@@ -1,0 +1,51 @@
+{
+  "name": "renku-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev:core": "pnpm --filter @gorenku/studio-core dev",
+    "dev:cli": "pnpm --filter @gorenku/studio-cli dev",
+    "dev:studio": "pnpm --filter @gorenku/studio dev",
+    "build": "pnpm --filter @gorenku/studio-core build && pnpm --filter @gorenku/studio-cli build && pnpm --filter @gorenku/studio build",
+    "build:core": "pnpm --filter @gorenku/studio-core build",
+    "build:cli": "pnpm --filter @gorenku/studio-cli build",
+    "build:studio": "pnpm --filter @gorenku/studio build",
+    "lint": "pnpm --filter @gorenku/studio-core lint && pnpm --filter @gorenku/studio-cli lint && pnpm --filter @gorenku/studio lint",
+    "lint:core": "pnpm --filter @gorenku/studio-core lint",
+    "lint:cli": "pnpm --filter @gorenku/studio-cli lint",
+    "lint:studio": "pnpm --filter @gorenku/studio lint",
+    "type-check": "pnpm --filter @gorenku/studio-core type-check && pnpm --filter @gorenku/studio-cli type-check",
+    "type-check:core": "pnpm --filter @gorenku/studio-core type-check",
+    "type-check:cli": "pnpm --filter @gorenku/studio-cli type-check",
+    "test": "pnpm --filter @gorenku/studio-core test && pnpm --filter @gorenku/studio-cli test && pnpm --filter @gorenku/studio test",
+    "test:core": "pnpm --filter @gorenku/studio-core test",
+    "test:cli": "pnpm --filter @gorenku/studio-cli test",
+    "test:studio": "pnpm --filter @gorenku/studio test",
+    "test:typecheck": "pnpm --filter @gorenku/studio-core test:typecheck && pnpm --filter @gorenku/studio-cli test:typecheck && pnpm --filter @gorenku/studio test:typecheck",
+    "test:typecheck:core": "pnpm --filter @gorenku/studio-core test:typecheck",
+    "test:typecheck:cli": "pnpm --filter @gorenku/studio-cli test:typecheck",
+    "test:typecheck:studio": "pnpm --filter @gorenku/studio test:typecheck",
+    "check": "pnpm type-check && pnpm test:typecheck && pnpm lint"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "typescript": "^5.6.3",
+    "yaml": "^2.8.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "bufferutil",
+      "esbuild",
+      "sharp",
+      "ffmpeg-static"
+    ]
+  }
+}
