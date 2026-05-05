@@ -2,11 +2,11 @@
 
 Date: 2026-05-05
 
-Status: architecture decision draft
+Status: architecture decision
 
 ## Purpose
 
-This document defines the YAML shape passed to `renku movie create` when creating
+This document defines the YAML shape passed to `renku create` when creating
 a new Renku Studio project.
 
 The YAML is a **creation scaffold**, not an import/export format and not a
@@ -17,7 +17,7 @@ The intended flow is:
 ```text
 narrative, references, user direction
   -> agent skill creates a project create YAML
-  -> agent calls renku movie create
+  -> agent calls renku create
   -> studio-core validates the YAML
   -> studio-core creates the project under the configured storage root
   -> studio-core creates .renku/movie.sqlite and the initial folder structure
@@ -34,11 +34,11 @@ Later changes should use specific Renku CLI commands or Renku Studio UI actions.
 Examples:
 
 ```bash
-renku movie cast add ...
-renku movie visual-language add ...
-renku movie sequence add ...
-renku movie scene update ...
-renku movie clip add ...
+renku cast add ...
+renku visual-language add ...
+renku sequence add ...
+renku scene update ...
+renku clip add ...
 ```
 
 ## Core Decision
@@ -74,13 +74,13 @@ The rule:
 The command should be:
 
 ```bash
-renku movie create --file project.yaml
+renku create --file project.yaml
 ```
 
 The user may provide a project name:
 
 ```bash
-renku movie create my-constantinople-movie --file project.yaml
+renku create my-constantinople-movie --file project.yaml
 ```
 
 The command should not accept an arbitrary project folder path.
@@ -91,8 +91,14 @@ Project location should be deterministic:
 configured storageRoot + project name
 ```
 
-The `storageRoot` should be configured elsewhere, for example during Renku setup
-or Renku Studio settings.
+The `storageRoot` is configured in the global Renku config created by:
+
+```bash
+renku init <storage-root>
+```
+
+The config file lives at `~/.config/renku/config.yaml`, uses camelCase keys, and
+must contain an explicit `storageRoot`. There is no default storage root.
 
 If the target project folder already exists, creation should fail with a clear
 error unless a future explicit recovery/resume flow is designed.

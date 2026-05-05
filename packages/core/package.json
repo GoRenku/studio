@@ -48,7 +48,7 @@
   "author": "",
   "packageManager": "pnpm@10.15.0",
   "dependencies": {
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.4"
   },
   "peerDependencies": {
     "better-sqlite3": "^12.9.0",
@@ -69,8 +69,8 @@
     "@types/node": "^20.16.11",
     "@typescript-eslint/parser": "^8.18.2",
     "@vitest/ui": "^3.2.4",
-    "drizzle-kit": "^0.31.10",
     "better-sqlite3": "^12.9.0",
+    "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "eslint": "^8",
     "eslint-config-prettier": "^10.1.8",

@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
-import { createMovieStudioApiMiddleware } from './server/movie-studio-api';
 
 const expandPath = (input: string | null | undefined) => {
   if (!input) return null;
@@ -39,7 +38,11 @@ export default defineConfig(({ mode }) => {
       {
         name: 'renku-studio-api',
         apply: 'serve',
-        configureServer(server) {
+        async configureServer(server) {
+          const apiModulePath = './server/movie-studio-api';
+          const { createMovieStudioApiMiddleware } = await import(
+            apiModulePath
+          );
           server.middlewares.use(createMovieStudioApiMiddleware());
         },
       },

@@ -10,6 +10,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: '@gorenku/studio-core/node',
+        replacement: new URL('../core/src/node/index.ts', import.meta.url).pathname,
+      },
+      {
         find: '@gorenku/studio-core',
         replacement: new URL('../core/src/index.ts', import.meta.url).pathname,
       },

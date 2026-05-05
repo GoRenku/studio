@@ -14,7 +14,8 @@
     "isolatedModules": true,
     "types": ["node"],
     "paths": {
-      "@gorenku/studio-core": ["../core/dist/index.d.ts"]
+      "@gorenku/studio-core": ["../core/dist/index.d.ts"],
+      "@gorenku/studio-core/node": ["../core/dist/node/index.d.ts"]
     },
     "typeRoots": [
       "./node_modules/@types",

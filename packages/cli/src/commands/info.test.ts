@@ -1,9 +1,11 @@
-import { getMovieCliInfo } from './info.js';
+import { describe, expect, it } from 'vitest';
+import { getRenkuCliInfo } from './info.js';
 
 describe('studio-cli scaffold', () => {
-  it('reports the movie CLI and movie core packages', () => {
-    expect(getMovieCliInfo()).toEqual({
+  it('reports the Renku CLI and core packages', () => {
+    expect(getRenkuCliInfo()).toEqual({
       cli: '@gorenku/studio-cli',
+      binary: 'renku',
       core: {
         packageName: '@gorenku/studio-core',
         purpose: 'renku-studio-domain',

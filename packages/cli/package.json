@@ -7,11 +7,11 @@
     "access": "public"
   },
   "bin": {
-    "renku-studio": "dist/cli.js"
+    "renku": "dist/cli.js"
   },
   "type": "module",
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "scripts": {
     "build": "tsc",
@@ -29,7 +29,8 @@
   ],
   "packageManager": "pnpm@10.15.0",
   "dependencies": {
-    "@gorenku/studio-core": "workspace:*"
+    "@gorenku/studio-core": "workspace:*",
+    "meow": "^14.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

@@ -41,6 +41,9 @@ importers:
       '@gorenku/studio-core':
         specifier: workspace:*
         version: link:../core
+      meow:
+        specifier: ^14.1.0
+        version: 14.1.0
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.3.1
@@ -73,7 +76,7 @@ importers:
   packages/core:
     dependencies:
       yaml:
-        specifier: ^2.8.1
+        specifier: ^2.8.4
         version: 2.8.4
     devDependencies:
       '@eslint/eslintrc':
@@ -179,6 +182,9 @@ importers:
 
   packages/studio:
     dependencies:
+      '@gorenku/studio-core':
+        specifier: workspace:*
+        version: link:../core
       '@radix-ui/react-dropdown-menu':
         specifier: ^2.1.16
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -2971,6 +2977,10 @@ packages:
 
   mediabunny@1.44.0:
     resolution: {integrity: sha512-rs54ixLAe5MSa6q35MVsVXyXZ+aYkEZYhAw57bseil+mmxFuqAS8YrELaWBcsqAJLCTb8Tse4AoYEhtkwCHYlQ==}
+
+  meow@14.1.0:
+    resolution: {integrity: sha512-EDYo6VlmtnumlcBCbh1gLJ//9jvM/ndXHfVXIFrZVr6fGcwTUyCTFNTLCKuY3ffbK8L/+3Mzqnd58RojiZqHVw==}
+    engines: {node: '>=20'}
 
   merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
@@ -6242,6 +6252,8 @@ snapshots:
     dependencies:
       '@types/dom-mediacapture-transform': 0.1.11
       '@types/dom-webcodecs': 0.1.13
+
+  meow@14.1.0: {}
 
   merge2@1.4.1: {}
 

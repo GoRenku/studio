@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
+import { resolveRenkuStorageRoot } from '@gorenku/studio-core/node';
 import {
   loadMovieProject,
   MovieProjectValidationError,
@@ -52,10 +52,7 @@ export async function listMovieProjects(): Promise<MovieProjectLibrary> {
 }
 
 export async function resolveMovieStudioStorageRoot(): Promise<string> {
-  return path.resolve(
-    process.env.RENKU_STUDIO_STORAGE_ROOT ??
-      path.join(os.homedir(), 'renku-studio-projects')
-  );
+  return await resolveRenkuStorageRoot();
 }
 
 export async function resolveCoverImagePath(
