@@ -53,14 +53,54 @@ unless the user explicitly asks for dependency installation.
 - When a plan becomes accepted project direction, summarize the final decision
   in `docs/` instead of leaving the plan as the only source of truth.
 
+## Very Important: No Backwards Compatibility During Pre-Customer Development
+
+Renku Studio is pre-customer software and will be continuously iterated.
+
+During this phase, do not preserve backwards compatibility in code, tests, or
+file structure.
+
+That means:
+
+- do not keep old names as aliases;
+- do not add shims for prior APIs;
+- do not add fallback branches for old structures;
+- do not keep tests whose only purpose is to reject an obsolete format;
+- do not keep old loaders after the model changes;
+- do not mention obsolete names in new code unless a document is explicitly
+  describing a historical decision.
+
+When a name or structure changes, update callers to the new name and delete the
+obsolete code.
+
+Tests should describe the current intended behavior only. They should not become
+a museum of previous iterations.
+
+## Very Important: Fail Fast With Structured Errors
+
+Do not add fallback behavior unless there is a very good reason for a valid,
+explicitly specified case.
+
+The default behavior should be:
+
+- fail fast when required configuration, mappings, files, schema data, or inputs
+  are missing or invalid;
+- report failures through a systematic error mechanism with clear error codes;
+- avoid loose `throw new Error(...)` usage at package boundaries;
+- avoid silent defaults that hide broken setup or incomplete data;
+- avoid guessing user intent from old names, old folder structures, or partial
+  matches.
+
+Fallbacks are allowed only when the behavior is deliberately designed,
+documented, and tested as part of the current architecture. They must not be used
+to preserve obsolete behavior or paper over invalid state.
+
 ## Coding Rules
 
 - Keep package names product-scoped under `@gorenku/studio-*`.
 - Keep local folder names short: `core`, `cli`, `studio`, and later `engines`.
 - Do not introduce dependencies on the old `@gorenku/core`,
   `@gorenku/providers`, or `@gorenku/compositions` packages from the Studio app.
-- Do not add fallback logic to hide missing configuration or broken mappings.
-  Fail clearly when a required value is missing.
 - Prefer straightforward TypeScript over speculative defensive code.
 - Do not generate build artifacts into source directories.
 - Never delete files, reset changes, or run destructive git commands without

@@ -75,20 +75,16 @@ The command should be:
 
 ```bash
 renku create --file project.yaml
+renku create --file project.yaml --cover cover.png
 ```
 
-The user may provide a project name:
-
-```bash
-renku create my-constantinople-movie --file project.yaml
-```
-
-The command should not accept an arbitrary project folder path.
+The command should not accept a positional project name or an arbitrary project
+folder path.
 
 Project location should be deterministic:
 
 ```text
-configured storageRoot + project name
+configured storageRoot + project.name
 ```
 
 The `storageRoot` is configured in the global Renku config created by:
@@ -103,6 +99,10 @@ must contain an explicit `storageRoot`. There is no default storage root.
 If the target project folder already exists, creation should fail with a clear
 error unless a future explicit recovery/resume flow is designed.
 
+If `--cover` is provided, the source image is copied into the created project as
+`cover.png`. The cover image path is command input, not a field in the create
+YAML.
+
 ## Responsibility Split
 
 `studio-cli` should:
@@ -116,7 +116,7 @@ error unless a future explicit recovery/resume flow is designed.
 
 1. Validate the YAML shape.
 2. Resolve the configured `storageRoot`.
-3. Determine the project name.
+3. Read required `project.name`.
 4. Allocate the project folder path.
 5. Create `.renku/movie.sqlite`.
 6. Generate durable opaque IDs.
@@ -172,6 +172,8 @@ SQLite stores the real identity and relationships.
 
 The create YAML should not contain:
 
+- cover image paths;
+- narrative file paths;
 - durable project state after creation;
 - SQLite IDs;
 - Renku canonical IDs;
@@ -353,8 +355,8 @@ project:
 
 Recommended fields:
 
-- `name`: optional project folder/name hint. If omitted, `studio-core` should
-  derive one from `title`.
+- `name`: required kebab-case project short name. It is used as the project
+  folder name under the configured `storageRoot`.
 - `title`: display title. This is required.
 - `type`: `movie` or `series`. This is required because Renku Studio should
   create series metadata from the beginning when the project is a series.
@@ -781,6 +783,8 @@ Example report:
 {
   "projectName": "constantinople-movie",
   "projectPath": "/configured/storageRoot/constantinople-movie",
+  "databasePath": "/configured/storageRoot/constantinople-movie/.renku/movie.sqlite",
+  "coverPath": "/configured/storageRoot/constantinople-movie/cover.png",
   "created": {
     "languages": 2,
     "castMembers": 5,
@@ -805,7 +809,7 @@ For V0, keep the create YAML plain and forgiving:
 - required `version`;
 - required `project.title`;
 - required `project.type`;
-- optional `project.name`;
+- required `project.name`;
 - optional `languages`;
 - optional `visualLanguage`;
 - optional `cast`;
@@ -816,6 +820,8 @@ For V0, keep the create YAML plain and forgiving:
 - no durations;
 - no generation state;
 - no recipes;
+- no cover path;
+- no narrative file path;
 - no attempts to make this file a source of truth.
 
 This gives agents a simple way to turn a narrative into an initial Renku Studio
