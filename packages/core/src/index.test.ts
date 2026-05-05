@@ -18,4 +18,8 @@ describe('studio-core scaffold', () => {
       purpose: 'renku-studio-domain',
     });
   });
+
+  it('keeps the root module free of node-only imports', async () => {
+    await expect(import('./index.js')).resolves.toHaveProperty('MOVIE_PROJECT_KIND');
+  });
 });

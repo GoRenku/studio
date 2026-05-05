@@ -73,6 +73,13 @@ const eslintConfig = [
     plugins: {
       '@typescript-eslint': tseslint,
     },
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+      },
+    },
     rules: {
       'prefer-const': 'error',
       'no-var': 'error',

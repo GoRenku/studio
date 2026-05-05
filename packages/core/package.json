@@ -9,6 +9,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
     }
   },
   "license": "MIT",
@@ -42,12 +50,28 @@
   "dependencies": {
     "yaml": "^2.8.1"
   },
+  "peerDependencies": {
+    "better-sqlite3": "^12.9.0",
+    "drizzle-orm": "^0.45.2"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.36.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.16.11",
     "@typescript-eslint/parser": "^8.18.2",
     "@vitest/ui": "^3.2.4",
+    "drizzle-kit": "^0.31.10",
+    "better-sqlite3": "^12.9.0",
+    "drizzle-orm": "^0.45.2",
     "eslint": "^8",
     "eslint-config-prettier": "^10.1.8",
     "typescript": "^5.6.3",

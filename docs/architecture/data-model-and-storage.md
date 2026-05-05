@@ -427,6 +427,61 @@ Examples:
 - register generated media files;
 - compute whether a clip is stale.
 
+### Async Core And Storage Boundary
+
+`studio-core` command, query, projection, and storage APIs should be async from
+the beginning.
+
+This is true even if the first implementation uses `better-sqlite3`, whose
+driver calls are synchronous internally.
+
+Recommended shape:
+
+```text
+UI/server/CLI
+  await studio-core command/query/projection
+
+studio-core
+  await storage adapter
+
+better-sqlite3 adapter
+  synchronous driver calls internally
+  async API at the adapter boundary
+
+future storage adapter
+  libSQL, Turso Sync, remote worker, or hosted-agent storage
+  async internally and async at the adapter boundary
+```
+
+The reason is that async behavior spreads upward. If the public `studio-core`
+API starts synchronous, switching to an async driver later would require a broad
+rewrite through command handlers, server routes, CLI commands, projections, and
+tests.
+
+The async boundary does not mean every operation should hold a database
+transaction open while awaiting slow work.
+
+Command handlers should generally follow this shape:
+
+```text
+validate inputs
+prepare filesystem or provider-independent work
+open a short database transaction
+write metadata
+close transaction
+perform slow provider/runtime work outside the transaction
+record completion metadata in another short transaction
+```
+
+Important rules:
+
+- Do not expose `better-sqlite3` types in command, query, or projection
+  signatures.
+- Do not expose sync driver behavior outside the storage adapter.
+- Keep transactions short and deterministic.
+- Do not perform provider calls, long filesystem work, or network sync inside an
+  open SQLite transaction.
+
 ### Browser-Safe Core Contracts
 
 The browser should be able to import shared types without pulling in Node-only
@@ -812,7 +867,7 @@ it is registered through a Renku command.
 Renku Studio should use:
 
 - SQLite for project metadata storage;
-- `better-sqlite3` as the Node.js SQLite driver;
+- `better-sqlite3` as the first Node.js SQLite driver;
 - Drizzle as the typed schema, query, and migration layer.
 
 The `better-sqlite3` dependency should stay on the Node-side entry point of
@@ -820,6 +875,64 @@ The `better-sqlite3` dependency should stay on the Node-side entry point of
 
 Drizzle schemas should live in `studio-core` so the CLI, server, tests, and future
 workers all use the same table definitions and migrations.
+
+### Database Driver Decision
+
+The initial driver should remain `better-sqlite3`.
+
+That choice fits the current Renku Studio architecture:
+
+- the project database is local and project-owned;
+- the local server and CLI run in Node.js;
+- Electron packaging can include a native SQLite binding;
+- command handlers benefit from simple, deterministic local transactions;
+- the future cloud direction is a remote/versioning layer, not a live remote SQL
+  backend edited directly by the UI.
+
+`libsql` or Turso should not be chosen now only because cloud sync may exist
+later.
+
+The likely future cloud model is:
+
+```text
+local project folder
+  local SQLite metadata database
+  local media files
+  local generation recipes
+
+remote
+  versioning backend
+  media object storage
+  collaboration/review surface
+```
+
+That model does not require the v1 application database driver to be remote SQL.
+
+If Renku Studio later needs a database-level sync adapter, the future option may
+be Turso Sync or another explicit local-first sync layer rather than the legacy
+embedded-replica style of `libsql`.
+
+For that reason, the storage implementation should be designed as an adapter:
+
+```text
+studio-core storage interface
+  async command/query/transaction API
+
+better-sqlite3 storage adapter
+  v1 implementation
+  sync driver internally
+
+future libSQL/Turso/storage-sync adapter
+  possible implementation
+  async driver internally
+```
+
+The key decision is not "commit forever to `better-sqlite3`."
+
+The key decision is:
+
+> Use `better-sqlite3` for the first local Node implementation, while keeping
+> `studio-core` APIs async and driver-independent.
 
 ## Project-Level SQLite
 

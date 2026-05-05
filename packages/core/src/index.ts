@@ -17,3 +17,10 @@ export function getMovieStudioPackageInfo(): MovieStudioPackageInfo {
     purpose: 'renku-studio-domain',
   };
 }
+
+export type {
+  StudioProjectRecord,
+  StudioStorage,
+  StudioStorageSession,
+  UpsertStudioProjectInput,
+} from './storage/contracts.js';
