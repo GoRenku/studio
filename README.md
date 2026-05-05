@@ -9,11 +9,12 @@ starts with a focused monorepo:
 
 - `packages/core` -> `@gorenku/studio-core`
 - `packages/cli` -> `@gorenku/studio-cli`
+- `packages/engines` -> `@gorenku/studio-engines`
 - `packages/studio` -> `@gorenku/studio`
 
-The AI engine integration package will be added in a later pass as
-`@gorenku/studio-engines` once its dependency on the existing Renku core package
-has been untangled.
+The AI engine package owns provider-organized model catalogs, schema-first
+validation, simulation, and provider adapters. It intentionally excludes final
+movie rendering and legacy Renku execution-plan bridges.
 
 ## Common Commands
 

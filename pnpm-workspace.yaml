@@ -1,6 +1,7 @@
 packages:
   - 'packages/core'
   - 'packages/cli'
+  - 'packages/engines'
   - 'packages/studio'
 
 minimumReleaseAge: 10080

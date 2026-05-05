@@ -11,14 +11,14 @@ Renku Studio is a pnpm monorepo with these initial packages:
   workflow primitives, and shared non-UI logic.
 - `packages/cli` (`@gorenku/studio-cli`) owns the `renku-studio` command-line
   surface.
+- `packages/engines` (`@gorenku/studio-engines`) owns model-provider catalogs,
+  schema-first validation, simulation, and AI provider adapters.
 - `packages/studio` (`@gorenku/studio`) owns the browser Studio application.
 
-The future AI integration package should be named:
-
-- `packages/engines` (`@gorenku/studio-engines`)
-
-Do not add that package to the workspace until its dependency on the old Renku
-core package has been deliberately removed or isolated.
+`packages/engines` should stay focused on asset generation engines. Do not add
+legacy Renku timeline/export producers, Remotion, FFmpeg final-render producers,
+or old execution-plan bridge code unless the user explicitly decides to redesign
+those concepts for Studio.
 
 ## Build and Test Commands
 
@@ -35,6 +35,7 @@ Use focused commands when touching one package:
 
 ```bash
 pnpm build:core
+pnpm test:engines
 pnpm test:cli
 pnpm dev:studio
 ```

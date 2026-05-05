@@ -1,0 +1,69 @@
+{
+  "properties": {
+    "enable_base64_output": {
+      "default": false,
+      "description": "If enabled, the output will be encoded into a BASE64 string instead of a URL. This property is only available through the API.",
+      "disabled": true,
+      "type": "boolean"
+    },
+    "enable_sync_mode": {
+      "default": false,
+      "description": "If set to true, the function will wait for the result to be generated and uploaded before returning the response. It allows you to get the result directly in the response. This property is only available through the API.",
+      "disabled": true,
+      "type": "boolean"
+    },
+    "prompt": {
+      "description": "The positive prompt for the generation.",
+      "type": "string",
+      "x-rows": 10,
+      "x-ui-component": "textarea"
+    },
+    "size": {
+      "default": "2048*2048",
+      "description": "Specify the width and height pixel values of the generated image.",
+      "maximum": 4096,
+      "minimum": 1024,
+      "type": "string"
+    }
+  },
+  "required": [
+    "prompt"
+  ],
+  "type": "object",
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "enable_base64_output",
+        "enable_sync_mode",
+        "prompt",
+        "size"
+      ],
+      "fields": {
+        "enable_base64_output": {
+          "pointer": "/properties/enable_base64_output",
+          "component": "boolean",
+          "label": "Enable Base64 Output"
+        },
+        "enable_sync_mode": {
+          "pointer": "/properties/enable_sync_mode",
+          "component": "boolean",
+          "label": "Enable Sync Mode"
+        },
+        "prompt": {
+          "pointer": "/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
+        },
+        "size": {
+          "pointer": "/properties/size",
+          "component": "string",
+          "label": "Size"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,794 @@
+models:
+# Image Models
+  - name: black-forest-labs/flux-kontext-pro
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByRun
+      price: 0.04
+  - name: black-forest-labs/flux-2-pro
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByImageAndResolution
+      inputs: [resolution]
+      prices:
+        - resolution: "0.5 MP"
+          pricePerImage: 0.0225
+        - resolution: "1 MP"
+          pricePerImage: 0.030
+        - resolution: "2 MP"
+          pricePerImage: 0.045
+        - resolution: "4 MP"
+          pricePerImage: 0.075
+  - name: black-forest-labs/flux-2-max
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByImageAndResolution
+      inputs: [resolution]
+      prices:
+        - resolution: "0.5 MP"
+          pricePerImage: 0.055
+        - resolution: "1 MP"
+          pricePerImage: 0.070
+        - resolution: "2 MP"
+          pricePerImage: 0.100
+        - resolution: "4 MP"
+          pricePerImage: 0.160
+  - name: black-forest-labs/flux-2-flex
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByImageAndResolution
+      inputs: [resolution]
+      prices:
+        - resolution: "0.5 MP"
+          pricePerImage: 0.030
+        - resolution: "1 MP"
+          pricePerImage: 0.060
+        - resolution: "2 MP"
+          pricePerImage: 0.120
+        - resolution: "4 MP"
+          pricePerImage: 0.240
+  - name: black-forest-labs/flux-2-klein-9b
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByImageAndResolution
+      inputs: [megapixels]
+      prices:
+        - resolution: "0.25"
+          pricePerImage: 0.00375
+        - resolution: "0.5"
+          pricePerImage: 0.0075
+        - resolution: "1"
+          pricePerImage: 0.015
+        - resolution: "2"
+          pricePerImage: 0.030
+        - resolution: "4"
+          pricePerImage: 0.060
+  - name: bytedance/seedream-4
+    type: image
+    mime:
+      - image/png
+    price:
+      function: costByRun
+      price: 0.03
+  - name: bytedance/seedream-4.5
+    type: image
+    mime:
+      - image/png
+    price:
+      function: costByRun
+      price: 0.04
+  - name: bytedance/seedream-5-lite
+    type: image
+    mime:
+      - image/png
+    price:
+      function: costByRun
+      price: 0.035
+  - name: google/imagen-4
+    type: image
+    mime:
+      - image/png
+      - image/jpg
+    price:
+      function: costByRun
+      price: 0.04
+  - name: google/nano-banana
+    type: image
+    price:
+      function: costByRun
+      price: 0.039
+  - name: google/nano-banana-2
+    type: image
+    mime:
+      - image/png
+      - image/jpg
+    price:
+      function: costByRun
+      price: 0.039
+  - name: google/nano-banana-pro
+    type: image
+    price:
+      function: costByImageAndResolution
+      inputs: [resolution]
+      prices:
+        - resolution: 1K
+          pricePerImage: 0.15
+        - resolution: 2K
+          pricePerImage: 0.15
+        - resolution: 4K
+          pricePerImage: 0.30
+  - name: qwen/qwen-image
+    type: image
+    mime:
+      - image/png
+      - image/jpg
+      - image/webp
+    price:
+      function: costByRun
+      price: 0.025
+  - name: prunaai/p-image
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByRun
+      price: 0.005
+  - name: prunaai/flux-kontext-fast
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByRun
+      price: 0.01
+  - name: prunaai/z-image-turbo
+    type: image
+    mime:
+      - image/png
+      - image/jpg
+      - image/webp
+    price:
+      function: costByResolution
+      inputs: [width, height]
+      prices:
+        - resolution: 0.5K
+          pricePerImage: 0.0025
+        - resolution: 1K
+          pricePerImage: 0.005
+        - resolution: 2K
+          pricePerImage: 0.01
+  - name: qwen/qwen-image-edit-2511
+    type: image
+    mime:
+      - image/png
+      - image/jpg
+      - image/webp
+    price:
+      function: costByRun
+      price: 0.03
+  - name: recraft-ai/recraft-v4
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByRun
+      price: 0.04
+  - name: recraft-ai/recraft-v4-svg
+    type: image
+    mime:
+      - image/svg+xml
+    price:
+      function: costByRun
+      price: 0.08
+  - name: xai/grok-imagine-image
+    type: image
+    mime:
+      - image/png
+      - image/jpeg
+      - image/webp
+    price:
+      function: costByRun
+      price: 0.02
+
+# Audio Models (Speech)
+  - name: inworld/tts-1.5-max
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/ogg
+      - audio/flac
+    price:
+      function: costByCharacters
+      inputs: [text]
+      pricePerCharacter: 0.00001
+  - name: minimax/speech-2.6-hd
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/flac
+      - audio/pcm
+    price:
+      function: costByCharacters
+      inputs: [text]
+      pricePerCharacter: 0.0001
+  - name: minimax/speech-2.6-turbo
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/flac
+      - audio/pcm
+    price:
+      function: costByCharacters
+      inputs: [text]
+      pricePerCharacter: 0.00006
+  - name: minimax/speech-02-hd
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/flac
+      - audio/pcm
+    price:
+      function: costByCharacters
+      inputs: [text]
+      pricePerCharacter: 0.0001
+  - name: minimax/speech-02-turbo
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/flac
+      - audio/pcm
+    price:
+      function: costByCharacters
+      inputs: [text]
+      pricePerCharacter: 0.00006
+  - name: minimax/speech-2.8-hd
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/flac
+      - audio/pcm
+    price:
+      function: costByInputTokens
+      inputs: [text]
+      pricePerToken: 0.0001
+  - name: minimax/speech-2.8-turbo
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/flac
+      - audio/pcm
+    price:
+      function: costByInputTokens
+      inputs: [text]
+      pricePerToken: 0.00006
+  - name: resemble-ai/chatterbox-turbo
+    type: audio
+    mime:
+      - audio/mp3
+    price:
+      function: costByCharacters
+      inputs: [text]
+      pricePerCharacter: 0.000025
+
+  # Music Models (also audio output)
+  - name: stability-ai/stable-audio-2.5
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/pcm
+    price:
+      function: costByRun
+      price: 0.20
+  - name: minimax/music-1.5
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/pcm
+    price:
+      function: costByRun
+      price: 0.03
+  - name: minimax/music-2.5
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/pcm
+    price:
+      function: costByRun
+      price: 0.15
+  - name: minimax/music-2.6
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/pcm
+    price:
+      function: costByRun
+      price: 0.15
+  - name: google/lyria-3
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/pcm
+    price:
+      function: costByRun
+      price: 0.04
+  - name: google/lyria-3-pro
+    type: audio
+    mime:
+      - audio/mp3
+      - audio/wav
+      - audio/pcm
+    price:
+      function: costByRun
+      price: 0.08
+
+# Video Models
+  - name: bytedance/seedance-1-lite
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 480p
+          pricePerSecond: 0.018
+        - resolution: 720p
+          pricePerSecond: 0.036
+        - resolution: 1080p
+          pricePerSecond: 0.072
+  - name: bytedance/seedance-1-pro-fast
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 480p
+          pricePerSecond: 0.015
+        - resolution: 720p
+          pricePerSecond: 0.025
+        - resolution: 1080p
+          pricePerSecond: 0.06
+  - name: google/veo-3.1-fast
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndWithAudio
+      inputs: [duration, generate_audio]
+      prices:
+        - generate_audio: true
+          pricePerSecond: 0.15
+        - generate_audio: false
+          pricePerSecond: 0.10
+  - name: openai/sora-2
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.10
+  - name: minimax/hailuo-02
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 512p
+          pricePerSecond: 0.0166
+        - resolution: 768p
+          pricePerSecond: 0.045
+        - resolution: 1080p
+          pricePerSecond: 0.08
+  - name: minimax/hailuo-02-fast
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 512p
+          pricePerSecond: 0.0166
+  - name: minimax/hailuo-2.3
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 768p
+          pricePerSecond: 0.0466
+        - resolution: 1080p
+          pricePerSecond: 0.0816
+  - name: minimax/hailuo-2.3-fast
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 768p
+          pricePerSecond: 0.0316
+        - resolution: 1080p
+          pricePerSecond: 0.055
+  - name: bytedance/seedance-1.5-pro
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndWithAudio
+      inputs: [duration, generate_audio]
+      prices:
+        - generate_audio: true
+          pricePerSecond: 0.052
+        - generate_audio: false
+          pricePerSecond: 0.026
+  - name: bytedance/seedance-2.0
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 480p
+          pricePerSecond: 0.07
+        - resolution: 720p
+          pricePerSecond: 0.17
+  - name: bytedance/seedance-2.0-fast
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 480p
+          pricePerSecond: 0.06
+        - resolution: 720p
+          pricePerSecond: 0.13
+  - name: runwayml/gen-4.5
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.12
+  - name: runwayml/upscale-v1
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.02
+  - name: topazlabs/video-upscale
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationResolutionAndFps
+      inputs: [target_resolution, target_fps]
+      prices:
+        - resolution: 720p
+          fps: 30
+          pricePerSecond: 0.0054
+        - resolution: 720p
+          fps: 60
+          pricePerSecond: 0.0106
+        - resolution: 1080p
+          fps: 30
+          pricePerSecond: 0.0186
+        - resolution: 1080p
+          fps: 60
+          pricePerSecond: 0.0374
+        - resolution: 4K
+          fps: 30
+          pricePerSecond: 0.0746
+        - resolution: 4K
+          fps: 60
+          pricePerSecond: 0.1494
+  # Vidu Video Models
+  - name: vidu/q3-pro
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 540p
+          pricePerSecond: 0.07
+        - resolution: 720p
+          pricePerSecond: 0.15
+        - resolution: 1080p
+          pricePerSecond: 0.16
+  - name: vidu/q3-turbo
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 540p
+          pricePerSecond: 0.04
+        - resolution: 720p
+          pricePerSecond: 0.06
+        - resolution: 1080p
+          pricePerSecond: 0.08
+  - name: wan-video/wan2.6-i2v-flash
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 720p
+          pricePerSecond: 0.05
+        - resolution: 1080p
+          pricePerSecond: 0.075
+  - name: wan-video/wan-2.6-i2v
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 720p
+          pricePerSecond: 0.10
+        - resolution: 1080p
+          pricePerSecond: 0.15
+  - name: wan-video/wan-2.6-t2v
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, size]
+      prices:
+        - resolution: 720p
+          pricePerSecond: 0.10
+        - resolution: 1080p
+          pricePerSecond: 0.15
+  - name: wan-video/wan-2.7-r2v
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.10
+  - name: wan-video/wan-2.7-i2v
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 720p
+          pricePerSecond: 0.10
+        - resolution: 1080p
+          pricePerSecond: 0.15
+  - name: wan-video/wan-2.7-t2v
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.10
+  - name: xai/grok-imagine-video
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.05
+  - name: xai/grok-imagine-r2v
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.05
+  - name: xai/grok-imagine-video-extension
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.05
+  - name: pixverse/pixverse-v5.6
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 360p
+          pricePerSecond: 0.07
+        - resolution: 540p
+          pricePerSecond: 0.07
+        - resolution: 720p
+          pricePerSecond: 0.09
+        - resolution: 1080p
+          pricePerSecond: 0.15
+  # Lightricks LTX Video Models
+  - name: lightricks/ltx-2.3-pro
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 1080p
+          pricePerSecond: 0.06
+        - resolution: 2k
+          pricePerSecond: 0.12
+        - resolution: 4k
+          pricePerSecond: 0.24
+  - name: lightricks/ltx-2.3-fast
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 1080p
+          pricePerSecond: 0.04
+        - resolution: 2k
+          pricePerSecond: 0.08
+        - resolution: 4k
+          pricePerSecond: 0.16
+  # Kling Video Models
+  - name: kwaivgi/kling-v3-video
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationModeAndAudio
+      inputs: [duration, mode, generate_audio]
+      prices:
+        - mode: standard
+          generate_audio: false
+          pricePerSecond: 0.168
+        - mode: standard
+          generate_audio: true
+          pricePerSecond: 0.252
+        - mode: pro
+          generate_audio: false
+          pricePerSecond: 0.224
+        - mode: pro
+          generate_audio: true
+          pricePerSecond: 0.336
+  - name: kwaivgi/kling-v3-omni-video
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationModeAndAudio
+      inputs: [duration, mode, generate_audio]
+      prices:
+        - mode: standard
+          generate_audio: false
+          pricePerSecond: 0.168
+        - mode: standard
+          generate_audio: true
+          pricePerSecond: 0.224
+        - mode: pro
+          generate_audio: false
+          pricePerSecond: 0.224
+        - mode: pro
+          generate_audio: true
+          pricePerSecond: 0.28
+  - name: kwaivgi/kling-avatar-v2
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndMode
+      inputs: [duration, mode]
+      prices:
+        - mode: std
+          pricePerSecond: 0.056
+        - mode: pro
+          pricePerSecond: 0.11
+  - name: kwaivgi/kling-o1
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndMode
+      inputs: [duration, mode]
+      prices:
+        - mode: std
+          pricePerSecond: 0.084
+        - mode: pro
+          pricePerSecond: 0.112
+  - name: kwaivgi/kling-v2.6
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndWithAudio
+      inputs: [duration, generate_audio]
+      prices:
+        - generate_audio: false
+          pricePerSecond: 0.07
+        - generate_audio: true
+          pricePerSecond: 0.14
+  - name: kwaivgi/kling-v2.5-turbo-pro
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.07
+  - name: alibaba/happyhorse-1.0
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution]
+      prices:
+        - resolution: 720p
+          pricePerSecond: 0.14
+        - resolution: 1080p
+          pricePerSecond: 0.28

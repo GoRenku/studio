@@ -1,0 +1,443 @@
+{
+  "input_schema": {
+    "type": "object",
+    "title": "Input",
+    "required": [
+      "text"
+    ],
+    "properties": {
+      "seed": {
+        "type": "integer",
+        "title": "Seed",
+        "x-order": 7,
+        "nullable": true,
+        "description": "Random seed for reproducible results. Leave blank for random generation."
+      },
+      "text": {
+        "type": "string",
+        "title": "Text",
+        "x-order": 0,
+        "description": "Text to synthesize into speech (maximum 500 characters).\n\nSupported paralinguistic tags you can include in your text:\n[clear throat], [sigh], [sush], [cough], [groan], [sniff], [gasp], [chuckle], [laugh]\n\nExample: \"Oh, that's hilarious! [chuckle] Let me tell you more.\""
+      },
+      "top_k": {
+        "type": "integer",
+        "title": "Top K",
+        "default": 1000,
+        "maximum": 2000,
+        "minimum": 1,
+        "x-order": 5,
+        "description": "Top-k sampling. Limits vocabulary to top k tokens at each step."
+      },
+      "top_p": {
+        "type": "number",
+        "title": "Top P",
+        "default": 0.95,
+        "maximum": 1,
+        "minimum": 0.5,
+        "x-order": 4,
+        "description": "Nucleus sampling threshold. Lower values make output more focused."
+      },
+      "voice": {
+        "allOf": [
+          {
+            "$ref": "#/voice"
+          }
+        ],
+        "default": "Andy",
+        "x-order": 1,
+        "description": "Pre-made voice to use for synthesis. Ignored if reference_audio is provided."
+      },
+      "temperature": {
+        "type": "number",
+        "title": "Temperature",
+        "default": 0.8,
+        "maximum": 2,
+        "minimum": 0.05,
+        "x-order": 3,
+        "description": "Controls randomness in generation. Higher values produce more varied speech."
+      },
+      "reference_audio": {
+        "type": "string",
+        "title": "Reference Audio",
+        "format": "uri",
+        "x-order": 2,
+        "nullable": true,
+        "description": "Reference audio file for voice cloning (optional). Must be longer than 5 seconds. If provided, overrides the voice selection."
+      },
+      "repetition_penalty": {
+        "type": "number",
+        "title": "Repetition Penalty",
+        "default": 1.2,
+        "maximum": 2,
+        "minimum": 1,
+        "x-order": 6,
+        "description": "Penalizes token repetition. Higher values reduce repetition."
+      }
+    }
+  },
+  "voice": {
+    "enum": [
+      "Aaron",
+      "Abigail",
+      "Anaya",
+      "Andy",
+      "Archer",
+      "Brian",
+      "Chloe",
+      "Dylan",
+      "Emmanuel",
+      "Ethan",
+      "Evelyn",
+      "Gavin",
+      "Gordon",
+      "Ivan",
+      "Laura",
+      "Lucy",
+      "Madison",
+      "Marisol",
+      "Meera",
+      "Walter"
+    ],
+    "type": "string",
+    "title": "voice",
+    "x-voice-id": true,
+    "description": "An enumeration."
+  },
+  "output_schema": {
+    "type": "string",
+    "title": "Output",
+    "format": "uri"
+  },
+  "Status": {
+    "enum": [
+      "starting",
+      "processing",
+      "succeeded",
+      "canceled",
+      "failed"
+    ],
+    "type": "string",
+    "title": "Status",
+    "description": "An enumeration."
+  },
+  "WebhookEvent": {
+    "enum": [
+      "start",
+      "output",
+      "logs",
+      "completed"
+    ],
+    "type": "string",
+    "title": "WebhookEvent",
+    "description": "An enumeration."
+  },
+  "ValidationError": {
+    "type": "object",
+    "title": "ValidationError",
+    "required": [
+      "loc",
+      "msg",
+      "type"
+    ],
+    "properties": {
+      "loc": {
+        "type": "array",
+        "items": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "title": "Location"
+      },
+      "msg": {
+        "type": "string",
+        "title": "Message"
+      },
+      "type": {
+        "type": "string",
+        "title": "Error Type"
+      }
+    }
+  },
+  "PredictionRequest": {
+    "type": "object",
+    "title": "PredictionRequest",
+    "properties": {
+      "id": {
+        "type": "string",
+        "title": "Id",
+        "nullable": true
+      },
+      "input": {
+        "$ref": "#/Input",
+        "nullable": true
+      },
+      "context": {
+        "type": "object",
+        "title": "Context",
+        "nullable": true,
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "webhook": {
+        "type": "string",
+        "title": "Webhook",
+        "format": "uri",
+        "nullable": true,
+        "maxLength": 65536,
+        "minLength": 1
+      },
+      "created_at": {
+        "type": "string",
+        "title": "Created At",
+        "format": "date-time",
+        "nullable": true
+      },
+      "output_file_prefix": {
+        "type": "string",
+        "title": "Output File Prefix",
+        "nullable": true
+      },
+      "webhook_events_filter": {
+        "type": "array",
+        "items": {
+          "$ref": "#/WebhookEvent"
+        },
+        "default": [
+          "start",
+          "output",
+          "logs",
+          "completed"
+        ],
+        "nullable": true
+      }
+    }
+  },
+  "PredictionResponse": {
+    "type": "object",
+    "title": "PredictionResponse",
+    "properties": {
+      "id": {
+        "type": "string",
+        "title": "Id",
+        "nullable": true
+      },
+      "logs": {
+        "type": "string",
+        "title": "Logs",
+        "default": ""
+      },
+      "error": {
+        "type": "string",
+        "title": "Error",
+        "nullable": true
+      },
+      "input": {
+        "$ref": "#/Input",
+        "nullable": true
+      },
+      "output": {
+        "$ref": "#/Output"
+      },
+      "status": {
+        "$ref": "#/Status",
+        "nullable": true
+      },
+      "metrics": {
+        "type": "object",
+        "title": "Metrics",
+        "nullable": true,
+        "additionalProperties": true
+      },
+      "version": {
+        "type": "string",
+        "title": "Version",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "string",
+        "title": "Created At",
+        "format": "date-time",
+        "nullable": true
+      },
+      "started_at": {
+        "type": "string",
+        "title": "Started At",
+        "format": "date-time",
+        "nullable": true
+      },
+      "completed_at": {
+        "type": "string",
+        "title": "Completed At",
+        "format": "date-time",
+        "nullable": true
+      }
+    }
+  },
+  "HTTPValidationError": {
+    "type": "object",
+    "title": "HTTPValidationError",
+    "properties": {
+      "detail": {
+        "type": "array",
+        "items": {
+          "$ref": "#/ValidationError"
+        },
+        "title": "Detail"
+      }
+    }
+  },
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "/input_schema",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "seed",
+        "text",
+        "top_k",
+        "top_p",
+        "voice",
+        "temperature",
+        "reference_audio",
+        "repetition_penalty"
+      ],
+      "fields": {
+        "seed": {
+          "pointer": "/input_schema/properties/seed",
+          "component": "integer",
+          "label": "Seed"
+        },
+        "text": {
+          "pointer": "/input_schema/properties/text",
+          "component": "string",
+          "label": "Text"
+        },
+        "top_k": {
+          "pointer": "/input_schema/properties/top_k",
+          "component": "integer",
+          "label": "Top K"
+        },
+        "top_p": {
+          "pointer": "/input_schema/properties/top_p",
+          "component": "number",
+          "label": "Top P"
+        },
+        "voice": {
+          "pointer": "/input_schema/properties/voice",
+          "schemaPointer": "/voice",
+          "component": "string-enum",
+          "label": "Voice",
+          "custom": "voice-id-selector",
+          "custom_config": {
+            "allow_custom": true,
+            "options": [
+              {
+                "value": "Aaron",
+                "label": "Aaron"
+              },
+              {
+                "value": "Abigail",
+                "label": "Abigail"
+              },
+              {
+                "value": "Anaya",
+                "label": "Anaya"
+              },
+              {
+                "value": "Andy",
+                "label": "Andy"
+              },
+              {
+                "value": "Archer",
+                "label": "Archer"
+              },
+              {
+                "value": "Brian",
+                "label": "Brian"
+              },
+              {
+                "value": "Chloe",
+                "label": "Chloe"
+              },
+              {
+                "value": "Dylan",
+                "label": "Dylan"
+              },
+              {
+                "value": "Emmanuel",
+                "label": "Emmanuel"
+              },
+              {
+                "value": "Ethan",
+                "label": "Ethan"
+              },
+              {
+                "value": "Evelyn",
+                "label": "Evelyn"
+              },
+              {
+                "value": "Gavin",
+                "label": "Gavin"
+              },
+              {
+                "value": "Gordon",
+                "label": "Gordon"
+              },
+              {
+                "value": "Ivan",
+                "label": "Ivan"
+              },
+              {
+                "value": "Laura",
+                "label": "Laura"
+              },
+              {
+                "value": "Lucy",
+                "label": "Lucy"
+              },
+              {
+                "value": "Madison",
+                "label": "Madison"
+              },
+              {
+                "value": "Marisol",
+                "label": "Marisol"
+              },
+              {
+                "value": "Meera",
+                "label": "Meera"
+              },
+              {
+                "value": "Walter",
+                "label": "Walter"
+              }
+            ]
+          }
+        },
+        "temperature": {
+          "pointer": "/input_schema/properties/temperature",
+          "component": "number",
+          "label": "Temperature"
+        },
+        "reference_audio": {
+          "pointer": "/input_schema/properties/reference_audio",
+          "component": "file-uri",
+          "label": "Reference Audio"
+        },
+        "repetition_penalty": {
+          "pointer": "/input_schema/properties/repetition_penalty",
+          "component": "number",
+          "label": "Repetition Penalty"
+        }
+      }
+    }
+  }
+}

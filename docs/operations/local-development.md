@@ -19,6 +19,7 @@ Focused package commands are available from the repository root:
 
 ```bash
 pnpm build:core
+pnpm test:engines
 pnpm test:cli
 pnpm dev:studio
 ```
@@ -28,4 +29,11 @@ default local project folder:
 
 ```text
 ~/renku-studio-projects
+```
+
+Engine e2e tests call real providers and can cost money. They stay behind
+explicit environment flags, for example:
+
+```bash
+RUN_OPENAI_TEXT=1 pnpm --filter @gorenku/studio-engines test:e2e
 ```

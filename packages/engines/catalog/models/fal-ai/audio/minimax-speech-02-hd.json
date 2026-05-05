@@ -1,0 +1,503 @@
+{
+  "input_schema": {
+    "title": "TextToSpeechHDRequest",
+    "type": "object",
+    "properties": {
+      "text": {
+        "examples": [
+          "Hello world! This is a test of the text-to-speech system."
+        ],
+        "maxLength": 5000,
+        "type": "string",
+        "title": "Text",
+        "description": "Text to convert to speech (max 5000 characters, minimum 1 non-whitespace character)",
+        "minLength": 1
+      },
+      "language_boost": {
+        "enum": [
+          "Chinese",
+          "Chinese,Yue",
+          "English",
+          "Arabic",
+          "Russian",
+          "Spanish",
+          "French",
+          "Portuguese",
+          "German",
+          "Turkish",
+          "Dutch",
+          "Ukrainian",
+          "Vietnamese",
+          "Indonesian",
+          "Japanese",
+          "Italian",
+          "Korean",
+          "Thai",
+          "Polish",
+          "Romanian",
+          "Greek",
+          "Czech",
+          "Finnish",
+          "Hindi",
+          "Bulgarian",
+          "Danish",
+          "Hebrew",
+          "Malay",
+          "Slovak",
+          "Swedish",
+          "Croatian",
+          "Hungarian",
+          "Norwegian",
+          "Slovenian",
+          "Catalan",
+          "Nynorsk",
+          "Afrikaans",
+          "auto"
+        ],
+        "description": "Enhance recognition of specified languages and dialects",
+        "type": "string",
+        "title": "Language Boost"
+      },
+      "voice_setting": {
+        "default": {
+          "speed": 1,
+          "vol": 1,
+          "voice_id": "Wise_Woman",
+          "pitch": 0,
+          "english_normalization": false
+        },
+        "description": "Voice configuration settings",
+        "title": "Voice Setting",
+        "allOf": [
+          {
+            "$ref": "#/VoiceSetting"
+          }
+        ]
+      },
+      "output_format": {
+        "enum": [
+          "url",
+          "hex"
+        ],
+        "description": "Format of the output content (non-streaming only)",
+        "type": "string",
+        "title": "Output Format",
+        "default": "hex"
+      },
+      "pronunciation_dict": {
+        "description": "Custom pronunciation dictionary for text replacement",
+        "title": "Pronunciation Dict",
+        "allOf": [
+          {
+            "$ref": "#/PronunciationDict"
+          }
+        ]
+      },
+      "audio_setting": {
+        "description": "Audio configuration settings",
+        "title": "Audio Setting",
+        "allOf": [
+          {
+            "$ref": "#/AudioSetting"
+          }
+        ]
+      }
+    },
+    "x-fal-order-properties": [
+      "text",
+      "voice_setting",
+      "audio_setting",
+      "language_boost",
+      "output_format",
+      "pronunciation_dict"
+    ],
+    "required": [
+      "text"
+    ]
+  },
+  "output_schema": {
+    "title": "TextToSpeechOutput",
+    "type": "object",
+    "properties": {
+      "duration_ms": {
+        "description": "Duration of the audio in milliseconds",
+        "type": "integer",
+        "title": "Duration Ms"
+      },
+      "audio": {
+        "examples": [
+          {
+            "url": "https://fal.media/files/kangaroo/kojPUCNZ9iUGFGMR-xb7h_speech.mp3"
+          }
+        ],
+        "description": "The generated audio file",
+        "title": "Audio",
+        "allOf": [
+          {
+            "$ref": "#/File"
+          }
+        ]
+      }
+    },
+    "x-fal-order-properties": [
+      "audio",
+      "duration_ms"
+    ],
+    "required": [
+      "audio",
+      "duration_ms"
+    ]
+  },
+  "VoiceSetting": {
+    "title": "VoiceSetting",
+    "type": "object",
+    "properties": {
+      "speed": {
+        "minimum": 0.5,
+        "description": "Speech speed (0.5-2.0)",
+        "type": "number",
+        "maximum": 2,
+        "title": "Speed",
+        "default": 1
+      },
+      "vol": {
+        "minimum": 0.01,
+        "description": "Volume (0-10)",
+        "type": "number",
+        "maximum": 10,
+        "title": "Vol",
+        "default": 1
+      },
+      "voice_id": {
+        "examples": [
+          "Wise_Woman",
+          "Friendly_Person",
+          "Inspirational_girl",
+          "Deep_Voice_Man",
+          "Calm_Woman",
+          "Casual_Guy",
+          "Lively_Girl",
+          "Patient_Man",
+          "Young_Knight",
+          "Determined_Man",
+          "Lovely_Girl",
+          "Decent_Boy",
+          "Imposing_Manner",
+          "Elegant_Man",
+          "Abbess",
+          "Sweet_Girl_2",
+          "Exuberant_Girl"
+        ],
+        "description": "Predefined voice ID to use for synthesis",
+        "type": "string",
+        "title": "Voice Id",
+        "x-voice-id": true,
+        "x-voices-file": "voices/minimax-default-voices.json",
+        "default": "Wise_Woman"
+      },
+      "pitch": {
+        "minimum": -12,
+        "description": "Voice pitch (-12 to 12)",
+        "type": "integer",
+        "maximum": 12,
+        "title": "Pitch",
+        "default": 0
+      },
+      "english_normalization": {
+        "description": "Enables English text normalization to improve number reading performance, with a slight increase in latency",
+        "type": "boolean",
+        "title": "English Normalization",
+        "default": false
+      },
+      "emotion": {
+        "enum": [
+          "happy",
+          "sad",
+          "angry",
+          "fearful",
+          "disgusted",
+          "surprised",
+          "neutral"
+        ],
+        "description": "Emotion of the generated speech",
+        "type": "string",
+        "title": "Emotion"
+      }
+    },
+    "x-fal-order-properties": [
+      "voice_id",
+      "speed",
+      "vol",
+      "pitch",
+      "emotion",
+      "english_normalization"
+    ]
+  },
+  "PronunciationDict": {
+    "title": "PronunciationDict",
+    "type": "object",
+    "properties": {
+      "tone_list": {
+        "description": "List of pronunciation replacements in format ['text/(pronunciation)', ...]. For Chinese, tones are 1-5. Example: ['燕少飞/(yan4)(shao3)(fei1)']",
+        "type": "array",
+        "title": "Tone List",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "x-fal-order-properties": [
+      "tone_list"
+    ]
+  },
+  "AudioSetting": {
+    "title": "AudioSetting",
+    "type": "object",
+    "properties": {
+      "format": {
+        "enum": [
+          "mp3",
+          "pcm",
+          "flac"
+        ],
+        "description": "Audio format",
+        "type": "string",
+        "title": "Format",
+        "default": "mp3"
+      },
+      "sample_rate": {
+        "enum": [
+          8000,
+          16000,
+          22050,
+          24000,
+          32000,
+          44100
+        ],
+        "description": "Sample rate of generated audio",
+        "type": "integer",
+        "title": "Sample Rate",
+        "default": 32000
+      },
+      "channel": {
+        "enum": [
+          1,
+          2
+        ],
+        "description": "Number of audio channels (1=mono, 2=stereo)",
+        "type": "integer",
+        "title": "Channel",
+        "default": 1
+      },
+      "bitrate": {
+        "enum": [
+          32000,
+          64000,
+          128000,
+          256000
+        ],
+        "description": "Bitrate of generated audio",
+        "type": "integer",
+        "title": "Bitrate",
+        "default": 128000
+      }
+    },
+    "x-fal-order-properties": [
+      "sample_rate",
+      "bitrate",
+      "format",
+      "channel"
+    ]
+  },
+  "File": {
+    "title": "File",
+    "type": "object",
+    "properties": {
+      "file_size": {
+        "examples": [
+          4404019
+        ],
+        "description": "The size of the file in bytes.",
+        "type": "integer",
+        "title": "File Size"
+      },
+      "file_name": {
+        "examples": [
+          "z9RV14K95DvU.png"
+        ],
+        "description": "The name of the file. It will be auto-generated if not provided.",
+        "type": "string",
+        "title": "File Name"
+      },
+      "content_type": {
+        "examples": [
+          "image/png"
+        ],
+        "description": "The mime type of the file.",
+        "type": "string",
+        "title": "Content Type"
+      },
+      "url": {
+        "description": "The URL where the file can be downloaded from.",
+        "type": "string",
+        "title": "Url",
+        "format": "uri"
+      },
+      "file_data": {
+        "format": "binary",
+        "description": "File data",
+        "type": "string",
+        "title": "File Data"
+      }
+    },
+    "x-fal-order-properties": [
+      "url",
+      "content_type",
+      "file_name",
+      "file_size",
+      "file_data"
+    ],
+    "required": [
+      "url"
+    ]
+  },
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "/input_schema",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "text",
+        "language_boost",
+        "voice_setting",
+        "output_format",
+        "pronunciation_dict",
+        "audio_setting"
+      ],
+      "fields": {
+        "text": {
+          "pointer": "/input_schema/properties/text",
+          "component": "string",
+          "label": "Text"
+        },
+        "language_boost": {
+          "pointer": "/input_schema/properties/language_boost",
+          "component": "string-enum",
+          "label": "Language Boost"
+        },
+        "voice_setting": {
+          "pointer": "/input_schema/properties/voice_setting",
+          "schemaPointer": "/VoiceSetting",
+          "component": "object",
+          "label": "Voice Setting",
+          "order": [
+            "speed",
+            "vol",
+            "voice_id",
+            "pitch",
+            "english_normalization",
+            "emotion"
+          ],
+          "fields": {
+            "speed": {
+              "pointer": "/VoiceSetting/properties/speed",
+              "component": "number",
+              "label": "Speed"
+            },
+            "vol": {
+              "pointer": "/VoiceSetting/properties/vol",
+              "component": "number",
+              "label": "Vol"
+            },
+            "voice_id": {
+              "pointer": "/VoiceSetting/properties/voice_id",
+              "component": "string",
+              "label": "Voice Id",
+              "custom": "voice-id-selector",
+              "custom_config": {
+                "allow_custom": true,
+                "options_file": "voices/minimax-default-voices.json"
+              }
+            },
+            "pitch": {
+              "pointer": "/VoiceSetting/properties/pitch",
+              "component": "integer",
+              "label": "Pitch"
+            },
+            "english_normalization": {
+              "pointer": "/VoiceSetting/properties/english_normalization",
+              "component": "boolean",
+              "label": "English Normalization"
+            },
+            "emotion": {
+              "pointer": "/VoiceSetting/properties/emotion",
+              "component": "string-enum",
+              "label": "Emotion"
+            }
+          }
+        },
+        "output_format": {
+          "pointer": "/input_schema/properties/output_format",
+          "component": "string-enum",
+          "label": "Output Format"
+        },
+        "pronunciation_dict": {
+          "pointer": "/input_schema/properties/pronunciation_dict",
+          "schemaPointer": "/PronunciationDict",
+          "component": "object",
+          "label": "Pronunciation Dict",
+          "order": [
+            "tone_list"
+          ],
+          "fields": {
+            "tone_list": {
+              "pointer": "/PronunciationDict/properties/tone_list",
+              "component": "array-scalar",
+              "label": "Tone List",
+              "item": {
+                "pointer": "/PronunciationDict/properties/tone_list/items",
+                "component": "string",
+                "label": "Item"
+              }
+            }
+          }
+        },
+        "audio_setting": {
+          "pointer": "/input_schema/properties/audio_setting",
+          "schemaPointer": "/AudioSetting",
+          "component": "object",
+          "label": "Audio Setting",
+          "order": [
+            "format",
+            "sample_rate",
+            "channel",
+            "bitrate"
+          ],
+          "fields": {
+            "format": {
+              "pointer": "/AudioSetting/properties/format",
+              "component": "string-enum",
+              "label": "Format"
+            },
+            "sample_rate": {
+              "pointer": "/AudioSetting/properties/sample_rate",
+              "component": "integer",
+              "label": "Sample Rate"
+            },
+            "channel": {
+              "pointer": "/AudioSetting/properties/channel",
+              "component": "integer",
+              "label": "Channel"
+            },
+            "bitrate": {
+              "pointer": "/AudioSetting/properties/bitrate",
+              "component": "integer",
+              "label": "Bitrate"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "properties": {
+    "audio": {
+      "description": "The audio url to use for the speech.",
+      "type": "string",
+      "format": "uri"
+    },
+    "image": {
+      "description": "The image url for the initial starting image.",
+      "type": "string",
+      "format": "uri"
+    },
+    "mask_image": {
+      "description": "Optional mask image to specify the person in the image to animate.",
+      "type": "string",
+      "format": "uri"
+    },
+    "prompt": {
+      "description": "The positive prompt for the generation.",
+      "type": "string"
+    },
+    "resolution": {
+      "default": "480p",
+      "description": "The resolution of the output video.",
+      "enum": [
+        "480p",
+        "720p"
+      ],
+      "type": "string",
+      "x-ui-component": "select"
+    },
+    "seed": {
+      "default": -1,
+      "description": "The random seed to use for the generation. -1 means a random seed will be used.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "audio",
+    "image"
+  ],
+  "type": "object",
+  "x-order-properties": [
+    "audio",
+    "image",
+    "mask_image",
+    "prompt",
+    "resolution",
+    "seed"
+  ],
+  "x-renku-constraints": {
+    "fields": {
+      "resolution": {
+        "enum": {
+          "values": [
+            "480p",
+            "720p"
+          ],
+          "source": "explicit",
+          "confidence": "high"
+        }
+      }
+    }
+  },
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "audio",
+        "image",
+        "mask_image",
+        "prompt",
+        "resolution",
+        "seed"
+      ],
+      "fields": {
+        "audio": {
+          "pointer": "/properties/audio",
+          "component": "file-uri",
+          "label": "Audio"
+        },
+        "image": {
+          "pointer": "/properties/image",
+          "component": "file-uri",
+          "label": "Image"
+        },
+        "mask_image": {
+          "pointer": "/properties/mask_image",
+          "component": "file-uri",
+          "label": "Mask Image"
+        },
+        "prompt": {
+          "pointer": "/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
+        },
+        "resolution": {
+          "pointer": "/properties/resolution",
+          "component": "string-enum",
+          "label": "Resolution"
+        },
+        "seed": {
+          "pointer": "/properties/seed",
+          "component": "integer",
+          "label": "Seed"
+        }
+      }
+    }
+  }
+}

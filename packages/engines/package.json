@@ -1,0 +1,76 @@
+{
+  "name": "@gorenku/studio-engines",
+  "version": "0.1.0",
+  "description": "Renku Studio AI engine registry, schema validation, simulation, and provider adapters",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#core": {
+      "types": "./dist/contracts/core.d.ts",
+      "default": "./dist/contracts/core.js"
+    }
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "catalog",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src tests",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "catalog:fetch-fal": "node scripts/fetch-fal-schema.mjs",
+    "catalog:update-fal": "node scripts/update-fal-catalog.mjs catalog/models/fal-ai/fal-ai.yaml",
+    "catalog:fetch-replicate": "node scripts/fetch-replicate-schema.mjs",
+    "catalog:update-replicate": "node scripts/update-replicate-catalog.mjs catalog/models/replicate/replicate.yaml",
+    "catalog:validate-schemas": "vitest run --config vitest.config.ts tests/schemas/validate-schemas.test.ts"
+  },
+  "keywords": [
+    "ai",
+    "renku-studio",
+    "engines",
+    "openai",
+    "replicate",
+    "fal",
+    "elevenlabs"
+  ],
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.1",
+    "@elevenlabs/elevenlabs-js": "^2.31.0",
+    "@fal-ai/client": "^1.7.2",
+    "ai": "^6.0.3",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "mediabunny": "^1.24.5",
+    "replicate": "^1.2.0",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.36.0",
+    "@types/node": "^20.16.11",
+    "@typescript-eslint/parser": "^8.18.2",
+    "@vitest/ui": "^3.2.4",
+    "dotenv": "^17.2.3",
+    "eslint": "^8",
+    "eslint-config-prettier": "^10.1.8",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  }
+}

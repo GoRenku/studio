@@ -15,7 +15,7 @@ and normalizes calls across model vendors.
 
 Use **Engine** as the product and code term for an AI generation backend.
 
-The future package should be:
+The package is:
 
 ```text
 packages/engines -> @gorenku/studio-engines
@@ -32,5 +32,5 @@ Inside that package:
 ## Consequences
 
 - Studio-facing language becomes clearer than `provider`.
-- The old provider package can be migrated deliberately instead of copied as-is.
+- The old provider package can be extracted deliberately instead of copied as-is.
 - The Studio app should not depend on the legacy provider package.

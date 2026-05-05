@@ -1,0 +1,394 @@
+{
+  "input_schema": {
+    "x-fal-order-properties": [
+      "prompt",
+      "image_size",
+      "num_images",
+      "max_images",
+      "seed",
+      "sync_mode",
+      "enable_safety_checker",
+      "enhance_prompt_mode",
+      "image_urls"
+    ],
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "examples": [
+          "Dress the model in the clothes and hat. Add a cat to the scene and change the background to a Victorian era building."
+        ],
+        "title": "Prompt",
+        "type": "string",
+        "description": "The text prompt used to edit the image"
+      },
+      "num_images": {
+        "minimum": 1,
+        "maximum": 6,
+        "type": "integer",
+        "description": "Number of separate model generations to be run with the prompt.",
+        "title": "Num Images",
+        "default": 1
+      },
+      "image_size": {
+        "anyOf": [
+          {
+            "$ref": "#/ImageSize"
+          },
+          {
+            "enum": [
+              "square_hd",
+              "square",
+              "portrait_4_3",
+              "portrait_16_9",
+              "landscape_4_3",
+              "landscape_16_9",
+              "auto",
+              "auto_2K",
+              "auto_4K"
+            ],
+            "type": "string"
+          }
+        ],
+        "title": "Image Size",
+        "description": "The size of the generated image. The minimum total image area is 921600 pixels. Failing this, the image size will be adjusted to by scaling it up, while maintaining the aspect ratio.",
+        "examples": [
+          {
+            "height": 2160,
+            "width": 3840
+          }
+        ],
+        "default": {
+          "height": 2048,
+          "width": 2048
+        }
+      },
+      "max_images": {
+        "minimum": 1,
+        "maximum": 6,
+        "type": "integer",
+        "description": "If set to a number greater than one, enables multi-image generation. The model will potentially return up to `max_images` images every generation, and in total, `num_images` generations will be carried out. In total, the number of images generated will be between `num_images` and `max_images*num_images`. The total number of images (image inputs + image outputs) must not exceed 15",
+        "title": "Max Images",
+        "default": 1
+      },
+      "enhance_prompt_mode": {
+        "enum": [
+          "standard",
+          "fast"
+        ],
+        "description": "The mode to use for enhancing prompt enhancement. Standard mode provides higher quality results but takes longer to generate. Fast mode provides average quality results but takes less time to generate.",
+        "type": "string",
+        "title": "Enhance Prompt Mode",
+        "default": "standard"
+      },
+      "sync_mode": {
+        "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
+        "type": "boolean",
+        "title": "Sync Mode",
+        "default": false
+      },
+      "enable_safety_checker": {
+        "examples": [
+          true
+        ],
+        "title": "Enable Safety Checker",
+        "type": "boolean",
+        "description": "If set to true, the safety checker will be enabled.",
+        "default": true
+      },
+      "seed": {
+        "description": "Random seed to control the stochasticity of image generation.",
+        "type": "integer",
+        "title": "Seed"
+      },
+      "image_urls": {
+        "examples": [
+          [
+            "https://storage.googleapis.com/falserverless/example_inputs/seedream4_edit_input_1.png",
+            "https://storage.googleapis.com/falserverless/example_inputs/seedream4_edit_input_2.png",
+            "https://storage.googleapis.com/falserverless/example_inputs/seedream4_edit_input_3.png",
+            "https://storage.googleapis.com/falserverless/example_inputs/seedream4_edit_input_4.png"
+          ]
+        ],
+        "title": "Image URLs",
+        "type": "array",
+        "description": "List of URLs of input images for editing. Presently, up to 10 image inputs are allowed. If over 10 images are sent, only the last 10 will be used.",
+        "items": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "title": "SeedDream4EditInput",
+    "required": [
+      "prompt",
+      "image_urls"
+    ],
+    "x-renku-constraints": {
+      "fields": {
+        "image_size": {
+          "enum": {
+            "values": [
+              "square_hd",
+              "square",
+              "portrait_4_3",
+              "portrait_16_9",
+              "landscape_4_3",
+              "landscape_16_9",
+              "auto",
+              "auto_2K",
+              "auto_4K"
+            ],
+            "source": "explicit",
+            "confidence": "high"
+          }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "x-fal-order-properties": [
+      "images",
+      "seed"
+    ],
+    "type": "object",
+    "properties": {
+      "images": {
+        "examples": [
+          [
+            {
+              "url": "https://storage.googleapis.com/falserverless/example_outputs/seedream4_edit_output.png"
+            }
+          ]
+        ],
+        "title": "Images",
+        "type": "array",
+        "description": "Generated images",
+        "items": {
+          "$ref": "#/Image"
+        }
+      },
+      "seed": {
+        "examples": [
+          746406749
+        ],
+        "title": "Seed",
+        "type": "integer",
+        "description": "Seed used for generation"
+      }
+    },
+    "title": "SeedDream4EditOutput",
+    "required": [
+      "images",
+      "seed"
+    ]
+  },
+  "ImageSize": {
+    "x-fal-order-properties": [
+      "width",
+      "height"
+    ],
+    "type": "object",
+    "properties": {
+      "height": {
+        "maximum": 14142,
+        "type": "integer",
+        "description": "The height of the generated image.",
+        "title": "Height",
+        "exclusiveMinimum": 0,
+        "default": 512
+      },
+      "width": {
+        "maximum": 14142,
+        "type": "integer",
+        "description": "The width of the generated image.",
+        "title": "Width",
+        "exclusiveMinimum": 0,
+        "default": 512
+      }
+    },
+    "title": "ImageSize"
+  },
+  "Image": {
+    "x-fal-order-properties": [
+      "url",
+      "content_type",
+      "file_name",
+      "file_size",
+      "file_data",
+      "width",
+      "height"
+    ],
+    "type": "object",
+    "description": "Represents an image file.",
+    "title": "Image",
+    "properties": {
+      "height": {
+        "examples": [
+          1024
+        ],
+        "title": "Height",
+        "type": "integer",
+        "description": "The height of the image in pixels."
+      },
+      "file_size": {
+        "examples": [
+          4404019
+        ],
+        "title": "File Size",
+        "type": "integer",
+        "description": "The size of the file in bytes."
+      },
+      "url": {
+        "description": "The URL where the file can be downloaded from.",
+        "type": "string",
+        "title": "Url",
+        "format": "uri"
+      },
+      "width": {
+        "examples": [
+          1024
+        ],
+        "title": "Width",
+        "type": "integer",
+        "description": "The width of the image in pixels."
+      },
+      "file_name": {
+        "examples": [
+          "z9RV14K95DvU.png"
+        ],
+        "title": "File Name",
+        "type": "string",
+        "description": "The name of the file. It will be auto-generated if not provided."
+      },
+      "content_type": {
+        "examples": [
+          "image/png"
+        ],
+        "title": "Content Type",
+        "type": "string",
+        "description": "The mime type of the file."
+      },
+      "file_data": {
+        "format": "binary",
+        "description": "File data",
+        "type": "string",
+        "title": "File Data"
+      }
+    },
+    "required": [
+      "url"
+    ]
+  },
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "/input_schema",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "prompt",
+        "num_images",
+        "image_size",
+        "max_images",
+        "enhance_prompt_mode",
+        "sync_mode",
+        "enable_safety_checker",
+        "seed",
+        "image_urls"
+      ],
+      "fields": {
+        "prompt": {
+          "pointer": "/input_schema/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
+        },
+        "num_images": {
+          "pointer": "/input_schema/properties/num_images",
+          "component": "integer",
+          "label": "Num Images"
+        },
+        "image_size": {
+          "pointer": "/input_schema/properties/image_size",
+          "component": "union",
+          "label": "Image Size",
+          "presentation": "enum-or-dimensions",
+          "variants": [
+            {
+              "id": "variant-1",
+              "pointer": "/input_schema/properties/image_size/anyOf/0",
+              "schemaPointer": "/ImageSize",
+              "component": "object",
+              "label": "Custom Size",
+              "order": [
+                "height",
+                "width"
+              ],
+              "fields": {
+                "height": {
+                  "pointer": "/ImageSize/properties/height",
+                  "component": "integer",
+                  "label": "Height"
+                },
+                "width": {
+                  "pointer": "/ImageSize/properties/width",
+                  "component": "integer",
+                  "label": "Width"
+                }
+              }
+            },
+            {
+              "id": "variant-2",
+              "pointer": "/input_schema/properties/image_size/anyOf/1",
+              "component": "string-enum",
+              "label": "Preset"
+            }
+          ],
+          "unionEditor": {
+            "type": "enum-dimensions",
+            "enumVariantId": "variant-2",
+            "customVariantId": "variant-1",
+            "customSelection": {
+              "source": "virtual-option",
+              "label": "Custom Size"
+            }
+          }
+        },
+        "max_images": {
+          "pointer": "/input_schema/properties/max_images",
+          "component": "integer",
+          "label": "Max Images"
+        },
+        "enhance_prompt_mode": {
+          "pointer": "/input_schema/properties/enhance_prompt_mode",
+          "component": "string-enum",
+          "label": "Enhance Prompt Mode"
+        },
+        "sync_mode": {
+          "pointer": "/input_schema/properties/sync_mode",
+          "component": "boolean",
+          "label": "Sync Mode"
+        },
+        "enable_safety_checker": {
+          "pointer": "/input_schema/properties/enable_safety_checker",
+          "component": "boolean",
+          "label": "Enable Safety Checker"
+        },
+        "seed": {
+          "pointer": "/input_schema/properties/seed",
+          "component": "integer",
+          "label": "Seed"
+        },
+        "image_urls": {
+          "pointer": "/input_schema/properties/image_urls",
+          "component": "array-file-uri",
+          "label": "Image Urls",
+          "item": {
+            "pointer": "/input_schema/properties/image_urls/items",
+            "component": "file-uri",
+            "label": "Item"
+          }
+        }
+      }
+    }
+  }
+}

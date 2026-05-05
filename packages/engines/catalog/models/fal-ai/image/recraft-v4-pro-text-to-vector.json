@@ -1,0 +1,370 @@
+{
+  "input_schema": {
+    "x-fal-order-properties": [
+      "prompt",
+      "image_size",
+      "colors",
+      "background_color",
+      "enable_safety_checker"
+    ],
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "examples": [
+          "a cute character panda with cool clothes, 3d flat color, design"
+        ],
+        "maxLength": 10000,
+        "type": "string",
+        "minLength": 1,
+        "title": "Prompt"
+      },
+      "image_size": {
+        "examples": [
+          "landscape_16_9"
+        ],
+        "title": "Image Size",
+        "anyOf": [
+          {
+            "$ref": "#/ImageSize"
+          },
+          {
+            "enum": [
+              "square_hd",
+              "square",
+              "portrait_4_3",
+              "portrait_16_9",
+              "landscape_4_3",
+              "landscape_16_9"
+            ],
+            "type": "string"
+          }
+        ],
+        "default": "square_hd"
+      },
+      "enable_safety_checker": {
+        "description": "If set to true, the safety checker will be enabled.",
+        "type": "boolean",
+        "title": "Enable Safety Checker",
+        "default": true
+      },
+      "colors": {
+        "description": "An array of preferable colors",
+        "type": "array",
+        "title": "Colors",
+        "items": {
+          "$ref": "#/RGBColor"
+        },
+        "default": []
+      },
+      "background_color": {
+        "description": "The preferable background color of the generated images.",
+        "title": "Background Color",
+        "allOf": [
+          {
+            "$ref": "#/RGBColor"
+          }
+        ]
+      }
+    },
+    "title": "RecraftV4VectorProTextToImageInput",
+    "required": [
+      "prompt"
+    ],
+    "x-renku-constraints": {
+      "fields": {
+        "image_size": {
+          "enum": {
+            "values": [
+              "square_hd",
+              "square",
+              "portrait_4_3",
+              "portrait_16_9",
+              "landscape_4_3",
+              "landscape_16_9"
+            ],
+            "source": "explicit",
+            "confidence": "high"
+          }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "x-fal-order-properties": [
+      "images"
+    ],
+    "type": "object",
+    "properties": {
+      "images": {
+        "examples": [
+          [
+            {
+              "file_size": 1818794,
+              "file_name": "image.svg",
+              "content_type": "image/svg+xml",
+              "url": "https://v3b.fal.media/files/b/0a8ee4de/lmXuapOPV309mE533swE0_image.svg"
+            }
+          ]
+        ],
+        "title": "Images",
+        "type": "array",
+        "items": {
+          "$ref": "#/File"
+        }
+      }
+    },
+    "title": "RecraftV4VectorProTextToImageOutput",
+    "required": [
+      "images"
+    ]
+  },
+  "ImageSize": {
+    "x-fal-order-properties": [
+      "width",
+      "height"
+    ],
+    "type": "object",
+    "properties": {
+      "height": {
+        "maximum": 14142,
+        "type": "integer",
+        "description": "The height of the generated image.",
+        "title": "Height",
+        "exclusiveMinimum": 0,
+        "default": 512
+      },
+      "width": {
+        "maximum": 14142,
+        "type": "integer",
+        "description": "The width of the generated image.",
+        "title": "Width",
+        "exclusiveMinimum": 0,
+        "default": 512
+      }
+    },
+    "title": "ImageSize"
+  },
+  "RGBColor": {
+    "x-fal-order-properties": [
+      "r",
+      "g",
+      "b"
+    ],
+    "type": "object",
+    "properties": {
+      "r": {
+        "minimum": 0,
+        "maximum": 255,
+        "type": "integer",
+        "description": "Red color value",
+        "title": "R",
+        "default": 0
+      },
+      "b": {
+        "minimum": 0,
+        "maximum": 255,
+        "type": "integer",
+        "description": "Blue color value",
+        "title": "B",
+        "default": 0
+      },
+      "g": {
+        "minimum": 0,
+        "maximum": 255,
+        "type": "integer",
+        "description": "Green color value",
+        "title": "G",
+        "default": 0
+      }
+    },
+    "title": "RGBColor"
+  },
+  "File": {
+    "x-fal-order-properties": [
+      "url",
+      "content_type",
+      "file_name",
+      "file_size",
+      "file_data"
+    ],
+    "type": "object",
+    "properties": {
+      "file_size": {
+        "examples": [
+          4404019
+        ],
+        "description": "The size of the file in bytes.",
+        "type": "integer",
+        "title": "File Size"
+      },
+      "file_name": {
+        "examples": [
+          "z9RV14K95DvU.png"
+        ],
+        "description": "The name of the file. It will be auto-generated if not provided.",
+        "type": "string",
+        "title": "File Name"
+      },
+      "content_type": {
+        "examples": [
+          "image/png"
+        ],
+        "description": "The mime type of the file.",
+        "type": "string",
+        "title": "Content Type"
+      },
+      "url": {
+        "description": "The URL where the file can be downloaded from.",
+        "type": "string",
+        "title": "Url",
+        "format": "uri"
+      },
+      "file_data": {
+        "format": "binary",
+        "description": "File data",
+        "type": "string",
+        "title": "File Data"
+      }
+    },
+    "title": "File",
+    "required": [
+      "url"
+    ]
+  },
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "/input_schema",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "prompt",
+        "image_size",
+        "enable_safety_checker",
+        "colors",
+        "background_color"
+      ],
+      "fields": {
+        "prompt": {
+          "pointer": "/input_schema/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
+        },
+        "image_size": {
+          "pointer": "/input_schema/properties/image_size",
+          "component": "union",
+          "label": "Image Size",
+          "presentation": "enum-or-dimensions",
+          "variants": [
+            {
+              "id": "variant-1",
+              "pointer": "/input_schema/properties/image_size/anyOf/0",
+              "schemaPointer": "/ImageSize",
+              "component": "object",
+              "label": "Custom Size",
+              "order": [
+                "height",
+                "width"
+              ],
+              "fields": {
+                "height": {
+                  "pointer": "/ImageSize/properties/height",
+                  "component": "integer",
+                  "label": "Height"
+                },
+                "width": {
+                  "pointer": "/ImageSize/properties/width",
+                  "component": "integer",
+                  "label": "Width"
+                }
+              }
+            },
+            {
+              "id": "variant-2",
+              "pointer": "/input_schema/properties/image_size/anyOf/1",
+              "component": "string-enum",
+              "label": "Preset"
+            }
+          ],
+          "unionEditor": {
+            "type": "enum-dimensions",
+            "enumVariantId": "variant-2",
+            "customVariantId": "variant-1",
+            "customSelection": {
+              "source": "virtual-option",
+              "label": "Custom Size"
+            }
+          }
+        },
+        "enable_safety_checker": {
+          "pointer": "/input_schema/properties/enable_safety_checker",
+          "component": "boolean",
+          "label": "Enable Safety Checker"
+        },
+        "colors": {
+          "pointer": "/input_schema/properties/colors",
+          "component": "array-object-cards",
+          "label": "Colors",
+          "item": {
+            "pointer": "/input_schema/properties/colors/items",
+            "component": "object",
+            "label": "Item",
+            "order": [
+              "r",
+              "b",
+              "g"
+            ],
+            "fields": {
+              "r": {
+                "pointer": "/input_schema/properties/colors/items/properties/r",
+                "component": "integer",
+                "label": "R"
+              },
+              "b": {
+                "pointer": "/input_schema/properties/colors/items/properties/b",
+                "component": "integer",
+                "label": "B"
+              },
+              "g": {
+                "pointer": "/input_schema/properties/colors/items/properties/g",
+                "component": "integer",
+                "label": "G"
+              }
+            },
+            "custom": "color-picker"
+          },
+          "custom": "array-object-table"
+        },
+        "background_color": {
+          "pointer": "/input_schema/properties/background_color",
+          "schemaPointer": "/RGBColor",
+          "component": "object",
+          "label": "Background Color",
+          "order": [
+            "r",
+            "b",
+            "g"
+          ],
+          "fields": {
+            "r": {
+              "pointer": "/RGBColor/properties/r",
+              "component": "integer",
+              "label": "R"
+            },
+            "b": {
+              "pointer": "/RGBColor/properties/b",
+              "component": "integer",
+              "label": "B"
+            },
+            "g": {
+              "pointer": "/RGBColor/properties/g",
+              "component": "integer",
+              "label": "G"
+            }
+          },
+          "custom": "color-picker"
+        }
+      }
+    }
+  }
+}

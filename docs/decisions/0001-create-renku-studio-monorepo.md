@@ -24,17 +24,14 @@ Use the product name **Renku Studio** and the package family:
 ```text
 @gorenku/studio-core
 @gorenku/studio-cli
+@gorenku/studio-engines
 @gorenku/studio
 ```
 
-The future AI integration package will be named:
-
-```text
-@gorenku/studio-engines
-```
-
-but it is not part of the first workspace pass because the existing provider
-package still depends on the old Renku core and compositions packages.
+`@gorenku/studio-engines` is extracted as a focused AI engine package. It keeps
+provider-organized model catalogs, schema-first validation, simulation, and
+provider adapters, while leaving legacy Renku timeline/export/final-render
+producers behind.
 
 ## Consequences
 
@@ -42,3 +39,5 @@ package still depends on the old Renku core and compositions packages.
 - Existing Renku npm packages can continue independently.
 - Studio docs and plans can be cleaned up without carrying all legacy Renku
   repository rules forward.
+- Engines can evolve around Studio's asset-generation needs without inheriting
+  old execution-plan or final-rendering design choices.

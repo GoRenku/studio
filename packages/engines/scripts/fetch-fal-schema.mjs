@@ -1,0 +1,398 @@
+#!/usr/bin/env node
+import { readFile, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  applyViewerAnnotationsOrThrow,
+  mergeExistingViewerAnnotations,
+} from './schema-viewer-annotations.mjs';
+import { normalizeSchemaUriFormats } from './schema-uri-format.mjs';
+import { normalizeSchemaFileForCatalog } from './schema-file-validation.mjs';
+import {
+  applySchemaOverrides,
+  loadSchemaOverrideManifest,
+} from './schema-overrides.mjs';
+
+/**
+ * Fetch and transform OpenAPI schema from fal.ai for a single model.
+ *
+ * Usage:
+ *   node scripts/fetch-fal-schema.mjs <model-name> <output-path>
+ *   node scripts/fetch-fal-schema.mjs <model-name> --type=audio|video|image|json|stt [--subprovider=<name>]
+ *
+ * Examples:
+ *   node scripts/fetch-fal-schema.mjs minimax/speech-02-hd --type=audio
+ *   node scripts/fetch-fal-schema.mjs fal-ai/veo3.1 --type=video
+ *   node scripts/fetch-fal-schema.mjs wan/v2.6/image-to-image --type=image --subprovider=wan
+ */
+
+const FAL_OPENAPI_BASE = 'https://fal.ai/api/openapi/queue/openapi.json';
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(scriptDir, '..');
+const FAL_SCHEMA_OVERRIDES_PATH = resolve(
+  repoRoot,
+  'catalog',
+  'models',
+  'fal-ai',
+  'schema-overrides.yaml'
+);
+
+/**
+ * Convert model name to filename (kebab-case with .json extension)
+ * Examples:
+ * - minimax/speech-02-hd → minimax-speech-02-hd.json
+ * - bytedance/seedream/v4/text-to-image → bytedance-seedream-v4-text-to-image.json
+ * - gpt-image-1.5 → gpt-image-1-5.json
+ * - veo3.1 → veo3-1.json
+ */
+export function modelNameToFilename(modelName) {
+  return modelName.replace(/\//g, '-').replace(/\./g, '-') + '.json';
+}
+
+/**
+ * Normalize model name by stripping fal-ai/ prefix if present
+ */
+function normalizeModelName(modelName) {
+  return modelName.startsWith('fal-ai/') ? modelName.slice(7) : modelName;
+}
+
+/**
+ * Recursively fix $ref paths from #/components/schemas/X to #/X
+ */
+function fixRefs(obj) {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(fixRefs);
+  }
+
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === '$ref' && typeof value === 'string') {
+      result[key] = value.replace('#/components/schemas/', '#/');
+    } else {
+      result[key] = fixRefs(value);
+    }
+  }
+  return result;
+}
+
+/**
+ * Extract the primary input/output schema names from OpenAPI paths.
+ * The primary input is the requestBody schema of the POST operation.
+ * The primary output is the response schema (from POST or GET /requests/{request_id}).
+ */
+function findPrimarySchemaNames(openapi) {
+  let primaryInput = null;
+  let primaryOutput = null;
+
+  const paths = openapi?.paths;
+  if (!paths) return { primaryInput, primaryOutput };
+
+  for (const [, pathItem] of Object.entries(paths)) {
+    const post = pathItem?.post;
+    if (!post) continue;
+
+    // Input from requestBody
+    const inputRef =
+      post?.requestBody?.content?.['application/json']?.schema?.['$ref'];
+    if (inputRef) {
+      primaryInput = inputRef.replace('#/components/schemas/', '');
+    }
+
+    // Output from response (may be QueueStatus for queued endpoints)
+    const outputRef =
+      post?.responses?.['200']?.content?.['application/json']?.schema?.['$ref'];
+    if (outputRef) {
+      const name = outputRef.replace('#/components/schemas/', '');
+      if (name !== 'QueueStatus') {
+        primaryOutput = name;
+      }
+    }
+  }
+
+  // For queued endpoints, the actual output schema is on GET /requests/{request_id}
+  if (!primaryOutput) {
+    for (const [pathStr, pathItem] of Object.entries(paths)) {
+      if (pathStr.includes('/requests/{request_id}')) {
+        const get = pathItem?.get;
+        const ref =
+          get?.responses?.['200']?.content?.['application/json']?.schema?.[
+            '$ref'
+          ];
+        if (ref) {
+          primaryOutput = ref.replace('#/components/schemas/', '');
+        }
+      }
+    }
+  }
+
+  return { primaryInput, primaryOutput };
+}
+
+/**
+ * Fetch and transform schema for a model
+ * @param {string} modelName - The model name
+ * @param {string} [subProvider] - Optional sub-provider. If specified, use model name as-is for endpoint.
+ */
+export async function fetchAndTransformSchema(modelName, subProvider) {
+  // Normalize model name (strip fal-ai/ if present)
+  const normalizedName = normalizeModelName(modelName);
+
+  // Construct endpoint ID based on subProvider
+  // If subProvider is specified, use model name as-is (already fully qualified)
+  // Otherwise, prepend fal-ai/
+  const endpointId = subProvider ? normalizedName : `fal-ai/${normalizedName}`;
+
+  const url = `${FAL_OPENAPI_BASE}?endpoint_id=${encodeURIComponent(endpointId)}`;
+
+  console.log(`[fetch-fal] Fetching schema for ${endpointId}...`);
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch schema: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const openapi = await response.json();
+
+  // Extract components.schemas
+  const schemas = openapi?.components?.schemas;
+  if (!schemas) {
+    throw new Error('No schemas found in OpenAPI response');
+  }
+
+  // Find the primary input/output schema names from paths
+  const { primaryInput, primaryOutput } = findPrimarySchemaNames(openapi);
+
+  // Build the result object
+  const result = {};
+
+  for (const [schemaName, schemaValue] of Object.entries(schemas)) {
+    // Skip QueueStatus
+    if (schemaName === 'QueueStatus') {
+      continue;
+    }
+
+    // Only rename schemas that are the primary input/output for this endpoint
+    let outputKey;
+    if (primaryInput && schemaName === primaryInput) {
+      outputKey = 'input_schema';
+    } else if (primaryOutput && schemaName === primaryOutput) {
+      outputKey = 'output_schema';
+    } else {
+      outputKey = schemaName;
+    }
+
+    result[outputKey] = schemaValue;
+  }
+
+  // Fix $ref paths
+  const withFixedRefs = fixRefs(result);
+
+  // Add format: uri to URL-like fields (including nullable/union branches)
+  const withUriFormat = normalizeSchemaUriFormats(withFixedRefs);
+
+  applyViewerAnnotationsOrThrow(withUriFormat);
+
+  return withUriFormat;
+}
+
+async function readExistingSchemaIfAny(schemaPath) {
+  let content;
+  try {
+    content = await readFile(schemaPath, 'utf8');
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+      return undefined;
+    }
+
+    throw new Error(
+      `[fetch-fal] Failed to read existing schema at ${schemaPath}: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (error) {
+    throw new Error(
+      `[fetch-fal] Existing schema at ${schemaPath} is not valid JSON: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(
+      `[fetch-fal] Existing schema at ${schemaPath} must be a top-level JSON object.`
+    );
+  }
+
+  return parsed;
+}
+
+function inferSchemaTypeFromOutputPath(outputPath) {
+  if (!outputPath) {
+    return undefined;
+  }
+
+  const normalized = outputPath.replace(/\\/g, '/');
+  const marker = '/catalog/models/fal-ai/';
+  const markerIndex = normalized.lastIndexOf(marker);
+  if (markerIndex === -1) {
+    return undefined;
+  }
+
+  const remainder = normalized.slice(markerIndex + marker.length);
+  const [type] = remainder.split('/');
+  return type || undefined;
+}
+
+export function annotateFetchedSchemaWithExistingViewer(args) {
+  const { fetchedSchema, existingSchema } = args;
+  if (existingSchema) {
+    mergeExistingViewerAnnotations(existingSchema, fetchedSchema);
+    applyViewerAnnotationsOrThrow(fetchedSchema);
+  }
+
+  return fetchedSchema;
+}
+
+export async function fetchTransformAndAnnotateSchema(args) {
+  const fetchedSchema = await fetchAndTransformSchema(
+    args.modelName,
+    args.subProvider
+  );
+  const schemaType = args.schemaType ?? inferSchemaTypeFromOutputPath(args.outputPath);
+  if (schemaType) {
+    const overrides = await loadSchemaOverrideManifest(FAL_SCHEMA_OVERRIDES_PATH);
+    const { applied } = applySchemaOverrides({
+      targetSchema: fetchedSchema,
+      manifest: overrides,
+      modelName: args.modelName,
+      schemaType,
+      manifestPath: FAL_SCHEMA_OVERRIDES_PATH,
+    });
+    if (applied > 0) {
+      console.log(
+        `[fetch-fal] Applied ${applied} schema override patch(es) for ${args.modelName} (${schemaType}).`
+      );
+    }
+    applyViewerAnnotationsOrThrow(fetchedSchema);
+  }
+
+  const existingSchema = args.outputPath
+    ? await readExistingSchemaIfAny(args.outputPath)
+    : undefined;
+
+  const mergedSchema = annotateFetchedSchemaWithExistingViewer({
+    fetchedSchema,
+    existingSchema,
+  });
+  const { schemaFile: normalizedSchema, repairsApplied } =
+    normalizeSchemaFileForCatalog(
+      mergedSchema,
+      `Fal schema for ${args.modelName}`
+    );
+  if (repairsApplied > 0) {
+    console.log(
+      `[fetch-fal] Applied ${repairsApplied} known schema repair(s) for ${args.modelName}.`
+    );
+  }
+
+  return normalizedSchema;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+
+  // Parse flags
+  const typeArg = args.find((arg) => arg.startsWith('--type='));
+  const type = typeArg ? typeArg.split('=')[1] : null;
+
+  const subProviderArg = args.find((arg) => arg.startsWith('--subprovider='));
+  const subProvider = subProviderArg ? subProviderArg.split('=')[1] : null;
+
+  const positionalArgs = args.filter((arg) => !arg.startsWith('--'));
+
+  if (positionalArgs.length < 1) {
+    console.error('Usage:');
+    console.error(
+      '  node scripts/fetch-fal-schema.mjs <model-name> <output-path>'
+    );
+    console.error(
+      '  node scripts/fetch-fal-schema.mjs <model-name> --type=audio|video|image|json|stt [--subprovider=<name>]'
+    );
+    console.error('');
+    console.error('Examples:');
+    console.error(
+      '  node scripts/fetch-fal-schema.mjs minimax/speech-02-hd --type=audio'
+    );
+    console.error(
+      '  node scripts/fetch-fal-schema.mjs fal-ai/veo3.1 --type=video'
+    );
+    console.error(
+      '  node scripts/fetch-fal-schema.mjs wan/v2.6/image-to-image --type=image --subprovider=wan'
+    );
+    process.exit(1);
+  }
+
+  const modelName = positionalArgs[0];
+  const normalizedName = normalizeModelName(modelName);
+
+  // Determine output path
+  let outputPath;
+  if (type) {
+    if (!['audio', 'video', 'image', 'json', 'stt'].includes(type)) {
+      console.error(
+        `[fetch-fal] Invalid type: ${type}. Must be one of: audio, video, image, json, stt`
+      );
+      process.exit(1);
+    }
+    const filename = modelNameToFilename(normalizedName);
+    outputPath = resolve(
+      repoRoot,
+      'catalog',
+      'models',
+      'fal-ai',
+      type,
+      filename
+    );
+  } else if (positionalArgs.length >= 2) {
+    outputPath = positionalArgs[1];
+  } else {
+    console.error(
+      '[fetch-fal] Error: Either provide an output path or use --type=audio|video|image|json|stt'
+    );
+    process.exit(1);
+  }
+
+  const schema = await fetchTransformAndAnnotateSchema({
+    modelName: normalizedName,
+    subProvider,
+    outputPath,
+    schemaType: type,
+  });
+
+  await writeFile(outputPath, JSON.stringify(schema, null, 2) + '\n');
+  console.log(`[fetch-fal] Wrote schema to ${outputPath}`);
+}
+
+// Only run main if this script is invoked directly
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  main().catch((error) => {
+    console.error(
+      '[fetch-fal] Error:',
+      error instanceof Error ? error.message : error
+    );
+    process.exit(1);
+  });
+}

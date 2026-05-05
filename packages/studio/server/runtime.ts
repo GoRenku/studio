@@ -6,7 +6,7 @@ import {
   type ServerResponse,
 } from 'node:http';
 import path from 'node:path';
-import { createMovieStudioApiHandler } from './studio-api.js';
+import { createMovieStudioApiHandler } from './movie-studio-api.js';
 
 export interface MovieStudioServerOptions {
   distPath: string;

@@ -1,0 +1,1166 @@
+import { describe, expect, it, beforeEach, vi } from 'vitest';
+import type { HandlerFactory, ProviderJobContext } from '../../types.js';
+import { createVercelAiGatewayHandler } from './vercel-ai-gateway.js';
+
+const mocks = vi.hoisted(() => ({
+  generateText: vi.fn(),
+  modelFn: vi.fn(),
+  createGateway: vi.fn(),
+}));
+
+vi.mock('ai', async () => {
+  const actual = await vi.importActual<typeof import('ai')>('ai');
+  return {
+    ...actual,
+    createGateway: mocks.createGateway,
+    generateText: (...args: unknown[]) => mocks.generateText(...args),
+  };
+});
+
+const secretResolver = vi.fn<(key: string) => Promise<string | null>>(
+  async (key: string) => {
+    if (key === 'AI_GATEWAY_API_KEY') {
+      return 'test-key';
+    }
+    return null;
+  }
+);
+
+function buildHandler(): ReturnType<HandlerFactory> {
+  const factory = createVercelAiGatewayHandler();
+  return factory({
+    descriptor: {
+      provider: 'vercel',
+      model: 'anthropic/claude-sonnet-4-20250514',
+      environment: 'local',
+    },
+    mode: 'live',
+    secretResolver: {
+      async getSecret(key: string) {
+        return secretResolver(key);
+      },
+    },
+    logger: undefined,
+  });
+}
+
+function createJobContext(
+  overrides: Partial<ProviderJobContext> = {}
+): ProviderJobContext {
+  const baseContext: ProviderJobContext = {
+    jobId: 'job-base',
+    provider: 'vercel',
+    model: 'anthropic/claude-sonnet-4-20250514',
+    revision: 'rev-base',
+    layerIndex: 0,
+    attempt: 1,
+    inputs: [],
+    produces: ['Artifact:Default'],
+    context: {
+      providerConfig: {
+        systemPrompt: 'System prompt',
+        responseFormat: { type: 'text' as const },
+      },
+      rawAttachments: [],
+      observability: undefined,
+      environment: 'local',
+      extras: {
+        resolvedInputs: {},
+      },
+    },
+  };
+
+  const overrideContext: Partial<ProviderJobContext['context']> =
+    overrides.context ?? {};
+  const baseExtras = (baseContext.context.extras ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const overrideExtras = (overrideContext.extras ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const baseResolvedInputs =
+    (baseExtras.resolvedInputs as Record<string, unknown> | undefined) ?? {};
+  const overrideResolvedInputs =
+    (overrideExtras.resolvedInputs as Record<string, unknown> | undefined) ??
+    {};
+  const mergedResolvedInputs = {
+    ...baseResolvedInputs,
+    ...overrideResolvedInputs,
+  };
+
+  const baseJobContext =
+    (baseExtras.jobContext as Record<string, unknown> | undefined) ?? {};
+  const overrideJobContext =
+    (overrideExtras.jobContext as Record<string, unknown> | undefined) ?? {};
+  const mergedJobContext = {
+    ...baseJobContext,
+    ...overrideJobContext,
+  };
+  const existingInputBindings = (mergedJobContext.inputBindings ??
+    {}) as Record<string, string>;
+  const inferredInputBindings: Record<string, string> = {};
+  const normalizedResolvedInputs: Record<string, unknown> = {
+    ...mergedResolvedInputs,
+  };
+
+  for (const [key, value] of Object.entries(mergedResolvedInputs)) {
+    if (key.startsWith('Input:')) {
+      const alias = key.slice('Input:'.length).split('.').at(-1);
+      if (alias && alias.length > 0) {
+        inferredInputBindings[alias] = key;
+      }
+      continue;
+    }
+    const canonicalKey = `Input:${key}`;
+    if (!(canonicalKey in normalizedResolvedInputs)) {
+      normalizedResolvedInputs[canonicalKey] = value;
+    }
+    inferredInputBindings[key] = canonicalKey;
+  }
+
+  return {
+    ...baseContext,
+    ...overrides,
+    context: {
+      ...baseContext.context,
+      ...overrideContext,
+      providerConfig:
+        overrideContext.providerConfig !== undefined
+          ? overrideContext.providerConfig
+          : baseContext.context.providerConfig,
+      rawAttachments:
+        overrideContext.rawAttachments ?? baseContext.context.rawAttachments,
+      observability:
+        overrideContext.observability ?? baseContext.context.observability,
+      environment:
+        overrideContext.environment ?? baseContext.context.environment,
+      extras: {
+        ...baseExtras,
+        ...overrideExtras,
+        resolvedInputs: normalizedResolvedInputs,
+        jobContext: {
+          ...mergedJobContext,
+          inputBindings: {
+            ...inferredInputBindings,
+            ...existingInputBindings,
+          },
+        },
+      },
+    },
+  };
+}
+
+describe('createVercelAiGatewayHandler', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    secretResolver.mockClear();
+    secretResolver.mockImplementation(async (key: string) => {
+      if (key === 'AI_GATEWAY_API_KEY') {
+        return 'test-key';
+      }
+      return null;
+    });
+    mocks.modelFn.mockReturnValue('mock-model');
+    mocks.createGateway.mockReturnValue({
+      languageModel: mocks.modelFn,
+    });
+    mocks.generateText.mockReset();
+  });
+
+  it('only initializes the client once during warmStart + invoke', async () => {
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:MovieSummary'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Summarize',
+          responseFormat: { type: 'text' },
+        },
+      },
+    });
+
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Placeholder text',
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+      warnings: [],
+      response: { id: 'resp', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    await handler.invoke(request);
+
+    expect(mocks.createGateway).toHaveBeenCalledTimes(1);
+  });
+
+  it('configures client with API key', async () => {
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    expect(mocks.createGateway).toHaveBeenCalledWith({
+      apiKey: 'test-key',
+    });
+  });
+
+  it('throws when AI_GATEWAY_API_KEY is missing', async () => {
+    secretResolver.mockImplementation(async () => null);
+
+    const handler = buildHandler();
+
+    await expect(handler.warmStart?.({ logger: undefined })).rejects.toThrow(
+      /AI_GATEWAY_API_KEY.*not found/
+    );
+  });
+
+  it('throws when provider configuration is not an object', async () => {
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      context: {
+        providerConfig: null,
+      },
+    });
+
+    await expect(handler.invoke(request)).rejects.toThrow(
+      'OpenAI provider configuration must be an object.'
+    );
+  });
+
+  it('invokes provider with JSON schema response format', async () => {
+    mocks.generateText.mockResolvedValue({
+      output: {
+        MovieTitle: 'Journey to Mars',
+        MovieSummary: 'A thrilling space adventure',
+      },
+      usage: {
+        inputTokens: 120,
+        outputTokens: 350,
+        totalTokens: 470,
+      },
+      warnings: [],
+      response: {
+        id: 'resp-123',
+        model: 'claude-sonnet-4',
+        createdAt: '2025-01-01T00:00:00.000Z',
+      },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      jobId: 'job-1',
+      revision: 'rev-001',
+      produces: ['Artifact:MovieTitle', 'Artifact:MovieSummary'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Write for {{Audience}}',
+          userPrompt: 'Topic: {{InquiryPrompt}}',
+          variables: ['Audience', 'InquiryPrompt'],
+          responseFormat: {
+            type: 'json_schema',
+            schema: {
+              type: 'object',
+              properties: {
+                MovieTitle: { type: 'string' },
+                MovieSummary: { type: 'string' },
+              },
+            },
+          },
+        },
+        extras: {
+          resolvedInputs: {
+            Audience: 'children',
+            InquiryPrompt: 'space travel',
+          },
+          schema: {
+            output: JSON.stringify({
+              type: 'object',
+              properties: {
+                MovieTitle: { type: 'string' },
+                MovieSummary: { type: 'string' },
+              },
+            }),
+          },
+        },
+      },
+    });
+
+    const result = await handler.invoke(request);
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(1);
+    const callArgs = mocks.generateText.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(callArgs.prompt).toContain('Topic: space travel');
+    expect(callArgs.model).toBe('mock-model');
+    expect(callArgs.system).toBe('Write for children');
+
+    expect(result.status).toBe('succeeded');
+    expect(result.artifacts).toHaveLength(2);
+    expect(result.artifacts[0]).toMatchObject({
+      artifactId: 'Artifact:MovieTitle',
+      blob: { data: 'Journey to Mars', mimeType: 'text/plain' },
+      status: 'succeeded',
+    });
+    expect(result.artifacts[1]).toMatchObject({
+      artifactId: 'Artifact:MovieSummary',
+      blob: { data: 'A thrilling space adventure', mimeType: 'text/plain' },
+      status: 'succeeded',
+    });
+  });
+
+  it('produces text blobs for text responses', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Plain response text',
+      usage: {
+        inputTokens: 10,
+        outputTokens: 20,
+        totalTokens: 30,
+      },
+      warnings: [],
+      response: {
+        id: 'resp-text',
+        model: 'claude-sonnet-4',
+        createdAt: '2025-01-01T00:00:00.000Z',
+      },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      jobId: 'job-text',
+      revision: 'rev-003',
+      produces: ['Artifact:MovieSummary'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Summarise {{InquiryPrompt}}',
+          variables: ['InquiryPrompt'],
+          responseFormat: { type: 'text' },
+        },
+        extras: {
+          resolvedInputs: {
+            InquiryPrompt: 'the ocean',
+          },
+        },
+      },
+    });
+
+    const result = await handler.invoke(request);
+    expect(result.status).toBe('succeeded');
+    expect(result.artifacts[0]?.blob?.data).toBe('Plain response text');
+
+    const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(args.prompt).toBe('Summarise the ocean');
+    expect(args.model).toBe('mock-model');
+    expect(args.system).toBe('Summarise the ocean');
+  });
+
+  it('formats array prompt variables as numbered lists', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Prompt response',
+      usage: { inputTokens: 11, outputTokens: 21, totalTokens: 32 },
+      warnings: [],
+      response: { id: 'resp-array', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Storyboard'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Build storyboard',
+          userPrompt: 'Character descriptions:\n{{CharacterDescriptions}}',
+          variables: ['CharacterDescriptions'],
+          responseFormat: { type: 'text' },
+        },
+        extras: {
+          resolvedInputs: {
+            CharacterDescriptions: [
+              'Hero: brave fox, determined leader.',
+              'Villain: shadow king, manipulative strategist.',
+            ],
+          },
+        },
+      },
+    });
+
+    await handler.invoke(request);
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(1);
+    const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(typeof args.prompt).toBe('string');
+    expect(args.prompt).toContain('1. Hero: brave fox, determined leader.');
+    expect(args.prompt).toContain(
+      '2. Villain: shadow king, manipulative strategist.'
+    );
+  });
+
+  it('simulates responses in dry-run mode without calling the AI provider', async () => {
+    const factory = createVercelAiGatewayHandler();
+    const handler = factory({
+      descriptor: {
+        provider: 'vercel',
+        model: 'anthropic/claude-sonnet-4-20250514',
+        environment: 'local',
+      },
+      mode: 'simulated',
+      secretResolver: {
+        async getSecret(key: string) {
+          if (key === 'AI_GATEWAY_API_KEY') {
+            return 'test-api-key';
+          }
+          return null;
+        },
+      },
+      logger: undefined,
+    });
+
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      jobId: 'job-sim',
+      produces: [
+        'Artifact:ScriptGenerator.MovieTitle',
+        'Artifact:ScriptGenerator.NarrationScript[0]',
+        'Artifact:ScriptGenerator.NarrationScript[1]',
+      ],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Summarise {{InquiryPrompt}}',
+          responseFormat: {
+            type: 'json_schema',
+            schema: {
+              type: 'object',
+              properties: {
+                MovieTitle: { type: 'string' },
+                NarrationScript: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          },
+          variables: ['InquiryPrompt'],
+        },
+        extras: {
+          resolvedInputs: {
+            InquiryPrompt: 'The Silk Road',
+          },
+          schema: {
+            output: JSON.stringify({
+              type: 'object',
+              properties: {
+                MovieTitle: { type: 'string' },
+                NarrationScript: { type: 'array', items: { type: 'string' } },
+              },
+            }),
+          },
+        },
+      },
+    });
+
+    const result = await handler.invoke(request);
+
+    // In simulated mode, generateText should not be called
+    expect(mocks.generateText).not.toHaveBeenCalled();
+    expect(result.status).toBe('succeeded');
+
+    const title = result.artifacts.find(
+      (artifact) =>
+        artifact.artifactId === 'Artifact:ScriptGenerator.MovieTitle'
+    );
+    expect(title?.blob?.data).toContain('Simulated MovieTitle');
+  });
+
+  it('requires the gateway API key during warmStart in simulated mode', async () => {
+    const factory = createVercelAiGatewayHandler();
+    const handler = factory({
+      descriptor: {
+        provider: 'vercel',
+        model: 'anthropic/claude-sonnet-4-20250514',
+        environment: 'local',
+      },
+      mode: 'simulated',
+      secretResolver: {
+        async getSecret() {
+          return null;
+        },
+      },
+      logger: undefined,
+    });
+
+    await expect(handler.warmStart?.({ logger: undefined })).rejects.toThrow(
+      /AI_GATEWAY_API_KEY.*not found/
+    );
+  });
+
+  it('passes call settings (temperature, maxOutputTokens, penalties, retries) to AI SDK', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Response',
+      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+      warnings: [],
+      response: { id: 'resp', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test prompt',
+          responseFormat: { type: 'text' },
+          temperature: 0.7,
+          maxOutputTokens: 1000,
+          presencePenalty: 0.5,
+          frequencyPenalty: 0.3,
+        },
+        extras: {
+          resolvedInputs: {},
+          runtimeLlmInvocationSettings: {
+            maxRetries: 0,
+          },
+        },
+      },
+    });
+
+    await handler.invoke(request);
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(1);
+    const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(args.temperature).toBe(0.7);
+    expect(args.maxOutputTokens).toBe(1000);
+    expect(args.presencePenalty).toBe(0.5);
+    expect(args.frequencyPenalty).toBe(0.3);
+    expect(args.maxRetries).toBe(0);
+  });
+
+  it('does not inject provider options when provider-specific settings are not configured', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Response',
+      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+      warnings: [],
+      response: { id: 'resp-no-route', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test prompt',
+          responseFormat: { type: 'text' },
+        },
+      },
+    });
+
+    await handler.invoke(request);
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(1);
+    const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(args.providerOptions).toBeUndefined();
+  });
+
+  it('passes provider-specific settings to model provider options', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Response',
+      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+      warnings: [],
+      response: { id: 'resp-provider-options', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test prompt',
+          responseFormat: { type: 'text' },
+          includeReasoning: true,
+        },
+      },
+    });
+
+    await handler.invoke(request);
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(1);
+    const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(args.providerOptions).toEqual({
+      anthropic: {
+        includeReasoning: true,
+      },
+    });
+  });
+
+  it('passes request abort signal to AI SDK calls', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Response',
+      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+      warnings: [],
+      response: { id: 'resp', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const abortController = new AbortController();
+    const request = createJobContext({
+      signal: abortController.signal,
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test prompt',
+          responseFormat: { type: 'text' },
+        },
+      },
+    });
+
+    await handler.invoke(request);
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(1);
+    const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(args.abortSignal).toBe(abortController.signal);
+  });
+
+  it('aborts hanging SDK calls when requestTimeoutMs is configured', async () => {
+    mocks.generateText.mockImplementationOnce(
+      (args: { abortSignal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          if (!args.abortSignal) {
+            reject(new Error('Expected abortSignal to be passed to AI SDK.'));
+            return;
+          }
+
+          const timeout = setTimeout(() => {
+            reject(
+              new Error('Abort signal was not triggered by requestTimeoutMs.')
+            );
+          }, 200);
+
+          args.abortSignal.addEventListener(
+            'abort',
+            () => {
+              clearTimeout(timeout);
+              reject(
+                args.abortSignal?.reason ??
+                  new Error('Request aborted without a reason.')
+              );
+            },
+            { once: true }
+          );
+        })
+    );
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test prompt',
+          responseFormat: { type: 'text' },
+        },
+        extras: {
+          resolvedInputs: {},
+          runtimeLlmInvocationSettings: {
+            requestTimeoutMs: 25,
+          },
+        },
+      },
+    });
+
+    await expect(handler.invoke(request)).rejects.toThrow(
+      /timed out after 25ms/i
+    );
+  });
+
+  it('marks artifacts as failed when field is missing from JSON response', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      output: { MovieTitle: 'Title only' },
+      usage: { inputTokens: 5, outputTokens: 10, totalTokens: 15 },
+      warnings: [],
+      response: { id: 'resp-missing', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      jobId: 'job-2',
+      revision: 'rev-002',
+      produces: ['Artifact:MovieTitle', 'Artifact:MissingField'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Hello',
+          responseFormat: { type: 'json_schema', schema: {} },
+        },
+        extras: {
+          resolvedInputs: {},
+          schema: {
+            output: JSON.stringify({}),
+          },
+        },
+      },
+    });
+
+    const result = await handler.invoke(request);
+    expect(result.status).toBe('failed');
+    expect(result.artifacts[0]?.status).toBe('succeeded');
+    expect(result.artifacts[1]?.status).toBe('failed');
+    expect(result.artifacts[1]?.diagnostics?.reason).toBe('missing_field');
+  });
+
+  it('propagates errors when generateText (structured output) fails', async () => {
+    mocks.generateText.mockRejectedValueOnce(
+      new Error('API rate limit exceeded')
+    );
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test',
+          responseFormat: {
+            type: 'json_schema',
+            schema: {
+              type: 'object',
+              properties: { Output: { type: 'string' } },
+            },
+          },
+        },
+        extras: {
+          resolvedInputs: {},
+          schema: {
+            output: JSON.stringify({
+              type: 'object',
+              properties: { Output: { type: 'string' } },
+            }),
+          },
+        },
+      },
+    });
+
+    await expect(handler.invoke(request)).rejects.toThrow(
+      'API rate limit exceeded'
+    );
+  });
+
+  it('propagates errors when generateText fails', async () => {
+    mocks.generateText.mockRejectedValueOnce(new Error('Network error'));
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test',
+          responseFormat: { type: 'text' },
+        },
+      },
+    });
+
+    await expect(handler.invoke(request)).rejects.toThrow('Network error');
+  });
+
+  it('normalizes malformed gateway error payload failures with actionable context', async () => {
+    const gatewayError = Object.assign(
+      new Error('Invalid error response format: Gateway request failed'),
+      {
+        name: 'GatewayResponseError',
+        statusCode: 504,
+        response: 'Gateway request failed',
+      }
+    );
+    mocks.generateText.mockRejectedValueOnce(gatewayError);
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test',
+          responseFormat: { type: 'text' },
+        },
+      },
+    });
+
+    const invocation = handler.invoke(request);
+    await expect(invocation).rejects.toThrow(/non-JSON error payload/i);
+    await expect(invocation).rejects.toThrow(
+      /upstream provider timed out|request format/i
+    );
+  });
+
+  it('falls back to JSON text + local schema validation when native structured output fails', async () => {
+    const gatewayError = Object.assign(
+      new Error('Invalid error response format: Gateway request failed'),
+      {
+        name: 'GatewayResponseError',
+        statusCode: 500,
+        response: {},
+      }
+    );
+    mocks.generateText.mockRejectedValueOnce(gatewayError);
+    mocks.generateText.mockResolvedValueOnce({
+      text: '{"Title":"Recovered from fallback"}',
+      usage: { inputTokens: 40, outputTokens: 20, totalTokens: 60 },
+      warnings: [],
+      response: {
+        id: 'resp-fallback',
+        model: 'anthropic/claude-sonnet-4.5',
+        createdAt: '2025-01-01T00:00:00Z',
+      },
+      providerMetadata: {
+        gateway: {
+          routing: {
+            attempts: [
+              {
+                provider: 'anthropic',
+                model: 'anthropic/claude-sonnet-4.5',
+                timeout: false,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      model: 'anthropic/claude-sonnet-4.5',
+      produces: ['Artifact:Title'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Generate title',
+        },
+        extras: {
+          resolvedInputs: {},
+          schema: {
+            output: JSON.stringify({
+              title: 'Output',
+              type: 'object',
+              properties: { Title: { type: 'string' } },
+              required: ['Title'],
+              additionalProperties: false,
+            }),
+          },
+        },
+      },
+    });
+
+    const result = await handler.invoke(request);
+    expect(result.status).toBe('succeeded');
+    expect(result.artifacts[0]?.status).toBe('succeeded');
+    expect(result.artifacts[0]?.blob?.data).toBe('Recovered from fallback');
+    expect(mocks.generateText).toHaveBeenCalledTimes(2);
+    expect(result.diagnostics?.warnings).toContain(
+      'Structured output fallback used (JSON text + local schema validation).'
+    );
+    expect(result.diagnostics?.gatewayRoutingAttempts).toEqual([
+      {
+        provider: 'anthropic',
+        model: 'anthropic/claude-sonnet-4.5',
+        timeout: false,
+      },
+    ]);
+  });
+
+  it('includes usage and response metadata in diagnostics', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      output: { Title: 'Test' },
+      usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
+      warnings: ['Some warning about token usage'],
+      response: {
+        id: 'resp-123',
+        model: 'claude-sonnet-4',
+        createdAt: '2025-01-01T00:00:00Z',
+      },
+      providerMetadata: {
+        gateway: {
+          routing: {
+            attempts: [
+              { provider: 'anthropic', model: 'anthropic/claude-sonnet-4.5' },
+            ],
+          },
+        },
+      },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Title'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Generate',
+          responseFormat: {
+            type: 'json_schema',
+            schema: {
+              type: 'object',
+              properties: { Title: { type: 'string' } },
+            },
+          },
+        },
+        extras: {
+          resolvedInputs: {},
+          schema: {
+            output: JSON.stringify({
+              type: 'object',
+              properties: { Title: { type: 'string' } },
+            }),
+          },
+        },
+      },
+    });
+
+    const result = await handler.invoke(request);
+
+    expect(result.diagnostics?.usage).toEqual({
+      inputTokens: 100,
+      outputTokens: 50,
+      totalTokens: 150,
+    });
+    expect(result.diagnostics?.warnings).toEqual([
+      'Some warning about token usage',
+    ]);
+    expect(result.diagnostics?.response).toMatchObject({ id: 'resp-123' });
+    expect(result.diagnostics?.providerMetadata).toEqual({
+      gateway: {
+        routing: {
+          attempts: [
+            {
+              provider: 'anthropic',
+              model: 'anthropic/claude-sonnet-4.5',
+            },
+          ],
+        },
+      },
+    });
+    expect(result.diagnostics?.gatewayRoutingAttempts).toEqual([
+      {
+        provider: 'anthropic',
+        model: 'anthropic/claude-sonnet-4.5',
+      },
+    ]);
+    expect(result.diagnostics?.provider).toBe('vercel');
+  });
+
+  it('passes full model name to getModel', async () => {
+    mocks.generateText.mockResolvedValueOnce({
+      text: 'Response',
+      usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+      warnings: [],
+      response: { id: 'resp', model: 'claude-sonnet-4', createdAt: '' },
+    });
+
+    const handler = buildHandler();
+    await handler.warmStart?.({ logger: undefined });
+
+    const request = createJobContext({
+      produces: ['Artifact:Output'],
+      context: {
+        providerConfig: {
+          systemPrompt: 'Test',
+          responseFormat: { type: 'text' },
+        },
+      },
+    });
+
+    await handler.invoke(request);
+
+    // The modelFn should be called with the full model name
+    expect(mocks.modelFn).toHaveBeenCalledWith(
+      'anthropic/claude-sonnet-4-20250514'
+    );
+  });
+
+  describe('auto-derive responseFormat from outputSchema', () => {
+    it('automatically uses structured output when outputSchema is present in request extras', async () => {
+      mocks.generateText.mockResolvedValueOnce({
+        output: {
+          MovieTitle: 'Auto-derived Title',
+          MovieSummary: 'Auto-derived summary',
+        },
+        usage: { inputTokens: 50, outputTokens: 100, totalTokens: 150 },
+        warnings: [],
+        response: { id: 'resp-auto', model: 'claude-sonnet-4', createdAt: '' },
+      });
+
+      const handler = buildHandler();
+      await handler.warmStart?.({ logger: undefined });
+
+      const outputSchema = JSON.stringify({
+        title: 'MovieOutput',
+        description: 'Movie generation output',
+        type: 'object',
+        properties: {
+          MovieTitle: { type: 'string' },
+          MovieSummary: { type: 'string' },
+        },
+        required: ['MovieTitle', 'MovieSummary'],
+      });
+
+      const request = createJobContext({
+        produces: ['Artifact:MovieTitle', 'Artifact:MovieSummary'],
+        context: {
+          providerConfig: {
+            systemPrompt: 'Generate a movie',
+            // No responseFormat specified - should auto-derive from outputSchema
+          },
+          extras: {
+            schema: {
+              output: outputSchema,
+            },
+            resolvedInputs: {},
+          },
+        },
+      });
+
+      const result = await handler.invoke(request);
+
+      // Should use structured output (generateText is called once)
+      expect(mocks.generateText).toHaveBeenCalledTimes(1);
+      expect(result.status).toBe('succeeded');
+      expect(result.artifacts).toHaveLength(2);
+
+      // Verify the call includes the output option for structured output
+      const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+        string,
+        unknown
+      >;
+      expect(args.output).toBeDefined();
+    });
+
+    it('always uses outputSchema even when explicit responseFormat is also in config', async () => {
+      mocks.generateText.mockResolvedValueOnce({
+        output: { Title: 'From schema' },
+        usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+        warnings: [],
+        response: {
+          id: 'resp-explicit',
+          model: 'claude-sonnet-4',
+          createdAt: '',
+        },
+      });
+
+      const handler = buildHandler();
+      await handler.warmStart?.({ logger: undefined });
+
+      const outputSchema = JSON.stringify({
+        type: 'object',
+        properties: { Title: { type: 'string' } },
+      });
+
+      const request = createJobContext({
+        produces: ['Artifact:Title'],
+        context: {
+          providerConfig: {
+            systemPrompt: 'Generate text',
+            // Explicit text responseFormat — but outputSchema always wins
+            responseFormat: { type: 'text' },
+          },
+          extras: {
+            schema: {
+              output: outputSchema,
+            },
+            resolvedInputs: {},
+          },
+        },
+      });
+
+      const result = await handler.invoke(request);
+
+      // outputSchema always wins — structured output is used
+      expect(mocks.generateText).toHaveBeenCalledTimes(1);
+      const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+        string,
+        unknown
+      >;
+      expect(args.output).toBeDefined(); // Structured output from schema
+      expect(result.status).toBe('succeeded');
+    });
+
+    it('defaults to plain text when no outputSchema and no responseFormat', async () => {
+      mocks.generateText.mockResolvedValueOnce({
+        text: 'Default text response',
+        usage: { inputTokens: 5, outputTokens: 10, totalTokens: 15 },
+        warnings: [],
+        response: {
+          id: 'resp-default',
+          model: 'claude-sonnet-4',
+          createdAt: '',
+        },
+      });
+
+      const handler = buildHandler();
+      await handler.warmStart?.({ logger: undefined });
+
+      const request = createJobContext({
+        produces: ['Artifact:Output'],
+        context: {
+          providerConfig: {
+            systemPrompt: 'Generate something',
+            // No responseFormat, no outputSchema in extras
+          },
+          extras: {
+            resolvedInputs: {},
+            // No schema.output
+          },
+        },
+      });
+
+      const result = await handler.invoke(request);
+
+      // Should default to plain text
+      expect(mocks.generateText).toHaveBeenCalledTimes(1);
+      expect(result.status).toBe('succeeded');
+
+      // Verify the call does NOT include the output option
+      const args = mocks.generateText.mock.calls[0]?.[0] as Record<
+        string,
+        unknown
+      >;
+      expect(args.output).toBeUndefined();
+    });
+  });
+});

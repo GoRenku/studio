@@ -1,0 +1,117 @@
+import type {
+  SecretResolver,
+  ProviderLogger,
+  ProviderMode,
+  ProviderJobContext,
+} from '../../types.js';
+import type { SchemaRegistry } from '../../schema-registry.js';
+import type { SchemaFile } from './schema-file.js';
+
+/**
+ * Context passed to formatModelIdentifier for provider-specific handling.
+ */
+export interface ModelContext {
+  /** Sub-provider for models hosted on a platform (e.g., 'wan' for wan models on fal-ai) */
+  subProvider?: string;
+}
+
+/**
+ * Canonical file payload used for provider-native uploads.
+ */
+export interface ProviderInputFile {
+  data: Uint8Array | Buffer;
+  mimeType: string;
+}
+
+/**
+ * Standardized result returned by unified provider adapters.
+ * `result` is always the actual model output that should be validated and saved.
+ * Provider transport metadata like request IDs stays separate.
+ */
+export interface UnifiedInvokeResult {
+  result: unknown;
+  providerRequestId?: string;
+}
+
+/**
+ * Provider adapter interface for unified handler.
+ * Each provider (replicate, fal-ai, wavespeed-ai) implements this interface
+ * to handle provider-specific API invocation and output parsing.
+ */
+export interface ProviderAdapter {
+  /** Provider identifier (e.g., 'replicate', 'fal-ai', 'wavespeed-ai') */
+  readonly name: string;
+
+  /** Environment variable name for the API key */
+  readonly secretKey: string;
+
+  /** Initialize and return the provider client */
+  createClient(options: ClientOptions): Promise<ProviderClient>;
+
+  /** Format the model identifier for API calls (provider-specific) */
+  formatModelIdentifier(model: string, context?: ModelContext): string;
+
+  /** Execute the API call and return raw output */
+  invoke(
+    client: ProviderClient,
+    model: string,
+    input: Record<string, unknown>,
+    context: ProviderInvokeContext
+  ): Promise<UnifiedInvokeResult>;
+
+  /**
+   * Optional native upload capability.
+   * When defined, unified handlers will use this for file-based inputs before invoke().
+   */
+  uploadInputFile?: (
+    client: ProviderClient,
+    file: ProviderInputFile
+  ) => Promise<string>;
+
+  /** Extract URLs from provider-specific response structure */
+  normalizeOutput(response: unknown): string[];
+
+  /**
+   * Optional: Create a provider-specific retry wrapper.
+   * If undefined, no retry wrapping is applied.
+   * Each provider can implement its own retry strategy based on how it handles 429 errors.
+   */
+  createRetryWrapper?: (options: RetryWrapperOptions) => RetryWrapper;
+}
+
+/**
+ * Options passed to create a retry wrapper.
+ */
+export interface RetryWrapperOptions {
+  logger?: ProviderLogger;
+  jobId: string;
+  model: string;
+  plannerContext: Record<string, unknown>;
+  maxAttempts?: number;
+  requestTimeoutMs?: number;
+}
+
+/**
+ * Retry wrapper that can wrap an async function with retry logic.
+ */
+export interface RetryWrapper {
+  execute<T>(fn: () => Promise<T>): Promise<T>;
+}
+
+export interface ClientOptions {
+  secretResolver: SecretResolver;
+  logger?: ProviderLogger;
+  mode: ProviderMode;
+  schemaRegistry?: SchemaRegistry;
+}
+
+export interface ProviderInvokeContext {
+  mode: ProviderMode;
+  request: ProviderJobContext;
+  schemaFile?: SchemaFile;
+}
+
+/**
+ * Opaque client type - each provider has its own client implementation.
+ */
+export type ProviderClient = unknown;
