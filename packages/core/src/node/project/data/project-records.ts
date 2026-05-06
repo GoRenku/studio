@@ -39,8 +39,8 @@ export function readProjectRecordById(
 
 export interface UpdateProjectInformationRecord {
   title: string;
-  logline?: string;
-  summary?: string;
+  logline: string | null;
+  summary: string | null;
   aspectRatio?: string;
   updatedAt: string;
 }

@@ -74,18 +74,18 @@ export function ProjectInformationPanel({
 
   const save = useCallback(
     async (nextForm: ProjectInformationForm) => {
-      const nextProject = await updateProjectInformation(
+      return await updateProjectInformation(
         project.identity.name,
         toProjectInformationUpdate(nextForm)
       );
-      onProjectChange(nextProject);
     },
-    [onProjectChange, project.identity.name]
+    [project.identity.name]
   );
 
   const autosave = useDebouncedAutosave({
     value: form,
     save,
+    onSaved: onProjectChange,
   });
 
   useEffect(() => {

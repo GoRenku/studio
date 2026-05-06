@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './app';
 import { ThemeProvider } from './theme-provider';
@@ -55,6 +55,18 @@ describe('App', () => {
     expect(screen.getAllByText('Sequences').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cast').length).toBeGreaterThan(0);
   });
+
+  it('opens Project Information for projects without cover images', async () => {
+    mockFetchSequence([{ project: makeProject({ coverUrl: null }) }]);
+
+    renderApp();
+
+    const projectInformationButton = await screen.findByText('Project Information');
+    fireEvent.click(projectInformationButton);
+
+    expect(screen.getByText('Project Name')).toBeTruthy();
+    expect(screen.getByDisplayValue('constantinople')).toBeTruthy();
+  });
 });
 
 function renderApp() {
@@ -82,7 +94,14 @@ function mockFetchSequence(bodies: unknown[]): void {
   });
 }
 
-function makeProject(): ProjectWithHttp {
+function makeProject(
+  options: { coverUrl?: string | null } = {}
+): ProjectWithHttp {
+  const coverUrl =
+    options.coverUrl === undefined
+      ? '/studio-api/projects/constantinople/cover'
+      : options.coverUrl;
+
   return {
     identity: {
       id: 'project_test0001',
@@ -92,8 +111,8 @@ function makeProject(): ProjectWithHttp {
       folderPath: '/tmp/constantinople',
       databasePath: '/tmp/constantinople/.renku/project.sqlite',
     },
-    coverImage: { fileName: 'cover.png' },
-    coverUrl: '/studio-api/projects/constantinople/cover',
+    coverImage: coverUrl ? { fileName: 'cover.png' } : null,
+    coverUrl,
     languages: [],
     visualLanguage: [],
     cast: [

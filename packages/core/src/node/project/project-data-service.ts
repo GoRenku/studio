@@ -199,8 +199,8 @@ async function updateProjectInformation(
       updateProjectInformationRecord(session, projectRecord.id, {
         title: input.information.title.trim(),
         aspectRatio: input.information.aspectRatio,
-        logline: optionalTrimmed(input.information.logline),
-        summary: optionalTrimmed(input.information.summary),
+        logline: nullableTrimmed(input.information.logline),
+        summary: nullableTrimmed(input.information.summary),
         updatedAt: now,
       });
       replaceProjectLanguageRecords(
@@ -487,6 +487,11 @@ function validateProjectInformationUpdate(update: ProjectInformationUpdate): voi
 function optionalTrimmed(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function nullableTrimmed(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {

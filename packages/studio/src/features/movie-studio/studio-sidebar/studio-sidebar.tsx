@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Clapperboard,
+  FileText,
   Layers3,
   ListTree,
   Palette,
@@ -9,6 +10,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import { cn } from '@/lib/utils';
 import {
   toggleSetValue,
   type MovieStudioSelection,
@@ -65,12 +67,17 @@ export function StudioSidebar({
         </span>
       </div>
 
-      {project.coverUrl ? (
-        <div className='border-b border-border/40 p-3'>
+      <div className='border-b border-border/40 p-3'>
+        {project.coverUrl ? (
           <button
             type='button'
             onClick={() => onSelect({ type: 'projectInformation' })}
-            className='group relative aspect-video w-full overflow-hidden rounded-md border border-border/40 bg-muted/50 text-left transition-colors hover:border-item-active-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+            className={cn(
+              'group relative aspect-video w-full overflow-hidden rounded-md border bg-muted/50 text-left transition-colors hover:border-item-active-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+              selection.type === 'projectInformation'
+                ? 'border-item-active-border'
+                : 'border-border/40'
+            )}
           >
             <img
               src={project.coverUrl}
@@ -84,8 +91,31 @@ export function StudioSidebar({
               </span>
             </span>
           </button>
-        </div>
-      ) : null}
+        ) : (
+          <button
+            type='button'
+            onClick={() => onSelect({ type: 'projectInformation' })}
+            className={cn(
+              'flex w-full items-start gap-3 rounded-md border bg-muted/35 px-3 py-3 text-left transition-colors hover:border-item-active-border hover:bg-item-hover-bg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+              selection.type === 'projectInformation'
+                ? 'border-item-active-border bg-item-active-bg'
+                : 'border-border/40'
+            )}
+          >
+            <span className='mt-0.5 rounded-sm bg-background/70 p-1.5 text-muted-foreground'>
+              <FileText className='h-4 w-4' />
+            </span>
+            <span className='min-w-0 flex-1'>
+              <span className='block truncate text-sm font-semibold'>
+                {project.identity.title}
+              </span>
+              <span className='block truncate text-xs text-muted-foreground'>
+                Project Information
+              </span>
+            </span>
+          </button>
+        )}
+      </div>
 
       <div className='flex-1 min-h-0 overflow-y-auto p-2 space-y-4'>
         <StudioSidebarSection

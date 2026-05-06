@@ -244,6 +244,64 @@ describe('ProjectDataService', () => {
     ]);
   });
 
+  it('persists cleared project information text fields', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    await projectData.updateProjectInformation({
+      projectName: 'constantinople',
+      homeDir,
+      information: {
+        title: 'The Siege Machine',
+        aspectRatio: '21:9',
+        logline: 'A sharper premise.',
+        summary: 'A revised project summary.',
+        languages: [
+          {
+            localeTag: 'en-US',
+            displayName: 'English',
+            isBase: true,
+            supportsAudio: true,
+            supportsSubtitles: true,
+          },
+        ],
+      },
+    });
+
+    const project = await projectData.updateProjectInformation({
+      projectName: 'constantinople',
+      homeDir,
+      information: {
+        title: 'The Siege Machine',
+        aspectRatio: '21:9',
+        logline: '',
+        summary: '   ',
+        languages: [
+          {
+            localeTag: 'en-US',
+            displayName: 'English',
+            isBase: true,
+            supportsAudio: true,
+            supportsSubtitles: true,
+          },
+        ],
+      },
+    });
+
+    expect(project.identity.logline).toBeUndefined();
+    expect(project.identity.summary).toBeUndefined();
+  });
+
   it('collects project information validation errors', async () => {
     const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
