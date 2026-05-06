@@ -1,0 +1,302 @@
+kind: renku.projectSetup
+version: 0.1.0
+
+project:
+  name: constantinople
+  title: Preparation of the Siege of Constantinople
+  type: standaloneMovie
+  format: historical_documentary
+  baseLanguage: en-US
+  aspectRatio: "16:9"
+  resolution:
+    width: 1920
+    height: 1080
+  logline: A historical documentary about how Mehmed II prepared the strategic, technological, logistical, naval, diplomatic, and psychological machine that made Constantinople vulnerable before April 1453.
+  summary: >
+    The film follows the preparation phase before the siege: a young sultan
+    turns inherited ambition into policy, studies a city that has survived
+    centuries of attacks, cuts the Bosphorus, embraces gunpowder, and moves an
+    impossible weapon toward ancient walls while Constantinople waits for help.
+
+languages:
+  - localeTag: en-US
+    displayName: English
+    isBase: true
+
+  - localeTag: tr-TR
+    displayName: Turkish
+
+visualLanguage:
+  - name: Ottoman court miniature influence
+    intent: >
+      Formal staging inspired by Ottoman court miniature painting, fifteenth
+      century textiles, restrained documentary lighting, and precise historical
+      material detail. Use rich but controlled color rather than fantasy
+      spectacle.
+    summary: Muted golds, deep reds, formal court staging, and textile detail.
+
+  - name: Byzantine dusk and candlelight
+    intent: >
+      Constantinople should feel vast, sacred, depleted, and watchful. Use
+      candlelit interiors, blue-gray stone, sea haze, aging mosaics, and long
+      defensive silhouettes along the walls.
+    summary: Sacred interiors, sea haze, old stone, and anxious defensive scale.
+
+  - name: Foundry and siege logistics
+    intent: >
+      Cannon work and transport should feel physical and dangerous: smoke,
+      sparks, mud, timber, oxen, ropes, bronze, exhausted labor, and command
+      discipline pushing against mass and friction.
+    summary: Smoke, sparks, bronze, mud, ropes, timber, oxen, and torchlight.
+
+cast:
+  - name: Narrator
+    kind: narrator
+    role: Voiceover
+    shortDescription: Grave, cinematic documentary voice guiding the viewer through the preparation phase.
+
+  - name: Mehmed II
+    kind: historical_figure
+    role: Protagonist
+    shortDescription: Young Ottoman sultan determined to capture Constantinople and turn an inherited ambition into state policy.
+
+  - name: Constantine XI Palaiologos
+    kind: historical_figure
+    role: Opposing ruler
+    shortDescription: Byzantine emperor defending a diminished but symbolically immense capital.
+
+  - name: Urban
+    kind: historical_figure
+    role: Cannon founder
+    shortDescription: Engineer associated with Mehmed's giant bombard and the gunpowder challenge to medieval walls.
+
+  - name: Candarli Halil Pasha
+    kind: historical_figure
+    role: Advisor
+    shortDescription: Senior Ottoman grand vizier representing caution, court politics, and the risks of Mehmed's plan.
+
+  - name: Zaganos Pasha
+    kind: historical_figure
+    role: Commander
+    shortDescription: Ottoman commander aligned with Mehmed's aggressive policy toward Constantinople.
+
+  - name: Giovanni Giustiniani
+    kind: historical_figure
+    role: Defender
+    shortDescription: Genoese commander whose arrival gives the defenders professional military hope.
+
+  - name: Loukas Notaras
+    kind: historical_figure
+    role: Byzantine official
+    shortDescription: Senior Byzantine official representing internal tension, diplomacy, and limited resources.
+
+  - name: Ottoman Army
+    kind: group
+    role: War machine
+    shortDescription: Laborers, soldiers, engineers, sailors, officers, animals, and artillery crews assembled for the campaign.
+
+  - name: Byzantine Defenders
+    kind: group
+    role: Defenders
+    shortDescription: The small, exhausted, mixed force inside Constantinople preparing walls, gates, chains, and hope.
+
+sequences:
+  - title: The Young Sultan's Obsession
+    shortTitle: Ambition
+    summary: Mehmed II becomes the new Ottoman ruler and turns the conquest of Constantinople from inherited dream into immediate policy.
+    scenes:
+      - title: A Throne Facing an Ancient City
+        summary: Mehmed's accession is framed against the old imperial prize waiting across the water.
+        clips:
+          - title: The New Sultan
+            summary: Mehmed is introduced as young, controlled, ambitious, and underestimated.
+            visualIntent: Quiet court staging around a ruler already looking beyond the room.
+          - title: The City In His Mind
+            summary: Constantinople appears less as a place than as an imperial problem occupying Mehmed's imagination.
+            visualIntent: A map, water, walls, and a distant city become one strategic object.
+          - title: A Court That Remembers Failure
+            summary: Older advisors and commanders carry the memory of previous failed attempts.
+            visualIntent: Court faces held in formal silence, weighed down by history.
+
+      - title: The Inheritance of an Impossible Goal
+        summary: The conquest is presented as both dynastic inheritance and personal test.
+        clips:
+          - title: Old Maps, Old Wounds
+            summary: Maps and records evoke earlier Ottoman pressure on the city.
+          - title: A Sultan Measures Distance
+            summary: Mehmed studies roads, waters, walls, and weak points rather than merely dreaming of glory.
+          - title: Ambition Becomes Method
+            summary: The film turns from desire to preparation.
+
+  - title: The City That Had Survived Everyone
+    shortTitle: Target
+    summary: Constantinople is explained as a target protected by geography, walls, harbor defenses, imperial prestige, and centuries of failed sieges.
+    scenes:
+      - title: The Geography of Survival
+        summary: The city is shown as a defensive machine made of sea, harbor, hills, and walls.
+        clips:
+          - title: City Between Waters
+            summary: Constantinople's position between the Bosphorus, Marmara, and Golden Horn is established.
+          - title: The Harbor Behind the Chain
+            summary: The Golden Horn appears as a sheltered naval refuge.
+          - title: Sea As Wall
+            summary: Water is framed as an active part of the city's defense.
+
+      - title: The Land Walls
+        summary: The Theodosian Walls are introduced as the great physical problem Mehmed must solve.
+        clips:
+          - title: Stone In Layers
+            summary: Outer wall, moat, inner wall, and towers reveal defense in depth.
+          - title: The Memory of Sieges
+            summary: The walls carry the weight of earlier armies that failed.
+          - title: A Medieval Problem
+            summary: The question becomes how a fifteenth-century army can break an ancient defensive system.
+
+  - title: Cutting the Bosphorus Throat
+    shortTitle: Bosphorus
+    summary: Mehmed uses Rumelihisari to turn geography into pressure, threatening traffic and tightening the space around Constantinople before the siege begins.
+    scenes:
+      - title: The Chosen Shore
+        summary: Mehmed chooses the Bosphorus as the place where preparation becomes physical control.
+        clips:
+          - title: Surveying the Strait
+            summary: Ottoman surveyors read currents, banks, and sightlines.
+          - title: Across From Anadolu Hisari
+            summary: The new fortress site is positioned against earlier Ottoman control.
+          - title: A Narrow Place Becomes A Weapon
+            summary: The Bosphorus is reframed as a choke point.
+
+      - title: Building Rumelihisari
+        summary: The fortress rises quickly, turning labor, stone, and command into a strategic instrument.
+        clips:
+          - title: Foundations In Haste
+            summary: Workers dig, haul, and set the first stones with urgent discipline.
+          - title: Towers Over Water
+            summary: The fortress grows into a visible warning above the strait.
+          - title: The Sultan Inspects The Work
+            summary: Mehmed's personal attention makes the project feel central, not peripheral.
+
+  - title: The Gunmaker and the Walls
+    shortTitle: Gunpowder
+    summary: Urban's cannon and Mehmed's interest in artillery introduce a new technological pressure against the Theodosian Walls.
+    scenes:
+      - title: A Founder Offers Thunder
+        summary: Urban enters the story as the man who can turn molten metal into a wall-breaking promise.
+        clips:
+          - title: The Engineer Arrives
+            summary: Urban is introduced through tools, metal, sketches, and calculation.
+          - title: A Weapon Too Large For Ordinary War
+            summary: The proposed bombard is presented as astonishing and impractical at once.
+          - title: Mehmed Sees The Use
+            summary: The sultan recognizes that the cannon's problem may be solved by organization.
+
+      - title: Casting The Bombard
+        summary: Heat, molds, metal, danger, and scale transform an idea into a siege machine.
+        clips:
+          - title: Furnace At Night
+            summary: Firelight and labor establish the foundry as a place of transformation.
+            visualIntent: Sparks, smoke, and bronze surfaces under torchlight.
+          - title: Bronze Into The Mold
+            summary: Molten metal becomes the future siege machine.
+          - title: Waiting For The Metal To Cool
+            summary: The pace slows as danger becomes anticipation.
+
+  - title: The Logistics of Impossible Weight
+    shortTitle: Logistics
+    summary: The Ottoman war machine prepares roads, bridges, animals, labor, and command systems to move massive artillery from Edirne toward Constantinople.
+    scenes:
+      - title: The Weapon Is Too Heavy For War
+        summary: The giant bombard is introduced as both miracle and problem.
+        clips:
+          - title: The Bombard On Its Cradle
+            summary: The cannon sits enormous and inert, more landscape than tool.
+          - title: Men Become Measurement
+            summary: Workers beside the weapon reveal its scale.
+          - title: The Question Of Movement
+            summary: The story turns from making the cannon to moving it.
+
+      - title: The Cannon Begins To Move
+        summary: The bombard stops being an invention and becomes a campaign.
+        clips:
+          - title: The Sleeping Monster
+            summary: The viewer understands the cannon's impossible scale.
+            visualIntent: The cannon rests in shadow, too large to feel movable.
+          - title: Ropes, Axles, Timber
+            summary: Preparation becomes organized labor.
+            visualIntent: Teams of workers, timber frames, ropes, mud, and torchlight.
+          - title: The Weight Refuses
+            summary: The first attempt fails; the cannon resists movement.
+          - title: The Earth Gives Way
+            summary: The cannon finally moves.
+
+  - title: Diplomacy, Isolation, and Delay
+    shortTitle: Isolation
+    summary: Mehmed minimizes external intervention while Constantinople seeks help that arrives too slowly or too weakly.
+    scenes:
+      - title: Letters Across The Sea
+        summary: Appeals for help move through diplomatic channels while the Ottoman plan advances on the ground.
+        clips:
+          - title: Constantine Writes West
+            summary: The emperor's need becomes messages, envoys, and uncertainty.
+          - title: Councils Elsewhere
+            summary: Distant powers debate risk, cost, faith, commerce, and timing.
+          - title: Help Becomes Conditional
+            summary: Concern is not the same as action.
+
+      - title: A Capital Waiting
+        summary: Constantinople waits for ships, soldiers, money, and miracles.
+        clips:
+          - title: Looking From The Sea Walls
+            summary: Defenders scan the water for signs of relief.
+          - title: The City Counts Time
+            summary: Delay becomes emotional pressure inside the walls.
+          - title: Isolation Settles
+            summary: The viewer feels that the city is becoming strategically alone.
+
+  - title: The City Prepares To Die
+    shortTitle: Dread
+    summary: Inside Constantinople, defenders repair walls, count too few soldiers, prepare the harbor, and turn fear into ritual and work.
+    scenes:
+      - title: Counting Defenders
+        summary: Constantine XI faces the practical arithmetic of defending too much wall with too few people.
+        clips:
+          - title: Names On A List
+            summary: The defenders become numbers, units, loyalties, and shortages.
+          - title: Walls Without Enough Men
+            summary: The scale of the defenses makes the shortage visible.
+          - title: Command Under Constraint
+            summary: Constantine prepares without the comfort of abundance.
+
+      - title: Prayer Before Siege
+        summary: The city turns from strategy to ritual as dread becomes collective atmosphere.
+        clips:
+          - title: Icons In Candlelight
+            summary: Religious images and candlelit faces frame the emotional stakes.
+          - title: Procession Through The Streets
+            summary: Citizens move through a city that knows what is coming.
+          - title: Silence Over The Walls
+            summary: The sequence ends in waiting.
+
+  - title: The Ottoman Army Arrives
+    shortTitle: Arrival
+    summary: The preparation phase culminates as the Ottoman army assembles outside Constantinople and the siege becomes imminent.
+    scenes:
+      - title: First Sight Of The Walls
+        summary: The Ottoman column reaches the field before Constantinople and the campaign's abstract plan becomes physical confrontation.
+        clips:
+          - title: The Walls On The Horizon
+            summary: Constantinople appears ahead of the moving army.
+          - title: The Cannon Reaches Its Purpose
+            summary: The bombard is positioned before the land walls.
+          - title: Two Worlds Face Each Other
+            summary: Ottoman camp and Byzantine walls share the same frame.
+
+      - title: Mehmed Before The Walls
+        summary: The sultan looks at the target that has organized the entire film.
+        clips:
+          - title: The Sultan's Tent
+            summary: Mehmed's command center is established before the city.
+          - title: Measuring The Ancient Wall
+            summary: The walls are studied one final time before siege begins.
+          - title: Preparation Ends
+            summary: "The film stops at the threshold: the first cannon shot is about to begin another story."

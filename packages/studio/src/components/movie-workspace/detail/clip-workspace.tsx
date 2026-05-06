@@ -1,19 +1,25 @@
-import type { MovieClip, MovieStudioProject } from '@/types/movie-project';
+import type { Clip } from '@/types/movie-project';
 
 interface ClipWorkspaceProps {
-  clip: MovieClip;
-  project: MovieStudioProject;
+  clip: Clip;
 }
 
-export function ClipWorkspace({ clip, project }: ClipWorkspaceProps) {
-  const castById = new Map(project.cast.map((entry) => [entry.id, entry]));
-  const referencedCast = (clip.cast ?? []).map((id) => castById.get(id) ?? null);
-
+export function ClipWorkspace({ clip }: ClipWorkspaceProps) {
   return (
     <div className='space-y-4'>
       <p className='max-w-3xl text-sm leading-relaxed text-muted-foreground'>
         {clip.summary ?? 'This clip has structure but no production assets yet.'}
       </p>
+      {clip.visualIntent ? (
+        <section className='max-w-3xl rounded-xl border border-border/40 bg-card shadow-lg p-4'>
+          <h3 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
+            Visual Intent
+          </h3>
+          <p className='mt-2 text-sm leading-relaxed text-muted-foreground'>
+            {clip.visualIntent}
+          </p>
+        </section>
+      ) : null}
 
       <div className='grid grid-cols-1 xl:grid-cols-3 gap-3'>
         {['Design References', 'Shot Design', 'Motion Design'].map((stage) => (
@@ -39,23 +45,6 @@ export function ClipWorkspace({ clip, project }: ClipWorkspaceProps) {
         ))}
       </div>
 
-      {clip.cast && clip.cast.length > 0 ? (
-        <section className='rounded-xl border border-border/40 bg-card shadow-lg p-4'>
-          <h3 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
-            Referenced Cast
-          </h3>
-          <div className='mt-3 flex flex-wrap gap-2'>
-            {clip.cast.map((castId, index) => (
-              <span
-                key={`${castId}-${index}`}
-                className='rounded-full border border-border/50 bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground'
-              >
-                {referencedCast[index]?.name ?? castId}
-              </span>
-            ))}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }

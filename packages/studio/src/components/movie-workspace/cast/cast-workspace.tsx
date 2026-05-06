@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { CastEntry } from '@/types/movie-project';
+import type { CastMember } from '@/types/movie-project';
 import { castDesignMocks } from './mocks/cast-design-mocks';
 import { CastTabPanel } from './cast-tab-panel';
 import { CastTabs } from './cast-tabs';
@@ -7,7 +7,7 @@ import type { CastDesignTab, CastTake, GenerationSettings } from './cast-types';
 import { GenerationSettingsPane } from './generation-settings-pane';
 
 interface CastWorkspaceProps {
-  castEntry: CastEntry;
+  castEntry: CastMember;
 }
 
 export function CastWorkspace({ castEntry }: CastWorkspaceProps) {

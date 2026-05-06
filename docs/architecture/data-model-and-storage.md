@@ -13,6 +13,11 @@ domain areas: language/localization, budget/cost, visual language, and casting.
 It should be treated as the current working decision for the new Renku Studio
 implementation.
 
+Naming note: `docs/architecture/naming-guidelines.md` records the newer naming
+decision for this slice. Where this document still says `.renku/movie.sqlite` or
+`visual_language_profile`, the current implementation should use
+`.renku/project.sqlite` and `visual_language`.
+
 Earlier documents explored both file-first metadata and SQLite-as-cache designs.
 Those explorations remain useful context, but this document records the updated
 decision:

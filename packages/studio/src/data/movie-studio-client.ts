@@ -1,14 +1,14 @@
 import type {
-  MovieProjectLibrary,
-  MovieStudioProject,
+  ProjectLibraryWithHttp,
+  ProjectWithHttp,
 } from '@/types/movie-project';
 
 interface ProjectResponse {
-  project: MovieStudioProject | null;
+  project: ProjectWithHttp | null;
 }
 
 interface LibraryResponse {
-  library: MovieProjectLibrary;
+  library: ProjectLibraryWithHttp;
 }
 
 interface ErrorResponse {
@@ -18,14 +18,13 @@ interface ErrorResponse {
   };
 }
 
-export async function openMovieProject(
-  projectFolder: string
-): Promise<MovieStudioProject> {
-  const response = await fetch('/studio-api/projects/open', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ projectFolder }),
-  });
+export async function openProject(projectName: string): Promise<ProjectWithHttp> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/select`,
+    {
+      method: 'POST',
+    }
+  );
 
   if (!response.ok) {
     throw await readRequestError(response);
@@ -38,7 +37,7 @@ export async function openMovieProject(
   return body.project;
 }
 
-export async function fetchCurrentMovieProject(): Promise<MovieStudioProject | null> {
+export async function fetchCurrentProject(): Promise<ProjectWithHttp | null> {
   const response = await fetch('/studio-api/projects/current');
   if (!response.ok) {
     throw await readRequestError(response);
@@ -47,8 +46,8 @@ export async function fetchCurrentMovieProject(): Promise<MovieStudioProject | n
   return body.project;
 }
 
-export async function fetchMovieProjectLibrary(): Promise<MovieProjectLibrary> {
-  const response = await fetch('/studio-api/projects/list');
+export async function fetchProjectLibrary(): Promise<ProjectLibraryWithHttp> {
+  const response = await fetch('/studio-api/projects');
   if (!response.ok) {
     throw await readRequestError(response);
   }

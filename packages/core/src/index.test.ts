@@ -1,25 +1,25 @@
 import {
-  MOVIE_PROJECT_KIND,
-  MOVIE_TASK_KIND,
-  MOVIE_WORKFLOW_KIND,
-  getMovieStudioPackageInfo,
+  PROJECT_KIND,
+  TASK_KIND,
+  WORKFLOW_KIND,
+  getStudioCorePackageInfo,
 } from './index.js';
 
 describe('studio-core scaffold', () => {
   it('exports Renku Studio document kinds', () => {
-    expect(MOVIE_PROJECT_KIND).toBe('renku.movie');
-    expect(MOVIE_WORKFLOW_KIND).toBe('renku.movieWorkflow');
-    expect(MOVIE_TASK_KIND).toBe('renku.movieTask');
+    expect(PROJECT_KIND).toBe('renku.project');
+    expect(WORKFLOW_KIND).toBe('renku.workflow');
+    expect(TASK_KIND).toBe('renku.task');
   });
 
   it('identifies the new Renku Studio domain package', () => {
-    expect(getMovieStudioPackageInfo()).toEqual({
+    expect(getStudioCorePackageInfo()).toEqual({
       packageName: '@gorenku/studio-core',
       purpose: 'renku-studio-domain',
     });
   });
 
   it('keeps the root module free of node-only imports', async () => {
-    await expect(import('./index.js')).resolves.toHaveProperty('MOVIE_PROJECT_KIND');
+    await expect(import('./index.js')).resolves.toHaveProperty('PROJECT_KIND');
   });
 });

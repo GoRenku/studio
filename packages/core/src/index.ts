@@ -1,17 +1,17 @@
-export const MOVIE_PROJECT_KIND = 'renku.movie' as const;
-export const MOVIE_WORKFLOW_KIND = 'renku.movieWorkflow' as const;
-export const MOVIE_TASK_KIND = 'renku.movieTask' as const;
+export const PROJECT_KIND = 'renku.project' as const;
+export const WORKFLOW_KIND = 'renku.workflow' as const;
+export const TASK_KIND = 'renku.task' as const;
 
-export type MovieProjectKind = typeof MOVIE_PROJECT_KIND;
-export type MovieWorkflowKind = typeof MOVIE_WORKFLOW_KIND;
-export type MovieTaskKind = typeof MOVIE_TASK_KIND;
+export type ProjectKind = typeof PROJECT_KIND;
+export type WorkflowKind = typeof WORKFLOW_KIND;
+export type TaskKind = typeof TASK_KIND;
 
-export interface MovieStudioPackageInfo {
+export interface StudioCorePackageInfo {
   packageName: '@gorenku/studio-core';
   purpose: 'renku-studio-domain';
 }
 
-export function getMovieStudioPackageInfo(): MovieStudioPackageInfo {
+export function getStudioCorePackageInfo(): StudioCorePackageInfo {
   return {
     packageName: '@gorenku/studio-core',
     purpose: 'renku-studio-domain',
@@ -19,8 +19,21 @@ export function getMovieStudioPackageInfo(): MovieStudioPackageInfo {
 }
 
 export type {
-  StudioProjectRecord,
-  StudioStorage,
-  StudioStorageSession,
-  UpsertStudioProjectInput,
-} from './storage/contracts.js';
+  CastMember,
+  Clip,
+  Episode,
+  Project,
+  ProjectCoverImage,
+  ProjectCounts,
+  ProjectCreateReport,
+  ProjectDataErrorContract,
+  ProjectIdentity,
+  ProjectLanguage,
+  ProjectLibrary,
+  ProjectSummary,
+  ProjectType,
+  Scene,
+  Sequence,
+  VisualLanguage,
+} from './project/index.js';
+export { ProjectDataError } from './project/index.js';

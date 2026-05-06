@@ -7,13 +7,13 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react';
-import type { MovieStudioProject, Selection } from '@/types/movie-project';
+import type { ProjectWithHttp, Selection } from '@/types/movie-project';
 import { toggleSetValue } from '@movie-workspace/model/movie-selection';
 import { NavButton } from './nav-button';
 import { NavigationSection } from './navigation-section';
 
 interface MovieNavigationProps {
-  project: MovieStudioProject;
+  project: ProjectWithHttp;
   selection: Selection;
   onSelect: (selection: Selection) => void;
 }
@@ -57,14 +57,26 @@ export function MovieNavigation({
           </h2>
         </div>
         <span className='text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium'>
-          {project.totals.clips}
+          {project.counts.clips}
         </span>
       </div>
+
+      {project.coverUrl ? (
+        <div className='border-b border-border/40 p-3'>
+          <div className='aspect-video overflow-hidden rounded-md border border-border/40 bg-muted/50'>
+            <img
+              src={project.coverUrl}
+              alt=''
+              className='h-full w-full object-cover'
+            />
+          </div>
+        </div>
+      ) : null}
 
       <div className='flex-1 min-h-0 overflow-y-auto p-2 space-y-4'>
         <NavigationSection
           title='Sequences'
-          detail={`${project.totals.sequences} sequences, ${project.totals.clips} clips`}
+          detail={`${project.counts.sequences} sequences, ${project.counts.clips} clips`}
           icon={<Layers3 className='h-4 w-4' />}
           active={selection.type === 'storyboard'}
           expanded={sequencesExpanded}

@@ -3,57 +3,33 @@ import { Loader2 } from 'lucide-react';
 import { ProjectOpener } from '@/components/project-opener';
 import { MovieWorkspace } from '@/components/movie-workspace';
 import {
-  fetchCurrentMovieProject,
-  fetchMovieProjectLibrary,
-  openMovieProject,
+  fetchCurrentProject,
+  fetchProjectLibrary,
+  openProject,
 } from '@/data/movie-studio-client';
 import type {
-  MovieProjectLibrary,
-  MovieStudioProject,
+  ProjectLibraryWithHttp,
+  ProjectWithHttp,
 } from '@/types/movie-project';
 
 function App() {
-  const [project, setProject] = useState<MovieStudioProject | null>(null);
-  const [library, setLibrary] = useState<MovieProjectLibrary | null>(null);
+  const [project, setProject] = useState<ProjectWithHttp | null>(null);
+  const [library, setLibrary] = useState<ProjectLibraryWithHttp | null>(null);
   const [isLoadingCurrent, setIsLoadingCurrent] = useState(true);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchCurrentMovieProject()
-      .then((currentProject) => {
-        if (!cancelled) {
-          setProject(currentProject);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setProject(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoadingCurrent(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const refreshLibrary = useCallback(async () => {
     setIsLoadingLibrary(true);
     setError(null);
     try {
-      setLibrary(await fetchMovieProjectLibrary());
+      setLibrary(await fetchProjectLibrary());
     } catch (libraryError) {
       setError(
         libraryError instanceof Error
           ? libraryError.message
-          : 'Unable to load movie library.'
+          : 'Unable to load project library.'
       );
     } finally {
       setIsLoadingLibrary(false);
@@ -61,23 +37,49 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoadingCurrent && !project) {
-      void refreshLibrary();
-    }
-  }, [isLoadingCurrent, project, refreshLibrary]);
+    let cancelled = false;
 
-  const handleOpenProject = useCallback(async (projectFolder: string) => {
+    async function loadCurrentProject() {
+      try {
+        const currentProject = await fetchCurrentProject();
+        if (cancelled) {
+          return;
+        }
+        setProject(currentProject);
+        if (!currentProject) {
+          await refreshLibrary();
+        }
+      } catch {
+        if (!cancelled) {
+          setProject(null);
+          await refreshLibrary();
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingCurrent(false);
+        }
+      }
+    }
+
+    void loadCurrentProject();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshLibrary]);
+
+  const handleOpenProject = useCallback(async (projectName: string) => {
     setIsOpening(true);
     setError(null);
     try {
-      const nextProject = await openMovieProject(projectFolder);
+      const nextProject = await openProject(projectName);
       setProject(nextProject);
       window.history.pushState({}, '', '/project');
     } catch (openError) {
       setError(
         openError instanceof Error
           ? openError.message
-          : 'Unable to open movie project.'
+          : 'Unable to open project.'
       );
     } finally {
       setIsOpening(false);

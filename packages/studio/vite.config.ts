@@ -39,11 +39,8 @@ export default defineConfig(({ mode }) => {
         name: 'renku-studio-api',
         apply: 'serve',
         async configureServer(server) {
-          const apiModulePath = './server/movie-studio-api';
-          const { createMovieStudioApiMiddleware } = await import(
-            apiModulePath
-          );
-          server.middlewares.use(createMovieStudioApiMiddleware());
+          const { createStudioApiMiddleware } = await import('./server/app');
+          server.middlewares.use(createStudioApiMiddleware());
         },
       },
     ],

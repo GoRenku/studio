@@ -95,6 +95,48 @@ Fallbacks are allowed only when the behavior is deliberately designed,
 documented, and tested as part of the current architecture. They must not be used
 to preserve obsolete behavior or paper over invalid state.
 
+## Very Important: Naming Is Architecture
+
+Naming is a core architecture concern in Renku Studio. Never create generic
+placeholder names when a domain name exists.
+
+The default behavior should be:
+
+- use deliberate names from the domain vocabulary in
+  `docs/architecture/data-model-and-storage.md`;
+- follow the detailed naming rules in `docs/architecture/naming-guidelines.md`;
+- use plain domain names for public contract objects, such as `Project`,
+  `Episode`, `Sequence`, `Scene`, `Clip`, `CastMember`, and `VisualLanguage`;
+- reserve suffixes such as `Setup` and `Record` for internal boundary-specific
+  shapes;
+- avoid broad placeholder names such as `data`, `item`, `manager`, `helper`,
+  `detail`, `snapshot`, `view`, and one-off verb filenames such as `create.ts`
+  or `open.ts`;
+- rename callers directly when names change instead of adding aliases.
+
+If a name feels temporary or vague, stop and choose a clearer domain name before
+writing code.
+
+## Very Important: Drizzle Migrations Use Drizzle Kit
+
+Before changing database schemas or migrations, look up the current Drizzle
+migration documentation and follow the documented Drizzle Kit workflow.
+
+For Renku Studio project databases:
+
+- the Drizzle TypeScript schema is the source of truth;
+- generate SQL migrations with the `drizzle-kit` CLI;
+- apply SQL migrations with the `drizzle-kit` CLI;
+- do not hand-write TypeScript migration registries;
+- do not copy generated SQL into TypeScript files;
+- do not manually edit generated migration SQL unless the current architecture
+  explicitly calls for a custom migration;
+- keep generated migration files in the package-owned migrations folder;
+- document any intentional custom migration before adding it.
+
+The accepted details live in
+`docs/architecture/drizzle-migrations.md`.
+
 ## Coding Rules
 
 - Keep package names product-scoped under `@gorenku/studio-*`.

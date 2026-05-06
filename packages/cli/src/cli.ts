@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import meow from 'meow';
+import { runCreateCommand } from './commands/create-project-command.js';
 import { getRenkuCliInfo } from './commands/info.js';
-import { runInitCommand } from './commands/init.js';
+import { runInitCommand } from './commands/initialize-config-command.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -31,15 +32,20 @@ Usage
   $ renku <command>
 
 Commands
+  create --file <yaml>  Create a project from YAML
   init <storage-root>  Create or inspect the global Renku config
   info                 Show Renku CLI package information
 
 Options
+  --file               Project create YAML file
+  --cover              Optional PNG cover image
   --json               Print machine-readable JSON
   --help, -h           Show help
   --version            Show version
 
 Examples
+  $ renku create --file sample-project.yaml
+  $ renku create --file sample-project.yaml --cover cover.png
   $ renku init ~/Movies/renku
   $ renku init /Volumes/Media/Renku --json
 `;
@@ -58,6 +64,12 @@ export async function runRenkuCli(
         type: 'boolean',
         default: false,
       },
+      file: {
+        type: 'string',
+      },
+      cover: {
+        type: 'string',
+      },
       help: {
         type: 'boolean',
         shortFlag: 'h',
@@ -75,6 +87,15 @@ export async function runRenkuCli(
 
   try {
     switch (command) {
+      case 'create':
+        return await runCreateCommand({
+          input,
+          file: cli.flags.file,
+          cover: cli.flags.cover,
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
       case 'init':
         return await runInitCommand({
           input,

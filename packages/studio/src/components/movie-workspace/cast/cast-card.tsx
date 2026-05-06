@@ -1,7 +1,7 @@
-import type { CastEntry } from '@/types/movie-project';
+import type { CastMember } from '@/types/movie-project';
 import { ReadinessDot } from '@movie-workspace/shared/readiness-dot';
 
-export function CastCard({ castEntry }: { castEntry: CastEntry }) {
+export function CastCard({ castEntry }: { castEntry: CastMember }) {
   return (
     <article className='rounded-xl border border-border/40 bg-card p-4 shadow-lg'>
       <div className='flex items-start justify-between gap-3'>

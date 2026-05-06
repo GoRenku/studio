@@ -1,32 +1,32 @@
 import type {
-  CastEntry,
-  MovieClip,
-  MovieScene,
-  MovieSequence,
-  MovieStudioProject,
+  CastMember,
+  Clip,
+  ProjectWithHttp,
+  Scene,
+  Sequence,
   Selection,
 } from '@/types/movie-project';
 
 export interface MovieLookup {
-  sequences: Map<string, MovieSequence>;
-  scenes: Map<string, MovieScene>;
-  clips: Map<string, MovieClip>;
-  cast: Map<string, CastEntry>;
+  sequences: Map<string, Sequence>;
+  scenes: Map<string, Scene>;
+  clips: Map<string, Clip>;
+  cast: Map<string, CastMember>;
 }
 
 export interface ResolvedSelection {
   kicker: string;
   title: string;
   summary: string;
-  clips: MovieClip[];
-  clip?: MovieClip;
-  castEntry?: CastEntry;
+  clips: Clip[];
+  clip?: Clip;
+  castEntry?: CastMember;
 }
 
-export function buildMovieLookup(project: MovieStudioProject): MovieLookup {
-  const sequences = new Map<string, MovieSequence>();
-  const scenes = new Map<string, MovieScene>();
-  const clips = new Map<string, MovieClip>();
+export function buildMovieLookup(project: ProjectWithHttp): MovieLookup {
+  const sequences = new Map<string, Sequence>();
+  const scenes = new Map<string, Scene>();
+  const clips = new Map<string, Clip>();
   const cast = new Map(project.cast.map((entry) => [entry.id, entry]));
 
   for (const sequence of project.sequences) {
@@ -52,7 +52,7 @@ export function resolveMovieSelection(
       return {
         kicker: 'Sequence Storyboard',
         title: sequence.title,
-        summary: sequence.summary ?? 'Sequence structure loaded from movie.yaml.',
+        summary: sequence.summary ?? 'Sequence structure loaded from project data.',
         clips: sequence.scenes.flatMap((scene) => scene.clips),
       };
     }
@@ -64,7 +64,7 @@ export function resolveMovieSelection(
       return {
         kicker: 'Scene Storyboard',
         title: scene.title,
-        summary: scene.summary ?? 'Scene structure loaded from movie.yaml.',
+        summary: scene.summary ?? 'Scene structure loaded from project data.',
         clips: scene.clips,
       };
     }
@@ -76,7 +76,7 @@ export function resolveMovieSelection(
       return {
         kicker: 'Clip Design Workspace',
         title: clip.title,
-        summary: clip.summary ?? 'Clip structure loaded from movie.yaml.',
+        summary: clip.summary ?? 'Clip structure loaded from project data.',
         clips: [clip],
         clip,
       };
@@ -89,7 +89,7 @@ export function resolveMovieSelection(
       return {
         kicker: 'Cast Workspace',
         title: castEntry.name,
-        summary: castEntry.shortDescription ?? 'Cast structure loaded from movie.yaml.',
+        summary: castEntry.shortDescription ?? 'Cast structure loaded from project data.',
         clips: [],
         castEntry,
       };
@@ -101,8 +101,8 @@ export function resolveMovieSelection(
     title: selection.type === 'casting' ? 'All Cast' : 'Full Storyboard',
     summary:
       selection.type === 'casting'
-        ? 'Cast entries loaded from movie.yaml.'
-        : 'Movie hierarchy loaded from movie.yaml. Production readiness starts at narrative only.',
+        ? 'Cast entries loaded from project data.'
+        : 'Movie hierarchy loaded from project data. Production readiness starts at narrative only.',
     clips: Array.from(lookup.clips.values()),
   };
 }

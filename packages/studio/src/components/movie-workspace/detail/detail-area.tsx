@@ -1,4 +1,4 @@
-import type { MovieStudioProject, Selection } from '@/types/movie-project';
+import type { ProjectWithHttp, Selection } from '@/types/movie-project';
 import { CastWorkspace } from '@movie-workspace/cast/cast-workspace';
 import type { MovieLookup } from '@movie-workspace/model/movie-selection';
 import { resolveMovieSelection } from '@movie-workspace/model/movie-selection';
@@ -7,7 +7,7 @@ import { ClipWorkspace } from './clip-workspace';
 import { StoryboardOverview } from './storyboard-overview';
 
 interface DetailAreaProps {
-  project: MovieStudioProject;
+  project: ProjectWithHttp;
   selection: Selection;
   lookup: MovieLookup;
 }
@@ -35,7 +35,7 @@ export function DetailArea({ project, selection, lookup }: DetailAreaProps) {
 
       <div className='flex-1 min-h-0 overflow-y-auto p-4'>
         {selection.type === 'clip' && selected.clip ? (
-          <ClipWorkspace clip={selected.clip} project={project} />
+          <ClipWorkspace clip={selected.clip} />
         ) : selection.type === 'casting' ? (
           <CastingOverview cast={project.cast} />
         ) : (

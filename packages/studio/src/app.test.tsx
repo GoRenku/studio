@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './app';
 import { ThemeProvider } from './contexts/theme-context';
-import type { MovieStudioProject } from './types/movie-project';
+import type { ProjectWithHttp } from './types/movie-project';
 
 describe('App', () => {
   beforeEach(() => {
@@ -28,16 +28,16 @@ describe('App', () => {
       {
         library: {
           storageRoot: '/tmp/renku-studio',
-          movies: [],
+          projects: [],
         },
       },
     ]);
 
     renderApp();
 
-    await screen.findByText('Movie Library');
+    await screen.findByText('Project Library');
     expect(screen.getByText('Renku')).toBeTruthy();
-    expect(screen.getAllByPlaceholderText('Search movies').length).toBeGreaterThan(0);
+    expect(screen.getAllByPlaceholderText('Search projects').length).toBeGreaterThan(0);
   });
 
   it('renders the current project title after a successful load', async () => {
@@ -78,18 +78,20 @@ function mockFetchSequence(bodies: unknown[]): void {
   });
 }
 
-function makeProject(): MovieStudioProject {
+function makeProject(): ProjectWithHttp {
   return {
-    projectFolder: '/tmp/movie',
-    movieYamlPath: '/tmp/movie/movie.yaml',
-    narrativePath: '/tmp/movie/narrative.md',
-    kind: 'renku.movie',
-    version: '0.1.0',
-    movie: {
-      id: 'movie_constantinople_preparation',
+    identity: {
+      id: 'project_test0001',
+      name: 'constantinople',
       title: 'Preparation of the Siege',
-      narrativeFile: 'narrative.md',
+      type: 'standaloneMovie',
+      folderPath: '/tmp/constantinople',
+      databasePath: '/tmp/constantinople/.renku/project.sqlite',
     },
+    coverImage: { fileName: 'cover.png' },
+    coverUrl: '/studio-api/projects/constantinople/cover',
+    languages: [],
+    visualLanguage: [],
     cast: [
       {
         id: 'cast_narrator',
@@ -101,6 +103,7 @@ function makeProject(): MovieStudioProject {
     sequences: [
       {
         id: 'seq_opening',
+        number: 1,
         title: 'Opening',
         shortTitle: 'Opening',
         summary: 'The opening sequence.',
@@ -114,15 +117,18 @@ function makeProject(): MovieStudioProject {
                 id: 'clip_1_1_1',
                 title: 'Opening Image',
                 summary: 'Establish the movie.',
-                cast: ['cast_narrator'],
               },
             ],
           },
         ],
       },
     ],
-    totals: {
-      cast: 1,
+    episodes: [],
+    counts: {
+      languages: 0,
+      visualLanguage: 0,
+      castMembers: 1,
+      episodes: 0,
       sequences: 1,
       scenes: 1,
       clips: 1,

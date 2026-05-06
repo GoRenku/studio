@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MovieStudioHeader } from '@/components/layout/movie-studio-header';
 import type {
-  MovieProjectLibrary,
-  MovieProjectListItem,
+  ProjectLibraryWithHttp,
+  ProjectSummaryWithHttp,
 } from '@/types/movie-project';
 
 interface ProjectOpenerProps {
   error: string | null;
-  library: MovieProjectLibrary | null;
+  library: ProjectLibraryWithHttp | null;
   isLoadingLibrary: boolean;
   isOpening: boolean;
   onRefresh: () => Promise<void>;
-  onOpen: (projectFolder: string) => Promise<void>;
+  onOpen: (projectName: string) => Promise<void>;
 }
 
 export function ProjectOpener({
@@ -27,24 +27,24 @@ export function ProjectOpener({
 }: ProjectOpenerProps) {
   const [query, setQuery] = useState('');
 
-  const filteredMovies = useMemo(() => {
+  const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const movies = library?.movies ?? [];
+    const projects = library?.projects ?? [];
     if (!normalizedQuery) {
-      return movies;
+      return projects;
     }
-    return movies.filter((movie) =>
+    return projects.filter((project) =>
       [
-        movie.title,
-        movie.folderName,
-        movie.logline,
-        movie.format,
-        movie.language,
+        project.title,
+        project.name,
+        project.logline,
+        project.format,
+        project.baseLanguage,
       ]
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(normalizedQuery))
     );
-  }, [library?.movies, query]);
+  }, [library?.projects, query]);
 
   return (
     <div className='h-screen w-screen bg-background text-foreground p-4 flex flex-col gap-4'>
@@ -56,7 +56,7 @@ export function ProjectOpener({
             <FolderOpen className='w-4 h-4 shrink-0 text-muted-foreground' />
             <div className='min-w-0'>
               <h1 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
-                Movie Library
+                Project Library
               </h1>
               <p className='truncate text-xs text-muted-foreground'>
                 {library?.storageRoot ?? 'Loading Renku Studio storage root...'}
@@ -70,7 +70,7 @@ export function ProjectOpener({
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder='Search movies'
+                placeholder='Search projects'
                 className='h-8 pl-8'
               />
             </div>
@@ -97,7 +97,7 @@ export function ProjectOpener({
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder='Search movies'
+              placeholder='Search projects'
               className='h-8 pl-8'
             />
           </div>
@@ -114,17 +114,17 @@ export function ProjectOpener({
             <div className='h-full min-h-[280px] flex items-center justify-center'>
               <div className='flex items-center gap-2 text-sm text-muted-foreground'>
                 <Loader2 className='h-4 w-4 animate-spin' />
-                Loading movies...
+                Loading projects...
               </div>
             </div>
-          ) : filteredMovies.length === 0 ? (
+          ) : filteredProjects.length === 0 ? (
             <EmptyLibrary hasQuery={query.trim() !== ''} />
           ) : (
             <div className='grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3'>
-              {filteredMovies.map((movie) => (
-                <MovieCard
-                  key={movie.projectFolder}
-                  movie={movie}
+              {filteredProjects.map((project) => (
+                <ProjectCard
+                  key={project.name}
+                  project={project}
                   isOpening={isOpening}
                   onOpen={onOpen}
                 />
@@ -137,28 +137,28 @@ export function ProjectOpener({
   );
 }
 
-function MovieCard({
-  movie,
+function ProjectCard({
+  project,
   isOpening,
   onOpen,
 }: {
-  movie: MovieProjectListItem;
+  project: ProjectSummaryWithHttp;
   isOpening: boolean;
-  onOpen: (projectFolder: string) => Promise<void>;
+  onOpen: (projectName: string) => Promise<void>;
 }) {
-  const disabled = isOpening || Boolean(movie.validationError);
+  const disabled = isOpening || Boolean(project.validationError);
 
   return (
     <button
       type='button'
       disabled={disabled}
-      onClick={() => void onOpen(movie.projectFolder)}
+      onClick={() => void onOpen(project.name)}
       className='group min-w-0 overflow-hidden rounded-xl border border-border/40 bg-card text-left shadow-lg transition-all hover:border-primary/70 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-75'
     >
       <div className='aspect-video bg-muted/50 overflow-hidden border-b border-border/40'>
-        {movie.coverUrl ? (
+        {project.coverUrl ? (
           <img
-            src={movie.coverUrl}
+            src={project.coverUrl}
             alt=''
             className='h-full w-full object-cover transition-transform group-hover:scale-[1.03]'
           />
@@ -173,32 +173,32 @@ function MovieCard({
         <div className='flex items-start justify-between gap-2'>
           <div className='min-w-0'>
             <h2 className='line-clamp-2 text-sm font-semibold leading-snug'>
-              {movie.title}
+              {project.title}
             </h2>
             <p className='mt-1 truncate text-[11px] text-muted-foreground'>
-              {movie.folderName}
+              {project.name}
             </p>
           </div>
-          {movie.validationError ? (
+          {project.validationError ? (
             <AlertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-300' />
           ) : null}
         </div>
 
-        {movie.logline ? (
+        {project.logline ? (
           <p className='line-clamp-2 text-xs leading-relaxed text-muted-foreground'>
-            {movie.logline}
+            {project.logline}
           </p>
         ) : null}
 
-        {movie.validationError ? (
+        {project.validationError ? (
           <p className='line-clamp-2 text-xs leading-relaxed text-red-700 dark:text-red-300'>
-            {movie.validationError.code}: {movie.validationError.message}
+            {project.validationError.code}: {project.validationError.message}
           </p>
         ) : (
           <div className='flex flex-wrap gap-1.5'>
-            <Metric label='Seq' value={movie.totals?.sequences ?? 0} />
-            <Metric label='Scenes' value={movie.totals?.scenes ?? 0} />
-            <Metric label='Clips' value={movie.totals?.clips ?? 0} />
+            <Metric label='Seq' value={project.counts?.sequences ?? 0} />
+            <Metric label='Scenes' value={project.counts?.scenes ?? 0} />
+            <Metric label='Clips' value={project.counts?.clips ?? 0} />
           </div>
         )}
       </div>
@@ -220,12 +220,12 @@ function EmptyLibrary({ hasQuery }: { hasQuery: boolean }) {
       <div className='max-w-md rounded-xl border border-border/40 bg-card p-6 text-center shadow-lg'>
         <FolderOpen className='mx-auto h-8 w-8 text-muted-foreground' />
         <h2 className='mt-3 text-sm font-semibold'>
-          {hasQuery ? 'No matching movies' : 'No movies found'}
+          {hasQuery ? 'No matching projects' : 'No projects found'}
         </h2>
         <p className='mt-2 text-sm leading-relaxed text-muted-foreground'>
           {hasQuery
-            ? 'Try a different title, folder name, format, or language.'
-            : 'Renku Studio scans immediate child folders in its configured storage root and shows folders that contain movie.yaml.'}
+            ? 'Try a different title, project name, format, or language.'
+            : 'Renku Studio scans immediate child folders in its configured storage root and shows folders that contain .renku/project.sqlite.'}
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-# Movie Project Create YAML Structure
+# ProjectSetup YAML Structure
 
 Date: 2026-05-05
 
@@ -9,18 +9,18 @@ Status: architecture decision
 This document defines the YAML shape passed to `renku create` when creating
 a new Renku Studio project.
 
-The YAML is a **creation scaffold**, not an import/export format and not a
+The YAML is a temporary **ProjectSetup**, not an import/export format and not a
 long-term project state file.
 
 The intended flow is:
 
 ```text
 narrative, references, user direction
-  -> agent skill creates a project create YAML
+  -> agent skill creates a ProjectSetup YAML
   -> agent calls renku create
-  -> studio-core validates the YAML
+  -> studio-core/node parses the YAML as internal ProjectSetup
   -> studio-core creates the project under the configured storage root
-  -> studio-core creates .renku/movie.sqlite and the initial folder structure
+  -> studio-core creates .renku/project.sqlite and the initial folder structure
   -> Renku Studio opens the initialized project
 ```
 
@@ -62,7 +62,7 @@ reasonably extract from narrative material:
 It should not decide detailed production relationships.
 
 For example, the YAML should not say which cast member appears in which clip, or
-which visual language profile is bound to which scene. Those relationships are
+which visual language is bound to which scene. Those relationships are
 authored later through explicit commands and UI actions.
 
 The rule:
@@ -108,8 +108,7 @@ YAML.
 `studio-cli` should:
 
 - parse command arguments;
-- read the YAML file;
-- call `studio-core`;
+- pass the setup file path to `ProjectDataService`;
 - print a human-readable and machine-readable creation report.
 
 `studio-core` should:
@@ -118,7 +117,7 @@ YAML.
 2. Resolve the configured `storageRoot`.
 3. Read required `project.name`.
 4. Allocate the project folder path.
-5. Create `.renku/movie.sqlite`.
+5. Create `.renku/project.sqlite`.
 6. Generate durable opaque IDs.
 7. Create project, series, episode, language, cast, visual language, sequence,
    scene, and clip records for whatever the YAML provides.
@@ -227,7 +226,7 @@ flowchart TD
   Sequences["sequences[]"]
   Scenes["scenes[]"]
   Clips["clips[]"]
-  SQLite[".renku/movie.sqlite"]
+  SQLite[".renku/project.sqlite"]
   Folders["project folders under storageRoot"]
 
   CreateYaml --> Project
@@ -248,12 +247,12 @@ flowchart TD
 Only the project title and project type are required.
 
 ```yaml
-kind: renku.movieProjectCreate
+kind: renku.projectSetup
 version: 0.1.0
 
 project:
   title: Preparation of the Siege of Constantinople
-  type: movie
+  type: standaloneMovie
 ```
 
 Everything else can be authored later.
@@ -261,13 +260,13 @@ Everything else can be authored later.
 ## Recommended Shape
 
 ```yaml
-kind: renku.movieProjectCreate
+kind: renku.projectSetup
 version: 0.1.0
 
 project:
   name: constantinople-movie
   title: Preparation of the Siege of Constantinople
-  type: movie
+  type: standaloneMovie
   format: historical_documentary
   baseLanguage: en-US
   logline: A documentary about how Mehmed II prepared the machine that made Constantinople vulnerable.
@@ -294,10 +293,6 @@ cast:
     kind: character
     role: Young Ottoman sultan
     shortDescription: Young ruler preparing to take Constantinople.
-    visualDescription: Controlled, austere court presence; youthful but severe.
-    voiceDescription: Calm, grave, historically grounded documentary voice.
-    aliases:
-      - Mehmed the Conqueror
 
 sequences:
   - title: The Young Sultan's Obsession
@@ -321,7 +316,7 @@ Required.
 Identifies the file as a Renku Studio project creation document.
 
 ```yaml
-kind: renku.movieProjectCreate
+kind: renku.projectSetup
 ```
 
 ### `version`
@@ -344,7 +339,7 @@ Basic scaffold metadata.
 project:
   name: constantinople-movie
   title: Preparation of the Siege of Constantinople
-  type: movie
+  type: standaloneMovie
   format: historical_documentary
   baseLanguage: en-US
   logline: A documentary about how Mehmed II prepared the machine that made Constantinople vulnerable.
@@ -358,7 +353,7 @@ Recommended fields:
 - `name`: required kebab-case project short name. It is used as the project
   folder name under the configured `storageRoot`.
 - `title`: display title. This is required.
-- `type`: `movie` or `series`. This is required because Renku Studio should
+- `type`: `standaloneMovie` or `series`. This is required because Renku Studio should
   create series metadata from the beginning when the project is a series.
 - `format`: broad format, such as `historical_documentary`, `fiction_short`,
   `explainer`, or `essay_film`.
@@ -435,10 +430,11 @@ Recommended visual language fields:
 - `intent`: human-readable creative direction summary.
 - `summary`: compact navigation summary.
 
-The create command should create visual language profile records and
+The create command should create visual language records and
 user-friendly folders.
 
-It should not bind those profiles to cast members, scenes, clips, or episodes.
+It should not bind those visual language entries to cast members, scenes, clips,
+or episodes.
 
 ### `cast`
 
@@ -465,10 +461,6 @@ cast:
     kind: character
     role: Young Ottoman sultan
     shortDescription: Young ruler preparing to take Constantinople.
-    visualDescription: Controlled, austere court presence; youthful but severe.
-    voiceDescription: Calm, grave, historically grounded documentary voice.
-    aliases:
-      - Mehmed the Conqueror
 ```
 
 Recommended cast fields:
@@ -477,13 +469,6 @@ Recommended cast fields:
 - `kind`: `character`, `narrator`, `location`, `object`, `group`, or `other`.
 - `role`: plain-language production or story role.
 - `shortDescription`: compact context for the project.
-- `visualDescription`: optional visual design seed.
-- `voiceDescription`: optional base voice direction.
-- `aliases`: optional display/search metadata.
-
-Aliases are only display/search metadata.
-
-They must not resolve relationships.
 
 ### `sequences`
 
@@ -576,7 +561,7 @@ Series support should be part of the initial creation model.
 Use `project.type: series` and provide `episodes`.
 
 ```yaml
-kind: renku.movieProjectCreate
+kind: renku.projectSetup
 version: 0.1.0
 
 project:
@@ -615,13 +600,13 @@ should fail with a clear validation error until a concrete meaning is designed.
 ## Complete Movie Example
 
 ```yaml
-kind: renku.movieProjectCreate
+kind: renku.projectSetup
 version: 0.1.0
 
 project:
   name: constantinople-movie
   title: Preparation of the Siege of Constantinople
-  type: movie
+  type: standaloneMovie
   format: historical_documentary
   baseLanguage: en-US
   logline: A historical documentary about how Mehmed II prepared the machine that made Constantinople vulnerable.
@@ -659,10 +644,6 @@ cast:
     kind: character
     role: Young Ottoman sultan
     shortDescription: Young ruler preparing to take Constantinople.
-    visualDescription: Controlled, austere court presence; youthful but severe.
-    voiceDescription: Calm, grave, historically grounded documentary voice.
-    aliases:
-      - Mehmed the Conqueror
 
   - name: Constantine XI Palaiologos
     kind: character
@@ -683,7 +664,6 @@ cast:
     kind: narrator
     role: Voiceover
     shortDescription: Grave, cinematic documentary narrator.
-    voiceDescription: Authoritative narration with controlled pacing.
 
 sequences:
   - title: The Young Sultan's Obsession
@@ -725,11 +705,11 @@ sequences:
 
 The create command should fail when:
 
-- `kind` is not `renku.movieProjectCreate`;
+- `kind` is not `renku.projectSetup`;
 - `version` is missing or unsupported;
 - `project.title` is missing;
 - `project.type` is missing;
-- `project.type` is not `movie` or `series`;
+- `project.type` is not `standaloneMovie` or `series`;
 - `project.name` is present but is not a valid project name;
 - the resolved project folder already exists;
 - `project.type` is `series` and both top-level `sequences` and
@@ -746,7 +726,7 @@ The create command should not fail when:
 - `visualLanguage` is missing;
 - `cast` is missing;
 - `sequences` is missing;
-- `episodes` is missing for a `movie`;
+- `episodes` is missing for a `standaloneMovie`;
 - a sequence has no scenes;
 - a scene has no clips.
 
@@ -757,7 +737,7 @@ The create command should not:
 - infer ordering from titles;
 - resolve aliases as identities;
 - synthesize missing cast entries;
-- synthesize missing visual language profiles;
+- synthesize missing visual language entries;
 - generate media;
 - queue generation tasks;
 - treat this YAML as project state after creation.
@@ -767,11 +747,11 @@ The create command should not:
 After a successful create, `studio-core` should create:
 
 - the project folder under configured `storageRoot`;
-- `.renku/movie.sqlite`;
+- `.renku/project.sqlite`;
 - project metadata rows;
 - series and episode rows, when `project.type` is `series`;
 - supported language rows, if language metadata was provided;
-- visual language profile rows, if visual language metadata was provided;
+- visual language rows, if visual language metadata was provided;
 - cast member rows, if cast metadata was provided;
 - sequence, scene, and clip rows, if narrative spine metadata was provided;
 - user-friendly folders for the created project structure;
@@ -783,12 +763,12 @@ Example report:
 {
   "projectName": "constantinople-movie",
   "projectPath": "/configured/storageRoot/constantinople-movie",
-  "databasePath": "/configured/storageRoot/constantinople-movie/.renku/movie.sqlite",
+  "databasePath": "/configured/storageRoot/constantinople-movie/.renku/project.sqlite",
   "coverPath": "/configured/storageRoot/constantinople-movie/cover.png",
   "created": {
     "languages": 2,
     "castMembers": 5,
-    "visualLanguageProfiles": 2,
+    "visualLanguage": 2,
     "episodes": 0,
     "sequences": 2,
     "scenes": 2,

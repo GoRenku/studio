@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { MovieStudioHeader } from '@/components/layout/movie-studio-header';
-import type { MovieStudioProject, Selection } from '@/types/movie-project';
+import type { ProjectWithHttp, Selection } from '@/types/movie-project';
 import { DetailArea } from '@movie-workspace/detail/detail-area';
 import { buildMovieLookup } from '@movie-workspace/model/movie-selection';
 import { MovieNavigation } from '@movie-workspace/navigation/movie-navigation';
 import { QueueBar } from '@movie-workspace/queue/queue-bar';
 
 interface MovieWorkspaceProps {
-  project: MovieStudioProject;
+  project: ProjectWithHttp;
   onHome: () => void;
 }
 
@@ -19,7 +19,7 @@ export function MovieWorkspace({ project, onHome }: MovieWorkspaceProps) {
     <div className='h-screen w-screen bg-background text-foreground p-3 flex flex-col gap-3'>
       <MovieStudioHeader
         subtitle='Studio'
-        projectTitle={project.movie.title}
+        projectTitle={project.identity.title}
         onHome={onHome}
       />
 

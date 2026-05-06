@@ -6,7 +6,8 @@ import {
   type ServerResponse,
 } from 'node:http';
 import path from 'node:path';
-import { createMovieStudioApiHandler } from './movie-studio-api.js';
+import { getRequestListener } from '@hono/node-server';
+import { createStudioServerApp } from './app.js';
 
 export interface MovieStudioServerOptions {
   distPath: string;
@@ -34,7 +35,7 @@ export async function startMovieStudioServer(
     throw new Error(`Renku Studio assets not found at ${distDir}`);
   }
 
-  const apiHandler = createMovieStudioApiHandler();
+  const apiHandler = getRequestListener(createStudioServerApp().fetch);
 
   const server = createServer(async (req, res) => {
     if (!req.url) {

@@ -75,6 +75,15 @@ importers:
 
   packages/core:
     dependencies:
+      better-sqlite3:
+        specifier: ^12.9.0
+        version: 12.9.0
+      drizzle-kit:
+        specifier: ^0.31.10
+        version: 0.31.10
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)
       yaml:
         specifier: ^2.8.4
         version: 2.8.4
@@ -97,15 +106,6 @@ importers:
       '@vitest/ui':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4)
-      better-sqlite3:
-        specifier: ^12.9.0
-        version: 12.9.0
-      drizzle-kit:
-        specifier: ^0.31.10
-        version: 0.31.10
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)
       eslint:
         specifier: ^8
         version: 8.57.1
@@ -185,6 +185,9 @@ importers:
       '@gorenku/studio-core':
         specifier: workspace:*
         version: link:../core
+      '@hono/node-server':
+        specifier: ^2.0.1
+        version: 2.0.1(hono@4.12.17)
       '@radix-ui/react-dropdown-menu':
         specifier: ^2.1.16
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -203,6 +206,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      hono:
+        specifier: ^4.12.17
+        version: 4.12.17
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.5)
@@ -974,6 +980,12 @@ packages:
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+
+  '@hono/node-server@2.0.1':
+    resolution: {integrity: sha512-jI9yMDyFpqBeSighf/zlXnQG/nl9AyBc6aAgy4XtxJMyt/CNyJpvPfzDD+bCc2zAOmhhqtF6TnmIaY+xV4mIrw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2751,6 +2763,10 @@ packages:
   hermes-parser@0.25.1:
     resolution: {integrity: sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA==}
 
+  hono@4.12.17:
+    resolution: {integrity: sha512-FbJJNb/XgX7YW0hX/V8w5oYLztKEsRLykCMZWt1WdLtsfjzMvmoqWBA4H4t5norinq8/rh20oiZYr+WSl4UzAQ==}
+    engines: {node: '>=16.9.0'}
+
   html-encoding-sniffer@6.0.0:
     resolution: {integrity: sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
@@ -4168,6 +4184,10 @@ snapshots:
       react-dom: 19.2.5(react@19.2.5)
 
   '@floating-ui/utils@0.2.11': {}
+
+  '@hono/node-server@2.0.1(hono@4.12.17)':
+    dependencies:
+      hono: 4.12.17
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -6049,6 +6069,8 @@ snapshots:
   hermes-parser@0.25.1:
     dependencies:
       hermes-estree: 0.25.1
+
+  hono@4.12.17: {}
 
   html-encoding-sniffer@6.0.0:
     dependencies:
