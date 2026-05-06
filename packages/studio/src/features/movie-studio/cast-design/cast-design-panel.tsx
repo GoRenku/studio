@@ -33,10 +33,11 @@ export function CastDesignPanel({ castEntry }: CastDesignPanelProps) {
 
   return (
     <section className='h-full min-h-0 rounded-(--radius-panel) border border-panel-border bg-panel-bg overflow-hidden flex flex-col'>
-      <header className='h-[52px] shrink-0 border-b border-border/40 bg-panel-header-bg px-4 flex items-center justify-between gap-4'>
+      <header className='h-[45px] shrink-0 border-b border-border/40 bg-panel-header-bg px-4 flex items-center justify-between gap-4'>
         <div className='min-w-0'>
-          <h2 className='truncate text-base font-semibold'>{castEntry.name}</h2>
-          <p className='mt-0.5 text-xs text-muted-foreground'>Cast design</p>
+          <h2 className='truncate text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
+            {castEntry.name}
+          </h2>
         </div>
       </header>
 

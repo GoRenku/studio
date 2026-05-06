@@ -55,14 +55,9 @@ export function MovieStudioScreen({
           <section className='min-h-0 rounded-(--radius-panel) border border-panel-border bg-panel-bg overflow-hidden flex flex-col'>
             <div className='h-[45px] px-4 border-b border-border/40 bg-panel-header-bg flex items-center justify-between shrink-0'>
               <div className='min-w-0'>
-                <h2 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
+                <h2 className='truncate text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
                   {resolvedSelection.kicker}
                 </h2>
-                {resolvedSelection.title ? (
-                  <p className='truncate text-sm font-semibold'>
-                    {resolvedSelection.title}
-                  </p>
-                ) : null}
               </div>
               {selection.type === 'projectInformation' ? (
                 <AutosaveStatus

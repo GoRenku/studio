@@ -25,7 +25,6 @@ export interface MovieStudioLookup {
 
 export interface ResolvedMovieStudioSelection {
   kicker: string;
-  title: string;
   summary: string;
   clips: Clip[];
   clip?: Clip;
@@ -61,8 +60,7 @@ export function resolveMovieStudioSelection(
     const sequence = lookup.sequences.get(selection.id);
     if (sequence) {
       return {
-        kicker: 'Sequence Storyboard',
-        title: sequence.title,
+        kicker: sequence.title,
         summary: sequence.summary ?? 'Sequence structure loaded from project data.',
         clips: sequence.scenes.flatMap((scene) => scene.clips),
       };
@@ -73,8 +71,7 @@ export function resolveMovieStudioSelection(
     const scene = lookup.scenes.get(selection.id);
     if (scene) {
       return {
-        kicker: 'Scene Storyboard',
-        title: scene.title,
+        kicker: scene.title,
         summary: scene.summary ?? 'Scene structure loaded from project data.',
         clips: scene.clips,
       };
@@ -85,8 +82,7 @@ export function resolveMovieStudioSelection(
     const clip = lookup.clips.get(selection.id);
     if (clip) {
       return {
-        kicker: 'Clip Design',
-        title: clip.title,
+        kicker: clip.title,
         summary: clip.summary ?? 'Clip structure loaded from project data.',
         clips: [clip],
         clip,
@@ -98,8 +94,7 @@ export function resolveMovieStudioSelection(
     const castEntry = lookup.cast.get(selection.id);
     if (castEntry) {
       return {
-        kicker: 'Cast Design',
-        title: castEntry.name,
+        kicker: castEntry.name,
         summary: castEntry.shortDescription ?? 'Cast structure loaded from project data.',
         clips: [],
         castEntry,
@@ -110,7 +105,6 @@ export function resolveMovieStudioSelection(
   if (selection.type === 'projectInformation') {
     return {
       kicker: 'Project Information',
-      title: '',
       summary: 'Project information loaded from project data.',
       clips: [],
     };
@@ -119,15 +113,13 @@ export function resolveMovieStudioSelection(
   if (selection.type === 'visualLanguage') {
     return {
       kicker: 'Visual Language',
-      title: '',
       summary: 'Visual language loaded from project data.',
       clips: [],
     };
   }
 
   return {
-    kicker: selection.type === 'casting' ? 'Casting' : 'Full Storyboard',
-    title: selection.type === 'casting' ? 'All Cast' : 'Full Storyboard',
+    kicker: selection.type === 'casting' ? 'Cast' : 'Full Storyboard',
     summary:
       selection.type === 'casting'
         ? 'Cast entries loaded from project data.'

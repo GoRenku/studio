@@ -6,7 +6,7 @@ import {
 } from './movie-studio-selection';
 
 describe('movie studio selection', () => {
-  it('resolves clip selections to the clip design surface', () => {
+  it('resolves clip selections to the clip title', () => {
     const lookup = buildMovieStudioLookup(makeProject());
 
     const selected = resolveMovieStudioSelection(
@@ -14,13 +14,12 @@ describe('movie studio selection', () => {
       lookup
     );
 
-    expect(selected.kicker).toBe('Clip Design');
-    expect(selected.title).toBe('Opening Image');
+    expect(selected.kicker).toBe('Opening Image');
     expect(selected.clip?.id).toBe('clip_1_1_1');
     expect(selected.clips).toHaveLength(1);
   });
 
-  it('resolves cast selections to the cast design surface', () => {
+  it('resolves cast selections to the cast member name', () => {
     const lookup = buildMovieStudioLookup(makeProject());
 
     const selected = resolveMovieStudioSelection(
@@ -28,9 +27,30 @@ describe('movie studio selection', () => {
       lookup
     );
 
-    expect(selected.kicker).toBe('Cast Design');
-    expect(selected.title).toBe('Narrator');
+    expect(selected.kicker).toBe('Narrator');
     expect(selected.castEntry?.id).toBe('cast_narrator');
+  });
+
+  it('resolves sequence selections to the sequence title', () => {
+    const lookup = buildMovieStudioLookup(makeProject());
+
+    const selected = resolveMovieStudioSelection(
+      { type: 'sequence', id: 'seq_opening' },
+      lookup
+    );
+
+    expect(selected.kicker).toBe('Opening');
+  });
+
+  it('resolves scene selections to the scene title', () => {
+    const lookup = buildMovieStudioLookup(makeProject());
+
+    const selected = resolveMovieStudioSelection(
+      { type: 'scene', id: 'scene_1_1' },
+      lookup
+    );
+
+    expect(selected.kicker).toBe('Opening Scene');
   });
 
   it('falls back to the full storyboard for stale story selections', () => {
@@ -103,4 +123,3 @@ function makeProject(): ProjectWithHttp {
     },
   };
 }
-
