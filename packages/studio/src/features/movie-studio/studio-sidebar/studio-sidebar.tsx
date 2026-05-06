@@ -3,6 +3,7 @@ import {
   Clapperboard,
   Layers3,
   ListTree,
+  Palette,
   Sparkles,
   UserRound,
   UsersRound,
@@ -66,17 +67,63 @@ export function StudioSidebar({
 
       {project.coverUrl ? (
         <div className='border-b border-border/40 p-3'>
-          <div className='aspect-video overflow-hidden rounded-md border border-border/40 bg-muted/50'>
+          <button
+            type='button'
+            onClick={() => onSelect({ type: 'projectInformation' })}
+            className='group relative aspect-video w-full overflow-hidden rounded-md border border-border/40 bg-muted/50 text-left transition-colors hover:border-item-active-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+          >
             <img
               src={project.coverUrl}
               alt=''
               className='h-full w-full object-cover'
             />
-          </div>
+            <span className='absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent' />
+            <span className='absolute inset-x-0 bottom-0 p-3'>
+              <span className='line-clamp-2 text-sm font-semibold text-white drop-shadow-sm'>
+                {project.identity.title}
+              </span>
+            </span>
+          </button>
         </div>
       ) : null}
 
       <div className='flex-1 min-h-0 overflow-y-auto p-2 space-y-4'>
+        <StudioSidebarSection
+          title='Visual Language'
+          detail={`${project.counts.visualLanguage} entries`}
+          icon={<Palette className='h-4 w-4' />}
+          active={selection.type === 'visualLanguage'}
+          expanded={false}
+          onSelect={() => onSelect({ type: 'visualLanguage' })}
+          onToggle={() => onSelect({ type: 'visualLanguage' })}
+        >
+          {null}
+        </StudioSidebarSection>
+
+        <StudioSidebarSection
+          title='Cast'
+          detail={`${project.cast.length} entries`}
+          icon={<UsersRound className='h-4 w-4' />}
+          active={selection.type === 'casting'}
+          expanded={castingExpanded}
+          onSelect={() => onSelect({ type: 'casting' })}
+          onToggle={() => toggleSection('casting')}
+        >
+          {castingExpanded
+            ? project.cast.map((castEntry) => (
+                <StudioSidebarButton
+                  key={castEntry.id}
+                  active={selection.type === 'cast' && selection.id === castEntry.id}
+                  icon={<UserRound className='h-4 w-4' />}
+                  label={castEntry.name}
+                  detail={castEntry.role ?? castEntry.kind ?? 'Cast entry'}
+                  compact
+                  onClick={() => onSelect({ type: 'cast', id: castEntry.id })}
+                />
+              ))
+            : null}
+        </StudioSidebarSection>
+
         <StudioSidebarSection
           title='Sequences'
           detail={`${project.counts.sequences} sequences, ${project.counts.clips} clips`}
@@ -160,30 +207,6 @@ export function StudioSidebar({
                   </div>
                 );
               })
-            : null}
-        </StudioSidebarSection>
-
-        <StudioSidebarSection
-          title='Cast'
-          detail={`${project.cast.length} entries`}
-          icon={<UsersRound className='h-4 w-4' />}
-          active={selection.type === 'casting'}
-          expanded={castingExpanded}
-          onSelect={() => onSelect({ type: 'casting' })}
-          onToggle={() => toggleSection('casting')}
-        >
-          {castingExpanded
-            ? project.cast.map((castEntry) => (
-                <StudioSidebarButton
-                  key={castEntry.id}
-                  active={selection.type === 'cast' && selection.id === castEntry.id}
-                  icon={<UserRound className='h-4 w-4' />}
-                  label={castEntry.name}
-                  detail={castEntry.role ?? castEntry.kind ?? 'Cast entry'}
-                  compact
-                  onClick={() => onSelect({ type: 'cast', id: castEntry.id })}
-                />
-              ))
             : null}
         </StudioSidebarSection>
       </div>

@@ -9,13 +9,9 @@ export interface InsertProjectRecord {
   name: string;
   title: string;
   type: 'standaloneMovie' | 'series';
-  format?: string;
-  baseLanguage?: string;
   logline?: string;
   summary?: string;
   aspectRatio?: string;
-  resolutionWidth?: number;
-  resolutionHeight?: number;
   coverFile: string | null;
   createdAt: string;
   updatedAt: string;
@@ -39,4 +35,24 @@ export function readProjectRecordById(
   return (
     session.db.select().from(projects).where(eq(projects.id, projectId)).get() ?? null
   );
+}
+
+export interface UpdateProjectInformationRecord {
+  title: string;
+  logline?: string;
+  summary?: string;
+  aspectRatio?: string;
+  updatedAt: string;
+}
+
+export function updateProjectInformationRecord(
+  session: ProjectDataSession,
+  projectId: string,
+  record: UpdateProjectInformationRecord
+): void {
+  session.db
+    .update(projects)
+    .set(record)
+    .where(eq(projects.id, projectId))
+    .run();
 }

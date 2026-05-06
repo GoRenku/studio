@@ -59,6 +59,22 @@ describe('ProjectDataService', () => {
       title: 'Preparation of the Siege',
       type: 'standaloneMovie',
     });
+    expect(project.identity).not.toHaveProperty('format');
+    expect(project.identity).not.toHaveProperty('resolution');
+    expect(project.languages).toEqual([
+      expect.objectContaining({
+        localeTag: 'en-US',
+        isBase: true,
+        supportsAudio: true,
+        supportsSubtitles: true,
+      }),
+      expect.objectContaining({
+        localeTag: 'tr-TR',
+        isBase: false,
+        supportsAudio: true,
+        supportsSubtitles: true,
+      }),
+    ]);
     expect(project.cast.map((cast) => cast.id)).toEqual([
       'cast_test0001',
       'cast_test0002',
@@ -164,6 +180,120 @@ describe('ProjectDataService', () => {
     expect(project.identity).not.toHaveProperty('visualDescription');
   });
 
+  it('updates project information without changing the immutable project name', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const project = await projectData.updateProjectInformation({
+      projectName: 'constantinople',
+      homeDir,
+      information: {
+        title: 'The Siege Machine',
+        aspectRatio: '21:9',
+        logline: 'A sharper premise.',
+        summary: 'A revised project summary.',
+        languages: [
+          {
+            localeTag: 'en-US',
+            displayName: 'English',
+            isBase: false,
+            supportsAudio: true,
+            supportsSubtitles: true,
+          },
+          {
+            localeTag: 'tr-TR',
+            displayName: 'Turkish',
+            isBase: true,
+            supportsAudio: false,
+            supportsSubtitles: true,
+          },
+        ],
+      },
+    });
+
+    expect(project.identity).toMatchObject({
+      name: 'constantinople',
+      title: 'The Siege Machine',
+      aspectRatio: '21:9',
+      logline: 'A sharper premise.',
+      summary: 'A revised project summary.',
+    });
+    expect(project.languages).toEqual([
+      expect.objectContaining({
+        localeTag: 'en-US',
+        isBase: false,
+        supportsAudio: true,
+        supportsSubtitles: true,
+      }),
+      expect.objectContaining({
+        localeTag: 'tr-TR',
+        isBase: true,
+        supportsAudio: false,
+        supportsSubtitles: true,
+      }),
+    ]);
+  });
+
+  it('collects project information validation errors', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    await expect(
+      projectData.updateProjectInformation({
+        projectName: 'constantinople',
+        homeDir,
+        information: {
+          title: '',
+          aspectRatio: '2:1',
+          languages: [
+            {
+              localeTag: 'en-US',
+              displayName: 'English',
+              isBase: false,
+              supportsAudio: true,
+              supportsSubtitles: true,
+            },
+            {
+              localeTag: 'en-US',
+              displayName: 'English',
+              isBase: false,
+              supportsAudio: true,
+              supportsSubtitles: true,
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA056',
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: 'PROJECT_DATA050' }),
+        expect.objectContaining({ code: 'PROJECT_DATA051' }),
+        expect.objectContaining({ code: 'PROJECT_DATA054' }),
+        expect.objectContaining({ code: 'PROJECT_DATA055' }),
+      ]),
+    });
+  });
+
   it('collects setup errors and unknown-field warnings together', () => {
     const validation = validateProjectSetup({
       kind: 'renku.projectSetup',
@@ -257,8 +387,6 @@ project:
   name: constantinople
   title: Preparation of the Siege
   type: standaloneMovie
-  format: historical_documentary
-  baseLanguage: en-US
   logline: A documentary about preparation before 1453.
 ${options.extraProjectFields ?? ''}
 
@@ -266,8 +394,12 @@ languages:
   - localeTag: en-US
     displayName: English
     isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
   - localeTag: tr-TR
     displayName: Turkish
+    supportsAudio: true
+    supportsSubtitles: true
 
 visualLanguage:
   - name: Ottoman court miniature influence

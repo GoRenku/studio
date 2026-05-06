@@ -115,14 +115,6 @@ function toProjectIdentity(
   folderPath: string,
   databasePath: string
 ): ProjectIdentity {
-  const resolution =
-    row.resolutionWidth !== null && row.resolutionHeight !== null
-      ? {
-          width: row.resolutionWidth,
-          height: row.resolutionHeight,
-        }
-      : undefined;
-
   return {
     id: row.id,
     name: row.name,
@@ -130,10 +122,7 @@ function toProjectIdentity(
     type: row.type === 'series' ? 'series' : 'standaloneMovie',
     folderPath,
     databasePath,
-    format: nullable(row.format),
-    baseLanguage: nullable(row.baseLanguage),
     aspectRatio: nullable(row.aspectRatio),
-    resolution,
     logline: nullable(row.logline),
     summary: nullable(row.summary),
   };
@@ -145,6 +134,8 @@ function toProjectLanguage(row: ProjectLanguageRecord): ProjectLanguage {
     localeTag: row.localeTag,
     displayName: nullable(row.displayName),
     isBase: row.isBase,
+    supportsAudio: row.supportsAudio,
+    supportsSubtitles: row.supportsSubtitles,
   };
 }
 

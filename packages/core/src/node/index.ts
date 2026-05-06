@@ -28,7 +28,10 @@ export type {
   CreateProjectFromSetupInput,
   EntityIdPrefix,
   ProjectDataService,
+  ProjectInformationLanguageUpdate,
+  ProjectInformationUpdate,
   ProjectIdGenerator,
   ReadProjectInput,
   ResolveProjectCoverImageInput,
+  UpdateProjectInformationInput,
 } from './project/index.js';

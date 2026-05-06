@@ -25,8 +25,6 @@ export interface ProjectSummary {
   folderPath: string;
   coverImage: ProjectCoverImage | null;
   logline?: string;
-  format?: string;
-  baseLanguage?: string;
   counts: ProjectCounts | null;
   validationError: ProjectDataError | null;
 }
@@ -38,13 +36,7 @@ export interface ProjectIdentity {
   type: ProjectType;
   folderPath: string;
   databasePath: string;
-  format?: string;
-  baseLanguage?: string;
   aspectRatio?: string;
-  resolution?: {
-    width: number;
-    height: number;
-  };
   logline?: string;
   summary?: string;
 }
@@ -58,6 +50,8 @@ export interface ProjectLanguage {
   localeTag: string;
   displayName?: string;
   isBase: boolean;
+  supportsAudio: boolean;
+  supportsSubtitles: boolean;
 }
 
 export interface VisualLanguage {

@@ -18,6 +18,7 @@ export interface ProjectSession {
   projectSessionError: string | null;
   refreshProjectLibrary: () => Promise<void>;
   selectProject: (projectName: string) => Promise<void>;
+  updateCurrentProject: (project: ProjectWithHttp) => void;
   returnToProjectLibrary: () => void;
 }
 
@@ -104,6 +105,10 @@ export function useProjectSession(): ProjectSession {
     void refreshProjectLibrary();
   }, [refreshProjectLibrary]);
 
+  const updateCurrentProject = useCallback((nextProject: ProjectWithHttp) => {
+    setProject(nextProject);
+  }, []);
+
   return {
     project,
     library,
@@ -113,7 +118,7 @@ export function useProjectSession(): ProjectSession {
     projectSessionError,
     refreshProjectLibrary,
     selectProject,
+    updateCurrentProject,
     returnToProjectLibrary,
   };
 }
-

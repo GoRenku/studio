@@ -1,4 +1,5 @@
 import type {
+  ProjectInformationUpdateRequest,
   ProjectLibraryWithHttp,
   ProjectWithHttp,
 } from '@/services/studio-project-contracts';
@@ -47,4 +48,30 @@ export async function readProjectLibrary(): Promise<ProjectLibraryWithHttp> {
   }
   const body = (await response.json()) as LibraryResponse;
   return body.library;
+}
+
+export async function updateProjectInformation(
+  projectName: string,
+  information: ProjectInformationUpdateRequest
+): Promise<ProjectWithHttp> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/information`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(information),
+    }
+  );
+
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as ProjectResponse;
+  if (!body.project) {
+    throw new Error('Renku Studio API returned no project.');
+  }
+  return body.project;
 }

@@ -1,5 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {
+  buildDiagnosticResult,
+  createDiagnosticError,
+  type DiagnosticIssue,
+} from '@gorenku/studio-diagnostics';
 import type {
   Project,
   ProjectCounts,
@@ -37,10 +42,18 @@ import {
   insertSceneRecord,
   insertSequenceRecord,
 } from './data/narrative-records.js';
-import { insertProjectLanguageRecords } from './data/project-language-records.js';
+import {
+  insertProjectLanguageRecords,
+  listProjectLanguageRecords,
+  replaceProjectLanguageRecords,
+} from './data/project-language-records.js';
 import { readProjectLibrary } from './data/project-library-reader.js';
 import { readProjectFromSession } from './data/project-reader.js';
-import { insertProjectRecord } from './data/project-records.js';
+import {
+  insertProjectRecord,
+  readProjectRecord,
+  updateProjectInformationRecord,
+} from './data/project-records.js';
 import { openProjectStore, type ProjectDataSession } from './data/sqlite-project-store.js';
 import { insertVisualLanguageRecords } from './data/visual-language-records.js';
 
@@ -48,6 +61,7 @@ export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
+  updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
   resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
 }
 
@@ -61,6 +75,27 @@ export interface ReadProjectInput extends RenkuConfigPathOptions {
   projectName: string;
 }
 
+export interface UpdateProjectInformationInput extends RenkuConfigPathOptions {
+  projectName: string;
+  information: ProjectInformationUpdate;
+}
+
+export interface ProjectInformationUpdate {
+  title: string;
+  aspectRatio?: string;
+  logline?: string;
+  summary?: string;
+  languages: ProjectInformationLanguageUpdate[];
+}
+
+export interface ProjectInformationLanguageUpdate {
+  localeTag: string;
+  displayName?: string;
+  isBase: boolean;
+  supportsAudio: boolean;
+  supportsSubtitles: boolean;
+}
+
 export interface ResolveProjectCoverImageInput extends RenkuConfigPathOptions {
   projectName: string;
 }
@@ -70,6 +105,7 @@ export function createProjectDataService(): ProjectDataService {
     createFromSetup,
     listLibrary,
     readProject,
+    updateProjectInformation,
     resolveCoverImage,
   };
 }
@@ -134,6 +170,60 @@ async function readProject(input: ReadProjectInput): Promise<Project> {
   }
 }
 
+async function updateProjectInformation(
+  input: UpdateProjectInformationInput
+): Promise<Project> {
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  const session = openProjectStore({ projectFolder, create: false });
+  try {
+    const projectRecord = readProjectRecord(session);
+    if (!projectRecord) {
+      throw new ProjectDataError(
+        'PROJECT_DATA021',
+        `Project database has no project row: ${session.databasePath}.`
+      );
+    }
+
+    validateProjectInformationUpdate(input.information);
+    const now = new Date().toISOString();
+    const existingLanguageIds = new Map(
+      listProjectLanguageRecords(session).map((language) => [
+        language.localeTag,
+        language.id,
+      ])
+    );
+    const ids = createUniqueIdAllocator(createRandomIdGenerator());
+
+    const transaction = session.sqlite.transaction(() => {
+      updateProjectInformationRecord(session, projectRecord.id, {
+        title: input.information.title.trim(),
+        aspectRatio: input.information.aspectRatio,
+        logline: optionalTrimmed(input.information.logline),
+        summary: optionalTrimmed(input.information.summary),
+        updatedAt: now,
+      });
+      replaceProjectLanguageRecords(
+        session,
+        input.information.languages.map((language, index) => ({
+          id: existingLanguageIds.get(language.localeTag) ?? ids('language'),
+          localeTag: language.localeTag,
+          displayName: optionalTrimmed(language.displayName),
+          isBase: language.isBase,
+          supportsAudio: language.supportsAudio,
+          supportsSubtitles: language.supportsSubtitles,
+          position: index + 1,
+        }))
+      );
+    });
+
+    transaction();
+    return readProjectFromSession({ session, projectFolder });
+  } finally {
+    session.close();
+  }
+}
+
 async function resolveCoverImage(
   input: ResolveProjectCoverImageInput
 ): Promise<string | null> {
@@ -160,13 +250,9 @@ function writeSetupRecords(
       name: setup.project.name,
       title: setup.project.title,
       type: setup.project.type,
-      format: setup.project.format,
-      baseLanguage: setup.project.baseLanguage,
       logline: setup.project.logline,
       summary: setup.project.summary,
       aspectRatio: setup.project.aspectRatio,
-      resolutionWidth: setup.project.resolution?.width,
-      resolutionHeight: setup.project.resolution?.height,
       coverFile,
       createdAt: now,
       updatedAt: now,
@@ -180,6 +266,8 @@ function writeSetupRecords(
         localeTag: language.localeTag,
         displayName: language.displayName,
         isBase: language.isBase ?? false,
+        supportsAudio: language.supportsAudio ?? true,
+        supportsSubtitles: language.supportsSubtitles ?? true,
         position: index + 1,
       }))
     );
@@ -283,19 +371,122 @@ function writeSequences(
 }
 
 function expandLanguages(setup: ProjectSetup): ProjectSetupLanguage[] {
-  const languages = [...(setup.languages ?? [])];
-  const baseLanguage = setup.project.baseLanguage;
-  if (
-    baseLanguage &&
-    !languages.some((language) => language.localeTag === baseLanguage)
-  ) {
-    languages.unshift({
-      localeTag: baseLanguage,
-      displayName: baseLanguage,
-      isBase: true,
-    });
+  return [...(setup.languages ?? [])];
+}
+
+function validateProjectInformationUpdate(update: ProjectInformationUpdate): void {
+  const issues: DiagnosticIssue[] = [];
+  const supportedAspectRatios = new Set([
+    '1:1',
+    '3:4',
+    '4:3',
+    '16:9',
+    '9:16',
+    '21:9',
+  ]);
+  const supportedLocaleTags = new Set([
+    'en-US',
+    'es-ES',
+    'de-DE',
+    'fr-FR',
+    'zh-CN',
+    'ja-JP',
+    'tr-TR',
+  ]);
+
+  if (!update.title.trim()) {
+    issues.push(
+      createDiagnosticError(
+        'PROJECT_DATA050',
+        'Project title is required.',
+        { path: ['title'], context: 'project information update' },
+        'Enter a project title before saving.'
+      )
+    );
   }
-  return languages;
+
+  if (
+    update.aspectRatio !== undefined &&
+    !supportedAspectRatios.has(update.aspectRatio)
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'PROJECT_DATA051',
+        'Project aspect ratio is not supported.',
+        { path: ['aspectRatio'], context: 'project information update' },
+        'Choose one of 1:1, 3:4, 4:3, 16:9, 9:16, or 21:9.'
+      )
+    );
+  }
+
+  if (update.languages.length === 0) {
+    issues.push(
+      createDiagnosticError(
+        'PROJECT_DATA052',
+        'At least one project language is required.',
+        { path: ['languages'], context: 'project information update' },
+        'Add at least one language.'
+      )
+    );
+  }
+
+  const seenLocaleTags = new Set<string>();
+  let baseLanguageCount = 0;
+  update.languages.forEach((language, index) => {
+    const languagePath = ['languages', String(index)];
+    if (!supportedLocaleTags.has(language.localeTag)) {
+      issues.push(
+        createDiagnosticError(
+          'PROJECT_DATA053',
+          `Language ${language.localeTag} is not in the supported project language catalog.`,
+          { path: [...languagePath, 'localeTag'], context: 'project information update' },
+          'Choose a language from the Studio language dropdown.'
+        )
+      );
+    }
+    if (seenLocaleTags.has(language.localeTag)) {
+      issues.push(
+        createDiagnosticError(
+          'PROJECT_DATA054',
+          `Language ${language.localeTag} appears more than once.`,
+          { path: [...languagePath, 'localeTag'], context: 'project information update' },
+          'Keep only one row for each locale tag.'
+        )
+      );
+    }
+    seenLocaleTags.add(language.localeTag);
+    if (language.isBase) {
+      baseLanguageCount += 1;
+    }
+  });
+
+  if (baseLanguageCount !== 1) {
+    issues.push(
+      createDiagnosticError(
+        'PROJECT_DATA055',
+        'Exactly one project language must be marked as base.',
+        { path: ['languages'], context: 'project information update' },
+        'Choose one base language.'
+      )
+    );
+  }
+
+  const result = buildDiagnosticResult(issues);
+  if (!result.valid) {
+    throw new ProjectDataError(
+      'PROJECT_DATA056',
+      'Project information failed validation.',
+      {
+        issues: result.issues,
+        suggestion: 'Fix the highlighted project information fields and save again.',
+      }
+    );
+  }
+}
+
+function optionalTrimmed(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {

@@ -9,6 +9,8 @@ export interface InsertProjectLanguageRecord {
   localeTag: string;
   displayName?: string;
   isBase: boolean;
+  supportsAudio: boolean;
+  supportsSubtitles: boolean;
   position: number;
 }
 
@@ -29,4 +31,12 @@ export function listProjectLanguageRecords(
     .from(projectLanguages)
     .orderBy(asc(projectLanguages.position))
     .all();
+}
+
+export function replaceProjectLanguageRecords(
+  session: ProjectDataSession,
+  records: InsertProjectLanguageRecord[]
+): void {
+  session.db.delete(projectLanguages).run();
+  insertProjectLanguageRecords(session, records);
 }

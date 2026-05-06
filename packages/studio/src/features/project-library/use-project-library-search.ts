@@ -15,12 +15,9 @@ export function useProjectLibrarySearch(
         project.title,
         project.name,
         project.logline,
-        project.format,
-        project.baseLanguage,
       ]
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(normalizedQuery))
     );
   }, [projects, query]);
 }
-

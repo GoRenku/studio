@@ -4,8 +4,11 @@ export {
 export type {
   CreateProjectFromSetupInput,
   ProjectDataService,
+  ProjectInformationLanguageUpdate,
+  ProjectInformationUpdate,
   ReadProjectInput,
   ResolveProjectCoverImageInput,
+  UpdateProjectInformationInput,
 } from './project-data-service.js';
 export {
   RENKU_PROJECT_DATABASE,

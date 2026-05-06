@@ -5,12 +5,7 @@ project:
   name: constantinople
   title: Preparation of the Siege of Constantinople
   type: standaloneMovie
-  format: historical_documentary
-  baseLanguage: en-US
   aspectRatio: "16:9"
-  resolution:
-    width: 1920
-    height: 1080
   logline: A historical documentary about how Mehmed II prepared the strategic, technological, logistical, naval, diplomatic, and psychological machine that made Constantinople vulnerable before April 1453.
   summary: >
     The film follows the preparation phase before the siege: a young sultan
@@ -22,9 +17,13 @@ languages:
   - localeTag: en-US
     displayName: English
     isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
 
   - localeTag: tr-TR
     displayName: Turkish
+    supportsAudio: true
+    supportsSubtitles: true
 
 visualLanguage:
   - name: Ottoman court miniature influence

@@ -22,6 +22,7 @@ function App() {
       <MovieStudioScreen
         project={projectSession.project}
         onHome={projectSession.returnToProjectLibrary}
+        onProjectChange={projectSession.updateCurrentProject}
       />
     );
   }

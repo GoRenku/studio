@@ -10,11 +10,10 @@ export function EmptyProjectLibrary({ hasQuery }: { hasQuery: boolean }) {
         </h2>
         <p className='mt-2 text-sm leading-relaxed text-muted-foreground'>
           {hasQuery
-            ? 'Try a different title, project name, format, or language.'
+            ? 'Try a different title, project name, or logline.'
             : 'Renku Studio scans immediate child folders in its configured storage root and shows folders that contain .renku/project.sqlite.'}
         </p>
       </div>
     </div>
   );
 }
-

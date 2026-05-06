@@ -48,8 +48,6 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
       folderPath: project.identity.folderPath,
       coverImage: project.coverImage,
       logline: project.identity.logline,
-      format: project.identity.format,
-      baseLanguage: project.identity.baseLanguage,
       counts: project.counts,
       validationError: null,
     };

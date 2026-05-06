@@ -25,21 +25,17 @@ export interface ProjectSetupProject {
   name: string;
   title: string;
   type: 'standaloneMovie' | 'series';
-  format?: string;
-  baseLanguage?: string;
   logline?: string;
   summary?: string;
   aspectRatio?: string;
-  resolution?: {
-    width: number;
-    height: number;
-  };
 }
 
 export interface ProjectSetupLanguage {
   localeTag: string;
   displayName?: string;
   isBase?: boolean;
+  supportsAudio?: boolean;
+  supportsSubtitles?: boolean;
 }
 
 export interface ProjectSetupVisualLanguage {
@@ -257,12 +253,9 @@ function readProject(
     'name',
     'title',
     'type',
-    'format',
-    'baseLanguage',
     'logline',
     'summary',
     'aspectRatio',
-    'resolution',
   ]);
 
   const name = readRequiredString(context, record, [...path, 'name'], 'project.name is required.');
@@ -311,12 +304,9 @@ function readProject(
     name,
     title,
     type,
-    format: readOptionalString(context, record, [...path, 'format']),
-    baseLanguage: readOptionalString(context, record, [...path, 'baseLanguage']),
     logline: readOptionalString(context, record, [...path, 'logline']),
     summary: readOptionalString(context, record, [...path, 'summary']),
     aspectRatio: readOptionalString(context, record, [...path, 'aspectRatio']),
-    resolution: readResolution(context, record.resolution, [...path, 'resolution']),
   };
 }
 
@@ -329,7 +319,13 @@ function readLanguage(
   if (!record) {
     return null;
   }
-  warnUnknownKeys(context, record, path, ['localeTag', 'displayName', 'isBase']);
+  warnUnknownKeys(context, record, path, [
+    'localeTag',
+    'displayName',
+    'isBase',
+    'supportsAudio',
+    'supportsSubtitles',
+  ]);
   const localeTag = readRequiredString(
     context,
     record,
@@ -343,6 +339,11 @@ function readLanguage(
     localeTag,
     displayName: readOptionalString(context, record, [...path, 'displayName']),
     isBase: readOptionalBoolean(context, record, [...path, 'isBase']),
+    supportsAudio: readOptionalBoolean(context, record, [...path, 'supportsAudio']),
+    supportsSubtitles: readOptionalBoolean(context, record, [
+      ...path,
+      'supportsSubtitles',
+    ]),
   };
 }
 
@@ -523,37 +524,6 @@ function readClip(
   };
 }
 
-function readResolution(
-  context: ValidationContext,
-  input: unknown,
-  path: string[]
-): ProjectSetupProject['resolution'] {
-  if (input === undefined) {
-    return undefined;
-  }
-  const record = readRecord(context, input, path, 'project.resolution');
-  if (!record) {
-    return undefined;
-  }
-  warnUnknownKeys(context, record, path, ['width', 'height']);
-  const width = readRequiredNumber(
-    context,
-    record,
-    [...path, 'width'],
-    `${formatPath([...path, 'width'])} is required.`
-  );
-  const height = readRequiredNumber(
-    context,
-    record,
-    [...path, 'height'],
-    `${formatPath([...path, 'height'])} is required.`
-  );
-  if (width === null || height === null) {
-    return undefined;
-  }
-  return { width, height };
-}
-
 function readArrayItems<T>(
   context: ValidationContext,
   input: unknown,
@@ -681,29 +651,6 @@ function readOptionalNumber(
       path
     );
     return undefined;
-  }
-  return value;
-}
-
-function readRequiredNumber(
-  context: ValidationContext,
-  record: Record<string, unknown>,
-  path: string[],
-  message: string
-): number | null {
-  const value = record[path[path.length - 1]];
-  if (value === undefined) {
-    addError(context, 'PROJECT_SETUP003', message, path);
-    return null;
-  }
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    addError(
-      context,
-      'PROJECT_SETUP004',
-      `${formatPath(path)} must be a number.`,
-      path
-    );
-    return null;
   }
   return value;
 }

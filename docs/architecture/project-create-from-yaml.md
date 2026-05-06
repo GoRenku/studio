@@ -50,7 +50,7 @@ The create YAML answers one question:
 It should include only the initial creative/narrative outline that an agent can
 reasonably extract from narrative material:
 
-- project title, project name, format, logline, and summary;
+- project title, project name, type, aspect ratio, logline, and summary;
 - whether this is a standalone movie or a series;
 - initial episodes for a series;
 - initial base/supported language metadata, if known;
@@ -267,8 +267,6 @@ project:
   name: constantinople-movie
   title: Preparation of the Siege of Constantinople
   type: standaloneMovie
-  format: historical_documentary
-  baseLanguage: en-US
   logline: A documentary about how Mehmed II prepared the machine that made Constantinople vulnerable.
   summary: >
     The movie follows the strategic, logistical, and psychological preparation
@@ -278,8 +276,12 @@ languages:
   - localeTag: en-US
     displayName: English
     isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
   - localeTag: tr-TR
     displayName: Turkish
+    supportsAudio: true
+    supportsSubtitles: true
 
 visualLanguage:
   - name: Ottoman court miniature influence
@@ -340,8 +342,6 @@ project:
   name: constantinople-movie
   title: Preparation of the Siege of Constantinople
   type: standaloneMovie
-  format: historical_documentary
-  baseLanguage: en-US
   logline: A documentary about how Mehmed II prepared the machine that made Constantinople vulnerable.
   summary: >
     The movie follows the strategic, logistical, and psychological preparation
@@ -355,9 +355,6 @@ Recommended fields:
 - `title`: display title. This is required.
 - `type`: `standaloneMovie` or `series`. This is required because Renku Studio should
   create series metadata from the beginning when the project is a series.
-- `format`: broad format, such as `historical_documentary`, `fiction_short`,
-  `explainer`, or `essay_film`.
-- `baseLanguage`: optional BCP 47-style locale tag.
 - `logline`: compact one-sentence premise.
 - `summary`: short project-level summary.
 
@@ -380,9 +377,13 @@ languages:
   - localeTag: en-US
     displayName: English
     isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
 
   - localeTag: tr-TR
     displayName: Turkish
+    supportsAudio: true
+    supportsSubtitles: true
 ```
 
 Recommended language fields:
@@ -390,18 +391,19 @@ Recommended language fields:
 - `localeTag`: BCP 47-style locale tag.
 - `displayName`: user-facing language name.
 - `isBase`: whether this is the base language.
+- `supportsAudio`: whether localized audio can be produced for this language.
+- `supportsSubtitles`: whether subtitles can be produced for this language.
 
 Rules:
 
-- If `project.baseLanguage` is present, `studio-core` should create basic base
-  language metadata for that locale.
 - If `languages` is present, `studio-core` should create basic language metadata
   for those entries.
-- If neither `project.baseLanguage` nor `languages` is present, creation should
-  still succeed and the user can configure language later.
+- If `languages` is missing, creation should still succeed and the user can
+  configure language later.
 - If `languages` is present and no item has `isBase: true`, creation should
   still succeed and the user can configure the base language later.
-- Detailed localization levels are out of scope for this YAML.
+- Detailed localization levels beyond audio/subtitle availability are out of
+  scope for this YAML.
 
 ### `visualLanguage`
 
@@ -568,8 +570,6 @@ project:
   name: conquest-series
   title: The Fall of Constantinople
   type: series
-  format: historical_documentary_series
-  baseLanguage: en-US
   logline: A series about the people, machines, and decisions that shaped 1453.
 
 episodes:
@@ -607,24 +607,23 @@ project:
   name: constantinople-movie
   title: Preparation of the Siege of Constantinople
   type: standaloneMovie
-  format: historical_documentary
-  baseLanguage: en-US
   logline: A historical documentary about how Mehmed II prepared the machine that made Constantinople vulnerable.
   summary: >
     The film follows the strategic, logistical, and psychological preparation
     that turned an old imperial dream into a campaign.
   aspectRatio: "16:9"
-  resolution:
-    width: 1920
-    height: 1080
 
 languages:
   - localeTag: en-US
     displayName: English
     isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
 
   - localeTag: tr-TR
     displayName: Turkish
+    supportsAudio: true
+    supportsSubtitles: true
 
 visualLanguage:
   - name: Ottoman court miniature influence

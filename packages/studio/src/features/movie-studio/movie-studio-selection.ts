@@ -7,6 +7,8 @@ import type {
 import type { ProjectWithHttp } from '@/services/studio-project-contracts';
 
 export type MovieStudioSelection =
+  | { type: 'projectInformation' }
+  | { type: 'visualLanguage' }
   | { type: 'storyboard' }
   | { type: 'sequence'; id: string }
   | { type: 'scene'; id: string }
@@ -103,6 +105,24 @@ export function resolveMovieStudioSelection(
         castEntry,
       };
     }
+  }
+
+  if (selection.type === 'projectInformation') {
+    return {
+      kicker: 'Project Information',
+      title: '',
+      summary: 'Project information loaded from project data.',
+      clips: [],
+    };
+  }
+
+  if (selection.type === 'visualLanguage') {
+    return {
+      kicker: 'Visual Language',
+      title: '',
+      summary: 'Visual language loaded from project data.',
+      clips: [],
+    };
   }
 
   return {

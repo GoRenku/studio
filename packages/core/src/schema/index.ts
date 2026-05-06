@@ -5,13 +5,9 @@ export const projects = sqliteTable('project', {
   name: text('name').notNull(),
   title: text('title').notNull(),
   type: text('type').notNull(),
-  format: text('format'),
-  baseLanguage: text('base_language'),
   logline: text('logline'),
   summary: text('summary'),
   aspectRatio: text('aspect_ratio'),
-  resolutionWidth: integer('resolution_width'),
-  resolutionHeight: integer('resolution_height'),
   coverFile: text('cover_file'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -22,6 +18,10 @@ export const projectLanguages = sqliteTable('project_language', {
   localeTag: text('locale_tag').notNull(),
   displayName: text('display_name'),
   isBase: integer('is_base', { mode: 'boolean' }).notNull(),
+  supportsAudio: integer('supports_audio', { mode: 'boolean' }).notNull().default(true),
+  supportsSubtitles: integer('supports_subtitles', { mode: 'boolean' })
+    .notNull()
+    .default(true),
   position: integer('position').notNull(),
 });
 

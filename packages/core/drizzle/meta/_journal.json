@@ -8,6 +8,13 @@
       "when": 1778051456567,
       "tag": "0000_project_create",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778077719667,
+      "tag": "0001_project_information_languages",
+      "breakpoints": true
     }
   ]
 }
