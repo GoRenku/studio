@@ -1,3 +1,5 @@
+import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
+
 export type ProjectType = 'standaloneMovie' | 'series';
 
 export interface Project {
@@ -117,6 +119,8 @@ export interface ProjectCounts {
 export interface ProjectDataError {
   code: string;
   message: string;
+  issues?: DiagnosticIssue[];
+  suggestion?: string;
 }
 
 export interface ProjectCreateReport {
@@ -125,4 +129,5 @@ export interface ProjectCreateReport {
   databasePath: string;
   coverPath: string | null;
   created: ProjectCounts;
+  warnings: DiagnosticIssue[];
 }

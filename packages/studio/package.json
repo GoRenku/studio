@@ -17,6 +17,7 @@
     "check:all": "pnpm lint && pnpm test:typecheck && pnpm test"
   },
   "dependencies": {
+    "@gorenku/studio-diagnostics": "workspace:*",
     "@gorenku/studio-core": "workspace:*",
     "@hono/node-server": "^2.0.1",
     "@radix-ui/react-dropdown-menu": "^2.1.16",

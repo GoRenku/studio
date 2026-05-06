@@ -90,7 +90,7 @@ describe('Renku config', () => {
 
   it('fails when config is missing', async () => {
     await expect(readRenkuConfig({ homeDir })).rejects.toMatchObject({
-      code: 'C002',
+      code: 'CONFIG002',
     });
   });
 
@@ -100,7 +100,7 @@ describe('Renku config', () => {
     await fs.writeFile(configPath, 'version: 0.1.0\n', 'utf8');
 
     await expect(readRenkuConfig({ homeDir })).rejects.toMatchObject({
-      code: 'C007',
+      code: 'CONFIG007',
     });
   });
 
@@ -110,7 +110,7 @@ describe('Renku config', () => {
     await fs.writeFile(configPath, 'version: 0.1.0\nstorageRoot: 123\n', 'utf8');
 
     await expect(readRenkuConfig({ homeDir })).rejects.toMatchObject({
-      code: 'C007',
+      code: 'CONFIG007',
     });
   });
 
@@ -124,7 +124,7 @@ describe('Renku config', () => {
     );
 
     await expect(readRenkuConfig({ homeDir })).rejects.toMatchObject({
-      code: 'C005',
+      code: 'CONFIG005',
     });
   });
 
@@ -136,7 +136,7 @@ describe('Renku config', () => {
       RenkuConfigError
     );
     await expect(initRenkuConfig(storageRoot, { homeDir })).rejects.toMatchObject({
-      code: 'C008',
+      code: 'CONFIG008',
     });
   });
 });

@@ -29,6 +29,7 @@
   ],
   "packageManager": "pnpm@10.15.0",
   "dependencies": {
+    "@gorenku/studio-diagnostics": "workspace:*",
     "@gorenku/studio-core": "workspace:*",
     "meow": "^14.1.0"
   },

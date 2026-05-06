@@ -703,22 +703,29 @@ sequences:
 
 ## Validation Rules
 
-The create command should fail when:
+The create command should fail with structured `PROJECT_SETUP...` diagnostics
+when:
 
 - `kind` is not `renku.projectSetup`;
 - `version` is missing or unsupported;
+- `project.name` is missing;
 - `project.title` is missing;
 - `project.type` is missing;
 - `project.type` is not `standaloneMovie` or `series`;
 - `project.name` is present but is not a valid project name;
-- the resolved project folder already exists;
-- `project.type` is `series` and both top-level `sequences` and
-  `episodes[].sequences` are present;
-- a duration field is present;
-- a relationship reference field is present, such as `castRefs`,
-  `visualLanguageRefs`, or `referenceSetRefs`;
-- a generation task, take, recipe, provider run, or budget spend field is
-  present.
+- a known field has the wrong type.
+
+The create command should fail with structured `PROJECT_DATA...` diagnostics
+when the resolved project folder already exists or a required filesystem/database
+operation fails.
+
+Unknown YAML fields are warnings, not errors. They are ignored and must never
+create database columns, DTO fields, or schema obligations.
+
+Misspelled required fields are reported as both:
+
+- a missing required field error for the intended field;
+- an unknown field warning for the misspelled key.
 
 The create command should not fail when:
 

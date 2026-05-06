@@ -19,7 +19,7 @@ export function openProjectStore(input: {
   const databasePath = resolveProjectDatabasePath(input.projectFolder);
   if (!input.create && !existsSync(databasePath)) {
     throw new ProjectDataError(
-      'P020',
+      'PROJECT_DATA020',
       `Project database not found at ${databasePath}.`
     );
   }

@@ -1,4 +1,5 @@
 packages:
+  - 'packages/diagnostics'
   - 'packages/core'
   - 'packages/cli'
   - 'packages/engines'

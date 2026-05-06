@@ -13,7 +13,7 @@ export function migrateProjectDatabase(databasePath: string): void {
 
   if (!existsSync(configPath)) {
     throw new ProjectDataError(
-      'P030',
+      'PROJECT_DATA040',
       `Project database migration config was not found at ${configPath}.`
     );
   }
@@ -33,7 +33,7 @@ export function migrateProjectDatabase(databasePath: string): void {
 
   if (result.error) {
     throw new ProjectDataError(
-      'P031',
+      'PROJECT_DATA041',
       `Project database migration command failed to start for ${databasePath}: ${result.error.message}`
     );
   }
@@ -44,7 +44,7 @@ export function migrateProjectDatabase(databasePath: string): void {
       .join('\n');
 
     throw new ProjectDataError(
-      'P032',
+      'PROJECT_DATA042',
       `Project database migration failed for ${databasePath}.${output ? `\n${output}` : ''}`
     );
   }
@@ -69,7 +69,7 @@ function findCorePackageRoot(startFolder: string): string {
   }
 
   throw new ProjectDataError(
-    'P033',
+    'PROJECT_DATA043',
     `Could not resolve the ${CORE_PACKAGE_NAME} package root from ${startFolder}.`
   );
 }

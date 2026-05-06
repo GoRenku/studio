@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isStructuredError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import meow from 'meow';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { getRenkuCliInfo } from './commands/info.js';
@@ -112,9 +113,67 @@ export async function runRenkuCli(
         return 1;
     }
   } catch (error) {
+    if (isStructuredError(error)) {
+      if (cli.flags.json) {
+        io.stderr.error(
+          JSON.stringify(
+            {
+              valid: false,
+              error: {
+                code: error.code,
+                message: error.message,
+                suggestion: error.suggestion,
+              },
+              issues: error.issues,
+              errors: error.issues.filter((issue) => issue.severity === 'error'),
+              warnings: error.issues.filter((issue) => issue.severity === 'warning'),
+            },
+            null,
+            2
+          )
+        );
+      } else {
+        io.stderr.error(formatStructuredError(error));
+      }
+      return 1;
+    }
     io.stderr.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
+}
+
+function formatStructuredError(error: {
+  code: string;
+  message: string;
+  issues: DiagnosticIssue[];
+  suggestion?: string;
+}): string {
+  const lines = [`[${error.code}] ${error.message}`];
+  for (const issue of error.issues) {
+    lines.push(formatDiagnosticIssue(issue));
+  }
+  if (error.suggestion) {
+    lines.push(`Suggestion: ${error.suggestion}`);
+  }
+  return lines.join('\n');
+}
+
+export function formatDiagnosticIssue(issue: DiagnosticIssue): string {
+  const location = formatDiagnosticLocation(issue.location.path);
+  const suggestion = issue.suggestion ? ` Suggestion: ${issue.suggestion}` : '';
+  return `[${issue.code}] ${issue.severity.toUpperCase()} ${location}: ${issue.message}${suggestion}`;
+}
+
+function formatDiagnosticLocation(path: string[]): string {
+  if (path.length === 0) {
+    return '<root>';
+  }
+  return path.reduce((label, segment) => {
+    if (/^\d+$/.test(segment)) {
+      return `${label}[${segment}]`;
+    }
+    return label ? `${label}.${segment}` : segment;
+  }, '');
 }
 
 const isEntrypoint = process.argv[1]?.endsWith('/cli.js') ?? false;

@@ -41,7 +41,7 @@ export function readProjectFromSession(input: {
   const project = readProjectRecord(input.session);
   if (!project) {
     throw new ProjectDataError(
-      'P021',
+      'PROJECT_DATA021',
       `Project database has no project row: ${input.session.databasePath}.`
     );
   }

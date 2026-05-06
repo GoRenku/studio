@@ -1,3 +1,7 @@
+import {
+  StructuredError,
+  createDiagnosticError,
+} from '@gorenku/studio-diagnostics';
 import { initRenkuConfig } from '@gorenku/studio-core/node';
 import type { RenkuCliIo } from '../cli.js';
 
@@ -14,17 +18,33 @@ export async function runInitCommand(
   const [storageRoot, ...extraInput] = options.input;
 
   if (!storageRoot) {
-    options.io.stderr.error(
-      'Missing required storage root. Usage: renku init <storage-root>'
-    );
-    return 1;
+    throw new StructuredError({
+      code: 'CLI003',
+      message: 'Missing required storage root. Usage: renku init <storage-root>',
+      issues: [
+        createDiagnosticError(
+          'CLI003',
+          'Missing required storage root.',
+          { path: ['init', '<storage-root>'], context: 'renku CLI arguments' },
+          'Run renku init <storage-root> with an explicit storage directory.'
+        ),
+      ],
+    });
   }
 
   if (extraInput.length > 0) {
-    options.io.stderr.error(
-      `Unexpected extra arguments: ${extraInput.join(' ')}`
-    );
-    return 1;
+    throw new StructuredError({
+      code: 'CLI004',
+      message: `Unexpected extra arguments: ${extraInput.join(' ')}`,
+      issues: [
+        createDiagnosticError(
+          'CLI004',
+          `Unexpected extra arguments: ${extraInput.join(' ')}`,
+          { path: ['init'], context: 'renku CLI arguments' },
+          'Run renku init with exactly one storage root argument.'
+        ),
+      ],
+    });
   }
 
   const result = await initRenkuConfig(storageRoot, {

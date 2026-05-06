@@ -66,7 +66,7 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
         error instanceof ProjectDataError
           ? { code: error.code, message: error.message }
           : {
-              code: 'P022',
+              code: 'PROJECT_DATA022',
               message: error instanceof Error ? error.message : String(error),
             },
     };
@@ -78,7 +78,10 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
 async function assertDirectory(targetPath: string, label: string): Promise<void> {
   const stats = await fs.stat(targetPath);
   if (!stats.isDirectory()) {
-    throw new ProjectDataError('P023', `${label} is not a directory: ${targetPath}`);
+    throw new ProjectDataError(
+      'PROJECT_DATA023',
+      `${label} is not a directory: ${targetPath}`
+    );
   }
 }
 

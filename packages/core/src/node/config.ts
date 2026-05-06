@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { StructuredError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 export const RENKU_CONFIG_VERSION = '0.1.0' as const;
@@ -32,12 +33,21 @@ export interface InitRenkuConfigResult {
   storageRoot: string;
 }
 
-export class RenkuConfigError extends Error {
+export class RenkuConfigError extends StructuredError {
   constructor(
-    public readonly code: string,
-    message: string
+    code: string,
+    message: string,
+    options: {
+      issues?: DiagnosticIssue[];
+      suggestion?: string;
+    } = {}
   ) {
-    super(message);
+    super({
+      code,
+      message,
+      issues: options.issues,
+      suggestion: options.suggestion,
+    });
     this.name = 'RenkuConfigError';
   }
 }
@@ -76,7 +86,7 @@ export async function initRenkuConfig(
 ): Promise<InitRenkuConfigResult> {
   if (!storageRootInput.trim()) {
     throw new RenkuConfigError(
-      'C001',
+      'CONFIG001',
       'storageRoot is required. Run `renku init <storage-root>` with an explicit path.'
     );
   }
@@ -122,7 +132,7 @@ async function readConfigFile(configPath: string): Promise<string> {
   } catch (error) {
     if (isNodeError(error) && error.code === 'ENOENT') {
       throw new RenkuConfigError(
-        'C002',
+        'CONFIG002',
         `Renku config not found at ${configPath}. Run \`renku init <storage-root>\` first.`
       );
     }
@@ -135,7 +145,7 @@ function parseConfigYaml(contents: string, configPath: string): unknown {
     return parseYaml(contents);
   } catch (error) {
     throw new RenkuConfigError(
-      'C003',
+      'CONFIG003',
       `Invalid YAML in Renku config at ${configPath}: ${
         error instanceof Error ? error.message : String(error)
       }`
@@ -146,7 +156,7 @@ function parseConfigYaml(contents: string, configPath: string): unknown {
 function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
   if (!isPlainObject(value)) {
     throw new RenkuConfigError(
-      'C004',
+      'CONFIG004',
       `Renku config at ${configPath} must be a YAML object.`
     );
   }
@@ -154,7 +164,7 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
   for (const key of Object.keys(value)) {
     if (!isCamelCaseKey(key)) {
       throw new RenkuConfigError(
-        'C005',
+        'CONFIG005',
         `Renku config key "${key}" must use camelCase.`
       );
     }
@@ -162,14 +172,14 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
 
   if (value.version !== RENKU_CONFIG_VERSION) {
     throw new RenkuConfigError(
-      'C006',
+      'CONFIG006',
       `Renku config version must be "${RENKU_CONFIG_VERSION}".`
     );
   }
 
   if (typeof value.storageRoot !== 'string' || !value.storageRoot.trim()) {
     throw new RenkuConfigError(
-      'C007',
+      'CONFIG007',
       'Renku config must define storageRoot as a non-empty string.'
     );
   }
@@ -185,7 +195,7 @@ async function ensureDirectory(directoryPath: string, label: string): Promise<vo
     const stats = await fs.stat(directoryPath);
     if (!stats.isDirectory()) {
       throw new RenkuConfigError(
-        'C008',
+        'CONFIG008',
         `Cannot create Renku ${label}: ${directoryPath} already exists and is not a directory.`
       );
     }
@@ -207,7 +217,7 @@ async function fileExists(filePath: string): Promise<boolean> {
     const stats = await fs.stat(filePath);
     if (!stats.isFile()) {
       throw new RenkuConfigError(
-        'C009',
+        'CONFIG009',
         `Renku config path exists but is not a file: ${filePath}.`
       );
     }

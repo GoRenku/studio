@@ -6,6 +6,7 @@ import {
   createDeterministicIdGenerator,
   createProjectDataService,
 } from './index.js';
+import { validateProjectSetup } from './setup/project-setup-reader.js';
 
 describe('ProjectDataService', () => {
   let homeDir: string;
@@ -102,7 +103,7 @@ describe('ProjectDataService', () => {
         homeDir,
         idGenerator: createDeterministicIdGenerator(),
       })
-    ).rejects.toMatchObject({ code: 'P024' });
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA024' });
   });
 
   it('lists only SQLite-backed projects from storageRoot', async () => {
@@ -128,6 +129,92 @@ describe('ProjectDataService', () => {
       name: 'constantinople',
       title: 'Preparation of the Siege',
     });
+  });
+
+  it('warns about unknown setup fields and ignores them', async () => {
+    const setupPath = await writeProjectSetup(homeDir, {
+      extraProjectFields: '  visualDescription: This must not shape the database.\n',
+    });
+    const projectData = createProjectDataService();
+
+    const result = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!result) {
+      return;
+    }
+
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: 'PROJECT_SETUP100',
+        severity: 'warning',
+        location: expect.objectContaining({
+          path: ['project', 'visualDescription'],
+        }),
+      }),
+    ]);
+    const project = await projectData.readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    expect(project.identity).not.toHaveProperty('visualDescription');
+  });
+
+  it('collects setup errors and unknown-field warnings together', () => {
+    const validation = validateProjectSetup({
+      kind: 'renku.projectSetup',
+      version: '0.1.0',
+      project: {
+        nam: 'constantinople',
+        title: 'Preparation of the Siege',
+      },
+    });
+
+    expect(validation.setup).toBeNull();
+    expect(validation.result.valid).toBe(false);
+    expect(validation.result.errors).toEqual([
+      expect.objectContaining({
+        code: 'PROJECT_SETUP003',
+        message: 'project.name is required.',
+      }),
+      expect.objectContaining({
+        code: 'PROJECT_SETUP003',
+        message: 'project.type is required.',
+      }),
+    ]);
+    expect(validation.result.warnings).toEqual([
+      expect.objectContaining({
+        code: 'PROJECT_SETUP100',
+        location: expect.objectContaining({ path: ['project', 'nam'] }),
+      }),
+    ]);
+  });
+
+  it('fails before creating a project folder when setup validation has errors', async () => {
+    const setupPath = await writeInvalidProjectSetup(homeDir);
+
+    await expect(
+      createProjectDataService().createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_SETUP999',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'PROJECT_SETUP003',
+          message: 'project.name is required.',
+        }),
+      ]),
+    });
+    await expect(
+      fs.stat(path.join(storageRoot, 'constantinople'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });
 
@@ -156,7 +243,10 @@ async function writeConfig(homeDir: string, storageRoot: string): Promise<void> 
   );
 }
 
-async function writeProjectSetup(homeDir: string): Promise<string> {
+async function writeProjectSetup(
+  homeDir: string,
+  options: { extraProjectFields?: string } = {}
+): Promise<string> {
   const setupPath = path.join(homeDir, 'project.yaml');
   await fs.writeFile(
     setupPath,
@@ -170,6 +260,7 @@ project:
   format: historical_documentary
   baseLanguage: en-US
   logline: A documentary about preparation before 1453.
+${options.extraProjectFields ?? ''}
 
 languages:
   - localeTag: en-US
@@ -204,6 +295,22 @@ sequences:
             visualIntent: Quiet court staging.
           - title: The City In His Mind
             summary: Constantinople appears as an imperial problem.
+`,
+    'utf8'
+  );
+  return setupPath;
+}
+
+async function writeInvalidProjectSetup(homeDir: string): Promise<string> {
+  const setupPath = path.join(homeDir, 'invalid-project.yaml');
+  await fs.writeFile(
+    setupPath,
+    `kind: renku.projectSetup
+version: 0.1.0
+
+project:
+  title: Preparation of the Siege
+  type: standaloneMovie
 `,
     'utf8'
   );

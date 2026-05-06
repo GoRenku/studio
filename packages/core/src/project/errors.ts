@@ -1,9 +1,20 @@
-export class ProjectDataError extends Error {
+import { StructuredError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
+
+export class ProjectDataError extends StructuredError {
   constructor(
-    public readonly code: string,
-    message: string
+    code: string,
+    message: string,
+    options: {
+      issues?: DiagnosticIssue[];
+      suggestion?: string;
+    } = {}
   ) {
-    super(message);
+    super({
+      code,
+      message,
+      issues: options.issues,
+      suggestion: options.suggestion,
+    });
     this.name = 'ProjectDataError';
   }
 }

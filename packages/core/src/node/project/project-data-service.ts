@@ -25,7 +25,7 @@ import {
   type ProjectIdGenerator,
 } from './ids/project-id-generator.js';
 import {
-  readProjectSetup,
+  readProjectSetupOrThrow,
   type ProjectSetup,
   type ProjectSetupLanguage,
   type ProjectSetupSequence,
@@ -77,14 +77,15 @@ export function createProjectDataService(): ProjectDataService {
 async function createFromSetup(
   input: CreateProjectFromSetupInput
 ): Promise<ProjectCreateReport> {
-  const setup = await readProjectSetup(input.setupPath);
+  const setupResult = await readProjectSetupOrThrow(input.setupPath);
+  const setup = setupResult.setup;
   const storageRoot = await resolveRenkuStorageRoot(input);
   await fs.mkdir(storageRoot, { recursive: true });
 
   const projectFolder = resolveProjectFolder(storageRoot, setup.project.name);
   if (await pathExists(projectFolder)) {
     throw new ProjectDataError(
-      'P024',
+      'PROJECT_DATA024',
       `Project folder already exists: ${projectFolder}`
     );
   }
@@ -110,6 +111,7 @@ async function createFromSetup(
       databasePath: resolveProjectDatabasePath(projectFolder),
       coverPath,
       created: counts,
+      warnings: setupResult.warnings,
     };
   } finally {
     session.close();

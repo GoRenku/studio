@@ -1,16 +1,18 @@
-import { ProjectDataError } from '@gorenku/studio-core';
+import { isStructuredError } from '@gorenku/studio-diagnostics';
 import type { Context } from 'hono';
 
 export function projectErrorResponse(c: Context, error: unknown): Response {
-  if (error instanceof ProjectDataError) {
+  if (isStructuredError(error)) {
     return c.json(
       {
         error: {
           code: error.code,
           message: error.message,
+          issues: error.issues,
+          suggestion: error.suggestion,
         },
       },
-      statusForProjectError(error.code)
+      statusForStructuredError(error.code)
     );
   }
 
@@ -18,7 +20,7 @@ export function projectErrorResponse(c: Context, error: unknown): Response {
   return c.json(
     {
       error: {
-        code: 'S000',
+        code: 'STUDIO_SERVER000',
         message,
       },
     },
@@ -26,11 +28,19 @@ export function projectErrorResponse(c: Context, error: unknown): Response {
   );
 }
 
-function statusForProjectError(code: string): 400 | 404 | 500 {
-  if (code === 'P020' || code === 'P030' || code === 'P031') {
+function statusForStructuredError(code: string): 400 | 404 | 500 {
+  if (
+    code === 'PROJECT_DATA020' ||
+    code === 'PROJECT_DATA040' ||
+    code === 'PROJECT_DATA041'
+  ) {
     return 404;
   }
-  if (code.startsWith('C') || code.startsWith('P')) {
+  if (
+    code.startsWith('CONFIG') ||
+    code.startsWith('PROJECT_DATA') ||
+    code.startsWith('PROJECT_SETUP')
+  ) {
     return 400;
   }
   return 500;

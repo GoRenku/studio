@@ -4,6 +4,7 @@ import type {
   ProjectLibrary,
 } from '@gorenku/studio-core';
 import type { ProjectDataService } from '@gorenku/studio-core/node';
+import { StructuredError, createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { describe, expect, it } from 'vitest';
 import { createProjectsRoute } from './projects.js';
 
@@ -42,6 +43,42 @@ describe('projects Hono route', () => {
           name: 'constantinople',
         },
         coverUrl: '/studio-api/projects/constantinople/cover',
+      },
+    });
+  });
+
+  it('serializes structured errors with issues', async () => {
+    const app = createProjectsRoute({
+      projectData: {
+        ...fakeProjectDataService(),
+        async listLibrary() {
+          throw new StructuredError({
+            code: 'PROJECT_SETUP999',
+            message: 'Project setup YAML failed validation.',
+            issues: [
+              createDiagnosticError(
+                'PROJECT_SETUP003',
+                'project.name is required.',
+                { path: ['project', 'name'] }
+              ),
+            ],
+          });
+        },
+      },
+    });
+
+    const response = await app.request('/');
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'PROJECT_SETUP999',
+        issues: [
+          {
+            code: 'PROJECT_SETUP003',
+            message: 'project.name is required.',
+          },
+        ],
       },
     });
   });

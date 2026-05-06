@@ -69,7 +69,7 @@ export function createProjectsRoute(
           return c.json(
             {
               error: {
-                code: 'S004',
+                code: 'STUDIO_SERVER004',
                 message: 'Project cover image not found.',
               },
             },

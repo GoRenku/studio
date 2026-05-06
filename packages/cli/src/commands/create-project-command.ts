@@ -1,5 +1,9 @@
+import {
+  StructuredError,
+  createDiagnosticError,
+} from '@gorenku/studio-diagnostics';
 import { createProjectDataService } from '@gorenku/studio-core/node';
-import type { RenkuCliIo } from '../cli.js';
+import { formatDiagnosticIssue, type RenkuCliIo } from '../cli.js';
 
 export interface RunCreateCommandOptions {
   input: string[];
@@ -14,17 +18,34 @@ export async function runCreateCommand(
   options: RunCreateCommandOptions
 ): Promise<number> {
   if (options.input.length > 0) {
-    options.io.stderr.error(
-      'Project names are read from project.name in the YAML. Usage: renku create --file <project.yaml>'
-    );
-    return 1;
+    throw new StructuredError({
+      code: 'CLI001',
+      message:
+        'Project names are read from project.name in the YAML. Usage: renku create --file <project.yaml>',
+      issues: [
+        createDiagnosticError(
+          'CLI001',
+          'Unexpected positional project name.',
+          { path: ['create'], context: 'renku CLI arguments' },
+          'Remove the positional name and set project.name in the YAML file.'
+        ),
+      ],
+    });
   }
 
   if (!options.file) {
-    options.io.stderr.error(
-      'Missing required --file option. Usage: renku create --file <project.yaml>'
-    );
-    return 1;
+    throw new StructuredError({
+      code: 'CLI002',
+      message: 'Missing required --file option. Usage: renku create --file <project.yaml>',
+      issues: [
+        createDiagnosticError(
+          'CLI002',
+          'Missing required --file option.',
+          { path: ['--file'], context: 'renku CLI arguments' },
+          'Run renku create --file <project.yaml>.'
+        ),
+      ],
+    });
   }
 
   const projectData = createProjectDataService();
@@ -37,6 +58,10 @@ export async function runCreateCommand(
   if (options.json) {
     options.io.stdout.log(JSON.stringify(result, null, 2));
     return 0;
+  }
+
+  for (const warning of result.warnings) {
+    options.io.stderr.error(formatDiagnosticIssue(warning));
   }
 
   options.io.stdout.log(`Renku project created: ${result.projectName}`);

@@ -31,7 +31,7 @@ export async function resolveProjectCoverImage(input: {
   }
   if (input.coverFile !== PROJECT_COVER_IMAGE_FILE) {
     throw new ProjectDataError(
-      'P030',
+      'PROJECT_DATA030',
       `Unsupported project cover image file: ${input.coverFile}.`
     );
   }
@@ -40,7 +40,7 @@ export async function resolveProjectCoverImage(input: {
   const coverPath = resolveProjectCoverImagePath(projectFolder);
   if (!isPathInside(projectFolder, coverPath)) {
     throw new ProjectDataError(
-      'P031',
+      'PROJECT_DATA031',
       'Resolved cover image path is outside the project folder.'
     );
   }
@@ -58,10 +58,13 @@ export async function resolveProjectCoverImage(input: {
 
 async function validateCoverImage(coverPath: string): Promise<void> {
   if (path.extname(coverPath).toLowerCase() !== '.png') {
-    throw new ProjectDataError('P032', 'Cover image must be a PNG file.');
+    throw new ProjectDataError('PROJECT_DATA032', 'Cover image must be a PNG file.');
   }
   const stats = await fs.stat(coverPath);
   if (!stats.isFile()) {
-    throw new ProjectDataError('P033', `Cover image is not a file: ${coverPath}`);
+    throw new ProjectDataError(
+      'PROJECT_DATA033',
+      `Cover image is not a file: ${coverPath}`
+    );
   }
 }

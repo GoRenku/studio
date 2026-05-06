@@ -48,6 +48,7 @@
   "author": "",
   "packageManager": "pnpm@10.15.0",
   "dependencies": {
+    "@gorenku/studio-diagnostics": "workspace:*",
     "better-sqlite3": "^12.9.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",

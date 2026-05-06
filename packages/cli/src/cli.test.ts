@@ -124,6 +124,32 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
+  it('prints warnings for unknown setup fields and still creates the project', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeCreateYaml(homeDir, {
+      extraProjectFields: '  visualDescription: This field is ignored.\n',
+    });
+
+    const exitCode = await runRenkuCli(['create', '--file', yamlPath], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    if (isMissingSqliteBindings(exitCode, stderr)) {
+      return;
+    }
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('Renku project created: constantinople');
+    expect(stderr.join('\n')).toContain('[PROJECT_SETUP100] WARNING');
+    expect(stderr.join('\n')).toContain('project.visualDescription');
+  });
+
   it('creates a project with cover and JSON output', async () => {
     const storageRoot = path.join(homeDir, 'movies');
     await runRenkuCli(['init', storageRoot], {
@@ -152,6 +178,7 @@ describe('renku CLI', () => {
     expect(result).toMatchObject({
       projectName: 'constantinople',
       coverPath: path.join(storageRoot, 'constantinople', 'cover.png'),
+      warnings: [],
     });
     await expect(fs.readFile(result.coverPath, 'utf8')).resolves.toBe('cover');
     expect(stderr).toEqual([]);
@@ -176,6 +203,43 @@ describe('renku CLI', () => {
     expect(exitCode).toBe(1);
     expect(stderr.join('\n')).toContain('Project names are read from project.name');
   });
+
+  it('prints JSON diagnostics to stderr when create --json validation fails', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeInvalidCreateYaml(homeDir);
+
+    const exitCode = await runRenkuCli(['create', '--file', yamlPath, '--json'], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    const report = JSON.parse(stderr.join('\n'));
+    expect(report).toMatchObject({
+      valid: false,
+      error: {
+        code: 'PROJECT_SETUP999',
+      },
+      errors: [
+        expect.objectContaining({
+          code: 'PROJECT_SETUP003',
+          message: 'project.name is required.',
+        }),
+      ],
+      warnings: [
+        expect.objectContaining({
+          code: 'PROJECT_SETUP100',
+        }),
+      ],
+    });
+  });
 });
 
 function captureIo(stdout: string[], stderr: string[]) {
@@ -193,7 +257,10 @@ function captureIo(stdout: string[], stderr: string[]) {
   };
 }
 
-async function writeCreateYaml(homeDir: string): Promise<string> {
+async function writeCreateYaml(
+  homeDir: string,
+  options: { extraProjectFields?: string } = {}
+): Promise<string> {
   const yamlPath = path.join(homeDir, 'project.yaml');
   await fs.writeFile(
     yamlPath,
@@ -204,6 +271,7 @@ project:
   name: constantinople
   title: Preparation of the Siege
   type: standaloneMovie
+${options.extraProjectFields ?? ''}
 
 sequences:
   - title: Opening
@@ -211,6 +279,23 @@ sequences:
       - title: First Scene
         clips:
           - title: First Clip
+`,
+    'utf8'
+  );
+  return yamlPath;
+}
+
+async function writeInvalidCreateYaml(homeDir: string): Promise<string> {
+  const yamlPath = path.join(homeDir, 'invalid-project.yaml');
+  await fs.writeFile(
+    yamlPath,
+    `kind: renku.projectSetup
+version: 0.1.0
+
+project:
+  nam: constantinople
+  title: Preparation of the Siege
+  type: standaloneMovie
 `,
     'utf8'
   );
