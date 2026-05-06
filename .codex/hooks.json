@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/final-review.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Running Renku Studio final review"
+          }
+        ]
+      }
+    ]
+  }
+}
