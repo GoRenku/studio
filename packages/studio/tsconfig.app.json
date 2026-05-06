@@ -26,8 +26,7 @@
 
     /* Path aliases */
     "paths": {
-      "@/*": ["./src/*"],
-      "@movie-workspace/*": ["./src/components/movie-workspace/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]

@@ -1,5 +1,31 @@
 # Agent Rules for Renku Studio
 
+## Top Instruction: No Shims, No Compatibility Layers
+
+Renku Studio is pre-customer software and will be continuously iterated.
+
+During this phase, do not preserve backwards compatibility in code, tests, file
+structure, package exports, command behavior, schemas, or documentation.
+
+That means:
+
+- do not keep old names as aliases;
+- do not add shims for prior APIs;
+- do not add fallback branches for old structures;
+- do not add compatibility layers;
+- do not add convenience re-exports to avoid fixing callers;
+- do not keep tests whose only purpose is to reject an obsolete format;
+- do not keep old loaders after the model changes;
+- do not mention obsolete names in new code unless a document is explicitly
+  describing a historical decision.
+
+When a name, owner package, API, folder structure, schema, route, command, or
+file format changes, update callers directly to the new shape and delete the
+obsolete code.
+
+Tests should describe the current intended behavior only. They should not become
+a museum of previous iterations.
+
 When working in this repository, prioritize clarity, explicit contracts, and
 small focused changes.
 
@@ -53,29 +79,6 @@ unless the user explicitly asks for dependency installation.
 - When a plan becomes accepted project direction, summarize the final decision
   in `docs/` instead of leaving the plan as the only source of truth.
 
-## Very Important: No Backwards Compatibility During Pre-Customer Development
-
-Renku Studio is pre-customer software and will be continuously iterated.
-
-During this phase, do not preserve backwards compatibility in code, tests, or
-file structure.
-
-That means:
-
-- do not keep old names as aliases;
-- do not add shims for prior APIs;
-- do not add fallback branches for old structures;
-- do not keep tests whose only purpose is to reject an obsolete format;
-- do not keep old loaders after the model changes;
-- do not mention obsolete names in new code unless a document is explicitly
-  describing a historical decision.
-
-When a name or structure changes, update callers to the new name and delete the
-obsolete code.
-
-Tests should describe the current intended behavior only. They should not become
-a museum of previous iterations.
-
 ## Very Important: Fail Fast With Structured Errors
 
 Do not add fallback behavior unless there is a very good reason for a valid,
@@ -117,6 +120,10 @@ The default behavior should be:
 If a name feels temporary or vague, stop and choose a clearer domain name before
 writing code.
 
+For `packages/studio` frontend structure, component naming, service boundaries,
+hooks, and React conventions, follow the progressive guidance in
+`docs/architecture/front-end-guidelines.md`.
+
 ## Very Important: Drizzle Migrations Use Drizzle Kit
 
 Before changing database schemas or migrations, look up the current Drizzle
@@ -136,6 +143,42 @@ For Renku Studio project databases:
 
 The accepted details live in
 `docs/architecture/drizzle-migrations.md`.
+
+## Very Important: Structured Diagnostics At Package Boundaries
+
+Use `@gorenku/studio-diagnostics` for package-boundary errors, validation
+issues, and agent-readable command failures.
+
+The default behavior should be:
+
+- report structured errors with stable domain-prefixed codes;
+- collect all actionable validation issues before failing;
+- distinguish warnings from errors;
+- include locations and suggestions when they help the caller fix the problem;
+- serialize structured errors consistently in CLI and Studio HTTP responses.
+
+For import YAML, unknown fields are warnings and must be ignored. They must
+never drive database schema, DTO, or API shape changes. Required fields that are
+missing or invalid are errors.
+
+The accepted details live in
+`docs/architecture/structured-diagnostics.md`.
+
+## Very Important: Do Not Re-Export Another Package's API
+
+Do not re-export types, functions, classes, or constants from another workspace
+package as a convenience layer.
+
+The default behavior should be:
+
+- import from the package that owns the concept;
+- add that package as an explicit dependency when needed;
+- update callers directly when ownership changes;
+- avoid barrels that make one package look like it owns another package's API.
+
+Re-exporting is allowed only for a deliberately designed public facade that is
+documented as such. Do not add facade exports as a shortcut to avoid fixing
+callers.
 
 ## Coding Rules
 

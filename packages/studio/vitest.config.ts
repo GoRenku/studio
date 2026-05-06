@@ -19,10 +19,6 @@ export default defineConfig({
         __dirname,
         '../core/src/node/index.ts'
       ),
-      '@movie-workspace': path.resolve(
-        __dirname,
-        './src/components/movie-workspace'
-      ),
     },
   },
 });
