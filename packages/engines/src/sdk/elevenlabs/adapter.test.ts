@@ -2,6 +2,24 @@ import { describe, expect, it, vi } from 'vitest';
 import { elevenlabsAdapter } from './adapter.js';
 import { SdkErrorCode } from '../errors.js';
 import { createSimulatedProviderClient } from '../unified/simulated-client.js';
+import type { ProviderInvokeContext } from '../unified/provider-adapter.js';
+
+function createInvokeContext(model: string): ProviderInvokeContext {
+  return {
+    mode: 'live',
+    request: {
+      jobId: 'test-job',
+      provider: 'elevenlabs',
+      model,
+      revision: 'test-revision',
+      layerIndex: 0,
+      attempt: 1,
+      inputs: [],
+      produces: [],
+      context: {},
+    },
+  };
+}
 
 describe('elevenlabsAdapter', () => {
   it('fails fast with a provider error when TTS voice is missing', async () => {
@@ -18,7 +36,8 @@ describe('elevenlabsAdapter', () => {
       elevenlabsAdapter.invoke(
         client as never,
         'eleven_v3',
-        { text: 'Hello world' }
+        { text: 'Hello world' },
+        createInvokeContext('eleven_v3')
       )
     ).rejects.toMatchObject({
       code: SdkErrorCode.MISSING_REQUIRED_INPUT,
@@ -53,7 +72,8 @@ describe('elevenlabsAdapter', () => {
       {
         text: 'Hello world',
         voice: 'Rachel',
-      }
+      },
+      createInvokeContext('eleven_v3')
     );
 
     expect(convert).toHaveBeenCalledWith(
@@ -76,7 +96,8 @@ describe('elevenlabsAdapter', () => {
       elevenlabsAdapter.invoke(
         createSimulatedProviderClient('elevenlabs'),
         'eleven_v3',
-        { text: 'Hello world' }
+        { text: 'Hello world' },
+        createInvokeContext('eleven_v3')
       )
     ).rejects.toMatchObject({
       code: SdkErrorCode.MISSING_REQUIRED_INPUT,

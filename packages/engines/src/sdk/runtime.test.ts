@@ -6,6 +6,7 @@ import { createProducerRuntime } from './runtime.js';
 import type { ProviderJobContext } from '../types.js';
 import { SdkErrorCode, type MappingFieldDefinition } from '#core';
 import { resolveSchemaRefs } from './unified/schema-file.js';
+import type { JSONSchema7 } from 'ai';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -45,8 +46,8 @@ function readCatalogInputSchema(filename: string): string {
   ) as Record<string, unknown>;
   return JSON.stringify(
     resolveSchemaRefs(
-      raw.input_schema as Record<string, unknown>,
-      raw as Record<string, unknown>
+      raw.input_schema as JSONSchema7,
+      raw as Record<string, JSONSchema7>
     )
   );
 }
@@ -1122,9 +1123,13 @@ describe('createProducerRuntime', () => {
         },
       });
 
-      await expect(runtime.sdk.buildPayload(undefined, schema)).rejects.toThrow(
-        'incompatible with model constraints'
-      );
+      await expect(runtime.sdk.buildPayload(undefined, schema)).rejects.toMatchObject({
+        code: SdkErrorCode.INVALID_CONFIG,
+        metadata: {
+          field: 'aspect_ratio',
+          requested: 'hello-world',
+        },
+      });
     });
   });
 
