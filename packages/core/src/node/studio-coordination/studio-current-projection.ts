@@ -1,14 +1,13 @@
 import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../config.js';
 import { createProjectDataService } from '../project/index.js';
-import type { Project } from '../../project/index.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import { studioCoordinationWarning } from './studio-coordination-errors.js';
 import { isStudioRuntimeDescriptorStale, readStudioRuntimeDescriptor } from './studio-runtime-descriptor.js';
+import { resolveMovieStudioSelectionForProject } from './studio-focus-validation.js';
 import type {
   MovieStudioSelection,
   StudioBrowserSessionActiveEvent,
   StudioCurrent,
-  StudioCurrentContext,
   StudioEvent,
   StudioFocusChangedEvent,
   StudioFocusRequestedEvent,
@@ -182,122 +181,14 @@ async function enrichMovieStudioFocus(
     return { project: null, context: null, warnings };
   }
 
+  const resolution = resolveMovieStudioSelectionForProject(project, selection);
   return {
     project: {
       name: project.identity.name,
       id: project.identity.id,
       title: project.identity.title,
     },
-    context: buildContext(project, selection),
-    warnings,
+    context: resolution.ok ? resolution.context : null,
+    warnings: resolution.ok ? warnings : [...warnings, ...resolution.diagnostics],
   };
-}
-
-function buildContext(project: Project, selection: MovieStudioSelection): StudioCurrentContext | null {
-  if (selection.type === 'projectInformation') {
-    return {
-      kind: 'projectInformation',
-      title: project.identity.title,
-      aspectRatio: project.identity.aspectRatio,
-      logline: project.identity.logline,
-      summary: project.identity.summary,
-      languages: project.languages,
-    };
-  }
-  if (selection.type === 'visualLanguage') {
-    return { kind: 'visualLanguage', entries: project.visualLanguage };
-  }
-  if (selection.type === 'casting') {
-    return { kind: 'casting', cast: project.cast };
-  }
-  if (selection.type === 'storyboard') {
-    return {
-      kind: 'storyboard',
-      projectTitle: project.identity.title,
-      sequences: project.sequences.map((sequence) => ({
-        id: sequence.id,
-        number: sequence.number,
-        title: sequence.title,
-        scenes: sequence.scenes.map((scene) => ({
-          id: scene.id,
-          title: scene.title,
-          clips: scene.clips.map((clip) => ({ id: clip.id, title: clip.title })),
-        })),
-      })),
-    };
-  }
-  if (selection.type === 'cast') {
-    const cast = project.cast.find((entry) => entry.id === selection.id);
-    return cast
-      ? {
-          kind: 'castMember',
-          id: cast.id,
-          name: cast.name,
-          castKind: cast.kind,
-          role: cast.role,
-          shortDescription: cast.shortDescription,
-        }
-      : null;
-  }
-  for (const sequence of project.sequences) {
-    if (selection.type === 'sequence' && sequence.id === selection.id) {
-      return {
-        kind: 'sequence',
-        id: sequence.id,
-        number: sequence.number,
-        title: sequence.title,
-        shortTitle: sequence.shortTitle,
-        summary: sequence.summary,
-        scenes: sequence.scenes.map((scene) => ({
-          id: scene.id,
-          title: scene.title,
-          summary: scene.summary,
-        })),
-      };
-    }
-    for (const scene of sequence.scenes) {
-      if (selection.type === 'scene' && scene.id === selection.id) {
-        return {
-          kind: 'scene',
-          id: scene.id,
-          title: scene.title,
-          summary: scene.summary,
-          parentSequence: {
-            id: sequence.id,
-            number: sequence.number,
-            title: sequence.title,
-            summary: sequence.summary,
-          },
-          clips: scene.clips.map((clip) => ({
-            id: clip.id,
-            title: clip.title,
-            summary: clip.summary,
-          })),
-        };
-      }
-      for (const clip of scene.clips) {
-        if (selection.type === 'clip' && clip.id === selection.id) {
-          return {
-            kind: 'clip',
-            id: clip.id,
-            title: clip.title,
-            summary: clip.summary,
-            visualIntent: clip.visualIntent,
-            parentScene: {
-              id: scene.id,
-              title: scene.title,
-              summary: scene.summary,
-            },
-            parentSequence: {
-              id: sequence.id,
-              number: sequence.number,
-              title: sequence.title,
-              summary: sequence.summary,
-            },
-          };
-        }
-      }
-    }
-  }
-  return null;
 }

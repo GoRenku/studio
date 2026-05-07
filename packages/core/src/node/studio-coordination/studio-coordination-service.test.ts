@@ -220,6 +220,69 @@ describe('StudioCoordinationService', () => {
       title: 'Preparation of the Siege',
     });
   });
+
+  it('reports unresolved selected project data through current-context diagnostics', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+    await createProjectDataService().createFromSetup({
+      homeDir,
+      setupPath: await writeProjectSetup(homeDir),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const coordination = createStudioCoordinationService({ homeDir });
+    const now = new Date();
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: '127.0.0.1',
+      port: 5173,
+      serverUrl: 'http://127.0.0.1:5173',
+      now,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_one',
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+      createdAt: now.toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: { type: 'scene', id: 'missing_scene' },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+      createdAt: now.toISOString(),
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.project).toMatchObject({
+      name: 'constantinople',
+      id: 'project_test0001',
+    });
+    expect(current.selection).toEqual({
+      type: 'scene',
+      id: 'missing_scene',
+    });
+    expect(current.context).toBeNull();
+    expect(current.warnings).toEqual([
+      expect.objectContaining({
+        code: 'STUDIO_COORDINATION031',
+        severity: 'error',
+      }),
+    ]);
+  });
 });
 
 async function writeConfig(homeDir: string, storageRoot: string): Promise<void> {

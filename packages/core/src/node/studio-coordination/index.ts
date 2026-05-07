@@ -7,6 +7,10 @@ export {
   StudioCoordinationError,
 } from './studio-coordination-errors.js';
 export {
+  resolveMovieStudioSelectionForProject,
+  validateStudioFocusRequestForProject,
+} from './studio-focus-validation.js';
+export {
   resolveStudioEventStorePath,
 } from './studio-event-store.js';
 export {
@@ -44,3 +48,7 @@ export type {
   StudioProjectRefreshSurface,
   StudioRefreshRequest,
 } from './studio-coordination-events.js';
+export type {
+  MovieStudioSelectionResolution,
+  StudioFocusRequestValidation,
+} from './studio-focus-validation.js';

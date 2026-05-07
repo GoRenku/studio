@@ -7,6 +7,7 @@ import {
   reportBrowserSessionActive,
   reportStudioFocusChanged,
   reportStudioFocusRequestFailed,
+  validateStudioFocusRequest,
 } from '@/services/studio-events-api';
 import type {
   StudioFocus,
@@ -198,6 +199,19 @@ async function applyFocusRequest(input: {
         requestEventId: input.event.id,
         reason: 'unsupportedSelection',
         diagnostics: [],
+      });
+      return;
+    }
+    const validation = await validateStudioFocusRequest({
+      projectName: project.identity.name,
+      focus: input.event.focus,
+    });
+    if (!validation.valid) {
+      await reportStudioFocusRequestFailed({
+        browserSessionId: input.browserSessionId,
+        requestEventId: input.event.id,
+        reason: validation.reason,
+        diagnostics: validation.diagnostics,
       });
       return;
     }

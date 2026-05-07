@@ -58,6 +58,16 @@ export interface StudioCurrentResponse {
   warnings: unknown[];
 }
 
+export type StudioFocusRequestValidationResponse =
+  | {
+      valid: true;
+    }
+  | {
+      valid: false;
+      reason: 'selectionNotFound' | 'unsupportedSelection';
+      diagnostics: unknown[];
+    };
+
 declare global {
   interface Window {
     __RENKU_STUDIO_BOOTSTRAP__?: {

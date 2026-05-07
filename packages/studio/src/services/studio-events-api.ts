@@ -3,6 +3,7 @@ import type {
   StudioCurrentResponse,
   StudioEventsResponse,
   StudioFocus,
+  StudioFocusRequestValidationResponse,
   StudioProjectRef,
 } from './studio-current-contracts';
 
@@ -51,6 +52,27 @@ export async function reportStudioFocusRequestFailed(input: {
   diagnostics: unknown[];
 }): Promise<void> {
   await postStudioEvent('/studio-api/studio/events/focus-failures', input);
+}
+
+export async function validateStudioFocusRequest(input: {
+  projectName: string;
+  focus: StudioFocus;
+}): Promise<StudioFocusRequestValidationResponse> {
+  const response = await fetch(
+    '/studio-api/studio/events/focus-requests/validate',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify(input),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  return (await response.json()) as StudioFocusRequestValidationResponse;
 }
 
 function readStudioApiToken(): string {

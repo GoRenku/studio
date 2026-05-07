@@ -51,12 +51,15 @@ export {
   isStudioRuntimeDescriptorStale,
   readStudioRuntimeDescriptor,
   releaseStudioRuntimeDescriptor,
+  resolveMovieStudioSelectionForProject,
   resolveStudioEventStorePath,
   resolveStudioRuntimeDescriptorPath,
+  validateStudioFocusRequestForProject,
 } from './studio-coordination/index.js';
 export type {
   AppendStudioEventInput,
   MovieStudioSelection,
+  MovieStudioSelectionResolution,
   ProjectInformationRefreshField,
   ReadStudioEventsInput,
   StudioBrowserSessionActiveEvent,
@@ -71,6 +74,7 @@ export type {
   StudioFocusChangedEvent,
   StudioFocusRequest,
   StudioFocusRequestFailedEvent,
+  StudioFocusRequestValidation,
   StudioFocusRequestedEvent,
   StudioPendingRequest,
   StudioProjectRef,
