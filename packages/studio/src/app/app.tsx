@@ -2,9 +2,20 @@ import { Loader2 } from 'lucide-react';
 import { ProjectLibraryScreen } from '@/features/project-library/project-library-screen';
 import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
+import { useStudioCoordination } from '@/app/use-studio-coordination';
+import { useMovieStudioSelection } from '@/features/movie-studio/use-movie-studio-selection';
 
 function App() {
   const projectSession = useProjectSession();
+  const movieStudioSelection = useMovieStudioSelection(projectSession.project);
+
+  useStudioCoordination({
+    projectSession,
+    movieStudioSelection: {
+      selection: movieStudioSelection.selection,
+      setSelection: movieStudioSelection.setSelection,
+    },
+  });
 
   if (projectSession.isLoadingCurrentProject) {
     return (
@@ -23,6 +34,7 @@ function App() {
         project={projectSession.project}
         onHome={projectSession.returnToProjectLibrary}
         onProjectChange={projectSession.updateCurrentProject}
+        selection={movieStudioSelection}
       />
     );
   }
@@ -34,7 +46,9 @@ function App() {
       isLoadingLibrary={projectSession.isLoadingProjectLibrary}
       isSelectingProject={projectSession.isSelectingProject}
       onRefresh={projectSession.refreshProjectLibrary}
-      onSelectProject={projectSession.selectProject}
+      onSelectProject={async (projectName) => {
+        await projectSession.selectProject(projectName);
+      }}
     />
   );
 }

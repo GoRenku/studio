@@ -17,15 +17,16 @@ interface MovieStudioScreenProps {
   project: ProjectWithHttp;
   onHome: () => void;
   onProjectChange: (project: ProjectWithHttp) => void;
+  selection: ReturnType<typeof useMovieStudioSelection>;
 }
 
 export function MovieStudioScreen({
   project,
   onHome,
   onProjectChange,
+  selection: movieStudioSelection,
 }: MovieStudioScreenProps) {
-  const { selection, setSelection, resolvedSelection } =
-    useMovieStudioSelection(project);
+  const { selection, setSelection, resolvedSelection } = movieStudioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
   const handleProjectInformationAutosaveStatusChange = useCallback(

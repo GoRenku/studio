@@ -5,7 +5,10 @@ export type {
   CreateProjectFromSetupInput,
   ProjectDataService,
   ProjectInformationLanguageUpdate,
+  ProjectInformationPatch,
+  ProjectLanguagePatchOperation,
   ProjectInformationUpdate,
+  PatchProjectInformationInput,
   ReadProjectInput,
   ResolveProjectCoverImageInput,
   UpdateProjectInformationInput,
@@ -23,3 +26,14 @@ export type {
   EntityIdPrefix,
   ProjectIdGenerator,
 } from './ids/project-id-generator.js';
+export type {
+  CastMember,
+  Clip,
+  Episode,
+  Project,
+  ProjectLanguage,
+  ProjectLibrary,
+  Scene,
+  Sequence,
+  VisualLanguage,
+} from '../../project/contracts.js';

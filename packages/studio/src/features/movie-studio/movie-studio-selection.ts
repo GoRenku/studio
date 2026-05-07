@@ -24,6 +24,7 @@ export interface MovieStudioLookup {
 }
 
 export interface ResolvedMovieStudioSelection {
+  valid: boolean;
   kicker: string;
   summary: string;
   clips: Clip[];
@@ -60,6 +61,7 @@ export function resolveMovieStudioSelection(
     const sequence = lookup.sequences.get(selection.id);
     if (sequence) {
       return {
+        valid: true,
         kicker: sequence.title,
         summary: sequence.summary ?? 'Sequence structure loaded from project data.',
         clips: sequence.scenes.flatMap((scene) => scene.clips),
@@ -71,6 +73,7 @@ export function resolveMovieStudioSelection(
     const scene = lookup.scenes.get(selection.id);
     if (scene) {
       return {
+        valid: true,
         kicker: scene.title,
         summary: scene.summary ?? 'Scene structure loaded from project data.',
         clips: scene.clips,
@@ -82,6 +85,7 @@ export function resolveMovieStudioSelection(
     const clip = lookup.clips.get(selection.id);
     if (clip) {
       return {
+        valid: true,
         kicker: clip.title,
         summary: clip.summary ?? 'Clip structure loaded from project data.',
         clips: [clip],
@@ -94,6 +98,7 @@ export function resolveMovieStudioSelection(
     const castEntry = lookup.cast.get(selection.id);
     if (castEntry) {
       return {
+        valid: true,
         kicker: castEntry.name,
         summary: castEntry.shortDescription ?? 'Cast structure loaded from project data.',
         clips: [],
@@ -104,6 +109,7 @@ export function resolveMovieStudioSelection(
 
   if (selection.type === 'projectInformation') {
     return {
+      valid: true,
       kicker: 'Project Information',
       summary: 'Project information loaded from project data.',
       clips: [],
@@ -112,6 +118,7 @@ export function resolveMovieStudioSelection(
 
   if (selection.type === 'visualLanguage') {
     return {
+      valid: true,
       kicker: 'Visual Language',
       summary: 'Visual language loaded from project data.',
       clips: [],
@@ -119,6 +126,7 @@ export function resolveMovieStudioSelection(
   }
 
   return {
+    valid: selection.type === 'casting' || selection.type === 'storyboard',
     kicker: selection.type === 'casting' ? 'Cast' : 'Full Storyboard',
     summary:
       selection.type === 'casting'

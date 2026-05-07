@@ -208,6 +208,9 @@ function fakeProjectDataService(): ProjectDataService {
     async updateProjectInformation() {
       return project;
     },
+    async patchProjectInformation() {
+      return project;
+    },
     async resolveCoverImage() {
       return '/tmp/renku/constantinople/cover.png';
     },

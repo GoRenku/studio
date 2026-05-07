@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 import { isStructuredError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import meow from 'meow';
+import { runAboutCommand } from './commands/about-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
-import { getRenkuCliInfo } from './commands/info.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
+import { runProjectInformationCommand } from './commands/project-information-command.js';
+import { runProjectSelectionCommand } from './commands/project-selection-command.js';
+import { runStudioCurrentCommand } from './commands/studio-current-command.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -35,11 +38,27 @@ Usage
 Commands
   create --file <yaml>  Create a project from YAML
   init <storage-root>  Create or inspect the global Renku config
-  info                 Show Renku CLI package information
+  about                Show Renku CLI package information
+  info show            Show project information
+  info set             Update project information
+  info clear           Clear optional project information fields
+  info language        Add, update, remove, or set base languages
+  project current      Show the current Studio project
+  project select       Request Studio to select a project
+  studio current       Show current Studio focus and context
 
 Options
   --file               Project create YAML file
   --cover              Optional PNG cover image
+  --project            Project name for project information commands
+  --title              Project title
+  --aspect-ratio       Project aspect ratio
+  --logline            Project logline
+  --summary            Project summary
+  --display-name       Language display name
+  --base               Mark language as base
+  --audio, --no-audio  Toggle language audio support
+  --subtitles, --no-subtitles
   --json               Print machine-readable JSON
   --help, -h           Show help
   --version            Show version
@@ -70,6 +89,39 @@ export async function runRenkuCli(
       },
       cover: {
         type: 'string',
+      },
+      project: {
+        type: 'string',
+      },
+      title: {
+        type: 'string',
+      },
+      aspectRatio: {
+        type: 'string',
+      },
+      logline: {
+        type: 'string',
+      },
+      summary: {
+        type: 'string',
+      },
+      displayName: {
+        type: 'string',
+      },
+      base: {
+        type: 'boolean',
+      },
+      audio: {
+        type: 'boolean',
+      },
+      noAudio: {
+        type: 'boolean',
+      },
+      subtitles: {
+        type: 'boolean',
+      },
+      noSubtitles: {
+        type: 'boolean',
       },
       help: {
         type: 'boolean',
@@ -104,9 +156,42 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
+      case 'about':
+        return await runAboutCommand({ io });
       case 'info':
-        io.stdout.log(JSON.stringify(getRenkuCliInfo(), null, 2));
-        return 0;
+        return await runProjectInformationCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            title: cli.flags.title,
+            aspectRatio: cli.flags.aspectRatio,
+            logline: cli.flags.logline,
+            summary: cli.flags.summary,
+            displayName: cli.flags.displayName,
+            base: cli.flags.base,
+            audio: cli.flags.audio,
+            noAudio: cli.flags.noAudio,
+            subtitles: cli.flags.subtitles,
+            noSubtitles: cli.flags.noSubtitles,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'project':
+        return await runProjectSelectionCommand({
+          input,
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'studio':
+        return await runStudioCurrentCommand({
+          input,
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
       default:
         io.stderr.error(`Unknown command: ${command}`);
         io.stderr.error('Run `renku --help` to see available commands.');

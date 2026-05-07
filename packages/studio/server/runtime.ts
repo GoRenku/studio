@@ -8,6 +8,17 @@ import {
 import path from 'node:path';
 import { getRequestListener } from '@hono/node-server';
 import { createStudioServerApp } from './app.js';
+import {
+  STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS,
+  claimStudioRuntimeDescriptor,
+  heartbeatStudioRuntimeDescriptor,
+  releaseStudioRuntimeDescriptor,
+  type StudioRuntimeDescriptor,
+} from '@gorenku/studio-core/node';
+import {
+  createStudioBootstrapScript,
+  createStudioRuntimeToken,
+} from './studio-runtime-token.js';
 
 export interface MovieStudioServerOptions {
   distPath: string;
@@ -30,12 +41,15 @@ export async function startMovieStudioServer(
   const distDir = path.resolve(options.distPath);
   const port = options.port ?? 0;
   const log = options.log ?? (() => {});
+  const token = createStudioRuntimeToken();
 
   if (!existsSync(distDir)) {
     throw new Error(`Renku Studio assets not found at ${distDir}`);
   }
 
-  const apiHandler = getRequestListener(createStudioServerApp().fetch);
+  let runtimeDescriptor: StudioRuntimeDescriptor | null = null;
+  let heartbeat: NodeJS.Timeout | null = null;
+  const apiHandler = getRequestListener(createStudioServerApp({ token }).fetch);
 
   const server = createServer(async (req, res) => {
     if (!req.url) {
@@ -49,7 +63,7 @@ export async function startMovieStudioServer(
       return;
     }
 
-    await serveStaticAsset(req, res, distDir);
+    await serveStaticAsset(req, res, distDir, token);
   });
 
   return await new Promise<MovieStudioServerInstance>((resolve, reject) => {
@@ -62,22 +76,47 @@ export async function startMovieStudioServer(
       }
       const actualPort = address.port;
       const url = `http://${host}:${actualPort}`;
-      log(`Renku Studio server listening on ${url}`);
-      resolve({
-        url,
-        host,
-        port: actualPort,
-        stop: () =>
-          new Promise<void>((stopResolve, stopReject) => {
-            server.close((error) => {
-              if (error) {
-                stopReject(error);
-                return;
-              }
-              stopResolve();
-            });
-          }),
-      });
+      void claimStudioRuntimeDescriptor({ host, port: actualPort, serverUrl: url })
+        .then((descriptor) => {
+          runtimeDescriptor = descriptor;
+          heartbeat = setInterval(() => {
+            if (runtimeDescriptor) {
+              void heartbeatStudioRuntimeDescriptor(runtimeDescriptor).then((next) => {
+                runtimeDescriptor = next;
+              });
+            }
+          }, STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS);
+          log(`Renku Studio server listening on ${url}`);
+          resolve({
+            url,
+            host,
+            port: actualPort,
+            stop: () =>
+              new Promise<void>((stopResolve, stopReject) => {
+                if (heartbeat) {
+                  clearInterval(heartbeat);
+                  heartbeat = null;
+                }
+                server.close((error) => {
+                  if (error) {
+                    stopReject(error);
+                    return;
+                  }
+                  if (runtimeDescriptor) {
+                    void releaseStudioRuntimeDescriptor(runtimeDescriptor).finally(() => {
+                      stopResolve();
+                    });
+                  } else {
+                    stopResolve();
+                  }
+                });
+              }),
+          });
+        })
+        .catch((error) => {
+          server.close();
+          reject(error);
+        });
     });
   });
 }
@@ -85,7 +124,8 @@ export async function startMovieStudioServer(
 async function serveStaticAsset(
   req: IncomingMessage,
   res: ServerResponse,
-  distDir: string
+  distDir: string,
+  token: ReturnType<typeof createStudioRuntimeToken>
 ): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://studio.local');
   const method = req.method ?? 'GET';
@@ -126,7 +166,23 @@ async function serveStaticAsset(
     return;
   }
 
+  if (path.extname(targetPath).toLowerCase() === '.html') {
+    const html = await fs.readFile(targetPath, 'utf8');
+    res.end(injectStudioBootstrap(html, token));
+    return;
+  }
+
   await streamFile(targetPath, res);
+}
+
+function injectStudioBootstrap(
+  html: string,
+  token: ReturnType<typeof createStudioRuntimeToken>
+): string {
+  const script = createStudioBootstrapScript(token);
+  return html.includes('</head>')
+    ? html.replace('</head>', `${script}</head>`)
+    : `${script}${html}`;
 }
 
 function sanitizePath(requestPath: string): string {

@@ -6,11 +6,22 @@ import {
   type MovieStudioSelection,
 } from './movie-studio-selection';
 
-export function useMovieStudioSelection(project: ProjectWithHttp) {
+export function useMovieStudioSelection(project: ProjectWithHttp | null) {
   const [selection, setSelection] = useState<MovieStudioSelection>({
     type: 'storyboard',
   });
-  const lookup = useMemo(() => buildMovieStudioLookup(project), [project]);
+  const lookup = useMemo(
+    () =>
+      project
+        ? buildMovieStudioLookup(project)
+        : {
+            sequences: new Map(),
+            scenes: new Map(),
+            clips: new Map(),
+            cast: new Map(),
+          },
+    [project]
+  );
   const resolvedSelection = useMemo(
     () => resolveMovieStudioSelection(selection, lookup),
     [lookup, selection]
@@ -23,4 +34,3 @@ export function useMovieStudioSelection(project: ProjectWithHttp) {
     resolvedSelection,
   };
 }
-

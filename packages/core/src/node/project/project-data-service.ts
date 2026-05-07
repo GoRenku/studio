@@ -62,6 +62,7 @@ export interface ProjectDataService {
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
   updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
+  patchProjectInformation(input: PatchProjectInformationInput): Promise<Project>;
   resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
 }
 
@@ -79,6 +80,39 @@ export interface UpdateProjectInformationInput extends RenkuConfigPathOptions {
   projectName: string;
   information: ProjectInformationUpdate;
 }
+
+export interface PatchProjectInformationInput extends RenkuConfigPathOptions {
+  projectName: string;
+  patch: ProjectInformationPatch;
+}
+
+export interface ProjectInformationPatch {
+  title?: string;
+  aspectRatio?: string | null;
+  logline?: string | null;
+  summary?: string | null;
+  languages?: ProjectLanguagePatchOperation[];
+}
+
+export type ProjectLanguagePatchOperation =
+  | {
+      operation: 'add';
+      localeTag: string;
+      displayName?: string;
+      isBase?: boolean;
+      supportsAudio?: boolean;
+      supportsSubtitles?: boolean;
+    }
+  | {
+      operation: 'update';
+      localeTag: string;
+      displayName?: string | null;
+      isBase?: boolean;
+      supportsAudio?: boolean;
+      supportsSubtitles?: boolean;
+    }
+  | { operation: 'remove'; localeTag: string }
+  | { operation: 'setBase'; localeTag: string };
 
 export interface ProjectInformationUpdate {
   title: string;
@@ -106,6 +140,7 @@ export function createProjectDataService(): ProjectDataService {
     listLibrary,
     readProject,
     updateProjectInformation,
+    patchProjectInformation,
     resolveCoverImage,
   };
 }
@@ -222,6 +257,18 @@ async function updateProjectInformation(
   } finally {
     session.close();
   }
+}
+
+async function patchProjectInformation(
+  input: PatchProjectInformationInput
+): Promise<Project> {
+  const current = await readProject(input);
+  const information = applyProjectInformationPatch(current, input.patch);
+  return await updateProjectInformation({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    information,
+  });
 }
 
 async function resolveCoverImage(
@@ -481,6 +528,94 @@ function validateProjectInformationUpdate(update: ProjectInformationUpdate): voi
         suggestion: 'Fix the highlighted project information fields and save again.',
       }
     );
+  }
+}
+
+function applyProjectInformationPatch(
+  project: Project,
+  patch: ProjectInformationPatch
+): ProjectInformationUpdate {
+  const update: ProjectInformationUpdate = {
+    title: patch.title ?? project.identity.title,
+    aspectRatio:
+      patch.aspectRatio === null
+        ? undefined
+        : patch.aspectRatio ?? project.identity.aspectRatio,
+    logline:
+      patch.logline === null ? undefined : patch.logline ?? project.identity.logline,
+    summary:
+      patch.summary === null ? undefined : patch.summary ?? project.identity.summary,
+    languages: project.languages.map((language) => ({
+      localeTag: language.localeTag,
+      displayName: language.displayName,
+      isBase: language.isBase,
+      supportsAudio: language.supportsAudio,
+      supportsSubtitles: language.supportsSubtitles,
+    })),
+  };
+
+  for (const operation of patch.languages ?? []) {
+    if (operation.operation === 'add') {
+      update.languages.push({
+        localeTag: operation.localeTag,
+        displayName: operation.displayName,
+        isBase: operation.isBase ?? false,
+        supportsAudio: operation.supportsAudio ?? true,
+        supportsSubtitles: operation.supportsSubtitles ?? true,
+      });
+      if (operation.isBase) {
+        setBaseLanguage(update.languages, operation.localeTag);
+      }
+    }
+    if (operation.operation === 'update') {
+      const language = update.languages.find(
+        (entry) => entry.localeTag === operation.localeTag
+      );
+      if (!language) {
+        update.languages.push({
+          localeTag: operation.localeTag,
+          displayName: operation.displayName ?? undefined,
+          isBase: operation.isBase ?? false,
+          supportsAudio: operation.supportsAudio ?? true,
+          supportsSubtitles: operation.supportsSubtitles ?? true,
+        });
+      } else {
+        if ('displayName' in operation) {
+          language.displayName = operation.displayName ?? undefined;
+        }
+        if (operation.supportsAudio !== undefined) {
+          language.supportsAudio = operation.supportsAudio;
+        }
+        if (operation.supportsSubtitles !== undefined) {
+          language.supportsSubtitles = operation.supportsSubtitles;
+        }
+        if (operation.isBase !== undefined) {
+          language.isBase = operation.isBase;
+        }
+      }
+      if (operation.isBase) {
+        setBaseLanguage(update.languages, operation.localeTag);
+      }
+    }
+    if (operation.operation === 'remove') {
+      update.languages = update.languages.filter(
+        (language) => language.localeTag !== operation.localeTag
+      );
+    }
+    if (operation.operation === 'setBase') {
+      setBaseLanguage(update.languages, operation.localeTag);
+    }
+  }
+
+  return update;
+}
+
+function setBaseLanguage(
+  languages: ProjectInformationLanguageUpdate[],
+  localeTag: string
+): void {
+  for (const language of languages) {
+    language.isBase = language.localeTag === localeTag;
   }
 }
 

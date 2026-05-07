@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import type { ProjectLanguage } from '@gorenku/studio-core';
 import type {
@@ -59,9 +66,22 @@ export function ProjectInformationPanel({
   onProjectChange,
   onAutosaveStatusChange,
 }: ProjectInformationPanelProps) {
-  const [form, setForm] = useState<ProjectInformationForm>(() =>
-    toProjectInformationForm(project)
+  const projectForm = useMemo(
+    () => toProjectInformationForm(project),
+    [project]
   );
+  const [form, setForm] = useState<ProjectInformationForm>(() =>
+    projectForm
+  );
+  const formRef = useRef(form);
+  const lastProjectFormRef = useRef(projectForm);
+  const lastProjectFormSignatureRef = useRef(
+    projectInformationFormSignature(projectForm)
+  );
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
 
   const availableLanguages = useMemo(() => {
     const selected = new Set(
@@ -81,16 +101,39 @@ export function ProjectInformationPanel({
     },
     [project.identity.name]
   );
+  const isAutosaveReady = useCallback(
+    (nextForm: ProjectInformationForm) =>
+      projectInformationFormSignature(nextForm) !==
+      lastProjectFormSignatureRef.current,
+    []
+  );
 
   const autosave = useDebouncedAutosave({
     value: form,
     save,
     onSaved: onProjectChange,
+    isReady: isAutosaveReady,
   });
 
   useEffect(() => {
     onAutosaveStatusChange(autosave);
   }, [autosave, onAutosaveStatusChange]);
+
+  useEffect(() => {
+    const previousProjectForm = lastProjectFormRef.current;
+    const currentDraft = formRef.current;
+    const nextProjectFormSignature = projectInformationFormSignature(projectForm);
+
+    lastProjectFormRef.current = projectForm;
+    lastProjectFormSignatureRef.current = nextProjectFormSignature;
+
+    if (
+      projectInformationFormSignature(currentDraft) ===
+      projectInformationFormSignature(previousProjectForm)
+    ) {
+      setForm(projectForm);
+    }
+  }, [projectForm]);
 
   const projectTypeLabel =
     project.identity.type === 'series' ? 'Series' : 'Movie';
@@ -389,4 +432,8 @@ function toProjectInformationUpdate(
       supportsSubtitles: language.supportsSubtitles,
     })),
   };
+}
+
+function projectInformationFormSignature(form: ProjectInformationForm): string {
+  return JSON.stringify(toProjectInformationUpdate(form));
 }

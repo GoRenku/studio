@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import {
   createProjectDataService,
+  createStudioCoordinationService,
+  type StudioCoordinationService,
   type ProjectDataService,
   type ProjectInformationUpdate,
 } from '@gorenku/studio-core/node';
@@ -10,25 +12,31 @@ import {
   createStructuredError,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
-import { Hono } from 'hono';
+import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
-import {
-  getSelectedProjectName,
-  setSelectedProjectName,
-} from '../selected-project-store.js';
 import {
   toProjectLibraryResponse,
   toProjectResponse,
 } from '../http/project-responses.js';
+import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
+import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectDataService;
+  coordination?: StudioCoordinationService;
+  token?: StudioRuntimeToken;
 }
 
 export function createProjectsRoute(
   options: CreateProjectsRouteOptions = {}
 ) {
   const projectData = options.projectData ?? createProjectDataService();
+  const coordination = options.coordination ?? createStudioCoordinationService();
+  const requireToken: MiddlewareHandler = options.token
+    ? createStudioApiTokenMiddleware(options.token)
+    : async (_c, next) => {
+        await next();
+      };
 
   return new Hono()
     .get('/', async (c) => {
@@ -41,7 +49,8 @@ export function createProjectsRoute(
     })
     .get('/current', async (c) => {
       try {
-        const projectName = getSelectedProjectName();
+        const current = await coordination.readStudioCurrent();
+        const projectName = current.project?.name;
         const project = projectName
           ? await projectData.readProject({ projectName })
           : null;
@@ -54,16 +63,16 @@ export function createProjectsRoute(
     })
     .get('/:projectName', async (c) => {
       try {
-        const projectName = c.req.param('projectName');
+        const projectName = c.req.param('projectName') as string;
         const project = await projectData.readProject({ projectName });
         return c.json({ project: toProjectResponse(project) });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
     })
-    .patch('/:projectName/information', async (c) => {
+    .patch('/:projectName/information', requireToken, async (c) => {
       try {
-        const projectName = c.req.param('projectName');
+        const projectName = c.req.param('projectName') as string;
         const information = readProjectInformationUpdate(await c.req.json());
         const project = await projectData.updateProjectInformation({
           projectName,
@@ -74,11 +83,10 @@ export function createProjectsRoute(
         return projectErrorResponse(c, error);
       }
     })
-    .post('/:projectName/select', async (c) => {
+    .post('/:projectName/select', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName');
         const project = await projectData.readProject({ projectName });
-        setSelectedProjectName(projectName);
         return c.json({ project: toProjectResponse(project) });
       } catch (error) {
         return projectErrorResponse(c, error);

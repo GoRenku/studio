@@ -3,6 +3,7 @@ import type {
   ProjectLibraryWithHttp,
   ProjectWithHttp,
 } from '@/services/studio-project-contracts';
+import './studio-current-contracts';
 import { readStudioApiError } from './studio-api-errors';
 
 interface ProjectResponse {
@@ -18,6 +19,9 @@ export async function selectProject(projectName: string): Promise<ProjectWithHtt
     `/studio-api/projects/${encodeURIComponent(projectName)}/select`,
     {
       method: 'POST',
+      headers: {
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
     }
   );
 
@@ -41,6 +45,20 @@ export async function readCurrentProject(): Promise<ProjectWithHttp | null> {
   return body.project;
 }
 
+export async function readProject(projectName: string): Promise<ProjectWithHttp> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}`
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ProjectResponse;
+  if (!body.project) {
+    throw new Error('Renku Studio API returned no project.');
+  }
+  return body.project;
+}
+
 export async function readProjectLibrary(): Promise<ProjectLibraryWithHttp> {
   const response = await fetch('/studio-api/projects');
   if (!response.ok) {
@@ -60,6 +78,7 @@ export async function updateProjectInformation(
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
       },
       body: JSON.stringify(information),
     }
@@ -74,4 +93,12 @@ export async function updateProjectInformation(
     throw new Error('Renku Studio API returned no project.');
   }
   return body.project;
+}
+
+function readStudioApiToken(): string {
+  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
+  if (!token) {
+    throw new Error('Studio API token is not available.');
+  }
+  return token;
 }
