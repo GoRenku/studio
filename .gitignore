@@ -6,3 +6,4 @@ server-dist
 *.tsbuildinfo
 coverage
 tmp
+.playwright-mcp/

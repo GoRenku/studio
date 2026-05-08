@@ -9,9 +9,9 @@ import {
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { CastTake } from './cast-design-types';
+import type { CastDesignAsset } from '../cast-design-types';
 
-const aspectClasses: Record<CastTake['aspect'], string> = {
+const tileWidthClasses: Record<CastDesignAsset['aspect'], string> = {
   portrait: 'w-[220px]',
   square: 'w-[260px]',
   sheet: 'w-[360px]',
@@ -22,7 +22,7 @@ const aspectClasses: Record<CastTake['aspect'], string> = {
   text: 'w-[520px]',
 };
 
-const compactAspectClasses: Record<CastTake['aspect'], string> = {
+const compactTileWidthClasses: Record<CastDesignAsset['aspect'], string> = {
   portrait: 'w-[140px]',
   square: 'w-[150px]',
   sheet: 'w-[250px]',
@@ -33,7 +33,7 @@ const compactAspectClasses: Record<CastTake['aspect'], string> = {
   text: 'w-[400px]',
 };
 
-const imageAspectClasses: Record<CastTake['aspect'], string> = {
+const previewAspectClasses: Record<CastDesignAsset['aspect'], string> = {
   portrait: 'aspect-[4/5]',
   square: 'aspect-square',
   sheet: 'aspect-[16/9]',
@@ -44,26 +44,26 @@ const imageAspectClasses: Record<CastTake['aspect'], string> = {
   text: 'aspect-[2.6/1]',
 };
 
-interface CastAssetCardProps {
-  take: CastTake;
+interface CastAssetTileProps {
+  asset: CastDesignAsset;
   selectedSection?: boolean;
-  onOpenDetails: (take: CastTake) => void;
+  onOpenDetails: (asset: CastDesignAsset) => void;
 }
 
-export function CastAssetCard({
-  take,
+export function CastAssetTile({
+  asset,
   selectedSection = false,
   onOpenDetails,
-}: CastAssetCardProps) {
+}: CastAssetTileProps) {
   return (
     <Card
       className={cn(
         'group shrink-0 gap-0 overflow-hidden rounded-xl border bg-card py-0 shadow-lg transition-all',
         'hover:-translate-y-1 hover:border-primary/70 hover:shadow-xl',
         selectedSection
-          ? compactAspectClasses[take.aspect]
-          : aspectClasses[take.aspect],
-        take.selected
+          ? compactTileWidthClasses[asset.aspect]
+          : tileWidthClasses[asset.aspect],
+        asset.selected
           ? 'border-primary/70 ring-2 ring-primary/35'
           : 'border-border/40'
       )}
@@ -71,44 +71,40 @@ export function CastAssetCard({
       <CardContent className='p-3 pb-0'>
         <div
           className={cn(
-            'overflow-hidden rounded-lg bg-muted/70 dark:bg-black/65',
-            'flex items-center justify-center',
-            imageAspectClasses[take.aspect]
+            'flex items-center justify-center overflow-hidden rounded-lg bg-muted/70 dark:bg-black/65',
+            previewAspectClasses[asset.aspect]
           )}
         >
-          {take.imageUrl ? (
+          {asset.imageUrl ? (
             <img
-              src={take.imageUrl}
+              src={asset.imageUrl}
               alt=''
               className='h-full w-full rounded-lg object-contain transition-transform duration-300 group-hover:scale-[1.01]'
             />
-          ) : take.text ? (
+          ) : asset.text ? (
             <div className='h-full w-full overflow-hidden p-5 text-left'>
               <pre className='h-full overflow-hidden whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground'>
-                {take.text}
+                {asset.text}
               </pre>
             </div>
           ) : (
-            <div className='h-full w-full p-4 text-left text-xs leading-relaxed text-muted-foreground flex items-center'>
-              Young Ottoman ruler, controlled and austere, with a restrained
-              court presence.
+            <div className='flex h-full w-full items-center p-4 text-left text-xs leading-relaxed text-muted-foreground'>
+              Controlled, formal, and restrained.
             </div>
           )}
         </div>
       </CardContent>
 
-      <CardFooter className='mt-3 h-12 border-t border-border/60 bg-muted/45 px-4 py-0 [.border-t]:pt-0 flex items-center justify-between gap-3'>
-        <div className='min-w-0 flex items-center gap-2'>
-          {take.selected && !selectedSection ? (
+      <CardFooter className='mt-3 flex h-12 items-center justify-between gap-3 border-t border-border/60 bg-muted/45 px-4 py-0 [.border-t]:pt-0'>
+        <div className='flex min-w-0 items-center gap-2'>
+          {asset.selected && !selectedSection ? (
             <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
               <Check className='h-3.5 w-3.5' />
             </span>
           ) : null}
-          <div className='min-w-0'>
-            <span className='block truncate text-sm font-semibold leading-none'>
-              {take.title}
-            </span>
-          </div>
+          <span className='block truncate text-sm font-semibold leading-none'>
+            {asset.title}
+          </span>
         </div>
 
         <DropdownMenu>
@@ -118,13 +114,13 @@ export function CastAssetCard({
               variant='ghost'
               size='icon'
               className='h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground'
-              aria-label={`${take.title} actions`}
+              aria-label={`${asset.title} actions`}
             >
               <MoreHorizontal className='h-4 w-4' />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
-            <DropdownMenuItem onClick={() => onOpenDetails(take)}>
+            <DropdownMenuItem onClick={() => onOpenDetails(asset)}>
               <Settings2 className='h-4 w-4' />
               Details
             </DropdownMenuItem>

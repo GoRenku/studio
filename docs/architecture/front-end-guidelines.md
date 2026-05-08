@@ -287,6 +287,48 @@ Replace `alert` with the needed component name, such as `empty`, `item`,
 If the local `ui/` folder moves, update Shadcn configuration such as
 `components.json` so future CLI installs land in the correct directory.
 
+## App-Wide Visual Consistency
+
+Studio surfaces must use one consistent interaction language across the app.
+Using Shadcn primitives is required, but it is not sufficient on its own:
+feature code must also apply the same Studio visual states and section
+treatments.
+
+Rules:
+
+- Interactive controls must use the app's primary/yellow focus and selection
+  treatment consistently. Textareas, inputs, selects, segmented controls,
+  upload controls, tile pickers, and icon buttons should not each invent their
+  own focus border, ring color, or hover color.
+- Selection states should use the primary/yellow token family unless a different
+  semantic state is required, such as destructive, warning, or disabled.
+- Hover states for selectable tiles, add-more controls, and compact command
+  buttons should visibly connect to the same primary/yellow interaction system.
+  Do not mix generic muted hover styling with primary selection styling in the
+  same workflow.
+- Form sections should use the same surface treatment inside a workflow:
+  consistent border, background, padding, radius, and shadow. Avoid mixing loose
+  full-width fields with card-like sections unless the difference has a clear
+  product meaning.
+- Section headings should use a consistent hierarchy. For compact Studio
+  settings panels, use uppercase micro-headings with the same tracking, weight,
+  and muted color across sibling sections. Field labels inside those sections
+  should also follow one shared label treatment.
+- Footer or command-bar controls are not exempt. Model selectors, take-count
+  controls, cost summaries, and generate buttons should align visually with the
+  form sections above them.
+- When a workflow needs custom styling around Shadcn primitives, create a small
+  shared local style helper or wrapper for that workflow, then reuse it across
+  every control in the workflow. Do not scatter one-off class strings that make
+  the same primitive look different from screen to screen.
+- If a visual convention proves useful across more than one feature, promote it
+  into `src/ui/` as a domain-neutral primitive or variant rather than copying
+  feature-local classes.
+
+The goal is that a user can move between Studio surfaces and immediately
+understand what is selectable, focused, selected, destructive, disabled, or
+primary without relearning the visual language.
+
 ### `assets/` And `styles/`
 
 Keep these folders:

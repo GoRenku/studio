@@ -1,5 +1,22 @@
 # Agent Rules for Renku Studio
 
+## Top Instruction: Use Shadcn UI Controls Only
+
+In `packages/studio`, it is strictly forbidden to use raw HTML form or
+interactive controls in feature code. Always use the local shadcn-style
+components from `packages/studio/src/ui`, with no exceptions.
+
+That means:
+
+- do not write raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<dialog>`,
+  or similar browser controls in feature components;
+- use `Button`, `Input`, `Select`, `Textarea`, `Dialog`, `Slider`, `Tabs`, and
+  other local shadcn primitives instead;
+- if a needed shadcn primitive does not exist yet, add a local `src/ui/*`
+  component first, then consume that component from feature code;
+- feature code may use semantic non-control HTML such as `section`, `fieldset`,
+  `legend`, `div`, `span`, and `p` for structure and copy.
+
 ## Top Instruction: No Shims, No Compatibility Layers
 
 Renku Studio is pre-customer software and will be continuously iterated.
