@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { StudioAppHeader } from '@/app/studio-app-header';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import type { ProjectWithHttp } from '@/services/studio-project-contracts';
 import { AutosaveStatus } from '@/ui/autosave-status';
@@ -38,17 +37,12 @@ export function MovieStudioScreen({
 
   return (
     <div className='h-screen w-screen bg-background text-foreground p-3 flex flex-col gap-3'>
-      <StudioAppHeader
-        subtitle='Studio'
-        projectTitle={project.identity.title}
-        onHome={onHome}
-      />
-
       <main className='flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] gap-3'>
         <StudioSidebar
           project={project}
           selection={selection}
           onSelect={setSelection}
+          onHome={onHome}
         />
         {selection.type === 'cast' && resolvedSelection.castEntry ? (
           <CastDesignPanel castEntry={resolvedSelection.castEntry} />

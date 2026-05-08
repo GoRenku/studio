@@ -3,14 +3,16 @@ import {
   Clapperboard,
   FileText,
   Layers3,
-  ListTree,
   Palette,
   Sparkles,
   UserRound,
   UsersRound,
 } from 'lucide-react';
+import renkuLogo from '@/assets/renku-logo.svg';
 import type { ProjectWithHttp } from '@/services/studio-project-contracts';
 import { cn } from '@/lib/utils';
+import { Button } from '@/ui/button';
+import { ThemeToggle } from '@/ui/theme-toggle';
 import {
   toggleSetValue,
   type MovieStudioSelection,
@@ -22,12 +24,14 @@ interface StudioSidebarProps {
   project: ProjectWithHttp;
   selection: MovieStudioSelection;
   onSelect: (selection: MovieStudioSelection) => void;
+  onHome: () => void;
 }
 
 export function StudioSidebar({
   project,
   selection,
   onSelect,
+  onHome,
 }: StudioSidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     () => new Set(['sequences', 'casting'])
@@ -55,25 +59,36 @@ export function StudioSidebar({
 
   return (
     <aside className='min-h-0 rounded-(--radius-panel) border border-sidebar-border bg-sidebar-bg overflow-hidden flex flex-col'>
-      <div className='h-[45px] px-4 border-b border-border/40 bg-sidebar-header-bg flex items-center justify-between shrink-0'>
-        <div className='flex items-center gap-2'>
-          <ListTree className='w-4 h-4 text-muted-foreground' />
-          <h2 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
-            Studio
-          </h2>
-        </div>
-        <span className='text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium'>
-          {project.counts.clips}
-        </span>
+      <div className='h-14 px-3 border-b border-border/40 bg-sidebar-header-bg flex items-center justify-between gap-3 shrink-0'>
+        <Button
+          type='button'
+          variant='ghost'
+          onClick={onHome}
+          className='h-auto min-w-0 justify-start gap-2 rounded-md px-1.5 py-1 hover:bg-item-hover-bg/70'
+          aria-label='Go to Renku Studio home'
+        >
+          <img
+            src={renkuLogo}
+            alt='Renku'
+            className='h-9 w-9 shrink-0 rounded-md object-contain'
+          />
+          <span className='min-w-0 text-left'>
+            <span className='block truncate text-sm font-semibold leading-4'>
+              Renku Studio
+            </span>
+          </span>
+        </Button>
+        <ThemeToggle />
       </div>
 
       <div className='border-b border-border/40 p-3'>
         {project.coverUrl ? (
-          <button
+          <Button
             type='button'
+            variant='ghost'
             onClick={() => onSelect({ type: 'projectInformation' })}
             className={cn(
-              'group relative aspect-video w-full overflow-hidden rounded-md border bg-muted/50 text-left transition-colors hover:border-item-active-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+              'group relative h-auto aspect-video w-full overflow-hidden rounded-md border bg-muted/50 p-0 text-left transition-colors hover:border-item-active-border hover:bg-muted/50',
               selection.type === 'projectInformation'
                 ? 'border-item-active-border'
                 : 'border-border/40'
@@ -90,13 +105,14 @@ export function StudioSidebar({
                 {project.identity.title}
               </span>
             </span>
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type='button'
+            variant='ghost'
             onClick={() => onSelect({ type: 'projectInformation' })}
             className={cn(
-              'flex w-full items-start gap-3 rounded-md border bg-muted/35 px-3 py-3 text-left transition-colors hover:border-item-active-border hover:bg-item-hover-bg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+              'flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-md border bg-muted/35 px-3 py-3 text-left transition-colors hover:border-item-active-border hover:bg-item-hover-bg',
               selection.type === 'projectInformation'
                 ? 'border-item-active-border bg-item-active-bg'
                 : 'border-border/40'
@@ -113,7 +129,7 @@ export function StudioSidebar({
                 Project Information
               </span>
             </span>
-          </button>
+          </Button>
         )}
       </div>
 
