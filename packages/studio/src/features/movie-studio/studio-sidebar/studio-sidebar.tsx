@@ -89,6 +89,7 @@ export function StudioSidebar({
             onClick={() => onSelect({ type: 'projectInformation' })}
             className={cn(
               'group relative h-auto aspect-video w-full overflow-hidden rounded-md border bg-muted/50 p-0 text-left transition-colors hover:border-item-active-border hover:bg-muted/50',
+              'whitespace-normal',
               selection.type === 'projectInformation'
                 ? 'border-item-active-border'
                 : 'border-border/40'
@@ -101,7 +102,7 @@ export function StudioSidebar({
             />
             <span className='absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent' />
             <span className='absolute inset-x-0 bottom-0 p-3'>
-              <span className='line-clamp-2 text-sm font-semibold text-white drop-shadow-sm'>
+              <span className='block break-words text-sm font-semibold leading-snug text-white drop-shadow-sm'>
                 {project.identity.title}
               </span>
             </span>
