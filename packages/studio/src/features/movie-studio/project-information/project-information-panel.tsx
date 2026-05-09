@@ -37,6 +37,21 @@ import { cn } from '@/lib/utils';
 
 const ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16', '21:9'] as const;
 
+const projectInformationControlClassName =
+  'border-border/60 bg-background/35 transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/25';
+
+const projectInformationLanguageTriggerClassName =
+  "border-border/60 bg-background/35 [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/25 data-[state=open]:border-primary data-[state=open]:ring-[3px] data-[state=open]:ring-primary/25 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-[190px] items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+
+const projectInformationReadOnlyControlClassName =
+  'border-border/45 bg-muted/25 text-muted-foreground';
+
+const projectInformationSectionClassName =
+  'rounded-lg border border-border/45 bg-background/35 p-4 shadow-sm';
+
+const projectInformationSectionHeadingClassName =
+  'text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground';
+
 const LANGUAGE_CATALOG = [
   { localeTag: 'en-US', displayName: 'English' },
   { localeTag: 'es-ES', displayName: 'Spanish' },
@@ -181,96 +196,107 @@ export function ProjectInformationPanel({
   };
 
   return (
-    <div className='mx-auto flex max-w-4xl flex-col gap-5'>
-      <div className='grid gap-4 lg:grid-cols-2'>
-        <Field label='Project Name'>
-          <Input value={project.identity.name} readOnly className='bg-muted/35' />
-        </Field>
-        <Field label='Type'>
-          <Input value={projectTypeLabel} readOnly className='bg-muted/35' />
-        </Field>
-      </div>
+    <div className='mx-auto flex w-full max-w-4xl flex-col gap-4'>
+      <section className={projectInformationSectionClassName}>
+        <div className='grid gap-4 lg:grid-cols-2'>
+          <Field label='Project Name'>
+            <Input
+              value={project.identity.name}
+              readOnly
+              className={projectInformationReadOnlyControlClassName}
+            />
+          </Field>
+          <Field label='Type'>
+            <Input
+              value={projectTypeLabel}
+              readOnly
+              className={projectInformationReadOnlyControlClassName}
+            />
+          </Field>
+        </div>
+      </section>
 
-      <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]'>
-        <Field label='Title'>
-          <Input
-            value={form.title}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                title: event.target.value,
-              }))
-            }
-          />
-        </Field>
-        <Field label='Aspect Ratio'>
-          <Select
-            value={form.aspectRatio}
-            onValueChange={(aspectRatio) =>
-              setForm((current) => ({ ...current, aspectRatio }))
-            }
-          >
-            <SelectTrigger className='w-full'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ASPECT_RATIOS.map((aspectRatio) => (
-                <SelectItem key={aspectRatio} value={aspectRatio}>
-                  {aspectRatio}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
+      <section className={projectInformationSectionClassName}>
+        <div className='grid gap-4'>
+          <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]'>
+            <Field label='Title'>
+              <Input
+                value={form.title}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                className={projectInformationControlClassName}
+              />
+            </Field>
+            <Field label='Aspect Ratio'>
+              <Select
+                value={form.aspectRatio}
+                onValueChange={(aspectRatio) =>
+                  setForm((current) => ({ ...current, aspectRatio }))
+                }
+              >
+                <SelectTrigger
+                  className={cn('w-full', projectInformationControlClassName)}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASPECT_RATIOS.map((aspectRatio) => (
+                    <SelectItem key={aspectRatio} value={aspectRatio}>
+                      {aspectRatio}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
 
-      <Field label='Logline'>
-        <Textarea
-          value={form.logline}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              logline: event.target.value,
-            }))
-          }
-          className='min-h-24'
-        />
-      </Field>
+          <Field label='Logline'>
+            <Textarea
+              value={form.logline}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  logline: event.target.value,
+                }))
+              }
+              className={cn('min-h-24', projectInformationControlClassName)}
+            />
+          </Field>
 
-      <Field label='Summary'>
-        <Textarea
-          value={form.summary}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              summary: event.target.value,
-            }))
-          }
-          className='min-h-36'
-        />
-      </Field>
+          <Field label='Summary'>
+            <Textarea
+              value={form.summary}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  summary: event.target.value,
+                }))
+              }
+              className={cn('min-h-36', projectInformationControlClassName)}
+            />
+          </Field>
+        </div>
+      </section>
 
-      <section className='space-y-3 border-t border-border/40 pt-4'>
+      <section className={cn(projectInformationSectionClassName, 'space-y-3')}>
         <div className='flex items-center justify-between gap-3'>
-          <h3 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
-            Languages
-          </h3>
+          <h3 className={projectInformationSectionHeadingClassName}>Languages</h3>
           {availableLanguages.length > 0 ? (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type='button'
-                  variant='ghost'
-                  className='h-8 w-[190px] justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs hover:bg-item-hover-bg'
-                >
-                  <span className='flex min-w-0 items-center gap-2'>
-                    <Plus className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-                    <span className='truncate'>
-                      {availableLanguages[0].displayName}
-                    </span>
+              <DropdownMenuTrigger
+                className={projectInformationLanguageTriggerClassName}
+              >
+                <span className='flex min-w-0 items-center gap-2 line-clamp-1'>
+                  <Plus className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
+                  <span className='truncate'>
+                    {formatLanguageOptionLabel(availableLanguages[0])}
                   </span>
-                  <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground opacity-50' />
-                </Button>
+                </span>
+                <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground opacity-50' />
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end' className='w-[190px]'>
                 {availableLanguages.map((language) => (
@@ -278,7 +304,7 @@ export function ProjectInformationPanel({
                     key={language.localeTag}
                     onClick={() => addLanguage(language.localeTag)}
                   >
-                    {language.displayName} ({language.localeTag})
+                    {formatLanguageOptionLabel(language)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -292,7 +318,7 @@ export function ProjectInformationPanel({
             return (
               <div
                 key={language.localeTag}
-                className='grid gap-2 rounded-md border border-border/40 bg-background/30 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]'
+                className='grid gap-2 rounded-md border border-border/45 bg-card/35 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]'
               >
                 <div className='min-w-0'>
                   <p className='truncate text-sm font-medium'>
@@ -369,10 +395,8 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <label className='space-y-1.5'>
-      <span className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
-        {label}
-      </span>
+    <label className='grid gap-1.5'>
+      <span className={projectInformationSectionHeadingClassName}>{label}</span>
       {children}
     </label>
   );
@@ -404,6 +428,13 @@ function ToggleButton({
       {label}
     </Button>
   );
+}
+
+function formatLanguageOptionLabel(language: {
+  displayName: string;
+  localeTag: string;
+}): string {
+  return `${language.displayName} (${language.localeTag})`;
 }
 
 function toProjectInformationForm(project: ProjectWithHttp): ProjectInformationForm {
