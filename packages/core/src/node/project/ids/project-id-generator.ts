@@ -5,13 +5,21 @@ const ID_LENGTH = 8;
 
 export type EntityIdPrefix =
   | 'project'
-  | 'language'
+  | 'locale'
   | 'visual_language'
   | 'cast'
   | 'episode'
   | 'sequence'
   | 'scene'
-  | 'clip';
+  | 'clip'
+  | 'asset'
+  | 'asset_file'
+  | 'project_asset'
+  | 'visual_language_asset'
+  | 'cast_asset'
+  | 'sequence_asset'
+  | 'scene_asset'
+  | 'clip_asset';
 
 export interface ProjectIdGenerator {
   next(prefix: EntityIdPrefix): string;

@@ -12,8 +12,10 @@ export interface InsertEpisodeRecord {
   title: string;
   shortTitle?: string;
   episodeNumber?: number;
-  summary?: string;
+  oneLineSummary?: string;
   position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InsertSequenceRecord {
@@ -21,25 +23,30 @@ export interface InsertSequenceRecord {
   episodeId: string | null;
   title: string;
   shortTitle?: string;
-  summary?: string;
+  oneLineSummary?: string;
   position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InsertSceneRecord {
   id: string;
   sequenceId: string;
   title: string;
-  summary?: string;
+  oneLineSummary?: string;
   position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InsertClipRecord {
   id: string;
   sceneId: string;
   title: string;
-  summary?: string;
-  visualIntent?: string;
+  oneLineSummary?: string;
   position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export function insertEpisodeRecord(

@@ -39,6 +39,7 @@ export interface ProjectIdentity {
   aspectRatio?: string;
   logline?: string;
   summary?: string;
+  summaryAsset?: RichTextAssetLink;
 }
 
 export interface ProjectCoverImage {
@@ -59,6 +60,7 @@ export interface VisualLanguage {
   name: string;
   intent?: string;
   summary?: string;
+  intentAsset?: RichTextAssetLink;
 }
 
 export interface CastMember {
@@ -83,6 +85,7 @@ export interface Sequence {
   title: string;
   shortTitle?: string;
   summary?: string;
+  summaryAsset?: RichTextAssetLink;
   scenes: Scene[];
 }
 
@@ -90,6 +93,7 @@ export interface Scene {
   id: string;
   title: string;
   summary?: string;
+  summaryAsset?: RichTextAssetLink;
   clips: Clip[];
 }
 
@@ -98,6 +102,16 @@ export interface Clip {
   title: string;
   summary?: string;
   visualIntent?: string;
+  summaryAsset?: RichTextAssetLink;
+  visualIntentAsset?: RichTextAssetLink;
+}
+
+export interface RichTextAssetLink {
+  assetId: string;
+  assetFileId: string;
+  assetRole: string;
+  localeId?: string;
+  projectRelativePath: string;
 }
 
 export interface ProjectCounts {

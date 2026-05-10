@@ -33,6 +33,7 @@ export type {
   Project,
   ProjectLanguage,
   ProjectLibrary,
+  RichTextAssetLink,
   Scene,
   Sequence,
   VisualLanguage,

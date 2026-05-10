@@ -11,6 +11,8 @@ export interface InsertCastMemberRecord {
   role?: string;
   shortDescription?: string;
   position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export function insertCastMemberRecords(

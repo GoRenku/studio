@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   createDeterministicIdGenerator,
@@ -58,6 +59,11 @@ describe('ProjectDataService', () => {
       name: 'constantinople',
       title: 'Preparation of the Siege',
       type: 'standaloneMovie',
+      summary: 'A documentary setup summary for Markdown storage.',
+    });
+    expect(project.identity.summaryAsset).toMatchObject({
+      assetRole: 'summary',
+      projectRelativePath: 'Working Assets/Base/Narrative/project-summary.md',
     });
     expect(project.identity).not.toHaveProperty('format');
     expect(project.identity).not.toHaveProperty('resolution');
@@ -79,7 +85,103 @@ describe('ProjectDataService', () => {
       'cast_test0001',
       'cast_test0002',
     ]);
+    expect(project.visualLanguage[0]).toMatchObject({
+      summary: 'Muted golds, deep reds, formal court staging.',
+      intent: 'Formal staging and controlled historical detail.',
+      intentAsset: expect.objectContaining({
+        assetRole: 'intent',
+      }),
+    });
     expect(project.sequences[0]?.scenes[0]?.clips).toHaveLength(2);
+    expect(project.sequences[0]).toMatchObject({
+      summary: 'Mehmed turns conquest into policy.',
+      summaryAsset: expect.objectContaining({
+        assetRole: 'summary',
+      }),
+    });
+    expect(project.sequences[0]?.scenes[0]?.clips[0]).toMatchObject({
+      summary: 'Mehmed is introduced as controlled and ambitious.',
+      visualIntent: 'Quiet court staging.',
+      summaryAsset: expect.objectContaining({ assetRole: 'summary' }),
+      visualIntentAsset: expect.objectContaining({ assetRole: 'visual_intent' }),
+    });
+
+    await expect(
+      fs.readFile(
+        path.join(
+          result.projectPath,
+          'Working Assets',
+          'Base',
+          'Narrative',
+          'project-summary.md'
+        ),
+        'utf8'
+      )
+    ).resolves.toBe('A documentary setup summary for Markdown storage.\n');
+
+    const database = new Database(result.databasePath, { readonly: true });
+    try {
+      const tables = database
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+        .all()
+        .map((row) => (row as { name: string }).name);
+      expect(tables).toEqual(
+        expect.arrayContaining([
+          'asset',
+          'asset_file',
+          'project_asset',
+          'project_locale',
+          'visual_language_asset',
+          'sequence_asset',
+          'scene_asset',
+          'clip_asset',
+        ])
+      );
+      expect(tables).not.toContain('project_language');
+      expect(tableColumns(database, 'project')).not.toContain('summary');
+      expect(tableColumns(database, 'visual_language')).not.toContain('intent');
+      expect(tableColumns(database, 'clip')).not.toContain('visual_intent');
+
+      const projectSummary = database
+        .prepare(
+          `SELECT af.project_relative_path
+           FROM project_asset pa
+           JOIN asset_file af ON af.asset_id = pa.asset_id
+           WHERE pa.asset_role = 'summary'`
+        )
+        .get() as { project_relative_path: string } | undefined;
+      expect(projectSummary?.project_relative_path).toBe(
+        'Working Assets/Base/Narrative/project-summary.md'
+      );
+    } finally {
+      database.close();
+    }
+  });
+
+  it('preserves setup episode summaries', async () => {
+    const setupPath = await writeEpisodeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+
+    const result = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!result) {
+      return;
+    }
+
+    const project = await projectData.readProject({
+      projectName: 'constantinople-series',
+      homeDir,
+    });
+
+    expect(project.episodes[0]).toMatchObject({
+      title: 'The First Preparations',
+      summary: 'Mehmed turns an inherited ambition into a concrete plan.',
+    });
   });
 
   it('copies a PNG cover to cover.png', async () => {
@@ -302,6 +404,86 @@ describe('ProjectDataService', () => {
     expect(project.identity.summary).toBeUndefined();
   });
 
+  it('clears the Markdown-backed project summary through a patch', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const project = await projectData.patchProjectInformation({
+      projectName: 'constantinople',
+      homeDir,
+      patch: { summary: null },
+    });
+
+    expect(project.identity.summary).toBeUndefined();
+    await expect(
+      fs.readFile(
+        path.join(
+          created.projectPath,
+          'Working Assets',
+          'Base',
+          'Narrative',
+          'project-summary.md'
+        ),
+        'utf8'
+      )
+    ).resolves.toBe('');
+  });
+
+  it('rejects removing a locale that still has asset relationships', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    await expect(
+      projectData.updateProjectInformation({
+        projectName: 'constantinople',
+        homeDir,
+        information: {
+          title: 'Preparation of the Siege',
+          aspectRatio: '16:9',
+          logline: 'A documentary about preparation before 1453.',
+          summary: 'A documentary setup summary for Markdown storage.',
+          languages: [
+            {
+              localeTag: 'tr-TR',
+              displayName: 'Turkish',
+              isBase: true,
+              supportsAudio: true,
+              supportsSubtitles: true,
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA058',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'PROJECT_DATA057',
+          message: expect.stringContaining('project_asset'),
+        }),
+      ]),
+    });
+  });
+
   it('collects project information validation errors', async () => {
     const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
@@ -446,6 +628,7 @@ project:
   title: Preparation of the Siege
   type: standaloneMovie
   logline: A documentary about preparation before 1453.
+  summary: A documentary setup summary for Markdown storage.
 ${options.extraProjectFields ?? ''}
 
 languages:
@@ -489,6 +672,51 @@ sequences:
     'utf8'
   );
   return setupPath;
+}
+
+async function writeEpisodeProjectSetup(homeDir: string): Promise<string> {
+  const setupPath = path.join(homeDir, 'episode-project.yaml');
+  await fs.writeFile(
+    setupPath,
+    `kind: renku.projectSetup
+version: 0.1.0
+
+project:
+  name: constantinople-series
+  title: Preparation of the Siege
+  type: series
+  logline: A documentary series about preparation before 1453.
+
+languages:
+  - localeTag: en-US
+    displayName: English
+    isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
+
+episodes:
+  - title: The First Preparations
+    shortTitle: Preparations
+    episodeNumber: 1
+    summary: Mehmed turns an inherited ambition into a concrete plan.
+    sequences:
+      - title: The Young Sultan's Obsession
+        shortTitle: Ambition
+        scenes:
+          - title: A Throne Facing an Ancient City
+            clips:
+              - title: The New Sultan
+`,
+    'utf8'
+  );
+  return setupPath;
+}
+
+function tableColumns(database: Database.Database, tableName: string): string[] {
+  return database
+    .prepare(`PRAGMA table_info(${tableName})`)
+    .all()
+    .map((row) => (row as { name: string }).name);
 }
 
 async function writeInvalidProjectSetup(homeDir: string): Promise<string> {

@@ -7,9 +7,10 @@ export type VisualLanguageRecord = typeof visualLanguage.$inferSelect;
 export interface InsertVisualLanguageRecord {
   id: string;
   name: string;
-  intent?: string;
-  summary?: string;
+  oneLineSummary?: string;
   position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export function insertVisualLanguageRecords(

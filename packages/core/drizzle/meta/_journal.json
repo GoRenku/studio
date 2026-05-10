@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1778051456567,
-      "tag": "0000_project_create",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1778077719667,
-      "tag": "0001_project_information_languages",
+      "when": 1778411223468,
+      "tag": "0000_project_storage_foundation",
       "breakpoints": true
     }
   ]

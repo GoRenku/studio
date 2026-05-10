@@ -23,6 +23,15 @@ import {
   resolveProjectDatabasePath,
   resolveProjectFolder,
 } from './files/project-paths.js';
+import { writeMarkdownAssetFile } from './files/markdown-asset-files.js';
+import {
+  allocateWorkingMarkdownAssetPath,
+  type MarkdownAssetPathTarget,
+} from './files/project-asset-paths.js';
+import {
+  normalizeProjectRelativePath,
+  type ProjectRelativePath,
+} from './files/project-relative-paths.js';
 import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
@@ -36,6 +45,12 @@ import {
   type ProjectSetupSequence,
 } from './setup/project-setup-reader.js';
 import { insertCastMemberRecords } from './data/cast-member-records.js';
+import { listCastAssetRecords } from './data/cast-asset-records.js';
+import {
+  insertAssetFileRecord,
+  listAssetFileRecords,
+} from './data/asset-file-records.js';
+import { insertAssetRecord } from './data/asset-records.js';
 import {
   insertClipRecord,
   insertEpisodeRecord,
@@ -43,10 +58,15 @@ import {
   insertSequenceRecord,
 } from './data/narrative-records.js';
 import {
-  insertProjectLanguageRecords,
-  listProjectLanguageRecords,
-  replaceProjectLanguageRecords,
-} from './data/project-language-records.js';
+  insertProjectLocaleRecords,
+  listProjectLocaleRecords,
+  type ProjectLocaleRecord,
+  replaceProjectLocaleRecords,
+} from './data/project-locale-records.js';
+import {
+  insertProjectAssetRecord,
+  listProjectAssetRecords,
+} from './data/project-asset-records.js';
 import { readProjectLibrary } from './data/project-library-reader.js';
 import { readProjectFromSession } from './data/project-reader.js';
 import {
@@ -55,7 +75,19 @@ import {
   updateProjectInformationRecord,
 } from './data/project-records.js';
 import { openProjectStore, type ProjectDataSession } from './data/sqlite-project-store.js';
+import {
+  insertVisualLanguageAssetRecord,
+  listVisualLanguageAssetRecords,
+} from './data/visual-language-asset-records.js';
 import { insertVisualLanguageRecords } from './data/visual-language-records.js';
+import {
+  insertClipAssetRecord,
+  listClipAssetRecords,
+  listSceneAssetRecords,
+  listSequenceAssetRecords,
+  insertSceneAssetRecord,
+  insertSequenceAssetRecord,
+} from './data/narrative-asset-records.js';
 
 export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
@@ -118,7 +150,7 @@ export interface ProjectInformationUpdate {
   title: string;
   aspectRatio?: string;
   logline?: string;
-  summary?: string;
+  summary?: string | null;
   languages: ProjectInformationLanguageUpdate[];
 }
 
@@ -170,7 +202,14 @@ async function createFromSetup(
   try {
     const now = new Date().toISOString();
     const coverFile = input.coverPath ? PROJECT_COVER_IMAGE_FILE : null;
-    const counts = writeSetupRecords(session, setup, ids, now, coverFile);
+    const counts = await writeSetupRecords(
+      session,
+      setup,
+      ids,
+      now,
+      coverFile,
+      projectFolder
+    );
     const coverPath = await copyProjectCoverImage({
       coverPath: input.coverPath,
       projectFolder,
@@ -222,26 +261,33 @@ async function updateProjectInformation(
 
     validateProjectInformationUpdate(input.information);
     const now = new Date().toISOString();
-    const existingLanguageIds = new Map(
-      listProjectLanguageRecords(session).map((language) => [
+    const existingLocales = listProjectLocaleRecords(session);
+    const existingLocaleIds = new Map(
+      existingLocales.map((language) => [
         language.localeTag,
         language.id,
       ])
     );
     const ids = createUniqueIdAllocator(createRandomIdGenerator());
+    const nextLocaleIds = new Set(
+      input.information.languages.map((language) => existingLocaleIds.get(language.localeTag))
+    );
+    assertRemovedLocalesAreUnused(
+      session,
+      existingLocales.filter((locale) => !nextLocaleIds.has(locale.id))
+    );
 
     const transaction = session.sqlite.transaction(() => {
       updateProjectInformationRecord(session, projectRecord.id, {
         title: input.information.title.trim(),
         aspectRatio: input.information.aspectRatio,
         logline: nullableTrimmed(input.information.logline),
-        summary: nullableTrimmed(input.information.summary),
         updatedAt: now,
       });
-      replaceProjectLanguageRecords(
+      replaceProjectLocaleRecords(
         session,
         input.information.languages.map((language, index) => ({
-          id: existingLanguageIds.get(language.localeTag) ?? ids('language'),
+          id: existingLocaleIds.get(language.localeTag) ?? ids('locale'),
           localeTag: language.localeTag,
           displayName: optionalTrimmed(language.displayName),
           isBase: language.isBase,
@@ -253,6 +299,15 @@ async function updateProjectInformation(
     });
 
     transaction();
+    if (input.information.summary !== undefined) {
+      await updateExistingProjectSummaryAsset({
+        session,
+        projectFolder,
+        content: nullableTrimmed(input.information.summary) ?? '',
+        ids,
+        now,
+      });
+    }
     return readProjectFromSession({ session, projectFolder });
   } finally {
     session.close();
@@ -283,134 +338,266 @@ async function resolveCoverImage(
   });
 }
 
-function writeSetupRecords(
+async function writeSetupRecords(
   session: ProjectDataSession,
   setup: ProjectSetup,
   ids: (prefix: EntityIdPrefix) => string,
   now: string,
-  coverFile: string | null
-): ProjectCounts {
+  coverFile: string | null,
+  projectFolder: string
+): Promise<ProjectCounts> {
+  const markdownAssets: SetupMarkdownAsset[] = [];
+  const localeRecords = expandLanguages(setup).map((language, index) => ({
+    id: ids('locale'),
+    localeTag: language.localeTag,
+    displayName: language.displayName,
+    isBase: language.isBase ?? false,
+    supportsAudio: language.supportsAudio ?? true,
+    supportsSubtitles: language.supportsSubtitles ?? true,
+    position: index + 1,
+  }));
+  const baseLocaleId =
+    localeRecords.find((language) => language.isBase)?.id ??
+    localeRecords[0]?.id ??
+    null;
+
+  const projectId = ids('project');
+  addMarkdownAsset(markdownAssets, ids, now, {
+    content: setup.project.summary,
+    title: `${setup.project.title} summary`,
+    assetRole: 'summary',
+    localeId: baseLocaleId,
+    pathTarget: { kind: 'project' },
+    fileName: 'project-summary.md',
+    relationship: { kind: 'project' },
+  });
+
+  const visualLanguageRecords = (setup.visualLanguage ?? []).map((entry, index) => {
+    const visualLanguageId = ids('visual_language');
+    const slug = numberedSlug(index + 1, entry.name);
+    addMarkdownAsset(markdownAssets, ids, now, {
+      content: entry.intent,
+      title: `${entry.name} intent`,
+      assetRole: 'intent',
+      localeId: baseLocaleId,
+      pathTarget: { kind: 'visualLanguage', slug },
+      fileName: 'intent.md',
+      relationship: {
+        kind: 'visualLanguage',
+        visualLanguageId,
+      },
+    });
+    return {
+      id: visualLanguageId,
+      name: entry.name,
+      oneLineSummary: entry.summary,
+      position: index + 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
+
+  const castMemberRecords = (setup.cast ?? []).map((castMember, index) => ({
+    id: ids('cast'),
+    name: castMember.name,
+    kind: castMember.kind,
+    role: castMember.role,
+    shortDescription: castMember.shortDescription,
+    position: index + 1,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const episodeRecords: Parameters<typeof insertEpisodeRecord>[1][] = [];
+  const sequenceRecords: Parameters<typeof insertSequenceRecord>[1][] = [];
+  const sceneRecords: Parameters<typeof insertSceneRecord>[1][] = [];
+  const clipRecords: Parameters<typeof insertClipRecord>[1][] = [];
+
+  const counts: ProjectCounts = {
+    languages: localeRecords.length,
+    visualLanguage: visualLanguageRecords.length,
+    castMembers: castMemberRecords.length,
+    episodes: setup.episodes?.length ?? 0,
+    sequences: 0,
+    scenes: 0,
+    clips: 0,
+  };
+
+  (setup.episodes ?? []).forEach((episode, index) => {
+    const episodeId = ids('episode');
+    episodeRecords.push({
+      id: episodeId,
+      title: episode.title,
+      shortTitle: episode.shortTitle,
+      episodeNumber: episode.episodeNumber,
+      oneLineSummary: episode.summary,
+      position: index + 1,
+      createdAt: now,
+      updatedAt: now,
+    });
+    writeSequences({
+      input: episode.sequences ?? [],
+      episodeId,
+      ids,
+      counts,
+      now,
+      baseLocaleId,
+      markdownAssets,
+      sequenceRecords,
+      sceneRecords,
+      clipRecords,
+    });
+  });
+
+  writeSequences({
+    input: setup.sequences ?? [],
+    episodeId: null,
+    ids,
+    counts,
+    now,
+    baseLocaleId,
+    markdownAssets,
+    sequenceRecords,
+    sceneRecords,
+    clipRecords,
+  });
+
+  await Promise.all(
+    markdownAssets.map((asset) =>
+      writeMarkdownAssetFile({
+        projectFolder,
+        projectRelativePath: asset.projectRelativePath,
+        content: asset.content,
+      })
+    )
+  );
+
   const transaction = session.sqlite.transaction(() => {
-    const projectId = ids('project');
     insertProjectRecord(session, {
       id: projectId,
       name: setup.project.name,
       title: setup.project.title,
       type: setup.project.type,
       logline: setup.project.logline,
-      summary: setup.project.summary,
       aspectRatio: setup.project.aspectRatio,
       coverFile,
       createdAt: now,
       updatedAt: now,
     });
 
-    const languages = expandLanguages(setup);
-    insertProjectLanguageRecords(
-      session,
-      languages.map((language, index) => ({
-        id: ids('language'),
-        localeTag: language.localeTag,
-        displayName: language.displayName,
-        isBase: language.isBase ?? false,
-        supportsAudio: language.supportsAudio ?? true,
-        supportsSubtitles: language.supportsSubtitles ?? true,
-        position: index + 1,
-      }))
-    );
-
-    insertVisualLanguageRecords(
-      session,
-      (setup.visualLanguage ?? []).map((entry, index) => ({
-        id: ids('visual_language'),
-        name: entry.name,
-        intent: entry.intent,
-        summary: entry.summary,
-        position: index + 1,
-      }))
-    );
-
-    insertCastMemberRecords(
-      session,
-      (setup.cast ?? []).map((castMember, index) => ({
-        id: ids('cast'),
-        name: castMember.name,
-        kind: castMember.kind,
-        role: castMember.role,
-        shortDescription: castMember.shortDescription,
-        position: index + 1,
-      }))
-    );
-
-    const counts: ProjectCounts = {
-      languages: languages.length,
-      visualLanguage: setup.visualLanguage?.length ?? 0,
-      castMembers: setup.cast?.length ?? 0,
-      episodes: setup.episodes?.length ?? 0,
-      sequences: 0,
-      scenes: 0,
-      clips: 0,
-    };
-
-    (setup.episodes ?? []).forEach((episode, index) => {
-      const episodeId = ids('episode');
-      insertEpisodeRecord(session, {
-        id: episodeId,
-        title: episode.title,
-        shortTitle: episode.shortTitle,
-        episodeNumber: episode.episodeNumber,
-        summary: episode.summary,
-        position: index + 1,
-      });
-      writeSequences(session, episode.sequences ?? [], episodeId, ids, counts);
-    });
-
-    writeSequences(session, setup.sequences ?? [], null, ids, counts);
+    insertProjectLocaleRecords(session, localeRecords);
+    insertVisualLanguageRecords(session, visualLanguageRecords);
+    insertCastMemberRecords(session, castMemberRecords);
+    for (const record of episodeRecords) {
+      insertEpisodeRecord(session, record);
+    }
+    for (const record of sequenceRecords) {
+      insertSequenceRecord(session, record);
+    }
+    for (const record of sceneRecords) {
+      insertSceneRecord(session, record);
+    }
+    for (const record of clipRecords) {
+      insertClipRecord(session, record);
+    }
+    for (const asset of markdownAssets) {
+      insertMarkdownAssetRecords(session, asset);
+    }
     return counts;
   });
 
   return transaction();
 }
 
-function writeSequences(
-  session: ProjectDataSession,
-  input: ProjectSetupSequence[],
-  episodeId: string | null,
-  ids: (prefix: EntityIdPrefix) => string,
-  counts: ProjectCounts
-): void {
-  input.forEach((sequence) => {
-    const sequenceId = ids('sequence');
-    counts.sequences += 1;
-    insertSequenceRecord(session, {
+function writeSequences(input: {
+  input: ProjectSetupSequence[];
+  episodeId: string | null;
+  ids: (prefix: EntityIdPrefix) => string;
+  counts: ProjectCounts;
+  now: string;
+  baseLocaleId: string | null;
+  markdownAssets: SetupMarkdownAsset[];
+  sequenceRecords: Parameters<typeof insertSequenceRecord>[1][];
+  sceneRecords: Parameters<typeof insertSceneRecord>[1][];
+  clipRecords: Parameters<typeof insertClipRecord>[1][];
+}): void {
+  input.input.forEach((sequence) => {
+    const sequenceId = input.ids('sequence');
+    input.counts.sequences += 1;
+    const sequenceSlug = numberedSlug(input.counts.sequences, sequence.title);
+    input.sequenceRecords.push({
       id: sequenceId,
-      episodeId,
+      episodeId: input.episodeId,
       title: sequence.title,
       shortTitle: sequence.shortTitle,
-      summary: sequence.summary,
-      position: counts.sequences,
+      oneLineSummary: undefined,
+      position: input.counts.sequences,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
+    addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
+      content: sequence.summary,
+      title: `${sequence.title} summary`,
+      assetRole: 'summary',
+      localeId: input.baseLocaleId,
+      pathTarget: { kind: 'sequence', sequenceSlug },
+      fileName: 'sequence-summary.md',
+      relationship: { kind: 'sequence', sequenceId },
     });
 
     (sequence.scenes ?? []).forEach((scene, sceneIndex) => {
-      const sceneId = ids('scene');
-      counts.scenes += 1;
-      insertSceneRecord(session, {
+      const sceneId = input.ids('scene');
+      input.counts.scenes += 1;
+      const sceneSlug = numberedSlug(sceneIndex + 1, scene.title);
+      input.sceneRecords.push({
         id: sceneId,
         sequenceId,
         title: scene.title,
-        summary: scene.summary,
+        oneLineSummary: undefined,
         position: sceneIndex + 1,
+        createdAt: input.now,
+        updatedAt: input.now,
+      });
+      addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
+        content: scene.summary,
+        title: `${scene.title} summary`,
+        assetRole: 'summary',
+        localeId: input.baseLocaleId,
+        pathTarget: { kind: 'scene', sequenceSlug, sceneSlug },
+        fileName: 'scene-summary.md',
+        relationship: { kind: 'scene', sceneId },
       });
 
       (scene.clips ?? []).forEach((clip, clipIndex) => {
-        counts.clips += 1;
-        insertClipRecord(session, {
-          id: ids('clip'),
+        input.counts.clips += 1;
+        const clipId = input.ids('clip');
+        const clipSlug = numberedSlug(clipIndex + 1, clip.title);
+        input.clipRecords.push({
+          id: clipId,
           sceneId,
           title: clip.title,
-          summary: clip.summary,
-          visualIntent: clip.visualIntent,
+          oneLineSummary: undefined,
           position: clipIndex + 1,
+          createdAt: input.now,
+          updatedAt: input.now,
+        });
+        addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
+          content: clip.summary,
+          title: `${clip.title} summary`,
+          assetRole: 'summary',
+          localeId: input.baseLocaleId,
+          pathTarget: { kind: 'clip', sequenceSlug, sceneSlug, clipSlug },
+          fileName: 'clip-summary.md',
+          relationship: { kind: 'clip', clipId },
+        });
+        addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
+          content: clip.visualIntent,
+          title: `${clip.title} visual intent`,
+          assetRole: 'visual_intent',
+          localeId: input.baseLocaleId,
+          pathTarget: { kind: 'clip', sequenceSlug, sceneSlug, clipSlug },
+          fileName: 'visual-intent.md',
+          relationship: { kind: 'clip', clipId },
         });
       });
     });
@@ -419,6 +606,255 @@ function writeSequences(
 
 function expandLanguages(setup: ProjectSetup): ProjectSetupLanguage[] {
   return [...(setup.languages ?? [])];
+}
+
+interface SetupMarkdownAsset {
+  id: string;
+  fileId: string;
+  relationshipId: string;
+  title: string;
+  content: string;
+  projectRelativePath: ProjectRelativePath;
+  localeId: string | null;
+  assetRole: string;
+  createdAt: string;
+  updatedAt: string;
+  relationship:
+    | { kind: 'project' }
+    | { kind: 'visualLanguage'; visualLanguageId: string }
+    | { kind: 'sequence'; sequenceId: string }
+    | { kind: 'scene'; sceneId: string }
+    | { kind: 'clip'; clipId: string };
+}
+
+function addMarkdownAsset(
+  assets: SetupMarkdownAsset[],
+  ids: (prefix: EntityIdPrefix) => string,
+  now: string,
+  input: {
+    content?: string;
+    title: string;
+    assetRole: string;
+    localeId: string | null;
+    pathTarget: MarkdownAssetPathTarget;
+    fileName: string;
+    relationship: SetupMarkdownAsset['relationship'];
+  }
+): void {
+  if (!input.content?.trim()) {
+    return;
+  }
+
+  const relationshipPrefix = relationshipIdPrefix(input.relationship.kind);
+  assets.push({
+    id: ids('asset'),
+    fileId: ids('asset_file'),
+    relationshipId: ids(relationshipPrefix),
+    title: input.title,
+    content: input.content,
+    projectRelativePath: allocateWorkingMarkdownAssetPath({
+      target: input.pathTarget,
+      fileName: input.fileName,
+    }),
+    localeId: input.localeId,
+    assetRole: input.assetRole,
+    createdAt: now,
+    updatedAt: now,
+    relationship: input.relationship,
+  });
+}
+
+function insertMarkdownAssetRecords(
+  session: ProjectDataSession,
+  asset: SetupMarkdownAsset
+): void {
+  insertAssetRecord(session, {
+    id: asset.id,
+    assetType: asset.assetRole,
+    mediaKind: 'text',
+    title: asset.title,
+    origin: 'setup',
+    status: 'ready',
+    createdAt: asset.createdAt,
+    updatedAt: asset.updatedAt,
+  });
+  insertAssetFileRecord(session, {
+    id: asset.fileId,
+    assetId: asset.id,
+    role: 'primary',
+    projectRelativePath: asset.projectRelativePath,
+    mimeType: 'text/markdown',
+    mediaKind: 'text',
+    createdAt: asset.createdAt,
+    updatedAt: asset.updatedAt,
+  });
+
+  if (asset.relationship.kind === 'project') {
+    insertProjectAssetRecord(session, {
+      id: asset.relationshipId,
+      assetId: asset.id,
+      localeId: asset.localeId,
+      assetRole: asset.assetRole,
+      sortOrder: 1,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    });
+  }
+  if (asset.relationship.kind === 'visualLanguage') {
+    insertVisualLanguageAssetRecord(session, {
+      id: asset.relationshipId,
+      visualLanguageId: asset.relationship.visualLanguageId,
+      assetId: asset.id,
+      localeId: asset.localeId,
+      assetRole: asset.assetRole,
+      sortOrder: 1,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    });
+  }
+  if (asset.relationship.kind === 'sequence') {
+    insertSequenceAssetRecord(session, {
+      id: asset.relationshipId,
+      sequenceId: asset.relationship.sequenceId,
+      assetId: asset.id,
+      localeId: asset.localeId,
+      assetRole: asset.assetRole,
+      sortOrder: 1,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    });
+  }
+  if (asset.relationship.kind === 'scene') {
+    insertSceneAssetRecord(session, {
+      id: asset.relationshipId,
+      sceneId: asset.relationship.sceneId,
+      assetId: asset.id,
+      localeId: asset.localeId,
+      assetRole: asset.assetRole,
+      sortOrder: 1,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    });
+  }
+  if (asset.relationship.kind === 'clip') {
+    insertClipAssetRecord(session, {
+      id: asset.relationshipId,
+      clipId: asset.relationship.clipId,
+      assetId: asset.id,
+      localeId: asset.localeId,
+      assetRole: asset.assetRole,
+      sortOrder: 1,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    });
+  }
+}
+
+async function updateExistingProjectSummaryAsset(input: {
+  session: ProjectDataSession;
+  projectFolder: string;
+  content: string;
+  ids: (prefix: EntityIdPrefix) => string;
+  now: string;
+}): Promise<void> {
+  const projectSummaryAsset = listProjectAssetRecords(input.session).find(
+    (asset) => asset.assetRole === 'summary'
+  );
+  if (!projectSummaryAsset) {
+    if (input.content.length === 0) {
+      return;
+    }
+    const baseLocaleId =
+      listProjectLocaleRecords(input.session).find((locale) => locale.isBase)?.id ??
+      null;
+    const asset = buildProjectSummaryAsset({
+      ids: input.ids,
+      now: input.now,
+      content: input.content,
+      localeId: baseLocaleId,
+    });
+    insertMarkdownAssetRecords(input.session, asset);
+    await writeMarkdownAssetFile({
+      projectFolder: input.projectFolder,
+      projectRelativePath: asset.projectRelativePath,
+      content: asset.content,
+    });
+    return;
+  }
+
+  const projectSummaryFile = listAssetFileRecords(input.session).find(
+    (file) => file.assetId === projectSummaryAsset.assetId && file.role === 'primary'
+  );
+  if (!projectSummaryFile) {
+    throw new ProjectDataError(
+      'PROJECT_DATA062',
+      `Project summary asset ${projectSummaryAsset.assetId} is missing its primary file.`
+    );
+  }
+
+  await writeMarkdownAssetFile({
+    projectFolder: input.projectFolder,
+    projectRelativePath: normalizeProjectRelativePath(
+      projectSummaryFile.projectRelativePath
+    ),
+    content: input.content,
+  });
+}
+
+function buildProjectSummaryAsset(input: {
+  ids: (prefix: EntityIdPrefix) => string;
+  now: string;
+  content: string;
+  localeId: string | null;
+}): SetupMarkdownAsset {
+  const assets: SetupMarkdownAsset[] = [];
+  addMarkdownAsset(assets, input.ids, input.now, {
+    content: input.content,
+    title: 'Project summary',
+    assetRole: 'summary',
+    localeId: input.localeId,
+    pathTarget: { kind: 'project' },
+    fileName: 'project-summary.md',
+    relationship: { kind: 'project' },
+  });
+  const [asset] = assets;
+  if (!asset) {
+    throw new ProjectDataError(
+      'PROJECT_DATA063',
+      'Project summary asset could not be created from non-empty content.'
+    );
+  }
+  return asset;
+}
+
+function relationshipIdPrefix(
+  kind: SetupMarkdownAsset['relationship']['kind']
+): EntityIdPrefix {
+  if (kind === 'project') {
+    return 'project_asset';
+  }
+  if (kind === 'visualLanguage') {
+    return 'visual_language_asset';
+  }
+  if (kind === 'sequence') {
+    return 'sequence_asset';
+  }
+  if (kind === 'scene') {
+    return 'scene_asset';
+  }
+  return 'clip_asset';
+}
+
+function numberedSlug(position: number, title: string): string {
+  return `${String(position).padStart(2, '0')}-${slugify(title)}`;
+}
+
+function slugify(input: string): string {
+  const slug = input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug.length > 0 ? slug : 'untitled';
 }
 
 function validateProjectInformationUpdate(update: ProjectInformationUpdate): void {
@@ -531,6 +967,109 @@ function validateProjectInformationUpdate(update: ProjectInformationUpdate): voi
   }
 }
 
+interface LocaleAssetReference {
+  tableName: string;
+  relationshipId: string;
+  assetId: string;
+  assetRole: string;
+}
+
+function assertRemovedLocalesAreUnused(
+  session: ProjectDataSession,
+  removedLocales: ProjectLocaleRecord[]
+): void {
+  if (removedLocales.length === 0) {
+    return;
+  }
+
+  const issues: DiagnosticIssue[] = [];
+  for (const locale of removedLocales) {
+    const references = listLocaleAssetReferences(session, locale.id);
+    for (const reference of references) {
+      issues.push(
+        createDiagnosticError(
+          'PROJECT_DATA057',
+          `Project locale ${locale.localeTag} cannot be removed because ${reference.tableName} ${reference.relationshipId} still uses asset ${reference.assetId} as ${reference.assetRole}.`,
+          {
+            path: ['languages', locale.localeTag],
+            context: 'project information update',
+          },
+          'Remove or reassign the locale-specific asset relationship before removing this project locale.'
+        )
+      );
+    }
+  }
+
+  const result = buildDiagnosticResult(issues);
+  if (!result.valid) {
+    throw new ProjectDataError(
+      'PROJECT_DATA058',
+      'Project locale removal failed because assets still use removed locales.',
+      {
+        issues: result.issues,
+        suggestion:
+          'Keep the locale, or reassign/remove the assets that still reference it before saving.',
+      }
+    );
+  }
+}
+
+function listLocaleAssetReferences(
+  session: ProjectDataSession,
+  localeId: string
+): LocaleAssetReference[] {
+  return [
+    ...listProjectAssetRecords(session)
+      .filter((asset) => asset.localeId === localeId)
+      .map((asset) => ({
+        tableName: 'project_asset',
+        relationshipId: asset.id,
+        assetId: asset.assetId,
+        assetRole: asset.assetRole,
+      })),
+    ...listVisualLanguageAssetRecords(session)
+      .filter((asset) => asset.localeId === localeId)
+      .map((asset) => ({
+        tableName: 'visual_language_asset',
+        relationshipId: asset.id,
+        assetId: asset.assetId,
+        assetRole: asset.assetRole,
+      })),
+    ...listCastAssetRecords(session)
+      .filter((asset) => asset.localeId === localeId)
+      .map((asset) => ({
+        tableName: 'cast_asset',
+        relationshipId: asset.id,
+        assetId: asset.assetId,
+        assetRole: asset.assetRole,
+      })),
+    ...listSequenceAssetRecords(session)
+      .filter((asset) => asset.localeId === localeId)
+      .map((asset) => ({
+        tableName: 'sequence_asset',
+        relationshipId: asset.id,
+        assetId: asset.assetId,
+        assetRole: asset.assetRole,
+      })),
+    ...listSceneAssetRecords(session)
+      .filter((asset) => asset.localeId === localeId)
+      .map((asset) => ({
+        tableName: 'scene_asset',
+        relationshipId: asset.id,
+        assetId: asset.assetId,
+        assetRole: asset.assetRole,
+      })),
+    ...listClipAssetRecords(session)
+      .filter((asset) => asset.localeId === localeId)
+      .map((asset) => ({
+        tableName: 'clip_asset',
+        relationshipId: asset.id,
+        assetId: asset.assetId,
+        assetRole: asset.assetRole,
+      })),
+  ];
+}
+
 function applyProjectInformationPatch(
   project: Project,
   patch: ProjectInformationPatch
@@ -544,7 +1083,7 @@ function applyProjectInformationPatch(
     logline:
       patch.logline === null ? undefined : patch.logline ?? project.identity.logline,
     summary:
-      patch.summary === null ? undefined : patch.summary ?? project.identity.summary,
+      'summary' in patch ? patch.summary : project.identity.summary,
     languages: project.languages.map((language) => ({
       localeTag: language.localeTag,
       displayName: language.displayName,
@@ -624,7 +1163,7 @@ function optionalTrimmed(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function nullableTrimmed(value: string | undefined): string | null {
+function nullableTrimmed(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
 }

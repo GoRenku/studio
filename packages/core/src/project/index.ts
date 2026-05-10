@@ -10,6 +10,7 @@ export type {
   ProjectIdentity,
   ProjectLanguage,
   ProjectLibrary,
+  RichTextAssetLink,
   ProjectSummary,
   ProjectType,
   Scene,

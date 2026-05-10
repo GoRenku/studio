@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const projects = sqliteTable('project', {
   id: text('id').primaryKey(),
@@ -6,14 +6,13 @@ export const projects = sqliteTable('project', {
   title: text('title').notNull(),
   type: text('type').notNull(),
   logline: text('logline'),
-  summary: text('summary'),
   aspectRatio: text('aspect_ratio'),
   coverFile: text('cover_file'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
 
-export const projectLanguages = sqliteTable('project_language', {
+export const projectLocales = sqliteTable('project_locale', {
   id: text('id').primaryKey(),
   localeTag: text('locale_tag').notNull(),
   displayName: text('display_name'),
@@ -28,9 +27,10 @@ export const projectLanguages = sqliteTable('project_language', {
 export const visualLanguage = sqliteTable('visual_language', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  intent: text('intent'),
-  summary: text('summary'),
+  oneLineSummary: text('one_line_summary'),
   position: integer('position').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const castMembers = sqliteTable('cast_member', {
@@ -40,6 +40,8 @@ export const castMembers = sqliteTable('cast_member', {
   role: text('role'),
   shortDescription: text('short_description'),
   position: integer('position').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const episodes = sqliteTable('episode', {
@@ -47,32 +49,160 @@ export const episodes = sqliteTable('episode', {
   title: text('title').notNull(),
   shortTitle: text('short_title'),
   episodeNumber: integer('episode_number'),
-  summary: text('summary'),
+  oneLineSummary: text('one_line_summary'),
   position: integer('position').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const sequences = sqliteTable('sequence', {
   id: text('id').primaryKey(),
-  episodeId: text('episode_id'),
+  episodeId: text('episode_id').references(() => episodes.id),
   title: text('title').notNull(),
   shortTitle: text('short_title'),
-  summary: text('summary'),
+  oneLineSummary: text('one_line_summary'),
   position: integer('position').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const scenes = sqliteTable('scene', {
   id: text('id').primaryKey(),
-  sequenceId: text('sequence_id').notNull(),
+  sequenceId: text('sequence_id')
+    .notNull()
+    .references(() => sequences.id),
   title: text('title').notNull(),
-  summary: text('summary'),
+  oneLineSummary: text('one_line_summary'),
   position: integer('position').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const clips = sqliteTable('clip', {
   id: text('id').primaryKey(),
-  sceneId: text('scene_id').notNull(),
+  sceneId: text('scene_id')
+    .notNull()
+    .references(() => scenes.id),
   title: text('title').notNull(),
-  summary: text('summary'),
-  visualIntent: text('visual_intent'),
+  oneLineSummary: text('one_line_summary'),
   position: integer('position').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const assets = sqliteTable('asset', {
+  id: text('id').primaryKey(),
+  assetType: text('asset_type').notNull(),
+  mediaKind: text('media_kind').notNull(),
+  title: text('title').notNull(),
+  oneLineSummary: text('one_line_summary'),
+  origin: text('origin').notNull(),
+  status: text('status').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const assetFiles = sqliteTable('asset_file', {
+  id: text('id').primaryKey(),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  role: text('role').notNull(),
+  projectRelativePath: text('project_relative_path').notNull(),
+  mimeType: text('mime_type'),
+  mediaKind: text('media_kind').notNull(),
+  sizeBytes: integer('size_bytes'),
+  contentHash: text('content_hash'),
+  width: integer('width'),
+  height: integer('height'),
+  durationSeconds: real('duration_seconds'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const projectAssets = sqliteTable('project_asset', {
+  id: text('id').primaryKey(),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  localeId: text('locale_id').references(() => projectLocales.id),
+  assetRole: text('asset_role').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const visualLanguageAssets = sqliteTable('visual_language_asset', {
+  id: text('id').primaryKey(),
+  visualLanguageId: text('visual_language_id')
+    .notNull()
+    .references(() => visualLanguage.id),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  localeId: text('locale_id').references(() => projectLocales.id),
+  assetRole: text('asset_role').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const castAssets = sqliteTable('cast_asset', {
+  id: text('id').primaryKey(),
+  castMemberId: text('cast_member_id')
+    .notNull()
+    .references(() => castMembers.id),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  localeId: text('locale_id').references(() => projectLocales.id),
+  assetRole: text('asset_role').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const sequenceAssets = sqliteTable('sequence_asset', {
+  id: text('id').primaryKey(),
+  sequenceId: text('sequence_id')
+    .notNull()
+    .references(() => sequences.id),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  localeId: text('locale_id').references(() => projectLocales.id),
+  assetRole: text('asset_role').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const sceneAssets = sqliteTable('scene_asset', {
+  id: text('id').primaryKey(),
+  sceneId: text('scene_id')
+    .notNull()
+    .references(() => scenes.id),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  localeId: text('locale_id').references(() => projectLocales.id),
+  assetRole: text('asset_role').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const clipAssets = sqliteTable('clip_asset', {
+  id: text('id').primaryKey(),
+  clipId: text('clip_id')
+    .notNull()
+    .references(() => clips.id),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  localeId: text('locale_id').references(() => projectLocales.id),
+  assetRole: text('asset_role').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });

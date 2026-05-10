@@ -10,7 +10,6 @@ export interface InsertProjectRecord {
   title: string;
   type: 'standaloneMovie' | 'series';
   logline?: string;
-  summary?: string;
   aspectRatio?: string;
   coverFile: string | null;
   createdAt: string;
@@ -40,7 +39,6 @@ export function readProjectRecordById(
 export interface UpdateProjectInformationRecord {
   title: string;
   logline: string | null;
-  summary: string | null;
   aspectRatio?: string;
   updatedAt: string;
 }
