@@ -273,13 +273,13 @@ function buildRichTextAssets(input: {
   };
 
   for (const row of listProjectAssetRecords(input.session)) {
-    index.project.set(row.assetRole, toRichTextAsset(input, row, assetFilesByAssetId));
+    index.project.set(row.role, toRichTextAsset(input, row, assetFilesByAssetId));
   }
 
   for (const row of listVisualLanguageAssetRecords(input.session)) {
     setScopedRichTextAsset(
       index.visualLanguage,
-      row.assetRole,
+      row.role,
       row.visualLanguageId,
       toRichTextAsset(input, row, assetFilesByAssetId)
     );
@@ -288,7 +288,7 @@ function buildRichTextAssets(input: {
   for (const row of listSequenceAssetRecords(input.session)) {
     setScopedRichTextAsset(
       index.sequence,
-      row.assetRole,
+      row.role,
       row.sequenceId,
       toRichTextAsset(input, row, assetFilesByAssetId)
     );
@@ -297,7 +297,7 @@ function buildRichTextAssets(input: {
   for (const row of listSceneAssetRecords(input.session)) {
     setScopedRichTextAsset(
       index.scene,
-      row.assetRole,
+      row.role,
       row.sceneId,
       toRichTextAsset(input, row, assetFilesByAssetId)
     );
@@ -306,7 +306,7 @@ function buildRichTextAssets(input: {
   for (const row of listClipAssetRecords(input.session)) {
     setScopedRichTextAsset(
       index.clip,
-      row.assetRole,
+      row.role,
       row.clipId,
       toRichTextAsset(input, row, assetFilesByAssetId)
     );
@@ -342,7 +342,7 @@ function toRichTextAsset(
     link: {
       assetId: row.assetId,
       assetFileId: file.id,
-      assetRole: row.assetRole,
+      role: row.role,
       localeId: nullable(row.localeId),
       projectRelativePath,
     },
@@ -351,11 +351,11 @@ function toRichTextAsset(
 
 function setScopedRichTextAsset(
   map: Map<string, Map<string, RichTextAsset>>,
-  assetRole: string,
+  role: string,
   targetId: string,
   asset: RichTextAsset
 ): void {
-  const roleMap = map.get(assetRole) ?? new Map<string, RichTextAsset>();
+  const roleMap = map.get(role) ?? new Map<string, RichTextAsset>();
   roleMap.set(targetId, asset);
-  map.set(assetRole, roleMap);
+  map.set(role, roleMap);
 }

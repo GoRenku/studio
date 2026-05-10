@@ -2,7 +2,9 @@ export {
   createProjectDataService,
 } from './project-data-service.js';
 export type {
+  ChangeAssetSelectInput,
   CreateProjectFromSetupInput,
+  ListAssetsInput,
   ProjectDataService,
   ProjectInformationLanguageUpdate,
   ProjectInformationPatch,
@@ -10,6 +12,7 @@ export type {
   ProjectInformationUpdate,
   PatchProjectInformationInput,
   ReadProjectInput,
+  RemoveAssetSelectInput,
   ResolveProjectCoverImageInput,
   UpdateProjectInformationInput,
 } from './project-data-service.js';
@@ -27,12 +30,21 @@ export type {
   ProjectIdGenerator,
 } from './ids/project-id-generator.js';
 export type {
+  Asset,
+  AssetAvailability,
+  AssetFile,
+  AssetLocaleContext,
+  AssetReference,
+  AssetSelection,
+  AssetTarget,
   CastMember,
   Clip,
   Episode,
   Project,
   ProjectLanguage,
   ProjectLibrary,
+  ProjectRelativePath,
+  RegisterAssetInput,
   RichTextAssetLink,
   Scene,
   Sequence,

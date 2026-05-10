@@ -11,7 +11,7 @@ export interface InsertSequenceAssetRecord {
   sequenceId: string;
   assetId: string;
   localeId?: string | null;
-  assetRole: string;
+  role: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -22,7 +22,7 @@ export interface InsertSceneAssetRecord {
   sceneId: string;
   assetId: string;
   localeId?: string | null;
-  assetRole: string;
+  role: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -33,7 +33,7 @@ export interface InsertClipAssetRecord {
   clipId: string;
   assetId: string;
   localeId?: string | null;
-  assetRole: string;
+  role: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

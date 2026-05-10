@@ -1,12 +1,7 @@
-import type {
-  Project,
-  ProjectCreateReport,
-  ProjectLibrary,
-} from '@gorenku/studio-core';
-import type { ProjectDataService } from '@gorenku/studio-core/node';
+import type { Project } from '@gorenku/studio-core';
 import { describe, expect, it } from 'vitest';
 import { createStudioRuntimeToken } from '../studio-runtime-token.js';
-import { createStudioEventsRoute } from './studio-events.js';
+import { createStudioEventsRoute, type CreateStudioEventsRouteOptions } from './studio-events.js';
 
 describe('studio events Hono route', () => {
   it('validates focus requests against loaded project data', async () => {
@@ -106,41 +101,12 @@ describe('studio events Hono route', () => {
   });
 });
 
-function fakeProjectDataService(): ProjectDataService {
+function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['projectData']> {
   const project = makeProject();
-  const library: ProjectLibrary = {
-    storageRoot: '/tmp/renku',
-    projects: [
-      {
-        name: project.identity.name,
-        title: project.identity.title,
-        type: project.identity.type,
-        folderPath: project.identity.folderPath,
-        coverImage: project.coverImage,
-        counts: project.counts,
-        validationError: null,
-      },
-    ],
-  };
 
   return {
-    async createFromSetup(): Promise<ProjectCreateReport> {
-      throw new Error('createFromSetup is not used by these route tests.');
-    },
-    async listLibrary() {
-      return library;
-    },
     async readProject() {
       return project;
-    },
-    async updateProjectInformation() {
-      return project;
-    },
-    async patchProjectInformation() {
-      return project;
-    },
-    async resolveCoverImage() {
-      return null;
     },
   };
 }

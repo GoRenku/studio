@@ -19,6 +19,13 @@ export function getStudioCorePackageInfo(): StudioCorePackageInfo {
 }
 
 export type {
+  Asset,
+  AssetAvailability,
+  AssetFile,
+  AssetLocaleContext,
+  AssetReference,
+  AssetSelection,
+  AssetTarget,
   CastMember,
   Clip,
   Episode,
@@ -30,6 +37,8 @@ export type {
   ProjectIdentity,
   ProjectLanguage,
   ProjectLibrary,
+  ProjectRelativePath,
+  RegisterAssetInput,
   RichTextAssetLink,
   ProjectSummary,
   ProjectType,

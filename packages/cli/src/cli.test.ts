@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { createProjectDataService } from '@gorenku/studio-core/node';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { runRenkuCli } from './cli.js';
 
@@ -181,6 +182,97 @@ describe('renku CLI', () => {
       warnings: [],
     });
     await expect(fs.readFile(result.coverPath, 'utf8')).resolves.toBe('cover');
+    expect(stderr).toEqual([]);
+  });
+
+  it('registers and selects an asset through the asset command', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeCreateYaml(homeDir);
+    const createExitCode = await runRenkuCli(['create', '--file', yamlPath], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    const project = await createProjectDataService().readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const clipId = project.sequences[0]!.scenes[0]!.clips[0]!.id;
+    const assetPath =
+      'Working Assets/Base/Sequences/01-logistics/Scenes/01-foundry/Clips/001/narration.wav';
+    await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', assetPath)), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', assetPath),
+      'audio bytes'
+    );
+
+    stdout = [];
+    stderr = [];
+    const registerExitCode = await runRenkuCli(
+      [
+        'asset',
+        'register',
+        '--project',
+        'constantinople',
+        '--target',
+        `clip:${clipId}`,
+        '--type',
+        'narration',
+        '--media-kind',
+        'audio',
+        '--role',
+        'narration',
+        '--file-role',
+        'primary',
+        '--file',
+        assetPath,
+        '--title',
+        'Narration take 1',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(registerExitCode).toBe(0);
+    const registered = JSON.parse(stdout.join('\n')) as { assetId: string };
+    expect(registered).toMatchObject({
+      type: 'narration',
+      selection: { kind: 'take' },
+    });
+
+    stdout = [];
+    stderr = [];
+    const selectExitCode = await runRenkuCli(
+      [
+        'asset',
+        'select',
+        '--project',
+        'constantinople',
+        '--target',
+        `clip:${clipId}`,
+        registered.assetId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(selectExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      assetId: registered.assetId,
+      selection: { kind: 'select', order: 1 },
+    });
     expect(stderr).toEqual([]);
   });
 

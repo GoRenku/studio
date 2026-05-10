@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
+  type ProjectRelativePath,
 } from './index.js';
 import { validateProjectSetup } from './setup/project-setup-reader.js';
 
@@ -62,7 +63,7 @@ describe('ProjectDataService', () => {
       summary: 'A documentary setup summary for Markdown storage.',
     });
     expect(project.identity.summaryAsset).toMatchObject({
-      assetRole: 'summary',
+      role: 'summary',
       projectRelativePath: 'Working Assets/Base/Narrative/project-summary.md',
     });
     expect(project.identity).not.toHaveProperty('format');
@@ -89,21 +90,21 @@ describe('ProjectDataService', () => {
       summary: 'Muted golds, deep reds, formal court staging.',
       intent: 'Formal staging and controlled historical detail.',
       intentAsset: expect.objectContaining({
-        assetRole: 'intent',
+        role: 'intent',
       }),
     });
     expect(project.sequences[0]?.scenes[0]?.clips).toHaveLength(2);
     expect(project.sequences[0]).toMatchObject({
       summary: 'Mehmed turns conquest into policy.',
       summaryAsset: expect.objectContaining({
-        assetRole: 'summary',
+        role: 'summary',
       }),
     });
     expect(project.sequences[0]?.scenes[0]?.clips[0]).toMatchObject({
       summary: 'Mehmed is introduced as controlled and ambitious.',
       visualIntent: 'Quiet court staging.',
-      summaryAsset: expect.objectContaining({ assetRole: 'summary' }),
-      visualIntentAsset: expect.objectContaining({ assetRole: 'visual_intent' }),
+      summaryAsset: expect.objectContaining({ role: 'summary' }),
+      visualIntentAsset: expect.objectContaining({ role: 'visual_intent' }),
     });
 
     await expect(
@@ -147,7 +148,7 @@ describe('ProjectDataService', () => {
           `SELECT af.project_relative_path
            FROM project_asset pa
            JOIN asset_file af ON af.asset_id = pa.asset_id
-           WHERE pa.asset_role = 'summary'`
+           WHERE pa.role = 'summary'`
         )
         .get() as { project_relative_path: string } | undefined;
       expect(projectSummary?.project_relative_path).toBe(
@@ -182,6 +183,152 @@ describe('ProjectDataService', () => {
       title: 'The First Preparations',
       summary: 'Mehmed turns an inherited ambition into a concrete plan.',
     });
+  });
+
+  it('registers, lists, selects, and reopens an attached asset', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const assetPath =
+      'Working Assets/Base/Sequences/01-logistics/Scenes/01-foundry/Clips/001/narration.wav';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, assetPath), 'audio bytes');
+
+    const registered = await projectData.registerAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'clip', clipId: 'clip_test0001' },
+      type: 'narration',
+      mediaKind: 'audio',
+      title: 'Narration take 1',
+      projectRelativePath: assetPath as ProjectRelativePath,
+      fileRole: 'primary',
+      role: 'narration',
+    });
+
+    expect(registered).toMatchObject({
+      type: 'narration',
+      availability: 'ready',
+      role: 'narration',
+      selection: { kind: 'take' },
+      files: [expect.objectContaining({ projectRelativePath: assetPath })],
+    });
+
+    await expect(
+      projectData.listAssets({
+        projectName: 'constantinople',
+        homeDir,
+        target: { kind: 'clip', clipId: 'clip_test0001' },
+      })
+    ).resolves.toHaveLength(3);
+
+    const selected = await projectData.createAssetSelect({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'clip', clipId: 'clip_test0001' },
+      assetId: registered.assetId,
+    });
+    expect(selected.selection).toEqual({ kind: 'select', order: 1 });
+
+    await expect(
+      projectData.listAssetSelects({
+        projectName: 'constantinople',
+        homeDir,
+        target: { kind: 'clip', clipId: 'clip_test0001' },
+      })
+    ).resolves.toEqual([expect.objectContaining({ assetId: registered.assetId })]);
+
+    await expect(
+      createProjectDataService().listAssetSelects({
+        projectName: 'constantinople',
+        homeDir,
+        target: { kind: 'clip', clipId: 'clip_test0001' },
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        assetId: registered.assetId,
+        selection: { kind: 'select', order: 1 },
+      }),
+    ]);
+  });
+
+  it('rejects registering a file outside the project', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    await expect(
+      projectData.registerAsset({
+        projectName: 'constantinople',
+        homeDir,
+        target: { kind: 'clip', clipId: 'clip_test0001' },
+        type: 'narration',
+        mediaKind: 'audio',
+        title: 'Outside narration',
+        projectRelativePath: '../outside.wav' as ProjectRelativePath,
+        fileRole: 'primary',
+        role: 'narration',
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA060' });
+  });
+
+  it('rejects selecting an asset attached to another target', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const assetPath = 'Working Assets/Base/Narrative/reference.txt';
+    await fs.writeFile(path.join(created.projectPath, assetPath), 'reference');
+    const registered = await projectData.registerAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'project' },
+      type: 'reference',
+      mediaKind: 'text',
+      title: 'Project reference',
+      projectRelativePath: assetPath as ProjectRelativePath,
+      fileRole: 'primary',
+      role: 'reference',
+    });
+
+    await expect(
+      projectData.createAssetSelect({
+        projectName: 'constantinople',
+        homeDir,
+        target: { kind: 'clip', clipId: 'clip_test0001' },
+        assetId: registered.assetId,
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA080' });
   });
 
   it('copies a PNG cover to cover.png', async () => {

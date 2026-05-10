@@ -22,10 +22,18 @@ import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
 export interface CreateProjectsRouteOptions {
-  projectData?: ProjectDataService;
+  projectData?: ProjectsRouteProjectData;
   coordination?: StudioCoordinationService;
   token?: StudioRuntimeToken;
 }
+
+type ProjectsRouteProjectData = Pick<
+  ProjectDataService,
+  | 'listLibrary'
+  | 'readProject'
+  | 'updateProjectInformation'
+  | 'resolveCoverImage'
+>;
 
 export function createProjectsRoute(
   options: CreateProjectsRouteOptions = {}

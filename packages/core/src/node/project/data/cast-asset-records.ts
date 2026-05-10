@@ -9,7 +9,7 @@ export interface InsertCastAssetRecord {
   castMemberId: string;
   assetId: string;
   localeId?: string | null;
-  assetRole: string;
+  role: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

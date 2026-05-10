@@ -6,10 +6,14 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import type {
+  Asset,
+  AssetLocaleContext,
+  AssetTarget,
   Project,
   ProjectCounts,
   ProjectCreateReport,
   ProjectLibrary,
+  RegisterAssetInput,
 } from '../../project/index.js';
 import { ProjectDataError } from '../../project/index.js';
 import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../config.js';
@@ -88,6 +92,14 @@ import {
   insertSceneAssetRecord,
   insertSequenceAssetRecord,
 } from './data/narrative-asset-records.js';
+import {
+  createAssetSelect,
+  listAssetSelects,
+  listAssets,
+  registerAsset,
+  removeAssetSelect,
+  updateAssetSelect,
+} from './assets/asset-service.js';
 
 export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
@@ -96,6 +108,12 @@ export interface ProjectDataService {
   updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
   patchProjectInformation(input: PatchProjectInformationInput): Promise<Project>;
   resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
+  registerAsset(input: RegisterAssetInput & RenkuConfigPathOptions): Promise<Asset>;
+  listAssets(input: ListAssetsInput): Promise<Asset[]>;
+  createAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
+  updateAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
+  removeAssetSelect(input: RemoveAssetSelectInput): Promise<Asset>;
+  listAssetSelects(input: ListAssetsInput): Promise<Asset[]>;
 }
 
 export interface CreateProjectFromSetupInput extends RenkuConfigPathOptions {
@@ -166,6 +184,25 @@ export interface ResolveProjectCoverImageInput extends RenkuConfigPathOptions {
   projectName: string;
 }
 
+export interface ListAssetsInput extends RenkuConfigPathOptions {
+  projectName: string;
+  target: AssetTarget;
+  locale?: AssetLocaleContext;
+}
+
+export interface ChangeAssetSelectInput extends RenkuConfigPathOptions {
+  projectName: string;
+  target: AssetTarget;
+  assetId: string;
+  selectionOrder?: number;
+}
+
+export interface RemoveAssetSelectInput extends RenkuConfigPathOptions {
+  projectName: string;
+  target: AssetTarget;
+  assetId: string;
+}
+
 export function createProjectDataService(): ProjectDataService {
   return {
     createFromSetup,
@@ -174,6 +211,12 @@ export function createProjectDataService(): ProjectDataService {
     updateProjectInformation,
     patchProjectInformation,
     resolveCoverImage,
+    registerAsset,
+    listAssets,
+    createAssetSelect,
+    updateAssetSelect,
+    removeAssetSelect,
+    listAssetSelects,
   };
 }
 
@@ -365,7 +408,7 @@ async function writeSetupRecords(
   addMarkdownAsset(markdownAssets, ids, now, {
     content: setup.project.summary,
     title: `${setup.project.title} summary`,
-    assetRole: 'summary',
+    role: 'summary',
     localeId: baseLocaleId,
     pathTarget: { kind: 'project' },
     fileName: 'project-summary.md',
@@ -378,7 +421,7 @@ async function writeSetupRecords(
     addMarkdownAsset(markdownAssets, ids, now, {
       content: entry.intent,
       title: `${entry.name} intent`,
-      assetRole: 'intent',
+      role: 'intent',
       localeId: baseLocaleId,
       pathTarget: { kind: 'visualLanguage', slug },
       fileName: 'intent.md',
@@ -538,7 +581,7 @@ function writeSequences(input: {
     addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
       content: sequence.summary,
       title: `${sequence.title} summary`,
-      assetRole: 'summary',
+      role: 'summary',
       localeId: input.baseLocaleId,
       pathTarget: { kind: 'sequence', sequenceSlug },
       fileName: 'sequence-summary.md',
@@ -561,7 +604,7 @@ function writeSequences(input: {
       addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
         content: scene.summary,
         title: `${scene.title} summary`,
-        assetRole: 'summary',
+        role: 'summary',
         localeId: input.baseLocaleId,
         pathTarget: { kind: 'scene', sequenceSlug, sceneSlug },
         fileName: 'scene-summary.md',
@@ -584,7 +627,7 @@ function writeSequences(input: {
         addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
           content: clip.summary,
           title: `${clip.title} summary`,
-          assetRole: 'summary',
+          role: 'summary',
           localeId: input.baseLocaleId,
           pathTarget: { kind: 'clip', sequenceSlug, sceneSlug, clipSlug },
           fileName: 'clip-summary.md',
@@ -593,7 +636,7 @@ function writeSequences(input: {
         addMarkdownAsset(input.markdownAssets, input.ids, input.now, {
           content: clip.visualIntent,
           title: `${clip.title} visual intent`,
-          assetRole: 'visual_intent',
+          role: 'visual_intent',
           localeId: input.baseLocaleId,
           pathTarget: { kind: 'clip', sequenceSlug, sceneSlug, clipSlug },
           fileName: 'visual-intent.md',
@@ -616,7 +659,7 @@ interface SetupMarkdownAsset {
   content: string;
   projectRelativePath: ProjectRelativePath;
   localeId: string | null;
-  assetRole: string;
+  role: string;
   createdAt: string;
   updatedAt: string;
   relationship:
@@ -634,7 +677,7 @@ function addMarkdownAsset(
   input: {
     content?: string;
     title: string;
-    assetRole: string;
+    role: string;
     localeId: string | null;
     pathTarget: MarkdownAssetPathTarget;
     fileName: string;
@@ -657,7 +700,7 @@ function addMarkdownAsset(
       fileName: input.fileName,
     }),
     localeId: input.localeId,
-    assetRole: input.assetRole,
+    role: input.role,
     createdAt: now,
     updatedAt: now,
     relationship: input.relationship,
@@ -670,11 +713,11 @@ function insertMarkdownAssetRecords(
 ): void {
   insertAssetRecord(session, {
     id: asset.id,
-    assetType: asset.assetRole,
+    type: asset.role,
     mediaKind: 'text',
     title: asset.title,
     origin: 'setup',
-    status: 'ready',
+    availability: 'ready',
     createdAt: asset.createdAt,
     updatedAt: asset.updatedAt,
   });
@@ -694,7 +737,7 @@ function insertMarkdownAssetRecords(
       id: asset.relationshipId,
       assetId: asset.id,
       localeId: asset.localeId,
-      assetRole: asset.assetRole,
+      role: asset.role,
       sortOrder: 1,
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
@@ -706,7 +749,7 @@ function insertMarkdownAssetRecords(
       visualLanguageId: asset.relationship.visualLanguageId,
       assetId: asset.id,
       localeId: asset.localeId,
-      assetRole: asset.assetRole,
+      role: asset.role,
       sortOrder: 1,
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
@@ -718,7 +761,7 @@ function insertMarkdownAssetRecords(
       sequenceId: asset.relationship.sequenceId,
       assetId: asset.id,
       localeId: asset.localeId,
-      assetRole: asset.assetRole,
+      role: asset.role,
       sortOrder: 1,
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
@@ -730,7 +773,7 @@ function insertMarkdownAssetRecords(
       sceneId: asset.relationship.sceneId,
       assetId: asset.id,
       localeId: asset.localeId,
-      assetRole: asset.assetRole,
+      role: asset.role,
       sortOrder: 1,
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
@@ -742,7 +785,7 @@ function insertMarkdownAssetRecords(
       clipId: asset.relationship.clipId,
       assetId: asset.id,
       localeId: asset.localeId,
-      assetRole: asset.assetRole,
+      role: asset.role,
       sortOrder: 1,
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
@@ -758,7 +801,7 @@ async function updateExistingProjectSummaryAsset(input: {
   now: string;
 }): Promise<void> {
   const projectSummaryAsset = listProjectAssetRecords(input.session).find(
-    (asset) => asset.assetRole === 'summary'
+    (asset) => asset.role === 'summary'
   );
   if (!projectSummaryAsset) {
     if (input.content.length === 0) {
@@ -811,7 +854,7 @@ function buildProjectSummaryAsset(input: {
   addMarkdownAsset(assets, input.ids, input.now, {
     content: input.content,
     title: 'Project summary',
-    assetRole: 'summary',
+    role: 'summary',
     localeId: input.localeId,
     pathTarget: { kind: 'project' },
     fileName: 'project-summary.md',
@@ -971,7 +1014,7 @@ interface LocaleAssetReference {
   tableName: string;
   relationshipId: string;
   assetId: string;
-  assetRole: string;
+  role: string;
 }
 
 function assertRemovedLocalesAreUnused(
@@ -989,7 +1032,7 @@ function assertRemovedLocalesAreUnused(
       issues.push(
         createDiagnosticError(
           'PROJECT_DATA057',
-          `Project locale ${locale.localeTag} cannot be removed because ${reference.tableName} ${reference.relationshipId} still uses asset ${reference.assetId} as ${reference.assetRole}.`,
+          `Project locale ${locale.localeTag} cannot be removed because ${reference.tableName} ${reference.relationshipId} still uses asset ${reference.assetId} as ${reference.role}.`,
           {
             path: ['languages', locale.localeTag],
             context: 'project information update',
@@ -1025,7 +1068,7 @@ function listLocaleAssetReferences(
         tableName: 'project_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
-        assetRole: asset.assetRole,
+        role: asset.role,
       })),
     ...listVisualLanguageAssetRecords(session)
       .filter((asset) => asset.localeId === localeId)
@@ -1033,7 +1076,7 @@ function listLocaleAssetReferences(
         tableName: 'visual_language_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
-        assetRole: asset.assetRole,
+        role: asset.role,
       })),
     ...listCastAssetRecords(session)
       .filter((asset) => asset.localeId === localeId)
@@ -1041,7 +1084,7 @@ function listLocaleAssetReferences(
         tableName: 'cast_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
-        assetRole: asset.assetRole,
+        role: asset.role,
       })),
     ...listSequenceAssetRecords(session)
       .filter((asset) => asset.localeId === localeId)
@@ -1049,7 +1092,7 @@ function listLocaleAssetReferences(
         tableName: 'sequence_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
-        assetRole: asset.assetRole,
+        role: asset.role,
       })),
     ...listSceneAssetRecords(session)
       .filter((asset) => asset.localeId === localeId)
@@ -1057,7 +1100,7 @@ function listLocaleAssetReferences(
         tableName: 'scene_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
-        assetRole: asset.assetRole,
+        role: asset.role,
       })),
     ...listClipAssetRecords(session)
       .filter((asset) => asset.localeId === localeId)
@@ -1065,7 +1108,7 @@ function listLocaleAssetReferences(
         tableName: 'clip_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
-        assetRole: asset.assetRole,
+        role: asset.role,
       })),
   ];
 }

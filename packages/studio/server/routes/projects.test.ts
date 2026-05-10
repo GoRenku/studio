@@ -1,9 +1,8 @@
 import type {
   Project,
-  ProjectCreateReport,
   ProjectLibrary,
 } from '@gorenku/studio-core';
-import type { ProjectDataService } from '@gorenku/studio-core/node';
+import type { CreateProjectsRouteOptions } from './projects.js';
 import { StructuredError, createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { describe, expect, it } from 'vitest';
 import { createProjectsRoute } from './projects.js';
@@ -178,7 +177,7 @@ describe('projects Hono route', () => {
   });
 });
 
-function fakeProjectDataService(): ProjectDataService {
+function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['projectData']> {
   const project = makeProject();
   const library: ProjectLibrary = {
     storageRoot: '/tmp/renku',
@@ -196,9 +195,6 @@ function fakeProjectDataService(): ProjectDataService {
   };
 
   return {
-    async createFromSetup(): Promise<ProjectCreateReport> {
-      throw new Error('createFromSetup is not used by these route tests.');
-    },
     async listLibrary() {
       return library;
     },
@@ -206,9 +202,6 @@ function fakeProjectDataService(): ProjectDataService {
       return project;
     },
     async updateProjectInformation() {
-      return project;
-    },
-    async patchProjectInformation() {
       return project;
     },
     async resolveCoverImage() {

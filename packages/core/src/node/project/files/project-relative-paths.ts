@@ -1,7 +1,7 @@
 import path from 'node:path';
-import { ProjectDataError } from '../../../project/index.js';
+import { ProjectDataError, type ProjectRelativePath } from '../../../project/index.js';
 
-export type ProjectRelativePath = string & { readonly __brand: 'ProjectRelativePath' };
+export type { ProjectRelativePath };
 
 export function normalizeProjectRelativePath(input: string): ProjectRelativePath {
   const normalized = input.replaceAll('\\', '/');

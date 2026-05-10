@@ -2,6 +2,7 @@
 import { isStructuredError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import meow from 'meow';
 import { runAboutCommand } from './commands/about-command.js';
+import { runAssetCommand } from './commands/asset-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
@@ -39,6 +40,7 @@ Commands
   create --file <yaml>  Create a project from YAML
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
+  asset                Register, list, and select assets
   info show            Show project information
   info set             Update project information
   info clear           Clear optional project information fields
@@ -51,6 +53,13 @@ Options
   --file               Project create YAML file
   --cover              Optional PNG cover image
   --project            Project name for project information commands
+  --target             Asset attachment target
+  --type               Asset type
+  --media-kind         Asset media kind
+  --role               Asset relationship role
+  --file-role          Asset file role
+  --order              Selection order
+  --locale             Project locale id
   --title              Project title
   --aspect-ratio       Project aspect ratio
   --logline            Project logline
@@ -94,6 +103,27 @@ export async function runRenkuCli(
         type: 'string',
       },
       title: {
+        type: 'string',
+      },
+      target: {
+        type: 'string',
+      },
+      type: {
+        type: 'string',
+      },
+      mediaKind: {
+        type: 'string',
+      },
+      role: {
+        type: 'string',
+      },
+      fileRole: {
+        type: 'string',
+      },
+      order: {
+        type: 'number',
+      },
+      locale: {
         type: 'string',
       },
       aspectRatio: {
@@ -158,6 +188,26 @@ export async function runRenkuCli(
         });
       case 'about':
         return await runAboutCommand({ io });
+      case 'asset':
+        return await runAssetCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            target: cli.flags.target,
+            type: cli.flags.type,
+            mediaKind: cli.flags.mediaKind,
+            role: cli.flags.role,
+            fileRole: cli.flags.fileRole,
+            file: cli.flags.file,
+            title: cli.flags.title,
+            summary: cli.flags.summary,
+            locale: cli.flags.locale,
+            order: cli.flags.order,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
       case 'info':
         return await runProjectInformationCommand({
           input,

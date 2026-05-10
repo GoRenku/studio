@@ -92,12 +92,12 @@ export const clips = sqliteTable('clip', {
 
 export const assets = sqliteTable('asset', {
   id: text('id').primaryKey(),
-  assetType: text('asset_type').notNull(),
+  type: text('type').notNull(),
   mediaKind: text('media_kind').notNull(),
   title: text('title').notNull(),
   oneLineSummary: text('one_line_summary'),
   origin: text('origin').notNull(),
-  status: text('status').notNull(),
+  availability: text('availability').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -126,8 +126,10 @@ export const projectAssets = sqliteTable('project_asset', {
     .notNull()
     .references(() => assets.id),
   localeId: text('locale_id').references(() => projectLocales.id),
-  assetRole: text('asset_role').notNull(),
+  role: text('role').notNull(),
   sortOrder: integer('sort_order').notNull(),
+  selection: text('selection').notNull().default('take'),
+  selectionOrder: integer('selection_order'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -141,8 +143,10 @@ export const visualLanguageAssets = sqliteTable('visual_language_asset', {
     .notNull()
     .references(() => assets.id),
   localeId: text('locale_id').references(() => projectLocales.id),
-  assetRole: text('asset_role').notNull(),
+  role: text('role').notNull(),
   sortOrder: integer('sort_order').notNull(),
+  selection: text('selection').notNull().default('take'),
+  selectionOrder: integer('selection_order'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -156,8 +160,10 @@ export const castAssets = sqliteTable('cast_asset', {
     .notNull()
     .references(() => assets.id),
   localeId: text('locale_id').references(() => projectLocales.id),
-  assetRole: text('asset_role').notNull(),
+  role: text('role').notNull(),
   sortOrder: integer('sort_order').notNull(),
+  selection: text('selection').notNull().default('take'),
+  selectionOrder: integer('selection_order'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -171,8 +177,10 @@ export const sequenceAssets = sqliteTable('sequence_asset', {
     .notNull()
     .references(() => assets.id),
   localeId: text('locale_id').references(() => projectLocales.id),
-  assetRole: text('asset_role').notNull(),
+  role: text('role').notNull(),
   sortOrder: integer('sort_order').notNull(),
+  selection: text('selection').notNull().default('take'),
+  selectionOrder: integer('selection_order'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -186,8 +194,10 @@ export const sceneAssets = sqliteTable('scene_asset', {
     .notNull()
     .references(() => assets.id),
   localeId: text('locale_id').references(() => projectLocales.id),
-  assetRole: text('asset_role').notNull(),
+  role: text('role').notNull(),
   sortOrder: integer('sort_order').notNull(),
+  selection: text('selection').notNull().default('take'),
+  selectionOrder: integer('selection_order'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -201,8 +211,10 @@ export const clipAssets = sqliteTable('clip_asset', {
     .notNull()
     .references(() => assets.id),
   localeId: text('locale_id').references(() => projectLocales.id),
-  assetRole: text('asset_role').notNull(),
+  role: text('role').notNull(),
   sortOrder: integer('sort_order').notNull(),
+  selection: text('selection').notNull().default('take'),
+  selectionOrder: integer('selection_order'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

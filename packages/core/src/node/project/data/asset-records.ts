@@ -5,12 +5,12 @@ export type AssetRecord = typeof assets.$inferSelect;
 
 export interface InsertAssetRecord {
   id: string;
-  assetType: string;
+  type: string;
   mediaKind: string;
   title: string;
   oneLineSummary?: string;
   origin: string;
-  status: string;
+  availability: string;
   createdAt: string;
   updatedAt: string;
 }

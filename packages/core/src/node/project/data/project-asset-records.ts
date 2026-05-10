@@ -8,7 +8,7 @@ export interface InsertProjectAssetRecord {
   id: string;
   assetId: string;
   localeId?: string | null;
-  assetRole: string;
+  role: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

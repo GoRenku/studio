@@ -19,10 +19,12 @@ import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
 export interface CreateStudioEventsRouteOptions {
   coordination?: StudioCoordinationService;
-  projectData?: ProjectDataService;
+  projectData?: StudioEventsRouteProjectData;
   token: StudioRuntimeToken;
   serverInstanceId?: string;
 }
+
+type StudioEventsRouteProjectData = Pick<ProjectDataService, 'readProject'>;
 
 export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions) {
   const coordination = options.coordination ?? createStudioCoordinationService();
