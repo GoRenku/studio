@@ -13,6 +13,8 @@ import type {
   ProjectCounts,
   ProjectCreateReport,
   ProjectLibrary,
+  ProductionExportInput,
+  ProductionExportSummary,
   RegisterAssetInput,
 } from '../../project/index.js';
 import { ProjectDataError } from '../../project/index.js';
@@ -100,6 +102,7 @@ import {
   removeAssetSelect,
   updateAssetSelect,
 } from './assets/asset-service.js';
+import { exportProductionAssets } from './production-export/production-export-service.js';
 
 export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
@@ -114,6 +117,9 @@ export interface ProjectDataService {
   updateAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
   removeAssetSelect(input: RemoveAssetSelectInput): Promise<Asset>;
   listAssetSelects(input: ListAssetsInput): Promise<Asset[]>;
+  exportProductionAssets(
+    input: ProductionExportInput & RenkuConfigPathOptions
+  ): Promise<ProductionExportSummary>;
 }
 
 export interface CreateProjectFromSetupInput extends RenkuConfigPathOptions {
@@ -217,6 +223,7 @@ export function createProjectDataService(): ProjectDataService {
     updateAssetSelect,
     removeAssetSelect,
     listAssetSelects,
+    exportProductionAssets,
   };
 }
 

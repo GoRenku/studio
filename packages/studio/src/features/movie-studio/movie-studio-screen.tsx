@@ -1,7 +1,10 @@
 import { useCallback, useState } from 'react';
+import { Loader2, Upload } from 'lucide-react';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
+import { exportProductionAssets } from '@/services/studio-projects-api';
 import type { ProjectWithHttp } from '@/services/studio-project-contracts';
 import { AutosaveStatus } from '@/ui/autosave-status';
+import { Button } from '@/ui/button';
 import { CastDesignPanel } from './cast-design/cast-design-panel';
 import { CastOverviewPanel } from './cast-design/cast-overview-panel';
 import { ClipDesignPanel } from './clip-design/clip-design-panel';
@@ -28,12 +31,39 @@ export function MovieStudioScreen({
   const { selection, setSelection, resolvedSelection } = movieStudioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
+  const [productionExportStatus, setProductionExportStatus] = useState<
+    | { state: 'idle'; message: null }
+    | { state: 'running'; message: string }
+    | { state: 'complete'; message: string }
+    | { state: 'error'; message: string }
+  >({ state: 'idle', message: null });
   const handleProjectInformationAutosaveStatusChange = useCallback(
     (status: DebouncedAutosaveStatus) => {
       setProjectInformationAutosave(status);
     },
     []
   );
+  const handleProductionExport = useCallback(async () => {
+    setProductionExportStatus({
+      state: 'running',
+      message: 'Exporting production assets...',
+    });
+    try {
+      const summary = await exportProductionAssets(project.identity.name);
+      setProductionExportStatus({
+        state: 'complete',
+        message: `Copied ${summary.copiedFileCount}, skipped ${summary.skippedFileCount}, pruned ${summary.prunedFileCount}.`,
+      });
+    } catch (error) {
+      setProductionExportStatus({
+        state: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Production export failed.',
+      });
+    }
+  }, [project.identity.name]);
 
   return (
     <div className='h-screen w-screen bg-background text-foreground p-3 flex flex-col gap-3'>
@@ -54,12 +84,40 @@ export function MovieStudioScreen({
                   {resolvedSelection.kicker}
                 </h2>
               </div>
-              {selection.type === 'projectInformation' ? (
-                <AutosaveStatus
-                  status={projectInformationAutosave}
-                  className='shrink-0'
-                />
-              ) : null}
+              <div className='flex min-w-0 items-center gap-3'>
+                {productionExportStatus.message ? (
+                  <p
+                    className={
+                      productionExportStatus.state === 'error'
+                        ? 'hidden md:block truncate text-xs font-medium text-destructive'
+                        : 'hidden md:block truncate text-xs font-medium text-muted-foreground'
+                    }
+                  >
+                    {productionExportStatus.message}
+                  </p>
+                ) : null}
+                {selection.type === 'projectInformation' ? (
+                  <AutosaveStatus
+                    status={projectInformationAutosave}
+                    className='shrink-0'
+                  />
+                ) : null}
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  onClick={() => void handleProductionExport()}
+                  disabled={productionExportStatus.state === 'running'}
+                  className='shrink-0 gap-2'
+                >
+                  {productionExportStatus.state === 'running' ? (
+                    <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                  ) : (
+                    <Upload className='h-3.5 w-3.5' />
+                  )}
+                  Export
+                </Button>
+              </div>
             </div>
 
             <div className='flex-1 min-h-0 overflow-y-auto p-4'>

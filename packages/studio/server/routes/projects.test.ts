@@ -207,6 +207,15 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
     async resolveCoverImage() {
       return '/tmp/renku/constantinople/cover.png';
     },
+    async exportProductionAssets() {
+      return {
+        copiedFileCount: 1,
+        skippedFileCount: 0,
+        prunedFileCount: 0,
+        unmanagedFileCount: 0,
+        variants: [],
+      };
+    },
   };
 }
 

@@ -273,6 +273,38 @@ describe('renku CLI', () => {
       assetId: registered.assetId,
       selection: { kind: 'select', order: 1 },
     });
+
+    stdout = [];
+    stderr = [];
+    const exportExitCode = await runRenkuCli(
+      ['production', 'export', '--project', 'constantinople', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(exportExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      copiedFileCount: 1,
+      skippedFileCount: 0,
+      prunedFileCount: 0,
+    });
+    await expect(
+      fs.readFile(
+        path.join(
+          storageRoot,
+          'constantinople',
+          'Production Assets',
+          'Master',
+          'Sequences',
+          '01-opening',
+          'Scenes',
+          '01-first-scene',
+          'Clips',
+          '01-first-clip',
+          'narration.wav'
+        ),
+        'utf8'
+      )
+    ).resolves.toBe('audio bytes');
     expect(stderr).toEqual([]);
   });
 

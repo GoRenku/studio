@@ -7,6 +7,7 @@ import { runCreateCommand } from './commands/create-project-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
+import { runProductionCommand } from './commands/production-command.js';
 import { runStudioCurrentCommand } from './commands/studio-current-command.js';
 
 export interface RenkuCliIo {
@@ -41,6 +42,7 @@ Commands
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
   asset                Register, list, and select assets
+  production export    Export selected production assets
   info show            Show project information
   info set             Update project information
   info clear           Clear optional project information fields
@@ -60,6 +62,9 @@ Options
   --file-role          Asset file role
   --order              Selection order
   --locale             Project locale id
+  --all-locales        Export every locale with production selects
+  --dry-run            Report production export operations without writing
+  --fresh              Rebuild production export manifest
   --title              Project title
   --aspect-ratio       Project aspect ratio
   --logline            Project logline
@@ -125,6 +130,18 @@ export async function runRenkuCli(
       },
       locale: {
         type: 'string',
+      },
+      allLocales: {
+        type: 'boolean',
+        default: false,
+      },
+      dryRun: {
+        type: 'boolean',
+        default: false,
+      },
+      fresh: {
+        type: 'boolean',
+        default: false,
       },
       aspectRatio: {
         type: 'string',
@@ -223,6 +240,20 @@ export async function runRenkuCli(
             noAudio: cli.flags.noAudio,
             subtitles: cli.flags.subtitles,
             noSubtitles: cli.flags.noSubtitles,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'production':
+        return await runProductionCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            locale: cli.flags.locale,
+            allLocales: cli.flags.allLocales,
+            dryRun: cli.flags.dryRun,
+            fresh: cli.flags.fresh,
           },
           json: cli.flags.json,
           io,

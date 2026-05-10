@@ -5,6 +5,7 @@ import {
   type StudioCoordinationService,
   type ProjectDataService,
   type ProjectInformationUpdate,
+  type ProductionExportInput,
 } from '@gorenku/studio-core/node';
 import {
   buildDiagnosticResult,
@@ -33,6 +34,7 @@ type ProjectsRouteProjectData = Pick<
   | 'readProject'
   | 'updateProjectInformation'
   | 'resolveCoverImage'
+  | 'exportProductionAssets'
 >;
 
 export function createProjectsRoute(
@@ -91,6 +93,19 @@ export function createProjectsRoute(
         return projectErrorResponse(c, error);
       }
     })
+    .post('/:projectName/production-export', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const body = await readOptionalJson(c.req);
+        const summary = await projectData.exportProductionAssets({
+          projectName,
+          ...readProductionExportRequest(body),
+        });
+        return c.json({ summary });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .post('/:projectName/select', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName');
@@ -133,6 +148,45 @@ const projects = createProjectsRoute();
 
 export default projects;
 export type ProjectsRoute = typeof projects;
+
+async function readOptionalJson(request: {
+  json(): Promise<unknown>;
+}): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+
+function readProductionExportRequest(input: unknown): Omit<
+  ProductionExportInput,
+  'projectName'
+> {
+  const issues: DiagnosticIssue[] = [];
+  const record = readRecord(input, [], issues);
+  if (!record) {
+    throwProductionExportRequestError(issues);
+  }
+  assertAllowedKeys(record, [], ['dryRun', 'fresh'], issues);
+  const result = buildDiagnosticResult(issues);
+  if (!result.valid) {
+    throwProductionExportRequestError(result.issues);
+  }
+  return {
+    dryRun: typeof record.dryRun === 'boolean' ? record.dryRun : undefined,
+    fresh: typeof record.fresh === 'boolean' ? record.fresh : undefined,
+  };
+}
+
+function throwProductionExportRequestError(issues: DiagnosticIssue[]): never {
+  throw createStructuredError({
+    code: 'STUDIO_SERVER020',
+    message: 'Invalid production export request.',
+    issues,
+    suggestion: 'Send only supported production export options.',
+  });
+}
 
 function readProjectInformationUpdate(input: unknown): ProjectInformationUpdate {
   const issues: DiagnosticIssue[] = [];
