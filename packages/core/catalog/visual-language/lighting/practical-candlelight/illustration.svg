@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Practical candlelight reference">
+  <rect width="960" height="540" fill="#120f0c"/>
+  <radialGradient id="g" cx="48%" cy="48%" r="42%">
+    <stop offset="0" stop-color="#fbbf24" stop-opacity=".9"/>
+    <stop offset=".5" stop-color="#92400e" stop-opacity=".45"/>
+    <stop offset="1" stop-color="#120f0c" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="960" height="540" fill="url(#g)"/>
+  <rect x="230" y="178" width="500" height="236" rx="6" fill="#29201a" stroke="#6b4f31"/>
+  <path d="M480 198c22 34 12 56 0 76-13-20-23-42 0-76z" fill="#fbbf24"/>
+  <rect x="470" y="274" width="20" height="86" fill="#f5e6c8"/>
+  <text x="480" y="492" fill="#f5e6c8" font-family="Inter, Arial, sans-serif" font-size="26" text-anchor="middle">Practical candlelight</text>
+</svg>

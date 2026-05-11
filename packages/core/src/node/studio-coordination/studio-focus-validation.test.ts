@@ -177,10 +177,19 @@ function makeProject(): Project {
     },
     coverImage: null,
     languages: [],
+    visualLanguageCategories: [
+      {
+        id: 'visual_language_category_1',
+        name: 'Lighting',
+        source: 'project',
+      },
+    ],
     visualLanguage: [
       {
         id: 'visual_language_1',
+        categoryId: 'visual_language_category_1',
         name: 'Painterly Realism',
+        priority: 'default',
       },
     ],
     cast: [
@@ -191,6 +200,7 @@ function makeProject(): Project {
         role: 'voiceover',
       },
     ],
+    continuityReferences: [],
     episodes: [],
     sequences: [
       {
@@ -217,8 +227,10 @@ function makeProject(): Project {
     ],
     counts: {
       languages: 0,
+      visualLanguageCategories: 1,
       visualLanguage: 1,
       castMembers: 1,
+      continuityReferences: 0,
       episodes: 0,
       sequences: 1,
       scenes: 1,

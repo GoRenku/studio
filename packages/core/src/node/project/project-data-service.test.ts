@@ -43,7 +43,9 @@ describe('ProjectDataService', () => {
       created: {
         languages: 2,
         castMembers: 2,
+        visualLanguageCategories: 2,
         visualLanguage: 1,
+        continuityReferences: 1,
         episodes: 0,
         sequences: 1,
         scenes: 1,
@@ -86,11 +88,36 @@ describe('ProjectDataService', () => {
       'cast_test0001',
       'cast_test0002',
     ]);
+    expect(project.visualLanguageCategories).toEqual([
+      expect.objectContaining({
+        id: 'visual_language_category_test0001',
+        name: 'Lighting',
+      }),
+      expect.objectContaining({
+        id: 'visual_language_category_test0002',
+        name: 'Camera',
+      }),
+    ]);
     expect(project.visualLanguage[0]).toMatchObject({
-      summary: 'Muted golds, deep reds, formal court staging.',
-      intent: 'Formal staging and controlled historical detail.',
-      intentAsset: expect.objectContaining({
-        role: 'intent',
+      categoryId: 'visual_language_category_test0001',
+      summary: 'Warm practical interiors.',
+      priority: 'default',
+      guidance: 'Formal staging and controlled historical detail.',
+      prompt: 'Warm practical candlelight, deep brown shadows.',
+      guidanceAsset: expect.objectContaining({
+        role: 'guidance',
+      }),
+      promptAsset: expect.objectContaining({
+        role: 'prompt',
+      }),
+    });
+    expect(project.continuityReferences[0]).toMatchObject({
+      id: 'continuity_reference_test0001',
+      kind: 'location',
+      name: "Mehmed's council chamber",
+      description: 'Formal Ottoman planning room with maps and oil lamps.',
+      descriptionAsset: expect.objectContaining({
+        role: 'description',
       }),
     });
     expect(project.sequences[0]?.scenes[0]?.clips).toHaveLength(2);
@@ -132,6 +159,9 @@ describe('ProjectDataService', () => {
           'asset_file',
           'project_asset',
           'project_locale',
+          'visual_language_category',
+          'continuity_reference',
+          'continuity_reference_asset',
           'visual_language_asset',
           'sequence_asset',
           'scene_asset',
@@ -141,6 +171,7 @@ describe('ProjectDataService', () => {
       expect(tables).not.toContain('project_language');
       expect(tableColumns(database, 'project')).not.toContain('summary');
       expect(tableColumns(database, 'visual_language')).not.toContain('intent');
+      expect(tableColumns(database, 'visual_language')).not.toContain('prompt');
       expect(tableColumns(database, 'clip')).not.toContain('visual_intent');
 
       const projectSummary = database
@@ -1084,6 +1115,21 @@ async function writeProjectSetup(
   options: { extraProjectFields?: string } = {}
 ): Promise<string> {
   const setupPath = path.join(homeDir, 'project.yaml');
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'sample-project/visual-language/lighting/practical-source-low-key-interiors/guidance.md',
+    'Formal staging and controlled historical detail.'
+  );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'sample-project/visual-language/lighting/practical-source-low-key-interiors/prompt.md',
+    'Warm practical candlelight, deep brown shadows.'
+  );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'sample-project/continuity/locations/mehmeds-council-chamber/description.md',
+    'Formal Ottoman planning room with maps and oil lamps.'
+  );
   await fs.writeFile(
     setupPath,
     `kind: renku.projectSetup
@@ -1108,10 +1154,19 @@ languages:
     supportsAudio: true
     supportsSubtitles: true
 
+visualLanguageCategories:
+  - name: Lighting
+    description: Light behavior and source logic.
+  - name: Camera
+    description: Camera placement and motion.
+
 visualLanguage:
-  - name: Ottoman court miniature influence
-    intent: Formal staging and controlled historical detail.
-    summary: Muted golds, deep reds, formal court staging.
+  - category: Lighting
+    name: Practical-source low-key interiors
+    shortDescription: Warm practical interiors.
+    priority: default
+    guidanceFile: sample-project/visual-language/lighting/practical-source-low-key-interiors/guidance.md
+    promptFile: sample-project/visual-language/lighting/practical-source-low-key-interiors/prompt.md
 
 cast:
   - name: Narrator
@@ -1120,6 +1175,12 @@ cast:
   - name: Mehmed II
     kind: historical_figure
     role: protagonist
+
+continuityReferences:
+  - kind: location
+    name: Mehmed's council chamber
+    shortDescription: Formal Ottoman planning room.
+    descriptionFile: sample-project/continuity/locations/mehmeds-council-chamber/description.md
 
 sequences:
   - title: The Young Sultan's Obsession
@@ -1138,6 +1199,16 @@ sequences:
     'utf8'
   );
   return setupPath;
+}
+
+async function writeSetupMarkdownFixture(
+  homeDir: string,
+  relativePath: string,
+  content: string
+): Promise<void> {
+  const filePath = path.join(homeDir, relativePath);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, content, 'utf8');
 }
 
 async function writeEpisodeProjectSetup(homeDir: string): Promise<string> {

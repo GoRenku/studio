@@ -7,6 +7,7 @@ import {
   type DiagnosticResult,
 } from '@gorenku/studio-diagnostics';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { ProjectDataError } from '../../../project/index.js';
 
@@ -15,8 +16,10 @@ export interface ProjectSetup {
   version: '0.1.0';
   project: ProjectSetupProject;
   languages?: ProjectSetupLanguage[];
+  visualLanguageCategories?: ProjectSetupVisualLanguageCategory[];
   visualLanguage?: ProjectSetupVisualLanguage[];
   cast?: ProjectSetupCastMember[];
+  continuityReferences?: ProjectSetupContinuityReference[];
   episodes?: ProjectSetupEpisode[];
   sequences?: ProjectSetupSequence[];
 }
@@ -39,9 +42,27 @@ export interface ProjectSetupLanguage {
 }
 
 export interface ProjectSetupVisualLanguage {
+  category: string;
   name: string;
-  intent?: string;
-  summary?: string;
+  shortDescription?: string;
+  priority: 'default' | 'situational' | 'rare';
+  guidanceFile?: string;
+  promptFile?: string;
+  guidance?: string;
+  prompt?: string;
+}
+
+export interface ProjectSetupVisualLanguageCategory {
+  name: string;
+  description?: string;
+}
+
+export interface ProjectSetupContinuityReference {
+  kind: string;
+  name: string;
+  shortDescription?: string;
+  descriptionFile?: string;
+  description?: string;
 }
 
 export interface ProjectSetupCastMember {
@@ -140,8 +161,14 @@ export async function readProjectSetupOrThrow(
     );
   }
 
+  const setup = await loadReferencedSetupMarkdown(
+    validation.setup,
+    setupPath,
+    validation.result.issues
+  );
+
   return {
-    setup: validation.setup,
+    setup,
     result: validation.result,
     warnings: validation.result.warnings,
   };
@@ -166,8 +193,10 @@ export function validateProjectSetup(
     'version',
     'project',
     'languages',
+    'visualLanguageCategories',
     'visualLanguage',
     'cast',
+    'continuityReferences',
     'episodes',
     'sequences',
   ]);
@@ -201,6 +230,12 @@ export function validateProjectSetup(
 
   const project = readProject(context, root.project, ['project']);
   const languages = readArrayItems(context, root.languages, ['languages'], readLanguage);
+  const visualLanguageCategories = readArrayItems(
+    context,
+    root.visualLanguageCategories,
+    ['visualLanguageCategories'],
+    readVisualLanguageCategory
+  );
   const visualLanguage = readArrayItems(
     context,
     root.visualLanguage,
@@ -208,6 +243,12 @@ export function validateProjectSetup(
     readVisualLanguage
   );
   const cast = readArrayItems(context, root.cast, ['cast'], readCast);
+  const continuityReferences = readArrayItems(
+    context,
+    root.continuityReferences,
+    ['continuityReferences'],
+    readContinuityReference
+  );
   const episodes = readArrayItems(context, root.episodes, ['episodes'], readEpisode);
   const sequences = readArrayItems(
     context,
@@ -230,8 +271,10 @@ export function validateProjectSetup(
       version: '0.1.0',
       project,
       languages,
+      visualLanguageCategories,
       visualLanguage,
       cast,
+      continuityReferences,
       episodes,
       sequences,
     },
@@ -356,7 +399,67 @@ function readVisualLanguage(
   if (!record) {
     return null;
   }
-  warnUnknownKeys(context, record, path, ['name', 'intent', 'summary']);
+  warnUnknownKeys(context, record, path, [
+    'category',
+    'name',
+    'shortDescription',
+    'priority',
+    'guidanceFile',
+    'promptFile',
+  ]);
+  const category = readRequiredString(
+    context,
+    record,
+    [...path, 'category'],
+    `${formatPath([...path, 'category'])} is required.`
+  );
+  const name = readRequiredString(
+    context,
+    record,
+    [...path, 'name'],
+    `${formatPath([...path, 'name'])} is required.`
+  );
+  const priority =
+    readOptionalString(context, record, [...path, 'priority']) ?? 'default';
+  if (
+    priority !== 'default' &&
+    priority !== 'situational' &&
+    priority !== 'rare'
+  ) {
+    addError(
+      context,
+      'PROJECT_SETUP005',
+      `${formatPath([...path, 'priority'])} must be default, situational, or rare.`,
+      [...path, 'priority'],
+      'Use priority: default, priority: situational, or priority: rare.'
+    );
+  }
+  if (!category || !name || !isVisualLanguagePriority(priority)) {
+    return null;
+  }
+  return {
+    category,
+    name,
+    shortDescription: readOptionalString(context, record, [
+      ...path,
+      'shortDescription',
+    ]),
+    priority,
+    guidanceFile: readOptionalString(context, record, [...path, 'guidanceFile']),
+    promptFile: readOptionalString(context, record, [...path, 'promptFile']),
+  };
+}
+
+function readVisualLanguageCategory(
+  context: ValidationContext,
+  input: unknown,
+  path: string[]
+): ProjectSetupVisualLanguageCategory | null {
+  const record = readRecord(context, input, path, 'visualLanguageCategory');
+  if (!record) {
+    return null;
+  }
+  warnUnknownKeys(context, record, path, ['name', 'description']);
   const name = readRequiredString(
     context,
     record,
@@ -368,8 +471,51 @@ function readVisualLanguage(
   }
   return {
     name,
-    intent: readOptionalString(context, record, [...path, 'intent']),
-    summary: readOptionalString(context, record, [...path, 'summary']),
+    description: readOptionalString(context, record, [...path, 'description']),
+  };
+}
+
+function readContinuityReference(
+  context: ValidationContext,
+  input: unknown,
+  path: string[]
+): ProjectSetupContinuityReference | null {
+  const record = readRecord(context, input, path, 'continuityReference');
+  if (!record) {
+    return null;
+  }
+  warnUnknownKeys(context, record, path, [
+    'kind',
+    'name',
+    'shortDescription',
+    'descriptionFile',
+  ]);
+  const kind = readRequiredString(
+    context,
+    record,
+    [...path, 'kind'],
+    `${formatPath([...path, 'kind'])} is required.`
+  );
+  const name = readRequiredString(
+    context,
+    record,
+    [...path, 'name'],
+    `${formatPath([...path, 'name'])} is required.`
+  );
+  if (!kind || !name) {
+    return null;
+  }
+  return {
+    kind,
+    name,
+    shortDescription: readOptionalString(context, record, [
+      ...path,
+      'shortDescription',
+    ]),
+    descriptionFile: readOptionalString(context, record, [
+      ...path,
+      'descriptionFile',
+    ]),
   };
 }
 
@@ -655,6 +801,120 @@ function readOptionalNumber(
   return value;
 }
 
+function isVisualLanguagePriority(
+  value: string
+): value is ProjectSetupVisualLanguage['priority'] {
+  return value === 'default' || value === 'situational' || value === 'rare';
+}
+
+async function loadReferencedSetupMarkdown(
+  setup: ProjectSetup,
+  setupPath: string,
+  existingIssues: DiagnosticIssue[]
+): Promise<ProjectSetup> {
+  const context: ValidationContext = {
+    filePath: setupPath,
+    issues: [...existingIssues],
+  };
+  const setupDir = path.dirname(setupPath);
+
+  const visualLanguage = await Promise.all(
+    (setup.visualLanguage ?? []).map(async (entry, index) => ({
+      ...entry,
+      guidance: await readReferencedMarkdownFile(context, {
+        setupDir,
+        filePath: entry.guidanceFile,
+        yamlPath: ['visualLanguage', String(index), 'guidanceFile'],
+        label: `${entry.name} guidance`,
+      }),
+      prompt: await readReferencedMarkdownFile(context, {
+        setupDir,
+        filePath: entry.promptFile,
+        yamlPath: ['visualLanguage', String(index), 'promptFile'],
+        label: `${entry.name} prompt`,
+      }),
+    }))
+  );
+
+  const continuityReferences = await Promise.all(
+    (setup.continuityReferences ?? []).map(async (entry, index) => ({
+      ...entry,
+      description: await readReferencedMarkdownFile(context, {
+        setupDir,
+        filePath: entry.descriptionFile,
+        yamlPath: ['continuityReferences', String(index), 'descriptionFile'],
+        label: `${entry.name} description`,
+      }),
+    }))
+  );
+
+  const result = buildDiagnosticResult(context.issues);
+  throwIfDiagnosticResultInvalid(result, {
+    code: 'PROJECT_SETUP999',
+    message: 'Project setup YAML failed validation.',
+    suggestion: 'Fix the reported project setup errors and run the command again.',
+  });
+
+  return {
+    ...setup,
+    visualLanguage,
+    continuityReferences,
+  };
+}
+
+async function readReferencedMarkdownFile(
+  context: ValidationContext,
+  input: {
+    setupDir: string;
+    filePath?: string;
+    yamlPath: string[];
+    label: string;
+  }
+): Promise<string | undefined> {
+  if (!input.filePath?.trim()) {
+    return undefined;
+  }
+  if (path.isAbsolute(input.filePath)) {
+    addError(
+      context,
+      'PROJECT_SETUP006',
+      `${formatPath(input.yamlPath)} must be relative to the setup file.`,
+      input.yamlPath,
+      'Use a setup-relative Markdown path such as sample-project/visual-language/camera/example/prompt.md.'
+    );
+    return undefined;
+  }
+
+  const resolvedPath = path.resolve(input.setupDir, input.filePath);
+  const relativePath = path.relative(input.setupDir, resolvedPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    addError(
+      context,
+      'PROJECT_SETUP006',
+      `${formatPath(input.yamlPath)} must stay inside the setup directory.`,
+      input.yamlPath,
+      'Move the Markdown file under the setup directory and reference it with a relative path.'
+    );
+    return undefined;
+  }
+
+  try {
+    return await fs.readFile(resolvedPath, 'utf8');
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      addError(
+        context,
+        'PROJECT_SETUP007',
+        `Referenced Markdown file for ${input.label} does not exist: ${input.filePath}.`,
+        input.yamlPath,
+        'Create the referenced Markdown file or update the setup path.'
+      );
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 function warnUnknownKeys(
   context: ValidationContext,
   record: Record<string, unknown>,
@@ -727,4 +987,8 @@ function formatPath(path: string[]): string {
 
 function isRecord(input: unknown): input is Record<string, unknown> {
   return typeof input === 'object' && input !== null && !Array.isArray(input);
+}
+
+function isNodeError(error: unknown): error is Error & { code?: unknown } {
+  return error instanceof Error && 'code' in error;
 }

@@ -7,8 +7,10 @@ export interface Project {
   identity: ProjectIdentity;
   coverImage: ProjectCoverImage | null;
   languages: ProjectLanguage[];
+  visualLanguageCategories: VisualLanguageCategory[];
   visualLanguage: VisualLanguage[];
   cast: CastMember[];
+  continuityReferences: ContinuityReference[];
   episodes: Episode[];
   sequences: Sequence[];
   counts: ProjectCounts;
@@ -58,11 +60,25 @@ export interface ProjectLanguage {
 
 export interface VisualLanguage {
   id: string;
+  categoryId: string;
   name: string;
-  intent?: string;
   summary?: string;
-  intentAsset?: RichTextAssetLink;
+  priority: VisualLanguagePriority;
+  guidance?: string;
+  prompt?: string;
+  guidanceAsset?: RichTextAssetLink;
+  promptAsset?: RichTextAssetLink;
 }
+
+export interface VisualLanguageCategory {
+  id: string;
+  name: string;
+  description?: string;
+  source: VisualLanguageCategorySource;
+}
+
+export type VisualLanguageCategorySource = 'system' | 'project';
+export type VisualLanguagePriority = 'default' | 'situational' | 'rare';
 
 export interface CastMember {
   id: string;
@@ -70,6 +86,15 @@ export interface CastMember {
   kind?: string;
   role?: string;
   shortDescription?: string;
+}
+
+export interface ContinuityReference {
+  id: string;
+  kind: string;
+  name: string;
+  summary?: string;
+  description?: string;
+  descriptionAsset?: RichTextAssetLink;
 }
 
 export interface Episode {
@@ -209,8 +234,10 @@ export interface ProductionExportVariantSummary {
 
 export interface ProjectCounts {
   languages: number;
+  visualLanguageCategories: number;
   visualLanguage: number;
   castMembers: number;
+  continuityReferences: number;
   episodes: number;
   sequences: number;
   scenes: number;

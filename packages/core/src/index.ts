@@ -27,6 +27,7 @@ export type {
   AssetSelection,
   AssetTarget,
   CastMember,
+  ContinuityReference,
   Clip,
   Episode,
   Project,
@@ -49,5 +50,16 @@ export type {
   Scene,
   Sequence,
   VisualLanguage,
+  VisualLanguageCategory,
+  VisualLanguageCategorySource,
+  VisualLanguagePriority,
 } from './project/index.js';
+export type {
+  ReadVisualLanguageCatalogEntryInput,
+  ReadVisualLanguageCatalogInput,
+  VisualLanguageCatalog,
+  VisualLanguageCatalogDifficulty,
+  VisualLanguageCatalogEntry,
+  VisualLanguageCatalogIllustration,
+} from './visual-language-catalog/index.js';
 export { ProjectDataError } from './project/index.js';

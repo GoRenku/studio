@@ -1,5 +1,6 @@
 export type {
   CastMember,
+  ContinuityReference,
   Asset,
   AssetAvailability,
   AssetFile,
@@ -29,5 +30,8 @@ export type {
   Scene,
   Sequence,
   VisualLanguage,
+  VisualLanguageCategory,
+  VisualLanguageCategorySource,
+  VisualLanguagePriority,
 } from './contracts.js';
 export { ProjectDataError } from './errors.js';

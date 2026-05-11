@@ -79,6 +79,7 @@ function makeProject(): ProjectWithHttp {
     coverImage: null,
     coverUrl: null,
     languages: [],
+    visualLanguageCategories: [],
     visualLanguage: [],
     cast: [
       {
@@ -88,6 +89,7 @@ function makeProject(): ProjectWithHttp {
         role: 'voiceover',
       },
     ],
+    continuityReferences: [],
     sequences: [
       {
         id: 'seq_opening',
@@ -114,8 +116,10 @@ function makeProject(): ProjectWithHttp {
     episodes: [],
     counts: {
       languages: 0,
+      visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
+      continuityReferences: 0,
       episodes: 0,
       sequences: 1,
       scenes: 1,

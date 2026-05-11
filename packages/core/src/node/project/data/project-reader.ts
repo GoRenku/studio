@@ -3,6 +3,7 @@ import { ProjectDataError } from '../../../project/errors.js';
 import type {
   CastMember,
   Clip,
+  ContinuityReference,
   Project,
   ProjectCounts,
   ProjectIdentity,
@@ -11,12 +12,21 @@ import type {
   Scene,
   Sequence,
   VisualLanguage,
+  VisualLanguageCategory,
 } from '../../../project/index.js';
 import { listAssetFileRecords, type AssetFileRecord } from './asset-file-records.js';
 import {
   listCastMemberRecords,
   type CastMemberRecord,
 } from './cast-member-records.js';
+import {
+  listContinuityReferenceAssetRecords,
+  type ContinuityReferenceAssetRecord,
+} from './continuity-reference-asset-records.js';
+import {
+  listContinuityReferenceRecords,
+  type ContinuityReferenceRecord,
+} from './continuity-reference-records.js';
 import {
   listClipRecords,
   listEpisodeRecords,
@@ -49,6 +59,10 @@ import {
   type VisualLanguageAssetRecord,
 } from './visual-language-asset-records.js';
 import {
+  listVisualLanguageCategoryRecords,
+  type VisualLanguageCategoryRecord,
+} from './visual-language-category-records.js';
+import {
   listVisualLanguageRecords,
   type VisualLanguageRecord,
 } from './visual-language-records.js';
@@ -71,10 +85,16 @@ export function readProjectFromSession(input: {
 
   const languages = listProjectLocaleRecords(input.session).map(toProjectLanguage);
   const richText = buildRichTextAssets(input);
+  const visualLanguageCategories = listVisualLanguageCategoryRecords(input.session).map(
+    toVisualLanguageCategory
+  );
   const visualLanguage = listVisualLanguageRecords(input.session).map((row) =>
     toVisualLanguage(row, richText)
   );
   const cast = listCastMemberRecords(input.session).map(toCastMember);
+  const continuityReferences = listContinuityReferenceRecords(input.session).map(
+    (row) => toContinuityReference(row, richText)
+  );
   const episodeRecords = listEpisodeRecords(input.session);
   const sequenceRecords = listSequenceRecords(input.session);
   const sceneRecords = listSceneRecords(input.session);
@@ -101,8 +121,10 @@ export function readProjectFromSession(input: {
 
   const counts: ProjectCounts = {
     languages: languages.length,
+    visualLanguageCategories: visualLanguageCategories.length,
     visualLanguage: visualLanguage.length,
     castMembers: cast.length,
+    continuityReferences: continuityReferences.length,
     episodes: episodes.length,
     sequences: sequenceRecords.length,
     scenes: sceneRecords.length,
@@ -118,8 +140,10 @@ export function readProjectFromSession(input: {
     ),
     coverImage: project.coverFile === 'cover.png' ? { fileName: 'cover.png' } : null,
     languages,
+    visualLanguageCategories,
     visualLanguage,
     cast,
+    continuityReferences,
     episodes,
     sequences: topLevelSequences,
     counts,
@@ -178,17 +202,36 @@ function toProjectLanguage(row: ProjectLocaleRecord): ProjectLanguage {
   };
 }
 
+function toVisualLanguageCategory(
+  row: VisualLanguageCategoryRecord
+): VisualLanguageCategory {
+  return {
+    id: row.id,
+    name: row.name,
+    description: nullable(row.description),
+    source: row.source === 'system' ? 'system' : 'project',
+  };
+}
+
 function toVisualLanguage(
   row: VisualLanguageRecord,
   richText: RichTextAssetIndex
 ): VisualLanguage {
-  const intentAsset = richText.visualLanguage.get('intent')?.get(row.id);
+  const guidanceAsset = richText.visualLanguage.get('guidance')?.get(row.id);
+  const promptAsset = richText.visualLanguage.get('prompt')?.get(row.id);
   return {
     id: row.id,
+    categoryId: row.categoryId,
     name: row.name,
-    intent: nonEmpty(intentAsset?.content),
     summary: nullable(row.oneLineSummary),
-    intentAsset: intentAsset?.link,
+    priority:
+      row.priority === 'situational' || row.priority === 'rare'
+        ? row.priority
+        : 'default',
+    guidance: nonEmpty(guidanceAsset?.content),
+    prompt: nonEmpty(promptAsset?.content),
+    guidanceAsset: guidanceAsset?.link,
+    promptAsset: promptAsset?.link,
   };
 }
 
@@ -199,6 +242,23 @@ function toCastMember(row: CastMemberRecord): CastMember {
     kind: nullable(row.kind),
     role: nullable(row.role),
     shortDescription: nullable(row.shortDescription),
+  };
+}
+
+function toContinuityReference(
+  row: ContinuityReferenceRecord,
+  richText: RichTextAssetIndex
+): ContinuityReference {
+  const descriptionAsset = richText.continuityReference
+    .get('description')
+    ?.get(row.id);
+  return {
+    id: row.id,
+    kind: row.kind,
+    name: row.name,
+    summary: nullable(row.oneLineSummary),
+    description: nonEmpty(descriptionAsset?.content),
+    descriptionAsset: descriptionAsset?.link,
   };
 }
 
@@ -248,6 +308,7 @@ interface RichTextAsset {
 interface RichTextAssetIndex {
   project: Map<string, RichTextAsset>;
   visualLanguage: Map<string, Map<string, RichTextAsset>>;
+  continuityReference: Map<string, Map<string, RichTextAsset>>;
   sequence: Map<string, Map<string, RichTextAsset>>;
   scene: Map<string, Map<string, RichTextAsset>>;
   clip: Map<string, Map<string, RichTextAsset>>;
@@ -267,6 +328,7 @@ function buildRichTextAssets(input: {
   const index: RichTextAssetIndex = {
     project: new Map(),
     visualLanguage: new Map(),
+    continuityReference: new Map(),
     sequence: new Map(),
     scene: new Map(),
     clip: new Map(),
@@ -281,6 +343,15 @@ function buildRichTextAssets(input: {
       index.visualLanguage,
       row.role,
       row.visualLanguageId,
+      toRichTextAsset(input, row, assetFilesByAssetId)
+    );
+  }
+
+  for (const row of listContinuityReferenceAssetRecords(input.session)) {
+    setScopedRichTextAsset(
+      index.continuityReference,
+      row.role,
+      row.continuityReferenceId,
       toRichTextAsset(input, row, assetFilesByAssetId)
     );
   }
@@ -320,6 +391,7 @@ function toRichTextAsset(
   row:
     | ProjectAssetRecord
     | VisualLanguageAssetRecord
+    | ContinuityReferenceAssetRecord
     | SequenceAssetRecord
     | SceneAssetRecord
     | ClipAssetRecord,

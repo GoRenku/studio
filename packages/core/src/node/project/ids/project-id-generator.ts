@@ -6,8 +6,10 @@ const ID_LENGTH = 8;
 export type EntityIdPrefix =
   | 'project'
   | 'locale'
+  | 'visual_language_category'
   | 'visual_language'
   | 'cast'
+  | 'continuity_reference'
   | 'episode'
   | 'sequence'
   | 'scene'
@@ -17,6 +19,7 @@ export type EntityIdPrefix =
   | 'project_asset'
   | 'visual_language_asset'
   | 'cast_asset'
+  | 'continuity_reference_asset'
   | 'sequence_asset'
   | 'scene_asset'
   | 'clip_asset';

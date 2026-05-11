@@ -114,6 +114,7 @@ function makeProject(
     coverImage: coverUrl ? { fileName: 'cover.png' } : null,
     coverUrl,
     languages: [],
+    visualLanguageCategories: [],
     visualLanguage: [],
     cast: [
       {
@@ -123,6 +124,7 @@ function makeProject(
         role: 'voiceover',
       },
     ],
+    continuityReferences: [],
     sequences: [
       {
         id: 'seq_opening',
@@ -149,8 +151,10 @@ function makeProject(
     episodes: [],
     counts: {
       languages: 0,
+      visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
+      continuityReferences: 0,
       episodes: 0,
       sequences: 1,
       scenes: 1,

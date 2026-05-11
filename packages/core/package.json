@@ -20,6 +20,7 @@
     "access": "public"
   },
   "files": [
+    "catalog",
     "dist",
     "drizzle",
     "drizzle.project-migrate.config.ts",

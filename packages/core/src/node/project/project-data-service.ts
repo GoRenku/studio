@@ -53,6 +53,11 @@ import {
 import { insertCastMemberRecords } from './data/cast-member-records.js';
 import { listCastAssetRecords } from './data/cast-asset-records.js';
 import {
+  insertContinuityReferenceAssetRecord,
+  listContinuityReferenceAssetRecords,
+} from './data/continuity-reference-asset-records.js';
+import { insertContinuityReferenceRecords } from './data/continuity-reference-records.js';
+import {
   insertAssetFileRecord,
   listAssetFileRecords,
 } from './data/asset-file-records.js';
@@ -85,6 +90,7 @@ import {
   insertVisualLanguageAssetRecord,
   listVisualLanguageAssetRecords,
 } from './data/visual-language-asset-records.js';
+import { insertVisualLanguageCategoryRecords } from './data/visual-language-category-records.js';
 import { insertVisualLanguageRecords } from './data/visual-language-records.js';
 import {
   insertClipAssetRecord,
@@ -422,16 +428,52 @@ async function writeSetupRecords(
     relationship: { kind: 'project' },
   });
 
+  const visualLanguageCategoryRecords = buildVisualLanguageCategoryRecords({
+    setup,
+    ids,
+    now,
+  });
+  const visualLanguageCategoryIds = new Map(
+    visualLanguageCategoryRecords.map((category) => [category.name, category.id])
+  );
+
   const visualLanguageRecords = (setup.visualLanguage ?? []).map((entry, index) => {
     const visualLanguageId = ids('visual_language');
     const slug = numberedSlug(index + 1, entry.name);
+    const categoryId = visualLanguageCategoryIds.get(entry.category);
+    if (!categoryId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA064',
+        `Visual language category ${entry.category} was not created.`
+      );
+    }
     addMarkdownAsset(markdownAssets, ids, now, {
-      content: entry.intent,
-      title: `${entry.name} intent`,
-      role: 'intent',
+      content: entry.guidance,
+      title: `${entry.name} guidance`,
+      role: 'guidance',
       localeId: baseLocaleId,
-      pathTarget: { kind: 'visualLanguage', slug },
-      fileName: 'intent.md',
+      pathTarget: {
+        kind: 'visualLanguage',
+        categorySlug: slugify(entry.category),
+        slug,
+      },
+      fileName: 'guidance.md',
+      relationship: {
+        kind: 'visualLanguage',
+        visualLanguageId,
+      },
+    });
+    addMarkdownAsset(markdownAssets, ids, now, {
+      content: entry.prompt,
+      title: `${entry.name} prompt`,
+      role: 'prompt',
+      localeId: baseLocaleId,
+      pathTarget: {
+        kind: 'visualLanguage',
+        categorySlug: slugify(entry.category),
+        slug,
+      },
+      fileName: 'prompt.md',
       relationship: {
         kind: 'visualLanguage',
         visualLanguageId,
@@ -439,8 +481,10 @@ async function writeSetupRecords(
     });
     return {
       id: visualLanguageId,
+      categoryId,
       name: entry.name,
-      oneLineSummary: entry.summary,
+      oneLineSummary: entry.shortDescription,
+      priority: entry.priority,
       position: index + 1,
       createdAt: now,
       updatedAt: now,
@@ -458,6 +502,37 @@ async function writeSetupRecords(
     updatedAt: now,
   }));
 
+  const continuityReferenceRecords = (setup.continuityReferences ?? []).map(
+    (entry, index) => {
+      const continuityReferenceId = ids('continuity_reference');
+      addMarkdownAsset(markdownAssets, ids, now, {
+        content: entry.description,
+        title: `${entry.name} description`,
+        role: 'description',
+        localeId: baseLocaleId,
+        pathTarget: {
+          kind: 'continuityReference',
+          kindSlug: slugify(entry.kind),
+          slug: numberedSlug(index + 1, entry.name),
+        },
+        fileName: 'description.md',
+        relationship: {
+          kind: 'continuityReference',
+          continuityReferenceId,
+        },
+      });
+      return {
+        id: continuityReferenceId,
+        kind: entry.kind,
+        name: entry.name,
+        oneLineSummary: entry.shortDescription,
+        position: index + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+  );
+
   const episodeRecords: Parameters<typeof insertEpisodeRecord>[1][] = [];
   const sequenceRecords: Parameters<typeof insertSequenceRecord>[1][] = [];
   const sceneRecords: Parameters<typeof insertSceneRecord>[1][] = [];
@@ -465,8 +540,10 @@ async function writeSetupRecords(
 
   const counts: ProjectCounts = {
     languages: localeRecords.length,
+    visualLanguageCategories: visualLanguageCategoryRecords.length,
     visualLanguage: visualLanguageRecords.length,
     castMembers: castMemberRecords.length,
+    continuityReferences: continuityReferenceRecords.length,
     episodes: setup.episodes?.length ?? 0,
     sequences: 0,
     scenes: 0,
@@ -536,8 +613,10 @@ async function writeSetupRecords(
     });
 
     insertProjectLocaleRecords(session, localeRecords);
+    insertVisualLanguageCategoryRecords(session, visualLanguageCategoryRecords);
     insertVisualLanguageRecords(session, visualLanguageRecords);
     insertCastMemberRecords(session, castMemberRecords);
+    insertContinuityReferenceRecords(session, continuityReferenceRecords);
     for (const record of episodeRecords) {
       insertEpisodeRecord(session, record);
     }
@@ -658,6 +737,33 @@ function expandLanguages(setup: ProjectSetup): ProjectSetupLanguage[] {
   return [...(setup.languages ?? [])];
 }
 
+function buildVisualLanguageCategoryRecords(input: {
+  setup: ProjectSetup;
+  ids: (prefix: EntityIdPrefix) => string;
+  now: string;
+}): Parameters<typeof insertVisualLanguageCategoryRecords>[1] {
+  const categories = new Map<string, { name: string; description?: string }>();
+  for (const category of input.setup.visualLanguageCategories ?? []) {
+    if (!categories.has(category.name)) {
+      categories.set(category.name, category);
+    }
+  }
+  for (const entry of input.setup.visualLanguage ?? []) {
+    if (!categories.has(entry.category)) {
+      categories.set(entry.category, { name: entry.category });
+    }
+  }
+  return [...categories.values()].map((category, index) => ({
+    id: input.ids('visual_language_category'),
+    name: category.name,
+    description: category.description,
+    source: 'project',
+    position: index + 1,
+    createdAt: input.now,
+    updatedAt: input.now,
+  }));
+}
+
 interface SetupMarkdownAsset {
   id: string;
   fileId: string;
@@ -672,6 +778,7 @@ interface SetupMarkdownAsset {
   relationship:
     | { kind: 'project' }
     | { kind: 'visualLanguage'; visualLanguageId: string }
+    | { kind: 'continuityReference'; continuityReferenceId: string }
     | { kind: 'sequence'; sequenceId: string }
     | { kind: 'scene'; sceneId: string }
     | { kind: 'clip'; clipId: string };
@@ -754,6 +861,18 @@ function insertMarkdownAssetRecords(
     insertVisualLanguageAssetRecord(session, {
       id: asset.relationshipId,
       visualLanguageId: asset.relationship.visualLanguageId,
+      assetId: asset.id,
+      localeId: asset.localeId,
+      role: asset.role,
+      sortOrder: 1,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    });
+  }
+  if (asset.relationship.kind === 'continuityReference') {
+    insertContinuityReferenceAssetRecord(session, {
+      id: asset.relationshipId,
+      continuityReferenceId: asset.relationship.continuityReferenceId,
       assetId: asset.id,
       localeId: asset.localeId,
       role: asset.role,
@@ -885,6 +1004,9 @@ function relationshipIdPrefix(
   }
   if (kind === 'visualLanguage') {
     return 'visual_language_asset';
+  }
+  if (kind === 'continuityReference') {
+    return 'continuity_reference_asset';
   }
   if (kind === 'sequence') {
     return 'sequence_asset';
@@ -1089,6 +1211,14 @@ function listLocaleAssetReferences(
       .filter((asset) => asset.localeId === localeId)
       .map((asset) => ({
         tableName: 'cast_asset',
+        relationshipId: asset.id,
+        assetId: asset.assetId,
+        role: asset.role,
+      })),
+    ...listContinuityReferenceAssetRecords(session)
+      .filter((asset) => asset.localeId === localeId)
+      .map((asset) => ({
+        tableName: 'continuity_reference_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
         role: asset.role,
