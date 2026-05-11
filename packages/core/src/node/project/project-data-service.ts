@@ -50,6 +50,10 @@ import {
   type ProjectSetupLanguage,
   type ProjectSetupSequence,
 } from './setup/project-setup-reader.js';
+import {
+  readNarrativeStarterOrThrow,
+  type NarrativeStarter,
+} from './narrative-starter/index.js';
 import { insertCastMemberRecords } from './data/cast-member-records.js';
 import { listCastAssetRecords } from './data/cast-asset-records.js';
 import {
@@ -112,6 +116,9 @@ import { exportProductionAssets } from './production-export/production-export-se
 
 export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
+  createFromNarrativeStarter(
+    input: CreateProjectFromNarrativeStarterInput
+  ): Promise<ProjectCreateReport>;
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
   updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
@@ -131,6 +138,12 @@ export interface ProjectDataService {
 export interface CreateProjectFromSetupInput extends RenkuConfigPathOptions {
   setupPath: string;
   coverPath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface CreateProjectFromNarrativeStarterInput
+  extends RenkuConfigPathOptions {
+  starterPath: string;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -218,6 +231,7 @@ export interface RemoveAssetSelectInput extends RenkuConfigPathOptions {
 export function createProjectDataService(): ProjectDataService {
   return {
     createFromSetup,
+    createFromNarrativeStarter,
     listLibrary,
     readProject,
     updateProjectInformation,
@@ -278,6 +292,68 @@ async function createFromSetup(
       coverPath,
       created: counts,
       warnings: setupResult.warnings,
+    };
+  } finally {
+    session.close();
+  }
+}
+
+async function createFromNarrativeStarter(
+  input: CreateProjectFromNarrativeStarterInput
+): Promise<ProjectCreateReport> {
+  const starterResult = await readNarrativeStarterOrThrow(input.starterPath);
+  const setup = projectSetupFromNarrativeStarter(starterResult.starter);
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  await fs.mkdir(storageRoot, { recursive: true });
+
+  const projectFolder = resolveProjectFolder(storageRoot, setup.project.name);
+  if (await pathExists(projectFolder)) {
+    throw new ProjectDataError(
+      'NARRATIVE_STARTER050',
+      `Project folder already exists: ${projectFolder}`,
+      {
+        issues: [
+          createDiagnosticError(
+            'NARRATIVE_STARTER050',
+            `Project folder already exists: ${projectFolder}`,
+            {
+              filePath: input.starterPath,
+              path: ['project', 'name'],
+              context: 'narrative starter YAML',
+            },
+            'Choose a different project.name or remove the existing project folder.'
+          ),
+        ],
+        suggestion:
+          'Choose a different project name or remove the existing project folder.',
+      }
+    );
+  }
+
+  await fs.mkdir(path.join(projectFolder, RENKU_PROJECT_DIR), { recursive: true });
+  const session = openProjectStore({ projectFolder, create: true });
+  const ids = createUniqueIdAllocator(
+    input.idGenerator ?? createRandomIdGenerator()
+  );
+
+  try {
+    const now = new Date().toISOString();
+    const counts = await writeSetupRecords(
+      session,
+      setup,
+      ids,
+      now,
+      null,
+      projectFolder
+    );
+
+    return {
+      projectName: setup.project.name,
+      projectPath: projectFolder,
+      databasePath: resolveProjectDatabasePath(projectFolder),
+      coverPath: null,
+      created: counts,
+      warnings: starterResult.warnings,
     };
   } finally {
     session.close();
@@ -735,6 +811,36 @@ function writeSequences(input: {
 
 function expandLanguages(setup: ProjectSetup): ProjectSetupLanguage[] {
   return [...(setup.languages ?? [])];
+}
+
+function projectSetupFromNarrativeStarter(starter: NarrativeStarter): ProjectSetup {
+  return {
+    kind: 'renku.projectSetup',
+    version: '0.1.0',
+    project: {
+      name: starter.project.name,
+      title: starter.project.title,
+      type: starter.project.type,
+      aspectRatio: starter.project.aspectRatio,
+      logline: starter.project.logline,
+      summary: starter.project.summary,
+    },
+    languages: starter.languages,
+    sequences: starter.sequences.map((sequence) => ({
+      title: sequence.title,
+      shortTitle: sequence.shortTitle,
+      summary: sequence.summary,
+      scenes: (sequence.scenes ?? []).map((scene) => ({
+        title: scene.title,
+        summary: scene.summary,
+        clips: (scene.clips ?? []).map((clip) => ({
+          title: clip.title,
+          summary: clip.summary,
+          visualIntent: clip.visualIntent,
+        })),
+      })),
+    })),
+  };
 }
 
 function buildVisualLanguageCategoryRecords(input: {

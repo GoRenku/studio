@@ -125,6 +125,67 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
+  it('creates a project from narrative starter YAML', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeNarrativeYaml(homeDir);
+
+    const exitCode = await runRenkuCli(['create', '--from-narrative', yamlPath], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    if (isMissingSqliteBindings(exitCode, stderr)) {
+      return;
+    }
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain('Renku project created: constantinople');
+    await expect(
+      fs.stat(path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'))
+    ).resolves.toHaveProperty('isFile');
+    expect(stderr).toEqual([]);
+  });
+
+  it('prints JSON diagnostics for invalid narrative starter YAML', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeInvalidNarrativeYaml(homeDir);
+
+    const exitCode = await runRenkuCli(
+      ['create', '--from-narrative', yamlPath, '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    const report = JSON.parse(stderr.join('\n'));
+    expect(report).toMatchObject({
+      valid: false,
+      error: {
+        code: 'NARRATIVE_STARTER999',
+      },
+      errors: [
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER010',
+          message: 'project.title is required.',
+        }),
+      ],
+    });
+  });
+
   it('prints warnings for unknown setup fields and still creates the project', async () => {
     const storageRoot = path.join(homeDir, 'movies');
     await runRenkuCli(['init', storageRoot], {
@@ -315,7 +376,7 @@ describe('renku CLI', () => {
     });
 
     expect(exitCode).toBe(1);
-    expect(stderr.join('\n')).toContain('Missing required --file option');
+    expect(stderr.join('\n')).toContain('Missing required create input');
   });
 
   it('fails clearly when create receives a positional project name', async () => {
@@ -420,6 +481,66 @@ project:
   nam: constantinople
   title: Preparation of the Siege
   type: standaloneMovie
+`,
+    'utf8'
+  );
+  return yamlPath;
+}
+
+async function writeNarrativeYaml(homeDir: string): Promise<string> {
+  const yamlPath = path.join(homeDir, 'narrative.yaml');
+  await fs.writeFile(
+    yamlPath,
+    `kind: renku.narrativeStarter
+version: 0.1.0
+
+project:
+  name: constantinople
+  title: Preparation of the Siege
+  type: standaloneMovie
+  aspectRatio: "16:9"
+  logline: A documentary about preparation before 1453.
+  summary: A narrative starter summary.
+
+languages:
+  - localeTag: en-US
+    displayName: English
+    isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
+
+sequences:
+  - title: Opening
+    scenes:
+      - title: First Scene
+        clips:
+          - title: First Clip
+            summary: A first clip.
+`,
+    'utf8'
+  );
+  return yamlPath;
+}
+
+async function writeInvalidNarrativeYaml(homeDir: string): Promise<string> {
+  const yamlPath = path.join(homeDir, 'invalid-narrative.yaml');
+  await fs.writeFile(
+    yamlPath,
+    `kind: renku.narrativeStarter
+version: 0.1.0
+
+project:
+  name: constantinople
+  type: standaloneMovie
+  aspectRatio: "16:9"
+  logline: A documentary about preparation before 1453.
+
+languages:
+  - localeTag: en-US
+    isBase: true
+
+sequences:
+  - title: Opening
 `,
     'utf8'
   );

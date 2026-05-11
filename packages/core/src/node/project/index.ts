@@ -3,6 +3,7 @@ export {
 } from './project-data-service.js';
 export type {
   ChangeAssetSelectInput,
+  CreateProjectFromNarrativeStarterInput,
   CreateProjectFromSetupInput,
   ListAssetsInput,
   ProjectDataService,

@@ -25,28 +25,69 @@ languages:
     supportsAudio: true
     supportsSubtitles: true
 
+visualLanguageCategories:
+  - name: Color
+    description: Palette, saturation, contrast, skin treatment, and forbidden color behavior.
+  - name: Lighting
+    description: Light source logic, contrast, direction, atmosphere, and motivated illumination.
+  - name: Camera
+    description: Shot size, movement, lens language, camera restraint, and forbidden camera behavior.
+  - name: Texture
+    description: Materials, surface age, weathering, grain, smoke, dust, mud, fabric, and metal.
+  - name: Production Design
+    description: Historical material culture, props, costume logic, architecture, and handmade world detail.
+
 visualLanguage:
-  - name: Ottoman court miniature influence
-    intent: >
-      Formal staging inspired by Ottoman court miniature painting, fifteenth
-      century textiles, restrained documentary lighting, and precise historical
-      material detail. Use rich but controlled color rather than fantasy
-      spectacle.
-    summary: Muted golds, deep reds, formal court staging, and textile detail.
+  - category: Color
+    name: Muted earth, stone, bronze, and textile palette
+    shortDescription: Umber leather, smoke-gray wool, dirty ivory linen, oxidized bronze, faded burgundy, and blue-gray stone.
+    priority: default
+    guidanceFile: sample-project/visual-language/color/muted-earth-stone-bronze-and-textile-palette/guidance.md
+    promptFile: sample-project/visual-language/color/muted-earth-stone-bronze-and-textile-palette/prompt.md
 
-  - name: Byzantine dusk and candlelight
-    intent: >
-      Constantinople should feel vast, sacred, depleted, and watchful. Use
-      candlelit interiors, blue-gray stone, sea haze, aging mosaics, and long
-      defensive silhouettes along the walls.
-    summary: Sacred interiors, sea haze, old stone, and anxious defensive scale.
+  - category: Lighting
+    name: Practical-source low-key interiors
+    shortDescription: Candle, oil lamp, furnace, and torchlight motivate warm interiors with deep brown shadows.
+    priority: default
+    guidanceFile: sample-project/visual-language/lighting/practical-source-low-key-interiors/guidance.md
+    promptFile: sample-project/visual-language/lighting/practical-source-low-key-interiors/prompt.md
 
-  - name: Foundry and siege logistics
-    intent: >
-      Cannon work and transport should feel physical and dangerous: smoke,
-      sparks, mud, timber, oxen, ropes, bronze, exhausted labor, and command
-      discipline pushing against mass and friction.
-    summary: Smoke, sparks, bronze, mud, ropes, timber, oxen, and torchlight.
+  - category: Camera
+    name: Slow observational camera grammar
+    shortDescription: Mostly locked-off frames, slow lateral tracking, slow push-ins, and restrained reveals.
+    priority: default
+    guidanceFile: sample-project/visual-language/camera/slow-observational-camera-grammar/guidance.md
+    promptFile: sample-project/visual-language/camera/slow-observational-camera-grammar/prompt.md
+
+  - category: Texture
+    name: Weathered tactile material truth
+    shortDescription: Worn linen, cracked leather, smoke, mud, soot, oxidized bronze, rough stone, and frayed ropes.
+    priority: default
+    guidanceFile: sample-project/visual-language/texture/weathered-tactile-material-truth/guidance.md
+    promptFile: sample-project/visual-language/texture/weathered-tactile-material-truth/prompt.md
+
+  - category: Production Design
+    name: Fifteenth-century Ottoman and Byzantine material worlds
+    shortDescription: Handmade historical materials without fantasy armor, modern seams, plastic props, or generic medieval imagery.
+    priority: default
+    guidanceFile: sample-project/visual-language/production-design/fifteenth-century-ottoman-and-byzantine-material-worlds/guidance.md
+    promptFile: sample-project/visual-language/production-design/fifteenth-century-ottoman-and-byzantine-material-worlds/prompt.md
+
+continuityReferences:
+  - kind: location
+    name: Mehmed's council chamber
+    shortDescription: Formal Ottoman planning room with maps, textiles, oil lamps, and controlled court staging.
+    descriptionFile: sample-project/continuity/locations/mehmeds-council-chamber/description.md
+
+  - kind: location
+    name: Constantinople sea walls
+    shortDescription: Vast, layered defensive stone walls facing water, sea haze, and anxious defensive scale.
+    descriptionFile: sample-project/continuity/locations/constantinople-sea-walls/description.md
+
+  - kind: prop
+    name: Giant bombard
+    shortDescription: Massive bronze siege cannon, physically dangerous and almost too heavy to move.
+    descriptionFile: sample-project/continuity/props/giant-bombard/description.md
 
 cast:
   - name: Narrator

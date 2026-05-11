@@ -8,7 +8,9 @@ import { formatDiagnosticIssue, type RenkuCliIo } from '../cli.js';
 export interface RunCreateCommandOptions {
   input: string[];
   file?: string;
+  fromNarrative?: string;
   cover?: string;
+  storageRoot?: string;
   json: boolean;
   io: RenkuCliIo;
   homeDir?: string;
@@ -21,7 +23,7 @@ export async function runCreateCommand(
     throw new StructuredError({
       code: 'CLI001',
       message:
-        'Project names are read from project.name in the YAML. Usage: renku create --file <project.yaml>',
+        'Project names are read from project.name in the YAML. Usage: renku create --file <project.yaml> or renku create --from-narrative <narrative.yaml>',
       issues: [
         createDiagnosticError(
           'CLI001',
@@ -33,27 +35,51 @@ export async function runCreateCommand(
     });
   }
 
-  if (!options.file) {
+  if (options.file && options.fromNarrative) {
+    throw new StructuredError({
+      code: 'CLI003',
+      message:
+        'Use either --file or --from-narrative, not both.',
+      issues: [
+        createDiagnosticError(
+          'CLI003',
+          'Conflicting create inputs.',
+          { path: ['create'], context: 'renku CLI arguments' },
+          'Use --from-narrative for narrative starter YAML or --file for project setup YAML.'
+        ),
+      ],
+    });
+  }
+
+  if (!options.file && !options.fromNarrative) {
     throw new StructuredError({
       code: 'CLI002',
-      message: 'Missing required --file option. Usage: renku create --file <project.yaml>',
+      message:
+        'Missing required create input. Usage: renku create --file <project.yaml> or renku create --from-narrative <narrative.yaml>',
       issues: [
         createDiagnosticError(
           'CLI002',
-          'Missing required --file option.',
-          { path: ['--file'], context: 'renku CLI arguments' },
-          'Run renku create --file <project.yaml>.'
+          'Missing required create input.',
+          { path: ['create'], context: 'renku CLI arguments' },
+          'Run renku create --from-narrative <narrative.yaml> or renku create --file <project.yaml>.'
         ),
       ],
     });
   }
 
   const projectData = createProjectDataService();
-  const result = await projectData.createFromSetup({
-    setupPath: options.file,
-    coverPath: options.cover,
-    homeDir: options.homeDir,
-  });
+  const result = options.fromNarrative
+    ? await projectData.createFromNarrativeStarter({
+        starterPath: options.fromNarrative,
+        homeDir: options.homeDir,
+        storageRoot: options.storageRoot,
+      })
+    : await projectData.createFromSetup({
+        setupPath: options.file!,
+        coverPath: options.cover,
+        homeDir: options.homeDir,
+        storageRoot: options.storageRoot,
+      });
 
   if (options.json) {
     options.io.stdout.log(JSON.stringify(result, null, 2));

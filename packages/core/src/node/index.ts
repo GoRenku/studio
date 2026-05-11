@@ -49,6 +49,7 @@ export type {
   AssetSelection,
   AssetTarget,
   ChangeAssetSelectInput,
+  CreateProjectFromNarrativeStarterInput,
   CreateProjectFromSetupInput,
   Project,
   EntityIdPrefix,

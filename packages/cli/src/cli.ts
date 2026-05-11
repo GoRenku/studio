@@ -38,7 +38,8 @@ Usage
   $ renku <command>
 
 Commands
-  create --file <yaml>  Create a project from YAML
+  create --from-narrative <yaml>  Create a project from narrative starter YAML
+  create --file <yaml>            Create a project from internal setup YAML
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
   asset                Register, list, and select assets
@@ -53,6 +54,8 @@ Commands
 
 Options
   --file               Project create YAML file
+  --from-narrative     Narrative starter YAML file
+  --storage-root       Override configured storage root for this command
   --cover              Optional PNG cover image
   --project            Project name for project information commands
   --target             Asset attachment target
@@ -78,6 +81,7 @@ Options
   --version            Show version
 
 Examples
+  $ renku create --from-narrative narrative.yaml
   $ renku create --file sample-project.yaml
   $ renku create --file sample-project.yaml --cover cover.png
   $ renku init ~/Movies/renku
@@ -99,6 +103,12 @@ export async function runRenkuCli(
         default: false,
       },
       file: {
+        type: 'string',
+      },
+      fromNarrative: {
+        type: 'string',
+      },
+      storageRoot: {
         type: 'string',
       },
       cover: {
@@ -191,7 +201,9 @@ export async function runRenkuCli(
         return await runCreateCommand({
           input,
           file: cli.flags.file,
+          fromNarrative: cli.flags.fromNarrative,
           cover: cli.flags.cover,
+          storageRoot: cli.flags.storageRoot,
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,

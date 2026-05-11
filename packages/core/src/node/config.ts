@@ -15,6 +15,7 @@ export interface RenkuConfig {
 
 export interface RenkuConfigPathOptions {
   homeDir?: string;
+  storageRoot?: string;
 }
 
 export interface ReadRenkuConfigOptions extends RenkuConfigPathOptions {
@@ -76,6 +77,9 @@ export async function readRenkuConfig(
 export async function resolveRenkuStorageRoot(
   options: ReadRenkuConfigOptions = {}
 ): Promise<string> {
+  if (options.storageRoot?.trim()) {
+    return path.resolve(options.storageRoot);
+  }
   const config = await readRenkuConfig(options);
   return config.storageRoot;
 }

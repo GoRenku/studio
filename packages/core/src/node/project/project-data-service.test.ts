@@ -8,6 +8,7 @@ import {
   createProjectDataService,
   type ProjectRelativePath,
 } from './index.js';
+import { validateNarrativeStarter } from './narrative-starter/index.js';
 import { validateProjectSetup } from './setup/project-setup-reader.js';
 
 describe('ProjectDataService', () => {
@@ -214,6 +215,110 @@ describe('ProjectDataService', () => {
       title: 'The First Preparations',
       summary: 'Mehmed turns an inherited ambition into a concrete plan.',
     });
+  });
+
+  it('creates a project from narrative starter YAML with Markdown references', async () => {
+    const starterPath = await writeNarrativeStarter(homeDir);
+    const projectData = createProjectDataService();
+
+    const result = await runCreateOrSkip(
+      projectData.createFromNarrativeStarter({
+        starterPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!result) {
+      return;
+    }
+
+    expect(result).toMatchObject({
+      projectName: 'constantinople',
+      projectPath: path.join(storageRoot, 'constantinople'),
+      created: {
+        languages: 1,
+        castMembers: 0,
+        visualLanguageCategories: 0,
+        visualLanguage: 0,
+        continuityReferences: 0,
+        episodes: 0,
+        sequences: 1,
+        scenes: 1,
+        clips: 1,
+      },
+      warnings: [],
+    });
+
+    const project = await projectData.readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    expect(project.identity).toMatchObject({
+      name: 'constantinople',
+      title: 'Preparation of the Siege',
+      type: 'standaloneMovie',
+      aspectRatio: '16:9',
+      logline: 'A documentary about preparation before 1453.',
+      summary: 'Project summary from Markdown.',
+    });
+    expect(project.identity.summaryAsset).toMatchObject({
+      role: 'summary',
+      projectRelativePath: 'Working Assets/Base/Narrative/project-summary.md',
+    });
+    expect(project.sequences[0]).toMatchObject({
+      title: "The Young Sultan's Obsession",
+      shortTitle: 'Ambition',
+      summary: 'Mehmed turns conquest into policy.',
+    });
+    expect(project.sequences[0]?.scenes[0]?.clips[0]).toMatchObject({
+      title: 'The New Sultan',
+      summary: 'Clip summary from Markdown.',
+      visualIntent: 'Quiet court staging from Markdown.',
+    });
+
+    await expect(
+      fs.readFile(
+        path.join(
+          result.projectPath,
+          'Working Assets',
+          'Base',
+          'Sequences',
+          '01-the-young-sultan-s-obsession',
+          'Scenes',
+          '01-a-throne-facing-an-ancient-city',
+          'Clips',
+          '01-the-new-sultan',
+          'visual-intent.md'
+        ),
+        'utf8'
+      )
+    ).resolves.toBe('Quiet court staging from Markdown.\n');
+  });
+
+  it('requires narrative starter project name in YAML', async () => {
+    const starterPath = await writeNarrativeStarter(homeDir, {
+      projectNameLine: '',
+    });
+    const projectData = createProjectDataService();
+
+    await expect(
+      projectData.createFromNarrativeStarter({
+        starterPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    ).rejects.toMatchObject({
+      code: 'NARRATIVE_STARTER999',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER010',
+          message: 'project.name is required.',
+        }),
+      ]),
+    });
+    await expect(
+      fs.stat(path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('registers, lists, selects, and reopens an attached asset', async () => {
@@ -1061,6 +1166,99 @@ describe('ProjectDataService', () => {
     ]);
   });
 
+  it('collects narrative starter errors and unknown-field warnings together', () => {
+    const validation = validateNarrativeStarter({
+      kind: 'renku.narrativeStarter',
+      version: '0.1.0',
+      project: {
+        nam: 'constantinople',
+        title: 'Preparation of the Siege',
+        type: 'standaloneMovie',
+        aspectRatio: '16:9',
+        logline: 'A documentary about preparation before 1453.',
+      },
+      languages: [
+        { localeTag: 'en-US', isBase: false },
+        { localeTag: 'en-US', isBase: false },
+      ],
+      sequences: [],
+    });
+
+    expect(validation.starter).toBeNull();
+    expect(validation.result.valid).toBe(false);
+    expect(validation.result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER010',
+          message: 'project.name is required.',
+        }),
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER020',
+          message: 'Duplicate locale tag: en-US.',
+        }),
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER021',
+        }),
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER040',
+        }),
+      ])
+    );
+    expect(validation.result.warnings).toEqual([
+      expect.objectContaining({
+        code: 'NARRATIVE_STARTER012',
+        location: expect.objectContaining({ path: ['project', 'nam'] }),
+      }),
+    ]);
+  });
+
+  it('fails before creating a project folder when narrative starter validation has errors', async () => {
+    const starterPath = await writeInvalidNarrativeStarter(homeDir);
+
+    await expect(
+      createProjectDataService().createFromNarrativeStarter({
+        starterPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    ).rejects.toMatchObject({
+      code: 'NARRATIVE_STARTER999',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER010',
+          message: 'project.title is required.',
+        }),
+      ]),
+    });
+    await expect(
+      fs.stat(path.join(storageRoot, 'constantinople'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('rejects narrative starter Markdown path escapes', async () => {
+    const starterPath = await writeNarrativeStarter(homeDir, {
+      projectSummaryFile: '../summary.md',
+    });
+
+    await expect(
+      createProjectDataService().createFromNarrativeStarter({
+        starterPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    ).rejects.toMatchObject({
+      code: 'NARRATIVE_STARTER999',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'NARRATIVE_STARTER030',
+          location: expect.objectContaining({
+            path: ['project', 'summaryFile'],
+          }),
+        }),
+      ]),
+    });
+  });
+
   it('fails before creating a project folder when setup validation has errors', async () => {
     const setupPath = await writeInvalidProjectSetup(homeDir);
 
@@ -1249,6 +1447,65 @@ episodes:
   return setupPath;
 }
 
+async function writeNarrativeStarter(
+  homeDir: string,
+  options: {
+    projectNameLine?: string;
+    projectSummaryFile?: string;
+  } = {}
+): Promise<string> {
+  const starterPath = path.join(homeDir, 'narrative.yaml');
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'narrative/project-summary.md',
+    'Project summary from Markdown.'
+  );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'narrative/clips/new-sultan-summary.md',
+    'Clip summary from Markdown.'
+  );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'narrative/clips/new-sultan-visual-intent.md',
+    'Quiet court staging from Markdown.'
+  );
+  await fs.writeFile(
+    starterPath,
+    `kind: renku.narrativeStarter
+version: 0.1.0
+
+project:
+${options.projectNameLine ?? '  name: constantinople\n'}  title: Preparation of the Siege
+  type: standaloneMovie
+  aspectRatio: "16:9"
+  logline: A documentary about preparation before 1453.
+  summaryFile: ${options.projectSummaryFile ?? 'narrative/project-summary.md'}
+
+languages:
+  - localeTag: en-US
+    displayName: English
+    isBase: true
+    supportsAudio: true
+    supportsSubtitles: true
+
+sequences:
+  - title: The Young Sultan's Obsession
+    shortTitle: Ambition
+    summary: Mehmed turns conquest into policy.
+    scenes:
+      - title: A Throne Facing an Ancient City
+        summary: Mehmed's accession is framed against Constantinople.
+        clips:
+          - title: The New Sultan
+            summaryFile: narrative/clips/new-sultan-summary.md
+            visualIntentFile: narrative/clips/new-sultan-visual-intent.md
+`,
+    'utf8'
+  );
+  return starterPath;
+}
+
 function tableColumns(database: Database.Database, tableName: string): string[] {
   return database
     .prepare(`PRAGMA table_info(${tableName})`)
@@ -1295,4 +1552,29 @@ project:
     'utf8'
   );
   return setupPath;
+}
+
+async function writeInvalidNarrativeStarter(homeDir: string): Promise<string> {
+  const starterPath = path.join(homeDir, 'invalid-narrative.yaml');
+  await fs.writeFile(
+    starterPath,
+    `kind: renku.narrativeStarter
+version: 0.1.0
+
+project:
+  name: constantinople
+  type: standaloneMovie
+  aspectRatio: "16:9"
+  logline: A documentary about preparation before 1453.
+
+languages:
+  - localeTag: en-US
+    isBase: true
+
+sequences:
+  - title: Ambition
+`,
+    'utf8'
+  );
+  return starterPath;
 }
