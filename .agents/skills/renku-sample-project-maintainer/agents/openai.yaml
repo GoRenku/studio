@@ -1,0 +1,4 @@
+interface:
+  display_name: "Renku Sample Project Maintainer"
+  short_description: "Maintain the external Renku Studio development sample project."
+  default_prompt: "Use this skill to migrate, repair, import assets into, or validate the external Renku Studio sample project after Studio changes."
