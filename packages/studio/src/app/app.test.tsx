@@ -131,7 +131,7 @@ describe('App', () => {
   it('lets fresh coordination focus requests navigate through the project route', async () => {
     let selectWasCalled = false;
     let eventReadCount = 0;
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, _init) => {
       const url = requestUrl(input);
       if (url === '/studio-api/projects') {
         return jsonResponse({
@@ -154,6 +154,9 @@ describe('App', () => {
         url === '/studio-api/studio/events/browser-sessions/active' ||
         url === '/studio-api/studio/events/focus-changes'
       ) {
+        return jsonResponse({});
+      }
+      if (url === '/studio-api/studio/events/focus-failures') {
         return jsonResponse({});
       }
       if (url.startsWith('/studio-api/studio/events')) {
@@ -194,9 +197,101 @@ describe('App', () => {
     await waitFor(() => {
       expect(eventReadCount).toBeGreaterThan(1);
       expect(window.location.pathname).toBe('/projects/constantinople');
-    });
+    }, { timeout: 2_500 });
     await screen.findByText('Sequences');
     expect(selectWasCalled).toBe(false);
+  });
+
+  it('applies only the newest focus request from a polling batch', async () => {
+    let eventReadCount = 0;
+    let validationCount = 0;
+    const reportedAppliedRequestIds: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url === '/studio-api/projects') {
+        return jsonResponse({
+          library: {
+            storageRoot: '/tmp/renku-studio',
+            projects: [],
+          },
+        });
+      }
+      if (url === '/studio-api/projects/constantinople') {
+        return jsonResponse({ project: makeProject() });
+      }
+      if (url === '/studio-api/studio/events/current') {
+        return jsonResponse(emptyStudioCurrent());
+      }
+      if (url === '/studio-api/studio/events/focus-requests/validate') {
+        validationCount += 1;
+        return jsonResponse({ valid: true });
+      }
+      if (url === '/studio-api/studio/events/focus-changes') {
+        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        if (body.appliedRequestId) {
+          reportedAppliedRequestIds.push(body.appliedRequestId);
+        }
+        return jsonResponse({});
+      }
+      if (url === '/studio-api/studio/events/browser-sessions/active') {
+        return jsonResponse({});
+      }
+      if (url.startsWith('/studio-api/studio/events')) {
+        eventReadCount += 1;
+        return jsonResponse(
+          eventReadCount === 1
+            ? { events: [], nextCursor: '100', warnings: [] }
+            : {
+                events: [
+                  {
+                    id: 'studio_event_old_focus',
+                    type: 'studio.focusRequested',
+                    createdAt: '2026-05-11T00:00:00.000Z',
+                    projectRef: {
+                      name: 'constantinople',
+                      id: 'project_test0001',
+                      storageRoot: '/tmp',
+                    },
+                    focus: {
+                      screen: 'movieStudio',
+                      selection: { type: 'storyboard' },
+                    },
+                  },
+                  {
+                    id: 'studio_event_new_focus',
+                    type: 'studio.focusRequested',
+                    createdAt: '2026-05-11T00:00:01.000Z',
+                    projectRef: {
+                      name: 'constantinople',
+                      id: 'project_test0001',
+                      storageRoot: '/tmp',
+                    },
+                    focus: {
+                      screen: 'movieStudio',
+                      selection: { type: 'projectInformation' },
+                    },
+                  },
+                ],
+                nextCursor: '200',
+                warnings: [],
+              }
+        );
+      }
+      return jsonResponse({});
+    });
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(eventReadCount).toBeGreaterThan(1);
+      expect(window.location.pathname).toBe('/projects/constantinople');
+    }, { timeout: 2_500 });
+    await screen.findByText('Project Name');
+    await waitFor(() => {
+      expect(reportedAppliedRequestIds).toContain('studio_event_new_focus');
+    });
+    expect(validationCount).toBe(1);
+    expect(reportedAppliedRequestIds).not.toContain('studio_event_old_focus');
   });
 
   it('applies a non-stale pending coordination focus request when Studio starts', async () => {
@@ -243,6 +338,9 @@ describe('App', () => {
         url === '/studio-api/studio/events/browser-sessions/active' ||
         url === '/studio-api/studio/events/focus-changes'
       ) {
+        return jsonResponse({});
+      }
+      if (url === '/studio-api/studio/events/focus-failures') {
         return jsonResponse({});
       }
       if (url.includes('/select')) {

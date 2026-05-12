@@ -35,8 +35,7 @@ export async function projectStudioCurrent(
   const sessionFocus = new Map<string, StudioFocusChangedEvent>();
   const appliedRequests = new Set<string>();
   const failedRequests = new Set<string>();
-  let latestPendingRequest: StudioFocusRequestedEvent | null = null;
-  let latestStaleRequest: StudioFocusRequestedEvent | null = null;
+  let latestFocusRequest: StudioFocusRequestedEvent | null = null;
 
   for (const event of input.events) {
     if (event.type === 'studio.browserSessionActive') {
@@ -61,21 +60,31 @@ export async function projectStudioCurrent(
     if (event.type === 'studio.focusRequestFailed') {
       failedRequests.add(event.requestEventId);
     }
-  }
-
-  for (const event of input.events) {
-    if (
-      event.type === 'studio.focusRequested' &&
-      !appliedRequests.has(event.id) &&
-      !failedRequests.has(event.id)
-    ) {
-      if (now.getTime() - Date.parse(event.createdAt) <= FOCUS_REQUEST_STALE_AFTER_MS) {
-        latestPendingRequest = event;
-      } else {
-        latestStaleRequest = event;
-      }
+    if (event.type === 'studio.focusRequested') {
+      latestFocusRequest = event;
     }
   }
+
+  const latestFocusRequestIsResolved = latestFocusRequest
+    ? appliedRequests.has(latestFocusRequest.id) ||
+      failedRequests.has(latestFocusRequest.id)
+    : false;
+  const latestFocusRequestIsFresh = latestFocusRequest
+    ? now.getTime() - Date.parse(latestFocusRequest.createdAt) <=
+      FOCUS_REQUEST_STALE_AFTER_MS
+    : false;
+  const latestPendingRequest =
+    latestFocusRequest &&
+    !latestFocusRequestIsResolved &&
+    latestFocusRequestIsFresh
+      ? latestFocusRequest
+      : null;
+  const latestStaleRequest =
+    latestFocusRequest &&
+    !latestFocusRequestIsResolved &&
+    !latestFocusRequestIsFresh
+      ? latestFocusRequest
+      : null;
 
   const warnings = [...input.warnings];
   if (!latestPendingRequest && latestStaleRequest) {

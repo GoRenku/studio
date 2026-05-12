@@ -12,6 +12,7 @@ import {
 } from '@/services/studio-events-api';
 import type {
   StudioFocus,
+  StudioEvent,
   StudioFocusRequestedEvent,
   StudioPendingRequest,
   StudioProjectRef,
@@ -35,16 +36,29 @@ export function useStudioCoordination(input: {
   const [browserSessionId] = useState(readBrowserSessionId);
   const cursorRef = useRef<string | undefined>(undefined);
   const hasInitializedEventCursorRef = useRef(false);
+  const [isEventCursorReady, setIsEventCursorReady] = useState(false);
+  const hasCheckedStartupPendingRequestRef = useRef(false);
+  const pollInFlightRef = useRef(false);
+  const pollAgainRef = useRef(false);
   const lastActivityRef = useRef(0);
-  const applyingRequestIdRef = useRef<string | null>(null);
+  const focusRequestInProgressRef = useRef<string | null>(null);
+  const appliedRequestIdRef = useRef<string | null>(null);
   const lastReportedFocusKeyRef = useRef<string | null>(null);
+  const projectSessionRef = useRef(projectSession);
   const currentProjectRef = useRef<ProjectWithHttp | null>(projectSession.project);
-  const setSelection = movieStudioSelection?.setSelection ?? null;
+  const setSelectionRef = useRef<
+    ((selection: MovieStudioSelection) => void) | null
+  >(movieStudioSelection?.setSelection ?? null);
   const selection = movieStudioSelection?.selection ?? null;
 
   useEffect(() => {
+    projectSessionRef.current = projectSession;
     currentProjectRef.current = projectSession.project;
-  }, [projectSession.project]);
+  }, [projectSession]);
+
+  useEffect(() => {
+    setSelectionRef.current = movieStudioSelection?.setSelection ?? null;
+  }, [movieStudioSelection?.setSelection]);
 
   const reportActivity = useCallback(async () => {
     const now = Date.now();
@@ -59,59 +73,60 @@ export function useStudioCoordination(input: {
     }
   }, [browserSessionId]);
 
-  const poll = useCallback(async () => {
-    try {
-      const response = await readStudioEvents(cursorRef.current);
-      cursorRef.current = response.nextCursor;
-      if (!hasInitializedEventCursorRef.current) {
-        hasInitializedEventCursorRef.current = true;
-        await applyStartupPendingFocusRequest({
-          browserSessionId,
-          projectSession,
-          setSelection,
-          applyingRequestIdRef,
-        });
-        return;
-      }
-      for (const event of response.events) {
-        if (event.type === 'studio.focusRequested') {
-          await applyFocusRequest({
-            event: event as StudioFocusRequestedEvent,
-            browserSessionId,
-            projectSession,
-            setSelection,
-            applyingRequestIdRef,
-          });
-        }
-        if (
-          event.type === 'studio.projectRefreshRequested' &&
-          currentProjectRef.current?.identity.id ===
-            (event as { projectRef: StudioProjectRef }).projectRef.id
-        ) {
-          await projectSession.refreshProject(
-            (event as { projectRef: StudioProjectRef }).projectRef.name
-          );
-        }
-      }
-    } catch {
-      // Polling retries on the next tick. The API also exposes warnings for malformed history.
+  const processEventBatch = useCallback(async () => {
+    const response = await readStudioEvents(cursorRef.current);
+    cursorRef.current = response.nextCursor;
+    if (!hasInitializedEventCursorRef.current) {
+      hasInitializedEventCursorRef.current = true;
+      setIsEventCursorReady(true);
+      return;
     }
-  }, [browserSessionId, projectSession, setSelection]);
+    await applyStudioEventBatch({
+      events: response.events,
+      browserSessionId,
+      projectSessionRef,
+      setSelectionRef,
+      currentProjectRef,
+      focusRequestInProgressRef,
+      appliedRequestIdRef,
+    });
+  }, [browserSessionId]);
+
+  const requestPoll = useCallback(() => {
+    if (pollInFlightRef.current) {
+      pollAgainRef.current = true;
+      return;
+    }
+
+    pollInFlightRef.current = true;
+    void (async () => {
+      try {
+        do {
+          pollAgainRef.current = false;
+          await processEventBatch();
+        } while (pollAgainRef.current);
+      } catch {
+        // Polling retries on the next tick. The API also exposes warnings for malformed history.
+      } finally {
+        pollInFlightRef.current = false;
+      }
+    })();
+  }, [processEventBatch]);
 
   useEffect(() => {
     void reportActivity();
-    void poll();
+    requestPoll();
     const interval = window.setInterval(() => {
-      void poll();
+      requestPoll();
     }, POLLING_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [poll, reportActivity]);
+  }, [requestPoll, reportActivity]);
 
   useEffect(() => {
     const reportVisibleActivity = () => {
       if (document.visibilityState === 'visible') {
         void reportActivity();
-        void poll();
+        requestPoll();
       }
     };
     window.addEventListener('focus', reportVisibleActivity);
@@ -130,10 +145,35 @@ export function useStudioCoordination(input: {
       document.removeEventListener('visibilitychange', reportVisibleActivity);
       window.clearInterval(heartbeat);
     };
-  }, [poll, reportActivity]);
+  }, [requestPoll, reportActivity]);
 
   useEffect(() => {
-    if (projectSession.isLoadingProjectRoute) {
+    if (
+      !isEventCursorReady ||
+      projectSession.isLoadingProjectRoute ||
+      hasCheckedStartupPendingRequestRef.current
+    ) {
+      return;
+    }
+
+    hasCheckedStartupPendingRequestRef.current = true;
+    void applyStartupPendingFocusRequest({
+      browserSessionId,
+      projectSessionRef,
+      setSelectionRef,
+      currentProjectRef,
+      focusRequestInProgressRef,
+      appliedRequestIdRef,
+    }).catch(() => {
+      // Startup coordination retries through the regular polling path.
+    });
+  }, [browserSessionId, isEventCursorReady, projectSession.isLoadingProjectRoute]);
+
+  useEffect(() => {
+    if (
+      projectSession.isLoadingProjectRoute ||
+      focusRequestInProgressRef.current
+    ) {
       return;
     }
 
@@ -150,11 +190,11 @@ export function useStudioCoordination(input: {
           projectRef: undefined,
         };
 
-    const appliedRequestId = applyingRequestIdRef.current ?? undefined;
+    const appliedRequestId = appliedRequestIdRef.current ?? undefined;
     if (!appliedRequestId && lastReportedFocusKeyRef.current === observation.focusKey) {
       return;
     }
-    applyingRequestIdRef.current = null;
+    appliedRequestIdRef.current = null;
     lastReportedFocusKeyRef.current = observation.focusKey;
 
     void reportStudioFocusChanged({
@@ -173,21 +213,85 @@ export function useStudioCoordination(input: {
   ]);
 }
 
+interface StudioCoordinationRefs {
+  projectSessionRef: { current: ProjectSession };
+  setSelectionRef: {
+    current: ((selection: MovieStudioSelection) => void) | null;
+  };
+  currentProjectRef: { current: ProjectWithHttp | null };
+  focusRequestInProgressRef: { current: string | null };
+  appliedRequestIdRef: { current: string | null };
+}
+
+async function applyStudioEventBatch(input: {
+  events: StudioEvent[];
+  browserSessionId: string;
+} & StudioCoordinationRefs): Promise<void> {
+  const latestFocusRequest = latestFocusRequestIn(input.events);
+  const refreshedProjectIds = new Set<string>();
+
+  for (const event of input.events) {
+    if (event.type === 'studio.projectRefreshRequested') {
+      const refreshEvent = event as {
+        projectRef: StudioProjectRef;
+      };
+      if (
+        input.currentProjectRef.current?.identity.id ===
+        refreshEvent.projectRef.id
+      ) {
+        const project = await input.projectSessionRef.current.refreshProject(
+          refreshEvent.projectRef.name
+        );
+        input.currentProjectRef.current = project;
+        refreshedProjectIds.add(refreshEvent.projectRef.id);
+      }
+    }
+
+    if (
+      event.type === 'studio.focusRequested' &&
+      event.id === latestFocusRequest?.id
+    ) {
+      await applyFocusRequest({
+        event: event as StudioFocusRequestedEvent,
+        browserSessionId: input.browserSessionId,
+        projectSessionRef: input.projectSessionRef,
+        setSelectionRef: input.setSelectionRef,
+        currentProjectRef: input.currentProjectRef,
+        focusRequestInProgressRef: input.focusRequestInProgressRef,
+        appliedRequestIdRef: input.appliedRequestIdRef,
+        refreshedProjectIds,
+      });
+    }
+  }
+}
+
+function latestFocusRequestIn(
+  events: StudioEvent[]
+): StudioFocusRequestedEvent | null {
+  let latestFocusRequest: StudioFocusRequestedEvent | null = null;
+  for (const event of events) {
+    if (event.type === 'studio.focusRequested') {
+      latestFocusRequest = event as StudioFocusRequestedEvent;
+    }
+  }
+  return latestFocusRequest;
+}
+
 async function applyFocusRequest(input: {
   event: StudioFocusRequestedEvent;
   browserSessionId: string;
-  projectSession: ProjectSession;
-  setSelection: ((selection: MovieStudioSelection) => void) | null;
-  applyingRequestIdRef: { current: string | null };
-}): Promise<void> {
-  if (input.event.focus.screen === 'projectLibrary') {
-    input.applyingRequestIdRef.current = input.event.id;
-    input.projectSession.returnToProjectLibrary();
-    return;
-  }
-
+  refreshedProjectIds?: Set<string>;
+} & StudioCoordinationRefs): Promise<void> {
+  input.focusRequestInProgressRef.current = input.event.id;
   try {
-    let project = currentProjectFromSession(input.projectSession);
+    if (input.event.focus.screen === 'projectLibrary') {
+      input.appliedRequestIdRef.current = input.event.id;
+      input.currentProjectRef.current = null;
+      input.projectSessionRef.current.returnToProjectLibrary();
+      return;
+    }
+
+    let project = input.currentProjectRef.current;
     if (!input.event.projectRef) {
       await reportStudioFocusRequestFailed({
         browserSessionId: input.browserSessionId,
@@ -199,7 +303,10 @@ async function applyFocusRequest(input: {
     }
 
     if (project?.identity.id !== input.event.projectRef.id) {
-      project = await input.projectSession.navigateToProject(input.event.projectRef.name);
+      project = await input.projectSessionRef.current.navigateToProject(
+        input.event.projectRef.name
+      );
+      input.currentProjectRef.current = project;
       if (!project) {
         await reportStudioFocusRequestFailed({
           browserSessionId: input.browserSessionId,
@@ -211,8 +318,14 @@ async function applyFocusRequest(input: {
       }
     }
 
-    if (input.event.refresh?.project) {
-      project = await input.projectSession.refreshProject(input.event.projectRef.name);
+    if (
+      input.event.refresh?.project &&
+      !input.refreshedProjectIds?.has(input.event.projectRef.id)
+    ) {
+      project = await input.projectSessionRef.current.refreshProject(
+        input.event.projectRef.name
+      );
+      input.currentProjectRef.current = project;
     }
     if (project.identity.id !== input.event.projectRef.id) {
       await reportStudioFocusRequestFailed({
@@ -224,9 +337,10 @@ async function applyFocusRequest(input: {
       return;
     }
     if (input.event.refresh?.library) {
-      await input.projectSession.refreshProjectLibrary();
+      await input.projectSessionRef.current.refreshProjectLibrary();
     }
-    if (!input.setSelection) {
+    const setSelection = input.setSelectionRef.current;
+    if (!setSelection) {
       await reportStudioFocusRequestFailed({
         browserSessionId: input.browserSessionId,
         requestEventId: input.event.id,
@@ -248,8 +362,8 @@ async function applyFocusRequest(input: {
       });
       return;
     }
-    input.applyingRequestIdRef.current = input.event.id;
-    input.setSelection(input.event.focus.selection);
+    input.appliedRequestIdRef.current = input.event.id;
+    setSelection(input.event.focus.selection);
   } catch {
     await reportStudioFocusRequestFailed({
       browserSessionId: input.browserSessionId,
@@ -257,15 +371,16 @@ async function applyFocusRequest(input: {
       reason: 'selectionNotFound',
       diagnostics: [],
     });
+  } finally {
+    if (input.focusRequestInProgressRef.current === input.event.id) {
+      input.focusRequestInProgressRef.current = null;
+    }
   }
 }
 
 async function applyStartupPendingFocusRequest(input: {
   browserSessionId: string;
-  projectSession: ProjectSession;
-  setSelection: ((selection: MovieStudioSelection) => void) | null;
-  applyingRequestIdRef: { current: string | null };
-}): Promise<void> {
+} & StudioCoordinationRefs): Promise<void> {
   const current = await readStudioCurrent();
   if (!current.pendingRequest) {
     return;
@@ -287,10 +402,6 @@ function pendingRequestToFocusRequestedEvent(
     focus: pendingRequest.focus,
     refresh: pendingRequest.refresh,
   };
-}
-
-function currentProjectFromSession(projectSession: ProjectSession): ProjectWithHttp | null {
-  return projectSession.project;
 }
 
 function readBrowserSessionId(): string {

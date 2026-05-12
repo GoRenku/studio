@@ -283,6 +283,77 @@ describe('StudioCoordinationService', () => {
       }),
     ]);
   });
+
+  it('does not expose superseded focus requests after the newest request is applied', async () => {
+    const coordination = createStudioCoordinationService({ homeDir });
+    const projectRef = {
+      name: 'constantinople',
+      id: 'project_test0001',
+      storageRoot: path.join(homeDir, 'projects'),
+    };
+    await coordination.appendStudioEvent({
+      type: 'studio.focusRequested',
+      projectRef,
+      focus: {
+        screen: 'movieStudio',
+        selection: { type: 'storyboard' },
+      },
+      source: { kind: 'cli', command: 'renku project select' },
+    });
+    const newestRequest = await coordination.appendStudioEvent({
+      type: 'studio.focusRequested',
+      focus: {
+        screen: 'projectLibrary',
+      },
+      source: { kind: 'cli', command: 'renku info set' },
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      focus: {
+        screen: 'projectLibrary',
+      },
+      appliedRequestId: newestRequest.id,
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.pendingRequest).toBeNull();
+  });
+
+  it('exposes only the newest unresolved focus request as pending', async () => {
+    const coordination = createStudioCoordinationService({ homeDir });
+    const projectRef = {
+      name: 'constantinople',
+      id: 'project_test0001',
+      storageRoot: path.join(homeDir, 'projects'),
+    };
+    await coordination.appendStudioEvent({
+      type: 'studio.focusRequested',
+      projectRef,
+      focus: {
+        screen: 'movieStudio',
+        selection: { type: 'storyboard' },
+      },
+      source: { kind: 'cli', command: 'renku project select' },
+    });
+    const newestRequest = await coordination.appendStudioEvent({
+      type: 'studio.focusRequested',
+      projectRef,
+      focus: {
+        screen: 'movieStudio',
+        selection: { type: 'projectInformation' },
+      },
+      source: { kind: 'cli', command: 'renku info set' },
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.pendingRequest?.eventId).toBe(newestRequest.id);
+  });
 });
 
 async function writeConfig(homeDir: string, storageRoot: string): Promise<void> {

@@ -1110,12 +1110,19 @@ latest applied live focus.
 
 Do not overwrite or delete pending requests. If a newer request supersedes an
 older one, the projection can report only the newest relevant pending request.
+Older unresolved focus requests are historical events, not still-actionable UI
+intent. A later `studio.focusRequested` event supersedes earlier focus requests
+even when those earlier requests were never acknowledged.
 
 Stale focus requests should not force surprising UI jumps long after they were
 created.
 
 Recommended v1 behavior:
 
+- treat only the newest `studio.focusRequested` event as eligible to become the
+  current pending request;
+- when the browser receives a polling batch with multiple focus requests, apply
+  only the newest focus request in that batch;
 - ignore pending focus requests older than five minutes when Studio starts or
   resumes polling;
 - keep old events in the log;
