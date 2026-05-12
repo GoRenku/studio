@@ -32,10 +32,13 @@ import {
 import { writeMarkdownAssetFile } from './files/markdown-asset-files.js';
 import {
   allocateWorkingMarkdownAssetPath,
+  WORKING_ASSETS_BASE_ROOT,
   type MarkdownAssetPathTarget,
 } from './files/project-asset-paths.js';
 import {
+  joinProjectRelativePath,
   normalizeProjectRelativePath,
+  resolveProjectRelativePath,
   type ProjectRelativePath,
 } from './files/project-relative-paths.js';
 import {
@@ -335,23 +338,34 @@ async function createFromNarrativeStarter(
   const ids = createUniqueIdAllocator(
     input.idGenerator ?? createRandomIdGenerator()
   );
+  const starterCoverPath = starterResult.starter.project.coverFile
+    ? path.resolve(
+        path.dirname(input.starterPath),
+        starterResult.starter.project.coverFile
+      )
+    : undefined;
 
   try {
     const now = new Date().toISOString();
+    const coverFile = starterCoverPath ? PROJECT_COVER_IMAGE_FILE : null;
     const counts = await writeSetupRecords(
       session,
       setup,
       ids,
       now,
-      null,
+      coverFile,
       projectFolder
     );
+    const coverPath = await copyProjectCoverImage({
+      coverPath: starterCoverPath,
+      projectFolder,
+    });
 
     return {
       projectName: setup.project.name,
       projectPath: projectFolder,
       databasePath: resolveProjectDatabasePath(projectFolder),
-      coverPath: null,
+      coverPath,
       created: counts,
       warnings: starterResult.warnings,
     };
@@ -577,6 +591,10 @@ async function writeSetupRecords(
     createdAt: now,
     updatedAt: now,
   }));
+  const workspaceFolders = buildSetupWorkspaceFolders({
+    setup,
+    castMemberRecords,
+  });
 
   const continuityReferenceRecords = (setup.continuityReferences ?? []).map(
     (entry, index) => {
@@ -674,6 +692,7 @@ async function writeSetupRecords(
       })
     )
   );
+  await ensureProjectFolders(projectFolder, workspaceFolders);
 
   const transaction = session.sqlite.transaction(() => {
     insertProjectRecord(session, {
@@ -826,6 +845,10 @@ function projectSetupFromNarrativeStarter(starter: NarrativeStarter): ProjectSet
       summary: starter.project.summary,
     },
     languages: starter.languages,
+    visualLanguageCategories: starter.visualLanguageCategories,
+    visualLanguage: starter.visualLanguage,
+    cast: starter.cast,
+    continuityReferences: starter.continuityReferences,
     sequences: starter.sequences.map((sequence) => ({
       title: sequence.title,
       shortTitle: sequence.shortTitle,
@@ -868,6 +891,42 @@ function buildVisualLanguageCategoryRecords(input: {
     createdAt: input.now,
     updatedAt: input.now,
   }));
+}
+
+function buildSetupWorkspaceFolders(input: {
+  setup: ProjectSetup;
+  castMemberRecords: { name: string; position: number }[];
+}): ProjectRelativePath[] {
+  const folders = [joinProjectRelativePath(WORKING_ASSETS_BASE_ROOT, 'cast')];
+  for (const castMember of input.castMemberRecords) {
+    folders.push(
+      joinProjectRelativePath(
+        WORKING_ASSETS_BASE_ROOT,
+        'cast',
+        numberedSlug(castMember.position, castMember.name)
+      )
+    );
+  }
+  if ((input.setup.visualLanguageCategories?.length ?? 0) > 0) {
+    folders.push(joinProjectRelativePath(WORKING_ASSETS_BASE_ROOT, 'visual-language'));
+  }
+  if ((input.setup.continuityReferences?.length ?? 0) > 0) {
+    folders.push(joinProjectRelativePath(WORKING_ASSETS_BASE_ROOT, 'continuity'));
+  }
+  return folders;
+}
+
+async function ensureProjectFolders(
+  projectFolder: string,
+  folders: ProjectRelativePath[]
+): Promise<void> {
+  await Promise.all(
+    folders.map((folder) =>
+      fs.mkdir(resolveProjectRelativePath(projectFolder, folder), {
+        recursive: true,
+      })
+    )
+  );
 }
 
 interface SetupMarkdownAsset {

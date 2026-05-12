@@ -32,6 +32,10 @@ with:
 
 - project metadata;
 - languages;
+- visual language categories;
+- visual language entries;
+- cast members;
+- continuity references;
 - initial narrative spine;
 - sequences;
 - scenes;
@@ -48,17 +52,24 @@ The narrative starter is intentionally narrow.
 
 It may define:
 
-- project title, name, type, aspect ratio, logline, and summary;
+- project title, name, type, aspect ratio, optional cover image, logline, and
+  summary;
 - language configuration;
 - sequence, scene, and clip titles;
 - short titles;
 - summaries;
 - visual intent text;
 - optional Markdown files for longer authored narrative prose.
+- story-level cast members, such as named speakers, historical figures,
+  narrators, groups, or recurring subjects introduced by the narrative.
+- visual-language categories and authored guidance/prompt text that frame the
+  starter's creative direction.
+- continuity references and authored descriptions for story-relevant locations,
+  props, costumes, groups, or recurring subjects.
 
 It must not define:
 
-- media assets;
+- media assets other than the project cover image;
 - cast portrait or character-sheet assets;
 - visual-language reference boards;
 - continuity reference images;
@@ -122,6 +133,7 @@ project:
   title: Preparation of the Siege of Constantinople
   type: standaloneMovie
   aspectRatio: "16:9"
+  coverFile: sample-project/cover.png
   logline: A historical documentary about how Mehmed II prepared the siege.
   summary: >
     A young sultan turns inherited ambition into policy, studies a city that
@@ -146,6 +158,34 @@ sequences:
           - title: The New Sultan
             summary: Mehmed is introduced as young, controlled, ambitious, and underestimated.
             visualIntent: Quiet court staging around a ruler already looking beyond the room.
+
+cast:
+  - name: Narrator
+    kind: narrator
+    role: Voiceover
+    shortDescription: Grave documentary voice guiding the viewer through the preparation phase.
+  - name: Mehmed II
+    kind: historical_figure
+    role: Protagonist
+    shortDescription: Young Ottoman sultan determined to capture Constantinople.
+
+visualLanguageCategories:
+  - name: Lighting
+    description: Light source logic, contrast, direction, and atmosphere.
+
+visualLanguage:
+  - category: Lighting
+    name: Practical-source low-key interiors
+    shortDescription: Candle, oil lamp, furnace, and torchlight motivate warm interiors.
+    priority: default
+    guidanceFile: narrative/visual-language/lighting-guidance.md
+    promptFile: narrative/visual-language/lighting-prompt.md
+
+continuityReferences:
+  - kind: location
+    name: Mehmed's council chamber
+    shortDescription: Formal Ottoman planning room with maps and oil lamps.
+    descriptionFile: narrative/continuity/mehmeds-council-chamber.md
 ```
 
 Supported Markdown-backed fields in this slice:
@@ -187,6 +227,8 @@ Project rules:
 - `project.title` is required.
 - `project.type` must be one of the supported project types.
 - `project.aspectRatio` must be one of the supported aspect ratios.
+- `project.coverFile` is optional and, when present, must be a starter-relative
+  `.png` path that stays inside the starter folder.
 - `project.logline` is required.
 - exactly one of `project.summary` or `project.summaryFile` may be provided.
 
@@ -197,6 +239,40 @@ Language rules:
 - locale tags must be valid BCP 47 locale tags according to the current project
   validation approach;
 - duplicate locale tags are errors.
+
+Cast rules:
+
+- `cast` is optional;
+- every cast member requires `name`;
+- supported initial fields are `name`, `kind`, `role`, and
+  `shortDescription`;
+- cast entries are narrative/story records only;
+- cast assets, portraits, character sheets, voice samples, and other media are
+  not part of the narrative starter.
+
+Visual-language rules:
+
+- `visualLanguageCategories` is optional;
+- every visual-language category requires `name`;
+- supported category fields are `name` and `description`;
+- `visualLanguage` is optional;
+- every visual-language entry requires `category` and `name`;
+- `priority` defaults to `default` and must be `default`, `situational`, or
+  `rare`;
+- supported text fields are `guidance`, `guidanceFile`, `prompt`, and
+  `promptFile`;
+- direct text and file-backed text are mutually exclusive for each field;
+- visual-language reference images and boards are not part of the narrative
+  starter.
+
+Continuity reference rules:
+
+- `continuityReferences` is optional;
+- every continuity reference requires `kind` and `name`;
+- supported fields are `kind`, `name`, `shortDescription`, `description`, and
+  `descriptionFile`;
+- direct `description` and `descriptionFile` are mutually exclusive;
+- continuity media assets are not part of the narrative starter.
 
 Narrative rules:
 
@@ -330,6 +406,13 @@ sample project maintenance scripts or development-only asset registration code.
   - unknown fields produce warnings and are ignored;
   - invalid kind/version produce structured errors;
   - duplicate locale tags fail;
+  - cast entries are accepted and created;
+  - unknown cast fields warn and are ignored;
+  - visual-language categories and entries are accepted and created;
+  - visual-language guidance and prompt Markdown files create Markdown-backed
+    text assets;
+  - continuity references are accepted and created;
+  - continuity description Markdown files create Markdown-backed text assets;
   - missing or multiple base languages fail;
   - scalar plus `*File` conflict fails;
   - missing Markdown file fails;

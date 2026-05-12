@@ -1,20 +1,20 @@
 import { joinProjectRelativePath, type ProjectRelativePath } from './project-relative-paths.js';
 
 export const WORKING_ASSETS_BASE_ROOT = joinProjectRelativePath(
-  'Working Assets',
-  'Base'
+  'working-assets',
+  'base'
 );
 export const WORKING_ASSETS_LOCALIZATION_ROOT = joinProjectRelativePath(
-  'Working Assets',
-  'Localization'
+  'working-assets',
+  'localization'
 );
 export const PRODUCTION_ASSETS_MASTER_ROOT = joinProjectRelativePath(
-  'Production Assets',
-  'Master'
+  'production-assets',
+  'master'
 );
 export const PRODUCTION_ASSETS_LOCALIZED_ROOT = joinProjectRelativePath(
-  'Production Assets',
-  'Localized'
+  'production-assets',
+  'localized'
 );
 
 export function allocateWorkingMarkdownAssetPath(input: {
@@ -43,26 +43,26 @@ export type MarkdownAssetPathTarget =
 
 function targetSegments(target: MarkdownAssetPathTarget): string[] {
   if (target.kind === 'project') {
-    return ['Narrative'];
+    return ['narrative'];
   }
   if (target.kind === 'visualLanguage') {
-    return ['Visual Language', target.categorySlug, target.slug];
+    return ['visual-language', target.categorySlug, target.slug];
   }
   if (target.kind === 'continuityReference') {
-    return ['Continuity', target.kindSlug, target.slug];
+    return ['continuity', target.kindSlug, target.slug];
   }
   if (target.kind === 'sequence') {
-    return ['Sequences', target.sequenceSlug];
+    return ['sequences', target.sequenceSlug];
   }
   if (target.kind === 'scene') {
-    return ['Sequences', target.sequenceSlug, 'Scenes', target.sceneSlug];
+    return ['sequences', target.sequenceSlug, 'scenes', target.sceneSlug];
   }
   return [
-    'Sequences',
+    'sequences',
     target.sequenceSlug,
-    'Scenes',
+    'scenes',
     target.sceneSlug,
-    'Clips',
+    'clips',
     target.clipSlug,
   ];
 }

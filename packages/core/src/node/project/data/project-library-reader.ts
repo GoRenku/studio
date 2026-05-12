@@ -38,8 +38,9 @@ export async function readProjectLibrary(input: {
 }
 
 function readProjectSummary(projectFolder: string): ProjectSummary {
-  const session = openProjectStore({ projectFolder, create: false });
+  let session: ReturnType<typeof openProjectStore> | null = null;
   try {
+    session = openProjectStore({ projectFolder, create: false });
     const project = readProjectFromSession({ session, projectFolder });
     return {
       name: project.identity.name,
@@ -69,7 +70,7 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
             },
     };
   } finally {
-    session.close();
+    session?.close();
   }
 }
 

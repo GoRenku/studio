@@ -16,6 +16,10 @@ export interface NarrativeStarter {
   version: '0.1.0';
   project: NarrativeStarterProject;
   languages: NarrativeStarterLanguage[];
+  visualLanguageCategories?: NarrativeStarterVisualLanguageCategory[];
+  visualLanguage?: NarrativeStarterVisualLanguage[];
+  cast?: NarrativeStarterCastMember[];
+  continuityReferences?: NarrativeStarterContinuityReference[];
   sequences: NarrativeStarterSequence[];
 }
 
@@ -24,6 +28,7 @@ export interface NarrativeStarterProject {
   title: string;
   type: 'standaloneMovie' | 'series';
   aspectRatio: string;
+  coverFile?: string;
   logline: string;
   summary?: string;
   summaryFile?: string;
@@ -35,6 +40,37 @@ export interface NarrativeStarterLanguage {
   isBase?: boolean;
   supportsAudio?: boolean;
   supportsSubtitles?: boolean;
+}
+
+export interface NarrativeStarterCastMember {
+  name: string;
+  kind?: string;
+  role?: string;
+  shortDescription?: string;
+}
+
+export interface NarrativeStarterVisualLanguageCategory {
+  name: string;
+  description?: string;
+}
+
+export interface NarrativeStarterVisualLanguage {
+  category: string;
+  name: string;
+  shortDescription?: string;
+  priority: 'default' | 'situational' | 'rare';
+  guidance?: string;
+  guidanceFile?: string;
+  prompt?: string;
+  promptFile?: string;
+}
+
+export interface NarrativeStarterContinuityReference {
+  kind: string;
+  name: string;
+  shortDescription?: string;
+  description?: string;
+  descriptionFile?: string;
 }
 
 export interface NarrativeStarterSequence {
@@ -153,6 +189,10 @@ export function validateNarrativeStarter(
     'version',
     'project',
     'languages',
+    'visualLanguageCategories',
+    'visualLanguage',
+    'cast',
+    'continuityReferences',
     'sequences',
   ]);
 
@@ -189,6 +229,25 @@ export function validateNarrativeStarter(
     root.languages,
     ['languages'],
     readLanguage
+  );
+  const visualLanguageCategories = readArrayItems(
+    context,
+    root.visualLanguageCategories,
+    ['visualLanguageCategories'],
+    readVisualLanguageCategory
+  );
+  const visualLanguage = readArrayItems(
+    context,
+    root.visualLanguage,
+    ['visualLanguage'],
+    readVisualLanguage
+  );
+  const cast = readArrayItems(context, root.cast, ['cast'], readCast);
+  const continuityReferences = readArrayItems(
+    context,
+    root.continuityReferences,
+    ['continuityReferences'],
+    readContinuityReference
   );
   const sequences = readArrayItems(
     context,
@@ -228,6 +287,10 @@ export function validateNarrativeStarter(
       version: '0.1.0',
       project,
       languages,
+      visualLanguageCategories,
+      visualLanguage,
+      cast,
+      continuityReferences,
       sequences,
     },
     result,
@@ -249,6 +312,7 @@ function readProject(
     'title',
     'type',
     'aspectRatio',
+    'coverFile',
     'logline',
     'summary',
     'summaryFile',
@@ -318,6 +382,10 @@ function readProject(
     [...yamlPath, 'logline'],
     'project.logline is required.'
   );
+  const coverFile = readOptionalString(context, record, [
+    ...yamlPath,
+    'coverFile',
+  ]);
   const summary = readOptionalString(context, record, [...yamlPath, 'summary']);
   const summaryFile = readOptionalString(context, record, [
     ...yamlPath,
@@ -343,6 +411,7 @@ function readProject(
     title,
     type,
     aspectRatio,
+    coverFile,
     logline,
     summary,
     summaryFile,
@@ -396,6 +465,205 @@ function readLanguage(
       ...yamlPath,
       'supportsSubtitles',
     ]),
+  };
+}
+
+function readCast(
+  context: ValidationContext,
+  input: unknown,
+  yamlPath: string[]
+): NarrativeStarterCastMember | null {
+  const record = readRecord(context, input, yamlPath, 'cast member');
+  if (!record) {
+    return null;
+  }
+  warnUnknownKeys(context, record, yamlPath, [
+    'name',
+    'kind',
+    'role',
+    'shortDescription',
+  ]);
+  const name = readRequiredString(
+    context,
+    record,
+    [...yamlPath, 'name'],
+    `${formatPath([...yamlPath, 'name'])} is required.`
+  );
+  if (!name) {
+    return null;
+  }
+  return {
+    name,
+    kind: readOptionalString(context, record, [...yamlPath, 'kind']),
+    role: readOptionalString(context, record, [...yamlPath, 'role']),
+    shortDescription: readOptionalString(context, record, [
+      ...yamlPath,
+      'shortDescription',
+    ]),
+  };
+}
+
+function readVisualLanguageCategory(
+  context: ValidationContext,
+  input: unknown,
+  yamlPath: string[]
+): NarrativeStarterVisualLanguageCategory | null {
+  const record = readRecord(context, input, yamlPath, 'visual language category');
+  if (!record) {
+    return null;
+  }
+  warnUnknownKeys(context, record, yamlPath, ['name', 'description']);
+  const name = readRequiredString(
+    context,
+    record,
+    [...yamlPath, 'name'],
+    `${formatPath([...yamlPath, 'name'])} is required.`
+  );
+  if (!name) {
+    return null;
+  }
+  return {
+    name,
+    description: readOptionalString(context, record, [
+      ...yamlPath,
+      'description',
+    ]),
+  };
+}
+
+function readVisualLanguage(
+  context: ValidationContext,
+  input: unknown,
+  yamlPath: string[]
+): NarrativeStarterVisualLanguage | null {
+  const record = readRecord(context, input, yamlPath, 'visual language');
+  if (!record) {
+    return null;
+  }
+  warnUnknownKeys(context, record, yamlPath, [
+    'category',
+    'name',
+    'shortDescription',
+    'priority',
+    'guidance',
+    'guidanceFile',
+    'prompt',
+    'promptFile',
+  ]);
+  const category = readRequiredString(
+    context,
+    record,
+    [...yamlPath, 'category'],
+    `${formatPath([...yamlPath, 'category'])} is required.`
+  );
+  const name = readRequiredString(
+    context,
+    record,
+    [...yamlPath, 'name'],
+    `${formatPath([...yamlPath, 'name'])} is required.`
+  );
+  const priority =
+    readOptionalString(context, record, [...yamlPath, 'priority']) ?? 'default';
+  if (!isVisualLanguagePriority(priority)) {
+    addError(
+      context,
+      'NARRATIVE_STARTER011',
+      `${formatPath([...yamlPath, 'priority'])} must be default, situational, or rare.`,
+      [...yamlPath, 'priority'],
+      'Use priority: default, priority: situational, or priority: rare.'
+    );
+  }
+  const guidance = readOptionalString(context, record, [...yamlPath, 'guidance']);
+  const guidanceFile = readOptionalString(context, record, [
+    ...yamlPath,
+    'guidanceFile',
+  ]);
+  const prompt = readOptionalString(context, record, [...yamlPath, 'prompt']);
+  const promptFile = readOptionalString(context, record, [
+    ...yamlPath,
+    'promptFile',
+  ]);
+  validateTextOrFile(context, yamlPath, 'guidance', guidance, guidanceFile);
+  validateTextOrFile(context, yamlPath, 'prompt', prompt, promptFile);
+  if (
+    !category ||
+    !name ||
+    !isVisualLanguagePriority(priority) ||
+    Boolean(guidance && guidanceFile) ||
+    Boolean(prompt && promptFile)
+  ) {
+    return null;
+  }
+  return {
+    category,
+    name,
+    shortDescription: readOptionalString(context, record, [
+      ...yamlPath,
+      'shortDescription',
+    ]),
+    priority,
+    guidance,
+    guidanceFile,
+    prompt,
+    promptFile,
+  };
+}
+
+function readContinuityReference(
+  context: ValidationContext,
+  input: unknown,
+  yamlPath: string[]
+): NarrativeStarterContinuityReference | null {
+  const record = readRecord(context, input, yamlPath, 'continuity reference');
+  if (!record) {
+    return null;
+  }
+  warnUnknownKeys(context, record, yamlPath, [
+    'kind',
+    'name',
+    'shortDescription',
+    'description',
+    'descriptionFile',
+  ]);
+  const kind = readRequiredString(
+    context,
+    record,
+    [...yamlPath, 'kind'],
+    `${formatPath([...yamlPath, 'kind'])} is required.`
+  );
+  const name = readRequiredString(
+    context,
+    record,
+    [...yamlPath, 'name'],
+    `${formatPath([...yamlPath, 'name'])} is required.`
+  );
+  const description = readOptionalString(context, record, [
+    ...yamlPath,
+    'description',
+  ]);
+  const descriptionFile = readOptionalString(context, record, [
+    ...yamlPath,
+    'descriptionFile',
+  ]);
+  validateTextOrFile(
+    context,
+    yamlPath,
+    'description',
+    description,
+    descriptionFile
+  );
+  if (!kind || !name || Boolean(description && descriptionFile)) {
+    return null;
+  }
+  return {
+    kind,
+    name,
+    shortDescription: readOptionalString(context, record, [
+      ...yamlPath,
+      'shortDescription',
+    ]),
+    description,
+    descriptionFile,
   };
 }
 
@@ -585,7 +853,7 @@ function validateLanguages(
 function validateTextOrFile(
   context: ValidationContext,
   ownerPath: string[],
-  fieldName: 'summary' | 'visualIntent',
+  fieldName: 'summary' | 'visualIntent' | 'guidance' | 'prompt' | 'description',
   scalarValue: string | undefined,
   fileValue: string | undefined
 ): void {
@@ -618,6 +886,49 @@ async function loadReferencedNarrativeMarkdown(
       yamlPath: ['project', 'summaryFile'],
       label: 'project summary',
     })) ?? starter.project.summary;
+  await validateReferencedPngFile(context, {
+    starterDir,
+    filePath: starter.project.coverFile,
+    yamlPath: ['project', 'coverFile'],
+    label: 'project cover',
+  });
+
+  const visualLanguage = await Promise.all(
+    (starter.visualLanguage ?? []).map(async (entry, index) => ({
+      ...entry,
+      guidance:
+        (await readReferencedMarkdownFile(context, {
+          starterDir,
+          filePath: entry.guidanceFile,
+          yamlPath: ['visualLanguage', String(index), 'guidanceFile'],
+          label: `${entry.name} guidance`,
+        })) ?? entry.guidance,
+      prompt:
+        (await readReferencedMarkdownFile(context, {
+          starterDir,
+          filePath: entry.promptFile,
+          yamlPath: ['visualLanguage', String(index), 'promptFile'],
+          label: `${entry.name} prompt`,
+        })) ?? entry.prompt,
+    }))
+  );
+
+  const continuityReferences = await Promise.all(
+    (starter.continuityReferences ?? []).map(async (entry, index) => ({
+      ...entry,
+      description:
+        (await readReferencedMarkdownFile(context, {
+          starterDir,
+          filePath: entry.descriptionFile,
+          yamlPath: [
+            'continuityReferences',
+            String(index),
+            'descriptionFile',
+          ],
+          label: `${entry.name} description`,
+        })) ?? entry.description,
+    }))
+  );
 
   const sequences = await Promise.all(
     starter.sequences.map(async (sequence, sequenceIndex) => ({
@@ -698,6 +1009,8 @@ async function loadReferencedNarrativeMarkdown(
       ...starter.project,
       summary: projectSummary,
     },
+    visualLanguage,
+    continuityReferences,
     sequences,
   };
 }
@@ -760,6 +1073,78 @@ async function readReferencedMarkdownFile(
         'Create the referenced Markdown file or update the narrative starter path.'
       );
       return undefined;
+    }
+    throw error;
+  }
+}
+
+async function validateReferencedPngFile(
+  context: ValidationContext,
+  input: {
+    starterDir: string;
+    filePath?: string;
+    yamlPath: string[];
+    label: string;
+  }
+): Promise<void> {
+  if (!input.filePath?.trim()) {
+    return;
+  }
+  if (path.isAbsolute(input.filePath)) {
+    addError(
+      context,
+      'NARRATIVE_STARTER032',
+      `${formatPath(input.yamlPath)} must be relative to the narrative starter file.`,
+      input.yamlPath,
+      'Use a starter-relative PNG path such as sample-project/cover.png.'
+    );
+    return;
+  }
+  if (path.extname(input.filePath).toLowerCase() !== '.png') {
+    addError(
+      context,
+      'NARRATIVE_STARTER032',
+      `${formatPath(input.yamlPath)} must point to a PNG file.`,
+      input.yamlPath,
+      'Use a .png file for the project cover.'
+    );
+    return;
+  }
+
+  const resolvedPath = path.resolve(input.starterDir, input.filePath);
+  const relativePath = path.relative(input.starterDir, resolvedPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    addError(
+      context,
+      'NARRATIVE_STARTER032',
+      `${formatPath(input.yamlPath)} must stay inside the narrative starter directory.`,
+      input.yamlPath,
+      'Move the PNG file under the narrative starter directory and reference it with a relative path.'
+    );
+    return;
+  }
+
+  try {
+    const stats = await fs.stat(resolvedPath);
+    if (!stats.isFile()) {
+      addError(
+        context,
+        'NARRATIVE_STARTER033',
+        `Referenced PNG file for ${input.label} is not a file: ${input.filePath}.`,
+        input.yamlPath,
+        'Point project.coverFile at a PNG file.'
+      );
+    }
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      addError(
+        context,
+        'NARRATIVE_STARTER033',
+        `Referenced PNG file for ${input.label} does not exist: ${input.filePath}.`,
+        input.yamlPath,
+        'Create the referenced PNG file or update the narrative starter path.'
+      );
+      return;
     }
     throw error;
   }
@@ -959,6 +1344,12 @@ function isValidProjectName(input: string): boolean {
 
 function isSupportedAspectRatio(input: string): boolean {
   return new Set(['1:1', '3:4', '4:3', '16:9', '9:16', '21:9']).has(input);
+}
+
+function isVisualLanguagePriority(
+  input: string
+): input is NarrativeStarterVisualLanguage['priority'] {
+  return input === 'default' || input === 'situational' || input === 'rare';
 }
 
 function isLikelyLocaleTag(input: string): boolean {

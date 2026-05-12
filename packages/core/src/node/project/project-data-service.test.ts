@@ -67,7 +67,7 @@ describe('ProjectDataService', () => {
     });
     expect(project.identity.summaryAsset).toMatchObject({
       role: 'summary',
-      projectRelativePath: 'Working Assets/Base/Narrative/project-summary.md',
+      projectRelativePath: 'working-assets/base/narrative/project-summary.md',
     });
     expect(project.identity).not.toHaveProperty('format');
     expect(project.identity).not.toHaveProperty('resolution');
@@ -139,14 +139,39 @@ describe('ProjectDataService', () => {
       fs.readFile(
         path.join(
           result.projectPath,
-          'Working Assets',
-          'Base',
-          'Narrative',
+          'working-assets',
+          'base',
+          'narrative',
           'project-summary.md'
         ),
         'utf8'
       )
     ).resolves.toBe('A documentary setup summary for Markdown storage.\n');
+    await expect(
+      fs.access(path.join(result.projectPath, 'working-assets', 'base', 'cast'))
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(
+        path.join(
+          result.projectPath,
+          'working-assets',
+          'base',
+          'cast',
+          '01-narrator'
+        )
+      )
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(
+        path.join(
+          result.projectPath,
+          'working-assets',
+          'base',
+          'cast',
+          '02-mehmed-ii'
+        )
+      )
+    ).resolves.toBeUndefined();
 
     const database = new Database(result.databasePath, { readonly: true });
     try {
@@ -184,7 +209,7 @@ describe('ProjectDataService', () => {
         )
         .get() as { project_relative_path: string } | undefined;
       expect(projectSummary?.project_relative_path).toBe(
-        'Working Assets/Base/Narrative/project-summary.md'
+        'working-assets/base/narrative/project-summary.md'
       );
     } finally {
       database.close();
@@ -235,12 +260,13 @@ describe('ProjectDataService', () => {
     expect(result).toMatchObject({
       projectName: 'constantinople',
       projectPath: path.join(storageRoot, 'constantinople'),
+      coverPath: path.join(storageRoot, 'constantinople', 'cover.png'),
       created: {
         languages: 1,
-        castMembers: 0,
-        visualLanguageCategories: 0,
-        visualLanguage: 0,
-        continuityReferences: 0,
+        castMembers: 2,
+        visualLanguageCategories: 2,
+        visualLanguage: 1,
+        continuityReferences: 1,
         episodes: 0,
         sequences: 1,
         scenes: 1,
@@ -248,6 +274,9 @@ describe('ProjectDataService', () => {
       },
       warnings: [],
     });
+    await expect(fs.readFile(result.coverPath!, 'utf8')).resolves.toBe(
+      'narrative cover'
+    );
 
     const project = await projectData.readProject({
       projectName: 'constantinople',
@@ -261,9 +290,48 @@ describe('ProjectDataService', () => {
       logline: 'A documentary about preparation before 1453.',
       summary: 'Project summary from Markdown.',
     });
+    expect(project.cast).toEqual([
+      expect.objectContaining({
+        name: 'Narrator',
+        kind: 'narrator',
+        role: 'Voiceover',
+      }),
+      expect.objectContaining({
+        name: 'Mehmed II',
+        kind: 'historical_figure',
+        role: 'Protagonist',
+        shortDescription: 'Young Ottoman sultan.',
+      }),
+    ]);
+    expect(project.visualLanguageCategories).toEqual([
+      expect.objectContaining({
+        name: 'Lighting',
+        description: 'Light behavior and source logic.',
+      }),
+      expect.objectContaining({
+        name: 'Camera',
+        description: 'Camera placement and motion.',
+      }),
+    ]);
+    expect(project.visualLanguage[0]).toMatchObject({
+      name: 'Practical-source low-key interiors',
+      summary: 'Warm practical interiors.',
+      priority: 'default',
+      guidance: 'Lighting guidance from Markdown.',
+      prompt: 'Lighting prompt from Markdown.',
+      guidanceAsset: expect.objectContaining({ role: 'guidance' }),
+      promptAsset: expect.objectContaining({ role: 'prompt' }),
+    });
+    expect(project.continuityReferences[0]).toMatchObject({
+      kind: 'location',
+      name: "Mehmed's council chamber",
+      summary: 'Formal Ottoman planning room.',
+      description: 'Continuity description from Markdown.',
+      descriptionAsset: expect.objectContaining({ role: 'description' }),
+    });
     expect(project.identity.summaryAsset).toMatchObject({
       role: 'summary',
-      projectRelativePath: 'Working Assets/Base/Narrative/project-summary.md',
+      projectRelativePath: 'working-assets/base/narrative/project-summary.md',
     });
     expect(project.sequences[0]).toMatchObject({
       title: "The Young Sultan's Obsession",
@@ -280,13 +348,13 @@ describe('ProjectDataService', () => {
       fs.readFile(
         path.join(
           result.projectPath,
-          'Working Assets',
-          'Base',
-          'Sequences',
+          'working-assets',
+          'base',
+          'sequences',
           '01-the-young-sultan-s-obsession',
-          'Scenes',
+          'scenes',
           '01-a-throne-facing-an-ancient-city',
-          'Clips',
+          'clips',
           '01-the-new-sultan',
           'visual-intent.md'
         ),
@@ -336,7 +404,7 @@ describe('ProjectDataService', () => {
     }
 
     const assetPath =
-      'Working Assets/Base/Sequences/01-logistics/Scenes/01-foundry/Clips/001/narration.wav';
+      'working-assets/base/sequences/01-logistics/scenes/01-foundry/clips/001/narration.wav';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });
@@ -415,14 +483,14 @@ describe('ProjectDataService', () => {
     }
 
     const masterNarrationPath =
-      'Working Assets/Base/Sequences/01-logistics/Scenes/01-foundry/Clips/001/narration.wav';
+      'working-assets/base/sequences/01-logistics/scenes/01-foundry/clips/001/narration.wav';
     const sequenceVideoPath =
-      'Working Assets/Base/Sequences/01-logistics/sequence-video.mp4';
+      'working-assets/base/sequences/01-logistics/sequence-video.mp4';
     const sceneTitleCardPath =
-      'Working Assets/Base/Sequences/01-logistics/Scenes/01-foundry/title-card.png';
-    const helperSheetPath = 'Working Assets/Base/Cast/mehmed-sheet.png';
+      'working-assets/base/sequences/01-logistics/scenes/01-foundry/title-card.png';
+    const helperSheetPath = 'working-assets/base/cast/mehmed-sheet.png';
     const localizedSubtitlePath =
-      'Working Assets/Localization/tr-TR/Sequences/01-logistics/Scenes/01-foundry/Clips/001/subtitles.vtt';
+      'working-assets/localization/tr-TR/sequences/01-logistics/scenes/01-foundry/clips/001/subtitles.vtt';
     await fs.mkdir(path.dirname(path.join(created.projectPath, masterNarrationPath)), {
       recursive: true,
     });
@@ -556,44 +624,44 @@ describe('ProjectDataService', () => {
     });
     const sequenceTarget = path.join(
       created.projectPath,
-      'Production Assets',
-      'Master',
-      'Sequences',
+      'production-assets',
+      'master',
+      'sequences',
       '01-the-young-sultan-s-obsession',
       'video.mp4'
     );
     const sceneTarget = path.join(
       created.projectPath,
-      'Production Assets',
-      'Master',
-      'Sequences',
+      'production-assets',
+      'master',
+      'sequences',
       '01-the-young-sultan-s-obsession',
-      'Scenes',
+      'scenes',
       '01-a-throne-facing-an-ancient-city',
       'title-card.png'
     );
     const masterTarget = path.join(
       created.projectPath,
-      'Production Assets',
-      'Master',
-      'Sequences',
+      'production-assets',
+      'master',
+      'sequences',
       '01-the-young-sultan-s-obsession',
-      'Scenes',
+      'scenes',
       '01-a-throne-facing-an-ancient-city',
-      'Clips',
+      'clips',
       '01-the-new-sultan',
       'narration.wav'
     );
     const localizedTarget = path.join(
       created.projectPath,
-      'Production Assets',
-      'Localized',
+      'production-assets',
+      'localized',
       'tr-TR',
-      'Sequences',
+      'sequences',
       '01-the-young-sultan-s-obsession',
-      'Scenes',
+      'scenes',
       '01-a-throne-facing-an-ancient-city',
-      'Clips',
+      'clips',
       '01-the-new-sultan',
       'subtitles.vtt'
     );
@@ -608,7 +676,7 @@ describe('ProjectDataService', () => {
       'Merhaba'
     );
     await expect(
-      fs.access(path.join(created.projectPath, 'Production Assets', 'Master', 'Cast'))
+      fs.access(path.join(created.projectPath, 'production-assets', 'master', 'cast'))
     ).rejects.toThrow();
 
     const secondExport = await projectData.exportProductionAssets({
@@ -662,7 +730,7 @@ describe('ProjectDataService', () => {
     }
 
     const narrationPath =
-      'Working Assets/Base/Sequences/01-logistics/Scenes/01-foundry/Clips/001/narration.wav';
+      'working-assets/base/sequences/01-logistics/scenes/01-foundry/clips/001/narration.wav';
     await fs.mkdir(path.dirname(path.join(created.projectPath, narrationPath)), {
       recursive: true,
     });
@@ -705,13 +773,13 @@ describe('ProjectDataService', () => {
       fs.access(
         path.join(
           created.projectPath,
-          'Production Assets',
-          'Master',
-          'Sequences',
+          'production-assets',
+          'master',
+          'sequences',
           '01-the-young-sultan-s-obsession',
-          'Scenes',
+          'scenes',
           '01-a-throne-facing-an-ancient-city',
-          'Clips',
+          'clips',
           '01-the-new-sultan',
           'narration.wav'
         )
@@ -762,7 +830,7 @@ describe('ProjectDataService', () => {
       return;
     }
 
-    const assetPath = 'Working Assets/Base/Narrative/reference.txt';
+    const assetPath = 'working-assets/base/narrative/reference.txt';
     await fs.writeFile(path.join(created.projectPath, assetPath), 'reference');
     const registered = await projectData.registerAsset({
       projectName: 'constantinople',
@@ -849,6 +917,48 @@ describe('ProjectDataService', () => {
       name: 'constantinople',
       title: 'Preparation of the Siege',
     });
+  });
+
+  it('keeps listing the project library when one project database cannot be opened', async () => {
+    const projectData = createProjectDataService();
+    const setupPath = await writeProjectSetup(homeDir);
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+    const brokenProjectFolder = path.join(storageRoot, 'broken-project');
+    await fs.mkdir(path.join(brokenProjectFolder, '.renku'), { recursive: true });
+    await fs.writeFile(
+      path.join(brokenProjectFolder, '.renku', 'project.sqlite'),
+      'not a sqlite database',
+      'utf8'
+    );
+
+    const library = await projectData.listLibrary({ homeDir });
+
+    expect(library.projects).toHaveLength(2);
+    expect(library.projects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'constantinople',
+          validationError: null,
+        }),
+        expect.objectContaining({
+          name: 'broken-project',
+          title: 'broken-project',
+          counts: null,
+          validationError: expect.objectContaining({
+            code: 'PROJECT_DATA042',
+          }),
+        }),
+      ])
+    );
   });
 
   it('warns about unknown setup fields and ignores them', async () => {
@@ -1031,9 +1141,9 @@ describe('ProjectDataService', () => {
       fs.readFile(
         path.join(
           created.projectPath,
-          'Working Assets',
-          'Base',
-          'Narrative',
+          'working-assets',
+          'base',
+          'narrative',
           'project-summary.md'
         ),
         'utf8'
@@ -1470,6 +1580,22 @@ async function writeNarrativeStarter(
     'narrative/clips/new-sultan-visual-intent.md',
     'Quiet court staging from Markdown.'
   );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'narrative/visual-language/lighting-guidance.md',
+    'Lighting guidance from Markdown.'
+  );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'narrative/visual-language/lighting-prompt.md',
+    'Lighting prompt from Markdown.'
+  );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'narrative/continuity/mehmeds-council-chamber.md',
+    'Continuity description from Markdown.'
+  );
+  await writeSetupMarkdownFixture(homeDir, 'narrative/cover.png', 'narrative cover');
   await fs.writeFile(
     starterPath,
     `kind: renku.narrativeStarter
@@ -1479,6 +1605,7 @@ project:
 ${options.projectNameLine ?? '  name: constantinople\n'}  title: Preparation of the Siege
   type: standaloneMovie
   aspectRatio: "16:9"
+  coverFile: narrative/cover.png
   logline: A documentary about preparation before 1453.
   summaryFile: ${options.projectSummaryFile ?? 'narrative/project-summary.md'}
 
@@ -1488,6 +1615,35 @@ languages:
     isBase: true
     supportsAudio: true
     supportsSubtitles: true
+
+cast:
+  - name: Narrator
+    kind: narrator
+    role: Voiceover
+  - name: Mehmed II
+    kind: historical_figure
+    role: Protagonist
+    shortDescription: Young Ottoman sultan.
+
+visualLanguageCategories:
+  - name: Lighting
+    description: Light behavior and source logic.
+  - name: Camera
+    description: Camera placement and motion.
+
+visualLanguage:
+  - category: Lighting
+    name: Practical-source low-key interiors
+    shortDescription: Warm practical interiors.
+    priority: default
+    guidanceFile: narrative/visual-language/lighting-guidance.md
+    promptFile: narrative/visual-language/lighting-prompt.md
+
+continuityReferences:
+  - kind: location
+    name: Mehmed's council chamber
+    shortDescription: Formal Ottoman planning room.
+    descriptionFile: narrative/continuity/mehmeds-council-chamber.md
 
 sequences:
   - title: The Young Sultan's Obsession

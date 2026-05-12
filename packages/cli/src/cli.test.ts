@@ -509,6 +509,29 @@ languages:
     supportsAudio: true
     supportsSubtitles: true
 
+cast:
+  - name: Narrator
+    kind: narrator
+    role: Voiceover
+
+visualLanguageCategories:
+  - name: Lighting
+    description: Light behavior.
+
+visualLanguage:
+  - category: Lighting
+    name: Practical interiors
+    shortDescription: Warm practical interiors.
+    priority: default
+    guidance: Use candle and oil lamp motivation.
+    prompt: Warm practical candlelight.
+
+continuityReferences:
+  - kind: location
+    name: Mehmed's council chamber
+    shortDescription: Formal Ottoman planning room.
+    description: Maps, oil lamps, textiles, and controlled court staging.
+
 sequences:
   - title: Opening
     scenes:

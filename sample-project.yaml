@@ -1,4 +1,4 @@
-kind: renku.projectSetup
+kind: renku.narrativeStarter
 version: 0.1.0
 
 project:
@@ -6,6 +6,7 @@ project:
   title: Preparation of the Siege of Constantinople
   type: standaloneMovie
   aspectRatio: "16:9"
+  coverFile: sample-project/cover.png
   logline: A historical documentary about how Mehmed II prepared the strategic, technological, logistical, naval, diplomatic, and psychological machine that made Constantinople vulnerable before April 1453.
   summary: >
     The film follows the preparation phase before the siege: a young sultan
@@ -129,16 +130,6 @@ cast:
     kind: historical_figure
     role: Byzantine official
     shortDescription: Senior Byzantine official representing internal tension, diplomacy, and limited resources.
-
-  - name: Ottoman Army
-    kind: group
-    role: War machine
-    shortDescription: Laborers, soldiers, engineers, sailors, officers, animals, and artillery crews assembled for the campaign.
-
-  - name: Byzantine Defenders
-    kind: group
-    role: Defenders
-    shortDescription: The small, exhausted, mixed force inside Constantinople preparing walls, gates, chains, and hope.
 
 sequences:
   - title: The Young Sultan's Obsession

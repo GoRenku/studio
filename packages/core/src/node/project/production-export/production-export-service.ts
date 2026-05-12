@@ -19,7 +19,7 @@ import {
 } from '../files/project-relative-paths.js';
 
 const MANIFEST_PATH = normalizeProjectRelativePath(
-  'Production Assets/Manifest/production-export-manifest.json'
+  'production-assets/manifest/production-export-manifest.json'
 );
 
 const PRODUCTION_EXPORT_ROLES = new Set([
@@ -364,10 +364,10 @@ async function buildVariantPlans(input: {
   for (const variant of input.variants) {
     const rootProjectRelativePath =
       variant.kind === 'master'
-        ? normalizeProjectRelativePath('Production Assets/Master')
+        ? normalizeProjectRelativePath('production-assets/master')
         : joinProjectRelativePath(
-            'Production Assets',
-            'Localized',
+            'production-assets',
+            'localized',
             requiredLocaleTag(input.session, variant.localeId)
           );
     const files: DesiredExportFile[] = [];
@@ -531,7 +531,7 @@ function allocateTargetPath(
     const hierarchy = readSequenceHierarchy(session, requiredTargetId(row));
     return joinProjectRelativePath(
       rootProjectRelativePath,
-      'Sequences',
+      'sequences',
       numberedSlug(hierarchy.sequencePosition, hierarchy.sequenceTitle),
       exportFileName(row)
     );
@@ -541,9 +541,9 @@ function allocateTargetPath(
     const hierarchy = readSceneHierarchy(session, requiredTargetId(row));
     return joinProjectRelativePath(
       rootProjectRelativePath,
-      'Sequences',
+      'sequences',
       numberedSlug(hierarchy.sequencePosition, hierarchy.sequenceTitle),
-      'Scenes',
+      'scenes',
       numberedSlug(hierarchy.scenePosition, hierarchy.sceneTitle),
       exportFileName(row)
     );
@@ -553,11 +553,11 @@ function allocateTargetPath(
     const hierarchy = readClipHierarchy(session, requiredTargetId(row));
     return joinProjectRelativePath(
       rootProjectRelativePath,
-      'Sequences',
+      'sequences',
       numberedSlug(hierarchy.sequencePosition, hierarchy.sequenceTitle),
-      'Scenes',
+      'scenes',
       numberedSlug(hierarchy.scenePosition, hierarchy.sceneTitle),
-      'Clips',
+      'clips',
       numberedSlug(hierarchy.clipPosition, hierarchy.clipTitle),
       exportFileName(row)
     );
@@ -566,7 +566,7 @@ function allocateTargetPath(
   if (row.targetKind === 'project') {
     return joinProjectRelativePath(
       rootProjectRelativePath,
-      'Shared',
+      'shared',
       sharedFolderName(row.role, variant),
       exportFileName(row)
     );
@@ -719,21 +719,21 @@ function roleFileBaseName(role: string): string {
 
 function sharedFolderName(role: string, variant: ProductionExportVariant): string {
   if (role === 'music') {
-    return 'Music';
+    return 'music';
   }
   if (role === 'sound-effect' || role === 'sound_effect') {
-    return 'Sound Effects';
+    return 'sound-effects';
   }
   if (role === 'subtitles') {
-    return 'Subtitles';
+    return 'subtitles';
   }
   if (role === 'final-graphic' || role === 'final_graphic' || role === 'title-card' || role === 'title_card') {
-    return 'Graphics';
+    return 'graphics';
   }
   if (role === 'locale-video-override' || role === 'locale_video_override') {
-    return 'Video Overrides';
+    return 'video-overrides';
   }
-  return variant.kind === 'localized' ? 'Audio' : 'Audio';
+  return variant.kind === 'localized' ? 'audio' : 'audio';
 }
 
 function buildMerkleTreeHash(
