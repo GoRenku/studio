@@ -13,12 +13,14 @@ import { ProjectInformationPanel } from './project-information/project-informati
 import { StoryboardPanel } from './storyboard/storyboard-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
 import { useMovieStudioSelection } from './use-movie-studio-selection';
+import type { MovieStudioSelection } from './movie-studio-selection';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
 
 interface MovieStudioScreenProps {
   project: ProjectWithHttp;
   onHome: () => void;
   onProjectChange: (project: ProjectWithHttp) => void;
+  onNavigateSelection: (selection: MovieStudioSelection) => Promise<void>;
   selection: ReturnType<typeof useMovieStudioSelection>;
 }
 
@@ -26,6 +28,7 @@ export function MovieStudioScreen({
   project,
   onHome,
   onProjectChange,
+  onNavigateSelection,
   selection: movieStudioSelection,
 }: MovieStudioScreenProps) {
   const { selection, setSelection, resolvedSelection } = movieStudioSelection;
@@ -42,6 +45,13 @@ export function MovieStudioScreen({
       setProjectInformationAutosave(status);
     },
     []
+  );
+  const selectMovieStudioSurface = useCallback(
+    (nextSelection: MovieStudioSelection) => {
+      setSelection(nextSelection);
+      void onNavigateSelection(nextSelection);
+    },
+    [onNavigateSelection, setSelection]
   );
   const handleProductionExport = useCallback(async () => {
     setProductionExportStatus({
@@ -71,11 +81,15 @@ export function MovieStudioScreen({
         <StudioSidebar
           project={project}
           selection={selection}
-          onSelect={setSelection}
+          onSelect={selectMovieStudioSurface}
           onHome={onHome}
         />
         {selection.type === 'cast' && resolvedSelection.castEntry ? (
-          <CastDesignPanel castEntry={resolvedSelection.castEntry} />
+          <CastDesignPanel
+            key={resolvedSelection.castEntry.id}
+            projectName={project.identity.name}
+            castEntry={resolvedSelection.castEntry}
+          />
         ) : (
           <section className='min-h-0 rounded-(--radius-panel) border border-panel-border bg-panel-bg overflow-hidden flex flex-col'>
             <div className='h-[45px] px-4 border-b border-border/40 bg-panel-header-bg flex items-center justify-between shrink-0'>

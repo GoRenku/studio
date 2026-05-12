@@ -6,6 +6,7 @@ import { ThemeProvider } from './theme-provider';
 import type {
   ProjectLibraryWithHttp,
   ProjectWithHttp,
+  StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 
 describe('App', () => {
@@ -57,6 +58,130 @@ describe('App', () => {
     await screen.findByText('Sequences');
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
     expect(fetchLog.some((url) => url.includes('/select'))).toBe(false);
+  });
+
+  it('loads a cast member from the canonical cast route', async () => {
+    window.history.pushState({}, '', '/projects/constantinople/cast/cast_narrator');
+    const fetchLog = mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Narrator reference');
+    expect(fetchLog).toContain('/studio-api/projects/constantinople');
+    expect(fetchLog).toContain(
+      '/studio-api/projects/constantinople/cast/cast_narrator/assets'
+    );
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/cast/cast_narrator'
+    );
+  });
+
+  it('updates the URL when a cast member is selected from the sidebar', async () => {
+    window.history.pushState({}, '', '/projects/constantinople');
+    mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Sequences');
+    fireEvent.click(screen.getByText('Narrator'));
+
+    await screen.findByText('Narrator reference');
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/cast/cast_narrator'
+    );
+  });
+
+  it('keeps the Studio shell mounted when switching between cast members', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/projects/constantinople/cast/cast_narrator'
+    );
+    const project = makeProject();
+    project.cast = [
+      ...project.cast,
+      {
+        id: 'cast_mehmed',
+        name: 'Mehmed',
+        kind: 'character',
+        role: 'sultan',
+      },
+    ];
+    project.counts.castMembers = 2;
+    const mehmedAssets = deferredResponse();
+    let projectReadCount = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
+      const url = requestUrl(request);
+      if (url === '/studio-api/projects/constantinople') {
+        projectReadCount += 1;
+        return jsonResponse({ project });
+      }
+      if (url === '/studio-api/projects/constantinople/cast/cast_narrator/assets') {
+        return jsonResponse({ assets: [makeCastAsset()] });
+      }
+      if (url === '/studio-api/projects/constantinople/cast/cast_mehmed/assets') {
+        return mehmedAssets.promise;
+      }
+      if (url === '/studio-api/studio/events/current') {
+        return jsonResponse(emptyStudioCurrent());
+      }
+      if (
+        url === '/studio-api/studio/events/browser-sessions/active' ||
+        url === '/studio-api/studio/events/focus-changes'
+      ) {
+        return jsonResponse({});
+      }
+      if (url.startsWith('/studio-api/studio/events')) {
+        return jsonResponse({ events: [], nextCursor: '0', warnings: [] });
+      }
+      return jsonResponse({});
+    });
+
+    renderApp();
+
+    await screen.findByText('Narrator reference');
+    fireEvent.click(screen.getByText('Mehmed'));
+
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/cast/cast_mehmed'
+    );
+    expect(screen.queryByText('Loading Renku Studio...')).toBeNull();
+    expect(screen.getByText('Loading cast assets...')).toBeTruthy();
+    expect(projectReadCount).toBe(1);
+
+    mehmedAssets.resolve(
+      jsonResponse({
+        assets: [
+          makeCastAsset({
+            assetId: 'asset_mehmed_reference',
+            castMemberId: 'cast_mehmed',
+            title: 'Mehmed reference',
+          }),
+        ],
+      })
+    );
+
+    await screen.findByText('Mehmed reference');
+    expect(projectReadCount).toBe(1);
+  });
+
+  it('rejects an unknown cast member route instead of falling back', async () => {
+    window.history.pushState({}, '', '/projects/constantinople/cast/cast_missing');
+    mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Project Library');
+    expect(screen.getByText('Cast member not found: cast_missing')).toBeTruthy();
   });
 
   it('returns home from a project route and stays on the project library route', async () => {
@@ -507,6 +632,9 @@ function mockStudioFetch(input: {
     if (url === '/studio-api/projects/constantinople') {
       return jsonResponse({ project: input.project ?? makeProject() });
     }
+    if (url === '/studio-api/projects/constantinople/cast/cast_narrator/assets') {
+      return jsonResponse({ assets: [makeCastAsset()] });
+    }
     if (url === '/studio-api/studio/events/current') {
       return jsonResponse(emptyStudioCurrent());
     }
@@ -529,6 +657,17 @@ function jsonResponse(body: unknown): Response {
     ok: true,
     json: async () => body,
   } as Response;
+}
+
+function deferredResponse(): {
+  promise: Promise<Response>;
+  resolve: (response: Response) => void;
+} {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
 }
 
 function requestUrl(input: RequestInfo | URL): string {
@@ -649,5 +788,49 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
       clips: 1,
     },
     validationError: null,
+  };
+}
+
+function makeCastAsset(
+  options: {
+    assetId?: string;
+    castMemberId?: string;
+    title?: string;
+  } = {}
+): StudioAssetResponse {
+  const assetId = options.assetId ?? 'asset_cast_reference';
+  const castMemberId = options.castMemberId ?? 'cast_narrator';
+  const title = options.title ?? 'Narrator reference';
+  return {
+    assetId,
+    relationshipId: `${assetId}_relationship`,
+    target: { kind: 'castMember', castMemberId },
+    localeId: null,
+    type: 'reference',
+    selection: { kind: 'take' },
+    availability: 'ready',
+    mediaKind: 'image',
+    title,
+    oneLineSummary: null,
+    origin: 'imported',
+    role: 'reference',
+    sortOrder: 1,
+    files: [
+      {
+        id: `${assetId}_file`,
+        role: 'primary',
+        projectRelativePath:
+          'working-assets/base/cast/narrator/reference.png' as StudioAssetResponse['files'][number]['projectRelativePath'],
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        sizeBytes: 12,
+        contentHash: null,
+        width: 1200,
+        height: 900,
+        durationSeconds: null,
+      },
+    ],
+    createdAt: '2026-05-12T00:00:00.000Z',
+    updatedAt: '2026-05-12T00:00:00.000Z',
   };
 }

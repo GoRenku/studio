@@ -1,10 +1,12 @@
+import fs from 'node:fs/promises';
 import type {
+  Asset,
   Project,
   ProjectLibrary,
 } from '@gorenku/studio-core';
 import type { CreateProjectsRouteOptions } from './projects.js';
 import { StructuredError, createDiagnosticError } from '@gorenku/studio-diagnostics';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createProjectsRoute } from './projects.js';
 
 describe('projects Hono route', () => {
@@ -166,6 +168,75 @@ describe('projects Hono route', () => {
     });
   });
 
+  it('lists cast member assets through ProjectDataService', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request(
+      '/constantinople/cast/cast_narrator/assets'
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      assets: [
+        {
+          assetId: 'asset_cast_reference',
+          target: { kind: 'castMember', castMemberId: 'cast_narrator' },
+          title: 'Narrator reference',
+        },
+      ],
+    });
+  });
+
+  it('selects and unselects cast member assets through ProjectDataService', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const selected = await app.request(
+      '/constantinople/cast/cast_narrator/assets/asset_cast_reference/select',
+      { method: 'POST' }
+    );
+    const unselected = await app.request(
+      '/constantinople/cast/cast_narrator/assets/asset_cast_reference/select',
+      { method: 'DELETE' }
+    );
+
+    expect(selected.status).toBe(200);
+    await expect(selected.json()).resolves.toMatchObject({
+      asset: {
+        assetId: 'asset_cast_reference',
+        selection: { kind: 'select', order: 1 },
+      },
+    });
+    expect(unselected.status).toBe(200);
+    await expect(unselected.json()).resolves.toMatchObject({
+      asset: {
+        assetId: 'asset_cast_reference',
+        selection: { kind: 'take' },
+      },
+    });
+  });
+
+  it('serves a registered cast member asset file', async () => {
+    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('png bytes'));
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request(
+      '/constantinople/cast/cast_narrator/assets/asset_cast_reference/files/asset_file_cast_reference'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/png');
+    expect(response.headers.get('Cache-Control')).toBe(
+      'private, max-age=31536000, immutable'
+    );
+    await expect(response.text()).resolves.toBe('png bytes');
+  });
+
   it('rejects malformed Markdown asset content updates', async () => {
     const app = createProjectsRoute({
       projectData: fakeProjectDataService(),
@@ -316,6 +387,26 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
     async resolveCoverImage() {
       return '/tmp/renku/constantinople/cover.png';
     },
+    async resolveProjectAssetFile(input: { assetId: string }) {
+      const asset = makeAsset(input.assetId);
+      return {
+        asset,
+        file: asset.files[0],
+        absolutePath: '/tmp/renku/constantinople/working-assets/base/cast/reference.png',
+      };
+    },
+    async listAssets() {
+      return [makeAsset('asset_cast_reference')];
+    },
+    async createAssetSelect(input) {
+      return {
+        ...makeAsset(input.assetId),
+        selection: { kind: 'select', order: 1 },
+      };
+    },
+    async removeAssetSelect(input) {
+      return makeAsset(input.assetId);
+    },
     async exportProductionAssets() {
       return {
         copiedFileCount: 1,
@@ -325,6 +416,41 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
         variants: [],
       };
     },
+  };
+}
+
+function makeAsset(assetId: string): Asset {
+  return {
+    assetId,
+    relationshipId: 'cast_asset_test0001',
+    target: { kind: 'castMember', castMemberId: 'cast_narrator' },
+    localeId: null,
+    type: 'reference',
+    selection: { kind: 'take' },
+    availability: 'ready',
+    mediaKind: 'image',
+    title: 'Narrator reference',
+    oneLineSummary: null,
+    origin: 'imported',
+    role: 'reference',
+    sortOrder: 1,
+    files: [
+      {
+        id: 'asset_file_cast_reference',
+        role: 'primary',
+        projectRelativePath:
+          'working-assets/base/cast/narrator/reference.png' as Asset['files'][number]['projectRelativePath'],
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        sizeBytes: 12,
+        contentHash: null,
+        width: null,
+        height: null,
+        durationSeconds: null,
+      },
+    ],
+    createdAt: '2026-05-12T00:00:00.000Z',
+    updatedAt: '2026-05-12T00:00:00.000Z',
   };
 }
 

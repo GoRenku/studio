@@ -31,7 +31,6 @@ import {
   resolveProjectFolder,
 } from './files/project-paths.js';
 import {
-  readMarkdownAssetFile,
   readMarkdownAssetFileContent,
   writeMarkdownAssetFile,
   writeMarkdownAssetFileContent,
@@ -145,6 +144,9 @@ export interface ProjectDataService {
     input: UpdateMarkdownAssetContentInput
   ): Promise<UpdateMarkdownAssetContentResult>;
   resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
+  resolveProjectAssetFile(
+    input: ResolveProjectAssetFileInput
+  ): Promise<ResolvedProjectAssetFile>;
   registerAsset(input: RegisterAssetInput & RenkuConfigPathOptions): Promise<Asset>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
   createAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
@@ -246,6 +248,19 @@ export interface ResolveProjectCoverImageInput extends RenkuConfigPathOptions {
   projectName: string;
 }
 
+export interface ResolveProjectAssetFileInput extends RenkuConfigPathOptions {
+  projectName: string;
+  target: AssetTarget;
+  assetId: string;
+  assetFileId: string;
+}
+
+export interface ResolvedProjectAssetFile {
+  asset: Asset;
+  file: Asset['files'][number];
+  absolutePath: string;
+}
+
 export interface ListAssetsInput extends RenkuConfigPathOptions {
   projectName: string;
   target: AssetTarget;
@@ -276,6 +291,7 @@ export function createProjectDataService(): ProjectDataService {
     readMarkdownAssetContent,
     updateMarkdownAssetContent,
     resolveCoverImage,
+    resolveProjectAssetFile,
     registerAsset,
     listAssets,
     createAssetSelect,
@@ -284,6 +300,38 @@ export function createProjectDataService(): ProjectDataService {
     listAssetSelects,
     exportProductionAssets,
   };
+}
+
+async function resolveProjectAssetFile(
+  input: ResolveProjectAssetFileInput
+): Promise<ResolvedProjectAssetFile> {
+  const storageRoot = await resolveRenkuStorageRoot({ homeDir: input.homeDir });
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  const assets = await listAssets({
+    projectName: input.projectName,
+    target: input.target,
+    homeDir: input.homeDir,
+  });
+  const asset = assets.find((candidate) => candidate.assetId === input.assetId);
+  if (!asset) {
+    throw new ProjectDataError(
+      'PROJECT_DATA090',
+      `Asset is not attached to the requested target: ${input.assetId}.`
+    );
+  }
+  const file = asset.files.find((candidate) => candidate.id === input.assetFileId);
+  if (!file) {
+    throw new ProjectDataError(
+      'PROJECT_DATA091',
+      `Asset file is not attached to the requested asset: ${input.assetFileId}.`
+    );
+  }
+  const absolutePath = resolveProjectRelativePath(
+    projectFolder,
+    file.projectRelativePath
+  );
+  assertResolvedPathInsideProject(projectFolder, absolutePath);
+  return { asset, file, absolutePath };
 }
 
 async function createFromSetup(
@@ -1670,5 +1718,18 @@ async function pathExists(targetPath: string): Promise<boolean> {
       return false;
     }
     throw error;
+  }
+}
+
+function assertResolvedPathInsideProject(
+  projectFolder: string,
+  absolutePath: string
+): void {
+  const relative = path.relative(projectFolder, absolutePath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA088',
+      'Asset file must be inside the project folder.'
+    );
   }
 }

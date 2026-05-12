@@ -2,7 +2,10 @@ import type {
   MarkdownAssetContent,
   RichTextAssetLink,
 } from '@gorenku/studio-core';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type {
+  ProjectWithHttp,
+  StudioAssetResponse,
+} from '@/services/studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
 
 interface MarkdownAssetContentResponse {
@@ -12,6 +15,88 @@ interface MarkdownAssetContentResponse {
 interface MarkdownAssetContentUpdateResponse {
   content: MarkdownAssetContent | null;
   project: ProjectWithHttp | null;
+}
+
+interface CastAssetsResponse {
+  assets: StudioAssetResponse[];
+}
+
+interface CastAssetResponse {
+  asset: StudioAssetResponse | null;
+}
+
+export async function readCastAssets(
+  projectName: string,
+  castMemberId: string
+): Promise<StudioAssetResponse[]> {
+  const response = await fetch(castAssetsUrl(projectName, castMemberId));
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as CastAssetsResponse;
+  return body.assets;
+}
+
+export async function selectCastAsset(
+  projectName: string,
+  castMemberId: string,
+  assetId: string
+): Promise<StudioAssetResponse> {
+  const response = await fetch(
+    castAssetSelectUrl(projectName, castMemberId, assetId),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify({}),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as CastAssetResponse;
+  if (!body.asset) {
+    throw new Error('Renku Studio API returned no cast asset.');
+  }
+  return body.asset;
+}
+
+export async function unselectCastAsset(
+  projectName: string,
+  castMemberId: string,
+  assetId: string
+): Promise<StudioAssetResponse> {
+  const response = await fetch(
+    castAssetSelectUrl(projectName, castMemberId, assetId),
+    {
+      method: 'DELETE',
+      headers: {
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as CastAssetResponse;
+  if (!body.asset) {
+    throw new Error('Renku Studio API returned no cast asset.');
+  }
+  return body.asset;
+}
+
+export function castAssetFileUrl(
+  projectName: string,
+  castMemberId: string,
+  assetId: string,
+  assetFileId: string
+): string {
+  return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
 }
 
 export async function readMarkdownAssetContent(
@@ -64,6 +149,18 @@ function markdownAssetContentUrl(
   asset: Pick<RichTextAssetLink, 'assetId' | 'assetFileId'>
 ): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/markdown-assets/${encodeURIComponent(asset.assetId)}/files/${encodeURIComponent(asset.assetFileId)}/content`;
+}
+
+function castAssetsUrl(projectName: string, castMemberId: string): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/assets`;
+}
+
+function castAssetSelectUrl(
+  projectName: string,
+  castMemberId: string,
+  assetId: string
+): string {
+  return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}/select`;
 }
 
 function readStudioApiToken(): string {

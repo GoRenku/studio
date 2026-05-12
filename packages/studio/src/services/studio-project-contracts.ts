@@ -1,4 +1,5 @@
 import type {
+  Asset,
   ProductionExportSummary,
   Project,
   ProjectLibrary,
@@ -34,3 +35,5 @@ export interface ProjectInformationLanguageUpdateRequest {
 }
 
 export type ProductionExportSummaryResponse = ProductionExportSummary;
+
+export type StudioAssetResponse = Asset;

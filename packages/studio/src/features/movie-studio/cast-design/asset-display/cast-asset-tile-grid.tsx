@@ -8,6 +8,8 @@ interface CastAssetTileGridProps {
   emptyMessage: string;
   selectedSection?: boolean;
   onOpenDetails: (asset: CastDesignAsset) => void;
+  onSelectAsset?: (asset: CastDesignAsset) => void;
+  onUnselectAsset?: (asset: CastDesignAsset) => void;
 }
 
 export function CastAssetTileGrid({
@@ -15,6 +17,8 @@ export function CastAssetTileGrid({
   emptyMessage,
   selectedSection = false,
   onOpenDetails,
+  onSelectAsset,
+  onUnselectAsset,
 }: CastAssetTileGridProps) {
   if (assets.length === 0) {
     return <EmptyCastAssets message={emptyMessage} />;
@@ -39,6 +43,8 @@ export function CastAssetTileGrid({
             asset={asset}
             selectedSection={selectedSection}
             onOpenDetails={onOpenDetails}
+            onSelectAsset={onSelectAsset}
+            onUnselectAsset={onUnselectAsset}
           />
         ))}
       </div>

@@ -63,12 +63,14 @@ interface CastSelectedAssetSectionProps {
   assets: CastDesignAsset[];
   emptyMessage: string;
   onOpenDetails: (asset: CastDesignAsset) => void;
+  onUnselectAsset?: (asset: CastDesignAsset) => void;
 }
 
 export function CastSelectedAssetSection({
   assets,
   emptyMessage,
   onOpenDetails,
+  onUnselectAsset,
 }: CastSelectedAssetSectionProps) {
   return (
     <CastAssetSectionShell title='Selected Assets' className='shrink-0'>
@@ -78,6 +80,7 @@ export function CastSelectedAssetSection({
           emptyMessage={emptyMessage}
           selectedSection
           onOpenDetails={onOpenDetails}
+          onUnselectAsset={onUnselectAsset}
         />
       </div>
     </CastAssetSectionShell>
@@ -90,6 +93,7 @@ interface CastTakeSectionProps {
   newTakeEnabled?: boolean;
   onNewTake?: () => void;
   onOpenDetails: (asset: CastDesignAsset) => void;
+  onSelectAsset?: (asset: CastDesignAsset) => void;
 }
 
 export function CastTakeSection({
@@ -98,6 +102,7 @@ export function CastTakeSection({
   newTakeEnabled = false,
   onNewTake,
   onOpenDetails,
+  onSelectAsset,
 }: CastTakeSectionProps) {
   const actions = newTakeEnabled ? (
     <Button
@@ -122,6 +127,7 @@ export function CastTakeSection({
         assets={assets}
         emptyMessage={emptyMessage}
         onOpenDetails={onOpenDetails}
+        onSelectAsset={onSelectAsset}
       />
     </CastAssetSectionShell>
   );

@@ -1,25 +1,28 @@
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import type { CastMember } from '@gorenku/studio-core';
-import {
-  castCharacterSheetMockContent,
-  castDescriptionMockContent,
-  castVoiceDesignMockContent,
-} from './mock/cast-design-mock-content';
+import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { CastCharacterSheetTab } from './tabs/cast-character-sheet-tab';
 import { CastDescriptionTab } from './tabs/cast-description-tab';
 import { CastDesignTabBar } from './tabs/cast-design-tab-bar';
 import type { CastDesignAsset, CastDesignTabId } from './cast-design-types';
 import { CastVoiceDesignTab } from './tabs/cast-voice-design-tab';
 import { CharacterSheetGenerationPanel } from './character-sheet-generation/character-sheet-generation-panel';
+import { useCastDesignAssets } from './use-cast-design-assets';
 
 interface CastDesignPanelProps {
+  projectName: string;
   castEntry: CastMember;
 }
 
-export function CastDesignPanel({ castEntry }: CastDesignPanelProps) {
+export function CastDesignPanel({
+  projectName,
+  castEntry,
+}: CastDesignPanelProps) {
   const [activeTab, setActiveTab] = useState<CastDesignTabId>('description');
   const [characterSheetGenerationOpen, setCharacterSheetGenerationOpen] =
     useState(false);
+  const castDesignAssets = useCastDesignAssets({ projectName, castEntry });
 
   const openCharacterSheetGeneration = () => {
     setCharacterSheetGenerationOpen(true);
@@ -43,23 +46,51 @@ export function CastDesignPanel({ castEntry }: CastDesignPanelProps) {
 
       <div className='flex min-h-0 flex-1'>
         <div className='min-h-0 min-w-0 flex-1'>
-          {activeTab === 'description' ? (
+          {castDesignAssets.castAssetsError ? (
+            <div className='p-5 pb-0'>
+              <Alert variant='destructive'>
+                <AlertTitle>Cast assets could not load</AlertTitle>
+                <AlertDescription>
+                  {castDesignAssets.castAssetsError}
+                </AlertDescription>
+              </Alert>
+            </div>
+          ) : null}
+          {castDesignAssets.isLoadingCastAssets ? (
+            <div className='flex h-full min-h-0 items-center justify-center gap-2 text-sm text-muted-foreground'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              Loading cast assets...
+            </div>
+          ) : null}
+          {!castDesignAssets.isLoadingCastAssets && activeTab === 'description' ? (
             <CastDescriptionTab
-              content={castDescriptionMockContent}
+              content={castDesignAssets.descriptionContent}
               onOpenDetails={() => undefined}
             />
           ) : null}
-          {activeTab === 'character-sheet' ? (
+          {!castDesignAssets.isLoadingCastAssets && activeTab === 'character-sheet' ? (
             <CastCharacterSheetTab
-              content={castCharacterSheetMockContent}
+              content={castDesignAssets.characterSheetContent}
               onNewTake={openCharacterSheetGeneration}
               onOpenDetails={openAssetDetails}
+              onSelectAsset={(asset) => {
+                void castDesignAssets.selectCastDesignAsset(asset);
+              }}
+              onUnselectAsset={(asset) => {
+                void castDesignAssets.unselectCastDesignAsset(asset);
+              }}
             />
           ) : null}
-          {activeTab === 'voice-design' ? (
+          {!castDesignAssets.isLoadingCastAssets && activeTab === 'voice-design' ? (
             <CastVoiceDesignTab
-              content={castVoiceDesignMockContent}
+              content={castDesignAssets.voiceDesignContent}
               onOpenDetails={() => undefined}
+              onSelectAsset={(asset) => {
+                void castDesignAssets.selectCastDesignAsset(asset);
+              }}
+              onUnselectAsset={(asset) => {
+                void castDesignAssets.unselectCastDesignAsset(asset);
+              }}
             />
           ) : null}
         </div>

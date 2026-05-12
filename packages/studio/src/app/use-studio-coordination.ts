@@ -378,6 +378,9 @@ async function applyFocusRequest(input: {
     input.appliedRequestIdRef.current = input.event.id;
     input.appliedFocusRequestIdsRef.current.add(input.event.id);
     setSelection(input.event.focus.selection);
+    await input.projectSessionRef.current.navigateToMovieStudioSelection(
+      input.event.focus.selection
+    );
   } catch {
     await reportStudioFocusRequestFailed({
       browserSessionId: input.browserSessionId,

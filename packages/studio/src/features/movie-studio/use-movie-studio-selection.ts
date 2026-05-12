@@ -6,10 +6,14 @@ import {
   type MovieStudioSelection,
 } from './movie-studio-selection';
 
-export function useMovieStudioSelection(project: ProjectWithHttp | null) {
-  const [selection, setSelection] = useState<MovieStudioSelection>({
+export function useMovieStudioSelection(
+  project: ProjectWithHttp | null,
+  routeSelection: MovieStudioSelection | null = null
+) {
+  const [localSelection, setLocalSelection] = useState<MovieStudioSelection>({
     type: 'storyboard',
   });
+  const selection = routeSelection ?? localSelection;
   const lookup = useMemo(
     () =>
       project
@@ -29,7 +33,7 @@ export function useMovieStudioSelection(project: ProjectWithHttp | null) {
 
   return {
     selection,
-    setSelection,
+    setSelection: setLocalSelection,
     lookup,
     resolvedSelection,
   };

@@ -1,6 +1,10 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   createProjectDataService,
+  type Asset,
+  type AssetFile,
+  type AssetTarget,
   type ProjectDataService,
   type ProjectInformationUpdate,
   type ProductionExportInput,
@@ -33,13 +37,29 @@ type ProjectsRouteProjectData = Pick<
   | 'readMarkdownAssetContent'
   | 'updateMarkdownAssetContent'
   | 'resolveCoverImage'
+  | 'listAssets'
+  | 'createAssetSelect'
+  | 'removeAssetSelect'
   | 'exportProductionAssets'
->;
+> & {
+  resolveProjectAssetFile(input: {
+    projectName: string;
+    target: AssetTarget;
+    assetId: string;
+    assetFileId: string;
+  }): Promise<{
+    asset: Asset;
+    file: AssetFile;
+    absolutePath: string;
+  }>;
+};
 
 export function createProjectsRoute(
   options: CreateProjectsRouteOptions = {}
 ) {
-  const projectData = options.projectData ?? createProjectDataService();
+  const projectData =
+    options.projectData ??
+    (createProjectDataService() as unknown as ProjectsRouteProjectData);
   const requireToken: MiddlewareHandler = options.token
     ? createStudioApiTokenMiddleware(options.token)
     : async (_c, next) => {
@@ -64,6 +84,84 @@ export function createProjectsRoute(
         return projectErrorResponse(c, error);
       }
     })
+    .get('/:projectName/cast/:castMemberId/assets', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const castMemberId = c.req.param('castMemberId') as string;
+        const assets = await projectData.listAssets({
+          projectName,
+          target: { kind: 'castMember', castMemberId },
+        });
+        return c.json({ assets });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .post(
+      '/:projectName/cast/:castMemberId/assets/:assetId/select',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const castMemberId = c.req.param('castMemberId') as string;
+          const assetId = c.req.param('assetId') as string;
+          const asset = await projectData.createAssetSelect({
+            projectName,
+            target: { kind: 'castMember', castMemberId },
+            assetId,
+          });
+          return c.json({ asset });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .delete(
+      '/:projectName/cast/:castMemberId/assets/:assetId/select',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const castMemberId = c.req.param('castMemberId') as string;
+          const assetId = c.req.param('assetId') as string;
+          const asset = await projectData.removeAssetSelect({
+            projectName,
+            target: { kind: 'castMember', castMemberId },
+            assetId,
+          });
+          return c.json({ asset });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .get(
+      '/:projectName/cast/:castMemberId/assets/:assetId/files/:assetFileId',
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const castMemberId = c.req.param('castMemberId') as string;
+          const assetId = c.req.param('assetId') as string;
+          const assetFileId = c.req.param('assetFileId') as string;
+          const resolved = await resolveProjectAssetFileForRoute(projectData, {
+            projectName,
+            target: { kind: 'castMember', castMemberId },
+            assetId,
+            assetFileId,
+          });
+          const bytes = await fs.readFile(resolved.absolutePath);
+          return new Response(bytes, {
+            status: 200,
+            headers: {
+              'Content-Type': contentTypeForAssetFile(resolved.file),
+              'Cache-Control': 'private, max-age=31536000, immutable',
+            },
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .patch('/:projectName/information', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
@@ -208,6 +306,86 @@ function throwProductionExportRequestError(issues: DiagnosticIssue[]): never {
     issues,
     suggestion: 'Send only supported production export options.',
   });
+}
+
+function contentTypeForAssetFile(file: AssetFile): string {
+  if (file.mimeType) {
+    return file.mimeType;
+  }
+  if (file.mediaKind === 'image') {
+    const path = file.projectRelativePath.toLowerCase();
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (path.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (path.endsWith('.gif')) {
+      return 'image/gif';
+    }
+    return 'image/png';
+  }
+  if (file.mediaKind === 'audio') {
+    return 'audio/mpeg';
+  }
+  if (file.mediaKind === 'video') {
+    return 'video/mp4';
+  }
+  if (file.mediaKind === 'markdown' || file.mediaKind === 'text') {
+    return 'text/plain; charset=utf-8';
+  }
+  if (file.mediaKind === 'json') {
+    return 'application/json';
+  }
+  return 'application/octet-stream';
+}
+
+async function resolveProjectAssetFileForRoute(
+  projectData: ProjectsRouteProjectData,
+  input: {
+    projectName: string;
+    target: AssetTarget;
+    assetId: string;
+    assetFileId: string;
+  }
+): Promise<{ asset: Asset; file: AssetFile; absolutePath: string }> {
+  if (typeof projectData.resolveProjectAssetFile === 'function') {
+    return projectData.resolveProjectAssetFile(input);
+  }
+
+  const [project, assets] = await Promise.all([
+    projectData.readProject({ projectName: input.projectName }),
+    projectData.listAssets({
+      projectName: input.projectName,
+      target: input.target,
+    }),
+  ]);
+  const asset = assets.find((candidate) => candidate.assetId === input.assetId);
+  if (!asset) {
+    throw createStructuredError({
+      code: 'STUDIO_SERVER021',
+      message: `Asset is not attached to the requested target: ${input.assetId}.`,
+    });
+  }
+  const file = asset.files.find((candidate) => candidate.id === input.assetFileId);
+  if (!file) {
+    throw createStructuredError({
+      code: 'STUDIO_SERVER022',
+      message: `Asset file is not attached to the requested asset: ${input.assetFileId}.`,
+    });
+  }
+  const absolutePath = path.resolve(
+    project.identity.folderPath,
+    file.projectRelativePath
+  );
+  const relative = path.relative(project.identity.folderPath, absolutePath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw createStructuredError({
+      code: 'STUDIO_SERVER023',
+      message: 'Asset file must be inside the project folder.',
+    });
+  }
+  return { asset, file, absolutePath };
 }
 
 function readMarkdownAssetContentUpdate(input: unknown): { content: string } {

@@ -48,12 +48,16 @@ interface CastAssetTileProps {
   asset: CastDesignAsset;
   selectedSection?: boolean;
   onOpenDetails: (asset: CastDesignAsset) => void;
+  onSelectAsset?: (asset: CastDesignAsset) => void;
+  onUnselectAsset?: (asset: CastDesignAsset) => void;
 }
 
 export function CastAssetTile({
   asset,
   selectedSection = false,
   onOpenDetails,
+  onSelectAsset,
+  onUnselectAsset,
 }: CastAssetTileProps) {
   return (
     <Card
@@ -125,12 +129,12 @@ export function CastAssetTile({
               Details
             </DropdownMenuItem>
             {selectedSection ? (
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onUnselectAsset?.(asset)}>
                 <X className='h-4 w-4' />
                 Unselect
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSelectAsset?.(asset)}>
                 <Check className='h-4 w-4' />
                 Select
               </DropdownMenuItem>

@@ -7,7 +7,10 @@ import { useMovieStudioSelection } from '@/features/movie-studio/use-movie-studi
 
 function App() {
   const projectSession = useProjectSession();
-  const movieStudioSelection = useMovieStudioSelection(projectSession.project);
+  const movieStudioSelection = useMovieStudioSelection(
+    projectSession.project,
+    projectSession.routeSelection
+  );
 
   useStudioCoordination({
     projectSession,
@@ -34,6 +37,7 @@ function App() {
         project={projectSession.project}
         onHome={projectSession.returnToProjectLibrary}
         onProjectChange={projectSession.updateCurrentProject}
+        onNavigateSelection={projectSession.navigateToMovieStudioSelection}
         selection={movieStudioSelection}
       />
     );

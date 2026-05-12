@@ -9,8 +9,8 @@ import poseGestureSheetLightUrl from '@/assets/sheet-styles/pose-gesture-sheet-l
 import turnaroundModelSheetDarkUrl from '@/assets/sheet-styles/turnaround-model-sheet-dark.png';
 import turnaroundModelSheetLightUrl from '@/assets/sheet-styles/turnaround-model-sheet-light.png';
 import type {
-  CastAssetCollectionMockContent,
-  CastDescriptionMockContent,
+  CastAssetCollection,
+  CastDescriptionContent,
   CastDesignAsset,
   CharacterSheetModelId,
   CharacterSheetProviderId,
@@ -25,7 +25,7 @@ import costume4x3Url from '../sample-assets/costume-reference-4x3.png';
 import fullBody9x16Url from '../sample-assets/full-body-9x16.png';
 import portrait1x1Url from '../sample-assets/portrait-reference-1x1.png';
 
-export const castDescriptionMockContent: CastDescriptionMockContent = {
+export const castDescriptionMockContent: CastDescriptionContent = {
   descriptionText: `Young Ottoman ruler, controlled and austere, with a court presence that should feel intelligent rather than theatrical.
 
 - Carries authority through stillness rather than performance.
@@ -91,7 +91,7 @@ const sheetTakes: Array<Omit<CastDesignAsset, 'id' | 'kind' | 'model'>> = [
   },
 ];
 
-export const castCharacterSheetMockContent: CastAssetCollectionMockContent = {
+export const castCharacterSheetMockContent: CastAssetCollection = {
   emptySelected: 'No character sheets selected.',
   emptyTakes: 'Generated character sheet takes will appear here.',
   selectedAssets: [
@@ -127,7 +127,7 @@ export const castCharacterSheetMockContent: CastAssetCollectionMockContent = {
   }),
 };
 
-export const castVoiceDesignMockContent: CastAssetCollectionMockContent = {
+export const castVoiceDesignMockContent: CastAssetCollection = {
   emptySelected:
     'No voice selected. Add this only if the character speaks or needs narration continuity.',
   emptyTakes: 'Generated voice takes will appear here.',

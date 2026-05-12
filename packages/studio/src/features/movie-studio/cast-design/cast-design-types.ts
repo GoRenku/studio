@@ -17,6 +17,8 @@ export type CastDesignAssetAspect =
 
 export interface CastDesignAsset {
   id: string;
+  assetId?: string;
+  role?: string;
   title: string;
   model: string;
   kind: CastDesignAssetKind;
@@ -26,12 +28,12 @@ export interface CastDesignAsset {
   selected?: boolean;
 }
 
-export interface CastDescriptionMockContent {
+export interface CastDescriptionContent {
   descriptionText: string;
   descriptionImages: CastDesignAsset[];
 }
 
-export interface CastAssetCollectionMockContent {
+export interface CastAssetCollection {
   selectedAssets: CastDesignAsset[];
   takes: CastDesignAsset[];
   emptySelected: string;

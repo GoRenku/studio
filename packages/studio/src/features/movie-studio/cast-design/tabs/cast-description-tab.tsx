@@ -1,12 +1,12 @@
 import { Button } from '@/ui/button';
 import { Textarea } from '@/ui/textarea';
 import type {
-  CastDescriptionMockContent,
+  CastDescriptionContent,
   CastDesignAsset,
 } from '../cast-design-types';
 
 interface CastDescriptionTabProps {
-  content: CastDescriptionMockContent;
+  content: CastDescriptionContent;
   onOpenDetails: (asset: CastDesignAsset) => void;
 }
 
@@ -23,12 +23,12 @@ export function CastDescriptionTab({
               Description
             </h3>
             <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
-              Editable character notes for visual continuity. This can be
-              written by the user or pasted from an AI workflow outside Studio.
+              Character notes loaded from project data.
             </p>
           </div>
           <Textarea
-            defaultValue={content.descriptionText}
+            value={content.descriptionText || 'No cast description is attached yet.'}
+            readOnly
             rows={9}
             className='min-h-[240px] w-full resize-none rounded-lg border border-border/50 bg-background/45 px-4 py-3 text-sm leading-relaxed shadow-inner outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/25'
           />
@@ -40,7 +40,7 @@ export function CastDescriptionTab({
               Description Image
             </h3>
             <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
-              Mock reference images kept separate from the written description.
+              Reference images attached to this cast member.
             </p>
           </div>
           <div className='grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4'>
@@ -64,6 +64,11 @@ export function CastDescriptionTab({
                 </span>
               </Button>
             ))}
+            {content.descriptionImages.length === 0 ? (
+              <p className='rounded-lg border border-dashed border-border/45 bg-muted/25 px-4 py-8 text-center text-sm text-muted-foreground'>
+                No description images attached yet.
+              </p>
+            ) : null}
           </div>
         </section>
       </div>
