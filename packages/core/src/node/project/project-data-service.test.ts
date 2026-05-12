@@ -468,6 +468,99 @@ describe('ProjectDataService', () => {
     ]);
   });
 
+  it('reads project text fields when visual language has image reference assets', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const assetPath =
+      'working-assets/base/visual-language/lighting/01-practical-source-low-key-interiors/reference.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, assetPath), 'image bytes');
+
+    await projectData.registerAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'visualLanguage', visualLanguageId: 'visual_language_test0001' },
+      type: 'image',
+      mediaKind: 'image',
+      title: 'Lighting reference',
+      projectRelativePath: assetPath as ProjectRelativePath,
+      fileRole: 'primary',
+      role: 'reference',
+    });
+
+    await expect(
+      projectData.readProject({
+        projectName: 'constantinople',
+        homeDir,
+      })
+    ).resolves.toMatchObject({
+      visualLanguage: [
+        expect.objectContaining({
+          id: 'visual_language_test0001',
+          guidance: 'Formal staging and controlled historical detail.',
+          prompt: 'Warm practical candlelight, deep brown shadows.',
+        }),
+      ],
+    });
+  });
+
+  it('rejects image assets attached to visual language rich text roles', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const assetPath =
+      'working-assets/base/visual-language/lighting/01-practical-source-low-key-interiors/prompt.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, assetPath), 'image bytes');
+
+    await projectData.registerAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'visualLanguage', visualLanguageId: 'visual_language_test0001' },
+      type: 'image',
+      mediaKind: 'image',
+      title: 'Invalid prompt image',
+      projectRelativePath: assetPath as ProjectRelativePath,
+      fileRole: 'primary',
+      role: 'prompt',
+    });
+
+    await expect(
+      projectData.readProject({
+        projectName: 'constantinople',
+        homeDir,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA091',
+      message: expect.stringContaining('rich text role prompt'),
+    });
+  });
+
   it('exports selected production assets incrementally and prunes stale files', async () => {
     const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();

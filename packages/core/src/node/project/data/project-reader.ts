@@ -314,16 +314,20 @@ interface RichTextAssetIndex {
   clip: Map<string, Map<string, RichTextAsset>>;
 }
 
+const projectRichTextRoles = new Set(['summary']);
+const visualLanguageRichTextRoles = new Set(['guidance', 'prompt']);
+const continuityReferenceRichTextRoles = new Set(['description']);
+const sequenceRichTextRoles = new Set(['summary']);
+const sceneRichTextRoles = new Set(['summary']);
+const clipRichTextRoles = new Set(['summary', 'visual_intent']);
+
 function buildRichTextAssets(input: {
   session: ProjectDataSession;
   projectFolder: string;
 }): RichTextAssetIndex {
   const assetFilesByAssetId = new Map<string, AssetFileRecord>();
   for (const file of listAssetFileRecords(input.session)) {
-    if (
-      (file.mediaKind === 'text' || file.mediaKind === 'markdown') &&
-      file.role === 'primary'
-    ) {
+    if (file.role === 'primary') {
       assetFilesByAssetId.set(file.assetId, file);
     }
   }
@@ -338,52 +342,68 @@ function buildRichTextAssets(input: {
   };
 
   for (const row of listProjectAssetRecords(input.session)) {
-    index.project.set(row.role, toRichTextAsset(input, row, assetFilesByAssetId));
+    const asset = toRichTextAsset(input, row, assetFilesByAssetId, {
+      relationshipLabel: 'project',
+      richTextRoles: projectRichTextRoles,
+    });
+    if (asset) {
+      index.project.set(row.role, asset);
+    }
   }
 
   for (const row of listVisualLanguageAssetRecords(input.session)) {
-    setScopedRichTextAsset(
-      index.visualLanguage,
-      row.role,
-      row.visualLanguageId,
-      toRichTextAsset(input, row, assetFilesByAssetId)
-    );
+    const asset = toRichTextAsset(input, row, assetFilesByAssetId, {
+      relationshipLabel: 'visual language',
+      richTextRoles: visualLanguageRichTextRoles,
+    });
+    if (asset) {
+      setScopedRichTextAsset(index.visualLanguage, row.role, row.visualLanguageId, asset);
+    }
   }
 
   for (const row of listContinuityReferenceAssetRecords(input.session)) {
-    setScopedRichTextAsset(
-      index.continuityReference,
-      row.role,
-      row.continuityReferenceId,
-      toRichTextAsset(input, row, assetFilesByAssetId)
-    );
+    const asset = toRichTextAsset(input, row, assetFilesByAssetId, {
+      relationshipLabel: 'continuity reference',
+      richTextRoles: continuityReferenceRichTextRoles,
+    });
+    if (asset) {
+      setScopedRichTextAsset(
+        index.continuityReference,
+        row.role,
+        row.continuityReferenceId,
+        asset
+      );
+    }
   }
 
   for (const row of listSequenceAssetRecords(input.session)) {
-    setScopedRichTextAsset(
-      index.sequence,
-      row.role,
-      row.sequenceId,
-      toRichTextAsset(input, row, assetFilesByAssetId)
-    );
+    const asset = toRichTextAsset(input, row, assetFilesByAssetId, {
+      relationshipLabel: 'sequence',
+      richTextRoles: sequenceRichTextRoles,
+    });
+    if (asset) {
+      setScopedRichTextAsset(index.sequence, row.role, row.sequenceId, asset);
+    }
   }
 
   for (const row of listSceneAssetRecords(input.session)) {
-    setScopedRichTextAsset(
-      index.scene,
-      row.role,
-      row.sceneId,
-      toRichTextAsset(input, row, assetFilesByAssetId)
-    );
+    const asset = toRichTextAsset(input, row, assetFilesByAssetId, {
+      relationshipLabel: 'scene',
+      richTextRoles: sceneRichTextRoles,
+    });
+    if (asset) {
+      setScopedRichTextAsset(index.scene, row.role, row.sceneId, asset);
+    }
   }
 
   for (const row of listClipAssetRecords(input.session)) {
-    setScopedRichTextAsset(
-      index.clip,
-      row.role,
-      row.clipId,
-      toRichTextAsset(input, row, assetFilesByAssetId)
-    );
+    const asset = toRichTextAsset(input, row, assetFilesByAssetId, {
+      relationshipLabel: 'clip',
+      richTextRoles: clipRichTextRoles,
+    });
+    if (asset) {
+      setScopedRichTextAsset(index.clip, row.role, row.clipId, asset);
+    }
   }
 
   return index;
@@ -398,14 +418,31 @@ function toRichTextAsset(
     | SequenceAssetRecord
     | SceneAssetRecord
     | ClipAssetRecord,
-  assetFilesByAssetId: Map<string, AssetFileRecord>
-): RichTextAsset {
+  assetFilesByAssetId: Map<string, AssetFileRecord>,
+  context: {
+    relationshipLabel: string;
+    richTextRoles: ReadonlySet<string>;
+  }
+): RichTextAsset | null {
   const file = assetFilesByAssetId.get(row.assetId);
   if (!file) {
     throw new ProjectDataError(
       'PROJECT_DATA061',
       `Text asset ${row.assetId} is missing its primary asset file.`
     );
+  }
+  if (file.mediaKind !== 'text' && file.mediaKind !== 'markdown') {
+    if (context.richTextRoles.has(row.role)) {
+      throw new ProjectDataError(
+        'PROJECT_DATA091',
+        `${context.relationshipLabel} asset relationship ${row.id} uses rich text role ${row.role} with non-text primary asset file ${file.id}.`,
+        {
+          suggestion:
+            'Attach a text or markdown primary file for rich text roles, or use a non-rich-text relationship role for image, audio, and video assets.',
+        }
+      );
+    }
+    return null;
   }
 
   const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
