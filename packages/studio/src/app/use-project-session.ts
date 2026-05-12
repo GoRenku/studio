@@ -1,26 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  readCurrentProject,
   readProject,
   readProjectLibrary,
-  selectProject as selectStudioProject,
 } from '@/services/studio-projects-api';
 import type {
   ProjectLibraryWithHttp,
   ProjectWithHttp,
 } from '@/services/studio-project-contracts';
 
+type StudioRoute =
+  | { screen: 'projectLibrary' }
+  | { screen: 'movieStudio'; projectName: string };
+
 export interface ProjectSession {
   project: ProjectWithHttp | null;
   library: ProjectLibraryWithHttp | null;
-  isLoadingCurrentProject: boolean;
+  isLoadingProjectRoute: boolean;
   isLoadingProjectLibrary: boolean;
   isSelectingProject: boolean;
   projectSessionError: string | null;
   refreshProjectLibrary: () => Promise<void>;
-  refreshCurrentProject: () => Promise<ProjectWithHttp | null>;
   refreshProject: (projectName: string) => Promise<ProjectWithHttp>;
-  selectProject: (projectName: string) => Promise<ProjectWithHttp | null>;
+  navigateToProject: (projectName: string) => Promise<ProjectWithHttp | null>;
   updateCurrentProject: (project: ProjectWithHttp) => void;
   returnToProjectLibrary: () => void;
 }
@@ -28,12 +29,14 @@ export interface ProjectSession {
 export function useProjectSession(): ProjectSession {
   const [project, setProject] = useState<ProjectWithHttp | null>(null);
   const [library, setLibrary] = useState<ProjectLibraryWithHttp | null>(null);
-  const [isLoadingCurrentProject, setIsLoadingCurrentProject] = useState(true);
+  const [isLoadingProjectRoute, setIsLoadingProjectRoute] = useState(true);
   const [isLoadingProjectLibrary, setIsLoadingProjectLibrary] = useState(false);
   const [isSelectingProject, setIsSelectingProject] = useState(false);
   const [projectSessionError, setProjectSessionError] = useState<string | null>(
     null
   );
+  const [route, setRoute] = useState(readStudioRoute);
+  const prefetchedProjectRef = useRef<ProjectWithHttp | null>(null);
 
   const refreshProjectLibrary = useCallback(async () => {
     setIsLoadingProjectLibrary(true);
@@ -51,15 +54,6 @@ export function useProjectSession(): ProjectSession {
     }
   }, []);
 
-  const refreshCurrentProject = useCallback(async () => {
-    const currentProject = await readCurrentProject();
-    setProject(currentProject);
-    if (!currentProject) {
-      await refreshProjectLibrary();
-    }
-    return currentProject;
-  }, [refreshProjectLibrary]);
-
   const refreshProject = useCallback(async (projectName: string) => {
     const nextProject = await readProject(projectName);
     setProject(nextProject);
@@ -69,57 +63,90 @@ export function useProjectSession(): ProjectSession {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCurrentProject() {
+    async function loadRoute() {
+      setIsLoadingProjectRoute(true);
+      setProjectSessionError(null);
       try {
-        await refreshCurrentProject();
-        if (cancelled) {
-          return;
-        }
-      } catch {
-        if (!cancelled) {
+        if (route.screen === 'projectLibrary') {
           setProject(null);
           await refreshProjectLibrary();
+          return;
+        }
+
+        const prefetchedProject = prefetchedProjectRef.current;
+        prefetchedProjectRef.current = null;
+        const nextProject =
+          prefetchedProject?.identity.name === route.projectName
+            ? prefetchedProject
+            : await readProject(route.projectName);
+        if (!cancelled) {
+          setProject(nextProject);
+          setIsSelectingProject(false);
+        }
+      } catch (routeError) {
+        if (!cancelled) {
+          setProject(null);
+          if (route.screen === 'movieStudio') {
+            await refreshProjectLibrary();
+          }
+          setProjectSessionError(
+            routeError instanceof Error
+              ? routeError.message
+              : 'Unable to load project.'
+          );
         }
       } finally {
         if (!cancelled) {
-          setIsLoadingCurrentProject(false);
+          setIsLoadingProjectRoute(false);
+          setIsSelectingProject(false);
         }
       }
     }
 
-    void loadCurrentProject();
+    void loadRoute();
 
     return () => {
       cancelled = true;
     };
-  }, [refreshCurrentProject, refreshProjectLibrary]);
+  }, [refreshProjectLibrary, route]);
 
-  const selectProject = useCallback(async (projectName: string) => {
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(readStudioRoute());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateToProject = useCallback(async (projectName: string) => {
     setIsSelectingProject(true);
+    setIsLoadingProjectRoute(true);
     setProjectSessionError(null);
     try {
-      const nextProject = await selectStudioProject(projectName);
+      const nextProject = await readProject(projectName);
+      prefetchedProjectRef.current = nextProject;
       setProject(nextProject);
-      window.history.pushState({}, '', '/project');
+      pushRoutePath(projectRoutePath(projectName));
+      setRoute({ screen: 'movieStudio', projectName });
       return nextProject;
-    } catch (selectionError) {
+    } catch (navigationError) {
       setProjectSessionError(
-        selectionError instanceof Error
-          ? selectionError.message
-          : 'Unable to select project.'
+        navigationError instanceof Error
+          ? navigationError.message
+          : 'Unable to open project.'
       );
-      return null;
-    } finally {
+      setIsLoadingProjectRoute(false);
       setIsSelectingProject(false);
+      return null;
     }
   }, []);
 
   const returnToProjectLibrary = useCallback(() => {
     setProject(null);
     setProjectSessionError(null);
-    window.history.pushState({}, '', '/');
-    void refreshProjectLibrary();
-  }, [refreshProjectLibrary]);
+    pushRoutePath('/');
+    setRoute({ screen: 'projectLibrary' });
+  }, []);
 
   const updateCurrentProject = useCallback((nextProject: ProjectWithHttp) => {
     setProject(nextProject);
@@ -128,15 +155,37 @@ export function useProjectSession(): ProjectSession {
   return {
     project,
     library,
-    isLoadingCurrentProject,
+    isLoadingProjectRoute,
     isLoadingProjectLibrary,
     isSelectingProject,
     projectSessionError,
     refreshProjectLibrary,
-    refreshCurrentProject,
     refreshProject,
-    selectProject,
+    navigateToProject,
     updateCurrentProject,
     returnToProjectLibrary,
   };
+}
+
+function readStudioRoute(): StudioRoute {
+  const projectRoute = /^\/projects\/([^/]+)\/?$/.exec(window.location.pathname);
+  if (!projectRoute?.[1]) {
+    return { screen: 'projectLibrary' };
+  }
+
+  return {
+    screen: 'movieStudio',
+    projectName: decodeURIComponent(projectRoute[1]),
+  };
+}
+
+function projectRoutePath(projectName: string): string {
+  return `/projects/${encodeURIComponent(projectName)}`;
+}
+
+function pushRoutePath(path: string): void {
+  if (window.location.pathname === path) {
+    return;
+  }
+  window.history.pushState({}, '', path);
 }

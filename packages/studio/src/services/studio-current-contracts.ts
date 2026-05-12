@@ -26,6 +26,17 @@ export interface StudioFocusRequestedEvent extends StudioEventBase {
   };
 }
 
+export interface StudioPendingRequest {
+  eventId: string;
+  projectRef?: StudioProjectRef;
+  focus: StudioFocus;
+  refresh?: {
+    project?: boolean;
+    library?: boolean;
+  };
+  createdAt: string;
+}
+
 export interface StudioProjectRefreshRequestedEvent extends StudioEventBase {
   type: 'studio.projectRefreshRequested';
   projectRef: StudioProjectRef;
@@ -54,7 +65,7 @@ export interface StudioCurrentResponse {
   } | null;
   selection: MovieStudioSelection | null;
   context: unknown | null;
-  pendingRequest: unknown | null;
+  pendingRequest: StudioPendingRequest | null;
   warnings: unknown[];
 }
 

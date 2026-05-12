@@ -17,7 +17,7 @@ function App() {
     },
   });
 
-  if (projectSession.isLoadingCurrentProject) {
+  if (projectSession.isLoadingProjectRoute) {
     return (
       <div className='min-h-screen flex items-center justify-center bg-background text-foreground px-6'>
         <div className='max-w-xl w-full rounded-2xl border border-border/50 bg-card/60 p-8 shadow-lg flex flex-col gap-4 items-center'>
@@ -47,7 +47,7 @@ function App() {
       isSelectingProject={projectSession.isSelectingProject}
       onRefresh={projectSession.refreshProjectLibrary}
       onSelectProject={async (projectName) => {
-        await projectSession.selectProject(projectName);
+        await projectSession.navigateToProject(projectName);
       }}
     />
   );

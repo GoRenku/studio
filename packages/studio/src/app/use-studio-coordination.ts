@@ -4,6 +4,7 @@ import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-
 import type { ProjectWithHttp } from '@/services/studio-project-contracts';
 import {
   readStudioEvents,
+  readStudioCurrent,
   reportBrowserSessionActive,
   reportStudioFocusChanged,
   reportStudioFocusRequestFailed,
@@ -12,6 +13,7 @@ import {
 import type {
   StudioFocus,
   StudioFocusRequestedEvent,
+  StudioPendingRequest,
   StudioProjectRef,
 } from '@/services/studio-current-contracts';
 
@@ -32,6 +34,7 @@ export function useStudioCoordination(input: {
   const { projectSession, movieStudioSelection } = input;
   const [browserSessionId] = useState(readBrowserSessionId);
   const cursorRef = useRef<string | undefined>(undefined);
+  const hasInitializedEventCursorRef = useRef(false);
   const lastActivityRef = useRef(0);
   const applyingRequestIdRef = useRef<string | null>(null);
   const lastReportedFocusKeyRef = useRef<string | null>(null);
@@ -60,6 +63,16 @@ export function useStudioCoordination(input: {
     try {
       const response = await readStudioEvents(cursorRef.current);
       cursorRef.current = response.nextCursor;
+      if (!hasInitializedEventCursorRef.current) {
+        hasInitializedEventCursorRef.current = true;
+        await applyStartupPendingFocusRequest({
+          browserSessionId,
+          projectSession,
+          setSelection,
+          applyingRequestIdRef,
+        });
+        return;
+      }
       for (const event of response.events) {
         if (event.type === 'studio.focusRequested') {
           await applyFocusRequest({
@@ -120,7 +133,7 @@ export function useStudioCoordination(input: {
   }, [poll, reportActivity]);
 
   useEffect(() => {
-    if (projectSession.isLoadingCurrentProject) {
+    if (projectSession.isLoadingProjectRoute) {
       return;
     }
 
@@ -154,7 +167,7 @@ export function useStudioCoordination(input: {
     });
   }, [
     browserSessionId,
-    projectSession.isLoadingCurrentProject,
+    projectSession.isLoadingProjectRoute,
     selection,
     projectSession.project,
   ]);
@@ -175,16 +188,7 @@ async function applyFocusRequest(input: {
 
   try {
     let project = currentProjectFromSession(input.projectSession);
-    if (input.event.projectRef && project?.identity.id !== input.event.projectRef.id) {
-      project = await input.projectSession.selectProject(input.event.projectRef.name);
-    }
-    if (input.event.refresh?.project && input.event.projectRef) {
-      project = await input.projectSession.refreshProject(input.event.projectRef.name);
-    }
-    if (input.event.refresh?.library) {
-      await input.projectSession.refreshProjectLibrary();
-    }
-    if (!project || !input.event.projectRef || project.identity.id !== input.event.projectRef.id) {
+    if (!input.event.projectRef) {
       await reportStudioFocusRequestFailed({
         browserSessionId: input.browserSessionId,
         requestEventId: input.event.id,
@@ -192,6 +196,35 @@ async function applyFocusRequest(input: {
         diagnostics: [],
       });
       return;
+    }
+
+    if (project?.identity.id !== input.event.projectRef.id) {
+      project = await input.projectSession.navigateToProject(input.event.projectRef.name);
+      if (!project) {
+        await reportStudioFocusRequestFailed({
+          browserSessionId: input.browserSessionId,
+          requestEventId: input.event.id,
+          reason: 'projectNotFound',
+          diagnostics: [],
+        });
+        return;
+      }
+    }
+
+    if (input.event.refresh?.project) {
+      project = await input.projectSession.refreshProject(input.event.projectRef.name);
+    }
+    if (project.identity.id !== input.event.projectRef.id) {
+      await reportStudioFocusRequestFailed({
+        browserSessionId: input.browserSessionId,
+        requestEventId: input.event.id,
+        reason: 'projectRefMismatch',
+        diagnostics: [],
+      });
+      return;
+    }
+    if (input.event.refresh?.library) {
+      await input.projectSession.refreshProjectLibrary();
     }
     if (!input.setSelection) {
       await reportStudioFocusRequestFailed({
@@ -225,6 +258,35 @@ async function applyFocusRequest(input: {
       diagnostics: [],
     });
   }
+}
+
+async function applyStartupPendingFocusRequest(input: {
+  browserSessionId: string;
+  projectSession: ProjectSession;
+  setSelection: ((selection: MovieStudioSelection) => void) | null;
+  applyingRequestIdRef: { current: string | null };
+}): Promise<void> {
+  const current = await readStudioCurrent();
+  if (!current.pendingRequest) {
+    return;
+  }
+  await applyFocusRequest({
+    ...input,
+    event: pendingRequestToFocusRequestedEvent(current.pendingRequest),
+  });
+}
+
+function pendingRequestToFocusRequestedEvent(
+  pendingRequest: StudioPendingRequest
+): StudioFocusRequestedEvent {
+  return {
+    id: pendingRequest.eventId,
+    type: 'studio.focusRequested',
+    createdAt: pendingRequest.createdAt,
+    projectRef: pendingRequest.projectRef,
+    focus: pendingRequest.focus,
+    refresh: pendingRequest.refresh,
+  };
 }
 
 function currentProjectFromSession(projectSession: ProjectSession): ProjectWithHttp | null {

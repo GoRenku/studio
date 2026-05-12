@@ -167,11 +167,6 @@ const projects = new Hono()
     const projectName = c.req.param('projectName');
     const coverPath = await projectData.resolveCoverImage({ projectName });
     return streamCoverImage(c, coverPath);
-  })
-  .post('/:projectName/select', async (c) => {
-    const projectName = c.req.param('projectName');
-    selectedProjectStore.select(projectName);
-    return c.json({ ok: true });
   });
 
 export default projects;
@@ -206,8 +201,10 @@ Inside `routes/projects.ts`, use resource-relative paths:
 .get('/')
 .get('/:projectName')
 .get('/:projectName/cover')
-.post('/:projectName/select')
 ```
+
+Browser route selection is owned by the browser URL, not by a Studio API
+selection endpoint. See `docs/decisions/0008-use-url-owned-studio-routes.md`.
 
 Do not encode the HTTP method or action in the filename unless the file is not a
 route module. The route path already names the HTTP endpoint.

@@ -1,8 +1,6 @@
 import fs from 'node:fs/promises';
 import {
   createProjectDataService,
-  createStudioCoordinationService,
-  type StudioCoordinationService,
   type ProjectDataService,
   type ProjectInformationUpdate,
   type ProductionExportInput,
@@ -24,7 +22,6 @@ import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectsRouteProjectData;
-  coordination?: StudioCoordinationService;
   token?: StudioRuntimeToken;
 }
 
@@ -41,7 +38,6 @@ export function createProjectsRoute(
   options: CreateProjectsRouteOptions = {}
 ) {
   const projectData = options.projectData ?? createProjectDataService();
-  const coordination = options.coordination ?? createStudioCoordinationService();
   const requireToken: MiddlewareHandler = options.token
     ? createStudioApiTokenMiddleware(options.token)
     : async (_c, next) => {
@@ -53,20 +49,6 @@ export function createProjectsRoute(
       try {
         const library = await projectData.listLibrary();
         return c.json({ library: toProjectLibraryResponse(library) });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/current', async (c) => {
-      try {
-        const current = await coordination.readStudioCurrent();
-        const projectName = current.project?.name;
-        const project = projectName
-          ? await projectData.readProject({ projectName })
-          : null;
-        return c.json({
-          project: project ? toProjectResponse(project) : null,
-        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -102,15 +84,6 @@ export function createProjectsRoute(
           ...readProductionExportRequest(body),
         });
         return c.json({ summary });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .post('/:projectName/select', requireToken, async (c) => {
-      try {
-        const projectName = c.req.param('projectName');
-        const project = await projectData.readProject({ projectName });
-        return c.json({ project: toProjectResponse(project) });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

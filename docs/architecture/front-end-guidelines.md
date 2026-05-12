@@ -182,8 +182,9 @@ src/services/
 
 File meanings:
 
-- `studio-projects-api.ts`: functions such as `readCurrentProject`,
-  `readProjectLibrary`, and `selectProject`.
+- `studio-projects-api.ts`: functions such as `readProject`,
+  `readProjectLibrary`, `updateProjectInformation`, and
+  `exportProductionAssets`.
 - `studio-api-errors.ts`: response error parsing and typed frontend API errors.
 - `studio-project-contracts.ts`: HTTP-decorated project contracts such as
   `ProjectWithHttp` and `ProjectLibraryWithHttp`, unless these are later
@@ -192,9 +193,9 @@ File meanings:
 Function naming should use resource verbs instead of generic fetch names:
 
 ```ts
-readCurrentProject()
+readProject(projectName)
 readProjectLibrary()
-selectProject(projectName)
+updateProjectInformation(projectName, information)
 ```
 
 Avoid:
@@ -206,8 +207,8 @@ open()
 movieStudioClient()
 ```
 
-`selectProject(projectName)` is clearer than `openProject(projectName)` when the
-endpoint selects the active project for the Studio session. If a future behavior
+`readProject(projectName)` is clearer than `fetchProject(projectName)` because
+it names the resource projection returned by the Studio API. If a future behavior
 truly opens a file picker or project folder, that separate behavior should get
 its own name.
 
@@ -410,8 +411,8 @@ Good examples:
 buildMovieStudioLookup(project)
 resolveMovieStudioSelection(selection, lookup)
 readProjectLibrary()
-readCurrentProject()
-selectProject(projectName)
+readProject(projectName)
+returnToProjectLibrary()
 useProjectSession()
 useProjectLibrarySearch(projects, query)
 useMovieStudioSelection(project)
@@ -517,13 +518,13 @@ Rules:
 Example:
 
 ```ts
-const project = await readCurrentProject();
+const project = await readProject(projectName);
 ```
 
 Better than:
 
 ```ts
-const response = await fetch('/studio-api/projects/current');
+const response = await fetch(`/studio-api/projects/${projectName}`);
 const body = await response.json();
 ```
 

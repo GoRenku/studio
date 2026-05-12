@@ -1052,16 +1052,27 @@ The browser Studio app should process `studio.focusRequested` events.
 
 When receiving a focus request:
 
-1. If the event has `projectRef` and the current project is different, validate
-   that the reference still resolves to the same project and select it through
-   the existing Studio project API.
-2. If `refresh.project` is true, read the latest project data.
-3. If `refresh.library` is true and the project library is visible or needed,
+1. If the focus request targets `projectLibrary`, route the browser to `/`.
+2. If the focus request targets `movieStudio` and has a non-stale `projectRef`,
+   route the browser to `/projects/:projectName` when that project is not
+   already open.
+3. Load the project through `GET /studio-api/projects/:projectName`; do not use
+   a hidden current-project endpoint or project-selection endpoint.
+4. If the loaded project does not match `projectRef`, report
+   `studio.focusRequestFailed` with `projectRefMismatch`.
+5. If `refresh.project` is true, read the latest project data for the already
+   open project.
+6. If `refresh.library` is true and the project library is visible or needed,
    refresh the library.
-4. Apply the requested focus.
-5. Append or report a `studio.focusChanged` event with `appliedRequestId`.
-6. If the focus cannot be applied, append or report a
+7. Apply the requested focus inside the already-open screen.
+8. Append or report a `studio.focusChanged` event with `appliedRequestId`.
+9. If the focus cannot be applied, append or report a
    `studio.focusRequestFailed` event.
+
+Browser route ownership is recorded in
+`docs/decisions/0008-use-url-owned-studio-routes.md`. Coordination events may
+drive Studio navigation, but they must do it through canonical browser routes,
+not through hidden current-project state.
 
 For `renku info set`, this produces:
 

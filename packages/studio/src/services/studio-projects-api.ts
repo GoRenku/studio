@@ -19,37 +19,6 @@ interface ProductionExportResponse {
   summary: ProductionExportSummaryResponse;
 }
 
-export async function selectProject(projectName: string): Promise<ProjectWithHttp> {
-  const response = await fetch(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/select`,
-    {
-      method: 'POST',
-      headers: {
-        'X-Renku-Studio-Token': readStudioApiToken(),
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-
-  const body = (await response.json()) as ProjectResponse;
-  if (!body.project) {
-    throw new Error('Renku Studio API returned no project.');
-  }
-  return body.project;
-}
-
-export async function readCurrentProject(): Promise<ProjectWithHttp | null> {
-  const response = await fetch('/studio-api/projects/current');
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-  const body = (await response.json()) as ProjectResponse;
-  return body.project;
-}
-
 export async function readProject(projectName: string): Promise<ProjectWithHttp> {
   const response = await fetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}`
