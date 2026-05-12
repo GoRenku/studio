@@ -27,12 +27,12 @@ A user or agent can:
 
 ## References
 
-- `docs/architecture/domain-vocabulary.md`
-- `docs/architecture/project-files-and-assets.md`
-- `docs/architecture/project-relative-paths.md`
+- `docs/architecture/reference/domain-vocabulary.md`
+- `docs/architecture/reference/project-files-and-assets.md`
+- `docs/architecture/reference/project-relative-paths.md`
 - `docs/architecture/layers-of-responsibility.md`
-- `docs/architecture/structured-diagnostics.md`
-- `docs/architecture/drizzle-migrations.md`
+- `docs/architecture/reference/structured-diagnostics.md`
+- `docs/architecture/reference/drizzle-migrations.md`
 
 ## Implementation Decision Summary
 
@@ -98,7 +98,7 @@ target, role, and locale. For example, a clip may temporarily carry three
 selected narration candidates while the product workflow is still choosing how
 to collapse or materialize them later.
 
-Use the Drizzle Kit workflow from `docs/architecture/drizzle-migrations.md`.
+Use the Drizzle Kit workflow from `docs/architecture/reference/drizzle-migrations.md`.
 Do not hand-write a TypeScript migration registry, and do not copy generated SQL
 into TypeScript.
 

@@ -1,7 +1,17 @@
 # Drizzle Migrations
 
+Date: 2026-05-12
+
+Status: current
+
+Role: reference
+
 Renku Studio uses Drizzle for project-local SQLite databases. The migration
 workflow must follow Drizzle Kit's documented codebase-first migration flow.
+
+Decision history:
+
+- `../../decisions/0011-use-drizzle-kit-for-project-sqlite-migrations.md`
 
 ## Source Of Truth
 

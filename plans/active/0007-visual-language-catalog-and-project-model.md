@@ -29,12 +29,12 @@ should build on.
 ## References
 
 - `docs/architecture/data-model-and-storage.md`
-- `docs/architecture/domain-vocabulary.md`
-- `docs/architecture/project-files-and-assets.md`
-- `docs/architecture/project-storage-boundaries.md`
-- `docs/architecture/project-relative-paths.md`
+- `docs/architecture/reference/domain-vocabulary.md`
+- `docs/architecture/reference/project-files-and-assets.md`
+- `docs/architecture/reference/project-storage-boundaries.md`
+- `docs/architecture/reference/project-relative-paths.md`
 - `docs/architecture/naming-guidelines.md`
-- `docs/architecture/structured-diagnostics.md`
+- `docs/architecture/reference/structured-diagnostics.md`
 - `sample-project.yaml`
 
 ## Product Direction
@@ -696,17 +696,17 @@ Rules:
 
 Update accepted architecture docs after the model is implemented:
 
-- `docs/architecture/domain-vocabulary.md`
+- `docs/architecture/reference/domain-vocabulary.md`
   - define Visual Language Category;
   - define Visual Language Catalog Entry;
   - define Continuity Reference;
   - clarify that catalog entries are options and project entries are decisions.
 
-- `docs/architecture/project-files-and-assets.md`
+- `docs/architecture/reference/project-files-and-assets.md`
   - add continuity reference assets;
   - clarify visual-language asset roles.
 
-- `docs/architecture/project-storage-boundaries.md`
+- `docs/architecture/reference/project-storage-boundaries.md`
   - document that visual-language prompts live in Markdown assets;
   - document that the system catalog is outside project SQLite.
 
@@ -742,7 +742,7 @@ Update accepted architecture docs after the model is implemented:
    `sample-project/`.
 10. Update docs listed above.
 
-Use the Drizzle Kit workflow from `docs/architecture/drizzle-migrations.md` for
+Use the Drizzle Kit workflow from `docs/architecture/reference/drizzle-migrations.md` for
 schema changes.
 
 ## Verification
@@ -782,5 +782,5 @@ broader question of how generic asset commands, CLI target syntax, and
 generation context should reference Continuity References belongs in a later
 reference-resolution design.
 
-`0008-sample-project-fixture-builder.md` should use the new setup shape and
+`0010-development-sample-project-skill.md` should use the new setup shape and
 fixture folders after this plan is implemented.

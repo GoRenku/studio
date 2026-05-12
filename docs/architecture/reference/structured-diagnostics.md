@@ -1,10 +1,20 @@
 # Structured Diagnostics
 
+Date: 2026-05-12
+
+Status: current
+
+Role: reference
+
 Renku Studio uses structured diagnostics for package-boundary errors, validation
 results, and agent-readable command failures.
 
 The shared package is `@gorenku/studio-diagnostics` in `packages/diagnostics`.
 It is private to the workspace.
+
+Decision history:
+
+- `../../decisions/0009-use-structured-diagnostics-at-package-boundaries.md`
 
 ## Diagnostic Contracts
 

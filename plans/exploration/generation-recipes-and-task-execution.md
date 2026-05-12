@@ -2,7 +2,12 @@
 
 Date: 2026-05-08
 
-Status: architecture draft
+Status: exploration
+
+Role: future architecture exploration
+
+This document has not been accepted or implemented. It is preserved as
+exploration, not current Renku Studio architecture.
 
 ## Purpose
 
@@ -10,6 +15,10 @@ This document defines a YAML-free architecture for Renku Studio generation.
 
 The first implementation example is Cast image generation, but the architecture
 is shared by Studio, CLI, and future agent workflows.
+
+This document is not promoted to an ADR. The implementation has engine
+catalog and provider infrastructure, but the shared task/request architecture is
+still being proven.
 
 The goal is:
 

@@ -21,7 +21,7 @@ agent-facing feature.
 - `docs/decisions/0007-use-core-owned-project-reference-validation-for-agent-coordination.md`
 - `docs/architecture/data-model-and-storage.md`
 - `docs/architecture/studio-coordination-events.md`
-- `docs/architecture/structured-diagnostics.md`
+- `docs/architecture/reference/structured-diagnostics.md`
 - `plans/active/0003-studio-coordination-events.md`
 
 ## Problem Statement

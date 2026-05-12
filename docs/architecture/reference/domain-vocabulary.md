@@ -1,0 +1,200 @@
+# Renku Studio Domain Vocabulary
+
+Date: 2026-05-10
+
+Status: current
+
+Role: reference
+
+## Purpose
+
+Renku Studio needs one shared vocabulary across documentation, database schema,
+core APIs, CLI commands, and UI copy.
+
+The rule:
+
+> Use the same domain word for the same concept everywhere.
+
+Implementation-specific file names can exist, but they should not create
+competing product terms.
+
+Decision history:
+
+- `../../decisions/0010-use-domain-naming-and-remove-obsolete-compatibility.md`
+
+## Naming Rules
+
+- Use **Generation Definition** for code-owned generation behavior.
+- Use **Generation Key** for the stable key identifying a generation type.
+- Avoid using "workflow", "blueprint", "preset", "style", "lineage", or
+  "provenance" as casual synonyms for core Renku Studio concepts.
+- UI labels may be adapted later for a production template, but the model,
+  commands, documentation, and core APIs should keep the canonical domain term.
+- File and folder names are user-facing labels. They are not IDs and must never
+  be parsed to recover relationships.
+
+## Production Structure
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Project | The top-level local Renku Studio project folder and its project-local database. | Code and UI should generally say "project". |
+| Production workspace | An architectural description of what a project database represents. | Useful when explaining that one project can contain a standalone movie or a future series. It does not need to be a separate user-facing object in v1. |
+| Standalone movie | A project shape with one movie-like production unit. | This can be the only project type implemented in the first slice. |
+| Series | A project shape with multiple episodes sharing cast, visual language, and reusable assets. | A future feature, but the schema should not block it. |
+| Episode | A movie-like production unit inside a series project. | Episodes can have their own sequences, scenes, clips, exports, tasks, and takes while sharing project-level cast and visual language. |
+
+## Narrative Structure
+
+Renku Studio should use this canonical hierarchy for v1:
+
+```text
+Standalone movie project
+  -> Sequence
+    -> Scene
+      -> Clip
+
+Series project
+  -> Episode
+    -> Sequence
+      -> Scene
+        -> Clip
+```
+
+`Sequence` is a film and screenwriting term for a meaningful group of scenes
+that form a larger dramatic or production beat.
+
+Related terms:
+
+- **Act** is a higher-level story structure. It can be added later if Studio
+  needs screenplay-style act planning, but it should not replace `Sequence` in
+  the v1 hierarchy.
+- **Chapter** can be a friendly display label for documentaries, courses,
+  serialized web videos, or exports. It should not be the canonical schema term.
+- **Shot** is usually a lower-level camera/editing unit inside a scene. Since
+  the current model is organized around clips, `Clip` should stay the v1
+  production unit. A future shot model can be introduced below clips if needed.
+
+## Creative Direction
+
+| Canonical term | Use for | Avoid |
+| --- | --- | --- |
+| Visual Language | The top-level creative direction system for AI generation. | Do not use "style" as the top-level domain name. |
+| Visual Language Category | A project-owned grouping for visual language entries, such as Color, Lighting, Camera, Texture, or a custom category. | Do not bake the category list as a closed taxonomy. |
+| Visual Language Entry | A reusable project decision inside a category, backed by Markdown guidance, prompt text, and optional references. | Do not call this a style profile in schema, code, or docs. |
+| Visual Language Asset | A registered asset attached to a visual language entry. | The asset type can still be `style_sheet`, `look_reference`, etc. |
+| Visual Language Catalog Entry | A system-owned option shown in Studio and readable by agents. Choosing one creates an editable project Visual Language entry. | Do not store catalog entries in project SQLite. |
+| Continuity Reference | A reusable subject that must stay visually consistent, such as a location, prop, costume, architecture, vehicle, ship, symbol, or group. | Do not hide these under Visual Language or a vague "world" bucket. |
+| Style Sheet | A visual language asset type, usually an image or board that demonstrates a desired look. | This is an asset type, not the name of the whole creative-direction system. |
+
+## Language And Localization
+
+Language support is a core Renku Studio value proposition, not an export-only
+feature.
+
+Product copy can usually say **Language** because it is friendly. The stored
+technical value should be a **Locale Tag**, preferably a BCP 47 tag such as
+`en-US`, `tr-TR`, `es-MX`, or `pt-BR`.
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Language | The user-facing language target. | Example: Turkish, Mexican Spanish, Brazilian Portuguese. |
+| Locale Tag | The precise stored language/region/script identifier. | Use BCP 47-style values. Do not parse meaning from display names. |
+| Base Locale | The primary locale for the movie or episode. | Used for original narration, dialog, voice design, and first-pass subtitles. It must be explicit. |
+| Project Locale | A locale configured for the project. | This is the preferred schema and TypeScript name for rows such as `project_locale`. One project locale can be the base locale. |
+| Supported Locale | User-facing phrase meaning a project locale enabled for production. | Useful in copy, but avoid it as a vague schema/foreign-key name such as `supported_locale_id`. |
+| Localization Level | The production depth for a project locale. | Initial levels: `standard_subtitles`, `dubbed_audio`, `localized_lipsync`. |
+| Localized Version | A deliverable version of a movie, episode, clip, audio track, or subtitle track for one project locale and localization level. | Example: Turkish subtitle-only export, Spanish dubbed export, Japanese lip-sync export. |
+| Subtitle Track | A first-class timed text asset. | Cue-level timing, may be in a different language than the audio. |
+| Karaoke Caption Track | A word-synced subtitle/caption track where text appears or highlights word by word. | Requires audio language and subtitle language to match. Requires word-level timing. |
+| Timed Transcript | A transcript of an audio asset with timestamps. | Segment-level timing can support standard subtitles. Word-level timing is required for karaoke captions. |
+| Dubbed Audio Track | A localized narration or dialog audio asset. | Same visual clip, different language audio. |
+| Lip-Sync Take | A localized video take where mouth movement matches the target-language audio. | Expensive level; usually clip-specific. |
+| Voice Variant | A cast voice profile or sample for a specific project locale. | Lets a cast member keep the same voice identity across locales when the provider supports it. |
+
+The important distinction:
+
+- **Standard subtitles** are translated timed text. They can be in a different
+  language from the audio, and cue timing can be approximate.
+- **Karaoke caption tracks** are audio-synchronized text. The text language must
+  match the audio language, and word-level timing is required.
+
+## Casting
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Cast | The workspace section and collection of reusable production subjects. | This stays broad enough for characters, narrators, locations, objects, groups, or recurring emblems. |
+| Cast Member | One reusable production subject. | Use `cast_member` in schema names. |
+| Cast Asset | A registered asset associated with a cast member. | Examples: portrait, character sheet, costume reference, voice sample, research note. |
+| Reference Set | A named set of cast assets intended to be used together. | Example: "Mehmed II / Campaign armor" containing portrait, character sheet, and costume references. |
+| Pin | A cast-level curated favorite or useful asset. | Pins help the cast UI. They are not the same as clip usage. |
+| Binding | An explicit relationship between two domain objects. | Example: a clip binds to a cast member through a reference set. |
+
+Use **selection** for the take/select classification on an asset relationship.
+Use **Select** for a currently chosen asset, **Pin** for cast favorites, and
+**Binding** for scoped usage relationships.
+
+## Assets And Files
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Asset | A registered content item in Renku Studio metadata. | The `asset` row owns identity, type, origin, and availability. Domain relationship rows own where and why the asset is used. |
+| Asset File | A concrete file on disk that belongs to an asset. | One asset can have one file or several files. |
+| Asset Relationship | A row that attaches one asset to a real domain object with a role, order, optional locale, and selection. | Examples: `clip_asset`, `cast_asset`, `project_asset`. These are relationship tables, not separate asset stores. |
+| Compound Asset | An asset that needs a folder because several files belong together. | Example: a video take folder with `video.mp4`, `thumbnail.png`, and captions. |
+| Take | A persisted generated or imported candidate option. | Candidates are takes until the user chooses one or more. |
+| Select | The current project choice from persisted takes or imported options. | Use for current chosen asset(s), including intermediary references such as character sheets. Selects are changeable, but they are not ephemeral UI state. |
+| Production Asset | A selected asset that has been exported into the clean production handoff tree. | Current export is copy-based: working/take files remain in place, and editing/export tools see intended assets under `production-assets/`. |
+| Project Relative Path | A normalized path from the project folder to a project-owned file or folder. | SQLite stores these paths for asset files. Runtime code resolves them against the project folder. Do not store absolute paths in project metadata. |
+
+## Generation
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Generation Type | A category of generation work, such as `cast.character-sheet` or `clip.video-take`. | This usually appears as a stable generation key. |
+| Generation Definition | The code-owned setup for one generation type. | Owns prompt templates, provider/model selection, model settings, validation, and execution steps. It is not a project-local editable folder. |
+| Generation Key | The stable key identifying a generation type. | Example: `cast.character-sheet`. |
+| Task | A queued or running unit of work. | Example: generate a character sheet for one cast member. |
+| Generation Record | A lightweight durable record that connects a generated output to the task and generation definition that produced it. | It is not a full historical copy of prompt templates or runtime code. |
+| Generation Packet | A system-generated execution snapshot of resolved inputs for one task. | Useful for debugging and execution repeatability, but not the user-facing generation history model. |
+| Provider Run | A lower-level record of a call to an external or local generation provider. | Useful for diagnostics, cost, retries, and error reporting. |
+
+## Budget And Cost
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Budget | A user-defined planned spending limit for a scope. | Example scopes: project, episode, sequence, clip, cast member, project locale, localization level, generation definition. |
+| Cost Estimate | The predicted cost before a generation task runs. | This is not the same as actual cost. It can be a range when provider pricing is approximate. |
+| Actual Cost | The provider-reported final cost after work runs. | If the provider does not report actual cost, do not silently substitute the estimate. |
+| Accrued Cost | The sum of actual cost events for a scope. | Used by UI projections such as "spent so far". |
+| Pending Estimated Cost | The sum of estimates for queued/running work that has not produced actual cost yet. | Helps users understand likely near-term spend. |
+| Cost Event | A durable record of an actual charge, refund, adjustment, or unknown final cost. | The event log is the source for accrued cost rollups. |
+| Cost Rollup | A query/projection that summarizes cost estimates and cost events by scope. | Useful for UI, but should be recomputable from estimate and event records. |
+| Cost Approval | A user or agent decision allowing a task to run when it has a non-trivial estimated cost. | Especially important for expensive localization levels such as lip-sync. |
+
+Money storage rules:
+
+- store currency explicitly, such as `USD`;
+- store amounts as integer micros or another fixed-precision integer unit;
+- do not store money as floating point values;
+- keep estimates and actual costs as separate records.
+
+## Catalog And Models
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Catalog | System-level definitions bundled with Renku or Renku Studio. | Includes providers, models, model schemas, and generation definitions. |
+| Provider | A service or runtime that supplies a model. | Example: OpenAI, Replicate, ElevenLabs, local runtime. |
+| Model | A provider-specific generation model. | Provider/model selection belongs in code-owned generation definitions unless a current feature explicitly models user-adjustable settings. |
+| Model Schema | A JSON Schema describing valid parameters for a provider model. | Lives in the catalog. Code-owned generation definitions choose concrete values unless a current feature explicitly models user-adjustable settings. |
+
+## Terms To Avoid Or Scope Carefully
+
+| Term | Recommendation |
+| --- | --- |
+| Workflow | Do not use as the user-facing name for generation setup. Use Generation Definition for code-owned generation behavior. Generic phrases like "Git workflow" are fine when not naming a Renku Studio domain object. |
+| Blueprint | Avoid for Renku Studio product vocabulary. It can remain a legacy/current Renku or Viewer term where that system already uses it, but Renku Studio should say Generation Definition when referring to code-owned generation behavior. |
+| Preset | Avoid because it is vague. Use Generation Definition or a more specific domain name. |
+| Style | Avoid as the top-level domain concept. Use Visual Language. `style_sheet` is acceptable as a visual language asset type. |
+| Selection | Use only for the take/select classification on an asset relationship. Use Select for currently chosen assets, Pin for cast favorites, and Binding for scoped usage relationships. |
+| Lineage / Provenance | Avoid for the v1 data model. Use Generation Record for the lightweight output/task/generation link and Generation Packet for the resolved execution snapshot. |
+| Act / Chapter | Do not use as canonical v1 schema terms. Use Sequence for the movie hierarchy, with future display labels if needed. |

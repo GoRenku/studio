@@ -2,7 +2,9 @@
 
 Date: 2026-05-05
 
-Status: architecture decision draft
+Status: current
+
+Role: architecture policy
 
 ## Purpose
 
@@ -16,6 +18,10 @@ easier to accidentally move across an architectural boundary.
 This document records the naming rules for the current Renku Studio
 implementation. It should be used when designing new files, functions, types,
 database tables, DTOs, commands, route handlers, and tests.
+
+Decision history:
+
+- `../decisions/0010-use-domain-naming-and-remove-obsolete-compatibility.md`
 
 The central rule:
 
@@ -73,7 +79,7 @@ Examples of names to avoid:
 These words are not banned in every possible context, but they require a clear
 reason. Most of the time they hide the real concept.
 
-Use the vocabulary from `docs/architecture/data-model-and-storage.md` whenever
+Use the vocabulary from `docs/architecture/reference/domain-vocabulary.md` whenever
 it defines the concept.
 
 ## Three Kinds Of Type Shapes
@@ -151,7 +157,7 @@ Use the `Record` suffix:
 
 ```ts
 ProjectRecord
-ProjectLanguageRecord
+ProjectLocaleRecord
 VisualLanguageRecord
 CastMemberRecord
 EpisodeRecord
@@ -322,11 +328,23 @@ profile unless the product later introduces a distinct profile concept.
 Expected shape:
 
 ```ts
-export interface VisualLanguage {
+export interface VisualLanguageCategory {
   id: string;
   name: string;
-  intent?: string;
+  description?: string;
+  source: 'system' | 'project';
+}
+
+export interface VisualLanguage {
+  id: string;
+  categoryId: string;
+  name: string;
   summary?: string;
+  priority: 'default' | 'situational' | 'rare';
+  guidance?: string;
+  prompt?: string;
+  guidanceAsset?: RichTextAssetLink;
+  promptAsset?: RichTextAssetLink;
 }
 ```
 
@@ -334,6 +352,7 @@ The matching table name should be:
 
 ```text
 visual_language
+visual_language_category
 ```
 
 Not:
@@ -492,7 +511,7 @@ The initial tables should use canonical domain names:
 
 ```text
 project
-project_language
+project_locale
 visual_language
 cast_member
 episode
@@ -565,7 +584,7 @@ function:
 project-data-service.ts
 sqlite-project-store.ts
 project-records.ts
-project-language-records.ts
+project-locale-records.ts
 visual-language-records.ts
 cast-member-records.ts
 narrative-records.ts
@@ -729,7 +748,7 @@ Core should expose `coverImage.fileName` and safe filesystem path resolution.
 The Studio server should translate that into an HTTP URL because URLs are
 transport concerns.
 
-See `docs/architecture/studio-server-hono.md` for the full server routing
+See `docs/architecture/reference/studio-server-hono.md` for the full server routing
 architecture.
 
 ## Names To Avoid In This Slice

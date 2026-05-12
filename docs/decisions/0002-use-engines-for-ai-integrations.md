@@ -13,7 +13,8 @@ and normalizes calls across model vendors.
 
 ## Decision
 
-Use **Engine** as the product and code term for an AI generation backend.
+Use **Engine** as the package and Studio-facing product term for the AI
+generation integration layer.
 
 The package is:
 
@@ -23,14 +24,18 @@ packages/engines -> @gorenku/studio-engines
 
 Inside that package:
 
-- `engine` means a registered generation backend.
-- `adapter` means provider-specific SDK/API code.
-- `registry` means the system that collects available engines.
+- `provider` may remain an internal vendor/backend term where it names a
+  concrete external service, catalog entry, SDK adapter, or registry entry;
+- `adapter` means provider-specific SDK/API code;
+- `registry` means the system that collects available providers or engines for
+  Studio use;
 - `capability` means what an engine can do, such as text-to-image,
   image-to-video, text-to-speech, music, transcription, or prompt enhancement.
 
 ## Consequences
 
-- Studio-facing language becomes clearer than `provider`.
+- Studio-facing language can use the broader `engine` concept without forcing
+  every internal catalog and SDK type to avoid the vendor-oriented word
+  `provider`.
 - The old provider package can be extracted deliberately instead of copied as-is.
 - The Studio app should not depend on the legacy provider package.

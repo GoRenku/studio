@@ -2,11 +2,19 @@
 
 Date: 2026-05-03
 
-Status: proposal draft
+Status: exploration
+
+Role: future architecture exploration
+
+This document has not been accepted or implemented. It is preserved as
+exploration, not current Renku Studio architecture.
 
 ## Core Decision
 
 Renku Studio should get a new domain core and a new CLI surface instead of continuing to evolve the existing `core` and `cli` packages into the foundation for the new app.
+
+This document is not promoted to an ADR yet. It describes future workflow and
+queue architecture that is not fully implemented.
 
 The current `core` and `cli` were built around the Viewer-era product model:
 
@@ -1134,4 +1142,3 @@ The guiding principle:
 > Borrow proven infrastructure only when it directly serves Renku Studio.
 >
 > Do not let old blueprint/build complexity creep in just because it already exists.
-

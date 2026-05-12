@@ -84,10 +84,10 @@ production export job that:
 
 ## References
 
-- `docs/architecture/project-files-and-assets.md`
-- `docs/architecture/project-relative-paths.md`
-- `docs/architecture/domain-vocabulary.md`
-- `docs/architecture/structured-diagnostics.md`
+- `docs/architecture/reference/project-files-and-assets.md`
+- `docs/architecture/reference/project-relative-paths.md`
+- `docs/architecture/reference/domain-vocabulary.md`
+- `docs/architecture/reference/structured-diagnostics.md`
 
 ## Terminology
 

@@ -2,7 +2,9 @@
 
 Date: 2026-05-05
 
-Status: architecture decision draft
+Status: current
+
+Role: reference
 
 ## Purpose
 
@@ -14,7 +16,12 @@ dispatch. The server should stay an adapter: it accepts HTTP requests, calls
 `@gorenku/studio-core/node`, and returns HTTP responses. It must not own project
 data behavior.
 
-## Decision
+Decision history:
+
+- `../../decisions/0008-use-url-owned-studio-routes.md`
+- `../../decisions/0014-use-hono-route-modules-for-the-local-studio-server.md`
+
+## Current Contract
 
 Use Hono for the Studio server API.
 
@@ -76,7 +83,7 @@ Those belong in `@gorenku/studio-core/node`.
 
 ## File Structure
 
-Use this shape for the first Hono migration:
+Use this shape for the current Hono server:
 
 ```text
 packages/studio/server/
@@ -87,10 +94,14 @@ packages/studio/server/
   routes/
     health.ts
     projects.ts
+    studio-events.ts
 
   http/
     project-responses.ts
     project-cover-url.ts
+    studio-event-responses.ts
+
+  studio-runtime-token.ts
 ```
 
 File meanings:
@@ -100,9 +111,13 @@ File meanings:
 - `errors.ts`: translates structured core errors into HTTP responses;
 - `routes/health.ts`: health-check resource route module;
 - `routes/projects.ts`: project resource route module;
+- `routes/studio-events.ts`: Studio coordination event resource route module;
 - `http/project-responses.ts`: adapts core `Project` and `ProjectLibrary`
   contracts into HTTP response bodies when HTTP-only fields are needed;
-- `http/project-cover-url.ts`: builds Studio API cover URLs only.
+- `http/project-cover-url.ts`: builds Studio API cover URLs only;
+- `http/studio-event-responses.ts`: adapts Studio coordination events and
+  current context into HTTP response bodies when HTTP-only fields are needed;
+- `studio-runtime-token.ts`: creates and verifies the local runtime trust token.
 
 Avoid:
 
@@ -132,11 +147,13 @@ Example shape:
 ```ts
 import { Hono } from 'hono';
 import health from './routes/health.js';
-import projects from './routes/projects.js';
+import { createProjectsRoute } from './routes/projects.js';
+import { createStudioEventsRoute } from './routes/studio-events.js';
 
 export const app = new Hono()
   .route('/studio-api/health', health)
-  .route('/studio-api/projects', projects);
+  .route('/studio-api/projects', createProjectsRoute({ token }))
+  .route('/studio-api/studio/events', createStudioEventsRoute({ token }));
 
 export type StudioServerApp = typeof app;
 ```
@@ -156,12 +173,12 @@ import { Hono } from 'hono';
 const projects = new Hono()
   .get('/', async (c) => {
     const library = await projectData.listLibrary();
-    return c.json(toProjectLibraryResponse(library));
+    return c.json({ library: toProjectLibraryResponse(library) });
   })
   .get('/:projectName', async (c) => {
     const projectName = c.req.param('projectName');
     const project = await projectData.readProject({ projectName });
-    return c.json(toProjectResponse(project));
+    return c.json({ project: toProjectResponse(project) });
   })
   .get('/:projectName/cover', async (c) => {
     const projectName = c.req.param('projectName');

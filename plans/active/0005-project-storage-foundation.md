@@ -21,14 +21,14 @@ Markdown assets the schema has no meaningful content to verify.
 ## References
 
 - `docs/architecture/data-model-and-storage.md`
-- `docs/architecture/domain-vocabulary.md`
+- `docs/architecture/reference/domain-vocabulary.md`
 - `docs/architecture/core-design-principles.md`
 - `docs/architecture/layers-of-responsibility.md`
-- `docs/architecture/project-storage-boundaries.md`
-- `docs/architecture/project-files-and-assets.md`
-- `docs/architecture/project-relative-paths.md`
-- `docs/architecture/drizzle-migrations.md`
-- `docs/architecture/structured-diagnostics.md`
+- `docs/architecture/reference/project-storage-boundaries.md`
+- `docs/architecture/reference/project-files-and-assets.md`
+- `docs/architecture/reference/project-relative-paths.md`
+- `docs/architecture/reference/drizzle-migrations.md`
+- `docs/architecture/reference/structured-diagnostics.md`
 - `sample-project.yaml`
 
 ## Deliverable

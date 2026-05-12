@@ -7,7 +7,7 @@ Status: proposed
 ## Goal
 
 Refactor `packages/studio/src` so the frontend follows
-`docs/architecture/front-end-guidelines.md`.
+`docs/architecture/reference/front-end-guidelines.md`.
 
 This plan tracks the concrete next migration steps. The architecture document is
 the long-lived reference; this plan can be completed, revised, or archived after

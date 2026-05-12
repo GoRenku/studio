@@ -17,8 +17,8 @@ as implementation teaches us more.
 
 - `docs/architecture/studio-coordination-events.md`
 - `docs/decisions/0006-use-sqlite-for-project-data-and-studio-events-for-ui-coordination.md`
-- `docs/architecture/structured-diagnostics.md`
-- `docs/architecture/studio-server-hono.md`
+- `docs/architecture/reference/structured-diagnostics.md`
+- `docs/architecture/reference/studio-server-hono.md`
 
 ## Resolved Decisions
 
@@ -73,8 +73,8 @@ wrong.
 ## Project Structure
 
 Use the naming rules in `docs/architecture/naming-guidelines.md`,
-`docs/architecture/front-end-guidelines.md`, and
-`docs/architecture/studio-server-hono.md`.
+`docs/architecture/reference/front-end-guidelines.md`, and
+`docs/architecture/reference/studio-server-hono.md`.
 
 Do not introduce generic files such as `event-manager.ts`, `event-helper.ts`,
 `studio-state.ts`, `current.ts`, `session.ts`, `route-focus.ts`, or

@@ -147,8 +147,10 @@ the current project as a hidden default.
   current-project state.
 - The project library can show all projects without accidentally opening the
   last focused project.
-- Coordination events can still focus surfaces inside an already-open project,
-  but cannot surprise-navigate the browser to another project.
+- Coordination events can still focus surfaces, and fresh explicit focus
+  requests may navigate to their canonical route. Historical events, hidden
+  current-project state, and polling replay cannot surprise-navigate the browser
+  to another project.
 - Tests can assert route behavior by checking `window.location.pathname` and the
   exact project API URLs used during route loading.
 

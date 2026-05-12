@@ -2,7 +2,9 @@
 
 Date: 2026-05-06
 
-Status: architecture proposal draft
+Status: current
+
+Role: reference
 
 ## Purpose
 
@@ -12,6 +14,12 @@ This document defines durable frontend structure and naming guidance for
 The goal is not just to make folders tidier. The goal is to make the browser
 application easier to extend by giving every file a clear product responsibility
 and a clear architectural layer.
+
+Decision history:
+
+- `../../decisions/0005-use-latest-only-save-queues-for-autosave.md`
+- `../../decisions/0008-use-url-owned-studio-routes.md`
+- `../../decisions/0015-use-feature-service-ui-layering-for-the-studio-frontend.md`
 
 Current implementation steps belong in `plans/active/`. This document should
 remain useful after the first refactor is complete.
@@ -33,6 +41,7 @@ packages/studio/src/
   features/
   services/
   hooks/
+  lib/
   ui/
   assets/
   styles/
@@ -229,6 +238,17 @@ src/hooks/
 
 Do not add a shared hook until at least two features need it or the hook hides
 browser mechanics that would otherwise be repeated.
+
+### `lib/`
+
+Owns small shared browser utilities that are not product features, API clients,
+hooks, or UI primitives.
+
+Use `lib/` for queueing, timing, formatting, class-name, and other browser-safe
+helpers that are shared enough to avoid belonging to one feature.
+
+Do not put API clients, feature projections, Node-only code, or generic
+framework experiments in `lib/`.
 
 ### `ui/`
 
@@ -451,12 +471,12 @@ function useProjectSession() {
   return {
     project,
     library,
-    isLoadingCurrentProject,
+    isLoadingProjectRoute,
     isLoadingProjectLibrary,
     isSelectingProject,
     projectSessionError,
     refreshProjectLibrary,
-    selectProject,
+    navigateToProject,
     returnToProjectLibrary,
   };
 }
@@ -468,7 +488,7 @@ The root app should then read like composition:
 function App() {
   const projectSession = useProjectSession();
 
-  if (projectSession.isLoadingCurrentProject) {
+  if (projectSession.isLoadingProjectRoute) {
     return <StudioLoadingScreen />;
   }
 
@@ -497,7 +517,7 @@ Guidelines:
   mirrors.
 - Avoid boolean names that hide the subject, such as `isLoading`. Prefer
   `isLoadingProjectLibrary`, `isSelectingProject`, or
-  `isLoadingCurrentProject`.
+  `isLoadingProjectRoute`.
 
 ## Service And Error Handling Rules
 

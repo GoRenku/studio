@@ -2,7 +2,9 @@
 
 Date: 2026-05-05
 
-Status: architecture decision
+Status: current
+
+Role: reference
 
 ## Purpose
 
@@ -41,7 +43,7 @@ renku scene update ...
 renku clip add ...
 ```
 
-## Core Decision
+## Current Contract
 
 The create YAML answers one question:
 
@@ -54,8 +56,10 @@ reasonably extract from narrative material:
 - whether this is a standalone movie or a series;
 - initial episodes for a series;
 - initial base/supported language metadata, if known;
+- initial visual language categories;
 - initial cast list;
 - initial visual language descriptions;
+- initial continuity references;
 - initial narrative spine: sequences, scenes, and clips;
 - important titles, names, summaries, descriptions, and intent notes.
 
@@ -200,8 +204,8 @@ after the project has been created.
 ## Design Principles
 
 - Keep the YAML focused on the initial scaffold.
-- Every section except `kind`, `version`, `project.title`, and `project.type`
-  should be optional.
+- Every section except `kind`, `version`, `project.name`, `project.title`, and
+  `project.type` should be optional.
 - Missing cast, visual language, languages, sequences, scenes, or clips should
   not fail creation.
 - Include important narrative content such as names, titles, loglines,
@@ -244,13 +248,14 @@ flowchart TD
 
 ## Minimal Shape
 
-Only the project title and project type are required.
+Only the project name, project title, and project type are required.
 
 ```yaml
 kind: renku.projectSetup
 version: 0.1.0
 
 project:
+  name: constantinople-movie
   title: Preparation of the Siege of Constantinople
   type: standaloneMovie
 ```
@@ -283,12 +288,28 @@ languages:
     supportsAudio: true
     supportsSubtitles: true
 
+visualLanguageCategories:
+  - name: Historical documentary look
+    description: Grounded visual language guidance for factual historical scenes.
+  - name: Foundry and siege machinery
+    description: Material, lighting, and staging guidance for heavy engineering scenes.
+
 visualLanguage:
-  - name: Ottoman court miniature influence
-    intent: >
+  - category: Historical documentary look
+    name: Ottoman court miniature influence
+    priority: default
+    shortDescription: Muted golds, deep reds, formal court staging, and precise textile detail.
+    guidance: >
       A controlled visual language inspired by Ottoman court miniature painting,
       restrained documentary lighting, and historical materials.
-    summary: Muted golds, deep reds, formal court staging, and precise textile detail.
+
+continuityReferences:
+  - kind: location
+    name: Theodosian Walls
+    shortDescription: Ancient land walls guarding Constantinople from the west.
+    description: >
+      Massive layered stone defenses that recur as the central strategic
+      obstacle throughout the film.
 
 cast:
   - name: Mehmed II
@@ -417,26 +438,71 @@ configuration, or bindings.
 Example:
 
 ```yaml
+visualLanguageCategories:
+  - name: Historical documentary look
+    description: Grounded visual language guidance for factual historical scenes.
+
 visualLanguage:
-  - name: Ottoman court miniature influence
-    intent: >
+  - category: Historical documentary look
+    name: Ottoman court miniature influence
+    priority: default
+    shortDescription: Muted golds, deep reds, formal court staging, and precise textile detail.
+    guidance: >
       A controlled, richly detailed visual language inspired by Ottoman court
       miniature painting, restrained documentary lighting, and historical
       materials.
-    summary: Muted golds, deep reds, formal court staging, and precise textile detail.
 ```
 
 Recommended visual language fields:
 
+- `category`: required category name. If the category was not declared in
+  `visualLanguageCategories`, core creates it from the referenced name.
 - `name`: display name.
-- `intent`: human-readable creative direction summary.
-- `summary`: compact navigation summary.
+- `priority`: `default`, `situational`, or `rare`.
+- `shortDescription`: compact navigation summary.
+- `guidance`: inline human-readable creative direction.
+- `guidanceFile`: path to a Markdown guidance file relative to the setup YAML.
+- `prompt`: inline prompt-facing guidance.
+- `promptFile`: path to a Markdown prompt file relative to the setup YAML.
 
-The create command should create visual language records and
-user-friendly folders.
+The create command should create visual language category records, visual
+language records, and Markdown assets for guidance or prompt text when those
+fields are provided.
 
 It should not bind those visual language entries to cast members, scenes, clips,
 or episodes.
+
+### `continuityReferences`
+
+Optional.
+
+Represents reusable subjects that must remain visually consistent across the
+project.
+
+Example:
+
+```yaml
+continuityReferences:
+  - kind: location
+    name: Theodosian Walls
+    shortDescription: Ancient land walls guarding Constantinople from the west.
+    description: >
+      Massive layered stone defenses that recur as the central strategic
+      obstacle throughout the film.
+```
+
+Recommended continuity reference fields:
+
+- `kind`: recurring subject kind, such as `location`, `prop`, `costume`,
+  `architecture`, `vehicle`, `ship`, `symbol`, or `group`.
+- `name`: display name.
+- `shortDescription`: compact navigation summary.
+- `description`: inline Markdown-capable description.
+- `descriptionFile`: path to a Markdown description file relative to the setup
+  YAML.
+
+The create command should create continuity reference records and Markdown
+assets for description text when provided.
 
 ### `cast`
 
@@ -594,8 +660,10 @@ Recommended episode fields:
 
 For `project.type: series`, top-level `sequences` may be omitted.
 
-If both top-level `sequences` and episode sequences are present, `studio-core`
-should fail with a clear validation error until a concrete meaning is designed.
+The current implementation accepts both top-level `sequences` and episode-owned
+sequences for series projects. This is not a recommended authoring shape. A
+future model decision should either give that mixed shape a clear meaning or add
+fail-fast validation.
 
 ## Complete Movie Example
 
@@ -625,18 +693,29 @@ languages:
     supportsAudio: true
     supportsSubtitles: true
 
+visualLanguageCategories:
+  - name: Historical documentary look
+    description: Grounded visual language guidance for factual historical scenes.
+
+  - name: Foundry and siege machinery
+    description: Material, lighting, and staging guidance for heavy engineering scenes.
+
 visualLanguage:
-  - name: Ottoman court miniature influence
-    intent: >
+  - category: Historical documentary look
+    name: Ottoman court miniature influence
+    priority: default
+    shortDescription: Formal court staging, miniature-inspired composition, controlled color.
+    guidance: >
       A restrained historical documentary look influenced by Ottoman miniature
       painting, court textiles, muted golds, deep reds, and formal staging.
-    summary: Formal court staging, miniature-inspired composition, controlled color.
 
-  - name: Night foundry lighting
-    intent: >
+  - category: Foundry and siege machinery
+    name: Night foundry lighting
+    priority: situational
+    shortDescription: Industrial night lighting with smoke, sparks, and bronze.
+    guidance: >
       Smoke, sparks, torchlight, damp stone, and heavy bronze surfaces for
       sequences involving cannon casting and transport.
-    summary: Industrial night lighting with smoke, sparks, and bronze.
 
 cast:
   - name: Mehmed II
@@ -663,6 +742,14 @@ cast:
     kind: narrator
     role: Voiceover
     shortDescription: Grave, cinematic documentary narrator.
+
+continuityReferences:
+  - kind: location
+    name: Theodosian Walls
+    shortDescription: Ancient land walls guarding Constantinople from the west.
+    description: >
+      Massive layered stone defenses that recur as the central strategic
+      obstacle throughout the film.
 
 sequences:
   - title: The Young Sultan's Obsession
@@ -729,7 +816,9 @@ Misspelled required fields are reported as both:
 The create command should not fail when:
 
 - `languages` is missing;
+- `visualLanguageCategories` is missing;
 - `visualLanguage` is missing;
+- `continuityReferences` is missing;
 - `cast` is missing;
 - `sequences` is missing;
 - `episodes` is missing for a `standaloneMovie`;
@@ -757,7 +846,9 @@ After a successful create, `studio-core` should create:
 - project metadata rows;
 - series and episode rows, when `project.type` is `series`;
 - supported language rows, if language metadata was provided;
+- visual language category rows, if category metadata was provided;
 - visual language rows, if visual language metadata was provided;
+- continuity reference rows, if continuity reference metadata was provided;
 - cast member rows, if cast metadata was provided;
 - sequence, scene, and clip rows, if narrative spine metadata was provided;
 - user-friendly folders for the created project structure;
@@ -773,7 +864,9 @@ Example report:
   "coverPath": "/configured/storageRoot/constantinople-movie/cover.png",
   "created": {
     "languages": 2,
+    "visualLanguageCategories": 2,
     "castMembers": 5,
+    "continuityReferences": 1,
     "visualLanguage": 2,
     "episodes": 0,
     "sequences": 2,

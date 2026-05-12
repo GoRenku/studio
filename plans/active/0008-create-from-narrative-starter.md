@@ -17,7 +17,7 @@ This plan builds on:
 
 - `0005-project-storage-foundation.md`
 - `0009-studio-text-asset-editing.md`
-- `docs/architecture/structured-diagnostics.md`
+- `docs/architecture/reference/structured-diagnostics.md`
 
 ## Deliverable
 
