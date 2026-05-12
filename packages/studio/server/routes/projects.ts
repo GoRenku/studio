@@ -30,6 +30,8 @@ type ProjectsRouteProjectData = Pick<
   | 'listLibrary'
   | 'readProject'
   | 'updateProjectInformation'
+  | 'readMarkdownAssetContent'
+  | 'updateMarkdownAssetContent'
   | 'resolveCoverImage'
   | 'exportProductionAssets'
 >;
@@ -75,6 +77,45 @@ export function createProjectsRoute(
         return projectErrorResponse(c, error);
       }
     })
+    .get('/:projectName/markdown-assets/:assetId/files/:assetFileId/content', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const assetId = c.req.param('assetId') as string;
+        const assetFileId = c.req.param('assetFileId') as string;
+        const content = await projectData.readMarkdownAssetContent({
+          projectName,
+          assetId,
+          assetFileId,
+        });
+        return c.json({ content });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .patch(
+      '/:projectName/markdown-assets/:assetId/files/:assetFileId/content',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const assetId = c.req.param('assetId') as string;
+          const assetFileId = c.req.param('assetFileId') as string;
+          const body = readMarkdownAssetContentUpdate(await c.req.json());
+          const result = await projectData.updateMarkdownAssetContent({
+            projectName,
+            assetId,
+            assetFileId,
+            content: body.content,
+          });
+          return c.json({
+            content: result.content,
+            project: toProjectResponse(result.project),
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .post('/:projectName/production-export', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
@@ -136,12 +177,20 @@ function readProductionExportRequest(input: unknown): Omit<
   ProductionExportInput,
   'projectName'
 > {
+  const context = 'production export request';
   const issues: DiagnosticIssue[] = [];
-  const record = readRecord(input, [], issues);
+  const record = readRecord(input, [], issues, context);
   if (!record) {
     throwProductionExportRequestError(issues);
   }
-  assertAllowedKeys(record, [], ['dryRun', 'fresh'], issues);
+  assertAllowedKeys(
+    record,
+    [],
+    ['dryRun', 'fresh'],
+    issues,
+    context,
+    'Send only supported production export options.'
+  );
   const result = buildDiagnosticResult(issues);
   if (!result.valid) {
     throwProductionExportRequestError(result.issues);
@@ -158,6 +207,42 @@ function throwProductionExportRequestError(issues: DiagnosticIssue[]): never {
     message: 'Invalid production export request.',
     issues,
     suggestion: 'Send only supported production export options.',
+  });
+}
+
+function readMarkdownAssetContentUpdate(input: unknown): { content: string } {
+  const context = 'markdown asset content request';
+  const issues: DiagnosticIssue[] = [];
+  const record = readRecord(input, [], issues, context);
+  if (!record) {
+    throwMarkdownAssetContentRequestError(issues);
+  }
+
+  assertAllowedKeys(
+    record,
+    [],
+    ['content'],
+    issues,
+    context,
+    'Send only the editable Markdown asset content field.'
+  );
+  const content = readRequiredString(record, ['content'], issues, context);
+  const result = buildDiagnosticResult(issues);
+  if (!result.valid || content === null) {
+    throwMarkdownAssetContentRequestError(result.issues);
+  }
+
+  return { content };
+}
+
+function throwMarkdownAssetContentRequestError(
+  issues: DiagnosticIssue[]
+): never {
+  throw createStructuredError({
+    code: 'STUDIO_SERVER014',
+    message: 'Markdown asset content request failed validation.',
+    issues,
+    suggestion: 'Send a content string for the Markdown asset.',
   });
 }
 
@@ -271,14 +356,15 @@ function warnIfProjectNameMutationAttempt(
 function readRecord(
   input: unknown,
   path: string[],
-  issues: DiagnosticIssue[]
+  issues: DiagnosticIssue[],
+  context = 'project information request'
 ): Record<string, unknown> | null {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     issues.push(
       createDiagnosticError(
         'STUDIO_SERVER010',
         `${formatPath(path)} must be an object.`,
-        { path, context: 'project information request' }
+        { path, context }
       )
     );
     return null;
@@ -290,7 +376,9 @@ function assertAllowedKeys(
   record: Record<string, unknown>,
   path: string[],
   allowedKeys: string[],
-  issues: DiagnosticIssue[]
+  issues: DiagnosticIssue[],
+  context = 'project information request',
+  suggestion = 'Send only the supported project information fields.'
 ): void {
   const allowed = new Set(allowedKeys);
   Object.keys(record).forEach((key) => {
@@ -301,8 +389,8 @@ function assertAllowedKeys(
       createDiagnosticError(
         'STUDIO_SERVER012',
         `Unknown field ${formatPath([...path, key])} is not supported.`,
-        { path: [...path, key], context: 'project information request' },
-        'Send only the supported project information fields.'
+        { path: [...path, key], context },
+        suggestion
       )
     );
   });
@@ -311,7 +399,8 @@ function assertAllowedKeys(
 function readRequiredString(
   record: Record<string, unknown>,
   path: string[],
-  issues: DiagnosticIssue[]
+  issues: DiagnosticIssue[],
+  context = 'project information request'
 ): string | null {
   const value = record[path[path.length - 1]];
   if (typeof value !== 'string') {
@@ -319,7 +408,7 @@ function readRequiredString(
       createDiagnosticError(
         'STUDIO_SERVER010',
         `${formatPath(path)} must be a string.`,
-        { path, context: 'project information request' }
+        { path, context }
       )
     );
     return null;

@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { assets } from '../../../schema/index.js';
 import type { ProjectDataSession } from './sqlite-project-store.js';
 
@@ -24,4 +25,24 @@ export function insertAssetRecord(
 
 export function listAssetRecords(session: ProjectDataSession): AssetRecord[] {
   return session.db.select().from(assets).all();
+}
+
+export function readAssetRecord(
+  session: ProjectDataSession,
+  assetId: string
+): AssetRecord | null {
+  return (
+    session.db.select().from(assets).where(eq(assets.id, assetId)).get() ?? null
+  );
+}
+
+export function updateAssetRecordUpdatedAt(
+  session: ProjectDataSession,
+  input: { assetId: string; updatedAt: string }
+): void {
+  session.db
+    .update(assets)
+    .set({ updatedAt: input.updatedAt })
+    .where(eq(assets.id, input.assetId))
+    .run();
 }

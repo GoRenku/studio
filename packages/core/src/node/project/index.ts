@@ -12,9 +12,12 @@ export type {
   ProjectLanguagePatchOperation,
   ProjectInformationUpdate,
   PatchProjectInformationInput,
+  ReadMarkdownAssetContentInput,
   ReadProjectInput,
   RemoveAssetSelectInput,
   ResolveProjectCoverImageInput,
+  UpdateMarkdownAssetContentInput,
+  UpdateMarkdownAssetContentResult,
   UpdateProjectInformationInput,
 } from './project-data-service.js';
 export {
@@ -41,6 +44,7 @@ export type {
   CastMember,
   Clip,
   Episode,
+  MarkdownAssetContent,
   Project,
   ProjectLanguage,
   ProjectLibrary,

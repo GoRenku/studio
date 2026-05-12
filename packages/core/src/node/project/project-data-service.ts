@@ -9,6 +9,7 @@ import type {
   Asset,
   AssetLocaleContext,
   AssetTarget,
+  MarkdownAssetContent,
   Project,
   ProjectCounts,
   ProjectCreateReport,
@@ -29,7 +30,10 @@ import {
   resolveProjectDatabasePath,
   resolveProjectFolder,
 } from './files/project-paths.js';
-import { writeMarkdownAssetFile } from './files/markdown-asset-files.js';
+import {
+  readMarkdownAssetFile,
+  writeMarkdownAssetFile,
+} from './files/markdown-asset-files.js';
 import {
   allocateWorkingMarkdownAssetPath,
   WORKING_ASSETS_BASE_ROOT,
@@ -67,8 +71,14 @@ import { insertContinuityReferenceRecords } from './data/continuity-reference-re
 import {
   insertAssetFileRecord,
   listAssetFileRecords,
+  readAssetFileRecord,
+  updateAssetFileRecordMetadata,
 } from './data/asset-file-records.js';
-import { insertAssetRecord } from './data/asset-records.js';
+import {
+  insertAssetRecord,
+  readAssetRecord,
+  updateAssetRecordUpdatedAt,
+} from './data/asset-records.js';
 import {
   insertClipRecord,
   insertEpisodeRecord,
@@ -126,6 +136,12 @@ export interface ProjectDataService {
   readProject(input: ReadProjectInput): Promise<Project>;
   updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
   patchProjectInformation(input: PatchProjectInformationInput): Promise<Project>;
+  readMarkdownAssetContent(
+    input: ReadMarkdownAssetContentInput
+  ): Promise<MarkdownAssetContent>;
+  updateMarkdownAssetContent(
+    input: UpdateMarkdownAssetContentInput
+  ): Promise<UpdateMarkdownAssetContentResult>;
   resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
   registerAsset(input: RegisterAssetInput & RenkuConfigPathOptions): Promise<Asset>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
@@ -162,6 +178,22 @@ export interface UpdateProjectInformationInput extends RenkuConfigPathOptions {
 export interface PatchProjectInformationInput extends RenkuConfigPathOptions {
   projectName: string;
   patch: ProjectInformationPatch;
+}
+
+export interface ReadMarkdownAssetContentInput extends RenkuConfigPathOptions {
+  projectName: string;
+  assetId: string;
+  assetFileId: string;
+}
+
+export interface UpdateMarkdownAssetContentInput
+  extends ReadMarkdownAssetContentInput {
+  content: string;
+}
+
+export interface UpdateMarkdownAssetContentResult {
+  content: MarkdownAssetContent;
+  project: Project;
 }
 
 export interface ProjectInformationPatch {
@@ -239,6 +271,8 @@ export function createProjectDataService(): ProjectDataService {
     readProject,
     updateProjectInformation,
     patchProjectInformation,
+    readMarkdownAssetContent,
+    updateMarkdownAssetContent,
     resolveCoverImage,
     registerAsset,
     listAssets,
@@ -470,6 +504,77 @@ async function patchProjectInformation(
     homeDir: input.homeDir,
     information,
   });
+}
+
+async function readMarkdownAssetContent(
+  input: ReadMarkdownAssetContentInput
+): Promise<MarkdownAssetContent> {
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  const session = openProjectStore({ projectFolder, create: false });
+  try {
+    const file = readMarkdownAssetFileRecord(session, input);
+    return {
+      assetId: input.assetId,
+      assetFileId: input.assetFileId,
+      projectRelativePath: file.projectRelativePath,
+      content: await readMarkdownAssetFile({
+        projectFolder,
+        projectRelativePath: normalizeProjectRelativePath(file.projectRelativePath),
+      }),
+    };
+  } finally {
+    session.close();
+  }
+}
+
+async function updateMarkdownAssetContent(
+  input: UpdateMarkdownAssetContentInput
+): Promise<UpdateMarkdownAssetContentResult> {
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  const session = openProjectStore({ projectFolder, create: false });
+  try {
+    const file = readMarkdownAssetFileRecord(session, input);
+    const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
+    await writeMarkdownAssetFile({
+      projectFolder,
+      projectRelativePath,
+      content: input.content,
+    });
+
+    const absolutePath = resolveProjectRelativePath(projectFolder, projectRelativePath);
+    const stats = await fs.stat(absolutePath);
+    const now = new Date().toISOString();
+    const transaction = session.sqlite.transaction(() => {
+      updateAssetRecordUpdatedAt(session, {
+        assetId: input.assetId,
+        updatedAt: now,
+      });
+      updateAssetFileRecordMetadata(session, {
+        assetId: input.assetId,
+        assetFileId: input.assetFileId,
+        sizeBytes: stats.size,
+        updatedAt: now,
+      });
+    });
+    transaction();
+
+    return {
+      content: {
+        assetId: input.assetId,
+        assetFileId: input.assetFileId,
+        projectRelativePath,
+        content: await readMarkdownAssetFile({
+          projectFolder,
+          projectRelativePath,
+        }),
+      },
+      project: readProjectFromSession({ session, projectFolder }),
+    };
+  } finally {
+    session.close();
+  }
 }
 
 async function resolveCoverImage(
@@ -1159,6 +1264,47 @@ function buildProjectSummaryAsset(input: {
     );
   }
   return asset;
+}
+
+function readMarkdownAssetFileRecord(
+  session: ProjectDataSession,
+  input: { assetId: string; assetFileId: string }
+) {
+  const asset = readAssetRecord(session, input.assetId);
+  if (!asset) {
+    throw new ProjectDataError(
+      'PROJECT_DATA069',
+      `Markdown asset ${input.assetId} was not found.`
+    );
+  }
+  if (asset.mediaKind !== 'text' && asset.mediaKind !== 'markdown') {
+    throw new ProjectDataError(
+      'PROJECT_DATA070',
+      `Asset ${input.assetId} is not a Markdown text asset.`
+    );
+  }
+
+  const file = readAssetFileRecord(session, input);
+  if (!file) {
+    throw new ProjectDataError(
+      'PROJECT_DATA071',
+      `Markdown asset file ${input.assetFileId} was not found for asset ${input.assetId}.`
+    );
+  }
+  if (file.role !== 'primary') {
+    throw new ProjectDataError(
+      'PROJECT_DATA072',
+      `Markdown asset file ${input.assetFileId} is not the primary text file.`
+    );
+  }
+  if (file.mediaKind !== 'text' && file.mediaKind !== 'markdown') {
+    throw new ProjectDataError(
+      'PROJECT_DATA073',
+      `Asset file ${input.assetFileId} is not a Markdown text file.`
+    );
+  }
+
+  return file;
 }
 
 function relationshipIdPrefix(

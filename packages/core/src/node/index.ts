@@ -54,6 +54,7 @@ export type {
   Project,
   EntityIdPrefix,
   ListAssetsInput,
+  MarkdownAssetContent,
   ProjectDataService,
   ProductionExportInput,
   ProductionExportSummary,
@@ -66,10 +67,13 @@ export type {
   ProjectRelativePath,
   ProductionExportVariant,
   ProductionExportVariantSummary,
+  ReadMarkdownAssetContentInput,
   ReadProjectInput,
   RegisterAssetInput,
   RemoveAssetSelectInput,
   ResolveProjectCoverImageInput,
+  UpdateMarkdownAssetContentInput,
+  UpdateMarkdownAssetContentResult,
   UpdateProjectInformationInput,
 } from './project/index.js';
 export {

@@ -1151,6 +1151,70 @@ describe('ProjectDataService', () => {
     ).resolves.toBe('');
   });
 
+  it('reads and updates Markdown asset content by asset link', async () => {
+    const starterPath = await writeNarrativeStarter(homeDir);
+    const projectData = createProjectDataService();
+    const created = await runCreateOrSkip(
+      projectData.createFromNarrativeStarter({
+        starterPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const project = await projectData.readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const clip = project.sequences[0]?.scenes[0]?.clips[0];
+    const summaryAsset = clip?.summaryAsset;
+    expect(summaryAsset).toBeDefined();
+    if (!summaryAsset) {
+      return;
+    }
+
+    await expect(
+      projectData.readMarkdownAssetContent({
+        projectName: 'constantinople',
+        homeDir,
+        assetId: summaryAsset.assetId,
+        assetFileId: summaryAsset.assetFileId,
+      })
+    ).resolves.toMatchObject({
+      assetId: summaryAsset.assetId,
+      assetFileId: summaryAsset.assetFileId,
+      projectRelativePath: summaryAsset.projectRelativePath,
+      content: 'Clip summary from Markdown.',
+    });
+
+    const updated = await projectData.updateMarkdownAssetContent({
+      projectName: 'constantinople',
+      homeDir,
+      assetId: summaryAsset.assetId,
+      assetFileId: summaryAsset.assetFileId,
+      content: 'Updated clip summary.\n\n',
+    });
+
+    expect(updated.content).toMatchObject({
+      assetId: summaryAsset.assetId,
+      assetFileId: summaryAsset.assetFileId,
+      projectRelativePath: summaryAsset.projectRelativePath,
+      content: 'Updated clip summary.',
+    });
+    expect(
+      updated.project.sequences[0]?.scenes[0]?.clips[0]?.summary
+    ).toBe('Updated clip summary.');
+    await expect(
+      fs.readFile(
+        path.join(created.projectPath, summaryAsset.projectRelativePath),
+        'utf8'
+      )
+    ).resolves.toBe('Updated clip summary.\n');
+  });
+
   it('rejects removing a locale that still has asset relationships', async () => {
     const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();

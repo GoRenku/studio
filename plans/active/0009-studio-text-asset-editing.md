@@ -21,7 +21,8 @@ In Studio, a user can:
 - edit a short field stored directly in SQLite, such as a title;
 - edit rich text stored as a Markdown asset, such as a clip brief or visual
   intent;
-- reload the project and see both changes persisted.
+- see saved changes reflected immediately in the open project without manually
+  reloading it.
 
 ## References
 
@@ -102,8 +103,9 @@ feature code. Use local shadcn-style primitives from `packages/studio/src/ui`.
 - Browser/manual verification:
   - edit a SQLite title;
   - edit a Markdown-backed clip brief;
-  - reload the project;
-  - confirm both persisted.
+  - confirm both saved changes are reflected immediately in the open project;
+  - as a verification-only persistence check, refresh the browser or restart
+    Studio and confirm both saved changes are still present.
 - Component/service tests prove:
   - Markdown asset content loads;
   - Markdown asset content saves;

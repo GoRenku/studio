@@ -132,7 +132,11 @@ export function MovieStudioScreen({
               ) : selection.type === 'visualLanguage' ? (
                 <VisualLanguagePanel project={project} />
               ) : selection.type === 'clip' && resolvedSelection.clip ? (
-                <ClipDesignPanel clip={resolvedSelection.clip} />
+                <ClipDesignPanel
+                  projectName={project.identity.name}
+                  clip={resolvedSelection.clip}
+                  onProjectChange={onProjectChange}
+                />
               ) : selection.type === 'casting' ? (
                 <CastOverviewPanel cast={project.cast} />
               ) : (

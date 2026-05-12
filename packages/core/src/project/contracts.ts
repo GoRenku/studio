@@ -140,6 +140,13 @@ export interface RichTextAssetLink {
   projectRelativePath: string;
 }
 
+export interface MarkdownAssetContent {
+  assetId: string;
+  assetFileId: string;
+  projectRelativePath: string;
+  content: string;
+}
+
 export type AssetTarget =
   | { kind: 'project' }
   | { kind: 'visualLanguage'; visualLanguageId: string }

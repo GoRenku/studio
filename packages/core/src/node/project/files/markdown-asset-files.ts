@@ -18,6 +18,17 @@ export async function writeMarkdownAssetFile(input: {
   await fs.writeFile(absolutePath, normalizeMarkdownContent(input.content), 'utf8');
 }
 
+export async function readMarkdownAssetFile(input: {
+  projectFolder: string;
+  projectRelativePath: ProjectRelativePath;
+}): Promise<string> {
+  const absolutePath = resolveProjectRelativePath(
+    input.projectFolder,
+    input.projectRelativePath
+  );
+  return (await fs.readFile(absolutePath, 'utf8')).trimEnd();
+}
+
 function normalizeMarkdownContent(content: string): string {
   const trimmed = content.trim();
   return trimmed.length === 0 ? '' : `${trimmed}\n`;

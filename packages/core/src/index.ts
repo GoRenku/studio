@@ -39,6 +39,7 @@ export type {
   ProjectLanguage,
   ProjectLibrary,
   ProjectRelativePath,
+  MarkdownAssetContent,
   ProductionExportInput,
   ProductionExportSummary,
   ProductionExportVariant,

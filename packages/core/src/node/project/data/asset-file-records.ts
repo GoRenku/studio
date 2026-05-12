@@ -1,3 +1,4 @@
+import { and, eq } from 'drizzle-orm';
 import { assetFiles } from '../../../schema/index.js';
 import type { ProjectDataSession } from './sqlite-project-store.js';
 
@@ -28,4 +29,41 @@ export function insertAssetFileRecord(
 
 export function listAssetFileRecords(session: ProjectDataSession): AssetFileRecord[] {
   return session.db.select().from(assetFiles).all();
+}
+
+export function readAssetFileRecord(
+  session: ProjectDataSession,
+  input: { assetId: string; assetFileId: string }
+): AssetFileRecord | null {
+  return (
+    session.db
+      .select()
+      .from(assetFiles)
+      .where(
+        and(
+          eq(assetFiles.assetId, input.assetId),
+          eq(assetFiles.id, input.assetFileId)
+        )
+      )
+      .get() ?? null
+  );
+}
+
+export function updateAssetFileRecordMetadata(
+  session: ProjectDataSession,
+  input: { assetId: string; assetFileId: string; sizeBytes: number; updatedAt: string }
+): void {
+  session.db
+    .update(assetFiles)
+    .set({
+      sizeBytes: input.sizeBytes,
+      updatedAt: input.updatedAt,
+    })
+    .where(
+      and(
+        eq(assetFiles.assetId, input.assetId),
+        eq(assetFiles.id, input.assetFileId)
+      )
+    )
+    .run();
 }

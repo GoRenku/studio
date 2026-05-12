@@ -110,6 +110,94 @@ describe('projects Hono route', () => {
     });
   });
 
+  it('reads Markdown asset content through ProjectDataService', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request(
+      '/constantinople/markdown-assets/asset_clip_summary/files/asset_file_clip_summary/content'
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      content: {
+        assetId: 'asset_clip_summary',
+        assetFileId: 'asset_file_clip_summary',
+        projectRelativePath:
+          'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
+        content: 'Establish the movie.',
+      },
+    });
+  });
+
+  it('updates Markdown asset content through ProjectDataService', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request(
+      '/constantinople/markdown-assets/asset_clip_summary/files/asset_file_clip_summary/content',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          content: 'Frame the city as a strategic obsession.',
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      content: {
+        assetId: 'asset_clip_summary',
+        assetFileId: 'asset_file_clip_summary',
+        projectRelativePath:
+          'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
+        content: 'Frame the city as a strategic obsession.',
+      },
+      project: {
+        identity: {
+          name: 'constantinople',
+        },
+      },
+    });
+  });
+
+  it('rejects malformed Markdown asset content updates', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request(
+      '/constantinople/markdown-assets/asset_clip_summary/files/asset_file_clip_summary/content',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          content: 42,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'STUDIO_SERVER014',
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'STUDIO_SERVER010',
+            message: 'content must be a string.',
+          }),
+        ]),
+      },
+    });
+  });
+
   it('rejects project information payloads that try to change project name', async () => {
     const app = createProjectsRoute({
       projectData: fakeProjectDataService(),
@@ -203,6 +291,27 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
     },
     async updateProjectInformation() {
       return project;
+    },
+    async readMarkdownAssetContent(input) {
+      return {
+        assetId: input.assetId,
+        assetFileId: input.assetFileId,
+        projectRelativePath:
+          'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
+        content: 'Establish the movie.',
+      };
+    },
+    async updateMarkdownAssetContent(input) {
+      return {
+        content: {
+          assetId: input.assetId,
+          assetFileId: input.assetFileId,
+          projectRelativePath:
+            'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
+          content: input.content,
+        },
+        project,
+      };
     },
     async resolveCoverImage() {
       return '/tmp/renku/constantinople/cover.png';

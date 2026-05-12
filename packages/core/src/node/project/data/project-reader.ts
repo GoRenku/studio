@@ -320,7 +320,10 @@ function buildRichTextAssets(input: {
 }): RichTextAssetIndex {
   const assetFilesByAssetId = new Map<string, AssetFileRecord>();
   for (const file of listAssetFileRecords(input.session)) {
-    if (file.mediaKind === 'text' && file.role === 'primary') {
+    if (
+      (file.mediaKind === 'text' || file.mediaKind === 'markdown') &&
+      file.role === 'primary'
+    ) {
       assetFilesByAssetId.set(file.assetId, file);
     }
   }
