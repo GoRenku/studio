@@ -114,6 +114,16 @@ describe('App', () => {
       },
     ];
     project.counts.castMembers = 2;
+    project.castAssetsByCastMemberId = {
+      ...project.castAssetsByCastMemberId,
+      cast_mehmed: [
+        makeCastAsset({
+          assetId: 'asset_mehmed_reference',
+          castMemberId: 'cast_mehmed',
+          title: 'Mehmed reference',
+        }),
+      ],
+    };
     const mehmedAssets = deferredResponse();
     let projectReadCount = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
@@ -152,7 +162,8 @@ describe('App', () => {
       '/projects/constantinople/cast/cast_mehmed'
     );
     expect(screen.queryByText('Loading Renku Studio...')).toBeNull();
-    expect(screen.getByText('Loading cast assets...')).toBeTruthy();
+    expect(screen.queryByText('Loading cast assets...')).toBeNull();
+    expect(screen.getByText('Mehmed reference')).toBeTruthy();
     expect(projectReadCount).toBe(1);
 
     mehmedAssets.resolve(
@@ -722,6 +733,9 @@ function makeProject(
       },
     ],
     continuityReferences: [],
+    castAssetsByCastMemberId: {
+      cast_narrator: [makeCastAsset()],
+    },
     sequences: [
       {
         id: 'seq_opening',

@@ -120,7 +120,11 @@ export async function exportProductionAssets(
 ): Promise<ProductionExportSummary> {
   const storageRoot = await resolveRenkuStorageRoot(input);
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
-  const session = openProjectStore({ projectFolder, create: false });
+  const session = openProjectStore({
+    projectFolder,
+    create: false,
+    lifetime: 'project',
+  });
   try {
     const project = readProjectIdentity(session);
     const variants = readRequestedVariants(session, input.variants);

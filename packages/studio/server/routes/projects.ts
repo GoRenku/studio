@@ -38,6 +38,7 @@ type ProjectsRouteProjectData = Pick<
   | 'updateMarkdownAssetContent'
   | 'resolveCoverImage'
   | 'listAssets'
+  | 'listCastMemberAssets'
   | 'createAssetSelect'
   | 'removeAssetSelect'
   | 'exportProductionAssets'
@@ -78,8 +79,13 @@ export function createProjectsRoute(
     .get('/:projectName', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const project = await projectData.readProject({ projectName });
-        return c.json({ project: toProjectResponse(project) });
+        const [project, castAssets] = await Promise.all([
+          projectData.readProject({ projectName }),
+          projectData.listCastMemberAssets({ projectName }),
+        ]);
+        return c.json({
+          project: toProjectResponse(project, { castAssets }),
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -170,7 +176,10 @@ export function createProjectsRoute(
           projectName,
           information,
         });
-        return c.json({ project: toProjectResponse(project) });
+        const castAssets = await projectData.listCastMemberAssets({
+          projectName,
+        });
+        return c.json({ project: toProjectResponse(project, { castAssets }) });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -205,9 +214,12 @@ export function createProjectsRoute(
             assetFileId,
             content: body.content,
           });
+          const castAssets = await projectData.listCastMemberAssets({
+            projectName,
+          });
           return c.json({
             content: result.content,
-            project: toProjectResponse(result.project),
+            project: toProjectResponse(result.project, { castAssets }),
           });
         } catch (error) {
           return projectErrorResponse(c, error);

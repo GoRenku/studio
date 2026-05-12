@@ -53,6 +53,7 @@ export type {
   CreateProjectFromSetupInput,
   Project,
   EntityIdPrefix,
+  ListCastMemberAssetsInput,
   ListAssetsInput,
   MarkdownAssetContent,
   ProjectDataService,

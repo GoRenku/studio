@@ -19,9 +19,9 @@ import type {
 } from '@/services/studio-current-contracts';
 
 const BROWSER_SESSION_KEY = 'renku.studio.browserSessionId';
-const POLLING_INTERVAL_MS = 1_000;
-const ACTIVITY_DEBOUNCE_MS = 2_000;
-const VISIBLE_HEARTBEAT_MS = 15_000;
+const POLLING_INTERVAL_MS = 2_000;
+const ACTIVITY_DEBOUNCE_MS = 30_000;
+const VISIBLE_HEARTBEAT_MS = 60_000;
 
 export interface StudioCoordinationSelection {
   selection: MovieStudioSelection;
@@ -132,8 +132,6 @@ export function useStudioCoordination(input: {
       }
     };
     window.addEventListener('focus', reportVisibleActivity);
-    window.addEventListener('pointerdown', reportVisibleActivity);
-    window.addEventListener('keydown', reportVisibleActivity);
     document.addEventListener('visibilitychange', reportVisibleActivity);
     const heartbeat = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -142,8 +140,6 @@ export function useStudioCoordination(input: {
     }, VISIBLE_HEARTBEAT_MS);
     return () => {
       window.removeEventListener('focus', reportVisibleActivity);
-      window.removeEventListener('pointerdown', reportVisibleActivity);
-      window.removeEventListener('keydown', reportVisibleActivity);
       document.removeEventListener('visibilitychange', reportVisibleActivity);
       window.clearInterval(heartbeat);
     };

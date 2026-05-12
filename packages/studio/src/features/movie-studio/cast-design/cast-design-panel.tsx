@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import type { CastMember } from '@gorenku/studio-core';
+import type { Asset, CastMember } from '@gorenku/studio-core';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { CastCharacterSheetTab } from './tabs/cast-character-sheet-tab';
 import { CastDescriptionTab } from './tabs/cast-description-tab';
@@ -13,16 +13,22 @@ import { useCastDesignAssets } from './use-cast-design-assets';
 interface CastDesignPanelProps {
   projectName: string;
   castEntry: CastMember;
+  initialAssets?: Asset[];
 }
 
 export function CastDesignPanel({
   projectName,
   castEntry,
+  initialAssets,
 }: CastDesignPanelProps) {
   const [activeTab, setActiveTab] = useState<CastDesignTabId>('description');
   const [characterSheetGenerationOpen, setCharacterSheetGenerationOpen] =
     useState(false);
-  const castDesignAssets = useCastDesignAssets({ projectName, castEntry });
+  const castDesignAssets = useCastDesignAssets({
+    projectName,
+    castEntry,
+    initialAssets,
+  });
 
   const openCharacterSheetGeneration = () => {
     setCharacterSheetGenerationOpen(true);

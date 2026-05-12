@@ -97,6 +97,7 @@ import {
   listProjectAssetRecords,
 } from './data/project-asset-records.js';
 import { readProjectLibrary } from './data/project-library-reader.js';
+import { migrateProjectDatabase } from './data/project-database-migrator.js';
 import { readProjectFromSession } from './data/project-reader.js';
 import {
   insertProjectRecord,
@@ -120,6 +121,7 @@ import {
 } from './data/narrative-asset-records.js';
 import {
   createAssetSelect,
+  listCastMemberAssets,
   listAssetSelects,
   listAssets,
   registerAsset,
@@ -153,6 +155,7 @@ export interface ProjectDataService {
   updateAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
   removeAssetSelect(input: RemoveAssetSelectInput): Promise<Asset>;
   listAssetSelects(input: ListAssetsInput): Promise<Asset[]>;
+  listCastMemberAssets(input: ListCastMemberAssetsInput): Promise<Asset[]>;
   exportProductionAssets(
     input: ProductionExportInput & RenkuConfigPathOptions
   ): Promise<ProductionExportSummary>;
@@ -267,6 +270,11 @@ export interface ListAssetsInput extends RenkuConfigPathOptions {
   locale?: AssetLocaleContext;
 }
 
+export interface ListCastMemberAssetsInput extends RenkuConfigPathOptions {
+  projectName: string;
+  locale?: AssetLocaleContext;
+}
+
 export interface ChangeAssetSelectInput extends RenkuConfigPathOptions {
   projectName: string;
   target: AssetTarget;
@@ -298,6 +306,7 @@ export function createProjectDataService(): ProjectDataService {
     updateAssetSelect,
     removeAssetSelect,
     listAssetSelects,
+    listCastMemberAssets,
     exportProductionAssets,
   };
 }
@@ -351,6 +360,7 @@ async function createFromSetup(
   }
 
   await fs.mkdir(path.join(projectFolder, RENKU_PROJECT_DIR), { recursive: true });
+  migrateProjectDatabase(resolveProjectDatabasePath(projectFolder));
   const session = openProjectStore({ projectFolder, create: true });
   const ids = createUniqueIdAllocator(
     input.idGenerator ?? createRandomIdGenerator()
@@ -418,6 +428,7 @@ async function createFromNarrativeStarter(
   }
 
   await fs.mkdir(path.join(projectFolder, RENKU_PROJECT_DIR), { recursive: true });
+  migrateProjectDatabase(resolveProjectDatabasePath(projectFolder));
   const session = openProjectStore({ projectFolder, create: true });
   const ids = createUniqueIdAllocator(
     input.idGenerator ?? createRandomIdGenerator()
@@ -466,7 +477,11 @@ async function listLibrary(input: RenkuConfigPathOptions = {}): Promise<ProjectL
 async function readProject(input: ReadProjectInput): Promise<Project> {
   const storageRoot = await resolveRenkuStorageRoot(input);
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
-  const session = openProjectStore({ projectFolder, create: false });
+  const session = openProjectStore({
+    projectFolder,
+    create: false,
+    lifetime: 'project',
+  });
   try {
     return readProjectFromSession({ session, projectFolder });
   } finally {
@@ -479,7 +494,11 @@ async function updateProjectInformation(
 ): Promise<Project> {
   const storageRoot = await resolveRenkuStorageRoot(input);
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
-  const session = openProjectStore({ projectFolder, create: false });
+  const session = openProjectStore({
+    projectFolder,
+    create: false,
+    lifetime: 'project',
+  });
   try {
     const projectRecord = readProjectRecord(session);
     if (!projectRecord) {
@@ -561,7 +580,11 @@ async function readMarkdownAssetContent(
 ): Promise<MarkdownAssetContent> {
   const storageRoot = await resolveRenkuStorageRoot(input);
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
-  const session = openProjectStore({ projectFolder, create: false });
+  const session = openProjectStore({
+    projectFolder,
+    create: false,
+    lifetime: 'project',
+  });
   try {
     const file = readMarkdownAssetFileRecord(session, input);
     return {
@@ -583,7 +606,11 @@ async function updateMarkdownAssetContent(
 ): Promise<UpdateMarkdownAssetContentResult> {
   const storageRoot = await resolveRenkuStorageRoot(input);
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
-  const session = openProjectStore({ projectFolder, create: false });
+  const session = openProjectStore({
+    projectFolder,
+    create: false,
+    lifetime: 'project',
+  });
   try {
     const file = readMarkdownAssetFileRecord(session, input);
     const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);

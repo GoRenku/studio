@@ -8,6 +8,7 @@ import type {
 
 export type ProjectWithHttp = Project & {
   coverUrl: string | null;
+  castAssetsByCastMemberId?: Record<string, Asset[]>;
 };
 
 export type ProjectSummaryWithHttp = ProjectSummary & {

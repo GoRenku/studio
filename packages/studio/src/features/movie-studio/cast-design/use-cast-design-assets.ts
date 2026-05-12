@@ -30,14 +30,15 @@ export interface CastDesignAssetsState {
 export function useCastDesignAssets(input: {
   projectName: string;
   castEntry: CastMember;
+  initialAssets?: Asset[];
 }): CastDesignAssetsState {
-  const { projectName, castEntry } = input;
+  const { projectName, castEntry, initialAssets } = input;
   const cacheKey = castAssetsCacheKey(projectName, castEntry.id);
   const [assets, setAssets] = useState<Asset[]>(
-    () => castAssetsCache.get(cacheKey) ?? []
+    () => initialAssets ?? castAssetsCache.get(cacheKey) ?? []
   );
   const [isLoadingCastAssets, setIsLoadingCastAssets] = useState(
-    () => !castAssetsCache.has(cacheKey)
+    () => !initialAssets && !castAssetsCache.has(cacheKey)
   );
   const [castAssetsError, setCastAssetsError] = useState<string | null>(null);
   const [castAssetMutationId, setCastAssetMutationId] = useState<string | null>(

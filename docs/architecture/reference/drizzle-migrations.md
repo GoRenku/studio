@@ -58,7 +58,7 @@ Generated files include Drizzle's migration journal and schema snapshots. Those
 files are part of the migration history and should be committed together with
 the SQL migration.
 
-## Applying Migrations
+## Applying Migrations In Development
 
 Each Renku project owns its own SQLite database:
 
@@ -66,7 +66,11 @@ Each Renku project owns its own SQLite database:
 <storageRoot>/<projectName>/.renku/project.sqlite
 ```
 
-Core applies migrations to that project-local database by invoking Drizzle Kit:
+Project database migrations are a development-time setup operation. They must
+not run from Studio request handlers, project read paths, asset listing paths,
+image-serving paths, coordination polling, or other application runtime code.
+
+Apply migrations to a project-local database by invoking Drizzle Kit explicitly:
 
 ```bash
 RENKU_PROJECT_DATABASE_PATH=/absolute/path/to/project.sqlite \
@@ -80,8 +84,8 @@ RENKU_PROJECT_DATABASE_PATH=/absolute/path/to/project.sqlite \
   pnpm --filter @gorenku/studio-core db:migrate:project
 ```
 
-`packages/core` owns this migration operation. CLI and Studio must call core
-project data APIs instead of invoking Drizzle Kit directly.
+`packages/core` owns this migration operation. CLI and Studio must not invoke
+Drizzle Kit from normal runtime paths.
 
 ## Config Files
 

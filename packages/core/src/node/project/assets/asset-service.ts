@@ -156,6 +156,32 @@ export async function listAssets(
   }
 }
 
+export async function listCastMemberAssets(
+  input: {
+    projectName: string;
+    locale?: AssetLocaleContext;
+  } & RenkuConfigPathOptions
+): Promise<Asset[]> {
+  const { session } = await openAssetSession(input);
+  try {
+    validateLocaleExists(session, input.locale);
+    return listAssetsForRelationshipTable(
+      session,
+      {
+        tableName: 'cast_asset',
+        idPrefix: 'cast_asset',
+        targetColumn: 'cast_member_id',
+        targetId: null,
+        targetTable: 'cast_member',
+        targetTableIdColumn: 'id',
+      },
+      input.locale
+    );
+  } finally {
+    session.close();
+  }
+}
+
 export async function createAssetSelect(
   input: {
     projectName: string;
@@ -274,7 +300,11 @@ async function openAssetSession(input: {
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
   return {
     projectFolder,
-    session: openProjectStore({ projectFolder, create: false }),
+    session: openProjectStore({
+      projectFolder,
+      create: false,
+      lifetime: 'project',
+    }),
   };
 }
 
@@ -390,7 +420,11 @@ function validateTargetExists(
   session: ProjectDataSession,
   target: RelationshipTableConfig
 ): void {
-  if (!target.targetTable || !target.targetTableIdColumn || !target.targetId) {
+  if (
+    !target.targetTable ||
+    !target.targetTableIdColumn ||
+    target.targetId === null
+  ) {
     return;
   }
   const row = session.sqlite
@@ -492,6 +526,19 @@ function listAssetsForTarget(
   return rows.map((row) => toAsset(row, files));
 }
 
+function listAssetsForRelationshipTable(
+  session: ProjectDataSession,
+  target: RelationshipTableConfig,
+  locale?: AssetLocaleContext
+): Asset[] {
+  const rows = listRelationshipAssetRows(session, target, locale);
+  const files = readAssetFileRows(
+    session,
+    rows.map((row) => row.assetId)
+  );
+  return rows.map((row) => toAsset(row, files));
+}
+
 function readRelationshipAssetRow(
   session: ProjectDataSession,
   target: RelationshipTableConfig,
@@ -518,8 +565,10 @@ function listRelationshipAssetRows(
   const conditions: string[] = [];
   const values: unknown[] = [];
   if (target.targetColumn) {
-    conditions.push(`r.${target.targetColumn} = ?`);
-    values.push(target.targetId);
+    if (target.targetId !== null) {
+      conditions.push(`r.${target.targetColumn} = ?`);
+      values.push(target.targetId);
+    }
   }
   if (locale && locale.localeId === null) {
     conditions.push('r.locale_id is null');

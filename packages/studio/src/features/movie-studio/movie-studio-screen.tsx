@@ -89,6 +89,13 @@ export function MovieStudioScreen({
             key={resolvedSelection.castEntry.id}
             projectName={project.identity.name}
             castEntry={resolvedSelection.castEntry}
+            initialAssets={
+              project.castAssetsByCastMemberId
+                ? (project.castAssetsByCastMemberId[
+                    resolvedSelection.castEntry.id
+                  ] ?? [])
+                : undefined
+            }
           />
         ) : (
           <section className='min-h-0 rounded-(--radius-panel) border border-panel-border bg-panel-bg overflow-hidden flex flex-col'>

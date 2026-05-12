@@ -44,6 +44,14 @@ describe('projects Hono route', () => {
           name: 'constantinople',
         },
         coverUrl: '/studio-api/projects/constantinople/cover',
+        castAssetsByCastMemberId: {
+          cast_narrator: [
+            {
+              assetId: 'asset_cast_reference',
+              title: 'Narrator reference',
+            },
+          ],
+        },
       },
     });
   });
@@ -396,6 +404,9 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
       };
     },
     async listAssets() {
+      return [makeAsset('asset_cast_reference')];
+    },
+    async listCastMemberAssets() {
       return [makeAsset('asset_cast_reference')];
     },
     async createAssetSelect(input) {

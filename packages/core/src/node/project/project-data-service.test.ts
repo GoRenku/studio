@@ -1047,7 +1047,7 @@ describe('ProjectDataService', () => {
           title: 'broken-project',
           counts: null,
           validationError: expect.objectContaining({
-            code: 'PROJECT_DATA042',
+            code: 'PROJECT_DATA044',
           }),
         }),
       ])

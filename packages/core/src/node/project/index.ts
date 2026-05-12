@@ -5,6 +5,7 @@ export type {
   ChangeAssetSelectInput,
   CreateProjectFromNarrativeStarterInput,
   CreateProjectFromSetupInput,
+  ListCastMemberAssetsInput,
   ListAssetsInput,
   ProjectDataService,
   ProjectInformationLanguageUpdate,

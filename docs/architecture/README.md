@@ -45,6 +45,7 @@ Use this page as the map:
   - `../decisions/0011-use-drizzle-kit-for-project-sqlite-migrations.md`
   - `../decisions/0012-store-project-file-references-as-project-relative-paths.md`
   - `../decisions/0013-use-core-owned-project-assets-and-production-exports.md`
+  - `../decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 
 ## Studio App, Server, Routes, And Coordination
 
@@ -59,6 +60,7 @@ Use this page as the map:
   - `../decisions/0008-use-url-owned-studio-routes.md`
   - `../decisions/0014-use-hono-route-modules-for-the-local-studio-server.md`
   - `../decisions/0015-use-feature-service-ui-layering-for-the-studio-frontend.md`
+  - `../decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 
 ## Diagnostics, Naming, CLI, And Contracts
 
