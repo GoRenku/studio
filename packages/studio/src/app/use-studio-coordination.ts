@@ -43,6 +43,7 @@ export function useStudioCoordination(input: {
   const lastActivityRef = useRef(0);
   const focusRequestInProgressRef = useRef<string | null>(null);
   const appliedRequestIdRef = useRef<string | null>(null);
+  const appliedFocusRequestIdsRef = useRef<Set<string>>(new Set());
   const lastReportedFocusKeyRef = useRef<string | null>(null);
   const projectSessionRef = useRef(projectSession);
   const currentProjectRef = useRef<ProjectWithHttp | null>(projectSession.project);
@@ -89,6 +90,7 @@ export function useStudioCoordination(input: {
       currentProjectRef,
       focusRequestInProgressRef,
       appliedRequestIdRef,
+      appliedFocusRequestIdsRef,
     });
   }, [browserSessionId]);
 
@@ -164,6 +166,7 @@ export function useStudioCoordination(input: {
       currentProjectRef,
       focusRequestInProgressRef,
       appliedRequestIdRef,
+      appliedFocusRequestIdsRef,
     }).catch(() => {
       // Startup coordination retries through the regular polling path.
     });
@@ -221,13 +224,17 @@ interface StudioCoordinationRefs {
   currentProjectRef: { current: ProjectWithHttp | null };
   focusRequestInProgressRef: { current: string | null };
   appliedRequestIdRef: { current: string | null };
+  appliedFocusRequestIdsRef: { current: Set<string> };
 }
 
 async function applyStudioEventBatch(input: {
   events: StudioEvent[];
   browserSessionId: string;
 } & StudioCoordinationRefs): Promise<void> {
-  const latestFocusRequest = latestFocusRequestIn(input.events);
+  const latestFocusRequest = latestFocusRequestIn(
+    input.events,
+    input.appliedFocusRequestIdsRef.current
+  );
   const refreshedProjectIds = new Set<string>();
 
   for (const event of input.events) {
@@ -259,6 +266,7 @@ async function applyStudioEventBatch(input: {
         currentProjectRef: input.currentProjectRef,
         focusRequestInProgressRef: input.focusRequestInProgressRef,
         appliedRequestIdRef: input.appliedRequestIdRef,
+        appliedFocusRequestIdsRef: input.appliedFocusRequestIdsRef,
         refreshedProjectIds,
       });
     }
@@ -266,11 +274,15 @@ async function applyStudioEventBatch(input: {
 }
 
 function latestFocusRequestIn(
-  events: StudioEvent[]
+  events: StudioEvent[],
+  appliedFocusRequestIds: Set<string>
 ): StudioFocusRequestedEvent | null {
   let latestFocusRequest: StudioFocusRequestedEvent | null = null;
   for (const event of events) {
-    if (event.type === 'studio.focusRequested') {
+    if (
+      event.type === 'studio.focusRequested' &&
+      !appliedFocusRequestIds.has(event.id)
+    ) {
       latestFocusRequest = event as StudioFocusRequestedEvent;
     }
   }
@@ -286,6 +298,7 @@ async function applyFocusRequest(input: {
   try {
     if (input.event.focus.screen === 'projectLibrary') {
       input.appliedRequestIdRef.current = input.event.id;
+      input.appliedFocusRequestIdsRef.current.add(input.event.id);
       input.currentProjectRef.current = null;
       input.projectSessionRef.current.returnToProjectLibrary();
       return;
@@ -363,6 +376,7 @@ async function applyFocusRequest(input: {
       return;
     }
     input.appliedRequestIdRef.current = input.event.id;
+    input.appliedFocusRequestIdsRef.current.add(input.event.id);
     setSelection(input.event.focus.selection);
   } catch {
     await reportStudioFocusRequestFailed({

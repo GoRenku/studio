@@ -206,6 +206,7 @@ describe('App', () => {
     let eventReadCount = 0;
     let validationCount = 0;
     const reportedAppliedRequestIds: string[] = [];
+    const reportedAppliedFocuses: unknown[] = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = requestUrl(input);
       if (url === '/studio-api/projects') {
@@ -230,6 +231,7 @@ describe('App', () => {
         const body = init?.body ? JSON.parse(String(init.body)) : {};
         if (body.appliedRequestId) {
           reportedAppliedRequestIds.push(body.appliedRequestId);
+          reportedAppliedFocuses.push(body.focus);
         }
         return jsonResponse({});
       }
@@ -286,12 +288,15 @@ describe('App', () => {
       expect(eventReadCount).toBeGreaterThan(1);
       expect(window.location.pathname).toBe('/projects/constantinople');
     }, { timeout: 2_500 });
-    await screen.findByText('Project Name');
     await waitFor(() => {
       expect(reportedAppliedRequestIds).toContain('studio_event_new_focus');
     });
     expect(validationCount).toBe(1);
     expect(reportedAppliedRequestIds).not.toContain('studio_event_old_focus');
+    expect(reportedAppliedFocuses).toContainEqual({
+      screen: 'movieStudio',
+      selection: { type: 'projectInformation' },
+    });
   });
 
   it('applies a non-stale pending coordination focus request when Studio starts', async () => {
@@ -356,6 +361,99 @@ describe('App', () => {
     });
     await screen.findByText('Project Name');
     expect(selectWasCalled).toBe(false);
+  });
+
+  it('does not apply a startup pending focus request again when it appears in polling', async () => {
+    let eventReadCount = 0;
+    let validationCount = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = requestUrl(input);
+      if (url === '/studio-api/projects') {
+        return jsonResponse({
+          library: {
+            storageRoot: '/tmp/renku-studio',
+            projects: [],
+          },
+        });
+      }
+      if (url === '/studio-api/projects/constantinople') {
+        return jsonResponse({ project: makeProject() });
+      }
+      if (url === '/studio-api/studio/events/current') {
+        return jsonResponse({
+          ...emptyStudioCurrent(),
+          pendingRequest: {
+            eventId: 'studio_event_pending_focus',
+            createdAt: '2026-05-12T00:00:00.000Z',
+            projectRef: {
+              name: 'constantinople',
+              id: 'project_test0001',
+              storageRoot: '/tmp',
+            },
+            focus: {
+              screen: 'movieStudio',
+              selection: { type: 'projectInformation' },
+            },
+            refresh: { project: true },
+          },
+        });
+      }
+      if (url === '/studio-api/studio/events/focus-requests/validate') {
+        validationCount += 1;
+        return jsonResponse({ valid: true });
+      }
+      if (
+        url === '/studio-api/studio/events/browser-sessions/active' ||
+        url === '/studio-api/studio/events/focus-changes'
+      ) {
+        return jsonResponse({});
+      }
+      if (url === '/studio-api/studio/events/focus-failures') {
+        return jsonResponse({});
+      }
+      if (url.startsWith('/studio-api/studio/events')) {
+        eventReadCount += 1;
+        return jsonResponse(
+          eventReadCount === 1
+            ? { events: [], nextCursor: '100', warnings: [] }
+            : eventReadCount === 2
+              ? {
+                  events: [
+                    {
+                      id: 'studio_event_pending_focus',
+                      type: 'studio.focusRequested',
+                      createdAt: '2026-05-12T00:00:00.000Z',
+                      projectRef: {
+                        name: 'constantinople',
+                        id: 'project_test0001',
+                        storageRoot: '/tmp',
+                      },
+                      focus: {
+                        screen: 'movieStudio',
+                        selection: { type: 'projectInformation' },
+                      },
+                      refresh: { project: true },
+                    },
+                  ],
+                  nextCursor: '200',
+                  warnings: [],
+                }
+              : { events: [], nextCursor: '200', warnings: [] }
+        );
+      }
+      return jsonResponse({});
+    });
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/projects/constantinople');
+    });
+    await screen.findByText('Project Name');
+    await waitFor(() => {
+      expect(eventReadCount).toBeGreaterThan(1);
+    }, { timeout: 2_500 });
+    expect(validationCount).toBe(1);
   });
 
   it('renders the project route title after a successful load', async () => {
