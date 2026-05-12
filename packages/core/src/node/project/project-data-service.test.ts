@@ -1187,32 +1187,33 @@ describe('ProjectDataService', () => {
       assetId: summaryAsset.assetId,
       assetFileId: summaryAsset.assetFileId,
       projectRelativePath: summaryAsset.projectRelativePath,
-      content: 'Clip summary from Markdown.',
+      content: 'Clip summary from Markdown.\n',
     });
 
+    const preservedMarkdown = '    npm test\n\nKeep this line.  \n\n';
     const updated = await projectData.updateMarkdownAssetContent({
       projectName: 'constantinople',
       homeDir,
       assetId: summaryAsset.assetId,
       assetFileId: summaryAsset.assetFileId,
-      content: 'Updated clip summary.\n\n',
+      content: preservedMarkdown,
     });
 
     expect(updated.content).toMatchObject({
       assetId: summaryAsset.assetId,
       assetFileId: summaryAsset.assetFileId,
       projectRelativePath: summaryAsset.projectRelativePath,
-      content: 'Updated clip summary.',
+      content: preservedMarkdown,
     });
     expect(
       updated.project.sequences[0]?.scenes[0]?.clips[0]?.summary
-    ).toBe('Updated clip summary.');
+    ).toBe('    npm test\n\nKeep this line.');
     await expect(
       fs.readFile(
         path.join(created.projectPath, summaryAsset.projectRelativePath),
         'utf8'
       )
-    ).resolves.toBe('Updated clip summary.\n');
+    ).resolves.toBe(preservedMarkdown);
   });
 
   it('rejects removing a locale that still has asset relationships', async () => {

@@ -32,7 +32,9 @@ import {
 } from './files/project-paths.js';
 import {
   readMarkdownAssetFile,
+  readMarkdownAssetFileContent,
   writeMarkdownAssetFile,
+  writeMarkdownAssetFileContent,
 } from './files/markdown-asset-files.js';
 import {
   allocateWorkingMarkdownAssetPath,
@@ -518,7 +520,7 @@ async function readMarkdownAssetContent(
       assetId: input.assetId,
       assetFileId: input.assetFileId,
       projectRelativePath: file.projectRelativePath,
-      content: await readMarkdownAssetFile({
+      content: await readMarkdownAssetFileContent({
         projectFolder,
         projectRelativePath: normalizeProjectRelativePath(file.projectRelativePath),
       }),
@@ -537,7 +539,7 @@ async function updateMarkdownAssetContent(
   try {
     const file = readMarkdownAssetFileRecord(session, input);
     const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
-    await writeMarkdownAssetFile({
+    await writeMarkdownAssetFileContent({
       projectFolder,
       projectRelativePath,
       content: input.content,
@@ -565,7 +567,7 @@ async function updateMarkdownAssetContent(
         assetId: input.assetId,
         assetFileId: input.assetFileId,
         projectRelativePath,
-        content: await readMarkdownAssetFile({
+        content: await readMarkdownAssetFileContent({
           projectFolder,
           projectRelativePath,
         }),
