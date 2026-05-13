@@ -43,9 +43,16 @@ export interface StudioProjectRefreshRequestedEvent extends StudioEventBase {
   surface: 'projectInformation' | 'projectLibrary';
 }
 
+export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
+  type: 'studio.projectResourcesChanged';
+  projectRef: StudioProjectRef;
+  resourceKeys: string[];
+}
+
 export type StudioEvent =
   | StudioFocusRequestedEvent
   | StudioProjectRefreshRequestedEvent
+  | StudioProjectResourcesChangedEvent
   | StudioEventBase;
 
 export interface StudioEventsResponse {

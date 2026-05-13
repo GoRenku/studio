@@ -3,6 +3,7 @@ import type {
   Asset,
   Project,
   ProjectLibrary,
+  ProjectShell,
 } from '@gorenku/studio-core';
 import type { CreateProjectsRouteOptions } from './projects.js';
 import { StructuredError, createDiagnosticError } from '@gorenku/studio-diagnostics';
@@ -44,27 +45,61 @@ describe('projects Hono route', () => {
           name: 'constantinople',
         },
         coverUrl: '/studio-api/projects/constantinople/cover',
-        castAssetsByCastMemberId: {
-          cast_narrator: [
-            {
-              assetId: 'asset_cast_reference',
-              title: 'Narrator reference',
-            },
-          ],
+        navigation: {
+          cast: {
+            items: [
+              {
+                id: 'cast_narrator',
+                name: 'Narrator',
+              },
+            ],
+          },
         },
       },
     });
   });
 
+  it('rejects unsupported Movie Studio selection context types', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request(
+      '/constantinople/movie-studio-selection/context',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          selection: { type: 'episode', id: 'ep_1' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'STUDIO_SERVER034',
+        issues: [
+          {
+            location: {
+              path: ['selection', 'type'],
+            },
+          },
+        ],
+      },
+    });
+  });
+
   it('updates project information through ProjectDataService', async () => {
+    let currentProject = makeProject();
     const app = createProjectsRoute({
       projectData: {
         ...fakeProjectDataService(),
         async updateProjectInformation(input) {
-          return {
-            ...makeProject(),
+          currentProject = {
+            ...currentProject,
             identity: {
-              ...makeProject().identity,
+              ...currentProject.identity,
               title: input.information.title,
               aspectRatio: input.information.aspectRatio,
             },
@@ -73,6 +108,10 @@ describe('projects Hono route', () => {
               ...language,
             })),
           };
+          return currentProject;
+        },
+        async readProjectShell() {
+          return makeProjectShell(currentProject);
         },
       },
     });
@@ -168,11 +207,10 @@ describe('projects Hono route', () => {
           'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
         content: 'Frame the city as a strategic obsession.',
       },
-      project: {
-        identity: {
-          name: 'constantinople',
-        },
-      },
+      resourceKeys: [
+        'markdown:asset_clip_summary:asset_file_clip_summary',
+        'project-information',
+      ],
     });
   });
 
@@ -368,6 +406,9 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
     async readProject() {
       return project;
     },
+    async readProjectShell() {
+      return makeProjectShell(project);
+    },
     async updateProjectInformation() {
       return project;
     },
@@ -406,8 +447,93 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
     async listAssets() {
       return [makeAsset('asset_cast_reference')];
     },
-    async listCastMemberAssets() {
-      return [makeAsset('asset_cast_reference')];
+    async listAssetPage() {
+      return {
+        items: [makeAsset('asset_cast_reference')],
+        nextCursor: null,
+      };
+    },
+    async listCastNavigation() {
+      return makeProjectShell(project).navigation.cast;
+    },
+    async listContinuityReferenceNavigation() {
+      return makeProjectShell(project).navigation.continuityReferences;
+    },
+    async listEpisodeNavigation() {
+      return { items: [], nextCursor: null };
+    },
+    async listStandaloneMovieSequenceNavigation() {
+      const storyStructure = makeProjectShell(project).navigation.storyStructure;
+      return storyStructure.projectType === 'standaloneMovie'
+        ? storyStructure.sequences
+        : { items: [], nextCursor: null };
+    },
+    async listEpisodeSequenceNavigation() {
+      return { items: [], nextCursor: null };
+    },
+    async listSceneNavigation() {
+      return {
+        items: [
+          {
+            id: 'scene_opening',
+            sequenceId: 'seq_opening',
+            title: 'Opening Scene',
+            clipCount: 1,
+          },
+        ],
+        nextCursor: null,
+      };
+    },
+    async listClipNavigation() {
+      return {
+        items: [
+          {
+            id: 'clip_opening',
+            sceneId: 'scene_opening',
+            title: 'Opening Image',
+          },
+        ],
+        nextCursor: null,
+      };
+    },
+    async readCastDesignResource() {
+      return {
+        castMember: project.cast[0],
+        selectedAssets: [],
+        activeTakePage: {
+          items: [makeAsset('asset_cast_reference')],
+          nextCursor: null,
+        },
+        countsByRole: [],
+      };
+    },
+    async readClipDesignResource() {
+      return {
+        clip: project.sequences[0]!.scenes[0]!.clips[0]!,
+        scene: {
+          id: 'scene_opening',
+          sequenceId: 'seq_opening',
+          title: 'Opening Scene',
+          clipCount: 1,
+        },
+        sequence: {
+          id: 'seq_opening',
+          number: 1,
+          title: 'Opening',
+          sceneCount: 1,
+          clipCount: 1,
+        },
+        selectedAssets: [],
+        activeTakePage: { items: [], nextCursor: null },
+      };
+    },
+    async readMovieStudioSelectionContext() {
+      return {
+        valid: true,
+        selection: { type: 'projectInformation' },
+        context: { surface: 'project-information' },
+        resourceKeys: ['project-information'],
+      };
     },
     async createAssetSelect(input) {
       return {
@@ -465,6 +591,42 @@ function makeAsset(assetId: string): Asset {
   };
 }
 
+function makeProjectShell(project: Project): ProjectShell {
+  return {
+    ...project,
+    navigation: {
+      cast: {
+        items: project.cast.map((castMember) => ({
+          id: castMember.id,
+          name: castMember.name,
+          kind: castMember.kind,
+          role: castMember.role,
+        })),
+        nextCursor: null,
+      },
+      visualLanguage: { items: [], nextCursor: null },
+      continuityReferences: { items: [], nextCursor: null },
+      storyStructure: {
+        projectType: 'standaloneMovie',
+        sequences: {
+          items: project.sequences.map((sequence) => ({
+            id: sequence.id,
+            number: sequence.number,
+            title: sequence.title,
+            shortTitle: sequence.shortTitle,
+            sceneCount: sequence.scenes.length,
+            clipCount: sequence.scenes.reduce(
+              (count, scene) => count + scene.clips.length,
+              0
+            ),
+          })),
+          nextCursor: null,
+        },
+      },
+    },
+  };
+}
+
 function makeProject(): Project {
   return {
     identity: {
@@ -479,20 +641,45 @@ function makeProject(): Project {
     languages: [],
     visualLanguageCategories: [],
     visualLanguage: [],
-    cast: [],
+    cast: [
+      {
+        id: 'cast_narrator',
+        name: 'Narrator',
+        kind: 'narrator',
+        role: 'voiceover',
+      },
+    ],
     continuityReferences: [],
     episodes: [],
-    sequences: [],
+    sequences: [
+      {
+        id: 'seq_opening',
+        number: 1,
+        title: 'Opening',
+        scenes: [
+          {
+            id: 'scene_opening',
+            title: 'Opening Scene',
+            clips: [
+              {
+                id: 'clip_opening',
+                title: 'Opening Image',
+              },
+            ],
+          },
+        ],
+      },
+    ],
     counts: {
       languages: 0,
       visualLanguageCategories: 0,
       visualLanguage: 0,
-      castMembers: 0,
+      castMembers: 1,
       continuityReferences: 0,
       episodes: 0,
-      sequences: 0,
-      scenes: 0,
-      clips: 0,
+      sequences: 1,
+      scenes: 1,
+      clips: 1,
     },
   };
 }

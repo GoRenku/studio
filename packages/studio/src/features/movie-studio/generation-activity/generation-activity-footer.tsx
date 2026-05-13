@@ -1,12 +1,12 @@
 import { FolderOpen } from 'lucide-react';
 import { Button } from '@/ui/button';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { StatPill } from './stat-pill';
 
 export function GenerationActivityFooter({
   project,
 }: {
-  project: ProjectWithHttp;
+  project: ProjectShellWithHttp;
 }) {
   return (
     <footer className='h-20 rounded-(--radius-panel) border border-sidebar-border bg-sidebar-bg overflow-hidden shrink-0 flex items-center justify-between gap-4 px-4'>

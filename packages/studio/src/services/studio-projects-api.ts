@@ -1,14 +1,16 @@
 import type {
+  MovieStudioSelectionContextRequest,
+  MovieStudioSelectionContextResponse,
   ProjectInformationUpdateRequest,
   ProjectLibraryWithHttp,
   ProductionExportSummaryResponse,
-  ProjectWithHttp,
+  ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
 import './studio-current-contracts';
 import { readStudioApiError } from './studio-api-errors';
 
 interface ProjectResponse {
-  project: ProjectWithHttp | null;
+  project: ProjectShellWithHttp | null;
 }
 
 interface LibraryResponse {
@@ -19,7 +21,7 @@ interface ProductionExportResponse {
   summary: ProductionExportSummaryResponse;
 }
 
-export async function readProject(projectName: string): Promise<ProjectWithHttp> {
+export async function readProject(projectName: string): Promise<ProjectShellWithHttp> {
   const response = await fetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}`
   );
@@ -42,10 +44,30 @@ export async function readProjectLibrary(): Promise<ProjectLibraryWithHttp> {
   return body.library;
 }
 
+export async function readMovieStudioSelectionContext(
+  projectName: string,
+  request: MovieStudioSelectionContextRequest
+): Promise<MovieStudioSelectionContextResponse> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/movie-studio-selection/context`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  return (await response.json()) as MovieStudioSelectionContextResponse;
+}
+
 export async function updateProjectInformation(
   projectName: string,
   information: ProjectInformationUpdateRequest
-): Promise<ProjectWithHttp> {
+): Promise<ProjectShellWithHttp> {
   const response = await fetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/information`,
     {

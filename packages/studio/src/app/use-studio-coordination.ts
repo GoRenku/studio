@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProjectSession } from '@/app/use-project-session';
 import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   readStudioEvents,
   readStudioCurrent,
@@ -17,6 +17,7 @@ import type {
   StudioPendingRequest,
   StudioProjectRef,
 } from '@/services/studio-current-contracts';
+import { invalidateCastDesignResource } from '@/services/studio-project-assets-api';
 
 const BROWSER_SESSION_KEY = 'renku.studio.browserSessionId';
 const POLLING_INTERVAL_MS = 2_000;
@@ -46,7 +47,7 @@ export function useStudioCoordination(input: {
   const lastReportedFocusKeyRef = useRef<string | null>(null);
   const [focusReportVersion, setFocusReportVersion] = useState(0);
   const projectSessionRef = useRef(projectSession);
-  const currentProjectRef = useRef<ProjectWithHttp | null>(projectSession.project);
+  const currentProjectRef = useRef<ProjectShellWithHttp | null>(projectSession.project);
   const requestFocusReportRef = useRef(() => {
     setFocusReportVersion((version) => version + 1);
   });
@@ -211,7 +212,7 @@ export function useStudioCoordination(input: {
 
 interface StudioCoordinationRefs {
   projectSessionRef: { current: ProjectSession };
-  currentProjectRef: { current: ProjectWithHttp | null };
+  currentProjectRef: { current: ProjectShellWithHttp | null };
   focusRequestInProgressRef: { current: string | null };
   appliedRequestIdRef: { current: string | null };
   appliedFocusRequestIdsRef: { current: Set<string> };
@@ -245,6 +246,27 @@ async function applyStudioEventBatch(input: {
       }
     }
 
+    if (event.type === 'studio.projectResourcesChanged') {
+      const resourceEvent = event as {
+        projectRef: StudioProjectRef;
+        resourceKeys: string[];
+      };
+      if (
+        input.currentProjectRef.current?.identity.id ===
+        resourceEvent.projectRef.id
+      ) {
+        invalidateChangedResources(resourceEvent);
+        publishChangedResources(resourceEvent);
+        if (resourceEvent.resourceKeys.includes('project-shell')) {
+          const project = await input.projectSessionRef.current.refreshProject(
+            resourceEvent.projectRef.name
+          );
+          input.currentProjectRef.current = project;
+          refreshedProjectIds.add(resourceEvent.projectRef.id);
+        }
+      }
+    }
+
     if (
       event.type === 'studio.focusRequested' &&
       event.id === latestFocusRequest?.id
@@ -262,6 +284,44 @@ async function applyStudioEventBatch(input: {
       });
     }
   }
+}
+
+function invalidateChangedResources(event: {
+  projectRef: StudioProjectRef;
+  resourceKeys: string[];
+}): void {
+  for (const resourceKey of event.resourceKeys) {
+    const castDesignId = castDesignResourceId(resourceKey);
+    if (castDesignId) {
+      invalidateCastDesignResource(event.projectRef.name, castDesignId);
+    }
+  }
+}
+
+function publishChangedResources(event: {
+  projectRef: StudioProjectRef;
+  resourceKeys: string[];
+}): void {
+  window.dispatchEvent(
+    new CustomEvent('renku:studio-resource-changed', {
+      detail: {
+        projectName: event.projectRef.name,
+        resourceKeys: event.resourceKeys,
+      },
+    })
+  );
+}
+
+function castDesignResourceId(resourceKey: string): string | null {
+  const surfacePrefix = 'surface:cast-design:';
+  if (resourceKey.startsWith(surfacePrefix)) {
+    return resourceKey.slice(surfacePrefix.length);
+  }
+  const assetsPrefix = 'assets:castMember:';
+  if (resourceKey.startsWith(assetsPrefix)) {
+    return resourceKey.slice(assetsPrefix.length);
+  }
+  return null;
 }
 
 function latestFocusRequestIn(
@@ -415,7 +475,7 @@ function readBrowserSessionId(): string {
   return browserSessionId;
 }
 
-function toProjectRef(project: ProjectWithHttp): StudioProjectRef {
+function toProjectRef(project: ProjectShellWithHttp): StudioProjectRef {
   return {
     name: project.identity.name,
     id: project.identity.id,

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Loader2, Upload } from 'lucide-react';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import { Button } from '@/ui/button';
 import { CastDesignPanel } from './cast-design/cast-design-panel';
@@ -17,9 +17,9 @@ import type { MovieStudioSelection } from './movie-studio-selection';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
 
 interface MovieStudioScreenProps {
-  project: ProjectWithHttp;
+  project: ProjectShellWithHttp;
   onHome: () => void;
-  onProjectChange: (project: ProjectWithHttp) => void;
+  onProjectChange: (project: ProjectShellWithHttp) => void;
   onNavigateSelection: (
     selection: MovieStudioSelection
   ) => Promise<{ routeChanged: boolean }>;
@@ -90,13 +90,6 @@ export function MovieStudioScreen({
             key={resolvedSelection.castEntry.id}
             projectName={project.identity.name}
             castEntry={resolvedSelection.castEntry}
-            initialAssets={
-              project.castAssetsByCastMemberId
-                ? (project.castAssetsByCastMemberId[
-                    resolvedSelection.castEntry.id
-                  ] ?? [])
-                : undefined
-            }
           />
         ) : (
           <section className='min-h-0 rounded-(--radius-panel) border border-panel-border bg-panel-bg overflow-hidden flex flex-col'>

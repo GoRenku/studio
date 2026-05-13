@@ -5,7 +5,7 @@ import App from './app';
 import { ThemeProvider } from './theme-provider';
 import type {
   ProjectLibraryWithHttp,
-  ProjectWithHttp,
+  ProjectShellWithHttp,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
@@ -131,11 +131,80 @@ describe('App', () => {
 
     await screen.findByText('Narrator reference');
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
-    expect(fetchLog).not.toContain(
-      '/studio-api/projects/constantinople/cast/cast_narrator/assets'
-    );
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
+    );
+  });
+
+  it('loads a direct sequence route when the selected sequence is outside the shell page', async () => {
+    const project = {
+      ...makeProject(),
+      sequences: [],
+      navigation: {
+        ...makeProjectNavigation(),
+        storyStructure: {
+          projectType: 'standaloneMovie' as const,
+          sequences: { items: [], nextCursor: 'after-first-page' },
+        },
+      },
+    };
+    const fetchLog: string[] = [];
+    window.history.pushState(
+      {},
+      '',
+      '/projects/constantinople/sequences/seq_late'
+    );
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
+      const url = requestUrl(request);
+      fetchLog.push(url);
+      if (url === '/studio-api/projects/constantinople') {
+        return jsonResponse({ project });
+      }
+      if (
+        url ===
+        '/studio-api/projects/constantinople/movie-studio-selection/context'
+      ) {
+        return jsonResponse({
+          valid: true,
+          selection: { type: 'sequence', id: 'seq_late' },
+          context: {
+            surface: 'sequence',
+            sequence: {
+              id: 'seq_late',
+              number: 150,
+              title: 'Late Sequence',
+              sceneCount: 0,
+              clipCount: 0,
+            },
+          },
+          resourceKeys: ['navigation:movie-sequences'],
+        });
+      }
+      if (url === '/studio-api/studio/events/current') {
+        return jsonResponse(emptyStudioCurrent());
+      }
+      if (
+        url === '/studio-api/studio/events/browser-sessions/active' ||
+        url === '/studio-api/studio/events/focus-changes'
+      ) {
+        return jsonResponse({});
+      }
+      if (url.startsWith('/studio-api/studio/events')) {
+        return jsonResponse({ events: [], nextCursor: '0', warnings: [] });
+      }
+      return jsonResponse({});
+    });
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Late Sequence').length).toBeGreaterThan(0);
+    });
+    expect(fetchLog).toContain(
+      '/studio-api/projects/constantinople/movie-studio-selection/context'
+    );
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/sequences/seq_late'
     );
   });
 
@@ -203,16 +272,6 @@ describe('App', () => {
       },
     ];
     project.counts.castMembers = 2;
-    project.castAssetsByCastMemberId = {
-      ...project.castAssetsByCastMemberId,
-      cast_mehmed: [
-        makeCastAsset({
-          assetId: 'asset_mehmed_reference',
-          castMemberId: 'cast_mehmed',
-          title: 'Mehmed reference',
-        }),
-      ],
-    };
     const mehmedAssets = deferredResponse();
     let projectReadCount = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
@@ -221,10 +280,16 @@ describe('App', () => {
         projectReadCount += 1;
         return jsonResponse({ project });
       }
-      if (url === '/studio-api/projects/constantinople/cast/cast_narrator/assets') {
-        return jsonResponse({ assets: [makeCastAsset()] });
+      if (
+        url ===
+        '/studio-api/projects/constantinople/cast/cast_narrator/design?role=character_sheet'
+      ) {
+        return jsonResponse({ resource: makeCastDesignResource([makeCastAsset()]) });
       }
-      if (url === '/studio-api/projects/constantinople/cast/cast_mehmed/assets') {
+      if (
+        url ===
+        '/studio-api/projects/constantinople/cast/cast_mehmed/design?role=character_sheet'
+      ) {
         return mehmedAssets.promise;
       }
       if (url === '/studio-api/studio/events/current') {
@@ -251,19 +316,18 @@ describe('App', () => {
       '/projects/constantinople/cast/cast_mehmed'
     );
     expect(screen.queryByText('Loading Renku Studio...')).toBeNull();
-    expect(screen.queryByText('Loading cast assets...')).toBeNull();
-    expect(screen.getByText('Mehmed reference')).toBeTruthy();
+    expect(screen.getByText('Loading cast assets...')).toBeTruthy();
     expect(projectReadCount).toBe(1);
 
     mehmedAssets.resolve(
       jsonResponse({
-        assets: [
+        resource: makeCastDesignResource([
           makeCastAsset({
             assetId: 'asset_mehmed_reference',
             castMemberId: 'cast_mehmed',
             title: 'Mehmed reference',
           }),
-        ],
+        ]),
       })
     );
 
@@ -872,7 +936,7 @@ function renderApp() {
 
 function mockStudioFetch(input: {
   library?: ProjectLibraryWithHttp;
-  project?: ProjectWithHttp;
+  project?: ProjectShellWithHttp;
 }): string[] {
   const fetchLog: string[] = [];
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
@@ -884,8 +948,11 @@ function mockStudioFetch(input: {
     if (url === '/studio-api/projects/constantinople') {
       return jsonResponse({ project: input.project ?? makeProject() });
     }
-    if (url === '/studio-api/projects/constantinople/cast/cast_narrator/assets') {
-      return jsonResponse({ assets: [makeCastAsset()] });
+    if (
+      url ===
+      '/studio-api/projects/constantinople/cast/cast_narrator/design?role=character_sheet'
+    ) {
+      return jsonResponse({ resource: makeCastDesignResource([makeCastAsset()]) });
     }
     if (url === '/studio-api/studio/events/current') {
       return jsonResponse(emptyStudioCurrent());
@@ -945,7 +1012,7 @@ function emptyStudioCurrent() {
 
 function makeProject(
   options: { coverUrl?: string | null } = {}
-): ProjectWithHttp {
+): ProjectShellWithHttp {
   const coverUrl =
     options.coverUrl === undefined
       ? '/studio-api/projects/constantinople/cover'
@@ -974,9 +1041,6 @@ function makeProject(
       },
     ],
     continuityReferences: [],
-    castAssetsByCastMemberId: {
-      cast_narrator: [makeCastAsset()],
-    },
     sequences: [
       {
         id: 'seq_opening',
@@ -1012,6 +1076,58 @@ function makeProject(
       scenes: 1,
       clips: 1,
     },
+    navigation: makeProjectNavigation(),
+  };
+}
+
+function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
+  return {
+    cast: {
+      items: [
+        {
+          id: 'cast_narrator',
+          name: 'Narrator',
+          kind: 'narrator',
+          role: 'voiceover',
+        },
+      ],
+      nextCursor: null,
+    },
+    visualLanguage: { items: [], nextCursor: null },
+    continuityReferences: { items: [], nextCursor: null },
+    storyStructure: {
+      projectType: 'standaloneMovie',
+      sequences: {
+        items: [
+          {
+            id: 'seq_opening',
+            number: 1,
+            title: 'Opening',
+            shortTitle: 'Opening',
+            sceneCount: 1,
+            clipCount: 1,
+          },
+        ],
+        nextCursor: null,
+      },
+    },
+  };
+}
+
+function makeCastDesignResource(assets: StudioAssetResponse[]) {
+  return {
+    castMember: {
+      id: 'cast_narrator',
+      name: 'Narrator',
+      kind: 'narrator',
+      role: 'voiceover',
+    },
+    selectedAssets: assets.filter((asset) => asset.selection.kind === 'select'),
+    activeTakePage: {
+      items: assets.filter((asset) => asset.selection.kind === 'take'),
+      nextCursor: null,
+    },
+    countsByRole: [],
   };
 }
 

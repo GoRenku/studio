@@ -9,7 +9,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import renkuLogo from '@/assets/renku-logo.svg';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { ThemeToggle } from '@/ui/theme-toggle';
@@ -21,7 +21,7 @@ import { StudioSidebarButton } from './studio-sidebar-button';
 import { StudioSidebarSection } from './studio-sidebar-section';
 
 interface StudioSidebarProps {
-  project: ProjectWithHttp;
+  project: ProjectShellWithHttp;
   selection: MovieStudioSelection;
   onSelect: (selection: MovieStudioSelection) => void;
   onHome: () => void;

@@ -10,7 +10,7 @@ import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import type { ProjectLanguage } from '@gorenku/studio-core';
 import type {
   ProjectInformationUpdateRequest,
-  ProjectWithHttp,
+  ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
 import { updateProjectInformation } from '@/services/studio-projects-api';
 import {
@@ -63,8 +63,8 @@ const LANGUAGE_CATALOG = [
 ] as const;
 
 interface ProjectInformationPanelProps {
-  project: ProjectWithHttp;
-  onProjectChange: (project: ProjectWithHttp) => void;
+  project: ProjectShellWithHttp;
+  onProjectChange: (project: ProjectShellWithHttp) => void;
   onAutosaveStatusChange: (status: DebouncedAutosaveStatus) => void;
 }
 
@@ -437,7 +437,7 @@ function formatLanguageOptionLabel(language: {
   return `${language.displayName} (${language.localeTag})`;
 }
 
-function toProjectInformationForm(project: ProjectWithHttp): ProjectInformationForm {
+function toProjectInformationForm(project: ProjectShellWithHttp): ProjectInformationForm {
   return {
     title: project.identity.title,
     aspectRatio: project.identity.aspectRatio ?? '16:9',

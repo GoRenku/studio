@@ -3,7 +3,8 @@ import type {
   RichTextAssetLink,
 } from '@gorenku/studio-core';
 import type {
-  ProjectWithHttp,
+  CastDesignResourceResponse,
+  ProjectShellWithHttp,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
@@ -14,7 +15,8 @@ interface MarkdownAssetContentResponse {
 
 interface MarkdownAssetContentUpdateResponse {
   content: MarkdownAssetContent | null;
-  project: ProjectWithHttp | null;
+  project?: ProjectShellWithHttp | null;
+  resourceKeys?: string[];
 }
 
 interface CastAssetsResponse {
@@ -23,7 +25,14 @@ interface CastAssetsResponse {
 
 interface CastAssetResponse {
   asset: StudioAssetResponse | null;
+  resourceKeys?: string[];
 }
+
+interface CastDesignResourceApiResponse {
+  resource: CastDesignResourceResponse | null;
+}
+
+const castDesignResourceCache = new Map<string, CastDesignResourceResponse>();
 
 export async function readCastAssets(
   projectName: string,
@@ -36,6 +45,45 @@ export async function readCastAssets(
 
   const body = (await response.json()) as CastAssetsResponse;
   return body.assets;
+}
+
+export async function readCastDesignResource(
+  projectName: string,
+  castMemberId: string,
+  role = 'character_sheet'
+): Promise<CastDesignResourceResponse> {
+  const cacheKey = `${projectName}\n${castMemberId}\n${role}`;
+  const cached = castDesignResourceCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const response = await fetch(
+    `${castDesignResourceUrl(projectName, castMemberId)}?role=${encodeURIComponent(role)}`
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as CastDesignResourceApiResponse;
+  if (!body.resource) {
+    throw new Error('Renku Studio API returned no cast design resource.');
+  }
+  castDesignResourceCache.set(cacheKey, body.resource);
+  retainRecentCastDesignResources(12);
+  return body.resource;
+}
+
+export function invalidateCastDesignResource(
+  projectName: string,
+  castMemberId: string
+): void {
+  const prefix = `${projectName}\n${castMemberId}\n`;
+  for (const key of Array.from(castDesignResourceCache.keys())) {
+    if (key.startsWith(prefix)) {
+      castDesignResourceCache.delete(key);
+    }
+  }
 }
 
 export async function selectCastAsset(
@@ -119,7 +167,11 @@ export async function updateMarkdownAssetContent(
   projectName: string,
   asset: Pick<RichTextAssetLink, 'assetId' | 'assetFileId'>,
   content: string
-): Promise<{ content: MarkdownAssetContent; project: ProjectWithHttp }> {
+): Promise<{
+  content: MarkdownAssetContent;
+  project?: ProjectShellWithHttp;
+  resourceKeys: string[];
+}> {
   const response = await fetch(markdownAssetContentUrl(projectName, asset), {
     method: 'PATCH',
     headers: {
@@ -133,15 +185,21 @@ export async function updateMarkdownAssetContent(
   }
 
   const body = (await response.json()) as MarkdownAssetContentUpdateResponse;
-  if (!body.content || !body.project) {
-    throw new Error(
-      'Renku Studio API returned no Markdown asset update result.'
-    );
+  if (!body.content) {
+    throw new Error('Renku Studio API returned no Markdown asset update result.');
   }
   return {
     content: body.content,
-    project: body.project,
+    project: body.project ?? undefined,
+    resourceKeys: body.resourceKeys ?? [],
   };
+}
+
+function castDesignResourceUrl(
+  projectName: string,
+  castMemberId: string
+): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/design`;
 }
 
 function markdownAssetContentUrl(
@@ -153,6 +211,18 @@ function markdownAssetContentUrl(
 
 function castAssetsUrl(projectName: string, castMemberId: string): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/assets`;
+}
+
+function retainRecentCastDesignResources(limit: number): void {
+  while (castDesignResourceCache.size > limit) {
+    const oldestKey = castDesignResourceCache.keys().next().value as
+      | string
+      | undefined;
+    if (!oldestKey) {
+      return;
+    }
+    castDesignResourceCache.delete(oldestKey);
+  }
 }
 
 function castAssetSelectUrl(

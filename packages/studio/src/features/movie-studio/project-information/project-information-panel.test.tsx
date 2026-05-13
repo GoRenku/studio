@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { ProjectInformationPanel } from './project-information-panel';
 
 vi.mock('@/services/studio-projects-api', () => ({
@@ -49,7 +49,7 @@ function readTitleInput(): HTMLInputElement {
   return screen.getByLabelText('Title') as HTMLInputElement;
 }
 
-function renderPanel(project: ProjectWithHttp) {
+function renderPanel(project: ProjectShellWithHttp) {
   return render(
     <ProjectInformationPanel
       project={project}
@@ -61,7 +61,7 @@ function renderPanel(project: ProjectWithHttp) {
 
 function rerenderPanel(
   rerender: ReturnType<typeof render>['rerender'],
-  project: ProjectWithHttp
+  project: ProjectShellWithHttp
 ): void {
   rerender(
     <ProjectInformationPanel
@@ -72,7 +72,7 @@ function rerenderPanel(
   );
 }
 
-function makeProject(input: { title: string }): ProjectWithHttp {
+function makeProject(input: { title: string }): ProjectShellWithHttp {
   return {
     identity: {
       id: 'project_test0001',
@@ -113,6 +113,15 @@ function makeProject(input: { title: string }): ProjectWithHttp {
       sequences: 0,
       scenes: 0,
       clips: 0,
+    },
+    navigation: {
+      cast: { items: [], nextCursor: null },
+      visualLanguage: { items: [], nextCursor: null },
+      continuityReferences: { items: [], nextCursor: null },
+      storyStructure: {
+        projectType: 'standaloneMovie',
+        sequences: { items: [], nextCursor: null },
+      },
     },
   };
 }

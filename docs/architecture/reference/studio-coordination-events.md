@@ -424,6 +424,12 @@ The first event set should stay small and focused.
 
 ### `studio.projectRefreshRequested`
 
+ADR 0017 adds scoped resource invalidation for Studio UI resource caches. New
+resource-aware project mutations should prefer
+`studio.projectResourcesChanged` with deterministic resource keys. Keep
+`studio.projectRefreshRequested` for the narrower project information and
+project library refresh behavior that already exists.
+
 Written after a successful project mutation when Studio should refresh its
 project-facing UI data.
 
@@ -475,6 +481,39 @@ Example:
 
 `changedFields` is an optimization hint for UI refresh and display decisions. It
 must not be treated as the durable audit record of the mutation.
+
+### `studio.projectResourcesChanged`
+
+Written after a successful project SQLite mutation when Studio should invalidate
+specific browser-side UI resources and refresh visible matching resources.
+
+This event is a UI coordination signal only. It is not a durable domain event
+and must not store before/after project data. If the same operation should also
+move the UI, append a separate `studio.focusRequested` event with the same
+`operationId`.
+
+```ts
+export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
+  type: 'studio.projectResourcesChanged';
+  projectRef: StudioProjectRef;
+  resourceKeys: string[];
+}
+```
+
+Resource keys are owned by the Studio coordination boundary, not assembled ad
+hoc in feature components. Current examples include:
+
+- `project-shell`;
+- `project-information`;
+- `navigation:cast`;
+- `surface:cast-design:<castMemberId>`;
+- `surface:clip-design:<clipId>`;
+- `assets:castMember:<castMemberId>`;
+- `assets:clip:<clipId>`;
+- `markdown:<assetId>:<assetFileId>`.
+
+Use ADR 0017 for the authoritative project shell, lazy resource loading,
+pagination, and scoped invalidation rules.
 
 ### `studio.focusRequested`
 

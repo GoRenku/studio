@@ -11,7 +11,7 @@ import {
   readMarkdownAssetContent,
   updateMarkdownAssetContent,
 } from '@/services/studio-project-assets-api';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { useDebouncedAutosave } from '@/hooks/use-debounced-autosave';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import { Textarea } from '@/ui/textarea';
@@ -28,7 +28,7 @@ interface MarkdownAssetEditorProps {
   emptyMessage: string;
   minHeightClassName?: string;
   autosaveDelayMs?: number;
-  onProjectChange: (project: ProjectWithHttp) => void;
+  onProjectChange: (project: ProjectShellWithHttp) => void;
 }
 
 export function MarkdownAssetEditor(props: MarkdownAssetEditorProps) {
@@ -170,7 +170,9 @@ function MarkdownAssetEditorForm({
         contentRef.current = result.content.content;
         setContent(result.content.content);
       }
-      onProjectChange(result.project);
+      if (result.project) {
+        onProjectChange(result.project);
+      }
     },
     [onProjectChange]
   );

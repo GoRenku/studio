@@ -46,6 +46,11 @@ Use this page as the map:
   - `../decisions/0012-store-project-file-references-as-project-relative-paths.md`
   - `../decisions/0013-use-core-owned-project-assets-and-production-exports.md`
   - `../decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
+    for active project SQLite sessions only; its eager surface data direction is
+    superseded.
+  - `../decisions/0017-use-scalable-studio-resource-loading.md`
+    for current project shell, lazy resource, pagination, and scoped
+    invalidation architecture.
 
 ## Studio App, Server, Routes, And Coordination
 
@@ -61,6 +66,11 @@ Use this page as the map:
   - `../decisions/0014-use-hono-route-modules-for-the-local-studio-server.md`
   - `../decisions/0015-use-feature-service-ui-layering-for-the-studio-frontend.md`
   - `../decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
+    for active project SQLite sessions only; its eager surface data direction is
+    superseded.
+  - `../decisions/0017-use-scalable-studio-resource-loading.md`
+    for current project shell, selected resource, keyset pagination, and
+    `studio.projectResourcesChanged` behavior.
 
 ## Diagnostics, Naming, CLI, And Contracts
 

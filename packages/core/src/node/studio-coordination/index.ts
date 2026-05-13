@@ -14,6 +14,14 @@ export {
   resolveStudioEventStorePath,
 } from './studio-event-store.js';
 export {
+  studioAssetResourceKey,
+  studioMarkdownResourceKey,
+  studioProjectInformationResourceKey,
+  studioProjectShellResourceKey,
+  studioResourceKeysForAssetTarget,
+  studioSurfaceResourceKeyForAssetTarget,
+} from './studio-resource-keys.js';
+export {
   STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS,
   STUDIO_RUNTIME_STALE_AFTER_MS,
   claimStudioRuntimeDescriptor,
@@ -45,6 +53,7 @@ export type {
   StudioPendingRequest,
   StudioProjectRef,
   StudioProjectRefreshRequestedEvent,
+  StudioProjectResourcesChangedEvent,
   StudioProjectRefreshSurface,
   StudioRefreshRequest,
 } from './studio-coordination-events.js';

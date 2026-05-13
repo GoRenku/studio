@@ -3,10 +3,15 @@ import {
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
 import {
+  createStudioCoordinationService,
+  createStudioOperationId,
   createProjectDataService,
+  resolveRenkuStorageRoot,
+  studioResourceKeysForAssetTarget,
   type Asset,
   type AssetTarget,
   type ProjectRelativePath,
+  type StudioProjectRef,
 } from '@gorenku/studio-core/node';
 import type { RenkuCliIo } from '../cli.js';
 
@@ -73,7 +78,8 @@ export async function runAssetCommand(
 async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
-  const asset = await createProjectDataService().registerAsset({
+  const projectData = createProjectDataService();
+  const asset = await projectData.registerAsset({
     projectName,
     target,
     locale: readLocale(options),
@@ -86,7 +92,14 @@ async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
     role: requiredFlag(options, 'role'),
     homeDir: options.homeDir,
   });
-  writeAssetResult(options, asset, `Registered asset: ${asset.assetId}`);
+  const resourceKeys = studioResourceKeysForAssetTarget(target);
+  await appendAssetResourceChangedEvent({
+    options,
+    projectName,
+    resourceKeys,
+    command: 'asset register',
+  });
+  writeAssetResult(options, asset, `Registered asset: ${asset.assetId}`, resourceKeys);
   return 0;
 }
 
@@ -105,14 +118,23 @@ async function createAssetSelect(
   options: RunAssetCommandOptions,
   assetId?: string
 ): Promise<number> {
+  const projectName = requiredFlag(options, 'project');
+  const target = readTarget(options);
   const asset = await createProjectDataService().createAssetSelect({
-    projectName: requiredFlag(options, 'project'),
-    target: readTarget(options),
+    projectName,
+    target,
     assetId: requiredAssetId(assetId),
     selectionOrder: options.flags.order,
     homeDir: options.homeDir,
   });
-  writeAssetResult(options, asset, `Selected asset: ${asset.assetId}`);
+  const resourceKeys = studioResourceKeysForAssetTarget(target);
+  await appendAssetResourceChangedEvent({
+    options,
+    projectName,
+    resourceKeys,
+    command: 'asset select',
+  });
+  writeAssetResult(options, asset, `Selected asset: ${asset.assetId}`, resourceKeys);
   return 0;
 }
 
@@ -120,14 +142,28 @@ async function updateAssetSelect(
   options: RunAssetCommandOptions,
   assetId?: string
 ): Promise<number> {
+  const projectName = requiredFlag(options, 'project');
+  const target = readTarget(options);
   const asset = await createProjectDataService().updateAssetSelect({
-    projectName: requiredFlag(options, 'project'),
-    target: readTarget(options),
+    projectName,
+    target,
     assetId: requiredAssetId(assetId),
     selectionOrder: requiredOrder(options),
     homeDir: options.homeDir,
   });
-  writeAssetResult(options, asset, `Updated selected asset: ${asset.assetId}`);
+  const resourceKeys = studioResourceKeysForAssetTarget(target);
+  await appendAssetResourceChangedEvent({
+    options,
+    projectName,
+    resourceKeys,
+    command: 'asset select-update',
+  });
+  writeAssetResult(
+    options,
+    asset,
+    `Updated selected asset: ${asset.assetId}`,
+    resourceKeys
+  );
   return 0;
 }
 
@@ -135,13 +171,27 @@ async function removeAssetSelect(
   options: RunAssetCommandOptions,
   assetId?: string
 ): Promise<number> {
+  const projectName = requiredFlag(options, 'project');
+  const target = readTarget(options);
   const asset = await createProjectDataService().removeAssetSelect({
-    projectName: requiredFlag(options, 'project'),
-    target: readTarget(options),
+    projectName,
+    target,
     assetId: requiredAssetId(assetId),
     homeDir: options.homeDir,
   });
-  writeAssetResult(options, asset, `Changed asset back to take: ${asset.assetId}`);
+  const resourceKeys = studioResourceKeysForAssetTarget(target);
+  await appendAssetResourceChangedEvent({
+    options,
+    projectName,
+    resourceKeys,
+    command: 'asset select-remove',
+  });
+  writeAssetResult(
+    options,
+    asset,
+    `Changed asset back to take: ${asset.assetId}`,
+    resourceKeys
+  );
   return 0;
 }
 
@@ -159,15 +209,19 @@ async function listAssetSelects(options: RunAssetCommandOptions): Promise<number
 function writeAssetResult(
   options: RunAssetCommandOptions,
   asset: Asset,
-  message: string
+  message: string,
+  resourceKeys: string[] = []
 ): void {
   if (options.json) {
-    options.io.stdout.log(JSON.stringify(asset, null, 2));
+    options.io.stdout.log(JSON.stringify({ asset, resourceKeys }, null, 2));
     return;
   }
   options.io.stdout.log(message);
   options.io.stdout.log(`Attached to: ${formatTarget(asset.target)}`);
   options.io.stdout.log(`Selection: ${asset.selection.kind}`);
+  if (resourceKeys.length > 0) {
+    options.io.stdout.log(`Refresh resources: ${resourceKeys.join(', ')}`);
+  }
 }
 
 function writeAssetList(options: RunAssetCommandOptions, assets: Asset[]): void {
@@ -186,6 +240,72 @@ function writeAssetList(options: RunAssetCommandOptions, assets: Asset[]): void 
   }
 }
 
+async function appendAssetResourceChangedEvent(input: {
+  options: RunAssetCommandOptions;
+  projectName: string;
+  resourceKeys: string[];
+  command: string;
+}): Promise<void> {
+  if (input.resourceKeys.length === 0) {
+    return;
+  }
+
+  try {
+    const project = await createProjectDataService().readProjectShell({
+      projectName: input.projectName,
+      homeDir: input.options.homeDir,
+    });
+    const coordination = createStudioCoordinationService({
+      homeDir: input.options.homeDir,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.projectResourcesChanged',
+      projectRef: await toProjectRef(project, input.options.homeDir),
+      resourceKeys: input.resourceKeys,
+      source: { kind: 'cli', command: input.command },
+      operationId: createStudioOperationId(),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Studio coordination event could not be appended.';
+    if (input.options.json) {
+      input.options.io.stderr.error(
+        JSON.stringify(
+          {
+            warnings: [
+              {
+                code: 'CLI043',
+                message:
+                  'Asset mutation succeeded, but Studio refresh coordination failed.',
+                detail: message,
+              },
+            ],
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    input.options.io.stderr.error(
+      `[CLI043] WARNING Asset mutation succeeded, but Studio refresh coordination failed: ${message}`
+    );
+  }
+}
+
+async function toProjectRef(
+  project: { identity: { name: string; id: string } },
+  homeDir?: string
+): Promise<StudioProjectRef> {
+  return {
+    name: project.identity.name,
+    id: project.identity.id,
+    storageRoot: await resolveRenkuStorageRoot({ homeDir }),
+  };
+}
+
 function readTarget(options: RunAssetCommandOptions): AssetTarget {
   const target = requiredFlag(options, 'target');
   if (target === 'project') {
@@ -202,6 +322,8 @@ function readTarget(options: RunAssetCommandOptions): AssetTarget {
       return { kind: 'visualLanguage', visualLanguageId: id };
     case 'cast':
       return { kind: 'castMember', castMemberId: id };
+    case 'continuity-reference':
+      return { kind: 'continuityReference', continuityReferenceId: id };
     case 'sequence':
       return { kind: 'sequence', sequenceId: id };
     case 'scene':
@@ -302,6 +424,8 @@ function formatTarget(target: AssetTarget): string {
       return `visual-language:${target.visualLanguageId}`;
     case 'castMember':
       return `cast:${target.castMemberId}`;
+    case 'continuityReference':
+      return `continuity-reference:${target.continuityReferenceId}`;
     case 'sequence':
       return `sequence:${target.sequenceId}`;
     case 'scene':

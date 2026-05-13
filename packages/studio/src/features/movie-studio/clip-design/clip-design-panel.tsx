@@ -1,11 +1,11 @@
 import type { Clip } from '@gorenku/studio-core';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { MarkdownAssetEditor } from '../markdown-asset-editor';
 
 interface ClipDesignPanelProps {
   projectName: string;
   clip: Clip;
-  onProjectChange: (project: ProjectWithHttp) => void;
+  onProjectChange: (project: ProjectShellWithHttp) => void;
 }
 
 export function ClipDesignPanel({

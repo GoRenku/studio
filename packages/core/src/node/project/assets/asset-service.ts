@@ -27,6 +27,7 @@ type RelationshipTableName =
   | 'project_asset'
   | 'visual_language_asset'
   | 'cast_asset'
+  | 'continuity_reference_asset'
   | 'sequence_asset'
   | 'scene_asset'
   | 'clip_asset';
@@ -386,6 +387,15 @@ function relationshipConfig(target: AssetTarget): RelationshipTableConfig {
         targetTable: 'cast_member',
         targetTableIdColumn: 'id',
       };
+    case 'continuityReference':
+      return {
+        tableName: 'continuity_reference_asset',
+        idPrefix: 'continuity_reference_asset',
+        targetColumn: 'continuity_reference_id',
+        targetId: target.continuityReferenceId,
+        targetTable: 'continuity_reference',
+        targetTableIdColumn: 'id',
+      };
     case 'sequence':
       return {
         tableName: 'sequence_asset',
@@ -670,6 +680,12 @@ function targetFromRelationshipRow(row: RelationshipRow): AssetTarget {
   }
   if (row.relationshipId.startsWith('cast_asset_')) {
     return { kind: 'castMember', castMemberId: requiredTargetId(row) };
+  }
+  if (row.relationshipId.startsWith('continuity_reference_asset_')) {
+    return {
+      kind: 'continuityReference',
+      continuityReferenceId: requiredTargetId(row),
+    };
   }
   if (row.relationshipId.startsWith('sequence_asset_')) {
     return { kind: 'sequence', sequenceId: requiredTargetId(row) };

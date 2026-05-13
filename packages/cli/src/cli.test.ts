@@ -422,10 +422,19 @@ describe('renku CLI', () => {
     );
 
     expect(registerExitCode).toBe(0);
-    const registered = JSON.parse(stdout.join('\n')) as { assetId: string };
+    const registered = JSON.parse(stdout.join('\n')) as {
+      asset: { assetId: string };
+      resourceKeys: string[];
+    };
     expect(registered).toMatchObject({
-      type: 'narration',
-      selection: { kind: 'take' },
+      asset: {
+        type: 'narration',
+        selection: { kind: 'take' },
+      },
+      resourceKeys: [
+        `assets:clip:${clipId}`,
+        `surface:clip-design:${clipId}`,
+      ],
     });
 
     stdout = [];
@@ -438,7 +447,7 @@ describe('renku CLI', () => {
         'constantinople',
         '--target',
         `clip:${clipId}`,
-        registered.assetId,
+        registered.asset.assetId,
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -446,8 +455,14 @@ describe('renku CLI', () => {
 
     expect(selectExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      assetId: registered.assetId,
-      selection: { kind: 'select', order: 1 },
+      asset: {
+        assetId: registered.asset.assetId,
+        selection: { kind: 'select', order: 1 },
+      },
+      resourceKeys: [
+        `assets:clip:${clipId}`,
+        `surface:clip-design:${clipId}`,
+      ],
     });
 
     stdout = [];

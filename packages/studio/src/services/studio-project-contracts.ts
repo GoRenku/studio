@@ -1,14 +1,17 @@
 import type {
   Asset,
+  CastDesignResource,
+  MovieStudioSelection,
+  MovieStudioSelectionContextResult,
+  PageResponse,
   ProductionExportSummary,
-  Project,
   ProjectLibrary,
+  ProjectShell,
   ProjectSummary,
 } from '@gorenku/studio-core';
 
-export type ProjectWithHttp = Project & {
+export type ProjectShellWithHttp = ProjectShell & {
   coverUrl: string | null;
-  castAssetsByCastMemberId?: Record<string, Asset[]>;
 };
 
 export type ProjectSummaryWithHttp = ProjectSummary & {
@@ -38,3 +41,14 @@ export interface ProjectInformationLanguageUpdateRequest {
 export type ProductionExportSummaryResponse = ProductionExportSummary;
 
 export type StudioAssetResponse = Asset;
+
+export type CastDesignResourceResponse = CastDesignResource;
+
+export type StudioPageResponse<T> = PageResponse<T>;
+
+export type MovieStudioSelectionContextRequest = {
+  selection: MovieStudioSelection;
+};
+
+export type MovieStudioSelectionContextResponse =
+  MovieStudioSelectionContextResult;

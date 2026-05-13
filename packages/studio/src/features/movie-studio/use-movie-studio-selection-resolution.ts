@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   buildMovieStudioLookup,
   resolveMovieStudioSelection,
@@ -11,7 +11,7 @@ const defaultMovieStudioSelection: MovieStudioSelection = {
 };
 
 export function useMovieStudioSelectionResolution(
-  project: ProjectWithHttp | null,
+  project: ProjectShellWithHttp | null,
   selection: MovieStudioSelection | null
 ) {
   const routeSelection = selection ?? defaultMovieStudioSelection;

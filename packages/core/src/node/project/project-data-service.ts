@@ -17,6 +17,18 @@ import type {
   ProductionExportInput,
   ProductionExportSummary,
   RegisterAssetInput,
+  CastDesignResource,
+  ClipDesignResource,
+  MovieStudioSelection,
+  MovieStudioSelectionContextResult,
+  PageResponse,
+  ProjectShell,
+  CastNavigationRow,
+  ContinuityReferenceNavigationRow,
+  EpisodeNavigationRow,
+  SequenceNavigationRow,
+  SceneNavigationRow,
+  ClipNavigationRow,
 } from '../../project/index.js';
 import { ProjectDataError } from '../../project/index.js';
 import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../config.js';
@@ -129,6 +141,37 @@ import {
   updateAssetSelect,
 } from './assets/asset-service.js';
 import { exportProductionAssets } from './production-export/production-export-service.js';
+import {
+  listAssetPage,
+  listCastNavigation,
+  listClipNavigation,
+  listContinuityReferenceNavigation,
+  listEpisodeNavigation,
+  listEpisodeSequenceNavigation,
+  listSceneNavigation,
+  listStandaloneMovieSequenceNavigation,
+  readCastDesignResource,
+  readClipDesignResource,
+  readMovieStudioSelectionContext,
+  readProjectShell,
+  type ListAssetPageInput,
+  type ListClipNavigationInput,
+  type ListEpisodeSequenceNavigationInput,
+  type ListNavigationInput,
+  type ListSceneNavigationInput,
+  type ReadCastDesignResourceInput,
+  type ReadClipDesignResourceInput,
+} from './project-resource-queries.js';
+
+export type {
+  ListAssetPageInput,
+  ListClipNavigationInput,
+  ListEpisodeSequenceNavigationInput,
+  ListNavigationInput,
+  ListSceneNavigationInput,
+  ReadCastDesignResourceInput,
+  ReadClipDesignResourceInput,
+} from './project-resource-queries.js';
 
 export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
@@ -140,6 +183,38 @@ export interface ProjectDataService {
   ): Promise<ProjectDatabaseMigrationReport>;
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
+  readProjectShell(input: ReadProjectInput): Promise<ProjectShell>;
+  listCastNavigation(input: ListNavigationInput): Promise<PageResponse<CastNavigationRow>>;
+  listContinuityReferenceNavigation(
+    input: ListNavigationInput
+  ): Promise<PageResponse<ContinuityReferenceNavigationRow>>;
+  listEpisodeNavigation(
+    input: ListNavigationInput
+  ): Promise<PageResponse<EpisodeNavigationRow>>;
+  listStandaloneMovieSequenceNavigation(
+    input: ListNavigationInput
+  ): Promise<PageResponse<SequenceNavigationRow>>;
+  listEpisodeSequenceNavigation(
+    input: ListEpisodeSequenceNavigationInput
+  ): Promise<PageResponse<SequenceNavigationRow>>;
+  listSceneNavigation(
+    input: ListSceneNavigationInput
+  ): Promise<PageResponse<SceneNavigationRow>>;
+  listClipNavigation(
+    input: ListClipNavigationInput
+  ): Promise<PageResponse<ClipNavigationRow>>;
+  listAssetPage(input: ListAssetPageInput): Promise<PageResponse<Asset>>;
+  readCastDesignResource(
+    input: ReadCastDesignResourceInput
+  ): Promise<CastDesignResource>;
+  readClipDesignResource(
+    input: ReadClipDesignResourceInput
+  ): Promise<ClipDesignResource>;
+  readMovieStudioSelectionContext(input: {
+    projectName: string;
+    selection: MovieStudioSelection;
+    homeDir?: string;
+  }): Promise<MovieStudioSelectionContextResult>;
   updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
   patchProjectInformation(input: PatchProjectInformationInput): Promise<Project>;
   readMarkdownAssetContent(
@@ -308,6 +383,18 @@ export function createProjectDataService(): ProjectDataService {
     migrateProjectDatabase: migrateProjectDatabaseForProject,
     listLibrary,
     readProject,
+    readProjectShell,
+    listCastNavigation,
+    listContinuityReferenceNavigation,
+    listEpisodeNavigation,
+    listStandaloneMovieSequenceNavigation,
+    listEpisodeSequenceNavigation,
+    listSceneNavigation,
+    listClipNavigation,
+    listAssetPage,
+    readCastDesignResource,
+    readClipDesignResource,
+    readMovieStudioSelectionContext,
     updateProjectInformation,
     patchProjectInformation,
     readMarkdownAssetContent,

@@ -21,8 +21,14 @@ The current event contract, event types, service shape, CLI flows, and browser
 application rules are documented in
 `docs/architecture/reference/studio-coordination-events.md`.
 
+Resource-aware project mutations should use scoped
+`studio.projectResourcesChanged` events from ADR 0017 instead of broad project
+refreshes. `studio.projectRefreshRequested` remains available for the narrower
+project information and project library refresh cases.
+
 Decision history:
 
 - `../decisions/0006-use-sqlite-for-project-data-and-studio-events-for-ui-coordination.md`
 - `../decisions/0007-use-core-owned-project-reference-validation-for-agent-coordination.md`
 - `../decisions/0008-use-url-owned-studio-routes.md`
+- `../decisions/0017-use-scalable-studio-resource-loading.md`

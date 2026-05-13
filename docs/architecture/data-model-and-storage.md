@@ -40,6 +40,9 @@ Use the focused documents below for current direction.
 
 - `studio-core` owns schema, migrations, validation, project-relative path
   handling, asset path allocation, mutation commands, and projections.
+- Studio browser project-open uses bounded project shell and resource queries,
+  not a full project-wide surface snapshot. Large navigation and asset
+  collections are loaded through paginated resource contracts.
 - CLI, Studio server, and UI must call shared core operations instead of
   implementing separate metadata rules.
 - Renku Studio is pre-customer software. Do not preserve compatibility with old
@@ -52,6 +55,11 @@ The durable decision history is recorded in:
 - `docs/decisions/0011-use-drizzle-kit-for-project-sqlite-migrations.md`
 - `docs/decisions/0012-store-project-file-references-as-project-relative-paths.md`
 - `docs/decisions/0013-use-core-owned-project-assets-and-production-exports.md`
+- `docs/decisions/0017-use-scalable-studio-resource-loading.md`
+
+`docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
+is still accepted for active project SQLite sessions, but its eager surface data
+direction is superseded by ADR 0017.
 
 ## Focused References
 

@@ -5,6 +5,7 @@ export const STUDIO_COORDINATION_EVENT_VERSION = '0.1.0' as const;
 
 export type StudioEventType =
   | 'studio.projectRefreshRequested'
+  | 'studio.projectResourcesChanged'
   | 'studio.focusRequested'
   | 'studio.focusChanged'
   | 'studio.focusRequestFailed'
@@ -73,6 +74,12 @@ export interface StudioProjectRefreshRequestedEvent extends StudioEventBase {
   changedFields?: ProjectInformationRefreshField[];
 }
 
+export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
+  type: 'studio.projectResourcesChanged';
+  projectRef: StudioProjectRef;
+  resourceKeys: string[];
+}
+
 export interface StudioFocusRequestedEvent extends StudioEventBase {
   type: 'studio.focusRequested';
   projectRef?: StudioProjectRef;
@@ -107,6 +114,7 @@ export interface StudioBrowserSessionActiveEvent extends StudioEventBase {
 
 export type StudioEvent =
   | StudioProjectRefreshRequestedEvent
+  | StudioProjectResourcesChangedEvent
   | StudioFocusRequestedEvent
   | StudioFocusChangedEvent
   | StudioFocusRequestFailedEvent
@@ -116,6 +124,7 @@ type StudioAssignedEnvelopeKeys = 'id' | 'version' | 'createdAt';
 
 export type AppendStudioEventInput =
   | (Omit<StudioProjectRefreshRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
+  | (Omit<StudioProjectResourcesChangedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusChangedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusRequestFailedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)

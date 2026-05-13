@@ -51,6 +51,24 @@ export function collectStudioEventIssues(value: unknown) {
         issues.push(issue('STUDIO_COORDINATION005', 'Unsupported refresh surface.', ['surface']));
       }
       break;
+    case 'studio.projectResourcesChanged':
+      validateProjectRef(record.projectRef, ['projectRef'], issues);
+      if (!Array.isArray(record.resourceKeys)) {
+        issues.push(issue('STUDIO_COORDINATION005', 'resourceKeys must be an array.', ['resourceKeys']));
+      } else {
+        for (const [index, resourceKey] of record.resourceKeys.entries()) {
+          if (typeof resourceKey !== 'string' || !resourceKey.trim()) {
+            issues.push(
+              issue(
+                'STUDIO_COORDINATION005',
+                'resourceKeys entries must be non-empty strings.',
+                ['resourceKeys', String(index)]
+              )
+            );
+          }
+        }
+      }
+      break;
     case 'studio.focusRequested':
       validateOptionalProjectRef(record.projectRef, ['projectRef'], issues);
       validateFocus(record.focus, ['focus'], issues);

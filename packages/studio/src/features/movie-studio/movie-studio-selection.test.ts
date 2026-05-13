@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   buildMovieStudioLookup,
   resolveMovieStudioSelection,
@@ -66,7 +66,7 @@ describe('movie studio selection', () => {
   });
 });
 
-function makeProject(): ProjectWithHttp {
+function makeProject(): ProjectShellWithHttp {
   return {
     identity: {
       id: 'project_test0001',
@@ -124,6 +124,37 @@ function makeProject(): ProjectWithHttp {
       sequences: 1,
       scenes: 1,
       clips: 1,
+    },
+    navigation: {
+      cast: {
+        items: [
+          {
+            id: 'cast_narrator',
+            name: 'Narrator',
+            kind: 'narrator',
+            role: 'voiceover',
+          },
+        ],
+        nextCursor: null,
+      },
+      visualLanguage: { items: [], nextCursor: null },
+      continuityReferences: { items: [], nextCursor: null },
+      storyStructure: {
+        projectType: 'standaloneMovie',
+        sequences: {
+          items: [
+            {
+              id: 'seq_opening',
+              number: 1,
+              title: 'Opening',
+              shortTitle: 'Opening',
+              sceneCount: 1,
+              clipCount: 1,
+            },
+          ],
+          nextCursor: null,
+        },
+      },
     },
   };
 }

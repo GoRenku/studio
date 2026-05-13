@@ -1,7 +1,7 @@
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 
 interface VisualLanguagePanelProps {
-  project: ProjectWithHttp;
+  project: ProjectShellWithHttp;
 }
 
 export function VisualLanguagePanel({ project }: VisualLanguagePanelProps) {

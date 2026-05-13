@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Asset, CastMember } from '@gorenku/studio-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readCastAssets } from '@/services/studio-project-assets-api';
+import {
+  invalidateCastDesignResource,
+  readCastDesignResource,
+} from '@/services/studio-project-assets-api';
 import { useCastDesignAssets } from './use-cast-design-assets';
 
 vi.mock('@/services/studio-project-assets-api', () => ({
@@ -12,7 +15,8 @@ vi.mock('@/services/studio-project-assets-api', () => ({
     assetId: string,
     assetFileId: string
   ) => `/projects/${projectName}/cast/${castMemberId}/assets/${assetId}/files/${assetFileId}`,
-  readCastAssets: vi.fn(),
+  invalidateCastDesignResource: vi.fn(),
+  readCastDesignResource: vi.fn(),
   selectCastAsset: vi.fn(),
   unselectCastAsset: vi.fn(),
 }));
@@ -22,100 +26,15 @@ describe('useCastDesignAssets', () => {
     vi.clearAllMocks();
   });
 
-  it('renders eager initial assets without fetching cast assets', () => {
-    vi.mocked(readCastAssets).mockResolvedValue([]);
-
-    const { result } = renderHook(() =>
-      useCastDesignAssets({
-        projectName: 'constantinople-eager',
-        castEntry: castMember,
-        initialAssets: [
-          castAsset({
-            assetId: 'asset_selected_sheet',
-            role: 'character_sheet',
-            selection: { kind: 'select', order: 1 },
-          }),
-        ],
-      })
-    );
-
-    expect(result.current.isLoadingCastAssets).toBe(false);
-    expect(readCastAssets).not.toHaveBeenCalled();
-    expect(result.current.characterSheetContent.selectedAssets).toEqual([
-      expect.objectContaining({
-        assetId: 'asset_selected_sheet',
-        selected: true,
-      }),
-    ]);
-  });
-
-  it('syncs local state when eager assets refresh while the panel stays mounted', async () => {
-    const { result, rerender } = renderHook(
-      ({ initialAssets }: { initialAssets: Asset[] }) =>
-        useCastDesignAssets({
-          projectName: 'constantinople-refresh',
-          castEntry: castMember,
-          initialAssets,
-        }),
-      {
-        initialProps: {
-          initialAssets: [
-            castAsset({
-              assetId: 'asset_old_take',
-              role: 'character_sheet',
-              selection: { kind: 'take' },
-            }),
-          ],
-        },
-      }
-    );
-
-    expect(result.current.characterSheetContent.takes).toEqual([
-      expect.objectContaining({ assetId: 'asset_old_take' }),
-    ]);
-
-    rerender({
-      initialAssets: [
-        castAsset({
-          assetId: 'asset_refreshed_selected',
-          role: 'character_sheet',
-          selection: { kind: 'select', order: 1 },
-        }),
-      ],
+  it('fetches the cast design resource when the panel opens', async () => {
+    const fetchedAsset = castAsset({
+      assetId: 'asset_fetched_sheet',
+      role: 'character_sheet',
+      selection: { kind: 'take' },
     });
-
-    await waitFor(() => {
-      expect(result.current.characterSheetContent.selectedAssets).toEqual([
-        expect.objectContaining({ assetId: 'asset_refreshed_selected' }),
-      ]);
-    });
-    expect(result.current.characterSheetContent.takes).toEqual([]);
-    expect(readCastAssets).not.toHaveBeenCalled();
-  });
-
-  it('treats eager empty assets as known empty state', () => {
-    const { result } = renderHook(() =>
-      useCastDesignAssets({
-        projectName: 'constantinople-empty',
-        castEntry: castMember,
-        initialAssets: [],
-      })
+    vi.mocked(readCastDesignResource).mockResolvedValue(
+      castDesignResource([fetchedAsset])
     );
-
-    expect(result.current.isLoadingCastAssets).toBe(false);
-    expect(result.current.characterSheetContent.selectedAssets).toEqual([]);
-    expect(result.current.characterSheetContent.takes).toEqual([]);
-    expect(readCastAssets).not.toHaveBeenCalled();
-  });
-
-  it('fetches cast assets when eager data is unavailable', async () => {
-    vi.mocked(readCastAssets).mockResolvedValue([
-      castAsset({
-        assetId: 'asset_fetched_sheet',
-        role: 'character_sheet',
-        selection: { kind: 'take' },
-      }),
-    ]);
 
     const { result } = renderHook(() =>
       useCastDesignAssets({
@@ -130,7 +49,65 @@ describe('useCastDesignAssets', () => {
       ]);
     });
     expect(result.current.isLoadingCastAssets).toBe(false);
-    expect(readCastAssets).toHaveBeenCalledWith('constantinople-fetch', 'cast_1');
+    expect(readCastDesignResource).toHaveBeenCalledWith(
+      'constantinople-fetch',
+      'cast_1'
+    );
+  });
+
+  it('reloads when coordination reports changed cast design resources', async () => {
+    vi.mocked(readCastDesignResource)
+      .mockResolvedValueOnce(
+        castDesignResource([
+          castAsset({
+            assetId: 'asset_original_sheet',
+            role: 'character_sheet',
+            selection: { kind: 'take' },
+          }),
+        ])
+      )
+      .mockResolvedValueOnce(
+        castDesignResource([
+          castAsset({
+            assetId: 'asset_refreshed_sheet',
+            role: 'character_sheet',
+            selection: { kind: 'take' },
+          }),
+        ])
+      );
+
+    const { result } = renderHook(() =>
+      useCastDesignAssets({
+        projectName: 'constantinople-refresh',
+        castEntry: castMember,
+      })
+    );
+    await waitFor(() => {
+      expect(result.current.characterSheetContent.takes).toEqual([
+        expect.objectContaining({ assetId: 'asset_original_sheet' }),
+      ]);
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('renku:studio-resource-changed', {
+          detail: {
+            projectName: 'constantinople-refresh',
+            resourceKeys: ['assets:castMember:cast_1'],
+          },
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.characterSheetContent.takes).toEqual([
+        expect.objectContaining({ assetId: 'asset_refreshed_sheet' }),
+      ]);
+    });
+    expect(invalidateCastDesignResource).toHaveBeenCalledWith(
+      'constantinople-refresh',
+      'cast_1'
+    );
   });
 });
 
@@ -175,5 +152,17 @@ function castAsset(input: {
     ],
     createdAt: '2026-05-12T00:00:00.000Z',
     updatedAt: '2026-05-12T00:00:00.000Z',
+  };
+}
+
+function castDesignResource(assets: Asset[]) {
+  return {
+    castMember,
+    selectedAssets: assets.filter((asset) => asset.selection.kind === 'select'),
+    activeTakePage: {
+      items: assets.filter((asset) => asset.selection.kind === 'take'),
+      nextCursor: null,
+    },
+    countsByRole: [],
   };
 }

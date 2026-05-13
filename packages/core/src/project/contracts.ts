@@ -16,6 +16,153 @@ export interface Project {
   counts: ProjectCounts;
 }
 
+export interface PageResponse<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+export interface ProjectShell {
+  identity: ProjectIdentity;
+  coverImage: ProjectCoverImage | null;
+  languages: ProjectLanguage[];
+  visualLanguageCategories: VisualLanguageCategory[];
+  visualLanguage: VisualLanguage[];
+  cast: CastMember[];
+  continuityReferences: ContinuityReference[];
+  episodes: Episode[];
+  sequences: Sequence[];
+  counts: ProjectCounts;
+  navigation: ProjectShellNavigation;
+}
+
+export interface ProjectShellNavigation {
+  cast: PageResponse<CastNavigationRow>;
+  visualLanguage: PageResponse<VisualLanguageNavigationRow>;
+  continuityReferences: PageResponse<ContinuityReferenceNavigationRow>;
+  storyStructure: StoryStructureNavigation;
+}
+
+export type StoryStructureNavigation =
+  | {
+      projectType: 'standaloneMovie';
+      sequences: PageResponse<SequenceNavigationRow>;
+    }
+  | {
+      projectType: 'series';
+      episodes: PageResponse<EpisodeNavigationRow>;
+      selectedEpisodeSequences?: PageResponse<SequenceNavigationRow>;
+    };
+
+export interface CastNavigationRow {
+  id: string;
+  name: string;
+  kind?: string;
+  role?: string;
+}
+
+export interface VisualLanguageNavigationRow {
+  id: string;
+  categoryId: string;
+  name: string;
+  oneLineSummary?: string;
+}
+
+export interface ContinuityReferenceNavigationRow {
+  id: string;
+  kind: string;
+  name: string;
+  oneLineSummary?: string;
+}
+
+export interface EpisodeNavigationRow {
+  id: string;
+  number: number;
+  title: string;
+  shortTitle?: string;
+  sequenceCount: number;
+  sceneCount: number;
+  clipCount: number;
+}
+
+export interface SequenceNavigationRow {
+  id: string;
+  episodeId?: string;
+  number: number;
+  title: string;
+  shortTitle?: string;
+  sceneCount: number;
+  clipCount: number;
+}
+
+export interface SceneNavigationRow {
+  id: string;
+  sequenceId: string;
+  title: string;
+  clipCount: number;
+}
+
+export interface ClipNavigationRow {
+  id: string;
+  sceneId: string;
+  title: string;
+  oneLineSummary?: string;
+}
+
+export interface CastDesignResource {
+  castMember: CastMember;
+  selectedAssets: Asset[];
+  activeTakePage: PageResponse<Asset>;
+  countsByRole: CastDesignAssetRoleCount[];
+}
+
+export interface CastDesignAssetRoleCount {
+  role: string;
+  selectedCount: number;
+  takeCount: number;
+}
+
+export interface ClipDesignResource {
+  clip: Clip;
+  scene: SceneNavigationRow;
+  sequence: SequenceNavigationRow;
+  episode?: EpisodeNavigationRow;
+  selectedAssets: Asset[];
+  activeTakePage: PageResponse<Asset>;
+}
+
+export type MovieStudioSelectionContextResult =
+  | {
+      valid: true;
+      selection: MovieStudioSelection;
+      context: MovieStudioSelectionContext;
+      resourceKeys: string[];
+    }
+  | {
+      valid: false;
+      reason: 'selectionNotFound' | 'unsupportedSelection';
+      diagnostics: DiagnosticIssue[];
+    };
+
+export type MovieStudioSelection =
+  | { type: 'projectInformation' }
+  | { type: 'visualLanguage' }
+  | { type: 'storyboard' }
+  | { type: 'sequence'; id: string }
+  | { type: 'scene'; id: string }
+  | { type: 'clip'; id: string }
+  | { type: 'casting' }
+  | { type: 'cast'; id: string };
+
+export type MovieStudioSelectionContext =
+  | { surface: 'project-information' }
+  | { surface: 'visual-language' }
+  | { surface: 'storyboard' }
+  | { surface: 'casting'; cast: PageResponse<CastNavigationRow> }
+  | { surface: 'cast-design'; castMember: CastNavigationRow }
+  | { surface: 'sequence'; sequence: SequenceNavigationRow; episode?: EpisodeNavigationRow }
+  | { surface: 'scene'; scene: SceneNavigationRow; sequence: SequenceNavigationRow; episode?: EpisodeNavigationRow }
+  | { surface: 'clip-design'; clip: ClipNavigationRow; scene: SceneNavigationRow; sequence: SequenceNavigationRow; episode?: EpisodeNavigationRow };
+
 export interface ProjectLibrary {
   storageRoot: string;
   projects: ProjectSummary[];
@@ -151,6 +298,7 @@ export type AssetTarget =
   | { kind: 'project' }
   | { kind: 'visualLanguage'; visualLanguageId: string }
   | { kind: 'castMember'; castMemberId: string }
+  | { kind: 'continuityReference'; continuityReferenceId: string }
   | { kind: 'sequence'; sequenceId: string }
   | { kind: 'scene'; sceneId: string }
   | { kind: 'clip'; clipId: string };

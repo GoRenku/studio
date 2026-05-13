@@ -9,7 +9,7 @@ import {
   readMarkdownAssetContent,
   updateMarkdownAssetContent,
 } from '@/services/studio-project-assets-api';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { MarkdownAssetEditor } from './markdown-asset-editor';
 
 vi.mock('@/services/studio-project-assets-api', () => ({
@@ -47,6 +47,7 @@ describe('MarkdownAssetEditor', () => {
     vi.mocked(updateMarkdownAssetContent).mockResolvedValue({
       content: makeContent('Updated clip summary.'),
       project: updatedProject,
+      resourceKeys: ['markdown:asset_clip_summary:asset_file_clip_summary'],
     });
 
     renderEditor({ onProjectChange });
@@ -96,7 +97,7 @@ describe('MarkdownAssetEditor', () => {
 });
 
 function renderEditor(
-  options: { onProjectChange?: (project: ProjectWithHttp) => void } = {}
+  options: { onProjectChange?: (project: ProjectShellWithHttp) => void } = {}
 ) {
   return render(
     <MarkdownAssetEditor
@@ -131,7 +132,7 @@ function makeContent(content: string): MarkdownAssetContent {
   };
 }
 
-function makeProject(summary: string): ProjectWithHttp {
+function makeProject(summary: string): ProjectShellWithHttp {
   return {
     identity: {
       id: 'project_test0001',
@@ -180,6 +181,26 @@ function makeProject(summary: string): ProjectWithHttp {
       sequences: 1,
       scenes: 1,
       clips: 1,
+    },
+    navigation: {
+      cast: { items: [], nextCursor: null },
+      visualLanguage: { items: [], nextCursor: null },
+      continuityReferences: { items: [], nextCursor: null },
+      storyStructure: {
+        projectType: 'standaloneMovie',
+        sequences: {
+          items: [
+            {
+              id: 'sequence_test0001',
+              number: 1,
+              title: 'Opening',
+              sceneCount: 1,
+              clipCount: 1,
+            },
+          ],
+          nextCursor: null,
+        },
+      },
     },
   };
 }

@@ -1,14 +1,17 @@
 import type {
-  Asset,
   Project,
   ProjectLibrary,
+  ProjectShell,
   ProjectSummary,
 } from '@gorenku/studio-core';
 import { projectCoverUrl } from './project-cover-url.js';
 
 export type ProjectResponse = Project & {
   coverUrl: string | null;
-  castAssetsByCastMemberId?: Record<string, Asset[]>;
+};
+
+export type ProjectShellResponse = ProjectShell & {
+  coverUrl: string | null;
 };
 
 export interface ProjectLibraryResponse {
@@ -21,8 +24,7 @@ export type ProjectSummaryResponse = ProjectSummary & {
 };
 
 export function toProjectResponse(
-  project: Project,
-  options: { castAssets?: Asset[] } = {}
+  project: Project
 ): ProjectResponse {
   return {
     ...project,
@@ -30,9 +32,16 @@ export function toProjectResponse(
       projectName: project.identity.name,
       coverImage: project.coverImage,
     }),
-    castAssetsByCastMemberId: groupCastAssetsByCastMemberId(
-      options.castAssets ?? []
-    ),
+  };
+}
+
+export function toProjectShellResponse(project: ProjectShell): ProjectShellResponse {
+  return {
+    ...project,
+    coverUrl: projectCoverUrl({
+      projectName: project.identity.name,
+      coverImage: project.coverImage,
+    }),
   };
 }
 
@@ -49,18 +58,4 @@ export function toProjectLibraryResponse(
       }),
     })),
   };
-}
-
-function groupCastAssetsByCastMemberId(
-  assets: Asset[]
-): Record<string, Asset[]> {
-  const grouped: Record<string, Asset[]> = {};
-  for (const asset of assets) {
-    if (asset.target.kind !== 'castMember') {
-      continue;
-    }
-    grouped[asset.target.castMemberId] ??= [];
-    grouped[asset.target.castMemberId]!.push(asset);
-  }
-  return grouped;
 }

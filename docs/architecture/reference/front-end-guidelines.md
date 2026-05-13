@@ -196,8 +196,13 @@ File meanings:
   `exportProductionAssets`.
 - `studio-api-errors.ts`: response error parsing and typed frontend API errors.
 - `studio-project-contracts.ts`: HTTP-decorated project contracts such as
-  `ProjectWithHttp` and `ProjectLibraryWithHttp`, unless these are later
+  `ProjectShellWithHttp` and `ProjectLibraryWithHttp`, unless these are later
   generated from a typed server contract.
+
+Project-open contracts must follow ADR 0017. The browser should read a bounded
+`ProjectShellWithHttp` first, then load selected surface resources and paginated
+asset/navigation pages through feature services. Do not add broad eager surface
+maps, such as all cast assets or all clip takes, to the project shell.
 
 Function naming should use resource verbs instead of generic fetch names:
 

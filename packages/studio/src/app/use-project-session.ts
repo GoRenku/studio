@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  readMovieStudioSelectionContext,
   readProject,
   readProjectLibrary,
 } from '@/services/studio-projects-api';
 import type {
+  MovieStudioSelectionContextResponse,
   ProjectLibraryWithHttp,
-  ProjectWithHttp,
+  ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
 import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
@@ -19,7 +21,7 @@ type StudioRoute =
     };
 
 export interface ProjectSession {
-  project: ProjectWithHttp | null;
+  project: ProjectShellWithHttp | null;
   library: ProjectLibraryWithHttp | null;
   isLoadingProjectRoute: boolean;
   isLoadingProjectLibrary: boolean;
@@ -27,18 +29,18 @@ export interface ProjectSession {
   projectSessionError: string | null;
   movieStudioRouteSelection: MovieStudioSelection | null;
   refreshProjectLibrary: () => Promise<void>;
-  refreshProject: (projectName: string) => Promise<ProjectWithHttp>;
-  navigateToProject: (projectName: string) => Promise<ProjectWithHttp | null>;
+  refreshProject: (projectName: string) => Promise<ProjectShellWithHttp>;
+  navigateToProject: (projectName: string) => Promise<ProjectShellWithHttp | null>;
   navigateToMovieStudioSelectionRoute: (
     selection: MovieStudioSelection,
     projectName?: string
   ) => Promise<{ routeChanged: boolean }>;
-  updateCurrentProject: (project: ProjectWithHttp) => void;
+  updateCurrentProject: (project: ProjectShellWithHttp) => void;
   returnToProjectLibrary: () => void;
 }
 
 export function useProjectSession(): ProjectSession {
-  const [project, setProject] = useState<ProjectWithHttp | null>(null);
+  const [project, setProject] = useState<ProjectShellWithHttp | null>(null);
   const [library, setLibrary] = useState<ProjectLibraryWithHttp | null>(null);
   const [isLoadingProjectRoute, setIsLoadingProjectRoute] = useState(true);
   const [isLoadingProjectLibrary, setIsLoadingProjectLibrary] = useState(false);
@@ -47,8 +49,8 @@ export function useProjectSession(): ProjectSession {
     null
   );
   const [route, setRoute] = useState(readStudioRoute);
-  const prefetchedProjectRef = useRef<ProjectWithHttp | null>(null);
-  const currentProjectRef = useRef<ProjectWithHttp | null>(null);
+  const prefetchedProjectRef = useRef<ProjectShellWithHttp | null>(null);
+  const currentProjectRef = useRef<ProjectShellWithHttp | null>(null);
 
   useEffect(() => {
     currentProjectRef.current = project;
@@ -84,7 +86,13 @@ export function useProjectSession(): ProjectSession {
         const currentProject = currentProjectRef.current;
         if (currentProject?.identity.name === route.projectName) {
           try {
-            validateRouteSelection(currentProject, route);
+            const nextProject = await validateRouteSelection(
+              currentProject,
+              route
+            );
+            if (!cancelled && nextProject !== currentProject) {
+              setProject(nextProject);
+            }
             setProjectSessionError(null);
           } catch (routeError) {
             if (!cancelled) {
@@ -121,9 +129,9 @@ export function useProjectSession(): ProjectSession {
           prefetchedProject?.identity.name === route.projectName
             ? prefetchedProject
             : await readProject(route.projectName);
-        validateRouteSelection(nextProject, route);
+        const routeProject = await validateRouteSelection(nextProject, route);
         if (!cancelled) {
-          setProject(nextProject);
+          setProject(routeProject);
           setIsSelectingProject(false);
         }
       } catch (routeError) {
@@ -224,7 +232,7 @@ export function useProjectSession(): ProjectSession {
     setRoute({ screen: 'projectLibrary' });
   }, []);
 
-  const updateCurrentProject = useCallback((nextProject: ProjectWithHttp) => {
+  const updateCurrentProject = useCallback((nextProject: ProjectShellWithHttp) => {
     setProject(nextProject);
   }, []);
 
@@ -350,45 +358,231 @@ function readStudioRoute(): StudioRoute {
   return { screen: 'projectLibrary' };
 }
 
-function validateRouteSelection(
-  project: ProjectWithHttp,
+async function validateRouteSelection(
+  project: ProjectShellWithHttp,
   route: Extract<StudioRoute, { screen: 'movieStudio' }>
-): void {
+): Promise<ProjectShellWithHttp> {
   if (route.routeError) {
     throw new Error(route.routeError);
   }
 
   const selection = route.selection;
-  if (
-    selection.type === 'cast' &&
-    !project.cast.some((castEntry) => castEntry.id === selection.id)
-  ) {
-    throw new Error(`Cast member not found: ${selection.id}`);
+  if (canResolveRouteSelection(project, selection)) {
+    return project;
   }
-  if (
-    selection.type === 'sequence' &&
-    !project.sequences.some((sequence) => sequence.id === selection.id)
-  ) {
-    throw new Error(`Sequence not found: ${selection.id}`);
+  const context = await readMovieStudioSelectionContext(project.identity.name, {
+    selection,
+  });
+  if (!context.valid) {
+    throw new Error(selectionContextErrorMessage(selection, context));
   }
+  return hydrateRouteSelection(project, context);
+}
+
+function hydrateRouteSelection(
+  project: ProjectShellWithHttp,
+  context: MovieStudioSelectionContextResponse
+): ProjectShellWithHttp {
+  if (!context.valid) {
+    return project;
+  }
+  const selectionContext = context.context;
+
+  if (selectionContext.surface === 'cast-design') {
+    if (
+      project.cast.some(
+        (castEntry) => castEntry.id === selectionContext.castMember.id
+      )
+    ) {
+      return project;
+    }
+    return {
+      ...project,
+      cast: [...project.cast, selectionContext.castMember],
+    };
+  }
+
+  if (selectionContext.surface === 'sequence') {
+    if (
+      project.sequences.some(
+        (sequence) => sequence.id === selectionContext.sequence.id
+      )
+    ) {
+      return project;
+    }
+    return {
+      ...project,
+      sequences: [
+        ...project.sequences,
+        {
+          id: selectionContext.sequence.id,
+          number: selectionContext.sequence.number,
+          title: selectionContext.sequence.title,
+          shortTitle: selectionContext.sequence.shortTitle,
+          scenes: [],
+        },
+      ],
+    };
+  }
+
+  if (selectionContext.surface === 'scene') {
+    return hydrateSequence(project, {
+      id: selectionContext.sequence.id,
+      number: selectionContext.sequence.number,
+      title: selectionContext.sequence.title,
+      shortTitle: selectionContext.sequence.shortTitle,
+      scenes: [
+        {
+          id: selectionContext.scene.id,
+          title: selectionContext.scene.title,
+          clips: [],
+        },
+      ],
+    });
+  }
+
+  if (selectionContext.surface === 'clip-design') {
+    return hydrateSequence(project, {
+      id: selectionContext.sequence.id,
+      number: selectionContext.sequence.number,
+      title: selectionContext.sequence.title,
+      shortTitle: selectionContext.sequence.shortTitle,
+      scenes: [
+        {
+          id: selectionContext.scene.id,
+          title: selectionContext.scene.title,
+          clips: [
+            {
+              id: selectionContext.clip.id,
+              title: selectionContext.clip.title,
+              summary: selectionContext.clip.oneLineSummary,
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  return project;
+}
+
+function hydrateSequence(
+  project: ProjectShellWithHttp,
+  selectedSequence: ProjectShellWithHttp['sequences'][number]
+): ProjectShellWithHttp {
+  const existingSequence = project.sequences.find(
+    (sequence) => sequence.id === selectedSequence.id
+  );
+  if (!existingSequence) {
+    return {
+      ...project,
+      sequences: [...project.sequences, selectedSequence],
+    };
+  }
+
+  const selectedScene = selectedSequence.scenes[0];
+  if (!selectedScene) {
+    return project;
+  }
+  const existingScene = existingSequence.scenes.find(
+    (scene) => scene.id === selectedScene.id
+  );
+  if (!existingScene) {
+    return {
+      ...project,
+      sequences: project.sequences.map((sequence) =>
+        sequence.id === existingSequence.id
+          ? {
+              ...sequence,
+              scenes: [...sequence.scenes, selectedScene],
+            }
+          : sequence
+      ),
+    };
+  }
+
+  const selectedClip = selectedScene.clips[0];
   if (
-    selection.type === 'scene' &&
-    !project.sequences.some((sequence) =>
+    !selectedClip ||
+    existingScene.clips.some((clip) => clip.id === selectedClip.id)
+  ) {
+    return project;
+  }
+
+  return {
+    ...project,
+    sequences: project.sequences.map((sequence) =>
+      sequence.id === existingSequence.id
+        ? {
+            ...sequence,
+            scenes: sequence.scenes.map((scene) =>
+              scene.id === existingScene.id
+                ? { ...scene, clips: [...scene.clips, selectedClip] }
+                : scene
+            ),
+          }
+        : sequence
+    ),
+  };
+}
+
+function selectionContextErrorMessage(
+  selection: MovieStudioSelection,
+  context: Extract<MovieStudioSelectionContextResponse, { valid: false }>
+): string {
+  if (context.reason === 'unsupportedSelection') {
+    return `Unsupported Movie Studio selection: ${selection.type}`;
+  }
+  if ('id' in selection) {
+    return `${selectionTypeLabel(selection.type)} not found: ${selection.id}`;
+  }
+  return `Movie Studio selection not found: ${selection.type}`;
+}
+
+function selectionTypeLabel(type: MovieStudioSelection['type']): string {
+  switch (type) {
+    case 'cast':
+      return 'Cast member';
+    case 'sequence':
+      return 'Sequence';
+    case 'scene':
+      return 'Scene';
+    case 'clip':
+      return 'Clip';
+    case 'projectInformation':
+      return 'Project information';
+    case 'visualLanguage':
+      return 'Visual language';
+    case 'storyboard':
+      return 'Storyboard';
+    case 'casting':
+      return 'Casting';
+  }
+}
+
+function canResolveRouteSelection(
+  project: ProjectShellWithHttp,
+  selection: MovieStudioSelection
+): boolean {
+  if (selection.type === 'cast') {
+    return project.cast.some((castEntry) => castEntry.id === selection.id);
+  }
+  if (selection.type === 'sequence') {
+    return project.sequences.some((sequence) => sequence.id === selection.id);
+  }
+  if (selection.type === 'scene') {
+    return project.sequences.some((sequence) =>
       sequence.scenes.some((scene) => scene.id === selection.id)
-    )
-  ) {
-    throw new Error(`Scene not found: ${selection.id}`);
+    );
   }
-  if (
-    selection.type === 'clip' &&
-    !project.sequences.some((sequence) =>
+  if (selection.type === 'clip') {
+    return project.sequences.some((sequence) =>
       sequence.scenes.some((scene) =>
         scene.clips.some((clip) => clip.id === selection.id)
       )
-    )
-  ) {
-    throw new Error(`Clip not found: ${selection.id}`);
+    );
   }
+  return true;
 }
 
 function projectRoutePath(projectName: string): string {

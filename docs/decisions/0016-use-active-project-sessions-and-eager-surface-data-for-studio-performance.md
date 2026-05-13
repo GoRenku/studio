@@ -4,6 +4,26 @@ Date: 2026-05-12
 
 Status: accepted
 
+## Supersession Notice
+
+ADR 0017 supersedes this ADR's **Eager Surface Data** direction.
+
+Keep using the **Active Project SQLite Sessions** and runtime database access
+guidance below. Do not use this ADR as authority for project-wide eager browser
+payloads, `ProjectWithHttp`-style full surface snapshots, or eager
+`castAssetsByCastMemberId` loading.
+
+The current Studio loading architecture is:
+
+- open a project with a bounded `ProjectShell`;
+- load selected surface resources lazily;
+- page large navigation and asset collections with opaque cursors;
+- invalidate cached UI resources through scoped
+  `studio.projectResourcesChanged` events.
+
+Read `0017-use-scalable-studio-resource-loading.md` before changing Studio
+project-open, surface-resource, asset-page, navigation, or refresh behavior.
+
 ## Context
 
 Renku Studio is a local application. Opening a project and moving between Studio
@@ -30,8 +50,12 @@ explicit.
 
 ## Decision
 
-Studio uses active project sessions and eager surface data for normal project
-browsing.
+Studio uses active project sessions for normal project browsing.
+
+This ADR originally also accepted eager surface data. That part is no longer
+current architecture. ADR 0017 replaces it with bounded project shell loading,
+lazy selected surface resources, paginated asset/navigation resources, and
+scoped resource invalidation.
 
 ### Runtime Database Access
 
@@ -73,6 +97,9 @@ inside ordinary project operations should not close the active project database.
 
 ### Eager Surface Data
 
+This section is superseded by ADR 0017. It is retained only as historical
+context for the performance problem ADR 0016 was trying to solve.
+
 Project reads should include the lightweight metadata needed to render normal
 first-level Studio surfaces immediately.
 
@@ -95,6 +122,10 @@ asset and file metadata plus stable file URLs. Image, audio, and video bytes sta
 behind file-serving endpoints and browser caching.
 
 ### Background Refresh
+
+This section's `project.castAssetsByCastMemberId` example is historical. Current
+code should render from resource cache entries and refresh visible stale
+resources after `studio.projectResourcesChanged`, as described in ADR 0017.
 
 Surface-specific refreshes may still happen after render, but they must be
 silent when the project payload already supplied a known initial state.
@@ -134,8 +165,9 @@ ordinary surface navigation.
   like loading independent web pages.
 - New surfaces should distinguish "unknown" from "known empty" data. Known empty
   data renders an empty state, not a spinner.
-- Backend APIs may return denormalized, surface-ready metadata when that avoids
-  blocking local navigation.
+- This ADR's earlier claim that backend APIs may return broad denormalized,
+  surface-ready project metadata is superseded. Current backend APIs should use
+  bounded shell/resources and pagination per ADR 0017.
 - Core remains responsible for validating project data and asset relationships,
   but routine reads reuse the active project database handle.
 - Runtime code must not hide invalid schema state by running migrations.

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Asset, CastMember } from '@gorenku/studio-core';
 import {
   castAssetFileUrl,
-  readCastAssets,
+  invalidateCastDesignResource,
+  readCastDesignResource,
   selectCastAsset,
   unselectCastAsset,
 } from '@/services/studio-project-assets-api';
@@ -18,7 +19,6 @@ const castAssetsCache = new Map<string, Asset[]>();
 
 interface CastDesignAssetsRuntimeState {
   cacheKey: string;
-  initialAssetsVersion: string | null;
   assets: Asset[];
   isLoadingCastAssets: boolean;
   castAssetsError: string | null;
@@ -38,33 +38,19 @@ export interface CastDesignAssetsState {
 export function useCastDesignAssets(input: {
   projectName: string;
   castEntry: CastMember;
-  initialAssets?: Asset[];
 }): CastDesignAssetsState {
-  const { projectName, castEntry, initialAssets } = input;
+  const { projectName, castEntry } = input;
   const cacheKey = castAssetsCacheKey(projectName, castEntry.id);
-  const initialAssetsVersion = castAssetsVersion(initialAssets);
   const [assetState, setAssetState] = useState<CastDesignAssetsRuntimeState>(
-    () =>
-      createCastDesignAssetsRuntimeState(
-        cacheKey,
-        initialAssets,
-        initialAssetsVersion
-      )
+    () => createCastDesignAssetsRuntimeState(cacheKey)
   );
   const [castAssetMutationId, setCastAssetMutationId] = useState<string | null>(
     null
   );
 
   let currentAssetState = assetState;
-  if (
-    currentAssetState.cacheKey !== cacheKey ||
-    currentAssetState.initialAssetsVersion !== initialAssetsVersion
-  ) {
-    currentAssetState = createCastDesignAssetsRuntimeState(
-      cacheKey,
-      initialAssets,
-      initialAssetsVersion
-    );
+  if (currentAssetState.cacheKey !== cacheKey) {
+    currentAssetState = createCastDesignAssetsRuntimeState(cacheKey);
     setAssetState(currentAssetState);
   }
 
@@ -77,7 +63,11 @@ export function useCastDesignAssets(input: {
       castAssetsError: null,
     }));
     try {
-      const nextAssets = await readCastAssets(projectName, castEntry.id);
+      const resource = await readCastDesignResource(projectName, castEntry.id);
+      const nextAssets = [
+        ...resource.selectedAssets,
+        ...resource.activeTakePage.items,
+      ];
       castAssetsCache.set(cacheKey, nextAssets);
       setAssetState((current) => ({
         ...current,
@@ -95,20 +85,18 @@ export function useCastDesignAssets(input: {
   }, [cacheKey, castEntry.id, projectName]);
 
   useEffect(() => {
-    if (initialAssets !== undefined) {
-      castAssetsCache.set(cacheKey, initialAssets);
-      return;
-    }
-
     let cancelled = false;
     void Promise.resolve()
-      .then(() => readCastAssets(projectName, castEntry.id))
+      .then(() => readCastDesignResource(projectName, castEntry.id))
+      .then((resource) => [
+        ...resource.selectedAssets,
+        ...resource.activeTakePage.items,
+      ])
       .then((nextAssets) => {
         castAssetsCache.set(cacheKey, nextAssets);
         if (!cancelled) {
           setAssetState((current) =>
-            current.cacheKey === cacheKey &&
-            current.initialAssetsVersion === null
+            current.cacheKey === cacheKey
               ? {
                   ...current,
                   assets: nextAssets,
@@ -121,8 +109,7 @@ export function useCastDesignAssets(input: {
       .catch((error) => {
         if (!cancelled) {
           setAssetState((current) =>
-            current.cacheKey === cacheKey &&
-            current.initialAssetsVersion === null
+            current.cacheKey === cacheKey
               ? {
                   ...current,
                   isLoadingCastAssets: false,
@@ -138,8 +125,7 @@ export function useCastDesignAssets(input: {
       .finally(() => {
         if (!cancelled) {
           setAssetState((current) =>
-            current.cacheKey === cacheKey &&
-            current.initialAssetsVersion === null
+            current.cacheKey === cacheKey
               ? {
                   ...current,
                   isLoadingCastAssets: false,
@@ -151,7 +137,34 @@ export function useCastDesignAssets(input: {
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, castEntry.id, initialAssets, initialAssetsVersion, projectName]);
+  }, [cacheKey, castEntry.id, projectName]);
+
+  useEffect(() => {
+    const handleResourceChange = (event: Event) => {
+      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
+      if (
+        !detail ||
+        detail.projectName !== projectName ||
+        !detail.resourceKeys.some((resourceKey) =>
+          isCastDesignResourceKey(resourceKey, castEntry.id)
+        )
+      ) {
+        return;
+      }
+      invalidateCastDesignResource(projectName, castEntry.id);
+      void loadAssets();
+    };
+    window.addEventListener(
+      'renku:studio-resource-changed',
+      handleResourceChange
+    );
+    return () => {
+      window.removeEventListener(
+        'renku:studio-resource-changed',
+        handleResourceChange
+      );
+    };
+  }, [castEntry.id, loadAssets, projectName]);
 
   const selectCastDesignAsset = useCallback(
     async (asset: CastDesignAsset) => {
@@ -162,6 +175,7 @@ export function useCastDesignAssets(input: {
       setAssetState((current) => ({ ...current, castAssetsError: null }));
       try {
         await selectCastAsset(projectName, castEntry.id, asset.assetId);
+        invalidateCastDesignResource(projectName, castEntry.id);
         await loadAssets();
       } catch (error) {
         setAssetState((current) => ({
@@ -185,6 +199,7 @@ export function useCastDesignAssets(input: {
       setAssetState((current) => ({ ...current, castAssetsError: null }));
       try {
         await unselectCastAsset(projectName, castEntry.id, asset.assetId);
+        invalidateCastDesignResource(projectName, castEntry.id);
         await loadAssets();
       } catch (error) {
         setAssetState((current) => ({
@@ -218,49 +233,31 @@ function castAssetsCacheKey(projectName: string, castMemberId: string): string {
   return `${projectName}\n${castMemberId}`;
 }
 
-function createCastDesignAssetsRuntimeState(
-  cacheKey: string,
-  initialAssets: Asset[] | undefined,
-  initialAssetsVersion: string | null
-): CastDesignAssetsRuntimeState {
-  if (initialAssets !== undefined) {
-    return {
-      cacheKey,
-      initialAssetsVersion,
-      assets: initialAssets,
-      isLoadingCastAssets: false,
-      castAssetsError: null,
-    };
-  }
+interface StudioResourceChangedDetail {
+  projectName: string;
+  resourceKeys: string[];
+}
 
+function isCastDesignResourceKey(
+  resourceKey: string,
+  castMemberId: string
+): boolean {
+  return (
+    resourceKey === `surface:cast-design:${castMemberId}` ||
+    resourceKey === `assets:castMember:${castMemberId}`
+  );
+}
+
+function createCastDesignAssetsRuntimeState(
+  cacheKey: string
+): CastDesignAssetsRuntimeState {
   const cachedAssets = castAssetsCache.get(cacheKey);
   return {
     cacheKey,
-    initialAssetsVersion,
     assets: cachedAssets ?? [],
     isLoadingCastAssets: cachedAssets === undefined,
     castAssetsError: null,
   };
-}
-
-function castAssetsVersion(assets: Asset[] | undefined): string | null {
-  if (assets === undefined) {
-    return null;
-  }
-
-  return assets
-    .map((asset) =>
-      [
-        asset.assetId,
-        asset.relationshipId,
-        asset.role,
-        asset.sortOrder,
-        asset.selection.kind,
-        asset.selection.kind === 'select' ? asset.selection.order : '',
-        asset.updatedAt,
-      ].join(':')
-    )
-    .join('\n');
 }
 
 function projectCastDesignAssets(

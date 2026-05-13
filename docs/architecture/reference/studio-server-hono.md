@@ -260,6 +260,11 @@ packages/studio/server/http/project-cover-url.ts
 The response adapter must stay mechanical. It should not scan project folders,
 open SQLite, or infer domain relationships.
 
+Project-open responses follow ADR 0017. The Studio project route should adapt a
+bounded project shell, not construct a project-wide eager surface snapshot.
+Selected surface resources, navigation pages, and asset pages should be exposed
+as explicit resource routes that call core query methods.
+
 ## Error Handling
 
 The Hono app should translate structured core errors into structured HTTP

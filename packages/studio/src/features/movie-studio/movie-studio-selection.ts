@@ -4,7 +4,7 @@ import type {
   Scene,
   Sequence,
 } from '@gorenku/studio-core';
-import type { ProjectWithHttp } from '@/services/studio-project-contracts';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 
 export type MovieStudioSelection =
   | { type: 'projectInformation' }
@@ -33,7 +33,7 @@ export interface ResolvedMovieStudioSelection {
 }
 
 export function buildMovieStudioLookup(
-  project: ProjectWithHttp
+  project: ProjectShellWithHttp
 ): MovieStudioLookup {
   const sequences = new Map<string, Sequence>();
   const scenes = new Map<string, Scene>();
