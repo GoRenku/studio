@@ -8,6 +8,7 @@ import type {
   ProjectWithHttp,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
+import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
 describe('App', () => {
   beforeEach(() => {
@@ -55,9 +56,68 @@ describe('App', () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/projects/constantinople');
     });
+    await screen.findByText('Project Name');
     await screen.findByText('Sequences');
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
     expect(fetchLog.some((url) => url.includes('/select'))).toBe(false);
+  });
+
+  it('loads canonical Movie Studio selection routes', async () => {
+    const project = makeProject();
+    const routeCases: Array<{
+      path: string;
+      expectedText: string;
+    }> = [
+      {
+        path: '/projects/constantinople',
+        expectedText: 'Project Name',
+      },
+      {
+        path: '/projects/constantinople/visual-language',
+        expectedText: 'Visual Language',
+      },
+      {
+        path: '/projects/constantinople/storyboard',
+        expectedText: 'Full Storyboard',
+      },
+      {
+        path: '/projects/constantinople/sequences/seq_opening',
+        expectedText: 'The opening sequence.',
+      },
+      {
+        path: '/projects/constantinople/scenes/scene_1_1',
+        expectedText: 'The movie begins.',
+      },
+      {
+        path: '/projects/constantinople/clips/clip_1_1_1',
+        expectedText: 'Opening Image',
+      },
+      {
+        path: '/projects/constantinople/cast',
+        expectedText: 'narrator / voiceover',
+      },
+      {
+        path: '/projects/constantinople/cast/cast_narrator',
+        expectedText: 'Narrator reference',
+      },
+    ];
+
+    for (const routeCase of routeCases) {
+      window.history.pushState({}, '', routeCase.path);
+      mockStudioFetch({
+        library: makeLibrary([makeProjectSummary()]),
+        project,
+      });
+      const { unmount } = renderApp();
+
+      await waitFor(() => {
+        expect(screen.getAllByText(routeCase.expectedText).length).toBeGreaterThan(
+          0
+        );
+      });
+      expect(window.location.pathname).toBe(routeCase.path);
+      unmount();
+    }
   });
 
   it('loads a cast member from the canonical cast route', async () => {
@@ -91,6 +151,35 @@ describe('App', () => {
     await screen.findByText('Sequences');
     fireEvent.click(screen.getByText('Narrator'));
 
+    await screen.findByText('Narrator reference');
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/cast/cast_narrator'
+    );
+  });
+
+  it('uses browser history to restore route-owned Movie Studio selections', async () => {
+    window.history.pushState({}, '', '/projects/constantinople');
+    mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Project Name');
+    fireEvent.click(screen.getByText('Narrator'));
+    await screen.findByText('Narrator reference');
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/cast/cast_narrator'
+    );
+
+    window.history.back();
+    fireEvent.popState(window);
+    await screen.findByText('Project Name');
+    expect(window.location.pathname).toBe('/projects/constantinople');
+
+    window.history.forward();
+    fireEvent.popState(window);
     await screen.findByText('Narrator reference');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
@@ -193,6 +282,51 @@ describe('App', () => {
 
     await screen.findByText('Project Library');
     expect(screen.getByText('Cast member not found: cast_missing')).toBeTruthy();
+  });
+
+  it('rejects unknown story selection routes instead of falling back', async () => {
+    const routeCases = [
+      {
+        path: '/projects/constantinople/sequences/seq_missing',
+        message: 'Sequence not found: seq_missing',
+      },
+      {
+        path: '/projects/constantinople/scenes/scene_missing',
+        message: 'Scene not found: scene_missing',
+      },
+      {
+        path: '/projects/constantinople/clips/clip_missing',
+        message: 'Clip not found: clip_missing',
+      },
+    ];
+
+    for (const routeCase of routeCases) {
+      window.history.pushState({}, '', routeCase.path);
+      mockStudioFetch({
+        library: makeLibrary([makeProjectSummary()]),
+        project: makeProject(),
+      });
+      const { unmount } = renderApp();
+
+      await screen.findByText('Project Library');
+      expect(screen.getByText(routeCase.message)).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it('rejects unknown project child routes instead of falling back', async () => {
+    window.history.pushState({}, '', '/projects/constantinople/not-a-surface');
+    mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Project Library');
+    expect(
+      screen.getByText('Unknown project route: /projects/constantinople/not-a-surface')
+    ).toBeTruthy();
   });
 
   it('returns home from a project route and stays on the project library route', async () => {
@@ -336,6 +470,112 @@ describe('App', () => {
     }, { timeout: 2_500 });
     await screen.findByText('Sequences');
     expect(selectWasCalled).toBe(false);
+  });
+
+  it.each([
+    [
+      'Project Information',
+      { type: 'projectInformation' },
+      '/projects/constantinople',
+    ],
+    [
+      'Visual Language',
+      { type: 'visualLanguage' },
+      '/projects/constantinople/visual-language',
+    ],
+    ['Storyboard', { type: 'storyboard' }, '/projects/constantinople/storyboard'],
+    [
+      'Sequence',
+      { type: 'sequence', id: 'seq_opening' },
+      '/projects/constantinople/sequences/seq_opening',
+    ],
+    [
+      'Scene',
+      { type: 'scene', id: 'scene_1_1' },
+      '/projects/constantinople/scenes/scene_1_1',
+    ],
+    [
+      'Clip',
+      { type: 'clip', id: 'clip_1_1_1' },
+      '/projects/constantinople/clips/clip_1_1_1',
+    ],
+    ['Cast overview', { type: 'casting' }, '/projects/constantinople/cast'],
+    [
+      'Cast member',
+      { type: 'cast', id: 'cast_narrator' },
+      '/projects/constantinople/cast/cast_narrator',
+    ],
+  ] satisfies Array<[string, MovieStudioSelection, string]>)(
+    'routes CLI-style pending focus requests for %s to the canonical URL',
+    async (_label, selection, expectedPath) => {
+    const reportedAppliedRequestIds: string[] = [];
+    const reportedAppliedFocuses: unknown[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url === '/studio-api/projects') {
+        return jsonResponse({
+          library: {
+            storageRoot: '/tmp/renku-studio',
+            projects: [],
+          },
+        });
+      }
+      if (url === '/studio-api/projects/constantinople') {
+        return jsonResponse({ project: makeProject() });
+      }
+      if (url === '/studio-api/studio/events/current') {
+        return jsonResponse({
+          ...emptyStudioCurrent(),
+          pendingRequest: {
+            eventId: 'studio_event_selection_focus',
+            createdAt: '2026-05-12T00:00:00.000Z',
+            projectRef: {
+              name: 'constantinople',
+              id: 'project_test0001',
+              storageRoot: '/tmp',
+            },
+            focus: {
+              screen: 'movieStudio',
+              selection,
+            },
+          },
+        });
+      }
+      if (url === '/studio-api/studio/events/focus-requests/validate') {
+        return jsonResponse({ valid: true });
+      }
+      if (url === '/studio-api/studio/events/focus-changes') {
+        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        if (body.appliedRequestId) {
+          reportedAppliedRequestIds.push(body.appliedRequestId);
+          reportedAppliedFocuses.push(body.focus);
+        }
+        return jsonResponse({});
+      }
+      if (
+        url === '/studio-api/studio/events/browser-sessions/active' ||
+        url === '/studio-api/studio/events/focus-failures'
+      ) {
+        return jsonResponse({});
+      }
+      if (url.startsWith('/studio-api/studio/events')) {
+        return jsonResponse({ events: [], nextCursor: '100', warnings: [] });
+      }
+      return jsonResponse({});
+    });
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(expectedPath);
+    }, { timeout: 2_500 });
+    await waitFor(() => {
+      expect(reportedAppliedRequestIds).toContain('studio_event_selection_focus');
+    });
+    expect(reportedAppliedFocuses).toContainEqual({
+      screen: 'movieStudio',
+      selection,
+    });
   });
 
   it('applies only the newest focus request from a polling batch', async () => {
@@ -613,8 +853,9 @@ describe('App', () => {
 
     renderApp();
 
-    const projectInformationButton = await screen.findByText('Project Information');
-    fireEvent.click(projectInformationButton);
+    const [projectInformationButton] =
+      await screen.findAllByText('Project Information');
+    fireEvent.click(projectInformationButton.closest('button')!);
 
     expect(screen.getByText('Project Name')).toBeTruthy();
     expect(screen.getByDisplayValue('constantinople')).toBeTruthy();

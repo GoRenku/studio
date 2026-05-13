@@ -14,7 +14,8 @@ type StudioRoute =
   | {
       screen: 'movieStudio';
       projectName: string;
-      selection?: MovieStudioSelection;
+      selection: MovieStudioSelection;
+      routeError?: string;
     };
 
 export interface ProjectSession {
@@ -24,13 +25,14 @@ export interface ProjectSession {
   isLoadingProjectLibrary: boolean;
   isSelectingProject: boolean;
   projectSessionError: string | null;
-  routeSelection: MovieStudioSelection | null;
+  movieStudioRouteSelection: MovieStudioSelection | null;
   refreshProjectLibrary: () => Promise<void>;
   refreshProject: (projectName: string) => Promise<ProjectWithHttp>;
   navigateToProject: (projectName: string) => Promise<ProjectWithHttp | null>;
-  navigateToMovieStudioSelection: (
-    selection: MovieStudioSelection
-  ) => Promise<void>;
+  navigateToMovieStudioSelectionRoute: (
+    selection: MovieStudioSelection,
+    projectName?: string
+  ) => Promise<{ routeChanged: boolean }>;
   updateCurrentProject: (project: ProjectWithHttp) => void;
   returnToProjectLibrary: () => void;
 }
@@ -82,7 +84,7 @@ export function useProjectSession(): ProjectSession {
         const currentProject = currentProjectRef.current;
         if (currentProject?.identity.name === route.projectName) {
           try {
-            validateRouteSelection(currentProject, route.selection);
+            validateRouteSelection(currentProject, route);
             setProjectSessionError(null);
           } catch (routeError) {
             if (!cancelled) {
@@ -119,7 +121,7 @@ export function useProjectSession(): ProjectSession {
           prefetchedProject?.identity.name === route.projectName
             ? prefetchedProject
             : await readProject(route.projectName);
-        validateRouteSelection(nextProject, route.selection);
+        validateRouteSelection(nextProject, route);
         if (!cancelled) {
           setProject(nextProject);
           setIsSelectingProject(false);
@@ -168,7 +170,11 @@ export function useProjectSession(): ProjectSession {
       prefetchedProjectRef.current = nextProject;
       setProject(nextProject);
       pushRoutePath(projectRoutePath(projectName));
-      setRoute({ screen: 'movieStudio', projectName });
+      setRoute({
+        screen: 'movieStudio',
+        projectName,
+        selection: { type: 'projectInformation' },
+      });
       return nextProject;
     } catch (navigationError) {
       setProjectSessionError(
@@ -182,31 +188,31 @@ export function useProjectSession(): ProjectSession {
     }
   }, []);
 
-  const navigateToMovieStudioSelection = useCallback(
-    async (selection: MovieStudioSelection) => {
+  const navigateToMovieStudioSelectionRoute = useCallback(
+    async (selection: MovieStudioSelection, requestedProjectName?: string) => {
       const projectName =
+        requestedProjectName ??
         project?.identity.name ??
         (route.screen === 'movieStudio' ? route.projectName : null);
       if (!projectName) {
-        return;
+        return { routeChanged: false };
       }
       const path = movieStudioSelectionRoutePath(projectName, selection);
-      const routeSelection = routableMovieStudioSelection(selection);
       if (
         window.location.pathname === path &&
         route.screen === 'movieStudio' &&
         route.projectName === projectName &&
-        movieStudioSelectionKey(route.selection) ===
-          movieStudioSelectionKey(routeSelection)
+        movieStudioSelectionKey(route.selection) === movieStudioSelectionKey(selection)
       ) {
-        return;
+        return { routeChanged: false };
       }
       pushRoutePath(path);
       setRoute({
         screen: 'movieStudio',
         projectName,
-        selection: routeSelection,
+        selection,
       });
+      return { routeChanged: true };
     },
     [project, route]
   );
@@ -229,18 +235,84 @@ export function useProjectSession(): ProjectSession {
     isLoadingProjectLibrary,
     isSelectingProject,
     projectSessionError,
-    routeSelection:
-      route.screen === 'movieStudio' ? route.selection ?? null : null,
+    movieStudioRouteSelection:
+      route.screen === 'movieStudio' ? route.selection : null,
     refreshProjectLibrary,
     refreshProject,
     navigateToProject,
-    navigateToMovieStudioSelection,
+    navigateToMovieStudioSelectionRoute,
     updateCurrentProject,
     returnToProjectLibrary,
   };
 }
 
 function readStudioRoute(): StudioRoute {
+  const projectInformationRoute = /^\/projects\/([^/]+)\/?$/.exec(
+    window.location.pathname
+  );
+  if (projectInformationRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(projectInformationRoute[1]),
+      selection: { type: 'projectInformation' },
+    };
+  }
+
+  const visualLanguageRoute = /^\/projects\/([^/]+)\/visual-language\/?$/.exec(
+    window.location.pathname
+  );
+  if (visualLanguageRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(visualLanguageRoute[1]),
+      selection: { type: 'visualLanguage' },
+    };
+  }
+
+  const storyboardRoute = /^\/projects\/([^/]+)\/storyboard\/?$/.exec(
+    window.location.pathname
+  );
+  if (storyboardRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(storyboardRoute[1]),
+      selection: { type: 'storyboard' },
+    };
+  }
+
+  const sequenceRoute = /^\/projects\/([^/]+)\/sequences\/([^/]+)\/?$/.exec(
+    window.location.pathname
+  );
+  if (sequenceRoute?.[1] && sequenceRoute[2]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(sequenceRoute[1]),
+      selection: { type: 'sequence', id: decodeURIComponent(sequenceRoute[2]) },
+    };
+  }
+
+  const sceneRoute = /^\/projects\/([^/]+)\/scenes\/([^/]+)\/?$/.exec(
+    window.location.pathname
+  );
+  if (sceneRoute?.[1] && sceneRoute[2]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(sceneRoute[1]),
+      selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+    };
+  }
+
+  const clipRoute = /^\/projects\/([^/]+)\/clips\/([^/]+)\/?$/.exec(
+    window.location.pathname
+  );
+  if (clipRoute?.[1] && clipRoute[2]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(clipRoute[1]),
+      selection: { type: 'clip', id: decodeURIComponent(clipRoute[2]) },
+    };
+  }
+
   const castRoute = /^\/projects\/([^/]+)\/cast\/([^/]+)\/?$/.exec(
     window.location.pathname
   );
@@ -263,26 +335,59 @@ function readStudioRoute(): StudioRoute {
     };
   }
 
-  const projectRoute = /^\/projects\/([^/]+)\/?$/.exec(window.location.pathname);
-  if (!projectRoute?.[1]) {
-    return { screen: 'projectLibrary' };
+  const unknownProjectRoute = /^\/projects\/([^/]+)\/.+$/.exec(
+    window.location.pathname
+  );
+  if (unknownProjectRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(unknownProjectRoute[1]),
+      selection: { type: 'projectInformation' },
+      routeError: `Unknown project route: ${window.location.pathname}`,
+    };
   }
 
-  return {
-    screen: 'movieStudio',
-    projectName: decodeURIComponent(projectRoute[1]),
-  };
+  return { screen: 'projectLibrary' };
 }
 
 function validateRouteSelection(
   project: ProjectWithHttp,
-  selection?: MovieStudioSelection
+  route: Extract<StudioRoute, { screen: 'movieStudio' }>
 ): void {
+  if (route.routeError) {
+    throw new Error(route.routeError);
+  }
+
+  const selection = route.selection;
   if (
-    selection?.type === 'cast' &&
+    selection.type === 'cast' &&
     !project.cast.some((castEntry) => castEntry.id === selection.id)
   ) {
     throw new Error(`Cast member not found: ${selection.id}`);
+  }
+  if (
+    selection.type === 'sequence' &&
+    !project.sequences.some((sequence) => sequence.id === selection.id)
+  ) {
+    throw new Error(`Sequence not found: ${selection.id}`);
+  }
+  if (
+    selection.type === 'scene' &&
+    !project.sequences.some((sequence) =>
+      sequence.scenes.some((scene) => scene.id === selection.id)
+    )
+  ) {
+    throw new Error(`Scene not found: ${selection.id}`);
+  }
+  if (
+    selection.type === 'clip' &&
+    !project.sequences.some((sequence) =>
+      sequence.scenes.some((scene) =>
+        scene.clips.some((clip) => clip.id === selection.id)
+      )
+    )
+  ) {
+    throw new Error(`Clip not found: ${selection.id}`);
   }
 }
 
@@ -300,19 +405,26 @@ function movieStudioSelectionRoutePath(
   if (selection.type === 'cast') {
     return `${projectRoutePath(projectName)}/cast/${encodeURIComponent(selection.id)}`;
   }
+  if (selection.type === 'visualLanguage') {
+    return `${projectRoutePath(projectName)}/visual-language`;
+  }
+  if (selection.type === 'storyboard') {
+    return `${projectRoutePath(projectName)}/storyboard`;
+  }
+  if (selection.type === 'sequence') {
+    return `${projectRoutePath(projectName)}/sequences/${encodeURIComponent(selection.id)}`;
+  }
+  if (selection.type === 'scene') {
+    return `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;
+  }
+  if (selection.type === 'clip') {
+    return `${projectRoutePath(projectName)}/clips/${encodeURIComponent(selection.id)}`;
+  }
   return projectRoutePath(projectName);
 }
 
-function routableMovieStudioSelection(
-  selection: MovieStudioSelection
-): MovieStudioSelection | undefined {
-  return selection.type === 'casting' || selection.type === 'cast'
-    ? selection
-    : undefined;
-}
-
-function movieStudioSelectionKey(selection?: MovieStudioSelection): string {
-  return selection ? JSON.stringify(selection) : '';
+function movieStudioSelectionKey(selection: MovieStudioSelection): string {
+  return JSON.stringify(selection);
 }
 
 function pushRoutePath(path: string): void {

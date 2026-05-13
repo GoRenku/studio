@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ProjectWithHttp } from '@/services/studio-project-contracts';
 import {
   buildMovieStudioLookup,
@@ -6,14 +6,15 @@ import {
   type MovieStudioSelection,
 } from './movie-studio-selection';
 
-export function useMovieStudioSelection(
+const defaultMovieStudioSelection: MovieStudioSelection = {
+  type: 'projectInformation',
+};
+
+export function useMovieStudioSelectionResolution(
   project: ProjectWithHttp | null,
-  routeSelection: MovieStudioSelection | null = null
+  selection: MovieStudioSelection | null
 ) {
-  const [localSelection, setLocalSelection] = useState<MovieStudioSelection>({
-    type: 'storyboard',
-  });
-  const selection = routeSelection ?? localSelection;
+  const routeSelection = selection ?? defaultMovieStudioSelection;
   const lookup = useMemo(
     () =>
       project
@@ -27,13 +28,12 @@ export function useMovieStudioSelection(
     [project]
   );
   const resolvedSelection = useMemo(
-    () => resolveMovieStudioSelection(selection, lookup),
-    [lookup, selection]
+    () => resolveMovieStudioSelection(routeSelection, lookup),
+    [lookup, routeSelection]
   );
 
   return {
-    selection,
-    setSelection: setLocalSelection,
+    selection: routeSelection,
     lookup,
     resolvedSelection,
   };

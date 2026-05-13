@@ -3,20 +3,19 @@ import { ProjectLibraryScreen } from '@/features/project-library/project-library
 import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
-import { useMovieStudioSelection } from '@/features/movie-studio/use-movie-studio-selection';
+import { useMovieStudioSelectionResolution } from '@/features/movie-studio/use-movie-studio-selection-resolution';
 
 function App() {
   const projectSession = useProjectSession();
-  const movieStudioSelection = useMovieStudioSelection(
+  const movieStudioSelection = useMovieStudioSelectionResolution(
     projectSession.project,
-    projectSession.routeSelection
+    projectSession.movieStudioRouteSelection
   );
 
   useStudioCoordination({
     projectSession,
     movieStudioSelection: {
       selection: movieStudioSelection.selection,
-      setSelection: movieStudioSelection.setSelection,
     },
   });
 
@@ -37,7 +36,7 @@ function App() {
         project={projectSession.project}
         onHome={projectSession.returnToProjectLibrary}
         onProjectChange={projectSession.updateCurrentProject}
-        onNavigateSelection={projectSession.navigateToMovieStudioSelection}
+        onNavigateSelection={projectSession.navigateToMovieStudioSelectionRoute}
         selection={movieStudioSelection}
       />
     );

@@ -25,7 +25,6 @@ const VISIBLE_HEARTBEAT_MS = 60_000;
 
 export interface StudioCoordinationSelection {
   selection: MovieStudioSelection;
-  setSelection: (selection: MovieStudioSelection) => void;
 }
 
 export function useStudioCoordination(input: {
@@ -45,21 +44,18 @@ export function useStudioCoordination(input: {
   const appliedRequestIdRef = useRef<string | null>(null);
   const appliedFocusRequestIdsRef = useRef<Set<string>>(new Set());
   const lastReportedFocusKeyRef = useRef<string | null>(null);
+  const [focusReportVersion, setFocusReportVersion] = useState(0);
   const projectSessionRef = useRef(projectSession);
   const currentProjectRef = useRef<ProjectWithHttp | null>(projectSession.project);
-  const setSelectionRef = useRef<
-    ((selection: MovieStudioSelection) => void) | null
-  >(movieStudioSelection?.setSelection ?? null);
+  const requestFocusReportRef = useRef(() => {
+    setFocusReportVersion((version) => version + 1);
+  });
   const selection = movieStudioSelection?.selection ?? null;
 
   useEffect(() => {
     projectSessionRef.current = projectSession;
     currentProjectRef.current = projectSession.project;
   }, [projectSession]);
-
-  useEffect(() => {
-    setSelectionRef.current = movieStudioSelection?.setSelection ?? null;
-  }, [movieStudioSelection?.setSelection]);
 
   const reportActivity = useCallback(async () => {
     const now = Date.now();
@@ -86,11 +82,11 @@ export function useStudioCoordination(input: {
       events: response.events,
       browserSessionId,
       projectSessionRef,
-      setSelectionRef,
       currentProjectRef,
       focusRequestInProgressRef,
       appliedRequestIdRef,
       appliedFocusRequestIdsRef,
+      requestFocusReportRef,
     });
   }, [browserSessionId]);
 
@@ -158,11 +154,11 @@ export function useStudioCoordination(input: {
     void applyStartupPendingFocusRequest({
       browserSessionId,
       projectSessionRef,
-      setSelectionRef,
       currentProjectRef,
       focusRequestInProgressRef,
       appliedRequestIdRef,
       appliedFocusRequestIdsRef,
+      requestFocusReportRef,
     }).catch(() => {
       // Startup coordination retries through the regular polling path.
     });
@@ -209,18 +205,17 @@ export function useStudioCoordination(input: {
     projectSession.isLoadingProjectRoute,
     selection,
     projectSession.project,
+    focusReportVersion,
   ]);
 }
 
 interface StudioCoordinationRefs {
   projectSessionRef: { current: ProjectSession };
-  setSelectionRef: {
-    current: ((selection: MovieStudioSelection) => void) | null;
-  };
   currentProjectRef: { current: ProjectWithHttp | null };
   focusRequestInProgressRef: { current: string | null };
   appliedRequestIdRef: { current: string | null };
   appliedFocusRequestIdsRef: { current: Set<string> };
+  requestFocusReportRef: { current: () => void };
 }
 
 async function applyStudioEventBatch(input: {
@@ -258,11 +253,11 @@ async function applyStudioEventBatch(input: {
         event: event as StudioFocusRequestedEvent,
         browserSessionId: input.browserSessionId,
         projectSessionRef: input.projectSessionRef,
-        setSelectionRef: input.setSelectionRef,
         currentProjectRef: input.currentProjectRef,
         focusRequestInProgressRef: input.focusRequestInProgressRef,
         appliedRequestIdRef: input.appliedRequestIdRef,
         appliedFocusRequestIdsRef: input.appliedFocusRequestIdsRef,
+        requestFocusReportRef: input.requestFocusReportRef,
         refreshedProjectIds,
       });
     }
@@ -348,16 +343,6 @@ async function applyFocusRequest(input: {
     if (input.event.refresh?.library) {
       await input.projectSessionRef.current.refreshProjectLibrary();
     }
-    const setSelection = input.setSelectionRef.current;
-    if (!setSelection) {
-      await reportStudioFocusRequestFailed({
-        browserSessionId: input.browserSessionId,
-        requestEventId: input.event.id,
-        reason: 'unsupportedSelection',
-        diagnostics: [],
-      });
-      return;
-    }
     const validation = await validateStudioFocusRequest({
       projectName: project.identity.name,
       focus: input.event.focus,
@@ -373,9 +358,9 @@ async function applyFocusRequest(input: {
     }
     input.appliedRequestIdRef.current = input.event.id;
     input.appliedFocusRequestIdsRef.current.add(input.event.id);
-    setSelection(input.event.focus.selection);
-    await input.projectSessionRef.current.navigateToMovieStudioSelection(
-      input.event.focus.selection
+    await input.projectSessionRef.current.navigateToMovieStudioSelectionRoute(
+      input.event.focus.selection,
+      project.identity.name
     );
   } catch {
     await reportStudioFocusRequestFailed({
@@ -387,6 +372,9 @@ async function applyFocusRequest(input: {
   } finally {
     if (input.focusRequestInProgressRef.current === input.event.id) {
       input.focusRequestInProgressRef.current = null;
+    }
+    if (input.appliedRequestIdRef.current === input.event.id) {
+      input.requestFocusReportRef.current();
     }
   }
 }

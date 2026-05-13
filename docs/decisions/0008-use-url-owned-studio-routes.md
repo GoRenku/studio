@@ -44,15 +44,29 @@ The current route contract is:
 
 ```text
 /                         -> project library
-/projects/:projectName    -> movie Studio for that project
+/projects/:projectName    -> Movie Studio Project Information
+/projects/:projectName/visual-language
+                          -> Movie Studio Visual Language
+/projects/:projectName/storyboard
+                          -> Movie Studio Storyboard
+/projects/:projectName/sequences/:sequenceId
+                          -> Movie Studio Sequence
+/projects/:projectName/scenes/:sceneId
+                          -> Movie Studio Scene
+/projects/:projectName/clips/:clipId
+                          -> Movie Studio Clip
+/projects/:projectName/cast
+                          -> Movie Studio Cast overview
+/projects/:projectName/cast/:castMemberId
+                          -> Movie Studio Cast Member
 ```
 
 When the browser is at `/`, Studio must show the project library. There must
 not be a `/studio-api/projects/current` route loader that can reinterpret `/`
 as a project screen.
 
-When the browser is at `/projects/:projectName`, Studio must read that project
-directly from the project API:
+When the browser is at any `/projects/:projectName...` route, Studio must read
+that project directly from the project API:
 
 ```text
 GET /studio-api/projects/:projectName
@@ -62,7 +76,7 @@ Opening a project from the library is route navigation:
 
 1. push `/projects/:projectName` into browser history;
 2. read `GET /studio-api/projects/:projectName`;
-3. render the project when the route load succeeds.
+3. render Project Information when the route load succeeds.
 
 Returning home is route navigation:
 
@@ -111,6 +125,10 @@ current-project router.
 Use the same URL-owned pattern for any Studio screen that is user-navigable,
 bookmarkable, reloadable, or externally addressable.
 
+Movie Studio selection is route-owned. Do not keep a browser-local fallback
+selection that can reinterpret a project URL after Back, Forward, reload, or a
+coordination request.
+
 Future browser routes should follow these rules:
 
 - the route path identifies the durable resource needed to load the screen;
@@ -120,15 +138,6 @@ Future browser routes should follow these rules:
 - no route may be inferred from "current" server state, historical coordination
   events, polling, or ambient selection;
 - API endpoints provide data and mutations, not browser route ownership.
-
-For example, if a future surface needs direct navigation, prefer route-owned
-paths such as:
-
-```text
-/projects/:projectName/cast/:castMemberId
-/projects/:projectName/scenes/:sceneId
-/projects/:projectName/clips/:clipId
-```
 
 Do not add those paths just because a React panel exists. Local panel state,
 temporary tabs, expanded sidebar groups, open dialogs, hover state, and draft
@@ -163,13 +172,19 @@ Keep these checks in tests and code review:
 - clicking Home from a project must navigate to `/` and remain on the project
   library;
 - direct `/projects/:projectName` loads that project by name;
+- direct Movie Studio selection routes load that project by name and render the
+  route-selected surface;
+- Back and Forward restore the route-selected Movie Studio surface without
+  browser-local selection fallback;
+- missing sequence, scene, clip, or cast route ids fail clearly instead of
+  falling back to another panel;
 - project opening must not call a `/select` endpoint;
 - first coordination poll must not replay stale or already-applied focus
   requests as navigation;
 - a non-stale pending `movieStudio` focus request may open a project through
   `/projects/:projectName`;
-- a new `movieStudio` focus request while the browser is on `/` must open a
-  project through `/projects/:projectName`, validate the focus, and never call
+- a new `movieStudio` focus request while the browser is on `/` must open the
+  canonical selection route for that project, validate the focus, and never call
   `/select`;
 - route parsing should be small, explicit, and located at the app/session
   boundary rather than scattered through feature components.

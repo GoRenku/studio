@@ -12,7 +12,7 @@ import { GenerationActivityFooter } from './generation-activity/generation-activ
 import { ProjectInformationPanel } from './project-information/project-information-panel';
 import { StoryboardPanel } from './storyboard/storyboard-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
-import { useMovieStudioSelection } from './use-movie-studio-selection';
+import { useMovieStudioSelectionResolution } from './use-movie-studio-selection-resolution';
 import type { MovieStudioSelection } from './movie-studio-selection';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
 
@@ -20,8 +20,10 @@ interface MovieStudioScreenProps {
   project: ProjectWithHttp;
   onHome: () => void;
   onProjectChange: (project: ProjectWithHttp) => void;
-  onNavigateSelection: (selection: MovieStudioSelection) => Promise<void>;
-  selection: ReturnType<typeof useMovieStudioSelection>;
+  onNavigateSelection: (
+    selection: MovieStudioSelection
+  ) => Promise<{ routeChanged: boolean }>;
+  selection: ReturnType<typeof useMovieStudioSelectionResolution>;
 }
 
 export function MovieStudioScreen({
@@ -31,7 +33,7 @@ export function MovieStudioScreen({
   onNavigateSelection,
   selection: movieStudioSelection,
 }: MovieStudioScreenProps) {
-  const { selection, setSelection, resolvedSelection } = movieStudioSelection;
+  const { selection, resolvedSelection } = movieStudioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
   const [productionExportStatus, setProductionExportStatus] = useState<
@@ -48,10 +50,9 @@ export function MovieStudioScreen({
   );
   const selectMovieStudioSurface = useCallback(
     (nextSelection: MovieStudioSelection) => {
-      setSelection(nextSelection);
       void onNavigateSelection(nextSelection);
     },
-    [onNavigateSelection, setSelection]
+    [onNavigateSelection]
   );
   const handleProductionExport = useCallback(async () => {
     setProductionExportStatus({
