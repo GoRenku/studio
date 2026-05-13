@@ -135,6 +135,9 @@ export interface ProjectDataService {
   createFromNarrativeStarter(
     input: CreateProjectFromNarrativeStarterInput
   ): Promise<ProjectCreateReport>;
+  migrateProjectDatabase(
+    input: MigrateProjectDatabaseInput
+  ): Promise<ProjectDatabaseMigrationReport>;
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
   updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
@@ -171,6 +174,16 @@ export interface CreateProjectFromNarrativeStarterInput
   extends RenkuConfigPathOptions {
   starterPath: string;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface MigrateProjectDatabaseInput extends RenkuConfigPathOptions {
+  projectName: string;
+}
+
+export interface ProjectDatabaseMigrationReport {
+  projectName: string;
+  projectPath: string;
+  databasePath: string;
 }
 
 export interface ReadProjectInput extends RenkuConfigPathOptions {
@@ -292,6 +305,7 @@ export function createProjectDataService(): ProjectDataService {
   return {
     createFromSetup,
     createFromNarrativeStarter,
+    migrateProjectDatabase: migrateProjectDatabaseForProject,
     listLibrary,
     readProject,
     updateProjectInformation,
@@ -467,6 +481,29 @@ async function createFromNarrativeStarter(
   } finally {
     session.close();
   }
+}
+
+async function migrateProjectDatabaseForProject(
+  input: MigrateProjectDatabaseInput
+): Promise<ProjectDatabaseMigrationReport> {
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  const databasePath = resolveProjectDatabasePath(projectFolder);
+
+  if (!(await pathExists(databasePath))) {
+    throw new ProjectDataError(
+      'PROJECT_DATA020',
+      `Project database not found at ${databasePath}.`
+    );
+  }
+
+  migrateProjectDatabase(databasePath);
+
+  return {
+    projectName: input.projectName,
+    projectPath: projectFolder,
+    databasePath,
+  };
 }
 
 async function listLibrary(input: RenkuConfigPathOptions = {}): Promise<ProjectLibrary> {

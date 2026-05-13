@@ -71,7 +71,7 @@ describe('App', () => {
 
     await screen.findByText('Narrator reference');
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
-    expect(fetchLog).toContain(
+    expect(fetchLog).not.toContain(
       '/studio-api/projects/constantinople/cast/cast_narrator/assets'
     );
     expect(window.location.pathname).toBe(

@@ -151,6 +151,121 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
+  it('migrates a project database by project name', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeCreateYaml(homeDir);
+    const createExitCode = await runRenkuCli(['create', '--file', yamlPath], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    const migrateExitCode = await runRenkuCli(
+      ['project', 'migrate', 'constantinople'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(migrateExitCode).toBe(0);
+    expect(stdout.join('\n')).toContain(
+      'Renku project database migrated: constantinople'
+    );
+    expect(stdout.join('\n')).toContain(
+      path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite')
+    );
+    expect(stderr).toEqual([]);
+  });
+
+  it('prints JSON for project database migration', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeCreateYaml(homeDir);
+    const createExitCode = await runRenkuCli(['create', '--file', yamlPath], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    const migrateExitCode = await runRenkuCli(
+      ['project', 'migrate', 'constantinople', '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(migrateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toEqual({
+      projectName: 'constantinople',
+      projectPath: path.join(storageRoot, 'constantinople'),
+      databasePath: path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'),
+    });
+    expect(stderr).toEqual([]);
+  });
+
+  it('shows project usage when migrate is missing a project name', async () => {
+    const exitCode = await runRenkuCli(['project', 'migrate'], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(stderr.join('\n')).toContain(
+      'Usage: renku project current|select <project-name>|migrate <project-name>'
+    );
+  });
+
+  it('reports a structured error when project migration cannot find a database', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+
+    const exitCode = await runRenkuCli(
+      ['project', 'migrate', 'constantinople', '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
+      valid: false,
+      error: {
+        code: 'PROJECT_DATA020',
+      },
+    });
+  });
+
   it('prints JSON diagnostics for invalid narrative starter YAML', async () => {
     const storageRoot = path.join(homeDir, 'movies');
     await runRenkuCli(['init', storageRoot], {
@@ -353,13 +468,13 @@ describe('renku CLI', () => {
         path.join(
           storageRoot,
           'constantinople',
-          'Production Assets',
-          'Master',
-          'Sequences',
+          'production-assets',
+          'master',
+          'sequences',
           '01-opening',
-          'Scenes',
+          'scenes',
           '01-first-scene',
-          'Clips',
+          'clips',
           '01-first-clip',
           'narration.wav'
         ),

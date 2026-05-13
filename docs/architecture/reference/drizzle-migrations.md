@@ -70,7 +70,22 @@ Project database migrations are a development-time setup operation. They must
 not run from Studio request handlers, project read paths, asset listing paths,
 image-serving paths, coordination polling, or other application runtime code.
 
-Apply migrations to a project-local database by invoking Drizzle Kit explicitly:
+Apply migrations to a known project by project name:
+
+```bash
+renku project migrate <projectName>
+```
+
+For example:
+
+```bash
+renku project migrate constantinople
+```
+
+This command resolves the configured storage root, finds the project-local
+SQLite database, and runs the package-owned Drizzle Kit migration operation.
+
+When a direct database path is needed, use the lower-level package command:
 
 ```bash
 RENKU_PROJECT_DATABASE_PATH=/absolute/path/to/project.sqlite \
@@ -86,6 +101,38 @@ RENKU_PROJECT_DATABASE_PATH=/absolute/path/to/project.sqlite \
 
 `packages/core` owns this migration operation. CLI and Studio must not invoke
 Drizzle Kit from normal runtime paths.
+
+## Changing Project Schema
+
+When changing the project SQLite schema:
+
+1. Edit the Drizzle schema in `packages/core/src/schema/index.ts`.
+2. Generate a migration from `packages/core`:
+
+   ```bash
+   pnpm drizzle-kit generate --config drizzle.config.ts --name <migration_name>
+   ```
+
+3. Decide whether current runtime code requires a new schema generation.
+
+   A change requires a new schema generation when current reads or writes need
+   the new shape to avoid raw SQLite errors or incorrect behavior. Examples:
+   renaming a column, removing a table, adding a required column, or adding a
+   table that `readProject` now queries unconditionally.
+
+4. If a new schema generation is required:
+
+   - increment the core runtime schema generation constant;
+   - add `PRAGMA user_version = <generation>;` to the migration.
+
+5. Apply migrations to development projects:
+
+   ```bash
+   renku project migrate constantinople
+   ```
+
+If a migration does not change the schema generation, do not change
+`user_version`.
 
 ## Config Files
 
@@ -112,11 +159,57 @@ Before adding a custom migration:
 - run it through Drizzle Kit's migration flow;
 - do not create a parallel application-level migration runner.
 
+## Project Store Schema Generation
+
+Renku Studio project databases use SQLite's `PRAGMA user_version` as the
+project-store schema generation.
+
+This value is not the latest migration number. It records the breaking schema
+generation that the current runtime is written for:
+
+- breaking schema changes must increment the core runtime schema generation
+  constant and set `PRAGMA user_version = <new generation>` in the migration;
+- non-breaking migrations must not change `user_version`;
+- runtime project opens must check `user_version` and fail with a structured
+  project data error when it does not match the current runtime generation.
+
+A schema change is breaking when current runtime reads or writes require the new
+shape to avoid raw SQLite errors or incorrect behavior. For example, renaming a
+column, removing a table, or adding a table that `readProject` now queries
+unconditionally is breaking. Adding an unused optional column or an index is not.
+
+Use Drizzle Kit's custom migration workflow for generation-only updates:
+
+```bash
+pnpm drizzle-kit generate --config drizzle.config.ts --custom --name <name>
+```
+
+Then add the `PRAGMA user_version = <generation>;` statement to the generated SQL
+file and apply it through the normal Drizzle Kit migration command.
+
+## Shipped Project Upgrades
+
+Once Renku Studio is used for durable user projects, projects created by a
+previous app release may need to move forward to the current schema generation.
+
+The accepted direction is explicit forward migration:
+
+```text
+project database from previous release -> Drizzle migration -> current schema generation
+```
+
+Studio should eventually detect the schema-generation failure, show an explicit
+upgrade state, create a database backup, and run the same core migration
+operation used by `renku project migrate`.
+
+Studio must not keep readers for historical table shapes in normal runtime
+paths.
+
 ## Error Behavior
 
 Migration failures must fail fast through core's structured project data error
 mechanism.
 
-Do not add fallback schema creation, compatibility loaders, or silent defaults.
+Do not add implicit schema creation, historical schema readers, or silent defaults.
 If the migration config, migration files, project database path, or Drizzle Kit
 command is invalid, the operation should fail with a clear core error code.

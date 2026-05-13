@@ -16,6 +16,14 @@ import type {
 
 const castAssetsCache = new Map<string, Asset[]>();
 
+interface CastDesignAssetsRuntimeState {
+  cacheKey: string;
+  initialAssetsVersion: string | null;
+  assets: Asset[];
+  isLoadingCastAssets: boolean;
+  castAssetsError: string | null;
+}
+
 export interface CastDesignAssetsState {
   descriptionContent: CastDescriptionContent;
   characterSheetContent: CastAssetCollection;
@@ -34,61 +42,116 @@ export function useCastDesignAssets(input: {
 }): CastDesignAssetsState {
   const { projectName, castEntry, initialAssets } = input;
   const cacheKey = castAssetsCacheKey(projectName, castEntry.id);
-  const [assets, setAssets] = useState<Asset[]>(
-    () => initialAssets ?? castAssetsCache.get(cacheKey) ?? []
+  const initialAssetsVersion = castAssetsVersion(initialAssets);
+  const [assetState, setAssetState] = useState<CastDesignAssetsRuntimeState>(
+    () =>
+      createCastDesignAssetsRuntimeState(
+        cacheKey,
+        initialAssets,
+        initialAssetsVersion
+      )
   );
-  const [isLoadingCastAssets, setIsLoadingCastAssets] = useState(
-    () => !initialAssets && !castAssetsCache.has(cacheKey)
-  );
-  const [castAssetsError, setCastAssetsError] = useState<string | null>(null);
   const [castAssetMutationId, setCastAssetMutationId] = useState<string | null>(
     null
   );
 
+  let currentAssetState = assetState;
+  if (
+    currentAssetState.cacheKey !== cacheKey ||
+    currentAssetState.initialAssetsVersion !== initialAssetsVersion
+  ) {
+    currentAssetState = createCastDesignAssetsRuntimeState(
+      cacheKey,
+      initialAssets,
+      initialAssetsVersion
+    );
+    setAssetState(currentAssetState);
+  }
+
+  const { assets, isLoadingCastAssets, castAssetsError } = currentAssetState;
+
   const loadAssets = useCallback(async () => {
-    setIsLoadingCastAssets(true);
-    setCastAssetsError(null);
+    setAssetState((current) => ({
+      ...current,
+      isLoadingCastAssets: true,
+      castAssetsError: null,
+    }));
     try {
       const nextAssets = await readCastAssets(projectName, castEntry.id);
       castAssetsCache.set(cacheKey, nextAssets);
-      setAssets(nextAssets);
+      setAssetState((current) => ({
+        ...current,
+        assets: nextAssets,
+        isLoadingCastAssets: false,
+      }));
     } catch (error) {
-      setCastAssetsError(
-        error instanceof Error ? error.message : 'Unable to load cast assets.'
-      );
-    } finally {
-      setIsLoadingCastAssets(false);
+      setAssetState((current) => ({
+        ...current,
+        isLoadingCastAssets: false,
+        castAssetsError:
+          error instanceof Error ? error.message : 'Unable to load cast assets.',
+      }));
     }
   }, [cacheKey, castEntry.id, projectName]);
 
   useEffect(() => {
+    if (initialAssets !== undefined) {
+      castAssetsCache.set(cacheKey, initialAssets);
+      return;
+    }
+
     let cancelled = false;
     void Promise.resolve()
       .then(() => readCastAssets(projectName, castEntry.id))
       .then((nextAssets) => {
         castAssetsCache.set(cacheKey, nextAssets);
         if (!cancelled) {
-          setAssets(nextAssets);
+          setAssetState((current) =>
+            current.cacheKey === cacheKey &&
+            current.initialAssetsVersion === null
+              ? {
+                  ...current,
+                  assets: nextAssets,
+                  isLoadingCastAssets: false,
+                }
+              : current
+          );
         }
       })
       .catch((error) => {
         if (!cancelled) {
-          setCastAssetsError(
-            error instanceof Error
-              ? error.message
-              : 'Unable to load cast assets.'
+          setAssetState((current) =>
+            current.cacheKey === cacheKey &&
+            current.initialAssetsVersion === null
+              ? {
+                  ...current,
+                  isLoadingCastAssets: false,
+                  castAssetsError:
+                    error instanceof Error
+                      ? error.message
+                      : 'Unable to load cast assets.',
+                }
+              : current
           );
         }
       })
       .finally(() => {
         if (!cancelled) {
-          setIsLoadingCastAssets(false);
+          setAssetState((current) =>
+            current.cacheKey === cacheKey &&
+            current.initialAssetsVersion === null
+              ? {
+                  ...current,
+                  isLoadingCastAssets: false,
+                }
+              : current
+          );
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, castEntry.id, projectName]);
+  }, [cacheKey, castEntry.id, initialAssets, initialAssetsVersion, projectName]);
 
   const selectCastDesignAsset = useCallback(
     async (asset: CastDesignAsset) => {
@@ -96,14 +159,16 @@ export function useCastDesignAssets(input: {
         return;
       }
       setCastAssetMutationId(asset.assetId);
-      setCastAssetsError(null);
+      setAssetState((current) => ({ ...current, castAssetsError: null }));
       try {
         await selectCastAsset(projectName, castEntry.id, asset.assetId);
         await loadAssets();
       } catch (error) {
-        setCastAssetsError(
-          error instanceof Error ? error.message : 'Unable to select asset.'
-        );
+        setAssetState((current) => ({
+          ...current,
+          castAssetsError:
+            error instanceof Error ? error.message : 'Unable to select asset.',
+        }));
       } finally {
         setCastAssetMutationId(null);
       }
@@ -117,14 +182,16 @@ export function useCastDesignAssets(input: {
         return;
       }
       setCastAssetMutationId(asset.assetId);
-      setCastAssetsError(null);
+      setAssetState((current) => ({ ...current, castAssetsError: null }));
       try {
         await unselectCastAsset(projectName, castEntry.id, asset.assetId);
         await loadAssets();
       } catch (error) {
-        setCastAssetsError(
-          error instanceof Error ? error.message : 'Unable to unselect asset.'
-        );
+        setAssetState((current) => ({
+          ...current,
+          castAssetsError:
+            error instanceof Error ? error.message : 'Unable to unselect asset.',
+        }));
       } finally {
         setCastAssetMutationId(null);
       }
@@ -149,6 +216,51 @@ export function useCastDesignAssets(input: {
 
 function castAssetsCacheKey(projectName: string, castMemberId: string): string {
   return `${projectName}\n${castMemberId}`;
+}
+
+function createCastDesignAssetsRuntimeState(
+  cacheKey: string,
+  initialAssets: Asset[] | undefined,
+  initialAssetsVersion: string | null
+): CastDesignAssetsRuntimeState {
+  if (initialAssets !== undefined) {
+    return {
+      cacheKey,
+      initialAssetsVersion,
+      assets: initialAssets,
+      isLoadingCastAssets: false,
+      castAssetsError: null,
+    };
+  }
+
+  const cachedAssets = castAssetsCache.get(cacheKey);
+  return {
+    cacheKey,
+    initialAssetsVersion,
+    assets: cachedAssets ?? [],
+    isLoadingCastAssets: cachedAssets === undefined,
+    castAssetsError: null,
+  };
+}
+
+function castAssetsVersion(assets: Asset[] | undefined): string | null {
+  if (assets === undefined) {
+    return null;
+  }
+
+  return assets
+    .map((asset) =>
+      [
+        asset.assetId,
+        asset.relationshipId,
+        asset.role,
+        asset.sortOrder,
+        asset.selection.kind,
+        asset.selection.kind === 'select' ? asset.selection.order : '',
+        asset.updatedAt,
+      ].join(':')
+    )
+    .join('\n');
 }
 
 function projectCastDesignAssets(

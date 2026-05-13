@@ -50,6 +50,7 @@ Commands
   info language        Add, update, remove, or set base languages
   project current      Show the current Studio project
   project select       Request Studio to select a project
+  project migrate      Apply pending project database migrations
   studio current       Show current Studio focus and context
 
 Options
@@ -274,6 +275,7 @@ export async function runRenkuCli(
       case 'project':
         return await runProjectSelectionCommand({
           input,
+          storageRoot: cli.flags.storageRoot,
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,

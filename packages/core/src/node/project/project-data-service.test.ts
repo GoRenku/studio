@@ -468,6 +468,40 @@ describe('ProjectDataService', () => {
     ]);
   });
 
+  it('applies project database migrations by project name', async () => {
+    const setupPath = await writeProjectSetup(homeDir);
+    const projectData = createProjectDataService();
+
+    const created = await runCreateOrSkip(
+      projectData.createFromSetup({
+        setupPath,
+        homeDir,
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    );
+    if (!created) {
+      return;
+    }
+
+    const report = await projectData.migrateProjectDatabase({
+      projectName: 'constantinople',
+      homeDir,
+    });
+
+    expect(report).toEqual({
+      projectName: 'constantinople',
+      projectPath: path.join(storageRoot, 'constantinople'),
+      databasePath: path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'),
+    });
+
+    const sqlite = new Database(report.databasePath);
+    try {
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(1);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it('reads project text fields when visual language has image reference assets', async () => {
     const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();

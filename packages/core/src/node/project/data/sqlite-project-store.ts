@@ -13,6 +13,9 @@ export interface ProjectDataSession {
 
 type ProjectStoreLifetime = 'operation' | 'project';
 
+const PROJECT_STORE_SCHEMA_GENERATION = 1;
+const DRIZZLE_MIGRATIONS_TABLE = '__drizzle_migrations';
+
 const projectSessions = new Map<string, ProjectDataSession>();
 
 export function openProjectStore(input: {
@@ -80,24 +83,41 @@ function assertProjectStoreSchema(
   sqlite: Database.Database,
   databasePath: string
 ): void {
+  const invalidSchema = (message: string) =>
+    new ProjectDataError(
+      'PROJECT_DATA044',
+      `${message}: ${databasePath}.`
+    );
+
   try {
-    const row = sqlite
+    const migrationRow = sqlite
       .prepare(
-        "select 1 from sqlite_master where type = 'table' and name = 'project'"
+        `select 1 from ${DRIZZLE_MIGRATIONS_TABLE} limit 1`
       )
       .get();
-    if (row) {
-      return;
-    }
-  } catch {
-    throw new ProjectDataError(
-      'PROJECT_DATA044',
-      `Project database is not a valid Renku Studio database: ${databasePath}.`
-    );
-  }
 
-  throw new ProjectDataError(
-    'PROJECT_DATA044',
-    `Project database has not been initialized with the Renku Studio schema: ${databasePath}.`
-  );
+    if (!migrationRow) {
+      throw invalidSchema(
+        'Project database has not been initialized with Renku Studio migrations'
+      );
+    }
+
+    const schemaGeneration = sqlite.pragma('user_version', {
+      simple: true,
+    });
+    if (schemaGeneration !== PROJECT_STORE_SCHEMA_GENERATION) {
+      throw invalidSchema(
+        `Project database schema generation ${String(
+          schemaGeneration
+        )} is not supported by this Renku Studio runtime; expected ${PROJECT_STORE_SCHEMA_GENERATION}`
+      );
+    }
+
+    return;
+  } catch (error) {
+    if (error instanceof ProjectDataError) {
+      throw error;
+    }
+    throw invalidSchema('Project database is not a valid Renku Studio database');
+  }
 }

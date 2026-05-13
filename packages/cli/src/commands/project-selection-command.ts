@@ -9,6 +9,7 @@ import type { RenkuCliIo } from '../cli.js';
 
 export async function runProjectSelectionCommand(options: {
   input: string[];
+  storageRoot?: string;
   json: boolean;
   io: RenkuCliIo;
   homeDir?: string;
@@ -26,6 +27,23 @@ export async function runProjectSelectionCommand(options: {
           ? `Current project: ${current.project.name}`
           : 'No current project is selected.'
       );
+    }
+    return 0;
+  }
+
+  if (subcommand === 'migrate' && projectName) {
+    const report = await createProjectDataService().migrateProjectDatabase({
+      projectName,
+      homeDir: options.homeDir,
+      storageRoot: options.storageRoot,
+    });
+
+    if (options.json) {
+      options.io.stdout.log(JSON.stringify(report, null, 2));
+    } else {
+      options.io.stdout.log(`Renku project database migrated: ${report.projectName}`);
+      options.io.stdout.log(`Project: ${report.projectPath}`);
+      options.io.stdout.log(`Database: ${report.databasePath}`);
     }
     return 0;
   }
@@ -60,6 +78,8 @@ export async function runProjectSelectionCommand(options: {
     return 0;
   }
 
-  options.io.stderr.error('Usage: renku project current|select <project-name>');
+  options.io.stderr.error(
+    'Usage: renku project current|select <project-name>|migrate <project-name>'
+  );
   return 1;
 }
