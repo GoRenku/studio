@@ -29,6 +29,13 @@
       "when": 1778605187428,
       "tag": "0003_set_project_store_schema_generation",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1778690533613,
+      "tag": "0004_add_resource_loading_indexes",
+      "breakpoints": true
     }
   ]
 }

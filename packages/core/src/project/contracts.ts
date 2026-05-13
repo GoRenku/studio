@@ -29,8 +29,6 @@ export interface ProjectShell {
   visualLanguage: VisualLanguage[];
   cast: CastMember[];
   continuityReferences: ContinuityReference[];
-  episodes: Episode[];
-  sequences: Sequence[];
   counts: ProjectCounts;
   navigation: ProjectShellNavigation;
 }
@@ -110,6 +108,7 @@ export interface ClipNavigationRow {
 
 export interface CastDesignResource {
   castMember: CastMember;
+  descriptionAsset?: RichTextAssetLink;
   selectedAssets: Asset[];
   activeTakePage: PageResponse<Asset>;
   countsByRole: CastDesignAssetRoleCount[];
@@ -128,6 +127,14 @@ export interface ClipDesignResource {
   episode?: EpisodeNavigationRow;
   selectedAssets: Asset[];
   activeTakePage: PageResponse<Asset>;
+}
+
+export interface ProjectInformationResource {
+  title: string;
+  aspectRatio?: string;
+  logline?: string;
+  summaryAsset?: RichTextAssetLink;
+  languages: ProjectLanguage[];
 }
 
 export type MovieStudioSelectionContextResult =

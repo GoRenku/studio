@@ -31,6 +31,8 @@ Use this page as the map:
 
 - `data-model-and-storage.md` is the short entry point for project data and
   storage architecture.
+- `drizzle-first-project-data.md` defines the Drizzle-first runtime query
+  policy and raw SQL escape hatch.
 - `reference/domain-vocabulary.md` defines canonical project vocabulary.
 - `reference/project-storage-boundaries.md` explains SQLite versus filesystem ownership.
 - `reference/project-files-and-assets.md` explains assets, files, takes, selects, and

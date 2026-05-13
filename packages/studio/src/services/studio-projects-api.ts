@@ -1,6 +1,10 @@
 import type {
   MovieStudioSelectionContextRequest,
   MovieStudioSelectionContextResponse,
+  ClipNavigationPageResponse,
+  SceneNavigationPageResponse,
+  SequenceNavigationPageResponse,
+  ProjectInformationResourceResponse,
   ProjectInformationUpdateRequest,
   ProjectLibraryWithHttp,
   ProductionExportSummaryResponse,
@@ -11,6 +15,19 @@ import { readStudioApiError } from './studio-api-errors';
 
 interface ProjectResponse {
   project: ProjectShellWithHttp | null;
+}
+
+interface ProjectInformationResourceApiResponse {
+  resource: ProjectInformationResourceResponse | null;
+}
+
+interface NavigationPageApiResponse<T> {
+  page: T;
+}
+
+interface NavigationPageQuery {
+  limit?: number;
+  cursor?: string | null;
 }
 
 interface LibraryResponse {
@@ -64,10 +81,75 @@ export async function readMovieStudioSelectionContext(
   return (await response.json()) as MovieStudioSelectionContextResponse;
 }
 
+export async function readStandaloneMovieSequenceNavigation(
+  projectName: string,
+  query: NavigationPageQuery = {}
+): Promise<SequenceNavigationPageResponse> {
+  return readNavigationPage(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/sequences`,
+    query
+  );
+}
+
+export async function readEpisodeSequenceNavigation(
+  projectName: string,
+  episodeId: string,
+  query: NavigationPageQuery = {}
+): Promise<SequenceNavigationPageResponse> {
+  return readNavigationPage(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/episodes/${encodeURIComponent(
+      episodeId
+    )}/sequences`,
+    query
+  );
+}
+
+export async function readSceneNavigation(
+  projectName: string,
+  sequenceId: string,
+  query: NavigationPageQuery = {}
+): Promise<SceneNavigationPageResponse> {
+  return readNavigationPage(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/sequences/${encodeURIComponent(
+      sequenceId
+    )}/scenes`,
+    query
+  );
+}
+
+export async function readClipNavigation(
+  projectName: string,
+  sceneId: string,
+  query: NavigationPageQuery = {}
+): Promise<ClipNavigationPageResponse> {
+  return readNavigationPage(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(
+      sceneId
+    )}/clips`,
+    query
+  );
+}
+
+export async function readProjectInformationResource(
+  projectName: string
+): Promise<ProjectInformationResourceResponse> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/information`
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ProjectInformationResourceApiResponse;
+  if (!body.resource) {
+    throw new Error('Renku Studio API returned no project information resource.');
+  }
+  return body.resource;
+}
+
 export async function updateProjectInformation(
   projectName: string,
   information: ProjectInformationUpdateRequest
-): Promise<ProjectShellWithHttp> {
+): Promise<ProjectInformationResourceResponse> {
   const response = await fetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/information`,
     {
@@ -84,11 +166,11 @@ export async function updateProjectInformation(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as ProjectResponse;
-  if (!body.project) {
-    throw new Error('Renku Studio API returned no project.');
+  const body = (await response.json()) as ProjectInformationResourceApiResponse;
+  if (!body.resource) {
+    throw new Error('Renku Studio API returned no project information resource.');
   }
-  return body.project;
+  return body.resource;
 }
 
 export async function exportProductionAssets(
@@ -120,4 +202,31 @@ function readStudioApiToken(): string {
     throw new Error('Studio API token is not available.');
   }
   return token;
+}
+
+async function readNavigationPage<T>(
+  path: string,
+  query: NavigationPageQuery
+): Promise<T> {
+  const response = await fetch(`${path}${navigationQueryString(query)}`);
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as NavigationPageApiResponse<T>;
+  if (!body.page) {
+    throw new Error('Renku Studio API returned no navigation page.');
+  }
+  return body.page;
+}
+
+function navigationQueryString(query: NavigationPageQuery): string {
+  const search = new URLSearchParams();
+  if (query.limit !== undefined) {
+    search.set('limit', String(query.limit));
+  }
+  if (query.cursor) {
+    search.set('cursor', query.cursor);
+  }
+  const value = search.toString();
+  return value ? `?${value}` : '';
 }

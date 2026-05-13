@@ -376,10 +376,10 @@ async function validateRouteSelection(
   if (!context.valid) {
     throw new Error(selectionContextErrorMessage(selection, context));
   }
-  return hydrateRouteSelection(project, context);
+  return hydrateCastRouteSelection(project, context);
 }
 
-function hydrateRouteSelection(
+function hydrateCastRouteSelection(
   project: ProjectShellWithHttp,
   context: MovieStudioSelectionContextResponse
 ): ProjectShellWithHttp {
@@ -402,128 +402,7 @@ function hydrateRouteSelection(
     };
   }
 
-  if (selectionContext.surface === 'sequence') {
-    if (
-      project.sequences.some(
-        (sequence) => sequence.id === selectionContext.sequence.id
-      )
-    ) {
-      return project;
-    }
-    return {
-      ...project,
-      sequences: [
-        ...project.sequences,
-        {
-          id: selectionContext.sequence.id,
-          number: selectionContext.sequence.number,
-          title: selectionContext.sequence.title,
-          shortTitle: selectionContext.sequence.shortTitle,
-          scenes: [],
-        },
-      ],
-    };
-  }
-
-  if (selectionContext.surface === 'scene') {
-    return hydrateSequence(project, {
-      id: selectionContext.sequence.id,
-      number: selectionContext.sequence.number,
-      title: selectionContext.sequence.title,
-      shortTitle: selectionContext.sequence.shortTitle,
-      scenes: [
-        {
-          id: selectionContext.scene.id,
-          title: selectionContext.scene.title,
-          clips: [],
-        },
-      ],
-    });
-  }
-
-  if (selectionContext.surface === 'clip-design') {
-    return hydrateSequence(project, {
-      id: selectionContext.sequence.id,
-      number: selectionContext.sequence.number,
-      title: selectionContext.sequence.title,
-      shortTitle: selectionContext.sequence.shortTitle,
-      scenes: [
-        {
-          id: selectionContext.scene.id,
-          title: selectionContext.scene.title,
-          clips: [
-            {
-              id: selectionContext.clip.id,
-              title: selectionContext.clip.title,
-              summary: selectionContext.clip.oneLineSummary,
-            },
-          ],
-        },
-      ],
-    });
-  }
-
   return project;
-}
-
-function hydrateSequence(
-  project: ProjectShellWithHttp,
-  selectedSequence: ProjectShellWithHttp['sequences'][number]
-): ProjectShellWithHttp {
-  const existingSequence = project.sequences.find(
-    (sequence) => sequence.id === selectedSequence.id
-  );
-  if (!existingSequence) {
-    return {
-      ...project,
-      sequences: [...project.sequences, selectedSequence],
-    };
-  }
-
-  const selectedScene = selectedSequence.scenes[0];
-  if (!selectedScene) {
-    return project;
-  }
-  const existingScene = existingSequence.scenes.find(
-    (scene) => scene.id === selectedScene.id
-  );
-  if (!existingScene) {
-    return {
-      ...project,
-      sequences: project.sequences.map((sequence) =>
-        sequence.id === existingSequence.id
-          ? {
-              ...sequence,
-              scenes: [...sequence.scenes, selectedScene],
-            }
-          : sequence
-      ),
-    };
-  }
-
-  const selectedClip = selectedScene.clips[0];
-  if (
-    !selectedClip ||
-    existingScene.clips.some((clip) => clip.id === selectedClip.id)
-  ) {
-    return project;
-  }
-
-  return {
-    ...project,
-    sequences: project.sequences.map((sequence) =>
-      sequence.id === existingSequence.id
-        ? {
-            ...sequence,
-            scenes: sequence.scenes.map((scene) =>
-              scene.id === existingScene.id
-                ? { ...scene, clips: [...scene.clips, selectedClip] }
-                : scene
-            ),
-          }
-        : sequence
-    ),
-  };
 }
 
 function selectionContextErrorMessage(
@@ -568,19 +447,14 @@ function canResolveRouteSelection(
     return project.cast.some((castEntry) => castEntry.id === selection.id);
   }
   if (selection.type === 'sequence') {
-    return project.sequences.some((sequence) => sequence.id === selection.id);
-  }
-  if (selection.type === 'scene') {
-    return project.sequences.some((sequence) =>
-      sequence.scenes.some((scene) => scene.id === selection.id)
+    const storyStructure = project.navigation.storyStructure;
+    return (
+      storyStructure.projectType === 'standaloneMovie' &&
+      storyStructure.sequences.items.some((sequence) => sequence.id === selection.id)
     );
   }
-  if (selection.type === 'clip') {
-    return project.sequences.some((sequence) =>
-      sequence.scenes.some((scene) =>
-        scene.clips.some((clip) => clip.id === selection.id)
-      )
-    );
+  if (selection.type === 'scene' || selection.type === 'clip') {
+    return false;
   }
   return true;
 }

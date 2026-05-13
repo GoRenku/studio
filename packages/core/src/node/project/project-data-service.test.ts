@@ -89,6 +89,25 @@ describe('ProjectDataService', () => {
       'cast_test0001',
       'cast_test0002',
     ]);
+    const castDesign = await projectData.readCastDesignResource({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: 'cast_test0002',
+    });
+    expect(castDesign.descriptionAsset).toMatchObject({
+      role: 'description',
+      projectRelativePath: 'working-assets/base/cast/02-mehmed-ii/description.md',
+    });
+    await expect(
+      projectData.readMarkdownAssetContent({
+        projectName: 'constantinople',
+        homeDir,
+        assetId: castDesign.descriptionAsset?.assetId ?? '',
+        assetFileId: castDesign.descriptionAsset?.assetFileId ?? '',
+      })
+    ).resolves.toMatchObject({
+      content: 'Cast description from Markdown.\n',
+    });
     expect(project.visualLanguageCategories).toEqual([
       expect.objectContaining({
         id: 'visual_language_category_test0001',
@@ -133,6 +152,81 @@ describe('ProjectDataService', () => {
       visualIntent: 'Quiet court staging.',
       summaryAsset: expect.objectContaining({ role: 'summary' }),
       visualIntentAsset: expect.objectContaining({ role: 'visual_intent' }),
+    });
+
+    const shell = await projectData.readProjectShell({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    expect(shell).not.toHaveProperty('sequences');
+    expect(shell).not.toHaveProperty('episodes');
+    expect(shell.counts).toMatchObject({
+      sequences: 1,
+      scenes: 1,
+      clips: 2,
+    });
+    expect(shell.navigation.storyStructure).toMatchObject({
+      projectType: 'standaloneMovie',
+      sequences: {
+        items: [
+          expect.objectContaining({
+            id: 'sequence_test0001',
+            title: "The Young Sultan's Obsession",
+            sceneCount: 1,
+            clipCount: 2,
+          }),
+        ],
+      },
+    });
+    const scenePage = await projectData.listSceneNavigation({
+      projectName: 'constantinople',
+      homeDir,
+      sequenceId: 'sequence_test0001',
+    });
+    expect(scenePage.items).toEqual([
+      expect.objectContaining({
+        id: 'scene_test0001',
+        title: 'A Throne Facing an Ancient City',
+        clipCount: 2,
+      }),
+    ]);
+    const clipPage = await projectData.listClipNavigation({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: 'scene_test0001',
+      limit: 1,
+    });
+    expect(clipPage.items).toEqual([
+      expect.objectContaining({
+        id: 'clip_test0001',
+        title: 'The New Sultan',
+      }),
+    ]);
+    expect(clipPage.nextCursor).toEqual(expect.any(String));
+    await expect(
+      projectData.readMovieStudioSelectionContext({
+        projectName: 'constantinople',
+        homeDir,
+        selection: { type: 'clip', id: 'clip_test0002' },
+      })
+    ).resolves.toMatchObject({
+      valid: true,
+      context: {
+        surface: 'clip-design',
+        sequence: expect.objectContaining({
+          id: 'sequence_test0001',
+          sceneCount: 1,
+          clipCount: 2,
+        }),
+        scene: expect.objectContaining({
+          id: 'scene_test0001',
+          clipCount: 2,
+        }),
+        clip: expect.objectContaining({
+          id: 'clip_test0002',
+          title: 'The City In His Mind',
+        }),
+      },
     });
 
     await expect(
@@ -240,6 +334,26 @@ describe('ProjectDataService', () => {
       title: 'The First Preparations',
       summary: 'Mehmed turns an inherited ambition into a concrete plan.',
     });
+
+    const shell = await projectData.readProjectShell({
+      projectName: 'constantinople-series',
+      homeDir,
+    });
+    expect(shell).not.toHaveProperty('sequences');
+    expect(shell).not.toHaveProperty('episodes');
+    expect(shell.navigation.storyStructure).toMatchObject({
+      projectType: 'series',
+      episodes: {
+        items: [
+          expect.objectContaining({
+            title: 'The First Preparations',
+            sequenceCount: 1,
+            sceneCount: 1,
+            clipCount: 1,
+          }),
+        ],
+      },
+    });
   });
 
   it('creates a project from narrative starter YAML with Markdown references', async () => {
@@ -328,6 +442,27 @@ describe('ProjectDataService', () => {
       summary: 'Formal Ottoman planning room.',
       description: 'Continuity description from Markdown.',
       descriptionAsset: expect.objectContaining({ role: 'description' }),
+    });
+    const mehmed = project.cast.find((castMember) => castMember.name === 'Mehmed II');
+    expect(mehmed).toBeDefined();
+    const castDesign = await projectData.readCastDesignResource({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: mehmed?.id ?? '',
+    });
+    expect(castDesign.descriptionAsset).toMatchObject({
+      role: 'description',
+      projectRelativePath: 'working-assets/base/cast/02-mehmed-ii/description.md',
+    });
+    await expect(
+      projectData.readMarkdownAssetContent({
+        projectName: 'constantinople',
+        homeDir,
+        assetId: castDesign.descriptionAsset?.assetId ?? '',
+        assetFileId: castDesign.descriptionAsset?.assetFileId ?? '',
+      })
+    ).resolves.toMatchObject({
+      content: 'Cast description from Markdown.\n',
     });
     expect(project.identity.summaryAsset).toMatchObject({
       role: 'summary',
@@ -978,7 +1113,7 @@ describe('ProjectDataService', () => {
         target: { kind: 'clip', clipId: 'clip_test0001' },
         assetId: registered.assetId,
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA080' });
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA078' });
   });
 
   it('copies a PNG cover to cover.png', async () => {
@@ -1135,7 +1270,7 @@ describe('ProjectDataService', () => {
       return;
     }
 
-    const project = await projectData.updateProjectInformation({
+    const resource = await projectData.updateProjectInformation({
       projectName: 'constantinople',
       homeDir,
       information: {
@@ -1162,14 +1297,12 @@ describe('ProjectDataService', () => {
       },
     });
 
-    expect(project.identity).toMatchObject({
-      name: 'constantinople',
+    expect(resource).toMatchObject({
       title: 'The Siege Machine',
       aspectRatio: '21:9',
       logline: 'A sharper premise.',
-      summary: 'A revised project summary.',
     });
-    expect(project.languages).toEqual([
+    expect(resource.languages).toEqual([
       expect.objectContaining({
         localeTag: 'en-US',
         isBase: false,
@@ -1219,7 +1352,7 @@ describe('ProjectDataService', () => {
       },
     });
 
-    const project = await projectData.updateProjectInformation({
+    const resource = await projectData.updateProjectInformation({
       projectName: 'constantinople',
       homeDir,
       information: {
@@ -1239,8 +1372,19 @@ describe('ProjectDataService', () => {
       },
     });
 
-    expect(project.identity.logline).toBeUndefined();
-    expect(project.identity.summary).toBeUndefined();
+    expect(resource.logline).toBeUndefined();
+    await expect(
+      fs.readFile(
+        path.join(
+          created.projectPath,
+          'working-assets',
+          'base',
+          'narrative',
+          'project-summary.md'
+        ),
+        'utf8'
+      )
+    ).resolves.toBe('');
   });
 
   it('clears the Markdown-backed project summary through a patch', async () => {
@@ -1257,13 +1401,12 @@ describe('ProjectDataService', () => {
       return;
     }
 
-    const project = await projectData.patchProjectInformation({
+    await projectData.patchProjectInformation({
       projectName: 'constantinople',
       homeDir,
       patch: { summary: null },
     });
 
-    expect(project.identity.summary).toBeUndefined();
     await expect(
       fs.readFile(
         path.join(
@@ -1332,9 +1475,11 @@ describe('ProjectDataService', () => {
       projectRelativePath: summaryAsset.projectRelativePath,
       content: preservedMarkdown,
     });
-    expect(
-      updated.project.sequences[0]?.scenes[0]?.clips[0]?.summary
-    ).toBe('    npm test\n\nKeep this line.');
+    expect(updated.resourceKeys).toEqual([
+      `markdown:${summaryAsset.assetId}:${summaryAsset.assetFileId}`,
+      `assets:clip:${clip.id}`,
+      `surface:clip-design:${clip.id}`,
+    ]);
     await expect(
       fs.readFile(
         path.join(created.projectPath, summaryAsset.projectRelativePath),
@@ -1630,6 +1775,11 @@ async function writeProjectSetup(
     'sample-project/continuity/locations/mehmeds-council-chamber/description.md',
     'Formal Ottoman planning room with maps and oil lamps.'
   );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'sample-project/cast/mehmed-ii/description.md',
+    'Cast description from Markdown.'
+  );
   await fs.writeFile(
     setupPath,
     `kind: renku.projectSetup
@@ -1675,6 +1825,7 @@ cast:
   - name: Mehmed II
     kind: historical_figure
     role: protagonist
+    descriptionFile: sample-project/cast/mehmed-ii/description.md
 
 continuityReferences:
   - kind: location
@@ -1787,6 +1938,11 @@ async function writeNarrativeStarter(
     'narrative/continuity/mehmeds-council-chamber.md',
     'Continuity description from Markdown.'
   );
+  await writeSetupMarkdownFixture(
+    homeDir,
+    'narrative/cast/mehmed-ii.md',
+    'Cast description from Markdown.'
+  );
   await writeSetupMarkdownFixture(homeDir, 'narrative/cover.png', 'narrative cover');
   await fs.writeFile(
     starterPath,
@@ -1816,6 +1972,7 @@ cast:
     kind: historical_figure
     role: Protagonist
     shortDescription: Young Ottoman sultan.
+    descriptionFile: narrative/cast/mehmed-ii.md
 
 visualLanguageCategories:
   - name: Lighting

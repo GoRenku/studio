@@ -95,41 +95,49 @@ cast:
     kind: narrator
     role: Voiceover
     shortDescription: Grave, cinematic documentary voice guiding the viewer through the preparation phase.
+    descriptionFile: sample-project/cast/narrator/description.md
 
   - name: Mehmed II
     kind: historical_figure
     role: Protagonist
     shortDescription: Young Ottoman sultan determined to capture Constantinople and turn an inherited ambition into state policy.
+    descriptionFile: sample-project/cast/mehmed-ii/description.md
 
   - name: Constantine XI Palaiologos
     kind: historical_figure
     role: Opposing ruler
     shortDescription: Byzantine emperor defending a diminished but symbolically immense capital.
+    descriptionFile: sample-project/cast/constantine-xi-palaiologos/description.md
 
   - name: Urban
     kind: historical_figure
     role: Cannon founder
     shortDescription: Engineer associated with Mehmed's giant bombard and the gunpowder challenge to medieval walls.
+    descriptionFile: sample-project/cast/urban/description.md
 
   - name: Candarli Halil Pasha
     kind: historical_figure
     role: Advisor
     shortDescription: Senior Ottoman grand vizier representing caution, court politics, and the risks of Mehmed's plan.
+    descriptionFile: sample-project/cast/candarli-halil-pasha/description.md
 
   - name: Zaganos Pasha
     kind: historical_figure
     role: Commander
     shortDescription: Ottoman commander aligned with Mehmed's aggressive policy toward Constantinople.
+    descriptionFile: sample-project/cast/zaganos-pasha/description.md
 
   - name: Giovanni Giustiniani
     kind: historical_figure
     role: Defender
     shortDescription: Genoese commander whose arrival gives the defenders professional military hope.
+    descriptionFile: sample-project/cast/giovanni-giustiniani/description.md
 
   - name: Loukas Notaras
     kind: historical_figure
     role: Byzantine official
     shortDescription: Senior Byzantine official representing internal tension, diplomacy, and limited resources.
+    descriptionFile: sample-project/cast/loukas-notaras/description.md
 
 sequences:
   - title: The Young Sultan's Obsession

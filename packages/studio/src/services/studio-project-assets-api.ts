@@ -4,6 +4,7 @@ import type {
 } from '@gorenku/studio-core';
 import type {
   CastDesignResourceResponse,
+  ClipDesignResourceResponse,
   ProjectShellWithHttp,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
@@ -32,7 +33,9 @@ interface CastDesignResourceApiResponse {
   resource: CastDesignResourceResponse | null;
 }
 
-const castDesignResourceCache = new Map<string, CastDesignResourceResponse>();
+interface ClipDesignResourceApiResponse {
+  resource: ClipDesignResourceResponse | null;
+}
 
 export async function readCastAssets(
   projectName: string,
@@ -52,12 +55,6 @@ export async function readCastDesignResource(
   castMemberId: string,
   role = 'character_sheet'
 ): Promise<CastDesignResourceResponse> {
-  const cacheKey = `${projectName}\n${castMemberId}\n${role}`;
-  const cached = castDesignResourceCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
   const response = await fetch(
     `${castDesignResourceUrl(projectName, castMemberId)}?role=${encodeURIComponent(role)}`
   );
@@ -69,8 +66,6 @@ export async function readCastDesignResource(
   if (!body.resource) {
     throw new Error('Renku Studio API returned no cast design resource.');
   }
-  castDesignResourceCache.set(cacheKey, body.resource);
-  retainRecentCastDesignResources(12);
   return body.resource;
 }
 
@@ -78,12 +73,27 @@ export function invalidateCastDesignResource(
   projectName: string,
   castMemberId: string
 ): void {
-  const prefix = `${projectName}\n${castMemberId}\n`;
-  for (const key of Array.from(castDesignResourceCache.keys())) {
-    if (key.startsWith(prefix)) {
-      castDesignResourceCache.delete(key);
-    }
+  void projectName;
+  void castMemberId;
+}
+
+export async function readClipDesignResource(
+  projectName: string,
+  clipId: string,
+  role?: string
+): Promise<ClipDesignResourceResponse> {
+  const query = role ? `?role=${encodeURIComponent(role)}` : '';
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/clips/${encodeURIComponent(clipId)}/design${query}`
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
   }
+  const body = (await response.json()) as ClipDesignResourceApiResponse;
+  if (!body.resource) {
+    throw new Error('Renku Studio API returned no clip design resource.');
+  }
+  return body.resource;
 }
 
 export async function selectCastAsset(
@@ -211,18 +221,6 @@ function markdownAssetContentUrl(
 
 function castAssetsUrl(projectName: string, castMemberId: string): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/assets`;
-}
-
-function retainRecentCastDesignResources(limit: number): void {
-  while (castDesignResourceCache.size > limit) {
-    const oldestKey = castDesignResourceCache.keys().next().value as
-      | string
-      | undefined;
-    if (!oldestKey) {
-      return;
-    }
-    castDesignResourceCache.delete(oldestKey);
-  }
 }
 
 function castAssetSelectUrl(

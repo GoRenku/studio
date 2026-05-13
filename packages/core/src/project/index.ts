@@ -23,6 +23,7 @@ export type {
   ProjectCreateReport,
   ProjectDataError as ProjectDataErrorContract,
   ProjectIdentity,
+  ProjectInformationResource,
   ProjectLanguage,
   ProjectLibrary,
   ProjectRelativePath,

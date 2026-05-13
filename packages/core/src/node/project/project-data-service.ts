@@ -22,6 +22,7 @@ import type {
   MovieStudioSelection,
   MovieStudioSelectionContextResult,
   PageResponse,
+  ProjectInformationResource,
   ProjectShell,
   CastNavigationRow,
   ContinuityReferenceNavigationRow,
@@ -32,6 +33,10 @@ import type {
 } from '../../project/index.js';
 import { ProjectDataError } from '../../project/index.js';
 import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../config.js';
+import {
+  studioMarkdownResourceKey,
+  studioResourceKeysForAssetTarget,
+} from '../studio-coordination/studio-resource-keys.js';
 import {
   copyProjectCoverImage,
   resolveProjectCoverImage as resolveProjectCoverImageFile,
@@ -75,7 +80,10 @@ import {
   type NarrativeStarter,
 } from './narrative-starter/index.js';
 import { insertCastMemberRecords } from './data/cast-member-records.js';
-import { listCastAssetRecords } from './data/cast-asset-records.js';
+import {
+  insertCastAssetRecord,
+  listCastAssetRecords,
+} from './data/cast-asset-records.js';
 import {
   insertContinuityReferenceAssetRecord,
   listContinuityReferenceAssetRecords,
@@ -133,7 +141,6 @@ import {
 } from './data/narrative-asset-records.js';
 import {
   createAssetSelect,
-  listCastMemberAssets,
   listAssetSelects,
   listAssets,
   registerAsset,
@@ -142,36 +149,67 @@ import {
 } from './assets/asset-service.js';
 import { exportProductionAssets } from './production-export/production-export-service.js';
 import {
-  listAssetPage,
-  listCastNavigation,
-  listClipNavigation,
-  listContinuityReferenceNavigation,
-  listEpisodeNavigation,
-  listEpisodeSequenceNavigation,
-  listSceneNavigation,
-  listStandaloneMovieSequenceNavigation,
-  readCastDesignResource,
-  readClipDesignResource,
-  readMovieStudioSelectionContext,
-  readProjectShell,
-  type ListAssetPageInput,
-  type ListClipNavigationInput,
-  type ListEpisodeSequenceNavigationInput,
-  type ListNavigationInput,
-  type ListSceneNavigationInput,
-  type ReadCastDesignResourceInput,
-  type ReadClipDesignResourceInput,
-} from './project-resource-queries.js';
+  listAssetRelationshipPage,
+  readAssetOwnerTargets,
+  type AssetRelationshipPageInput,
+} from './data/asset-relationship-records.js';
+import {
+  assertProjectStoryType,
+  listCastNavigationPage,
+  listClipNavigationPage,
+  listContinuityReferenceNavigationPage,
+  listEpisodeNavigationPage,
+  listEpisodeSequenceNavigationPage,
+  listSceneNavigationPage,
+  listStandaloneMovieSequenceNavigationPage,
+  type ListNavigationPageInput,
+} from './data/navigation-pages.js';
+import { readProjectShellProjection } from './projections/project-shell-projection.js';
+import { readProjectInformationResource } from './projections/project-information-resource.js';
+import { readCastDesignResourceProjection } from './projections/cast-design-resource.js';
+import { readClipDesignResourceProjection } from './projections/clip-design-resource.js';
+import { readMovieStudioSelectionContextProjection } from './projections/movie-studio-selection-context.js';
 
-export type {
-  ListAssetPageInput,
-  ListClipNavigationInput,
-  ListEpisodeSequenceNavigationInput,
-  ListNavigationInput,
-  ListSceneNavigationInput,
-  ReadCastDesignResourceInput,
-  ReadClipDesignResourceInput,
-} from './project-resource-queries.js';
+export interface ListNavigationInput
+  extends RenkuConfigPathOptions,
+    ListNavigationPageInput {
+  projectName: string;
+}
+
+export interface ListEpisodeSequenceNavigationInput
+  extends ListNavigationInput {
+  episodeId: string;
+}
+
+export interface ListSceneNavigationInput extends ListNavigationInput {
+  sequenceId: string;
+}
+
+export interface ListClipNavigationInput extends ListNavigationInput {
+  sceneId: string;
+}
+
+export interface ListAssetPageInput
+  extends RenkuConfigPathOptions,
+    AssetRelationshipPageInput {
+  projectName: string;
+}
+
+export interface ReadCastDesignResourceInput
+  extends RenkuConfigPathOptions,
+    ListNavigationPageInput {
+  projectName: string;
+  castMemberId: string;
+  activeRole?: string;
+}
+
+export interface ReadClipDesignResourceInput
+  extends RenkuConfigPathOptions,
+    ListNavigationPageInput {
+  projectName: string;
+  clipId: string;
+  activeRole?: string;
+}
 
 export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
@@ -184,6 +222,9 @@ export interface ProjectDataService {
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
   readProjectShell(input: ReadProjectInput): Promise<ProjectShell>;
+  readProjectInformationResource(
+    input: ReadProjectInput
+  ): Promise<ProjectInformationResource>;
   listCastNavigation(input: ListNavigationInput): Promise<PageResponse<CastNavigationRow>>;
   listContinuityReferenceNavigation(
     input: ListNavigationInput
@@ -215,8 +256,12 @@ export interface ProjectDataService {
     selection: MovieStudioSelection;
     homeDir?: string;
   }): Promise<MovieStudioSelectionContextResult>;
-  updateProjectInformation(input: UpdateProjectInformationInput): Promise<Project>;
-  patchProjectInformation(input: PatchProjectInformationInput): Promise<Project>;
+  updateProjectInformation(
+    input: UpdateProjectInformationInput
+  ): Promise<ProjectInformationResource>;
+  patchProjectInformation(
+    input: PatchProjectInformationInput
+  ): Promise<ProjectInformationResource>;
   readMarkdownAssetContent(
     input: ReadMarkdownAssetContentInput
   ): Promise<MarkdownAssetContent>;
@@ -233,7 +278,6 @@ export interface ProjectDataService {
   updateAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
   removeAssetSelect(input: RemoveAssetSelectInput): Promise<Asset>;
   listAssetSelects(input: ListAssetsInput): Promise<Asset[]>;
-  listCastMemberAssets(input: ListCastMemberAssetsInput): Promise<Asset[]>;
   exportProductionAssets(
     input: ProductionExportInput & RenkuConfigPathOptions
   ): Promise<ProductionExportSummary>;
@@ -288,7 +332,7 @@ export interface UpdateMarkdownAssetContentInput
 
 export interface UpdateMarkdownAssetContentResult {
   content: MarkdownAssetContent;
-  project: Project;
+  resourceKeys: string[];
 }
 
 export interface ProjectInformationPatch {
@@ -358,11 +402,6 @@ export interface ListAssetsInput extends RenkuConfigPathOptions {
   locale?: AssetLocaleContext;
 }
 
-export interface ListCastMemberAssetsInput extends RenkuConfigPathOptions {
-  projectName: string;
-  locale?: AssetLocaleContext;
-}
-
 export interface ChangeAssetSelectInput extends RenkuConfigPathOptions {
   projectName: string;
   target: AssetTarget;
@@ -384,6 +423,7 @@ export function createProjectDataService(): ProjectDataService {
     listLibrary,
     readProject,
     readProjectShell,
+    readProjectInformationResource: readProjectInformationResourceForProject,
     listCastNavigation,
     listContinuityReferenceNavigation,
     listEpisodeNavigation,
@@ -407,8 +447,173 @@ export function createProjectDataService(): ProjectDataService {
     updateAssetSelect,
     removeAssetSelect,
     listAssetSelects,
-    listCastMemberAssets,
     exportProductionAssets,
+  };
+}
+
+async function readProjectShell(input: ReadProjectInput): Promise<ProjectShell> {
+  const { projectFolder, session } = await openProjectSession(input);
+  try {
+    return readProjectShellProjection(session, {
+      projectFolder,
+    });
+  } finally {
+    session.close();
+  }
+}
+
+async function readProjectInformationResourceForProject(
+  input: ReadProjectInput
+): Promise<ProjectInformationResource> {
+  const { session } = await openProjectSession(input);
+  try {
+    return readProjectInformationResource(session);
+  } finally {
+    session.close();
+  }
+}
+
+async function listCastNavigation(
+  input: ListNavigationInput
+): Promise<PageResponse<CastNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    return listCastNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function listContinuityReferenceNavigation(
+  input: ListNavigationInput
+): Promise<PageResponse<ContinuityReferenceNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    return listContinuityReferenceNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function listEpisodeNavigation(
+  input: ListNavigationInput
+): Promise<PageResponse<EpisodeNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    assertProjectStoryType(session, 'series');
+    return listEpisodeNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function listStandaloneMovieSequenceNavigation(
+  input: ListNavigationInput
+): Promise<PageResponse<SequenceNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    assertProjectStoryType(session, 'standaloneMovie');
+    return listStandaloneMovieSequenceNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function listEpisodeSequenceNavigation(
+  input: ListEpisodeSequenceNavigationInput
+): Promise<PageResponse<SequenceNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    assertProjectStoryType(session, 'series');
+    return listEpisodeSequenceNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function listSceneNavigation(
+  input: ListSceneNavigationInput
+): Promise<PageResponse<SceneNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    return listSceneNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function listClipNavigation(
+  input: ListClipNavigationInput
+): Promise<PageResponse<ClipNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    return listClipNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function listAssetPage(
+  input: ListAssetPageInput
+): Promise<PageResponse<Asset>> {
+  const { session } = await openProjectSession(input);
+  try {
+    return listAssetRelationshipPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function readCastDesignResource(
+  input: ReadCastDesignResourceInput
+): Promise<CastDesignResource> {
+  const { session } = await openProjectSession(input);
+  try {
+    return readCastDesignResourceProjection(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function readClipDesignResource(
+  input: ReadClipDesignResourceInput
+): Promise<ClipDesignResource> {
+  const { session } = await openProjectSession(input);
+  try {
+    return readClipDesignResourceProjection(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+async function readMovieStudioSelectionContext(input: {
+  projectName: string;
+  selection: MovieStudioSelection;
+  homeDir?: string;
+}): Promise<MovieStudioSelectionContextResult> {
+  const { session } = await openProjectSession(input);
+  try {
+    return readMovieStudioSelectionContextProjection(session, {
+      selection: input.selection,
+    });
+  } finally {
+    session.close();
+  }
+}
+
+async function openProjectSession(input: {
+  projectName: string;
+  homeDir?: string;
+}): Promise<{ projectFolder: string; session: ProjectDataSession }> {
+  const storageRoot = await resolveRenkuStorageRoot({ homeDir: input.homeDir });
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  return {
+    projectFolder,
+    session: openProjectStore({
+      projectFolder,
+      create: false,
+      lifetime: 'project',
+    }),
   };
 }
 
@@ -615,7 +820,7 @@ async function readProject(input: ReadProjectInput): Promise<Project> {
 
 async function updateProjectInformation(
   input: UpdateProjectInformationInput
-): Promise<Project> {
+): Promise<ProjectInformationResource> {
   const storageRoot = await resolveRenkuStorageRoot(input);
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
   const session = openProjectStore({
@@ -650,15 +855,16 @@ async function updateProjectInformation(
       existingLocales.filter((locale) => !nextLocaleIds.has(locale.id))
     );
 
-    const transaction = session.sqlite.transaction(() => {
-      updateProjectInformationRecord(session, projectRecord.id, {
+    session.db.transaction((tx) => {
+      const transactionSession = { ...session, db: tx };
+      updateProjectInformationRecord(transactionSession, projectRecord.id, {
         title: input.information.title.trim(),
         aspectRatio: input.information.aspectRatio,
         logline: nullableTrimmed(input.information.logline),
         updatedAt: now,
       });
       replaceProjectLocaleRecords(
-        session,
+        transactionSession,
         input.information.languages.map((language, index) => ({
           id: existingLocaleIds.get(language.localeTag) ?? ids('locale'),
           localeTag: language.localeTag,
@@ -670,8 +876,6 @@ async function updateProjectInformation(
         }))
       );
     });
-
-    transaction();
     if (input.information.summary !== undefined) {
       await updateExistingProjectSummaryAsset({
         session,
@@ -681,7 +885,7 @@ async function updateProjectInformation(
         now,
       });
     }
-    return readProjectFromSession({ session, projectFolder });
+    return readProjectInformationResource(session);
   } finally {
     session.close();
   }
@@ -689,7 +893,7 @@ async function updateProjectInformation(
 
 async function patchProjectInformation(
   input: PatchProjectInformationInput
-): Promise<Project> {
+): Promise<ProjectInformationResource> {
   const current = await readProject(input);
   const information = applyProjectInformationPatch(current, input.patch);
   return await updateProjectInformation({
@@ -747,19 +951,19 @@ async function updateMarkdownAssetContent(
     const absolutePath = resolveProjectRelativePath(projectFolder, projectRelativePath);
     const stats = await fs.stat(absolutePath);
     const now = new Date().toISOString();
-    const transaction = session.sqlite.transaction(() => {
-      updateAssetRecordUpdatedAt(session, {
+    session.db.transaction((tx) => {
+      const transactionSession = { ...session, db: tx };
+      updateAssetRecordUpdatedAt(transactionSession, {
         assetId: input.assetId,
         updatedAt: now,
       });
-      updateAssetFileRecordMetadata(session, {
+      updateAssetFileRecordMetadata(transactionSession, {
         assetId: input.assetId,
         assetFileId: input.assetFileId,
         sizeBytes: stats.size,
         updatedAt: now,
       });
     });
-    transaction();
 
     return {
       content: {
@@ -771,11 +975,27 @@ async function updateMarkdownAssetContent(
           projectRelativePath,
         }),
       },
-      project: readProjectFromSession({ session, projectFolder }),
+      resourceKeys: scopedMarkdownResourceKeys(session, {
+        assetId: input.assetId,
+        assetFileId: input.assetFileId,
+      }),
     };
   } finally {
     session.close();
   }
+}
+
+function scopedMarkdownResourceKeys(
+  session: ProjectDataSession,
+  input: { assetId: string; assetFileId: string }
+): string[] {
+  const keys = [
+    studioMarkdownResourceKey(input),
+    ...readAssetOwnerTargets(session, input.assetId).flatMap((target) =>
+      studioResourceKeysForAssetTarget(target)
+    ),
+  ];
+  return [...new Set(keys)];
 }
 
 async function resolveCoverImage(
@@ -887,16 +1107,34 @@ async function writeSetupRecords(
     };
   });
 
-  const castMemberRecords = (setup.cast ?? []).map((castMember, index) => ({
-    id: ids('cast'),
-    name: castMember.name,
-    kind: castMember.kind,
-    role: castMember.role,
-    shortDescription: castMember.shortDescription,
-    position: index + 1,
-    createdAt: now,
-    updatedAt: now,
-  }));
+  const castMemberRecords = (setup.cast ?? []).map((castMember, index) => {
+    const castMemberId = ids('cast');
+    addMarkdownAsset(markdownAssets, ids, now, {
+      content: castMember.description,
+      title: `${castMember.name} description`,
+      role: 'description',
+      localeId: baseLocaleId,
+      pathTarget: {
+        kind: 'castMember',
+        slug: numberedSlug(index + 1, castMember.name),
+      },
+      fileName: 'description.md',
+      relationship: {
+        kind: 'castMember',
+        castMemberId,
+      },
+    });
+    return {
+      id: castMemberId,
+      name: castMember.name,
+      kind: castMember.kind,
+      role: castMember.role,
+      shortDescription: castMember.shortDescription,
+      position: index + 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
   const workspaceFolders = buildSetupWorkspaceFolders({
     setup,
     castMemberRecords,
@@ -1000,8 +1238,9 @@ async function writeSetupRecords(
   );
   await ensureProjectFolders(projectFolder, workspaceFolders);
 
-  const transaction = session.sqlite.transaction(() => {
-    insertProjectRecord(session, {
+  return session.db.transaction((tx) => {
+    const transactionSession = { ...session, db: tx };
+    insertProjectRecord(transactionSession, {
       id: projectId,
       name: setup.project.name,
       title: setup.project.title,
@@ -1013,30 +1252,28 @@ async function writeSetupRecords(
       updatedAt: now,
     });
 
-    insertProjectLocaleRecords(session, localeRecords);
-    insertVisualLanguageCategoryRecords(session, visualLanguageCategoryRecords);
-    insertVisualLanguageRecords(session, visualLanguageRecords);
-    insertCastMemberRecords(session, castMemberRecords);
-    insertContinuityReferenceRecords(session, continuityReferenceRecords);
+    insertProjectLocaleRecords(transactionSession, localeRecords);
+    insertVisualLanguageCategoryRecords(transactionSession, visualLanguageCategoryRecords);
+    insertVisualLanguageRecords(transactionSession, visualLanguageRecords);
+    insertCastMemberRecords(transactionSession, castMemberRecords);
+    insertContinuityReferenceRecords(transactionSession, continuityReferenceRecords);
     for (const record of episodeRecords) {
-      insertEpisodeRecord(session, record);
+      insertEpisodeRecord(transactionSession, record);
     }
     for (const record of sequenceRecords) {
-      insertSequenceRecord(session, record);
+      insertSequenceRecord(transactionSession, record);
     }
     for (const record of sceneRecords) {
-      insertSceneRecord(session, record);
+      insertSceneRecord(transactionSession, record);
     }
     for (const record of clipRecords) {
-      insertClipRecord(session, record);
+      insertClipRecord(transactionSession, record);
     }
     for (const asset of markdownAssets) {
-      insertMarkdownAssetRecords(session, asset);
+      insertMarkdownAssetRecords(transactionSession, asset);
     }
     return counts;
   });
-
-  return transaction();
 }
 
 function writeSequences(input: {
@@ -1249,6 +1486,7 @@ interface SetupMarkdownAsset {
   relationship:
     | { kind: 'project' }
     | { kind: 'visualLanguage'; visualLanguageId: string }
+    | { kind: 'castMember'; castMemberId: string }
     | { kind: 'continuityReference'; continuityReferenceId: string }
     | { kind: 'sequence'; sequenceId: string }
     | { kind: 'scene'; sceneId: string }
@@ -1332,6 +1570,18 @@ function insertMarkdownAssetRecords(
     insertVisualLanguageAssetRecord(session, {
       id: asset.relationshipId,
       visualLanguageId: asset.relationship.visualLanguageId,
+      assetId: asset.id,
+      localeId: asset.localeId,
+      role: asset.role,
+      sortOrder: 1,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    });
+  }
+  if (asset.relationship.kind === 'castMember') {
+    insertCastAssetRecord(session, {
+      id: asset.relationshipId,
+      castMemberId: asset.relationship.castMemberId,
       assetId: asset.id,
       localeId: asset.localeId,
       role: asset.role,
@@ -1516,6 +1766,9 @@ function relationshipIdPrefix(
   }
   if (kind === 'visualLanguage') {
     return 'visual_language_asset';
+  }
+  if (kind === 'castMember') {
+    return 'cast_asset';
   }
   if (kind === 'continuityReference') {
     return 'continuity_reference_asset';

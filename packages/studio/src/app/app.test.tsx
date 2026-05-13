@@ -82,11 +82,11 @@ describe('App', () => {
       },
       {
         path: '/projects/constantinople/sequences/seq_opening',
-        expectedText: 'The opening sequence.',
+        expectedText: '1 scenes, 1 clips.',
       },
       {
         path: '/projects/constantinople/scenes/scene_1_1',
-        expectedText: 'The movie begins.',
+        expectedText: 'Opening Scene',
       },
       {
         path: '/projects/constantinople/clips/clip_1_1_1',
@@ -139,7 +139,6 @@ describe('App', () => {
   it('loads a direct sequence route when the selected sequence is outside the shell page', async () => {
     const project = {
       ...makeProject(),
-      sequences: [],
       navigation: {
         ...makeProjectNavigation(),
         storyStructure: {
@@ -205,6 +204,106 @@ describe('App', () => {
     );
     expect(window.location.pathname).toBe(
       '/projects/constantinople/sequences/seq_late'
+    );
+  });
+
+  it('loads a direct clip route through selection context without eager shell children', async () => {
+    const project = {
+      ...makeProject(),
+      navigation: {
+        ...makeProjectNavigation(),
+        storyStructure: {
+          projectType: 'standaloneMovie' as const,
+          sequences: { items: [], nextCursor: 'after-first-page' },
+        },
+      },
+    };
+    window.history.pushState({}, '', '/projects/constantinople/clips/clip_late');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
+      const url = requestUrl(request);
+      if (url === '/studio-api/projects/constantinople') {
+        return jsonResponse({ project });
+      }
+      if (
+        url ===
+        '/studio-api/projects/constantinople/movie-studio-selection/context'
+      ) {
+        return jsonResponse({
+          valid: true,
+          selection: { type: 'clip', id: 'clip_late' },
+          context: {
+            surface: 'clip-design',
+            sequence: {
+              id: 'seq_late',
+              number: 150,
+              title: 'Late Sequence',
+              sceneCount: 1,
+              clipCount: 1,
+            },
+            scene: {
+              id: 'scene_late',
+              sequenceId: 'seq_late',
+              title: 'Late Scene',
+              clipCount: 1,
+            },
+            clip: {
+              id: 'clip_late',
+              sceneId: 'scene_late',
+              title: 'Late Clip',
+              oneLineSummary: 'Loaded from selection context.',
+            },
+          },
+          resourceKeys: ['surface:clip-design:clip_late'],
+        });
+      }
+      if (url === '/studio-api/projects/constantinople/clips/clip_late/design') {
+        return jsonResponse({ resource: null });
+      }
+      if (url === '/studio-api/studio/events/current') {
+        return jsonResponse(emptyStudioCurrent());
+      }
+      if (
+        url === '/studio-api/studio/events/browser-sessions/active' ||
+        url === '/studio-api/studio/events/focus-changes'
+      ) {
+        return jsonResponse({});
+      }
+      if (url.startsWith('/studio-api/studio/events')) {
+        return jsonResponse({ events: [], nextCursor: '0', warnings: [] });
+      }
+      return jsonResponse({});
+    });
+
+    renderApp();
+
+    await screen.findByText('Late Clip');
+    expect(window.location.pathname).toBe('/projects/constantinople/clips/clip_late');
+  });
+
+  it('loads sequence scenes and scene clips through navigation pages', async () => {
+    window.history.pushState({}, '', '/projects/constantinople');
+    const fetchLog = mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Opening');
+    fireEvent.click(screen.getByLabelText('Expand Opening'));
+
+    await screen.findByText('Opening Scene');
+    expect(screen.getByText('1 scenes, 1 clips')).toBeTruthy();
+    expect(screen.getByText('1 clips')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Expand Opening Scene'));
+
+    await screen.findByText('Opening Image');
+    expect(fetchLog).toContain(
+      '/studio-api/projects/constantinople/sequences/seq_opening/scenes'
+    );
+    expect(fetchLog).toContain(
+      '/studio-api/projects/constantinople/scenes/scene_1_1/clips'
     );
   });
 
@@ -587,6 +686,12 @@ describe('App', () => {
       if (url === '/studio-api/projects/constantinople') {
         return jsonResponse({ project: makeProject() });
       }
+      if (
+        url ===
+        '/studio-api/projects/constantinople/movie-studio-selection/context'
+      ) {
+        return jsonResponse(makeSelectionContextResponse(selection));
+      }
       if (url === '/studio-api/studio/events/current') {
         return jsonResponse({
           ...emptyStudioCurrent(),
@@ -939,7 +1044,7 @@ function mockStudioFetch(input: {
   project?: ProjectShellWithHttp;
 }): string[] {
   const fetchLog: string[] = [];
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (request, init) => {
     const url = requestUrl(request);
     fetchLog.push(url);
     if (url === '/studio-api/projects') {
@@ -947,6 +1052,43 @@ function mockStudioFetch(input: {
     }
     if (url === '/studio-api/projects/constantinople') {
       return jsonResponse({ project: input.project ?? makeProject() });
+    }
+    if (
+      url ===
+      '/studio-api/projects/constantinople/movie-studio-selection/context'
+    ) {
+      const body = requestJsonBody<{ selection: MovieStudioSelection }>(init);
+      return jsonResponse(makeSelectionContextResponse(body.selection));
+    }
+    if (url === '/studio-api/projects/constantinople/sequences/seq_opening/scenes') {
+      return jsonResponse({
+        page: {
+          items: [
+            {
+              id: 'scene_1_1',
+              sequenceId: 'seq_opening',
+              title: 'Opening Scene',
+              clipCount: 1,
+            },
+          ],
+          nextCursor: null,
+        },
+      });
+    }
+    if (url === '/studio-api/projects/constantinople/scenes/scene_1_1/clips') {
+      return jsonResponse({
+        page: {
+          items: [
+            {
+              id: 'clip_1_1_1',
+              sceneId: 'scene_1_1',
+              title: 'Opening Image',
+              oneLineSummary: 'Establish the movie.',
+            },
+          ],
+          nextCursor: null,
+        },
+      });
     }
     if (
       url ===
@@ -999,6 +1141,114 @@ function requestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
+function requestJsonBody<T>(init: RequestInit | undefined): T {
+  return JSON.parse(String(init?.body ?? '{}')) as T;
+}
+
+function makeSelectionContextResponse(selection: MovieStudioSelection) {
+  if ('id' in selection && selection.id.includes('missing')) {
+    return {
+      valid: false,
+      reason: 'selectionNotFound',
+      diagnostics: [],
+    };
+  }
+  if (selection.type === 'cast') {
+    return {
+      valid: true,
+      selection,
+      context: {
+        surface: 'cast-design',
+        castMember: {
+          id: selection.id,
+          name: 'Narrator',
+          kind: 'narrator',
+          role: 'voiceover',
+        },
+      },
+      resourceKeys: [`surface:cast-design:${selection.id}`],
+    };
+  }
+  if (selection.type === 'sequence') {
+    return {
+      valid: true,
+      selection,
+      context: {
+        surface: 'sequence',
+        sequence: {
+          id: selection.id,
+          number: 1,
+          title: 'Opening',
+          shortTitle: 'Opening',
+          sceneCount: 1,
+          clipCount: 1,
+        },
+      },
+      resourceKeys: ['navigation:movie-sequences'],
+    };
+  }
+  if (selection.type === 'scene') {
+    return {
+      valid: true,
+      selection,
+      context: {
+        surface: 'scene',
+        sequence: {
+          id: 'seq_opening',
+          number: 1,
+          title: 'Opening',
+          shortTitle: 'Opening',
+          sceneCount: 1,
+          clipCount: 1,
+        },
+        scene: {
+          id: selection.id,
+          sequenceId: 'seq_opening',
+          title: 'Opening Scene',
+          clipCount: 1,
+        },
+      },
+      resourceKeys: ['navigation:sequence-scenes:seq_opening'],
+    };
+  }
+  if (selection.type === 'clip') {
+    return {
+      valid: true,
+      selection,
+      context: {
+        surface: 'clip-design',
+        sequence: {
+          id: 'seq_opening',
+          number: 1,
+          title: 'Opening',
+          shortTitle: 'Opening',
+          sceneCount: 1,
+          clipCount: 1,
+        },
+        scene: {
+          id: 'scene_1_1',
+          sequenceId: 'seq_opening',
+          title: 'Opening Scene',
+          clipCount: 1,
+        },
+        clip: {
+          id: selection.id,
+          sceneId: 'scene_1_1',
+          title: 'Opening Image',
+          oneLineSummary: 'Establish the movie.',
+        },
+      },
+      resourceKeys: ['surface:clip-design:clip_1_1_1'],
+    };
+  }
+  return {
+    valid: true,
+    selection,
+    context: { surface: 'project-information' },
+    resourceKeys: ['project-information'],
+  };
+}
+
 function emptyStudioCurrent() {
   return {
     studio: { running: true },
@@ -1041,30 +1291,6 @@ function makeProject(
       },
     ],
     continuityReferences: [],
-    sequences: [
-      {
-        id: 'seq_opening',
-        number: 1,
-        title: 'Opening',
-        shortTitle: 'Opening',
-        summary: 'The opening sequence.',
-        scenes: [
-          {
-            id: 'scene_1_1',
-            title: 'Opening Scene',
-            summary: 'The movie begins.',
-            clips: [
-              {
-                id: 'clip_1_1_1',
-                title: 'Opening Image',
-                summary: 'Establish the movie.',
-              },
-            ],
-          },
-        ],
-      },
-    ],
-    episodes: [],
     counts: {
       languages: 0,
       visualLanguageCategories: 0,

@@ -47,6 +47,8 @@ export interface NarrativeStarterCastMember {
   kind?: string;
   role?: string;
   shortDescription?: string;
+  description?: string;
+  descriptionFile?: string;
 }
 
 export interface NarrativeStarterVisualLanguageCategory {
@@ -482,6 +484,8 @@ function readCast(
     'kind',
     'role',
     'shortDescription',
+    'description',
+    'descriptionFile',
   ]);
   const name = readRequiredString(
     context,
@@ -489,7 +493,22 @@ function readCast(
     [...yamlPath, 'name'],
     `${formatPath([...yamlPath, 'name'])} is required.`
   );
-  if (!name) {
+  const description = readOptionalString(context, record, [
+    ...yamlPath,
+    'description',
+  ]);
+  const descriptionFile = readOptionalString(context, record, [
+    ...yamlPath,
+    'descriptionFile',
+  ]);
+  validateTextOrFile(
+    context,
+    yamlPath,
+    'description',
+    description,
+    descriptionFile
+  );
+  if (!name || Boolean(description && descriptionFile)) {
     return null;
   }
   return {
@@ -500,6 +519,8 @@ function readCast(
       ...yamlPath,
       'shortDescription',
     ]),
+    description,
+    descriptionFile,
   };
 }
 
@@ -913,6 +934,19 @@ async function loadReferencedNarrativeMarkdown(
     }))
   );
 
+  const cast = await Promise.all(
+    (starter.cast ?? []).map(async (entry, index) => ({
+      ...entry,
+      description:
+        (await readReferencedMarkdownFile(context, {
+          starterDir,
+          filePath: entry.descriptionFile,
+          yamlPath: ['cast', String(index), 'descriptionFile'],
+          label: `${entry.name} description`,
+        })) ?? entry.description,
+    }))
+  );
+
   const continuityReferences = await Promise.all(
     (starter.continuityReferences ?? []).map(async (entry, index) => ({
       ...entry,
@@ -1009,6 +1043,7 @@ async function loadReferencedNarrativeMarkdown(
       ...starter.project,
       summary: projectSummary,
     },
+    cast,
     visualLanguage,
     continuityReferences,
     sequences,

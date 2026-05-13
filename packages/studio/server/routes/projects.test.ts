@@ -39,7 +39,8 @@ describe('projects Hono route', () => {
     const response = await app.request('/constantinople');
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       project: {
         identity: {
           name: 'constantinople',
@@ -55,6 +56,79 @@ describe('projects Hono route', () => {
             ],
           },
         },
+      },
+    });
+    expect(body?.project).not.toHaveProperty('sequences');
+    expect(body?.project).not.toHaveProperty('episodes');
+  });
+
+  it('returns paginated story navigation resources with counts', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const sequenceResponse = await app.request('/constantinople/sequences');
+    const sceneResponse = await app.request(
+      '/constantinople/sequences/seq_opening/scenes'
+    );
+    const clipResponse = await app.request('/constantinople/scenes/scene_opening/clips');
+
+    expect(sequenceResponse.status).toBe(200);
+    await expect(sequenceResponse.json()).resolves.toMatchObject({
+      page: {
+        items: [
+          {
+            id: 'seq_opening',
+            sceneCount: 1,
+            clipCount: 1,
+          },
+        ],
+      },
+    });
+    expect(sceneResponse.status).toBe(200);
+    await expect(sceneResponse.json()).resolves.toMatchObject({
+      page: {
+        items: [
+          {
+            id: 'scene_opening',
+            sequenceId: 'seq_opening',
+            clipCount: 1,
+          },
+        ],
+      },
+    });
+    expect(clipResponse.status).toBe(200);
+    await expect(clipResponse.json()).resolves.toMatchObject({
+      page: {
+        items: [
+          {
+            id: 'clip_opening',
+            sceneId: 'scene_opening',
+            title: 'Opening Image',
+          },
+        ],
+      },
+    });
+  });
+
+  it('returns structured errors for malformed navigation pagination', async () => {
+    const app = createProjectsRoute({
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request('/constantinople/sequences?limit=wide');
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'STUDIO_SERVER030',
+        issues: [
+          {
+            location: {
+              path: ['limit'],
+            },
+          },
+        ],
       },
     });
   });
@@ -108,7 +182,20 @@ describe('projects Hono route', () => {
               ...language,
             })),
           };
-          return currentProject;
+          return {
+            title: currentProject.identity.title,
+            aspectRatio: currentProject.identity.aspectRatio,
+            logline: currentProject.identity.logline,
+            languages: currentProject.languages,
+          };
+        },
+        async readProjectInformationResource() {
+          return {
+            title: currentProject.identity.title,
+            aspectRatio: currentProject.identity.aspectRatio,
+            logline: currentProject.identity.logline,
+            languages: currentProject.languages,
+          };
         },
         async readProjectShell() {
           return makeProjectShell(currentProject);
@@ -140,12 +227,9 @@ describe('projects Hono route', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      project: {
-        identity: {
-          name: 'constantinople',
-          title: 'The Siege Machine',
-          aspectRatio: '21:9',
-        },
+      resource: {
+        title: 'The Siege Machine',
+        aspectRatio: '21:9',
         languages: [
           {
             localeTag: 'en-US',
@@ -154,7 +238,6 @@ describe('projects Hono route', () => {
             supportsSubtitles: true,
           },
         ],
-        coverUrl: '/studio-api/projects/constantinople/cover',
       },
     });
   });
@@ -209,7 +292,8 @@ describe('projects Hono route', () => {
       },
       resourceKeys: [
         'markdown:asset_clip_summary:asset_file_clip_summary',
-        'project-information',
+        'assets:clip:clip_1',
+        'surface:clip-design:clip_1',
       ],
     });
   });
@@ -409,8 +493,21 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
     async readProjectShell() {
       return makeProjectShell(project);
     },
+    async readProjectInformationResource() {
+      return {
+        title: project.identity.title,
+        aspectRatio: project.identity.aspectRatio,
+        logline: project.identity.logline,
+        languages: project.languages,
+      };
+    },
     async updateProjectInformation() {
-      return project;
+      return {
+        title: project.identity.title,
+        aspectRatio: project.identity.aspectRatio,
+        logline: project.identity.logline,
+        languages: project.languages,
+      };
     },
     async readMarkdownAssetContent(input) {
       return {
@@ -430,7 +527,11 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
             'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
           content: input.content,
         },
-        project,
+        resourceKeys: [
+          `markdown:${input.assetId}:${input.assetFileId}`,
+          'assets:clip:clip_1',
+          'surface:clip-design:clip_1',
+        ],
       };
     },
     async resolveCoverImage() {
@@ -593,7 +694,14 @@ function makeAsset(assetId: string): Asset {
 
 function makeProjectShell(project: Project): ProjectShell {
   return {
-    ...project,
+    identity: project.identity,
+    coverImage: project.coverImage,
+    languages: project.languages,
+    visualLanguageCategories: project.visualLanguageCategories,
+    visualLanguage: project.visualLanguage,
+    cast: project.cast,
+    continuityReferences: project.continuityReferences,
+    counts: project.counts,
     navigation: {
       cast: {
         items: project.cast.map((castMember) => ({

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { and, asc, eq } from 'drizzle-orm';
 import type {
   ProductionExportInput,
   ProductionExportSummary,
@@ -9,6 +10,19 @@ import type {
   ProjectRelativePath,
 } from '../../../project/index.js';
 import { ProjectDataError } from '../../../project/index.js';
+import {
+  assetFiles,
+  assets,
+  clipAssets,
+  clips,
+  projectAssets,
+  projectLocales,
+  projects,
+  sceneAssets,
+  scenes,
+  sequenceAssets,
+  sequences,
+} from '../../../schema/index.js';
 import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../../config.js';
 import { openProjectStore, type ProjectDataSession } from '../data/sqlite-project-store.js';
 import { resolveProjectFolder } from '../files/project-paths.js';
@@ -127,11 +141,11 @@ export async function exportProductionAssets(
   });
   try {
     const project = readProjectIdentity(session);
-    const variants = readRequestedVariants(session, input.variants);
+    const selectedRows = readSelectedAssetRows(session);
+    const variants = readRequestedVariants(session, selectedRows, input.variants);
     const previousManifest = input.fresh
       ? null
       : await readManifest(projectFolder, project.id);
-    const selectedRows = readSelectedAssetRows(session);
     const plans = await buildVariantPlans({
       projectFolder,
       session,
@@ -230,9 +244,7 @@ export async function exportProductionAssets(
 }
 
 function readProjectIdentity(session: ProjectDataSession): { id: string } {
-  const row = session.sqlite.prepare('select id from project limit 1').get() as
-    | { id: string }
-    | undefined;
+  const row = session.db.select({ id: projects.id }).from(projects).limit(1).get();
   if (!row) {
     throw new ProjectDataError('PROJECT_DATA102', 'Project database has no project row.');
   }
@@ -241,6 +253,7 @@ function readProjectIdentity(session: ProjectDataSession): { id: string } {
 
 function readRequestedVariants(
   session: ProjectDataSession,
+  selectedRows: SelectedAssetRow[],
   inputVariants?: ProductionExportVariant[]
 ): ProductionExportVariant[] {
   if (inputVariants?.length) {
@@ -252,33 +265,29 @@ function readRequestedVariants(
     return inputVariants;
   }
 
-  const localeRows = session.sqlite
-    .prepare(
-      `select distinct r.locale_id as localeId
-       from (
-         select locale_id from project_asset where selection = 'select'
-         union all select locale_id from sequence_asset where selection = 'select'
-         union all select locale_id from scene_asset where selection = 'select'
-         union all select locale_id from clip_asset where selection = 'select'
-       ) r
-       where r.locale_id is not null
-       order by r.locale_id asc`
-    )
-    .all() as { localeId: string }[];
+  const localeIds = [
+    ...new Set(
+      selectedRows
+        .map((row) => row.localeId)
+        .filter((localeId): localeId is string => localeId !== null)
+    ),
+  ].sort((left, right) => left.localeCompare(right));
 
   return [
     { kind: 'master' },
-    ...localeRows.map((row): ProductionExportVariant => ({
+    ...localeIds.map((localeId): ProductionExportVariant => ({
       kind: 'localized',
-      localeId: row.localeId,
+      localeId,
     })),
   ];
 }
 
 function assertLocaleExists(session: ProjectDataSession, localeId: string): void {
-  const row = session.sqlite
-    .prepare('select 1 from project_locale where id = ?')
-    .get(localeId);
+  const row = session.db
+    .select({ id: projectLocales.id })
+    .from(projectLocales)
+    .where(eq(projectLocales.id, localeId))
+    .get();
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA103',
@@ -288,72 +297,168 @@ function assertLocaleExists(session: ProjectDataSession, localeId: string): void
 }
 
 function readSelectedAssetRows(session: ProjectDataSession): SelectedAssetRow[] {
-  return session.sqlite
-    .prepare(
-      `
-      select * from (
-        select a.id as assetId, r.id as relationshipId, af.id as assetFileId,
-          'project' as targetKind, null as targetId, r.locale_id as localeId,
-          l.locale_tag as localeTag, r.role as role,
-          coalesce(r.selection_order, 1) as selectionOrder, a.title as title,
-          af.project_relative_path as sourceProjectRelativePath,
-          af.media_kind as mediaKind, af.size_bytes as sourceSizeBytes,
-          af.content_hash as sourceContentHash
-        from project_asset r
-        join asset a on a.id = r.asset_id
-        join asset_file af on af.asset_id = a.id
-        left join project_locale l on l.id = r.locale_id
-        where r.selection = 'select' and a.availability = 'ready'
+  return [
+    ...readProjectSelectedAssetRows(session),
+    ...readSequenceSelectedAssetRows(session),
+    ...readSceneSelectedAssetRows(session),
+    ...readClipSelectedAssetRows(session),
+  ].sort(compareSelectedAssetRows);
+}
 
-        union all
-
-        select a.id as assetId, r.id as relationshipId, af.id as assetFileId,
-          'sequence' as targetKind, r.sequence_id as targetId,
-          r.locale_id as localeId, l.locale_tag as localeTag, r.role as role,
-          coalesce(r.selection_order, 1) as selectionOrder, a.title as title,
-          af.project_relative_path as sourceProjectRelativePath,
-          af.media_kind as mediaKind, af.size_bytes as sourceSizeBytes,
-          af.content_hash as sourceContentHash
-        from sequence_asset r
-        join asset a on a.id = r.asset_id
-        join asset_file af on af.asset_id = a.id
-        left join project_locale l on l.id = r.locale_id
-        where r.selection = 'select' and a.availability = 'ready'
-
-        union all
-
-        select a.id as assetId, r.id as relationshipId, af.id as assetFileId,
-          'scene' as targetKind, r.scene_id as targetId,
-          r.locale_id as localeId, l.locale_tag as localeTag, r.role as role,
-          coalesce(r.selection_order, 1) as selectionOrder, a.title as title,
-          af.project_relative_path as sourceProjectRelativePath,
-          af.media_kind as mediaKind, af.size_bytes as sourceSizeBytes,
-          af.content_hash as sourceContentHash
-        from scene_asset r
-        join asset a on a.id = r.asset_id
-        join asset_file af on af.asset_id = a.id
-        left join project_locale l on l.id = r.locale_id
-        where r.selection = 'select' and a.availability = 'ready'
-
-        union all
-
-        select a.id as assetId, r.id as relationshipId, af.id as assetFileId,
-          'clip' as targetKind, r.clip_id as targetId,
-          r.locale_id as localeId, l.locale_tag as localeTag, r.role as role,
-          coalesce(r.selection_order, 1) as selectionOrder, a.title as title,
-          af.project_relative_path as sourceProjectRelativePath,
-          af.media_kind as mediaKind, af.size_bytes as sourceSizeBytes,
-          af.content_hash as sourceContentHash
-        from clip_asset r
-        join asset a on a.id = r.asset_id
-        join asset_file af on af.asset_id = a.id
-        left join project_locale l on l.id = r.locale_id
-        where r.selection = 'select' and a.availability = 'ready'
-      )
-      order by targetKind asc, targetId asc, role asc, selectionOrder asc, assetId asc
-      `
+function readProjectSelectedAssetRows(session: ProjectDataSession): SelectedAssetRow[] {
+  return session.db
+    .select({
+      assetId: assets.id,
+      relationshipId: projectAssets.id,
+      assetFileId: assetFiles.id,
+      localeId: projectAssets.localeId,
+      localeTag: projectLocales.localeTag,
+      role: projectAssets.role,
+      selectionOrder: projectAssets.selectionOrder,
+      title: assets.title,
+      sourceProjectRelativePath: assetFiles.projectRelativePath,
+      mediaKind: assetFiles.mediaKind,
+      sourceSizeBytes: assetFiles.sizeBytes,
+      sourceContentHash: assetFiles.contentHash,
+    })
+    .from(projectAssets)
+    .innerJoin(assets, eq(assets.id, projectAssets.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
+    .leftJoin(projectLocales, eq(projectLocales.id, projectAssets.localeId))
+    .where(and(eq(projectAssets.selection, 'select'), eq(assets.availability, 'ready')))
+    .orderBy(
+      asc(projectAssets.role),
+      asc(projectAssets.selectionOrder),
+      asc(projectAssets.assetId)
     )
-    .all() as SelectedAssetRow[];
+    .all()
+    .map((row) => ({
+      ...row,
+      targetKind: 'project' as const,
+      targetId: null,
+      selectionOrder: row.selectionOrder ?? 1,
+    }));
+}
+
+function readSequenceSelectedAssetRows(session: ProjectDataSession): SelectedAssetRow[] {
+  return session.db
+    .select({
+      assetId: assets.id,
+      relationshipId: sequenceAssets.id,
+      assetFileId: assetFiles.id,
+      targetId: sequenceAssets.sequenceId,
+      localeId: sequenceAssets.localeId,
+      localeTag: projectLocales.localeTag,
+      role: sequenceAssets.role,
+      selectionOrder: sequenceAssets.selectionOrder,
+      title: assets.title,
+      sourceProjectRelativePath: assetFiles.projectRelativePath,
+      mediaKind: assetFiles.mediaKind,
+      sourceSizeBytes: assetFiles.sizeBytes,
+      sourceContentHash: assetFiles.contentHash,
+    })
+    .from(sequenceAssets)
+    .innerJoin(assets, eq(assets.id, sequenceAssets.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
+    .leftJoin(projectLocales, eq(projectLocales.id, sequenceAssets.localeId))
+    .where(and(eq(sequenceAssets.selection, 'select'), eq(assets.availability, 'ready')))
+    .orderBy(
+      asc(sequenceAssets.sequenceId),
+      asc(sequenceAssets.role),
+      asc(sequenceAssets.selectionOrder),
+      asc(sequenceAssets.assetId)
+    )
+    .all()
+    .map((row) => ({
+      ...row,
+      targetKind: 'sequence' as const,
+      selectionOrder: row.selectionOrder ?? 1,
+    }));
+}
+
+function readSceneSelectedAssetRows(session: ProjectDataSession): SelectedAssetRow[] {
+  return session.db
+    .select({
+      assetId: assets.id,
+      relationshipId: sceneAssets.id,
+      assetFileId: assetFiles.id,
+      targetId: sceneAssets.sceneId,
+      localeId: sceneAssets.localeId,
+      localeTag: projectLocales.localeTag,
+      role: sceneAssets.role,
+      selectionOrder: sceneAssets.selectionOrder,
+      title: assets.title,
+      sourceProjectRelativePath: assetFiles.projectRelativePath,
+      mediaKind: assetFiles.mediaKind,
+      sourceSizeBytes: assetFiles.sizeBytes,
+      sourceContentHash: assetFiles.contentHash,
+    })
+    .from(sceneAssets)
+    .innerJoin(assets, eq(assets.id, sceneAssets.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
+    .leftJoin(projectLocales, eq(projectLocales.id, sceneAssets.localeId))
+    .where(and(eq(sceneAssets.selection, 'select'), eq(assets.availability, 'ready')))
+    .orderBy(
+      asc(sceneAssets.sceneId),
+      asc(sceneAssets.role),
+      asc(sceneAssets.selectionOrder),
+      asc(sceneAssets.assetId)
+    )
+    .all()
+    .map((row) => ({
+      ...row,
+      targetKind: 'scene' as const,
+      selectionOrder: row.selectionOrder ?? 1,
+    }));
+}
+
+function readClipSelectedAssetRows(session: ProjectDataSession): SelectedAssetRow[] {
+  return session.db
+    .select({
+      assetId: assets.id,
+      relationshipId: clipAssets.id,
+      assetFileId: assetFiles.id,
+      targetId: clipAssets.clipId,
+      localeId: clipAssets.localeId,
+      localeTag: projectLocales.localeTag,
+      role: clipAssets.role,
+      selectionOrder: clipAssets.selectionOrder,
+      title: assets.title,
+      sourceProjectRelativePath: assetFiles.projectRelativePath,
+      mediaKind: assetFiles.mediaKind,
+      sourceSizeBytes: assetFiles.sizeBytes,
+      sourceContentHash: assetFiles.contentHash,
+    })
+    .from(clipAssets)
+    .innerJoin(assets, eq(assets.id, clipAssets.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
+    .leftJoin(projectLocales, eq(projectLocales.id, clipAssets.localeId))
+    .where(and(eq(clipAssets.selection, 'select'), eq(assets.availability, 'ready')))
+    .orderBy(
+      asc(clipAssets.clipId),
+      asc(clipAssets.role),
+      asc(clipAssets.selectionOrder),
+      asc(clipAssets.assetId)
+    )
+    .all()
+    .map((row) => ({
+      ...row,
+      targetKind: 'clip' as const,
+      selectionOrder: row.selectionOrder ?? 1,
+    }));
+}
+
+function compareSelectedAssetRows(
+  left: SelectedAssetRow,
+  right: SelectedAssetRow
+): number {
+  return (
+    left.targetKind.localeCompare(right.targetKind) ||
+    String(left.targetId ?? '').localeCompare(String(right.targetId ?? '')) ||
+    left.role.localeCompare(right.role) ||
+    left.selectionOrder - right.selectionOrder ||
+    left.assetId.localeCompare(right.assetId)
+  );
 }
 
 async function buildVariantPlans(input: {
@@ -502,11 +607,15 @@ function refreshAssetFileMetadata(input: {
   contentHash: string;
   sizeBytes: number;
 }): void {
-  input.session.sqlite
-    .prepare(
-      `update asset_file set content_hash = ?, size_bytes = ?, updated_at = ? where id = ?`
-    )
-    .run(input.contentHash, input.sizeBytes, new Date().toISOString(), input.assetFileId);
+  input.session.db
+    .update(assetFiles)
+    .set({
+      contentHash: input.contentHash,
+      sizeBytes: input.sizeBytes,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(assetFiles.id, input.assetFileId))
+    .run();
 }
 
 function findPreviousFileForAssetFile(
@@ -589,18 +698,14 @@ function readSequenceHierarchy(
   sequencePosition: number;
   sequenceTitle: string;
 } {
-  const row = session.sqlite
-    .prepare(
-      `select position as sequencePosition, title as sequenceTitle
-       from sequence
-       where id = ?`
-    )
-    .get(sequenceId) as
-    | {
-        sequencePosition: number;
-        sequenceTitle: string;
-      }
-    | undefined;
+  const row = session.db
+    .select({
+      sequencePosition: sequences.position,
+      sequenceTitle: sequences.title,
+    })
+    .from(sequences)
+    .where(eq(sequences.id, sequenceId))
+    .get();
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA108',
@@ -619,22 +724,17 @@ function readSceneHierarchy(
   scenePosition: number;
   sceneTitle: string;
 } {
-  const row = session.sqlite
-    .prepare(
-      `select s.position as sequencePosition, s.title as sequenceTitle,
-        sc.position as scenePosition, sc.title as sceneTitle
-       from scene sc
-       join sequence s on s.id = sc.sequence_id
-       where sc.id = ?`
-    )
-    .get(sceneId) as
-    | {
-        sequencePosition: number;
-        sequenceTitle: string;
-        scenePosition: number;
-        sceneTitle: string;
-      }
-    | undefined;
+  const row = session.db
+    .select({
+      sequencePosition: sequences.position,
+      sequenceTitle: sequences.title,
+      scenePosition: scenes.position,
+      sceneTitle: scenes.title,
+    })
+    .from(scenes)
+    .innerJoin(sequences, eq(sequences.id, scenes.sequenceId))
+    .where(eq(scenes.id, sceneId))
+    .get();
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA109',
@@ -655,26 +755,20 @@ function readClipHierarchy(
   clipPosition: number;
   clipTitle: string;
 } {
-  const row = session.sqlite
-    .prepare(
-      `select s.position as sequencePosition, s.title as sequenceTitle,
-        sc.position as scenePosition, sc.title as sceneTitle,
-        c.position as clipPosition, c.title as clipTitle
-       from clip c
-       join scene sc on sc.id = c.scene_id
-       join sequence s on s.id = sc.sequence_id
-       where c.id = ?`
-    )
-    .get(clipId) as
-    | {
-        sequencePosition: number;
-        sequenceTitle: string;
-        scenePosition: number;
-        sceneTitle: string;
-        clipPosition: number;
-        clipTitle: string;
-      }
-    | undefined;
+  const row = session.db
+    .select({
+      sequencePosition: sequences.position,
+      sequenceTitle: sequences.title,
+      scenePosition: scenes.position,
+      sceneTitle: scenes.title,
+      clipPosition: clips.position,
+      clipTitle: clips.title,
+    })
+    .from(clips)
+    .innerJoin(scenes, eq(scenes.id, clips.sceneId))
+    .innerJoin(sequences, eq(sequences.id, scenes.sequenceId))
+    .where(eq(clips.id, clipId))
+    .get();
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA107',
@@ -991,9 +1085,11 @@ function toManifestVariant(plan: VariantPlan): ProductionExportVariantManifest {
 }
 
 function requiredLocaleTag(session: ProjectDataSession, localeId: string): string {
-  const row = session.sqlite
-    .prepare('select locale_tag as localeTag from project_locale where id = ?')
-    .get(localeId) as { localeTag: string } | undefined;
+  const row = session.db
+    .select({ localeTag: projectLocales.localeTag })
+    .from(projectLocales)
+    .where(eq(projectLocales.id, localeId))
+    .get();
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA103',

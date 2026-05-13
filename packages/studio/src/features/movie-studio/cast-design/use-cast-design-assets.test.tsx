@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { Asset, CastMember } from '@gorenku/studio-core';
+import type { Asset, CastMember, RichTextAssetLink } from '@gorenku/studio-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   invalidateCastDesignResource,
@@ -53,6 +53,33 @@ describe('useCastDesignAssets', () => {
       'constantinople-fetch',
       'cast_1'
     );
+  });
+
+  it('projects the cast description Markdown asset from the resource', async () => {
+    vi.mocked(readCastDesignResource).mockResolvedValue(
+      castDesignResource([], {
+        assetId: 'asset_cast_description',
+        assetFileId: 'asset_file_cast_description',
+        role: 'description',
+        projectRelativePath: 'working-assets/base/cast/01-anna/description.md',
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useCastDesignAssets({
+        projectName: 'constantinople-description',
+        castEntry: castMember,
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.descriptionContent.descriptionAsset).toEqual({
+        assetId: 'asset_cast_description',
+        assetFileId: 'asset_file_cast_description',
+        role: 'description',
+        projectRelativePath: 'working-assets/base/cast/01-anna/description.md',
+      });
+    });
   });
 
   it('reloads when coordination reports changed cast design resources', async () => {
@@ -155,9 +182,13 @@ function castAsset(input: {
   };
 }
 
-function castDesignResource(assets: Asset[]) {
+function castDesignResource(
+  assets: Asset[],
+  descriptionAsset?: RichTextAssetLink
+) {
   return {
     castMember,
+    descriptionAsset,
     selectedAssets: assets.filter((asset) => asset.selection.kind === 'select'),
     activeTakePage: {
       items: assets.filter((asset) => asset.selection.kind === 'take'),

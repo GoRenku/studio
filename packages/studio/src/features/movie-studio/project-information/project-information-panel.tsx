@@ -9,10 +9,15 @@ import {
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import type { ProjectLanguage } from '@gorenku/studio-core';
 import type {
+  ProjectInformationResourceResponse,
   ProjectInformationUpdateRequest,
   ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
-import { updateProjectInformation } from '@/services/studio-projects-api';
+import {
+  readProject,
+  readProjectInformationResource,
+  updateProjectInformation,
+} from '@/services/studio-projects-api';
 import {
   useDebouncedAutosave,
   type DebouncedAutosaveStatus,
@@ -34,6 +39,7 @@ import {
 } from '@/ui/select';
 import { Textarea } from '@/ui/textarea';
 import { cn } from '@/lib/utils';
+import { MarkdownAssetEditor } from '../markdown-asset-editor';
 
 const ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16', '21:9'] as const;
 
@@ -72,7 +78,6 @@ interface ProjectInformationForm {
   title: string;
   aspectRatio: string;
   logline: string;
-  summary: string;
   languages: ProjectLanguage[];
 }
 
@@ -88,6 +93,8 @@ export function ProjectInformationPanel({
   const [form, setForm] = useState<ProjectInformationForm>(() =>
     projectForm
   );
+  const [resource, setResource] =
+    useState<ProjectInformationResourceResponse | null>(null);
   const formRef = useRef(form);
   const lastProjectFormRef = useRef(projectForm);
   const lastProjectFormSignatureRef = useRef(
@@ -126,9 +133,36 @@ export function ProjectInformationPanel({
   const autosave = useDebouncedAutosave({
     value: form,
     save,
-    onSaved: onProjectChange,
+    onSaved: () => {
+      void readProject(project.identity.name).then(onProjectChange);
+    },
     isReady: isAutosaveReady,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    void readProjectInformationResource(project.identity.name)
+      .then((nextResource) => {
+        if (!cancelled) {
+          const nextResourceForm = toProjectInformationResourceForm(nextResource);
+          setResource(nextResource);
+          setForm((current) =>
+            projectInformationFormSignature(current) ===
+            projectInformationFormSignature(lastProjectFormRef.current)
+              ? nextResourceForm
+              : current
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResource(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.identity.name]);
 
   useEffect(() => {
     onAutosaveStatusChange(autosave);
@@ -267,18 +301,15 @@ export function ProjectInformationPanel({
             />
           </Field>
 
-          <Field label='Summary'>
-            <Textarea
-              value={form.summary}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  summary: event.target.value,
-                }))
-              }
-              className={cn('min-h-36', projectInformationControlClassName)}
-            />
-          </Field>
+          <MarkdownAssetEditor
+            projectName={project.identity.name}
+            label='Summary'
+            asset={resource?.summaryAsset}
+            initialContent=''
+            emptyMessage='No editable project summary asset is attached yet.'
+            minHeightClassName='min-h-36'
+            onProjectChange={onProjectChange}
+          />
         </div>
       </section>
 
@@ -442,8 +473,18 @@ function toProjectInformationForm(project: ProjectShellWithHttp): ProjectInforma
     title: project.identity.title,
     aspectRatio: project.identity.aspectRatio ?? '16:9',
     logline: project.identity.logline ?? '',
-    summary: project.identity.summary ?? '',
     languages: project.languages,
+  };
+}
+
+function toProjectInformationResourceForm(
+  resource: ProjectInformationResourceResponse
+): ProjectInformationForm {
+  return {
+    title: resource.title,
+    aspectRatio: resource.aspectRatio ?? '16:9',
+    logline: resource.logline ?? '',
+    languages: resource.languages,
   };
 }
 
@@ -454,7 +495,6 @@ function toProjectInformationUpdate(
     title: form.title,
     aspectRatio: form.aspectRatio,
     logline: form.logline,
-    summary: form.summary,
     languages: form.languages.map((language) => ({
       localeTag: language.localeTag,
       displayName: language.displayName,

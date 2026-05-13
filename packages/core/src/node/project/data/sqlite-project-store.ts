@@ -6,9 +6,12 @@ import { resolveProjectDatabasePath } from '../files/project-paths.js';
 
 export interface ProjectDataSession {
   databasePath: string;
-  sqlite: Database.Database;
   db: BetterSQLite3Database;
   close(): void;
+}
+
+interface SqliteProjectDataSession extends ProjectDataSession {
+  sqlite: Database.Database;
 }
 
 type ProjectStoreLifetime = 'operation' | 'project';
@@ -16,7 +19,7 @@ type ProjectStoreLifetime = 'operation' | 'project';
 const PROJECT_STORE_SCHEMA_GENERATION = 1;
 const DRIZZLE_MIGRATIONS_TABLE = '__drizzle_migrations';
 
-const projectSessions = new Map<string, ProjectDataSession>();
+const projectSessions = new Map<string, SqliteProjectDataSession>();
 
 export function openProjectStore(input: {
   projectFolder: string;
@@ -48,7 +51,7 @@ export function openProjectStore(input: {
   }
   const db = drizzle(sqlite);
 
-  const session: ProjectDataSession = {
+  const session: SqliteProjectDataSession = {
     databasePath,
     sqlite,
     db,

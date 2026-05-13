@@ -537,6 +537,12 @@ Recommended cast fields:
 - `kind`: `character`, `narrator`, `location`, `object`, `group`, or `other`.
 - `role`: plain-language production or story role.
 - `shortDescription`: compact context for the project.
+- `description`: inline Markdown-capable cast description.
+- `descriptionFile`: path to a Markdown cast description file relative to the
+  setup YAML.
+
+The create command should create cast member records and Markdown assets for
+description text when provided.
 
 ### `sequences`
 

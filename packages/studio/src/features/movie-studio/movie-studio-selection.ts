@@ -1,10 +1,12 @@
 import type {
   CastMember,
   Clip,
-  Scene,
-  Sequence,
+  ClipNavigationRow,
+  SceneNavigationRow,
+  SequenceNavigationRow,
 } from '@gorenku/studio-core';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
+import type { StoryNavigationState } from './use-story-navigation';
 
 export type MovieStudioSelection =
   | { type: 'projectInformation' }
@@ -17,10 +19,12 @@ export type MovieStudioSelection =
   | { type: 'cast'; id: string };
 
 export interface MovieStudioLookup {
-  sequences: Map<string, Sequence>;
-  scenes: Map<string, Scene>;
-  clips: Map<string, Clip>;
+  sequences: Map<string, SequenceNavigationRow>;
+  scenes: Map<string, SceneNavigationRow>;
+  clips: Map<string, ClipNavigationRow>;
   cast: Map<string, CastMember>;
+  clipsBySequenceId: Map<string, ClipNavigationRow[]>;
+  clipsBySceneId: Map<string, ClipNavigationRow[]>;
 }
 
 export interface ResolvedMovieStudioSelection {
@@ -33,24 +37,32 @@ export interface ResolvedMovieStudioSelection {
 }
 
 export function buildMovieStudioLookup(
-  project: ProjectShellWithHttp
+  project: ProjectShellWithHttp,
+  storyNavigation: StoryNavigationState
 ): MovieStudioLookup {
-  const sequences = new Map<string, Sequence>();
-  const scenes = new Map<string, Scene>();
-  const clips = new Map<string, Clip>();
+  const sequences = new Map<string, SequenceNavigationRow>();
+  const scenes = new Map<string, SceneNavigationRow>();
+  const clips = new Map<string, ClipNavigationRow>();
+  const clipsBySequenceId = new Map<string, ClipNavigationRow[]>();
+  const clipsBySceneId = new Map<string, ClipNavigationRow[]>();
   const cast = new Map(project.cast.map((entry) => [entry.id, entry]));
 
-  for (const sequence of project.sequences) {
+  for (const sequence of allSequenceRows(storyNavigation)) {
     sequences.set(sequence.id, sequence);
-    for (const scene of sequence.scenes) {
+    const sequenceClips: ClipNavigationRow[] = [];
+    for (const scene of storyNavigation.scenesBySequenceId.get(sequence.id) ?? []) {
       scenes.set(scene.id, scene);
-      for (const clip of scene.clips) {
+      const sceneClips = storyNavigation.clipsBySceneId.get(scene.id) ?? [];
+      clipsBySceneId.set(scene.id, sceneClips);
+      for (const clip of sceneClips) {
         clips.set(clip.id, clip);
+        sequenceClips.push(clip);
       }
     }
+    clipsBySequenceId.set(sequence.id, sequenceClips);
   }
 
-  return { sequences, scenes, clips, cast };
+  return { sequences, scenes, clips, cast, clipsBySequenceId, clipsBySceneId };
 }
 
 export function resolveMovieStudioSelection(
@@ -63,8 +75,8 @@ export function resolveMovieStudioSelection(
       return {
         valid: true,
         kicker: sequence.title,
-        summary: sequence.summary ?? 'Sequence structure loaded from project data.',
-        clips: sequence.scenes.flatMap((scene) => scene.clips),
+        summary: `${sequence.sceneCount} scenes, ${sequence.clipCount} clips.`,
+        clips: toClips(lookup.clipsBySequenceId.get(sequence.id) ?? []),
       };
     }
   }
@@ -75,8 +87,8 @@ export function resolveMovieStudioSelection(
       return {
         valid: true,
         kicker: scene.title,
-        summary: scene.summary ?? 'Scene structure loaded from project data.',
-        clips: scene.clips,
+        summary: `${scene.clipCount} clips.`,
+        clips: toClips(lookup.clipsBySceneId.get(scene.id) ?? []),
       };
     }
   }
@@ -87,9 +99,9 @@ export function resolveMovieStudioSelection(
       return {
         valid: true,
         kicker: clip.title,
-        summary: clip.summary ?? 'Clip structure loaded from project data.',
-        clips: [clip],
-        clip,
+        summary: clip.oneLineSummary ?? 'Clip structure loaded from project data.',
+        clips: [toClip(clip)],
+        clip: toClip(clip),
       };
     }
   }
@@ -131,8 +143,29 @@ export function resolveMovieStudioSelection(
     summary:
       selection.type === 'casting'
         ? 'Cast entries loaded from project data.'
-        : 'Movie hierarchy loaded from project data. Production readiness starts at narrative only.',
-    clips: Array.from(lookup.clips.values()),
+        : 'Story navigation loads sequence, scene, and clip pages as you open them.',
+    clips: toClips(Array.from(lookup.clips.values())),
+  };
+}
+
+function allSequenceRows(
+  storyNavigation: StoryNavigationState
+): SequenceNavigationRow[] {
+  return [
+    ...storyNavigation.standaloneSequences,
+    ...Array.from(storyNavigation.sequencesByEpisodeId.values()).flat(),
+  ];
+}
+
+function toClips(rows: ClipNavigationRow[]): Clip[] {
+  return rows.map(toClip);
+}
+
+function toClip(row: ClipNavigationRow): Clip {
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.oneLineSummary,
   };
 }
 

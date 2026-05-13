@@ -31,6 +31,7 @@ export function allocateWorkingMarkdownAssetPath(input: {
 export type MarkdownAssetPathTarget =
   | { kind: 'project' }
   | { kind: 'visualLanguage'; categorySlug: string; slug: string }
+  | { kind: 'castMember'; slug: string }
   | { kind: 'continuityReference'; kindSlug: string; slug: string }
   | { kind: 'sequence'; sequenceSlug: string }
   | { kind: 'scene'; sequenceSlug: string; sceneSlug: string }
@@ -47,6 +48,9 @@ function targetSegments(target: MarkdownAssetPathTarget): string[] {
   }
   if (target.kind === 'visualLanguage') {
     return ['visual-language', target.categorySlug, target.slug];
+  }
+  if (target.kind === 'castMember') {
+    return ['cast', target.slug];
   }
   if (target.kind === 'continuityReference') {
     return ['continuity', target.kindSlug, target.slug];

@@ -47,6 +47,7 @@ export type {
   ProjectCreateReport,
   ProjectDataErrorContract,
   ProjectIdentity,
+  ProjectInformationResource,
   ProjectLanguage,
   ProjectLibrary,
   ProjectShell,

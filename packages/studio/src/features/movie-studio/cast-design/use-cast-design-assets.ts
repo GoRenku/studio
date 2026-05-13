@@ -7,6 +7,7 @@ import {
   selectCastAsset,
   unselectCastAsset,
 } from '@/services/studio-project-assets-api';
+import type { CastDesignResourceResponse } from '@/services/studio-project-contracts';
 import type {
   CastAssetCollection,
   CastDescriptionContent,
@@ -20,6 +21,7 @@ const castAssetsCache = new Map<string, Asset[]>();
 interface CastDesignAssetsRuntimeState {
   cacheKey: string;
   assets: Asset[];
+  descriptionAsset: CastDesignResourceResponse['descriptionAsset'];
   isLoadingCastAssets: boolean;
   castAssetsError: string | null;
 }
@@ -54,7 +56,8 @@ export function useCastDesignAssets(input: {
     setAssetState(currentAssetState);
   }
 
-  const { assets, isLoadingCastAssets, castAssetsError } = currentAssetState;
+  const { assets, descriptionAsset, isLoadingCastAssets, castAssetsError } =
+    currentAssetState;
 
   const loadAssets = useCallback(async () => {
     setAssetState((current) => ({
@@ -64,14 +67,12 @@ export function useCastDesignAssets(input: {
     }));
     try {
       const resource = await readCastDesignResource(projectName, castEntry.id);
-      const nextAssets = [
-        ...resource.selectedAssets,
-        ...resource.activeTakePage.items,
-      ];
+      const nextAssets = castDesignResourceAssets(resource);
       castAssetsCache.set(cacheKey, nextAssets);
       setAssetState((current) => ({
         ...current,
         assets: nextAssets,
+        descriptionAsset: resource.descriptionAsset,
         isLoadingCastAssets: false,
       }));
     } catch (error) {
@@ -88,11 +89,8 @@ export function useCastDesignAssets(input: {
     let cancelled = false;
     void Promise.resolve()
       .then(() => readCastDesignResource(projectName, castEntry.id))
-      .then((resource) => [
-        ...resource.selectedAssets,
-        ...resource.activeTakePage.items,
-      ])
-      .then((nextAssets) => {
+      .then((resource) => {
+        const nextAssets = castDesignResourceAssets(resource);
         castAssetsCache.set(cacheKey, nextAssets);
         if (!cancelled) {
           setAssetState((current) =>
@@ -100,6 +98,7 @@ export function useCastDesignAssets(input: {
               ? {
                   ...current,
                   assets: nextAssets,
+                  descriptionAsset: resource.descriptionAsset,
                   isLoadingCastAssets: false,
                 }
               : current
@@ -215,8 +214,14 @@ export function useCastDesignAssets(input: {
   );
 
   const projected = useMemo(
-    () => projectCastDesignAssets(projectName, castEntry, assets),
-    [assets, castEntry, projectName]
+    () =>
+      projectCastDesignAssets(
+        projectName,
+        castEntry,
+        assets,
+        descriptionAsset
+      ),
+    [assets, castEntry, descriptionAsset, projectName]
   );
 
   return {
@@ -255,15 +260,24 @@ function createCastDesignAssetsRuntimeState(
   return {
     cacheKey,
     assets: cachedAssets ?? [],
+    descriptionAsset: undefined,
     isLoadingCastAssets: cachedAssets === undefined,
     castAssetsError: null,
   };
 }
 
+function castDesignResourceAssets(resource: CastDesignResourceResponse): Asset[] {
+  return [
+    ...resource.selectedAssets,
+    ...resource.activeTakePage.items,
+  ];
+}
+
 function projectCastDesignAssets(
   projectName: string,
   castEntry: CastMember,
-  assets: Asset[]
+  assets: Asset[],
+  descriptionAsset: CastDesignResourceResponse['descriptionAsset']
 ): Pick<
   CastDesignAssetsState,
   'descriptionContent' | 'characterSheetContent' | 'voiceDesignContent'
@@ -274,6 +288,7 @@ function projectCastDesignAssets(
   return {
     descriptionContent: {
       descriptionText: castEntry.shortDescription ?? '',
+      descriptionAsset,
       descriptionImages: designAssets.filter(
         (asset) => asset.kind === 'image' && isDescriptionAsset(asset)
       ),

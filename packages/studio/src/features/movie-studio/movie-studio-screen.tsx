@@ -12,6 +12,7 @@ import { GenerationActivityFooter } from './generation-activity/generation-activ
 import { ProjectInformationPanel } from './project-information/project-information-panel';
 import { StoryboardPanel } from './storyboard/storyboard-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
+import { useStoryNavigation } from './use-story-navigation';
 import { useMovieStudioSelectionResolution } from './use-movie-studio-selection-resolution';
 import type { MovieStudioSelection } from './movie-studio-selection';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
@@ -23,7 +24,7 @@ interface MovieStudioScreenProps {
   onNavigateSelection: (
     selection: MovieStudioSelection
   ) => Promise<{ routeChanged: boolean }>;
-  selection: ReturnType<typeof useMovieStudioSelectionResolution>;
+  selection: MovieStudioSelection | null;
 }
 
 export function MovieStudioScreen({
@@ -31,8 +32,17 @@ export function MovieStudioScreen({
   onHome,
   onProjectChange,
   onNavigateSelection,
-  selection: movieStudioSelection,
+  selection: routeSelection,
 }: MovieStudioScreenProps) {
+  const storyNavigation = useStoryNavigation(
+    project,
+    routeSelection ?? { type: 'projectInformation' }
+  );
+  const movieStudioSelection = useMovieStudioSelectionResolution(
+    project,
+    routeSelection,
+    storyNavigation
+  );
   const { selection, resolvedSelection } = movieStudioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
@@ -81,6 +91,7 @@ export function MovieStudioScreen({
       <main className='flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] gap-3'>
         <StudioSidebar
           project={project}
+          storyNavigation={storyNavigation}
           selection={selection}
           onSelect={selectMovieStudioSurface}
           onHome={onHome}
@@ -90,6 +101,7 @@ export function MovieStudioScreen({
             key={resolvedSelection.castEntry.id}
             projectName={project.identity.name}
             castEntry={resolvedSelection.castEntry}
+            onProjectChange={onProjectChange}
           />
         ) : (
           <section className='min-h-0 rounded-(--radius-panel) border border-panel-border bg-panel-bg overflow-hidden flex flex-col'>

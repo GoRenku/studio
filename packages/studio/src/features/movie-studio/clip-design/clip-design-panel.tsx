@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import type { Clip } from '@gorenku/studio-core';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
+import { readClipDesignResource } from '@/services/studio-project-assets-api';
 import { MarkdownAssetEditor } from '../markdown-asset-editor';
 
 interface ClipDesignPanelProps {
@@ -13,14 +15,38 @@ export function ClipDesignPanel({
   clip,
   onProjectChange,
 }: ClipDesignPanelProps) {
+  const [resource, setResource] = useState<Awaited<
+    ReturnType<typeof readClipDesignResource>
+  > | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void readClipDesignResource(projectName, clip.id)
+      .then((nextResource) => {
+        if (!cancelled) {
+          setResource(nextResource);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResource(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clip.id, projectName]);
+
+  const editableClip = resource?.clip.id === clip.id ? resource.clip : clip;
+
   return (
     <div className='space-y-4'>
       <div className='grid gap-4 xl:grid-cols-2'>
         <MarkdownAssetEditor
           projectName={projectName}
           label='Clip Brief'
-          asset={clip.summaryAsset}
-          initialContent={clip.summary ?? ''}
+          asset={editableClip.summaryAsset}
+          initialContent=''
           emptyMessage='No editable clip brief asset is attached yet.'
           minHeightClassName='min-h-40'
           onProjectChange={onProjectChange}
@@ -28,8 +54,8 @@ export function ClipDesignPanel({
         <MarkdownAssetEditor
           projectName={projectName}
           label='Visual Intent'
-          asset={clip.visualIntentAsset}
-          initialContent={clip.visualIntent ?? ''}
+          asset={editableClip.visualIntentAsset}
+          initialContent=''
           emptyMessage='No editable visual intent asset is attached yet.'
           minHeightClassName='min-h-40'
           onProjectChange={onProjectChange}

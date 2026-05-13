@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   createProjectDataService,
-  studioMarkdownResourceKey,
   studioProjectInformationResourceKey,
   studioProjectShellResourceKey,
   studioResourceKeysForAssetTarget,
@@ -39,6 +38,7 @@ type ProjectsRouteProjectData = Pick<
   | 'listLibrary'
   | 'readProject'
   | 'readProjectShell'
+  | 'readProjectInformationResource'
   | 'listCastNavigation'
   | 'listContinuityReferenceNavigation'
   | 'listEpisodeNavigation'
@@ -346,18 +346,27 @@ export function createProjectsRoute(
         }
       }
     )
+    .get('/:projectName/information', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const resource = await projectData.readProjectInformationResource({
+          projectName,
+        });
+        return c.json({ resource });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .patch('/:projectName/information', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const information = readProjectInformationUpdate(await c.req.json());
-        await projectData.updateProjectInformation({
+        const resource = await projectData.updateProjectInformation({
           projectName,
           information,
         });
         return c.json({
-          project: toProjectShellResponse(
-            await projectData.readProjectShell({ projectName })
-          ),
+          resource,
           resourceKeys: [
             studioProjectInformationResourceKey(),
             studioProjectShellResourceKey(),
@@ -399,10 +408,7 @@ export function createProjectsRoute(
           });
           return c.json({
             content: result.content,
-            resourceKeys: [
-              studioMarkdownResourceKey({ assetId, assetFileId }),
-              studioProjectInformationResourceKey(),
-            ],
+            resourceKeys: result.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);

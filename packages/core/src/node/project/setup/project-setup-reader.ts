@@ -70,6 +70,8 @@ export interface ProjectSetupCastMember {
   kind?: string;
   role?: string;
   shortDescription?: string;
+  descriptionFile?: string;
+  description?: string;
 }
 
 export interface ProjectSetupEpisode {
@@ -533,6 +535,7 @@ function readCast(
     'kind',
     'role',
     'shortDescription',
+    'descriptionFile',
   ]);
   const name = readRequiredString(
     context,
@@ -550,6 +553,10 @@ function readCast(
     shortDescription: readOptionalString(context, record, [
       ...path,
       'shortDescription',
+    ]),
+    descriptionFile: readOptionalString(context, record, [
+      ...path,
+      'descriptionFile',
     ]),
   };
 }
@@ -836,6 +843,18 @@ async function loadReferencedSetupMarkdown(
     }))
   );
 
+  const cast = await Promise.all(
+    (setup.cast ?? []).map(async (entry, index) => ({
+      ...entry,
+      description: await readReferencedMarkdownFile(context, {
+        setupDir,
+        filePath: entry.descriptionFile,
+        yamlPath: ['cast', String(index), 'descriptionFile'],
+        label: `${entry.name} description`,
+      }),
+    }))
+  );
+
   const continuityReferences = await Promise.all(
     (setup.continuityReferences ?? []).map(async (entry, index) => ({
       ...entry,
@@ -857,6 +876,7 @@ async function loadReferencedSetupMarkdown(
 
   return {
     ...setup,
+    cast,
     visualLanguage,
     continuityReferences,
   };

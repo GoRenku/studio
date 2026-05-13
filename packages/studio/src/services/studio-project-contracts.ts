@@ -1,13 +1,19 @@
 import type {
   Asset,
   CastDesignResource,
+  ClipNavigationRow,
+  ClipDesignResource,
+  EpisodeNavigationRow,
   MovieStudioSelection,
   MovieStudioSelectionContextResult,
   PageResponse,
   ProductionExportSummary,
+  ProjectInformationResource,
   ProjectLibrary,
   ProjectShell,
   ProjectSummary,
+  SceneNavigationRow,
+  SequenceNavigationRow,
 } from '@gorenku/studio-core';
 
 export type ProjectShellWithHttp = ProjectShell & {
@@ -30,6 +36,8 @@ export interface ProjectInformationUpdateRequest {
   languages: ProjectInformationLanguageUpdateRequest[];
 }
 
+export type ProjectInformationResourceResponse = ProjectInformationResource;
+
 export interface ProjectInformationLanguageUpdateRequest {
   localeTag: string;
   displayName?: string;
@@ -44,7 +52,19 @@ export type StudioAssetResponse = Asset;
 
 export type CastDesignResourceResponse = CastDesignResource;
 
+export type ClipDesignResourceResponse = ClipDesignResource;
+
 export type StudioPageResponse<T> = PageResponse<T>;
+
+export type SequenceNavigationPageResponse =
+  StudioPageResponse<SequenceNavigationRow>;
+
+export type EpisodeNavigationPageResponse =
+  StudioPageResponse<EpisodeNavigationRow>;
+
+export type SceneNavigationPageResponse = StudioPageResponse<SceneNavigationRow>;
+
+export type ClipNavigationPageResponse = StudioPageResponse<ClipNavigationRow>;
 
 export type MovieStudioSelectionContextRequest = {
   selection: MovieStudioSelection;

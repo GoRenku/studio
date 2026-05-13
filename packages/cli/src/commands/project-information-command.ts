@@ -93,9 +93,13 @@ async function mutateProjectInformation(
 ): Promise<number> {
   const projectName = await resolveTargetProjectName(options);
   const projectData = createProjectDataService();
-  const project = await projectData.patchProjectInformation({
+  await projectData.patchProjectInformation({
     projectName,
     patch,
+    homeDir: options.homeDir,
+  });
+  const project = await projectData.readProject({
+    projectName,
     homeDir: options.homeDir,
   });
   const changedFields = changedProjectInformationFields(patch);

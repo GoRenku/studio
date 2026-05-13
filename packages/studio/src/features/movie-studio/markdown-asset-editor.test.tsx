@@ -132,7 +132,7 @@ function makeContent(content: string): MarkdownAssetContent {
   };
 }
 
-function makeProject(summary: string): ProjectShellWithHttp {
+function makeProject(_summary: string): ProjectShellWithHttp {
   return {
     identity: {
       id: 'project_test0001',
@@ -149,28 +149,6 @@ function makeProject(summary: string): ProjectShellWithHttp {
     visualLanguage: [],
     cast: [],
     continuityReferences: [],
-    episodes: [],
-    sequences: [
-      {
-        id: 'sequence_test0001',
-        number: 1,
-        title: 'Opening',
-        scenes: [
-          {
-            id: 'scene_test0001',
-            title: 'Opening Scene',
-            clips: [
-              {
-                id: 'clip_test0001',
-                title: 'Opening Image',
-                summary,
-                summaryAsset: makeAsset(),
-              },
-            ],
-          },
-        ],
-      },
-    ],
     counts: {
       languages: 0,
       visualLanguageCategories: 0,

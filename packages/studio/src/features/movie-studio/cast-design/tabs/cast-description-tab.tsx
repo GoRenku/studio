@@ -1,38 +1,36 @@
 import { Button } from '@/ui/button';
-import { Textarea } from '@/ui/textarea';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
+import { MarkdownAssetEditor } from '../../markdown-asset-editor';
 import type {
   CastDescriptionContent,
   CastDesignAsset,
 } from '../cast-design-types';
 
 interface CastDescriptionTabProps {
+  projectName: string;
   content: CastDescriptionContent;
   onOpenDetails: (asset: CastDesignAsset) => void;
+  onProjectChange: (project: ProjectShellWithHttp) => void;
 }
 
 export function CastDescriptionTab({
+  projectName,
   content,
   onOpenDetails,
+  onProjectChange,
 }: CastDescriptionTabProps) {
   return (
     <div className='h-full min-h-0 overflow-y-auto p-5'>
       <div className='mx-auto flex max-w-5xl flex-col gap-6'>
-        <section className='space-y-2'>
-          <div>
-            <h3 className='text-sm font-semibold text-foreground'>
-              Description
-            </h3>
-            <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
-              Character notes loaded from project data.
-            </p>
-          </div>
-          <Textarea
-            value={content.descriptionText || 'No cast description is attached yet.'}
-            readOnly
-            rows={9}
-            className='min-h-[240px] w-full resize-none rounded-lg border border-border/50 bg-background/45 px-4 py-3 text-sm leading-relaxed shadow-inner outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/25'
-          />
-        </section>
+        <MarkdownAssetEditor
+          projectName={projectName}
+          label='Description'
+          asset={content.descriptionAsset}
+          initialContent={content.descriptionText}
+          emptyMessage='No cast description is attached yet.'
+          minHeightClassName='min-h-[240px]'
+          onProjectChange={onProjectChange}
+        />
 
         <section className='space-y-3'>
           <div>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
+import type { StoryNavigationState } from './use-story-navigation';
 import {
   buildMovieStudioLookup,
   resolveMovieStudioSelection,
@@ -7,7 +8,7 @@ import {
 
 describe('movie studio selection', () => {
   it('resolves clip selections to the clip title', () => {
-    const lookup = buildMovieStudioLookup(makeProject());
+    const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
     const selected = resolveMovieStudioSelection(
       { type: 'clip', id: 'clip_1_1_1' },
@@ -20,7 +21,7 @@ describe('movie studio selection', () => {
   });
 
   it('resolves cast selections to the cast member name', () => {
-    const lookup = buildMovieStudioLookup(makeProject());
+    const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
     const selected = resolveMovieStudioSelection(
       { type: 'cast', id: 'cast_narrator' },
@@ -32,7 +33,7 @@ describe('movie studio selection', () => {
   });
 
   it('resolves sequence selections to the sequence title', () => {
-    const lookup = buildMovieStudioLookup(makeProject());
+    const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
     const selected = resolveMovieStudioSelection(
       { type: 'sequence', id: 'seq_opening' },
@@ -43,7 +44,7 @@ describe('movie studio selection', () => {
   });
 
   it('resolves scene selections to the scene title', () => {
-    const lookup = buildMovieStudioLookup(makeProject());
+    const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
     const selected = resolveMovieStudioSelection(
       { type: 'scene', id: 'scene_1_1' },
@@ -54,7 +55,7 @@ describe('movie studio selection', () => {
   });
 
   it('falls back to the full storyboard for stale story selections', () => {
-    const lookup = buildMovieStudioLookup(makeProject());
+    const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
     const selected = resolveMovieStudioSelection(
       { type: 'scene', id: 'missing_scene' },
@@ -90,30 +91,6 @@ function makeProject(): ProjectShellWithHttp {
       },
     ],
     continuityReferences: [],
-    sequences: [
-      {
-        id: 'seq_opening',
-        number: 1,
-        title: 'Opening',
-        shortTitle: 'Opening',
-        summary: 'The opening sequence.',
-        scenes: [
-          {
-            id: 'scene_1_1',
-            title: 'Opening Scene',
-            summary: 'The movie begins.',
-            clips: [
-              {
-                id: 'clip_1_1_1',
-                title: 'Opening Image',
-                summary: 'Establish the movie.',
-              },
-            ],
-          },
-        ],
-      },
-    ],
-    episodes: [],
     counts: {
       languages: 0,
       visualLanguageCategories: 0,
@@ -156,5 +133,54 @@ function makeProject(): ProjectShellWithHttp {
         },
       },
     },
+  };
+}
+
+function makeStoryNavigation(): StoryNavigationState {
+  return {
+    projectType: 'standaloneMovie',
+    episodes: [],
+    standaloneSequences: [
+      {
+        id: 'seq_opening',
+        number: 1,
+        title: 'Opening',
+        shortTitle: 'Opening',
+        sceneCount: 1,
+        clipCount: 1,
+      },
+    ],
+    sequencesByEpisodeId: new Map(),
+    scenesBySequenceId: new Map([
+      [
+        'seq_opening',
+        [
+          {
+            id: 'scene_1_1',
+            sequenceId: 'seq_opening',
+            title: 'Opening Scene',
+            clipCount: 1,
+          },
+        ],
+      ],
+    ]),
+    clipsBySceneId: new Map([
+      [
+        'scene_1_1',
+        [
+          {
+            id: 'clip_1_1_1',
+            sceneId: 'scene_1_1',
+            title: 'Opening Image',
+            oneLineSummary: 'Establish the movie.',
+          },
+        ],
+      ],
+    ]),
+    loadingKeys: new Set(),
+    error: null,
+    loadEpisodeSequences: async () => {},
+    loadSequenceScenes: async () => {},
+    loadSceneClips: async () => {},
   };
 }
