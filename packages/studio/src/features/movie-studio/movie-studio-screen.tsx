@@ -13,8 +13,8 @@ import { ProjectInformationPanel } from './project-information/project-informati
 import { StoryboardPanel } from './storyboard/storyboard-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
 import { useStoryNavigation } from './use-story-navigation';
-import { useMovieStudioSelectionResolution } from './use-movie-studio-selection-resolution';
-import type { MovieStudioSelection } from './movie-studio-selection';
+import { useStudioSelectionResolution } from './use-movie-studio-selection-resolution';
+import type { StudioSelection } from './movie-studio-selection';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
 
 interface MovieStudioScreenProps {
@@ -22,9 +22,9 @@ interface MovieStudioScreenProps {
   onHome: () => void;
   onProjectChange: (project: ProjectShellWithHttp) => void;
   onNavigateSelection: (
-    selection: MovieStudioSelection
+    selection: StudioSelection
   ) => Promise<{ routeChanged: boolean }>;
-  selection: MovieStudioSelection | null;
+  selection: StudioSelection | null;
 }
 
 export function MovieStudioScreen({
@@ -38,12 +38,12 @@ export function MovieStudioScreen({
     project,
     routeSelection ?? { type: 'projectInformation' }
   );
-  const movieStudioSelection = useMovieStudioSelectionResolution(
+  const studioSelection = useStudioSelectionResolution(
     project,
     routeSelection,
     storyNavigation
   );
-  const { selection, resolvedSelection } = movieStudioSelection;
+  const { selection, resolvedSelection } = studioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
   const [productionExportStatus, setProductionExportStatus] = useState<
@@ -59,7 +59,7 @@ export function MovieStudioScreen({
     []
   );
   const selectMovieStudioSurface = useCallback(
-    (nextSelection: MovieStudioSelection) => {
+    (nextSelection: StudioSelection) => {
       void onNavigateSelection(nextSelection);
     },
     [onNavigateSelection]

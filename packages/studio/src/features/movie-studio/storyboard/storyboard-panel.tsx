@@ -1,10 +1,10 @@
-import type { ResolvedMovieStudioSelection } from '../movie-studio-selection';
+import type { ResolvedStudioSelection } from '../movie-studio-selection';
 import { ReadinessDot } from './readiness-dot';
 
 export function StoryboardPanel({
   selected,
 }: {
-  selected: ResolvedMovieStudioSelection;
+  selected: ResolvedStudioSelection;
 }) {
   return (
     <div className='space-y-4'>

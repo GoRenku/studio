@@ -2,7 +2,7 @@ import {
   StructuredError,
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
-import { createProjectDataService } from '@gorenku/studio-core/node';
+import { createProjectDataService } from '@gorenku/studio-core/server';
 import { formatDiagnosticIssue, type RenkuCliIo } from '../cli.js';
 
 export interface RunCreateCommandOptions {

@@ -8,7 +8,7 @@ import type {
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import type { StoryNavigationState } from './use-story-navigation';
 
-export type MovieStudioSelection =
+export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'visualLanguage' }
   | { type: 'storyboard' }
@@ -27,7 +27,7 @@ export interface MovieStudioLookup {
   clipsBySceneId: Map<string, ClipNavigationRow[]>;
 }
 
-export interface ResolvedMovieStudioSelection {
+export interface ResolvedStudioSelection {
   valid: boolean;
   kicker: string;
   summary: string;
@@ -65,10 +65,10 @@ export function buildMovieStudioLookup(
   return { sequences, scenes, clips, cast, clipsBySequenceId, clipsBySceneId };
 }
 
-export function resolveMovieStudioSelection(
-  selection: MovieStudioSelection,
+export function resolveStudioSelection(
+  selection: StudioSelection,
   lookup: MovieStudioLookup
-): ResolvedMovieStudioSelection {
+): ResolvedStudioSelection {
   if (selection.type === 'sequence') {
     const sequence = lookup.sequences.get(selection.id);
     if (sequence) {

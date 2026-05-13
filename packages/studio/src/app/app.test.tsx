@@ -8,7 +8,7 @@ import type {
   ProjectShellWithHttp,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
-import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
+import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
 describe('App', () => {
   beforeEach(() => {
@@ -141,7 +141,7 @@ describe('App', () => {
       ...makeProject(),
       navigation: {
         ...makeProjectNavigation(),
-        storyStructure: {
+        narrative: {
           projectType: 'standaloneMovie' as const,
           sequences: { items: [], nextCursor: 'after-first-page' },
         },
@@ -212,7 +212,7 @@ describe('App', () => {
       ...makeProject(),
       navigation: {
         ...makeProjectNavigation(),
-        storyStructure: {
+        narrative: {
           projectType: 'standaloneMovie' as const,
           sequences: { items: [], nextCursor: 'after-first-page' },
         },
@@ -668,7 +668,7 @@ describe('App', () => {
       { type: 'cast', id: 'cast_narrator' },
       '/projects/constantinople/cast/cast_narrator',
     ],
-  ] satisfies Array<[string, MovieStudioSelection, string]>)(
+  ] satisfies Array<[string, StudioSelection, string]>)(
     'routes CLI-style pending focus requests for %s to the canonical URL',
     async (_label, selection, expectedPath) => {
     const reportedAppliedRequestIds: string[] = [];
@@ -1057,7 +1057,7 @@ function mockStudioFetch(input: {
       url ===
       '/studio-api/projects/constantinople/movie-studio-selection/context'
     ) {
-      const body = requestJsonBody<{ selection: MovieStudioSelection }>(init);
+      const body = requestJsonBody<{ selection: StudioSelection }>(init);
       return jsonResponse(makeSelectionContextResponse(body.selection));
     }
     if (url === '/studio-api/projects/constantinople/sequences/seq_opening/scenes') {
@@ -1145,7 +1145,7 @@ function requestJsonBody<T>(init: RequestInit | undefined): T {
   return JSON.parse(String(init?.body ?? '{}')) as T;
 }
 
-function makeSelectionContextResponse(selection: MovieStudioSelection) {
+function makeSelectionContextResponse(selection: StudioSelection) {
   if ('id' in selection && selection.id.includes('missing')) {
     return {
       valid: false,
@@ -1321,7 +1321,7 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
     },
     visualLanguage: { items: [], nextCursor: null },
     continuityReferences: { items: [], nextCursor: null },
-    storyStructure: {
+    narrative: {
       projectType: 'standaloneMovie',
       sequences: {
         items: [

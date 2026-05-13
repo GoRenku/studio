@@ -10,7 +10,7 @@ import {
   createStudioBootstrapScript,
   createStudioRuntimeToken,
 } from './server/studio-runtime-token';
-import type { StudioRuntimeDescriptor } from '@gorenku/studio-core/node';
+import type { StudioRuntimeDescriptor } from '@gorenku/studio-core/server';
 
 const expandPath = (input: string | null | undefined) => {
   if (!input) return null;
@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => {
             claimStudioRuntimeDescriptor,
             heartbeatStudioRuntimeDescriptor,
             releaseStudioRuntimeDescriptor,
-          } = await import('@gorenku/studio-core/node');
+          } = await import('@gorenku/studio-core/server');
           let descriptor: StudioRuntimeDescriptor | null = null;
           let heartbeat: ReturnType<typeof setInterval> | null = null;
 

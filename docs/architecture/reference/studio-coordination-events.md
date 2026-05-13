@@ -204,7 +204,7 @@ The event store lives under the Renku config directory:
 
 Each line is one JSON event.
 
-The event store path should be owned by `@gorenku/studio-core/node` so the CLI,
+The event store path should be owned by `@gorenku/studio-core/server` so the CLI,
 Studio server, and tests use one implementation.
 
 The global config remains:
@@ -272,16 +272,16 @@ The first implementation should use this layering:
 
 ```text
 renku CLI
-  -> @gorenku/studio-core/node project services
+  -> @gorenku/studio-core/server project services
     -> project SQLite
-  -> @gorenku/studio-core/node coordination services
+  -> @gorenku/studio-core/server coordination services
     -> studio-events.jsonl
 
 browser Studio UI
   -> Studio server HTTP adapter
-    -> @gorenku/studio-core/node project services
+    -> @gorenku/studio-core/server project services
       -> project SQLite
-    -> @gorenku/studio-core/node coordination services
+    -> @gorenku/studio-core/server coordination services
       -> studio-events.jsonl
 ```
 
@@ -301,7 +301,7 @@ logic.
 
 ## Coordination Service
 
-The node-only coordination service in `@gorenku/studio-core/node` exposes this
+The node-only coordination service in `@gorenku/studio-core/server` exposes this
 current public shape:
 
 ```ts
@@ -530,7 +530,7 @@ export interface StudioFocusRequestedEvent extends StudioEventBase {
 
 export type StudioFocusRequest =
   | { screen: 'projectLibrary' }
-  | { screen: 'movieStudio'; selection: MovieStudioSelection };
+  | { screen: 'movieStudio'; selection: StudioSelection };
 
 export interface StudioRefreshRequest {
   project?: boolean;
@@ -581,7 +581,7 @@ export interface StudioFocusChangedEvent extends StudioEventBase {
 
 export type StudioFocus =
   | { screen: 'projectLibrary' }
-  | { screen: 'movieStudio'; selection: MovieStudioSelection };
+  | { screen: 'movieStudio'; selection: StudioSelection };
 ```
 
 Example:
@@ -700,7 +700,7 @@ Example:
 The v1 selection contract should match the current browser selection model.
 
 ```ts
-export type MovieStudioSelection =
+export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'visualLanguage' }
   | { type: 'storyboard' }
@@ -740,7 +740,7 @@ renku info show [--project <project-name>] [--json]
 ```
 
 Reads project information from project SQLite through
-`@gorenku/studio-core/node`.
+`@gorenku/studio-core/server`.
 
 It may append a focus request if the command is intended to navigate the UI.
 For v1, read-only `show` should not move focus unless a future flag explicitly

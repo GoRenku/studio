@@ -2,11 +2,11 @@ import {
   createProjectDataService,
   createStudioCoordinationService,
   validateStudioFocusRequestForProject,
-  type MovieStudioSelection,
+  type StudioSelection,
   type ProjectDataService,
   type StudioCoordinationService,
   type StudioFocusRequest,
-} from '@gorenku/studio-core/node';
+} from '@gorenku/studio-core/server';
 import {
   createDiagnosticError,
   type DiagnosticIssue,
@@ -175,7 +175,7 @@ function readStudioFocusRequest(value: unknown): StudioFocusRequestReadResult {
     );
   }
 
-  const selection = readMovieStudioSelection(focus.selection);
+  const selection = readStudioSelection(focus.selection);
   if (!selection) {
     return unsupportedFocusRequest(
       ['focus', 'selection'],
@@ -190,7 +190,7 @@ function readStudioFocusRequest(value: unknown): StudioFocusRequestReadResult {
   };
 }
 
-function readMovieStudioSelection(value: unknown): MovieStudioSelection | null {
+function readStudioSelection(value: unknown): StudioSelection | null {
   const selection = readRecord(value);
   if (!selection) {
     return null;

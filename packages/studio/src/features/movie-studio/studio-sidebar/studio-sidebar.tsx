@@ -21,7 +21,7 @@ import { Button } from '@/ui/button';
 import { ThemeToggle } from '@/ui/theme-toggle';
 import {
   toggleSetValue,
-  type MovieStudioSelection,
+  type StudioSelection,
 } from '../movie-studio-selection';
 import type { StoryNavigationState } from '../use-story-navigation';
 import { StudioSidebarButton } from './studio-sidebar-button';
@@ -30,8 +30,8 @@ import { StudioSidebarSection } from './studio-sidebar-section';
 interface StudioSidebarProps {
   project: ProjectShellWithHttp;
   storyNavigation: StoryNavigationState;
-  selection: MovieStudioSelection;
-  onSelect: (selection: MovieStudioSelection) => void;
+  selection: StudioSelection;
+  onSelect: (selection: StudioSelection) => void;
   onHome: () => void;
 }
 

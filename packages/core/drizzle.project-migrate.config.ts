@@ -8,7 +8,7 @@ if (!databasePath) {
 
 export default defineConfig({
   dialect: 'sqlite',
-  schema: './src/schema/index.ts',
+  schema: './src/server/schema/index.ts',
   out: './drizzle',
   dbCredentials: {
     url: databasePath,

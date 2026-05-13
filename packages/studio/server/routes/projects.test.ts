@@ -564,9 +564,9 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
       return { items: [], nextCursor: null };
     },
     async listStandaloneMovieSequenceNavigation() {
-      const storyStructure = makeProjectShell(project).navigation.storyStructure;
-      return storyStructure.projectType === 'standaloneMovie'
-        ? storyStructure.sequences
+      const narrative = makeProjectShell(project).navigation.narrative;
+      return narrative.projectType === 'standaloneMovie'
+        ? narrative.sequences
         : { items: [], nextCursor: null };
     },
     async listEpisodeSequenceNavigation() {
@@ -628,7 +628,7 @@ function fakeProjectDataService(): NonNullable<CreateProjectsRouteOptions['proje
         activeTakePage: { items: [], nextCursor: null },
       };
     },
-    async readMovieStudioSelectionContext() {
+    async readStudioSelectionContext() {
       return {
         valid: true,
         selection: { type: 'projectInformation' },
@@ -714,7 +714,7 @@ function makeProjectShell(project: Project): ProjectShell {
       },
       visualLanguage: { items: [], nextCursor: null },
       continuityReferences: { items: [], nextCursor: null },
-      storyStructure: {
+      narrative: {
         projectType: 'standaloneMovie',
         sequences: {
           items: project.sequences.map((sequence) => ({

@@ -1,7 +1,7 @@
 import type {
   StudioCurrent,
   StudioEventReadResult,
-} from '@gorenku/studio-core/node';
+} from '@gorenku/studio-core/server';
 
 export function toStudioEventReadResponse(result: StudioEventReadResult) {
   return {

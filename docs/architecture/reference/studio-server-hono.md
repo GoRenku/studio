@@ -13,7 +13,7 @@ server.
 
 Renku Studio should use Hono for HTTP routing instead of hand-written route
 dispatch. The server should stay an adapter: it accepts HTTP requests, calls
-`@gorenku/studio-core/node`, and returns HTTP responses. It must not own project
+`@gorenku/studio-core/server`, and returns HTTP responses. It must not own project
 data behavior.
 
 Decision history:
@@ -54,7 +54,7 @@ The server stack should be:
 browser
   -> Studio server Hono route
     -> HTTP adapter code
-      -> ProjectDataService from @gorenku/studio-core/node
+      -> ProjectDataService from @gorenku/studio-core/server
         -> core data layer
           -> project-local SQLite
 ```
@@ -79,7 +79,7 @@ The Hono layer must not own:
 - storage root fallback behavior;
 - domain mutation rules.
 
-Those belong in `@gorenku/studio-core/node`.
+Those belong in `@gorenku/studio-core/server`.
 
 ## File Structure
 

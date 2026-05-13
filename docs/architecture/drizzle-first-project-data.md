@@ -9,7 +9,7 @@ Role: architecture policy
 ## Purpose
 
 Renku Studio project runtime code uses Drizzle as the application query layer.
-The Drizzle schema in `packages/core/src/schema/index.ts` is the source of truth
+The Drizzle schema in `packages/core/src/server/schema/index.ts` is the source of truth
 for table and column names, and runtime project reads and writes should use
 Drizzle table objects instead of handwritten SQL strings.
 

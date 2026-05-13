@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createProjectDataService } from '@gorenku/studio-core/node';
+import { createProjectDataService } from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { runRenkuCli } from './cli.js';
 

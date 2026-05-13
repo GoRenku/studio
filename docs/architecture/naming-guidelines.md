@@ -540,7 +540,7 @@ Rationale:
 
 ## Data Layer Naming
 
-The data layer belongs in `@gorenku/studio-core/node`.
+The data layer belongs in `@gorenku/studio-core/server`.
 
 It should expose one organized service interface to CLI and Studio server. It
 should not expose Drizzle, `better-sqlite3`, raw database handles, or row-shaped
@@ -582,30 +582,30 @@ function:
 
 ```text
 project-data-service.ts
-sqlite-project-store.ts
-project-records.ts
-project-locale-records.ts
-visual-language-records.ts
-cast-member-records.ts
-narrative-records.ts
-project-reader.ts
-project-library-reader.ts
+database/lifecycle/store.ts
+database/access/project.ts
+database/access/project-locales.ts
+database/access/visual-language.ts
+database/access/cast-members.ts
+database/access/narrative.ts
+resources/full-project.ts
+resources/project-library.ts
 project-paths.ts
 cover-image-files.ts
-project-id-generator.ts
+entity-ids.ts
 ```
 
 These names mean:
 
-- `sqlite-project-store.ts`: opens and closes the project-local SQLite store;
-- `*-records.ts`: reads or writes persisted records through Drizzle;
-- `narrative-records.ts`: reads or writes the canonical narrative hierarchy
+- `database/lifecycle/store.ts`: opens and closes the project-local SQLite store;
+- `database/access/*`: reads or writes persisted records through Drizzle;
+- `database/access/narrative.ts`: reads or writes the canonical narrative hierarchy
   tables: episode, sequence, scene, and clip;
-- `project-reader.ts`: assembles the public `Project` contract from records;
-- `project-library-reader.ts`: assembles the public `ProjectLibrary` contract;
+- `resources/full-project.ts`: assembles the public `Project` contract from records;
+- `resources/project-library.ts`: assembles the public `ProjectLibrary` contract;
 - `project-paths.ts`: allocates and validates project folder/database paths;
 - `cover-image-files.ts`: copies and resolves project-local cover images;
-- `project-id-generator.ts`: creates short opaque project-local IDs.
+- `entity-ids.ts`: creates short opaque project-local IDs.
 
 Do not create files named only after a verb, such as:
 
@@ -634,18 +634,18 @@ CLI / Studio server
           -> better-sqlite3
 ```
 
-The record modules are thin wrappers around Drizzle operations. They exist so
+The database access modules are thin wrappers around Drizzle operations. They exist so
 the command and reader code does not become a long script full of raw table
 operations.
 
 Examples:
 
-- `project-records.ts` owns CRUD-style operations for the `project` table;
-- `visual-language-records.ts` owns CRUD-style operations for the
+- `database/access/project.ts` owns CRUD-style operations for the `project` table;
+- `database/access/visual-language.ts` owns CRUD-style operations for the
   `visual_language` table;
-- `cast-member-records.ts` owns CRUD-style operations for the
+- `database/access/cast-members.ts` owns CRUD-style operations for the
   `cast_member` table;
-- `narrative-records.ts` owns CRUD-style operations for `episode`, `sequence`,
+- `database/access/narrative.ts` owns CRUD-style operations for `episode`, `sequence`,
   `scene`, and `clip` because those tables form one narrative hierarchy.
 
 Repository classes are not required unless they add clarity. A module with

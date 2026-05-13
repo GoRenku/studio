@@ -2,7 +2,7 @@ import {
   StructuredError,
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
-import { initRenkuConfig } from '@gorenku/studio-core/node';
+import { initRenkuConfig } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 
 export interface RunInitCommandOptions {

@@ -69,7 +69,7 @@ For the current focus coordination slice, core should validate the existing
 Studio focus contract:
 
 ```ts
-export type MovieStudioSelection =
+export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'visualLanguage' }
   | { type: 'storyboard' }
@@ -81,29 +81,29 @@ export type MovieStudioSelection =
 
 export type StudioFocusRequest =
   | { screen: 'projectLibrary' }
-  | { screen: 'movieStudio'; selection: MovieStudioSelection };
+  | { screen: 'movieStudio'; selection: StudioSelection };
 ```
 
 Core should expose validation/resolution functions for those operation shapes:
 
 ```ts
-export type MovieStudioSelectionResolution =
+export type StudioSelectionResolution =
   | {
       ok: true;
-      selection: MovieStudioSelection;
+      selection: StudioSelection;
       context: StudioCurrentContext;
     }
   | {
       ok: false;
-      selection: MovieStudioSelection;
+      selection: StudioSelection;
       reason: 'selectionNotFound' | 'unsupportedSelection';
       diagnostics: DiagnosticIssue[];
     };
 
-export function resolveMovieStudioSelectionForProject(
+export function resolveStudioSelectionForProject(
   project: Project,
-  selection: MovieStudioSelection
-): MovieStudioSelectionResolution;
+  selection: StudioSelection
+): StudioSelectionResolution;
 ```
 
 The resolver validates against the actual project data model:
@@ -262,7 +262,7 @@ The validation should live with the core project data operation that performs
 the mutation, for example:
 
 ```text
-packages/core/src/node/project/
+packages/core/src/server/project/
   project-data-service.ts
   project-cast-member-validation.ts
   project-cast-member-validation.test.ts
@@ -295,7 +295,7 @@ The validation should live with the core service that queues or creates the
 generation task, for example:
 
 ```text
-packages/core/src/node/generation/
+packages/core/src/server/generation/
   generation-task-service.ts
   clip-generation-validation.ts
   clip-generation-validation.test.ts
@@ -329,7 +329,7 @@ The validation should live with the core service that owns bindings, for
 example:
 
 ```text
-packages/core/src/node/project/
+packages/core/src/server/project/
   project-binding-service.ts
   project-binding-validation.ts
   project-binding-validation.test.ts
@@ -365,7 +365,7 @@ export interface UpdateEpisodeInput {
 The validation should live with the episode-owning core operation, for example:
 
 ```text
-packages/core/src/node/project/
+packages/core/src/server/project/
   project-episode-service.ts
   project-episode-validation.ts
   project-episode-validation.test.ts
@@ -383,13 +383,13 @@ being validated is a Studio coordination operation:
 ```ts
 export type StudioFocusRequest =
   | { screen: 'projectLibrary' }
-  | { screen: 'movieStudio'; selection: MovieStudioSelection };
+  | { screen: 'movieStudio'; selection: StudioSelection };
 ```
 
 Therefore its validation belongs near the core Studio coordination projection:
 
 ```text
-packages/core/src/node/studio-coordination/
+packages/core/src/server/studio-coordination/
   studio-focus-validation.ts
   studio-focus-validation.test.ts
   studio-current-projection.ts

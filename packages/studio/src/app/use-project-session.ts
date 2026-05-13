@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  readMovieStudioSelectionContext,
+  readStudioSelectionContext,
   readProject,
   readProjectLibrary,
 } from '@/services/studio-projects-api';
 import type {
-  MovieStudioSelectionContextResponse,
+  StudioSelectionContextResponse,
   ProjectLibraryWithHttp,
   ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
-import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
+import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
 type StudioRoute =
   | { screen: 'projectLibrary' }
   | {
       screen: 'movieStudio';
       projectName: string;
-      selection: MovieStudioSelection;
+      selection: StudioSelection;
       routeError?: string;
     };
 
@@ -27,12 +27,12 @@ export interface ProjectSession {
   isLoadingProjectLibrary: boolean;
   isSelectingProject: boolean;
   projectSessionError: string | null;
-  movieStudioRouteSelection: MovieStudioSelection | null;
+  studioRouteSelection: StudioSelection | null;
   refreshProjectLibrary: () => Promise<void>;
   refreshProject: (projectName: string) => Promise<ProjectShellWithHttp>;
   navigateToProject: (projectName: string) => Promise<ProjectShellWithHttp | null>;
-  navigateToMovieStudioSelectionRoute: (
-    selection: MovieStudioSelection,
+  navigateToStudioSelectionRoute: (
+    selection: StudioSelection,
     projectName?: string
   ) => Promise<{ routeChanged: boolean }>;
   updateCurrentProject: (project: ProjectShellWithHttp) => void;
@@ -196,8 +196,8 @@ export function useProjectSession(): ProjectSession {
     }
   }, []);
 
-  const navigateToMovieStudioSelectionRoute = useCallback(
-    async (selection: MovieStudioSelection, requestedProjectName?: string) => {
+  const navigateToStudioSelectionRoute = useCallback(
+    async (selection: StudioSelection, requestedProjectName?: string) => {
       const projectName =
         requestedProjectName ??
         project?.identity.name ??
@@ -205,12 +205,12 @@ export function useProjectSession(): ProjectSession {
       if (!projectName) {
         return { routeChanged: false };
       }
-      const path = movieStudioSelectionRoutePath(projectName, selection);
+      const path = studioSelectionRoutePath(projectName, selection);
       if (
         window.location.pathname === path &&
         route.screen === 'movieStudio' &&
         route.projectName === projectName &&
-        movieStudioSelectionKey(route.selection) === movieStudioSelectionKey(selection)
+        studioSelectionKey(route.selection) === studioSelectionKey(selection)
       ) {
         return { routeChanged: false };
       }
@@ -243,12 +243,12 @@ export function useProjectSession(): ProjectSession {
     isLoadingProjectLibrary,
     isSelectingProject,
     projectSessionError,
-    movieStudioRouteSelection:
+    studioRouteSelection:
       route.screen === 'movieStudio' ? route.selection : null,
     refreshProjectLibrary,
     refreshProject,
     navigateToProject,
-    navigateToMovieStudioSelectionRoute,
+    navigateToStudioSelectionRoute,
     updateCurrentProject,
     returnToProjectLibrary,
   };
@@ -370,7 +370,7 @@ async function validateRouteSelection(
   if (canResolveRouteSelection(project, selection)) {
     return project;
   }
-  const context = await readMovieStudioSelectionContext(project.identity.name, {
+  const context = await readStudioSelectionContext(project.identity.name, {
     selection,
   });
   if (!context.valid) {
@@ -381,7 +381,7 @@ async function validateRouteSelection(
 
 function hydrateCastRouteSelection(
   project: ProjectShellWithHttp,
-  context: MovieStudioSelectionContextResponse
+  context: StudioSelectionContextResponse
 ): ProjectShellWithHttp {
   if (!context.valid) {
     return project;
@@ -406,8 +406,8 @@ function hydrateCastRouteSelection(
 }
 
 function selectionContextErrorMessage(
-  selection: MovieStudioSelection,
-  context: Extract<MovieStudioSelectionContextResponse, { valid: false }>
+  selection: StudioSelection,
+  context: Extract<StudioSelectionContextResponse, { valid: false }>
 ): string {
   if (context.reason === 'unsupportedSelection') {
     return `Unsupported Movie Studio selection: ${selection.type}`;
@@ -418,7 +418,7 @@ function selectionContextErrorMessage(
   return `Movie Studio selection not found: ${selection.type}`;
 }
 
-function selectionTypeLabel(type: MovieStudioSelection['type']): string {
+function selectionTypeLabel(type: StudioSelection['type']): string {
   switch (type) {
     case 'cast':
       return 'Cast member';
@@ -441,16 +441,16 @@ function selectionTypeLabel(type: MovieStudioSelection['type']): string {
 
 function canResolveRouteSelection(
   project: ProjectShellWithHttp,
-  selection: MovieStudioSelection
+  selection: StudioSelection
 ): boolean {
   if (selection.type === 'cast') {
     return project.cast.some((castEntry) => castEntry.id === selection.id);
   }
   if (selection.type === 'sequence') {
-    const storyStructure = project.navigation.storyStructure;
+    const narrative = project.navigation.narrative;
     return (
-      storyStructure.projectType === 'standaloneMovie' &&
-      storyStructure.sequences.items.some((sequence) => sequence.id === selection.id)
+      narrative.projectType === 'standaloneMovie' &&
+      narrative.sequences.items.some((sequence) => sequence.id === selection.id)
     );
   }
   if (selection.type === 'scene' || selection.type === 'clip') {
@@ -463,9 +463,9 @@ function projectRoutePath(projectName: string): string {
   return `/projects/${encodeURIComponent(projectName)}`;
 }
 
-function movieStudioSelectionRoutePath(
+function studioSelectionRoutePath(
   projectName: string,
-  selection: MovieStudioSelection
+  selection: StudioSelection
 ): string {
   if (selection.type === 'casting') {
     return `${projectRoutePath(projectName)}/cast`;
@@ -491,7 +491,7 @@ function movieStudioSelectionRoutePath(
   return projectRoutePath(projectName);
 }
 
-function movieStudioSelectionKey(selection: MovieStudioSelection): string {
+function studioSelectionKey(selection: StudioSelection): string {
   return JSON.stringify(selection);
 }
 

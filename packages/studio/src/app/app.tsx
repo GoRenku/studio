@@ -3,9 +3,9 @@ import { ProjectLibraryScreen } from '@/features/project-library/project-library
 import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
-import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
+import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
-const defaultMovieStudioSelection: MovieStudioSelection = {
+const defaultStudioSelection: StudioSelection = {
   type: 'projectInformation',
 };
 
@@ -14,9 +14,9 @@ function App() {
 
   useStudioCoordination({
     projectSession,
-    movieStudioSelection: {
+    studioSelection: {
       selection:
-        projectSession.movieStudioRouteSelection ?? defaultMovieStudioSelection,
+        projectSession.studioRouteSelection ?? defaultStudioSelection,
     },
   });
 
@@ -38,8 +38,8 @@ function App() {
         project={projectSession.project}
         onHome={projectSession.returnToProjectLibrary}
         onProjectChange={projectSession.updateCurrentProject}
-        onNavigateSelection={projectSession.navigateToMovieStudioSelectionRoute}
-        selection={projectSession.movieStudioRouteSelection}
+        onNavigateSelection={projectSession.navigateToStudioSelectionRoute}
+        selection={projectSession.studioRouteSelection}
       />
     );
   }

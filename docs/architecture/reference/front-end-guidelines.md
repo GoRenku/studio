@@ -434,13 +434,13 @@ Good examples:
 
 ```ts
 buildMovieStudioLookup(project)
-resolveMovieStudioSelection(selection, lookup)
+resolveStudioSelection(selection, lookup)
 readProjectLibrary()
 readProject(projectName)
 returnToProjectLibrary()
 useProjectSession()
 useProjectLibrarySearch(projects, query)
-useMovieStudioSelection(project)
+useStudioSelection(project)
 ```
 
 Avoid examples:

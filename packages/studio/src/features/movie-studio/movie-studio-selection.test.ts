@@ -3,14 +3,14 @@ import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import type { StoryNavigationState } from './use-story-navigation';
 import {
   buildMovieStudioLookup,
-  resolveMovieStudioSelection,
+  resolveStudioSelection,
 } from './movie-studio-selection';
 
 describe('movie studio selection', () => {
   it('resolves clip selections to the clip title', () => {
     const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
-    const selected = resolveMovieStudioSelection(
+    const selected = resolveStudioSelection(
       { type: 'clip', id: 'clip_1_1_1' },
       lookup
     );
@@ -23,7 +23,7 @@ describe('movie studio selection', () => {
   it('resolves cast selections to the cast member name', () => {
     const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
-    const selected = resolveMovieStudioSelection(
+    const selected = resolveStudioSelection(
       { type: 'cast', id: 'cast_narrator' },
       lookup
     );
@@ -35,7 +35,7 @@ describe('movie studio selection', () => {
   it('resolves sequence selections to the sequence title', () => {
     const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
-    const selected = resolveMovieStudioSelection(
+    const selected = resolveStudioSelection(
       { type: 'sequence', id: 'seq_opening' },
       lookup
     );
@@ -46,7 +46,7 @@ describe('movie studio selection', () => {
   it('resolves scene selections to the scene title', () => {
     const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
-    const selected = resolveMovieStudioSelection(
+    const selected = resolveStudioSelection(
       { type: 'scene', id: 'scene_1_1' },
       lookup
     );
@@ -57,7 +57,7 @@ describe('movie studio selection', () => {
   it('falls back to the full storyboard for stale story selections', () => {
     const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
-    const selected = resolveMovieStudioSelection(
+    const selected = resolveStudioSelection(
       { type: 'scene', id: 'missing_scene' },
       lookup
     );
@@ -116,7 +116,7 @@ function makeProject(): ProjectShellWithHttp {
       },
       visualLanguage: { items: [], nextCursor: null },
       continuityReferences: { items: [], nextCursor: null },
-      storyStructure: {
+      narrative: {
         projectType: 'standaloneMovie',
         sequences: {
           items: [

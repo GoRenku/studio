@@ -8,11 +8,11 @@ import {
   type Asset,
   type AssetFile,
   type AssetTarget,
-  type MovieStudioSelection,
+  type StudioSelection,
   type ProjectDataService,
   type ProjectInformationUpdate,
   type ProductionExportInput,
-} from '@gorenku/studio-core/node';
+} from '@gorenku/studio-core/server';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -49,7 +49,7 @@ type ProjectsRouteProjectData = Pick<
   | 'listAssetPage'
   | 'readCastDesignResource'
   | 'readClipDesignResource'
-  | 'readMovieStudioSelectionContext'
+  | 'readStudioSelectionContext'
   | 'updateProjectInformation'
   | 'readMarkdownAssetContent'
   | 'updateMarkdownAssetContent'
@@ -250,7 +250,7 @@ export function createProjectsRoute(
       try {
         const projectName = c.req.param('projectName') as string;
         const body = readSelectionContextRequest(await c.req.json());
-        const result = await projectData.readMovieStudioSelectionContext({
+        const result = await projectData.readStudioSelectionContext({
           projectName,
           selection: body.selection,
         });
@@ -599,7 +599,7 @@ function readRequiredTargetId(
 }
 
 function readSelectionContextRequest(input: unknown): {
-  selection: MovieStudioSelection;
+  selection: StudioSelection;
 } {
   const context = 'movie studio selection context request';
   const issues: DiagnosticIssue[] = [];
@@ -620,7 +620,7 @@ function readSelectionContextRequest(input: unknown): {
   if (!result.valid || type === null) {
     throwSelectionContextRequestError(result.issues);
   }
-  if (!isMovieStudioSelectionType(type)) {
+  if (!isStudioSelectionType(type)) {
     throwSelectionContextRequestError([
       createDiagnosticError(
         'STUDIO_SERVER034',
@@ -647,13 +647,13 @@ function readSelectionContextRequest(input: unknown): {
     ]);
   }
   return {
-    selection: movieStudioSelectionFromRequest(type, id),
+    selection: studioSelectionFromRequest(type, id),
   };
 }
 
-function isMovieStudioSelectionType(
+function isStudioSelectionType(
   type: string
-): type is MovieStudioSelection['type'] {
+): type is StudioSelection['type'] {
   return (
     type === 'projectInformation' ||
     type === 'visualLanguage' ||
@@ -666,10 +666,10 @@ function isMovieStudioSelectionType(
   );
 }
 
-function movieStudioSelectionFromRequest(
-  type: MovieStudioSelection['type'],
+function studioSelectionFromRequest(
+  type: StudioSelection['type'],
   id: string | undefined
-): MovieStudioSelection {
+): StudioSelection {
   switch (type) {
     case 'sequence':
     case 'scene':

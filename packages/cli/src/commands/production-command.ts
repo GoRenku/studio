@@ -6,7 +6,7 @@ import {
   createProjectDataService,
   type ProductionExportSummary,
   type ProductionExportVariant,
-} from '@gorenku/studio-core/node';
+} from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 
 export interface RunProductionCommandOptions {

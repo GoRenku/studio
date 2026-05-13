@@ -14,7 +14,7 @@ import {
   heartbeatStudioRuntimeDescriptor,
   releaseStudioRuntimeDescriptor,
   type StudioRuntimeDescriptor,
-} from '@gorenku/studio-core/node';
+} from '@gorenku/studio-core/server';
 import {
   createStudioBootstrapScript,
   createStudioRuntimeToken,

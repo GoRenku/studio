@@ -1,6 +1,6 @@
 import type {
-  MovieStudioSelectionContextRequest,
-  MovieStudioSelectionContextResponse,
+  StudioSelectionContextRequest,
+  StudioSelectionContextResponse,
   ClipNavigationPageResponse,
   SceneNavigationPageResponse,
   SequenceNavigationPageResponse,
@@ -61,10 +61,10 @@ export async function readProjectLibrary(): Promise<ProjectLibraryWithHttp> {
   return body.library;
 }
 
-export async function readMovieStudioSelectionContext(
+export async function readStudioSelectionContext(
   projectName: string,
-  request: MovieStudioSelectionContextRequest
-): Promise<MovieStudioSelectionContextResponse> {
+  request: StudioSelectionContextRequest
+): Promise<StudioSelectionContextResponse> {
   const response = await fetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/movie-studio-selection/context`,
     {
@@ -78,7 +78,7 @@ export async function readMovieStudioSelectionContext(
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  return (await response.json()) as MovieStudioSelectionContextResponse;
+  return (await response.json()) as StudioSelectionContextResponse;
 }
 
 export async function readStandaloneMovieSequenceNavigation(

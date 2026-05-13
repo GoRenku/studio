@@ -4,7 +4,7 @@ import {
   createStudioOperationId,
   resolveRenkuStorageRoot,
   type StudioProjectRef,
-} from '@gorenku/studio-core/node';
+} from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 
 export async function runProjectSelectionCommand(options: {

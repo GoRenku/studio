@@ -2,21 +2,21 @@ import { useMemo } from 'react';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   buildMovieStudioLookup,
-  resolveMovieStudioSelection,
-  type MovieStudioSelection,
+  resolveStudioSelection,
+  type StudioSelection,
 } from './movie-studio-selection';
 import type { StoryNavigationState } from './use-story-navigation';
 
-const defaultMovieStudioSelection: MovieStudioSelection = {
+const defaultStudioSelection: StudioSelection = {
   type: 'projectInformation',
 };
 
-export function useMovieStudioSelectionResolution(
+export function useStudioSelectionResolution(
   project: ProjectShellWithHttp | null,
-  selection: MovieStudioSelection | null,
+  selection: StudioSelection | null,
   storyNavigation: StoryNavigationState | null
 ) {
-  const routeSelection = selection ?? defaultMovieStudioSelection;
+  const routeSelection = selection ?? defaultStudioSelection;
   const lookup = useMemo(
     () =>
       project && storyNavigation
@@ -32,7 +32,7 @@ export function useMovieStudioSelectionResolution(
     [project, storyNavigation]
   );
   const resolvedSelection = useMemo(
-    () => resolveMovieStudioSelection(routeSelection, lookup),
+    () => resolveStudioSelection(routeSelection, lookup),
     [lookup, routeSelection]
   );
 

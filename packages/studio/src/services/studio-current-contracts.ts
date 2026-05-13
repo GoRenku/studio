@@ -1,4 +1,4 @@
-import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
+import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
 export interface StudioProjectRef {
   name: string;
@@ -8,7 +8,7 @@ export interface StudioProjectRef {
 
 export type StudioFocus =
   | { screen: 'projectLibrary' }
-  | { screen: 'movieStudio'; selection: MovieStudioSelection };
+  | { screen: 'movieStudio'; selection: StudioSelection };
 
 export interface StudioEventBase {
   id: string;
@@ -70,7 +70,7 @@ export interface StudioCurrentResponse {
     id: string;
     title: string;
   } | null;
-  selection: MovieStudioSelection | null;
+  selection: StudioSelection | null;
   context: unknown | null;
   pendingRequest: StudioPendingRequest | null;
   warnings: unknown[];

@@ -1,15 +1,11 @@
 import {
   PROJECT_KIND,
-  TASK_KIND,
-  WORKFLOW_KIND,
   getStudioCorePackageInfo,
 } from './index.js';
 
 describe('studio-core scaffold', () => {
   it('exports Renku Studio document kinds', () => {
     expect(PROJECT_KIND).toBe('renku.project');
-    expect(WORKFLOW_KIND).toBe('renku.workflow');
-    expect(TASK_KIND).toBe('renku.task');
   });
 
   it('identifies the new Renku Studio domain package', () => {

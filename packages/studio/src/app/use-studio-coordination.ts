@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProjectSession } from '@/app/use-project-session';
-import type { MovieStudioSelection } from '@/features/movie-studio/movie-studio-selection';
+import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   readStudioEvents,
@@ -25,14 +25,14 @@ const ACTIVITY_DEBOUNCE_MS = 30_000;
 const VISIBLE_HEARTBEAT_MS = 60_000;
 
 export interface StudioCoordinationSelection {
-  selection: MovieStudioSelection;
+  selection: StudioSelection;
 }
 
 export function useStudioCoordination(input: {
   projectSession: ProjectSession;
-  movieStudioSelection: StudioCoordinationSelection | null;
+  studioSelection: StudioCoordinationSelection | null;
 }) {
-  const { projectSession, movieStudioSelection } = input;
+  const { projectSession, studioSelection } = input;
   const [browserSessionId] = useState(readBrowserSessionId);
   const cursorRef = useRef<string | undefined>(undefined);
   const hasInitializedEventCursorRef = useRef(false);
@@ -51,7 +51,7 @@ export function useStudioCoordination(input: {
   const requestFocusReportRef = useRef(() => {
     setFocusReportVersion((version) => version + 1);
   });
-  const selection = movieStudioSelection?.selection ?? null;
+  const selection = studioSelection?.selection ?? null;
 
   useEffect(() => {
     projectSessionRef.current = projectSession;
@@ -418,7 +418,7 @@ async function applyFocusRequest(input: {
     }
     input.appliedRequestIdRef.current = input.event.id;
     input.appliedFocusRequestIdsRef.current.add(input.event.id);
-    await input.projectSessionRef.current.navigateToMovieStudioSelectionRoute(
+    await input.projectSessionRef.current.navigateToStudioSelectionRoute(
       input.event.focus.selection,
       project.identity.name
     );

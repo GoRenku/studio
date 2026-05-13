@@ -9,7 +9,7 @@ import {
 import type {
   ClipNavigationRow,
   EpisodeNavigationRow,
-  MovieStudioSelectionContext,
+  StudioSelectionContext,
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
@@ -23,10 +23,10 @@ import type {
 import {
   readClipNavigation,
   readEpisodeSequenceNavigation,
-  readMovieStudioSelectionContext,
+  readStudioSelectionContext,
   readSceneNavigation,
 } from '@/services/studio-projects-api';
-import type { MovieStudioSelection } from './movie-studio-selection';
+import type { StudioSelection } from './movie-studio-selection';
 
 export interface StoryNavigationState {
   projectType: ProjectShellWithHttp['identity']['type'];
@@ -44,10 +44,10 @@ export interface StoryNavigationState {
 
 export function useStoryNavigation(
   project: ProjectShellWithHttp,
-  selection: MovieStudioSelection
+  selection: StudioSelection
 ): StoryNavigationState {
   const projectName = project.identity.name;
-  const storyStructure = project.navigation.storyStructure;
+  const narrative = project.navigation.narrative;
   const [episodeSequencePages, setEpisodeSequencePages] = useState<
     Map<string, SequenceNavigationPageResponse>
   >(() => new Map());
@@ -58,7 +58,7 @@ export function useStoryNavigation(
     () => new Map()
   );
   const [selectionContext, setSelectionContext] =
-    useState<MovieStudioSelectionContext | null>(null);
+    useState<StudioSelectionContext | null>(null);
   const [loadingKeys, setLoadingKeys] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
 
@@ -118,7 +118,7 @@ export function useStoryNavigation(
       return;
     }
     if (canResolveSelection(selection, {
-      storyStructure,
+      narrative,
       episodeSequencePages,
       scenePages,
       clipPages,
@@ -127,7 +127,7 @@ export function useStoryNavigation(
       return;
     }
     let cancelled = false;
-    void readMovieStudioSelectionContext(projectName, { selection })
+    void readStudioSelectionContext(projectName, { selection })
       .then((result) => {
         if (cancelled) {
           return;
@@ -153,18 +153,18 @@ export function useStoryNavigation(
     scenePages,
     selection,
     selectionContext,
-    storyStructure,
+    narrative,
   ]);
 
   return useMemo(() => {
     const contextRows = rowsFromSelectionContext(selectionContext);
     const episodes =
-      storyStructure.projectType === 'series'
-        ? appendUniqueRows(storyStructure.episodes.items, contextRows.episodes)
+      narrative.projectType === 'series'
+        ? appendUniqueRows(narrative.episodes.items, contextRows.episodes)
         : [];
     const standaloneSequences =
-      storyStructure.projectType === 'standaloneMovie'
-        ? appendUniqueRows(storyStructure.sequences.items, contextRows.sequences)
+      narrative.projectType === 'standaloneMovie'
+        ? appendUniqueRows(narrative.sequences.items, contextRows.sequences)
         : [];
     const sequencesByEpisodeId = new Map<string, SequenceNavigationRow[]>();
     for (const [episodeId, page] of episodeSequencePages) {
@@ -229,7 +229,7 @@ export function useStoryNavigation(
     project.identity.type,
     scenePages,
     selectionContext,
-    storyStructure,
+    narrative,
   ]);
 }
 
@@ -257,7 +257,7 @@ async function loadNavigationPage<T>({
   }
 }
 
-function rowsFromSelectionContext(context: MovieStudioSelectionContext | null): {
+function rowsFromSelectionContext(context: StudioSelectionContext | null): {
   episodes: EpisodeNavigationRow[];
   sequences: SequenceNavigationRow[];
   sequencesByEpisodeId: Map<string, SequenceNavigationRow[]>;
@@ -294,13 +294,13 @@ function rowsFromSelectionContext(context: MovieStudioSelectionContext | null): 
 }
 
 function canResolveSelection(
-  selection: MovieStudioSelection,
+  selection: StudioSelection,
   input: {
-    storyStructure: ProjectShellWithHttp['navigation']['storyStructure'];
+    narrative: ProjectShellWithHttp['navigation']['narrative'];
     episodeSequencePages: Map<string, SequenceNavigationPageResponse>;
     scenePages: Map<string, SceneNavigationPageResponse>;
     clipPages: Map<string, ClipNavigationPageResponse>;
-    selectionContext: MovieStudioSelectionContext | null;
+    selectionContext: StudioSelectionContext | null;
   }
 ): boolean {
   if (selection.type === 'sequence') {
@@ -327,18 +327,18 @@ function canResolveSelection(
 }
 
 function sequenceRows(input: {
-  storyStructure: ProjectShellWithHttp['navigation']['storyStructure'];
+  narrative: ProjectShellWithHttp['navigation']['narrative'];
   episodeSequencePages: Map<string, SequenceNavigationPageResponse>;
 }): SequenceNavigationRow[] {
-  if (input.storyStructure.projectType === 'standaloneMovie') {
-    return input.storyStructure.sequences.items;
+  if (input.narrative.projectType === 'standaloneMovie') {
+    return input.narrative.sequences.items;
   }
   return Array.from(input.episodeSequencePages.values()).flatMap((page) => page.items);
 }
 
 function contextMatches(
-  context: MovieStudioSelectionContext | null,
-  selection: MovieStudioSelection
+  context: StudioSelectionContext | null,
+  selection: StudioSelection
 ): boolean {
   if (!context) {
     return false;
@@ -356,8 +356,8 @@ function contextMatches(
 }
 
 function isStorySelection(
-  selection: MovieStudioSelection
-): selection is Extract<MovieStudioSelection, { type: 'sequence' | 'scene' | 'clip' }> {
+  selection: StudioSelection
+): selection is Extract<StudioSelection, { type: 'sequence' | 'scene' | 'clip' }> {
   return selection.type === 'sequence' || selection.type === 'scene' || selection.type === 'clip';
 }
 

@@ -18,7 +18,7 @@ Decision history:
 The Drizzle TypeScript schema is the source of truth for table structure:
 
 ```text
-packages/core/src/schema/index.ts
+packages/core/src/server/schema/index.ts
 ```
 
 Application code must not define table structure in a second place. In
@@ -106,7 +106,7 @@ Drizzle Kit from normal runtime paths.
 
 When changing the project SQLite schema:
 
-1. Edit the Drizzle schema in `packages/core/src/schema/index.ts`.
+1. Edit the Drizzle schema in `packages/core/src/server/schema/index.ts`.
 2. Generate a migration from `packages/core`:
 
    ```bash

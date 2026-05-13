@@ -164,7 +164,7 @@ function makeProject(_summary: string): ProjectShellWithHttp {
       cast: { items: [], nextCursor: null },
       visualLanguage: { items: [], nextCursor: null },
       continuityReferences: { items: [], nextCursor: null },
-      storyStructure: {
+      narrative: {
         projectType: 'standaloneMovie',
         sequences: {
           items: [

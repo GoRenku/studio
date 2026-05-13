@@ -7,7 +7,7 @@ Status: accepted
 ## Context
 
 Renku Studio stores project metadata in project-local SQLite databases. The
-schema lives in TypeScript under `packages/core/src/schema`.
+schema lives in TypeScript under `packages/core/src/server/schema`.
 
 Migration code can drift when hand-written SQL, generated SQL, and custom
 TypeScript registries are all treated as sources of truth. The project needs a

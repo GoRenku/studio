@@ -25,7 +25,7 @@
     /* Workspace aliases */
     "baseUrl": ".",
     "paths": {
-      "@gorenku/studio-core/node": ["../core/dist/node/index.d.ts"]
+      "@gorenku/studio-core/server": ["../core/dist/server/index.d.ts"]
     }
   },
   "include": ["vite.config.ts"]

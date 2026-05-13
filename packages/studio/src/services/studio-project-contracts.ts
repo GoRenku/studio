@@ -4,8 +4,8 @@ import type {
   ClipNavigationRow,
   ClipDesignResource,
   EpisodeNavigationRow,
-  MovieStudioSelection,
-  MovieStudioSelectionContextResult,
+  StudioSelection,
+  StudioSelectionContextResult,
   PageResponse,
   ProductionExportSummary,
   ProjectInformationResource,
@@ -66,9 +66,9 @@ export type SceneNavigationPageResponse = StudioPageResponse<SceneNavigationRow>
 
 export type ClipNavigationPageResponse = StudioPageResponse<ClipNavigationRow>;
 
-export type MovieStudioSelectionContextRequest = {
-  selection: MovieStudioSelection;
+export type StudioSelectionContextRequest = {
+  selection: StudioSelection;
 };
 
-export type MovieStudioSelectionContextResponse =
-  MovieStudioSelectionContextResult;
+export type StudioSelectionContextResponse =
+  StudioSelectionContextResult;

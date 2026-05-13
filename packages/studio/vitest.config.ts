@@ -15,9 +15,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@gorenku/studio-core/node': path.resolve(
+      '@gorenku/studio-core/server': path.resolve(
         __dirname,
-        '../core/src/node/index.ts'
+        '../core/src/server/index.ts'
       ),
     },
   },

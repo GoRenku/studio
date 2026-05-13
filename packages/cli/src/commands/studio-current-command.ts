@@ -1,4 +1,4 @@
-import { createStudioCoordinationService } from '@gorenku/studio-core/node';
+import { createStudioCoordinationService } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 
 export async function runStudioCurrentCommand(options: {

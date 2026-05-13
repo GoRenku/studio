@@ -29,7 +29,7 @@ or another explicit sync layer.
 
 Use `better-sqlite3` as the first Node.js SQLite driver for Renku Studio.
 
-Keep `better-sqlite3` behind the Node-side `@gorenku/studio-core/node` storage
+Keep `better-sqlite3` behind the Node-side `@gorenku/studio-core/server` storage
 adapter. It must not leak into browser imports, domain command signatures, query
 signatures, or projection signatures.
 

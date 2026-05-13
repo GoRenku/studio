@@ -134,7 +134,7 @@ Core should expose separate entry points:
 @gorenku/studio-core
   browser-safe contracts, DTOs, constants, pure validation helpers
 
-@gorenku/studio-core/node
+@gorenku/studio-core/server
   filesystem access, SQLite driver setup, Drizzle database, migrations,
   command handlers that touch disk
 ```
@@ -186,7 +186,7 @@ The UI should not:
 - infer relationships from folder paths;
 - encode domain mutation rules;
 - own long-running task state;
-- import `@gorenku/studio-core/node`;
+- import `@gorenku/studio-core/server`;
 - import `better-sqlite3`, Drizzle's SQLite driver, or Node filesystem modules.
 
 ## `studio-cli`
