@@ -94,9 +94,23 @@ packages/studio/server/
   routes/
     health.ts
     projects.ts
+    navigation.ts
+    assets.ts
+    project-information.ts
+    markdown-assets.ts
+    production-exports.ts
+    movie-studio-selection-context.ts
     studio-events.ts
 
   http/
+    pagination-request.ts
+    asset-file-response.ts
+    asset-request.ts
+    project-information-request.ts
+    markdown-asset-content-request.ts
+    production-export-request.ts
+    movie-studio-selection-request.ts
+    request-validation.ts
     project-responses.ts
     project-cover-url.ts
     studio-event-responses.ts
@@ -110,8 +124,19 @@ File meanings:
 - `runtime.ts`: starts the Node server and serves built Studio assets;
 - `errors.ts`: translates structured core errors into HTTP responses;
 - `routes/health.ts`: health-check resource route module;
-- `routes/projects.ts`: project resource route module;
+- `routes/projects.ts`: top-level `/studio-api/projects` resource route module;
+- `routes/navigation.ts`: navigation page routes mounted below one project;
+- `routes/assets.ts`: asset page, selection, and file routes mounted below one project;
+- `routes/project-information.ts`: Project Information routes mounted below one project;
+- `routes/markdown-assets.ts`: Markdown asset content routes mounted below one project;
+- `routes/production-exports.ts`: production export route mounted below one project;
+- `routes/movie-studio-selection-context.ts`: Movie Studio selection context route
+  mounted below one project;
 - `routes/studio-events.ts`: Studio coordination event resource route module;
+- `http/*-request.ts`: request readers that translate raw HTTP input into
+  core service input and structured diagnostics;
+- `http/asset-file-response.ts`: asset file response mechanics, including
+  content type and cache headers;
 - `http/project-responses.ts`: adapts core `Project` and `ProjectLibrary`
   contracts into HTTP response bodies when HTTP-only fields are needed;
 - `http/project-cover-url.ts`: builds Studio API cover URLs only;
@@ -137,6 +162,12 @@ Why:
 - `project-routes.ts` repeats what the `routes/` folder already says;
 - one file per route method is not the Hono convention for this size of server;
 - the resource module should be `routes/projects.ts`.
+
+When a mounted resource module is already scoped below `/studio-api/projects`,
+do not add `project-` as a filename prefix just to restate that scope. Use names
+such as `routes/assets.ts`, `routes/navigation.ts`, and
+`http/asset-request.ts`. Keep `Project` in names only when it is part of the
+domain concept, such as `ProjectInformation`.
 
 ## Root App
 
@@ -201,9 +232,9 @@ Use plural resource names for route module files:
 ```text
 routes/projects.ts
 routes/health.ts
-routes/cast.ts
-routes/clips.ts
-routes/sequences.ts
+routes/assets.ts
+routes/markdown-assets.ts
+routes/production-exports.ts
 ```
 
 Use route paths that match the mounted resource:
@@ -217,8 +248,15 @@ Inside `routes/projects.ts`, use resource-relative paths:
 ```ts
 .get('/')
 .get('/:projectName')
+.route('/:projectName', createNavigationRoute(...))
+.route('/:projectName', createAssetsRoute(...))
 .get('/:projectName/cover')
 ```
+
+Child resource modules mounted below `/:projectName` should use paths relative
+to that project. For example, `routes/assets.ts` owns `.get('/assets')` and
+`.get('/cast/:castMemberId/assets')`; it should not be named
+`project-assets.ts`.
 
 Browser route selection is owned by the browser URL, not by a Studio API
 selection endpoint. See `docs/decisions/0008-use-url-owned-studio-routes.md`.

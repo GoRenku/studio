@@ -695,6 +695,10 @@ Use plural resource module filenames:
 server/app.ts
 server/routes/health.ts
 server/routes/projects.ts
+server/routes/assets.ts
+server/routes/navigation.ts
+server/routes/markdown-assets.ts
+server/routes/production-exports.ts
 server/http/project-responses.ts
 server/http/project-cover-url.ts
 ```
@@ -703,7 +707,14 @@ These names mean:
 
 - `server/app.ts`: creates the root Hono app and mounts resource modules;
 - `server/routes/health.ts`: owns the health-check resource route;
-- `server/routes/projects.ts`: owns the `/studio-api/projects` resource routes;
+- `server/routes/projects.ts`: owns the top-level `/studio-api/projects`
+  resource routes and mounts bounded child resource modules;
+- `server/routes/assets.ts`: owns asset page, selection, and file routes below
+  one project;
+- `server/routes/navigation.ts`: owns navigation page routes below one project;
+- `server/routes/project-information.ts`: owns Project Information routes;
+- `server/routes/markdown-assets.ts`: owns Markdown asset content routes;
+- `server/routes/production-exports.ts`: owns production export routes;
 - `server/http/project-responses.ts`: adapts core contracts to HTTP response
   shapes when HTTP-only fields are needed;
 - `server/http/project-cover-url.ts`: builds Studio API cover URLs only.
@@ -717,11 +728,14 @@ const projects = new Hono()
   })
   .get('/:projectName', async (c) => {
     // read one project
-  })
-  .get('/:projectName/cover', async (c) => {
-    // stream one project cover
   });
 ```
+
+When `routes/projects.ts` mounts child modules under `/:projectName`, those
+child modules should use the resource name without a noisy `project-` prefix:
+`routes/assets.ts`, not `routes/project-assets.ts`; `routes/navigation.ts`, not
+`routes/project-navigation.ts`. Use `Project` only when it names a domain
+concept, such as `ProjectInformation`.
 
 Avoid:
 
@@ -732,6 +746,8 @@ project-routes.ts
 route-list-projects.ts
 route-read-project.ts
 route-read-project-cover.ts
+project-assets.ts
+project-navigation.ts
 ```
 
 Reasons:
@@ -741,6 +757,9 @@ Reasons:
 - `project-routes.ts` repeats what the `routes/` folder already says;
 - one file per HTTP method is not the Hono convention for this server size;
 - the route module should be named after the resource: `routes/projects.ts`.
+- `project-assets.ts` and `project-navigation.ts` repeat the enclosing
+  `/studio-api/projects/:projectName` scope instead of naming the bounded
+  resource.
 
 The Studio server may add HTTP-only fields such as `coverUrl`.
 
