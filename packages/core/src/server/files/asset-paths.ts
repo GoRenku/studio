@@ -1,4 +1,5 @@
-import { joinProjectRelativePath, type ProjectRelativePath } from './project-relative-paths.js';
+import type { ProjectRelativePath } from '../../client/index.js';
+import { joinProjectRelativePath } from './project-relative-paths.js';
 
 export const WORKING_ASSETS_BASE_ROOT = joinProjectRelativePath(
   'working-assets',

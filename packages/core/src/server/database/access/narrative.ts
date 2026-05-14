@@ -1,4 +1,4 @@
-import { asc } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { clips, episodes, scenes, sequences } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
@@ -91,4 +91,13 @@ export function listSceneRecords(session: DatabaseSession): SceneRecord[] {
 
 export function listClipRecords(session: DatabaseSession): ClipRecord[] {
   return session.db.select().from(clips).orderBy(asc(clips.position)).all();
+}
+
+export function readClipRecord(
+  session: DatabaseSession,
+  clipId: string
+): ClipRecord | null {
+  return (
+    session.db.select().from(clips).where(eq(clips.id, clipId)).get() ?? null
+  );
 }

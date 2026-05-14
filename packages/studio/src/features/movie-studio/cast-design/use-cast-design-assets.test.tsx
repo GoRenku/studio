@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { Asset, CastMember, RichTextAssetLink } from '@gorenku/studio-core';
+import type { Asset, CastMember, RichTextAssetLink } from '@gorenku/studio-core/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   invalidateCastDesignResource,

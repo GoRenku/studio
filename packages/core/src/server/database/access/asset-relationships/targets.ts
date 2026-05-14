@@ -21,15 +21,37 @@ import { ProjectDataError } from '../../../project-data-error.js';
 import type { EntityIdPrefix } from '../../../entity-ids.js';
 import type { DatabaseSession } from '../../lifecycle/store.js';
 
+type RelationshipTextColumn = AnySQLiteColumn<{ data: string; notNull: true }>;
+type NullableRelationshipTextColumn = AnySQLiteColumn<{
+  data: string;
+  notNull: false;
+}>;
+type RelationshipNumberColumn = AnySQLiteColumn<{ data: number; notNull: true }>;
+type NullableRelationshipNumberColumn = AnySQLiteColumn<{
+  data: number;
+  notNull: false;
+}>;
+
+export type AssetRelationshipTable = SQLiteTable & {
+  id: RelationshipTextColumn;
+  assetId: RelationshipTextColumn;
+  localeId: NullableRelationshipTextColumn;
+  role: RelationshipTextColumn;
+  sortOrder: RelationshipNumberColumn;
+  selection: RelationshipTextColumn;
+  selectionOrder: NullableRelationshipNumberColumn;
+  updatedAt: RelationshipTextColumn;
+};
+
 export interface AssetRelationshipTableConfig {
   target: AssetTarget;
-  table: SQLiteTable;
+  table: AssetRelationshipTable;
   idPrefix: EntityIdPrefix;
   targetValueKey: string | null;
-  targetColumn: AnySQLiteColumn | null;
+  targetColumn: RelationshipTextColumn | null;
   targetId: string | null;
   targetEntityTable: SQLiteTable | null;
-  targetEntityIdColumn: AnySQLiteColumn | null;
+  targetEntityIdColumn: RelationshipTextColumn | null;
 }
 
 export function assetRelationshipTableConfig(

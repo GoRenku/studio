@@ -14,8 +14,8 @@ export default defineConfig({
         replacement: new URL('../core/src/server/index.ts', import.meta.url).pathname,
       },
       {
-        find: '@gorenku/studio-core',
-        replacement: new URL('../core/src/index.ts', import.meta.url).pathname,
+        find: '@gorenku/studio-core/client',
+        replacement: new URL('../core/src/client/index.ts', import.meta.url).pathname,
       },
     ],
   },

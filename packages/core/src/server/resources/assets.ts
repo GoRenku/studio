@@ -1,102 +1,33 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import type {
   Asset,
   AssetLocaleContext,
   AssetTarget,
-  RegisterAssetInput,
+  PageResponse,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../renku-config.js';
-import { insertAssetFileRecord } from '../database/access/asset-files.js';
-import { insertAssetRecord } from '../database/access/assets.js';
 import {
-  insertAssetRelationshipRecord,
+  listAssetRelationshipPage,
   listAssetRelationships,
-  nextAssetRelationshipSortOrder,
-  nextAssetSelectionOrder,
-  readAssetRelationshipRecord,
-  updateAssetRelationshipSelection,
 } from '../database/access/asset-relationships/index.js';
-import {
-  assertAssetTargetExists,
-  assertProjectLocaleExists,
-  assetRelationshipTableConfig,
-} from '../database/access/asset-relationships/targets.js';
 import { openProjectStore, type DatabaseSession } from '../database/lifecycle/store.js';
-import { resolveProjectFolder } from '../files/project-paths.js';
 import {
-  normalizeProjectRelativePath,
-  resolveProjectRelativePath,
-} from '../files/project-relative-paths.js';
-import {
-  createRandomIdGenerator,
-  createUniqueIdAllocator,
-} from '../entity-ids.js';
+  isPathInside,
+  resolveProjectFolder,
+} from '../files/project-paths.js';
+import { resolveProjectRelativePath } from '../files/project-relative-paths.js';
+import type {
+  ListAssetPageInput,
+  ResolveProjectAssetFileInput,
+  ResolvedProjectAssetFile,
+} from '../project-data-service-contracts.js';
 
-export async function registerAsset(
-  input: RegisterAssetInput & RenkuConfigPathOptions
-): Promise<Asset> {
-  const normalizedInput = normalizeRegisterAssetInput(input);
-  const { projectFolder, session } = await openAssetSession(normalizedInput);
+export async function listAssetPage(
+  input: ListAssetPageInput
+): Promise<PageResponse<Asset>> {
+  const { session } = await openAssetSession(input);
   try {
-    const targetConfig = assetRelationshipTableConfig(normalizedInput.target);
-    assertAssetTargetExists(session, targetConfig);
-    assertProjectLocaleExists(session, normalizedInput.locale?.localeId);
-
-    const absolutePath = resolveProjectRelativePath(
-      projectFolder,
-      normalizedInput.projectRelativePath
-    );
-    assertResolvedPathInsideProject(projectFolder, absolutePath);
-    const fileStats = await statExistingFile(absolutePath);
-
-    const now = new Date().toISOString();
-    const ids = createUniqueIdAllocator(createRandomIdGenerator());
-    const assetId = ids('asset');
-    const fileId = ids('asset_file');
-    const relationshipId = ids(targetConfig.idPrefix);
-    const localeId = normalizedInput.locale?.localeId ?? null;
-    const sortOrder = nextAssetRelationshipSortOrder(session, {
-      target: normalizedInput.target,
-      role: normalizedInput.role,
-      localeId,
-    });
-
-    session.db.transaction((tx) => {
-      const transactionSession = { ...session, db: tx };
-      insertAssetRecord(transactionSession, {
-        id: assetId,
-        type: normalizedInput.type,
-        mediaKind: normalizedInput.mediaKind,
-        title: normalizedInput.title,
-        oneLineSummary: normalizedInput.oneLineSummary ?? undefined,
-        origin: 'imported',
-        availability: 'ready',
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertAssetFileRecord(transactionSession, {
-        id: fileId,
-        assetId,
-        role: normalizedInput.fileRole,
-        projectRelativePath: normalizedInput.projectRelativePath,
-        mediaKind: normalizedInput.mediaKind,
-        sizeBytes: fileStats.size,
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertAssetRelationshipRecord(transactionSession, normalizedInput.target, {
-        relationshipId,
-        assetId,
-        localeId,
-        role: normalizedInput.role,
-        sortOrder,
-        now,
-      });
-    });
-
-    return readAssetOrThrow(session, normalizedInput.target, assetId);
+    return listAssetRelationshipPage(session, input);
   } finally {
     session.close();
   }
@@ -120,57 +51,6 @@ export async function listAssets(
   }
 }
 
-export async function createAssetSelect(
-  input: {
-    projectName: string;
-    target: AssetTarget;
-    assetId: string;
-    selectionOrder?: number;
-  } & RenkuConfigPathOptions
-): Promise<Asset> {
-  return updateSelection(input, 'create');
-}
-
-export async function updateAssetSelect(
-  input: {
-    projectName: string;
-    target: AssetTarget;
-    assetId: string;
-    selectionOrder?: number;
-  } & RenkuConfigPathOptions
-): Promise<Asset> {
-  return updateSelection(input, 'update');
-}
-
-export async function removeAssetSelect(
-  input: {
-    projectName: string;
-    target: AssetTarget;
-    assetId: string;
-  } & RenkuConfigPathOptions
-): Promise<Asset> {
-  const { session } = await openAssetSession(input);
-  try {
-    const row = readAssetRelationshipRecord(session, {
-      target: input.target,
-      assetId: input.assetId,
-    });
-    if (!row) {
-      throw assetNotAttached(input.assetId);
-    }
-    updateAssetRelationshipSelection(session, {
-      target: input.target,
-      assetId: input.assetId,
-      selection: 'take',
-      selectionOrder: null,
-      updatedAt: new Date().toISOString(),
-    });
-    return readAssetOrThrow(session, input.target, input.assetId);
-  } finally {
-    session.close();
-  }
-}
-
 export async function listAssetSelects(
   input: {
     projectName: string;
@@ -183,55 +63,35 @@ export async function listAssetSelects(
   );
 }
 
-async function updateSelection(
-  input: {
-    projectName: string;
-    target: AssetTarget;
-    assetId: string;
-    selectionOrder?: number;
-  } & RenkuConfigPathOptions,
-  operation: 'create' | 'update'
-): Promise<Asset> {
-  if (input.selectionOrder !== undefined && input.selectionOrder < 1) {
+export async function resolveProjectAssetFile(
+  input: ResolveProjectAssetFileInput
+): Promise<ResolvedProjectAssetFile> {
+  const storageRoot = await resolveRenkuStorageRoot({ homeDir: input.homeDir });
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  const assets = await listAssets({
+    projectName: input.projectName,
+    target: input.target,
+    homeDir: input.homeDir,
+  });
+  const asset = findTargetAsset(assets, input.assetId);
+  const file = asset.files.find((candidate) => candidate.id === input.assetFileId);
+  if (!file) {
     throw new ProjectDataError(
-      'PROJECT_DATA083',
-      'Selection order must be a positive integer.'
+      'PROJECT_DATA091',
+      `Asset file is not attached to the requested asset: ${input.assetFileId}.`
     );
   }
-
-  const { session } = await openAssetSession(input);
-  try {
-    const row = readAssetRelationshipRecord(session, {
-      target: input.target,
-      assetId: input.assetId,
-    });
-    if (!row) {
-      throw assetNotAttached(input.assetId);
-    }
-    if (operation === 'update' && row.selection !== 'select') {
-      throw new ProjectDataError(
-        'PROJECT_DATA084',
-        `Asset ${input.assetId} is still a take for the requested target.`
-      );
-    }
-    const selectionOrder =
-      input.selectionOrder ??
-      nextAssetSelectionOrder(session, {
-        target: input.target,
-        role: row.role,
-        localeId: row.localeId,
-      });
-    updateAssetRelationshipSelection(session, {
-      target: input.target,
-      assetId: input.assetId,
-      selection: 'select',
-      selectionOrder,
-      updatedAt: new Date().toISOString(),
-    });
-    return readAssetOrThrow(session, input.target, input.assetId);
-  } finally {
-    session.close();
+  const absolutePath = resolveProjectRelativePath(
+    projectFolder,
+    file.projectRelativePath
+  );
+  if (!isPathInside(projectFolder, absolutePath)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA088',
+      'Asset file must be inside the project folder.'
+    );
   }
+  return { asset, file, absolutePath };
 }
 
 async function openAssetSession(input: {
@@ -250,100 +110,13 @@ async function openAssetSession(input: {
   };
 }
 
-function readAssetOrThrow(
-  session: DatabaseSession,
-  target: AssetTarget,
-  assetId: string
-): Asset {
-  const asset = listAssetRelationships(session, { target }).find(
-    (candidate) => candidate.assetId === assetId
-  );
+function findTargetAsset(assets: Asset[], assetId: string): Asset {
+  const asset = assets.find((candidate) => candidate.assetId === assetId);
   if (!asset) {
-    throw assetNotAttached(assetId);
+    throw new ProjectDataError(
+      'PROJECT_DATA090',
+      `Asset is not attached to the requested target: ${assetId}.`
+    );
   }
   return asset;
-}
-
-function normalizeRegisterAssetInput(
-  input: RegisterAssetInput & RenkuConfigPathOptions
-): RegisterAssetInput & RenkuConfigPathOptions {
-  return {
-    ...input,
-    type: requiredTrimmed(input.type, 'type'),
-    mediaKind: normalizeMediaKind(input.mediaKind),
-    title: requiredTrimmed(input.title, 'title'),
-    oneLineSummary: optionalTrimmed(input.oneLineSummary),
-    projectRelativePath: normalizeProjectRelativePath(input.projectRelativePath),
-    fileRole: requiredTrimmed(input.fileRole, 'fileRole'),
-    role: requiredTrimmed(input.role, 'role'),
-  };
-}
-
-function normalizeMediaKind(input: string): string {
-  const mediaKind = requiredTrimmed(input, 'mediaKind');
-  const allowed = new Set([
-    'markdown',
-    'text',
-    'image',
-    'audio',
-    'video',
-    'json',
-    'folder',
-    'other',
-  ]);
-  if (!allowed.has(mediaKind)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA082',
-      `Unsupported media kind: ${mediaKind}.`
-    );
-  }
-  return mediaKind;
-}
-
-function requiredTrimmed(input: string, fieldName: string): string {
-  const value = input.trim();
-  if (!value) {
-    throw new ProjectDataError('PROJECT_DATA081', `${fieldName} cannot be empty.`);
-  }
-  return value;
-}
-
-function optionalTrimmed(input?: string | null): string | null {
-  const value = input?.trim();
-  return value ? value : null;
-}
-
-async function statExistingFile(absolutePath: string): Promise<{ size: number }> {
-  try {
-    const stats = await fs.stat(absolutePath);
-    if (!stats.isFile() && !stats.isDirectory()) {
-      throw new Error('not a regular file or directory');
-    }
-    return { size: stats.size };
-  } catch {
-    throw new ProjectDataError(
-      'PROJECT_DATA080',
-      `Asset file does not exist: ${absolutePath}.`
-    );
-  }
-}
-
-function assertResolvedPathInsideProject(
-  projectFolder: string,
-  absolutePath: string
-): void {
-  const relative = path.relative(projectFolder, absolutePath);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA079',
-      `Asset file must be inside the project folder: ${absolutePath}.`
-    );
-  }
-}
-
-function assetNotAttached(assetId: string): ProjectDataError {
-  return new ProjectDataError(
-    'PROJECT_DATA078',
-    `Asset ${assetId} is not attached to the requested target.`
-  );
 }

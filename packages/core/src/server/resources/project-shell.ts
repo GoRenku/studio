@@ -1,23 +1,11 @@
-import { count } from 'drizzle-orm';
-import {
-  castMembers,
-  clips,
-  continuityReferences,
-  episodes,
-  projectLocales,
-  scenes,
-  sequences,
-  visualLanguage,
-  visualLanguageCategories,
-} from '../schema/index.js';
 import type {
-  ProjectCounts,
   ProjectInfo,
   ProjectLanguage,
   ProjectShell,
   VisualLanguageCategory,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
@@ -27,9 +15,22 @@ import {
   listStandaloneMovieSequenceNavigationPage,
   listVisualLanguageNavigationPage,
   type ListNavigationPageInput,
-} from './navigation.js';
+} from '../database/access/navigation.js';
+import { readProjectCounts } from '../database/access/project-counts.js';
 import { listProjectLocaleRecords } from '../database/access/project-locales.js';
 import { listVisualLanguageCategoryRecords } from '../database/access/visual-language-categories.js';
+import type { ReadProjectInput } from '../project-data-service-contracts.js';
+
+export async function readProjectShell(input: ReadProjectInput): Promise<ProjectShell> {
+  const { projectFolder, session } = await openProjectSession(input);
+  try {
+    return readProjectShellProjection(session, {
+      projectFolder,
+    });
+  } finally {
+    session.close();
+  }
+}
 
 export function readProjectShellProjection(
   session: DatabaseSession,
@@ -139,25 +140,6 @@ export function readProjectShellProjection(
       },
     },
   };
-}
-
-function readProjectCounts(session: DatabaseSession): ProjectCounts {
-  return {
-    languages: countTable(session, projectLocales),
-    visualLanguageCategories: countTable(session, visualLanguageCategories),
-    visualLanguage: countTable(session, visualLanguage),
-    castMembers: countTable(session, castMembers),
-    continuityReferences: countTable(session, continuityReferences),
-    episodes: countTable(session, episodes),
-    sequences: countTable(session, sequences),
-    scenes: countTable(session, scenes),
-    clips: countTable(session, clips),
-  };
-}
-
-function countTable(session: DatabaseSession, table: any): number {
-  const row = session.db.select({ value: count() }).from(table).get();
-  return row?.value ?? 0;
 }
 
 function toProjectLanguage(row: ReturnType<typeof listProjectLocaleRecords>[number]): ProjectLanguage {

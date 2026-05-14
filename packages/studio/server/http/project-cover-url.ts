@@ -1,4 +1,4 @@
-import type { ProjectCoverImage } from '@gorenku/studio-core';
+import type { ProjectCoverImage } from '@gorenku/studio-core/client';
 
 export function projectCoverUrl(input: {
   projectName: string;

@@ -21,18 +21,20 @@ import type {
 } from '../../../../client/index.js';
 import { ProjectDataError } from '../../../project-data-error.js';
 import { normalizeProjectRelativePath } from '../../../files/project-relative-paths.js';
+import type { EntityIdPrefix } from '../../../entity-ids.js';
 import type { DatabaseSession } from '../../lifecycle/store.js';
 import {
   assertAssetTargetExists,
   assertProjectLocaleExists,
   assetRelationshipTableConfig,
+  type AssetRelationshipTable,
   type AssetRelationshipTableConfig,
 } from './targets.js';
 import {
   decodeProjectPageCursor,
   encodeProjectPageCursor,
   normalizeProjectPageLimit,
-} from '../../../resources/cursors.js';
+} from '../page-cursors.js';
 
 export const DEFAULT_ASSET_PAGE_LIMIT = 60;
 export const MAX_RESOURCE_PAGE_LIMIT = 200;
@@ -89,13 +91,31 @@ export interface AssetRelationshipPageInput {
   cursor?: string | null;
 }
 
+export function assetRelationshipIdPrefix(target: AssetTarget): EntityIdPrefix {
+  return assetRelationshipTableConfig(target).idPrefix;
+}
+
+export function assertAssetRelationshipTargetExists(
+  session: DatabaseSession,
+  target: AssetTarget
+): void {
+  assertAssetTargetExists(session, assetRelationshipTableConfig(target));
+}
+
+export function assertAssetRelationshipLocaleExists(
+  session: DatabaseSession,
+  localeId: string | null | undefined
+): void {
+  assertProjectLocaleExists(session, localeId);
+}
+
 export function insertAssetRelationshipRecord(
   session: DatabaseSession,
   target: AssetTarget,
   record: InsertAssetRelationshipRecord
 ): void {
   const config = assetRelationshipTableConfig(target);
-  const table = config.table as any;
+  const table = config.table;
   const values: Record<string, unknown> = {
     id: record.relationshipId,
     assetId: record.assetId,
@@ -117,10 +137,30 @@ export function readAssetRelationshipRecord(
 ): AssetRelationshipRecord | null {
   const config = assetRelationshipTableConfig(input.target);
   const rows = selectAssetRelationshipRows(session, config, {
-    conditions: [eq((config.table as any).assetId, input.assetId)],
+    conditions: [eq(config.table.assetId, input.assetId)],
     limit: 1,
   });
   return rows[0] ?? null;
+}
+
+export function readAssetRelationship(
+  session: DatabaseSession,
+  input: { target: AssetTarget; assetId: string }
+): Asset | null {
+  const config = assetRelationshipTableConfig(input.target);
+  const rows = selectAssetRelationshipRows(session, config, {
+    conditions: [eq(config.table.assetId, input.assetId)],
+    limit: 1,
+  });
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+  return toAsset(
+    row,
+    readAssetFileRows(session, [row.assetId]),
+    input.target
+  );
 }
 
 export function listAssetRelationships(
@@ -146,7 +186,7 @@ export function listAssetRelationshipPage(
   assertAssetTargetExists(session, config);
   assertProjectLocaleExists(session, input.locale?.localeId);
 
-  const table = config.table as any;
+  const table = config.table;
   const limit = normalizeProjectPageLimit(input.limit, {
     defaultLimit: DEFAULT_ASSET_PAGE_LIMIT,
     maxLimit: MAX_RESOURCE_PAGE_LIMIT,
@@ -214,7 +254,7 @@ export function updateAssetRelationshipSelection(
   }
 ): void {
   const config = assetRelationshipTableConfig(input.target);
-  const table = config.table as any;
+  const table = config.table;
   const conditions = [eq(table.assetId, input.assetId)];
   if (config.targetColumn && config.targetId) {
     conditions.push(eq(config.targetColumn, config.targetId));
@@ -235,7 +275,7 @@ export function nextAssetRelationshipSortOrder(
   input: { target: AssetTarget; role: string; localeId: string | null }
 ): number {
   const config = assetRelationshipTableConfig(input.target);
-  const table = config.table as any;
+  const table = config.table;
   const conditions = [
     eq(table.role, input.role),
     input.localeId === null
@@ -258,7 +298,7 @@ export function nextAssetSelectionOrder(
   input: { target: AssetTarget; role: string; localeId: string | null }
 ): number {
   const config = assetRelationshipTableConfig(input.target);
-  const table = config.table as any;
+  const table = config.table;
   const conditions = [
     eq(table.role, input.role),
     eq(table.selection, 'select'),
@@ -282,7 +322,7 @@ export function countAssetRelationshipsByRole(
   target: AssetTarget
 ): Array<{ role: string; selectedCount: number; takeCount: number }> {
   const config = assetRelationshipTableConfig(target);
-  const table = config.table as any;
+  const table = config.table;
   const conditions: SQL[] = [];
   if (config.targetColumn && config.targetId) {
     conditions.push(eq(config.targetColumn, config.targetId));
@@ -325,7 +365,7 @@ function selectAssetRelationshipRows(
   config: AssetRelationshipTableConfig,
   input: { conditions: SQL[]; limit: number }
 ): AssetRelationshipRecord[] {
-  const table = config.table as any;
+  const table = config.table;
   const selectionRank = assetSelectionRank(table);
   const selectionOrderRank = sql<number>`coalesce(${table.selectionOrder}, 2147483647)`;
   return session.db
@@ -365,7 +405,7 @@ function assetRelationshipConditions(
   config: AssetRelationshipTableConfig,
   input: AssetRelationshipPageInput
 ): SQL[] {
-  const table = config.table as any;
+  const table = config.table;
   const conditions: SQL[] = [];
   if (config.targetColumn && config.targetId) {
     conditions.push(eq(config.targetColumn, config.targetId));
@@ -379,10 +419,11 @@ function assetRelationshipConditions(
   if (input.selection) {
     conditions.push(eq(table.selection, input.selection));
   }
-  if (input.locale && input.locale.localeId === null) {
+  const localeId = input.locale?.localeId;
+  if (localeId === null) {
     conditions.push(isNull(table.localeId));
-  } else if (input.locale?.localeId !== undefined) {
-    conditions.push(eq(table.localeId, input.locale.localeId));
+  } else if (localeId !== undefined) {
+    conditions.push(eq(table.localeId, localeId));
   }
   return conditions;
 }
@@ -464,7 +505,7 @@ function toAssetFile(row: AssetFileRecord): AssetFile {
   };
 }
 
-function assetSelectionRank(table: any): SQL<number> {
+function assetSelectionRank(table: AssetRelationshipTable): SQL<number> {
   return sql<number>`case when ${table.selection} = 'select' then 0 else 1 end`;
 }
 
@@ -507,10 +548,11 @@ function readProjectAssetOwnerTargets(
   session: DatabaseSession,
   assetId: string
 ): AssetTarget[] {
+  const config = assetRelationshipTableConfig({ kind: 'project' });
   const rows = session.db
-    .select({ assetId: (assetRelationshipTableConfig({ kind: 'project' }).table as any).assetId })
-    .from(assetRelationshipTableConfig({ kind: 'project' }).table as any)
-    .where(eq((assetRelationshipTableConfig({ kind: 'project' }).table as any).assetId, assetId))
+    .select({ assetId: config.table.assetId })
+    .from(config.table)
+    .where(eq(config.table.assetId, assetId))
     .all();
   return rows.length > 0 ? [{ kind: 'project' }] : [];
 }
@@ -528,7 +570,7 @@ function readScopedAssetOwnerTargets(
 ): AssetTarget[] {
   const target = placeholderTarget(kind);
   const config = assetRelationshipTableConfig(target);
-  const table = config.table as any;
+  const table = config.table;
   if (!config.targetColumn) {
     return [];
   }

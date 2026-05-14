@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Asset, CastMember } from '@gorenku/studio-core';
+import type { Asset, CastMember } from '@gorenku/studio-core/client';
 import {
   castAssetFileUrl,
   invalidateCastDesignResource,

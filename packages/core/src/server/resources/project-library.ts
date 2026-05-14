@@ -2,12 +2,39 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectLibrary, ProjectSummary } from '../../client/index.js';
+import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../renku-config.js';
+import {
+  resolveProjectCoverImage as resolveProjectCoverImageFile,
+} from '../files/cover-image-files.js';
 import {
   resolveProjectDatabasePath,
   resolveProjectFolder,
 } from '../files/project-paths.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
 import { readProjectFromSession } from './full-project.js';
+import type { ResolveProjectCoverImageInput } from '../project-data-service-contracts.js';
+
+export async function listLibrary(
+  input: RenkuConfigPathOptions = {}
+): Promise<ProjectLibrary> {
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  return await readProjectLibrary({ storageRoot });
+}
+
+export async function resolveCoverImage(
+  input: ResolveProjectCoverImageInput
+): Promise<string | null> {
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  const library = await readProjectLibrary({ storageRoot });
+  const project = library.projects.find(
+    (candidate) => candidate.name === input.projectName
+  );
+  return await resolveProjectCoverImageFile({
+    storageRoot,
+    projectName: input.projectName,
+    coverFile: project?.coverImage?.fileName ?? null,
+  });
+}
 
 export async function readProjectLibrary(input: {
   storageRoot: string;

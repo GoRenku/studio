@@ -14,7 +14,7 @@ import type {
   ProjectSummary,
   SceneNavigationRow,
   SequenceNavigationRow,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 
 export type ProjectShellWithHttp = ProjectShell & {
   coverUrl: string | null;

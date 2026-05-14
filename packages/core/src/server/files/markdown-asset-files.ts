@@ -1,9 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-  resolveProjectRelativePath,
-  type ProjectRelativePath,
-} from './project-relative-paths.js';
+import type { ProjectRelativePath } from '../../client/index.js';
+import { resolveProjectRelativePath } from './project-relative-paths.js';
 
 export async function writeMarkdownAssetFile(input: {
   projectFolder: string;

@@ -1,5 +1,5 @@
-import type { ProjectSetup } from '../setup/reader.js';
-import type { NarrativeStarter } from './reader.js';
+import type { ProjectSetup } from '../setup/contracts.js';
+import type { NarrativeStarter } from './contracts.js';
 
 export function projectSetupFromNarrativeStarter(
   starter: NarrativeStarter

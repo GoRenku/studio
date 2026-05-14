@@ -13,7 +13,7 @@ import type {
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import type {
   ClipNavigationPageResponse,
   ProjectShellWithHttp,

@@ -25,6 +25,7 @@
     /* Workspace aliases */
     "baseUrl": ".",
     "paths": {
+      "@gorenku/studio-core/client": ["../core/dist/client/index.d.ts"],
       "@gorenku/studio-core/server": ["../core/dist/server/index.d.ts"]
     }
   },

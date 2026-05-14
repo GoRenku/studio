@@ -1,8 +1,8 @@
-import { eq } from 'drizzle-orm';
-import { castMembers } from '../schema/index.js';
 import type { CastDesignResource } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
+import { readCastMemberRecord } from '../database/access/cast-members.js';
 import {
   countAssetRelationshipsByRole,
   listAssetRelationshipPage,
@@ -12,6 +12,18 @@ import {
   castMemberRichTextRoles,
   readRichTextAssetLink,
 } from '../database/access/rich-text-asset-links.js';
+import type { ReadCastDesignResourceInput } from '../project-data-service-contracts.js';
+
+export async function readCastDesignResource(
+  input: ReadCastDesignResourceInput
+): Promise<CastDesignResource> {
+  const { session } = await openProjectSession(input);
+  try {
+    return readCastDesignResourceProjection(session, input);
+  } finally {
+    session.close();
+  }
+}
 
 export function readCastDesignResourceProjection(
   session: DatabaseSession,
@@ -22,11 +34,7 @@ export function readCastDesignResourceProjection(
     cursor?: string | null;
   }
 ): CastDesignResource {
-  const castMember = session.db
-    .select()
-    .from(castMembers)
-    .where(eq(castMembers.id, input.castMemberId))
-    .get();
+  const castMember = readCastMemberRecord(session, input.castMemberId);
   if (!castMember) {
     throw new ProjectDataError(
       'PROJECT_DATA115',

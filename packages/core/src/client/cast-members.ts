@@ -1,1 +1,7 @@
-export type { CastMember } from './project.js';
+export interface CastMember {
+  id: string;
+  name: string;
+  kind?: string;
+  role?: string;
+  shortDescription?: string;
+}

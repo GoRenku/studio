@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getRenkuCliInfo } from './info.js';
+import { getRenkuCliInfo } from './about-command.js';
 
 describe('studio-cli scaffold', () => {
   it('reports the Renku CLI and core packages', () => {

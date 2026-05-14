@@ -15,7 +15,7 @@ import type {
   ClipNavigationRow,
   SceneNavigationRow,
   SequenceNavigationRow,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { ThemeToggle } from '@/ui/theme-toggle';

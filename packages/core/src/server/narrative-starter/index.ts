@@ -15,4 +15,4 @@ export type {
   NarrativeStarterValidation,
   NarrativeStarterVisualLanguage,
   NarrativeStarterVisualLanguageCategory,
-} from './reader.js';
+} from './contracts.js';

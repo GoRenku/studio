@@ -4,7 +4,7 @@ import type {
   ClipNavigationRow,
   SceneNavigationRow,
   SequenceNavigationRow,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import type { StoryNavigationState } from './use-story-navigation';
 

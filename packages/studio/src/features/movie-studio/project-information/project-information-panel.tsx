@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
-import type { ProjectLanguage } from '@gorenku/studio-core';
+import type { ProjectLanguage } from '@gorenku/studio-core/client';
 import type {
   ProjectInformationResourceResponse,
   ProjectInformationUpdateRequest,

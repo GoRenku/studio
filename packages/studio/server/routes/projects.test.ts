@@ -4,7 +4,7 @@ import type {
   Project,
   ProjectLibrary,
   ProjectShell,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from './projects.js';
 import { StructuredError, createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { describe, expect, it, vi } from 'vitest';

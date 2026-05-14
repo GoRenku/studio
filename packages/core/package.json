@@ -3,12 +3,10 @@
   "version": "0.1.0",
   "description": "Renku Studio domain model, validation, workflows, queue and projection primitives",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
     },
     "./server": {
       "types": "./dist/server/index.d.ts",

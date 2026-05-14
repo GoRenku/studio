@@ -1,4 +1,4 @@
-import { asc } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { castMembers } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
@@ -30,4 +30,17 @@ export function listCastMemberRecords(session: DatabaseSession): CastMemberRecor
     .from(castMembers)
     .orderBy(asc(castMembers.position))
     .all();
+}
+
+export function readCastMemberRecord(
+  session: DatabaseSession,
+  castMemberId: string
+): CastMemberRecord | null {
+  return (
+    session.db
+      .select()
+      .from(castMembers)
+      .where(eq(castMembers.id, castMemberId))
+      .get() ?? null
+  );
 }

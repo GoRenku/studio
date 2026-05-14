@@ -1,11 +1,11 @@
 import { isDeepStrictEqual } from 'node:util';
 import type {
-  ProviderAttachment,
   ProviderDescriptor,
   ProviderJobContext,
   ProviderLogger,
   ProviderMode,
 } from '../types.js';
+import type { ProviderAttachment } from '#core';
 import type {
   ProducerRuntime,
   ProducerDomain,

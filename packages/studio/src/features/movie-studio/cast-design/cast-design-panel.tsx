@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import type { CastMember } from '@gorenku/studio-core';
+import type { CastMember } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { CastCharacterSheetTab } from './tabs/cast-character-sheet-tab';

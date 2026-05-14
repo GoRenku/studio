@@ -1,12 +1,16 @@
 import {
+  listAssetPage,
   listAssetSelects,
   listAssets,
+  resolveProjectAssetFile,
 } from './resources/assets.js';
+import { readCastDesignResource } from './resources/cast-design.js';
 import {
   createAssetSelect,
   removeAssetSelect,
   updateAssetSelect,
 } from './commands/change-asset-selection.js';
+import { readClipDesignResource } from './resources/clip-design.js';
 import {
   createFromSetup,
 } from './commands/create-project-from-setup.js';
@@ -22,14 +26,9 @@ import {
   updateProjectInformation,
 } from './commands/update-project-information.js';
 import { exportProductionAssets } from './production-export/export-production-assets.js';
+import { readProject } from './resources/full-project.js';
+import { listLibrary, resolveCoverImage } from './resources/project-library.js';
 import {
-  listLibrary,
-  readProject,
-  resolveCoverImage,
-  resolveProjectAssetFile,
-} from './resources/project-read-operations.js';
-import {
-  listAssetPage,
   listCastNavigation,
   listClipNavigation,
   listContinuityReferenceNavigation,
@@ -37,44 +36,11 @@ import {
   listEpisodeSequenceNavigation,
   listSceneNavigation,
   listStandaloneMovieSequenceNavigation,
-  readCastDesignResource,
-  readClipDesignResource,
-  readStudioSelectionContext,
-  readProjectInformationResourceForProject,
-  readProjectShell,
-} from './resources/project-resource-operations.js';
+} from './resources/navigation.js';
+import { readProjectInformationResourceForProject } from './resources/project-information.js';
+import { readProjectShell } from './resources/project-shell.js';
+import { readStudioSelectionContext } from './resources/selection-context.js';
 import type { ProjectDataService } from './project-data-service-contracts.js';
-
-export type {
-  ChangeAssetSelectInput,
-  CreateProjectFromNarrativeStarterInput,
-  CreateProjectFromSetupInput,
-  ListAssetsInput,
-  ListAssetPageInput,
-  ListClipNavigationInput,
-  ListEpisodeSequenceNavigationInput,
-  ListNavigationInput,
-  ListSceneNavigationInput,
-  MigrateProjectDatabaseInput,
-  PatchProjectInformationInput,
-  ProjectDataService,
-  ProjectDatabaseMigrationReport,
-  ProjectInformationLanguageUpdate,
-  ProjectInformationPatch,
-  ProjectInformationUpdate,
-  ProjectLanguagePatchOperation,
-  ReadCastDesignResourceInput,
-  ReadClipDesignResourceInput,
-  ReadMarkdownAssetContentInput,
-  ReadProjectInput,
-  RemoveAssetSelectInput,
-  ResolveProjectAssetFileInput,
-  ResolveProjectCoverImageInput,
-  ResolvedProjectAssetFile,
-  UpdateMarkdownAssetContentInput,
-  UpdateMarkdownAssetContentResult,
-  UpdateProjectInformationInput,
-} from './project-data-service-contracts.js';
 
 export function createProjectDataService(): ProjectDataService {
   return {

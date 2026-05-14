@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type {
   MarkdownAssetContent,
   RichTextAssetLink,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   readMarkdownAssetContent,

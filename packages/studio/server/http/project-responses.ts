@@ -3,7 +3,7 @@ import type {
   ProjectLibrary,
   ProjectShell,
   ProjectSummary,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import { projectCoverUrl } from './project-cover-url.js';
 
 export type ProjectResponse = Project & {

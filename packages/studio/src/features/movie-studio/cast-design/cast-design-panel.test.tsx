@@ -4,7 +4,7 @@ import type {
   CastMember,
   MarkdownAssetContent,
   RichTextAssetLink,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   readCastDesignResource,

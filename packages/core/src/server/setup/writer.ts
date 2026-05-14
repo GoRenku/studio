@@ -19,14 +19,14 @@ import { WORKING_ASSETS_BASE_ROOT } from '../files/asset-paths.js';
 import {
   joinProjectRelativePath,
   resolveProjectRelativePath,
-  type ProjectRelativePath,
 } from '../files/project-relative-paths.js';
+import type { ProjectRelativePath } from '../../client/index.js';
 import type { EntityIdPrefix } from '../entity-ids.js';
 import type {
   ProjectSetup,
   ProjectSetupLanguage,
   ProjectSetupSequence,
-} from './reader.js';
+} from './contracts.js';
 import {
   addProjectSetupMarkdownAsset,
   insertProjectSetupMarkdownAssetRecords,

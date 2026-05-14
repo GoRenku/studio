@@ -1,4 +1,4 @@
-import type { Project } from '@gorenku/studio-core';
+import type { Project } from '@gorenku/studio-core/client';
 import { describe, expect, it } from 'vitest';
 import { createStudioRuntimeToken } from '../studio-runtime-token.js';
 import { createStudioEventsRoute, type CreateStudioEventsRouteOptions } from './studio-events.js';

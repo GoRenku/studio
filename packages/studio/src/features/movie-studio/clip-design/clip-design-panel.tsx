@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Clip } from '@gorenku/studio-core';
+import type { Clip } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { readClipDesignResource } from '@/services/studio-project-assets-api';
 import { MarkdownAssetEditor } from '../markdown-asset-editor';

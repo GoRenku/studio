@@ -1,7 +1,7 @@
 import type {
   MarkdownAssetContent,
   RichTextAssetLink,
-} from '@gorenku/studio-core';
+} from '@gorenku/studio-core/client';
 import type {
   CastDesignResourceResponse,
   ClipDesignResourceResponse,

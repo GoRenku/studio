@@ -14,6 +14,8 @@ import type {
   VisualLanguage,
   VisualLanguageCategory,
 } from '../../client/index.js';
+import { openProjectStore } from '../database/lifecycle/store.js';
+import { resolveRenkuStorageRoot } from '../renku-config.js';
 import { listAssetFileRecords, type AssetFileRecord } from '../database/access/asset-files.js';
 import {
   listCastMemberRecords,
@@ -70,6 +72,27 @@ import {
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
+import { resolveProjectFolder } from '../files/project-paths.js';
+import type { ReadProjectInput } from '../project-data-service-contracts.js';
+import {
+  buildRichTextAssetLink,
+  type RichTextAssetRelationshipRecord,
+} from '../database/access/rich-text-asset-links.js';
+
+export async function readProject(input: ReadProjectInput): Promise<Project> {
+  const storageRoot = await resolveRenkuStorageRoot(input);
+  const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
+  const session = openProjectStore({
+    projectFolder,
+    create: false,
+    lifetime: 'project',
+  });
+  try {
+    return readProjectFromSession({ session, projectFolder });
+  } finally {
+    session.close();
+  }
+}
 
 export function readProjectFromSession(input: {
   session: DatabaseSession;
@@ -425,39 +448,42 @@ function toRichTextAsset(
   }
 ): RichTextAsset | null {
   const file = assetFilesByAssetId.get(row.assetId);
-  if (!file) {
-    throw new ProjectDataError(
-      'PROJECT_DATA061',
-      `Text asset ${row.assetId} is missing its primary asset file.`
-    );
-  }
-  if (file.mediaKind !== 'text' && file.mediaKind !== 'markdown') {
-    if (context.richTextRoles.has(row.role)) {
-      throw new ProjectDataError(
-        'PROJECT_DATA091',
-        `${context.relationshipLabel} asset relationship ${row.id} uses rich text role ${row.role} with non-text primary asset file ${file.id}.`,
-        {
-          suggestion:
-            'Attach a text or markdown primary file for rich text roles, or use a non-rich-text relationship role for image, audio, and video assets.',
-        }
-      );
-    }
+  const link = buildRichTextAssetLink({
+    relationship: toRichTextRelationship(row),
+    file,
+    relationshipLabel: context.relationshipLabel,
+    richTextRoles: context.richTextRoles,
+  });
+  if (!link) {
     return null;
   }
 
-  const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
-  const absolutePath = resolveProjectRelativePath(input.projectFolder, projectRelativePath);
+  const absolutePath = resolveProjectRelativePath(
+    input.projectFolder,
+    normalizeProjectRelativePath(link.projectRelativePath)
+  );
   const content = readFileSync(absolutePath, 'utf8').trimEnd();
 
   return {
     content,
-    link: {
-      assetId: row.assetId,
-      assetFileId: file.id,
-      role: row.role,
-      localeId: nullable(row.localeId),
-      projectRelativePath,
-    },
+    link,
+  };
+}
+
+function toRichTextRelationship(
+  row:
+    | ProjectAssetRecord
+    | VisualLanguageAssetRecord
+    | ContinuityReferenceAssetRecord
+    | SequenceAssetRecord
+    | SceneAssetRecord
+    | ClipAssetRecord
+): RichTextAssetRelationshipRecord {
+  return {
+    relationshipId: row.id,
+    assetId: row.assetId,
+    role: row.role,
+    localeId: row.localeId,
   };
 }
 

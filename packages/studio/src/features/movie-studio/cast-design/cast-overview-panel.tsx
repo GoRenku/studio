@@ -1,4 +1,4 @@
-import type { CastMember } from '@gorenku/studio-core';
+import type { CastMember } from '@gorenku/studio-core/client';
 import { CastCard } from './cast-card';
 
 export function CastOverviewPanel({ cast }: { cast: CastMember[] }) {

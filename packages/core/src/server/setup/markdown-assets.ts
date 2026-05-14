@@ -5,15 +5,15 @@ import {
 } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
+  assetRelationshipIdPrefix,
   insertAssetRelationshipRecord,
 } from '../database/access/asset-relationships/index.js';
-import { assetRelationshipTableConfig } from '../database/access/asset-relationships/targets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   allocateWorkingMarkdownAssetPath,
   type MarkdownAssetPathTarget,
 } from '../files/asset-paths.js';
-import type { ProjectRelativePath } from '../files/project-relative-paths.js';
+import type { ProjectRelativePath } from '../../client/index.js';
 import type { EntityIdPrefix } from '../entity-ids.js';
 
 export interface ProjectSetupMarkdownAsset {
@@ -55,9 +55,9 @@ export function addProjectSetupMarkdownAsset(
     return;
   }
 
-  const relationshipPrefix = assetRelationshipTableConfig(
+  const relationshipPrefix = assetRelationshipIdPrefix(
     assetRelationshipTarget(input.relationship)
-  ).idPrefix;
+  );
   assets.push({
     id: ids('asset'),
     fileId: ids('asset_file'),

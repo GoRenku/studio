@@ -1,4 +1,4 @@
-import type { CastMember } from '@gorenku/studio-core';
+import type { CastMember } from '@gorenku/studio-core/client';
 import { ReadinessDot } from '../storyboard/readiness-dot';
 
 export function CastCard({ castEntry }: { castEntry: CastMember }) {

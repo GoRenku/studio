@@ -4,10 +4,7 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import { ProjectDataError } from '../project-data-error.js';
-import type {
-  Project,
-  ProjectInformationResource,
-} from '../../client/index.js';
+import type { ProjectInformationResource } from '../../client/index.js';
 import { listCastAssetRecords } from '../database/access/asset-relationships/cast-members.js';
 import { listContinuityReferenceAssetRecords } from '../database/access/asset-relationships/continuity-references.js';
 import { listAssetFileRecords } from '../database/access/asset-files.js';
@@ -22,7 +19,10 @@ import {
   type ProjectLocaleRecord,
 } from '../database/access/project-locales.js';
 import { listProjectAssetRecords } from '../database/access/asset-relationships/project.js';
-import { readProjectFromSession } from '../resources/full-project.js';
+import {
+  readProjectInformationResourceFromDatabase,
+  readProjectInformationUpdateFromDatabase,
+} from '../database/access/project-information.js';
 import {
   readProjectRecord,
   updateProjectInformationRecord,
@@ -36,7 +36,6 @@ import {
   createUniqueIdAllocator,
   type EntityIdPrefix,
 } from '../entity-ids.js';
-import { readProjectInformationResource } from '../resources/project-information.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type {
   PatchProjectInformationInput,
@@ -111,7 +110,7 @@ export async function updateProjectInformation(
         now,
       });
     }
-    return readProjectInformationResource(session);
+    return readProjectInformationResourceFromDatabase(session);
   } finally {
     session.close();
   }
@@ -120,7 +119,7 @@ export async function updateProjectInformation(
 export async function patchProjectInformation(
   input: PatchProjectInformationInput
 ): Promise<ProjectInformationResource> {
-  const current = await readCurrentProject(input);
+  const current = await readCurrentProjectInformationUpdate(input);
   const information = applyProjectInformationPatch(current, input.patch);
   return await updateProjectInformation({
     projectName: input.projectName,
@@ -401,33 +400,32 @@ async function updateExistingProjectSummaryAsset(input: {
   });
 }
 
-async function readCurrentProject(input: {
+async function readCurrentProjectInformationUpdate(input: {
   projectName: string;
   homeDir?: string;
-}): Promise<Project> {
-  const { projectFolder, session } = await openProjectSession(input);
+}): Promise<ProjectInformationUpdate> {
+  const { session } = await openProjectSession(input);
   try {
-    return readProjectFromSession({ session, projectFolder });
+    return readProjectInformationUpdateFromDatabase(session);
   } finally {
     session.close();
   }
 }
 
 function applyProjectInformationPatch(
-  project: Project,
+  current: ProjectInformationUpdate,
   patch: ProjectInformationPatch
 ): ProjectInformationUpdate {
   const update: ProjectInformationUpdate = {
-    title: patch.title ?? project.identity.title,
+    title: patch.title ?? current.title,
     aspectRatio:
       patch.aspectRatio === null
         ? undefined
-        : patch.aspectRatio ?? project.identity.aspectRatio,
+        : patch.aspectRatio ?? current.aspectRatio,
     logline:
-      patch.logline === null ? undefined : patch.logline ?? project.identity.logline,
-    summary:
-      'summary' in patch ? patch.summary : project.identity.summary,
-    languages: project.languages.map((language) => ({
+      patch.logline === null ? undefined : patch.logline ?? current.logline,
+    summary: 'summary' in patch ? patch.summary : undefined,
+    languages: current.languages.map((language) => ({
       localeTag: language.localeTag,
       displayName: language.displayName,
       isBase: language.isBase,

@@ -9,6 +9,19 @@ import {
   assertAssetTargetExists,
 } from './asset-relationships/targets.js';
 
+export interface RichTextAssetRelationshipRecord {
+  relationshipId: string;
+  assetId: string;
+  role: string;
+  localeId: string | null;
+}
+
+export interface RichTextPrimaryAssetFileRecord {
+  id: string;
+  mediaKind: string;
+  projectRelativePath: string;
+}
+
 export function readRichTextAssetLink(
   session: DatabaseSession,
   input: {
@@ -20,12 +33,12 @@ export function readRichTextAssetLink(
 ): RichTextAssetLink | undefined {
   const config = assetRelationshipTableConfig(input.target);
   assertAssetTargetExists(session, config);
-  const table = config.table as any;
+  const table = config.table;
   const conditions = [eq(table.role, input.role)];
   if (config.targetColumn && config.targetId) {
     conditions.push(eq(config.targetColumn, config.targetId));
   }
-  const relationship = session.db
+  const relationship: RichTextAssetRelationshipRecord | undefined = session.db
     .select({
       relationshipId: table.id,
       assetId: table.assetId,
@@ -41,7 +54,7 @@ export function readRichTextAssetLink(
     return undefined;
   }
 
-  const file = session.db
+  const file: RichTextPrimaryAssetFileRecord | undefined = session.db
     .select({
       id: assetFiles.id,
       mediaKind: assetFiles.mediaKind,
@@ -55,6 +68,21 @@ export function readRichTextAssetLink(
       )
     )
     .get();
+  return buildRichTextAssetLink({
+    relationship,
+    file,
+    relationshipLabel: input.relationshipLabel,
+    richTextRoles: input.richTextRoles,
+  });
+}
+
+export function buildRichTextAssetLink(input: {
+  relationship: RichTextAssetRelationshipRecord;
+  file: RichTextPrimaryAssetFileRecord | undefined;
+  relationshipLabel: string;
+  richTextRoles: ReadonlySet<string>;
+}): RichTextAssetLink | undefined {
+  const { relationship, file } = input;
   if (!file) {
     throw new ProjectDataError(
       'PROJECT_DATA061',

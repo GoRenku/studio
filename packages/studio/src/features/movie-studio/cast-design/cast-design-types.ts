@@ -1,4 +1,4 @@
-import type { RichTextAssetLink } from '@gorenku/studio-core';
+import type { RichTextAssetLink } from '@gorenku/studio-core/client';
 
 export type CastDesignTabId =
   | 'description'

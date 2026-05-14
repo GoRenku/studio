@@ -1,4 +1,4 @@
-import { getStudioCorePackageInfo } from '@gorenku/studio-core';
+import { getStudioCorePackageInfo } from '@gorenku/studio-core/client';
 import type { RenkuCliIo } from '../cli.js';
 
 export interface RenkuCliInfo {

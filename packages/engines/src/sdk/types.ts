@@ -2,12 +2,14 @@ import type {
   ProducerHandler,
   ProviderJobContext,
   ProviderResult,
-  ProviderAttachment,
   ProviderDescriptor,
   ProviderLogger,
   ProviderMode,
 } from '../types.js';
-import type { BlueprintProducerSdkMappingField } from '#core';
+import type {
+  BlueprintProducerSdkMappingField,
+  ProviderAttachment,
+} from '#core';
 
 export type ProducerDomain = 'prompt' | 'media' | 'transcription';
 

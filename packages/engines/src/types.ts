@@ -11,9 +11,6 @@ import type { SchemaRegistry } from './schema-registry.js';
 
 export type ProviderMode = 'live' | 'simulated';
 
-// Re-export from core for backward compatibility
-export type { ProviderEnvironment, ProviderAttachment } from '#core';
-
 export interface ProviderDescriptor {
   provider: ProviderName;
   model: string;

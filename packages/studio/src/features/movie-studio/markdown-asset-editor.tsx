@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { RichTextAssetLink } from '@gorenku/studio-core';
+import type { RichTextAssetLink } from '@gorenku/studio-core/client';
 import {
   readMarkdownAssetContent,
   updateMarkdownAssetContent,
