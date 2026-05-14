@@ -529,7 +529,7 @@ function sequenceNumber(
           lt(sequences.position, sequence.position),
           and(
             eq(sequences.position, sequence.position),
-            or(eq(sequences.id, sequenceId), lt(sequences.id, sequenceId))
+            lt(sequences.id, sequenceId)
           )
         )
       )

@@ -137,7 +137,10 @@ export function readAssetRelationshipRecord(
 ): AssetRelationshipRecord | null {
   const config = assetRelationshipTableConfig(input.target);
   const rows = selectAssetRelationshipRows(session, config, {
-    conditions: [eq(config.table.assetId, input.assetId)],
+    conditions: [
+      eq(config.table.assetId, input.assetId),
+      ...assetRelationshipConditions(config, { target: input.target }),
+    ],
     limit: 1,
   });
   return rows[0] ?? null;
@@ -149,7 +152,10 @@ export function readAssetRelationship(
 ): Asset | null {
   const config = assetRelationshipTableConfig(input.target);
   const rows = selectAssetRelationshipRows(session, config, {
-    conditions: [eq(config.table.assetId, input.assetId)],
+    conditions: [
+      eq(config.table.assetId, input.assetId),
+      ...assetRelationshipConditions(config, { target: input.target }),
+    ],
     limit: 1,
   });
   const row = rows[0];

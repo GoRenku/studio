@@ -175,6 +175,7 @@ describe('create project from setup', () => {
         items: [
           expect.objectContaining({
             id: 'sequence_test0001',
+            number: 1,
             title: "The Young Sultan's Obsession",
             sceneCount: 1,
             clipCount: 2,
@@ -219,6 +220,7 @@ describe('create project from setup', () => {
         surface: 'clip-design',
         sequence: expect.objectContaining({
           id: 'sequence_test0001',
+          number: 1,
           sceneCount: 1,
           clipCount: 2,
         }),
