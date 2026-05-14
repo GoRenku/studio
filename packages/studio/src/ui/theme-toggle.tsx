@@ -25,7 +25,7 @@ export function ThemeToggle() {
       }}
       className="
         relative inline-flex items-center
-        h-7 w-14
+        h-7 w-11
         p-0.5
         rounded-full
         bg-border dark:bg-muted
@@ -43,7 +43,7 @@ export function ThemeToggle() {
           bg-white dark:bg-card
           shadow-sm
           transition-transform duration-200 ease-in-out
-          ${isDark ? 'translate-x-7' : 'translate-x-0'}
+          ${isDark ? 'translate-x-4' : 'translate-x-0'}
         `}
       >
         {isDark ? (

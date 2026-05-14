@@ -39,13 +39,15 @@ function TooltipTrigger({
 function TooltipContent({
   className,
   children,
+  side = "top",
   ...props
 }: React.HTMLAttributes<HTMLSpanElement> & { sideOffset?: number; side?: string }) {
   return (
     <span
       data-slot="tooltip-content"
       className={cn(
-        "pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden w-max max-w-64 -translate-x-1/2 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-lg group-hover/tooltip:block group-focus-within/tooltip:block",
+        "pointer-events-none absolute left-1/2 z-50 hidden w-max max-w-64 -translate-x-1/2 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-lg group-hover/tooltip:block group-focus-within/tooltip:block",
+        side === "bottom" ? "top-full mt-2" : "bottom-full mb-2",
         className
       )}
       {...props}

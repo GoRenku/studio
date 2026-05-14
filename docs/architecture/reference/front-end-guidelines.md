@@ -165,6 +165,36 @@ Notes:
   `generation-activity` should stay precise because they name product areas
   inside the broader movie studio.
 
+## Component Composition
+
+Feature containers should compose named child components. They should not grow
+into large monolithic files that own unrelated controls, status displays,
+menus, forms, list rows, and business actions all at once.
+
+Rules:
+
+- Keep screen and shell components focused on layout, data wiring, and
+  high-level composition.
+- Extract cohesive subcomponents when a UI area has its own responsibility,
+  repeated visual treatment, or separate interaction logic.
+- Name extracted components after the product area they serve, not after a
+  generic implementation detail. For example, use `StudioSidebarActions` for
+  sidebar header controls instead of adding those controls directly inside
+  `StudioSidebar`.
+- Keep feature-local components inside the feature folder when they are not
+  reusable app-wide primitives.
+- Promote a component to `src/ui/` only when it is domain-neutral and useful
+  across multiple features.
+- Avoid hiding large blocks of JSX behind private render functions in the same
+  file when the block is really a separate UI area. Prefer a small component
+  with explicit props.
+- A container can own local state for the surface, but child components should
+  receive the smallest clear set of values and callbacks they need.
+
+The desired reading experience is that a feature file explains the shape of the
+surface at a glance, while focused child components own the details of each
+area.
+
 ### `services/`
 
 Owns browser-side adapters to external systems. In this app, that currently

@@ -4,12 +4,13 @@ import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
+import { Toaster } from '@/ui/sonner';
 
 const defaultStudioSelection: StudioSelection = {
   type: 'projectInformation',
 };
 
-function App() {
+function AppContent() {
   const projectSession = useProjectSession();
 
   useStudioCoordination({
@@ -58,4 +59,11 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <>
+      <AppContent />
+      <Toaster richColors position='bottom-right' />
+    </>
+  );
+}

@@ -1,10 +1,9 @@
 import { useCallback, useState } from 'react';
-import { Loader2, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { AutosaveStatus } from '@/ui/autosave-status';
-import { Button } from '@/ui/button';
 import { CastDesignPanel } from './cast-design/cast-design-panel';
 import { CastOverviewPanel } from './cast-design/cast-overview-panel';
 import { ClipDesignPanel } from './clip-design/clip-design-panel';
@@ -46,12 +45,7 @@ export function MovieStudioScreen({
   const { selection, resolvedSelection } = studioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
-  const [productionExportStatus, setProductionExportStatus] = useState<
-    | { state: 'idle'; message: null }
-    | { state: 'running'; message: string }
-    | { state: 'complete'; message: string }
-    | { state: 'error'; message: string }
-  >({ state: 'idle', message: null });
+  const [isProductionExportRunning, setIsProductionExportRunning] = useState(false);
   const handleProjectInformationAutosaveStatusChange = useCallback(
     (status: DebouncedAutosaveStatus) => {
       setProjectInformationAutosave(status);
@@ -65,24 +59,26 @@ export function MovieStudioScreen({
     [onNavigateSelection]
   );
   const handleProductionExport = useCallback(async () => {
-    setProductionExportStatus({
-      state: 'running',
-      message: 'Exporting production assets...',
+    setIsProductionExportRunning(true);
+    toast.loading('Exporting production assets', {
+      id: 'production-export',
     });
     try {
       const summary = await exportProductionAssets(project.identity.name);
-      setProductionExportStatus({
-        state: 'complete',
-        message: `Copied ${summary.copiedFileCount}, skipped ${summary.skippedFileCount}, pruned ${summary.prunedFileCount}.`,
+      toast.success('Production assets exported', {
+        id: 'production-export',
+        description: `Copied ${summary.copiedFileCount}, skipped ${summary.skippedFileCount}, pruned ${summary.prunedFileCount}.`,
       });
     } catch (error) {
-      setProductionExportStatus({
-        state: 'error',
-        message:
+      toast.error('Export failed', {
+        id: 'production-export',
+        description:
           error instanceof Error
             ? error.message
             : 'Production export failed.',
       });
+    } finally {
+      setIsProductionExportRunning(false);
     }
   }, [project.identity.name]);
 
@@ -95,6 +91,8 @@ export function MovieStudioScreen({
           selection={selection}
           onSelect={selectMovieStudioSurface}
           onHome={onHome}
+          isProductionExportRunning={isProductionExportRunning}
+          onProductionExport={handleProductionExport}
         />
         {selection.type === 'cast' && resolvedSelection.castEntry ? (
           <CastDesignPanel
@@ -112,38 +110,12 @@ export function MovieStudioScreen({
                 </h2>
               </div>
               <div className='flex min-w-0 items-center gap-3'>
-                {productionExportStatus.message ? (
-                  <p
-                    className={
-                      productionExportStatus.state === 'error'
-                        ? 'hidden md:block truncate text-xs font-medium text-destructive'
-                        : 'hidden md:block truncate text-xs font-medium text-muted-foreground'
-                    }
-                  >
-                    {productionExportStatus.message}
-                  </p>
-                ) : null}
                 {selection.type === 'projectInformation' ? (
                   <AutosaveStatus
                     status={projectInformationAutosave}
                     className='shrink-0'
                   />
                 ) : null}
-                <Button
-                  type='button'
-                  size='sm'
-                  variant='outline'
-                  onClick={() => void handleProductionExport()}
-                  disabled={productionExportStatus.state === 'running'}
-                  className='shrink-0 gap-2'
-                >
-                  {productionExportStatus.state === 'running' ? (
-                    <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                  ) : (
-                    <Upload className='h-3.5 w-3.5' />
-                  )}
-                  Export
-                </Button>
               </div>
             </div>
 

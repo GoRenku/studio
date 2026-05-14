@@ -325,6 +325,25 @@ describe('App', () => {
     );
   });
 
+  it('exports production assets from the sidebar header action', async () => {
+    window.history.pushState({}, '', '/projects/constantinople');
+    const fetchLog = mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Project Name');
+    fireEvent.click(screen.getByLabelText('Export production assets'));
+
+    await waitFor(() => {
+      expect(fetchLog).toContain(
+        '/studio-api/projects/constantinople/production-export'
+      );
+    });
+  });
+
   it('uses browser history to restore route-owned Movie Studio selections', async () => {
     window.history.pushState({}, '', '/projects/constantinople');
     mockStudioFetch({
@@ -1052,6 +1071,17 @@ function mockStudioFetch(input: {
     }
     if (url === '/studio-api/projects/constantinople') {
       return jsonResponse({ project: input.project ?? makeProject() });
+    }
+    if (url === '/studio-api/projects/constantinople/production-export') {
+      return jsonResponse({
+        summary: {
+          copiedFileCount: 1,
+          skippedFileCount: 0,
+          prunedFileCount: 0,
+          unmanagedFileCount: 0,
+          variants: [],
+        },
+      });
     }
     if (
       url ===

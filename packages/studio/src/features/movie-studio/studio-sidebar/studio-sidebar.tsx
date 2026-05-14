@@ -18,12 +18,12 @@ import type {
 } from '@gorenku/studio-core/client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
-import { ThemeToggle } from '@/ui/theme-toggle';
 import {
   toggleSetValue,
   type StudioSelection,
 } from '../movie-studio-selection';
 import type { StoryNavigationState } from '../use-story-navigation';
+import { StudioSidebarActions } from './studio-sidebar-actions';
 import { StudioSidebarButton } from './studio-sidebar-button';
 import { StudioSidebarSection } from './studio-sidebar-section';
 
@@ -33,6 +33,8 @@ interface StudioSidebarProps {
   selection: StudioSelection;
   onSelect: (selection: StudioSelection) => void;
   onHome: () => void;
+  isProductionExportRunning: boolean;
+  onProductionExport: () => void;
 }
 
 export function StudioSidebar({
@@ -41,6 +43,8 @@ export function StudioSidebar({
   selection,
   onSelect,
   onHome,
+  isProductionExportRunning,
+  onProductionExport,
 }: StudioSidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     () => new Set(['sequences', 'casting'])
@@ -215,7 +219,10 @@ export function StudioSidebar({
             </span>
           </span>
         </Button>
-        <ThemeToggle />
+        <StudioSidebarActions
+          isProductionExportRunning={isProductionExportRunning}
+          onProductionExport={onProductionExport}
+        />
       </div>
 
       <div className='border-b border-border/40 p-3'>
