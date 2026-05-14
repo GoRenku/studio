@@ -9,7 +9,7 @@ import {
 import {
   runCreateOrSkip,
   writeConfig,
-  writeNarrativeStarter,
+  writeNarrativeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('markdown asset content resource', () => {
@@ -22,11 +22,11 @@ describe('markdown asset content resource', () => {
   });
 
   it('reads and updates Markdown asset content by asset link', async () => {
-    const starterPath = await writeNarrativeStarter(homeDir);
+    const setupPath = await writeNarrativeProjectSetup(homeDir);
     const projectData = createProjectDataService();
     const created = await runCreateOrSkip(
-      projectData.createFromNarrativeStarter({
-        starterPath,
+      projectData.createFromSetup({
+        setupPath,
         homeDir,
         idGenerator: createDeterministicIdGenerator(),
       })

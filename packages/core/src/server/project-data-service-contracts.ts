@@ -28,9 +28,6 @@ import type { ProjectIdGenerator } from './entity-ids.js';
 
 export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
-  createFromNarrativeStarter(
-    input: CreateProjectFromNarrativeStarterInput
-  ): Promise<ProjectCreateReport>;
   migrateProjectDatabase(
     input: MigrateProjectDatabaseInput
   ): Promise<ProjectDatabaseMigrationReport>;
@@ -100,13 +97,6 @@ export interface ProjectDataService {
 
 export interface CreateProjectFromSetupInput extends RenkuConfigPathOptions {
   setupPath: string;
-  coverPath?: string;
-  idGenerator?: ProjectIdGenerator;
-}
-
-export interface CreateProjectFromNarrativeStarterInput
-  extends RenkuConfigPathOptions {
-  starterPath: string;
   idGenerator?: ProjectIdGenerator;
 }
 

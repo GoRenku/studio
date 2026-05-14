@@ -79,7 +79,6 @@ The command should be:
 
 ```bash
 renku create --file project.yaml
-renku create --file project.yaml --cover cover.png
 ```
 
 The command should not accept a positional project name or an arbitrary project
@@ -103,9 +102,9 @@ must contain an explicit `storageRoot`. There is no default storage root.
 If the target project folder already exists, creation should fail with a clear
 error unless a future explicit recovery/resume flow is designed.
 
-If `--cover` is provided, the source image is copied into the created project as
-`cover.png`. The cover image path is command input, not a field in the create
-YAML.
+If `project.coverFile` is provided, it must be a setup-file-relative PNG path.
+The source image is copied into the created project as `cover.png`. This is the
+only visual asset that belongs in create YAML.
 
 ## Responsibility Split
 
@@ -175,8 +174,8 @@ SQLite stores the real identity and relationships.
 
 The create YAML should not contain:
 
-- cover image paths;
-- narrative file paths;
+- generated or selected visual asset paths, except `project.coverFile`;
+- non-narrative import/export manifests;
 - durable project state after creation;
 - SQLite IDs;
 - Renku canonical IDs;
@@ -193,6 +192,7 @@ The create YAML should not contain:
 - generation recipes;
 - recipe workflow definitions;
 - prompt packages;
+- developer sample asset import manifests;
 - queue state;
 - budget spend or actual cost records;
 - timeline assembly state;
@@ -664,12 +664,21 @@ Recommended episode fields:
 - `summary`: compact episode summary.
 - `sequences`: optional ordered list of sequences for that episode.
 
-For `project.type: series`, top-level `sequences` may be omitted.
+For `project.type: series`, sequences must live under `episodes[].sequences`.
+Top-level `sequences` fail validation for series projects. For
+`project.type: standaloneMovie`, `episodes` fail validation.
 
-The current implementation accepts both top-level `sequences` and episode-owned
-sequences for series projects. This is not a recommended authoring shape. A
-future model decision should either give that mixed shape a clear meaning or add
-fail-fast validation.
+A blank series project is valid:
+
+```yaml
+kind: renku.projectSetup
+version: 0.1.0
+
+project:
+  name: blank-series
+  title: Blank Series
+  type: series
+```
 
 ## Complete Movie Example
 
@@ -805,6 +814,12 @@ when:
 - `project.type` is missing;
 - `project.type` is not `standaloneMovie` or `series`;
 - `project.name` is present but is not a valid project name;
+- `project.coverFile` is absolute, escapes the setup directory, does not exist,
+  is not a file, or is not a PNG;
+- both an inline text field and its `*File` field are provided, such as
+  `summary` and `summaryFile`;
+- `project.type: series` includes top-level `sequences`;
+- `project.type: standaloneMovie` includes `episodes`;
 - a known field has the wrong type.
 
 The create command should fail with structured `PROJECT_DATA...` diagnostics
@@ -827,7 +842,7 @@ The create command should not fail when:
 - `continuityReferences` is missing;
 - `cast` is missing;
 - `sequences` is missing;
-- `episodes` is missing for a `standaloneMovie`;
+- `episodes` is missing for a `series`;
 - a sequence has no scenes;
 - a scene has no clips.
 
@@ -905,8 +920,8 @@ For V0, keep the create YAML plain and forgiving:
 - no durations;
 - no generation state;
 - no recipes;
-- no cover path;
-- no narrative file path;
+- optional `project.coverFile`, which is the only create-time visual asset;
+- optional Markdown file references for narrative text fields;
 - no attempts to make this file a source of truth.
 
 This gives agents a simple way to turn a narrative into an initial Renku Studio

@@ -20,8 +20,10 @@ export interface ProjectSetupProject {
   name: string;
   title: string;
   type: 'standaloneMovie' | 'series';
+  coverFile?: string;
   logline?: string;
   summary?: string;
+  summaryFile?: string;
   aspectRatio?: string;
 }
 
@@ -71,6 +73,7 @@ export interface ProjectSetupEpisode {
   shortTitle?: string;
   episodeNumber?: number;
   summary?: string;
+  summaryFile?: string;
   sequences?: ProjectSetupSequence[];
 }
 
@@ -78,19 +81,23 @@ export interface ProjectSetupSequence {
   title: string;
   shortTitle?: string;
   summary?: string;
+  summaryFile?: string;
   scenes?: ProjectSetupScene[];
 }
 
 export interface ProjectSetupScene {
   title: string;
   summary?: string;
+  summaryFile?: string;
   clips?: ProjectSetupClip[];
 }
 
 export interface ProjectSetupClip {
   title: string;
   summary?: string;
+  summaryFile?: string;
   visualIntent?: string;
+  visualIntentFile?: string;
 }
 
 export interface ProjectSetupValidation {
@@ -102,4 +109,5 @@ export interface ProjectSetupReadResult {
   setup: ProjectSetup;
   result: DiagnosticResult;
   warnings: DiagnosticIssue[];
+  coverPath?: string;
 }

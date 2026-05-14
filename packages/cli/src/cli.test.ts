@@ -125,7 +125,7 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
-  it('creates a project from narrative starter YAML', async () => {
+  it('creates a project from pre-authored narrative setup YAML', async () => {
     const storageRoot = path.join(homeDir, 'movies');
     await runRenkuCli(['init', storageRoot], {
       homeDir,
@@ -135,7 +135,7 @@ describe('renku CLI', () => {
     stderr = [];
     const yamlPath = await writeNarrativeYaml(homeDir);
 
-    const exitCode = await runRenkuCli(['create', '--from-narrative', yamlPath], {
+    const exitCode = await runRenkuCli(['create', '--file', yamlPath], {
       homeDir,
       io: captureIo(stdout, stderr),
     });
@@ -266,7 +266,7 @@ describe('renku CLI', () => {
     });
   });
 
-  it('prints JSON diagnostics for invalid narrative starter YAML', async () => {
+  it('rejects unknown CLI flags before running a command', async () => {
     const storageRoot = path.join(homeDir, 'movies');
     await runRenkuCli(['init', storageRoot], {
       homeDir,
@@ -274,10 +274,10 @@ describe('renku CLI', () => {
     });
     stdout = [];
     stderr = [];
-    const yamlPath = await writeInvalidNarrativeYaml(homeDir);
+    const yamlPath = await writeCreateYaml(homeDir);
 
     const exitCode = await runRenkuCli(
-      ['create', '--from-narrative', yamlPath, '--json'],
+      ['create', '--file', yamlPath, '--unexpected-input=cover.png', '--json'],
       {
         homeDir,
         io: captureIo(stdout, stderr),
@@ -290,12 +290,12 @@ describe('renku CLI', () => {
     expect(report).toMatchObject({
       valid: false,
       error: {
-        code: 'NARRATIVE_STARTER999',
+        code: 'CLI005',
       },
       errors: [
         expect.objectContaining({
-          code: 'NARRATIVE_STARTER010',
-          message: 'project.title is required.',
+          code: 'CLI005',
+          message: 'Unknown flag: --unexpected-input=cover.png.',
         }),
       ],
     });
@@ -327,7 +327,7 @@ describe('renku CLI', () => {
     expect(stderr.join('\n')).toContain('project.visualDescription');
   });
 
-  it('creates a project with cover and JSON output', async () => {
+  it('creates a project with YAML coverFile and JSON output', async () => {
     const storageRoot = path.join(homeDir, 'movies');
     await runRenkuCli(['init', storageRoot], {
       homeDir,
@@ -335,12 +335,14 @@ describe('renku CLI', () => {
     });
     stdout = [];
     stderr = [];
-    const yamlPath = await writeCreateYaml(homeDir);
-    const coverPath = path.join(homeDir, 'cover.png');
-    await fs.writeFile(coverPath, 'cover', 'utf8');
+    await fs.mkdir(path.join(homeDir, 'narrative'), { recursive: true });
+    await fs.writeFile(path.join(homeDir, 'narrative', 'cover.png'), 'cover', 'utf8');
+    const yamlPath = await writeCreateYaml(homeDir, {
+      extraProjectFields: '  coverFile: narrative/cover.png\n',
+    });
 
     const exitCode = await runRenkuCli(
-      ['create', '--file', yamlPath, '--cover', coverPath, '--json'],
+      ['create', '--file', yamlPath, '--json'],
       {
         homeDir,
         io: captureIo(stdout, stderr),
@@ -621,7 +623,7 @@ async function writeNarrativeYaml(homeDir: string): Promise<string> {
   const yamlPath = path.join(homeDir, 'narrative.yaml');
   await fs.writeFile(
     yamlPath,
-    `kind: renku.narrativeStarter
+    `kind: renku.projectSetup
 version: 0.1.0
 
 project:
@@ -630,7 +632,7 @@ project:
   type: standaloneMovie
   aspectRatio: "16:9"
   logline: A documentary about preparation before 1453.
-  summary: A narrative starter summary.
+  summary: A narrative setup summary.
 
 languages:
   - localeTag: en-US
@@ -669,31 +671,6 @@ sequences:
         clips:
           - title: First Clip
             summary: A first clip.
-`,
-    'utf8'
-  );
-  return yamlPath;
-}
-
-async function writeInvalidNarrativeYaml(homeDir: string): Promise<string> {
-  const yamlPath = path.join(homeDir, 'invalid-narrative.yaml');
-  await fs.writeFile(
-    yamlPath,
-    `kind: renku.narrativeStarter
-version: 0.1.0
-
-project:
-  name: constantinople
-  type: standaloneMovie
-  aspectRatio: "16:9"
-  logline: A documentary about preparation before 1453.
-
-languages:
-  - localeTag: en-US
-    isBase: true
-
-sequences:
-  - title: Opening
 `,
     'utf8'
   );

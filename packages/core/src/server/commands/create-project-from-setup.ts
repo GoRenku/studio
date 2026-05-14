@@ -50,7 +50,7 @@ export async function createFromSetup(
 
   try {
     const now = new Date().toISOString();
-    const coverFile = input.coverPath ? PROJECT_COVER_IMAGE_FILE : null;
+    const coverFile = setupResult.coverPath ? PROJECT_COVER_IMAGE_FILE : null;
     const counts = await writeProjectSetupRecords(
       session,
       setup,
@@ -60,7 +60,7 @@ export async function createFromSetup(
       projectFolder
     );
     const coverPath = await copyProjectCoverImage({
-      coverPath: input.coverPath,
+      coverPath: setupResult.coverPath,
       projectFolder,
     });
 

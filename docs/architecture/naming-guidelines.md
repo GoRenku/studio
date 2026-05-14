@@ -668,7 +668,6 @@ The public command remains:
 
 ```bash
 renku create --file project.yaml
-renku create --file project.yaml --cover cover.png
 ```
 
 The CLI should call `ProjectDataService.createFromSetup`.

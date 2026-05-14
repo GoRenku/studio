@@ -14,7 +14,6 @@ import { readClipDesignResource } from './resources/clip-design.js';
 import {
   createFromSetup,
 } from './commands/create-project-from-setup.js';
-import { createFromNarrativeStarter } from './commands/create-project-from-narrative-starter.js';
 import { migrateProjectDatabaseForProject } from './commands/migrate-database.js';
 import { registerAsset } from './commands/register-asset.js';
 import {
@@ -45,7 +44,6 @@ import type { ProjectDataService } from './project-data-service-contracts.js';
 export function createProjectDataService(): ProjectDataService {
   return {
     createFromSetup,
-    createFromNarrativeStarter,
     migrateProjectDatabase: migrateProjectDatabaseForProject,
     listLibrary,
     readProject,

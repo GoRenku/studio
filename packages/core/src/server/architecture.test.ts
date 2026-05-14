@@ -40,7 +40,6 @@ describe('core server architecture', () => {
       'session.db',
       'openProjectStore',
       'readProjectSetupOrThrow',
-      'readNarrativeStarterOrThrow',
     ];
 
     expect(lineCount).toBeLessThanOrEqual(140);

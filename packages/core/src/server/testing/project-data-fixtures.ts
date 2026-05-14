@@ -172,14 +172,31 @@ episodes:
   return setupPath;
 }
 
-export async function writeNarrativeStarter(
+export async function writeMinimalProjectSetup(homeDir: string): Promise<string> {
+  const setupPath = path.join(homeDir, 'minimal-project.yaml');
+  await fs.writeFile(
+    setupPath,
+    `kind: renku.projectSetup
+version: 0.1.0
+
+project:
+  name: blank-movie
+  title: Blank Movie
+  type: standaloneMovie
+`,
+    'utf8'
+  );
+  return setupPath;
+}
+
+export async function writeNarrativeProjectSetup(
   homeDir: string,
   options: {
     projectNameLine?: string;
     projectSummaryFile?: string;
   } = {}
 ): Promise<string> {
-  const starterPath = path.join(homeDir, 'narrative.yaml');
+  const setupPath = path.join(homeDir, 'narrative-project.yaml');
   await writeSetupMarkdownFixture(
     homeDir,
     'narrative/project-summary.md',
@@ -217,8 +234,8 @@ export async function writeNarrativeStarter(
   );
   await writeSetupMarkdownFixture(homeDir, 'narrative/cover.png', 'narrative cover');
   await fs.writeFile(
-    starterPath,
-    `kind: renku.narrativeStarter
+    setupPath,
+    `kind: renku.projectSetup
 version: 0.1.0
 
 project:
@@ -280,7 +297,7 @@ sequences:
 `,
     'utf8'
   );
-  return starterPath;
+  return setupPath;
 }
 
 export function tableColumns(database: Database.Database, tableName: string): string[] {
@@ -314,4 +331,3 @@ export function readAssetFileMetadata(
     database.close();
   }
 }
-

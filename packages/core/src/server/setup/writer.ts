@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectCounts } from '../../client/index.js';
 import { insertCastMemberRecords } from '../database/access/cast-members.js';
@@ -15,23 +14,25 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { insertVisualLanguageCategoryRecords } from '../database/access/visual-language-categories.js';
 import { insertVisualLanguageRecords } from '../database/access/visual-language.js';
 import { writeMarkdownAssetFile } from '../files/markdown-asset-files.js';
-import { WORKING_ASSETS_BASE_ROOT } from '../files/asset-paths.js';
-import {
-  joinProjectRelativePath,
-  resolveProjectRelativePath,
-} from '../files/project-relative-paths.js';
-import type { ProjectRelativePath } from '../../client/index.js';
 import type { EntityIdPrefix } from '../entity-ids.js';
 import type {
   ProjectSetup,
   ProjectSetupLanguage,
-  ProjectSetupSequence,
 } from './contracts.js';
 import {
   addProjectSetupMarkdownAsset,
   insertProjectSetupMarkdownAssetRecords,
   type ProjectSetupMarkdownAsset,
 } from './markdown-assets.js';
+import {
+  createProjectSetupNarrativeRecords,
+  writeSetupSequences,
+} from './narrative-records.js';
+import { numberedSlug, slugify } from './slugs.js';
+import {
+  buildSetupWorkspaceFolders,
+  ensureProjectFolders,
+} from './workspace-folders.js';
 
 export async function writeProjectSetupRecords(
   session: DatabaseSession,
@@ -195,9 +196,7 @@ export async function writeProjectSetupRecords(
   );
 
   const episodeRecords: Parameters<typeof insertEpisodeRecord>[1][] = [];
-  const sequenceRecords: Parameters<typeof insertSequenceRecord>[1][] = [];
-  const sceneRecords: Parameters<typeof insertSceneRecord>[1][] = [];
-  const clipRecords: Parameters<typeof insertClipRecord>[1][] = [];
+  const narrativeRecords = createProjectSetupNarrativeRecords();
 
   const counts: ProjectCounts = {
     languages: localeRecords.length,
@@ -223,31 +222,27 @@ export async function writeProjectSetupRecords(
       createdAt: now,
       updatedAt: now,
     });
-    writeSequences({
-      input: episode.sequences ?? [],
+    writeSetupSequences({
+      sequences: episode.sequences ?? [],
       episodeId,
       ids,
       counts,
       now,
       baseLocaleId,
       markdownAssets,
-      sequenceRecords,
-      sceneRecords,
-      clipRecords,
+      records: narrativeRecords,
     });
   });
 
-  writeSequences({
-    input: setup.sequences ?? [],
+  writeSetupSequences({
+    sequences: setup.sequences ?? [],
     episodeId: null,
     ids,
     counts,
     now,
     baseLocaleId,
     markdownAssets,
-    sequenceRecords,
-    sceneRecords,
-    clipRecords,
+    records: narrativeRecords,
   });
 
   await Promise.all(
@@ -283,114 +278,19 @@ export async function writeProjectSetupRecords(
     for (const record of episodeRecords) {
       insertEpisodeRecord(transactionSession, record);
     }
-    for (const record of sequenceRecords) {
+    for (const record of narrativeRecords.sequenceRecords) {
       insertSequenceRecord(transactionSession, record);
     }
-    for (const record of sceneRecords) {
+    for (const record of narrativeRecords.sceneRecords) {
       insertSceneRecord(transactionSession, record);
     }
-    for (const record of clipRecords) {
+    for (const record of narrativeRecords.clipRecords) {
       insertClipRecord(transactionSession, record);
     }
     for (const asset of markdownAssets) {
       insertProjectSetupMarkdownAssetRecords(transactionSession, asset);
     }
     return counts;
-  });
-}
-
-function writeSequences(input: {
-  input: ProjectSetupSequence[];
-  episodeId: string | null;
-  ids: (prefix: EntityIdPrefix) => string;
-  counts: ProjectCounts;
-  now: string;
-  baseLocaleId: string | null;
-  markdownAssets: ProjectSetupMarkdownAsset[];
-  sequenceRecords: Parameters<typeof insertSequenceRecord>[1][];
-  sceneRecords: Parameters<typeof insertSceneRecord>[1][];
-  clipRecords: Parameters<typeof insertClipRecord>[1][];
-}): void {
-  input.input.forEach((sequence) => {
-    const sequenceId = input.ids('sequence');
-    input.counts.sequences += 1;
-    const sequenceSlug = numberedSlug(input.counts.sequences, sequence.title);
-    input.sequenceRecords.push({
-      id: sequenceId,
-      episodeId: input.episodeId,
-      title: sequence.title,
-      shortTitle: sequence.shortTitle,
-      oneLineSummary: undefined,
-      position: input.counts.sequences,
-      createdAt: input.now,
-      updatedAt: input.now,
-    });
-    addProjectSetupMarkdownAsset(input.markdownAssets, input.ids, input.now, {
-      content: sequence.summary,
-      title: `${sequence.title} summary`,
-      role: 'summary',
-      localeId: input.baseLocaleId,
-      pathTarget: { kind: 'sequence', sequenceSlug },
-      fileName: 'sequence-summary.md',
-      relationship: { kind: 'sequence', sequenceId },
-    });
-
-    (sequence.scenes ?? []).forEach((scene, sceneIndex) => {
-      const sceneId = input.ids('scene');
-      input.counts.scenes += 1;
-      const sceneSlug = numberedSlug(sceneIndex + 1, scene.title);
-      input.sceneRecords.push({
-        id: sceneId,
-        sequenceId,
-        title: scene.title,
-        oneLineSummary: undefined,
-        position: sceneIndex + 1,
-        createdAt: input.now,
-        updatedAt: input.now,
-      });
-      addProjectSetupMarkdownAsset(input.markdownAssets, input.ids, input.now, {
-        content: scene.summary,
-        title: `${scene.title} summary`,
-        role: 'summary',
-        localeId: input.baseLocaleId,
-        pathTarget: { kind: 'scene', sequenceSlug, sceneSlug },
-        fileName: 'scene-summary.md',
-        relationship: { kind: 'scene', sceneId },
-      });
-
-      (scene.clips ?? []).forEach((clip, clipIndex) => {
-        input.counts.clips += 1;
-        const clipId = input.ids('clip');
-        const clipSlug = numberedSlug(clipIndex + 1, clip.title);
-        input.clipRecords.push({
-          id: clipId,
-          sceneId,
-          title: clip.title,
-          oneLineSummary: undefined,
-          position: clipIndex + 1,
-          createdAt: input.now,
-          updatedAt: input.now,
-        });
-        addProjectSetupMarkdownAsset(input.markdownAssets, input.ids, input.now, {
-          content: clip.summary,
-          title: `${clip.title} summary`,
-          role: 'summary',
-          localeId: input.baseLocaleId,
-          pathTarget: { kind: 'clip', sequenceSlug, sceneSlug, clipSlug },
-          fileName: 'clip-summary.md',
-          relationship: { kind: 'clip', clipId },
-        });
-        addProjectSetupMarkdownAsset(input.markdownAssets, input.ids, input.now, {
-          content: clip.visualIntent,
-          title: `${clip.title} visual intent`,
-          role: 'visual_intent',
-          localeId: input.baseLocaleId,
-          pathTarget: { kind: 'clip', sequenceSlug, sceneSlug, clipSlug },
-          fileName: 'visual-intent.md',
-          relationship: { kind: 'clip', clipId },
-        });
-      });
-    });
   });
 }
 
@@ -423,52 +323,4 @@ function buildVisualLanguageCategoryRecords(input: {
     createdAt: input.now,
     updatedAt: input.now,
   }));
-}
-
-function buildSetupWorkspaceFolders(input: {
-  setup: ProjectSetup;
-  castMemberRecords: { name: string; position: number }[];
-}): ProjectRelativePath[] {
-  const folders = [joinProjectRelativePath(WORKING_ASSETS_BASE_ROOT, 'cast')];
-  for (const castMember of input.castMemberRecords) {
-    folders.push(
-      joinProjectRelativePath(
-        WORKING_ASSETS_BASE_ROOT,
-        'cast',
-        numberedSlug(castMember.position, castMember.name)
-      )
-    );
-  }
-  if ((input.setup.visualLanguageCategories?.length ?? 0) > 0) {
-    folders.push(joinProjectRelativePath(WORKING_ASSETS_BASE_ROOT, 'visual-language'));
-  }
-  if ((input.setup.continuityReferences?.length ?? 0) > 0) {
-    folders.push(joinProjectRelativePath(WORKING_ASSETS_BASE_ROOT, 'continuity'));
-  }
-  return folders;
-}
-
-async function ensureProjectFolders(
-  projectFolder: string,
-  folders: ProjectRelativePath[]
-): Promise<void> {
-  await Promise.all(
-    folders.map((folder) =>
-      fs.mkdir(resolveProjectRelativePath(projectFolder, folder), {
-        recursive: true,
-      })
-    )
-  );
-}
-
-function numberedSlug(position: number, title: string): string {
-  return `${String(position).padStart(2, '0')}-${slugify(title)}`;
-}
-
-function slugify(input: string): string {
-  const slug = input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return slug.length > 0 ? slug : 'untitled';
 }
