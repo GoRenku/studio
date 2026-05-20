@@ -48,6 +48,7 @@
   "packageManager": "pnpm@10.15.0",
   "dependencies": {
     "@gorenku/studio-diagnostics": "workspace:*",
+    "ajv": "^8.20.0",
     "better-sqlite3": "^12.9.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
