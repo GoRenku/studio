@@ -1,8 +1,14 @@
+export * from './acts.js';
 export * from './assets.js';
+export * from './block-cast-members.js';
+export * from './block-locations.js';
+export * from './blocks.js';
 export * from './cast-members.js';
-export * from './continuity-references.js';
-export * from './narrative.js';
+export * from './locations.js';
 export * from './project.js';
 export * from './project-locales.js';
+export * from './scene-locations.js';
+export * from './scenes.js';
+export * from './screenplay.js';
+export * from './sequences.js';
 export * from './visual-language.js';
-

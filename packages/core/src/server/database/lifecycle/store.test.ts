@@ -82,7 +82,7 @@ describe('openProjectStore', () => {
 
   it('rejects a mismatched project store schema generation', async () => {
     const projectFolder = await createProjectFolder();
-    createProjectDatabaseWithSchemaGeneration(projectFolder, 2);
+    createProjectDatabaseWithSchemaGeneration(projectFolder, 1);
 
     expect(() =>
       openProjectStore({
@@ -126,7 +126,7 @@ function projectDatabasePath(projectFolder: string): string {
 }
 
 function createCurrentProjectDatabase(projectFolder: string): void {
-  createProjectDatabaseWithSchemaGeneration(projectFolder, 1);
+  createProjectDatabaseWithSchemaGeneration(projectFolder, 2);
 }
 
 function createProjectDatabaseWithSchemaGeneration(

@@ -5,12 +5,16 @@ export const castMembers = sqliteTable(
   {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
-    kind: text('kind'),
     role: text('role'),
-    shortDescription: text('short_description'),
+    age: integer('age'),
+    want: text('want'),
+    need: text('need'),
+    arc: text('arc'),
+    voiceNotes: text('voice_notes'),
+    description: text('description'),
     position: integer('position').notNull(),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('cast_member_position_id_idx').on(table.position, table.id)]
+  (table) => [
+    index('cast_member_position_id_idx').on(table.position, table.id),
+  ],
 );

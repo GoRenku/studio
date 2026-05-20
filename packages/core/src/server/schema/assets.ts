@@ -1,8 +1,15 @@
-import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  real,
+  sqliteTable,
+  text,
+} from 'drizzle-orm/sqlite-core';
 import { castMembers } from './cast-members.js';
-import { continuityReferences } from './continuity-references.js';
-import { clips, scenes, sequences } from './narrative.js';
+import { locations } from './locations.js';
 import { projectLocales } from './project-locales.js';
+import { scenes } from './scenes.js';
+import { sequences } from './sequences.js';
 import { visualLanguage } from './visual-language.js';
 
 export const assets = sqliteTable('asset', {
@@ -36,7 +43,7 @@ export const assetFiles = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (table) => [index('asset_file_asset_role_idx').on(table.assetId, table.role)]
+  (table) => [index('asset_file_asset_role_idx').on(table.assetId, table.role)],
 );
 
 export const projectAssets = sqliteTable(
@@ -60,9 +67,9 @@ export const projectAssets = sqliteTable(
       table.selection,
       table.selectionOrder,
       table.sortOrder,
-      table.assetId
+      table.assetId,
     ),
-  ]
+  ],
 );
 
 export const visualLanguageAssets = sqliteTable(
@@ -90,9 +97,9 @@ export const visualLanguageAssets = sqliteTable(
       table.selection,
       table.selectionOrder,
       table.sortOrder,
-      table.assetId
+      table.assetId,
     ),
-  ]
+  ],
 );
 
 export const castAssets = sqliteTable(
@@ -120,18 +127,18 @@ export const castAssets = sqliteTable(
       table.selection,
       table.selectionOrder,
       table.sortOrder,
-      table.assetId
+      table.assetId,
     ),
-  ]
+  ],
 );
 
-export const continuityReferenceAssets = sqliteTable(
-  'continuity_reference_asset',
+export const locationAssets = sqliteTable(
+  'location_asset',
   {
     id: text('id').primaryKey(),
-    continuityReferenceId: text('continuity_reference_id')
+    locationId: text('location_id')
       .notNull()
-      .references(() => continuityReferences.id),
+      .references(() => locations.id),
     assetId: text('asset_id')
       .notNull()
       .references(() => assets.id),
@@ -144,15 +151,15 @@ export const continuityReferenceAssets = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    index('continuity_reference_asset_filter_order_idx').on(
-      table.continuityReferenceId,
+    index('location_asset_filter_order_idx').on(
+      table.locationId,
       table.role,
       table.selection,
       table.selectionOrder,
       table.sortOrder,
-      table.assetId
+      table.assetId,
     ),
-  ]
+  ],
 );
 
 export const sequenceAssets = sqliteTable(
@@ -180,9 +187,9 @@ export const sequenceAssets = sqliteTable(
       table.selection,
       table.selectionOrder,
       table.sortOrder,
-      table.assetId
+      table.assetId,
     ),
-  ]
+  ],
 );
 
 export const sceneAssets = sqliteTable(
@@ -210,37 +217,7 @@ export const sceneAssets = sqliteTable(
       table.selection,
       table.selectionOrder,
       table.sortOrder,
-      table.assetId
+      table.assetId,
     ),
-  ]
-);
-
-export const clipAssets = sqliteTable(
-  'clip_asset',
-  {
-    id: text('id').primaryKey(),
-    clipId: text('clip_id')
-      .notNull()
-      .references(() => clips.id),
-    assetId: text('asset_id')
-      .notNull()
-      .references(() => assets.id),
-    localeId: text('locale_id').references(() => projectLocales.id),
-    role: text('role').notNull(),
-    sortOrder: integer('sort_order').notNull(),
-    selection: text('selection').notNull().default('take'),
-    selectionOrder: integer('selection_order'),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
-  },
-  (table) => [
-    index('clip_asset_filter_order_idx').on(
-      table.clipId,
-      table.role,
-      table.selection,
-      table.selectionOrder,
-      table.sortOrder,
-      table.assetId
-    ),
-  ]
+  ],
 );

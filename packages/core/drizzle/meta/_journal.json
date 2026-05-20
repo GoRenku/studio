@@ -36,6 +36,13 @@
       "when": 1778690533613,
       "tag": "0004_add_resource_loading_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1779286109920,
+      "tag": "0005_screenplay_schema",
+      "breakpoints": true
     }
   ]
 }
