@@ -45,7 +45,7 @@ function contentTypeForAssetFile(file: AssetFile): string {
   if (file.mediaKind === 'video') {
     return 'video/mp4';
   }
-  if (file.mediaKind === 'markdown' || file.mediaKind === 'text') {
+  if (file.mediaKind === 'text') {
     return 'text/plain; charset=utf-8';
   }
   if (file.mediaKind === 'json') {

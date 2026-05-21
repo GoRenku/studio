@@ -3,15 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  createDeterministicIdGenerator,
   createProjectDataService,
   type ProjectRelativePath,
 } from '../index.js';
 import {
+  createSampleMovieProject,
   readAssetFileMetadata,
-  runCreateOrSkip,
   writeConfig,
-  writeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('export production assets', () => {
@@ -24,15 +22,8 @@ describe('export production assets', () => {
   });
 
   it('exports selected production assets incrementally and prunes stale files', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -82,7 +73,7 @@ describe('export production assets', () => {
     const narration = await projectData.registerAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       type: 'narration',
       mediaKind: 'audio',
       title: 'Narration take 1',
@@ -126,7 +117,7 @@ describe('export production assets', () => {
     const subtitles = await projectData.registerAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       locale: { localeId: 'locale_test0002' },
       type: 'subtitles',
       mediaKind: 'text',
@@ -139,7 +130,7 @@ describe('export production assets', () => {
     await projectData.createAssetSelect({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       assetId: narration.assetId,
     });
     await projectData.createAssetSelect({
@@ -163,7 +154,7 @@ describe('export production assets', () => {
     await projectData.createAssetSelect({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       assetId: subtitles.assetId,
     });
 
@@ -203,8 +194,6 @@ describe('export production assets', () => {
       '01-the-young-sultan-s-obsession',
       'scenes',
       '01-a-throne-facing-an-ancient-city',
-      'clips',
-      '01-the-new-sultan',
       'narration.wav'
     );
     const localizedTarget = path.join(
@@ -216,8 +205,6 @@ describe('export production assets', () => {
       '01-the-young-sultan-s-obsession',
       'scenes',
       '01-a-throne-facing-an-ancient-city',
-      'clips',
-      '01-the-new-sultan',
       'subtitles.vtt'
     );
     await expect(fs.readFile(sequenceTarget, 'utf8')).resolves.toBe(
@@ -256,7 +243,7 @@ describe('export production assets', () => {
     await projectData.removeAssetSelect({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       assetId: narration.assetId,
     });
     const prunedExport = await projectData.exportProductionAssets({
@@ -271,15 +258,8 @@ describe('export production assets', () => {
   }, 10000);
 
   it('does not refresh asset file metadata during a production export dry run', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -294,7 +274,7 @@ describe('export production assets', () => {
     const narration = await projectData.registerAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       type: 'narration',
       mediaKind: 'audio',
       title: 'Narration take 1',
@@ -305,7 +285,7 @@ describe('export production assets', () => {
     await projectData.createAssetSelect({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       assetId: narration.assetId,
     });
 
@@ -334,8 +314,6 @@ describe('export production assets', () => {
           '01-the-young-sultan-s-obsession',
           'scenes',
           '01-a-throne-facing-an-ancient-city',
-          'clips',
-          '01-the-new-sultan',
           'narration.wav'
         )
       )

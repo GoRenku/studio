@@ -1,5 +1,6 @@
 import type {
   ScreenplayCommandReport,
+  ScreenplayCreateDocument,
   ScreenplayDocument,
   ScreenplayOperationDocument,
 } from '../../client/screenplay.js';
@@ -13,7 +14,7 @@ import { buildScreenplayDraftForOperations } from './apply-screenplay-operations
 
 export async function validateScreenplayJson(
   input: RenkuConfigPathOptions & {
-    document?: ScreenplayDocument | ScreenplayOperationDocument;
+    document?: ScreenplayDocument | ScreenplayCreateDocument | ScreenplayOperationDocument;
     filePath?: string;
   } = {}
 ): Promise<ScreenplayCommandReport> {
@@ -27,6 +28,18 @@ export async function validateScreenplayJson(
 
     if (input.document?.kind === 'screenplay') {
       warnings.push(...resolveScreenplayDocumentIds({ document: input.document }).warnings);
+    } else if (input.document?.kind === 'screenplayCreate') {
+      warnings.push(
+        ...resolveScreenplayDocumentIds({
+          document: {
+            kind: 'screenplay',
+            screenplay: input.document.screenplay,
+            cast: input.document.cast,
+            locations: input.document.locations,
+            acts: input.document.acts,
+          },
+        }).warnings
+      );
     } else if (input.document?.kind === 'screenplayOperations') {
       const base = readScreenplayDocumentFromSession(session);
       if (!base) {

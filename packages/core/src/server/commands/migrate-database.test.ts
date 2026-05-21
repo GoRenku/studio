@@ -3,14 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createProjectDataService } from '../index.js';
 import {
-  createDeterministicIdGenerator,
-  createProjectDataService,
-} from '../index.js';
-import {
-  runCreateOrSkip,
+  createSampleMovieProject,
   writeConfig,
-  writeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('migrate database command', () => {
@@ -24,16 +20,8 @@ describe('migrate database command', () => {
   });
 
   it('applies project database migrations by project name', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -51,7 +39,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(2);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(3);
     } finally {
       sqlite.close();
     }

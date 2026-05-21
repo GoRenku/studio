@@ -21,7 +21,6 @@ const castAssetsCache = new Map<string, Asset[]>();
 interface CastDesignAssetsRuntimeState {
   cacheKey: string;
   assets: Asset[];
-  descriptionAsset: CastDesignResourceResponse['descriptionAsset'];
   isLoadingCastAssets: boolean;
   castAssetsError: string | null;
 }
@@ -56,8 +55,7 @@ export function useCastDesignAssets(input: {
     setAssetState(currentAssetState);
   }
 
-  const { assets, descriptionAsset, isLoadingCastAssets, castAssetsError } =
-    currentAssetState;
+  const { assets, isLoadingCastAssets, castAssetsError } = currentAssetState;
 
   const loadAssets = useCallback(async () => {
     setAssetState((current) => ({
@@ -72,7 +70,6 @@ export function useCastDesignAssets(input: {
       setAssetState((current) => ({
         ...current,
         assets: nextAssets,
-        descriptionAsset: resource.descriptionAsset,
         isLoadingCastAssets: false,
       }));
     } catch (error) {
@@ -98,7 +95,6 @@ export function useCastDesignAssets(input: {
               ? {
                   ...current,
                   assets: nextAssets,
-                  descriptionAsset: resource.descriptionAsset,
                   isLoadingCastAssets: false,
                 }
               : current
@@ -218,10 +214,9 @@ export function useCastDesignAssets(input: {
       projectCastDesignAssets(
         projectName,
         castEntry,
-        assets,
-        descriptionAsset
+        assets
       ),
-    [assets, castEntry, descriptionAsset, projectName]
+    [assets, castEntry, projectName]
   );
 
   return {
@@ -260,7 +255,6 @@ function createCastDesignAssetsRuntimeState(
   return {
     cacheKey,
     assets: cachedAssets ?? [],
-    descriptionAsset: undefined,
     isLoadingCastAssets: cachedAssets === undefined,
     castAssetsError: null,
   };
@@ -276,8 +270,7 @@ function castDesignResourceAssets(resource: CastDesignResourceResponse): Asset[]
 function projectCastDesignAssets(
   projectName: string,
   castEntry: CastMember,
-  assets: Asset[],
-  descriptionAsset: CastDesignResourceResponse['descriptionAsset']
+  assets: Asset[]
 ): Pick<
   CastDesignAssetsState,
   'descriptionContent' | 'characterSheetContent' | 'voiceDesignContent'
@@ -288,7 +281,6 @@ function projectCastDesignAssets(
   return {
     descriptionContent: {
       descriptionText: castEntry.shortDescription ?? '',
-      descriptionAsset,
       descriptionImages: designAssets.filter(
         (asset) => asset.kind === 'image' && isDescriptionAsset(asset)
       ),
@@ -341,7 +333,7 @@ function castDesignAssetKind(asset: Asset): CastDesignAssetKind {
   if (asset.mediaKind === 'audio') {
     return 'voice';
   }
-  if (asset.mediaKind === 'text' || asset.mediaKind === 'markdown') {
+  if (asset.mediaKind === 'text') {
     return 'text';
   }
   return 'image';
@@ -354,7 +346,7 @@ function castDesignAssetAspect(
   if (asset.mediaKind === 'audio') {
     return 'voice';
   }
-  if (asset.mediaKind === 'text' || asset.mediaKind === 'markdown') {
+  if (asset.mediaKind === 'text') {
     return 'text';
   }
   if (!file?.width || !file.height) {

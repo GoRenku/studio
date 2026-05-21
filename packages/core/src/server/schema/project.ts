@@ -6,6 +6,7 @@ export const projects = sqliteTable('project', {
   title: text('title').notNull(),
   type: text('type').notNull(),
   logline: text('logline'),
+  summary: text('summary'),
   aspectRatio: text('aspect_ratio'),
   coverFile: text('cover_file'),
   createdAt: text('created_at').notNull(),

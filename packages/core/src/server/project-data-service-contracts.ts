@@ -8,7 +8,6 @@ import type {
   ClipNavigationRow,
   ContinuityReferenceNavigationRow,
   EpisodeNavigationRow,
-  MarkdownAssetContent,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -29,6 +28,7 @@ import type {
   Location as ScreenplayLocation,
   Scene as ScreenplayScene,
   ScreenplayCommandReport,
+  ScreenplayCreateDocument,
   ScreenplayDocument,
   ScreenplayOperationDocument,
   ScreenplayReadReport,
@@ -40,7 +40,7 @@ import type { RenkuConfigPathOptions } from './renku-config.js';
 import type { ProjectIdGenerator } from './entity-ids.js';
 
 export interface ProjectDataService {
-  createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
+  createMovieProject(input: CreateMovieProjectInput): Promise<ProjectCreateReport>;
   migrateProjectDatabase(
     input: MigrateProjectDatabaseInput
   ): Promise<ProjectDatabaseMigrationReport>;
@@ -87,12 +87,6 @@ export interface ProjectDataService {
   patchProjectInformation(
     input: PatchProjectInformationInput
   ): Promise<ProjectInformationResource>;
-  readMarkdownAssetContent(
-    input: ReadMarkdownAssetContentInput
-  ): Promise<MarkdownAssetContent>;
-  updateMarkdownAssetContent(
-    input: UpdateMarkdownAssetContentInput
-  ): Promise<UpdateMarkdownAssetContentResult>;
   resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
   resolveProjectAssetFile(
     input: ResolveProjectAssetFileInput
@@ -126,8 +120,12 @@ export interface ProjectDataService {
   applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayCommandReport>;
 }
 
-export interface CreateProjectFromSetupInput extends RenkuConfigPathOptions {
-  setupPath: string;
+export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
+  projectName: string;
+  title: string;
+  aspectRatio?: string;
+  logline?: string;
+  summary?: string;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -178,20 +176,22 @@ export interface ReadScreenplaySceneInput extends RenkuConfigPathOptions {
 }
 
 export interface ValidateScreenplayJsonInput extends RenkuConfigPathOptions {
-  document?: ScreenplayDocument | ScreenplayOperationDocument;
+  document?: ScreenplayDocument | ScreenplayCreateDocument | ScreenplayOperationDocument;
   filePath?: string;
 }
 
 export interface CreateScreenplayInput extends RenkuConfigPathOptions {
-  document: ScreenplayDocument;
+  document: ScreenplayCreateDocument;
   filePath?: string;
   dryRun?: boolean;
+  idGenerator?: ProjectIdGenerator;
 }
 
 export interface ApplyScreenplayOperationsInput extends RenkuConfigPathOptions {
   document: ScreenplayOperationDocument;
   filePath?: string;
   dryRun?: boolean;
+  idGenerator?: ProjectIdGenerator;
 }
 
 export interface ListNavigationInput extends RenkuConfigPathOptions {
@@ -250,22 +250,6 @@ export interface UpdateProjectInformationInput extends RenkuConfigPathOptions {
 export interface PatchProjectInformationInput extends RenkuConfigPathOptions {
   projectName: string;
   patch: ProjectInformationPatch;
-}
-
-export interface ReadMarkdownAssetContentInput extends RenkuConfigPathOptions {
-  projectName: string;
-  assetId: string;
-  assetFileId: string;
-}
-
-export interface UpdateMarkdownAssetContentInput
-  extends ReadMarkdownAssetContentInput {
-  content: string;
-}
-
-export interface UpdateMarkdownAssetContentResult {
-  content: MarkdownAssetContent;
-  resourceKeys: string[];
 }
 
 export interface ProjectInformationPatch {

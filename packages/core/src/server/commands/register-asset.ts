@@ -117,7 +117,6 @@ function normalizeRegisterAssetInput(
 function normalizeMediaKind(input: string): string {
   const mediaKind = requiredTrimmed(input, 'mediaKind');
   const allowed = new Set([
-    'markdown',
     'text',
     'image',
     'audio',

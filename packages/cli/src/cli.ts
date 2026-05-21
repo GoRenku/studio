@@ -44,7 +44,7 @@ Usage
   $ renku <command>
 
 Commands
-  create --file <yaml>            Create a project from setup YAML
+  create <project-name>           Create a clean movie project
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
   asset                Register, list, and select assets
@@ -62,7 +62,7 @@ Commands
   studio current       Show current Studio focus and context
 
 Options
-  --file               Project create YAML file
+  --file               JSON input file for screenplay commands
   --storage-root       Override configured storage root for this command
   --project            Project name for project information commands
   --target             Asset attachment target
@@ -90,7 +90,7 @@ Options
   --version            Show version
 
 Examples
-  $ renku create --file sample-project.yaml
+  $ renku create urban-basilica --title "Urban Basilica"
   $ renku init ~/Movies/renku
   $ renku init /Volumes/Media/Renku --json
 `;
@@ -234,6 +234,10 @@ export async function runRenkuCli(
         return await runCreateCommand({
           input,
           file: cli.flags.file,
+          title: cli.flags.title,
+          aspectRatio: cli.flags.aspectRatio,
+          logline: cli.flags.logline,
+          summary: cli.flags.summary,
           storageRoot: cli.flags.storageRoot,
           json: cli.flags.json,
           io,

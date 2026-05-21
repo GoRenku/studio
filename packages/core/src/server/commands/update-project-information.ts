@@ -7,7 +7,6 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectInformationResource } from '../../client/index.js';
 import { listCastAssetRecords } from '../database/access/asset-relationships/cast-members.js';
 import { listContinuityReferenceAssetRecords } from '../database/access/asset-relationships/continuity-references.js';
-import { listAssetFileRecords } from '../database/access/asset-files.js';
 import {
   listClipAssetRecords,
   listSceneAssetRecords,
@@ -29,13 +28,7 @@ import {
 } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { listVisualLanguageAssetRecords } from '../database/access/asset-relationships/visual-language.js';
-import { writeMarkdownAssetFile } from '../files/markdown-asset-files.js';
-import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
-import {
-  createRandomIdGenerator,
-  createUniqueIdAllocator,
-  type EntityIdPrefix,
-} from '../entity-ids.js';
+import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type {
   PatchProjectInformationInput,
@@ -44,15 +37,11 @@ import type {
   ProjectInformationUpdate,
   UpdateProjectInformationInput,
 } from '../project-data-service-contracts.js';
-import {
-  buildProjectSummaryAsset,
-  insertProjectSetupMarkdownAssetRecords,
-} from '../setup/markdown-assets.js';
 
 export async function updateProjectInformation(
   input: UpdateProjectInformationInput
 ): Promise<ProjectInformationResource> {
-  const { projectFolder, session } = await openProjectSession(input);
+  const { session } = await openProjectSession(input);
   try {
     const projectRecord = readProjectRecord(session);
     if (!projectRecord) {
@@ -86,6 +75,7 @@ export async function updateProjectInformation(
         title: input.information.title.trim(),
         aspectRatio: input.information.aspectRatio,
         logline: nullableTrimmed(input.information.logline),
+        summary: nullableTrimmed(input.information.summary),
         updatedAt: now,
       });
       replaceProjectLocaleRecords(
@@ -101,15 +91,6 @@ export async function updateProjectInformation(
         }))
       );
     });
-    if (input.information.summary !== undefined) {
-      await updateExistingProjectSummaryAsset({
-        session,
-        projectFolder,
-        content: nullableTrimmed(input.information.summary) ?? '',
-        ids,
-        now,
-      });
-    }
     return readProjectInformationResourceFromDatabase(session);
   } finally {
     session.close();
@@ -349,57 +330,6 @@ function listLocaleAssetReferences(
   ];
 }
 
-async function updateExistingProjectSummaryAsset(input: {
-  session: DatabaseSession;
-  projectFolder: string;
-  content: string;
-  ids: (prefix: EntityIdPrefix) => string;
-  now: string;
-}): Promise<void> {
-  const projectSummaryAsset = listProjectAssetRecords(input.session).find(
-    (asset) => asset.role === 'summary'
-  );
-  if (!projectSummaryAsset) {
-    if (input.content.length === 0) {
-      return;
-    }
-    const baseLocaleId =
-      listProjectLocaleRecords(input.session).find((locale) => locale.isBase)?.id ??
-      null;
-    const asset = buildProjectSummaryAsset({
-      ids: input.ids,
-      now: input.now,
-      content: input.content,
-      localeId: baseLocaleId,
-    });
-    insertProjectSetupMarkdownAssetRecords(input.session, asset);
-    await writeMarkdownAssetFile({
-      projectFolder: input.projectFolder,
-      projectRelativePath: asset.projectRelativePath,
-      content: asset.content,
-    });
-    return;
-  }
-
-  const projectSummaryFile = listAssetFileRecords(input.session).find(
-    (file) => file.assetId === projectSummaryAsset.assetId && file.role === 'primary'
-  );
-  if (!projectSummaryFile) {
-    throw new ProjectDataError(
-      'PROJECT_DATA062',
-      `Project summary asset ${projectSummaryAsset.assetId} is missing its primary file.`
-    );
-  }
-
-  await writeMarkdownAssetFile({
-    projectFolder: input.projectFolder,
-    projectRelativePath: normalizeProjectRelativePath(
-      projectSummaryFile.projectRelativePath
-    ),
-    content: input.content,
-  });
-}
-
 async function readCurrentProjectInformationUpdate(input: {
   projectName: string;
   homeDir?: string;
@@ -424,7 +354,7 @@ function applyProjectInformationPatch(
         : patch.aspectRatio ?? current.aspectRatio,
     logline:
       patch.logline === null ? undefined : patch.logline ?? current.logline,
-    summary: 'summary' in patch ? patch.summary : undefined,
+    summary: 'summary' in patch ? patch.summary : current.summary,
     languages: current.languages.map((language) => ({
       localeTag: language.localeTag,
       displayName: language.displayName,

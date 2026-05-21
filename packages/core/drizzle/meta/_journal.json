@@ -43,6 +43,13 @@
       "when": 1779286109920,
       "tag": "0005_screenplay_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1779355436788,
+      "tag": "0006_movie_screenplay_cleanup",
+      "breakpoints": true
     }
   ]
 }

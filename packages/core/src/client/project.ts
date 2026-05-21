@@ -6,7 +6,6 @@ import type {
   VisualLanguage,
   VisualLanguageCategory,
 } from './visual-language.js';
-import type { RichTextAssetLink } from './assets.js';
 
 export type ProjectType = 'standaloneMovie' | 'series';
 export type ProjectRelativePath = string & { readonly __brand: 'ProjectRelativePath' };
@@ -34,7 +33,6 @@ export interface ProjectInfo {
   aspectRatio?: string;
   logline?: string;
   summary?: string;
-  summaryAsset?: RichTextAssetLink;
 }
 
 export interface ProjectCoverImage {

@@ -4,6 +4,7 @@ import type { DatabaseSession } from '../lifecycle/store.js';
 
 export interface CastMemberRecord {
   id: string;
+  handle: string;
   name: string;
   role: string | null;
   age: number | null;
@@ -35,12 +36,21 @@ export function insertCastMemberRecords(
   for (const record of records) {
     session.db.insert(castMembers).values({
       id: record.id,
+      handle: toHandle(record.name, record.id),
       name: record.name,
       role: record.role ?? null,
       description: record.shortDescription ?? null,
       position: record.position,
     }).run();
   }
+}
+
+function toHandle(name: string, id: string): string {
+  const normalized = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return /^[a-z]/.test(normalized) ? normalized : `cast-${id.replace(/[^a-z0-9]+/gi, '').toLowerCase()}`;
 }
 
 export function listCastMemberRecords(session: DatabaseSession): CastMemberRecord[] {

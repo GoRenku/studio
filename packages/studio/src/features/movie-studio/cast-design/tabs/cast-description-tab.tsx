@@ -1,36 +1,37 @@
 import { Button } from '@/ui/button';
-import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
-import { MarkdownAssetEditor } from '../../markdown-asset-editor';
 import type {
   CastDescriptionContent,
   CastDesignAsset,
 } from '../cast-design-types';
 
 interface CastDescriptionTabProps {
-  projectName: string;
   content: CastDescriptionContent;
   onOpenDetails: (asset: CastDesignAsset) => void;
-  onProjectChange: (project: ProjectShellWithHttp) => void;
 }
 
 export function CastDescriptionTab({
-  projectName,
   content,
   onOpenDetails,
-  onProjectChange,
 }: CastDescriptionTabProps) {
   return (
     <div className='h-full min-h-0 overflow-y-auto p-5'>
       <div className='mx-auto flex max-w-5xl flex-col gap-6'>
-        <MarkdownAssetEditor
-          projectName={projectName}
-          label='Description'
-          asset={content.descriptionAsset}
-          initialContent={content.descriptionText}
-          emptyMessage='No cast description is attached yet.'
-          minHeightClassName='min-h-[240px]'
-          onProjectChange={onProjectChange}
-        />
+        <section className='space-y-3'>
+          <div>
+            <h3 className='text-sm font-semibold text-foreground'>
+              Description
+            </h3>
+          </div>
+          {content.descriptionText ? (
+            <p className='min-h-[140px] whitespace-pre-wrap rounded-md border border-border/45 bg-muted/25 p-4 text-sm leading-relaxed text-foreground'>
+              {content.descriptionText}
+            </p>
+          ) : (
+            <p className='rounded-md border border-dashed border-border/45 bg-muted/25 px-4 py-8 text-center text-sm text-muted-foreground'>
+              No cast description has been written yet.
+            </p>
+          )}
+        </section>
 
         <section className='space-y-3'>
           <div>

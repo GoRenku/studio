@@ -1,5 +1,3 @@
-import type { RichTextAssetLink } from '@gorenku/studio-core/client';
-
 export type CastDesignTabId =
   | 'description'
   | 'character-sheet'
@@ -32,7 +30,6 @@ export interface CastDesignAsset {
 
 export interface CastDescriptionContent {
   descriptionText: string;
-  descriptionAsset?: RichTextAssetLink;
   descriptionImages: CastDesignAsset[];
 }
 

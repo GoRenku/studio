@@ -99,7 +99,6 @@ export function MovieStudioScreen({
             key={resolvedSelection.castEntry.id}
             projectName={project.identity.name}
             castEntry={resolvedSelection.castEntry}
-            onProjectChange={onProjectChange}
           />
         ) : (
           <section className='min-h-0 rounded-(--radius-panel) border border-panel-border bg-panel-bg overflow-hidden flex flex-col'>
@@ -134,7 +133,6 @@ export function MovieStudioScreen({
                 <ClipDesignPanel
                   projectName={project.identity.name}
                   clip={resolvedSelection.clip}
-                  onProjectChange={onProjectChange}
                 />
               ) : selection.type === 'casting' ? (
                 <CastOverviewPanel cast={project.cast} />

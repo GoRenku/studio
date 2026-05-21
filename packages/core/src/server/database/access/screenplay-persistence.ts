@@ -4,6 +4,7 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import type {
+  Block,
   GeneratedId,
   Reference,
   Scene,
@@ -12,9 +13,6 @@ import type {
 } from '../../../client/screenplay.js';
 import {
   acts,
-  blockCastMembers,
-  blockLocations,
-  blocks,
   castAssets,
   castMembers,
   locationAssets,
@@ -49,28 +47,24 @@ export function resolveScreenplayDocumentIds(input: {
   const document = structuredClone(input.document);
   const generatedIds: GeneratedId[] = [];
   const allocator = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-  const localKeys = {
+  const keys = {
     cast: new Map<string, string>(),
     locations: new Map<string, string>(),
     acts: new Map<string, string>(),
     sequences: new Map<string, string>(),
     scenes: new Map<string, string>(),
-    blocks: new Map<string, string>(),
   };
 
   const issues: DiagnosticIssue[] = [];
   const warnings: DiagnosticIssue[] = [];
-  assignCollectionIds(document.cast, 'cast', ['cast'], 'cast', localKeys.cast, generatedIds, allocator, issues);
-  assignCollectionIds(document.locations, 'location', ['locations'], 'location', localKeys.locations, generatedIds, allocator, issues);
+  assignCollectionIds(document.cast, 'cast', ['cast'], 'cast', keys.cast, generatedIds, allocator, issues);
+  assignCollectionIds(document.locations, 'location', ['locations'], 'location', keys.locations, generatedIds, allocator, issues);
   document.acts.forEach((act, actIndex) => {
-    assignObjectId(act, 'act', ['acts', String(actIndex)], 'act', localKeys.acts, generatedIds, allocator, issues);
+    assignObjectId(act, 'act', ['acts', String(actIndex)], 'act', keys.acts, generatedIds, allocator, issues);
     act.sequences.forEach((sequence, sequenceIndex) => {
-      assignObjectId(sequence, 'sequence', ['acts', String(actIndex), 'sequences', String(sequenceIndex)], 'sequence', localKeys.sequences, generatedIds, allocator, issues);
+      assignObjectId(sequence, 'sequence', ['acts', String(actIndex), 'sequences', String(sequenceIndex)], 'sequence', keys.sequences, generatedIds, allocator, issues);
       sequence.scenes.forEach((scene, sceneIndex) => {
-        assignObjectId(scene, 'scene', ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes', String(sceneIndex)], 'scene', localKeys.scenes, generatedIds, allocator, issues);
-        scene.blocks.forEach((block, blockIndex) =>
-          assignObjectId(block, 'block', ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes', String(sceneIndex), 'blocks', String(blockIndex)], 'block', localKeys.blocks, generatedIds, allocator, issues)
-        );
+        assignObjectId(scene, 'scene', ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes', String(sceneIndex)], 'scene', keys.scenes, generatedIds, allocator, issues);
       });
     });
   });
@@ -87,15 +81,16 @@ export function resolveScreenplayDocumentIds(input: {
 
   const castIds = new Set(document.cast.map((castMember) => castMember.id ?? ''));
   const locationIds = new Set(document.locations.map((location) => location.id ?? ''));
+  validateHandles(document, issues);
   document.acts.forEach((act, actIndex) =>
     act.sequences.forEach((sequence, sequenceIndex) =>
       sequence.scenes.forEach((scene, sceneIndex) => {
-        scene.setting.locationIds = scene.setting.locationRefs
+        scene.setting.locationIds = scene.setting.locationReferences
           ? resolveRefs(
-              scene.setting.locationRefs,
+              scene.setting.locationReferences,
               locationIds,
-              localKeys.locations,
-              ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes', String(sceneIndex), 'setting', 'locationRefs'],
+              keys.locations,
+              ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes', String(sceneIndex), 'setting', 'locationReferences'],
               issues,
               warnings
             )
@@ -106,22 +101,24 @@ export function resolveScreenplayDocumentIds(input: {
               issues,
               warnings
             );
-        delete scene.setting.locationRefs;
+        delete scene.setting.locationReferences;
         scene.blocks.forEach((block, blockIndex) => {
           const blockPath = ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes', String(sceneIndex), 'blocks', String(blockIndex)];
-          block.castMemberIds = block.castMemberRefs
-            ? resolveRefs(block.castMemberRefs, castIds, localKeys.cast, [...blockPath, 'castMemberRefs'], issues, warnings)
+          block.castMemberIds = block.castMemberReferences
+            ? resolveRefs(block.castMemberReferences, castIds, keys.cast, [...blockPath, 'castMemberReferences'], issues, warnings)
             : validateDurableIds(block.castMemberIds ?? [], castIds, [...blockPath, 'castMemberIds'], issues, warnings);
-          block.locationIds = block.locationRefs
-            ? resolveRefs(block.locationRefs, locationIds, localKeys.locations, [...blockPath, 'locationRefs'], issues, warnings)
+          block.locationIds = block.locationReferences
+            ? resolveRefs(block.locationReferences, locationIds, keys.locations, [...blockPath, 'locationReferences'], issues, warnings)
             : validateDurableIds(block.locationIds ?? [], locationIds, [...blockPath, 'locationIds'], issues, warnings);
-          delete block.castMemberRefs;
-          delete block.locationRefs;
+          delete block.castMemberReferences;
+          delete block.locationReferences;
           if (block.type === 'dialogue') {
-            block.castMemberId = block.castMemberRef
-              ? resolveRef(block.castMemberRef, castIds, localKeys.cast, [...blockPath, 'castMemberRef'], issues)
+            block.castMemberId = block.castMemberReference
+              ? resolveRef(block.castMemberReference, castIds, keys.cast, [...blockPath, 'castMemberReference'], issues)
               : block.castMemberId;
-            delete block.castMemberRef;
+            delete block.castMemberReference;
+          } else {
+            validateTextMentions(block.text, document, blockPath, issues);
           }
         });
       })
@@ -179,21 +176,6 @@ function collectDuplicateIds(
         ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes'],
         issues
       );
-      sequence.scenes.forEach((scene, sceneIndex) => {
-        collectDuplicateIdsInCollection(
-          scene.blocks,
-          [
-            'acts',
-            String(actIndex),
-            'sequences',
-            String(sequenceIndex),
-            'scenes',
-            String(sceneIndex),
-            'blocks',
-          ],
-          issues
-        );
-      });
     });
   });
 }
@@ -257,6 +239,7 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
     document.cast.forEach((castMember, index) => {
       session.db.insert(castMembers).values({
         id: requiredId(castMember),
+        handle: castMember.handle,
         name: castMember.name,
         role: castMember.role ?? null,
         age: castMember.age ?? null,
@@ -272,6 +255,7 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
     document.locations.forEach((location, index) => {
       session.db.insert(locations).values({
         id: requiredId(location),
+        handle: location.handle,
         name: location.name,
         timePeriod: location.timePeriod ?? null,
         description: location.description ?? null,
@@ -356,6 +340,7 @@ function insertScene(
     interiorExterior: scene.setting.interiorExterior ?? null,
     timeOfDay: scene.setting.timeOfDay ?? null,
     storyFunction: stringifyArray(scene.storyFunction),
+    blocksJson: stringifyBlocks(scene.blocks),
     position: sceneIndex,
   }).run();
   (scene.setting.locationIds ?? []).forEach((locationId, locationIndex) => {
@@ -365,41 +350,10 @@ function insertScene(
       position: locationIndex,
     }).run();
   });
-  scene.blocks.forEach((block, blockIndex) => {
-    session.db.insert(blocks).values({
-      id: requiredId(block),
-      sceneId: requiredId(scene),
-      type: block.type,
-      text: block.type === 'action' ? block.text : null,
-      castId: block.type === 'dialogue' ? block.castMemberId ?? null : null,
-      extension: block.type === 'dialogue' ? block.extension ?? null : null,
-      parenthetical: block.type === 'dialogue' ? block.parenthetical ?? null : null,
-      lines: block.type === 'dialogue' ? stringifyArray(block.lines) : null,
-      render: null,
-      position: blockIndex,
-    }).run();
-    (block.castMemberIds ?? []).forEach((castMemberId, castIndex) => {
-      session.db.insert(blockCastMembers).values({
-        blockId: requiredId(block),
-        castMemberId,
-        position: castIndex,
-      }).run();
-    });
-    (block.locationIds ?? []).forEach((locationId, locationIndex) => {
-      session.db.insert(blockLocations).values({
-        blockId: requiredId(block),
-        locationId,
-        position: locationIndex,
-      }).run();
-    });
-  });
 }
 
 function deleteScreenplayTables(session: DatabaseSession): void {
-  session.db.delete(blockCastMembers).run();
-  session.db.delete(blockLocations).run();
   session.db.delete(sceneLocations).run();
-  session.db.delete(blocks).run();
   session.db.delete(scenes).run();
   session.db.delete(sequences).run();
   session.db.delete(acts).run();
@@ -408,60 +362,127 @@ function deleteScreenplayTables(session: DatabaseSession): void {
   session.db.delete(screenplay).run();
 }
 
-function assignCollectionIds<T extends { id?: string; localKey?: string }>(
+function assignCollectionIds<T extends { id?: string; key?: string }>(
   values: T[],
   prefix: EntityIdPrefix,
   path: string[],
   kind: string,
-  localKeys: Map<string, string>,
+  keys: Map<string, string>,
   generatedIds: GeneratedId[],
   allocator: (prefix: EntityIdPrefix) => string,
   issues: DiagnosticIssue[]
 ): void {
   values.forEach((value, index) =>
-    assignObjectId(value, prefix, [...path, String(index)], kind, localKeys, generatedIds, allocator, issues)
+    assignObjectId(value, prefix, [...path, String(index)], kind, keys, generatedIds, allocator, issues)
   );
 }
 
-function assignObjectId<T extends { id?: string; localKey?: string }>(
+function assignObjectId<T extends { id?: string; key?: string }>(
   value: T,
   prefix: EntityIdPrefix,
   path: string[],
   kind: string,
-  localKeys: Map<string, string>,
+  keys: Map<string, string>,
   generatedIds: GeneratedId[],
   allocator: (prefix: EntityIdPrefix) => string,
   issues: DiagnosticIssue[]
 ): void {
-  if (value.localKey) {
-    if (localKeys.has(value.localKey)) {
-      issues.push(createDiagnosticError('PROJECT_DATA209', `Duplicate localKey: ${value.localKey}.`, { path: [...path, 'localKey'] }, 'Use a unique request-local key.'));
+  if (value.key) {
+    if (keys.has(value.key)) {
+      issues.push(createDiagnosticError('PROJECT_DATA209', `Duplicate key: ${value.key}.`, { path: [...path, 'key'] }, 'Use a unique request-local key.'));
       return;
     }
   }
   if (!value.id) {
     value.id = allocator(prefix);
-    if (value.localKey) {
-      generatedIds.push({ kind, path: [...path, 'localKey'], localKey: value.localKey, id: value.id });
+    if (value.key) {
+      generatedIds.push({ kind, path: [...path, 'key'], key: value.key, id: value.id });
     }
   }
-  if (value.localKey) {
-    localKeys.set(value.localKey, value.id);
+  if (value.key) {
+    keys.set(value.key, value.id);
   }
-  delete value.localKey;
+  delete value.key;
+}
+
+function validateHandles(document: ScreenplayDocument, issues: DiagnosticIssue[]): void {
+  const handles = new Map<string, string[]>();
+  document.cast.forEach((castMember, index) =>
+    validateHandle(castMember.handle, ['cast', String(index), 'handle'], handles, issues)
+  );
+  document.locations.forEach((location, index) =>
+    validateHandle(location.handle, ['locations', String(index), 'handle'], handles, issues)
+  );
+}
+
+function validateHandle(
+  handle: string,
+  path: string[],
+  handles: Map<string, string[]>,
+  issues: DiagnosticIssue[]
+): void {
+  if (!/^[a-z][a-z0-9-]*$/.test(handle)) {
+    issues.push(
+      createDiagnosticError(
+        'PROJECT_DATA208',
+        `Invalid handle: ${handle}.`,
+        { path },
+        'Use lower-case slug style, starting with a letter.'
+      )
+    );
+    return;
+  }
+  const firstPath = handles.get(handle);
+  if (firstPath) {
+    issues.push(
+      createDiagnosticError(
+        'PROJECT_DATA209',
+        `Duplicate handle: ${handle}.`,
+        { path, context: `First seen at ${firstPath.join('.')}` },
+        'Use a unique handle across cast and locations.'
+      )
+    );
+    return;
+  }
+  handles.set(handle, path);
+}
+
+function validateTextMentions(
+  text: string,
+  document: ScreenplayDocument,
+  path: string[],
+  issues: DiagnosticIssue[]
+): void {
+  const knownHandles = new Set([
+    ...document.cast.map((castMember) => castMember.handle),
+    ...document.locations.map((location) => location.handle),
+  ]);
+  for (const match of text.matchAll(/@([a-z][a-z0-9-]*)/g)) {
+    const handle = match[1]!;
+    if (!knownHandles.has(handle)) {
+      issues.push(
+        createDiagnosticError(
+          'PROJECT_DATA210',
+          `Unknown screenplay handle: @${handle}.`,
+          { path: [...path, 'text'] },
+          'Use an existing cast or location handle.'
+        )
+      );
+    }
+  }
 }
 
 function resolveRefs(
   refs: Reference[] | undefined,
   durableIds: Set<string>,
-  localKeys: Map<string, string>,
+  keys: Map<string, string>,
   path: string[],
   issues: DiagnosticIssue[],
   warnings: DiagnosticIssue[]
 ): string[] {
   const resolved: string[] = [];
   refs?.forEach((ref, index) => {
-    const id = resolveRef(ref, durableIds, localKeys, [...path, String(index)], issues);
+    const id = resolveRef(ref, durableIds, keys, [...path, String(index)], issues);
     if (id) {
       addUniqueResolvedId(resolved, id, [...path, String(index)], warnings);
     }
@@ -492,17 +513,17 @@ function addUniqueResolvedId(
 function resolveRef(
   ref: Reference | undefined,
   durableIds: Set<string>,
-  localKeys: Map<string, string>,
+  keys: Map<string, string>,
   path: string[],
   issues: DiagnosticIssue[]
 ): string | undefined {
-  if (!ref || (ref.id && ref.localKey) || (!ref.id && !ref.localKey)) {
-    issues.push(createDiagnosticError('PROJECT_DATA211', 'Reference must provide exactly one of id or localKey.', { path }, 'Provide exactly one of id or localKey.'));
+  if (!ref || (ref.id && ref.key) || (!ref.id && !ref.key)) {
+    issues.push(createDiagnosticError('PROJECT_DATA211', 'Reference must provide exactly one of id or key.', { path }, 'Provide exactly one of id or key.'));
     return undefined;
   }
-  const id = ref.id ?? localKeys.get(ref.localKey ?? '');
+  const id = ref.id ?? keys.get(ref.key ?? '');
   if (!id || !durableIds.has(id)) {
-    issues.push(createDiagnosticError('PROJECT_DATA210', 'Reference points to an unknown object.', { path }, 'Reference an existing object id or define the target with localKey in this request.'));
+    issues.push(createDiagnosticError('PROJECT_DATA210', 'Reference points to an unknown object.', { path }, 'Reference an existing object id or define the target with key in this request.'));
     return undefined;
   }
   return id;
@@ -524,4 +545,8 @@ function requiredId(value: { id?: string }): string {
 
 function stringifyArray(value: unknown[] | undefined): string | null {
   return value ? JSON.stringify(value) : null;
+}
+
+function stringifyBlocks(value: Block[]): string {
+  return JSON.stringify(value);
 }

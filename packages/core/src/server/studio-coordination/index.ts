@@ -15,7 +15,6 @@ export {
 } from './event-store.js';
 export {
   studioAssetResourceKey,
-  studioMarkdownResourceKey,
   studioProjectInformationResourceKey,
   studioProjectShellResourceKey,
   studioResourceKeysForAssetTarget,

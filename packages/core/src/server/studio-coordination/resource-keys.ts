@@ -50,10 +50,3 @@ export function studioResourceKeysForAssetTarget(target: AssetTarget): string[] 
     studioSurfaceResourceKeyForAssetTarget(target),
   ].filter((key): key is string => key !== null);
 }
-
-export function studioMarkdownResourceKey(input: {
-  assetId: string;
-  assetFileId: string;
-}): string {
-  return `markdown:${input.assetId}:${input.assetFileId}`;
-}

@@ -12,7 +12,7 @@ import {
 import { openProjectStore, type DatabaseSession } from './store.js';
 
 const CURRENT_PROJECT_FILE = 'current-project.json';
-const CURRENT_PROJECT_SCHEMA_GENERATION = 2;
+const CURRENT_PROJECT_SCHEMA_GENERATION = 3;
 
 export interface CurrentProject {
   projectName: string;

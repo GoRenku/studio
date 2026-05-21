@@ -1,4 +1,8 @@
-import type { ScreenplayCommandReport, ScreenplayDocument } from '../../client/screenplay.js';
+import type {
+  ScreenplayCommandReport,
+  ScreenplayCreateDocument,
+  ScreenplayDocument,
+} from '../../client/screenplay.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -9,7 +13,7 @@ import { replaceScreenplayDocument, resolveScreenplayDocumentIds } from '../data
 
 export async function createScreenplay(
   input: RenkuConfigPathOptions & {
-    document: ScreenplayDocument;
+    document: ScreenplayCreateDocument;
     filePath?: string;
     dryRun?: boolean;
     idGenerator?: ProjectIdGenerator;
@@ -18,7 +22,7 @@ export async function createScreenplay(
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
     const warnings = validateScreenplayJsonDocument({
       value: input.document,
-      kind: 'screenplay',
+      kind: 'screenplayCreate',
       filePath: input.filePath,
     }).filter((issue) => issue.severity === 'warning');
 
@@ -28,8 +32,16 @@ export async function createScreenplay(
       });
     }
 
+    const document: ScreenplayDocument = {
+      kind: 'screenplay',
+      screenplay: input.document.screenplay,
+      cast: input.document.cast,
+      locations: input.document.locations,
+      acts: input.document.acts,
+    };
+
     const resolved = resolveScreenplayDocumentIds({
-      document: input.document,
+      document,
       idGenerator: input.idGenerator,
     });
     if (!input.dryRun) {

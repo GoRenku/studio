@@ -4,10 +4,6 @@ import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import { readProjectRecord } from './project.js';
 import { listProjectLocaleRecords } from './project-locales.js';
-import {
-  projectSummaryRichTextRole,
-  readRichTextAssetLink,
-} from './rich-text-asset-links.js';
 
 export function readProjectInformationResourceFromDatabase(
   session: DatabaseSession
@@ -17,12 +13,7 @@ export function readProjectInformationResourceFromDatabase(
     title: project.title,
     aspectRatio: project.aspectRatio ?? undefined,
     logline: project.logline ?? undefined,
-    summaryAsset: readRichTextAssetLink(session, {
-      target: { kind: 'project' },
-      role: 'summary',
-      relationshipLabel: 'project',
-      richTextRoles: projectSummaryRichTextRole(),
-    }),
+    summary: project.summary ?? undefined,
     languages: listProjectLocaleRecords(session).map((row) => ({
       id: row.id,
       localeTag: row.localeTag,
@@ -42,6 +33,7 @@ export function readProjectInformationUpdateFromDatabase(
     title: project.title,
     aspectRatio: project.aspectRatio ?? undefined,
     logline: project.logline ?? undefined,
+    summary: project.summary ?? undefined,
     languages: listProjectLocaleRecords(session).map((row) => ({
       localeTag: row.localeTag,
       displayName: row.displayName ?? undefined,

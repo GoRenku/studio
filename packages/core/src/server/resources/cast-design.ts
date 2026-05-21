@@ -8,10 +8,6 @@ import {
   listAssetRelationshipPage,
   MAX_RESOURCE_PAGE_LIMIT,
 } from '../database/access/asset-relationships/index.js';
-import {
-  castMemberRichTextRoles,
-  readRichTextAssetLink,
-} from '../database/access/rich-text-asset-links.js';
 import type { ReadCastDesignResourceInput } from '../project-data-service-contracts.js';
 
 export async function readCastDesignResource(
@@ -53,12 +49,6 @@ export function readCastDesignResourceProjection(
       role: castMember.role ?? undefined,
       shortDescription: castMember.shortDescription ?? undefined,
     },
-    descriptionAsset: readRichTextAssetLink(session, {
-      target,
-      role: 'description',
-      relationshipLabel: 'Cast description',
-      richTextRoles: castMemberRichTextRoles(),
-    }),
     selectedAssets: listAssetRelationshipPage(session, {
       target,
       selection: 'select',

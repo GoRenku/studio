@@ -2,7 +2,7 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 
 export interface Reference {
   id?: string;
-  localKey?: string;
+  key?: string;
 }
 
 export interface Screenplay {
@@ -31,7 +31,8 @@ export interface Screenplay {
 
 export interface CastMember {
   id?: string;
-  localKey?: string;
+  key?: string;
+  handle: string;
   name: string;
   role?: string;
   age?: number;
@@ -44,7 +45,8 @@ export interface CastMember {
 
 export interface Location {
   id?: string;
-  localKey?: string;
+  key?: string;
+  handle: string;
   name: string;
   timePeriod?: string;
   description?: string;
@@ -53,7 +55,7 @@ export interface Location {
 
 export interface Act {
   id?: string;
-  localKey?: string;
+  key?: string;
   title?: string;
   purpose?: string;
   keyBeats?: unknown[];
@@ -62,7 +64,7 @@ export interface Act {
 
 export interface Sequence {
   id?: string;
-  localKey?: string;
+  key?: string;
   title?: string;
   purpose?: string;
   scenes: Scene[];
@@ -71,13 +73,13 @@ export interface Sequence {
 export interface SceneSetting {
   interiorExterior?: string;
   timeOfDay?: string;
-  locationRefs?: Reference[];
+  locationReferences?: Reference[];
   locationIds?: string[];
 }
 
 export interface Scene {
   id?: string;
-  localKey?: string;
+  key?: string;
   title: string;
   setting: SceneSetting;
   storyFunction?: string[];
@@ -85,29 +87,35 @@ export interface Scene {
 }
 
 export type Block = ActionBlock | DialogueBlock;
+export type TextBlockType =
+  | 'action'
+  | 'parenthetical'
+  | 'transition'
+  | 'special_heading'
+  | 'title_card'
+  | 'super'
+  | 'shot'
+  | 'note';
 
 export interface ActionBlock {
-  id?: string;
-  localKey?: string;
-  type: 'action';
+  type: TextBlockType;
   text: string;
-  castMemberRefs?: Reference[];
-  locationRefs?: Reference[];
+  render?: boolean;
+  castMemberReferences?: Reference[];
+  locationReferences?: Reference[];
   castMemberIds?: string[];
   locationIds?: string[];
 }
 
 export interface DialogueBlock {
-  id?: string;
-  localKey?: string;
   type: 'dialogue';
-  castMemberRef?: Reference;
+  castMemberReference?: Reference;
   castMemberId?: string;
   extension?: string;
   parenthetical?: string;
   lines: string[];
-  castMemberRefs?: Reference[];
-  locationRefs?: Reference[];
+  castMemberReferences?: Reference[];
+  locationReferences?: Reference[];
   castMemberIds?: string[];
   locationIds?: string[];
 }
@@ -120,9 +128,14 @@ export interface ScreenplayDocument {
   acts: Act[];
 }
 
+export interface ScreenplayCreateDocument extends Omit<ScreenplayDocument, 'kind'> {
+  kind: 'screenplayCreate';
+}
+
 export interface Placement {
   beforeId?: string;
   afterId?: string;
+  position?: 'only';
 }
 
 export type ScreenplayOperation =
@@ -141,11 +154,11 @@ export type ScreenplayOperation =
   | { operation: 'sequence.add'; actId: string; sequence: Sequence; placement?: Placement }
   | { operation: 'sequence.update'; sequence: Sequence }
   | { operation: 'sequence.delete'; sequenceId: string }
-  | { operation: 'sequence.move'; sequenceId: string; actId?: string; placement: Placement }
+  | { operation: 'sequence.move'; sequenceId: string; fromActId: string; toActId: string; placement: Placement }
   | { operation: 'scene.add'; sequenceId: string; scene: Scene; placement?: Placement }
   | { operation: 'scene.update'; scene: Scene }
   | { operation: 'scene.delete'; sceneId: string }
-  | { operation: 'scene.move'; sceneId: string; sequenceId?: string; placement: Placement };
+  | { operation: 'scene.move'; sceneId: string; fromSequenceId: string; toSequenceId: string; placement: Placement };
 
 export interface ScreenplayOperationDocument {
   kind: 'screenplayOperations';
@@ -155,7 +168,7 @@ export interface ScreenplayOperationDocument {
 export interface GeneratedId {
   kind: string;
   path: string[];
-  localKey: string;
+  key: string;
   id: string;
 }
 

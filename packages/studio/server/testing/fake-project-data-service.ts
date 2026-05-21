@@ -47,31 +47,6 @@ export function fakeProjectDataService(): NonNullable<
         languages: project.languages,
       };
     },
-    async readMarkdownAssetContent(input) {
-      return {
-        assetId: input.assetId,
-        assetFileId: input.assetFileId,
-        projectRelativePath:
-          'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
-        content: 'Establish the movie.',
-      };
-    },
-    async updateMarkdownAssetContent(input) {
-      return {
-        content: {
-          assetId: input.assetId,
-          assetFileId: input.assetFileId,
-          projectRelativePath:
-            'working-assets/base/sequences/01-opening/scenes/01-opening-scene/clips/01-opening-image/clip-summary.md',
-          content: input.content,
-        },
-        resourceKeys: [
-          `markdown:${input.assetId}:${input.assetFileId}`,
-          'assets:clip:clip_1',
-          'surface:clip-design:clip_1',
-        ],
-      };
-    },
     async resolveCoverImage() {
       return '/tmp/renku/constantinople/cover.png';
     },

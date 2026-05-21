@@ -12,6 +12,7 @@ export const scenes = sqliteTable(
     interiorExterior: text('interior_exterior'),
     timeOfDay: text('time_of_day'),
     storyFunction: text('story_function'),
+    blocksJson: text('blocks_json').notNull().default('[]'),
     position: integer('position').notNull(),
   },
   (table) => [

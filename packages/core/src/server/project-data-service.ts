@@ -13,15 +13,9 @@ import {
 import { applyScreenplayOperations } from './commands/apply-screenplay-operations.js';
 import { createScreenplay } from './commands/create-screenplay.js';
 import { readClipDesignResource } from './resources/clip-design.js';
-import {
-  createFromSetup,
-} from './commands/create-project-from-setup.js';
+import { createMovieProject } from './commands/create-movie-project.js';
 import { migrateProjectDatabaseForProject } from './commands/migrate-database.js';
 import { registerAsset } from './commands/register-asset.js';
-import {
-  updateMarkdownAssetContent,
-} from './commands/update-markdown-asset-content.js';
-import { readMarkdownAssetContent } from './resources/markdown-asset-content.js';
 import {
   patchProjectInformation,
   updateProjectInformation,
@@ -65,7 +59,7 @@ import { validateScreenplayJson } from './commands/validate-screenplay-json.js';
 
 export function createProjectDataService(): ProjectDataService {
   return {
-    createFromSetup,
+    createMovieProject,
     migrateProjectDatabase: migrateProjectDatabaseForProject,
     listLibrary,
     readProject,
@@ -84,8 +78,6 @@ export function createProjectDataService(): ProjectDataService {
     readStudioSelectionContext,
     updateProjectInformation,
     patchProjectInformation,
-    readMarkdownAssetContent,
-    updateMarkdownAssetContent,
     resolveCoverImage,
     resolveProjectAssetFile,
     registerAsset,

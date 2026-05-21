@@ -2,14 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createProjectDataService, type ProjectRelativePath } from '../index.js';
 import {
-  createDeterministicIdGenerator,
-  createProjectDataService,
-} from '../index.js';
-import {
-  runCreateOrSkip,
+  createSampleMovieProject,
   writeConfig,
-  writeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('project information resource', () => {
@@ -22,15 +18,8 @@ describe('project information resource', () => {
   });
 
   it('updates project information without changing the immutable project name', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -66,6 +55,7 @@ describe('project information resource', () => {
       title: 'The Siege Machine',
       aspectRatio: '21:9',
       logline: 'A sharper premise.',
+      summary: 'A revised project summary.',
     });
     expect(resource.languages).toEqual([
       expect.objectContaining({
@@ -84,15 +74,8 @@ describe('project information resource', () => {
   });
 
   it('persists cleared project information text fields', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -138,30 +121,20 @@ describe('project information resource', () => {
     });
 
     expect(resource.logline).toBeUndefined();
+    expect(resource.summary).toBeUndefined();
     await expect(
-      fs.readFile(
-        path.join(
-          created.projectPath,
-          'working-assets',
-          'base',
-          'screenplay',
-          'project-summary.md'
-        ),
-        'utf8'
-      )
-    ).resolves.toBe('');
+      projectData.readProject({ projectName: 'constantinople', homeDir })
+    ).resolves.toMatchObject({
+      identity: {
+        logline: undefined,
+        summary: undefined,
+      },
+    });
   });
 
-  it('clears the Markdown-backed project summary through a patch', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
+  it('clears the SQLite-backed project summary through a patch', async () => {
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -173,32 +146,35 @@ describe('project information resource', () => {
     });
 
     await expect(
-      fs.readFile(
-        path.join(
-          created.projectPath,
-          'working-assets',
-          'base',
-          'screenplay',
-          'project-summary.md'
-        ),
-        'utf8'
-      )
-    ).resolves.toBe('');
+      projectData.readProject({ projectName: 'constantinople', homeDir })
+    ).resolves.toMatchObject({
+      identity: { summary: undefined },
+    });
   });
 
   it('rejects removing a locale that still has asset relationships', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
+    const assetPath = 'working-assets/base/project-reference.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, assetPath), 'image bytes');
+    await projectData.registerAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'project' },
+      locale: { localeId: 'locale_test0001' },
+      type: 'reference',
+      mediaKind: 'image',
+      title: 'Project reference',
+      projectRelativePath: assetPath as ProjectRelativePath,
+      fileRole: 'primary',
+      role: 'reference',
+    });
 
     await expect(
       projectData.updateProjectInformation({
@@ -208,7 +184,7 @@ describe('project information resource', () => {
           title: 'Preparation of the Siege',
           aspectRatio: '16:9',
           logline: 'A documentary about preparation before 1453.',
-          summary: 'A documentary setup summary for Markdown storage.',
+          summary: 'A documentary project summary stored in SQLite.',
           languages: [
             {
               localeTag: 'tr-TR',
@@ -232,15 +208,8 @@ describe('project information resource', () => {
   });
 
   it('collects project information validation errors', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }

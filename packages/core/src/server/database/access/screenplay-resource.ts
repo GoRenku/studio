@@ -11,9 +11,6 @@ import type {
 } from '../../../client/screenplay.js';
 import {
   acts,
-  blockCastMembers,
-  blockLocations,
-  blocks,
   castMembers,
   locations,
   sceneLocations,
@@ -152,49 +149,7 @@ function buildScene(session: DatabaseSession, scene: typeof scenes.$inferSelect)
       locationIds,
     },
     storyFunction: parseStringArray(scene.storyFunction),
-    blocks: session.db
-      .select()
-      .from(blocks)
-      .where(eq(blocks.sceneId, scene.id))
-      .orderBy(asc(blocks.position))
-      .all()
-      .map((block) => buildBlock(session, block)),
-  };
-}
-
-function buildBlock(session: DatabaseSession, block: typeof blocks.$inferSelect): Block {
-  const castMemberIds = session.db
-    .select()
-    .from(blockCastMembers)
-    .where(eq(blockCastMembers.blockId, block.id))
-    .orderBy(asc(blockCastMembers.position))
-    .all()
-    .map((row) => row.castMemberId);
-  const locationIds = session.db
-    .select()
-    .from(blockLocations)
-    .where(eq(blockLocations.blockId, block.id))
-    .orderBy(asc(blockLocations.position))
-    .all()
-    .map((row) => row.locationId);
-  if (block.type === 'dialogue') {
-    return {
-      id: block.id,
-      type: 'dialogue',
-      castMemberId: nullable(block.castId),
-      extension: nullable(block.extension),
-      parenthetical: nullable(block.parenthetical),
-      lines: parseStringArray(block.lines),
-      castMemberIds,
-      locationIds,
-    };
-  }
-  return {
-    id: block.id,
-    type: 'action',
-    text: block.text ?? '',
-    castMemberIds,
-    locationIds,
+    blocks: parseBlocks(scene.blocksJson),
   };
 }
 
@@ -227,6 +182,7 @@ function toScreenplay(row: typeof screenplay.$inferSelect): Screenplay {
 function toCastMember(row: typeof castMembers.$inferSelect): CastMember {
   return {
     id: row.id,
+    handle: row.handle,
     name: row.name,
     role: nullable(row.role),
     age: row.age ?? undefined,
@@ -241,6 +197,7 @@ function toCastMember(row: typeof castMembers.$inferSelect): CastMember {
 function toLocation(row: typeof locations.$inferSelect): Location {
   return {
     id: row.id,
+    handle: row.handle,
     name: row.name,
     timePeriod: nullable(row.timePeriod),
     description: nullable(row.description),
@@ -277,6 +234,11 @@ function parseJsonArray(value: string | null): unknown[] {
 
 function parseStringArray(value: string | null): string[] {
   return parseJsonArray(value).filter((item): item is string => typeof item === 'string');
+}
+
+function parseBlocks(value: string): Block[] {
+  const parsed = JSON.parse(value) as unknown;
+  return Array.isArray(parsed) ? (parsed as Block[]) : [];
 }
 
 function nullable(value: string | null): string | undefined {

@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset, RichTextAssetLink } from './assets.js';
+import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { ContinuityReference } from './continuity-references.js';
 import type { Clip } from './screenplay-projection.js';
@@ -106,7 +106,6 @@ export interface ClipNavigationRow {
 
 export interface CastDesignResource {
   castMember: CastMember;
-  descriptionAsset?: RichTextAssetLink;
   selectedAssets: Asset[];
   activeTakePage: PageResponse<Asset>;
   countsByRole: CastDesignAssetRoleCount[];
@@ -131,7 +130,7 @@ export interface ProjectInformationResource {
   title: string;
   aspectRatio?: string;
   logline?: string;
-  summaryAsset?: RichTextAssetLink;
+  summary?: string;
   languages: ProjectLanguage[];
 }
 

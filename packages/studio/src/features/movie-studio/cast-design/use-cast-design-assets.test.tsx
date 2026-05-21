@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { Asset, CastMember, RichTextAssetLink } from '@gorenku/studio-core/client';
+import type { Asset, CastMember } from '@gorenku/studio-core/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   invalidateCastDesignResource,
@@ -55,15 +55,8 @@ describe('useCastDesignAssets', () => {
     );
   });
 
-  it('projects the cast description Markdown asset from the resource', async () => {
-    vi.mocked(readCastDesignResource).mockResolvedValue(
-      castDesignResource([], {
-        assetId: 'asset_cast_description',
-        assetFileId: 'asset_file_cast_description',
-        role: 'description',
-        projectRelativePath: 'working-assets/base/cast/01-anna/description.md',
-      })
-    );
+  it('projects the cast description from the selected cast member', async () => {
+    vi.mocked(readCastDesignResource).mockResolvedValue(castDesignResource([]));
 
     const { result } = renderHook(() =>
       useCastDesignAssets({
@@ -73,12 +66,9 @@ describe('useCastDesignAssets', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.descriptionContent.descriptionAsset).toEqual({
-        assetId: 'asset_cast_description',
-        assetFileId: 'asset_file_cast_description',
-        role: 'description',
-        projectRelativePath: 'working-assets/base/cast/01-anna/description.md',
-      });
+      expect(result.current.descriptionContent.descriptionText).toBe(
+        'A sharp court historian.'
+      );
     });
   });
 
@@ -182,13 +172,9 @@ function castAsset(input: {
   };
 }
 
-function castDesignResource(
-  assets: Asset[],
-  descriptionAsset?: RichTextAssetLink
-) {
+function castDesignResource(assets: Asset[]) {
   return {
     castMember,
-    descriptionAsset,
     selectedAssets: assets.filter((asset) => asset.selection.kind === 'select'),
     activeTakePage: {
       items: assets.filter((asset) => asset.selection.kind === 'take'),

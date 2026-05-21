@@ -15,7 +15,6 @@ import {
 import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
-import { createMarkdownAssetsRoute } from './markdown-assets.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
 import { createProductionExportsRoute } from './production-exports.js';
@@ -44,8 +43,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'readClipDesignResource'
   | 'readStudioSelectionContext'
   | 'updateProjectInformation'
-  | 'readMarkdownAssetContent'
-  | 'updateMarkdownAssetContent'
   | 'resolveCoverImage'
   | 'listAssets'
   | 'createAssetSelect'
@@ -101,10 +98,6 @@ export function createProjectsRoute(
     .route(
       '/:projectName',
       createProjectInformationRoute({ projectData, requireToken })
-    )
-    .route(
-      '/:projectName',
-      createMarkdownAssetsRoute({ projectData, requireToken })
     )
     .route(
       '/:projectName',

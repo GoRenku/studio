@@ -7,20 +7,20 @@ export const screenplayReferenceSchema = {
       required: ['id'],
       properties: {
         id: { type: 'string', minLength: 1 },
-        localKey: { type: 'string', minLength: 1 },
+        key: { type: 'string', minLength: 1 },
       },
       not: {
         type: 'object',
-        properties: { localKey: true },
-        required: ['localKey'],
+        properties: { key: true },
+        required: ['key'],
       },
       additionalProperties: true,
     },
     {
-      required: ['localKey'],
+      required: ['key'],
       properties: {
         id: { type: 'string', minLength: 1 },
-        localKey: { type: 'string', minLength: 1 },
+        key: { type: 'string', minLength: 1 },
       },
       not: {
         type: 'object',
@@ -40,28 +40,38 @@ export const screenplayBlockSchema = {
       type: 'object',
       required: ['type', 'text'],
       properties: {
-        id: { type: 'string', minLength: 1 },
-        localKey: { type: 'string', minLength: 1 },
-        type: { const: 'action' },
+        type: {
+          enum: [
+            'action',
+            'parenthetical',
+            'transition',
+            'special_heading',
+            'title_card',
+            'super',
+            'shot',
+            'note',
+          ],
+        },
         text: { type: 'string' },
-        castMemberRefs: refArray(),
-        locationRefs: refArray(),
+        render: { type: 'boolean' },
+        castMemberReferences: refArray(),
+        locationReferences: refArray(),
       },
       additionalProperties: true,
     },
     {
       type: 'object',
-      required: ['type', 'castMemberRef', 'lines'],
+      required: ['type', 'lines'],
+      anyOf: [{ required: ['castMemberReference'] }, { required: ['castMemberId'] }],
       properties: {
-        id: { type: 'string', minLength: 1 },
-        localKey: { type: 'string', minLength: 1 },
         type: { const: 'dialogue' },
-        castMemberRef: ref(),
+        castMemberReference: ref(),
+        castMemberId: stringId(),
         extension: { type: 'string' },
         parenthetical: { type: 'string' },
         lines: { type: 'array', items: { type: 'string' } },
-        castMemberRefs: refArray(),
-        locationRefs: refArray(),
+        castMemberReferences: refArray(),
+        locationReferences: refArray(),
       },
       additionalProperties: true,
     },
@@ -110,9 +120,10 @@ export const screenplayDocumentSchema = {
       },
       additionalProperties: true,
     },
-    castMember: objectWith(['name'], {
+    castMember: objectWith(['handle', 'name'], {
       id: stringId(),
-      localKey: stringId(),
+      key: stringId(),
+      handle: handle(),
       name: { type: 'string' },
       role: { type: 'string' },
       age: { type: 'integer', minimum: 0 },
@@ -122,9 +133,10 @@ export const screenplayDocumentSchema = {
       voiceNotes: { type: 'string' },
       description: { type: 'string' },
     }),
-    location: objectWith(['name'], {
+    location: objectWith(['handle', 'name'], {
       id: stringId(),
-      localKey: stringId(),
+      key: stringId(),
+      handle: handle(),
       name: { type: 'string' },
       timePeriod: { type: 'string' },
       description: { type: 'string' },
@@ -132,7 +144,7 @@ export const screenplayDocumentSchema = {
     }),
     act: objectWith(['sequences'], {
       id: stringId(),
-      localKey: stringId(),
+      key: stringId(),
       title: { type: 'string' },
       purpose: { type: 'string' },
       keyBeats: { type: 'array' },
@@ -140,14 +152,14 @@ export const screenplayDocumentSchema = {
     }),
     sequence: objectWith(['scenes'], {
       id: stringId(),
-      localKey: stringId(),
+      key: stringId(),
       title: { type: 'string' },
       purpose: { type: 'string' },
       scenes: { type: 'array', items: { $ref: '#/$defs/scene' } },
     }),
     scene: objectWith(['title', 'setting', 'blocks'], {
       id: stringId(),
-      localKey: stringId(),
+      key: stringId(),
       title: { type: 'string' },
       setting: { $ref: '#/$defs/sceneSetting' },
       storyFunction: { type: 'array', items: { type: 'string' } },
@@ -158,11 +170,21 @@ export const screenplayDocumentSchema = {
         },
       },
     }),
-    sceneSetting: objectWith(['locationRefs'], {
+    sceneSetting: objectWith([], {
       interiorExterior: { type: 'string' },
       timeOfDay: { type: 'string' },
-      locationRefs: refArray(),
+      locationReferences: refArray(),
+      locationIds: { type: 'array', items: stringId() },
     }),
+  },
+} as const;
+
+export const screenplayCreateDocumentSchema = {
+  ...screenplayDocumentSchema,
+  $id: 'https://schemas.gorenku.com/studio/screenplay-create-document.schema.json',
+  properties: {
+    ...screenplayDocumentSchema.properties,
+    kind: { const: 'screenplayCreate' },
   },
 } as const;
 
@@ -199,6 +221,7 @@ export const screenplayOperationsSchema = {
       oneOf: [
         objectWith(['beforeId'], { beforeId: stringId() }),
         objectWith(['afterId'], { afterId: stringId() }),
+        objectWith(['position'], { position: { const: 'only' } }),
       ],
     },
     castMemberAdd: operationObject(['operation', 'castMember'], {
@@ -269,10 +292,11 @@ export const screenplayOperationsSchema = {
       operation: { const: 'sequence.delete' },
       sequenceId: stringId(),
     }),
-    sequenceMove: operationObject(['operation', 'sequenceId', 'placement'], {
+    sequenceMove: operationObject(['operation', 'sequenceId', 'fromActId', 'toActId', 'placement'], {
       operation: { const: 'sequence.move' },
       sequenceId: stringId(),
-      actId: stringId(),
+      fromActId: stringId(),
+      toActId: stringId(),
       placement: { $ref: '#/$defs/placement' },
     }),
     sceneAdd: operationObject(['operation', 'sequenceId', 'scene'], {
@@ -289,10 +313,11 @@ export const screenplayOperationsSchema = {
       operation: { const: 'scene.delete' },
       sceneId: stringId(),
     }),
-    sceneMove: operationObject(['operation', 'sceneId', 'placement'], {
+    sceneMove: operationObject(['operation', 'sceneId', 'fromSequenceId', 'toSequenceId', 'placement'], {
       operation: { const: 'scene.move' },
       sceneId: stringId(),
-      sequenceId: stringId(),
+      fromSequenceId: stringId(),
+      toSequenceId: stringId(),
       placement: { $ref: '#/$defs/placement' },
     }),
   },
@@ -310,6 +335,10 @@ function refArray() {
 
 function stringId() {
   return { type: 'string', minLength: 1 };
+}
+
+function handle() {
+  return { type: 'string', pattern: '^[a-z][a-z0-9-]*$' };
 }
 
 function objectWith(required: string[], properties: Record<string, unknown>) {

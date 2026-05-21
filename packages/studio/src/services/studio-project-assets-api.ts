@@ -1,24 +1,9 @@
 import type {
-  MarkdownAssetContent,
-  RichTextAssetLink,
-} from '@gorenku/studio-core/client';
-import type {
   CastDesignResourceResponse,
   ClipDesignResourceResponse,
-  ProjectShellWithHttp,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
-
-interface MarkdownAssetContentResponse {
-  content: MarkdownAssetContent | null;
-}
-
-interface MarkdownAssetContentUpdateResponse {
-  content: MarkdownAssetContent | null;
-  project?: ProjectShellWithHttp | null;
-  resourceKeys?: string[];
-}
 
 interface CastAssetsResponse {
   assets: StudioAssetResponse[];
@@ -157,66 +142,11 @@ export function castAssetFileUrl(
   return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
 }
 
-export async function readMarkdownAssetContent(
-  projectName: string,
-  asset: Pick<RichTextAssetLink, 'assetId' | 'assetFileId'>
-): Promise<MarkdownAssetContent> {
-  const response = await fetch(markdownAssetContentUrl(projectName, asset));
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-
-  const body = (await response.json()) as MarkdownAssetContentResponse;
-  if (!body.content) {
-    throw new Error('Renku Studio API returned no Markdown asset content.');
-  }
-  return body.content;
-}
-
-export async function updateMarkdownAssetContent(
-  projectName: string,
-  asset: Pick<RichTextAssetLink, 'assetId' | 'assetFileId'>,
-  content: string
-): Promise<{
-  content: MarkdownAssetContent;
-  project?: ProjectShellWithHttp;
-  resourceKeys: string[];
-}> {
-  const response = await fetch(markdownAssetContentUrl(projectName, asset), {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Renku-Studio-Token': readStudioApiToken(),
-    },
-    body: JSON.stringify({ content }),
-  });
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-
-  const body = (await response.json()) as MarkdownAssetContentUpdateResponse;
-  if (!body.content) {
-    throw new Error('Renku Studio API returned no Markdown asset update result.');
-  }
-  return {
-    content: body.content,
-    project: body.project ?? undefined,
-    resourceKeys: body.resourceKeys ?? [],
-  };
-}
-
 function castDesignResourceUrl(
   projectName: string,
   castMemberId: string
 ): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/design`;
-}
-
-function markdownAssetContentUrl(
-  projectName: string,
-  asset: Pick<RichTextAssetLink, 'assetId' | 'assetFileId'>
-): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/markdown-assets/${encodeURIComponent(asset.assetId)}/files/${encodeURIComponent(asset.assetFileId)}/content`;
 }
 
 function castAssetsUrl(projectName: string, castMemberId: string): string {

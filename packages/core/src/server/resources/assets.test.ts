@@ -3,14 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  createDeterministicIdGenerator,
   createProjectDataService,
   type ProjectRelativePath,
 } from '../index.js';
 import {
-  runCreateOrSkip,
+  createSampleMovieProject,
   writeConfig,
-  writeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('asset resources', () => {
@@ -22,15 +20,8 @@ describe('asset resources', () => {
   });
 
   it('lists registered assets, selected assets, and persisted selections', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -45,7 +36,7 @@ describe('asset resources', () => {
     const registered = await projectData.registerAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       type: 'narration',
       mediaKind: 'audio',
       title: 'Narration take 1',
@@ -57,7 +48,7 @@ describe('asset resources', () => {
     await projectData.createAssetSelect({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       assetId: registered.assetId,
     });
 
@@ -65,7 +56,7 @@ describe('asset resources', () => {
       projectData.listAssets({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'clip', clipId: 'clip_test0001' },
+        target: { kind: 'scene', sceneId: 'scene_test0001' },
       })
     ).resolves.toEqual(
       expect.arrayContaining([
@@ -80,7 +71,7 @@ describe('asset resources', () => {
       createProjectDataService().listAssetSelects({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'clip', clipId: 'clip_test0001' },
+        target: { kind: 'scene', sceneId: 'scene_test0001' },
       })
     ).resolves.toEqual([
       expect.objectContaining({

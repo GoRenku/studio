@@ -2,14 +2,17 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ScreenplayDocument, ScreenplayOperationDocument } from '../../client/screenplay.js';
+import type {
+  ScreenplayCreateDocument,
+  ScreenplayDocument,
+  ScreenplayOperationDocument,
+} from '../../client/screenplay.js';
 import {
-  createDeterministicIdGenerator,
   createProjectDataService,
 } from '../index.js';
 import {
+  createBlankMovieProject,
   writeConfig,
-  writeMinimalProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('screenplay JSON commands', () => {
@@ -47,7 +50,7 @@ describe('screenplay JSON commands', () => {
       resourceKeys: expect.arrayContaining(['screenplay']),
     });
     expect(report.generatedIds?.map((id) => id.kind)).toEqual(
-      expect.arrayContaining(['cast', 'location', 'act', 'sequence', 'scene', 'block'])
+      expect.arrayContaining(['cast', 'location', 'act', 'sequence', 'scene'])
     );
 
     await expect(projectData.readScreenplayStatus({ homeDir })).resolves.toMatchObject({
@@ -114,7 +117,7 @@ describe('screenplay JSON commands', () => {
       document: {
         ...minimalScreenplayDocument(),
         mood: 'extraneous',
-      } as unknown as ScreenplayDocument,
+      } as unknown as ScreenplayCreateDocument,
     });
     expect(valid.warnings).toEqual([
       expect.objectContaining({
@@ -142,9 +145,9 @@ describe('screenplay JSON commands', () => {
           operation: 'scene.add',
           sequenceId,
           scene: {
-            localKey: 'new-scene',
+            key: 'new-scene',
             title: 'Second Scene',
-            setting: { locationRefs: [{ id: locationId }] },
+            setting: { locationReferences: [{ id: locationId }] },
             blocks: [],
           },
         },
@@ -155,7 +158,7 @@ describe('screenplay JSON commands', () => {
     expect(report).toMatchObject({
       valid: true,
       changes: [expect.objectContaining({ operation: 'scene.add' })],
-      generatedIds: [expect.objectContaining({ kind: 'scene', localKey: 'new-scene' })],
+      generatedIds: [expect.objectContaining({ kind: 'scene', key: 'new-scene' })],
     });
     await expect(projectData.readScreenplayStatus({ homeDir })).resolves.toMatchObject({
       counts: expect.objectContaining({ scenes: 2 }),
@@ -171,18 +174,18 @@ describe('screenplay JSON commands', () => {
         ...minimalScreenplayDocument(),
         acts: [
           {
-            localKey: 'act-one',
+            key: 'act-one',
             title: 'Act I',
             sequences: [
               {
-                localKey: 'commission',
+                key: 'commission',
                 title: 'The Commission',
                 scenes: [
                   {
-                    localKey: 'opening',
+                    key: 'opening',
                     title: 'Opening Scene',
                     setting: {
-                      locationRefs: [{ localKey: 'foundry' }, { localKey: 'foundry' }],
+                      locationReferences: [{ key: 'foundry' }, { key: 'foundry' }],
                     },
                     blocks: [],
                   },
@@ -214,9 +217,9 @@ describe('screenplay JSON commands', () => {
             sequenceId: sequence.id,
             placement: { beforeId: firstSceneId },
             scene: {
-              localKey: 'inserted',
+              key: 'inserted',
               title: 'Inserted Scene',
-              setting: { locationRefs: [] },
+              setting: { locationReferences: [] },
               blocks: [],
             },
           },
@@ -232,64 +235,66 @@ describe('screenplay JSON commands', () => {
   });
 
   async function createBlankProject(): Promise<void> {
-    await projectData.createFromSetup({
-      setupPath: await writeMinimalProjectSetup(homeDir),
+    const created = await createBlankMovieProject({
+      projectData,
       homeDir,
-      idGenerator: createDeterministicIdGenerator(),
     });
+    if (!created) {
+      return;
+    }
   }
 });
 
-function minimalScreenplayDocument(): ScreenplayDocument {
+function minimalScreenplayDocument(): ScreenplayCreateDocument {
   return {
-    kind: 'screenplay',
+    kind: 'screenplayCreate',
     screenplay: {
       title: 'Urban Basilica',
       logline: 'A founder builds a weapon and a conscience.',
     },
     cast: [
       {
-        localKey: 'urban',
+        key: 'urban',
+        handle: 'urban',
         name: 'Urban',
         role: 'cannon founder',
       },
     ],
     locations: [
       {
-        localKey: 'foundry',
+        key: 'foundry',
+        handle: 'foundry',
         name: 'Foundry',
       },
     ],
     acts: [
       {
-        localKey: 'act-one',
+        key: 'act-one',
         title: 'Act I',
         sequences: [
           {
-            localKey: 'commission',
+            key: 'commission',
             title: 'The Commission',
             scenes: [
               {
-                localKey: 'urban-enters',
+                key: 'urban-enters',
                 title: 'Urban Enters The Foundry',
                 setting: {
                   interiorExterior: 'INT',
                   timeOfDay: 'NIGHT',
-                  locationRefs: [{ localKey: 'foundry' }],
+                  locationReferences: [{ key: 'foundry' }],
                 },
                 storyFunction: ['Introduce Urban'],
                 blocks: [
                   {
-                    localKey: 'action-one',
                     type: 'action',
                     text: 'Urban studies the cracked bronze.',
-                    castMemberRefs: [{ localKey: 'urban' }],
-                    locationRefs: [{ localKey: 'foundry' }],
+                    castMemberReferences: [{ key: 'urban' }],
+                    locationReferences: [{ key: 'foundry' }],
                   },
                   {
-                    localKey: 'line-one',
                     type: 'dialogue',
-                    castMemberRef: { localKey: 'urban' },
+                    castMemberReference: { key: 'urban' },
                     lines: ['No furnace is innocent.'],
                   },
                 ],

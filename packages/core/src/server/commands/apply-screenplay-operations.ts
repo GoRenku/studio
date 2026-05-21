@@ -132,7 +132,7 @@ export function buildScreenplayDraftForOperations(
         changes.push({ operation: operation.operation, sequenceId: operation.sequenceId });
         break;
       case 'sequence.move':
-        moveSequence(draft.acts, operation.sequenceId, operation.actId, operation.placement);
+        moveSequence(draft.acts, operation.sequenceId, operation.fromActId, operation.toActId, operation.placement);
         changes.push({ operation: operation.operation, sequenceId: operation.sequenceId });
         break;
       case 'scene.add':
@@ -148,7 +148,7 @@ export function buildScreenplayDraftForOperations(
         changes.push({ operation: operation.operation, sceneId: operation.sceneId });
         break;
       case 'scene.move':
-        moveScene(draft.acts, operation.sceneId, operation.sequenceId, operation.placement);
+        moveScene(draft.acts, operation.sceneId, operation.fromSequenceId, operation.toSequenceId, operation.placement);
         changes.push({ operation: operation.operation, sceneId: operation.sceneId });
         break;
     }
@@ -189,6 +189,15 @@ function insertByPlacement<T extends { id?: string }>(
   placement?: Placement
 ): void {
   if (!placement) {
+    items.push(value);
+    return;
+  }
+  if (placement.position === 'only') {
+    if (items.length > 0) {
+      throw new ProjectDataError('PROJECT_DATA212', 'Only placement requires an empty target parent.', {
+        suggestion: 'Use beforeId or afterId for a non-empty target parent.',
+      });
+    }
     items.push(value);
     return;
   }
@@ -253,11 +262,16 @@ function removeSequence(acts: Act[], sequenceId: string): Sequence {
 function moveSequence(
   acts: Act[],
   sequenceId: string,
-  actId?: string,
+  fromActId: string,
+  toActId: string,
   placement?: Placement
 ): void {
-  const sequence = removeSequence(acts, sequenceId);
-  insertByPlacement((actId ? findAct(acts, actId) : acts[0])?.sequences ?? [], sequence, placement);
+  if (!placement) {
+    throwInvalidMovePlacement();
+  }
+  const fromAct = findAct(acts, fromActId);
+  const sequence = removeById(fromAct.sequences, sequenceId, 'sequence');
+  insertByPlacement(findAct(acts, toActId).sequences, sequence, placement);
 }
 
 function replaceScene(acts: Act[], scene: Scene): void {
@@ -286,9 +300,19 @@ function removeScene(acts: Act[], sceneId: string): Scene {
   throwNotFound('scene');
 }
 
-function moveScene(acts: Act[], sceneId: string, sequenceId?: string, placement?: Placement): void {
-  const scene = removeScene(acts, sceneId);
-  insertByPlacement(findSequence(acts, sequenceId ?? acts[0]?.sequences[0]?.id ?? '').scenes, scene, placement);
+function moveScene(
+  acts: Act[],
+  sceneId: string,
+  fromSequenceId: string,
+  toSequenceId: string,
+  placement?: Placement
+): void {
+  if (!placement) {
+    throwInvalidMovePlacement();
+  }
+  const fromSequence = findSequence(acts, fromSequenceId);
+  const scene = removeById(fromSequence.scenes, sceneId, 'scene');
+  insertByPlacement(findSequence(acts, toSequenceId).scenes, scene, placement);
 }
 
 function requiredId(value: { id?: string }): string {
@@ -303,5 +327,11 @@ function requiredId(value: { id?: string }): string {
 function throwNotFound(label: string): never {
   throw new ProjectDataError('PROJECT_DATA210', `Unknown ${label} id.`, {
     suggestion: 'Read the screenplay first and use an existing id.',
+  });
+}
+
+function throwInvalidMovePlacement(): never {
+  throw new ProjectDataError('PROJECT_DATA212', 'Move operations require explicit placement.', {
+    suggestion: 'Provide beforeId, afterId, or position: "only" for an empty target parent.',
   });
 }

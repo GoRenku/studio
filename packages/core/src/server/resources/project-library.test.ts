@@ -3,13 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  createDeterministicIdGenerator,
   createProjectDataService,
 } from '../index.js';
 import {
-  runCreateOrSkip,
+  createSampleMovieProject,
   writeConfig,
-  writeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('project library resource', () => {
@@ -24,14 +22,7 @@ describe('project library resource', () => {
 
   it('lists only SQLite-backed projects from storageRoot', async () => {
     const projectData = createProjectDataService();
-    const setupPath = await writeProjectSetup(homeDir);
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -49,14 +40,7 @@ describe('project library resource', () => {
 
   it('keeps listing the project library when one project database cannot be opened', async () => {
     const projectData = createProjectDataService();
-    const setupPath = await writeProjectSetup(homeDir);
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }

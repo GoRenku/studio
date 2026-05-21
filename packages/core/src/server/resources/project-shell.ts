@@ -53,6 +53,7 @@ export function readProjectShellProjection(
     databasePath: session.databasePath,
     aspectRatio: nullable(project.aspectRatio),
     logline: nullable(project.logline),
+    summary: nullable(project.summary),
   };
   const castPage = listCastNavigationPage(session, input);
   const visualLanguagePage = listVisualLanguageNavigationPage(session, input);

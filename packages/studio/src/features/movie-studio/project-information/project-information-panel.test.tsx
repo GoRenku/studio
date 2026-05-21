@@ -14,6 +14,7 @@ vi.mock('@/services/studio-projects-api', () => ({
           : projectName,
       aspectRatio: '16:9',
       logline: 'A historical documentary.',
+      summary: 'A refreshed project summary.',
       languages: [
         {
           id: 'language_1',
@@ -115,7 +116,7 @@ function makeProject(input: { title: string }): ProjectShellWithHttp {
       databasePath: '/tmp/renku/constantinople/.renku/project.sqlite',
       aspectRatio: '16:9',
       logline: 'A historical documentary.',
-      summary: 'A project summary.',
+      summary: 'A refreshed project summary.',
     },
     coverImage: null,
     coverUrl: null,

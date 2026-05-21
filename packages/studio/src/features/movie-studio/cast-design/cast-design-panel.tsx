@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { CastMember } from '@gorenku/studio-core/client';
-import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { CastCharacterSheetTab } from './tabs/cast-character-sheet-tab';
 import { CastDescriptionTab } from './tabs/cast-description-tab';
@@ -14,13 +13,11 @@ import { useCastDesignAssets } from './use-cast-design-assets';
 interface CastDesignPanelProps {
   projectName: string;
   castEntry: CastMember;
-  onProjectChange: (project: ProjectShellWithHttp) => void;
 }
 
 export function CastDesignPanel({
   projectName,
   castEntry,
-  onProjectChange,
 }: CastDesignPanelProps) {
   const [activeTab, setActiveTab] = useState<CastDesignTabId>('description');
   const [characterSheetGenerationOpen, setCharacterSheetGenerationOpen] =
@@ -70,10 +67,8 @@ export function CastDesignPanel({
           ) : null}
           {!castDesignAssets.isLoadingCastAssets && activeTab === 'description' ? (
             <CastDescriptionTab
-              projectName={projectName}
               content={castDesignAssets.descriptionContent}
               onOpenDetails={() => undefined}
-              onProjectChange={onProjectChange}
             />
           ) : null}
           {!castDesignAssets.isLoadingCastAssets && activeTab === 'character-sheet' ? (

@@ -166,9 +166,10 @@ describe('StudioCoordinationService', () => {
   it('uses recent browser session activity when the operational runtime descriptor is stale', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);
-    await createProjectDataService().createFromSetup({
+    await createProjectDataService().createMovieProject({
       homeDir,
-      setupPath: await writeProjectSetup(homeDir),
+      projectName: 'constantinople',
+      title: 'Preparation of the Siege',
       idGenerator: createDeterministicIdGenerator(),
     });
     const coordination = createStudioCoordinationService({ homeDir });
@@ -224,9 +225,10 @@ describe('StudioCoordinationService', () => {
   it('reports unresolved selected project data through current-context diagnostics', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);
-    await createProjectDataService().createFromSetup({
+    await createProjectDataService().createMovieProject({
       homeDir,
-      setupPath: await writeProjectSetup(homeDir),
+      projectName: 'constantinople',
+      title: 'Preparation of the Siege',
       idGenerator: createDeterministicIdGenerator(),
     });
     const coordination = createStudioCoordinationService({ homeDir });
@@ -364,21 +366,4 @@ async function writeConfig(homeDir: string, storageRoot: string): Promise<void> 
     `version: 0.1.0\nstorageRoot: ${storageRoot}\n`,
     'utf8'
   );
-}
-
-async function writeProjectSetup(homeDir: string): Promise<string> {
-  const setupPath = path.join(homeDir, 'project.yaml');
-  await fs.writeFile(
-    setupPath,
-    `kind: renku.projectSetup
-version: 0.1.0
-
-project:
-  name: constantinople
-  title: Preparation of the Siege
-  type: standaloneMovie
-`,
-    'utf8'
-  );
-  return setupPath;
 }

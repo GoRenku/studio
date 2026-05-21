@@ -14,9 +14,7 @@ export type {
   AssetReference,
   AssetSelection,
   AssetTarget,
-  MarkdownAssetContent,
   RegisterAssetInput,
-  RichTextAssetLink,
 } from './assets.js';
 export type {
   CastMember,
@@ -83,6 +81,7 @@ export type {
 } from './diagnostics.js';
 export {
   screenplayBlockSchema,
+  screenplayCreateDocumentSchema,
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,

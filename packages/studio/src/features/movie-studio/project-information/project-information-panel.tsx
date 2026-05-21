@@ -39,7 +39,6 @@ import {
 } from '@/ui/select';
 import { Textarea } from '@/ui/textarea';
 import { cn } from '@/lib/utils';
-import { MarkdownAssetEditor } from '../markdown-asset-editor';
 
 const ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16', '21:9'] as const;
 
@@ -78,6 +77,7 @@ interface ProjectInformationForm {
   title: string;
   aspectRatio: string;
   logline: string;
+  summary: string;
   languages: ProjectLanguage[];
 }
 
@@ -93,8 +93,6 @@ export function ProjectInformationPanel({
   const [form, setForm] = useState<ProjectInformationForm>(() =>
     projectForm
   );
-  const [resource, setResource] =
-    useState<ProjectInformationResourceResponse | null>(null);
   const formRef = useRef(form);
   const lastProjectFormRef = useRef(projectForm);
   const lastProjectFormSignatureRef = useRef(
@@ -141,28 +139,33 @@ export function ProjectInformationPanel({
 
   useEffect(() => {
     let cancelled = false;
+    const requestedProjectFormSignature =
+      projectInformationFormSignature(projectForm);
+    const requestedProjectIdentitySignature =
+      projectInformationIdentitySignature(projectForm);
     void readProjectInformationResource(project.identity.name)
       .then((nextResource) => {
-        if (!cancelled) {
-          const nextResourceForm = toProjectInformationResourceForm(nextResource);
-          setResource(nextResource);
-          setForm((current) =>
-            projectInformationFormSignature(current) ===
-            projectInformationFormSignature(lastProjectFormRef.current)
-              ? nextResourceForm
-              : current
-          );
+        const nextResourceForm = toProjectInformationResourceForm(nextResource);
+        if (
+          cancelled ||
+          lastProjectFormSignatureRef.current !== requestedProjectFormSignature ||
+          projectInformationIdentitySignature(nextResourceForm) !==
+            requestedProjectIdentitySignature
+        ) {
+          return;
         }
+        setForm((current) =>
+          projectInformationFormSignature(current) ===
+          projectInformationFormSignature(lastProjectFormRef.current)
+            ? nextResourceForm
+            : current
+        );
       })
-      .catch(() => {
-        if (!cancelled) {
-          setResource(null);
-        }
-      });
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [project.identity.name]);
+  }, [project.identity.name, projectForm]);
 
   useEffect(() => {
     onAutosaveStatusChange(autosave);
@@ -301,15 +304,18 @@ export function ProjectInformationPanel({
             />
           </Field>
 
-          <MarkdownAssetEditor
-            projectName={project.identity.name}
-            label='Summary'
-            asset={resource?.summaryAsset}
-            initialContent=''
-            emptyMessage='No editable project summary asset is attached yet.'
-            minHeightClassName='min-h-36'
-            onProjectChange={onProjectChange}
-          />
+          <Field label='Summary'>
+            <Textarea
+              value={form.summary}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  summary: event.target.value,
+                }))
+              }
+              className={cn('min-h-36', projectInformationControlClassName)}
+            />
+          </Field>
         </div>
       </section>
 
@@ -473,6 +479,7 @@ function toProjectInformationForm(project: ProjectShellWithHttp): ProjectInforma
     title: project.identity.title,
     aspectRatio: project.identity.aspectRatio ?? '16:9',
     logline: project.identity.logline ?? '',
+    summary: project.identity.summary ?? '',
     languages: project.languages,
   };
 }
@@ -484,6 +491,7 @@ function toProjectInformationResourceForm(
     title: resource.title,
     aspectRatio: resource.aspectRatio ?? '16:9',
     logline: resource.logline ?? '',
+    summary: resource.summary ?? '',
     languages: resource.languages,
   };
 }
@@ -495,6 +503,7 @@ function toProjectInformationUpdate(
     title: form.title,
     aspectRatio: form.aspectRatio,
     logline: form.logline,
+    summary: form.summary,
     languages: form.languages.map((language) => ({
       localeTag: language.localeTag,
       displayName: language.displayName,
@@ -507,4 +516,15 @@ function toProjectInformationUpdate(
 
 function projectInformationFormSignature(form: ProjectInformationForm): string {
   return JSON.stringify(toProjectInformationUpdate(form));
+}
+
+function projectInformationIdentitySignature(
+  form: Pick<ProjectInformationForm, 'title' | 'aspectRatio' | 'logline' | 'summary'>
+): string {
+  return JSON.stringify({
+    title: form.title,
+    aspectRatio: form.aspectRatio,
+    logline: form.logline,
+    summary: form.summary,
+  });
 }

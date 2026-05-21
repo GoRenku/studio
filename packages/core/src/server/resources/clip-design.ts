@@ -6,7 +6,6 @@ import {
   listAssetRelationshipPage,
   MAX_RESOURCE_PAGE_LIMIT,
 } from '../database/access/asset-relationships/index.js';
-import { clipRichTextRoles, readRichTextAssetLink } from '../database/access/rich-text-asset-links.js';
 import { readClipParentChain } from '../database/access/navigation.js';
 import type { ReadClipDesignResourceInput } from '../project-data-service-contracts.js';
 
@@ -38,18 +37,6 @@ export function readClipDesignResourceProjection(
       id: chain.clip.id,
       title: chain.clip.title,
       summary: clipRow?.oneLineSummary ?? undefined,
-      summaryAsset: readRichTextAssetLink(session, {
-        target,
-        role: 'summary',
-        relationshipLabel: 'clip',
-        richTextRoles: clipRichTextRoles(),
-      }),
-      visualIntentAsset: readRichTextAssetLink(session, {
-        target,
-        role: 'visual_intent',
-        relationshipLabel: 'clip',
-        richTextRoles: clipRichTextRoles(),
-      }),
     },
     scene: chain.scene,
     sequence: chain.sequence,

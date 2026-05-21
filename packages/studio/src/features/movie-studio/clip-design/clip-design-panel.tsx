@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { Clip } from '@gorenku/studio-core/client';
-import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { readClipDesignResource } from '@/services/studio-project-assets-api';
-import { MarkdownAssetEditor } from '../markdown-asset-editor';
 
 interface ClipDesignPanelProps {
   projectName: string;
   clip: Clip;
-  onProjectChange: (project: ProjectShellWithHttp) => void;
 }
 
 export function ClipDesignPanel({
   projectName,
   clip,
-  onProjectChange,
 }: ClipDesignPanelProps) {
   const [resource, setResource] = useState<Awaited<
     ReturnType<typeof readClipDesignResource>
@@ -41,26 +37,18 @@ export function ClipDesignPanel({
 
   return (
     <div className='space-y-4'>
-      <div className='grid gap-4 xl:grid-cols-2'>
-        <MarkdownAssetEditor
-          projectName={projectName}
-          label='Clip Brief'
-          asset={editableClip.summaryAsset}
-          initialContent=''
-          emptyMessage='No editable clip brief asset is attached yet.'
-          minHeightClassName='min-h-40'
-          onProjectChange={onProjectChange}
-        />
-        <MarkdownAssetEditor
-          projectName={projectName}
-          label='Visual Intent'
-          asset={editableClip.visualIntentAsset}
-          initialContent=''
-          emptyMessage='No editable visual intent asset is attached yet.'
-          minHeightClassName='min-h-40'
-          onProjectChange={onProjectChange}
-        />
-      </div>
+      <section className='space-y-3'>
+        <h3 className='text-sm font-semibold text-foreground'>Clip Brief</h3>
+        {editableClip.summary ? (
+          <p className='min-h-24 whitespace-pre-wrap rounded-md border border-border/45 bg-muted/25 p-4 text-sm leading-relaxed text-foreground'>
+            {editableClip.summary}
+          </p>
+        ) : (
+          <p className='rounded-md border border-dashed border-border/45 bg-muted/25 px-4 py-8 text-center text-sm text-muted-foreground'>
+            No clip brief has been written yet.
+          </p>
+        )}
+      </section>
 
       <div className='grid grid-cols-1 xl:grid-cols-3 gap-3'>
         {['Design References', 'Shot Design', 'Motion Design'].map((stage) => (

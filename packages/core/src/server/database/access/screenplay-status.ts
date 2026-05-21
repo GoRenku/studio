@@ -1,5 +1,5 @@
 import { count } from 'drizzle-orm';
-import { acts, blocks, castMembers, locations, scenes, screenplay, sequences } from '../../schema/index.js';
+import { acts, castMembers, locations, scenes, screenplay, sequences } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export interface ScreenplayStatusCounts {
@@ -22,13 +22,26 @@ export function readScreenplayStatusCounts(session: DatabaseSession): Screenplay
     acts: tableCount(session, acts),
     sequences: tableCount(session, sequences),
     scenes: tableCount(session, scenes),
-    blocks: tableCount(session, blocks),
+    blocks: session.db
+      .select()
+      .from(scenes)
+      .all()
+      .reduce((total, scene) => total + parseBlockCount(scene.blocksJson), 0),
   };
 }
 
 function tableCount(
   session: DatabaseSession,
-  table: typeof acts | typeof blocks | typeof castMembers | typeof locations | typeof scenes | typeof screenplay | typeof sequences
+  table: typeof acts | typeof castMembers | typeof locations | typeof scenes | typeof screenplay | typeof sequences
 ): number {
   return session.db.select({ value: count() }).from(table).get()?.value ?? 0;
+}
+
+function parseBlockCount(value: string): number {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch {
+    return 0;
+  }
 }

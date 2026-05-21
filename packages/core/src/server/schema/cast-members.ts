@@ -1,9 +1,10 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const castMembers = sqliteTable(
   'cast_member',
   {
     id: text('id').primaryKey(),
+    handle: text('handle').notNull(),
     name: text('name').notNull(),
     role: text('role'),
     age: integer('age'),
@@ -16,5 +17,6 @@ export const castMembers = sqliteTable(
   },
   (table) => [
     index('cast_member_position_id_idx').on(table.position, table.id),
+    uniqueIndex('cast_member_handle_idx').on(table.handle),
   ],
 );

@@ -3,14 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  createDeterministicIdGenerator,
   createProjectDataService,
   type ProjectRelativePath,
 } from '../index.js';
 import {
-  runCreateOrSkip,
+  createSampleMovieProject,
   writeConfig,
-  writeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
 describe('register asset command', () => {
@@ -23,15 +21,8 @@ describe('register asset command', () => {
   });
 
   it('registers, lists, selects, and reopens an attached asset', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -46,7 +37,7 @@ describe('register asset command', () => {
     const registered = await projectData.registerAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       type: 'narration',
       mediaKind: 'audio',
       title: 'Narration take 1',
@@ -67,14 +58,14 @@ describe('register asset command', () => {
       projectData.listAssets({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'clip', clipId: 'clip_test0001' },
+        target: { kind: 'scene', sceneId: 'scene_test0001' },
       })
-    ).resolves.toHaveLength(3);
+    ).resolves.toHaveLength(1);
 
     const selected = await projectData.createAssetSelect({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'clip', clipId: 'clip_test0001' },
+      target: { kind: 'scene', sceneId: 'scene_test0001' },
       assetId: registered.assetId,
     });
     expect(selected.selection).toEqual({ kind: 'select', order: 1 });
@@ -83,7 +74,7 @@ describe('register asset command', () => {
       projectData.listAssetSelects({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'clip', clipId: 'clip_test0001' },
+        target: { kind: 'scene', sceneId: 'scene_test0001' },
       })
     ).resolves.toEqual([expect.objectContaining({ assetId: registered.assetId })]);
 
@@ -91,7 +82,7 @@ describe('register asset command', () => {
       createProjectDataService().listAssetSelects({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'clip', clipId: 'clip_test0001' },
+        target: { kind: 'scene', sceneId: 'scene_test0001' },
       })
     ).resolves.toEqual([
       expect.objectContaining({
@@ -101,16 +92,9 @@ describe('register asset command', () => {
     ]);
   });
 
-  it('reads project text fields when visual language has image reference assets', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
+  it('reads project fields when visual language has image reference assets', async () => {
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -143,23 +127,15 @@ describe('register asset command', () => {
       visualLanguage: [
         expect.objectContaining({
           id: 'visual_language_test0001',
-          guidance: 'Formal staging and controlled historical detail.',
-          prompt: 'Warm practical candlelight, deep brown shadows.',
+          summary: 'Warm practical interiors.',
         }),
       ],
     });
   });
 
-  it('rejects image assets attached to visual language rich text roles', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
+  it('keeps visual language prompt images as assets instead of rich-text data', async () => {
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -171,7 +147,7 @@ describe('register asset command', () => {
     });
     await fs.writeFile(path.join(created.projectPath, assetPath), 'image bytes');
 
-    await projectData.registerAsset({
+    const asset = await projectData.registerAsset({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'visualLanguage', visualLanguageId: 'visual_language_test0001' },
@@ -184,26 +160,20 @@ describe('register asset command', () => {
     });
 
     await expect(
-      projectData.readProject({
+      projectData.listAssets({
         projectName: 'constantinople',
         homeDir,
+        target: {
+          kind: 'visualLanguage',
+          visualLanguageId: 'visual_language_test0001',
+        },
       })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA091',
-      message: expect.stringContaining('rich text role prompt'),
-    });
+    ).resolves.toEqual([expect.objectContaining({ assetId: asset.assetId })]);
   });
 
   it('rejects registering a file outside the project', async () => {
-    const setupPath = await writeProjectSetup(homeDir);
     const projectData = createProjectDataService();
-    const created = await runCreateOrSkip(
-      projectData.createFromSetup({
-        setupPath,
-        homeDir,
-        idGenerator: createDeterministicIdGenerator(),
-      })
-    );
+    const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -212,7 +182,7 @@ describe('register asset command', () => {
       projectData.registerAsset({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'clip', clipId: 'clip_test0001' },
+        target: { kind: 'scene', sceneId: 'scene_test0001' },
         type: 'narration',
         mediaKind: 'audio',
         title: 'Outside narration',

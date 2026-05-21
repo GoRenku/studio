@@ -142,7 +142,7 @@ function requiredTargetId(row: SelectedProductionAssetRow): string {
 }
 
 function numberedSlug(position: number, title: string): string {
-  return `${String(position).padStart(2, '0')}-${slugify(title)}`;
+  return `${String(position + 1).padStart(2, '0')}-${slugify(title)}`;
 }
 
 function slugify(input: string): string {

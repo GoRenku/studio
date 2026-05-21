@@ -5,6 +5,7 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
+  type ScreenplayCreateDocument,
   type ScreenplayDocument,
   type ScreenplayOperationDocument,
 } from '@gorenku/studio-core/server';
@@ -30,7 +31,8 @@ export async function runScreenplayCommand(options: {
     return 0;
   }
   if (subcommand === 'show') {
-    writeJson(options.io, await service.readScreenplay({ homeDir: options.homeDir }));
+    const report = await service.readScreenplay({ homeDir: options.homeDir });
+    writeJson(options.io, report.screenplay);
     return 0;
   }
   if (subcommand === 'validate') {
@@ -53,7 +55,7 @@ export async function runScreenplayCommand(options: {
       options.io,
       await service.createScreenplay({
         homeDir: options.homeDir,
-        document: document as ScreenplayDocument,
+        document: document as ScreenplayCreateDocument,
         filePath: options.flags.file !== '-' ? options.flags.file : undefined,
         dryRun: options.flags.dryRun,
       })

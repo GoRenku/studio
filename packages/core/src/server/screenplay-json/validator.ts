@@ -8,6 +8,7 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   screenplayBlockSchema,
+  screenplayCreateDocumentSchema,
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,
@@ -17,10 +18,13 @@ const SCREENPLAY_DOCUMENT_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-document.schema.json';
 const SCREENPLAY_OPERATIONS_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-operations.schema.json';
+const SCREENPLAY_CREATE_DOCUMENT_SCHEMA_ID =
+  'https://schemas.gorenku.com/studio/screenplay-create-document.schema.json';
 
 const ajv = new Ajv2020({
   allErrors: true,
   strict: true,
+  strictRequired: false,
   removeAdditional: false,
   useDefaults: false,
   coerceTypes: false,
@@ -29,9 +33,10 @@ const ajv = new Ajv2020({
 ajv.addSchema(screenplayReferenceSchema);
 ajv.addSchema(screenplayBlockSchema);
 ajv.addSchema(screenplayDocumentSchema);
+ajv.addSchema(screenplayCreateDocumentSchema);
 ajv.addSchema(screenplayOperationsSchema);
 
-export type ScreenplayJsonKind = 'screenplay' | 'screenplayOperations';
+export type ScreenplayJsonKind = 'screenplay' | 'screenplayCreate' | 'screenplayOperations';
 
 export function parseScreenplayJson(input: {
   contents: string;
@@ -58,7 +63,11 @@ export function validateScreenplayJsonDocument(input: {
 }): DiagnosticIssue[] {
   const kind = input.kind ?? inferKind(input.value);
   const validator = ajv.getSchema(
-    kind === 'screenplay' ? SCREENPLAY_DOCUMENT_SCHEMA_ID : SCREENPLAY_OPERATIONS_SCHEMA_ID
+    kind === 'screenplay'
+      ? SCREENPLAY_DOCUMENT_SCHEMA_ID
+      : kind === 'screenplayCreate'
+        ? SCREENPLAY_CREATE_DOCUMENT_SCHEMA_ID
+        : SCREENPLAY_OPERATIONS_SCHEMA_ID
   );
   if (!validator) {
     throw new Error(`Screenplay JSON schema was not registered for ${kind}.`);
@@ -82,9 +91,12 @@ function inferKind(value: unknown): ScreenplayJsonKind {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return 'screenplay';
   }
-  return (value as { kind?: unknown }).kind === 'screenplayOperations'
+  const kind = (value as { kind?: unknown }).kind;
+  return kind === 'screenplayOperations'
     ? 'screenplayOperations'
-    : 'screenplay';
+    : kind === 'screenplayCreate'
+      ? 'screenplayCreate'
+      : 'screenplay';
 }
 
 function throwInvalidJson(filePath?: string): never {
@@ -170,16 +182,16 @@ const allowedFields: Record<string, Set<string>> = {
     'researchSources',
     'assumptionsMade',
   ]),
-  castMember: new Set(['id', 'localKey', 'name', 'role', 'age', 'want', 'need', 'arc', 'voiceNotes', 'description']),
-  location: new Set(['id', 'localKey', 'name', 'timePeriod', 'description', 'visualNotes']),
-  act: new Set(['id', 'localKey', 'title', 'purpose', 'keyBeats', 'sequences']),
-  sequence: new Set(['id', 'localKey', 'title', 'purpose', 'scenes']),
-  scene: new Set(['id', 'localKey', 'title', 'setting', 'storyFunction', 'blocks']),
-  setting: new Set(['interiorExterior', 'timeOfDay', 'locationRefs']),
-  block: new Set(['id', 'localKey', 'type', 'text', 'castMemberRef', 'extension', 'parenthetical', 'lines', 'castMemberRefs', 'locationRefs']),
-  ref: new Set(['id', 'localKey']),
-  operation: new Set(['operation', 'castMember', 'castMemberId', 'location', 'locationId', 'act', 'actId', 'sequence', 'sequenceId', 'scene', 'sceneId', 'placement']),
-  placement: new Set(['beforeId', 'afterId']),
+  castMember: new Set(['id', 'key', 'handle', 'name', 'role', 'age', 'want', 'need', 'arc', 'voiceNotes', 'description']),
+  location: new Set(['id', 'key', 'handle', 'name', 'timePeriod', 'description', 'visualNotes']),
+  act: new Set(['id', 'key', 'title', 'purpose', 'keyBeats', 'sequences']),
+  sequence: new Set(['id', 'key', 'title', 'purpose', 'scenes']),
+  scene: new Set(['id', 'key', 'title', 'setting', 'storyFunction', 'blocks']),
+  setting: new Set(['interiorExterior', 'timeOfDay', 'locationReferences', 'locationIds']),
+  block: new Set(['type', 'text', 'render', 'castMemberReference', 'castMemberId', 'extension', 'parenthetical', 'lines', 'castMemberReferences', 'locationReferences', 'castMemberIds', 'locationIds']),
+  ref: new Set(['id', 'key']),
+  operation: new Set(['operation', 'castMember', 'castMemberId', 'location', 'locationId', 'act', 'actId', 'sequence', 'sequenceId', 'fromActId', 'toActId', 'scene', 'sceneId', 'fromSequenceId', 'toSequenceId', 'placement']),
+  placement: new Set(['beforeId', 'afterId', 'position']),
 };
 
 function collectUnknownFieldWarnings(value: unknown, filePath?: string): DiagnosticIssue[] {
@@ -229,12 +241,12 @@ function visitObject(
     visitArray(record.blocks, [...path, 'blocks'], 'block', issues, filePath);
   }
   if (shape === 'setting') {
-    visitArray(record.locationRefs, [...path, 'locationRefs'], 'ref', issues, filePath);
+    visitArray(record.locationReferences, [...path, 'locationReferences'], 'ref', issues, filePath);
   }
   if (shape === 'block') {
-    visitObject(record.castMemberRef, [...path, 'castMemberRef'], 'ref', issues, filePath);
-    visitArray(record.castMemberRefs, [...path, 'castMemberRefs'], 'ref', issues, filePath);
-    visitArray(record.locationRefs, [...path, 'locationRefs'], 'ref', issues, filePath);
+    visitObject(record.castMemberReference, [...path, 'castMemberReference'], 'ref', issues, filePath);
+    visitArray(record.castMemberReferences, [...path, 'castMemberReferences'], 'ref', issues, filePath);
+    visitArray(record.locationReferences, [...path, 'locationReferences'], 'ref', issues, filePath);
   }
   if (shape === 'operation') {
     visitObject(record.castMember, [...path, 'castMember'], 'castMember', issues, filePath);

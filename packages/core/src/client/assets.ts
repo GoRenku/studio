@@ -1,20 +1,5 @@
 import type { ProjectRelativePath } from './project.js';
 
-export interface RichTextAssetLink {
-  assetId: string;
-  assetFileId: string;
-  role: string;
-  localeId?: string;
-  projectRelativePath: string;
-}
-
-export interface MarkdownAssetContent {
-  assetId: string;
-  assetFileId: string;
-  projectRelativePath: string;
-  content: string;
-}
-
 export type AssetTarget =
   | { kind: 'project' }
   | { kind: 'visualLanguage'; visualLanguageId: string }
