@@ -24,14 +24,13 @@ export async function runCreateCommand(
   if (options.file) {
     throw new StructuredError({
       code: 'CLI001',
-      message:
-        'Project creation no longer imports setup YAML. Create the project with `renku create <project-name> --title <title>`, then add screenplay content with `renku screenplay create --file <screenplay-json>`.',
+      message: 'Project creation does not accept --file.',
       issues: [
         createDiagnosticError(
           'CLI001',
-          '`renku create --file` is no longer supported.',
+          '--file is not valid for project creation.',
           { path: ['--file'], context: 'renku CLI arguments' },
-          'Use `renku create <project-name> --title <title>` and then `renku screenplay create --file <screenplay-json>`.'
+          'Use `renku create <project-name> --title <title>`.'
         ),
       ],
     });
@@ -107,7 +106,7 @@ export async function runCreateCommand(
   options.io.stdout.log(`Project: ${result.projectPath}`);
   options.io.stdout.log(`Database: ${result.databasePath}`);
   options.io.stdout.log(
-    'Created a clean movie project. Add screenplay content with `renku screenplay create --file <screenplay-json>`.'
+    'Created a clean movie project. Add screenplay content with `renku screenplay create --json --file <screenplay-json>`.'
   );
 
   return 0;

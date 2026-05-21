@@ -187,9 +187,6 @@ export function ProjectInformationPanel({
     }
   }, [projectForm]);
 
-  const projectTypeLabel =
-    project.identity.type === 'series' ? 'Series' : 'Movie';
-
   const addLanguage = (localeTag: string) => {
     const language = LANGUAGE_CATALOG.find((entry) => entry.localeTag === localeTag);
     if (!language) {
@@ -245,7 +242,7 @@ export function ProjectInformationPanel({
           </Field>
           <Field label='Type'>
             <Input
-              value={projectTypeLabel}
+              value='Movie'
               readOnly
               className={projectInformationReadOnlyControlClassName}
             />

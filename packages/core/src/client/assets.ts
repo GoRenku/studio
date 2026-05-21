@@ -4,10 +4,8 @@ export type AssetTarget =
   | { kind: 'project' }
   | { kind: 'visualLanguage'; visualLanguageId: string }
   | { kind: 'castMember'; castMemberId: string }
-  | { kind: 'continuityReference'; continuityReferenceId: string }
   | { kind: 'sequence'; sequenceId: string }
-  | { kind: 'scene'; sceneId: string }
-  | { kind: 'clip'; clipId: string };
+  | { kind: 'scene'; sceneId: string };
 
 export interface AssetLocaleContext {
   localeId?: string | null;

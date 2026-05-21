@@ -7,39 +7,27 @@ import {
   type SetStateAction,
 } from 'react';
 import type {
-  ClipNavigationRow,
-  EpisodeNavigationRow,
   StudioSelectionContext,
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
 } from '@gorenku/studio-core/client';
 import type {
-  ClipNavigationPageResponse,
   ProjectShellWithHttp,
   SceneNavigationPageResponse,
-  SequenceNavigationPageResponse,
 } from '@/services/studio-project-contracts';
 import {
-  readClipNavigation,
-  readEpisodeSequenceNavigation,
   readStudioSelectionContext,
   readSceneNavigation,
 } from '@/services/studio-projects-api';
 import type { StudioSelection } from './movie-studio-selection';
 
 export interface StoryNavigationState {
-  projectType: ProjectShellWithHttp['identity']['type'];
-  episodes: EpisodeNavigationRow[];
-  standaloneSequences: SequenceNavigationRow[];
-  sequencesByEpisodeId: Map<string, SequenceNavigationRow[]>;
+  sequences: SequenceNavigationRow[];
   scenesBySequenceId: Map<string, SceneNavigationRow[]>;
-  clipsBySceneId: Map<string, ClipNavigationRow[]>;
   loadingKeys: Set<string>;
   error: string | null;
-  loadEpisodeSequences: (episodeId: string) => Promise<void>;
   loadSequenceScenes: (sequenceId: string) => Promise<void>;
-  loadSceneClips: (sceneId: string) => Promise<void>;
 }
 
 export function useStoryNavigation(
@@ -48,36 +36,13 @@ export function useStoryNavigation(
 ): StoryNavigationState {
   const projectName = project.identity.name;
   const screenplay = project.navigation.screenplay;
-  const [episodeSequencePages, setEpisodeSequencePages] = useState<
-    Map<string, SequenceNavigationPageResponse>
-  >(() => new Map());
   const [scenePages, setScenePages] = useState<
     Map<string, SceneNavigationPageResponse>
   >(() => new Map());
-  const [clipPages, setClipPages] = useState<Map<string, ClipNavigationPageResponse>>(
-    () => new Map()
-  );
   const [selectionContext, setSelectionContext] =
     useState<StudioSelectionContext | null>(null);
   const [loadingKeys, setLoadingKeys] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | null>(null);
-
-  const loadEpisodeSequences = useCallback(
-    async (episodeId: string) => {
-      if (episodeSequencePages.has(episodeId)) {
-        return;
-      }
-      await loadNavigationPage({
-        key: `episode-sequences:${episodeId}`,
-        setLoadingKeys,
-        setError,
-        read: () => readEpisodeSequenceNavigation(projectName, episodeId),
-        write: (page) =>
-          setEpisodeSequencePages((current) => withMapEntry(current, episodeId, page)),
-      });
-    },
-    [episodeSequencePages, projectName]
-  );
 
   const loadSequenceScenes = useCallback(
     async (sequenceId: string) => {
@@ -96,32 +61,13 @@ export function useStoryNavigation(
     [projectName, scenePages]
   );
 
-  const loadSceneClips = useCallback(
-    async (sceneId: string) => {
-      if (clipPages.has(sceneId)) {
-        return;
-      }
-      await loadNavigationPage({
-        key: `scene-clips:${sceneId}`,
-        setLoadingKeys,
-        setError,
-        read: () => readClipNavigation(projectName, sceneId),
-        write: (page) =>
-          setClipPages((current) => withMapEntry(current, sceneId, page)),
-      });
-    },
-    [clipPages, projectName]
-  );
-
   useEffect(() => {
     if (!isStorySelection(selection)) {
       return;
     }
     if (canResolveSelection(selection, {
       screenplay,
-      episodeSequencePages,
       scenePages,
-      clipPages,
       selectionContext,
     })) {
       return;
@@ -147,8 +93,6 @@ export function useStoryNavigation(
       cancelled = true;
     };
   }, [
-    clipPages,
-    episodeSequencePages,
     projectName,
     scenePages,
     selection,
@@ -158,26 +102,10 @@ export function useStoryNavigation(
 
   return useMemo(() => {
     const contextRows = rowsFromSelectionContext(selectionContext);
-    const episodes =
-      screenplay.projectType === 'series'
-        ? appendUniqueRows(screenplay.episodes.items, contextRows.episodes)
-        : [];
-    const standaloneSequences =
-      screenplay.projectType === 'standaloneMovie'
-        ? appendUniqueRows(screenplay.sequences.items, contextRows.sequences)
-        : [];
-    const sequencesByEpisodeId = new Map<string, SequenceNavigationRow[]>();
-    for (const [episodeId, page] of episodeSequencePages) {
-      sequencesByEpisodeId.set(
-        episodeId,
-        appendUniqueRows(page.items, contextRows.sequencesByEpisodeId.get(episodeId) ?? [])
-      );
-    }
-    for (const [episodeId, rows] of contextRows.sequencesByEpisodeId) {
-      if (!sequencesByEpisodeId.has(episodeId)) {
-        sequencesByEpisodeId.set(episodeId, rows);
-      }
-    }
+    const sequences = appendUniqueRows(
+      screenplay.sequences.items,
+      contextRows.sequences
+    );
 
     const scenesBySequenceId = new Map<string, SceneNavigationRow[]>();
     for (const [sequenceId, page] of scenePages) {
@@ -192,41 +120,17 @@ export function useStoryNavigation(
       }
     }
 
-    const clipsBySceneId = new Map<string, ClipNavigationRow[]>();
-    for (const [sceneId, page] of clipPages) {
-      clipsBySceneId.set(
-        sceneId,
-        appendUniqueRows(page.items, contextRows.clipsBySceneId.get(sceneId) ?? [])
-      );
-    }
-    for (const [sceneId, rows] of contextRows.clipsBySceneId) {
-      if (!clipsBySceneId.has(sceneId)) {
-        clipsBySceneId.set(sceneId, rows);
-      }
-    }
-
     return {
-      projectType: project.identity.type,
-      episodes,
-      standaloneSequences,
-      sequencesByEpisodeId,
+      sequences,
       scenesBySequenceId,
-      clipsBySceneId,
       loadingKeys,
       error,
-      loadEpisodeSequences,
       loadSequenceScenes,
-      loadSceneClips,
     };
   }, [
-    clipPages,
-    episodeSequencePages,
     error,
-    loadEpisodeSequences,
-    loadSceneClips,
     loadSequenceScenes,
     loadingKeys,
-    project.identity.type,
     scenePages,
     selectionContext,
     screenplay,
@@ -258,37 +162,21 @@ async function loadNavigationPage<T>({
 }
 
 function rowsFromSelectionContext(context: StudioSelectionContext | null): {
-  episodes: EpisodeNavigationRow[];
   sequences: SequenceNavigationRow[];
-  sequencesByEpisodeId: Map<string, SequenceNavigationRow[]>;
   scenesBySequenceId: Map<string, SceneNavigationRow[]>;
-  clipsBySceneId: Map<string, ClipNavigationRow[]>;
 } {
   const rows = {
-    episodes: [] as EpisodeNavigationRow[],
     sequences: [] as SequenceNavigationRow[],
-    sequencesByEpisodeId: new Map<string, SequenceNavigationRow[]>(),
     scenesBySequenceId: new Map<string, SceneNavigationRow[]>(),
-    clipsBySceneId: new Map<string, ClipNavigationRow[]>(),
   };
   if (!context) {
     return rows;
   }
-  if ('episode' in context && context.episode) {
-    rows.episodes.push(context.episode);
-  }
   if ('sequence' in context) {
-    if (context.sequence.episodeId) {
-      rows.sequencesByEpisodeId.set(context.sequence.episodeId, [context.sequence]);
-    } else {
-      rows.sequences.push(context.sequence);
-    }
+    rows.sequences.push(context.sequence);
   }
   if ('scene' in context) {
     rows.scenesBySequenceId.set(context.scene.sequenceId, [context.scene]);
-  }
-  if ('clip' in context) {
-    rows.clipsBySceneId.set(context.clip.sceneId, [context.clip]);
   }
   return rows;
 }
@@ -297,9 +185,7 @@ function canResolveSelection(
   selection: StudioSelection,
   input: {
     screenplay: ProjectShellWithHttp['navigation']['screenplay'];
-    episodeSequencePages: Map<string, SequenceNavigationPageResponse>;
     scenePages: Map<string, SceneNavigationPageResponse>;
-    clipPages: Map<string, ClipNavigationPageResponse>;
     selectionContext: StudioSelectionContext | null;
   }
 ): boolean {
@@ -316,24 +202,13 @@ function canResolveSelection(
       ) || contextMatches(input.selectionContext, selection)
     );
   }
-  if (selection.type === 'clip') {
-    return (
-      Array.from(input.clipPages.values()).some((page) =>
-        page.items.some((clip) => clip.id === selection.id)
-      ) || contextMatches(input.selectionContext, selection)
-    );
-  }
   return true;
 }
 
 function sequenceRows(input: {
   screenplay: ProjectShellWithHttp['navigation']['screenplay'];
-  episodeSequencePages: Map<string, SequenceNavigationPageResponse>;
 }): SequenceNavigationRow[] {
-  if (input.screenplay.projectType === 'standaloneMovie') {
-    return input.screenplay.sequences.items;
-  }
-  return Array.from(input.episodeSequencePages.values()).flatMap((page) => page.items);
+  return input.screenplay.sequences.items;
 }
 
 function contextMatches(
@@ -349,16 +224,13 @@ function contextMatches(
   if (selection.type === 'scene' && 'scene' in context) {
     return context.scene.id === selection.id;
   }
-  if (selection.type === 'clip' && 'clip' in context) {
-    return context.clip.id === selection.id;
-  }
   return false;
 }
 
 function isStorySelection(
   selection: StudioSelection
-): selection is Extract<StudioSelection, { type: 'sequence' | 'scene' | 'clip' }> {
-  return selection.type === 'sequence' || selection.type === 'scene' || selection.type === 'clip';
+): selection is Extract<StudioSelection, { type: 'sequence' | 'scene' }> {
+  return selection.type === 'sequence' || selection.type === 'scene';
 }
 
 function appendUniqueRows<T extends { id: string }>(rows: T[], extraRows: T[]): T[] {

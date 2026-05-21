@@ -310,17 +310,6 @@ function readStudioRoute(): StudioRoute {
     };
   }
 
-  const clipRoute = /^\/projects\/([^/]+)\/clips\/([^/]+)\/?$/.exec(
-    window.location.pathname
-  );
-  if (clipRoute?.[1] && clipRoute[2]) {
-    return {
-      screen: 'movieStudio',
-      projectName: decodeURIComponent(clipRoute[1]),
-      selection: { type: 'clip', id: decodeURIComponent(clipRoute[2]) },
-    };
-  }
-
   const castRoute = /^\/projects\/([^/]+)\/cast\/([^/]+)\/?$/.exec(
     window.location.pathname
   );
@@ -426,8 +415,6 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Sequence';
     case 'scene':
       return 'Scene';
-    case 'clip':
-      return 'Clip';
     case 'projectInformation':
       return 'Project information';
     case 'visualLanguage':
@@ -448,12 +435,9 @@ function canResolveRouteSelection(
   }
   if (selection.type === 'sequence') {
     const screenplay = project.navigation.screenplay;
-    return (
-      screenplay.projectType === 'standaloneMovie' &&
-      screenplay.sequences.items.some((sequence) => sequence.id === selection.id)
-    );
+    return screenplay.sequences.items.some((sequence) => sequence.id === selection.id);
   }
-  if (selection.type === 'scene' || selection.type === 'clip') {
+  if (selection.type === 'scene') {
     return false;
   }
   return true;
@@ -484,9 +468,6 @@ function studioSelectionRoutePath(
   }
   if (selection.type === 'scene') {
     return `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;
-  }
-  if (selection.type === 'clip') {
-    return `${projectRoutePath(projectName)}/clips/${encodeURIComponent(selection.id)}`;
   }
   return projectRoutePath(projectName);
 }

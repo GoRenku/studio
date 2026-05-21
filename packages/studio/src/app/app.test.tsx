@@ -82,15 +82,11 @@ describe('App', () => {
       },
       {
         path: '/projects/constantinople/sequences/seq_opening',
-        expectedText: '1 scenes, 1 clips.',
+        expectedText: '1 scenes.',
       },
       {
         path: '/projects/constantinople/scenes/scene_1_1',
         expectedText: 'Opening Scene',
-      },
-      {
-        path: '/projects/constantinople/clips/clip_1_1_1',
-        expectedText: 'Opening Image',
       },
       {
         path: '/projects/constantinople/cast',
@@ -142,7 +138,6 @@ describe('App', () => {
       navigation: {
         ...makeProjectNavigation(),
         screenplay: {
-          projectType: 'standaloneMovie' as const,
           sequences: { items: [], nextCursor: 'after-first-page' },
         },
       },
@@ -173,7 +168,6 @@ describe('App', () => {
               number: 150,
               title: 'Late Sequence',
               sceneCount: 0,
-              clipCount: 0,
             },
           },
           resourceKeys: ['navigation:movie-sequences'],
@@ -207,18 +201,17 @@ describe('App', () => {
     );
   });
 
-  it('loads a direct clip route through selection context without eager shell children', async () => {
+  it('loads a direct scene route through selection context without eager shell children', async () => {
     const project = {
       ...makeProject(),
       navigation: {
         ...makeProjectNavigation(),
         screenplay: {
-          projectType: 'standaloneMovie' as const,
           sequences: { items: [], nextCursor: 'after-first-page' },
         },
       },
     };
-    window.history.pushState({}, '', '/projects/constantinople/clips/clip_late');
+    window.history.pushState({}, '', '/projects/constantinople/scenes/scene_late');
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
       const url = requestUrl(request);
       if (url === '/studio-api/projects/constantinople') {
@@ -230,33 +223,25 @@ describe('App', () => {
       ) {
         return jsonResponse({
           valid: true,
-          selection: { type: 'clip', id: 'clip_late' },
+          selection: { type: 'scene', id: 'scene_late' },
           context: {
-            surface: 'clip-design',
+            surface: 'scene',
             sequence: {
               id: 'seq_late',
               number: 150,
               title: 'Late Sequence',
               sceneCount: 1,
-              clipCount: 1,
             },
             scene: {
               id: 'scene_late',
               sequenceId: 'seq_late',
               title: 'Late Scene',
-              clipCount: 1,
-            },
-            clip: {
-              id: 'clip_late',
-              sceneId: 'scene_late',
-              title: 'Late Clip',
-              oneLineSummary: 'Loaded from selection context.',
             },
           },
-          resourceKeys: ['surface:clip-design:clip_late'],
+          resourceKeys: ['navigation:sequence-scenes:seq_late'],
         });
       }
-      if (url === '/studio-api/projects/constantinople/clips/clip_late/design') {
+      if (url === '/studio-api/projects/constantinople/scenes/scene_late/design') {
         return jsonResponse({ resource: null });
       }
       if (url === '/studio-api/studio/events/current') {
@@ -276,11 +261,11 @@ describe('App', () => {
 
     renderApp();
 
-    await screen.findByText('Late Clip');
-    expect(window.location.pathname).toBe('/projects/constantinople/clips/clip_late');
+    await screen.findByRole('heading', { name: 'Late Scene' });
+    expect(window.location.pathname).toBe('/projects/constantinople/scenes/scene_late');
   });
 
-  it('loads sequence scenes and scene clips through navigation pages', async () => {
+  it('loads sequence scenes through navigation pages', async () => {
     window.history.pushState({}, '', '/projects/constantinople');
     const fetchLog = mockStudioFetch({
       library: makeLibrary([makeProjectSummary()]),
@@ -293,17 +278,9 @@ describe('App', () => {
     fireEvent.click(screen.getByLabelText('Expand Opening'));
 
     await screen.findByText('Opening Scene');
-    expect(screen.getByText('1 scenes, 1 clips')).toBeTruthy();
-    expect(screen.getByText('1 clips')).toBeTruthy();
-
-    fireEvent.click(screen.getByLabelText('Expand Opening Scene'));
-
-    await screen.findByText('Opening Image');
+    expect(screen.getByText('1 scenes')).toBeTruthy();
     expect(fetchLog).toContain(
       '/studio-api/projects/constantinople/sequences/seq_opening/scenes'
-    );
-    expect(fetchLog).toContain(
-      '/studio-api/projects/constantinople/scenes/scene_1_1/clips'
     );
   });
 
@@ -475,10 +452,6 @@ describe('App', () => {
       {
         path: '/projects/constantinople/scenes/scene_missing',
         message: 'Scene not found: scene_missing',
-      },
-      {
-        path: '/projects/constantinople/clips/clip_missing',
-        message: 'Clip not found: clip_missing',
       },
     ];
 
@@ -675,11 +648,6 @@ describe('App', () => {
       'Scene',
       { type: 'scene', id: 'scene_1_1' },
       '/projects/constantinople/scenes/scene_1_1',
-    ],
-    [
-      'Clip',
-      { type: 'clip', id: 'clip_1_1_1' },
-      '/projects/constantinople/clips/clip_1_1_1',
     ],
     ['Cast overview', { type: 'casting' }, '/projects/constantinople/cast'],
     [
@@ -1098,22 +1066,6 @@ function mockStudioFetch(input: {
               id: 'scene_1_1',
               sequenceId: 'seq_opening',
               title: 'Opening Scene',
-              clipCount: 1,
-            },
-          ],
-          nextCursor: null,
-        },
-      });
-    }
-    if (url === '/studio-api/projects/constantinople/scenes/scene_1_1/clips') {
-      return jsonResponse({
-        page: {
-          items: [
-            {
-              id: 'clip_1_1_1',
-              sceneId: 'scene_1_1',
-              title: 'Opening Image',
-              oneLineSummary: 'Establish the movie.',
             },
           ],
           nextCursor: null,
@@ -1211,7 +1163,6 @@ function makeSelectionContextResponse(selection: StudioSelection) {
           title: 'Opening',
           shortTitle: 'Opening',
           sceneCount: 1,
-          clipCount: 1,
         },
       },
       resourceKeys: ['navigation:movie-sequences'],
@@ -1229,46 +1180,14 @@ function makeSelectionContextResponse(selection: StudioSelection) {
           title: 'Opening',
           shortTitle: 'Opening',
           sceneCount: 1,
-          clipCount: 1,
         },
         scene: {
           id: selection.id,
           sequenceId: 'seq_opening',
           title: 'Opening Scene',
-          clipCount: 1,
         },
       },
       resourceKeys: ['navigation:sequence-scenes:seq_opening'],
-    };
-  }
-  if (selection.type === 'clip') {
-    return {
-      valid: true,
-      selection,
-      context: {
-        surface: 'clip-design',
-        sequence: {
-          id: 'seq_opening',
-          number: 1,
-          title: 'Opening',
-          shortTitle: 'Opening',
-          sceneCount: 1,
-          clipCount: 1,
-        },
-        scene: {
-          id: 'scene_1_1',
-          sequenceId: 'seq_opening',
-          title: 'Opening Scene',
-          clipCount: 1,
-        },
-        clip: {
-          id: selection.id,
-          sceneId: 'scene_1_1',
-          title: 'Opening Image',
-          oneLineSummary: 'Establish the movie.',
-        },
-      },
-      resourceKeys: ['surface:clip-design:clip_1_1_1'],
     };
   }
   return {
@@ -1303,7 +1222,6 @@ function makeProject(
       id: 'project_test0001',
       name: 'constantinople',
       title: 'Preparation of the Siege',
-      type: 'standaloneMovie',
       folderPath: '/tmp/constantinople',
       databasePath: '/tmp/constantinople/.renku/project.sqlite',
     },
@@ -1320,17 +1238,13 @@ function makeProject(
         role: 'voiceover',
       },
     ],
-    continuityReferences: [],
     counts: {
       languages: 0,
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
-      continuityReferences: 0,
-      episodes: 0,
       sequences: 1,
       scenes: 1,
-      clips: 1,
     },
     navigation: makeProjectNavigation(),
   };
@@ -1350,9 +1264,7 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
       nextCursor: null,
     },
     visualLanguage: { items: [], nextCursor: null },
-    continuityReferences: { items: [], nextCursor: null },
     screenplay: {
-      projectType: 'standaloneMovie',
       sequences: {
         items: [
           {
@@ -1361,7 +1273,6 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
             title: 'Opening',
             shortTitle: 'Opening',
             sceneCount: 1,
-            clipCount: 1,
           },
         ],
         nextCursor: null,
@@ -1398,7 +1309,6 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
   return {
     name: 'constantinople',
     title: 'Preparation of the Siege',
-    type: 'standaloneMovie',
     folderPath: '/tmp/constantinople',
     coverImage: { fileName: 'cover.png' },
     coverUrl: '/studio-api/projects/constantinople/cover',
@@ -1408,11 +1318,8 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
-      continuityReferences: 0,
-      episodes: 0,
       sequences: 1,
       scenes: 1,
-      clips: 1,
     },
     validationError: null,
   };

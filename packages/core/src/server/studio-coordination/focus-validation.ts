@@ -4,7 +4,6 @@ import {
 } from '@gorenku/studio-diagnostics';
 import type {
   CastMember,
-  Clip,
   Project,
   Scene,
   Sequence,
@@ -110,10 +109,6 @@ export function resolveStudioSelectionForProject(
           scenes: sequence.scenes.map((scene) => ({
             id: scene.id,
             title: scene.title,
-            clips: scene.clips.map((clip) => ({
-              id: clip.id,
-              title: clip.title,
-            })),
           })),
         })),
       },
@@ -208,46 +203,6 @@ export function resolveStudioSelectionForProject(
           title: resolved.sequence.title,
           summary: resolved.sequence.summary,
         },
-        clips: resolved.scene.clips.map((clip) => ({
-          id: clip.id,
-          title: clip.title,
-          summary: clip.summary,
-        })),
-      },
-    };
-  }
-
-  if (selection.type === 'clip') {
-    const resolved = findClip(project, selection.id);
-    if (!resolved) {
-      return missingSelection(
-        selection,
-        'STUDIO_COORDINATION032',
-        `Requested clip '${selection.id}' was not found.`,
-        ['focus', 'selection', 'id'],
-        'Select an existing clip before requesting Studio focus.'
-      );
-    }
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'clip',
-        id: resolved.clip.id,
-        title: resolved.clip.title,
-        summary: resolved.clip.summary,
-        visualIntent: resolved.clip.visualIntent,
-        parentScene: {
-          id: resolved.scene.id,
-          title: resolved.scene.title,
-          summary: resolved.scene.summary,
-        },
-        parentSequence: {
-          id: resolved.sequence.id,
-          number: resolved.sequence.number,
-          title: resolved.sequence.title,
-          summary: resolved.sequence.summary,
-        },
       },
     };
   }
@@ -279,21 +234,6 @@ function findScene(
     const scene = sequence.scenes.find((entry) => entry.id === id);
     if (scene) {
       return { sequence, scene };
-    }
-  }
-  return null;
-}
-
-function findClip(
-  project: Project,
-  id: string
-): { sequence: Sequence; scene: Scene; clip: Clip } | null {
-  for (const sequence of project.sequences) {
-    for (const scene of sequence.scenes) {
-      const clip = scene.clips.find((entry) => entry.id === id);
-      if (clip) {
-        return { sequence, scene, clip };
-      }
     }
   }
   return null;

@@ -1,7 +1,6 @@
 import type {
   StudioSelectionContextRequest,
   StudioSelectionContextResponse,
-  ClipNavigationPageResponse,
   SceneNavigationPageResponse,
   SequenceNavigationPageResponse,
   ProjectInformationResourceResponse,
@@ -81,25 +80,12 @@ export async function readStudioSelectionContext(
   return (await response.json()) as StudioSelectionContextResponse;
 }
 
-export async function readStandaloneMovieSequenceNavigation(
+export async function readSequenceNavigation(
   projectName: string,
   query: NavigationPageQuery = {}
 ): Promise<SequenceNavigationPageResponse> {
   return readNavigationPage(
     `/studio-api/projects/${encodeURIComponent(projectName)}/sequences`,
-    query
-  );
-}
-
-export async function readEpisodeSequenceNavigation(
-  projectName: string,
-  episodeId: string,
-  query: NavigationPageQuery = {}
-): Promise<SequenceNavigationPageResponse> {
-  return readNavigationPage(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/episodes/${encodeURIComponent(
-      episodeId
-    )}/sequences`,
     query
   );
 }
@@ -113,19 +99,6 @@ export async function readSceneNavigation(
     `/studio-api/projects/${encodeURIComponent(projectName)}/sequences/${encodeURIComponent(
       sequenceId
     )}/scenes`,
-    query
-  );
-}
-
-export async function readClipNavigation(
-  projectName: string,
-  sceneId: string,
-  query: NavigationPageQuery = {}
-): Promise<ClipNavigationPageResponse> {
-  return readNavigationPage(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(
-      sceneId
-    )}/clips`,
     query
   );
 }

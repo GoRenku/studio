@@ -42,49 +42,11 @@ export function createNavigationRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .get('/continuity-references', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const page = await projectData.listContinuityReferenceNavigation({
-          projectName,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({ page });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/episodes', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const page = await projectData.listEpisodeNavigation({
-          projectName,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({ page });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
     .get('/sequences', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const page = await projectData.listStandaloneMovieSequenceNavigation({
+        const page = await projectData.listSequenceNavigation({
           projectName,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({ page });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/episodes/:episodeId/sequences', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const episodeId = c.req.param('episodeId') as string;
-        const page = await projectData.listEpisodeSequenceNavigation({
-          projectName,
-          episodeId,
           ...readPageRequest(c.req.query()),
         });
         return c.json({ page });
@@ -106,28 +68,14 @@ export function createNavigationRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .get('/scenes/:sceneId/clips', async (c) => {
+    .get('/scenes/:sceneId/design', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const sceneId = c.req.param('sceneId') as string;
-        const page = await projectData.listClipNavigation({
+        const query = c.req.query();
+        const resource = await projectData.readSceneDesignResource({
           projectName,
           sceneId,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({ page });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/clips/:clipId/design', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const clipId = c.req.param('clipId') as string;
-        const query = c.req.query();
-        const resource = await projectData.readClipDesignResource({
-          projectName,
-          clipId,
           activeRole: readOptionalQueryString(query.role),
           ...readPageRequest(query),
         });

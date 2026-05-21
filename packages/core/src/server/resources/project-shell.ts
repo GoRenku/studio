@@ -10,9 +10,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   listCastNavigationPage,
-  listContinuityReferenceNavigationPage,
-  listEpisodeNavigationPage,
-  listStandaloneMovieSequenceNavigationPage,
+  listSequenceNavigationPage,
   listVisualLanguageNavigationPage,
   type ListNavigationPageInput,
 } from '../database/access/navigation.js';
@@ -48,7 +46,6 @@ export function readProjectShellProjection(
     id: project.id,
     name: project.name,
     title: project.title,
-    type: project.type === 'series' ? 'series' : 'standaloneMovie',
     folderPath: input.projectFolder,
     databasePath: session.databasePath,
     aspectRatio: nullable(project.aspectRatio),
@@ -57,52 +54,9 @@ export function readProjectShellProjection(
   };
   const castPage = listCastNavigationPage(session, input);
   const visualLanguagePage = listVisualLanguageNavigationPage(session, input);
-  const continuityPage = listContinuityReferenceNavigationPage(session, input);
   const counts = readProjectCounts(session);
 
-  if (identity.type === 'series') {
-    const episodePage = listEpisodeNavigationPage(session, input);
-    return {
-      identity,
-      coverImage:
-        project.coverFile === 'cover.png' ? { fileName: 'cover.png' } : null,
-      languages: listProjectLocaleRecords(session).map(toProjectLanguage),
-      visualLanguageCategories: listVisualLanguageCategoryRecords(session).map(
-        toVisualLanguageCategory
-      ),
-      visualLanguage: visualLanguagePage.items.map((row) => ({
-        id: row.id,
-        categoryId: row.categoryId,
-        name: row.name,
-        summary: row.oneLineSummary,
-        priority: 'default',
-      })),
-      cast: castPage.items.map((row) => ({
-        id: row.id,
-        name: row.name,
-        kind: row.kind,
-        role: row.role,
-      })),
-      continuityReferences: continuityPage.items.map((row) => ({
-        id: row.id,
-        kind: row.kind,
-        name: row.name,
-        summary: row.oneLineSummary,
-      })),
-      counts,
-      navigation: {
-        cast: castPage,
-        visualLanguage: visualLanguagePage,
-        continuityReferences: continuityPage,
-        screenplay: {
-          projectType: 'series',
-          episodes: episodePage,
-        },
-      },
-    };
-  }
-
-  const sequencePage = listStandaloneMovieSequenceNavigationPage(session, input);
+  const sequencePage = listSequenceNavigationPage(session, input);
   return {
     identity,
     coverImage:
@@ -124,19 +78,11 @@ export function readProjectShellProjection(
       kind: row.kind,
       role: row.role,
     })),
-    continuityReferences: continuityPage.items.map((row) => ({
-      id: row.id,
-      kind: row.kind,
-      name: row.name,
-      summary: row.oneLineSummary,
-    })),
     counts,
     navigation: {
       cast: castPage,
       visualLanguage: visualLanguagePage,
-      continuityReferences: continuityPage,
       screenplay: {
-        projectType: 'standaloneMovie',
         sequences: sequencePage,
       },
     },

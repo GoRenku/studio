@@ -5,7 +5,6 @@ import type {
 } from '../../client/index.js';
 import type { SelectedProductionAssetRow } from '../database/access/production-export.js';
 import {
-  readClipProductionHierarchy,
   readSceneProductionHierarchy,
   readSequenceProductionHierarchy,
 } from '../database/access/production-export.js';
@@ -41,20 +40,6 @@ export function allocateProductionAssetPath(
     );
   }
 
-  if (row.targetKind === 'clip') {
-    const hierarchy = readClipProductionHierarchy(session, requiredTargetId(row));
-    return joinProjectRelativePath(
-      rootProjectRelativePath,
-      'sequences',
-      numberedSlug(hierarchy.sequencePosition, hierarchy.sequenceTitle),
-      'scenes',
-      numberedSlug(hierarchy.scenePosition, hierarchy.sceneTitle),
-      'clips',
-      numberedSlug(hierarchy.clipPosition, hierarchy.clipTitle),
-      exportFileName(row)
-    );
-  }
-
   if (row.targetKind === 'project') {
     return joinProjectRelativePath(
       rootProjectRelativePath,
@@ -80,8 +65,8 @@ function exportFileName(row: SelectedProductionAssetRow): string {
 
 function roleFileBaseName(role: string): string {
   switch (role) {
-    case 'clip_video':
-    case 'clip-video':
+    case 'scene_video':
+    case 'scene-video':
     case 'video':
       return 'video';
     case 'locale_video_override':

@@ -706,10 +706,12 @@ export type StudioSelection =
   | { type: 'storyboard' }
   | { type: 'sequence'; id: string }
   | { type: 'scene'; id: string }
-  | { type: 'clip'; id: string }
   | { type: 'casting' }
   | { type: 'cast'; id: string };
 ```
+
+Scene selections open the current scene design surface. Clip selections are not
+part of the active movie-only Studio contract.
 
 Selection is ephemeral UI state. Do not store it in the project database unless
 a future product decision deliberately turns a particular selection into a

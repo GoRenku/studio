@@ -6,9 +6,9 @@ import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import { CastDesignPanel } from './cast-design/cast-design-panel';
 import { CastOverviewPanel } from './cast-design/cast-overview-panel';
-import { ClipDesignPanel } from './clip-design/clip-design-panel';
 import { GenerationActivityFooter } from './generation-activity/generation-activity-footer';
 import { ProjectInformationPanel } from './project-information/project-information-panel';
+import { SceneDesignPanel } from './scene-design/scene-design-panel';
 import { StoryboardPanel } from './storyboard/storyboard-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
 import { useStoryNavigation } from './use-story-navigation';
@@ -129,10 +129,10 @@ export function MovieStudioScreen({
                 />
               ) : selection.type === 'visualLanguage' ? (
                 <VisualLanguagePanel project={project} />
-              ) : selection.type === 'clip' && resolvedSelection.clip ? (
-                <ClipDesignPanel
+              ) : selection.type === 'scene' && resolvedSelection.scene ? (
+                <SceneDesignPanel
                   projectName={project.identity.name}
-                  clip={resolvedSelection.clip}
+                  scene={resolvedSelection.scene}
                 />
               ) : selection.type === 'casting' ? (
                 <CastOverviewPanel cast={project.cast} />

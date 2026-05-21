@@ -1,7 +1,6 @@
 import type {
   ProjectCounts,
   ProjectCoverImage,
-  ProjectType,
 } from './project.js';
 import type { ProjectDataError } from './diagnostics.js';
 
@@ -13,7 +12,6 @@ export interface ProjectLibrary {
 export interface ProjectSummary {
   name: string;
   title: string;
-  type: ProjectType;
   folderPath: string;
   coverImage: ProjectCoverImage | null;
   logline?: string;

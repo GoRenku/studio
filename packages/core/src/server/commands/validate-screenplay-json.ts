@@ -27,7 +27,7 @@ export async function validateScreenplayJson(
       : [];
 
     if (input.document?.kind === 'screenplay') {
-      warnings.push(...resolveScreenplayDocumentIds({ document: input.document }).warnings);
+      warnings.push(...resolveScreenplayDocumentIds({ document: input.document, mode: 'canonical' }).warnings);
     } else if (input.document?.kind === 'screenplayCreate') {
       warnings.push(
         ...resolveScreenplayDocumentIds({
@@ -38,6 +38,7 @@ export async function validateScreenplayJson(
             locations: input.document.locations,
             acts: input.document.acts,
           },
+          mode: 'create',
         }).warnings
       );
     } else if (input.document?.kind === 'screenplayOperations') {
@@ -48,7 +49,7 @@ export async function validateScreenplayJson(
         });
       }
       const { draft } = buildScreenplayDraftForOperations(base, input.document);
-      warnings.push(...resolveScreenplayDocumentIds({ document: draft }).warnings);
+      warnings.push(...resolveScreenplayDocumentIds({ document: draft, existing: base, mode: 'mutation' }).warnings);
     } else if (!input.document) {
       const current = readScreenplayDocumentFromSession(session);
       if (!current) {
@@ -56,7 +57,7 @@ export async function validateScreenplayJson(
           suggestion: 'Use `renku screenplay create` first.',
         });
       }
-      warnings.push(...resolveScreenplayDocumentIds({ document: current }).warnings);
+      warnings.push(...resolveScreenplayDocumentIds({ document: current, mode: 'canonical' }).warnings);
     }
 
     return {

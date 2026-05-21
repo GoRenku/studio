@@ -1,7 +1,5 @@
 import type {
   CastMember,
-  Clip,
-  ClipNavigationRow,
   SceneNavigationRow,
   SequenceNavigationRow,
 } from '@gorenku/studio-core/client';
@@ -14,25 +12,22 @@ export type StudioSelection =
   | { type: 'storyboard' }
   | { type: 'sequence'; id: string }
   | { type: 'scene'; id: string }
-  | { type: 'clip'; id: string }
   | { type: 'casting' }
   | { type: 'cast'; id: string };
 
 export interface MovieStudioLookup {
   sequences: Map<string, SequenceNavigationRow>;
   scenes: Map<string, SceneNavigationRow>;
-  clips: Map<string, ClipNavigationRow>;
   cast: Map<string, CastMember>;
-  clipsBySequenceId: Map<string, ClipNavigationRow[]>;
-  clipsBySceneId: Map<string, ClipNavigationRow[]>;
+  scenesBySequenceId: Map<string, SceneNavigationRow[]>;
 }
 
 export interface ResolvedStudioSelection {
   valid: boolean;
   kicker: string;
   summary: string;
-  clips: Clip[];
-  clip?: Clip;
+  scenes: SceneNavigationRow[];
+  scene?: SceneNavigationRow;
   castEntry?: CastMember;
 }
 
@@ -42,27 +37,19 @@ export function buildMovieStudioLookup(
 ): MovieStudioLookup {
   const sequences = new Map<string, SequenceNavigationRow>();
   const scenes = new Map<string, SceneNavigationRow>();
-  const clips = new Map<string, ClipNavigationRow>();
-  const clipsBySequenceId = new Map<string, ClipNavigationRow[]>();
-  const clipsBySceneId = new Map<string, ClipNavigationRow[]>();
+  const scenesBySequenceId = new Map<string, SceneNavigationRow[]>();
   const cast = new Map(project.cast.map((entry) => [entry.id, entry]));
 
-  for (const sequence of allSequenceRows(storyNavigation)) {
+  for (const sequence of storyNavigation.sequences) {
     sequences.set(sequence.id, sequence);
-    const sequenceClips: ClipNavigationRow[] = [];
-    for (const scene of storyNavigation.scenesBySequenceId.get(sequence.id) ?? []) {
+    const sequenceScenes = storyNavigation.scenesBySequenceId.get(sequence.id) ?? [];
+    scenesBySequenceId.set(sequence.id, sequenceScenes);
+    for (const scene of sequenceScenes) {
       scenes.set(scene.id, scene);
-      const sceneClips = storyNavigation.clipsBySceneId.get(scene.id) ?? [];
-      clipsBySceneId.set(scene.id, sceneClips);
-      for (const clip of sceneClips) {
-        clips.set(clip.id, clip);
-        sequenceClips.push(clip);
-      }
     }
-    clipsBySequenceId.set(sequence.id, sequenceClips);
   }
 
-  return { sequences, scenes, clips, cast, clipsBySequenceId, clipsBySceneId };
+  return { sequences, scenes, cast, scenesBySequenceId };
 }
 
 export function resolveStudioSelection(
@@ -75,8 +62,8 @@ export function resolveStudioSelection(
       return {
         valid: true,
         kicker: sequence.title,
-        summary: `${sequence.sceneCount} scenes, ${sequence.clipCount} clips.`,
-        clips: toClips(lookup.clipsBySequenceId.get(sequence.id) ?? []),
+        summary: `${sequence.sceneCount} scenes.`,
+        scenes: lookup.scenesBySequenceId.get(sequence.id) ?? [],
       };
     }
   }
@@ -87,21 +74,9 @@ export function resolveStudioSelection(
       return {
         valid: true,
         kicker: scene.title,
-        summary: `${scene.clipCount} clips.`,
-        clips: toClips(lookup.clipsBySceneId.get(scene.id) ?? []),
-      };
-    }
-  }
-
-  if (selection.type === 'clip') {
-    const clip = lookup.clips.get(selection.id);
-    if (clip) {
-      return {
-        valid: true,
-        kicker: clip.title,
-        summary: clip.oneLineSummary ?? 'Clip structure loaded from project data.',
-        clips: [toClip(clip)],
-        clip: toClip(clip),
+        summary: 'Scene structure loaded from project data.',
+        scenes: [scene],
+        scene,
       };
     }
   }
@@ -113,7 +88,7 @@ export function resolveStudioSelection(
         valid: true,
         kicker: castEntry.name,
         summary: castEntry.shortDescription ?? 'Cast structure loaded from project data.',
-        clips: [],
+        scenes: [],
         castEntry,
       };
     }
@@ -124,7 +99,7 @@ export function resolveStudioSelection(
       valid: true,
       kicker: 'Project Information',
       summary: 'Project information loaded from project data.',
-      clips: [],
+      scenes: [],
     };
   }
 
@@ -133,7 +108,7 @@ export function resolveStudioSelection(
       valid: true,
       kicker: 'Visual Language',
       summary: 'Visual language loaded from project data.',
-      clips: [],
+      scenes: [],
     };
   }
 
@@ -143,29 +118,8 @@ export function resolveStudioSelection(
     summary:
       selection.type === 'casting'
         ? 'Cast entries loaded from project data.'
-        : 'Story navigation loads sequence, scene, and clip pages as you open them.',
-    clips: toClips(Array.from(lookup.clips.values())),
-  };
-}
-
-function allSequenceRows(
-  storyNavigation: StoryNavigationState
-): SequenceNavigationRow[] {
-  return [
-    ...storyNavigation.standaloneSequences,
-    ...Array.from(storyNavigation.sequencesByEpisodeId.values()).flat(),
-  ];
-}
-
-function toClips(rows: ClipNavigationRow[]): Clip[] {
-  return rows.map(toClip);
-}
-
-function toClip(row: ClipNavigationRow): Clip {
-  return {
-    id: row.id,
-    title: row.title,
-    summary: row.oneLineSummary,
+        : 'Story navigation loads sequence and scene pages as you open them.',
+    scenes: Array.from(lookup.scenes.values()),
   };
 }
 

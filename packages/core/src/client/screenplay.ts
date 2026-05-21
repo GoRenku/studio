@@ -21,12 +21,12 @@ export interface Screenplay {
   centralConflict?: string;
   dramaticQuestion?: string;
   themes?: string[];
-  historicalBasis?: unknown[];
-  dramatizedElements?: unknown[];
+  historicalBasis?: string[];
+  dramatizedElements?: string[];
   structureModel?: string;
   status?: string;
-  researchSources?: unknown[];
-  assumptionsMade?: unknown[];
+  researchSources?: string[];
+  assumptionsMade?: string[];
 }
 
 export interface CastMember {
@@ -58,7 +58,7 @@ export interface Act {
   key?: string;
   title?: string;
   purpose?: string;
-  keyBeats?: unknown[];
+  keyBeats?: string[];
   sequences: Sequence[];
 }
 

@@ -7,17 +7,17 @@ import {
 } from './movie-studio-selection';
 
 describe('movie studio selection', () => {
-  it('resolves clip selections to the clip title', () => {
+  it('resolves scene selections to the scene title', () => {
     const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
     const selected = resolveStudioSelection(
-      { type: 'clip', id: 'clip_1_1_1' },
+      { type: 'scene', id: 'scene_1_1' },
       lookup
     );
 
-    expect(selected.kicker).toBe('Opening Image');
-    expect(selected.clip?.id).toBe('clip_1_1_1');
-    expect(selected.clips).toHaveLength(1);
+    expect(selected.kicker).toBe('Opening Scene');
+    expect(selected.scene?.id).toBe('scene_1_1');
+    expect(selected.scenes).toHaveLength(1);
   });
 
   it('resolves cast selections to the cast member name', () => {
@@ -43,17 +43,6 @@ describe('movie studio selection', () => {
     expect(selected.kicker).toBe('Opening');
   });
 
-  it('resolves scene selections to the scene title', () => {
-    const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
-
-    const selected = resolveStudioSelection(
-      { type: 'scene', id: 'scene_1_1' },
-      lookup
-    );
-
-    expect(selected.kicker).toBe('Opening Scene');
-  });
-
   it('falls back to the full storyboard for stale story selections', () => {
     const lookup = buildMovieStudioLookup(makeProject(), makeStoryNavigation());
 
@@ -63,7 +52,7 @@ describe('movie studio selection', () => {
     );
 
     expect(selected.kicker).toBe('Full Storyboard');
-    expect(selected.clips.map((clip) => clip.id)).toEqual(['clip_1_1_1']);
+    expect(selected.scenes.map((scene) => scene.id)).toEqual(['scene_1_1']);
   });
 });
 
@@ -73,7 +62,6 @@ function makeProject(): ProjectShellWithHttp {
       id: 'project_test0001',
       name: 'constantinople',
       title: 'Preparation of the Siege',
-      type: 'standaloneMovie',
       folderPath: '/tmp/constantinople',
       databasePath: '/tmp/constantinople/.renku/project.sqlite',
     },
@@ -90,17 +78,13 @@ function makeProject(): ProjectShellWithHttp {
         role: 'voiceover',
       },
     ],
-    continuityReferences: [],
     counts: {
       languages: 0,
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
-      continuityReferences: 0,
-      episodes: 0,
       sequences: 1,
       scenes: 1,
-      clips: 1,
     },
     navigation: {
       cast: {
@@ -115,9 +99,7 @@ function makeProject(): ProjectShellWithHttp {
         nextCursor: null,
       },
       visualLanguage: { items: [], nextCursor: null },
-      continuityReferences: { items: [], nextCursor: null },
       screenplay: {
-        projectType: 'standaloneMovie',
         sequences: {
           items: [
             {
@@ -126,7 +108,6 @@ function makeProject(): ProjectShellWithHttp {
               title: 'Opening',
               shortTitle: 'Opening',
               sceneCount: 1,
-              clipCount: 1,
             },
           ],
           nextCursor: null,
@@ -138,19 +119,15 @@ function makeProject(): ProjectShellWithHttp {
 
 function makeStoryNavigation(): StoryNavigationState {
   return {
-    projectType: 'standaloneMovie',
-    episodes: [],
-    standaloneSequences: [
+    sequences: [
       {
         id: 'seq_opening',
         number: 1,
         title: 'Opening',
         shortTitle: 'Opening',
         sceneCount: 1,
-        clipCount: 1,
       },
     ],
-    sequencesByEpisodeId: new Map(),
     scenesBySequenceId: new Map([
       [
         'seq_opening',
@@ -159,28 +136,12 @@ function makeStoryNavigation(): StoryNavigationState {
             id: 'scene_1_1',
             sequenceId: 'seq_opening',
             title: 'Opening Scene',
-            clipCount: 1,
-          },
-        ],
-      ],
-    ]),
-    clipsBySceneId: new Map([
-      [
-        'scene_1_1',
-        [
-          {
-            id: 'clip_1_1_1',
-            sceneId: 'scene_1_1',
-            title: 'Opening Image',
-            oneLineSummary: 'Establish the movie.',
           },
         ],
       ],
     ]),
     loadingKeys: new Set(),
     error: null,
-    loadEpisodeSequences: async () => {},
     loadSequenceScenes: async () => {},
-    loadSceneClips: async () => {},
   };
 }

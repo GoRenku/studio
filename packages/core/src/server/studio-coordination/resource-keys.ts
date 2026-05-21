@@ -16,14 +16,10 @@ export function studioAssetResourceKey(target: AssetTarget): string {
       return `assets:visualLanguage:${target.visualLanguageId}`;
     case 'castMember':
       return `assets:castMember:${target.castMemberId}`;
-    case 'continuityReference':
-      return `assets:continuityReference:${target.continuityReferenceId}`;
     case 'sequence':
       return `assets:sequence:${target.sequenceId}`;
     case 'scene':
       return `assets:scene:${target.sceneId}`;
-    case 'clip':
-      return `assets:clip:${target.clipId}`;
   }
 }
 
@@ -33,11 +29,8 @@ export function studioSurfaceResourceKeyForAssetTarget(
   switch (target.kind) {
     case 'castMember':
       return `surface:cast-design:${target.castMemberId}`;
-    case 'clip':
-      return `surface:clip-design:${target.clipId}`;
     case 'project':
     case 'visualLanguage':
-    case 'continuityReference':
     case 'sequence':
     case 'scene':
       return null;

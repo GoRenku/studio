@@ -1,9 +1,7 @@
 import type {
   Asset,
   CastDesignResource,
-  ClipNavigationRow,
-  ClipDesignResource,
-  EpisodeNavigationRow,
+  SceneDesignResource,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -52,19 +50,14 @@ export type StudioAssetResponse = Asset;
 
 export type CastDesignResourceResponse = CastDesignResource;
 
-export type ClipDesignResourceResponse = ClipDesignResource;
+export type SceneDesignResourceResponse = SceneDesignResource;
 
 export type StudioPageResponse<T> = PageResponse<T>;
 
 export type SequenceNavigationPageResponse =
   StudioPageResponse<SequenceNavigationRow>;
 
-export type EpisodeNavigationPageResponse =
-  StudioPageResponse<EpisodeNavigationRow>;
-
 export type SceneNavigationPageResponse = StudioPageResponse<SceneNavigationRow>;
-
-export type ClipNavigationPageResponse = StudioPageResponse<ClipNavigationRow>;
 
 export type StudioSelectionContextRequest = {
   selection: StudioSelection;

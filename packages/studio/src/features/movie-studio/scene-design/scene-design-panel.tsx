@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react';
-import type { Clip } from '@gorenku/studio-core/client';
-import { readClipDesignResource } from '@/services/studio-project-assets-api';
+import type { SceneNavigationRow } from '@gorenku/studio-core/client';
+import { readSceneDesignResource } from '@/services/studio-project-assets-api';
 
-interface ClipDesignPanelProps {
+interface SceneDesignPanelProps {
   projectName: string;
-  clip: Clip;
+  scene: SceneNavigationRow;
 }
 
-export function ClipDesignPanel({
+export function SceneDesignPanel({
   projectName,
-  clip,
-}: ClipDesignPanelProps) {
+  scene,
+}: SceneDesignPanelProps) {
   const [resource, setResource] = useState<Awaited<
-    ReturnType<typeof readClipDesignResource>
+    ReturnType<typeof readSceneDesignResource>
   > | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void readClipDesignResource(projectName, clip.id)
+    void readSceneDesignResource(projectName, scene.id)
       .then((nextResource) => {
         if (!cancelled) {
           setResource(nextResource);
@@ -31,23 +31,17 @@ export function ClipDesignPanel({
     return () => {
       cancelled = true;
     };
-  }, [clip.id, projectName]);
+  }, [projectName, scene.id]);
 
-  const editableClip = resource?.clip.id === clip.id ? resource.clip : clip;
+  const editableScene = resource?.scene.id === scene.id ? resource.scene : scene;
 
   return (
     <div className='space-y-4'>
       <section className='space-y-3'>
-        <h3 className='text-sm font-semibold text-foreground'>Clip Brief</h3>
-        {editableClip.summary ? (
-          <p className='min-h-24 whitespace-pre-wrap rounded-md border border-border/45 bg-muted/25 p-4 text-sm leading-relaxed text-foreground'>
-            {editableClip.summary}
-          </p>
-        ) : (
-          <p className='rounded-md border border-dashed border-border/45 bg-muted/25 px-4 py-8 text-center text-sm text-muted-foreground'>
-            No clip brief has been written yet.
-          </p>
-        )}
+        <h3 className='text-sm font-semibold text-foreground'>Scene Brief</h3>
+        <p className='min-h-24 whitespace-pre-wrap rounded-md border border-border/45 bg-muted/25 p-4 text-sm leading-relaxed text-foreground'>
+          {editableScene.title}
+        </p>
       </section>
 
       <div className='grid grid-cols-1 xl:grid-cols-3 gap-3'>

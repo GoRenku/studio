@@ -8,7 +8,6 @@ export interface InsertProjectRecord {
   id: string;
   name: string;
   title: string;
-  type: 'standaloneMovie' | 'series';
   logline?: string;
   aspectRatio?: string;
   summary?: string;

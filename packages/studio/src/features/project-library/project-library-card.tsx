@@ -73,10 +73,6 @@ export function ProjectLibraryCard({
                 label='Scenes'
                 value={project.counts?.scenes ?? 0}
               />
-              <ProjectLibraryMetric
-                label='Clips'
-                value={project.counts?.clips ?? 0}
-              />
             </div>
           )}
         </div>
@@ -98,4 +94,3 @@ function ProjectLibraryMetric({
     </span>
   );
 }
-

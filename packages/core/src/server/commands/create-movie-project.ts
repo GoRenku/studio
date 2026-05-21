@@ -56,7 +56,6 @@ export async function createMovieProject(
           id: ids('project'),
           name: input.projectName,
           title: input.title,
-          type: 'standaloneMovie',
           logline: input.logline,
           aspectRatio: input.aspectRatio,
           summary: input.summary,
@@ -86,11 +85,8 @@ function emptyMovieCounts(): ProjectCounts {
     visualLanguageCategories: 0,
     visualLanguage: 0,
     castMembers: 0,
-    continuityReferences: 0,
-    episodes: 0,
     sequences: 0,
     scenes: 0,
-    clips: 0,
   };
 }
 

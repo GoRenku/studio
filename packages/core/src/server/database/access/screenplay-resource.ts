@@ -9,6 +9,7 @@ import type {
   ScreenplayDocument,
   Sequence,
 } from '../../../client/screenplay.js';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import {
   acts,
   castMembers,
@@ -19,6 +20,7 @@ import {
   sequences,
 } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
+import { validateScreenplayStoredJsonFragment } from '../../screenplay-json/validator.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export function listScreenplayCastMembersFromSession(session: DatabaseSession): CastMember[] {
@@ -148,8 +150,8 @@ function buildScene(session: DatabaseSession, scene: typeof scenes.$inferSelect)
       timeOfDay: nullable(scene.timeOfDay),
       locationIds,
     },
-    storyFunction: parseStringArray(scene.storyFunction),
-    blocks: parseBlocks(scene.blocksJson),
+    storyFunction: parseStringArray(scene.storyFunction, ['scenes', scene.id, 'storyFunction']),
+    blocks: parseBlocks(scene.blocksJson, ['scenes', scene.id, 'blocks']),
   };
 }
 
@@ -160,22 +162,25 @@ function toScreenplay(row: typeof screenplay.$inferSelect): Screenplay {
     targetLengthLabel: nullable(row.targetLengthLabel),
     estimatedMinutes: row.estimatedMinutes ?? undefined,
     genrePrimary: nullable(row.genrePrimary),
-    genreSecondary: parseStringArray(row.genreSecondary),
-    tone: parseStringArray(row.tone),
+    genreSecondary: parseStringArray(row.genreSecondary, ['screenplay', 'genreSecondary']),
+    tone: parseStringArray(row.tone, ['screenplay', 'tone']),
     ratingIntent: nullable(row.ratingIntent),
-    boundaries: parseStringArray(row.boundaries),
+    boundaries: parseStringArray(row.boundaries, ['screenplay', 'boundaries']),
     logline: nullable(row.logline),
     summary: nullable(row.summary),
     premiseOverview: nullable(row.premiseOverview),
     centralConflict: nullable(row.centralConflict),
     dramaticQuestion: nullable(row.dramaticQuestion),
-    themes: parseStringArray(row.themes),
-    historicalBasis: parseJsonArray(row.historicalBasis),
-    dramatizedElements: parseJsonArray(row.dramatizedElements),
+    themes: parseStringArray(row.themes, ['screenplay', 'themes']),
+    historicalBasis: parseStringArray(row.historicalBasis, ['screenplay', 'historicalBasis']),
+    dramatizedElements: parseStringArray(row.dramatizedElements, [
+      'screenplay',
+      'dramatizedElements',
+    ]),
     structureModel: nullable(row.structureModel),
     status: nullable(row.status),
-    researchSources: parseJsonArray(row.researchSources),
-    assumptionsMade: parseJsonArray(row.assumptionsMade),
+    researchSources: parseStringArray(row.researchSources, ['screenplay', 'researchSources']),
+    assumptionsMade: parseStringArray(row.assumptionsMade, ['screenplay', 'assumptionsMade']),
   };
 }
 
@@ -210,7 +215,7 @@ function toActWithoutSequences(row: typeof acts.$inferSelect): Act {
     id: row.id,
     title: row.title,
     purpose: nullable(row.purpose),
-    keyBeats: parseJsonArray(row.keyBeats),
+    keyBeats: parseStringArray(row.keyBeats, ['acts', row.id, 'keyBeats']),
     sequences: [],
   };
 }
@@ -224,21 +229,48 @@ function toSequenceWithoutScenes(row: typeof sequences.$inferSelect): Sequence {
   };
 }
 
-function parseJsonArray(value: string | null): unknown[] {
+function parseStoredJson(value: string, path: string[]): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) {
+      throw error;
+    }
+    throw new ProjectDataError('PROJECT_DATA200', 'Stored screenplay JSON is malformed.', {
+      issues: [
+        createDiagnosticError(
+          'PROJECT_DATA200',
+          'Stored screenplay JSON is malformed.',
+          { path },
+          'Repair the stored screenplay data before reading it.'
+        ),
+      ],
+      suggestion: 'Repair the stored screenplay data before reading it.',
+    });
+  }
+}
+
+function parseStringArray(value: string | null, path: string[]): string[] {
   if (!value) {
     return [];
   }
-  const parsed = JSON.parse(value) as unknown;
-  return Array.isArray(parsed) ? parsed : [];
+  const parsed = parseStoredJson(value, path);
+  validateScreenplayStoredJsonFragment({
+    value: parsed,
+    fragment: 'stringArray',
+    path,
+  });
+  return parsed as string[];
 }
 
-function parseStringArray(value: string | null): string[] {
-  return parseJsonArray(value).filter((item): item is string => typeof item === 'string');
-}
-
-function parseBlocks(value: string): Block[] {
-  const parsed = JSON.parse(value) as unknown;
-  return Array.isArray(parsed) ? (parsed as Block[]) : [];
+function parseBlocks(value: string, path: string[]): Block[] {
+  const parsed = parseStoredJson(value, path);
+  validateScreenplayStoredJsonFragment({
+    value: parsed,
+    fragment: 'blockArray',
+    path,
+  });
+  return parsed as Block[];
 }
 
 function nullable(value: string | null): string | undefined {

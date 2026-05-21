@@ -7,11 +7,13 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import {
+  screenplayBlockArraySchema,
   screenplayBlockSchema,
   screenplayCreateDocumentSchema,
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,
+  screenplayStringArraySchema,
 } from '../../client/screenplay-json-schemas.js';
 
 const SCREENPLAY_DOCUMENT_SCHEMA_ID =
@@ -20,6 +22,10 @@ const SCREENPLAY_OPERATIONS_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-operations.schema.json';
 const SCREENPLAY_CREATE_DOCUMENT_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-create-document.schema.json';
+const SCREENPLAY_BLOCK_ARRAY_SCHEMA_ID =
+  'https://schemas.gorenku.com/studio/screenplay-block-array.schema.json';
+const SCREENPLAY_STRING_ARRAY_SCHEMA_ID =
+  'https://schemas.gorenku.com/studio/screenplay-string-array.schema.json';
 
 const ajv = new Ajv2020({
   allErrors: true,
@@ -32,6 +38,8 @@ const ajv = new Ajv2020({
 
 ajv.addSchema(screenplayReferenceSchema);
 ajv.addSchema(screenplayBlockSchema);
+ajv.addSchema(screenplayBlockArraySchema);
+ajv.addSchema(screenplayStringArraySchema);
 ajv.addSchema(screenplayDocumentSchema);
 ajv.addSchema(screenplayCreateDocumentSchema);
 ajv.addSchema(screenplayOperationsSchema);
@@ -87,6 +95,36 @@ export function validateScreenplayJsonDocument(input: {
   return issues;
 }
 
+export type ScreenplayStoredJsonFragmentKind = 'blockArray' | 'stringArray';
+
+export function validateScreenplayStoredJsonFragment(input: {
+  value: unknown;
+  fragment: ScreenplayStoredJsonFragmentKind;
+  path: string[];
+  filePath?: string;
+}): void {
+  const schemaId =
+    input.fragment === 'blockArray'
+      ? SCREENPLAY_BLOCK_ARRAY_SCHEMA_ID
+      : SCREENPLAY_STRING_ARRAY_SCHEMA_ID;
+  const validator = ajv.getSchema(schemaId);
+  if (!validator) {
+    throw new Error(`Screenplay stored JSON schema was not registered for ${input.fragment}.`);
+  }
+  const valid = validator(input.value);
+  if (valid) {
+    return;
+  }
+  throwIfDiagnosticResultInvalid(
+    buildDiagnosticResult(mapAjvErrors(validator.errors ?? [], input.filePath, input.path)),
+    {
+      code: 'PROJECT_DATA200',
+      message: 'Stored screenplay JSON failed validation.',
+      suggestion: 'Repair the stored screenplay data before reading it.',
+    }
+  );
+}
+
 function inferKind(value: unknown): ScreenplayJsonKind {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return 'screenplay';
@@ -118,11 +156,15 @@ function throwInvalidJson(filePath?: string): never {
   throw new Error('unreachable');
 }
 
-function mapAjvErrors(errors: ErrorObject[], filePath?: string): DiagnosticIssue[] {
+function mapAjvErrors(
+  errors: ErrorObject[],
+  filePath?: string,
+  pathPrefix: string[] = []
+): DiagnosticIssue[] {
   return errors
     .filter((error) => error.keyword !== 'not')
     .map((error) => {
-      const path = pointerToPath(error.instancePath);
+      const path = [...pathPrefix, ...pointerToPath(error.instancePath)];
       if (error.keyword === 'required') {
         const missing = String(error.params.missingProperty);
         return createDiagnosticError(

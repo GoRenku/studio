@@ -359,10 +359,8 @@ export function readAssetOwnerTargets(
     ...readProjectAssetOwnerTargets(session, assetId),
     ...readScopedAssetOwnerTargets(session, assetId, 'visualLanguage'),
     ...readScopedAssetOwnerTargets(session, assetId, 'castMember'),
-    ...readScopedAssetOwnerTargets(session, assetId, 'continuityReference'),
     ...readScopedAssetOwnerTargets(session, assetId, 'sequence'),
     ...readScopedAssetOwnerTargets(session, assetId, 'scene'),
-    ...readScopedAssetOwnerTargets(session, assetId, 'clip'),
   ];
 }
 
@@ -569,10 +567,8 @@ function readScopedAssetOwnerTargets(
   kind:
     | 'visualLanguage'
     | 'castMember'
-    | 'continuityReference'
     | 'sequence'
     | 'scene'
-    | 'clip'
 ): AssetTarget[] {
   const target = placeholderTarget(kind);
   const config = assetRelationshipTableConfig(target);
@@ -592,24 +588,18 @@ function placeholderTarget(
   kind:
     | 'visualLanguage'
     | 'castMember'
-    | 'continuityReference'
     | 'sequence'
     | 'scene'
-    | 'clip'
 ): AssetTarget {
   switch (kind) {
     case 'visualLanguage':
       return { kind, visualLanguageId: '' };
     case 'castMember':
       return { kind, castMemberId: '' };
-    case 'continuityReference':
-      return { kind, continuityReferenceId: '' };
     case 'sequence':
       return { kind, sequenceId: '' };
     case 'scene':
       return { kind, sceneId: '' };
-    case 'clip':
-      return { kind, clipId: '' };
   }
 }
 
@@ -617,10 +607,8 @@ function targetFromKind(
   kind:
     | 'visualLanguage'
     | 'castMember'
-    | 'continuityReference'
     | 'sequence'
-    | 'scene'
-    | 'clip',
+    | 'scene',
   targetId: string
 ): AssetTarget {
   switch (kind) {
@@ -628,13 +616,9 @@ function targetFromKind(
       return { kind, visualLanguageId: targetId };
     case 'castMember':
       return { kind, castMemberId: targetId };
-    case 'continuityReference':
-      return { kind, continuityReferenceId: targetId };
     case 'sequence':
       return { kind, sequenceId: targetId };
     case 'scene':
       return { kind, sceneId: targetId };
-    case 'clip':
-      return { kind, clipId: targetId };
   }
 }

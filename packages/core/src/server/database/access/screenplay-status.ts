@@ -1,5 +1,9 @@
 import { count } from 'drizzle-orm';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
+import type { Block } from '../../../client/screenplay.js';
 import { acts, castMembers, locations, scenes, screenplay, sequences } from '../../schema/index.js';
+import { ProjectDataError } from '../../project-data-error.js';
+import { validateScreenplayStoredJsonFragment } from '../../screenplay-json/validator.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export interface ScreenplayStatusCounts {
@@ -26,7 +30,10 @@ export function readScreenplayStatusCounts(session: DatabaseSession): Screenplay
       .select()
       .from(scenes)
       .all()
-      .reduce((total, scene) => total + parseBlockCount(scene.blocksJson), 0),
+      .reduce(
+        (total, scene) => total + parseBlockCount(scene.blocksJson, ['scenes', scene.id, 'blocks']),
+        0
+      ),
   };
 }
 
@@ -37,11 +44,32 @@ function tableCount(
   return session.db.select({ value: count() }).from(table).get()?.value ?? 0;
 }
 
-function parseBlockCount(value: string): number {
+function parseBlockCount(value: string, path: string[]): number {
   try {
     const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed) ? parsed.length : 0;
-  } catch {
-    return 0;
+    validateScreenplayStoredJsonFragment({
+      value: parsed,
+      fragment: 'blockArray',
+      path,
+    });
+    return (parsed as Block[]).length;
+  } catch (error) {
+    if (error instanceof ProjectDataError) {
+      throw error;
+    }
+    if (!(error instanceof SyntaxError)) {
+      throw error;
+    }
+    throw new ProjectDataError('PROJECT_DATA200', 'Stored screenplay block JSON is malformed.', {
+      issues: [
+        createDiagnosticError(
+          'PROJECT_DATA200',
+          'Stored screenplay block JSON is malformed.',
+          { path },
+          'Repair the stored screenplay data before reading status.'
+        ),
+      ],
+      suggestion: 'Repair the stored screenplay data before reading status.',
+    });
   }
 }

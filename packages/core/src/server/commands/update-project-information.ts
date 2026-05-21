@@ -6,9 +6,7 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectInformationResource } from '../../client/index.js';
 import { listCastAssetRecords } from '../database/access/asset-relationships/cast-members.js';
-import { listContinuityReferenceAssetRecords } from '../database/access/asset-relationships/continuity-references.js';
 import {
-  listClipAssetRecords,
   listSceneAssetRecords,
   listSequenceAssetRecords,
 } from '../database/access/asset-relationships/screenplay-assets.js';
@@ -295,14 +293,6 @@ function listLocaleAssetReferences(
         assetId: asset.assetId,
         role: asset.role,
       })),
-    ...listContinuityReferenceAssetRecords(session)
-      .filter((asset) => asset.localeId === localeId)
-      .map((asset) => ({
-        tableName: 'continuity_reference_asset',
-        relationshipId: asset.id,
-        assetId: asset.assetId,
-        role: asset.role,
-      })),
     ...listSequenceAssetRecords(session)
       .filter((asset) => asset.localeId === localeId)
       .map((asset) => ({
@@ -315,14 +305,6 @@ function listLocaleAssetReferences(
       .filter((asset) => asset.localeId === localeId)
       .map((asset) => ({
         tableName: 'scene_asset',
-        relationshipId: asset.id,
-        assetId: asset.assetId,
-        role: asset.role,
-      })),
-    ...listClipAssetRecords(session)
-      .filter((asset) => asset.localeId === localeId)
-      .map((asset) => ({
-        tableName: 'clip_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
         role: asset.role,

@@ -46,7 +46,9 @@ export async function applyScreenplayOperations(
 
     const resolved = resolveScreenplayDocumentIds({
       document: draft,
+      existing: base,
       idGenerator: input.idGenerator,
+      mode: 'mutation',
     });
     if (!input.dryRun) {
       replaceScreenplayDocument(session, resolved.document);
@@ -193,6 +195,9 @@ function insertByPlacement<T extends { id?: string }>(
     return;
   }
   if (placement.position === 'only') {
+    if (placement.beforeId || placement.afterId) {
+      throwInvalidPlacementShape();
+    }
     if (items.length > 0) {
       throw new ProjectDataError('PROJECT_DATA212', 'Only placement requires an empty target parent.', {
         suggestion: 'Use beforeId or afterId for a non-empty target parent.',
@@ -201,22 +206,56 @@ function insertByPlacement<T extends { id?: string }>(
     items.push(value);
     return;
   }
-  const targetId = placement.beforeId ?? placement.afterId;
-  const targetIndex = items.findIndex((item) => item.id === targetId);
-  if (targetIndex === -1) {
-    throw new ProjectDataError('PROJECT_DATA212', 'Placement target was not found in the target parent.', {
-      issues: [
-        createDiagnosticError(
-          'PROJECT_DATA212',
-          'Placement target was not found in the target parent.',
-          { path: ['placement'] },
-          'Use a placement target inside the same parent.'
-        ),
-      ],
-      suggestion: 'Use a placement target inside the same parent.',
-    });
+  if (placement.beforeId && placement.afterId) {
+    const afterIndex = findPlacementTargetIndex(items, placement.afterId);
+    const beforeIndex = findPlacementTargetIndex(items, placement.beforeId);
+    if (afterIndex + 1 !== beforeIndex) {
+      throw new ProjectDataError(
+        'PROJECT_DATA212',
+        'Placement neighbors are not adjacent in the target parent.',
+        {
+          issues: [
+            createDiagnosticError(
+              'PROJECT_DATA212',
+              'Placement neighbors are not adjacent in the target parent.',
+              { path: ['placement'] },
+              'Use adjacent beforeId and afterId values from the same target parent.'
+            ),
+          ],
+          suggestion: 'Use adjacent beforeId and afterId values from the same target parent.',
+        }
+      );
+    }
+    items.splice(beforeIndex, 0, value);
+    return;
   }
-  items.splice(placement.beforeId ? targetIndex : targetIndex + 1, 0, value);
+  if (placement.beforeId) {
+    items.splice(findPlacementTargetIndex(items, placement.beforeId), 0, value);
+    return;
+  }
+  if (placement.afterId) {
+    items.splice(findPlacementTargetIndex(items, placement.afterId) + 1, 0, value);
+    return;
+  }
+  throwInvalidPlacementShape();
+}
+
+function findPlacementTargetIndex<T extends { id?: string }>(items: T[], targetId: string): number {
+  const targetIndex = items.findIndex((item) => item.id === targetId);
+  if (targetIndex !== -1) {
+    return targetIndex;
+  }
+  throw new ProjectDataError('PROJECT_DATA212', 'Placement target was not found in the target parent.', {
+    issues: [
+      createDiagnosticError(
+        'PROJECT_DATA212',
+        'Placement target was not found in the target parent.',
+        { path: ['placement'] },
+        'Use a placement target inside the same parent.'
+      ),
+    ],
+    suggestion: 'Use a placement target inside the same parent.',
+  });
 }
 
 function findAct(acts: Act[], actId: string): Act {
@@ -270,8 +309,14 @@ function moveSequence(
     throwInvalidMovePlacement();
   }
   const fromAct = findAct(acts, fromActId);
-  const sequence = removeById(fromAct.sequences, sequenceId, 'sequence');
-  insertByPlacement(findAct(acts, toActId).sequences, sequence, placement);
+  const toAct = findAct(acts, toActId);
+  const sequence = removeByIdFromParent(
+    fromAct.sequences,
+    sequenceId,
+    'sequence',
+    'fromActId'
+  );
+  insertByPlacement(toAct.sequences, sequence, placement);
 }
 
 function replaceScene(acts: Act[], scene: Scene): void {
@@ -311,8 +356,14 @@ function moveScene(
     throwInvalidMovePlacement();
   }
   const fromSequence = findSequence(acts, fromSequenceId);
-  const scene = removeById(fromSequence.scenes, sceneId, 'scene');
-  insertByPlacement(findSequence(acts, toSequenceId).scenes, scene, placement);
+  const toSequence = findSequence(acts, toSequenceId);
+  const scene = removeByIdFromParent(
+    fromSequence.scenes,
+    sceneId,
+    'scene',
+    'fromSequenceId'
+  );
+  insertByPlacement(toSequence.scenes, scene, placement);
 }
 
 function requiredId(value: { id?: string }): string {
@@ -333,5 +384,47 @@ function throwNotFound(label: string): never {
 function throwInvalidMovePlacement(): never {
   throw new ProjectDataError('PROJECT_DATA212', 'Move operations require explicit placement.', {
     suggestion: 'Provide beforeId, afterId, or position: "only" for an empty target parent.',
+  });
+}
+
+function removeByIdFromParent<T extends { id?: string }>(
+  items: T[],
+  id: string,
+  label: string,
+  parentField: string
+): T {
+  const index = items.findIndex((item) => item.id === id);
+  if (index === -1) {
+    throw new ProjectDataError(
+      'PROJECT_DATA212',
+      `${label} is not a child of the declared source parent.`,
+      {
+        issues: [
+          createDiagnosticError(
+            'PROJECT_DATA212',
+            `${label} is not a child of the declared source parent.`,
+            { path: [parentField] },
+            'Use the current source parent id from the latest screenplay read.'
+          ),
+        ],
+        suggestion: 'Use the current source parent id from the latest screenplay read.',
+      }
+    );
+  }
+  const [removed] = items.splice(index, 1);
+  return removed;
+}
+
+function throwInvalidPlacementShape(): never {
+  throw new ProjectDataError('PROJECT_DATA212', 'Placement must provide a valid target.', {
+    issues: [
+      createDiagnosticError(
+        'PROJECT_DATA212',
+        'Placement must provide beforeId, afterId, or position: "only".',
+        { path: ['placement'] },
+        'Provide beforeId, afterId, or position: "only".'
+      ),
+    ],
+    suggestion: 'Provide beforeId, afterId, or position: "only".',
   });
 }

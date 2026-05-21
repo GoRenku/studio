@@ -70,20 +70,6 @@ describe('Studio focus validation', () => {
     });
     expect(
       resolveStudioSelectionForProject(project, {
-        type: 'clip',
-        id: 'clip_1_1_1',
-      })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'clip',
-        id: 'clip_1_1_1',
-        parentScene: { id: 'scene_1_1' },
-        parentSequence: { id: 'seq_opening' },
-      },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
         type: 'cast',
         id: 'cast_narrator',
       })
@@ -118,16 +104,6 @@ describe('Studio focus validation', () => {
       ok: false,
       reason: 'selectionNotFound',
       diagnostics: [{ code: 'STUDIO_COORDINATION031', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'clip',
-        id: 'missing_clip',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'selectionNotFound',
-      diagnostics: [{ code: 'STUDIO_COORDINATION032', severity: 'error' }],
     });
     expect(
       resolveStudioSelectionForProject(project, {
@@ -171,7 +147,6 @@ function makeProject(): Project {
       id: 'project_test0001',
       name: 'constantinople',
       title: 'Preparation of the Siege',
-      type: 'standaloneMovie',
       folderPath: '/tmp/constantinople',
       databasePath: '/tmp/constantinople/.renku/project.sqlite',
     },
@@ -200,8 +175,6 @@ function makeProject(): Project {
         role: 'voiceover',
       },
     ],
-    continuityReferences: [],
-    episodes: [],
     sequences: [
       {
         id: 'seq_opening',
@@ -214,13 +187,6 @@ function makeProject(): Project {
             id: 'scene_1_1',
             title: 'Opening Scene',
             summary: 'The movie begins.',
-            clips: [
-              {
-                id: 'clip_1_1_1',
-                title: 'Opening Image',
-                summary: 'Establish the movie.',
-              },
-            ],
           },
         ],
       },
@@ -230,11 +196,8 @@ function makeProject(): Project {
       visualLanguageCategories: 1,
       visualLanguage: 1,
       castMembers: 1,
-      continuityReferences: 0,
-      episodes: 0,
       sequences: 1,
       scenes: 1,
-      clips: 1,
     },
   };
 }

@@ -1,6 +1,6 @@
 import type {
   CastDesignResourceResponse,
-  ClipDesignResourceResponse,
+  SceneDesignResourceResponse,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
@@ -18,8 +18,8 @@ interface CastDesignResourceApiResponse {
   resource: CastDesignResourceResponse | null;
 }
 
-interface ClipDesignResourceApiResponse {
-  resource: ClipDesignResourceResponse | null;
+interface SceneDesignResourceApiResponse {
+  resource: SceneDesignResourceResponse | null;
 }
 
 export async function readCastAssets(
@@ -62,21 +62,21 @@ export function invalidateCastDesignResource(
   void castMemberId;
 }
 
-export async function readClipDesignResource(
+export async function readSceneDesignResource(
   projectName: string,
-  clipId: string,
+  sceneId: string,
   role?: string
-): Promise<ClipDesignResourceResponse> {
+): Promise<SceneDesignResourceResponse> {
   const query = role ? `?role=${encodeURIComponent(role)}` : '';
   const response = await fetch(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/clips/${encodeURIComponent(clipId)}/design${query}`
+    `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/design${query}`
   );
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  const body = (await response.json()) as ClipDesignResourceApiResponse;
+  const body = (await response.json()) as SceneDesignResourceApiResponse;
   if (!body.resource) {
-    throw new Error('Renku Studio API returned no clip design resource.');
+    throw new Error('Renku Studio API returned no scene design resource.');
   }
   return body.resource;
 }

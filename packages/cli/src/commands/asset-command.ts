@@ -322,14 +322,10 @@ function readTarget(options: RunAssetCommandOptions): AssetTarget {
       return { kind: 'visualLanguage', visualLanguageId: id };
     case 'cast':
       return { kind: 'castMember', castMemberId: id };
-    case 'continuity-reference':
-      return { kind: 'continuityReference', continuityReferenceId: id };
     case 'sequence':
       return { kind: 'sequence', sequenceId: id };
     case 'scene':
       return { kind: 'scene', sceneId: id };
-    case 'clip':
-      return { kind: 'clip', clipId: id };
     default:
       throw invalidTarget(target);
   }
@@ -406,7 +402,7 @@ function invalidTarget(target: string): StructuredError {
         'CLI044',
         'Asset target must be project or kind:id.',
         { path: ['--target'], context: 'renku CLI arguments' },
-        'Use project, visual-language:<id>, cast:<id>, sequence:<id>, scene:<id>, or clip:<id>.'
+        'Use project, visual-language:<id>, cast:<id>, sequence:<id>, or scene:<id>.'
       ),
     ],
   });
@@ -424,13 +420,9 @@ function formatTarget(target: AssetTarget): string {
       return `visual-language:${target.visualLanguageId}`;
     case 'castMember':
       return `cast:${target.castMemberId}`;
-    case 'continuityReference':
-      return `continuity-reference:${target.continuityReferenceId}`;
     case 'sequence':
       return `sequence:${target.sequenceId}`;
     case 'scene':
       return `scene:${target.sceneId}`;
-    case 'clip':
-      return `clip:${target.clipId}`;
   }
 }

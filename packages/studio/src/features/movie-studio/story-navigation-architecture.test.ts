@@ -13,9 +13,7 @@ describe('Movie Studio story navigation architecture', () => {
     );
     const forbiddenNeedles = [
       'project.sequences',
-      'project.episodes',
       "ProjectShellWithHttp['sequences']",
-      "ProjectShellWithHttp['episodes']",
     ];
     const offenders: string[] = [];
 

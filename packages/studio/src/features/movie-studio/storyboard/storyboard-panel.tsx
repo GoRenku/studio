@@ -12,16 +12,16 @@ export function StoryboardPanel({
         {selected.summary}
       </p>
       <div className='grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3'>
-        {selected.clips.map((clip) => (
+        {selected.scenes.map((scene) => (
           <article
-            key={clip.id}
+            key={scene.id}
             className='rounded-xl border border-border/40 bg-card p-4 shadow-lg space-y-3'
           >
             <div className='flex items-start justify-between gap-3'>
               <div className='min-w-0'>
-                <h3 className='truncate text-sm font-semibold'>{clip.title}</h3>
+                <h3 className='truncate text-sm font-semibold'>{scene.title}</h3>
                 <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
-                  {clip.summary ?? 'Screenplay structure loaded. Production assets pending.'}
+                  Screenplay structure loaded. Production assets pending.
                 </p>
               </div>
               <ReadinessDot />

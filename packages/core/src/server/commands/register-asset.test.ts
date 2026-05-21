@@ -28,7 +28,7 @@ describe('register asset command', () => {
     }
 
     const assetPath =
-      'working-assets/base/sequences/01-logistics/scenes/01-foundry/clips/001/narration.wav';
+      'working-assets/base/sequences/01-logistics/scenes/01-foundry/narration.wav';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });

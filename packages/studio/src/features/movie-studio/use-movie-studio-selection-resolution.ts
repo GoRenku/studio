@@ -24,10 +24,8 @@ export function useStudioSelectionResolution(
         : {
             sequences: new Map(),
             scenes: new Map(),
-            clips: new Map(),
             cast: new Map(),
-            clipsBySequenceId: new Map(),
-            clipsBySceneId: new Map(),
+            scenesBySequenceId: new Map(),
           },
     [project, storyNavigation]
   );

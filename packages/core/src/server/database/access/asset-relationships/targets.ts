@@ -87,8 +87,6 @@ export function assetRelationshipTableConfig(
         targetEntityTable: castMembers,
         targetEntityIdColumn: castMembers.id,
       };
-    case 'continuityReference':
-      throw unsupportedTarget('continuityReference');
     case 'sequence':
       return {
         target,
@@ -111,25 +109,7 @@ export function assetRelationshipTableConfig(
         targetEntityTable: scenes,
         targetEntityIdColumn: scenes.id,
       };
-    case 'clip':
-      return {
-        target,
-        table: sceneAssets,
-        idPrefix: 'scene_asset',
-        targetValueKey: 'sceneId',
-        targetColumn: sceneAssets.sceneId,
-        targetId: target.clipId,
-        targetEntityTable: scenes,
-        targetEntityIdColumn: scenes.id,
-      };
   }
-}
-
-function unsupportedTarget(kind: string): ProjectDataError {
-  return new ProjectDataError(
-    'PROJECT_DATA207',
-    `${kind} assets are not part of the current screenplay data model.`
-  );
 }
 
 export function assertAssetTargetExists(

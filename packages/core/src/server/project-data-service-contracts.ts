@@ -4,10 +4,7 @@ import type {
   AssetTarget,
   CastDesignResource,
   CastNavigationRow,
-  ClipDesignResource,
-  ClipNavigationRow,
-  ContinuityReferenceNavigationRow,
-  EpisodeNavigationRow,
+  SceneDesignResource,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -51,31 +48,19 @@ export interface ProjectDataService {
     input: ReadProjectInput
   ): Promise<ProjectInformationResource>;
   listCastNavigation(input: ListNavigationInput): Promise<PageResponse<CastNavigationRow>>;
-  listContinuityReferenceNavigation(
+  listSequenceNavigation(
     input: ListNavigationInput
-  ): Promise<PageResponse<ContinuityReferenceNavigationRow>>;
-  listEpisodeNavigation(
-    input: ListNavigationInput
-  ): Promise<PageResponse<EpisodeNavigationRow>>;
-  listStandaloneMovieSequenceNavigation(
-    input: ListNavigationInput
-  ): Promise<PageResponse<SequenceNavigationRow>>;
-  listEpisodeSequenceNavigation(
-    input: ListEpisodeSequenceNavigationInput
   ): Promise<PageResponse<SequenceNavigationRow>>;
   listSceneNavigation(
     input: ListSceneNavigationInput
   ): Promise<PageResponse<SceneNavigationRow>>;
-  listClipNavigation(
-    input: ListClipNavigationInput
-  ): Promise<PageResponse<ClipNavigationRow>>;
   listAssetPage(input: ListAssetPageInput): Promise<PageResponse<Asset>>;
   readCastDesignResource(
     input: ReadCastDesignResourceInput
   ): Promise<CastDesignResource>;
-  readClipDesignResource(
-    input: ReadClipDesignResourceInput
-  ): Promise<ClipDesignResource>;
+  readSceneDesignResource(
+    input: ReadSceneDesignResourceInput
+  ): Promise<SceneDesignResource>;
   readStudioSelectionContext(input: {
     projectName: string;
     selection: StudioSelection;
@@ -200,17 +185,8 @@ export interface ListNavigationInput extends RenkuConfigPathOptions {
   cursor?: string | null;
 }
 
-export interface ListEpisodeSequenceNavigationInput
-  extends ListNavigationInput {
-  episodeId: string;
-}
-
 export interface ListSceneNavigationInput extends ListNavigationInput {
   sequenceId: string;
-}
-
-export interface ListClipNavigationInput extends ListNavigationInput {
-  sceneId: string;
 }
 
 export interface ListAssetPageInput extends RenkuConfigPathOptions {
@@ -233,10 +209,10 @@ export interface ReadCastDesignResourceInput
   cursor?: string | null;
 }
 
-export interface ReadClipDesignResourceInput
+export interface ReadSceneDesignResourceInput
   extends RenkuConfigPathOptions {
   projectName: string;
-  clipId: string;
+  sceneId: string;
   activeRole?: string;
   limit?: number;
   cursor?: string | null;

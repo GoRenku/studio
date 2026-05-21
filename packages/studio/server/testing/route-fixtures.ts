@@ -47,7 +47,6 @@ export function makeProjectShell(project: Project): ProjectShell {
     visualLanguageCategories: project.visualLanguageCategories,
     visualLanguage: project.visualLanguage,
     cast: project.cast,
-    continuityReferences: project.continuityReferences,
     counts: project.counts,
     navigation: {
       cast: {
@@ -60,9 +59,7 @@ export function makeProjectShell(project: Project): ProjectShell {
         nextCursor: null,
       },
       visualLanguage: { items: [], nextCursor: null },
-      continuityReferences: { items: [], nextCursor: null },
       screenplay: {
-        projectType: 'standaloneMovie',
         sequences: {
           items: project.sequences.map((sequence) => ({
             id: sequence.id,
@@ -70,10 +67,6 @@ export function makeProjectShell(project: Project): ProjectShell {
             title: sequence.title,
             shortTitle: sequence.shortTitle,
             sceneCount: sequence.scenes.length,
-            clipCount: sequence.scenes.reduce(
-              (count, scene) => count + scene.clips.length,
-              0
-            ),
           })),
           nextCursor: null,
         },
@@ -88,7 +81,6 @@ export function makeProject(): Project {
       id: 'project_test0001',
       name: 'constantinople',
       title: 'Preparation of the Siege',
-      type: 'standaloneMovie',
       folderPath: '/tmp/renku/constantinople',
       databasePath: '/tmp/renku/constantinople/.renku/project.sqlite',
     },
@@ -104,8 +96,6 @@ export function makeProject(): Project {
         role: 'voiceover',
       },
     ],
-    continuityReferences: [],
-    episodes: [],
     sequences: [
       {
         id: 'seq_opening',
@@ -115,12 +105,6 @@ export function makeProject(): Project {
           {
             id: 'scene_opening',
             title: 'Opening Scene',
-            clips: [
-              {
-                id: 'clip_opening',
-                title: 'Opening Image',
-              },
-            ],
           },
         ],
       },
@@ -130,11 +114,8 @@ export function makeProject(): Project {
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
-      continuityReferences: 0,
-      episodes: 0,
       sequences: 1,
       scenes: 1,
-      clips: 1,
     },
   };
 }

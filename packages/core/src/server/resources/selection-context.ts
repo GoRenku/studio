@@ -12,7 +12,6 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   listCastNavigationPage,
   readCastNavigationRow,
-  readClipParentChain,
   readSceneNavigationContext,
   readSequenceNavigationContext,
 } from '../database/access/navigation.js';
@@ -92,13 +91,8 @@ export function readStudioSelectionContextProjection(
               context: {
                 surface: 'sequence',
                 sequence: chain.sequence,
-                episode: chain.episode,
               },
-              resourceKeys: [
-                chain.episode
-                  ? `navigation:episode-sequences:${chain.episode.id}`
-                  : 'navigation:movie-sequences',
-              ],
+              resourceKeys: ['navigation:movie-sequences'],
             }
           : selectionNotFound(input.selection);
       }
@@ -112,30 +106,14 @@ export function readStudioSelectionContextProjection(
                 surface: 'scene',
                 scene: chain.scene,
                 sequence: chain.sequence,
-                episode: chain.episode,
               },
               resourceKeys: [`navigation:sequence-scenes:${chain.sequence.id}`],
             }
           : selectionNotFound(input.selection);
       }
-      case 'clip': {
-        const chain = readClipParentChain(session, input.selection.id);
-        return {
-          valid: true,
-          selection: input.selection,
-          context: {
-            surface: 'clip-design',
-            clip: chain.clip,
-            scene: chain.scene,
-            sequence: chain.sequence,
-            episode: chain.episode,
-          },
-          resourceKeys: [`surface:clip-design:${chain.clip.id}`],
-        };
-      }
     }
   } catch (error) {
-    if (error instanceof ProjectDataError && error.code === 'PROJECT_DATA116') {
+    if (error instanceof ProjectDataError && error.code === 'PROJECT_DATA114') {
       return selectionNotFound(input.selection);
     }
     throw error;

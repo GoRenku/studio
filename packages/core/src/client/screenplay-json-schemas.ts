@@ -56,6 +56,8 @@ export const screenplayBlockSchema = {
         render: { type: 'boolean' },
         castMemberReferences: refArray(),
         locationReferences: refArray(),
+        castMemberIds: stringIdArray(),
+        locationIds: stringIdArray(),
       },
       additionalProperties: true,
     },
@@ -72,10 +74,28 @@ export const screenplayBlockSchema = {
         lines: { type: 'array', items: { type: 'string' } },
         castMemberReferences: refArray(),
         locationReferences: refArray(),
+        castMemberIds: stringIdArray(),
+        locationIds: stringIdArray(),
       },
       additionalProperties: true,
     },
   ],
+} as const;
+
+export const screenplayBlockArraySchema = {
+  $id: 'https://schemas.gorenku.com/studio/screenplay-block-array.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'array',
+  items: {
+    $ref: 'https://schemas.gorenku.com/studio/screenplay-block.schema.json',
+  },
+} as const;
+
+export const screenplayStringArraySchema = {
+  $id: 'https://schemas.gorenku.com/studio/screenplay-string-array.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'array',
+  items: { type: 'string' },
 } as const;
 
 export const screenplayDocumentSchema = {
@@ -101,22 +121,22 @@ export const screenplayDocumentSchema = {
         targetLengthLabel: { type: 'string' },
         estimatedMinutes: { type: 'integer', minimum: 1 },
         genrePrimary: { type: 'string' },
-        genreSecondary: { type: 'array', items: { type: 'string' } },
-        tone: { type: 'array', items: { type: 'string' } },
+        genreSecondary: stringArray(),
+        tone: stringArray(),
         ratingIntent: { type: 'string' },
-        boundaries: { type: 'array', items: { type: 'string' } },
+        boundaries: stringArray(),
         logline: { type: 'string' },
         summary: { type: 'string' },
         premiseOverview: { type: 'string' },
         centralConflict: { type: 'string' },
         dramaticQuestion: { type: 'string' },
-        themes: { type: 'array', items: { type: 'string' } },
-        historicalBasis: { type: 'array' },
-        dramatizedElements: { type: 'array' },
+        themes: stringArray(),
+        historicalBasis: stringArray(),
+        dramatizedElements: stringArray(),
         structureModel: { type: 'string' },
         status: { type: 'string' },
-        researchSources: { type: 'array' },
-        assumptionsMade: { type: 'array' },
+        researchSources: stringArray(),
+        assumptionsMade: stringArray(),
       },
       additionalProperties: true,
     },
@@ -147,7 +167,7 @@ export const screenplayDocumentSchema = {
       key: stringId(),
       title: { type: 'string' },
       purpose: { type: 'string' },
-      keyBeats: { type: 'array' },
+      keyBeats: stringArray(),
       sequences: { type: 'array', items: { $ref: '#/$defs/sequence' } },
     }),
     sequence: objectWith(['scenes'], {
@@ -162,7 +182,7 @@ export const screenplayDocumentSchema = {
       key: stringId(),
       title: { type: 'string' },
       setting: { $ref: '#/$defs/sceneSetting' },
-      storyFunction: { type: 'array', items: { type: 'string' } },
+      storyFunction: stringArray(),
       blocks: {
         type: 'array',
         items: {
@@ -218,11 +238,28 @@ export const screenplayOperationsSchema = {
   additionalProperties: true,
   $defs: {
     placement: {
-      oneOf: [
-        objectWith(['beforeId'], { beforeId: stringId() }),
-        objectWith(['afterId'], { afterId: stringId() }),
-        objectWith(['position'], { position: { const: 'only' } }),
+      type: 'object',
+      anyOf: [
+        { required: ['beforeId'] },
+        { required: ['afterId'] },
+        { required: ['position'] },
       ],
+      properties: {
+        beforeId: stringId(),
+        afterId: stringId(),
+        position: { const: 'only' },
+      },
+      allOf: [
+        {
+          if: { required: ['position'] },
+          then: {
+            not: {
+              anyOf: [{ required: ['beforeId'] }, { required: ['afterId'] }],
+            },
+          },
+        },
+      ],
+      additionalProperties: true,
     },
     castMemberAdd: operationObject(['operation', 'castMember'], {
       operation: { const: 'castMember.add' },
@@ -331,6 +368,14 @@ function ref() {
 
 function refArray() {
   return { type: 'array', items: ref() };
+}
+
+function stringArray() {
+  return { $ref: 'https://schemas.gorenku.com/studio/screenplay-string-array.schema.json' };
+}
+
+function stringIdArray() {
+  return { type: 'array', items: stringId() };
 }
 
 function stringId() {

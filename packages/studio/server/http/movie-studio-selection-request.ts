@@ -55,7 +55,6 @@ export function readMovieStudioSelectionRequest(input: unknown): {
   if (
     (type === 'sequence' ||
       type === 'scene' ||
-      type === 'clip' ||
       type === 'cast') &&
     !id
   ) {
@@ -82,7 +81,6 @@ function isStudioSelectionType(
     type === 'storyboard' ||
     type === 'sequence' ||
     type === 'scene' ||
-    type === 'clip' ||
     type === 'casting' ||
     type === 'cast'
   );
@@ -95,7 +93,6 @@ function studioSelectionFromRequest(
   switch (type) {
     case 'sequence':
     case 'scene':
-    case 'clip':
     case 'cast':
       return { type, id: id as string };
     case 'projectInformation':

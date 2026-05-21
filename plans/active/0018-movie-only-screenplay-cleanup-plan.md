@@ -817,7 +817,7 @@ When props are needed, add a prop model deliberately.
 ## Database And Migration Plan
 
 Follow the Drizzle Kit workflow documented in
-`docs/architecture/reference/drizzle-migrations.md`.
+`docs/architecture/drizzle-migrations.md`.
 
 Implementation order:
 
@@ -832,8 +832,8 @@ Implementation order:
 4. If Drizzle cannot express the destructive cleanup cleanly, document the
    reason in the migration file comments and keep the custom SQL in the Drizzle
    migration folder.
-5. Bump the runtime project store schema generation from `2` to `3`.
-6. Add `PRAGMA user_version = 3;` to the migration because runtime reads and
+5. Bump the runtime project store schema generation.
+6. Add `PRAGMA user_version = <generation>;` to the migration because runtime reads and
    writes require the new schema.
 7. Apply migrations to development projects through the existing project
    migration path, not runtime readers.
@@ -1052,146 +1052,146 @@ Add or update tests that prevent:
 
 ## Implementation Checklist
 
-- [ ] Update this plan if implementation discovers an unavoidable product or
+- [x] Update this plan if implementation discovers an unavoidable product or
       migration constraint not covered here.
 
 ### Project Creation
 
-- [ ] Replace `renku create --file` CLI behavior with
+- [x] Replace `renku create --file` CLI behavior with
       `renku create <project-name> --title <title>`.
-- [ ] Remove setup YAML wording from CLI help and examples.
-- [ ] Add a structured error for `renku create --file`.
-- [ ] Replace `createFromSetup` in the project data service with a movie create
+- [x] Remove setup YAML wording from CLI help and examples.
+- [x] Add a structured error for file-based project creation.
+- [x] Replace `createFromSetup` in the project data service with a movie create
       command.
-- [ ] Remove setup reader, shape reader, contracts, referenced-file loading,
+- [x] Remove setup reader, shape reader, contracts, referenced-file loading,
       Markdown setup materialization, setup writer, and setup fixtures.
-- [ ] Update project create reports and counts to remove clips, continuity
+- [x] Update project create reports and counts to remove clips, continuity
       references, and episodes.
 
 ### Movie-Only Contract
 
-- [ ] Remove project type branching from current client contracts.
-- [ ] Remove episode client types, counts, navigation rows, service methods, and
+- [x] Remove project type branching from current client contracts.
+- [x] Remove episode client types, counts, navigation rows, service methods, and
       Studio routes.
-- [ ] Update movie navigation to use acts, sequences, and scenes only.
-- [ ] Remove tests and fixtures that create or expect episode rows.
+- [x] Update movie navigation to use acts, sequences, and scenes only.
+- [x] Remove tests and fixtures that create or expect episode rows.
 
 ### Screenplay JSON
 
-- [ ] Add `screenplayCreate` contract and schema.
-- [ ] Add a documented JSON validation policy to the implementation docs or
+- [x] Add `screenplayCreate` contract and schema.
+- [x] Add a documented JSON validation policy to the implementation docs or
       accepted architecture docs if this plan becomes accepted direction.
-- [ ] Ensure every public screenplay JSON document has an AJV-backed schema.
-- [ ] Ensure every SQLite-stored screenplay JSON fragment has an AJV-backed
+- [x] Ensure every public screenplay JSON document has an AJV-backed schema.
+- [x] Ensure every SQLite-stored screenplay JSON fragment has an AJV-backed
       schema.
-- [ ] Replace unbounded `unknown[]` public fields with explicit schemas or a
+- [x] Replace unbounded `unknown[]` public fields with explicit schemas or a
       documented intentional arbitrary-JSON contract.
-- [ ] Validate stored JSON fragments during current-database validation.
-- [ ] Convert malformed stored JSON failures into structured diagnostics.
-- [ ] Change temporary object labels from `localKey` to `key`.
-- [ ] Add mutation-only `locationReferences`, `castMemberReferences`, and
+- [x] Validate stored JSON fragments during current-database validation.
+- [x] Convert malformed stored JSON failures into structured diagnostics.
+- [x] Change temporary object labels from `localKey` to `key`.
+- [x] Add mutation-only `locationReferences`, `castMemberReferences`, and
       `castMemberReference`.
-- [ ] Ensure canonical `screenplay` accepts and emits only durable ID
+- [x] Ensure canonical `screenplay` accepts and emits only durable ID
       relationship fields.
-- [ ] Remove canonical schema support for `locationRefs`, `castMemberRefs`, and
+- [x] Remove canonical schema support for `locationRefs`, `castMemberRefs`, and
       `castMemberRef`.
-- [ ] Update unknown-field walker for the new canonical and mutation-only
+- [x] Update unknown-field walker for the new canonical and mutation-only
       shapes.
-- [ ] Update generated ID reports to use `key`.
-- [ ] Add validation for key/id usage by operation type.
-- [ ] Add validation for unresolved keys and unknown IDs.
+- [x] Update generated ID reports to use `key`.
+- [x] Add validation for key/id usage by operation type.
+- [x] Add validation for unresolved keys and unknown IDs.
 
 ### Handles And Mentions
 
-- [ ] Add cast member handles.
-- [ ] Add location handles.
-- [ ] Enforce handle format.
-- [ ] Enforce handle uniqueness across mentionable records.
-- [ ] Add `@handle` mention extraction for non-dialogue block text.
-- [ ] Validate unknown mentions.
-- [ ] Ensure dialogue lines are not mention-processed.
-- [ ] Add duplicate-name warnings for likely duplicate cast/location records.
+- [x] Add cast member handles.
+- [x] Add location handles.
+- [x] Enforce handle format.
+- [x] Enforce handle uniqueness across mentionable records.
+- [x] Add `@handle` mention extraction for non-dialogue block text.
+- [x] Validate unknown mentions.
+- [x] Ensure dialogue lines are not mention-processed.
+- [x] Add duplicate-name warnings for likely duplicate cast/location records.
 
 ### Scene Blocks
 
-- [ ] Add scene block JSON storage to the Drizzle schema.
-- [ ] Remove block tables from the active schema.
-- [ ] Remove block IDs from client contracts and command reports.
-- [ ] Add an explicit block JSON schema.
-- [ ] Register the block JSON schema with the AJV 2020 validator.
-- [ ] Validate scene block arrays with AJV in `screenplayCreate`,
+- [x] Add scene block JSON storage to the Drizzle schema.
+- [x] Remove block tables from the active schema.
+- [x] Remove block IDs from client contracts and command reports.
+- [x] Add an explicit block JSON schema.
+- [x] Register the block JSON schema with the AJV 2020 validator.
+- [x] Validate scene block arrays with AJV in `screenplayCreate`,
       `screenplayOperations`, and canonical `screenplay` validation paths.
-- [ ] Map AJV block validation errors to structured diagnostics with precise
+- [x] Map AJV block validation errors to structured diagnostics with precise
       block paths.
-- [ ] Implement semantic block validation for all initial block types after AJV
+- [x] Implement semantic block validation for all initial block types after AJV
       structural validation.
-- [ ] Persist and read scene blocks through the scene JSON column.
-- [ ] Keep `scene.update` as full scene replacement.
-- [ ] Remove any block-level operation assumptions from tests and docs.
+- [x] Persist and read scene blocks through the scene JSON column.
+- [x] Keep `scene.update` as full scene replacement.
+- [x] Remove any block-level operation assumptions from tests and docs.
 
 ### Moves
 
-- [ ] Require `fromActId`, `toActId`, and `placement` for `sequence.move`.
-- [ ] Require `fromSequenceId`, `toSequenceId`, and `placement` for
+- [x] Require `fromActId`, `toActId`, and `placement` for `sequence.move`.
+- [x] Require `fromSequenceId`, `toSequenceId`, and `placement` for
       `scene.move`.
-- [ ] Validate source parent assertions.
-- [ ] Validate target parent existence.
-- [ ] Validate placement siblings are inside the target parent.
-- [ ] Validate neighbor-pair adjacency when both `afterId` and `beforeId` are
+- [x] Validate source parent assertions.
+- [x] Validate target parent existence.
+- [x] Validate placement siblings are inside the target parent.
+- [x] Validate neighbor-pair adjacency when both `afterId` and `beforeId` are
       supplied.
-- [ ] Remove first-act and first-sequence fallback behavior.
-- [ ] Add tests for beginning, end, between, wrong parent, and invalid neighbor
+- [x] Remove first-act and first-sequence fallback behavior.
+- [x] Add tests for beginning, end, between, wrong parent, and invalid neighbor
       moves.
 
 ### Clip Removal
 
-- [ ] Remove clip client contracts and exports.
-- [ ] Remove clip navigation and clip design resources.
-- [ ] Remove clip asset target parsing and formatting.
-- [ ] Remove clip resource keys.
-- [ ] Remove clip production export paths or rename them to scene paths.
-- [ ] Remove Studio clip routes, hooks, panels, and tests.
-- [ ] Update fixtures to attach assets to scenes instead of clips.
+- [x] Remove clip client contracts and exports.
+- [x] Remove clip navigation and clip design resources.
+- [x] Remove clip asset target parsing and formatting.
+- [x] Remove clip resource keys.
+- [x] Remove clip production export paths or rename them to scene paths.
+- [x] Remove Studio clip routes, hooks, panels, and tests.
+- [x] Update fixtures to attach assets to scenes instead of clips.
 
 ### Continuity Reference Removal
 
-- [ ] Remove continuity reference client contracts and exports.
-- [ ] Remove continuity reference schema/access modules.
-- [ ] Remove continuity reference asset relationship modules.
-- [ ] Remove continuity reference navigation and project shell fields.
-- [ ] Remove continuity reference asset target parsing and formatting.
-- [ ] Update docs to point to explicit locations and future explicit props.
+- [x] Remove continuity reference client contracts and exports.
+- [x] Remove continuity reference schema/access modules.
+- [x] Remove continuity reference asset relationship modules.
+- [x] Remove continuity reference navigation and project shell fields.
+- [x] Remove continuity reference asset target parsing and formatting.
+- [x] Update docs to point to explicit locations and future explicit props.
 
 ### Database And Migration
 
-- [ ] Update Drizzle TypeScript schema.
-- [ ] Generate a Drizzle migration from `packages/core`.
-- [ ] Review generated SQL and document any required custom destructive SQL.
-- [ ] Bump project store schema generation to `3`.
-- [ ] Add `PRAGMA user_version = 3;` to the migration.
-- [ ] Update migration tests for schema generation `3`.
-- [ ] Validate migration on a fresh test project.
+- [x] Update Drizzle TypeScript schema.
+- [x] Generate a Drizzle migration from `packages/core`.
+- [x] Review generated SQL and document any required custom destructive SQL.
+- [x] Bump project store schema generation to `4`.
+- [x] Add `PRAGMA user_version = 4;` to the migration.
+- [x] Update migration tests for schema generation `4`.
+- [x] Validate migration on a fresh test project.
 
 ### Resources, Studio, And API
 
-- [ ] Update full project reads to the movie-only contract.
-- [ ] Update project shell reads to the movie-only contract.
-- [ ] Update selection context to remove clip and continuity surfaces.
-- [ ] Update Studio fake project data service and route fixtures.
-- [ ] Add scene-focused resource if the UI still needs the old clip design
+- [x] Update full project reads to the movie-only contract.
+- [x] Update project shell reads to the movie-only contract.
+- [x] Update selection context to remove clip and continuity surfaces.
+- [x] Update Studio fake project data service and route fixtures.
+- [x] Add scene-focused resource if the UI still needs the old clip design
       surface behavior.
-- [ ] Verify `packages/studio` changes use local shadcn UI controls for any
+- [x] Verify `packages/studio` changes use local shadcn UI controls for any
       interactive controls.
 
 ### Tests And Verification
 
-- [ ] Update core tests for create, screenplay create, canonical validation,
+- [x] Update core tests for create, screenplay create, canonical validation,
       blocks, handles, mentions, moves, and cleanup.
-- [ ] Update CLI tests for the new create command and screenplay workflow.
-- [ ] Update Studio tests for movie-only navigation and no clips.
-- [ ] Update architecture tests for removed APIs and forbidden imports.
-- [ ] Run `pnpm test:core`.
-- [ ] Run `pnpm test:cli`.
-- [ ] Run relevant `pnpm test:studio` tests.
-- [ ] Run `pnpm check`.
-- [ ] Run final `rg` cleanup searches from the acceptance criteria.
+- [x] Update CLI tests for the new create command and screenplay workflow.
+- [x] Update Studio tests for movie-only navigation and no clips.
+- [x] Update architecture tests for removed APIs and forbidden imports.
+- [x] Run `pnpm test:core`.
+- [x] Run `pnpm test:cli`.
+- [x] Run relevant `pnpm test:studio` tests.
+- [x] Run `pnpm check`.
+- [x] Run final `rg` cleanup searches from the acceptance criteria.

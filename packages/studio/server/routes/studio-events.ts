@@ -208,7 +208,6 @@ function readStudioSelection(value: unknown): StudioSelection | null {
   if (
     (selection.type === 'sequence' ||
       selection.type === 'scene' ||
-      selection.type === 'clip' ||
       selection.type === 'cast') &&
     typeof selection.id === 'string' &&
     selection.id.trim()

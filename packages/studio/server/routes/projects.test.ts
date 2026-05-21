@@ -53,7 +53,6 @@ describe('projects Hono route', () => {
       },
     });
     expect(body?.project).not.toHaveProperty('sequences');
-    expect(body?.project).not.toHaveProperty('episodes');
   });
 
   it('serves project cover images', async () => {
@@ -76,11 +75,11 @@ describe('projects Hono route', () => {
         ...fakeProjectDataService(),
         async listLibrary() {
           throw new StructuredError({
-            code: 'PROJECT_SETUP999',
-            message: 'Project setup YAML failed validation.',
+            code: 'PROJECT_DATA999',
+            message: 'Project data failed validation.',
             issues: [
               createDiagnosticError(
-                'PROJECT_SETUP003',
+                'PROJECT_DATA999',
                 'project.name is required.',
                 { path: ['project', 'name'] }
               ),
@@ -95,10 +94,10 @@ describe('projects Hono route', () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
       error: {
-        code: 'PROJECT_SETUP999',
+        code: 'PROJECT_DATA999',
         issues: [
           {
-            code: 'PROJECT_SETUP003',
+            code: 'PROJECT_DATA999',
             message: 'project.name is required.',
           },
         ],

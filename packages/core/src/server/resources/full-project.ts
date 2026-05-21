@@ -1,8 +1,6 @@
 import { ProjectDataError } from '../project-data-error.js';
 import type {
   CastMember,
-  Clip,
-  ContinuityReference,
   Project,
   ProjectCounts,
   ProjectInfo,
@@ -19,15 +17,8 @@ import {
   type CastMemberRecord,
 } from '../database/access/cast-members.js';
 import {
-  listContinuityReferenceRecords,
-  type ContinuityReferenceRecord,
-} from '../database/access/continuity-references.js';
-import {
-  listClipRecords,
-  listEpisodeRecords,
   listSceneRecords,
   listSequenceRecords,
-  type ClipRecord,
   type SceneRecord,
   type SequenceRecord,
 } from '../database/access/screenplay-projection.js';
@@ -83,41 +74,18 @@ export function readProjectFromSession(input: {
     toVisualLanguage(row)
   );
   const cast = listCastMemberRecords(input.session).map(toCastMember);
-  const continuityReferences = listContinuityReferenceRecords(input.session).map(
-    (row) => toContinuityReference(row)
-  );
-  const episodeRecords = listEpisodeRecords(input.session);
   const sequenceRecords = listSequenceRecords(input.session);
   const sceneRecords = listSceneRecords(input.session);
-  const clipRecords = listClipRecords(input.session);
 
-  const topLevelSequences = buildSequences(
-    sequenceRecords.filter((sequence) => sequence.episodeId === null),
-    sceneRecords,
-    clipRecords
-  );
-  const episodes = episodeRecords.map((episode) => ({
-    id: episode.id,
-    title: episode.title,
-    shortTitle: nullable(episode.shortTitle),
-    summary: nullable(episode.oneLineSummary),
-    sequences: buildSequences(
-      sequenceRecords.filter((sequence) => sequence.episodeId === episode.id),
-      sceneRecords,
-      clipRecords
-    ),
-  }));
+  const sequences = buildSequences(sequenceRecords, sceneRecords);
 
   const counts: ProjectCounts = {
     languages: languages.length,
     visualLanguageCategories: visualLanguageCategories.length,
     visualLanguage: visualLanguage.length,
     castMembers: cast.length,
-    continuityReferences: continuityReferences.length,
-    episodes: episodes.length,
     sequences: sequenceRecords.length,
     scenes: sceneRecords.length,
-    clips: clipRecords.length,
   };
 
   return {
@@ -131,17 +99,14 @@ export function readProjectFromSession(input: {
     visualLanguageCategories,
     visualLanguage,
     cast,
-    continuityReferences,
-    episodes,
-    sequences: topLevelSequences,
+    sequences,
     counts,
   };
 }
 
 function buildSequences(
   sequenceRecords: SequenceRecord[],
-  sceneRecords: SceneRecord[],
-  clipRecords: ClipRecord[]
+  sceneRecords: SceneRecord[]
 ): Sequence[] {
   return sequenceRecords.map((sequence, sequenceIndex) => ({
     id: sequence.id,
@@ -151,7 +116,7 @@ function buildSequences(
     summary: nonEmpty(sequence.oneLineSummary ?? undefined),
     scenes: sceneRecords
       .filter((scene) => scene.sequenceId === sequence.id)
-      .map((scene) => toScene(scene, clipRecords)),
+      .map(toScene),
   }));
 }
 
@@ -164,7 +129,6 @@ function toProjectInfo(
     id: row.id,
     name: row.name,
     title: row.title,
-    type: row.type === 'series' ? 'series' : 'standaloneMovie',
     folderPath,
     databasePath,
     aspectRatio: nullable(row.aspectRatio),
@@ -218,30 +182,7 @@ function toCastMember(row: CastMemberRecord): CastMember {
   };
 }
 
-function toContinuityReference(row: ContinuityReferenceRecord): ContinuityReference {
-  return {
-    id: row.id,
-    kind: row.kind,
-    name: row.name,
-    summary: nullable(row.oneLineSummary),
-  };
-}
-
-function toScene(
-  row: SceneRecord,
-  clipRecords: ClipRecord[]
-): Scene {
-  return {
-    id: row.id,
-    title: row.title,
-    summary: nonEmpty(row.oneLineSummary ?? undefined),
-    clips: clipRecords
-      .filter((clip) => clip.sceneId === row.id)
-      .map((clip) => toClip(clip)),
-  };
-}
-
-function toClip(row: ClipRecord): Clip {
+function toScene(row: SceneRecord): Scene {
   return {
     id: row.id,
     title: row.title,

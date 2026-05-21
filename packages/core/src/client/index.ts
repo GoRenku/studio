@@ -20,11 +20,6 @@ export type {
   CastMember,
 } from './cast-members.js';
 export type {
-  ContinuityReference,
-} from './continuity-references.js';
-export type {
-  Clip,
-  Episode,
   Scene,
   Sequence,
 } from './screenplay-projection.js';
@@ -41,10 +36,7 @@ export type {
   CastDesignAssetRoleCount,
   CastDesignResource,
   CastNavigationRow,
-  ClipDesignResource,
-  ClipNavigationRow,
-  ContinuityReferenceNavigationRow,
-  EpisodeNavigationRow,
+  SceneDesignResource,
   ScreenplayNavigation,
   PageResponse,
   ProjectInformationResource,
@@ -64,7 +56,6 @@ export type {
   ProjectCreateReport,
   ProjectInfo,
   ProjectRelativePath,
-  ProjectType,
 } from './project.js';
 export type {
   ProjectLibrary,

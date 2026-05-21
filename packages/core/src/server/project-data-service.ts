@@ -12,7 +12,6 @@ import {
 } from './commands/change-asset-selection.js';
 import { applyScreenplayOperations } from './commands/apply-screenplay-operations.js';
 import { createScreenplay } from './commands/create-screenplay.js';
-import { readClipDesignResource } from './resources/clip-design.js';
 import { createMovieProject } from './commands/create-movie-project.js';
 import { migrateProjectDatabaseForProject } from './commands/migrate-database.js';
 import { registerAsset } from './commands/register-asset.js';
@@ -25,15 +24,12 @@ import { readProject } from './resources/full-project.js';
 import { listLibrary, resolveCoverImage } from './resources/project-library.js';
 import {
   listCastNavigation,
-  listClipNavigation,
-  listContinuityReferenceNavigation,
-  listEpisodeNavigation,
-  listEpisodeSequenceNavigation,
   listSceneNavigation,
-  listStandaloneMovieSequenceNavigation,
+  listSequenceNavigation,
 } from './resources/navigation.js';
 import { readProjectInformationResourceForProject } from './resources/project-information.js';
 import { readProjectShell } from './resources/project-shell.js';
+import { readSceneDesignResource } from './resources/scene-design.js';
 import {
   listScreenplayActs,
   listScreenplayCastMembers,
@@ -66,15 +62,11 @@ export function createProjectDataService(): ProjectDataService {
     readProjectShell,
     readProjectInformationResource: readProjectInformationResourceForProject,
     listCastNavigation,
-    listContinuityReferenceNavigation,
-    listEpisodeNavigation,
-    listStandaloneMovieSequenceNavigation,
-    listEpisodeSequenceNavigation,
+    listSequenceNavigation,
     listSceneNavigation,
-    listClipNavigation,
     listAssetPage,
     readCastDesignResource,
-    readClipDesignResource,
+    readSceneDesignResource,
     readStudioSelectionContext,
     updateProjectInformation,
     patchProjectInformation,

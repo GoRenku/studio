@@ -41,7 +41,6 @@ export type StudioSelection =
   | { type: 'storyboard' }
   | { type: 'sequence'; id: string }
   | { type: 'scene'; id: string }
-  | { type: 'clip'; id: string }
   | { type: 'casting' }
   | { type: 'cast'; id: string };
 
@@ -170,21 +169,11 @@ export type StudioCurrentContext =
       shortDescription?: string;
     }
   | {
-      kind: 'clip';
-      id: string;
-      title: string;
-      summary?: string;
-      visualIntent?: string;
-      parentScene: { id: string; title: string; summary?: string };
-      parentSequence: { id: string; number: number; title: string; summary?: string };
-    }
-  | {
       kind: 'scene';
       id: string;
       title: string;
       summary?: string;
       parentSequence: { id: string; number: number; title: string; summary?: string };
-      clips: { id: string; title: string; summary?: string }[];
     }
   | {
       kind: 'sequence';
@@ -202,7 +191,7 @@ export type StudioCurrentContext =
         id: string;
         number: number;
         title: string;
-        scenes: { id: string; title: string; clips: { id: string; title: string }[] }[];
+        scenes: { id: string; title: string }[];
       }[];
     }
   | {

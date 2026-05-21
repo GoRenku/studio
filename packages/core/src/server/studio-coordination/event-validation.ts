@@ -137,7 +137,6 @@ function validateSelection(value: unknown, path: string[], issues: ReturnType<ty
   if (
     (selection.type === 'sequence' ||
       selection.type === 'scene' ||
-      selection.type === 'clip' ||
       selection.type === 'cast') &&
     typeof selection.id === 'string' &&
     selection.id.trim()

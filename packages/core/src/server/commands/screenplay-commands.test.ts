@@ -127,6 +127,27 @@ describe('screenplay JSON commands', () => {
     ]);
   });
 
+  it('rejects screenplay metadata arrays that are not strings', async () => {
+    await createBlankProject();
+    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+
+    await expect(
+      projectData.validateScreenplayJson({
+        homeDir,
+        document: {
+          ...minimalScreenplayDocument(),
+          screenplay: {
+            title: 'Urban Basilica',
+            historicalBasis: [{ source: 'chronicle' }],
+          },
+        } as unknown as ScreenplayCreateDocument,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA200',
+      issues: [expect.objectContaining({ code: 'PROJECT_DATA208' })],
+    });
+  });
+
   it('applies focused scene additions atomically', async () => {
     await createBlankProject();
     await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
@@ -232,6 +253,158 @@ describe('screenplay JSON commands', () => {
       'Inserted Scene',
       'Opening Scene',
     ]);
+  });
+
+  it('warns when reusable cast or location names look duplicated', async () => {
+    await createBlankProject();
+    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+
+    const report = await projectData.createScreenplay({
+      homeDir,
+      document: {
+        ...minimalScreenplayDocument(),
+        cast: [
+          { key: 'urban', handle: 'urban', name: 'Urban' },
+          { key: 'urban-voice', handle: 'urban-voice', name: 'Urban' },
+        ],
+        locations: [
+          { key: 'foundry', handle: 'foundry', name: 'Foundry' },
+          { key: 'foundry-night', handle: 'foundry-night', name: 'Foundry' },
+        ],
+      },
+    });
+
+    expect(report.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'PROJECT_DATA215',
+          location: expect.objectContaining({ path: ['cast', '1', 'name'] }),
+        }),
+        expect.objectContaining({
+          code: 'PROJECT_DATA215',
+          location: expect.objectContaining({ path: ['locations', '1', 'name'] }),
+        }),
+      ])
+    );
+  });
+
+  it('validates scene moves against declared parents and adjacent placement neighbors', async () => {
+    await createBlankProject();
+    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
+
+    const current = await projectData.readScreenplay({ homeDir });
+    const actId = current.screenplay?.acts[0]?.id;
+    const sequenceId = current.screenplay?.acts[0]?.sequences[0]?.id;
+    const firstSceneId = current.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
+    if (!actId || !sequenceId || !firstSceneId) {
+      throw new Error('Expected seeded screenplay ids.');
+    }
+
+    await projectData.applyScreenplayOperations({
+      homeDir,
+      document: {
+        kind: 'screenplayOperations',
+        operations: [
+          {
+            operation: 'scene.add',
+            sequenceId,
+            scene: {
+              key: 'second-scene',
+              title: 'Second Scene',
+              setting: {},
+              blocks: [],
+            },
+          },
+          {
+            operation: 'scene.add',
+            sequenceId,
+            scene: {
+              key: 'third-scene',
+              title: 'Third Scene',
+              setting: {},
+              blocks: [],
+            },
+          },
+          {
+            operation: 'sequence.add',
+            actId,
+            sequence: {
+              key: 'parallel-sequence',
+              title: 'Parallel Sequence',
+              scenes: [],
+            },
+          },
+        ],
+      },
+    });
+
+    const expanded = await projectData.readScreenplay({ homeDir });
+    const mainSequence = expanded.screenplay?.acts[0]?.sequences[0];
+    const otherSequenceId = expanded.screenplay?.acts[0]?.sequences[1]?.id;
+    const secondSceneId = mainSequence?.scenes[1]?.id;
+    const thirdSceneId = mainSequence?.scenes[2]?.id;
+    if (!mainSequence?.id || !otherSequenceId || !secondSceneId || !thirdSceneId) {
+      throw new Error('Expected expanded screenplay ids.');
+    }
+
+    await projectData.applyScreenplayOperations({
+      homeDir,
+      document: {
+        kind: 'screenplayOperations',
+        operations: [
+          {
+            operation: 'scene.move',
+            sceneId: thirdSceneId,
+            fromSequenceId: mainSequence.id,
+            toSequenceId: mainSequence.id,
+            placement: { afterId: firstSceneId, beforeId: secondSceneId },
+          },
+        ],
+      },
+    });
+    const moved = await projectData.readScreenplay({ homeDir });
+    expect(moved.screenplay?.acts[0]?.sequences[0]?.scenes.map((scene) => scene.title)).toEqual([
+      'Urban Enters The Foundry',
+      'Third Scene',
+      'Second Scene',
+    ]);
+
+    await expect(
+      projectData.applyScreenplayOperations({
+        homeDir,
+        document: {
+          kind: 'screenplayOperations',
+          operations: [
+            {
+              operation: 'scene.move',
+              sceneId: thirdSceneId,
+              fromSequenceId: otherSequenceId,
+              toSequenceId: mainSequence.id,
+              placement: { afterId: firstSceneId },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA212' });
+
+    await expect(
+      projectData.applyScreenplayOperations({
+        homeDir,
+        document: {
+          kind: 'screenplayOperations',
+          operations: [
+            {
+              operation: 'scene.move',
+              sceneId: thirdSceneId,
+              fromSequenceId: mainSequence.id,
+              toSequenceId: mainSequence.id,
+              placement: { afterId: secondSceneId, beforeId: firstSceneId },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA212' });
   });
 
   async function createBlankProject(): Promise<void> {

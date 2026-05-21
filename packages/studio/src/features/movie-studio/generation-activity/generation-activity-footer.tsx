@@ -15,14 +15,13 @@ export function GenerationActivityFooter({
           Generation Activity And Cost
         </h2>
         <p className='mt-1 text-sm text-muted-foreground'>
-          No generation jobs queued. Cost tracking will attach to clip and cast
+          No generation jobs queued. Cost tracking will attach to scene and cast
           artifacts in a later pass.
         </p>
       </div>
       <div className='hidden md:flex items-center gap-2'>
         <StatPill label='Sequences' value={project.counts.sequences} />
         <StatPill label='Scenes' value={project.counts.scenes} />
-        <StatPill label='Clips' value={project.counts.clips} />
       </div>
       <Button type='button' variant='outline' disabled>
         <FolderOpen className='mr-2 h-4 w-4' />

@@ -23,8 +23,6 @@ import type {
 } from './types.js';
 
 const PRODUCTION_EXPORT_ROLES = new Set([
-  'clip-video',
-  'clip_video',
   'dialogue',
   'final-graphic',
   'final_graphic',
@@ -34,6 +32,8 @@ const PRODUCTION_EXPORT_ROLES = new Set([
   'locale_video_override',
   'music',
   'narration',
+  'scene-video',
+  'scene_video',
   'sound-effect',
   'sound_effect',
   'subtitles',

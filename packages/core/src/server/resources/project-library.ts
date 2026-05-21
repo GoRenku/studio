@@ -72,7 +72,6 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
     return {
       name: project.identity.name,
       title: project.identity.title,
-      type: project.identity.type,
       folderPath: project.identity.folderPath,
       coverImage: project.coverImage,
       logline: project.identity.logline,
@@ -84,7 +83,6 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
     return {
       name: folderName,
       title: folderName,
-      type: 'standaloneMovie',
       folderPath: projectFolder,
       coverImage: null,
       counts: null,

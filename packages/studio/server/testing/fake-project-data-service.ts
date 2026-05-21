@@ -12,7 +12,6 @@ export function fakeProjectDataService(): NonNullable<
       {
         name: project.identity.name,
         title: project.identity.title,
-        type: project.identity.type,
         folderPath: project.identity.folderPath,
         coverImage: project.coverImage,
         counts: project.counts,
@@ -70,20 +69,8 @@ export function fakeProjectDataService(): NonNullable<
     async listCastNavigation() {
       return makeProjectShell(project).navigation.cast;
     },
-    async listContinuityReferenceNavigation() {
-      return makeProjectShell(project).navigation.continuityReferences;
-    },
-    async listEpisodeNavigation() {
-      return { items: [], nextCursor: null };
-    },
-    async listStandaloneMovieSequenceNavigation() {
-      const screenplay = makeProjectShell(project).navigation.screenplay;
-      return screenplay.projectType === 'standaloneMovie'
-        ? screenplay.sequences
-        : { items: [], nextCursor: null };
-    },
-    async listEpisodeSequenceNavigation() {
-      return { items: [], nextCursor: null };
+    async listSequenceNavigation() {
+      return makeProjectShell(project).navigation.screenplay.sequences;
     },
     async listSceneNavigation() {
       return {
@@ -92,19 +79,6 @@ export function fakeProjectDataService(): NonNullable<
             id: 'scene_opening',
             sequenceId: 'seq_opening',
             title: 'Opening Scene',
-            clipCount: 1,
-          },
-        ],
-        nextCursor: null,
-      };
-    },
-    async listClipNavigation() {
-      return {
-        items: [
-          {
-            id: 'clip_opening',
-            sceneId: 'scene_opening',
-            title: 'Opening Image',
           },
         ],
         nextCursor: null,
@@ -121,21 +95,18 @@ export function fakeProjectDataService(): NonNullable<
         countsByRole: [],
       };
     },
-    async readClipDesignResource() {
+    async readSceneDesignResource() {
       return {
-        clip: project.sequences[0]!.scenes[0]!.clips[0]!,
         scene: {
           id: 'scene_opening',
           sequenceId: 'seq_opening',
           title: 'Opening Scene',
-          clipCount: 1,
         },
         sequence: {
           id: 'seq_opening',
           number: 1,
           title: 'Opening',
           sceneCount: 1,
-          clipCount: 1,
         },
         selectedAssets: [],
         activeTakePage: { items: [], nextCursor: null },

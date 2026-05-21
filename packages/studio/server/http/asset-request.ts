@@ -72,11 +72,6 @@ function readAssetTargetQuery(
         kind: 'castMember',
         castMemberId: readRequiredTargetId(query.targetId, query.targetKind),
       };
-    case 'continuityReference':
-      return {
-        kind: 'continuityReference',
-        continuityReferenceId: readRequiredTargetId(query.targetId, query.targetKind),
-      };
     case 'sequence':
       return {
         kind: 'sequence',
@@ -87,11 +82,6 @@ function readAssetTargetQuery(
         kind: 'scene',
         sceneId: readRequiredTargetId(query.targetId, query.targetKind),
       };
-    case 'clip':
-      return {
-        kind: 'clip',
-        clipId: readRequiredTargetId(query.targetId, query.targetKind),
-      };
     default:
       throw createStructuredError({
         code: 'STUDIO_SERVER032',
@@ -101,11 +91,10 @@ function readAssetTargetQuery(
             'STUDIO_SERVER032',
             'targetKind must name a supported asset target.',
             { path: ['targetKind'] },
-            'Use project, visualLanguage, castMember, continuityReference, sequence, scene, or clip.'
+            'Use project, visualLanguage, castMember, sequence, or scene.'
           ),
         ],
-        suggestion:
-          'Use project, visualLanguage, castMember, continuityReference, sequence, scene, or clip.',
+        suggestion: 'Use project, visualLanguage, castMember, sequence, or scene.',
       });
   }
 }

@@ -1,16 +1,12 @@
 import { and, asc, count, eq, gt, lt, or, type SQL } from 'drizzle-orm';
 import {
   castMembers,
-  projects,
   scenes,
   sequences,
   visualLanguage,
 } from '../../schema/index.js';
 import type {
   CastNavigationRow,
-  ClipNavigationRow,
-  ContinuityReferenceNavigationRow,
-  EpisodeNavigationRow,
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
@@ -93,40 +89,34 @@ export function listVisualLanguageNavigationPage(
   });
 }
 
-export function listContinuityReferenceNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput
-): PageResponse<ContinuityReferenceNavigationRow> {
-  void session;
-  void input;
-  return { items: [], nextCursor: null };
-}
-
-export function listEpisodeNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput
-): PageResponse<EpisodeNavigationRow> {
-  void session;
-  void input;
-  return { items: [], nextCursor: null };
-}
-
-export function listStandaloneMovieSequenceNavigationPage(
+export function listSequenceNavigationPage(
   session: DatabaseSession,
   input: ListNavigationPageInput
 ): PageResponse<SequenceNavigationRow> {
-  return listSequenceNavigationPage(session, {
-    ...input,
-    episodeId: null,
+  return listPositionPage({
+    input,
+    selectPage: (limit, cursorCondition) =>
+      session.db
+        .select({
+          id: sequences.id,
+          title: sequences.title,
+          position: sequences.position,
+        })
+        .from(sequences)
+        .where(cursorCondition)
+        .orderBy(asc(sequences.position), asc(sequences.id))
+        .limit(limit)
+        .all(),
+    positionColumn: sequences.position,
+    idColumn: sequences.id,
+    mapRow: (row) => ({
+      id: row.id,
+      number: sequenceNumber(session, row.id),
+      title: row.title,
+      shortTitle: undefined,
+      sceneCount: countRows(session, scenes, eq(scenes.sequenceId, row.id)),
+    }),
   });
-}
-
-export function listEpisodeSequenceNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput & { episodeId: string }
-): PageResponse<SequenceNavigationRow> {
-  void session;
-  throw new ProjectDataError('PROJECT_DATA112', `Episode was not found: ${input.episodeId}.`);
 }
 
 export function listSceneNavigationPage(
@@ -155,17 +145,8 @@ export function listSceneNavigationPage(
       id: row.id,
       sequenceId: row.sequenceId,
       title: row.title,
-      clipCount: 0,
     }),
   });
-}
-
-export function listClipNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput & { sceneId: string }
-): PageResponse<ClipNavigationRow> {
-  assertExists(session, scenes, scenes.id, input.sceneId, 'PROJECT_DATA114');
-  return { items: [], nextCursor: null };
 }
 
 export function readCastNavigationRow(
@@ -187,32 +168,6 @@ export function readCastNavigationRow(
     : null;
 }
 
-export function readClipParentChain(
-  session: DatabaseSession,
-  clipId: string
-): {
-  clip: ClipNavigationRow;
-  scene: SceneNavigationRow;
-  sequence: SequenceNavigationRow;
-  episode?: EpisodeNavigationRow;
-} {
-  const sceneContext = readSceneNavigationContext(session, clipId);
-  if (!sceneContext) {
-    throw new ProjectDataError('PROJECT_DATA116', `Clip was not found: ${clipId}.`);
-  }
-  return {
-    clip: {
-      id: sceneContext.scene.id,
-      sceneId: sceneContext.scene.id,
-      title: sceneContext.scene.title,
-      oneLineSummary: undefined,
-    },
-    scene: sceneContext.scene,
-    sequence: sceneContext.sequence,
-    episode: sceneContext.episode,
-  };
-}
-
 export function readSceneNavigationContext(
   session: DatabaseSession,
   sceneId: string
@@ -220,7 +175,6 @@ export function readSceneNavigationContext(
   | {
       scene: SceneNavigationRow;
       sequence: SequenceNavigationRow;
-      episode?: EpisodeNavigationRow;
     }
   | null {
   const scene = session.db.select().from(scenes).where(eq(scenes.id, sceneId)).get();
@@ -236,17 +190,15 @@ export function readSceneNavigationContext(
       id: scene.id,
       sequenceId: scene.sequenceId,
       title: scene.title,
-      clipCount: 0,
     },
     sequence: sequence.sequence,
-    episode: sequence.episode,
   };
 }
 
 export function readSequenceNavigationContext(
   session: DatabaseSession,
   sequenceId: string
-): { sequence: SequenceNavigationRow; episode?: EpisodeNavigationRow } | null {
+): { sequence: SequenceNavigationRow } | null {
   const sequence = session.db
     .select()
     .from(sequences)
@@ -258,64 +210,12 @@ export function readSequenceNavigationContext(
   return {
     sequence: {
       id: sequence.id,
-      episodeId: undefined,
       number: sequenceNumber(session, sequence.id),
       title: sequence.title,
       shortTitle: undefined,
       sceneCount: countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
-      clipCount: 0,
     },
-    episode: undefined,
   };
-}
-
-export function assertProjectType(
-  session: DatabaseSession,
-  expected: 'series' | 'standaloneMovie'
-): void {
-  const row = session.db
-    .select({ type: projects.type })
-    .from(projects)
-    .get();
-  if (!row || row.type !== expected) {
-    throw new ProjectDataError(
-      'PROJECT_DATA111',
-      `This route is only valid for ${expected} projects.`
-    );
-  }
-}
-
-function listSequenceNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput & { episodeId: string | null }
-): PageResponse<SequenceNavigationRow> {
-  const parentCondition = input.episodeId === null ? undefined : undefined;
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: sequences.id,
-          title: sequences.title,
-          position: sequences.position,
-        })
-        .from(sequences)
-        .where(and(parentCondition, cursorCondition))
-        .orderBy(asc(sequences.position), asc(sequences.id))
-        .limit(limit)
-        .all(),
-    positionColumn: sequences.position,
-    idColumn: sequences.id,
-    mapRow: (row) => ({
-      id: row.id,
-      episodeId: undefined,
-      number: sequenceNumber(session, row.id),
-      title: row.title,
-      shortTitle: undefined,
-      sceneCount: countRows(session, scenes, eq(scenes.sequenceId, row.id)),
-      clipCount: 0,
-    }),
-  });
 }
 
 function listPositionPage<Row extends { id: string; position: number }, Result>(

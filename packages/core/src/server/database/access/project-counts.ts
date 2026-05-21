@@ -17,11 +17,8 @@ export function readProjectCounts(session: DatabaseSession): ProjectCounts {
     visualLanguageCategories: countTable(session, visualLanguageCategories),
     visualLanguage: countTable(session, visualLanguage),
     castMembers: countTable(session, castMembers),
-    continuityReferences: 0,
-    episodes: 0,
     sequences: countTable(session, sequences),
     scenes: countTable(session, scenes),
-    clips: 0,
   };
 }
 

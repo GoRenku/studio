@@ -17,7 +17,7 @@ export interface SelectedProductionAssetRow {
   assetId: string;
   relationshipId: string;
   assetFileId: string;
-  targetKind: 'project' | 'visualLanguage' | 'castMember' | 'sequence' | 'scene' | 'clip';
+  targetKind: 'project' | 'visualLanguage' | 'castMember' | 'sequence' | 'scene';
   targetId: string | null;
   localeId: string | null;
   localeTag: string | null;
@@ -151,25 +151,6 @@ export function readSceneProductionHierarchy(
     );
   }
   return row;
-}
-
-export function readClipProductionHierarchy(
-  session: DatabaseSession,
-  clipId: string
-): {
-  sequencePosition: number;
-  sequenceTitle: string;
-  scenePosition: number;
-  sceneTitle: string;
-  clipPosition: number;
-  clipTitle: string;
-} {
-  const scene = readSceneProductionHierarchy(session, clipId);
-  return {
-    ...scene,
-    clipPosition: scene.scenePosition,
-    clipTitle: scene.sceneTitle,
-  };
 }
 
 function readProjectSelectedAssetRows(

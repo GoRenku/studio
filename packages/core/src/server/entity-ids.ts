@@ -11,21 +11,15 @@ export type EntityIdPrefix =
   | 'cast'
   | 'location'
   | 'act'
-  | 'block'
-  | 'continuity_reference'
-  | 'episode'
   | 'sequence'
   | 'scene'
-  | 'clip'
   | 'asset'
   | 'asset_file'
   | 'project_asset'
   | 'visual_language_asset'
   | 'cast_asset'
-  | 'continuity_reference_asset'
   | 'sequence_asset'
-  | 'scene_asset'
-  | 'clip_asset';
+  | 'scene_asset';
 
 export interface ProjectIdGenerator {
   next(prefix: EntityIdPrefix): string;

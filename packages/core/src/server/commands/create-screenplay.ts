@@ -43,6 +43,7 @@ export async function createScreenplay(
     const resolved = resolveScreenplayDocumentIds({
       document,
       idGenerator: input.idGenerator,
+      mode: 'create',
     });
     if (!input.dryRun) {
       replaceScreenplayDocument(session, resolved.document);

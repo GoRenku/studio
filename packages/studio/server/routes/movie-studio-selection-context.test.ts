@@ -42,7 +42,7 @@ describe('movie studio selection context Hono route', () => {
       {
         method: 'POST',
         body: JSON.stringify({
-          selection: { type: 'episode', id: 'ep_1' },
+          selection: { type: 'prop', id: 'prop_1' },
         }),
         headers: { 'Content-Type': 'application/json' },
       }
@@ -71,7 +71,7 @@ describe('movie studio selection context Hono route', () => {
       {
         method: 'POST',
         body: JSON.stringify({
-          selection: { type: 'clip' },
+          selection: { type: 'scene' },
         }),
         headers: { 'Content-Type': 'application/json' },
       }

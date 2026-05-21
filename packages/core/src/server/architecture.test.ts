@@ -45,7 +45,6 @@ describe('core server architecture', () => {
       'node:path',
       'session.db',
       'openProjectStore',
-      'readProjectSetupOrThrow',
     ];
 
     expect(lineCount).toBeLessThanOrEqual(140);
@@ -102,7 +101,6 @@ describe('core server architecture', () => {
     const domainFiles = [
       'assets.ts',
       'cast-members.ts',
-      'continuity-references.ts',
       'diagnostics.ts',
       'screenplay.ts',
       'production-export.ts',

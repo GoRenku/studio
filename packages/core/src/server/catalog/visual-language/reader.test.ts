@@ -30,7 +30,7 @@ describe('visual language catalog reader', () => {
         mediaKind: 'image',
       },
       tags: ['camera'],
-      appliesTo: ['clip.video'],
+      appliesTo: ['scene.video'],
       difficulty: 'beginner',
     });
 
@@ -79,7 +79,7 @@ illustration:
 tags:
   - camera
 appliesTo:
-  - clip.video
+  - scene.video
 difficulty: beginner
 ---
 # Explanation

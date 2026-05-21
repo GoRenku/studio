@@ -117,7 +117,6 @@ function makeProject(): Project {
       id: 'project_test0001',
       name: 'constantinople',
       title: 'Preparation of the Siege',
-      type: 'standaloneMovie',
       folderPath: '/tmp/renku/constantinople',
       databasePath: '/tmp/renku/constantinople/.renku/project.sqlite',
     },
@@ -126,19 +125,14 @@ function makeProject(): Project {
     visualLanguageCategories: [],
     visualLanguage: [],
     cast: [],
-    continuityReferences: [],
-    episodes: [],
     sequences: [],
     counts: {
       languages: 0,
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 0,
-      continuityReferences: 0,
-      episodes: 0,
       sequences: 0,
       scenes: 0,
-      clips: 0,
     },
   };
 }

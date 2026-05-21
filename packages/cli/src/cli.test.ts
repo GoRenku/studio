@@ -371,8 +371,8 @@ describe('renku CLI', () => {
     expect(stderr.join('\n')).toContain('Missing required --title');
   });
 
-  it('rejects obsolete setup YAML creation and unsafe project names', async () => {
-    const yamlExitCode = await runRenkuCli(
+  it('rejects file-based project creation and unsafe project names', async () => {
+    const fileExitCode = await runRenkuCli(
       ['create', '--file', path.join(homeDir, 'project.yaml')],
       {
         homeDir,
@@ -380,8 +380,8 @@ describe('renku CLI', () => {
       }
     );
 
-    expect(yamlExitCode).toBe(1);
-    expect(stderr.join('\n')).toContain('Project creation no longer imports setup YAML');
+    expect(fileExitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('Project creation does not accept --file');
 
     const storageRoot = await initializeStorageRoot();
     expect(storageRoot).toBe(path.join(homeDir, 'movies'));
