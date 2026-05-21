@@ -98,6 +98,38 @@ export const screenplayStringArraySchema = {
   items: { type: 'string' },
 } as const;
 
+export const screenplayStoryArcSchema = {
+  $id: 'https://schemas.gorenku.com/studio/screenplay-story-arc.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['acts'],
+  properties: {
+    structureModel: { type: 'string' },
+    acts: {
+      type: 'array',
+      items: { $ref: '#/$defs/storyArcAct' },
+    },
+  },
+  additionalProperties: true,
+  $defs: {
+    storyArcAct: objectWith(['actReference', 'title', 'purpose', 'keyBeats'], {
+      actReference: ref(),
+      title: { type: 'string' },
+      purpose: { type: 'string' },
+      estimatedPages: { type: 'string' },
+      keyBeats: {
+        type: 'array',
+        items: { $ref: '#/$defs/storyArcKeyBeat' },
+      },
+    }),
+    storyArcKeyBeat: objectWith(['type', 'label', 'description'], {
+      type: { type: 'string' },
+      label: { type: 'string' },
+      description: { type: 'string' },
+    }),
+  },
+} as const;
+
 export const screenplayDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -133,7 +165,9 @@ export const screenplayDocumentSchema = {
         themes: stringArray(),
         historicalBasis: stringArray(),
         dramatizedElements: stringArray(),
-        structureModel: { type: 'string' },
+        storyArc: {
+          $ref: 'https://schemas.gorenku.com/studio/screenplay-story-arc.schema.json',
+        },
         status: { type: 'string' },
         researchSources: stringArray(),
         assumptionsMade: stringArray(),
@@ -167,7 +201,6 @@ export const screenplayDocumentSchema = {
       key: stringId(),
       title: { type: 'string' },
       purpose: { type: 'string' },
-      keyBeats: stringArray(),
       sequences: { type: 'array', items: { $ref: '#/$defs/sequence' } },
     }),
     sequence: objectWith(['scenes'], {
@@ -226,12 +259,15 @@ export const screenplayOperationsSchema = {
     operations: {
       type: 'array',
       items: {
-        oneOf: Object.keys(entityDefs).flatMap((name) => [
-          { $ref: `#/$defs/${name}Add` },
-          { $ref: `#/$defs/${name}Update` },
-          { $ref: `#/$defs/${name}Delete` },
-          { $ref: `#/$defs/${name}Move` },
-        ]),
+        oneOf: [
+          { $ref: '#/$defs/screenplayUpdate' },
+          ...Object.keys(entityDefs).flatMap((name) => [
+            { $ref: `#/$defs/${name}Add` },
+            { $ref: `#/$defs/${name}Update` },
+            { $ref: `#/$defs/${name}Delete` },
+            { $ref: `#/$defs/${name}Move` },
+          ]),
+        ],
       },
     },
   },
@@ -261,6 +297,10 @@ export const screenplayOperationsSchema = {
       ],
       additionalProperties: true,
     },
+    screenplayUpdate: operationObject(['operation', 'screenplay'], {
+      operation: { const: 'screenplay.update' },
+      screenplay: { $ref: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json#/$defs/screenplay' },
+    }),
     castMemberAdd: operationObject(['operation', 'castMember'], {
       operation: { const: 'castMember.add' },
       placement: { $ref: '#/$defs/placement' },

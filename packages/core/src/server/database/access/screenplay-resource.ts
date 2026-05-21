@@ -8,6 +8,7 @@ import type {
   Screenplay,
   ScreenplayDocument,
   Sequence,
+  StoryArc,
 } from '../../../client/screenplay.js';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import {
@@ -177,7 +178,7 @@ function toScreenplay(row: typeof screenplay.$inferSelect): Screenplay {
       'screenplay',
       'dramatizedElements',
     ]),
-    structureModel: nullable(row.structureModel),
+    storyArc: parseStoryArc(row.storyArc, ['screenplay', 'storyArc']),
     status: nullable(row.status),
     researchSources: parseStringArray(row.researchSources, ['screenplay', 'researchSources']),
     assumptionsMade: parseStringArray(row.assumptionsMade, ['screenplay', 'assumptionsMade']),
@@ -215,7 +216,6 @@ function toActWithoutSequences(row: typeof acts.$inferSelect): Act {
     id: row.id,
     title: row.title,
     purpose: nullable(row.purpose),
-    keyBeats: parseStringArray(row.keyBeats, ['acts', row.id, 'keyBeats']),
     sequences: [],
   };
 }
@@ -271,6 +271,19 @@ function parseBlocks(value: string, path: string[]): Block[] {
     path,
   });
   return parsed as Block[];
+}
+
+function parseStoryArc(value: string | null, path: string[]): StoryArc | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = parseStoredJson(value, path);
+  validateScreenplayStoredJsonFragment({
+    value: parsed,
+    fragment: 'storyArc',
+    path,
+  });
+  return parsed as StoryArc;
 }
 
 function nullable(value: string | null): string | undefined {

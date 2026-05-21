@@ -5,6 +5,25 @@ export interface Reference {
   key?: string;
 }
 
+export interface StoryArc {
+  structureModel?: string;
+  acts: StoryArcAct[];
+}
+
+export interface StoryArcAct {
+  actReference: Reference;
+  title: string;
+  purpose: string;
+  estimatedPages?: string;
+  keyBeats: StoryArcKeyBeat[];
+}
+
+export interface StoryArcKeyBeat {
+  type: string;
+  label: string;
+  description: string;
+}
+
 export interface Screenplay {
   title: string;
   intendedAudience?: string;
@@ -23,7 +42,7 @@ export interface Screenplay {
   themes?: string[];
   historicalBasis?: string[];
   dramatizedElements?: string[];
-  structureModel?: string;
+  storyArc?: StoryArc;
   status?: string;
   researchSources?: string[];
   assumptionsMade?: string[];
@@ -58,7 +77,6 @@ export interface Act {
   key?: string;
   title?: string;
   purpose?: string;
-  keyBeats?: string[];
   sequences: Sequence[];
 }
 
@@ -139,6 +157,7 @@ export interface Placement {
 }
 
 export type ScreenplayOperation =
+  | { operation: 'screenplay.update'; screenplay: Screenplay }
   | { operation: 'castMember.add'; castMember: CastMember; placement?: Placement }
   | { operation: 'castMember.update'; castMember: CastMember }
   | { operation: 'castMember.delete'; castMemberId: string }

@@ -10,6 +10,7 @@ import type {
   Scene,
   ScreenplayDocument,
   Sequence,
+  StoryArc,
 } from '../../../client/screenplay.js';
 import {
   acts,
@@ -87,7 +88,16 @@ export function resolveScreenplayDocumentIds(input: {
 
   const castIds = new Set(document.cast.map((castMember) => castMember.id ?? ''));
   const locationIds = new Set(document.locations.map((location) => location.id ?? ''));
+  const actIds = new Set(document.acts.map((act) => act.id ?? ''));
   validateHandles(document, issues);
+  resolveStoryArcReferences(
+    document.screenplay.storyArc,
+    actIds,
+    keys.acts,
+    ['screenplay', 'storyArc'],
+    issues,
+    mode
+  );
   collectDuplicateNameWarnings(document.cast, ['cast'], 'cast member', warnings);
   collectDuplicateNameWarnings(document.locations, ['locations'], 'location', warnings);
   document.acts.forEach((act, actIndex) =>
@@ -275,45 +285,45 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
     session.db.transaction(() => {
       deleteScreenplayTables(session);
       session.db.insert(screenplay).values({
-      title: document.screenplay.title,
-      intendedAudience: document.screenplay.intendedAudience ?? null,
-      targetLengthLabel: document.screenplay.targetLengthLabel ?? null,
-      estimatedMinutes: document.screenplay.estimatedMinutes ?? null,
-      genrePrimary: document.screenplay.genrePrimary ?? null,
-      genreSecondary: stringifyStringArray(document.screenplay.genreSecondary, [
-        'screenplay',
-        'genreSecondary',
-      ]),
-      tone: stringifyStringArray(document.screenplay.tone, ['screenplay', 'tone']),
-      ratingIntent: document.screenplay.ratingIntent ?? null,
-      boundaries: stringifyStringArray(document.screenplay.boundaries, [
-        'screenplay',
-        'boundaries',
-      ]),
-      logline: document.screenplay.logline ?? null,
-      summary: document.screenplay.summary ?? null,
-      premiseOverview: document.screenplay.premiseOverview ?? null,
-      centralConflict: document.screenplay.centralConflict ?? null,
-      dramaticQuestion: document.screenplay.dramaticQuestion ?? null,
-      themes: stringifyStringArray(document.screenplay.themes, ['screenplay', 'themes']),
-      historicalBasis: stringifyStringArray(document.screenplay.historicalBasis, [
-        'screenplay',
-        'historicalBasis',
-      ]),
-      dramatizedElements: stringifyStringArray(document.screenplay.dramatizedElements, [
-        'screenplay',
-        'dramatizedElements',
-      ]),
-      structureModel: document.screenplay.structureModel ?? null,
-      status: document.screenplay.status ?? null,
-      researchSources: stringifyStringArray(document.screenplay.researchSources, [
-        'screenplay',
-        'researchSources',
-      ]),
-      assumptionsMade: stringifyStringArray(document.screenplay.assumptionsMade, [
-        'screenplay',
-        'assumptionsMade',
-      ]),
+        title: document.screenplay.title,
+        intendedAudience: document.screenplay.intendedAudience ?? null,
+        targetLengthLabel: document.screenplay.targetLengthLabel ?? null,
+        estimatedMinutes: document.screenplay.estimatedMinutes ?? null,
+        genrePrimary: document.screenplay.genrePrimary ?? null,
+        genreSecondary: stringifyStringArray(document.screenplay.genreSecondary, [
+          'screenplay',
+          'genreSecondary',
+        ]),
+        tone: stringifyStringArray(document.screenplay.tone, ['screenplay', 'tone']),
+        ratingIntent: document.screenplay.ratingIntent ?? null,
+        boundaries: stringifyStringArray(document.screenplay.boundaries, [
+          'screenplay',
+          'boundaries',
+        ]),
+        logline: document.screenplay.logline ?? null,
+        summary: document.screenplay.summary ?? null,
+        premiseOverview: document.screenplay.premiseOverview ?? null,
+        centralConflict: document.screenplay.centralConflict ?? null,
+        dramaticQuestion: document.screenplay.dramaticQuestion ?? null,
+        themes: stringifyStringArray(document.screenplay.themes, ['screenplay', 'themes']),
+        historicalBasis: stringifyStringArray(document.screenplay.historicalBasis, [
+          'screenplay',
+          'historicalBasis',
+        ]),
+        dramatizedElements: stringifyStringArray(document.screenplay.dramatizedElements, [
+          'screenplay',
+          'dramatizedElements',
+        ]),
+        storyArc: stringifyStoryArc(document.screenplay.storyArc, ['screenplay', 'storyArc']),
+        status: document.screenplay.status ?? null,
+        researchSources: stringifyStringArray(document.screenplay.researchSources, [
+          'screenplay',
+          'researchSources',
+        ]),
+        assumptionsMade: stringifyStringArray(document.screenplay.assumptionsMade, [
+          'screenplay',
+          'assumptionsMade',
+        ]),
       }).run();
 
     document.cast.forEach((castMember, index) => {
@@ -349,11 +359,6 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
         id: requiredId(act),
         title: act.title ?? `Act ${actIndex + 1}`,
         purpose: act.purpose ?? null,
-        keyBeats: stringifyStringArray(act.keyBeats, [
-          'acts',
-          requiredId(act),
-          'keyBeats',
-        ]),
         position: actIndex,
       }).run();
       act.sequences.forEach((sequence, sequenceIndex) => {
@@ -629,6 +634,27 @@ function collectDuplicateNameWarnings(
   });
 }
 
+function resolveStoryArcReferences(
+  storyArc: StoryArc | undefined,
+  durableIds: Set<string>,
+  keys: Map<string, string>,
+  path: string[],
+  issues: DiagnosticIssue[],
+  mode: ScreenplayResolveMode
+): void {
+  storyArc?.acts.forEach((act, actIndex) => {
+    const refPath = [...path, 'acts', String(actIndex), 'actReference'];
+    if (mode === 'canonical' && act.actReference.key) {
+      issues.push(mutationOnlyFieldError([...refPath, 'key']));
+      return;
+    }
+    const id = resolveRef(act.actReference, durableIds, keys, refPath, issues);
+    if (id) {
+      act.actReference = { id };
+    }
+  });
+}
+
 function validateTextMentions(
   text: string,
   document: ScreenplayDocument,
@@ -741,6 +767,18 @@ function stringifyBlocks(value: Block[], path: string[]): string {
   validateScreenplayStoredJsonFragment({
     value,
     fragment: 'blockArray',
+    path,
+  });
+  return JSON.stringify(value);
+}
+
+function stringifyStoryArc(value: StoryArc | undefined, path: string[]): string | null {
+  if (!value) {
+    return null;
+  }
+  validateScreenplayStoredJsonFragment({
+    value,
+    fragment: 'storyArc',
     path,
   });
   return JSON.stringify(value);

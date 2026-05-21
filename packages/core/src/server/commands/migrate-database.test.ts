@@ -39,7 +39,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(4);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(5);
     } finally {
       sqlite.close();
     }

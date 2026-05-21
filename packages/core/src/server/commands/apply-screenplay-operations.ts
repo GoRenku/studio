@@ -73,6 +73,10 @@ export function buildScreenplayDraftForOperations(
   const changes: ScreenplayCommandChange[] = [];
   for (const operation of document.operations) {
     switch (operation.operation) {
+      case 'screenplay.update':
+        draft.screenplay = operation.screenplay;
+        changes.push({ operation: operation.operation });
+        break;
       case 'castMember.add':
         insertByPlacement(draft.cast, operation.castMember, operation.placement);
         changes.push({ operation: operation.operation });

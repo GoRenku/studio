@@ -76,6 +76,7 @@ export {
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,
+  screenplayStoryArcSchema,
 } from './screenplay-json-schemas.js';
 export type {
   ReadVisualLanguageCatalogEntryInput,

@@ -18,7 +18,7 @@ export const screenplay = sqliteTable('screenplay', {
   themes: text('themes'),
   historicalBasis: text('historical_basis'),
   dramatizedElements: text('dramatized_elements'),
-  structureModel: text('structure_model'),
+  storyArc: text('story_arc'),
   status: text('status'),
   researchSources: text('research_sources'),
   assumptionsMade: text('assumptions_made'),

@@ -57,6 +57,13 @@
       "when": 1779363621662,
       "tag": "0007_remove_project_type",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1779374191053,
+      "tag": "0008_screenplay_story_arc_json",
+      "breakpoints": true
     }
   ]
 }
