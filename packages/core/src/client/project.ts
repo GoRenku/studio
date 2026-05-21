@@ -1,6 +1,6 @@
 import type { CastMember } from './cast-members.js';
 import type { ContinuityReference } from './continuity-references.js';
-import type { Episode, Sequence } from './narrative.js';
+import type { Episode, Sequence } from './screenplay-projection.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type {
   VisualLanguage,

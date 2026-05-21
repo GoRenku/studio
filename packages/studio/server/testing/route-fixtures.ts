@@ -61,7 +61,7 @@ export function makeProjectShell(project: Project): ProjectShell {
       },
       visualLanguage: { items: [], nextCursor: null },
       continuityReferences: { items: [], nextCursor: null },
-      narrative: {
+      screenplay: {
         projectType: 'standaloneMovie',
         sequences: {
           items: project.sequences.map((sequence) => ({

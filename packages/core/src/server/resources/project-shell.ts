@@ -93,7 +93,7 @@ export function readProjectShellProjection(
         cast: castPage,
         visualLanguage: visualLanguagePage,
         continuityReferences: continuityPage,
-        narrative: {
+        screenplay: {
           projectType: 'series',
           episodes: episodePage,
         },
@@ -134,7 +134,7 @@ export function readProjectShellProjection(
       cast: castPage,
       visualLanguage: visualLanguagePage,
       continuityReferences: continuityPage,
-      narrative: {
+      screenplay: {
         projectType: 'standaloneMovie',
         sequences: sequencePage,
       },

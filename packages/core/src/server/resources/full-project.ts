@@ -37,7 +37,7 @@ import {
   type ClipRecord,
   type SceneRecord,
   type SequenceRecord,
-} from '../database/access/narrative.js';
+} from '../database/access/screenplay-projection.js';
 import {
   listClipAssetRecords,
   listSceneAssetRecords,
@@ -45,7 +45,7 @@ import {
   type ClipAssetRecord,
   type SceneAssetRecord,
   type SequenceAssetRecord,
-} from '../database/access/asset-relationships/narrative.js';
+} from '../database/access/asset-relationships/screenplay-assets.js';
 import {
   listProjectLocaleRecords,
   type ProjectLocaleRecord,

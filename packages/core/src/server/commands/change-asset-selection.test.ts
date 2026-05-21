@@ -81,7 +81,7 @@ describe('change asset selection command', () => {
       return;
     }
 
-    const assetPath = 'working-assets/base/narrative/reference.txt';
+    const assetPath = 'working-assets/base/screenplay/reference.txt';
     await fs.writeFile(path.join(created.projectPath, assetPath), 'reference');
     const registered = await projectData.registerAsset({
       projectName: 'constantinople',

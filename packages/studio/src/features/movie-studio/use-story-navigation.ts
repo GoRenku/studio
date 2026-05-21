@@ -47,7 +47,7 @@ export function useStoryNavigation(
   selection: StudioSelection
 ): StoryNavigationState {
   const projectName = project.identity.name;
-  const narrative = project.navigation.narrative;
+  const screenplay = project.navigation.screenplay;
   const [episodeSequencePages, setEpisodeSequencePages] = useState<
     Map<string, SequenceNavigationPageResponse>
   >(() => new Map());
@@ -118,7 +118,7 @@ export function useStoryNavigation(
       return;
     }
     if (canResolveSelection(selection, {
-      narrative,
+      screenplay,
       episodeSequencePages,
       scenePages,
       clipPages,
@@ -153,18 +153,18 @@ export function useStoryNavigation(
     scenePages,
     selection,
     selectionContext,
-    narrative,
+    screenplay,
   ]);
 
   return useMemo(() => {
     const contextRows = rowsFromSelectionContext(selectionContext);
     const episodes =
-      narrative.projectType === 'series'
-        ? appendUniqueRows(narrative.episodes.items, contextRows.episodes)
+      screenplay.projectType === 'series'
+        ? appendUniqueRows(screenplay.episodes.items, contextRows.episodes)
         : [];
     const standaloneSequences =
-      narrative.projectType === 'standaloneMovie'
-        ? appendUniqueRows(narrative.sequences.items, contextRows.sequences)
+      screenplay.projectType === 'standaloneMovie'
+        ? appendUniqueRows(screenplay.sequences.items, contextRows.sequences)
         : [];
     const sequencesByEpisodeId = new Map<string, SequenceNavigationRow[]>();
     for (const [episodeId, page] of episodeSequencePages) {
@@ -229,7 +229,7 @@ export function useStoryNavigation(
     project.identity.type,
     scenePages,
     selectionContext,
-    narrative,
+    screenplay,
   ]);
 }
 
@@ -296,7 +296,7 @@ function rowsFromSelectionContext(context: StudioSelectionContext | null): {
 function canResolveSelection(
   selection: StudioSelection,
   input: {
-    narrative: ProjectShellWithHttp['navigation']['narrative'];
+    screenplay: ProjectShellWithHttp['navigation']['screenplay'];
     episodeSequencePages: Map<string, SequenceNavigationPageResponse>;
     scenePages: Map<string, SceneNavigationPageResponse>;
     clipPages: Map<string, ClipNavigationPageResponse>;
@@ -327,11 +327,11 @@ function canResolveSelection(
 }
 
 function sequenceRows(input: {
-  narrative: ProjectShellWithHttp['navigation']['narrative'];
+  screenplay: ProjectShellWithHttp['navigation']['screenplay'];
   episodeSequencePages: Map<string, SequenceNavigationPageResponse>;
 }): SequenceNavigationRow[] {
-  if (input.narrative.projectType === 'standaloneMovie') {
-    return input.narrative.sequences.items;
+  if (input.screenplay.projectType === 'standaloneMovie') {
+    return input.screenplay.sequences.items;
   }
   return Array.from(input.episodeSequencePages.values()).flatMap((page) => page.items);
 }

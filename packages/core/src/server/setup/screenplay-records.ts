@@ -3,7 +3,7 @@ import {
   insertClipRecord,
   insertSceneRecord,
   insertSequenceRecord,
-} from '../database/access/narrative.js';
+} from '../database/access/screenplay-projection.js';
 import type { EntityIdPrefix } from '../entity-ids.js';
 import type { ProjectSetupSequence } from './contracts.js';
 import {
@@ -12,13 +12,13 @@ import {
 } from './markdown-assets.js';
 import { numberedSlug } from './slugs.js';
 
-export interface ProjectSetupNarrativeRecords {
+export interface ProjectSetupScreenplayRecords {
   sequenceRecords: Parameters<typeof insertSequenceRecord>[1][];
   sceneRecords: Parameters<typeof insertSceneRecord>[1][];
   clipRecords: Parameters<typeof insertClipRecord>[1][];
 }
 
-export function createProjectSetupNarrativeRecords(): ProjectSetupNarrativeRecords {
+export function createProjectSetupScreenplayRecords(): ProjectSetupScreenplayRecords {
   return {
     sequenceRecords: [],
     sceneRecords: [],
@@ -34,7 +34,7 @@ export function writeSetupSequences(input: {
   now: string;
   baseLocaleId: string | null;
   markdownAssets: ProjectSetupMarkdownAsset[];
-  records: ProjectSetupNarrativeRecords;
+  records: ProjectSetupScreenplayRecords;
 }): void {
   input.sequences.forEach((sequence) => {
     const sequenceId = input.ids('sequence');

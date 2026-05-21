@@ -23,6 +23,19 @@ import type {
   SceneNavigationRow,
   SequenceNavigationRow,
 } from '../client/index.js';
+import type {
+  Act as ScreenplayAct,
+  CastMember as ScreenplayCastMember,
+  Location as ScreenplayLocation,
+  Scene as ScreenplayScene,
+  ScreenplayCommandReport,
+  ScreenplayDocument,
+  ScreenplayOperationDocument,
+  ScreenplayReadReport,
+  ScreenplayStatusReport,
+  Sequence as ScreenplaySequence,
+} from '../client/screenplay.js';
+import type { CurrentProjectReport } from './database/lifecycle/current-project.js';
 import type { RenkuConfigPathOptions } from './renku-config.js';
 import type { ProjectIdGenerator } from './entity-ids.js';
 
@@ -93,6 +106,24 @@ export interface ProjectDataService {
   exportProductionAssets(
     input: ProductionExportInput & RenkuConfigPathOptions
   ): Promise<ProductionExportSummary>;
+  openCurrentProject(input: OpenCurrentProjectInput): Promise<CurrentProjectReport>;
+  readCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
+  closeCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
+  readScreenplayStatus(input?: RenkuConfigPathOptions): Promise<ScreenplayStatusReport>;
+  readScreenplay(input?: RenkuConfigPathOptions): Promise<ScreenplayReadReport>;
+  listScreenplayCastMembers(input?: RenkuConfigPathOptions): Promise<ScreenplayCastMember[]>;
+  readScreenplayCastMember(input: ReadScreenplayCastMemberInput): Promise<ScreenplayCastMember>;
+  listScreenplayLocations(input?: RenkuConfigPathOptions): Promise<ScreenplayLocation[]>;
+  readScreenplayLocation(input: ReadScreenplayLocationInput): Promise<ScreenplayLocation>;
+  listScreenplayActs(input?: RenkuConfigPathOptions): Promise<ScreenplayAct[]>;
+  readScreenplayAct(input: ReadScreenplayActInput): Promise<ScreenplayAct>;
+  listScreenplaySequencesForAct(input: ListScreenplaySequencesForActInput): Promise<ScreenplaySequence[]>;
+  readScreenplaySequence(input: ReadScreenplaySequenceInput): Promise<ScreenplaySequence>;
+  listScreenplayScenesForSequence(input: ListScreenplayScenesForSequenceInput): Promise<ScreenplayScene[]>;
+  readScreenplayScene(input: ReadScreenplaySceneInput): Promise<ScreenplayScene>;
+  validateScreenplayJson(input: ValidateScreenplayJsonInput): Promise<ScreenplayCommandReport>;
+  createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayCommandReport>;
+  applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayCommandReport>;
 }
 
 export interface CreateProjectFromSetupInput extends RenkuConfigPathOptions {
@@ -104,6 +135,10 @@ export interface MigrateProjectDatabaseInput extends RenkuConfigPathOptions {
   projectName: string;
 }
 
+export interface OpenCurrentProjectInput extends RenkuConfigPathOptions {
+  projectName: string;
+}
+
 export interface ProjectDatabaseMigrationReport {
   projectName: string;
   projectPath: string;
@@ -112,6 +147,51 @@ export interface ProjectDatabaseMigrationReport {
 
 export interface ReadProjectInput extends RenkuConfigPathOptions {
   projectName: string;
+}
+
+export interface ReadScreenplayCastMemberInput extends RenkuConfigPathOptions {
+  castMemberId: string;
+}
+
+export interface ReadScreenplayLocationInput extends RenkuConfigPathOptions {
+  locationId: string;
+}
+
+export interface ReadScreenplayActInput extends RenkuConfigPathOptions {
+  actId: string;
+}
+
+export interface ListScreenplaySequencesForActInput extends RenkuConfigPathOptions {
+  actId: string;
+}
+
+export interface ReadScreenplaySequenceInput extends RenkuConfigPathOptions {
+  sequenceId: string;
+}
+
+export interface ListScreenplayScenesForSequenceInput extends RenkuConfigPathOptions {
+  sequenceId: string;
+}
+
+export interface ReadScreenplaySceneInput extends RenkuConfigPathOptions {
+  sceneId: string;
+}
+
+export interface ValidateScreenplayJsonInput extends RenkuConfigPathOptions {
+  document?: ScreenplayDocument | ScreenplayOperationDocument;
+  filePath?: string;
+}
+
+export interface CreateScreenplayInput extends RenkuConfigPathOptions {
+  document: ScreenplayDocument;
+  filePath?: string;
+  dryRun?: boolean;
+}
+
+export interface ApplyScreenplayOperationsInput extends RenkuConfigPathOptions {
+  document: ScreenplayOperationDocument;
+  filePath?: string;
+  dryRun?: boolean;
 }
 
 export interface ListNavigationInput extends RenkuConfigPathOptions {

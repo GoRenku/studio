@@ -70,7 +70,7 @@ export function readProjectSetupShape(input: {
     readSequence
   );
 
-  validateProjectNarrativeContainers(
+  validateProjectScreenplayContainers(
     input.context,
     project,
     episodes,
@@ -659,7 +659,7 @@ function readClip(
   };
 }
 
-function validateProjectNarrativeContainers(
+function validateProjectScreenplayContainers(
   context: ProjectSetupReaderContext,
   project: ProjectSetupProject | null,
   episodes: ProjectSetupEpisode[] | undefined,

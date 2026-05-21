@@ -93,6 +93,9 @@ unless the user explicitly asks for dependency installation.
 - Use `plans/exploration/` for rough product, UI, story, and workflow
   exploration.
 - Use `docs/decisions/` for accepted technical or product decisions.
+- During naming sweeps, do not edit old or historical plan files just to replace
+  names. Update only the currently used plan when the naming change affects the
+  active implementation direction.
 - When a plan becomes accepted project direction, summarize the final decision
   in `docs/` instead of leaving the plan as the only source of truth.
 
@@ -181,21 +184,29 @@ missing or invalid are errors.
 The accepted details live in
 `docs/architecture/structured-diagnostics.md`.
 
-## Very Important: Do Not Re-Export Another Package's API
+## Very Important: No Re-Export Stubs Or Compatibility Barrels
 
-Do not re-export types, functions, classes, or constants from another workspace
-package as a convenience layer.
+Do not add files whose purpose is to re-export types, functions, classes,
+constants, components, commands, resources, or database access helpers from
+another module. This rule applies both across workspace packages and inside a
+single package.
 
 The default behavior should be:
 
 - import from the package that owns the concept;
 - add that package as an explicit dependency when needed;
 - update callers directly when ownership changes;
-- avoid barrels that make one package look like it owns another package's API.
+- avoid barrels that make one package, folder, or layer look like it owns
+  another module's API;
+- delete obsolete import paths instead of preserving them through re-export
+  files;
+- move the implementation to the owning module if ownership has genuinely
+  changed, then update callers to import from that owner.
 
-Re-exporting is allowed only for a deliberately designed public facade that is
-documented as such. Do not add facade exports as a shortcut to avoid fixing
-callers.
+Re-exporting is allowed only in `index.ts` files when the index is an
+intentional public entrypoint for a package or clearly bounded module API. Even
+then, it must not be used as a shortcut to avoid fixing callers after a rename,
+move, or ownership change. Non-index files must not be re-export facades.
 
 ## Coding Rules
 

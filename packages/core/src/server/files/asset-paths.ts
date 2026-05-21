@@ -45,7 +45,7 @@ export type MarkdownAssetPathTarget =
 
 function targetSegments(target: MarkdownAssetPathTarget): string[] {
   if (target.kind === 'project') {
-    return ['narrative'];
+    return ['screenplay'];
   }
   if (target.kind === 'visualLanguage') {
     return ['visual-language', target.categorySlug, target.slug];

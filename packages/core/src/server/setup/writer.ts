@@ -7,7 +7,7 @@ import {
   insertEpisodeRecord,
   insertSceneRecord,
   insertSequenceRecord,
-} from '../database/access/narrative.js';
+} from '../database/access/screenplay-projection.js';
 import { insertProjectLocaleRecords } from '../database/access/project-locales.js';
 import { insertProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -25,9 +25,9 @@ import {
   type ProjectSetupMarkdownAsset,
 } from './markdown-assets.js';
 import {
-  createProjectSetupNarrativeRecords,
+  createProjectSetupScreenplayRecords,
   writeSetupSequences,
-} from './narrative-records.js';
+} from './screenplay-records.js';
 import { numberedSlug, slugify } from './slugs.js';
 import {
   buildSetupWorkspaceFolders,
@@ -196,7 +196,7 @@ export async function writeProjectSetupRecords(
   );
 
   const episodeRecords: Parameters<typeof insertEpisodeRecord>[1][] = [];
-  const narrativeRecords = createProjectSetupNarrativeRecords();
+  const screenplayRecords = createProjectSetupScreenplayRecords();
 
   const counts: ProjectCounts = {
     languages: localeRecords.length,
@@ -230,7 +230,7 @@ export async function writeProjectSetupRecords(
       now,
       baseLocaleId,
       markdownAssets,
-      records: narrativeRecords,
+      records: screenplayRecords,
     });
   });
 
@@ -242,7 +242,7 @@ export async function writeProjectSetupRecords(
     now,
     baseLocaleId,
     markdownAssets,
-    records: narrativeRecords,
+    records: screenplayRecords,
   });
 
   await Promise.all(
@@ -278,13 +278,13 @@ export async function writeProjectSetupRecords(
     for (const record of episodeRecords) {
       insertEpisodeRecord(transactionSession, record);
     }
-    for (const record of narrativeRecords.sequenceRecords) {
+    for (const record of screenplayRecords.sequenceRecords) {
       insertSequenceRecord(transactionSession, record);
     }
-    for (const record of narrativeRecords.sceneRecords) {
+    for (const record of screenplayRecords.sceneRecords) {
       insertSceneRecord(transactionSession, record);
     }
-    for (const record of narrativeRecords.clipRecords) {
+    for (const record of screenplayRecords.clipRecords) {
       insertClipRecord(transactionSession, record);
     }
     for (const asset of markdownAssets) {

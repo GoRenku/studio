@@ -1,9 +1,6 @@
-import { and, asc, count, eq, gt, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, eq, gt, lt, or, type SQL } from 'drizzle-orm';
 import {
   castMembers,
-  clips,
-  continuityReferences,
-  episodes,
   projects,
   scenes,
   sequences,
@@ -46,7 +43,6 @@ export function listCastNavigationPage(
         .select({
           id: castMembers.id,
           name: castMembers.name,
-          kind: castMembers.kind,
           role: castMembers.role,
           position: castMembers.position,
         })
@@ -60,7 +56,7 @@ export function listCastNavigationPage(
     mapRow: (row) => ({
       id: row.id,
       name: row.name,
-      kind: nullable(row.kind),
+      kind: nullable(row.role) ?? 'character',
       role: nullable(row.role),
     }),
   });
@@ -101,65 +97,18 @@ export function listContinuityReferenceNavigationPage(
   session: DatabaseSession,
   input: ListNavigationPageInput
 ): PageResponse<ContinuityReferenceNavigationRow> {
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: continuityReferences.id,
-          kind: continuityReferences.kind,
-          name: continuityReferences.name,
-          oneLineSummary: continuityReferences.oneLineSummary,
-          position: continuityReferences.position,
-        })
-        .from(continuityReferences)
-        .where(cursorCondition)
-        .orderBy(asc(continuityReferences.position), asc(continuityReferences.id))
-        .limit(limit)
-        .all(),
-    positionColumn: continuityReferences.position,
-    idColumn: continuityReferences.id,
-    mapRow: (row) => ({
-      id: row.id,
-      kind: row.kind,
-      name: row.name,
-      oneLineSummary: nullable(row.oneLineSummary),
-    }),
-  });
+  void session;
+  void input;
+  return { items: [], nextCursor: null };
 }
 
 export function listEpisodeNavigationPage(
   session: DatabaseSession,
   input: ListNavigationPageInput
 ): PageResponse<EpisodeNavigationRow> {
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: episodes.id,
-          episodeNumber: episodes.episodeNumber,
-          title: episodes.title,
-          shortTitle: episodes.shortTitle,
-          position: episodes.position,
-        })
-        .from(episodes)
-        .where(cursorCondition)
-        .orderBy(asc(episodes.position), asc(episodes.id))
-        .limit(limit)
-        .all(),
-    positionColumn: episodes.position,
-    idColumn: episodes.id,
-    mapRow: (row) => ({
-      id: row.id,
-      number: row.episodeNumber ?? row.position,
-      title: row.title,
-      shortTitle: nullable(row.shortTitle),
-      sequenceCount: countEpisodeSequences(session, row.id),
-      sceneCount: countEpisodeScenes(session, row.id),
-      clipCount: countEpisodeClips(session, row.id),
-    }),
-  });
+  void session;
+  void input;
+  return { items: [], nextCursor: null };
 }
 
 export function listStandaloneMovieSequenceNavigationPage(
@@ -176,11 +125,8 @@ export function listEpisodeSequenceNavigationPage(
   session: DatabaseSession,
   input: ListNavigationPageInput & { episodeId: string }
 ): PageResponse<SequenceNavigationRow> {
-  assertExists(session, episodes, episodes.id, input.episodeId, 'PROJECT_DATA112');
-  return listSequenceNavigationPage(session, {
-    ...input,
-    episodeId: input.episodeId,
-  });
+  void session;
+  throw new ProjectDataError('PROJECT_DATA112', `Episode was not found: ${input.episodeId}.`);
 }
 
 export function listSceneNavigationPage(
@@ -209,7 +155,7 @@ export function listSceneNavigationPage(
       id: row.id,
       sequenceId: row.sequenceId,
       title: row.title,
-      clipCount: countRows(session, clips, eq(clips.sceneId, row.id)),
+      clipCount: 0,
     }),
   });
 }
@@ -219,31 +165,7 @@ export function listClipNavigationPage(
   input: ListNavigationPageInput & { sceneId: string }
 ): PageResponse<ClipNavigationRow> {
   assertExists(session, scenes, scenes.id, input.sceneId, 'PROJECT_DATA114');
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: clips.id,
-          sceneId: clips.sceneId,
-          title: clips.title,
-          oneLineSummary: clips.oneLineSummary,
-          position: clips.position,
-        })
-        .from(clips)
-        .where(and(eq(clips.sceneId, input.sceneId), cursorCondition))
-        .orderBy(asc(clips.position), asc(clips.id))
-        .limit(limit)
-        .all(),
-    positionColumn: clips.position,
-    idColumn: clips.id,
-    mapRow: (row) => ({
-      id: row.id,
-      sceneId: row.sceneId,
-      title: row.title,
-      oneLineSummary: nullable(row.oneLineSummary),
-    }),
-  });
+  return { items: [], nextCursor: null };
 }
 
 export function readCastNavigationRow(
@@ -259,7 +181,7 @@ export function readCastNavigationRow(
     ? {
         id: castMember.id,
         name: castMember.name,
-        kind: nullable(castMember.kind),
+        kind: nullable(castMember.role) ?? 'character',
         role: nullable(castMember.role),
       }
     : null;
@@ -274,23 +196,16 @@ export function readClipParentChain(
   sequence: SequenceNavigationRow;
   episode?: EpisodeNavigationRow;
 } {
-  const clip = session.db.select().from(clips).where(eq(clips.id, clipId)).get();
-  if (!clip) {
-    throw new ProjectDataError('PROJECT_DATA116', `Clip was not found: ${clipId}.`);
-  }
-  const sceneContext = readSceneNavigationContext(session, clip.sceneId);
+  const sceneContext = readSceneNavigationContext(session, clipId);
   if (!sceneContext) {
-    throw new ProjectDataError(
-      'PROJECT_DATA116',
-      `Clip parent chain was not found: ${clipId}.`
-    );
+    throw new ProjectDataError('PROJECT_DATA116', `Clip was not found: ${clipId}.`);
   }
   return {
     clip: {
-      id: clip.id,
-      sceneId: clip.sceneId,
-      title: clip.title,
-      oneLineSummary: nullable(clip.oneLineSummary),
+      id: sceneContext.scene.id,
+      sceneId: sceneContext.scene.id,
+      title: sceneContext.scene.title,
+      oneLineSummary: undefined,
     },
     scene: sceneContext.scene,
     sequence: sceneContext.sequence,
@@ -321,7 +236,7 @@ export function readSceneNavigationContext(
       id: scene.id,
       sequenceId: scene.sequenceId,
       title: scene.title,
-      clipCount: countRows(session, clips, eq(clips.sceneId, scene.id)),
+      clipCount: 0,
     },
     sequence: sequence.sequence,
     episode: sequence.episode,
@@ -343,39 +258,14 @@ export function readSequenceNavigationContext(
   return {
     sequence: {
       id: sequence.id,
-      episodeId: nullable(sequence.episodeId),
-      number: sequenceNumber(session, sequence.id, sequence.episodeId),
+      episodeId: undefined,
+      number: sequenceNumber(session, sequence.id),
       title: sequence.title,
-      shortTitle: nullable(sequence.shortTitle),
+      shortTitle: undefined,
       sceneCount: countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
-      clipCount: countSequenceClips(session, sequence.id),
+      clipCount: 0,
     },
-    episode: sequence.episodeId
-      ? readEpisodeNavigationRow(session, sequence.episodeId) ?? undefined
-      : undefined,
-  };
-}
-
-function readEpisodeNavigationRow(
-  session: DatabaseSession,
-  episodeId: string
-): EpisodeNavigationRow | null {
-  const episode = session.db
-    .select()
-    .from(episodes)
-    .where(eq(episodes.id, episodeId))
-    .get();
-  if (!episode) {
-    return null;
-  }
-  return {
-    id: episode.id,
-    number: episode.episodeNumber ?? episode.position,
-    title: episode.title,
-    shortTitle: nullable(episode.shortTitle),
-    sequenceCount: countEpisodeSequences(session, episode.id),
-    sceneCount: countEpisodeScenes(session, episode.id),
-    clipCount: countEpisodeClips(session, episode.id),
+    episode: undefined,
   };
 }
 
@@ -399,19 +289,14 @@ function listSequenceNavigationPage(
   session: DatabaseSession,
   input: ListNavigationPageInput & { episodeId: string | null }
 ): PageResponse<SequenceNavigationRow> {
-  const parentCondition =
-    input.episodeId === null
-      ? isNull(sequences.episodeId)
-      : eq(sequences.episodeId, input.episodeId);
+  const parentCondition = input.episodeId === null ? undefined : undefined;
   return listPositionPage({
     input,
     selectPage: (limit, cursorCondition) =>
       session.db
         .select({
           id: sequences.id,
-          episodeId: sequences.episodeId,
           title: sequences.title,
-          shortTitle: sequences.shortTitle,
           position: sequences.position,
         })
         .from(sequences)
@@ -423,12 +308,12 @@ function listSequenceNavigationPage(
     idColumn: sequences.id,
     mapRow: (row) => ({
       id: row.id,
-      episodeId: nullable(row.episodeId),
-      number: sequenceNumber(session, row.id, row.episodeId),
+      episodeId: undefined,
+      number: sequenceNumber(session, row.id),
       title: row.title,
-      shortTitle: nullable(row.shortTitle),
+      shortTitle: undefined,
       sceneCount: countRows(session, scenes, eq(scenes.sequenceId, row.id)),
-      clipCount: countSequenceClips(session, row.id),
+      clipCount: 0,
     }),
   });
 }
@@ -464,50 +349,9 @@ function listPositionPage<Row extends { id: string; position: number }, Result>(
   };
 }
 
-function countEpisodeSequences(session: DatabaseSession, episodeId: string): number {
-  return countRows(session, sequences, eq(sequences.episodeId, episodeId));
-}
-
-function countEpisodeScenes(session: DatabaseSession, episodeId: string): number {
-  const sequenceRows = session.db
-    .select({ id: sequences.id })
-    .from(sequences)
-    .where(eq(sequences.episodeId, episodeId))
-    .all();
-  return sequenceRows.reduce(
-    (total, sequence) => total + countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
-    0
-  );
-}
-
-function countEpisodeClips(session: DatabaseSession, episodeId: string): number {
-  const sequenceRows = session.db
-    .select({ id: sequences.id })
-    .from(sequences)
-    .where(eq(sequences.episodeId, episodeId))
-    .all();
-  return sequenceRows.reduce(
-    (total, sequence) => total + countSequenceClips(session, sequence.id),
-    0
-  );
-}
-
-function countSequenceClips(session: DatabaseSession, sequenceId: string): number {
-  const sceneRows = session.db
-    .select({ id: scenes.id })
-    .from(scenes)
-    .where(eq(scenes.sequenceId, sequenceId))
-    .all();
-  return sceneRows.reduce(
-    (total, scene) => total + countRows(session, clips, eq(clips.sceneId, scene.id)),
-    0
-  );
-}
-
 function sequenceNumber(
   session: DatabaseSession,
-  sequenceId: string,
-  episodeId: string | null
+  sequenceId: string
 ): number {
   const sequence = session.db
     .select({ position: sequences.position })
@@ -517,22 +361,18 @@ function sequenceNumber(
   if (!sequence) {
     return 1;
   }
-  const parentCondition =
-    episodeId === null ? isNull(sequences.episodeId) : eq(sequences.episodeId, episodeId);
   const rows = session.db
     .select({ id: sequences.id })
     .from(sequences)
     .where(
       and(
-        parentCondition,
         or(
-          lt(sequences.position, sequence.position),
-          and(
-            eq(sequences.position, sequence.position),
-            lt(sequences.id, sequenceId)
-          )
+        lt(sequences.position, sequence.position),
+        and(
+          eq(sequences.position, sequence.position),
+          lt(sequences.id, sequenceId)
         )
-      )
+      ))
     )
     .all();
   return rows.length + 1;

@@ -1,10 +1,22 @@
 import { asc } from 'drizzle-orm';
-import { clipAssets, sceneAssets, sequenceAssets } from '../../../schema/index.js';
+import { sceneAssets, sequenceAssets } from '../../../schema/index.js';
+import { ProjectDataError } from '../../../project-data-error.js';
 import type { DatabaseSession } from '../../lifecycle/store.js';
 
 export type SequenceAssetRecord = typeof sequenceAssets.$inferSelect;
 export type SceneAssetRecord = typeof sceneAssets.$inferSelect;
-export type ClipAssetRecord = typeof clipAssets.$inferSelect;
+export interface ClipAssetRecord {
+  id: string;
+  clipId: string;
+  assetId: string;
+  localeId: string | null;
+  role: string;
+  sortOrder: number;
+  selection: string;
+  selectionOrder: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface InsertSequenceAssetRecord {
   id: string;
@@ -57,7 +69,12 @@ export function insertClipAssetRecord(
   session: DatabaseSession,
   record: InsertClipAssetRecord
 ): void {
-  session.db.insert(clipAssets).values(record).run();
+  void session;
+  void record;
+  throw new ProjectDataError(
+    'PROJECT_DATA207',
+    'Clip assets are not part of the current screenplay data model.'
+  );
 }
 
 export function listSequenceAssetRecords(
@@ -75,5 +92,6 @@ export function listSceneAssetRecords(session: DatabaseSession): SceneAssetRecor
 }
 
 export function listClipAssetRecords(session: DatabaseSession): ClipAssetRecord[] {
-  return session.db.select().from(clipAssets).orderBy(asc(clipAssets.sortOrder)).all();
+  void session;
+  return [];
 }

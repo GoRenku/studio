@@ -447,10 +447,10 @@ function canResolveRouteSelection(
     return project.cast.some((castEntry) => castEntry.id === selection.id);
   }
   if (selection.type === 'sequence') {
-    const narrative = project.navigation.narrative;
+    const screenplay = project.navigation.screenplay;
     return (
-      narrative.projectType === 'standaloneMovie' &&
-      narrative.sequences.items.some((sequence) => sequence.id === selection.id)
+      screenplay.projectType === 'standaloneMovie' &&
+      screenplay.sequences.items.some((sequence) => sequence.id === selection.id)
     );
   }
   if (selection.type === 'scene' || selection.type === 'clip') {

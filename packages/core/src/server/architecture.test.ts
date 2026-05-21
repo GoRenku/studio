@@ -98,7 +98,7 @@ describe('core server architecture', () => {
       'cast-members.ts',
       'continuity-references.ts',
       'diagnostics.ts',
-      'narrative.ts',
+      'screenplay.ts',
       'production-export.ts',
       'project-languages.ts',
       'project-library.ts',

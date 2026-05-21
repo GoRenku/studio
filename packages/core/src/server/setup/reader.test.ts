@@ -53,7 +53,7 @@ describe('project setup reader', () => {
     });
   });
 
-  it('accepts unified inline and file-backed narrative fields', () => {
+  it('accepts unified inline and file-backed screenplay fields', () => {
     const validation = validateProjectSetup({
       kind: 'renku.projectSetup',
       version: '0.1.0',
@@ -61,8 +61,8 @@ describe('project setup reader', () => {
         name: 'constantinople',
         title: 'Preparation of the Siege',
         type: 'standaloneMovie',
-        coverFile: 'narrative/cover.png',
-        summaryFile: 'narrative/project-summary.md',
+        coverFile: 'screenplay/cover.png',
+        summaryFile: 'screenplay/project-summary.md',
       },
       visualLanguage: [
         {
@@ -70,13 +70,13 @@ describe('project setup reader', () => {
           name: 'Low-key interiors',
           priority: 'default',
           guidance: 'Use practical light sources.',
-          promptFile: 'narrative/prompt.md',
+          promptFile: 'screenplay/prompt.md',
         },
       ],
       cast: [
         {
           name: 'Narrator',
-          descriptionFile: 'narrative/narrator.md',
+          descriptionFile: 'screenplay/narrator.md',
         },
       ],
       continuityReferences: [
@@ -89,16 +89,16 @@ describe('project setup reader', () => {
       sequences: [
         {
           title: 'Opening',
-          summaryFile: 'narrative/opening.md',
+          summaryFile: 'screenplay/opening.md',
           scenes: [
             {
               title: 'First Scene',
-              summaryFile: 'narrative/scene.md',
+              summaryFile: 'screenplay/scene.md',
               clips: [
                 {
                   title: 'First Clip',
-                  summaryFile: 'narrative/clip.md',
-                  visualIntentFile: 'narrative/visual-intent.md',
+                  summaryFile: 'screenplay/clip.md',
+                  visualIntentFile: 'screenplay/visual-intent.md',
                 },
               ],
             },
@@ -110,13 +110,13 @@ describe('project setup reader', () => {
     expect(validation.result.valid).toBe(true);
     expect(validation.setup).toMatchObject({
       project: {
-        coverFile: 'narrative/cover.png',
-        summaryFile: 'narrative/project-summary.md',
+        coverFile: 'screenplay/cover.png',
+        summaryFile: 'screenplay/project-summary.md',
       },
       visualLanguage: [
         expect.objectContaining({
           guidance: 'Use practical light sources.',
-          promptFile: 'narrative/prompt.md',
+          promptFile: 'screenplay/prompt.md',
         }),
       ],
     });
@@ -131,7 +131,7 @@ describe('project setup reader', () => {
         title: 'Preparation of the Siege',
         type: 'standaloneMovie',
         summary: 'Inline summary.',
-        summaryFile: 'narrative/project-summary.md',
+        summaryFile: 'screenplay/project-summary.md',
       },
     });
 
@@ -146,7 +146,7 @@ describe('project setup reader', () => {
     ]);
   });
 
-  it('rejects narrative containers that do not match project type', () => {
+  it('rejects screenplay containers that do not match project type', () => {
     const seriesValidation = validateProjectSetup({
       kind: 'renku.projectSetup',
       version: '0.1.0',

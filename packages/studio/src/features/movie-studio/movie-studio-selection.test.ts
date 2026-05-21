@@ -116,7 +116,7 @@ function makeProject(): ProjectShellWithHttp {
       },
       visualLanguage: { items: [], nextCursor: null },
       continuityReferences: { items: [], nextCursor: null },
-      narrative: {
+      screenplay: {
         projectType: 'standaloneMovie',
         sequences: {
           items: [

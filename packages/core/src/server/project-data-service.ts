@@ -10,6 +10,8 @@ import {
   removeAssetSelect,
   updateAssetSelect,
 } from './commands/change-asset-selection.js';
+import { applyScreenplayOperations } from './commands/apply-screenplay-operations.js';
+import { createScreenplay } from './commands/create-screenplay.js';
 import { readClipDesignResource } from './resources/clip-design.js';
 import {
   createFromSetup,
@@ -38,8 +40,28 @@ import {
 } from './resources/navigation.js';
 import { readProjectInformationResourceForProject } from './resources/project-information.js';
 import { readProjectShell } from './resources/project-shell.js';
+import {
+  listScreenplayActs,
+  listScreenplayCastMembers,
+  listScreenplayLocations,
+  listScreenplayScenesForSequence,
+  listScreenplaySequencesForAct,
+  readScreenplay,
+  readScreenplayAct,
+  readScreenplayCastMember,
+  readScreenplayLocation,
+  readScreenplayScene,
+  readScreenplaySequence,
+} from './resources/screenplay.js';
+import { readScreenplayStatus } from './resources/screenplay-status.js';
 import { readStudioSelectionContext } from './resources/selection-context.js';
 import type { ProjectDataService } from './project-data-service-contracts.js';
+import {
+  closeCurrentProject,
+  openCurrentProject,
+  readCurrentProject,
+} from './database/lifecycle/current-project.js';
+import { validateScreenplayJson } from './commands/validate-screenplay-json.js';
 
 export function createProjectDataService(): ProjectDataService {
   return {
@@ -73,5 +95,23 @@ export function createProjectDataService(): ProjectDataService {
     removeAssetSelect,
     listAssetSelects,
     exportProductionAssets,
+    openCurrentProject,
+    readCurrentProject,
+    closeCurrentProject,
+    readScreenplayStatus,
+    readScreenplay,
+    listScreenplayCastMembers,
+    readScreenplayCastMember,
+    listScreenplayLocations,
+    readScreenplayLocation,
+    listScreenplayActs,
+    readScreenplayAct,
+    listScreenplaySequencesForAct,
+    readScreenplaySequence,
+    listScreenplayScenesForSequence,
+    readScreenplayScene,
+    validateScreenplayJson,
+    createScreenplay,
+    applyScreenplayOperations,
   };
 }

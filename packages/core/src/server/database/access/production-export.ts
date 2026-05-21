@@ -2,8 +2,6 @@ import { and, asc, eq } from 'drizzle-orm';
 import {
   assetFiles,
   assets,
-  clipAssets,
-  clips,
   projectAssets,
   projectLocales,
   projects,
@@ -82,7 +80,6 @@ export function readSelectedProductionAssetRows(
     ...readProjectSelectedAssetRows(session),
     ...readSequenceSelectedAssetRows(session),
     ...readSceneSelectedAssetRows(session),
-    ...readClipSelectedAssetRows(session),
   ].sort(compareSelectedAssetRows);
 }
 
@@ -167,27 +164,12 @@ export function readClipProductionHierarchy(
   clipPosition: number;
   clipTitle: string;
 } {
-  const row = session.db
-    .select({
-      sequencePosition: sequences.position,
-      sequenceTitle: sequences.title,
-      scenePosition: scenes.position,
-      sceneTitle: scenes.title,
-      clipPosition: clips.position,
-      clipTitle: clips.title,
-    })
-    .from(clips)
-    .innerJoin(scenes, eq(scenes.id, clips.sceneId))
-    .innerJoin(sequences, eq(sequences.id, scenes.sequenceId))
-    .where(eq(clips.id, clipId))
-    .get();
-  if (!row) {
-    throw new ProjectDataError(
-      'PROJECT_DATA107',
-      `Clip target was not found for production export: ${clipId}.`
-    );
-  }
-  return row;
+  const scene = readSceneProductionHierarchy(session, clipId);
+  return {
+    ...scene,
+    clipPosition: scene.scenePosition,
+    clipTitle: scene.sceneTitle,
+  };
 }
 
 function readProjectSelectedAssetRows(
@@ -299,44 +281,6 @@ function readSceneSelectedAssetRows(
     .map((row) => ({
       ...row,
       targetKind: 'scene' as const,
-      selectionOrder: row.selectionOrder ?? 1,
-    }));
-}
-
-function readClipSelectedAssetRows(
-  session: DatabaseSession
-): SelectedProductionAssetRow[] {
-  return session.db
-    .select({
-      assetId: assets.id,
-      relationshipId: clipAssets.id,
-      assetFileId: assetFiles.id,
-      targetId: clipAssets.clipId,
-      localeId: clipAssets.localeId,
-      localeTag: projectLocales.localeTag,
-      role: clipAssets.role,
-      selectionOrder: clipAssets.selectionOrder,
-      title: assets.title,
-      sourceProjectRelativePath: assetFiles.projectRelativePath,
-      mediaKind: assetFiles.mediaKind,
-      sourceSizeBytes: assetFiles.sizeBytes,
-      sourceContentHash: assetFiles.contentHash,
-    })
-    .from(clipAssets)
-    .innerJoin(assets, eq(assets.id, clipAssets.assetId))
-    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
-    .leftJoin(projectLocales, eq(projectLocales.id, clipAssets.localeId))
-    .where(and(eq(clipAssets.selection, 'select'), eq(assets.availability, 'ready')))
-    .orderBy(
-      asc(clipAssets.clipId),
-      asc(clipAssets.role),
-      asc(clipAssets.selectionOrder),
-      asc(clipAssets.assetId)
-    )
-    .all()
-    .map((row) => ({
-      ...row,
-      targetKind: 'clip' as const,
       selectionOrder: row.selectionOrder ?? 1,
     }));
 }

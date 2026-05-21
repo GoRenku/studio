@@ -240,7 +240,7 @@ async function readReferencedMarkdownFile(
     filePath: input.filePath,
     yamlPath: input.yamlPath,
     relativeSuggestion:
-      'Use a setup-relative Markdown path such as narrative/sequence-summary.md.',
+      'Use a setup-relative Markdown path such as screenplay/sequence-summary.md.',
     insideSuggestion:
       'Move the Markdown file under the setup directory and reference it with a relative path.',
   });
@@ -280,7 +280,7 @@ async function resolveReferencedPngFile(
     setupDir: input.setupDir,
     filePath: input.filePath,
     yamlPath: input.yamlPath,
-    relativeSuggestion: 'Use a setup-relative PNG path such as narrative/cover.png.',
+    relativeSuggestion: 'Use a setup-relative PNG path such as screenplay/cover.png.',
     insideSuggestion:
       'Move the PNG file under the setup directory and reference it with a relative path.',
   });

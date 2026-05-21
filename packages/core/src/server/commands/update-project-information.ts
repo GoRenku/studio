@@ -12,7 +12,7 @@ import {
   listClipAssetRecords,
   listSceneAssetRecords,
   listSequenceAssetRecords,
-} from '../database/access/asset-relationships/narrative.js';
+} from '../database/access/asset-relationships/screenplay-assets.js';
 import {
   listProjectLocaleRecords,
   replaceProjectLocaleRecords,

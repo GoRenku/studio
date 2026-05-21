@@ -13,6 +13,7 @@ import { runInitCommand } from './commands/initialize-config-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionCommand } from './commands/production-command.js';
+import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCurrentCommand } from './commands/studio-current-command.js';
 
 export interface RenkuCliIo {
@@ -52,9 +53,12 @@ Commands
   info set             Update project information
   info clear           Clear optional project information fields
   info language        Add, update, remove, or set base languages
-  project current      Show the current Studio project
+  project current      Show the current authoring project
+  project open         Set the current authoring project
+  project close        Clear the current authoring project
   project select       Request Studio to select a project
   project migrate      Apply pending project database migrations
+  screenplay           Inspect, validate, create, and revise screenplay JSON
   studio current       Show current Studio focus and context
 
 Options
@@ -68,6 +72,8 @@ Options
   --file-role          Asset file role
   --order              Selection order
   --locale             Project locale id
+  --act                Act id for screenplay sequence list
+  --sequence           Sequence id for screenplay scene list
   --all-locales        Export every locale with production selects
   --dry-run            Report production export operations without writing
   --fresh              Rebuild production export manifest
@@ -126,6 +132,12 @@ function createCliFlags() {
       type: 'number',
     },
     locale: {
+      type: 'string',
+    },
+    act: {
+      type: 'string',
+    },
+    sequence: {
       type: 'string',
     },
     allLocales: {
@@ -294,6 +306,19 @@ export async function runRenkuCli(
         return await runProjectSelectionCommand({
           input,
           storageRoot: cli.flags.storageRoot,
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'screenplay':
+        return await runScreenplayCommand({
+          input,
+          flags: {
+            file: cli.flags.file,
+            act: cli.flags.act,
+            sequence: cli.flags.sequence,
+            dryRun: cli.flags.dryRun,
+          },
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,

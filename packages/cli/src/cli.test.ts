@@ -125,7 +125,7 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
-  it('creates a project from pre-authored narrative setup YAML', async () => {
+  it('creates a project from pre-authored screenplay setup YAML', async () => {
     const storageRoot = path.join(homeDir, 'movies');
     await runRenkuCli(['init', storageRoot], {
       homeDir,
@@ -133,7 +133,7 @@ describe('renku CLI', () => {
     });
     stdout = [];
     stderr = [];
-    const yamlPath = await writeNarrativeYaml(homeDir);
+    const yamlPath = await writeScreenplayYaml(homeDir);
 
     const exitCode = await runRenkuCli(['create', '--file', yamlPath], {
       homeDir,
@@ -235,7 +235,7 @@ describe('renku CLI', () => {
     expect(exitCode).toBe(1);
     expect(stdout).toEqual([]);
     expect(stderr.join('\n')).toContain(
-      'Usage: renku project current|select <project-name>|migrate <project-name>'
+      'Usage: renku project current|open <project-name>|close|select <project-name>|migrate <project-name>'
     );
   });
 
@@ -263,6 +263,114 @@ describe('renku CLI', () => {
       error: {
         code: 'PROJECT_DATA020',
       },
+    });
+  });
+
+  it('opens an authoring project and creates screenplay JSON through the CLI', async () => {
+    const storageRoot = path.join(homeDir, 'movies');
+    await runRenkuCli(['init', storageRoot], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    stdout = [];
+    stderr = [];
+    const yamlPath = await writeCreateYaml(homeDir);
+    const createProjectExitCode = await runRenkuCli(['create', '--file', yamlPath], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+    if (isMissingSqliteBindings(createProjectExitCode, stderr)) {
+      return;
+    }
+    expect(createProjectExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    const openExitCode = await runRenkuCli(
+      ['project', 'open', 'constantinople', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(openExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      projectName: 'constantinople',
+      projectId: expect.any(String),
+      databasePath: path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'),
+      status: 'set',
+    });
+    expect(stderr).toEqual([]);
+
+    const screenplayPath = path.join(homeDir, 'screenplay.json');
+    await fs.writeFile(
+      screenplayPath,
+      JSON.stringify(minimalScreenplayJson(), null, 2),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const screenplayExitCode = await runRenkuCli(
+      ['screenplay', 'create', '--file', screenplayPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(screenplayExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      project: { name: 'constantinople' },
+      changes: [{ operation: 'screenplay.create' }],
+      generatedIds: expect.arrayContaining([
+        expect.objectContaining({ localKey: 'urban' }),
+        expect.objectContaining({ localKey: 'foundry' }),
+      ]),
+    });
+    expect(stderr).toEqual([]);
+
+    stdout = [];
+    stderr = [];
+    const statusExitCode = await runRenkuCli(
+      ['screenplay', 'status', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(statusExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      exists: true,
+      counts: {
+        castMembers: 1,
+        locations: 1,
+        acts: 1,
+        sequences: 1,
+        scenes: 1,
+        blocks: 1,
+      },
+    });
+  });
+
+  it('prints structured JSON when screenplay create is run without a current authoring project', async () => {
+    const screenplayPath = path.join(homeDir, 'screenplay.json');
+    await fs.writeFile(
+      screenplayPath,
+      JSON.stringify(minimalScreenplayJson(), null, 2),
+      'utf8'
+    );
+
+    const exitCode = await runRenkuCli(
+      ['screenplay', 'create', '--file', screenplayPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
+      valid: false,
+      error: { code: 'PROJECT_DATA202' },
+      errors: [
+        expect.objectContaining({
+          code: 'PROJECT_DATA202',
+          suggestion: 'Run `renku project open <project-name>` before using screenplay commands.',
+        }),
+      ],
     });
   });
 
@@ -335,10 +443,10 @@ describe('renku CLI', () => {
     });
     stdout = [];
     stderr = [];
-    await fs.mkdir(path.join(homeDir, 'narrative'), { recursive: true });
-    await fs.writeFile(path.join(homeDir, 'narrative', 'cover.png'), 'cover', 'utf8');
+    await fs.mkdir(path.join(homeDir, 'screenplay'), { recursive: true });
+    await fs.writeFile(path.join(homeDir, 'screenplay', 'cover.png'), 'cover', 'utf8');
     const yamlPath = await writeCreateYaml(homeDir, {
-      extraProjectFields: '  coverFile: narrative/cover.png\n',
+      extraProjectFields: '  coverFile: screenplay/cover.png\n',
     });
 
     const exitCode = await runRenkuCli(
@@ -491,8 +599,6 @@ describe('renku CLI', () => {
           '01-opening',
           'scenes',
           '01-first-scene',
-          'clips',
-          '01-first-clip',
           'narration.wav'
         ),
         'utf8'
@@ -619,8 +725,8 @@ project:
   return yamlPath;
 }
 
-async function writeNarrativeYaml(homeDir: string): Promise<string> {
-  const yamlPath = path.join(homeDir, 'narrative.yaml');
+async function writeScreenplayYaml(homeDir: string): Promise<string> {
+  const yamlPath = path.join(homeDir, 'screenplay.yaml');
   await fs.writeFile(
     yamlPath,
     `kind: renku.projectSetup
@@ -632,7 +738,7 @@ project:
   type: standaloneMovie
   aspectRatio: "16:9"
   logline: A documentary about preparation before 1453.
-  summary: A narrative setup summary.
+  summary: A screenplay setup summary.
 
 languages:
   - localeTag: en-US
@@ -675,6 +781,57 @@ sequences:
     'utf8'
   );
   return yamlPath;
+}
+
+function minimalScreenplayJson() {
+  return {
+    kind: 'screenplay',
+    screenplay: {
+      title: 'Urban Basilica',
+    },
+    cast: [
+      {
+        localKey: 'urban',
+        name: 'Urban',
+      },
+    ],
+    locations: [
+      {
+        localKey: 'foundry',
+        name: 'Foundry',
+      },
+    ],
+    acts: [
+      {
+        localKey: 'act-one',
+        title: 'Act I',
+        sequences: [
+          {
+            localKey: 'commission',
+            title: 'The Commission',
+            scenes: [
+              {
+                localKey: 'first-scene',
+                title: 'Urban Enters The Foundry',
+                setting: {
+                  locationRefs: [{ localKey: 'foundry' }],
+                },
+                blocks: [
+                  {
+                    localKey: 'first-block',
+                    type: 'action',
+                    text: 'Urban studies the cracked bronze.',
+                    castMemberRefs: [{ localKey: 'urban' }],
+                    locationRefs: [{ localKey: 'foundry' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
 }
 
 function isMissingSqliteBindings(exitCode: number, stderr: string[]): boolean {

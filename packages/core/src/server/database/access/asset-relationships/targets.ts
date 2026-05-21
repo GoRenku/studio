@@ -3,10 +3,6 @@ import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import {
   castAssets,
   castMembers,
-  clipAssets,
-  clips,
-  continuityReferenceAssets,
-  continuityReferences,
   projectAssets,
   projectLocales,
   sceneAssets,
@@ -92,16 +88,7 @@ export function assetRelationshipTableConfig(
         targetEntityIdColumn: castMembers.id,
       };
     case 'continuityReference':
-      return {
-        target,
-        table: continuityReferenceAssets,
-        idPrefix: 'continuity_reference_asset',
-        targetValueKey: 'continuityReferenceId',
-        targetColumn: continuityReferenceAssets.continuityReferenceId,
-        targetId: target.continuityReferenceId,
-        targetEntityTable: continuityReferences,
-        targetEntityIdColumn: continuityReferences.id,
-      };
+      throw unsupportedTarget('continuityReference');
     case 'sequence':
       return {
         target,
@@ -127,15 +114,22 @@ export function assetRelationshipTableConfig(
     case 'clip':
       return {
         target,
-        table: clipAssets,
-        idPrefix: 'clip_asset',
-        targetValueKey: 'clipId',
-        targetColumn: clipAssets.clipId,
+        table: sceneAssets,
+        idPrefix: 'scene_asset',
+        targetValueKey: 'sceneId',
+        targetColumn: sceneAssets.sceneId,
         targetId: target.clipId,
-        targetEntityTable: clips,
-        targetEntityIdColumn: clips.id,
+        targetEntityTable: scenes,
+        targetEntityIdColumn: scenes.id,
       };
   }
+}
+
+function unsupportedTarget(kind: string): ProjectDataError {
+  return new ProjectDataError(
+    'PROJECT_DATA207',
+    `${kind} assets are not part of the current screenplay data model.`
+  );
 }
 
 export function assertAssetTargetExists(

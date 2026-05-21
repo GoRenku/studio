@@ -2,7 +2,7 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { Asset, RichTextAssetLink } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { ContinuityReference } from './continuity-references.js';
-import type { Clip } from './narrative.js';
+import type { Clip } from './screenplay-projection.js';
 import type {
   ProjectCounts,
   ProjectCoverImage,
@@ -35,10 +35,10 @@ export interface ProjectShellNavigation {
   cast: PageResponse<CastNavigationRow>;
   visualLanguage: PageResponse<VisualLanguageNavigationRow>;
   continuityReferences: PageResponse<ContinuityReferenceNavigationRow>;
-  narrative: NarrativeNavigation;
+  screenplay: ScreenplayNavigation;
 }
 
-export type NarrativeNavigation =
+export type ScreenplayNavigation =
   | {
       projectType: 'standaloneMovie';
       sequences: PageResponse<SequenceNavigationRow>;

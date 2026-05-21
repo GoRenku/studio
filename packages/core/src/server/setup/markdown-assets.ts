@@ -54,6 +54,12 @@ export function addProjectSetupMarkdownAsset(
   if (!input.content?.trim()) {
     return;
   }
+  if (
+    input.relationship.kind === 'continuityReference' ||
+    input.relationship.kind === 'clip'
+  ) {
+    return;
+  }
 
   const relationshipPrefix = assetRelationshipIdPrefix(
     assetRelationshipTarget(input.relationship)

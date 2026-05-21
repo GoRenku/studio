@@ -3,9 +3,6 @@ import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { ProjectCounts } from '../../../client/index.js';
 import {
   castMembers,
-  clips,
-  continuityReferences,
-  episodes,
   projectLocales,
   scenes,
   sequences,
@@ -20,11 +17,11 @@ export function readProjectCounts(session: DatabaseSession): ProjectCounts {
     visualLanguageCategories: countTable(session, visualLanguageCategories),
     visualLanguage: countTable(session, visualLanguage),
     castMembers: countTable(session, castMembers),
-    continuityReferences: countTable(session, continuityReferences),
-    episodes: countTable(session, episodes),
+    continuityReferences: 0,
+    episodes: 0,
     sequences: countTable(session, sequences),
     scenes: countTable(session, scenes),
-    clips: countTable(session, clips),
+    clips: 0,
   };
 }
 

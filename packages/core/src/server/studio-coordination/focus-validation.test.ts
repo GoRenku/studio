@@ -40,7 +40,7 @@ describe('Studio focus validation', () => {
     });
   });
 
-  it('resolves narrative and cast selections to current context', () => {
+  it('resolves screenplay and cast selections to current context', () => {
     const project = makeProject();
 
     expect(

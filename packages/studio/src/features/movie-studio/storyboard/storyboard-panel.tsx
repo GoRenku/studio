@@ -21,13 +21,13 @@ export function StoryboardPanel({
               <div className='min-w-0'>
                 <h3 className='truncate text-sm font-semibold'>{clip.title}</h3>
                 <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
-                  {clip.summary ?? 'Narrative structure loaded. Production assets pending.'}
+                  {clip.summary ?? 'Screenplay structure loaded. Production assets pending.'}
                 </p>
               </div>
               <ReadinessDot />
             </div>
             <div className='aspect-video rounded-lg border border-border/40 bg-muted/40 flex items-center justify-center text-xs text-muted-foreground'>
-              Narrative only
+              Screenplay only
             </div>
           </article>
         ))}

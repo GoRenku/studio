@@ -16,16 +16,49 @@ export async function runProjectSelectionCommand(options: {
 }): Promise<number> {
   const [subcommand, projectName] = options.input;
   if (subcommand === 'current') {
-    const current = await createStudioCoordinationService({
+    const current = await createProjectDataService().readCurrentProject({
       homeDir: options.homeDir,
-    }).readStudioCurrent();
+      storageRoot: options.storageRoot,
+    });
     if (options.json) {
-      options.io.stdout.log(JSON.stringify({ project: current.project }, null, 2));
+      options.io.stdout.log(JSON.stringify({ project: current }, null, 2));
     } else {
       options.io.stdout.log(
-        current.project
-          ? `Current project: ${current.project.name}`
-          : 'No current project is selected.'
+        current
+          ? `Current authoring project: ${current.projectName}`
+          : 'No current authoring project is set.'
+      );
+    }
+    return 0;
+  }
+
+  if (subcommand === 'open' && projectName) {
+    const report = await createProjectDataService().openCurrentProject({
+      projectName,
+      homeDir: options.homeDir,
+      storageRoot: options.storageRoot,
+    });
+    if (options.json) {
+      options.io.stdout.log(JSON.stringify(report, null, 2));
+    } else {
+      options.io.stdout.log(`Current authoring project ${report.status}: ${report.projectName}`);
+      options.io.stdout.log(`Database: ${report.databasePath}`);
+    }
+    return 0;
+  }
+
+  if (subcommand === 'close') {
+    const report = await createProjectDataService().closeCurrentProject({
+      homeDir: options.homeDir,
+      storageRoot: options.storageRoot,
+    });
+    if (options.json) {
+      options.io.stdout.log(JSON.stringify({ project: report }, null, 2));
+    } else {
+      options.io.stdout.log(
+        report
+          ? `Cleared current authoring project: ${report.projectName}`
+          : 'No current authoring project was set.'
       );
     }
     return 0;
@@ -79,7 +112,7 @@ export async function runProjectSelectionCommand(options: {
   }
 
   options.io.stderr.error(
-    'Usage: renku project current|select <project-name>|migrate <project-name>'
+    'Usage: renku project current|open <project-name>|close|select <project-name>|migrate <project-name>'
   );
   return 1;
 }

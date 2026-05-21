@@ -13,7 +13,7 @@ import {
   writeConfig,
   writeEpisodeProjectSetup,
   writeMinimalProjectSetup,
-  writeNarrativeProjectSetup,
+  writeScreenplayProjectSetup,
   writeProjectSetup,
 } from '../testing/project-data-fixtures.js';
 
@@ -121,7 +121,7 @@ describe('create project from setup', () => {
     });
     expect(project.identity.summaryAsset).toMatchObject({
       role: 'summary',
-      projectRelativePath: 'working-assets/base/narrative/project-summary.md',
+      projectRelativePath: 'working-assets/base/screenplay/project-summary.md',
     });
     expect(project.identity).not.toHaveProperty('format');
     expect(project.identity).not.toHaveProperty('resolution');
@@ -219,7 +219,7 @@ describe('create project from setup', () => {
       scenes: 1,
       clips: 2,
     });
-    expect(shell.navigation.narrative).toMatchObject({
+    expect(shell.navigation.screenplay).toMatchObject({
       projectType: 'standaloneMovie',
       sequences: {
         items: [
@@ -291,7 +291,7 @@ describe('create project from setup', () => {
           result.projectPath,
           'working-assets',
           'base',
-          'narrative',
+          'screenplay',
           'project-summary.md'
         ),
         'utf8'
@@ -359,7 +359,7 @@ describe('create project from setup', () => {
         )
         .get() as { project_relative_path: string } | undefined;
       expect(projectSummary?.project_relative_path).toBe(
-        'working-assets/base/narrative/project-summary.md'
+        'working-assets/base/screenplay/project-summary.md'
       );
     } finally {
       database.close();
@@ -397,7 +397,7 @@ describe('create project from setup', () => {
     });
     expect(shell).not.toHaveProperty('sequences');
     expect(shell).not.toHaveProperty('episodes');
-    expect(shell.navigation.narrative).toMatchObject({
+    expect(shell.navigation.screenplay).toMatchObject({
       projectType: 'series',
       episodes: {
         items: [
@@ -412,8 +412,8 @@ describe('create project from setup', () => {
     });
   });
 
-  it('creates a project from narrative setup YAML with Markdown references', async () => {
-    const setupPath = await writeNarrativeProjectSetup(homeDir);
+  it('creates a project from screenplay setup YAML with Markdown references', async () => {
+    const setupPath = await writeScreenplayProjectSetup(homeDir);
     const projectData = createProjectDataService();
 
     const result = await runCreateOrSkip(
@@ -445,7 +445,7 @@ describe('create project from setup', () => {
       warnings: [],
     });
     await expect(fs.readFile(result.coverPath!, 'utf8')).resolves.toBe(
-      'narrative cover'
+      'screenplay cover'
     );
 
     const project = await projectData.readProject({

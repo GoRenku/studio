@@ -1,8 +1,12 @@
-import { asc } from 'drizzle-orm';
-import { continuityReferences } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
-export type ContinuityReferenceRecord = typeof continuityReferences.$inferSelect;
+export interface ContinuityReferenceRecord {
+  id: string;
+  kind: string;
+  name: string;
+  oneLineSummary: string | null;
+  position: number;
+}
 
 export interface InsertContinuityReferenceRecord {
   id: string;
@@ -18,17 +22,13 @@ export function insertContinuityReferenceRecords(
   session: DatabaseSession,
   records: InsertContinuityReferenceRecord[]
 ): void {
-  for (const record of records) {
-    session.db.insert(continuityReferences).values(record).run();
-  }
+  void session;
+  void records;
 }
 
 export function listContinuityReferenceRecords(
   session: DatabaseSession
 ): ContinuityReferenceRecord[] {
-  return session.db
-    .select()
-    .from(continuityReferences)
-    .orderBy(asc(continuityReferences.position))
-    .all();
+  void session;
+  return [];
 }

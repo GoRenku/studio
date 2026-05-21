@@ -29,7 +29,7 @@ export type {
   Episode,
   Scene,
   Sequence,
-} from './narrative.js';
+} from './screenplay-projection.js';
 export type {
   ProductionExportInput,
   ProductionExportSummary,
@@ -47,7 +47,7 @@ export type {
   ClipNavigationRow,
   ContinuityReferenceNavigationRow,
   EpisodeNavigationRow,
-  NarrativeNavigation,
+  ScreenplayNavigation,
   PageResponse,
   ProjectInformationResource,
   ProjectShell,
@@ -81,6 +81,12 @@ export type {
 export type {
   ProjectDataErrorContract,
 } from './diagnostics.js';
+export {
+  screenplayBlockSchema,
+  screenplayDocumentSchema,
+  screenplayOperationsSchema,
+  screenplayReferenceSchema,
+} from './screenplay-json-schemas.js';
 export type {
   ReadVisualLanguageCatalogEntryInput,
   ReadVisualLanguageCatalogInput,

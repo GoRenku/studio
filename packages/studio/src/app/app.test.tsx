@@ -141,7 +141,7 @@ describe('App', () => {
       ...makeProject(),
       navigation: {
         ...makeProjectNavigation(),
-        narrative: {
+        screenplay: {
           projectType: 'standaloneMovie' as const,
           sequences: { items: [], nextCursor: 'after-first-page' },
         },
@@ -212,7 +212,7 @@ describe('App', () => {
       ...makeProject(),
       navigation: {
         ...makeProjectNavigation(),
-        narrative: {
+        screenplay: {
           projectType: 'standaloneMovie' as const,
           sequences: { items: [], nextCursor: 'after-first-page' },
         },
@@ -1351,7 +1351,7 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
     },
     visualLanguage: { items: [], nextCursor: null },
     continuityReferences: { items: [], nextCursor: null },
-    narrative: {
+    screenplay: {
       projectType: 'standaloneMovie',
       sequences: {
         items: [

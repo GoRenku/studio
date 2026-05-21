@@ -189,50 +189,50 @@ project:
   return setupPath;
 }
 
-export async function writeNarrativeProjectSetup(
+export async function writeScreenplayProjectSetup(
   homeDir: string,
   options: {
     projectNameLine?: string;
     projectSummaryFile?: string;
   } = {}
 ): Promise<string> {
-  const setupPath = path.join(homeDir, 'narrative-project.yaml');
+  const setupPath = path.join(homeDir, 'screenplay-project.yaml');
   await writeSetupMarkdownFixture(
     homeDir,
-    'narrative/project-summary.md',
+    'screenplay/project-summary.md',
     'Project summary from Markdown.'
   );
   await writeSetupMarkdownFixture(
     homeDir,
-    'narrative/clips/new-sultan-summary.md',
+    'screenplay/clips/new-sultan-summary.md',
     'Clip summary from Markdown.'
   );
   await writeSetupMarkdownFixture(
     homeDir,
-    'narrative/clips/new-sultan-visual-intent.md',
+    'screenplay/clips/new-sultan-visual-intent.md',
     'Quiet court staging from Markdown.'
   );
   await writeSetupMarkdownFixture(
     homeDir,
-    'narrative/visual-language/lighting-guidance.md',
+    'screenplay/visual-language/lighting-guidance.md',
     'Lighting guidance from Markdown.'
   );
   await writeSetupMarkdownFixture(
     homeDir,
-    'narrative/visual-language/lighting-prompt.md',
+    'screenplay/visual-language/lighting-prompt.md',
     'Lighting prompt from Markdown.'
   );
   await writeSetupMarkdownFixture(
     homeDir,
-    'narrative/continuity/mehmeds-council-chamber.md',
+    'screenplay/continuity/mehmeds-council-chamber.md',
     'Continuity description from Markdown.'
   );
   await writeSetupMarkdownFixture(
     homeDir,
-    'narrative/cast/mehmed-ii.md',
+    'screenplay/cast/mehmed-ii.md',
     'Cast description from Markdown.'
   );
-  await writeSetupMarkdownFixture(homeDir, 'narrative/cover.png', 'narrative cover');
+  await writeSetupMarkdownFixture(homeDir, 'screenplay/cover.png', 'screenplay cover');
   await fs.writeFile(
     setupPath,
     `kind: renku.projectSetup
@@ -242,9 +242,9 @@ project:
 ${options.projectNameLine ?? '  name: constantinople\n'}  title: Preparation of the Siege
   type: standaloneMovie
   aspectRatio: "16:9"
-  coverFile: narrative/cover.png
+  coverFile: screenplay/cover.png
   logline: A documentary about preparation before 1453.
-  summaryFile: ${options.projectSummaryFile ?? 'narrative/project-summary.md'}
+  summaryFile: ${options.projectSummaryFile ?? 'screenplay/project-summary.md'}
 
 languages:
   - localeTag: en-US
@@ -261,7 +261,7 @@ cast:
     kind: historical_figure
     role: Protagonist
     shortDescription: Young Ottoman sultan.
-    descriptionFile: narrative/cast/mehmed-ii.md
+    descriptionFile: screenplay/cast/mehmed-ii.md
 
 visualLanguageCategories:
   - name: Lighting
@@ -274,14 +274,14 @@ visualLanguage:
     name: Practical-source low-key interiors
     shortDescription: Warm practical interiors.
     priority: default
-    guidanceFile: narrative/visual-language/lighting-guidance.md
-    promptFile: narrative/visual-language/lighting-prompt.md
+    guidanceFile: screenplay/visual-language/lighting-guidance.md
+    promptFile: screenplay/visual-language/lighting-prompt.md
 
 continuityReferences:
   - kind: location
     name: Mehmed's council chamber
     shortDescription: Formal Ottoman planning room.
-    descriptionFile: narrative/continuity/mehmeds-council-chamber.md
+    descriptionFile: screenplay/continuity/mehmeds-council-chamber.md
 
 sequences:
   - title: The Young Sultan's Obsession
@@ -292,8 +292,8 @@ sequences:
         summary: Mehmed's accession is framed against Constantinople.
         clips:
           - title: The New Sultan
-            summaryFile: narrative/clips/new-sultan-summary.md
-            visualIntentFile: narrative/clips/new-sultan-visual-intent.md
+            summaryFile: screenplay/clips/new-sultan-summary.md
+            visualIntentFile: screenplay/clips/new-sultan-visual-intent.md
 `,
     'utf8'
   );

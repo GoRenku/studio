@@ -1,7 +1,7 @@
 import type { ClipDesignResource } from '../../client/index.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { readClipRecord } from '../database/access/narrative.js';
+import { readClipRecord } from '../database/access/screenplay-projection.js';
 import {
   listAssetRelationshipPage,
   MAX_RESOURCE_PAGE_LIMIT,

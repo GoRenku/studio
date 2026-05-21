@@ -102,9 +102,9 @@ export function fakeProjectDataService(): NonNullable<
       return { items: [], nextCursor: null };
     },
     async listStandaloneMovieSequenceNavigation() {
-      const narrative = makeProjectShell(project).navigation.narrative;
-      return narrative.projectType === 'standaloneMovie'
-        ? narrative.sequences
+      const screenplay = makeProjectShell(project).navigation.screenplay;
+      return screenplay.projectType === 'standaloneMovie'
+        ? screenplay.sequences
         : { items: [], nextCursor: null };
     },
     async listEpisodeSequenceNavigation() {

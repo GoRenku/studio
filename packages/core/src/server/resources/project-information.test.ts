@@ -144,7 +144,7 @@ describe('project information resource', () => {
           created.projectPath,
           'working-assets',
           'base',
-          'narrative',
+          'screenplay',
           'project-summary.md'
         ),
         'utf8'
@@ -178,7 +178,7 @@ describe('project information resource', () => {
           created.projectPath,
           'working-assets',
           'base',
-          'narrative',
+          'screenplay',
           'project-summary.md'
         ),
         'utf8'
