@@ -222,7 +222,8 @@ If there is no current authoring project, screenplay commands fail with a
 `PROJECT_DATA202` structured diagnostic and this suggestion:
 
 ```text
-Run `renku project open <project-name>` before using screenplay commands.
+Open an existing project with `renku project open <project-name>`, or create a
+new project with `renku create <project-name> --title <title>` and then open it.
 ```
 
 Direct one-off database access may exist for administrative commands such as

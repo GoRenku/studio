@@ -30,7 +30,8 @@ describe('screenplay JSON commands', () => {
       projectData.readScreenplayStatus({ homeDir })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA202',
-      suggestion: 'Run `renku project open <project-name>` before using screenplay commands.',
+      suggestion:
+        'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>` and then open it.',
     });
   });
 

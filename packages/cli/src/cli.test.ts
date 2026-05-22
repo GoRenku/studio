@@ -423,7 +423,30 @@ describe('renku CLI', () => {
       errors: [
         expect.objectContaining({
           code: 'PROJECT_DATA202',
-          suggestion: 'Run `renku project open <project-name>` before using screenplay commands.',
+          suggestion:
+            'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>` and then open it.',
+        }),
+      ],
+    });
+  });
+
+  it('prints structured JSON when screenplay show is run without a current authoring project', async () => {
+    const exitCode = await runRenkuCli(['screenplay', 'show', '--json'], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
+      valid: false,
+      error: { code: 'PROJECT_DATA202' },
+      errors: [
+        expect.objectContaining({
+          code: 'PROJECT_DATA202',
+          message: 'No current authoring project is open.',
+          suggestion:
+            'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>` and then open it.',
         }),
       ],
     });

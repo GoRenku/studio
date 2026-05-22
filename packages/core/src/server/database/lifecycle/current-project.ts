@@ -13,6 +13,8 @@ import { openProjectStore, type DatabaseSession } from './store.js';
 
 const CURRENT_PROJECT_FILE = 'current-project.json';
 const CURRENT_PROJECT_SCHEMA_GENERATION = 5;
+const CURRENT_PROJECT_REQUIRED_SUGGESTION =
+  'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>` and then open it.';
 
 export interface CurrentProject {
   projectName: string;
@@ -100,11 +102,10 @@ export async function openCurrentProjectHandle(
             'PROJECT_DATA202',
             'No current authoring project is open.',
             { path: ['currentProject'] },
-            'Run `renku project open <project-name>` before using screenplay commands.'
+            CURRENT_PROJECT_REQUIRED_SUGGESTION
           ),
         ],
-        suggestion:
-          'Run `renku project open <project-name>` before using screenplay commands.',
+        suggestion: CURRENT_PROJECT_REQUIRED_SUGGESTION,
       }
     );
   }
