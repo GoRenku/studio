@@ -359,6 +359,7 @@ export function readAssetOwnerTargets(
     ...readProjectAssetOwnerTargets(session, assetId),
     ...readScopedAssetOwnerTargets(session, assetId, 'visualLanguage'),
     ...readScopedAssetOwnerTargets(session, assetId, 'castMember'),
+    ...readScopedAssetOwnerTargets(session, assetId, 'location'),
     ...readScopedAssetOwnerTargets(session, assetId, 'sequence'),
     ...readScopedAssetOwnerTargets(session, assetId, 'scene'),
   ];
@@ -567,6 +568,7 @@ function readScopedAssetOwnerTargets(
   kind:
     | 'visualLanguage'
     | 'castMember'
+    | 'location'
     | 'sequence'
     | 'scene'
 ): AssetTarget[] {
@@ -588,6 +590,7 @@ function placeholderTarget(
   kind:
     | 'visualLanguage'
     | 'castMember'
+    | 'location'
     | 'sequence'
     | 'scene'
 ): AssetTarget {
@@ -596,6 +599,8 @@ function placeholderTarget(
       return { kind, visualLanguageId: '' };
     case 'castMember':
       return { kind, castMemberId: '' };
+    case 'location':
+      return { kind, locationId: '' };
     case 'sequence':
       return { kind, sequenceId: '' };
     case 'scene':
@@ -607,6 +612,7 @@ function targetFromKind(
   kind:
     | 'visualLanguage'
     | 'castMember'
+    | 'location'
     | 'sequence'
     | 'scene',
   targetId: string
@@ -616,6 +622,8 @@ function targetFromKind(
       return { kind, visualLanguageId: targetId };
     case 'castMember':
       return { kind, castMemberId: targetId };
+    case 'location':
+      return { kind, locationId: targetId };
     case 'sequence':
       return { kind, sequenceId: targetId };
     case 'scene':

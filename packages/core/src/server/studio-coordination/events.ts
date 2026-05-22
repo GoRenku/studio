@@ -38,11 +38,13 @@ export interface StudioProjectRef {
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'visualLanguage' }
-  | { type: 'storyboard' }
+  | { type: 'cast' }
+  | { type: 'castMember'; id: string }
+  | { type: 'locations' }
+  | { type: 'location'; id: string }
+  | { type: 'storyArc' }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string }
-  | { type: 'casting' }
-  | { type: 'cast'; id: string };
+  | { type: 'scene'; id: string };
 
 export type StudioFocusRequest =
   | { screen: 'projectLibrary' }
@@ -164,9 +166,15 @@ export type StudioCurrentContext =
       kind: 'castMember';
       id: string;
       name: string;
-      castKind?: string;
       role?: string;
-      shortDescription?: string;
+      description?: string;
+    }
+  | {
+      kind: 'location';
+      id: string;
+      name: string;
+      timePeriod?: string;
+      description?: string;
     }
   | {
       kind: 'scene';
@@ -185,7 +193,7 @@ export type StudioCurrentContext =
       scenes: { id: string; title: string; summary?: string }[];
     }
   | {
-      kind: 'storyboard';
+      kind: 'storyArc';
       projectTitle: string;
       sequences: {
         id: string;
@@ -199,8 +207,12 @@ export type StudioCurrentContext =
       entries: { id: string; name: string; intent?: string; summary?: string }[];
     }
   | {
-      kind: 'casting';
-      cast: { id: string; name: string; kind?: string; role?: string; shortDescription?: string }[];
+      kind: 'cast';
+      cast: { id: string; name: string; role?: string; description?: string }[];
+    }
+  | {
+      kind: 'locations';
+      locations: { id: string; name: string; timePeriod?: string; description?: string }[];
     };
 
 export interface StudioPendingRequest {

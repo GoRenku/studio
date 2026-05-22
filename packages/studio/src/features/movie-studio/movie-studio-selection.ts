@@ -1,24 +1,30 @@
 import type {
-  CastMember,
+  CastNavigationRow,
+  LocationNavigationRow,
   SceneNavigationRow,
   SequenceNavigationRow,
+  ActNavigationRow,
 } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
-import type { StoryNavigationState } from './use-story-navigation';
+import type { ScreenplayNavigationState } from './use-screenplay-navigation';
 
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'visualLanguage' }
-  | { type: 'storyboard' }
+  | { type: 'cast' }
+  | { type: 'castMember'; id: string }
+  | { type: 'locations' }
+  | { type: 'location'; id: string }
+  | { type: 'storyArc' }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string }
-  | { type: 'casting' }
-  | { type: 'cast'; id: string };
+  | { type: 'scene'; id: string };
 
 export interface MovieStudioLookup {
+  cast: Map<string, CastNavigationRow>;
+  locations: Map<string, LocationNavigationRow>;
+  acts: Map<string, ActNavigationRow>;
   sequences: Map<string, SequenceNavigationRow>;
   scenes: Map<string, SceneNavigationRow>;
-  cast: Map<string, CastMember>;
   scenesBySequenceId: Map<string, SceneNavigationRow[]>;
 }
 
@@ -26,101 +32,89 @@ export interface ResolvedStudioSelection {
   valid: boolean;
   kicker: string;
   summary: string;
-  scenes: SceneNavigationRow[];
+  castMember?: CastNavigationRow;
+  location?: LocationNavigationRow;
+  act?: ActNavigationRow;
+  sequence?: SequenceNavigationRow;
   scene?: SceneNavigationRow;
-  castEntry?: CastMember;
 }
 
 export function buildMovieStudioLookup(
   project: ProjectShellWithHttp,
-  storyNavigation: StoryNavigationState
+  navigation: ScreenplayNavigationState
 ): MovieStudioLookup {
+  const cast = new Map<string, CastNavigationRow>();
+  const locations = new Map<string, LocationNavigationRow>();
+  const acts = new Map<string, ActNavigationRow>();
   const sequences = new Map<string, SequenceNavigationRow>();
   const scenes = new Map<string, SceneNavigationRow>();
   const scenesBySequenceId = new Map<string, SceneNavigationRow[]>();
-  const cast = new Map(project.cast.map((entry) => [entry.id, entry]));
 
-  for (const sequence of storyNavigation.sequences) {
-    sequences.set(sequence.id, sequence);
-    const sequenceScenes = storyNavigation.scenesBySequenceId.get(sequence.id) ?? [];
-    scenesBySequenceId.set(sequence.id, sequenceScenes);
-    for (const scene of sequenceScenes) {
+  for (const castMember of navigation.cast) {
+    cast.set(castMember.id, castMember);
+  }
+  for (const location of navigation.locations) {
+    locations.set(location.id, location);
+  }
+  for (const act of navigation.acts) {
+    acts.set(act.id, act);
+  }
+  for (const rows of navigation.sequencesByActId.values()) {
+    for (const sequence of rows) {
+      sequences.set(sequence.id, sequence);
+    }
+  }
+  for (const [sequenceId, rows] of navigation.scenesBySequenceId) {
+    scenesBySequenceId.set(sequenceId, rows);
+    for (const scene of rows) {
       scenes.set(scene.id, scene);
     }
   }
 
-  return { sequences, scenes, cast, scenesBySequenceId };
+  void project;
+  return { cast, locations, acts, sequences, scenes, scenesBySequenceId };
 }
 
 export function resolveStudioSelection(
   selection: StudioSelection,
   lookup: MovieStudioLookup
 ): ResolvedStudioSelection {
-  if (selection.type === 'sequence') {
-    const sequence = lookup.sequences.get(selection.id);
-    if (sequence) {
-      return {
-        valid: true,
-        kicker: sequence.title,
-        summary: `${sequence.sceneCount} scenes.`,
-        scenes: lookup.scenesBySequenceId.get(sequence.id) ?? [],
-      };
+  switch (selection.type) {
+    case 'projectInformation':
+      return valid('Project Details', 'Project information loaded from project data.');
+    case 'visualLanguage':
+      return valid('Visual Language', 'Visual language loaded from project data.');
+    case 'cast':
+      return valid('Cast', 'Cast members loaded from screenplay data.');
+    case 'locations':
+      return valid('Locations', 'Locations loaded from screenplay data.');
+    case 'storyArc':
+      return valid('Story Arc', 'Acts and sequences loaded from screenplay data.');
+    case 'castMember': {
+      const castMember = lookup.cast.get(selection.id);
+      return castMember
+        ? { ...valid(castMember.name, castMember.role ?? 'Cast member'), castMember }
+        : invalid();
+    }
+    case 'location': {
+      const location = lookup.locations.get(selection.id);
+      return location
+        ? { ...valid(location.name, location.timePeriod ?? 'Location'), location }
+        : invalid();
+    }
+    case 'sequence': {
+      const sequence = lookup.sequences.get(selection.id);
+      return sequence
+        ? { ...valid(sequence.title, `${sequence.sceneCount} scenes.`), sequence }
+        : invalid();
+    }
+    case 'scene': {
+      const scene = lookup.scenes.get(selection.id);
+      return scene
+        ? { ...valid(scene.title, 'Scene loaded from screenplay data.'), scene }
+        : invalid();
     }
   }
-
-  if (selection.type === 'scene') {
-    const scene = lookup.scenes.get(selection.id);
-    if (scene) {
-      return {
-        valid: true,
-        kicker: scene.title,
-        summary: 'Scene structure loaded from project data.',
-        scenes: [scene],
-        scene,
-      };
-    }
-  }
-
-  if (selection.type === 'cast') {
-    const castEntry = lookup.cast.get(selection.id);
-    if (castEntry) {
-      return {
-        valid: true,
-        kicker: castEntry.name,
-        summary: castEntry.shortDescription ?? 'Cast structure loaded from project data.',
-        scenes: [],
-        castEntry,
-      };
-    }
-  }
-
-  if (selection.type === 'projectInformation') {
-    return {
-      valid: true,
-      kicker: 'Project Information',
-      summary: 'Project information loaded from project data.',
-      scenes: [],
-    };
-  }
-
-  if (selection.type === 'visualLanguage') {
-    return {
-      valid: true,
-      kicker: 'Visual Language',
-      summary: 'Visual language loaded from project data.',
-      scenes: [],
-    };
-  }
-
-  return {
-    valid: selection.type === 'casting' || selection.type === 'storyboard',
-    kicker: selection.type === 'casting' ? 'Cast' : 'Full Storyboard',
-    summary:
-      selection.type === 'casting'
-        ? 'Cast entries loaded from project data.'
-        : 'Story navigation loads sequence and scene pages as you open them.',
-    scenes: Array.from(lookup.scenes.values()),
-  };
 }
 
 export function toggleSetValue(current: Set<string>, value: string): Set<string> {
@@ -131,4 +125,16 @@ export function toggleSetValue(current: Set<string>, value: string): Set<string>
     next.add(value);
   }
   return next;
+}
+
+function valid(kicker: string, summary: string): ResolvedStudioSelection {
+  return { valid: true, kicker, summary };
+}
+
+function invalid(): ResolvedStudioSelection {
+  return {
+    valid: false,
+    kicker: 'Selection not found',
+    summary: 'The selected screenplay item could not be found.',
+  };
 }

@@ -1,4 +1,5 @@
 import type { CastMember } from './cast-members.js';
+import type { Location } from './locations.js';
 import type { Sequence } from './screenplay-projection.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type {
@@ -15,6 +16,7 @@ export interface Project {
   visualLanguageCategories: VisualLanguageCategory[];
   visualLanguage: VisualLanguage[];
   cast: CastMember[];
+  locations: Location[];
   sequences: Sequence[];
   counts: ProjectCounts;
 }
@@ -39,6 +41,8 @@ export interface ProjectCounts {
   visualLanguageCategories: number;
   visualLanguage: number;
   castMembers: number;
+  locations: number;
+  acts: number;
   sequences: number;
   scenes: number;
 }

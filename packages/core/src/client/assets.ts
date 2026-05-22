@@ -4,6 +4,7 @@ export type AssetTarget =
   | { kind: 'project' }
   | { kind: 'visualLanguage'; visualLanguageId: string }
   | { kind: 'castMember'; castMemberId: string }
+  | { kind: 'location'; locationId: string }
   | { kind: 'sequence'; sequenceId: string }
   | { kind: 'scene'; sceneId: string };
 

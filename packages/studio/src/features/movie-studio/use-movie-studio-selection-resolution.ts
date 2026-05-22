@@ -5,7 +5,7 @@ import {
   resolveStudioSelection,
   type StudioSelection,
 } from './movie-studio-selection';
-import type { StoryNavigationState } from './use-story-navigation';
+import type { ScreenplayNavigationState } from './use-screenplay-navigation';
 
 const defaultStudioSelection: StudioSelection = {
   type: 'projectInformation',
@@ -14,20 +14,22 @@ const defaultStudioSelection: StudioSelection = {
 export function useStudioSelectionResolution(
   project: ProjectShellWithHttp | null,
   selection: StudioSelection | null,
-  storyNavigation: StoryNavigationState | null
+  screenplayNavigation: ScreenplayNavigationState | null
 ) {
   const routeSelection = selection ?? defaultStudioSelection;
   const lookup = useMemo(
     () =>
-      project && storyNavigation
-        ? buildMovieStudioLookup(project, storyNavigation)
+      project && screenplayNavigation
+        ? buildMovieStudioLookup(project, screenplayNavigation)
         : {
+            acts: new Map(),
             sequences: new Map(),
             scenes: new Map(),
             cast: new Map(),
+            locations: new Map(),
             scenesBySequenceId: new Map(),
           },
-    [project, storyNavigation]
+    [project, screenplayNavigation]
   );
   const resolvedSelection = useMemo(
     () => resolveStudioSelection(routeSelection, lookup),

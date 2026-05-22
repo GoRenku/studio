@@ -21,7 +21,7 @@ describe('movie studio selection context Hono route', () => {
       {
         method: 'POST',
         body: JSON.stringify({
-          selection: { type: 'cast', id: 'cast_narrator' },
+          selection: { type: 'castMember', id: 'cast_narrator' },
         }),
         headers: { 'Content-Type': 'application/json' },
       }
@@ -30,7 +30,7 @@ describe('movie studio selection context Hono route', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       valid: true,
-      selection: { type: 'cast', id: 'cast_narrator' },
+      selection: { type: 'castMember', id: 'cast_narrator' },
     });
   });
 

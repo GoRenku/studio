@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
-import { ReadinessDot } from '../storyboard/readiness-dot';
 
 interface StudioSidebarButtonProps {
   active: boolean;
@@ -68,7 +67,7 @@ export function StudioSidebarButton({
           )}
         </Button>
       ) : (
-        <ReadinessDot />
+        <span className='mt-2 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/30' />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
+import { makeAsset } from '../testing/route-fixtures.js';
 import { createAssetsRoute } from './assets.js';
 
 function createMountedAssetsRoute() {
@@ -98,6 +99,98 @@ describe('assets Hono route', () => {
       'private, max-age=31536000, immutable'
     );
     await expect(response.text()).resolves.toBe('png bytes');
+  });
+
+  it('lists, selects, unselects, and serves location assets through ProjectDataService', async () => {
+    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('location bytes'));
+    const locationAsset = {
+      ...makeAsset('asset_location_reference'),
+      relationshipId: 'location_asset_test0001',
+      target: { kind: 'location' as const, locationId: 'location_gate' },
+      title: 'Gate reference',
+    };
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData: {
+          ...fakeProjectDataService(),
+          async listAssetPage(input) {
+            expect(input.target).toEqual({
+              kind: 'location',
+              locationId: 'location_gate',
+            });
+            return { items: [locationAsset], nextCursor: null };
+          },
+          async createAssetSelect(input) {
+            expect(input.target).toEqual({
+              kind: 'location',
+              locationId: 'location_gate',
+            });
+            return {
+              ...locationAsset,
+              selection: { kind: 'select' as const, order: 1 },
+            };
+          },
+          async removeAssetSelect(input) {
+            expect(input.target).toEqual({
+              kind: 'location',
+              locationId: 'location_gate',
+            });
+            return locationAsset;
+          },
+          async resolveProjectAssetFile(input) {
+            expect(input.target).toEqual({
+              kind: 'location',
+              locationId: 'location_gate',
+            });
+            return {
+              asset: locationAsset,
+              file: locationAsset.files[0],
+              absolutePath:
+                '/tmp/renku/constantinople/working-assets/base/locations/gate/reference.png',
+            };
+          },
+        },
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    const listed = await app.request(
+      '/constantinople/locations/location_gate/assets'
+    );
+    const selected = await app.request(
+      '/constantinople/locations/location_gate/assets/asset_location_reference/select',
+      { method: 'POST' }
+    );
+    const unselected = await app.request(
+      '/constantinople/locations/location_gate/assets/asset_location_reference/select',
+      { method: 'DELETE' }
+    );
+    const file = await app.request(
+      '/constantinople/locations/location_gate/assets/asset_location_reference/files/asset_file_cast_reference'
+    );
+
+    expect(listed.status).toBe(200);
+    await expect(listed.json()).resolves.toMatchObject({
+      assets: [{ target: { kind: 'location', locationId: 'location_gate' } }],
+    });
+    expect(selected.status).toBe(200);
+    await expect(selected.json()).resolves.toMatchObject({
+      asset: { selection: { kind: 'select', order: 1 } },
+      resourceKeys: [
+        'assets:location:location_gate',
+        'surface:location:location_gate',
+      ],
+    });
+    expect(unselected.status).toBe(200);
+    await expect(unselected.json()).resolves.toMatchObject({
+      asset: { selection: { kind: 'take' } },
+    });
+    expect(file.status).toBe(200);
+    expect(file.headers.get('Content-Type')).toBe('image/png');
+    await expect(file.text()).resolves.toBe('location bytes');
   });
 
   it('rejects malformed asset target and selection query values', async () => {

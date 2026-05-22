@@ -1,7 +1,14 @@
 import type {
   Asset,
+  ActNavigationRow,
+  CastMemberResource,
+  CastOverviewResource,
+  LocationOverviewResource,
+  LocationResource,
   CastDesignResource,
   SceneDesignResource,
+  SceneNarrativeResource,
+  ScreenplayImageReferenceWithHttp,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -12,6 +19,8 @@ import type {
   ProjectSummary,
   SceneNavigationRow,
   SequenceNavigationRow,
+  SequenceResource,
+  StoryArcResource,
 } from '@gorenku/studio-core/client';
 
 export type ProjectShellWithHttp = ProjectShell & {
@@ -52,10 +61,48 @@ export type CastDesignResourceResponse = CastDesignResource;
 
 export type SceneDesignResourceResponse = SceneDesignResource;
 
+export type CastOverviewResourceResponse = Omit<CastOverviewResource, 'cast'> & {
+  cast: {
+    items: Array<
+      CastOverviewResource['cast']['items'][number] & {
+        firstImage?: ScreenplayImageReferenceWithHttp;
+      }
+    >;
+    nextCursor: string | null;
+  };
+};
+
+export type CastMemberResourceResponse = Omit<CastMemberResource, 'firstImage'> & {
+  firstImage?: ScreenplayImageReferenceWithHttp;
+};
+
+export type LocationOverviewResourceResponse = Omit<
+  LocationOverviewResource,
+  'locations'
+> & {
+  locations: {
+    items: Array<
+      LocationOverviewResource['locations']['items'][number] & {
+        firstImage?: ScreenplayImageReferenceWithHttp;
+      }
+    >;
+    nextCursor: string | null;
+  };
+};
+
+export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
+  firstImage?: ScreenplayImageReferenceWithHttp;
+};
+
+export type StoryArcResourceResponse = StoryArcResource;
+export type SequenceResourceResponse = SequenceResource;
+export type SceneNarrativeResourceResponse = SceneNarrativeResource;
+
 export type StudioPageResponse<T> = PageResponse<T>;
 
 export type SequenceNavigationPageResponse =
   StudioPageResponse<SequenceNavigationRow>;
+export type ActNavigationPageResponse = StudioPageResponse<ActNavigationRow>;
 
 export type SceneNavigationPageResponse = StudioPageResponse<SceneNavigationRow>;
 

@@ -1,8 +1,8 @@
 import { ProjectDataError } from '../project-data-error.js';
 import type {
   CastMember,
+  Location,
   Project,
-  ProjectCounts,
   ProjectInfo,
   ProjectLanguage,
   Scene,
@@ -10,12 +10,14 @@ import type {
   VisualLanguage,
   VisualLanguageCategory,
 } from '../../client/index.js';
+import type { Location as ScreenplayLocation } from '../../client/screenplay.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
 import { resolveRenkuStorageRoot } from '../renku-config.js';
 import {
   listCastMemberRecords,
   type CastMemberRecord,
 } from '../database/access/cast-members.js';
+import { readProjectCounts } from '../database/access/project-counts.js';
 import {
   listSceneRecords,
   listSequenceRecords,
@@ -35,6 +37,7 @@ import {
   listVisualLanguageRecords,
   type VisualLanguageRecord,
 } from '../database/access/visual-language.js';
+import { listScreenplayLocationsFromSession } from '../database/access/screenplay-resource.js';
 import { resolveProjectFolder } from '../files/project-paths.js';
 import type { ReadProjectInput } from '../project-data-service-contracts.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -74,19 +77,14 @@ export function readProjectFromSession(input: {
     toVisualLanguage(row)
   );
   const cast = listCastMemberRecords(input.session).map(toCastMember);
+  const locations = listScreenplayLocationsFromSession(input.session).map(
+    toProjectLocation
+  );
   const sequenceRecords = listSequenceRecords(input.session);
   const sceneRecords = listSceneRecords(input.session);
 
   const sequences = buildSequences(sequenceRecords, sceneRecords);
-
-  const counts: ProjectCounts = {
-    languages: languages.length,
-    visualLanguageCategories: visualLanguageCategories.length,
-    visualLanguage: visualLanguage.length,
-    castMembers: cast.length,
-    sequences: sequenceRecords.length,
-    scenes: sceneRecords.length,
-  };
+  const counts = readProjectCounts(input.session);
 
   return {
     identity: toProjectInfo(
@@ -99,6 +97,7 @@ export function readProjectFromSession(input: {
     visualLanguageCategories,
     visualLanguage,
     cast,
+    locations,
     sequences,
     counts,
   };
@@ -175,10 +174,36 @@ function toVisualLanguage(row: VisualLanguageRecord): VisualLanguage {
 function toCastMember(row: CastMemberRecord): CastMember {
   return {
     id: row.id,
+    handle: row.handle,
     name: row.name,
-    kind: nullable(row.kind),
     role: nullable(row.role),
-    shortDescription: nullable(row.shortDescription),
+    age: row.age ?? undefined,
+    want: nullable(row.want),
+    need: nullable(row.need),
+    arc: nullable(row.arc),
+    voiceNotes: nullable(row.voiceNotes),
+    description: nullable(row.description),
+  };
+}
+
+function toProjectLocation(row: ScreenplayLocation): Location {
+  if (!row.id) {
+    throw new ProjectDataError(
+      'PROJECT_DATA205',
+      `Screenplay location is missing a durable id: ${row.handle}.`,
+      {
+        suggestion:
+          'Recreate or repair the screenplay data before reading project context.',
+      }
+    );
+  }
+  return {
+    id: row.id,
+    handle: row.handle,
+    name: row.name,
+    timePeriod: row.timePeriod,
+    description: row.description,
+    visualNotes: row.visualNotes,
   };
 }
 

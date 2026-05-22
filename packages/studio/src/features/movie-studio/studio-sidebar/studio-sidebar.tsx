@@ -1,32 +1,33 @@
 import { useState } from 'react';
 import {
-  Clapperboard,
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
   FileText,
   Layers3,
+  MapPin,
   Palette,
   UserRound,
   UsersRound,
 } from 'lucide-react';
 import renkuLogo from '@/assets/renku-logo.svg';
-import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import type {
+  ActNavigationRow,
   SceneNavigationRow,
   SequenceNavigationRow,
 } from '@gorenku/studio-core/client';
+import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
-import {
-  toggleSetValue,
-  type StudioSelection,
-} from '../movie-studio-selection';
-import type { StoryNavigationState } from '../use-story-navigation';
+import { toggleSetValue, type StudioSelection } from '../movie-studio-selection';
+import type { ScreenplayNavigationState } from '../use-screenplay-navigation';
 import { StudioSidebarActions } from './studio-sidebar-actions';
 import { StudioSidebarButton } from './studio-sidebar-button';
 import { StudioSidebarSection } from './studio-sidebar-section';
 
 interface StudioSidebarProps {
   project: ProjectShellWithHttp;
-  storyNavigation: StoryNavigationState;
+  screenplayNavigation: ScreenplayNavigationState;
   selection: StudioSelection;
   onSelect: (selection: StudioSelection) => void;
   onHome: () => void;
@@ -36,7 +37,7 @@ interface StudioSidebarProps {
 
 export function StudioSidebar({
   project,
-  storyNavigation,
+  screenplayNavigation,
   selection,
   onSelect,
   onHome,
@@ -44,73 +45,28 @@ export function StudioSidebar({
   onProductionExport,
 }: StudioSidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    () => new Set(['sequences', 'casting'])
+    () => new Set()
   );
+  const [expandedActs, setExpandedActs] = useState<Set<string>>(() => new Set());
   const [expandedSequences, setExpandedSequences] = useState<Set<string>>(
     () => new Set()
   );
-  const sequencesExpanded = expandedSections.has('sequences');
-  const castingExpanded = expandedSections.has('casting');
 
   const toggleSection = (section: string) => {
     setExpandedSections((current) => toggleSetValue(current, section));
+    if (section === 'acts') {
+      void screenplayNavigation.loadActs();
+    }
+  };
+
+  const toggleAct = (actId: string) => {
+    setExpandedActs((current) => toggleSetValue(current, actId));
+    void screenplayNavigation.loadActSequences(actId);
   };
 
   const toggleSequence = (sequenceId: string) => {
     setExpandedSequences((current) => toggleSetValue(current, sequenceId));
-    void storyNavigation.loadSequenceScenes(sequenceId);
-  };
-
-  const renderScene = (scene: SceneNavigationRow) => {
-    return (
-      <StudioSidebarButton
-        key={scene.id}
-        active={selection.type === 'scene' && selection.id === scene.id}
-        icon={<Clapperboard className='h-4 w-4' />}
-        label={scene.title}
-        detail='Scene workspace'
-        compact
-        onClick={() => onSelect({ type: 'scene', id: scene.id })}
-      />
-    );
-  };
-
-  const renderSequence = (sequence: SequenceNavigationRow) => {
-    const sequenceExpanded = expandedSequences.has(sequence.id);
-    const sequenceLoading = storyNavigation.loadingKeys.has(
-      `sequence-scenes:${sequence.id}`
-    );
-    const scenes = storyNavigation.scenesBySequenceId.get(sequence.id) ?? [];
-    return (
-      <div key={sequence.id} className='space-y-1'>
-        <StudioSidebarButton
-          active={selection.type === 'sequence' && selection.id === sequence.id}
-          icon={<Layers3 className='h-4 w-4' />}
-          label={sequence.shortTitle ?? sequence.title}
-          detail={`${sequence.sceneCount} scenes`}
-          onClick={() => onSelect({ type: 'sequence', id: sequence.id })}
-          disclosure={{
-            expanded: sequenceExpanded,
-            label: `${sequenceExpanded ? 'Collapse' : 'Expand'} ${
-              sequence.shortTitle ?? sequence.title
-            }`,
-            onToggle: () => toggleSequence(sequence.id),
-          }}
-        />
-        {sequenceExpanded ? (
-          <div className='ml-4 border-l border-border/30 pl-2 space-y-1'>
-            {scenes.map(renderScene)}
-            {sequenceLoading ? (
-              <p className='px-2 py-1 text-xs text-muted-foreground'>Loading scenes...</p>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  const renderStoryRows = () => {
-    return storyNavigation.sequences.map(renderSequence);
+    void screenplayNavigation.loadSequenceScenes(sequenceId);
   };
 
   return (
@@ -141,107 +97,258 @@ export function StudioSidebar({
       </div>
 
       <div className='border-b border-border/40 p-3'>
-        {project.coverUrl ? (
-          <Button
-            type='button'
-            variant='ghost'
-            onClick={() => onSelect({ type: 'projectInformation' })}
-            className={cn(
-              'group relative h-auto aspect-video w-full overflow-hidden rounded-md border bg-muted/50 p-0 text-left transition-colors hover:border-item-active-border hover:bg-muted/50',
-              'whitespace-normal',
-              selection.type === 'projectInformation'
-                ? 'border-item-active-border'
-                : 'border-border/40'
-            )}
-          >
-            <img
-              src={project.coverUrl}
-              alt=''
-              className='h-full w-full object-cover'
-            />
-            <span className='absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent' />
-            <span className='absolute inset-x-0 bottom-0 p-3'>
-              <span className='block break-words text-sm font-semibold leading-snug text-white drop-shadow-sm'>
-                {project.identity.title}
-              </span>
-            </span>
-          </Button>
-        ) : (
-          <Button
-            type='button'
-            variant='ghost'
-            onClick={() => onSelect({ type: 'projectInformation' })}
-            className={cn(
-              'flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-md border bg-muted/35 px-3 py-3 text-left transition-colors hover:border-item-active-border hover:bg-item-hover-bg',
-              selection.type === 'projectInformation'
-                ? 'border-item-active-border bg-item-active-bg'
-                : 'border-border/40'
-            )}
-          >
-            <span className='mt-0.5 rounded-sm bg-background/70 p-1.5 text-muted-foreground'>
-              <FileText className='h-4 w-4' />
-            </span>
-            <span className='min-w-0 flex-1'>
-              <span className='block truncate text-sm font-semibold'>
-                {project.identity.title}
-              </span>
-              <span className='block truncate text-xs text-muted-foreground'>
-                Project Information
-              </span>
-            </span>
-          </Button>
-        )}
+        <ProjectCard project={project} selection={selection} onSelect={onSelect} />
       </div>
 
       <div className='flex-1 min-h-0 overflow-y-auto p-2 space-y-4'>
-        <StudioSidebarSection
-          title='Visual Language'
-          detail={`${project.counts.visualLanguage} entries`}
-          icon={<Palette className='h-4 w-4' />}
+        <StudioSidebarButton
           active={selection.type === 'visualLanguage'}
-          expanded={false}
-          onSelect={() => onSelect({ type: 'visualLanguage' })}
-          onToggle={() => onSelect({ type: 'visualLanguage' })}
-        >
-          {null}
-        </StudioSidebarSection>
+          icon={<Palette className='h-4 w-4' />}
+          label='Visual Language'
+          detail={`${project.counts.visualLanguage} entries`}
+          onClick={() => onSelect({ type: 'visualLanguage' })}
+        />
 
         <StudioSidebarSection
           title='Cast'
-          detail={`${project.cast.length} entries`}
+          detail={`${project.counts.castMembers} members`}
           icon={<UsersRound className='h-4 w-4' />}
-          active={selection.type === 'casting'}
-          expanded={castingExpanded}
-          onSelect={() => onSelect({ type: 'casting' })}
-          onToggle={() => toggleSection('casting')}
+          active={selection.type === 'cast'}
+          expanded={expandedSections.has('cast')}
+          onSelect={() => onSelect({ type: 'cast' })}
+          onToggle={() => toggleSection('cast')}
         >
-          {castingExpanded
-            ? project.cast.map((castEntry) => (
+          {expandedSections.has('cast')
+            ? screenplayNavigation.cast.map((castMember) => (
                 <StudioSidebarButton
-                  key={castEntry.id}
-                  active={selection.type === 'cast' && selection.id === castEntry.id}
+                  key={castMember.id}
+                  active={
+                    selection.type === 'castMember' && selection.id === castMember.id
+                  }
                   icon={<UserRound className='h-4 w-4' />}
-                  label={castEntry.name}
-                  detail={castEntry.role ?? castEntry.kind ?? 'Cast entry'}
+                  label={castMember.name}
+                  detail={castMember.role ?? 'Cast member'}
                   compact
-                  onClick={() => onSelect({ type: 'cast', id: castEntry.id })}
+                  onClick={() =>
+                    onSelect({ type: 'castMember', id: castMember.id })
+                  }
                 />
               ))
             : null}
         </StudioSidebarSection>
 
         <StudioSidebarSection
-          title='Sequences'
-          detail={`${project.counts.sequences} sequences`}
-          icon={<Layers3 className='h-4 w-4' />}
-          active={selection.type === 'storyboard'}
-          expanded={sequencesExpanded}
-          onSelect={() => onSelect({ type: 'storyboard' })}
-          onToggle={() => toggleSection('sequences')}
+          title='Locations'
+          detail={`${project.counts.locations} locations`}
+          icon={<MapPin className='h-4 w-4' />}
+          active={selection.type === 'locations'}
+          expanded={expandedSections.has('locations')}
+          onSelect={() => onSelect({ type: 'locations' })}
+          onToggle={() => toggleSection('locations')}
         >
-          {sequencesExpanded ? renderStoryRows() : null}
+          {expandedSections.has('locations')
+            ? screenplayNavigation.locations.map((location) => (
+                <StudioSidebarButton
+                  key={location.id}
+                  active={selection.type === 'location' && selection.id === location.id}
+                  icon={<MapPin className='h-4 w-4' />}
+                  label={location.name}
+                  detail={location.timePeriod ?? 'Location'}
+                  compact
+                  onClick={() => onSelect({ type: 'location', id: location.id })}
+                />
+              ))
+            : null}
+        </StudioSidebarSection>
+
+        <StudioSidebarSection
+          title='Acts'
+          detail={`${project.counts.acts} acts`}
+          icon={<BookOpen className='h-4 w-4' />}
+          active={selection.type === 'storyArc'}
+          expanded={expandedSections.has('acts')}
+          onSelect={() => onSelect({ type: 'storyArc' })}
+          onToggle={() => toggleSection('acts')}
+        >
+          {expandedSections.has('acts')
+            ? screenplayNavigation.acts.map((act) => (
+                <ActTree
+                  key={act.id}
+                  act={act}
+                  selection={selection}
+                  sequences={screenplayNavigation.sequencesByActId.get(act.id) ?? []}
+                  scenesBySequenceId={screenplayNavigation.scenesBySequenceId}
+                  expandedActs={expandedActs}
+                  expandedSequences={expandedSequences}
+                  onToggleAct={toggleAct}
+                  onToggleSequence={toggleSequence}
+                  onSelect={onSelect}
+                />
+              ))
+            : null}
         </StudioSidebarSection>
       </div>
     </aside>
+  );
+}
+
+function ProjectCard({
+  project,
+  selection,
+  onSelect,
+}: {
+  project: ProjectShellWithHttp;
+  selection: StudioSelection;
+  onSelect: (selection: StudioSelection) => void;
+}) {
+  if (project.coverUrl) {
+    return (
+      <Button
+        type='button'
+        variant='ghost'
+        onClick={() => onSelect({ type: 'projectInformation' })}
+        className={cn(
+          'group relative h-auto aspect-video w-full overflow-hidden rounded-md border bg-muted/50 p-0 text-left transition-colors hover:border-item-active-border hover:bg-muted/50',
+          'whitespace-normal',
+          selection.type === 'projectInformation'
+            ? 'border-item-active-border'
+            : 'border-border/40'
+        )}
+      >
+        <img src={project.coverUrl} alt='' className='h-full w-full object-cover' />
+        <span className='absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent' />
+        <span className='absolute inset-x-0 bottom-0 p-3'>
+          <span className='block break-words text-sm font-semibold leading-snug text-white drop-shadow-sm'>
+            {project.identity.title}
+          </span>
+        </span>
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      type='button'
+      variant='ghost'
+      onClick={() => onSelect({ type: 'projectInformation' })}
+      className={cn(
+        'flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-md border bg-muted/35 px-3 py-3 text-left transition-colors hover:border-item-active-border hover:bg-item-hover-bg',
+        selection.type === 'projectInformation'
+          ? 'border-item-active-border bg-item-active-bg'
+          : 'border-border/40'
+      )}
+    >
+      <span className='mt-0.5 rounded-sm bg-background/70 p-1.5 text-muted-foreground'>
+        <FileText className='h-4 w-4' />
+      </span>
+      <span className='min-w-0 flex-1'>
+        <span className='block truncate text-sm font-semibold'>
+          {project.identity.title}
+        </span>
+        <span className='block truncate text-xs text-muted-foreground'>
+          Project Details
+        </span>
+      </span>
+    </Button>
+  );
+}
+
+function ActTree({
+  act,
+  selection,
+  sequences,
+  scenesBySequenceId,
+  expandedActs,
+  expandedSequences,
+  onToggleAct,
+  onToggleSequence,
+  onSelect,
+}: {
+  act: ActNavigationRow;
+  selection: StudioSelection;
+  sequences: SequenceNavigationRow[];
+  scenesBySequenceId: Map<string, SceneNavigationRow[]>;
+  expandedActs: Set<string>;
+  expandedSequences: Set<string>;
+  onToggleAct: (actId: string) => void;
+  onToggleSequence: (sequenceId: string) => void;
+  onSelect: (selection: StudioSelection) => void;
+}) {
+  const expanded = expandedActs.has(act.id);
+  return (
+    <div className='space-y-1'>
+      <Button
+        type='button'
+        variant='ghost'
+        onClick={() => onToggleAct(act.id)}
+        className='h-auto w-full justify-start gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-item-hover-bg'
+      >
+        {expanded ? <ChevronDown className='h-4 w-4' /> : <ChevronRight className='h-4 w-4' />}
+        <span className='min-w-0 flex-1 truncate'>{act.title}</span>
+      </Button>
+      {expanded ? (
+        <div className='ml-4 border-l border-border/30 pl-2 space-y-1'>
+          {sequences.map((sequence) => (
+            <SequenceTree
+              key={sequence.id}
+              sequence={sequence}
+              selection={selection}
+              scenes={scenesBySequenceId.get(sequence.id) ?? []}
+              expanded={expandedSequences.has(sequence.id)}
+              onToggleSequence={onToggleSequence}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SequenceTree({
+  sequence,
+  selection,
+  scenes,
+  expanded,
+  onToggleSequence,
+  onSelect,
+}: {
+  sequence: SequenceNavigationRow;
+  selection: StudioSelection;
+  scenes: SceneNavigationRow[];
+  expanded: boolean;
+  onToggleSequence: (sequenceId: string) => void;
+  onSelect: (selection: StudioSelection) => void;
+}) {
+  return (
+    <div className='space-y-1'>
+      <StudioSidebarButton
+        active={selection.type === 'sequence' && selection.id === sequence.id}
+        icon={<Layers3 className='h-4 w-4' />}
+        label={sequence.title}
+        detail={`${sequence.sceneCount} scenes`}
+        onClick={() => onSelect({ type: 'sequence', id: sequence.id })}
+        disclosure={{
+          expanded,
+          label: `${expanded ? 'Collapse' : 'Expand'} ${sequence.title}`,
+          onToggle: () => onToggleSequence(sequence.id),
+        }}
+      />
+      {expanded ? (
+        <div className='ml-4 border-l border-border/30 pl-2 space-y-1'>
+          {scenes.map((scene) => (
+            <StudioSidebarButton
+              key={scene.id}
+              active={selection.type === 'scene' && selection.id === scene.id}
+              icon={<FileText className='h-4 w-4' />}
+              label={scene.title}
+              detail='Scene'
+              compact
+              onClick={() => onSelect({ type: 'scene', id: scene.id })}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

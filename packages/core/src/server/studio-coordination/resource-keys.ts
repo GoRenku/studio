@@ -16,6 +16,8 @@ export function studioAssetResourceKey(target: AssetTarget): string {
       return `assets:visualLanguage:${target.visualLanguageId}`;
     case 'castMember':
       return `assets:castMember:${target.castMemberId}`;
+    case 'location':
+      return `assets:location:${target.locationId}`;
     case 'sequence':
       return `assets:sequence:${target.sequenceId}`;
     case 'scene':
@@ -28,7 +30,9 @@ export function studioSurfaceResourceKeyForAssetTarget(
 ): string | null {
   switch (target.kind) {
     case 'castMember':
-      return `surface:cast-design:${target.castMemberId}`;
+      return `surface:castMember:${target.castMemberId}`;
+    case 'location':
+      return `surface:location:${target.locationId}`;
     case 'project':
     case 'visualLanguage':
     case 'sequence':

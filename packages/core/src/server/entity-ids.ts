@@ -18,6 +18,7 @@ export type EntityIdPrefix =
   | 'project_asset'
   | 'visual_language_asset'
   | 'cast_asset'
+  | 'location_asset'
   | 'sequence_asset'
   | 'scene_asset';
 

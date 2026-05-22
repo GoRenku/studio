@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './app';
@@ -6,7 +7,6 @@ import { ThemeProvider } from './theme-provider';
 import type {
   ProjectLibraryWithHttp,
   ProjectShellWithHttp,
-  StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
@@ -57,7 +57,7 @@ describe('App', () => {
       expect(window.location.pathname).toBe('/projects/constantinople');
     });
     await screen.findByText('Project Name');
-    await screen.findByText('Sequences');
+    await screen.findByText('Acts');
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
     expect(fetchLog.some((url) => url.includes('/select'))).toBe(false);
   });
@@ -77,12 +77,12 @@ describe('App', () => {
         expectedText: 'Visual Language',
       },
       {
-        path: '/projects/constantinople/storyboard',
-        expectedText: 'Full Storyboard',
+        path: '/projects/constantinople/acts',
+        expectedText: 'Story Arc',
       },
       {
         path: '/projects/constantinople/sequences/seq_opening',
-        expectedText: '1 scenes.',
+        expectedText: 'Opening Scene',
       },
       {
         path: '/projects/constantinople/scenes/scene_1_1',
@@ -90,11 +90,11 @@ describe('App', () => {
       },
       {
         path: '/projects/constantinople/cast',
-        expectedText: 'narrator / voiceover',
+        expectedText: 'Narrator',
       },
       {
         path: '/projects/constantinople/cast/cast_narrator',
-        expectedText: 'Narrator reference',
+        expectedText: 'Voice Design',
       },
     ];
 
@@ -125,7 +125,7 @@ describe('App', () => {
 
     renderApp();
 
-    await screen.findByText('Narrator reference');
+    await screen.findByText('Voice Design');
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
@@ -138,7 +138,7 @@ describe('App', () => {
       navigation: {
         ...makeProjectNavigation(),
         screenplay: {
-          sequences: { items: [], nextCursor: 'after-first-page' },
+          acts: { items: [], nextCursor: 'after-first-page' },
         },
       },
     };
@@ -165,12 +165,33 @@ describe('App', () => {
             surface: 'sequence',
             sequence: {
               id: 'seq_late',
+              actId: 'act_late',
               number: 150,
               title: 'Late Sequence',
               sceneCount: 0,
             },
+            act: {
+              id: 'act_late',
+              title: 'Late Act',
+              sequenceCount: 1,
+              sceneCount: 0,
+            },
           },
           resourceKeys: ['navigation:movie-sequences'],
+        });
+      }
+      if (
+        url ===
+        '/studio-api/projects/constantinople/screenplay/sequences/seq_late'
+      ) {
+        return jsonResponse({
+          resource: makeSequenceResource({
+            actId: 'act_late',
+            actTitle: 'Late Act',
+            sequenceId: 'seq_late',
+            sequenceTitle: 'Late Sequence',
+            scenes: [],
+          }),
         });
       }
       if (url === '/studio-api/studio/events/current') {
@@ -207,7 +228,7 @@ describe('App', () => {
       navigation: {
         ...makeProjectNavigation(),
         screenplay: {
-          sequences: { items: [], nextCursor: 'after-first-page' },
+          acts: { items: [], nextCursor: 'after-first-page' },
         },
       },
     };
@@ -228,8 +249,15 @@ describe('App', () => {
             surface: 'scene',
             sequence: {
               id: 'seq_late',
+              actId: 'act_late',
               number: 150,
               title: 'Late Sequence',
+              sceneCount: 1,
+            },
+            act: {
+              id: 'act_late',
+              title: 'Late Act',
+              sequenceCount: 1,
               sceneCount: 1,
             },
             scene: {
@@ -241,8 +269,17 @@ describe('App', () => {
           resourceKeys: ['navigation:sequence-scenes:seq_late'],
         });
       }
-      if (url === '/studio-api/projects/constantinople/scenes/scene_late/design') {
-        return jsonResponse({ resource: null });
+      if (url === '/studio-api/projects/constantinople/screenplay/scenes/scene_late') {
+        return jsonResponse({
+          resource: makeSceneNarrativeResource({
+            sceneId: 'scene_late',
+            sceneTitle: 'Late Scene',
+            sequenceId: 'seq_late',
+            sequenceTitle: 'Late Sequence',
+            actId: 'act_late',
+            actTitle: 'Late Act',
+          }),
+        });
       }
       if (url === '/studio-api/studio/events/current') {
         return jsonResponse(emptyStudioCurrent());
@@ -274,13 +311,17 @@ describe('App', () => {
 
     renderApp();
 
+    await screen.findByText('Acts');
+    fireEvent.click(screen.getByLabelText('Expand Acts'));
+    await screen.findByText('Opening Act');
+    fireEvent.click(screen.getByText('Opening Act'));
     await screen.findByText('Opening');
     fireEvent.click(screen.getByLabelText('Expand Opening'));
 
     await screen.findByText('Opening Scene');
     expect(screen.getByText('1 scenes')).toBeTruthy();
     expect(fetchLog).toContain(
-      '/studio-api/projects/constantinople/sequences/seq_opening/scenes'
+      '/studio-api/projects/constantinople/screenplay/sequences/seq_opening/scenes'
     );
   });
 
@@ -293,10 +334,11 @@ describe('App', () => {
 
     renderApp();
 
-    await screen.findByText('Sequences');
+    await screen.findByText('Cast');
+    fireEvent.click(screen.getByLabelText('Expand Cast'));
     fireEvent.click(screen.getByText('Narrator'));
 
-    await screen.findByText('Narrator reference');
+    await screen.findByText('Voice Design');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
     );
@@ -331,8 +373,9 @@ describe('App', () => {
     renderApp();
 
     await screen.findByText('Project Name');
+    fireEvent.click(screen.getByLabelText('Expand Cast'));
     fireEvent.click(screen.getByText('Narrator'));
-    await screen.findByText('Narrator reference');
+    await screen.findByText('Voice Design');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
     );
@@ -344,7 +387,7 @@ describe('App', () => {
 
     window.history.forward();
     fireEvent.popState(window);
-    await screen.findByText('Narrator reference');
+    await screen.findByText('Voice Design');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
     );
@@ -361,8 +404,17 @@ describe('App', () => {
       ...project.cast,
       {
         id: 'cast_mehmed',
+        handle: 'mehmed',
         name: 'Mehmed',
-        kind: 'character',
+        role: 'sultan',
+      },
+    ];
+    project.navigation.cast.items = [
+      ...project.navigation.cast.items,
+      {
+        id: 'cast_mehmed',
+        handle: 'mehmed',
+        name: 'Mehmed',
         role: 'sultan',
       },
     ];
@@ -377,13 +429,20 @@ describe('App', () => {
       }
       if (
         url ===
-        '/studio-api/projects/constantinople/cast/cast_narrator/design?role=character_sheet'
+        '/studio-api/projects/constantinople/screenplay/cast/cast_narrator'
       ) {
-        return jsonResponse({ resource: makeCastDesignResource([makeCastAsset()]) });
+        return jsonResponse({
+          resource: makeCastMemberResource({
+            castMemberId: 'cast_narrator',
+            name: 'Narrator',
+            role: 'voiceover',
+            firstImageTitle: 'Narrator reference',
+          }),
+        });
       }
       if (
         url ===
-        '/studio-api/projects/constantinople/cast/cast_mehmed/design?role=character_sheet'
+        '/studio-api/projects/constantinople/screenplay/cast/cast_mehmed'
       ) {
         return mehmedAssets.promise;
       }
@@ -404,29 +463,29 @@ describe('App', () => {
 
     renderApp();
 
-    await screen.findByText('Narrator reference');
+    await screen.findByText('Voice Design');
+    fireEvent.click(screen.getByLabelText('Expand Cast'));
     fireEvent.click(screen.getByText('Mehmed'));
 
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_mehmed'
     );
     expect(screen.queryByText('Loading Renku Studio...')).toBeNull();
-    expect(screen.getByText('Loading cast assets...')).toBeTruthy();
+    expect(screen.getByText('Loading cast member...')).toBeTruthy();
     expect(projectReadCount).toBe(1);
 
     mehmedAssets.resolve(
       jsonResponse({
-        resource: makeCastDesignResource([
-          makeCastAsset({
-            assetId: 'asset_mehmed_reference',
+        resource: makeCastMemberResource({
             castMemberId: 'cast_mehmed',
+            name: 'Mehmed',
+            role: 'sultan',
             title: 'Mehmed reference',
-          }),
-        ]),
+        }),
       })
     );
 
-    await screen.findByText('Mehmed reference');
+    await screen.findByAltText('Mehmed');
     expect(projectReadCount).toBe(1);
   });
 
@@ -623,7 +682,7 @@ describe('App', () => {
       expect(eventReadCount).toBeGreaterThan(1);
       expect(window.location.pathname).toBe('/projects/constantinople');
     }, { timeout: 2_500 });
-    await screen.findByText('Sequences');
+    await screen.findByText('Acts');
     expect(selectWasCalled).toBe(false);
   });
 
@@ -638,7 +697,7 @@ describe('App', () => {
       { type: 'visualLanguage' },
       '/projects/constantinople/visual-language',
     ],
-    ['Storyboard', { type: 'storyboard' }, '/projects/constantinople/storyboard'],
+    ['Story Arc', { type: 'storyArc' }, '/projects/constantinople/acts'],
     [
       'Sequence',
       { type: 'sequence', id: 'seq_opening' },
@@ -649,10 +708,10 @@ describe('App', () => {
       { type: 'scene', id: 'scene_1_1' },
       '/projects/constantinople/scenes/scene_1_1',
     ],
-    ['Cast overview', { type: 'casting' }, '/projects/constantinople/cast'],
+    ['Cast overview', { type: 'cast' }, '/projects/constantinople/cast'],
     [
       'Cast member',
-      { type: 'cast', id: 'cast_narrator' },
+      { type: 'castMember', id: 'cast_narrator' },
       '/projects/constantinople/cast/cast_narrator',
     ],
   ] satisfies Array<[string, StudioSelection, string]>)(
@@ -788,7 +847,7 @@ describe('App', () => {
                     },
                     focus: {
                       screen: 'movieStudio',
-                      selection: { type: 'storyboard' },
+                      selection: { type: 'storyArc' },
                     },
                   },
                   {
@@ -999,7 +1058,7 @@ describe('App', () => {
         0
       );
     });
-    expect(screen.getAllByText('Sequences').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Acts').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cast').length).toBeGreaterThan(0);
   });
 
@@ -1010,7 +1069,7 @@ describe('App', () => {
     renderApp();
 
     const [projectInformationButton] =
-      await screen.findAllByText('Project Information');
+      await screen.findAllByText('Project Details');
     fireEvent.click(projectInformationButton.closest('button')!);
 
     expect(screen.getByText('Project Name')).toBeTruthy();
@@ -1058,14 +1117,20 @@ function mockStudioFetch(input: {
       const body = requestJsonBody<{ selection: StudioSelection }>(init);
       return jsonResponse(makeSelectionContextResponse(body.selection));
     }
-    if (url === '/studio-api/projects/constantinople/sequences/seq_opening/scenes') {
+    if (
+      url ===
+      '/studio-api/projects/constantinople/screenplay/acts/act_opening/sequences'
+    ) {
       return jsonResponse({
         page: {
           items: [
             {
-              id: 'scene_1_1',
-              sequenceId: 'seq_opening',
-              title: 'Opening Scene',
+              id: 'seq_opening',
+              actId: 'act_opening',
+              number: 1,
+              title: 'Opening',
+              purpose: 'Establish the siege preparations.',
+              sceneCount: 1,
             },
           ],
           nextCursor: null,
@@ -1074,9 +1139,86 @@ function mockStudioFetch(input: {
     }
     if (
       url ===
-      '/studio-api/projects/constantinople/cast/cast_narrator/design?role=character_sheet'
+      '/studio-api/projects/constantinople/screenplay/sequences/seq_opening/scenes'
     ) {
-      return jsonResponse({ resource: makeCastDesignResource([makeCastAsset()]) });
+      return jsonResponse({
+        page: {
+          items: [
+            {
+              id: 'scene_1_1',
+              sequenceId: 'seq_opening',
+              title: 'Opening Scene',
+              setting: {
+                interiorExterior: 'EXT',
+                locationIds: [],
+                timeOfDay: 'DAY',
+              },
+            },
+          ],
+          nextCursor: null,
+        },
+      });
+    }
+    if (
+      url ===
+      '/studio-api/projects/constantinople/screenplay/cast'
+    ) {
+      return jsonResponse({
+        resource: {
+          cast: {
+            items: [
+              {
+                id: 'cast_narrator',
+                handle: 'narrator',
+                name: 'Narrator',
+                role: 'voiceover',
+                firstImage: makeScreenplayImageReference({
+                  title: 'Narrator reference',
+                }),
+              },
+            ],
+            nextCursor: null,
+          },
+        },
+      });
+    }
+    if (
+      url ===
+      '/studio-api/projects/constantinople/screenplay/cast/cast_narrator'
+    ) {
+      return jsonResponse({
+        resource: makeCastMemberResource({
+          castMemberId: 'cast_narrator',
+          name: 'Narrator',
+          role: 'voiceover',
+          firstImageTitle: 'Narrator reference',
+        }),
+      });
+    }
+    if (url === '/studio-api/projects/constantinople/screenplay/locations') {
+      return jsonResponse({
+        resource: {
+          locations: { items: [], nextCursor: null },
+        },
+      });
+    }
+    if (url === '/studio-api/projects/constantinople/screenplay/story-arc') {
+      return jsonResponse({
+        resource: makeStoryArcResource(),
+      });
+    }
+    if (
+      url ===
+      '/studio-api/projects/constantinople/screenplay/sequences/seq_opening'
+    ) {
+      return jsonResponse({
+        resource: makeSequenceResource(),
+      });
+    }
+    if (url === '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1') {
+      return jsonResponse({
+        resource: makeSceneNarrativeResource(),
+      });
     }
     if (url === '/studio-api/studio/events/current') {
       return jsonResponse(emptyStudioCurrent());
@@ -1135,20 +1277,20 @@ function makeSelectionContextResponse(selection: StudioSelection) {
       diagnostics: [],
     };
   }
-  if (selection.type === 'cast') {
+  if (selection.type === 'castMember') {
     return {
       valid: true,
       selection,
       context: {
-        surface: 'cast-design',
+        surface: 'cast-member',
         castMember: {
           id: selection.id,
+          handle: 'narrator',
           name: 'Narrator',
-          kind: 'narrator',
           role: 'voiceover',
         },
       },
-      resourceKeys: [`surface:cast-design:${selection.id}`],
+      resourceKeys: [`surface:castMember:${selection.id}`],
     };
   }
   if (selection.type === 'sequence') {
@@ -1157,8 +1299,15 @@ function makeSelectionContextResponse(selection: StudioSelection) {
       selection,
       context: {
         surface: 'sequence',
+        act: {
+          id: 'act_opening',
+          title: 'Opening Act',
+          sequenceCount: 1,
+          sceneCount: 1,
+        },
         sequence: {
           id: selection.id,
+          actId: 'act_opening',
           number: 1,
           title: 'Opening',
           shortTitle: 'Opening',
@@ -1174,8 +1323,15 @@ function makeSelectionContextResponse(selection: StudioSelection) {
       selection,
       context: {
         surface: 'scene',
+        act: {
+          id: 'act_opening',
+          title: 'Opening Act',
+          sequenceCount: 1,
+          sceneCount: 1,
+        },
         sequence: {
           id: 'seq_opening',
+          actId: 'act_opening',
           number: 1,
           title: 'Opening',
           shortTitle: 'Opening',
@@ -1233,8 +1389,8 @@ function makeProject(
     cast: [
       {
         id: 'cast_narrator',
+        handle: 'narrator',
         name: 'Narrator',
-        kind: 'narrator',
         role: 'voiceover',
       },
     ],
@@ -1243,6 +1399,8 @@ function makeProject(
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
+      locations: 0,
+      acts: 1,
       sequences: 1,
       scenes: 1,
     },
@@ -1256,22 +1414,22 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
       items: [
         {
           id: 'cast_narrator',
+          handle: 'narrator',
           name: 'Narrator',
-          kind: 'narrator',
           role: 'voiceover',
         },
       ],
       nextCursor: null,
     },
     visualLanguage: { items: [], nextCursor: null },
+    locations: { items: [], nextCursor: null },
     screenplay: {
-      sequences: {
+      acts: {
         items: [
           {
-            id: 'seq_opening',
-            number: 1,
-            title: 'Opening',
-            shortTitle: 'Opening',
+            id: 'act_opening',
+            title: 'Opening Act',
+            sequenceCount: 1,
             sceneCount: 1,
           },
         ],
@@ -1281,20 +1439,185 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
   };
 }
 
-function makeCastDesignResource(assets: StudioAssetResponse[]) {
+function makeCastMemberResource(options: {
+  castMemberId?: string;
+  name?: string;
+  role?: string;
+  firstImageTitle?: string;
+  title?: string;
+}) {
+  const castMemberId = options.castMemberId ?? 'cast_narrator';
   return {
     castMember: {
-      id: 'cast_narrator',
-      name: 'Narrator',
-      kind: 'narrator',
-      role: 'voiceover',
+      id: castMemberId,
+      handle: castMemberId.replace(/^cast_/, ''),
+      name: options.name ?? 'Narrator',
+      role: options.role,
+      arc: 'Learns how to frame the siege as a human story.',
+      description: `${options.name ?? 'Narrator'} anchors the audience point of view.`,
+      voiceNotes: 'Measured, observant, and precise.',
     },
-    selectedAssets: assets.filter((asset) => asset.selection.kind === 'select'),
-    activeTakePage: {
-      items: assets.filter((asset) => asset.selection.kind === 'take'),
+    firstImage: makeScreenplayImageReference({
+      assetId: `asset_${castMemberId}_reference`,
+      title: options.firstImageTitle ?? options.title ?? 'Narrator reference',
+    }),
+  };
+}
+
+function makeStoryArcResource() {
+  return {
+    screenplay: {
+      title: 'Preparation of the Siege',
+      logline: 'A documentary about preparation before 1453.',
+      dramaticQuestion: 'Can the city withstand the siege?',
+      premiseOverview: 'A city and an army prepare for a decisive confrontation.',
+      centralConflict: 'Defenders and attackers make irreversible choices.',
+      summary: 'The story follows the pressure building before the fall.',
+      storyArc: 'Preparation, pressure, confrontation.',
+    },
+    acts: [
+      {
+        id: 'act_opening',
+        title: 'Opening Act',
+        sequenceCount: 1,
+        sceneCount: 1,
+        sequences: [
+          {
+            id: 'seq_opening',
+            actId: 'act_opening',
+            number: 1,
+            title: 'Opening',
+            purpose: 'Establish the siege preparations.',
+            sceneCount: 1,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function makeSequenceResource(
+  options: {
+    actId?: string;
+    actTitle?: string;
+    sequenceId?: string;
+    sequenceTitle?: string;
+    scenes?: Array<{
+      id: string;
+      sequenceId: string;
+      title: string;
+    }>;
+  } = {}
+) {
+  const actId = options.actId ?? 'act_opening';
+  const sequenceId = options.sequenceId ?? 'seq_opening';
+  const scenes =
+    options.scenes ??
+    [
+      {
+        id: 'scene_1_1',
+        sequenceId,
+        title: 'Opening Scene',
+        setting: {
+          interiorExterior: 'EXT',
+          locationIds: [],
+          timeOfDay: 'DAY',
+        },
+      },
+    ];
+  return {
+    act: {
+      id: actId,
+      title: options.actTitle ?? 'Opening Act',
+      sequenceCount: 1,
+      sceneCount: scenes.length,
+    },
+    sequence: {
+      id: sequenceId,
+      actId,
+      number: 1,
+      title: options.sequenceTitle ?? 'Opening',
+      purpose: 'Establish the siege preparations.',
+      sceneCount: scenes.length,
+    },
+    scenes: {
+      items: scenes,
       nextCursor: null,
     },
-    countsByRole: [],
+  };
+}
+
+function makeSceneNarrativeResource(
+  options: {
+    sceneId?: string;
+    sceneTitle?: string;
+    sequenceId?: string;
+    sequenceTitle?: string;
+    actId?: string;
+    actTitle?: string;
+  } = {}
+) {
+  const actId = options.actId ?? 'act_opening';
+  const sequenceId = options.sequenceId ?? 'seq_opening';
+  const sceneId = options.sceneId ?? 'scene_1_1';
+  return {
+    act: {
+      id: actId,
+      title: options.actTitle ?? 'Opening Act',
+      sequenceCount: 1,
+      sceneCount: 1,
+    },
+    sequence: {
+      id: sequenceId,
+      actId,
+      number: 1,
+      title: options.sequenceTitle ?? 'Opening',
+      purpose: 'Establish the siege preparations.',
+      sceneCount: 1,
+    },
+    scene: {
+      id: sceneId,
+      sequenceId,
+      title: options.sceneTitle ?? 'Opening Scene',
+      setting: {
+        interiorExterior: 'EXT',
+        locationIds: [],
+        timeOfDay: 'DAY',
+      },
+    },
+    blocks: [
+      {
+        type: 'action',
+        text: 'Workers prepare the city walls before sunrise.',
+      },
+    ],
+    castMemberLabels: {
+      cast_narrator: 'Narrator',
+    },
+    locationLabels: {},
+  };
+}
+
+function makeScreenplayImageReference(
+  options: {
+    assetId?: string;
+    relationshipId?: string;
+    assetFileId?: string;
+    title?: string;
+  } = {}
+) {
+  const assetId = options.assetId ?? 'asset_cast_reference';
+  return {
+    assetId,
+    relationshipId: options.relationshipId ?? `${assetId}_relationship`,
+    assetFileId: options.assetFileId ?? `${assetId}_file`,
+    title: options.title ?? 'Narrator reference',
+    fileRole: 'primary',
+    mediaKind: 'image',
+    mimeType: 'image/png',
+    width: 1200,
+    height: 900,
+    url: `/studio-api/assets/${assetId}`,
   };
 }
 
@@ -1318,53 +1641,11 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
+      locations: 0,
+      acts: 1,
       sequences: 1,
       scenes: 1,
     },
     validationError: null,
-  };
-}
-
-function makeCastAsset(
-  options: {
-    assetId?: string;
-    castMemberId?: string;
-    title?: string;
-  } = {}
-): StudioAssetResponse {
-  const assetId = options.assetId ?? 'asset_cast_reference';
-  const castMemberId = options.castMemberId ?? 'cast_narrator';
-  const title = options.title ?? 'Narrator reference';
-  return {
-    assetId,
-    relationshipId: `${assetId}_relationship`,
-    target: { kind: 'castMember', castMemberId },
-    localeId: null,
-    type: 'reference',
-    selection: { kind: 'take' },
-    availability: 'ready',
-    mediaKind: 'image',
-    title,
-    oneLineSummary: null,
-    origin: 'imported',
-    role: 'reference',
-    sortOrder: 1,
-    files: [
-      {
-        id: `${assetId}_file`,
-        role: 'primary',
-        projectRelativePath:
-          'working-assets/base/cast/narrator/reference.png' as StudioAssetResponse['files'][number]['projectRelativePath'],
-        mediaKind: 'image',
-        mimeType: 'image/png',
-        sizeBytes: 12,
-        contentHash: null,
-        width: 1200,
-        height: 900,
-        durationSeconds: null,
-      },
-    ],
-    createdAt: '2026-05-12T00:00:00.000Z',
-    updatedAt: '2026-05-12T00:00:00.000Z',
   };
 }

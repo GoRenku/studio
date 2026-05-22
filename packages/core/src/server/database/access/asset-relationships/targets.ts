@@ -3,6 +3,8 @@ import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import {
   castAssets,
   castMembers,
+  locationAssets,
+  locations,
   projectAssets,
   projectLocales,
   sceneAssets,
@@ -86,6 +88,17 @@ export function assetRelationshipTableConfig(
         targetId: target.castMemberId,
         targetEntityTable: castMembers,
         targetEntityIdColumn: castMembers.id,
+      };
+    case 'location':
+      return {
+        target,
+        table: locationAssets,
+        idPrefix: 'location_asset',
+        targetValueKey: 'locationId',
+        targetColumn: locationAssets.locationId,
+        targetId: target.locationId,
+        targetEntityTable: locations,
+        targetEntityIdColumn: locations.id,
       };
     case 'sequence':
       return {

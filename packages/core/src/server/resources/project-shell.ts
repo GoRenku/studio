@@ -10,7 +10,8 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   listCastNavigationPage,
-  listSequenceNavigationPage,
+  listActNavigationPage,
+  listLocationNavigationPage,
   listVisualLanguageNavigationPage,
   type ListNavigationPageInput,
 } from '../database/access/navigation.js';
@@ -53,10 +54,11 @@ export function readProjectShellProjection(
     summary: nullable(project.summary),
   };
   const castPage = listCastNavigationPage(session, input);
+  const locationPage = listLocationNavigationPage(session, input);
   const visualLanguagePage = listVisualLanguageNavigationPage(session, input);
   const counts = readProjectCounts(session);
 
-  const sequencePage = listSequenceNavigationPage(session, input);
+  const actPage = listActNavigationPage(session, input);
   return {
     identity,
     coverImage:
@@ -74,16 +76,17 @@ export function readProjectShellProjection(
     })),
     cast: castPage.items.map((row) => ({
       id: row.id,
+      handle: row.handle,
       name: row.name,
-      kind: row.kind,
       role: row.role,
     })),
     counts,
     navigation: {
       cast: castPage,
+      locations: locationPage,
       visualLanguage: visualLanguagePage,
       screenplay: {
-        sequences: sequencePage,
+        acts: actPage,
       },
     },
   };

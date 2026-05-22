@@ -24,12 +24,23 @@ import { readProject } from './resources/full-project.js';
 import { listLibrary, resolveCoverImage } from './resources/project-library.js';
 import {
   listCastNavigation,
+  listActNavigation,
+  listLocationNavigation,
   listSceneNavigation,
   listSequenceNavigation,
 } from './resources/navigation.js';
 import { readProjectInformationResourceForProject } from './resources/project-information.js';
 import { readProjectShell } from './resources/project-shell.js';
 import { readSceneDesignResource } from './resources/scene-design.js';
+import {
+  readCastMemberResource,
+  readCastOverviewResource,
+  readLocationOverviewResource,
+  readLocationResource,
+  readSceneNarrativeResource,
+  readSequenceResource,
+  readStoryArcResource,
+} from './resources/screenplay-ui.js';
 import {
   listScreenplayActs,
   listScreenplayCastMembers,
@@ -62,11 +73,20 @@ export function createProjectDataService(): ProjectDataService {
     readProjectShell,
     readProjectInformationResource: readProjectInformationResourceForProject,
     listCastNavigation,
+    listLocationNavigation,
+    listActNavigation,
     listSequenceNavigation,
     listSceneNavigation,
     listAssetPage,
     readCastDesignResource,
     readSceneDesignResource,
+    readCastOverviewResource,
+    readCastMemberResource,
+    readLocationOverviewResource,
+    readLocationResource,
+    readStoryArcResource,
+    readSequenceResource,
+    readSceneNarrativeResource,
     readStudioSelectionContext,
     updateProjectInformation,
     patchProjectInformation,

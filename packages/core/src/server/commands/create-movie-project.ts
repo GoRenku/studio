@@ -85,6 +85,8 @@ function emptyMovieCounts(): ProjectCounts {
     visualLanguageCategories: 0,
     visualLanguage: 0,
     castMembers: 0,
+    locations: 0,
+    acts: 0,
     sequences: 0,
     scenes: 0,
   };

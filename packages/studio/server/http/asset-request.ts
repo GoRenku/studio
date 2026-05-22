@@ -72,6 +72,11 @@ function readAssetTargetQuery(
         kind: 'castMember',
         castMemberId: readRequiredTargetId(query.targetId, query.targetKind),
       };
+    case 'location':
+      return {
+        kind: 'location',
+        locationId: readRequiredTargetId(query.targetId, query.targetKind),
+      };
     case 'sequence':
       return {
         kind: 'sequence',
@@ -91,10 +96,10 @@ function readAssetTargetQuery(
             'STUDIO_SERVER032',
             'targetKind must name a supported asset target.',
             { path: ['targetKind'] },
-            'Use project, visualLanguage, castMember, sequence, or scene.'
+            'Use project, visualLanguage, castMember, location, sequence, or scene.'
           ),
         ],
-        suggestion: 'Use project, visualLanguage, castMember, sequence, or scene.',
+        suggestion: 'Use project, visualLanguage, castMember, location, sequence, or scene.',
       });
   }
 }

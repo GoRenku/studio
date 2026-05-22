@@ -4,6 +4,7 @@ import {
 } from '@gorenku/studio-diagnostics';
 import type {
   CastMember,
+  Location,
   Project,
   Scene,
   Sequence,
@@ -95,12 +96,12 @@ export function resolveStudioSelectionForProject(
     };
   }
 
-  if (selection.type === 'storyboard') {
+  if (selection.type === 'storyArc') {
     return {
       ok: true,
       selection,
       context: {
-        kind: 'storyboard',
+        kind: 'storyArc',
         projectTitle: project.identity.title,
         sequences: project.sequences.map((sequence) => ({
           id: sequence.id,
@@ -115,15 +116,15 @@ export function resolveStudioSelectionForProject(
     };
   }
 
-  if (selection.type === 'casting') {
+  if (selection.type === 'cast') {
     return {
       ok: true,
       selection,
-      context: { kind: 'casting', cast: project.cast },
+      context: { kind: 'cast', cast: project.cast },
     };
   }
 
-  if (selection.type === 'cast') {
+  if (selection.type === 'castMember') {
     const castMember = findCastMember(project, selection.id);
     if (!castMember) {
       return missingSelection(
@@ -141,9 +142,48 @@ export function resolveStudioSelectionForProject(
         kind: 'castMember',
         id: castMember.id,
         name: castMember.name,
-        castKind: castMember.kind,
         role: castMember.role,
-        shortDescription: castMember.shortDescription,
+        description: castMember.description,
+      },
+    };
+  }
+
+  if (selection.type === 'locations') {
+    return {
+      ok: true,
+      selection,
+      context: {
+        kind: 'locations',
+        locations: project.locations.map((location) => ({
+          id: location.id,
+          name: location.name,
+          timePeriod: location.timePeriod,
+          description: location.description,
+        })),
+      },
+    };
+  }
+
+  if (selection.type === 'location') {
+    const location = findLocation(project, selection.id);
+    if (!location) {
+      return missingSelection(
+        selection,
+        'STUDIO_COORDINATION035',
+        `Requested location '${selection.id}' was not found.`,
+        ['focus', 'selection', 'id'],
+        'Select an existing location before requesting Studio focus.'
+      );
+    }
+    return {
+      ok: true,
+      selection,
+      context: {
+        kind: 'location',
+        id: location.id,
+        name: location.name,
+        timePeriod: location.timePeriod,
+        description: location.description,
       },
     };
   }
@@ -241,6 +281,10 @@ function findScene(
 
 function findCastMember(project: Project, id: string): CastMember | null {
   return project.cast.find((entry) => entry.id === id) ?? null;
+}
+
+function findLocation(project: Project, id: string): Location | null {
+  return project.locations.find((location) => location.id === id) ?? null;
 }
 
 function missingSelection(

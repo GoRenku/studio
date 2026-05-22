@@ -137,7 +137,7 @@ describe('StudioCoordinationService', () => {
       },
       focus: {
         screen: 'movieStudio',
-        selection: { type: 'storyboard' },
+        selection: { type: 'storyArc' },
       },
       source: {
         kind: 'studio',
@@ -298,7 +298,7 @@ describe('StudioCoordinationService', () => {
       projectRef,
       focus: {
         screen: 'movieStudio',
-        selection: { type: 'storyboard' },
+        selection: { type: 'storyArc' },
       },
       source: { kind: 'cli', command: 'renku project select' },
     });
@@ -338,7 +338,7 @@ describe('StudioCoordinationService', () => {
       projectRef,
       focus: {
         screen: 'movieStudio',
-        selection: { type: 'storyboard' },
+        selection: { type: 'storyArc' },
       },
       source: { kind: 'cli', command: 'renku project select' },
     });

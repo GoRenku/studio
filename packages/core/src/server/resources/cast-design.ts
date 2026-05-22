@@ -44,10 +44,15 @@ export function readCastDesignResourceProjection(
   return {
     castMember: {
       id: castMember.id,
+      handle: castMember.handle,
       name: castMember.name,
-      kind: castMember.kind ?? undefined,
       role: castMember.role ?? undefined,
-      shortDescription: castMember.shortDescription ?? undefined,
+      age: castMember.age ?? undefined,
+      want: castMember.want ?? undefined,
+      need: castMember.need ?? undefined,
+      arc: castMember.arc ?? undefined,
+      voiceNotes: castMember.voiceNotes ?? undefined,
+      description: castMember.description ?? undefined,
     },
     selectedAssets: listAssetRelationshipPage(session, {
       target,

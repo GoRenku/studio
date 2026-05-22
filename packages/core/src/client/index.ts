@@ -20,6 +20,9 @@ export type {
   CastMember,
 } from './cast-members.js';
 export type {
+  Location,
+} from './locations.js';
+export type {
   Scene,
   Sequence,
 } from './screenplay-projection.js';
@@ -36,14 +39,25 @@ export type {
   CastDesignAssetRoleCount,
   CastDesignResource,
   CastNavigationRow,
+  ActNavigationRow,
+  CastMemberResource,
+  CastOverviewResource,
+  LocationNavigationRow,
+  LocationOverviewResource,
+  LocationResource,
   SceneDesignResource,
+  SceneNarrativeResource,
   ScreenplayNavigation,
+  ScreenplayImageReference,
+  ScreenplayImageReferenceWithHttp,
   PageResponse,
   ProjectInformationResource,
   ProjectShell,
   ProjectShellNavigation,
   SceneNavigationRow,
   SequenceNavigationRow,
+  SequenceResource,
+  StoryArcResource,
   StudioSelection,
   StudioSelectionContext,
   StudioSelectionContextResult,
@@ -78,6 +92,9 @@ export {
   screenplayReferenceSchema,
   screenplayStoryArcSchema,
 } from './screenplay-json-schemas.js';
+export type {
+  Block,
+} from './screenplay.js';
 export type {
   ReadVisualLanguageCatalogEntryInput,
   ReadVisualLanguageCatalogInput,

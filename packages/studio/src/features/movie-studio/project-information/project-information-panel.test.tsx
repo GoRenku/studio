@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
@@ -137,14 +138,17 @@ function makeProject(input: { title: string }): ProjectShellWithHttp {
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 0,
+      locations: 0,
+      acts: 0,
       sequences: 0,
       scenes: 0,
     },
     navigation: {
       cast: { items: [], nextCursor: null },
       visualLanguage: { items: [], nextCursor: null },
+      locations: { items: [], nextCursor: null },
       screenplay: {
-        sequences: { items: [], nextCursor: null },
+        acts: { items: [], nextCursor: null },
       },
     },
   };

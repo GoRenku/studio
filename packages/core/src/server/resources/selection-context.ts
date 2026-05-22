@@ -11,7 +11,11 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   listCastNavigationPage,
+  listActNavigationPage,
+  listLocationNavigationPage,
   readCastNavigationRow,
+  readActNavigationRow,
+  readLocationNavigationRow,
   readSceneNavigationContext,
   readSequenceNavigationContext,
 } from '../database/access/navigation.js';
@@ -51,59 +55,87 @@ export function readStudioSelectionContextProjection(
           context: { surface: 'visual-language' },
           resourceKeys: ['navigation:visual-language'],
         };
-      case 'storyboard':
-        return {
-          valid: true,
-          selection: input.selection,
-          context: { surface: 'storyboard' },
-          resourceKeys: ['project-shell'],
-        };
-      case 'casting':
+      case 'cast':
         return {
           valid: true,
           selection: input.selection,
           context: {
-            surface: 'casting',
+            surface: 'cast',
             cast: listCastNavigationPage(session, {}),
           },
           resourceKeys: ['navigation:cast'],
         };
-      case 'cast': {
+      case 'castMember': {
         const castMember = readCastNavigationRow(session, input.selection.id);
         return castMember
           ? {
               valid: true,
               selection: input.selection,
               context: {
-                surface: 'cast-design',
+                surface: 'cast-member',
                 castMember,
               },
-              resourceKeys: [`surface:cast-design:${castMember.id}`],
+              resourceKeys: [`surface:castMember:${castMember.id}`],
             }
           : selectionNotFound(input.selection);
       }
+      case 'locations':
+        return {
+          valid: true,
+          selection: input.selection,
+          context: {
+            surface: 'locations',
+            locations: listLocationNavigationPage(session, {}),
+          },
+          resourceKeys: ['navigation:locations'],
+        };
+      case 'location': {
+        const location = readLocationNavigationRow(session, input.selection.id);
+        return location
+          ? {
+              valid: true,
+              selection: input.selection,
+              context: { surface: 'location', location },
+              resourceKeys: [`surface:location:${location.id}`],
+            }
+          : selectionNotFound(input.selection);
+      }
+      case 'storyArc':
+        return {
+          valid: true,
+          selection: input.selection,
+          context: {
+            surface: 'story-arc',
+            acts: listActNavigationPage(session, {}),
+          },
+          resourceKeys: ['surface:story-arc'],
+        };
       case 'sequence': {
         const chain = readSequenceNavigationContext(session, input.selection.id);
-        return chain
+        const act = chain ? readActNavigationRow(session, chain.sequence.actId) : null;
+        return chain && act
           ? {
               valid: true,
               selection: input.selection,
               context: {
                 surface: 'sequence',
+                act,
                 sequence: chain.sequence,
               },
-              resourceKeys: ['navigation:movie-sequences'],
+              resourceKeys: [`surface:sequence:${chain.sequence.id}`],
             }
           : selectionNotFound(input.selection);
       }
       case 'scene': {
         const chain = readSceneNavigationContext(session, input.selection.id);
-        return chain
+        const act = chain ? readActNavigationRow(session, chain.sequence.actId) : null;
+        return chain && act
           ? {
               valid: true,
               selection: input.selection,
               context: {
                 surface: 'scene',
+                act,
                 scene: chain.scene,
                 sequence: chain.sequence,
               },

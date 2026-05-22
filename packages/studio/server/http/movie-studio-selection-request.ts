@@ -55,7 +55,8 @@ export function readMovieStudioSelectionRequest(input: unknown): {
   if (
     (type === 'sequence' ||
       type === 'scene' ||
-      type === 'cast') &&
+      type === 'castMember' ||
+      type === 'location') &&
     !id
   ) {
     throwMovieStudioSelectionRequestError([
@@ -78,11 +79,13 @@ function isStudioSelectionType(
   return (
     type === 'projectInformation' ||
     type === 'visualLanguage' ||
-    type === 'storyboard' ||
+    type === 'cast' ||
+    type === 'locations' ||
+    type === 'storyArc' ||
     type === 'sequence' ||
     type === 'scene' ||
-    type === 'casting' ||
-    type === 'cast'
+    type === 'castMember' ||
+    type === 'location'
   );
 }
 
@@ -93,12 +96,14 @@ function studioSelectionFromRequest(
   switch (type) {
     case 'sequence':
     case 'scene':
-    case 'cast':
+    case 'castMember':
+    case 'location':
       return { type, id: id as string };
     case 'projectInformation':
     case 'visualLanguage':
-    case 'storyboard':
-    case 'casting':
+    case 'cast':
+    case 'locations':
+    case 'storyArc':
       return { type };
   }
 }

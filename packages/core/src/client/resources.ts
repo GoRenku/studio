@@ -1,6 +1,13 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
+import type { Location } from './locations.js';
+import type {
+  Block,
+  Scene,
+  Screenplay,
+  Sequence,
+} from './screenplay.js';
 import type {
   ProjectCounts,
   ProjectCoverImage,
@@ -30,19 +37,37 @@ export interface ProjectShell {
 
 export interface ProjectShellNavigation {
   cast: PageResponse<CastNavigationRow>;
+  locations: PageResponse<LocationNavigationRow>;
   visualLanguage: PageResponse<VisualLanguageNavigationRow>;
   screenplay: ScreenplayNavigation;
 }
 
 export interface ScreenplayNavigation {
-  sequences: PageResponse<SequenceNavigationRow>;
+  acts: PageResponse<ActNavigationRow>;
 }
 
 export interface CastNavigationRow {
   id: string;
+  handle: string;
   name: string;
-  kind?: string;
   role?: string;
+  firstImage?: ScreenplayImageReference;
+}
+
+export interface LocationNavigationRow {
+  id: string;
+  handle: string;
+  name: string;
+  timePeriod?: string;
+  firstImage?: ScreenplayImageReference;
+}
+
+export interface ActNavigationRow {
+  id: string;
+  title: string;
+  purpose?: string;
+  sequenceCount: number;
+  sceneCount: number;
 }
 
 export interface VisualLanguageNavigationRow {
@@ -54,9 +79,10 @@ export interface VisualLanguageNavigationRow {
 
 export interface SequenceNavigationRow {
   id: string;
+  actId: string;
   number: number;
   title: string;
-  shortTitle?: string;
+  purpose?: string;
   sceneCount: number;
 }
 
@@ -64,6 +90,71 @@ export interface SceneNavigationRow {
   id: string;
   sequenceId: string;
   title: string;
+  setting?: Scene['setting'];
+}
+
+export interface ScreenplayImageReference {
+  assetId: string;
+  relationshipId: string;
+  assetFileId: string;
+  title: string;
+  fileRole: string;
+  mediaKind: string;
+  mimeType: string | null;
+  width: number | null;
+  height: number | null;
+}
+
+export interface ScreenplayImageReferenceWithHttp
+  extends ScreenplayImageReference {
+  url: string;
+}
+
+export interface CastOverviewResource {
+  cast: PageResponse<CastNavigationRow>;
+}
+
+export interface CastMemberResource {
+  castMember: CastMember;
+  firstImage?: ScreenplayImageReference;
+}
+
+export interface LocationOverviewResource {
+  locations: PageResponse<LocationNavigationRow>;
+}
+
+export interface LocationResource {
+  location: Location;
+  firstImage?: ScreenplayImageReference;
+}
+
+export interface StoryArcResource {
+  screenplay: Pick<
+    Screenplay,
+    | 'title'
+    | 'logline'
+    | 'dramaticQuestion'
+    | 'premiseOverview'
+    | 'centralConflict'
+    | 'summary'
+    | 'storyArc'
+  >;
+  acts: Array<ActNavigationRow & { sequences: SequenceNavigationRow[] }>;
+}
+
+export interface SequenceResource {
+  act: ActNavigationRow;
+  sequence: SequenceNavigationRow & Pick<Sequence, 'purpose'>;
+  scenes: PageResponse<SceneNavigationRow>;
+}
+
+export interface SceneNarrativeResource {
+  act: ActNavigationRow;
+  sequence: SequenceNavigationRow;
+  scene: Scene;
+  blocks: Block[];
+  castMemberLabels: Record<string, string>;
+  locationLabels: Record<string, string>;
 }
 
 export interface CastDesignResource {
@@ -110,24 +201,30 @@ export type StudioSelectionContextResult =
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'visualLanguage' }
-  | { type: 'storyboard' }
+  | { type: 'cast' }
+  | { type: 'castMember'; id: string }
+  | { type: 'locations' }
+  | { type: 'location'; id: string }
+  | { type: 'storyArc' }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string }
-  | { type: 'casting' }
-  | { type: 'cast'; id: string };
+  | { type: 'scene'; id: string };
 
 export type StudioSelectionContext =
   | { surface: 'project-information' }
   | { surface: 'visual-language' }
-  | { surface: 'storyboard' }
-  | { surface: 'casting'; cast: PageResponse<CastNavigationRow> }
-  | { surface: 'cast-design'; castMember: CastNavigationRow }
+  | { surface: 'cast'; cast: PageResponse<CastNavigationRow> }
+  | { surface: 'cast-member'; castMember: CastNavigationRow }
+  | { surface: 'locations'; locations: PageResponse<LocationNavigationRow> }
+  | { surface: 'location'; location: LocationNavigationRow }
+  | { surface: 'story-arc'; acts: PageResponse<ActNavigationRow> }
   | {
       surface: 'sequence';
+      act: ActNavigationRow;
       sequence: SequenceNavigationRow;
     }
   | {
       surface: 'scene';
+      act: ActNavigationRow;
       scene: SceneNavigationRow;
       sequence: SequenceNavigationRow;
     };

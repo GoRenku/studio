@@ -1,12 +1,17 @@
 import { and, asc, count, eq, gt, lt, or, type SQL } from 'drizzle-orm';
 import {
   castMembers,
+  acts,
+  locations,
+  sceneLocations,
   scenes,
   sequences,
   visualLanguage,
 } from '../../schema/index.js';
 import type {
   CastNavigationRow,
+  ActNavigationRow,
+  LocationNavigationRow,
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
@@ -38,6 +43,7 @@ export function listCastNavigationPage(
       session.db
         .select({
           id: castMembers.id,
+          handle: castMembers.handle,
           name: castMembers.name,
           role: castMembers.role,
           position: castMembers.position,
@@ -51,9 +57,71 @@ export function listCastNavigationPage(
     idColumn: castMembers.id,
     mapRow: (row) => ({
       id: row.id,
+      handle: row.handle,
       name: row.name,
-      kind: nullable(row.role) ?? 'character',
       role: nullable(row.role),
+    }),
+  });
+}
+
+export function listLocationNavigationPage(
+  session: DatabaseSession,
+  input: ListNavigationPageInput
+): PageResponse<LocationNavigationRow> {
+  return listPositionPage({
+    input,
+    selectPage: (limit, cursorCondition) =>
+      session.db
+        .select({
+          id: locations.id,
+          handle: locations.handle,
+          name: locations.name,
+          timePeriod: locations.timePeriod,
+          position: locations.position,
+        })
+        .from(locations)
+        .where(cursorCondition)
+        .orderBy(asc(locations.position), asc(locations.id))
+        .limit(limit)
+        .all(),
+    positionColumn: locations.position,
+    idColumn: locations.id,
+    mapRow: (row) => ({
+      id: row.id,
+      handle: row.handle,
+      name: row.name,
+      timePeriod: nullable(row.timePeriod),
+    }),
+  });
+}
+
+export function listActNavigationPage(
+  session: DatabaseSession,
+  input: ListNavigationPageInput
+): PageResponse<ActNavigationRow> {
+  return listPositionPage({
+    input,
+    selectPage: (limit, cursorCondition) =>
+      session.db
+        .select({
+          id: acts.id,
+          title: acts.title,
+          purpose: acts.purpose,
+          position: acts.position,
+        })
+        .from(acts)
+        .where(cursorCondition)
+        .orderBy(asc(acts.position), asc(acts.id))
+        .limit(limit)
+        .all(),
+    positionColumn: acts.position,
+    idColumn: acts.id,
+    mapRow: (row) => ({
+      id: row.id,
+      title: row.title,
+      purpose: nullable(row.purpose),
+      sequenceCount: countRows(session, sequences, eq(sequences.actId, row.id)),
+      sceneCount: countScenesForAct(session, row.id),
     }),
   });
 }
@@ -91,19 +159,22 @@ export function listVisualLanguageNavigationPage(
 
 export function listSequenceNavigationPage(
   session: DatabaseSession,
-  input: ListNavigationPageInput
+  input: ListNavigationPageInput & { actId?: string }
 ): PageResponse<SequenceNavigationRow> {
+  const actCondition = input.actId ? eq(sequences.actId, input.actId) : undefined;
   return listPositionPage({
     input,
     selectPage: (limit, cursorCondition) =>
       session.db
         .select({
           id: sequences.id,
+          actId: sequences.actId,
           title: sequences.title,
+          purpose: sequences.purpose,
           position: sequences.position,
         })
         .from(sequences)
-        .where(cursorCondition)
+        .where(and(actCondition, cursorCondition))
         .orderBy(asc(sequences.position), asc(sequences.id))
         .limit(limit)
         .all(),
@@ -111,9 +182,10 @@ export function listSequenceNavigationPage(
     idColumn: sequences.id,
     mapRow: (row) => ({
       id: row.id,
+      actId: row.actId,
       number: sequenceNumber(session, row.id),
       title: row.title,
-      shortTitle: undefined,
+      purpose: nullable(row.purpose),
       sceneCount: countRows(session, scenes, eq(scenes.sequenceId, row.id)),
     }),
   });
@@ -132,6 +204,8 @@ export function listSceneNavigationPage(
           id: scenes.id,
           sequenceId: scenes.sequenceId,
           title: scenes.title,
+          interiorExterior: scenes.interiorExterior,
+          timeOfDay: scenes.timeOfDay,
           position: scenes.position,
         })
         .from(scenes)
@@ -145,6 +219,11 @@ export function listSceneNavigationPage(
       id: row.id,
       sequenceId: row.sequenceId,
       title: row.title,
+      setting: {
+        interiorExterior: nullable(row.interiorExterior),
+        timeOfDay: nullable(row.timeOfDay),
+        locationIds: listSceneLocationIds(session, row.id),
+      },
     }),
   });
 }
@@ -161,9 +240,28 @@ export function readCastNavigationRow(
   return castMember
     ? {
         id: castMember.id,
+        handle: castMember.handle,
         name: castMember.name,
-        kind: nullable(castMember.role) ?? 'character',
         role: nullable(castMember.role),
+      }
+    : null;
+}
+
+export function readLocationNavigationRow(
+  session: DatabaseSession,
+  locationId: string
+): LocationNavigationRow | null {
+  const location = session.db
+    .select()
+    .from(locations)
+    .where(eq(locations.id, locationId))
+    .get();
+  return location
+    ? {
+        id: location.id,
+        handle: location.handle,
+        name: location.name,
+        timePeriod: nullable(location.timePeriod),
       }
     : null;
 }
@@ -210,12 +308,29 @@ export function readSequenceNavigationContext(
   return {
     sequence: {
       id: sequence.id,
+      actId: sequence.actId,
       number: sequenceNumber(session, sequence.id),
       title: sequence.title,
-      shortTitle: undefined,
+      purpose: nullable(sequence.purpose),
       sceneCount: countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
     },
   };
+}
+
+export function readActNavigationRow(
+  session: DatabaseSession,
+  actId: string
+): ActNavigationRow | null {
+  const act = session.db.select().from(acts).where(eq(acts.id, actId)).get();
+  return act
+    ? {
+        id: act.id,
+        title: act.title,
+        purpose: nullable(act.purpose),
+        sequenceCount: countRows(session, sequences, eq(sequences.actId, act.id)),
+        sceneCount: countScenesForAct(session, act.id),
+      }
+    : null;
 }
 
 function listPositionPage<Row extends { id: string; position: number }, Result>(
@@ -289,6 +404,29 @@ function countRows(
     .where(condition)
     .get();
   return row?.value ?? 0;
+}
+
+function countScenesForAct(session: DatabaseSession, actId: string): number {
+  const actSequences = session.db
+    .select({ id: sequences.id })
+    .from(sequences)
+    .where(eq(sequences.actId, actId))
+    .all();
+  return actSequences.reduce(
+    (total, sequence) =>
+      total + countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
+    0
+  );
+}
+
+function listSceneLocationIds(session: DatabaseSession, sceneId: string): string[] {
+  return session.db
+    .select({ locationId: sceneLocations.locationId })
+    .from(sceneLocations)
+    .where(eq(sceneLocations.sceneId, sceneId))
+    .orderBy(asc(sceneLocations.position))
+    .all()
+    .map((row) => row.locationId);
 }
 
 function assertExists(

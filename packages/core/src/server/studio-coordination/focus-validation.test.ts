@@ -27,20 +27,29 @@ describe('Studio focus validation', () => {
       context: { kind: 'visualLanguage' },
     });
     expect(
-      resolveStudioSelectionForProject(project, { type: 'storyboard' })
+      resolveStudioSelectionForProject(project, { type: 'storyArc' })
     ).toMatchObject({
       ok: true,
-      context: { kind: 'storyboard' },
+      context: { kind: 'storyArc' },
     });
     expect(
-      resolveStudioSelectionForProject(project, { type: 'casting' })
+      resolveStudioSelectionForProject(project, { type: 'cast' })
     ).toMatchObject({
       ok: true,
-      context: { kind: 'casting' },
+      context: { kind: 'cast' },
+    });
+    expect(
+      resolveStudioSelectionForProject(project, { type: 'locations' })
+    ).toMatchObject({
+      ok: true,
+      context: {
+        kind: 'locations',
+        locations: [{ id: 'location_walls', name: 'City Walls' }],
+      },
     });
   });
 
-  it('resolves screenplay and cast selections to current context', () => {
+  it('resolves screenplay, cast, and location selections to current context', () => {
     const project = makeProject();
 
     expect(
@@ -70,7 +79,7 @@ describe('Studio focus validation', () => {
     });
     expect(
       resolveStudioSelectionForProject(project, {
-        type: 'cast',
+        type: 'castMember',
         id: 'cast_narrator',
       })
     ).toMatchObject({
@@ -78,6 +87,19 @@ describe('Studio focus validation', () => {
       context: {
         kind: 'castMember',
         id: 'cast_narrator',
+      },
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'location',
+        id: 'location_walls',
+      })
+    ).toMatchObject({
+      ok: true,
+      context: {
+        kind: 'location',
+        id: 'location_walls',
+        name: 'City Walls',
       },
     });
   });
@@ -107,13 +129,23 @@ describe('Studio focus validation', () => {
     });
     expect(
       resolveStudioSelectionForProject(project, {
-        type: 'cast',
+        type: 'castMember',
         id: 'missing_cast',
       })
     ).toMatchObject({
       ok: false,
       reason: 'selectionNotFound',
       diagnostics: [{ code: 'STUDIO_COORDINATION033', severity: 'error' }],
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'location',
+        id: 'missing_location',
+      })
+    ).toMatchObject({
+      ok: false,
+      reason: 'selectionNotFound',
+      diagnostics: [{ code: 'STUDIO_COORDINATION035', severity: 'error' }],
     });
   });
 
@@ -170,9 +202,18 @@ function makeProject(): Project {
     cast: [
       {
         id: 'cast_narrator',
+        handle: 'narrator',
         name: 'Narrator',
-        kind: 'narrator',
         role: 'voiceover',
+      },
+    ],
+    locations: [
+      {
+        id: 'location_walls',
+        handle: 'walls',
+        name: 'City Walls',
+        timePeriod: 'Dawn',
+        description: 'The outer walls where the opening scene begins.',
       },
     ],
     sequences: [
@@ -196,6 +237,8 @@ function makeProject(): Project {
       visualLanguageCategories: 1,
       visualLanguage: 1,
       castMembers: 1,
+      locations: 1,
+      acts: 1,
       sequences: 1,
       scenes: 1,
     },

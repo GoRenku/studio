@@ -96,7 +96,7 @@ export async function runProjectSelectionCommand(options: {
       projectRef,
       focus: {
         screen: 'movieStudio',
-        selection: { type: 'storyboard' },
+        selection: { type: 'storyArc' },
       },
       refresh: { project: true, library: true },
       source: { kind: 'cli', command: 'renku project select' },

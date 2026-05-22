@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { StrictMode, type ReactNode } from 'react';
+import React, { StrictMode, type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useDebouncedAutosave } from './use-debounced-autosave';

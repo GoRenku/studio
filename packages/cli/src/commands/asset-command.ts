@@ -322,6 +322,8 @@ function readTarget(options: RunAssetCommandOptions): AssetTarget {
       return { kind: 'visualLanguage', visualLanguageId: id };
     case 'cast':
       return { kind: 'castMember', castMemberId: id };
+    case 'location':
+      return { kind: 'location', locationId: id };
     case 'sequence':
       return { kind: 'sequence', sequenceId: id };
     case 'scene':
@@ -402,7 +404,7 @@ function invalidTarget(target: string): StructuredError {
         'CLI044',
         'Asset target must be project or kind:id.',
         { path: ['--target'], context: 'renku CLI arguments' },
-        'Use project, visual-language:<id>, cast:<id>, sequence:<id>, or scene:<id>.'
+        'Use project, visual-language:<id>, cast:<id>, location:<id>, sequence:<id>, or scene:<id>.'
       ),
     ],
   });
@@ -420,6 +422,8 @@ function formatTarget(target: AssetTarget): string {
       return `visual-language:${target.visualLanguageId}`;
     case 'castMember':
       return `cast:${target.castMemberId}`;
+    case 'location':
+      return `location:${target.locationId}`;
     case 'sequence':
       return `sequence:${target.sequenceId}`;
     case 'scene':

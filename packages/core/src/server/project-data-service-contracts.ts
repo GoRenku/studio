@@ -2,9 +2,16 @@ import type {
   Asset,
   AssetLocaleContext,
   AssetTarget,
+  ActNavigationRow,
+  CastMemberResource,
+  CastOverviewResource,
   CastDesignResource,
   CastNavigationRow,
+  LocationNavigationRow,
+  LocationOverviewResource,
+  LocationResource,
   SceneDesignResource,
+  SceneNarrativeResource,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -18,6 +25,8 @@ import type {
   RegisterAssetInput,
   SceneNavigationRow,
   SequenceNavigationRow,
+  SequenceResource,
+  StoryArcResource,
 } from '../client/index.js';
 import type {
   Act as ScreenplayAct,
@@ -48,8 +57,12 @@ export interface ProjectDataService {
     input: ReadProjectInput
   ): Promise<ProjectInformationResource>;
   listCastNavigation(input: ListNavigationInput): Promise<PageResponse<CastNavigationRow>>;
-  listSequenceNavigation(
+  listLocationNavigation(
     input: ListNavigationInput
+  ): Promise<PageResponse<LocationNavigationRow>>;
+  listActNavigation(input: ListNavigationInput): Promise<PageResponse<ActNavigationRow>>;
+  listSequenceNavigation(
+    input: ListNavigationInput | ListSequencesForActNavigationInput
   ): Promise<PageResponse<SequenceNavigationRow>>;
   listSceneNavigation(
     input: ListSceneNavigationInput
@@ -61,6 +74,19 @@ export interface ProjectDataService {
   readSceneDesignResource(
     input: ReadSceneDesignResourceInput
   ): Promise<SceneDesignResource>;
+  readCastOverviewResource(input: ListNavigationInput): Promise<CastOverviewResource>;
+  readCastMemberResource(
+    input: ReadCastMemberResourceInput
+  ): Promise<CastMemberResource>;
+  readLocationOverviewResource(
+    input: ListNavigationInput
+  ): Promise<LocationOverviewResource>;
+  readLocationResource(input: ReadLocationResourceInput): Promise<LocationResource>;
+  readStoryArcResource(input: ReadProjectInput): Promise<StoryArcResource>;
+  readSequenceResource(input: ReadSequenceResourceInput): Promise<SequenceResource>;
+  readSceneNarrativeResource(
+    input: ReadSceneNarrativeResourceInput
+  ): Promise<SceneNarrativeResource>;
   readStudioSelectionContext(input: {
     projectName: string;
     selection: StudioSelection;
@@ -185,6 +211,10 @@ export interface ListNavigationInput extends RenkuConfigPathOptions {
   cursor?: string | null;
 }
 
+export interface ListSequencesForActNavigationInput extends ListNavigationInput {
+  actId: string;
+}
+
 export interface ListSceneNavigationInput extends ListNavigationInput {
   sequenceId: string;
 }
@@ -207,6 +237,28 @@ export interface ReadCastDesignResourceInput
   activeRole?: string;
   limit?: number;
   cursor?: string | null;
+}
+
+export interface ReadCastMemberResourceInput extends RenkuConfigPathOptions {
+  projectName: string;
+  castMemberId: string;
+}
+
+export interface ReadLocationResourceInput extends RenkuConfigPathOptions {
+  projectName: string;
+  locationId: string;
+}
+
+export interface ReadSequenceResourceInput extends RenkuConfigPathOptions {
+  projectName: string;
+  sequenceId: string;
+  limit?: number;
+  cursor?: string | null;
+}
+
+export interface ReadSceneNarrativeResourceInput extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
 }
 
 export interface ReadSceneDesignResourceInput

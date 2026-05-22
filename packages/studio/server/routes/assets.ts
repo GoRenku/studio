@@ -103,5 +103,73 @@ export function createAssetsRoute({
       } catch (error) {
         return projectErrorResponse(c, error);
       }
+    })
+    .get('/locations/:locationId/assets', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const locationId = c.req.param('locationId') as string;
+        const page = await projectData.listAssetPage({
+          projectName,
+          target: { kind: 'location', locationId },
+          ...readPageRequest(c.req.query()),
+        });
+        return c.json({ assets: page.items, page });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .post('/locations/:locationId/assets/:assetId/select', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const locationId = c.req.param('locationId') as string;
+        const assetId = c.req.param('assetId') as string;
+        const asset = await projectData.createAssetSelect({
+          projectName,
+          target: { kind: 'location', locationId },
+          assetId,
+        });
+        const resourceKeys = studioResourceKeysForAssetTarget({
+          kind: 'location',
+          locationId,
+        });
+        return c.json({ asset, resourceKeys });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/locations/:locationId/assets/:assetId/select', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const locationId = c.req.param('locationId') as string;
+        const assetId = c.req.param('assetId') as string;
+        const asset = await projectData.removeAssetSelect({
+          projectName,
+          target: { kind: 'location', locationId },
+          assetId,
+        });
+        const resourceKeys = studioResourceKeysForAssetTarget({
+          kind: 'location',
+          locationId,
+        });
+        return c.json({ asset, resourceKeys });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .get('/locations/:locationId/assets/:assetId/files/:assetFileId', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const locationId = c.req.param('locationId') as string;
+        const assetId = c.req.param('assetId') as string;
+        const assetFileId = c.req.param('assetFileId') as string;
+        return await readAssetFileResponse(projectData, {
+          projectName,
+          target: { kind: 'location', locationId },
+          assetId,
+          assetFileId,
+        });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
     });
 }

@@ -272,7 +272,14 @@ export function buildSdkPayload(
           throw createProviderError(
             SdkErrorCode.INVALID_CONFIG,
             `Input for field "${issue.field}" is incompatible with model constraints and cannot be normalized safely. Requested value: ${JSON.stringify(issue.requested)}.`,
-            { kind: 'user_input', causedByUser: true }
+            {
+              kind: 'user_input',
+              causedByUser: true,
+              metadata: {
+                field: issue.field,
+                requested: issue.requested,
+              },
+            }
           );
         }
         continue;

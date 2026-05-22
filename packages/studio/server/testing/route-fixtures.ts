@@ -52,22 +52,25 @@ export function makeProjectShell(project: Project): ProjectShell {
       cast: {
         items: project.cast.map((castMember) => ({
           id: castMember.id,
+          handle: castMember.id,
           name: castMember.name,
-          kind: castMember.kind,
           role: castMember.role,
         })),
         nextCursor: null,
       },
+      locations: { items: [], nextCursor: null },
       visualLanguage: { items: [], nextCursor: null },
       screenplay: {
-        sequences: {
-          items: project.sequences.map((sequence) => ({
-            id: sequence.id,
-            number: sequence.number,
-            title: sequence.title,
-            shortTitle: sequence.shortTitle,
-            sceneCount: sequence.scenes.length,
-          })),
+        acts: {
+          items: [{
+            id: 'act_opening',
+            title: 'Opening Act',
+            sequenceCount: project.sequences.length,
+            sceneCount: project.sequences.reduce(
+              (total, sequence) => total + sequence.scenes.length,
+              0
+            ),
+          }],
           nextCursor: null,
         },
       },
@@ -91,11 +94,12 @@ export function makeProject(): Project {
     cast: [
       {
         id: 'cast_narrator',
+        handle: 'narrator',
         name: 'Narrator',
-        kind: 'narrator',
         role: 'voiceover',
       },
     ],
+    locations: [],
     sequences: [
       {
         id: 'seq_opening',
@@ -114,6 +118,8 @@ export function makeProject(): Project {
       visualLanguageCategories: 0,
       visualLanguage: 0,
       castMembers: 1,
+      locations: 0,
+      acts: 1,
       sequences: 1,
       scenes: 1,
     },

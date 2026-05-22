@@ -19,6 +19,7 @@ import { createMovieStudioSelectionContextRoute } from './movie-studio-selection
 import { createNavigationRoute } from './navigation.js';
 import { createProductionExportsRoute } from './production-exports.js';
 import { createProjectInformationRoute } from './project-information.js';
+import { createScreenplayRoute } from './screenplay.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectsRouteProjectData;
@@ -32,11 +33,20 @@ export type ProjectsRouteProjectData = Pick<
   | 'readProjectShell'
   | 'readProjectInformationResource'
   | 'listCastNavigation'
+  | 'listLocationNavigation'
+  | 'listActNavigation'
   | 'listSequenceNavigation'
   | 'listSceneNavigation'
   | 'listAssetPage'
   | 'readCastDesignResource'
   | 'readSceneDesignResource'
+  | 'readCastOverviewResource'
+  | 'readCastMemberResource'
+  | 'readLocationOverviewResource'
+  | 'readLocationResource'
+  | 'readStoryArcResource'
+  | 'readSequenceResource'
+  | 'readSceneNarrativeResource'
   | 'readStudioSelectionContext'
   | 'updateProjectInformation'
   | 'resolveCoverImage'
@@ -90,6 +100,7 @@ export function createProjectsRoute(
       }
     })
     .route('/:projectName', createNavigationRoute({ projectData }))
+    .route('/:projectName', createScreenplayRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
     .route(
       '/:projectName',

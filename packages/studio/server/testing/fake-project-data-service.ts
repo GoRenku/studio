@@ -69,8 +69,25 @@ export function fakeProjectDataService(): NonNullable<
     async listCastNavigation() {
       return makeProjectShell(project).navigation.cast;
     },
+    async listLocationNavigation() {
+      return makeProjectShell(project).navigation.locations;
+    },
+    async listActNavigation() {
+      return makeProjectShell(project).navigation.screenplay.acts;
+    },
     async listSequenceNavigation() {
-      return makeProjectShell(project).navigation.screenplay.sequences;
+      return {
+        items: [
+          {
+            id: 'seq_opening',
+            actId: 'act_opening',
+            number: 1,
+            title: 'Opening',
+            sceneCount: 1,
+          },
+        ],
+        nextCursor: null,
+      };
     },
     async listSceneNavigation() {
       return {
@@ -101,9 +118,11 @@ export function fakeProjectDataService(): NonNullable<
           id: 'scene_opening',
           sequenceId: 'seq_opening',
           title: 'Opening Scene',
+          setting: { locationIds: [] },
         },
         sequence: {
           id: 'seq_opening',
+          actId: 'act_opening',
           number: 1,
           title: 'Opening',
           sceneCount: 1,
@@ -118,6 +137,100 @@ export function fakeProjectDataService(): NonNullable<
         selection: input.selection,
         context: { surface: 'project-information' },
         resourceKeys: ['project-information'],
+      };
+    },
+    async readCastOverviewResource() {
+      return { cast: makeProjectShell(project).navigation.cast };
+    },
+    async readCastMemberResource() {
+      return { castMember: project.cast[0] };
+    },
+    async readLocationOverviewResource() {
+      return { locations: makeProjectShell(project).navigation.locations };
+    },
+    async readLocationResource() {
+      return {
+        location: {
+          id: 'location_test',
+          handle: 'location-test',
+          name: 'Location',
+        },
+      };
+    },
+    async readStoryArcResource() {
+      return {
+        screenplay: { title: project.identity.title },
+        acts: [
+          {
+            id: 'act_opening',
+            title: 'Opening Act',
+            sequenceCount: 1,
+            sceneCount: 1,
+            sequences: [
+              {
+                id: 'seq_opening',
+                actId: 'act_opening',
+                number: 1,
+                title: 'Opening',
+                sceneCount: 1,
+              },
+            ],
+          },
+        ],
+      };
+    },
+    async readSequenceResource() {
+      return {
+        act: {
+          id: 'act_opening',
+          title: 'Opening Act',
+          sequenceCount: 1,
+          sceneCount: 1,
+        },
+        sequence: {
+          id: 'seq_opening',
+          actId: 'act_opening',
+          number: 1,
+          title: 'Opening',
+          sceneCount: 1,
+        },
+        scenes: {
+          items: [
+            {
+              id: 'scene_opening',
+              sequenceId: 'seq_opening',
+              title: 'Opening Scene',
+              setting: { locationIds: [] },
+            },
+          ],
+          nextCursor: null,
+        },
+      };
+    },
+    async readSceneNarrativeResource() {
+      return {
+        act: {
+          id: 'act_opening',
+          title: 'Opening Act',
+          sequenceCount: 1,
+          sceneCount: 1,
+        },
+        sequence: {
+          id: 'seq_opening',
+          actId: 'act_opening',
+          number: 1,
+          title: 'Opening',
+          sceneCount: 1,
+        },
+        scene: {
+          id: 'scene_opening',
+          title: 'Opening Scene',
+          setting: { locationIds: [] },
+          blocks: [{ type: 'action', text: 'The siege begins.' }],
+        },
+        blocks: [{ type: 'action', text: 'The siege begins.' }],
+        castMemberLabels: {},
+        locationLabels: {},
       };
     },
     async createAssetSelect(input) {

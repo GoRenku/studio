@@ -199,8 +199,9 @@ function readStudioSelection(value: unknown): StudioSelection | null {
   if (
     selection.type === 'projectInformation' ||
     selection.type === 'visualLanguage' ||
-    selection.type === 'storyboard' ||
-    selection.type === 'casting'
+    selection.type === 'cast' ||
+    selection.type === 'locations' ||
+    selection.type === 'storyArc'
   ) {
     return { type: selection.type };
   }
@@ -208,7 +209,8 @@ function readStudioSelection(value: unknown): StudioSelection | null {
   if (
     (selection.type === 'sequence' ||
       selection.type === 'scene' ||
-      selection.type === 'cast') &&
+      selection.type === 'castMember' ||
+      selection.type === 'location') &&
     typeof selection.id === 'string' &&
     selection.id.trim()
   ) {
