@@ -119,9 +119,16 @@ describe('renku CLI', () => {
 
     expect(exitCode).toBe(0);
     expect(stdout.join('\n')).toContain('Renku project created: constantinople');
+    expect(stdout.join('\n')).toContain('Current authoring project: constantinople');
     await expect(
       fs.stat(path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'))
     ).resolves.toHaveProperty('isFile');
+    await expect(
+      createProjectDataService().readCurrentProject({ homeDir })
+    ).resolves.toMatchObject({
+      projectName: 'constantinople',
+      status: 'unchanged',
+    });
     await expect(
       createProjectDataService().readProject({
         projectName: 'constantinople',
@@ -129,6 +136,31 @@ describe('renku CLI', () => {
       })
     ).resolves.toMatchObject({
       identity: { summary: 'A SQLite-backed project summary.' },
+    });
+    expect(stderr).toEqual([]);
+  });
+
+  it('prints JSON for renku create and opens the project as current', async () => {
+    const storageRoot = await initializeStorageRoot();
+
+    const exitCode = await runRenkuCli(
+      ['create', 'json-movie', '--title', 'JSON Movie', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    if (isMissingSqliteBindings(exitCode, stderr)) {
+      return;
+    }
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      projectName: 'json-movie',
+      projectPath: path.join(storageRoot, 'json-movie'),
+      databasePath: path.join(storageRoot, 'json-movie', '.renku', 'project.sqlite'),
+      currentProject: {
+        projectName: 'json-movie',
+        databasePath: path.join(storageRoot, 'json-movie', '.renku', 'project.sqlite'),
+        status: 'set',
+      },
     });
     expect(stderr).toEqual([]);
   });
@@ -160,7 +192,7 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
-  it('opens an authoring project and creates screenplay JSON through the CLI', async () => {
+  it('keeps a created project open and creates screenplay JSON through the CLI', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -180,7 +212,7 @@ describe('renku CLI', () => {
       projectName: 'constantinople',
       projectId: expect.any(String),
       databasePath: path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'),
-      status: 'set',
+      status: 'unchanged',
     });
     expect(stderr).toEqual([]);
 
@@ -424,7 +456,7 @@ describe('renku CLI', () => {
         expect.objectContaining({
           code: 'PROJECT_DATA202',
           suggestion:
-            'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>` and then open it.',
+            'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>`.',
         }),
       ],
     });
@@ -446,7 +478,7 @@ describe('renku CLI', () => {
           code: 'PROJECT_DATA202',
           message: 'No current authoring project is open.',
           suggestion:
-            'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>` and then open it.',
+            'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>`.',
         }),
       ],
     });

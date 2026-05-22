@@ -29,7 +29,7 @@ Screenplay authoring commands require a current authoring project. If none is
 open, they fail with structured error `PROJECT_DATA202` and suggest:
 
 ```text
-Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>` and then open it.
+Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>`.
 ```
 
 There is no top-level `renku show` command. The current show commands are
@@ -93,8 +93,10 @@ Options:
 Behavior:
 
 - Creates the project folder and project SQLite database.
-- Does not open the project as the current authoring project. Run
-  `renku project open <project-name>` before screenplay authoring commands.
+- Opens the created project as the current authoring project after creation
+  succeeds.
+- The JSON output includes a `currentProject` descriptor for the project that
+  was just opened.
 
 ## `renku about`
 
@@ -209,8 +211,7 @@ Expected no-project failure:
 
 - Error code: `PROJECT_DATA202`
 - Suggestion: open an existing project with `renku project open <project-name>`,
-  or create a new project with `renku create <project-name> --title <title>` and
-  then open it.
+  or create a new project with `renku create <project-name> --title <title>`.
 
 ## `renku screenplay show`
 

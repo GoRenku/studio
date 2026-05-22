@@ -92,9 +92,14 @@ export async function runCreateCommand(
     homeDir: options.homeDir,
     storageRoot: options.storageRoot,
   });
+  const currentProject = await projectData.openCurrentProject({
+    projectName: result.projectName,
+    homeDir: options.homeDir,
+    storageRoot: options.storageRoot,
+  });
 
   if (options.json) {
-    options.io.stdout.log(JSON.stringify(result, null, 2));
+    options.io.stdout.log(JSON.stringify({ ...result, currentProject }, null, 2));
     return 0;
   }
 
@@ -105,6 +110,7 @@ export async function runCreateCommand(
   options.io.stdout.log(`Renku project created: ${result.projectName}`);
   options.io.stdout.log(`Project: ${result.projectPath}`);
   options.io.stdout.log(`Database: ${result.databasePath}`);
+  options.io.stdout.log(`Current authoring project: ${currentProject.projectName}`);
   options.io.stdout.log(
     'Created a clean movie project. Add screenplay content with `renku screenplay create --json --file <screenplay-json>`.'
   );

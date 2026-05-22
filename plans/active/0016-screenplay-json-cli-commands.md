@@ -223,7 +223,7 @@ If there is no current authoring project, screenplay commands fail with a
 
 ```text
 Open an existing project with `renku project open <project-name>`, or create a
-new project with `renku create <project-name> --title <title>` and then open it.
+new project with `renku create <project-name> --title <title>`.
 ```
 
 Direct one-off database access may exist for administrative commands such as
@@ -1399,7 +1399,7 @@ Proposed screenplay project-data codes:
 | --- | --- | --- | --- | --- |
 | `PROJECT_DATA200` | error | Top-level screenplay JSON validation failed. This is the `StructuredError.code` when one or more input issues block create/apply/validate. | `["screenplay"]` for whole documents or `["operations"]` for operation documents. | Fix the reported issues and run the command again. |
 | `PROJECT_DATA201` | error | Input was not valid JSON or was not a JSON object where an object is required. | Input root path `[]`, with `filePath` when available. | Provide a valid JSON object. |
-| `PROJECT_DATA202` | error | A screenplay command was run without a current authoring project. | `["currentProject"]`. | Run `renku project open <project-name>` first. |
+| `PROJECT_DATA202` | error | A screenplay command was run without a current authoring project. | `["currentProject"]`. | Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>`. |
 | `PROJECT_DATA203` | error | The current authoring project state is invalid, points at a missing database, or no longer matches the current runtime schema. | `["currentProject"]`. | Reopen the current project with `renku project open <project-name>`. |
 | `PROJECT_DATA204` | error | `screenplay create` was called after screenplay data already exists. | `["screenplay"]`. | Use `renku screenplay apply` for revisions. |
 | `PROJECT_DATA205` | error | A read, apply, or validate-current command requires existing screenplay data, but none exists. | `["screenplay"]`. | Use `renku screenplay create` first. |
