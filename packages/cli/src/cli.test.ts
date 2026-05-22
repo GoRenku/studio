@@ -277,7 +277,7 @@ describe('renku CLI', () => {
     });
     const sceneId = project.sequences[0]!.scenes[0]!.id;
     const assetPath =
-      'working-assets/base/sequences/01-commission/scenes/01-foundry/narration.wav';
+      'shotlist/sequences/01-commission/scenes/01-foundry/narration.wav';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', assetPath)), {
       recursive: true,
     });

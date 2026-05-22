@@ -54,7 +54,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         asset,
         file: asset.files[0],
-        absolutePath: '/tmp/renku/constantinople/working-assets/base/cast/reference.png',
+        absolutePath: '/tmp/renku/constantinople/cast/reference.png',
       };
     },
     async listAssets() {

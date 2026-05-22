@@ -24,7 +24,7 @@ export function makeAsset(assetId: string): Asset {
         id: 'asset_file_cast_reference',
         role: 'primary',
         projectRelativePath:
-          'working-assets/base/cast/narrator/reference.png' as Asset['files'][number]['projectRelativePath'],
+          'cast/narrator/reference.png' as Asset['files'][number]['projectRelativePath'],
         mediaKind: 'image',
         mimeType: 'image/png',
         sizeBytes: 12,

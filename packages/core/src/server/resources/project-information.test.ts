@@ -158,7 +158,7 @@ describe('project information resource', () => {
     if (!created) {
       return;
     }
-    const assetPath = 'working-assets/base/project-reference.png';
+    const assetPath = 'screenplay/project-reference.png';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });

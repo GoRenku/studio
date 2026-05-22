@@ -29,14 +29,13 @@ describe('export production assets', () => {
     }
 
     const masterNarrationPath =
-      'working-assets/base/sequences/01-logistics/scenes/01-foundry/narration.wav';
-    const sequenceVideoPath =
-      'working-assets/base/sequences/01-logistics/sequence-video.mp4';
+      'shotlist/sequences/01-logistics/scenes/01-foundry/narration.wav';
+    const sequenceVideoPath = 'shotlist/sequences/01-logistics/sequence-video.mp4';
     const sceneTitleCardPath =
-      'working-assets/base/sequences/01-logistics/scenes/01-foundry/title-card.png';
-    const helperSheetPath = 'working-assets/base/cast/mehmed-sheet.png';
+      'shotlist/sequences/01-logistics/scenes/01-foundry/title-card.png';
+    const helperSheetPath = 'cast/mehmed-sheet.png';
     const localizedSubtitlePath =
-      'working-assets/localization/tr-TR/sequences/01-logistics/scenes/01-foundry/subtitles.vtt';
+      'shotlist/localization/tr-TR/sequences/01-logistics/scenes/01-foundry/subtitles.vtt';
     await fs.mkdir(path.dirname(path.join(created.projectPath, masterNarrationPath)), {
       recursive: true,
     });
@@ -265,7 +264,7 @@ describe('export production assets', () => {
     }
 
     const narrationPath =
-      'working-assets/base/sequences/01-logistics/scenes/01-foundry/narration.wav';
+      'shotlist/sequences/01-logistics/scenes/01-foundry/narration.wav';
     await fs.mkdir(path.dirname(path.join(created.projectPath, narrationPath)), {
       recursive: true,
     });

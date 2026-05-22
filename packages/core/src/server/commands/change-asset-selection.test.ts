@@ -47,7 +47,7 @@ describe('change asset selection command', () => {
     });
 
     const assetPath =
-      'working-assets/base/sequences/01-logistics/scenes/01-foundry/narration.wav';
+      'shotlist/sequences/01-logistics/scenes/01-foundry/narration.wav';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });
@@ -84,7 +84,7 @@ describe('change asset selection command', () => {
       return;
     }
 
-    const assetPath = 'working-assets/base/screenplay/reference.txt';
+    const assetPath = 'screenplay/reference.txt';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });
@@ -119,7 +119,7 @@ describe('change asset selection command', () => {
     }
 
     const assetPath =
-      'working-assets/base/sequences/01-logistics/scenes/01-foundry/narration.wav';
+      'shotlist/sequences/01-logistics/scenes/01-foundry/narration.wav';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });

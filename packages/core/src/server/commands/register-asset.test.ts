@@ -28,7 +28,7 @@ describe('register asset command', () => {
     }
 
     const assetPath =
-      'working-assets/base/sequences/01-logistics/scenes/01-foundry/narration.wav';
+      'shotlist/sequences/01-logistics/scenes/01-foundry/narration.wav';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });
@@ -100,7 +100,7 @@ describe('register asset command', () => {
     }
 
     const assetPath =
-      'working-assets/base/visual-language/lighting/01-practical-source-low-key-interiors/reference.png';
+      'visual-language/lighting/01-practical-source-low-key-interiors/reference.png';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });
@@ -141,7 +141,7 @@ describe('register asset command', () => {
     }
 
     const assetPath =
-      'working-assets/base/visual-language/lighting/01-practical-source-low-key-interiors/prompt.png';
+      'visual-language/lighting/01-practical-source-low-key-interiors/prompt.png';
     await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
       recursive: true,
     });

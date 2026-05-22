@@ -146,8 +146,7 @@ describe('assets Hono route', () => {
             return {
               asset: locationAsset,
               file: locationAsset.files[0],
-              absolutePath:
-                '/tmp/renku/constantinople/working-assets/base/locations/gate/reference.png',
+              absolutePath: '/tmp/renku/constantinople/locations/gate/reference.png',
             };
           },
         },
