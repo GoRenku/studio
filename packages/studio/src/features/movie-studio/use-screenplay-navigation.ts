@@ -36,6 +36,7 @@ export interface ScreenplayNavigationState {
   scenesBySequenceId: Map<string, SceneNavigationRow[]>;
   loadingKeys: Set<string>;
   error: string | null;
+  selectionContext: StudioSelectionContext | null;
   loadActs: () => Promise<void>;
   loadActSequences: (actId: string) => Promise<void>;
   loadSequenceScenes: (sequenceId: string) => Promise<void>;
@@ -133,6 +134,36 @@ export function useScreenplayNavigation(
     };
   }, [projectName, selection]);
 
+  useEffect(() => {
+    if (selection.type !== 'scene' && selection.type !== 'sequence') {
+      return;
+    }
+    void loadActs();
+  }, [selection.type, loadActs]);
+
+  useEffect(() => {
+    if (!selectionContext) return;
+    if ('act' in selectionContext) {
+      void loadActSequences(selectionContext.act.id);
+    }
+    if ('sequence' in selectionContext) {
+      void loadSequenceScenes(selectionContext.sequence.id);
+    }
+  }, [selectionContext, loadActSequences, loadSequenceScenes]);
+
+  useEffect(() => {
+    if (!selectionContext || !('sequence' in selectionContext)) return;
+    const actId = selectionContext.act.id;
+    const sequenceId = selectionContext.sequence.id;
+    const sequencesInAct = sequencePages.get(actId)?.items;
+    if (!sequencesInAct) return;
+    const index = sequencesInAct.findIndex((seq) => seq.id === sequenceId);
+    if (index === -1) return;
+    if (index > 0) void loadSequenceScenes(sequencesInAct[index - 1].id);
+    if (index < sequencesInAct.length - 1)
+      void loadSequenceScenes(sequencesInAct[index + 1].id);
+  }, [selectionContext, sequencePages, loadSequenceScenes]);
+
   return useMemo(() => {
     const contextRows = rowsFromSelectionContext(selectionContext);
     const acts = appendUniqueRows(actPage.items, contextRows.acts);
@@ -145,7 +176,7 @@ export function useScreenplayNavigation(
     for (const [actId, page] of sequencePages) {
       sequencesByActId.set(
         actId,
-        appendUniqueRows(page.items, contextRows.sequencesByActId.get(actId) ?? [])
+        appendUniqueRows(page?.items ?? [], contextRows.sequencesByActId.get(actId) ?? [])
       );
     }
     for (const [actId, rows] of contextRows.sequencesByActId) {
@@ -158,7 +189,7 @@ export function useScreenplayNavigation(
       scenesBySequenceId.set(
         sequenceId,
         appendUniqueRows(
-          page.items,
+          page?.items ?? [],
           contextRows.scenesBySequenceId.get(sequenceId) ?? []
         )
       );
@@ -176,6 +207,7 @@ export function useScreenplayNavigation(
       scenesBySequenceId,
       loadingKeys,
       error,
+      selectionContext,
       loadActs,
       loadActSequences,
       loadSequenceScenes,

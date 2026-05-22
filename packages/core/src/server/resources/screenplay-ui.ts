@@ -200,6 +200,16 @@ export async function readSceneNarrativeResource(
       locationLabels: Object.fromEntries(
         document.locations.map((location) => [location.id, location.name])
       ),
+      castMemberHandles: Object.fromEntries(
+        document.cast
+          .filter((castMember) => castMember.handle && castMember.id)
+          .map((castMember) => [castMember.handle.toLowerCase(), castMember.id as string])
+      ),
+      locationHandles: Object.fromEntries(
+        document.locations
+          .filter((location) => location.handle && location.id)
+          .map((location) => [location.handle.toLowerCase(), location.id as string])
+      ),
     };
   } finally {
     session.close();

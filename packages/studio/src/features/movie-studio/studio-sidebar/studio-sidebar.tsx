@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   ChevronDown,
@@ -51,6 +51,39 @@ export function StudioSidebar({
   const [expandedSequences, setExpandedSequences] = useState<Set<string>>(
     () => new Set()
   );
+
+  const autoExpand = useMemo(() => {
+    const context = screenplayNavigation.selectionContext;
+    const sections: string[] = [];
+    const acts: string[] = [];
+    const sequences: string[] = [];
+    if (selection.type === 'castMember') sections.push('cast');
+    if (selection.type === 'location') sections.push('locations');
+    if (
+      selection.type === 'storyArc' ||
+      selection.type === 'sequence' ||
+      selection.type === 'scene'
+    ) {
+      sections.push('acts');
+    }
+    if (context) {
+      if ('act' in context) acts.push(context.act.id);
+      if ('sequence' in context) sequences.push(context.sequence.id);
+    }
+    return { sections, acts, sequences };
+  }, [screenplayNavigation.selectionContext, selection.type]);
+
+  useEffect(() => {
+    if (autoExpand.sections.length) {
+      setExpandedSections((current) => unionWith(current, autoExpand.sections));
+    }
+    if (autoExpand.acts.length) {
+      setExpandedActs((current) => unionWith(current, autoExpand.acts));
+    }
+    if (autoExpand.sequences.length) {
+      setExpandedSequences((current) => unionWith(current, autoExpand.sequences));
+    }
+  }, [autoExpand]);
 
   const toggleSection = (section: string) => {
     setExpandedSections((current) => toggleSetValue(current, section));
@@ -190,6 +223,18 @@ export function StudioSidebar({
       </div>
     </aside>
   );
+}
+
+function unionWith<T>(current: Set<T>, values: readonly T[]): Set<T> {
+  let changed = false;
+  const next = new Set(current);
+  for (const value of values) {
+    if (!next.has(value)) {
+      next.add(value);
+      changed = true;
+    }
+  }
+  return changed ? next : current;
 }
 
 function ProjectCard({

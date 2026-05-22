@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
@@ -62,6 +62,62 @@ export function MovieStudioScreen({
     },
     [onNavigateSelection]
   );
+
+  const sceneNeighbors = useMemo<{
+    previousScene: { id: string; title: string } | null;
+    nextScene: { id: string; title: string } | null;
+  }>(() => {
+    if (selection.type !== 'scene') {
+      return { previousScene: null, nextScene: null };
+    }
+    const context = screenplayNavigation.selectionContext;
+    if (!context || !('sequence' in context)) {
+      return { previousScene: null, nextScene: null };
+    }
+    const sequenceId = context.sequence.id;
+    const actId = context.act.id;
+    const scenes = screenplayNavigation.scenesBySequenceId.get(sequenceId) ?? [];
+    const sceneIndex = scenes.findIndex((scene) => scene.id === selection.id);
+    if (sceneIndex === -1) {
+      return { previousScene: null, nextScene: null };
+    }
+    const sequencesInAct =
+      screenplayNavigation.sequencesByActId.get(actId) ?? [];
+    const sequenceIndex = sequencesInAct.findIndex((seq) => seq.id === sequenceId);
+
+    const adjacentSequenceScene = (
+      offset: -1 | 1
+    ): { id: string; title: string } | null => {
+      if (sequenceIndex === -1) return null;
+      const target = sequencesInAct[sequenceIndex + offset];
+      if (!target) return null;
+      const targetScenes =
+        screenplayNavigation.scenesBySequenceId.get(target.id) ?? [];
+      if (!targetScenes.length) return null;
+      const scene =
+        offset === 1
+          ? targetScenes[0]
+          : targetScenes[targetScenes.length - 1];
+      return { id: scene.id, title: scene.title };
+    };
+
+    const previousScene =
+      sceneIndex > 0
+        ? { id: scenes[sceneIndex - 1].id, title: scenes[sceneIndex - 1].title }
+        : adjacentSequenceScene(-1);
+    const nextScene =
+      sceneIndex < scenes.length - 1
+        ? { id: scenes[sceneIndex + 1].id, title: scenes[sceneIndex + 1].title }
+        : adjacentSequenceScene(1);
+
+    return { previousScene, nextScene };
+  }, [
+    selection,
+    screenplayNavigation.selectionContext,
+    screenplayNavigation.scenesBySequenceId,
+    screenplayNavigation.sequencesByActId,
+  ]);
+
   const handleProductionExport = useCallback(async () => {
     setIsProductionExportRunning(true);
     toast.loading('Exporting production assets', {
@@ -154,6 +210,8 @@ export function MovieStudioScreen({
               projectName={project.identity.name}
               sceneId={selection.id}
               onSelect={selectMovieStudioSurface}
+              previousScene={sceneNeighbors.previousScene}
+              nextScene={sceneNeighbors.nextScene}
             />
           )}
         </PanelShell>

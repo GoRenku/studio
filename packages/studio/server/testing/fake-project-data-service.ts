@@ -231,6 +231,8 @@ export function fakeProjectDataService(): NonNullable<
         blocks: [{ type: 'action', text: 'The siege begins.' }],
         castMemberLabels: {},
         locationLabels: {},
+        castMemberHandles: {},
+        locationHandles: {},
       };
     },
     async createAssetSelect(input) {

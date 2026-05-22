@@ -155,6 +155,8 @@ export interface SceneNarrativeResource {
   blocks: Block[];
   castMemberLabels: Record<string, string>;
   locationLabels: Record<string, string>;
+  castMemberHandles: Record<string, string>;
+  locationHandles: Record<string, string>;
 }
 
 export interface CastDesignResource {

@@ -464,8 +464,7 @@ describe('App', () => {
     renderApp();
 
     await screen.findByText('Voice Design');
-    fireEvent.click(screen.getByLabelText('Expand Cast'));
-    fireEvent.click(screen.getByText('Mehmed'));
+    fireEvent.click(await screen.findByText('Mehmed'));
 
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_mehmed'
