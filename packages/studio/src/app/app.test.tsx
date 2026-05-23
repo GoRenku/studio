@@ -692,9 +692,14 @@ describe('App', () => {
       '/projects/constantinople',
     ],
     [
-      'Visual Language',
-      { type: 'visualLanguage' },
-      '/projects/constantinople/visual-language',
+      'Inspiration',
+      { type: 'inspiration' },
+      '/projects/constantinople/visual-language/inspiration',
+    ],
+    [
+      'Lookbooks',
+      { type: 'lookbooks' },
+      '/projects/constantinople/visual-language/lookbooks',
     ],
     ['Story Arc', { type: 'storyArc' }, '/projects/constantinople/acts'],
     [

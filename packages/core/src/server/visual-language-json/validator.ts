@@ -49,7 +49,7 @@ ajv.addSchema(inspiredBySectionSchema);
 ajv.addSchema(cameraSectionSchema);
 
 export type InspirationAnalysisSections = Omit<InspirationAnalysis, 'folderId'>;
-export type LookbookSections = Omit<Lookbook, 'id'>;
+export type LookbookSections = Omit<Lookbook, 'id' | 'name'>;
 export type VisualLanguageStoredSectionKind = keyof typeof schemaIds;
 
 export function parseVisualLanguageJson(input: {

@@ -77,6 +77,7 @@ Options
   --act                Act id for screenplay sequence list
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
+  --lookbook           Lookbook id
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
   --all-locales        Export every locale with production selects
@@ -146,6 +147,9 @@ function createCliFlags() {
       type: 'string',
     },
     folder: {
+      type: 'string',
+    },
+    lookbook: {
       type: 'string',
     },
     name: {

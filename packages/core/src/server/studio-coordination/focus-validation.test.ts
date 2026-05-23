@@ -21,10 +21,10 @@ describe('Studio focus validation', () => {
       },
     });
     expect(
-      resolveStudioSelectionForProject(project, { type: 'visualLanguage' })
+      resolveStudioSelectionForProject(project, { type: 'lookbooks' })
     ).toMatchObject({
       ok: true,
-      context: { kind: 'visualLanguage' },
+      context: { kind: 'visualLanguage', sections: ['inspiration', 'lookbooks'] },
     });
     expect(
       resolveStudioSelectionForProject(project, { type: 'storyArc' })

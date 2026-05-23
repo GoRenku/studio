@@ -14,6 +14,7 @@ import type {
   Lookbook,
   LookbookImage,
   LookbookResource,
+  LookbooksResource,
   LookbookSection,
   LocationNavigationRow,
   LocationOverviewResource,
@@ -151,8 +152,14 @@ export interface ProjectDataService {
   writeInspirationImage(input: WriteInspirationImageInput): Promise<InspirationFolderResource>;
   deleteInspirationImage(input: DeleteInspirationImageInput): Promise<InspirationFolderResource>;
   upsertInspirationAnalysis(input: UpsertInspirationAnalysisInput): Promise<InspirationAnalysis>;
+  listLookbooks(input: ListLookbooksInput): Promise<LookbooksResource>;
   readLookbook(input: ReadLookbookInput): Promise<LookbookResource>;
-  upsertLookbook(input: UpsertLookbookInput): Promise<Lookbook>;
+  createLookbook(input: CreateLookbookInput): Promise<Lookbook>;
+  updateLookbook(input: UpdateLookbookInput): Promise<Lookbook>;
+  deleteLookbook(input: DeleteLookbookInput): Promise<void>;
+  setActiveLookbook(input: SetActiveLookbookInput): Promise<void>;
+  clearActiveLookbook(input: ClearActiveLookbookInput): Promise<void>;
+  setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImage>;
   importLookbookImage(input: ImportLookbookImageInput): Promise<LookbookImage>;
   deleteLookbookImage(input: DeleteLookbookImageInput): Promise<void>;
   setLookbookImageSections(input: SetLookbookImageSectionsInput): Promise<LookbookImage>;
@@ -280,15 +287,43 @@ export interface UpsertInspirationAnalysisInput extends VisualLanguageProjectInp
   filePath?: string;
 }
 
-export interface ReadLookbookInput extends VisualLanguageProjectInput {}
+export interface ListLookbooksInput extends VisualLanguageProjectInput {}
 
-export interface UpsertLookbookInput extends VisualLanguageProjectInput {
+export interface ReadLookbookInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+}
+
+export interface CreateLookbookInput extends VisualLanguageProjectInput {
+  name: string;
   sections: LookbookSections;
   filePath?: string;
   idGenerator?: ProjectIdGenerator;
 }
 
+export interface UpdateLookbookInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+  name?: string;
+  sections?: LookbookSections;
+  filePath?: string;
+}
+
+export interface DeleteLookbookInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+}
+
+export interface SetActiveLookbookInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+}
+
+export interface ClearActiveLookbookInput extends VisualLanguageProjectInput {}
+
+export interface SetLookbookCardImageInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+  imageId: string;
+}
+
 export interface ImportLookbookImageInput extends VisualLanguageProjectInput {
+  lookbookId: string;
   projectRelativePath: string;
   sections?: LookbookSection[];
   title?: string;

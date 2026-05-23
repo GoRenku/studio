@@ -37,7 +37,9 @@ export interface StudioProjectRef {
 
 export type StudioSelection =
   | { type: 'projectInformation' }
-  | { type: 'visualLanguage' }
+  | { type: 'inspiration'; folderId?: string }
+  | { type: 'lookbooks' }
+  | { type: 'lookbook'; lookbookId: string }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
   | { type: 'locations' }
@@ -204,7 +206,7 @@ export type StudioCurrentContext =
     }
   | {
       kind: 'visualLanguage';
-      sections: ('inspiration' | 'lookbook')[];
+      sections: ('inspiration' | 'lookbooks')[];
     }
   | {
       kind: 'cast';

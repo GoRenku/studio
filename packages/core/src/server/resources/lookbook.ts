@@ -1,27 +1,55 @@
 import type {
   LookbookImage,
+  LookbookListItem,
   LookbookResource,
+  LookbooksResource,
   LookbookSection,
 } from '../../client/index.js';
 import {
-  readLookbookRecord,
+  listLookbookCardImageIds,
+  listLookbookRecords,
+  readActiveLookbookId,
+  requireLookbookRecordById,
   toLookbook,
 } from '../database/access/lookbook.js';
-import { listLookbookImages } from '../database/access/lookbook-images.js';
+import {
+  listLookbookImages,
+  readLookbookImage,
+} from '../database/access/lookbook-images.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import type { ReadLookbookInput } from '../project-data-service-contracts.js';
+import type {
+  ListLookbooksInput,
+  ReadLookbookInput,
+} from '../project-data-service-contracts.js';
+
+export async function listLookbooksResource(
+  input: ListLookbooksInput
+): Promise<LookbooksResource> {
+  return withVisualLanguageSession(input, ({ session }) => {
+    const activeLookbookId = readActiveLookbookId(session);
+    const cardImageIds = listLookbookCardImageIds(session);
+    const lookbooks: LookbookListItem[] = listLookbookRecords(session).map((row) => ({
+      lookbook: toLookbook(row),
+      cardImage: readCardImage(session, cardImageIds.get(row.id)),
+      isActive: activeLookbookId === row.id,
+    }));
+    return { activeLookbookId, lookbooks };
+  });
+}
 
 export async function readLookbookResource(
   input: ReadLookbookInput
 ): Promise<LookbookResource> {
   return withVisualLanguageSession(input, ({ session }) => {
-    const row = readLookbookRecord(session);
-    const lookbook = row ? toLookbook(row) : null;
-    const images = row ? listLookbookImages(session, row.id) : [];
+    const row = requireLookbookRecordById(session, input.lookbookId);
+    const images = listLookbookImages(session, row.id);
+    const cardImageIds = listLookbookCardImageIds(session);
     return {
-      lookbook,
+      lookbook: toLookbook(row),
+      cardImage: readCardImage(session, cardImageIds.get(row.id)),
+      isActive: readActiveLookbookId(session) === row.id,
       images,
       imagesBySection: buildImagesBySection(images),
     };
@@ -46,6 +74,13 @@ export function buildImagesBySection(
     }
   }
   return grouped;
+}
+
+function readCardImage(
+  session: DatabaseSession,
+  imageId: string | undefined
+): LookbookImage | null {
+  return imageId ? readLookbookImage(session, imageId) : null;
 }
 
 async function withVisualLanguageSession<T>(

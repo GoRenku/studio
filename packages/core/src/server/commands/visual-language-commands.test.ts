@@ -167,20 +167,48 @@ describe('visual language commands', () => {
     ).rejects.toThrow();
   });
 
-  it('writes the Lookbook, imports flat Lookbook images, and groups images by section', async () => {
+  it('creates multiple Lookbooks, tracks active state, card images, and deletion', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
 
-    const lookbook = await projectData.upsertLookbook({
+    const lookbookIds = createDeterministicIdGenerator();
+    const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
       homeDir,
+      name: 'Siege Steel',
       sections: lookbookSections(),
-      idGenerator: createDeterministicIdGenerator(),
+      idGenerator: lookbookIds,
     });
     expect(lookbook.id).toBe('lookbook_test0001');
+    expect(lookbook.name).toBe('Siege Steel');
+
+    const alternate = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Ivory Fog',
+      sections: lookbookSections(),
+      idGenerator: lookbookIds,
+    });
+    expect(alternate.id).toBe('lookbook_test0002');
+
+    await expect(
+      projectData.listLookbooks({ projectName: 'constantinople', homeDir })
+    ).resolves.toMatchObject({
+      activeLookbookId: null,
+      lookbooks: [
+        { lookbook: { name: 'Siege Steel' }, isActive: false },
+        { lookbook: { name: 'Ivory Fog' }, isActive: false },
+      ],
+    });
+
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.id,
+    });
 
     const firstGeneratedPath = 'visual-language/tmp/run-a/generated-look.png';
     const secondGeneratedPath = 'visual-language/tmp/run-b/generated-look.png';
@@ -197,6 +225,7 @@ describe('visual language commands', () => {
     const image = await projectData.importLookbookImage({
       projectName: 'constantinople',
       homeDir,
+      lookbookId: lookbook.id,
       projectRelativePath: firstGeneratedPath,
       sections: ['palette', 'lighting'],
       idGenerator: imageIds,
@@ -207,6 +236,7 @@ describe('visual language commands', () => {
     const secondImage = await projectData.importLookbookImage({
       projectName: 'constantinople',
       homeDir,
+      lookbookId: lookbook.id,
       projectRelativePath: secondGeneratedPath,
       sections: ['palette'],
       idGenerator: imageIds,
@@ -215,10 +245,21 @@ describe('visual language commands', () => {
       'visual-language/lookbook/generated-look-2.png'
     );
 
+    await projectData.setLookbookCardImage({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.id,
+      imageId: image.id,
+    });
+
     const resource = await projectData.readLookbook({
       projectName: 'constantinople',
       homeDir,
+      lookbookId: lookbook.id,
     });
+    expect(resource.lookbook.name).toBe('Siege Steel');
+    expect(resource.isActive).toBe(true);
+    expect(resource.cardImage?.id).toBe(image.id);
     expect(resource.imagesBySection.palette).toHaveLength(2);
     expect(resource.imagesBySection.lighting).toHaveLength(1);
 
@@ -242,6 +283,21 @@ describe('visual language commands', () => {
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look-2.png'))
     ).resolves.toBeUndefined();
+
+    await projectData.deleteLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.id,
+    });
+    await expect(
+      projectData.listLookbooks({ projectName: 'constantinople', homeDir })
+    ).resolves.toMatchObject({
+      activeLookbookId: null,
+      lookbooks: [{ lookbook: { name: 'Ivory Fog' }, isActive: false }],
+    });
+    await expect(
+      fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look-2.png'))
+    ).rejects.toThrow();
   });
 
   it('rejects invalid Lookbook JSON on write and malformed stored JSON on read', async () => {
@@ -252,9 +308,10 @@ describe('visual language commands', () => {
     }
 
     await expect(
-      projectData.upsertLookbook({
+      projectData.createLookbook({
         projectName: 'constantinople',
         homeDir,
+        name: 'Invalid Lookbook',
         sections: {
           ...lookbookSections(),
           thesis: { statement: 'Missing principles' },
@@ -262,9 +319,10 @@ describe('visual language commands', () => {
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA230' });
 
-    await projectData.upsertLookbook({
+    const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
       homeDir,
+      name: 'Corruptible Lookbook',
       sections: lookbookSections(),
       idGenerator: createDeterministicIdGenerator(),
     });
@@ -277,7 +335,11 @@ describe('visual language commands', () => {
     }
 
     await expect(
-      projectData.readLookbook({ projectName: 'constantinople', homeDir })
+      projectData.readLookbook({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: lookbook.id,
+      })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA230' });
   });
 });

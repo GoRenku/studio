@@ -15,6 +15,29 @@ function createMountedVisualLanguageRoute(
 }
 
 describe('visual language Hono route', () => {
+  it('routes active Lookbook clearing before parameterized Lookbook deletes', async () => {
+    let clearActiveCalled = false;
+    let deletedLookbookId: string | null = null;
+    const app = createMountedVisualLanguageRoute({
+      ...fakeProjectDataService(),
+      async clearActiveLookbook() {
+        clearActiveCalled = true;
+      },
+      async deleteLookbook(input) {
+        deletedLookbookId = input.lookbookId;
+      },
+    });
+
+    const response = await app.request(
+      '/constantinople/visual-language/lookbooks/active-selection',
+      { method: 'DELETE' }
+    );
+
+    expect(response.status).toBe(200);
+    expect(clearActiveCalled).toBe(true);
+    expect(deletedLookbookId).toBeNull();
+  });
+
   it('rejects Lookbook image section updates without a sections array', async () => {
     let sectionUpdateCalled = false;
     const app = createMountedVisualLanguageRoute({
@@ -26,7 +49,7 @@ describe('visual language Hono route', () => {
     });
 
     const response = await app.request(
-      '/constantinople/visual-language/lookbook/images/lookbook_image_test0001/sections',
+      '/constantinople/visual-language/lookbooks/images/lookbook_image_test0001/sections',
       {
         method: 'PUT',
         body: JSON.stringify({}),

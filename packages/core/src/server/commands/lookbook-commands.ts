@@ -13,14 +13,20 @@ import {
   insertAssetRecord,
 } from '../database/access/assets.js';
 import {
-  readLookbookRecord,
+  deleteLookbookRecord,
+  insertLookbookRecord,
+  readActiveLookbookId,
+  readLookbookRecordById,
   requireLookbookRecordById,
+  setActiveLookbookRecord,
+  setLookbookCardImageRecord,
   toLookbook,
-  upsertLookbookRecord,
+  updateLookbookRecord,
 } from '../database/access/lookbook.js';
 import {
   deleteLookbookImageRecord,
   insertLookbookImageRecord,
+  listLookbookImages,
   nextLookbookImageSortOrder,
   readLookbookImage,
   requireLookbookImageRecord,
@@ -38,10 +44,15 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import type {
+  ClearActiveLookbookInput,
+  CreateLookbookInput,
   DeleteLookbookImageInput,
+  DeleteLookbookInput,
   ImportLookbookImageInput,
+  SetActiveLookbookInput,
+  SetLookbookCardImageInput,
   SetLookbookImageSectionsInput,
-  UpsertLookbookInput,
+  UpdateLookbookInput,
 } from '../project-data-service-contracts.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
@@ -55,19 +66,22 @@ import {
   LOOKBOOK_ROOT,
 } from '../visual-language-paths.js';
 
-export async function upsertLookbook(input: UpsertLookbookInput): Promise<Lookbook> {
+export async function createLookbook(input: CreateLookbookInput): Promise<Lookbook> {
   return withVisualLanguageSession(input, ({ session }) => {
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     const sections = serializeLookbookSections({
       sections: input.sections,
       filePath: input.filePath,
     });
-    upsertLookbookRecord(session, {
-      id: ids('lookbook'),
+    const now = new Date().toISOString();
+    const lookbookId = ids('lookbook');
+    insertLookbookRecord(session, {
+      id: lookbookId,
+      name: normalizeLookbookName(input.name),
       sections,
-      now: new Date().toISOString(),
+      now,
     });
-    const row = readLookbookRecord(session);
+    const row = readLookbookRecordById(session, lookbookId);
     if (!row) {
       throw new ProjectDataError('PROJECT_DATA243', 'Lookbook was not written.');
     }
@@ -75,18 +89,107 @@ export async function upsertLookbook(input: UpsertLookbookInput): Promise<Lookbo
   });
 }
 
+export async function updateLookbook(input: UpdateLookbookInput): Promise<Lookbook> {
+  return withVisualLanguageSession(input, ({ session }) => {
+    const sections = input.sections
+      ? serializeLookbookSections({
+          sections: input.sections,
+          filePath: input.filePath,
+        })
+      : undefined;
+    updateLookbookRecord(session, {
+      lookbookId: input.lookbookId,
+      name: input.name ? normalizeLookbookName(input.name) : undefined,
+      sections,
+      now: new Date().toISOString(),
+    });
+    return toLookbook(requireLookbookRecordById(session, input.lookbookId));
+  });
+}
+
+export async function deleteLookbook(input: DeleteLookbookInput): Promise<void> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+    requireLookbookRecordById(session, input.lookbookId);
+    const images = listLookbookImages(session, input.lookbookId);
+
+    for (const image of images) {
+      await deleteLookbookImageFiles(projectFolder, image);
+    }
+
+    session.db.transaction((tx) => {
+      const txSession = { ...session, db: tx };
+      if (readActiveLookbookId(txSession) === input.lookbookId) {
+        setActiveLookbookRecord(txSession, {
+          lookbookId: null,
+          now: new Date().toISOString(),
+        });
+      }
+      for (const image of images) {
+        deleteLookbookImageRecord(txSession, image.id);
+        deleteAssetFileRecordsForAsset(txSession, image.asset.assetId);
+        deleteAssetRecord(txSession, image.asset.assetId);
+      }
+      deleteLookbookRecord(txSession, input.lookbookId);
+    });
+  });
+}
+
+export async function setActiveLookbook(
+  input: SetActiveLookbookInput
+): Promise<void> {
+  return withVisualLanguageSession(input, ({ session }) => {
+    requireLookbookRecordById(session, input.lookbookId);
+    setActiveLookbookRecord(session, {
+      lookbookId: input.lookbookId,
+      now: new Date().toISOString(),
+    });
+  });
+}
+
+export async function clearActiveLookbook(
+  input: ClearActiveLookbookInput
+): Promise<void> {
+  return withVisualLanguageSession(input, ({ session }) => {
+    setActiveLookbookRecord(session, {
+      lookbookId: null,
+      now: new Date().toISOString(),
+    });
+  });
+}
+
+export async function setLookbookCardImage(
+  input: SetLookbookCardImageInput
+): Promise<LookbookImage> {
+  return withVisualLanguageSession(input, ({ session }) => {
+    requireLookbookRecordById(session, input.lookbookId);
+    const image = requireLookbookImageRecord(session, input.imageId);
+    if (image.lookbookId !== input.lookbookId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA247',
+        `Lookbook image ${input.imageId} does not belong to Lookbook ${input.lookbookId}.`
+      );
+    }
+    setLookbookCardImageRecord(session, {
+      lookbookId: input.lookbookId,
+      imageId: input.imageId,
+      now: new Date().toISOString(),
+    });
+    const lookbookImage = readLookbookImage(session, input.imageId);
+    if (!lookbookImage) {
+      throw new ProjectDataError(
+        'PROJECT_DATA237',
+        `Lookbook image was not found: ${input.imageId}.`
+      );
+    }
+    return lookbookImage;
+  });
+}
+
 export async function importLookbookImage(
   input: ImportLookbookImageInput
 ): Promise<LookbookImage> {
   return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
-    const lookbook = readLookbookRecord(session);
-    if (!lookbook) {
-      throw new ProjectDataError(
-        'PROJECT_DATA236',
-        'A Lookbook must exist before importing Lookbook images.'
-      );
-    }
-    requireLookbookRecordById(session, lookbook.id);
+    requireLookbookRecordById(session, input.lookbookId);
 
     const sourceProjectRelativePath = normalizeProjectRelativePath(
       input.projectRelativePath
@@ -142,9 +245,9 @@ export async function importLookbookImage(
       });
       insertLookbookImageRecord(txSession, {
         id: imageId,
-        lookbookId: lookbook.id,
+        lookbookId: input.lookbookId,
         assetId,
-        sortOrder: nextLookbookImageSortOrder(txSession, lookbook.id),
+        sortOrder: nextLookbookImageSortOrder(txSession, input.lookbookId),
         now,
       });
       setLookbookImageSectionRecords(txSession, {
@@ -201,16 +304,7 @@ export async function deleteLookbookImage(
         `Lookbook image was not found: ${input.imageId}.`
       );
     }
-    for (const file of lookbookImage.asset.files) {
-      const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
-      assertProjectRelativeChildPath({
-        parent: LOOKBOOK_ROOT,
-        child: projectRelativePath,
-      });
-      await fs.rm(resolveProjectRelativePath(projectFolder, projectRelativePath), {
-        force: true,
-      });
-    }
+    await deleteLookbookImageFiles(projectFolder, lookbookImage);
     session.db.transaction((tx) => {
       const txSession = { ...session, db: tx };
       deleteLookbookImageRecord(txSession, image.id);
@@ -218,6 +312,30 @@ export async function deleteLookbookImage(
       deleteAssetRecord(txSession, image.assetId);
     });
   });
+}
+
+async function deleteLookbookImageFiles(
+  projectFolder: string,
+  image: LookbookImage
+): Promise<void> {
+  for (const file of image.asset.files) {
+    const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
+    assertProjectRelativeChildPath({
+      parent: LOOKBOOK_ROOT,
+      child: projectRelativePath,
+    });
+    await fs.rm(resolveProjectRelativePath(projectFolder, projectRelativePath), {
+      force: true,
+    });
+  }
+}
+
+function normalizeLookbookName(name: string): string {
+  const normalized = name.trim();
+  if (!normalized) {
+    throw new ProjectDataError('PROJECT_DATA248', 'Lookbook name is required.');
+  }
+  return normalized;
 }
 
 async function statExistingFile(absolutePath: string): Promise<{ size: number }> {

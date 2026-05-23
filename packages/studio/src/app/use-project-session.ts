@@ -273,7 +273,61 @@ function readStudioRoute(): StudioRoute {
     return {
       screen: 'movieStudio',
       projectName: decodeURIComponent(visualLanguageRoute[1]),
-      selection: { type: 'visualLanguage' },
+      selection: { type: 'inspiration' },
+    };
+  }
+
+  const inspirationFolderRoute =
+    /^\/projects\/([^/]+)\/visual-language\/inspiration\/([^/]+)\/?$/.exec(
+      window.location.pathname
+    );
+  if (inspirationFolderRoute?.[1] && inspirationFolderRoute[2]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(inspirationFolderRoute[1]),
+      selection: {
+        type: 'inspiration',
+        folderId: decodeURIComponent(inspirationFolderRoute[2]),
+      },
+    };
+  }
+
+  const inspirationRoute =
+    /^\/projects\/([^/]+)\/visual-language\/inspiration\/?$/.exec(
+      window.location.pathname
+    );
+  if (inspirationRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(inspirationRoute[1]),
+      selection: { type: 'inspiration' },
+    };
+  }
+
+  const lookbookRoute =
+    /^\/projects\/([^/]+)\/visual-language\/lookbooks\/([^/]+)\/?$/.exec(
+      window.location.pathname
+    );
+  if (lookbookRoute?.[1] && lookbookRoute[2]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(lookbookRoute[1]),
+      selection: {
+        type: 'lookbook',
+        lookbookId: decodeURIComponent(lookbookRoute[2]),
+      },
+    };
+  }
+
+  const lookbooksRoute =
+    /^\/projects\/([^/]+)\/visual-language\/lookbooks\/?$/.exec(
+      window.location.pathname
+    );
+  if (lookbooksRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(lookbooksRoute[1]),
+      selection: { type: 'lookbooks' },
     };
   }
 
@@ -400,6 +454,12 @@ function selectionContextErrorMessage(
   if ('id' in selection) {
     return `${selectionTypeLabel(selection.type)} not found: ${selection.id}`;
   }
+  if ('lookbookId' in selection) {
+    return `${selectionTypeLabel(selection.type)} not found: ${selection.lookbookId}`;
+  }
+  if ('folderId' in selection && selection.folderId) {
+    return `${selectionTypeLabel(selection.type)} not found: ${selection.folderId}`;
+  }
   return `Movie Studio selection not found: ${selection.type}`;
 }
 
@@ -415,7 +475,11 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Scene';
     case 'projectInformation':
       return 'Project information';
-    case 'visualLanguage':
+    case 'inspiration':
+      return 'Inspiration';
+    case 'lookbooks':
+      return 'Lookbooks';
+    case 'lookbook':
       return 'Visual language';
     case 'cast':
       return 'Cast';
@@ -442,6 +506,12 @@ function canResolveRouteSelection(
   if (selection.type === 'scene') {
     return false;
   }
+  if (selection.type === 'lookbook') {
+    return false;
+  }
+  if (selection.type === 'inspiration' && selection.folderId) {
+    return false;
+  }
   return true;
 }
 
@@ -465,8 +535,17 @@ function studioSelectionRoutePath(
   if (selection.type === 'location') {
     return `${projectRoutePath(projectName)}/locations/${encodeURIComponent(selection.id)}`;
   }
-  if (selection.type === 'visualLanguage') {
-    return `${projectRoutePath(projectName)}/visual-language`;
+  if (selection.type === 'inspiration') {
+    const base = `${projectRoutePath(projectName)}/visual-language/inspiration`;
+    return selection.folderId
+      ? `${base}/${encodeURIComponent(selection.folderId)}`
+      : base;
+  }
+  if (selection.type === 'lookbooks') {
+    return `${projectRoutePath(projectName)}/visual-language/lookbooks`;
+  }
+  if (selection.type === 'lookbook') {
+    return `${projectRoutePath(projectName)}/visual-language/lookbooks/${encodeURIComponent(selection.lookbookId)}`;
   }
   if (selection.type === 'storyArc') {
     return `${projectRoutePath(projectName)}/acts`;

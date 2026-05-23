@@ -310,9 +310,17 @@ export function fakeProjectDataService(): NonNullable<
     async upsertInspirationAnalysis(input) {
       return { folderId: input.folderId, ...input.sections };
     },
-    async readLookbook() {
+    async listLookbooks() {
       return {
-        lookbook: null,
+        activeLookbookId: null,
+        lookbooks: [],
+      };
+    },
+    async readLookbook(input) {
+      return {
+        lookbook: makeLookbook(input.lookbookId),
+        cardImage: null,
+        isActive: false,
         images: [],
         imagesBySection: {
           thesis: [],
@@ -325,43 +333,81 @@ export function fakeProjectDataService(): NonNullable<
         },
       };
     },
-    async upsertLookbook(input) {
-      return { id: 'lookbook_test0001', ...input.sections };
+    async createLookbook(input) {
+      return { id: 'lookbook_test0001', ...input.sections, name: input.name };
+    },
+    async updateLookbook(input) {
+      return makeLookbook(input.lookbookId, input.name);
+    },
+    async deleteLookbook() {},
+    async setActiveLookbook() {},
+    async clearActiveLookbook() {},
+    async setLookbookCardImage(input) {
+      return makeLookbookImage(input.imageId);
     },
     async importLookbookImage() {
-      return {
-        id: 'lookbook_image_test0001',
-        asset: {
-          assetId: 'asset_lookbook_image',
-          type: 'lookbook_image',
-          mediaKind: 'image',
-          title: 'Lookbook image',
-          origin: 'generated',
-          availability: 'ready',
-          files: [],
-          createdAt: '2026-05-22T00:00:00.000Z',
-          updatedAt: '2026-05-22T00:00:00.000Z',
-        },
-        sections: [],
-      };
+      return makeLookbookImage('lookbook_image_test0001');
     },
     async deleteLookbookImage() {},
     async setLookbookImageSections(input) {
-      return {
-        id: input.imageId,
-        asset: {
-          assetId: 'asset_lookbook_image',
-          type: 'lookbook_image',
-          mediaKind: 'image',
-          title: 'Lookbook image',
-          origin: 'generated',
-          availability: 'ready',
-          files: [],
-          createdAt: '2026-05-22T00:00:00.000Z',
-          updatedAt: '2026-05-22T00:00:00.000Z',
-        },
-        sections: input.sections,
-      };
+      return { ...makeLookbookImage(input.imageId), sections: input.sections };
     },
+  };
+}
+
+function makeLookbook(id: string, name = 'Lookbook') {
+  return {
+    id,
+    name,
+    thesis: {
+      statement: 'The movie favors pressure over spectacle.',
+      principles: ['Use negative space as pressure.'],
+    },
+    palette: {
+      description: 'Steel and ember tones.',
+      colors: [{ hex: '#334455', name: 'Siege steel', meaning: 'Pressure.' }],
+      observations: [{ text: 'Warmth appears near human labor.' }],
+    },
+    toneMood: {
+      tone: 'controlled dread',
+      moodTags: ['tense'],
+      description: 'Held shadows and practical highlights.',
+    },
+    composition: {
+      description: 'Orderly compositions tighten around decisions.',
+      patterns: [{ name: 'Map pressure', description: 'Tables compress depth.' }],
+    },
+    lighting: {
+      description: 'Practical pools of warm light.',
+      patterns: [{ name: 'Lamp islands', description: 'Oil lamps isolate faces.' }],
+    },
+    texture: {
+      description: 'Stone, smoke, and worn metal.',
+      observations: [{ text: 'Fine surface texture stays visible.' }],
+    },
+    camera: {
+      description: 'Patient and observant.',
+      movement: [{ name: 'Slow push', description: 'Push in when decisions harden.' }],
+      motion: [{ name: 'Held labor', description: 'Blocking moves with weight.' }],
+      framing: [{ name: 'Measured distance', description: 'Close-ups are earned.' }],
+    },
+  };
+}
+
+function makeLookbookImage(id: string) {
+  return {
+    id,
+    asset: {
+      assetId: 'asset_lookbook_image',
+      type: 'lookbook_image',
+      mediaKind: 'image',
+      title: 'Lookbook image',
+      origin: 'generated',
+      availability: 'ready',
+      files: [],
+      createdAt: '2026-05-22T00:00:00.000Z',
+      updatedAt: '2026-05-22T00:00:00.000Z',
+    },
+    sections: [],
   };
 }

@@ -10,7 +10,9 @@ import type { ScreenplayNavigationState } from './use-screenplay-navigation';
 
 export type StudioSelection =
   | { type: 'projectInformation' }
-  | { type: 'visualLanguage' }
+  | { type: 'inspiration'; folderId?: string }
+  | { type: 'lookbooks' }
+  | { type: 'lookbook'; lookbookId: string }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
   | { type: 'locations' }
@@ -82,8 +84,12 @@ export function resolveStudioSelection(
   switch (selection.type) {
     case 'projectInformation':
       return valid('Project Details', 'Project information loaded from project data.');
-    case 'visualLanguage':
-      return valid('Visual Language', 'Visual language loaded from project data.');
+    case 'inspiration':
+      return valid('Inspiration', 'Reference grabs and analysis.');
+    case 'lookbooks':
+      return valid('Lookbooks', 'Generated visual language options.');
+    case 'lookbook':
+      return valid('Lookbook', 'Generated visual language guide.');
     case 'cast':
       return valid('Cast', 'Cast members loaded from screenplay data.');
     case 'locations':

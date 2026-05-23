@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
+import { createInspirationFolder } from '@/services/studio-visual-language-api';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import { CastOverviewPanel } from './cast/cast-overview-panel';
@@ -18,6 +19,7 @@ import { StudioSidebar } from './studio-sidebar/studio-sidebar';
 import { useScreenplayNavigation } from './use-screenplay-navigation';
 import { useStudioSelectionResolution } from './use-movie-studio-selection-resolution';
 import type { StudioSelection } from './movie-studio-selection';
+import { InspirationFolderCreateDialog } from './visual-language/inspiration-folder-create-dialog';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
 
 interface MovieStudioScreenProps {
@@ -50,12 +52,20 @@ export function MovieStudioScreen({
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
   const [isProductionExportRunning, setIsProductionExportRunning] = useState(false);
+  const [lookbooksRevision, setLookbooksRevision] = useState(0);
+  const [inspirationFoldersRevision, setInspirationFoldersRevision] = useState(0);
   const handleProjectInformationAutosaveStatusChange = useCallback(
     (status: DebouncedAutosaveStatus) => {
       setProjectInformationAutosave(status);
     },
     []
   );
+  const handleLookbooksChange = useCallback(() => {
+    setLookbooksRevision((current) => current + 1);
+  }, []);
+  const handleInspirationFoldersChange = useCallback(() => {
+    setInspirationFoldersRevision((current) => current + 1);
+  }, []);
   const selectMovieStudioSurface = useCallback(
     (nextSelection: StudioSelection) => {
       void onNavigateSelection(nextSelection);
@@ -142,9 +152,18 @@ export function MovieStudioScreen({
     }
   }, [project.identity.name]);
 
+  const handleCreateInspirationFolder = useCallback(
+    async (name: string) => {
+      const folder = await createInspirationFolder(project.identity.name, name);
+      handleInspirationFoldersChange();
+      await onNavigateSelection({ type: 'inspiration', folderId: folder.id });
+    },
+    [handleInspirationFoldersChange, onNavigateSelection, project.identity.name]
+  );
+
   return (
     <div className='h-screen w-screen bg-background text-foreground p-3 flex flex-col gap-3'>
-      <main className='flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] gap-3'>
+      <main className='flex-1 min-h-0 grid grid-cols-1 gap-3 lg:grid-cols-[300px_minmax(0,1fr)]'>
         <StudioSidebar
           project={project}
           screenplayNavigation={screenplayNavigation}
@@ -153,14 +172,24 @@ export function MovieStudioScreen({
           onHome={onHome}
           isProductionExportRunning={isProductionExportRunning}
           onProductionExport={handleProductionExport}
+          lookbooksRevision={lookbooksRevision}
+          inspirationFoldersRevision={inspirationFoldersRevision}
+          onLookbooksChange={handleLookbooksChange}
+          onInspirationFoldersChange={handleInspirationFoldersChange}
         />
         <PanelShell
           title={resolvedSelection.kicker}
+          contentClassName={selection.type === 'inspiration' ? 'p-0' : undefined}
           action={
             selection.type === 'projectInformation' ? (
               <AutosaveStatus
                 status={projectInformationAutosave}
                 className='shrink-0'
+              />
+            ) : selection.type === 'inspiration' ? (
+              <InspirationFolderCreateDialog
+                trigger='icon'
+                onCreate={handleCreateInspirationFolder}
               />
             ) : null
           }
@@ -171,8 +200,16 @@ export function MovieStudioScreen({
               onProjectChange={onProjectChange}
               onAutosaveStatusChange={handleProjectInformationAutosaveStatusChange}
             />
-          ) : selection.type === 'visualLanguage' ? (
-            <VisualLanguagePanel project={project} />
+          ) : selection.type === 'inspiration' ||
+            selection.type === 'lookbooks' ||
+            selection.type === 'lookbook' ? (
+            <VisualLanguagePanel
+              project={project}
+              selection={selection}
+              onSelect={selectMovieStudioSurface}
+              onLookbooksChange={handleLookbooksChange}
+              inspirationFoldersRevision={inspirationFoldersRevision}
+            />
           ) : selection.type === 'cast' ? (
             <CastOverviewPanel
               projectName={project.identity.name}

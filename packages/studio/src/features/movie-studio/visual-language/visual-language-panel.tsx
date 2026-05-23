@@ -1,17 +1,54 @@
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
+import type { StudioSelection } from '../movie-studio-selection';
+import { InspirationPanel } from './inspiration-panel';
+import { LookbookPanel } from './lookbook-panel';
+import { LookbooksPanel } from './lookbooks-panel';
 
 interface VisualLanguagePanelProps {
   project: ProjectShellWithHttp;
+  selection: Extract<
+    StudioSelection,
+    { type: 'inspiration' } | { type: 'lookbooks' } | { type: 'lookbook' }
+  >;
+  onSelect: (selection: StudioSelection) => void;
+  onLookbooksChange: () => void;
+  inspirationFoldersRevision: number;
 }
 
-export function VisualLanguagePanel({ project }: VisualLanguagePanelProps) {
+export function VisualLanguagePanel({
+  project,
+  selection,
+  onSelect,
+  onLookbooksChange,
+  inspirationFoldersRevision,
+}: VisualLanguagePanelProps) {
+  const projectName = project.identity.name;
+
+  if (selection.type === 'lookbooks') {
+    return (
+      <LookbooksPanel
+        projectName={projectName}
+        onOpenLookbook={(lookbookId) => onSelect({ type: 'lookbook', lookbookId })}
+        onLookbooksChange={onLookbooksChange}
+      />
+    );
+  }
+
+  if (selection.type === 'lookbook') {
+    return (
+      <LookbookPanel
+        projectName={projectName}
+        lookbookId={selection.lookbookId}
+        onLookbooksChange={onLookbooksChange}
+      />
+    );
+  }
+
   return (
-    <div className='mx-auto flex max-w-4xl flex-col gap-4'>
-      <div className='rounded-md border border-border/40 bg-background/30 p-4'>
-        <p className='text-sm text-muted-foreground'>
-          Visual Language design for {project.identity.title} will be added here.
-        </p>
-      </div>
-    </div>
+    <InspirationPanel
+      projectName={projectName}
+      folderId={selection.folderId}
+      foldersRevision={inspirationFoldersRevision}
+    />
   );
 }

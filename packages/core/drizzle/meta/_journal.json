@@ -71,6 +71,13 @@
       "when": 1779475516655,
       "tag": "0009_visual_language_inspiration_lookbook",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1779538003329,
+      "tag": "0010_flimsy_aaron_stack",
+      "breakpoints": true
     }
   ]
 }

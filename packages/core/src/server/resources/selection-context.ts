@@ -19,6 +19,8 @@ import {
   readSceneNavigationContext,
   readSequenceNavigationContext,
 } from '../database/access/navigation.js';
+import { readLookbookRecordById } from '../database/access/lookbook.js';
+import { readInspirationFolderRecord } from '../database/access/inspiration-folders.js';
 
 export async function readStudioSelectionContext(input: {
   projectName: string;
@@ -48,13 +50,37 @@ export function readStudioSelectionContextProjection(
           context: { surface: 'project-information' },
           resourceKeys: ['project-information'],
         };
-      case 'visualLanguage':
+      case 'inspiration':
+        if (
+          input.selection.folderId &&
+          !readInspirationFolderRecord(session, input.selection.folderId)
+        ) {
+          return selectionNotFound(input.selection);
+        }
         return {
           valid: true,
           selection: input.selection,
-          context: { surface: 'visual-language' },
-          resourceKeys: ['surface:visual-language:inspiration', 'surface:visual-language:lookbook'],
+          context: { surface: 'visual-language-inspiration' },
+          resourceKeys: ['surface:visual-language:inspiration'],
         };
+      case 'lookbooks':
+        return {
+          valid: true,
+          selection: input.selection,
+          context: { surface: 'visual-language-lookbooks' },
+          resourceKeys: ['surface:visual-language:lookbooks'],
+        };
+      case 'lookbook': {
+        const lookbook = readLookbookRecordById(session, input.selection.lookbookId);
+        return lookbook
+          ? {
+              valid: true,
+              selection: input.selection,
+              context: { surface: 'visual-language-lookbook' },
+              resourceKeys: [`surface:visual-language:lookbook:${lookbook.id}`],
+            }
+          : selectionNotFound(input.selection);
+      }
       case 'cast':
         return {
           valid: true,

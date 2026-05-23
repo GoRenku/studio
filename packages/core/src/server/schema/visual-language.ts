@@ -33,6 +33,7 @@ export const inspirationAnalysis = sqliteTable('inspiration_analysis', {
 
 export const lookbook = sqliteTable('lookbook', {
   id: text('id').primaryKey(),
+  name: text('name').notNull(),
   thesis: text('thesis').notNull(),
   palette: text('palette').notNull(),
   toneMood: text('tone_mood').notNull(),
@@ -40,6 +41,15 @@ export const lookbook = sqliteTable('lookbook', {
   lighting: text('lighting').notNull(),
   texture: text('texture').notNull(),
   camera: text('camera').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const visualLanguageState = sqliteTable('visual_language_state', {
+  id: text('id').primaryKey(),
+  activeLookbookId: text('active_lookbook_id').references(() => lookbook.id, {
+    onDelete: 'set null',
+  }),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -88,3 +98,14 @@ export const lookbookImageSections = sqliteTable(
     index('lookbook_image_section_image_idx').on(table.imageId),
   ]
 );
+
+export const lookbookCardImages = sqliteTable('lookbook_card_image', {
+  lookbookId: text('lookbook_id')
+    .primaryKey()
+    .references(() => lookbook.id, { onDelete: 'cascade' }),
+  imageId: text('image_id')
+    .notNull()
+    .references(() => lookbookImages.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   ChevronDown,
   ChevronRight,
   FileText,
+  Images,
   Layers3,
   MapPin,
   Palette,
@@ -13,16 +14,26 @@ import {
 import renkuLogo from '@/assets/renku-logo.svg';
 import type {
   ActNavigationRow,
+  InspirationResource,
   SceneNavigationRow,
   SequenceNavigationRow,
+  LookbooksResource,
 } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { cn } from '@/lib/utils';
+import {
+  deleteInspirationFolder,
+  listLookbooks,
+  readInspirationResource,
+  setActiveLookbook,
+} from '@/services/studio-visual-language-api';
 import { Button } from '@/ui/button';
-import { toggleSetValue, type StudioSelection } from '../movie-studio-selection';
+import type { StudioSelection } from '../movie-studio-selection';
 import type { ScreenplayNavigationState } from '../use-screenplay-navigation';
+import { InspirationFolderDeleteDialog } from '../visual-language/inspiration-folder-delete-dialog';
 import { StudioSidebarActions } from './studio-sidebar-actions';
 import { StudioSidebarButton } from './studio-sidebar-button';
+import { StudioSidebarHoverActionRow } from './studio-sidebar-hover-action-row';
 import { StudioSidebarSection } from './studio-sidebar-section';
 
 interface StudioSidebarProps {
@@ -33,6 +44,10 @@ interface StudioSidebarProps {
   onHome: () => void;
   isProductionExportRunning: boolean;
   onProductionExport: () => void;
+  lookbooksRevision: number;
+  inspirationFoldersRevision: number;
+  onLookbooksChange: () => void;
+  onInspirationFoldersChange: () => void;
 }
 
 export function StudioSidebar({
@@ -43,14 +58,63 @@ export function StudioSidebar({
   onHome,
   isProductionExportRunning,
   onProductionExport,
+  lookbooksRevision,
+  inspirationFoldersRevision,
+  onLookbooksChange,
+  onInspirationFoldersChange,
 }: StudioSidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     () => new Set()
   );
+  const [collapsedAutoSections, setCollapsedAutoSections] = useState<Set<string>>(
+    () => new Set()
+  );
   const [expandedActs, setExpandedActs] = useState<Set<string>>(() => new Set());
+  const [collapsedAutoActs, setCollapsedAutoActs] = useState<Set<string>>(
+    () => new Set()
+  );
   const [expandedSequences, setExpandedSequences] = useState<Set<string>>(
     () => new Set()
   );
+  const [collapsedAutoSequences, setCollapsedAutoSequences] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [lookbooksResource, setLookbooksResource] =
+    useState<LookbooksResource | null>(null);
+  const [inspirationResource, setInspirationResource] =
+    useState<InspirationResource | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listLookbooks(project.identity.name)
+      .then((resource) => {
+        if (!cancelled) setLookbooksResource(resource);
+      })
+      .catch(() => {
+        if (!cancelled) setLookbooksResource(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.identity.name, lookbooksRevision]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void readInspirationResource(project.identity.name)
+      .then((resource) => {
+        if (!cancelled) setInspirationResource(resource);
+      })
+      .catch(() => {
+        if (!cancelled) setInspirationResource(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.identity.name, inspirationFoldersRevision]);
+
+  const inspirationFolders = inspirationResource?.folders.items ?? [];
+  const selectedInspirationFolderId =
+    selection.type === 'inspiration' ? selection.folderId ?? null : null;
 
   const autoExpand = useMemo(() => {
     const context = screenplayNavigation.selectionContext;
@@ -59,6 +123,12 @@ export function StudioSidebar({
     const sequences: string[] = [];
     if (selection.type === 'castMember') sections.push('cast');
     if (selection.type === 'location') sections.push('locations');
+    if (selection.type === 'inspiration') {
+      sections.push('visualLanguage', 'inspiration');
+    }
+    if (selection.type === 'lookbooks' || selection.type === 'lookbook') {
+      sections.push('visualLanguage');
+    }
     if (
       selection.type === 'storyArc' ||
       selection.type === 'sequence' ||
@@ -74,32 +144,83 @@ export function StudioSidebar({
   }, [screenplayNavigation.selectionContext, selection.type]);
 
   const visibleExpandedSections = useMemo(
-    () => unionWith(expandedSections, autoExpand.sections),
-    [autoExpand.sections, expandedSections]
+    () =>
+      subtractValues(
+        addValues(expandedSections, autoExpand.sections),
+        collapsedAutoSections
+      ),
+    [autoExpand.sections, collapsedAutoSections, expandedSections]
   );
   const visibleExpandedActs = useMemo(
-    () => unionWith(expandedActs, autoExpand.acts),
-    [autoExpand.acts, expandedActs]
+    () => subtractValues(addValues(expandedActs, autoExpand.acts), collapsedAutoActs),
+    [autoExpand.acts, collapsedAutoActs, expandedActs]
   );
   const visibleExpandedSequences = useMemo(
-    () => unionWith(expandedSequences, autoExpand.sequences),
-    [autoExpand.sequences, expandedSequences]
+    () =>
+      subtractValues(
+        addValues(expandedSequences, autoExpand.sequences),
+        collapsedAutoSequences
+      ),
+    [autoExpand.sequences, collapsedAutoSequences, expandedSequences]
   );
 
   const toggleSection = (section: string) => {
-    setExpandedSections((current) => toggleSetValue(current, section));
+    const expanded = visibleExpandedSections.has(section);
+    setExpandedSections((current) =>
+      expanded ? removeValue(current, section) : addValues(current, [section])
+    );
+    setCollapsedAutoSections((current) =>
+      expanded ? addValues(current, [section]) : removeValue(current, section)
+    );
     if (section === 'acts') {
       void screenplayNavigation.loadActs();
     }
   };
 
+  const markLookbookActive = async (lookbookId: string) => {
+    await setActiveLookbook(project.identity.name, lookbookId);
+    setLookbooksResource(await listLookbooks(project.identity.name));
+    onLookbooksChange();
+  };
+
+  const removeInspirationFolder = async (folderId: string) => {
+    await deleteInspirationFolder(project.identity.name, folderId);
+    setInspirationResource((current) =>
+      current
+        ? {
+            ...current,
+            folders: {
+              ...current.folders,
+              items: current.folders.items.filter((folder) => folder.id !== folderId),
+            },
+          }
+        : current
+    );
+    onInspirationFoldersChange();
+    if (selectedInspirationFolderId === folderId) {
+      onSelect({ type: 'inspiration' });
+    }
+  };
+
   const toggleAct = (actId: string) => {
-    setExpandedActs((current) => toggleSetValue(current, actId));
+    const expanded = visibleExpandedActs.has(actId);
+    setExpandedActs((current) =>
+      expanded ? removeValue(current, actId) : addValues(current, [actId])
+    );
+    setCollapsedAutoActs((current) =>
+      expanded ? addValues(current, [actId]) : removeValue(current, actId)
+    );
     void screenplayNavigation.loadActSequences(actId);
   };
 
   const toggleSequence = (sequenceId: string) => {
-    setExpandedSequences((current) => toggleSetValue(current, sequenceId));
+    const expanded = visibleExpandedSequences.has(sequenceId);
+    setExpandedSequences((current) =>
+      expanded ? removeValue(current, sequenceId) : addValues(current, [sequenceId])
+    );
+    setCollapsedAutoSequences((current) =>
+      expanded ? addValues(current, [sequenceId]) : removeValue(current, sequenceId)
+    );
     void screenplayNavigation.loadSequenceScenes(sequenceId);
   };
 
@@ -135,13 +256,96 @@ export function StudioSidebar({
       </div>
 
       <div className='flex-1 min-h-0 overflow-y-auto p-2 space-y-4'>
-        <StudioSidebarButton
-          active={selection.type === 'visualLanguage'}
+        <StudioSidebarSection
+          title='Visual Language'
+          detail='Inspiration and Lookbooks'
           icon={<Palette className='h-4 w-4' />}
-          label='Visual Language'
-          detail='Inspiration and Lookbook'
-          onClick={() => onSelect({ type: 'visualLanguage' })}
-        />
+          active={false}
+          expanded={visibleExpandedSections.has('visualLanguage')}
+          onSelect={() => onSelect({ type: 'inspiration' })}
+          onToggle={() => toggleSection('visualLanguage')}
+        >
+          {visibleExpandedSections.has('visualLanguage') ? (
+            <div className='space-y-1'>
+              <StudioSidebarButton
+                active={selection.type === 'inspiration' && !selection.folderId}
+                icon={<BookOpen className='h-4 w-4' />}
+                label='Inspiration'
+                detail={`${inspirationFolders.length} folders`}
+                compact
+                onClick={() => onSelect({ type: 'inspiration' })}
+                disclosure={{
+                  expanded: visibleExpandedSections.has('inspiration'),
+                  label: `${visibleExpandedSections.has('inspiration') ? 'Collapse' : 'Expand'} Inspiration`,
+                  onToggle: () => toggleSection('inspiration'),
+                }}
+              />
+              {visibleExpandedSections.has('inspiration')
+                ? inspirationFolders.map((folder) => (
+                    <div key={folder.id} className='pl-3'>
+                      <StudioSidebarHoverActionRow
+                        active={selectedInspirationFolderId === folder.id}
+                        icon={<Images className='h-3.5 w-3.5' />}
+                        label={folder.name}
+                        onSelect={() =>
+                          onSelect({ type: 'inspiration', folderId: folder.id })
+                        }
+                        action={
+                          <InspirationFolderDeleteDialog
+                            folderName={folder.name}
+                            onDelete={() => removeInspirationFolder(folder.id)}
+                          />
+                        }
+                      />
+                    </div>
+                  ))
+                : null}
+              <StudioSidebarButton
+                active={selection.type === 'lookbooks'}
+                icon={<Palette className='h-4 w-4' />}
+                label='Lookbooks'
+                detail={
+                  lookbooksResource?.activeLookbookId
+                    ? 'Active look selected'
+                    : 'No active lookbook'
+                }
+                compact
+                onClick={() => onSelect({ type: 'lookbooks' })}
+              />
+              {lookbooksResource?.lookbooks.map((item) => (
+                <div key={item.lookbook.id} className='flex items-center gap-1 pl-3'>
+                  <StudioSidebarButton
+                    active={
+                      selection.type === 'lookbook' &&
+                      selection.lookbookId === item.lookbook.id
+                    }
+                    icon={<Palette className='h-4 w-4' />}
+                    label={item.lookbook.name}
+                    detail={item.isActive ? 'Active' : 'Lookbook'}
+                    compact
+                    onClick={() =>
+                      onSelect({
+                        type: 'lookbook',
+                        lookbookId: item.lookbook.id,
+                      })
+                    }
+                  />
+                  {!item.isActive ? (
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      className='h-7 px-2 text-[11px]'
+                      onClick={() => void markLookbookActive(item.lookbook.id)}
+                    >
+                      Active
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </StudioSidebarSection>
 
         <StudioSidebarSection
           title='Cast'
@@ -226,12 +430,32 @@ export function StudioSidebar({
   );
 }
 
-function unionWith<T>(current: Set<T>, values: readonly T[]): Set<T> {
+function addValues<T>(current: Set<T>, values: readonly T[]): Set<T> {
   let changed = false;
   const next = new Set(current);
   for (const value of values) {
     if (!next.has(value)) {
       next.add(value);
+      changed = true;
+    }
+  }
+  return changed ? next : current;
+}
+
+function removeValue<T>(current: Set<T>, value: T): Set<T> {
+  if (!current.has(value)) {
+    return current;
+  }
+  const next = new Set(current);
+  next.delete(value);
+  return next;
+}
+
+function subtractValues<T>(current: Set<T>, values: ReadonlySet<T>): Set<T> {
+  let changed = false;
+  const next = new Set(current);
+  for (const value of values) {
+    if (next.delete(value)) {
       changed = true;
     }
   }

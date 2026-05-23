@@ -20,6 +20,7 @@ import type {
   InspirationImage,
   Lookbook,
   LookbookImage,
+  LookbookListItem,
   LookbookSection,
 } from './visual-language.js';
 
@@ -184,9 +185,16 @@ export interface InspirationFolderResource {
 }
 
 export interface LookbookResource {
-  lookbook: Lookbook | null;
+  lookbook: Lookbook;
+  cardImage: LookbookImage | null;
+  isActive: boolean;
   images: LookbookImage[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;
+}
+
+export interface LookbooksResource {
+  activeLookbookId: string | null;
+  lookbooks: LookbookListItem[];
 }
 
 export interface ProjectInformationResource {
@@ -212,7 +220,9 @@ export type StudioSelectionContextResult =
 
 export type StudioSelection =
   | { type: 'projectInformation' }
-  | { type: 'visualLanguage' }
+  | { type: 'inspiration'; folderId?: string }
+  | { type: 'lookbooks' }
+  | { type: 'lookbook'; lookbookId: string }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
   | { type: 'locations' }
@@ -223,7 +233,9 @@ export type StudioSelection =
 
 export type StudioSelectionContext =
   | { surface: 'project-information' }
-  | { surface: 'visual-language' }
+  | { surface: 'visual-language-inspiration' }
+  | { surface: 'visual-language-lookbooks' }
+  | { surface: 'visual-language-lookbook' }
   | { surface: 'cast'; cast: PageResponse<CastNavigationRow> }
   | { surface: 'cast-member'; castMember: CastNavigationRow }
   | { surface: 'locations'; locations: PageResponse<LocationNavigationRow> }

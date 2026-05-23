@@ -287,6 +287,12 @@ function rowsFromSelectionContext(context: StudioSelectionContext | null): {
 }
 
 function needsSelectionContext(selection: StudioSelection): boolean {
+  if (selection.type === 'lookbook') {
+    return true;
+  }
+  if (selection.type === 'inspiration' && selection.folderId) {
+    return true;
+  }
   return ['castMember', 'location', 'sequence', 'scene'].includes(selection.type);
 }
 

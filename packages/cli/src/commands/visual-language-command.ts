@@ -16,6 +16,7 @@ export async function runVisualLanguageCommand(options: {
   flags: {
     file?: string;
     folder?: string;
+    lookbook?: string;
     name?: string;
     project?: string;
     sections?: string;
@@ -96,22 +97,76 @@ export async function runVisualLanguageCommand(options: {
   if (area === 'lookbook' && action === 'read') {
     writeJson(
       options.io,
-      await service.readLookbook({ projectName, homeDir: options.homeDir })
+      await service.readLookbook({
+        projectName,
+        homeDir: options.homeDir,
+        lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+      })
     );
     return 0;
   }
-  if (area === 'lookbook' && action === 'write') {
+  if (area === 'lookbook' && action === 'list') {
+    writeJson(
+      options.io,
+      await service.listLookbooks({ projectName, homeDir: options.homeDir })
+    );
+    return 0;
+  }
+  if (area === 'lookbook' && action === 'create') {
     const filePath = requiredFlag(options.flags.file, '--file');
     const sections = await readJsonInput(filePath);
     writeJson(
       options.io,
-      await service.upsertLookbook({
+      await service.createLookbook({
         projectName,
         homeDir: options.homeDir,
+        name: requiredFlag(options.flags.name, '--name'),
         sections: sections as LookbookSections,
         filePath: filePath !== '-' ? filePath : undefined,
       })
     );
+    return 0;
+  }
+  if (area === 'lookbook' && action === 'update') {
+    const filePath = options.flags.file;
+    const sections = filePath ? await readJsonInput(filePath) : undefined;
+    writeJson(
+      options.io,
+      await service.updateLookbook({
+        projectName,
+        homeDir: options.homeDir,
+        lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+        name: options.flags.name,
+        sections: sections as LookbookSections | undefined,
+        filePath: filePath && filePath !== '-' ? filePath : undefined,
+      })
+    );
+    return 0;
+  }
+  if (area === 'lookbook' && action === 'delete') {
+    await service.deleteLookbook({
+      projectName,
+      homeDir: options.homeDir,
+      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+    });
+    writeJson(options.io, { ok: true });
+    return 0;
+  }
+  if (area === 'lookbook' && action === 'set-active') {
+    await service.setActiveLookbook({
+      projectName,
+      homeDir: options.homeDir,
+      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+    });
+    writeJson(options.io, { ok: true });
+    return 0;
+  }
+  if (area === 'lookbook' && action === 'clear-active') {
+    await service.clearActiveLookbook({
+      projectName,
+      homeDir: options.homeDir,
+    });
+    writeJson(options.io, { ok: true });
     return 0;
   }
   if (area === 'lookbook' && action === 'import-image') {
@@ -120,8 +175,21 @@ export async function runVisualLanguageCommand(options: {
       await service.importLookbookImage({
         projectName,
         homeDir: options.homeDir,
+        lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
         projectRelativePath: requiredFlag(options.flags.file, '--file'),
         sections: parseSections(options.flags.sections),
+      })
+    );
+    return 0;
+  }
+  if (area === 'lookbook' && action === 'set-card-image') {
+    writeJson(
+      options.io,
+      await service.setLookbookCardImage({
+        projectName,
+        homeDir: options.homeDir,
+        lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+        imageId: requiredFlag(options.flags.file, '--file'),
       })
     );
     return 0;
@@ -135,7 +203,7 @@ export async function runVisualLanguageCommand(options: {
         'CLI091',
         'Unknown visual-language command.',
         { path: ['visual-language', area ?? '', action ?? ''] },
-        'Use inspiration list/create/delete/read/write-analysis/read-analysis or lookbook read/write/import-image.'
+        'Use inspiration list/create/delete/read/write-analysis/read-analysis or lookbook list/read/create/update/delete/set-active/clear-active/import-image/set-card-image.'
       ),
     ],
     suggestion: 'Use a supported visual-language command.',

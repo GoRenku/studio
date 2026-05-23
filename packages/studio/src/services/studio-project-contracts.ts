@@ -6,6 +6,13 @@ import type {
   LocationOverviewResource,
   LocationResource,
   CastDesignResource,
+  InspirationFolder,
+  InspirationFolderResource,
+  InspirationResource,
+  Lookbook,
+  LookbookImage,
+  LookbookResource,
+  LookbooksResource,
   SceneDesignResource,
   SceneNarrativeResource,
   ScreenplayImageReferenceWithHttp,
@@ -97,6 +104,13 @@ export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
 export type StoryArcResourceResponse = StoryArcResource;
 export type SequenceResourceResponse = SequenceResource;
 export type SceneNarrativeResourceResponse = SceneNarrativeResource;
+export type InspirationResourceResponse = InspirationResource;
+export type InspirationFolderResourceResponse = InspirationFolderResource;
+export type InspirationFolderResponse = InspirationFolder;
+export type LookbooksResourceResponse = LookbooksResource;
+export type LookbookResourceResponse = LookbookResource;
+export type LookbookResponse = Lookbook;
+export type LookbookImageResponse = LookbookImage;
 
 export type StudioPageResponse<T> = PageResponse<T>;
 

@@ -88,11 +88,15 @@ export function resolveStudioSelectionForProject(
     };
   }
 
-  if (selection.type === 'visualLanguage') {
+  if (
+    selection.type === 'inspiration' ||
+    selection.type === 'lookbooks' ||
+    selection.type === 'lookbook'
+  ) {
     return {
       ok: true,
       selection,
-      context: { kind: 'visualLanguage', sections: ['inspiration', 'lookbook'] },
+      context: { kind: 'visualLanguage', sections: ['inspiration', 'lookbooks'] },
     };
   }
 

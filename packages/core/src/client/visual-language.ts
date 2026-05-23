@@ -26,6 +26,7 @@ export interface InspirationAnalysis {
 
 export interface Lookbook {
   id: string;
+  name: string;
   thesis: ThesisSection;
   palette: PaletteSection;
   toneMood: ToneMoodSection;
@@ -33,6 +34,12 @@ export interface Lookbook {
   lighting: PatternSection;
   texture: TextureSection;
   camera: CameraSection;
+}
+
+export interface LookbookListItem {
+  lookbook: Lookbook;
+  cardImage: LookbookImage | null;
+  isActive: boolean;
 }
 
 export type LookbookSection =

@@ -198,12 +198,26 @@ function readStudioSelection(value: unknown): StudioSelection | null {
 
   if (
     selection.type === 'projectInformation' ||
-    selection.type === 'visualLanguage' ||
+    selection.type === 'lookbooks' ||
     selection.type === 'cast' ||
     selection.type === 'locations' ||
     selection.type === 'storyArc'
   ) {
     return { type: selection.type };
+  }
+
+  if (selection.type === 'inspiration') {
+    return typeof selection.folderId === 'string' && selection.folderId.trim()
+      ? { type: selection.type, folderId: selection.folderId }
+      : { type: selection.type };
+  }
+
+  if (
+    selection.type === 'lookbook' &&
+    typeof selection.lookbookId === 'string' &&
+    selection.lookbookId.trim()
+  ) {
+    return { type: selection.type, lookbookId: selection.lookbookId };
   }
 
   if (

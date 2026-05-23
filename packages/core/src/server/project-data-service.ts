@@ -24,10 +24,15 @@ import {
   writeInspirationImage,
 } from './commands/inspiration-commands.js';
 import {
+  clearActiveLookbook,
+  createLookbook,
+  deleteLookbook,
   deleteLookbookImage,
   importLookbookImage,
+  setActiveLookbook,
+  setLookbookCardImage,
   setLookbookImageSections,
-  upsertLookbook,
+  updateLookbook,
 } from './commands/lookbook-commands.js';
 import { createMovieProject } from './commands/create-movie-project.js';
 import { migrateProjectDatabaseForProject } from './commands/migrate-database.js';
@@ -48,7 +53,10 @@ import {
 } from './resources/navigation.js';
 import { readProjectInformationResourceForProject } from './resources/project-information.js';
 import { readInspirationResource } from './resources/inspiration.js';
-import { readLookbookResource as readLookbook } from './resources/lookbook.js';
+import {
+  listLookbooksResource as listLookbooks,
+  readLookbookResource as readLookbook,
+} from './resources/lookbook.js';
 import { readProjectShell } from './resources/project-shell.js';
 import { readSceneDesignResource } from './resources/scene-design.js';
 import {
@@ -146,8 +154,14 @@ export function createProjectDataService(): ProjectDataService {
     writeInspirationImage,
     deleteInspirationImage,
     upsertInspirationAnalysis,
+    listLookbooks,
     readLookbook,
-    upsertLookbook,
+    createLookbook,
+    updateLookbook,
+    deleteLookbook,
+    setActiveLookbook,
+    clearActiveLookbook,
+    setLookbookCardImage,
     importLookbookImage,
     deleteLookbookImage,
     setLookbookImageSections,

@@ -128,10 +128,18 @@ function validateSelection(value: unknown, path: string[], issues: ReturnType<ty
   }
   if (
     selection.type === 'projectInformation' ||
-    selection.type === 'visualLanguage' ||
+    selection.type === 'inspiration' ||
+    selection.type === 'lookbooks' ||
     selection.type === 'cast' ||
     selection.type === 'locations' ||
     selection.type === 'storyArc'
+  ) {
+    return;
+  }
+  if (
+    selection.type === 'lookbook' &&
+    typeof selection.lookbookId === 'string' &&
+    selection.lookbookId.trim()
   ) {
     return;
   }
