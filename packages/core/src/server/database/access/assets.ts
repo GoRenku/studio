@@ -46,3 +46,7 @@ export function updateAssetRecordUpdatedAt(
     .where(eq(assets.id, input.assetId))
     .run();
 }
+
+export function deleteAssetRecord(session: DatabaseSession, assetId: string): void {
+  session.db.delete(assets).where(eq(assets.id, assetId)).run();
+}

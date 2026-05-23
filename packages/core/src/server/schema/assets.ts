@@ -10,7 +10,6 @@ import { locations } from './locations.js';
 import { projectLocales } from './project-locales.js';
 import { scenes } from './scenes.js';
 import { sequences } from './sequences.js';
-import { visualLanguage } from './visual-language.js';
 
 export const assets = sqliteTable('asset', {
   id: text('id').primaryKey(),
@@ -63,36 +62,6 @@ export const projectAssets = sqliteTable(
   },
   (table) => [
     index('project_asset_filter_order_idx').on(
-      table.role,
-      table.selection,
-      table.selectionOrder,
-      table.sortOrder,
-      table.assetId,
-    ),
-  ],
-);
-
-export const visualLanguageAssets = sqliteTable(
-  'visual_language_asset',
-  {
-    id: text('id').primaryKey(),
-    visualLanguageId: text('visual_language_id')
-      .notNull()
-      .references(() => visualLanguage.id),
-    assetId: text('asset_id')
-      .notNull()
-      .references(() => assets.id),
-    localeId: text('locale_id').references(() => projectLocales.id),
-    role: text('role').notNull(),
-    sortOrder: integer('sort_order').notNull(),
-    selection: text('selection').notNull().default('take'),
-    selectionOrder: integer('selection_order'),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
-  },
-  (table) => [
-    index('visual_language_asset_filter_order_idx').on(
-      table.visualLanguageId,
       table.role,
       table.selection,
       table.selectionOrder,

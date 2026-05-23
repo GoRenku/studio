@@ -62,11 +62,6 @@ function readAssetTargetQuery(
   switch (query.targetKind) {
     case 'project':
       return { kind: 'project' };
-    case 'visualLanguage':
-      return {
-        kind: 'visualLanguage',
-        visualLanguageId: readRequiredTargetId(query.targetId, query.targetKind),
-      };
     case 'castMember':
       return {
         kind: 'castMember',
@@ -96,10 +91,10 @@ function readAssetTargetQuery(
             'STUDIO_SERVER032',
             'targetKind must name a supported asset target.',
             { path: ['targetKind'] },
-            'Use project, visualLanguage, castMember, location, sequence, or scene.'
+            'Use project, castMember, location, sequence, or scene.'
           ),
         ],
-        suggestion: 'Use project, visualLanguage, castMember, location, sequence, or scene.',
+        suggestion: 'Use project, castMember, location, sequence, or scene.',
       });
   }
 }

@@ -15,8 +15,12 @@ import type {
 } from './project.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type {
-  VisualLanguage,
-  VisualLanguageCategory,
+  InspirationAnalysis,
+  InspirationFolder,
+  InspirationImage,
+  Lookbook,
+  LookbookImage,
+  LookbookSection,
 } from './visual-language.js';
 
 export interface PageResponse<T> {
@@ -28,8 +32,6 @@ export interface ProjectShell {
   identity: ProjectInfo;
   coverImage: ProjectCoverImage | null;
   languages: ProjectLanguage[];
-  visualLanguageCategories: VisualLanguageCategory[];
-  visualLanguage: VisualLanguage[];
   cast: CastMember[];
   counts: ProjectCounts;
   navigation: ProjectShellNavigation;
@@ -38,7 +40,6 @@ export interface ProjectShell {
 export interface ProjectShellNavigation {
   cast: PageResponse<CastNavigationRow>;
   locations: PageResponse<LocationNavigationRow>;
-  visualLanguage: PageResponse<VisualLanguageNavigationRow>;
   screenplay: ScreenplayNavigation;
 }
 
@@ -68,13 +69,6 @@ export interface ActNavigationRow {
   purpose?: string;
   sequenceCount: number;
   sceneCount: number;
-}
-
-export interface VisualLanguageNavigationRow {
-  id: string;
-  categoryId: string;
-  name: string;
-  oneLineSummary?: string;
 }
 
 export interface SequenceNavigationRow {
@@ -177,6 +171,22 @@ export interface SceneDesignResource {
   sequence: SequenceNavigationRow;
   selectedAssets: Asset[];
   activeTakePage: PageResponse<Asset>;
+}
+
+export interface InspirationResource {
+  folders: PageResponse<InspirationFolder>;
+}
+
+export interface InspirationFolderResource {
+  folder: InspirationFolder;
+  images: InspirationImage[];
+  analysis: InspirationAnalysis | null;
+}
+
+export interface LookbookResource {
+  lookbook: Lookbook | null;
+  images: LookbookImage[];
+  imagesBySection: Record<LookbookSection, LookbookImage[]>;
 }
 
 export interface ProjectInformationResource {

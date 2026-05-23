@@ -253,5 +253,115 @@ export function fakeProjectDataService(): NonNullable<
         variants: [],
       };
     },
+    async readInspirationResource() {
+      return { folders: { items: [], nextCursor: null } };
+    },
+    async readInspirationFolder() {
+      return {
+        folder: {
+          id: 'inspiration_folder_test0001',
+          name: 'Reference',
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+        },
+        images: [],
+        analysis: null,
+      };
+    },
+    async createInspirationFolder(input) {
+      return {
+        id: 'inspiration_folder_test0001',
+        name: input.name,
+        projectRelativePath: 'visual-language/inspiration/reference' as never,
+      };
+    },
+    async renameInspirationFolder(input) {
+      return {
+        id: input.folderId,
+        name: input.name,
+        projectRelativePath: 'visual-language/inspiration/reference' as never,
+      };
+    },
+    async reorderInspirationFolders() {
+      return { items: [], nextCursor: null };
+    },
+    async deleteInspirationFolder() {},
+    async writeInspirationImage() {
+      return {
+        folder: {
+          id: 'inspiration_folder_test0001',
+          name: 'Reference',
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+        },
+        images: [],
+        analysis: null,
+      };
+    },
+    async deleteInspirationImage() {
+      return {
+        folder: {
+          id: 'inspiration_folder_test0001',
+          name: 'Reference',
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+        },
+        images: [],
+        analysis: null,
+      };
+    },
+    async upsertInspirationAnalysis(input) {
+      return { folderId: input.folderId, ...input.sections };
+    },
+    async readLookbook() {
+      return {
+        lookbook: null,
+        images: [],
+        imagesBySection: {
+          thesis: [],
+          palette: [],
+          tone_mood: [],
+          composition: [],
+          lighting: [],
+          texture: [],
+          camera: [],
+        },
+      };
+    },
+    async upsertLookbook(input) {
+      return { id: 'lookbook_test0001', ...input.sections };
+    },
+    async importLookbookImage() {
+      return {
+        id: 'lookbook_image_test0001',
+        asset: {
+          assetId: 'asset_lookbook_image',
+          type: 'lookbook_image',
+          mediaKind: 'image',
+          title: 'Lookbook image',
+          origin: 'generated',
+          availability: 'ready',
+          files: [],
+          createdAt: '2026-05-22T00:00:00.000Z',
+          updatedAt: '2026-05-22T00:00:00.000Z',
+        },
+        sections: [],
+      };
+    },
+    async deleteLookbookImage() {},
+    async setLookbookImageSections(input) {
+      return {
+        id: input.imageId,
+        asset: {
+          assetId: 'asset_lookbook_image',
+          type: 'lookbook_image',
+          mediaKind: 'image',
+          title: 'Lookbook image',
+          origin: 'generated',
+          availability: 'ready',
+          files: [],
+          createdAt: '2026-05-22T00:00:00.000Z',
+          updatedAt: '2026-05-22T00:00:00.000Z',
+        },
+        sections: input.sections,
+      };
+    },
   };
 }

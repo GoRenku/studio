@@ -10,7 +10,6 @@ import {
   Sunrise,
   Sunset,
   Trees,
-  type LucideIcon,
 } from 'lucide-react';
 import { LineTabBar } from '@/ui/line-tab-bar';
 import { Tabs, TabsContent } from '@/ui/tabs';
@@ -231,21 +230,18 @@ function SlugLine({
   const timeOfDay = setting.timeOfDay?.trim() ?? '';
   const locationIds = setting.locationIds ?? [];
 
-  const InteriorIcon = pickInteriorIcon(interiorExterior);
-  const TimeIcon = pickTimeIcon(timeOfDay);
-
   const hasInteriorExterior = Boolean(interiorExterior);
   const hasLocations = locationIds.length > 0;
   const hasTime = Boolean(timeOfDay);
+  const interiorIcon = renderInteriorIcon(interiorExterior);
+  const timeIcon = renderTimeIcon(timeOfDay);
 
   return (
     <header className='font-mono text-[12.5px] uppercase tracking-[0.16em] text-muted-foreground'>
       <div className='flex flex-wrap items-center gap-x-1.5 gap-y-1'>
         {hasInteriorExterior ? (
           <span className='inline-flex items-center gap-1.5'>
-            {InteriorIcon ? (
-              <InteriorIcon className='h-3 w-3 opacity-70' aria-hidden />
-            ) : null}
+            {interiorIcon}
             <span>{interiorExterior}.</span>
           </span>
         ) : null}
@@ -270,9 +266,7 @@ function SlugLine({
             <span aria-hidden className='text-muted-foreground/50'>
               {hasInteriorExterior || hasLocations ? '—' : ''}
             </span>
-            {TimeIcon ? (
-              <TimeIcon className='h-3 w-3 opacity-70' aria-hidden />
-            ) : null}
+            {timeIcon}
             <span>{timeOfDay}</span>
           </span>
         ) : null}
@@ -396,8 +390,6 @@ function TextBlockView({
   );
 }
 
-const HANDLE_PATTERN = /@([a-zA-Z0-9][a-zA-Z0-9_-]*)/g;
-
 function InlineText({
   text,
   resource,
@@ -409,10 +401,10 @@ function InlineText({
 }) {
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
+  const handlePattern = /@([a-zA-Z0-9][a-zA-Z0-9_-]*)/g;
   let match: RegExpExecArray | null;
-  HANDLE_PATTERN.lastIndex = 0;
   let key = 0;
-  while ((match = HANDLE_PATTERN.exec(text)) !== null) {
+  while ((match = handlePattern.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
     if (start > lastIndex) {
@@ -469,22 +461,24 @@ function resolveHandle(
   return null;
 }
 
-function pickInteriorIcon(value: string): LucideIcon | null {
+function renderInteriorIcon(value: string): ReactNode {
   const v = value.toLowerCase();
   if (!v) return null;
-  if (v.startsWith('ext')) return Trees;
-  if (v.startsWith('int')) return Building2;
+  if (v.startsWith('ext')) return <Trees className='h-3 w-3 opacity-70' aria-hidden />;
+  if (v.startsWith('int')) return <Building2 className='h-3 w-3 opacity-70' aria-hidden />;
   return null;
 }
 
-function pickTimeIcon(value: string): LucideIcon | null {
+function renderTimeIcon(value: string): ReactNode {
   const v = value.toLowerCase();
   if (!v) return null;
-  if (v.includes('dawn')) return Sunrise;
-  if (v.includes('dusk') || v.includes('sunset')) return Sunset;
-  if (v.includes('night')) return Moon;
-  if (v.includes('evening')) return CloudMoon;
+  if (v.includes('dawn')) return <Sunrise className='h-3 w-3 opacity-70' aria-hidden />;
+  if (v.includes('dusk') || v.includes('sunset'))
+    return <Sunset className='h-3 w-3 opacity-70' aria-hidden />;
+  if (v.includes('night')) return <Moon className='h-3 w-3 opacity-70' aria-hidden />;
+  if (v.includes('evening'))
+    return <CloudMoon className='h-3 w-3 opacity-70' aria-hidden />;
   if (v.includes('morning') || v.includes('day') || v.includes('noon') || v.includes('afternoon'))
-    return Sun;
-  return Sun;
+    return <Sun className='h-3 w-3 opacity-70' aria-hidden />;
+  return <Sun className='h-3 w-3 opacity-70' aria-hidden />;
 }

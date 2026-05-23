@@ -12,6 +12,23 @@ import {
 } from './commands/change-asset-selection.js';
 import { applyScreenplayOperations } from './commands/apply-screenplay-operations.js';
 import { createScreenplay } from './commands/create-screenplay.js';
+import {
+  createInspirationFolder,
+  deleteInspirationFolder,
+  deleteInspirationImage,
+  listInspirationFolders,
+  readInspirationFolder,
+  renameInspirationFolder,
+  reorderInspirationFolders,
+  upsertInspirationAnalysis,
+  writeInspirationImage,
+} from './commands/inspiration-commands.js';
+import {
+  deleteLookbookImage,
+  importLookbookImage,
+  setLookbookImageSections,
+  upsertLookbook,
+} from './commands/lookbook-commands.js';
 import { createMovieProject } from './commands/create-movie-project.js';
 import { migrateProjectDatabaseForProject } from './commands/migrate-database.js';
 import { registerAsset } from './commands/register-asset.js';
@@ -30,6 +47,8 @@ import {
   listSequenceNavigation,
 } from './resources/navigation.js';
 import { readProjectInformationResourceForProject } from './resources/project-information.js';
+import { readInspirationResource } from './resources/inspiration.js';
+import { readLookbookResource as readLookbook } from './resources/lookbook.js';
 import { readProjectShell } from './resources/project-shell.js';
 import { readSceneDesignResource } from './resources/scene-design.js';
 import {
@@ -117,5 +136,20 @@ export function createProjectDataService(): ProjectDataService {
     validateScreenplayJson,
     createScreenplay,
     applyScreenplayOperations,
+    listInspirationFolders,
+    readInspirationResource,
+    readInspirationFolder,
+    createInspirationFolder,
+    renameInspirationFolder,
+    reorderInspirationFolders,
+    deleteInspirationFolder,
+    writeInspirationImage,
+    deleteInspirationImage,
+    upsertInspirationAnalysis,
+    readLookbook,
+    upsertLookbook,
+    importLookbookImage,
+    deleteLookbookImage,
+    setLookbookImageSections,
   };
 }

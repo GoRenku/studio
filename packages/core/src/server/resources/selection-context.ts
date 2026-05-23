@@ -53,7 +53,7 @@ export function readStudioSelectionContextProjection(
           valid: true,
           selection: input.selection,
           context: { surface: 'visual-language' },
-          resourceKeys: ['navigation:visual-language'],
+          resourceKeys: ['surface:visual-language:inspiration', 'surface:visual-language:lookbook'],
         };
       case 'cast':
         return {

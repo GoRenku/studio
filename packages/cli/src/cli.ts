@@ -15,6 +15,7 @@ import { runProjectSelectionCommand } from './commands/project-selection-command
 import { runProductionCommand } from './commands/production-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCurrentCommand } from './commands/studio-current-command.js';
+import { runVisualLanguageCommand } from './commands/visual-language-command.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -59,6 +60,7 @@ Commands
   project select       Request Studio to select a project
   project migrate      Apply pending project database migrations
   screenplay           Inspect, validate, create, and revise screenplay JSON
+  visual-language      Read and write Inspiration and Lookbook data
   studio current       Show current Studio focus and context
 
 Options
@@ -74,6 +76,9 @@ Options
   --locale             Project locale id
   --act                Act id for screenplay sequence list
   --sequence           Sequence id for screenplay scene list
+  --folder             Inspiration folder id
+  --name               Inspiration folder name
+  --sections           Comma-separated Lookbook section keys
   --all-locales        Export every locale with production selects
   --dry-run            Report production export operations without writing
   --fresh              Rebuild production export manifest
@@ -138,6 +143,15 @@ function createCliFlags() {
       type: 'string',
     },
     sequence: {
+      type: 'string',
+    },
+    folder: {
+      type: 'string',
+    },
+    name: {
+      type: 'string',
+    },
+    sections: {
       type: 'string',
     },
     allLocales: {
@@ -322,6 +336,20 @@ export async function runRenkuCli(
             act: cli.flags.act,
             sequence: cli.flags.sequence,
             dryRun: cli.flags.dryRun,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'visual-language':
+        return await runVisualLanguageCommand({
+          input,
+          flags: {
+            file: cli.flags.file,
+            folder: cli.flags.folder,
+            name: cli.flags.name,
+            project: cli.flags.project,
+            sections: cli.flags.sections,
           },
           json: cli.flags.json,
           io,

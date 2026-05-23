@@ -92,7 +92,7 @@ export function resolveStudioSelectionForProject(
     return {
       ok: true,
       selection,
-      context: { kind: 'visualLanguage', entries: project.visualLanguage },
+      context: { kind: 'visualLanguage', sections: ['inspiration', 'lookbook'] },
     };
   }
 

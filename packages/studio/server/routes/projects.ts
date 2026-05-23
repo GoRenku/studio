@@ -20,6 +20,7 @@ import { createNavigationRoute } from './navigation.js';
 import { createProductionExportsRoute } from './production-exports.js';
 import { createProjectInformationRoute } from './project-information.js';
 import { createScreenplayRoute } from './screenplay.js';
+import { createVisualLanguageRoute } from './visual-language.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectsRouteProjectData;
@@ -54,6 +55,20 @@ export type ProjectsRouteProjectData = Pick<
   | 'createAssetSelect'
   | 'removeAssetSelect'
   | 'exportProductionAssets'
+  | 'readInspirationResource'
+  | 'readInspirationFolder'
+  | 'createInspirationFolder'
+  | 'renameInspirationFolder'
+  | 'reorderInspirationFolders'
+  | 'deleteInspirationFolder'
+  | 'writeInspirationImage'
+  | 'deleteInspirationImage'
+  | 'upsertInspirationAnalysis'
+  | 'readLookbook'
+  | 'upsertLookbook'
+  | 'importLookbookImage'
+  | 'deleteLookbookImage'
+  | 'setLookbookImageSections'
 > & {
   resolveProjectAssetFile(input: {
     projectName: string;
@@ -101,6 +116,7 @@ export function createProjectsRoute(
     })
     .route('/:projectName', createNavigationRoute({ projectData }))
     .route('/:projectName', createScreenplayRoute({ projectData }))
+    .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
     .route(
       '/:projectName',

@@ -7,6 +7,14 @@ import type {
   CastOverviewResource,
   CastDesignResource,
   CastNavigationRow,
+  InspirationAnalysis,
+  InspirationFolder,
+  InspirationFolderResource,
+  InspirationResource,
+  Lookbook,
+  LookbookImage,
+  LookbookResource,
+  LookbookSection,
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
@@ -28,6 +36,10 @@ import type {
   SequenceResource,
   StoryArcResource,
 } from '../client/index.js';
+import type {
+  InspirationAnalysisSections,
+  LookbookSections,
+} from './visual-language-json/validator.js';
 import type {
   Act as ScreenplayAct,
   CastMember as ScreenplayCastMember,
@@ -129,6 +141,21 @@ export interface ProjectDataService {
   validateScreenplayJson(input: ValidateScreenplayJsonInput): Promise<ScreenplayCommandReport>;
   createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayCommandReport>;
   applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayCommandReport>;
+  listInspirationFolders(input: ListInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
+  readInspirationResource(input: ListInspirationFoldersInput): Promise<InspirationResource>;
+  readInspirationFolder(input: ReadInspirationFolderInput): Promise<InspirationFolderResource>;
+  createInspirationFolder(input: CreateInspirationFolderInput): Promise<InspirationFolder>;
+  renameInspirationFolder(input: RenameInspirationFolderInput): Promise<InspirationFolder>;
+  reorderInspirationFolders(input: ReorderInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
+  deleteInspirationFolder(input: DeleteInspirationFolderInput): Promise<void>;
+  writeInspirationImage(input: WriteInspirationImageInput): Promise<InspirationFolderResource>;
+  deleteInspirationImage(input: DeleteInspirationImageInput): Promise<InspirationFolderResource>;
+  upsertInspirationAnalysis(input: UpsertInspirationAnalysisInput): Promise<InspirationAnalysis>;
+  readLookbook(input: ReadLookbookInput): Promise<LookbookResource>;
+  upsertLookbook(input: UpsertLookbookInput): Promise<Lookbook>;
+  importLookbookImage(input: ImportLookbookImageInput): Promise<LookbookImage>;
+  deleteLookbookImage(input: DeleteLookbookImageInput): Promise<void>;
+  setLookbookImageSections(input: SetLookbookImageSectionsInput): Promise<LookbookImage>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -202,6 +229,80 @@ export interface ApplyScreenplayOperationsInput extends RenkuConfigPathOptions {
   document: ScreenplayOperationDocument;
   filePath?: string;
   dryRun?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface VisualLanguageProjectInput extends RenkuConfigPathOptions {
+  projectName?: string;
+}
+
+export interface ListInspirationFoldersInput extends VisualLanguageProjectInput {
+  limit?: number;
+  cursor?: string | null;
+}
+
+export interface ReadInspirationFolderInput extends VisualLanguageProjectInput {
+  folderId: string;
+}
+
+export interface CreateInspirationFolderInput extends VisualLanguageProjectInput {
+  name: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface RenameInspirationFolderInput extends VisualLanguageProjectInput {
+  folderId: string;
+  name: string;
+}
+
+export interface ReorderInspirationFoldersInput extends VisualLanguageProjectInput {
+  folderIds: string[];
+}
+
+export interface DeleteInspirationFolderInput extends VisualLanguageProjectInput {
+  folderId: string;
+}
+
+export interface WriteInspirationImageInput extends VisualLanguageProjectInput {
+  folderId: string;
+  fileName: string;
+  contents: ArrayBuffer | Uint8Array;
+}
+
+export interface DeleteInspirationImageInput extends VisualLanguageProjectInput {
+  folderId: string;
+  fileName: string;
+}
+
+export interface UpsertInspirationAnalysisInput extends VisualLanguageProjectInput {
+  folderId: string;
+  sections: InspirationAnalysisSections;
+  filePath?: string;
+}
+
+export interface ReadLookbookInput extends VisualLanguageProjectInput {}
+
+export interface UpsertLookbookInput extends VisualLanguageProjectInput {
+  sections: LookbookSections;
+  filePath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ImportLookbookImageInput extends VisualLanguageProjectInput {
+  projectRelativePath: string;
+  sections?: LookbookSection[];
+  title?: string;
+  oneLineSummary?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface DeleteLookbookImageInput extends VisualLanguageProjectInput {
+  imageId: string;
+}
+
+export interface SetLookbookImageSectionsInput extends VisualLanguageProjectInput {
+  imageId: string;
+  sections: LookbookSection[];
   idGenerator?: ProjectIdGenerator;
 }
 

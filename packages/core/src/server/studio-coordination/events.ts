@@ -204,7 +204,7 @@ export type StudioCurrentContext =
     }
   | {
       kind: 'visualLanguage';
-      entries: { id: string; name: string; intent?: string; summary?: string }[];
+      sections: ('inspiration' | 'lookbook')[];
     }
   | {
       kind: 'cast';

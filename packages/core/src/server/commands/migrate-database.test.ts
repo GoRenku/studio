@@ -40,8 +40,31 @@ describe('migrate database command', () => {
     const sqlite = new Database(report.databasePath);
     try {
       expect(sqlite.pragma('user_version', { simple: true })).toBe(5);
+      expect(readTableNames(sqlite)).toEqual(
+        expect.arrayContaining([
+          'inspiration_folder',
+          'inspiration_analysis',
+          'lookbook',
+          'lookbook_image',
+          'lookbook_image_section',
+        ])
+      );
+      expect(readTableNames(sqlite)).not.toEqual(
+        expect.arrayContaining([
+          'visual_language_category',
+          'visual_language',
+          'visual_language_asset',
+        ])
+      );
     } finally {
       sqlite.close();
     }
   });
 });
+
+function readTableNames(sqlite: Database.Database): string[] {
+  return sqlite
+    .prepare("select name from sqlite_master where type = 'table'")
+    .all()
+    .map((row) => (row as { name: string }).name);
+}

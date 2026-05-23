@@ -67,3 +67,10 @@ export function updateAssetFileRecordMetadata(
     )
     .run();
 }
+
+export function deleteAssetFileRecordsForAsset(
+  session: DatabaseSession,
+  assetId: string
+): void {
+  session.db.delete(assetFiles).where(eq(assetFiles.assetId, assetId)).run();
+}

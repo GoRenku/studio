@@ -72,8 +72,9 @@ working notes.
 
 ## Folder Shape
 
-For a standalone movie project, current implementation-owned asset roots use
-lower-kebab project-relative paths:
+For a standalone movie project, project files live under feature-owned folders
+at the project root. There is no `working-assets/` root and no
+`working-assets/base/` root.
 
 ```text
 <project>/
@@ -81,22 +82,22 @@ lower-kebab project-relative paths:
     project.sqlite
     tmp/
 
-  working-assets/
-    base/
-      narrative/
-      visual-language/
-      continuity/
-      sequences/
+  screenplay/
+    acts/
 
-    localization/
-      <locale>/
-        narrative/
-        cast/
-        sequences/
+  cast/
+
+  locations/
+
+  props/
+
+  visual-language/
+
+  shotlist/
 
   production-assets/
     master/
-      sequences/
+      shotlist/
       shared/
 
     localized/
@@ -107,12 +108,19 @@ lower-kebab project-relative paths:
     manifest/
       production-export-manifest.json
 
-  Exports/
 ```
 
+Folder responsibilities:
+
+- `screenplay/` contains authored screenplay source files.
+- `cast/`, `locations/`, `props/`, and `visual-language/` contain
+  feature-owned definitions, reference material, and working files.
+- `shotlist/` contains shot planning files and shot-owned assets.
+- `production-assets/` contains clean post-production handoff files.
+
 Project creation may create only the folders needed by the current project
-contents. Markdown asset writers and production export create additional parent
-folders when they write files.
+contents. Feature writers and production export create additional parent folders
+when they write files.
 
 ## Production Asset Hierarchy
 
@@ -184,48 +192,24 @@ language-pack subtitle file, or a shared dubbed intro.
 `production-assets/manifest/production-export-manifest.json` is the generated
 handoff manifest. SQLite remains the internal source of truth.
 
-## Working Localization
+## Localization
 
-Working localization should not clutter the base working tree.
+Localization work should live with the feature or production area that owns it.
+Do not create a separate `working-assets/localization/` root.
 
-Base-language work lives under:
-
-```text
-working-assets/base/
-```
-
-Localized work lives under:
+Locale-specific production handoff files live under:
 
 ```text
-working-assets/localization/<locale>/
-```
-
-Clip-specific localized working assets should still mirror the narrative
-hierarchy:
-
-```text
-working-assets/
-  localization/
-    tr-TR/
+production-assets/
+  localized/
+    <locale>/
       sequences/
-        01-logistics/
-          scenes/
-            01-foundry-at-night/
-              clips/
-                001-cannon-inspection/
-                  narration/
-                    takes/
-                    selects/
-                  subtitles/
-                    takes/
-                    selects/
-                  karaoke/
-                    takes/
-                    selects/
-                  video/
-                    takes/
-                    selects/
+      shared/
 ```
+
+Feature-owned localized working files may use feature-local subfolders when the
+feature defines them. SQLite still owns locale context and relationships; the
+folder structure must not be parsed to infer locale ownership.
 
 ## Select Materialization
 

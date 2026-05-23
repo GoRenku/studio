@@ -45,6 +45,9 @@ export type {
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
+  InspirationFolderResource,
+  InspirationResource,
+  LookbookResource,
   SceneDesignResource,
   SceneNarrativeResource,
   ScreenplayNavigation,
@@ -61,7 +64,6 @@ export type {
   StudioSelection,
   StudioSelectionContext,
   StudioSelectionContextResult,
-  VisualLanguageNavigationRow,
 } from './resources.js';
 export type {
   Project,
@@ -76,10 +78,25 @@ export type {
   ProjectSummary,
 } from './project-library.js';
 export type {
-  VisualLanguage,
-  VisualLanguageCategory,
-  VisualLanguageCategorySource,
-  VisualLanguagePriority,
+  CameraSection,
+  ColorSwatch,
+  InspirationAnalysis,
+  InspirationFolder,
+  InspirationImage,
+  InspiredByItem,
+  InspiredBySection,
+  Lookbook,
+  LookbookImage,
+  LookbookImageAsset,
+  LookbookImageAssetFile,
+  LookbookSection,
+  Observation,
+  PaletteSection,
+  Pattern,
+  PatternSection,
+  TextureSection,
+  ThesisSection,
+  ToneMoodSection,
 } from './visual-language.js';
 export type {
   ProjectDataErrorContract,
@@ -92,6 +109,15 @@ export {
   screenplayReferenceSchema,
   screenplayStoryArcSchema,
 } from './screenplay-json-schemas.js';
+export {
+  cameraSectionSchema as visualLanguageCameraSectionSchema,
+  inspiredBySectionSchema as visualLanguageInspiredBySectionSchema,
+  paletteSectionSchema as visualLanguagePaletteSectionSchema,
+  patternSectionSchema as visualLanguagePatternSectionSchema,
+  textureSectionSchema as visualLanguageTextureSectionSchema,
+  thesisSectionSchema as visualLanguageThesisSectionSchema,
+  toneMoodSectionSchema as visualLanguageToneMoodSectionSchema,
+} from './visual-language-json-schemas.js';
 export type {
   Block,
 } from './screenplay.js';

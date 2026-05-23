@@ -357,7 +357,6 @@ export function readAssetOwnerTargets(
 ): AssetTarget[] {
   return [
     ...readProjectAssetOwnerTargets(session, assetId),
-    ...readScopedAssetOwnerTargets(session, assetId, 'visualLanguage'),
     ...readScopedAssetOwnerTargets(session, assetId, 'castMember'),
     ...readScopedAssetOwnerTargets(session, assetId, 'location'),
     ...readScopedAssetOwnerTargets(session, assetId, 'sequence'),
@@ -566,7 +565,6 @@ function readScopedAssetOwnerTargets(
   session: DatabaseSession,
   assetId: string,
   kind:
-    | 'visualLanguage'
     | 'castMember'
     | 'location'
     | 'sequence'
@@ -588,15 +586,12 @@ function readScopedAssetOwnerTargets(
 
 function placeholderTarget(
   kind:
-    | 'visualLanguage'
     | 'castMember'
     | 'location'
     | 'sequence'
     | 'scene'
 ): AssetTarget {
   switch (kind) {
-    case 'visualLanguage':
-      return { kind, visualLanguageId: '' };
     case 'castMember':
       return { kind, castMemberId: '' };
     case 'location':
@@ -610,7 +605,6 @@ function placeholderTarget(
 
 function targetFromKind(
   kind:
-    | 'visualLanguage'
     | 'castMember'
     | 'location'
     | 'sequence'
@@ -618,8 +612,6 @@ function targetFromKind(
   targetId: string
 ): AssetTarget {
   switch (kind) {
-    case 'visualLanguage':
-      return { kind, visualLanguageId: targetId };
     case 'castMember':
       return { kind, castMemberId: targetId };
     case 'location':

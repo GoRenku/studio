@@ -25,7 +25,6 @@ import {
   updateProjectInformationRecord,
 } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { listVisualLanguageAssetRecords } from '../database/access/asset-relationships/visual-language.js';
 import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type {
@@ -273,14 +272,6 @@ function listLocaleAssetReferences(
       .filter((asset) => asset.localeId === localeId)
       .map((asset) => ({
         tableName: 'project_asset',
-        relationshipId: asset.id,
-        assetId: asset.assetId,
-        role: asset.role,
-      })),
-    ...listVisualLanguageAssetRecords(session)
-      .filter((asset) => asset.localeId === localeId)
-      .map((asset) => ({
-        tableName: 'visual_language_asset',
         relationshipId: asset.id,
         assetId: asset.assetId,
         role: asset.role,

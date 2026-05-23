@@ -11,8 +11,6 @@ import {
   scenes,
   sequenceAssets,
   sequences,
-  visualLanguage,
-  visualLanguageAssets,
 } from '../../../schema/index.js';
 import type { AssetTarget } from '../../../../client/index.js';
 import { ProjectDataError } from '../../../project-data-error.js';
@@ -66,17 +64,6 @@ export function assetRelationshipTableConfig(
         targetId: null,
         targetEntityTable: null,
         targetEntityIdColumn: null,
-      };
-    case 'visualLanguage':
-      return {
-        target,
-        table: visualLanguageAssets,
-        idPrefix: 'visual_language_asset',
-        targetValueKey: 'visualLanguageId',
-        targetColumn: visualLanguageAssets.visualLanguageId,
-        targetId: target.visualLanguageId,
-        targetEntityTable: visualLanguage,
-        targetEntityIdColumn: visualLanguage.id,
       };
     case 'castMember':
       return {

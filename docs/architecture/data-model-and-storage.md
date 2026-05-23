@@ -32,6 +32,9 @@ Use the focused documents below for current direction.
 - Markdown frontmatter is optional file-local authoring context only. It must
   not duplicate SQLite metadata, IDs, relationships, status, ordering, owner
   links, or file registration data.
+- SQLite JSON text columns must be validated with AJV against explicit JSON
+  Schemas before writes and after reads. TypeScript types, `JSON.parse`, and
+  ad hoc guards are not enough for persisted JSON.
 - The canonical project database path is:
 
 ```text
@@ -85,6 +88,9 @@ direction is superseded by ADR 0017.
 - `docs/architecture/reference/project-relative-paths.md`
   Defines the `ProjectRelativePath` contract and how paths are validated and
   resolved.
+
+- `docs/architecture/json-storage-validation.md`
+  Defines the AJV and JSON Schema validation rule for SQLite JSON columns.
 
 - `docs/architecture/naming-guidelines.md`
   Defines public contract, setup, and record naming conventions.

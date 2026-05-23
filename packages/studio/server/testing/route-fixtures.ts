@@ -44,8 +44,6 @@ export function makeProjectShell(project: Project): ProjectShell {
     identity: project.identity,
     coverImage: project.coverImage,
     languages: project.languages,
-    visualLanguageCategories: project.visualLanguageCategories,
-    visualLanguage: project.visualLanguage,
     cast: project.cast,
     counts: project.counts,
     navigation: {
@@ -59,7 +57,6 @@ export function makeProjectShell(project: Project): ProjectShell {
         nextCursor: null,
       },
       locations: { items: [], nextCursor: null },
-      visualLanguage: { items: [], nextCursor: null },
       screenplay: {
         acts: {
           items: [{
@@ -89,8 +86,6 @@ export function makeProject(): Project {
     },
     coverImage: { fileName: 'cover.png' },
     languages: [],
-    visualLanguageCategories: [],
-    visualLanguage: [],
     cast: [
       {
         id: 'cast_narrator',
@@ -115,8 +110,6 @@ export function makeProject(): Project {
     ],
     counts: {
       languages: 0,
-      visualLanguageCategories: 0,
-      visualLanguage: 0,
       castMembers: 1,
       locations: 0,
       acts: 1,

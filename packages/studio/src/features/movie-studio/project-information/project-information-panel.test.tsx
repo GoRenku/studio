@@ -130,13 +130,9 @@ function makeProject(input: { title: string }): ProjectShellWithHttp {
         supportsSubtitles: true,
       },
     ],
-    visualLanguageCategories: [],
-    visualLanguage: [],
     cast: [],
     counts: {
       languages: 1,
-      visualLanguageCategories: 0,
-      visualLanguage: 0,
       castMembers: 0,
       locations: 0,
       acts: 0,
@@ -145,7 +141,6 @@ function makeProject(input: { title: string }): ProjectShellWithHttp {
     },
     navigation: {
       cast: { items: [], nextCursor: null },
-      visualLanguage: { items: [], nextCursor: null },
       locations: { items: [], nextCursor: null },
       screenplay: {
         acts: { items: [], nextCursor: null },

@@ -2,10 +2,6 @@ import type { CastMember } from './cast-members.js';
 import type { Location } from './locations.js';
 import type { Sequence } from './screenplay-projection.js';
 import type { ProjectLanguage } from './project-languages.js';
-import type {
-  VisualLanguage,
-  VisualLanguageCategory,
-} from './visual-language.js';
 
 export type ProjectRelativePath = string & { readonly __brand: 'ProjectRelativePath' };
 
@@ -13,8 +9,6 @@ export interface Project {
   identity: ProjectInfo;
   coverImage: ProjectCoverImage | null;
   languages: ProjectLanguage[];
-  visualLanguageCategories: VisualLanguageCategory[];
-  visualLanguage: VisualLanguage[];
   cast: CastMember[];
   locations: Location[];
   sequences: Sequence[];
@@ -38,8 +32,6 @@ export interface ProjectCoverImage {
 
 export interface ProjectCounts {
   languages: number;
-  visualLanguageCategories: number;
-  visualLanguage: number;
   castMembers: number;
   locations: number;
   acts: number;

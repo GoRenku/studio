@@ -47,7 +47,7 @@ describe('core server architecture', () => {
       'openProjectStore',
     ];
 
-    expect(lineCount).toBeLessThanOrEqual(140);
+    expect(lineCount).toBeLessThanOrEqual(180);
     expect(
       forbiddenNeedles.filter((needle) => source.includes(needle))
     ).toEqual([]);

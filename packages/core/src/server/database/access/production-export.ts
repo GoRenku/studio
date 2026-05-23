@@ -17,7 +17,7 @@ export interface SelectedProductionAssetRow {
   assetId: string;
   relationshipId: string;
   assetFileId: string;
-  targetKind: 'project' | 'visualLanguage' | 'castMember' | 'sequence' | 'scene';
+  targetKind: 'project' | 'castMember' | 'sequence' | 'scene';
   targetId: string | null;
   localeId: string | null;
   localeTag: string | null;

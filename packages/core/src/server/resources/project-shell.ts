@@ -2,7 +2,6 @@ import type {
   ProjectInfo,
   ProjectLanguage,
   ProjectShell,
-  VisualLanguageCategory,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
@@ -12,12 +11,10 @@ import {
   listCastNavigationPage,
   listActNavigationPage,
   listLocationNavigationPage,
-  listVisualLanguageNavigationPage,
   type ListNavigationPageInput,
 } from '../database/access/navigation.js';
 import { readProjectCounts } from '../database/access/project-counts.js';
 import { listProjectLocaleRecords } from '../database/access/project-locales.js';
-import { listVisualLanguageCategoryRecords } from '../database/access/visual-language-categories.js';
 import type { ReadProjectInput } from '../project-data-service-contracts.js';
 
 export async function readProjectShell(input: ReadProjectInput): Promise<ProjectShell> {
@@ -55,7 +52,6 @@ export function readProjectShellProjection(
   };
   const castPage = listCastNavigationPage(session, input);
   const locationPage = listLocationNavigationPage(session, input);
-  const visualLanguagePage = listVisualLanguageNavigationPage(session, input);
   const counts = readProjectCounts(session);
 
   const actPage = listActNavigationPage(session, input);
@@ -64,16 +60,6 @@ export function readProjectShellProjection(
     coverImage:
       project.coverFile === 'cover.png' ? { fileName: 'cover.png' } : null,
     languages: listProjectLocaleRecords(session).map(toProjectLanguage),
-    visualLanguageCategories: listVisualLanguageCategoryRecords(session).map(
-      toVisualLanguageCategory
-    ),
-    visualLanguage: visualLanguagePage.items.map((row) => ({
-      id: row.id,
-      categoryId: row.categoryId,
-      name: row.name,
-      summary: row.oneLineSummary,
-      priority: 'default',
-    })),
     cast: castPage.items.map((row) => ({
       id: row.id,
       handle: row.handle,
@@ -84,7 +70,6 @@ export function readProjectShellProjection(
     navigation: {
       cast: castPage,
       locations: locationPage,
-      visualLanguage: visualLanguagePage,
       screenplay: {
         acts: actPage,
       },
@@ -100,17 +85,6 @@ function toProjectLanguage(row: ReturnType<typeof listProjectLocaleRecords>[numb
     isBase: row.isBase,
     supportsAudio: row.supportsAudio,
     supportsSubtitles: row.supportsSubtitles,
-  };
-}
-
-function toVisualLanguageCategory(
-  row: ReturnType<typeof listVisualLanguageCategoryRecords>[number]
-): VisualLanguageCategory {
-  return {
-    id: row.id,
-    name: row.name,
-    description: nullable(row.description),
-    source: row.source === 'system' ? 'system' : 'project',
   };
 }
 

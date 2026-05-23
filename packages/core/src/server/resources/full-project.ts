@@ -7,8 +7,6 @@ import type {
   ProjectLanguage,
   Scene,
   Sequence,
-  VisualLanguage,
-  VisualLanguageCategory,
 } from '../../client/index.js';
 import type { Location as ScreenplayLocation } from '../../client/screenplay.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
@@ -29,14 +27,6 @@ import {
   type ProjectLocaleRecord,
 } from '../database/access/project-locales.js';
 import { readProjectRecord, type ProjectRecord } from '../database/access/project.js';
-import {
-  listVisualLanguageCategoryRecords,
-  type VisualLanguageCategoryRecord,
-} from '../database/access/visual-language-categories.js';
-import {
-  listVisualLanguageRecords,
-  type VisualLanguageRecord,
-} from '../database/access/visual-language.js';
 import { listScreenplayLocationsFromSession } from '../database/access/screenplay-resource.js';
 import { resolveProjectFolder } from '../files/project-paths.js';
 import type { ReadProjectInput } from '../project-data-service-contracts.js';
@@ -70,12 +60,6 @@ export function readProjectFromSession(input: {
   }
 
   const languages = listProjectLocaleRecords(input.session).map(toProjectLanguage);
-  const visualLanguageCategories = listVisualLanguageCategoryRecords(input.session).map(
-    toVisualLanguageCategory
-  );
-  const visualLanguage = listVisualLanguageRecords(input.session).map((row) =>
-    toVisualLanguage(row)
-  );
   const cast = listCastMemberRecords(input.session).map(toCastMember);
   const locations = listScreenplayLocationsFromSession(input.session).map(
     toProjectLocation
@@ -94,8 +78,6 @@ export function readProjectFromSession(input: {
     ),
     coverImage: project.coverFile === 'cover.png' ? { fileName: 'cover.png' } : null,
     languages,
-    visualLanguageCategories,
-    visualLanguage,
     cast,
     locations,
     sequences,
@@ -144,30 +126,6 @@ function toProjectLanguage(row: ProjectLocaleRecord): ProjectLanguage {
     isBase: row.isBase,
     supportsAudio: row.supportsAudio,
     supportsSubtitles: row.supportsSubtitles,
-  };
-}
-
-function toVisualLanguageCategory(
-  row: VisualLanguageCategoryRecord
-): VisualLanguageCategory {
-  return {
-    id: row.id,
-    name: row.name,
-    description: nullable(row.description),
-    source: row.source === 'system' ? 'system' : 'project',
-  };
-}
-
-function toVisualLanguage(row: VisualLanguageRecord): VisualLanguage {
-  return {
-    id: row.id,
-    categoryId: row.categoryId,
-    name: row.name,
-    summary: nullable(row.oneLineSummary),
-    priority:
-      row.priority === 'situational' || row.priority === 'rare'
-        ? row.priority
-        : 'default',
   };
 }
 

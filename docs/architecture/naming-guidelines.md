@@ -82,6 +82,30 @@ reason. Most of the time they hide the real concept.
 Use the vocabulary from `docs/architecture/reference/domain-vocabulary.md` whenever
 it defines the concept.
 
+## Avoid Redundant Prefix And Suffix Clutter
+
+Names should carry meaning once. Do not repeat the same owner concept in every
+table, column, type, file, or field when the surrounding folder, module, route,
+or feature boundary already provides that context.
+
+Examples:
+
+- Inside the Visual Language feature, prefer `inspiration_folder`, `lookbook`,
+  `ThesisSection`, and `PaletteSection` over names such as
+  `visual_language_inspiration_folder`, `visual_language_lookbook`,
+  `VisualLanguageThesisSection`, or `VisualLanguagePaletteSection`.
+- If a column stores JSON, choose the domain name of the value, such as
+  `thesis`, `palette`, or `camera`. Do not append `_json` unless two columns
+  with the same domain meaning need to distinguish storage formats.
+- If a table is already scoped to a relationship, avoid vague or overloaded
+  role columns when the same object can belong to several sections. Use a real
+  relationship table with a precise column, such as `section`.
+
+Repeat an owner prefix only when it prevents real ambiguity at the point of use.
+For example, package-public API names may need a broader domain word than
+feature-local files or table names. The default should be the shortest clear
+domain name, not the longest mechanically complete name.
+
 ## Three Kinds Of Type Shapes
 
 Renku Studio currently needs three different TypeScript shapes for many domain

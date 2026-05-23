@@ -6,7 +6,6 @@ import {
   sceneLocations,
   scenes,
   sequences,
-  visualLanguage,
 } from '../../schema/index.js';
 import type {
   CastNavigationRow,
@@ -15,7 +14,6 @@ import type {
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
-  VisualLanguageNavigationRow,
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
@@ -122,37 +120,6 @@ export function listActNavigationPage(
       purpose: nullable(row.purpose),
       sequenceCount: countRows(session, sequences, eq(sequences.actId, row.id)),
       sceneCount: countScenesForAct(session, row.id),
-    }),
-  });
-}
-
-export function listVisualLanguageNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput
-): PageResponse<VisualLanguageNavigationRow> {
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: visualLanguage.id,
-          categoryId: visualLanguage.categoryId,
-          name: visualLanguage.name,
-          oneLineSummary: visualLanguage.oneLineSummary,
-          position: visualLanguage.position,
-        })
-        .from(visualLanguage)
-        .where(cursorCondition)
-        .orderBy(asc(visualLanguage.position), asc(visualLanguage.id))
-        .limit(limit)
-        .all(),
-    positionColumn: visualLanguage.position,
-    idColumn: visualLanguage.id,
-    mapRow: (row) => ({
-      id: row.id,
-      categoryId: row.categoryId,
-      name: row.name,
-      oneLineSummary: nullable(row.oneLineSummary),
     }),
   });
 }

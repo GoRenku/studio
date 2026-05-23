@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BookOpen,
   ChevronDown,
@@ -73,17 +73,18 @@ export function StudioSidebar({
     return { sections, acts, sequences };
   }, [screenplayNavigation.selectionContext, selection.type]);
 
-  useEffect(() => {
-    if (autoExpand.sections.length) {
-      setExpandedSections((current) => unionWith(current, autoExpand.sections));
-    }
-    if (autoExpand.acts.length) {
-      setExpandedActs((current) => unionWith(current, autoExpand.acts));
-    }
-    if (autoExpand.sequences.length) {
-      setExpandedSequences((current) => unionWith(current, autoExpand.sequences));
-    }
-  }, [autoExpand]);
+  const visibleExpandedSections = useMemo(
+    () => unionWith(expandedSections, autoExpand.sections),
+    [autoExpand.sections, expandedSections]
+  );
+  const visibleExpandedActs = useMemo(
+    () => unionWith(expandedActs, autoExpand.acts),
+    [autoExpand.acts, expandedActs]
+  );
+  const visibleExpandedSequences = useMemo(
+    () => unionWith(expandedSequences, autoExpand.sequences),
+    [autoExpand.sequences, expandedSequences]
+  );
 
   const toggleSection = (section: string) => {
     setExpandedSections((current) => toggleSetValue(current, section));
@@ -138,7 +139,7 @@ export function StudioSidebar({
           active={selection.type === 'visualLanguage'}
           icon={<Palette className='h-4 w-4' />}
           label='Visual Language'
-          detail={`${project.counts.visualLanguage} entries`}
+          detail='Inspiration and Lookbook'
           onClick={() => onSelect({ type: 'visualLanguage' })}
         />
 
@@ -147,11 +148,11 @@ export function StudioSidebar({
           detail={`${project.counts.castMembers} members`}
           icon={<UsersRound className='h-4 w-4' />}
           active={selection.type === 'cast'}
-          expanded={expandedSections.has('cast')}
+          expanded={visibleExpandedSections.has('cast')}
           onSelect={() => onSelect({ type: 'cast' })}
           onToggle={() => toggleSection('cast')}
         >
-          {expandedSections.has('cast')
+          {visibleExpandedSections.has('cast')
             ? screenplayNavigation.cast.map((castMember) => (
                 <StudioSidebarButton
                   key={castMember.id}
@@ -175,11 +176,11 @@ export function StudioSidebar({
           detail={`${project.counts.locations} locations`}
           icon={<MapPin className='h-4 w-4' />}
           active={selection.type === 'locations'}
-          expanded={expandedSections.has('locations')}
+          expanded={visibleExpandedSections.has('locations')}
           onSelect={() => onSelect({ type: 'locations' })}
           onToggle={() => toggleSection('locations')}
         >
-          {expandedSections.has('locations')
+          {visibleExpandedSections.has('locations')
             ? screenplayNavigation.locations.map((location) => (
                 <StudioSidebarButton
                   key={location.id}
@@ -199,11 +200,11 @@ export function StudioSidebar({
           detail={`${project.counts.acts} acts`}
           icon={<BookOpen className='h-4 w-4' />}
           active={selection.type === 'storyArc'}
-          expanded={expandedSections.has('acts')}
+          expanded={visibleExpandedSections.has('acts')}
           onSelect={() => onSelect({ type: 'storyArc' })}
           onToggle={() => toggleSection('acts')}
         >
-          {expandedSections.has('acts')
+          {visibleExpandedSections.has('acts')
             ? screenplayNavigation.acts.map((act) => (
                 <ActTree
                   key={act.id}
@@ -211,8 +212,8 @@ export function StudioSidebar({
                   selection={selection}
                   sequences={screenplayNavigation.sequencesByActId.get(act.id) ?? []}
                   scenesBySequenceId={screenplayNavigation.scenesBySequenceId}
-                  expandedActs={expandedActs}
-                  expandedSequences={expandedSequences}
+                  expandedActs={visibleExpandedActs}
+                  expandedSequences={visibleExpandedSequences}
                   onToggleAct={toggleAct}
                   onToggleSequence={toggleSequence}
                   onSelect={onSelect}

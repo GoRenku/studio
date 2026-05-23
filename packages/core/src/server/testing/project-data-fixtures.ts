@@ -8,8 +8,6 @@ import {
   createProjectDataService,
 } from '../index.js';
 import { insertProjectLocaleRecords } from '../database/access/project-locales.js';
-import { insertVisualLanguageCategoryRecords } from '../database/access/visual-language-categories.js';
-import { insertVisualLanguageRecords } from '../database/access/visual-language.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
 
 type ProjectDataService = ReturnType<typeof createProjectDataService>;
@@ -191,7 +189,6 @@ export function readAssetFileMetadata(
 
 function seedProjectInformationTables(projectFolder: string): void {
   const session = openProjectStore({ projectFolder, create: false });
-  const now = new Date().toISOString();
   try {
     session.db.transaction((tx) => {
       const transactionSession = { ...session, db: tx };
@@ -213,29 +210,6 @@ function seedProjectInformationTables(projectFolder: string): void {
           supportsAudio: true,
           supportsSubtitles: true,
           position: 2,
-        },
-      ]);
-      insertVisualLanguageCategoryRecords(transactionSession, [
-        {
-          id: 'visual_language_category_test0001',
-          name: 'Lighting',
-          description: 'Light behavior and source logic.',
-          source: 'project',
-          position: 1,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
-      insertVisualLanguageRecords(transactionSession, [
-        {
-          id: 'visual_language_test0001',
-          categoryId: 'visual_language_category_test0001',
-          name: 'Practical-source low-key interiors',
-          oneLineSummary: 'Warm practical interiors.',
-          priority: 'default',
-          position: 1,
-          createdAt: now,
-          updatedAt: now,
         },
       ]);
     });

@@ -82,8 +82,6 @@ export async function createMovieProject(
 function emptyMovieCounts(): ProjectCounts {
   return {
     languages: 0,
-    visualLanguageCategories: 0,
-    visualLanguage: 0,
     castMembers: 0,
     locations: 0,
     acts: 0,

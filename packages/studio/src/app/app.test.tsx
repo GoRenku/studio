@@ -1383,8 +1383,6 @@ function makeProject(
     coverImage: coverUrl ? { fileName: 'cover.png' } : null,
     coverUrl,
     languages: [],
-    visualLanguageCategories: [],
-    visualLanguage: [],
     cast: [
       {
         id: 'cast_narrator',
@@ -1395,8 +1393,6 @@ function makeProject(
     ],
     counts: {
       languages: 0,
-      visualLanguageCategories: 0,
-      visualLanguage: 0,
       castMembers: 1,
       locations: 0,
       acts: 1,
@@ -1420,7 +1416,6 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
       ],
       nextCursor: null,
     },
-    visualLanguage: { items: [], nextCursor: null },
     locations: { items: [], nextCursor: null },
     screenplay: {
       acts: {
@@ -1637,8 +1632,6 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
     logline: 'A documentary about preparation before 1453.',
     counts: {
       languages: 0,
-      visualLanguageCategories: 0,
-      visualLanguage: 0,
       castMembers: 1,
       locations: 0,
       acts: 1,
