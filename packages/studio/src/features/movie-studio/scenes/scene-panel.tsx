@@ -11,6 +11,7 @@ import {
   Sunset,
   Trees,
 } from 'lucide-react';
+import { Button } from '@/ui/button';
 import { LineTabBar } from '@/ui/line-tab-bar';
 import { Tabs, TabsContent } from '@/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -177,26 +178,29 @@ function SceneNavLink({
   }
   if (compact) {
     return (
-      <button
+      <Button
         type='button'
+        variant='ghost'
+        size='sm'
         onClick={() => onSelect({ type: 'scene', id: scene.id })}
         className={cn(
-          'group inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-primary/10',
+          'group h-auto gap-1.5 px-2 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary hover:bg-primary/10 hover:text-primary',
           isPrev ? 'justify-self-start' : 'justify-self-end'
         )}
       >
         {isPrev ? <Chevron className='h-3.5 w-3.5 shrink-0' /> : null}
         <span>{label}</span>
         {!isPrev ? <Chevron className='h-3.5 w-3.5 shrink-0' /> : null}
-      </button>
+      </Button>
     );
   }
   return (
-    <button
+    <Button
       type='button'
+      variant='ghost'
       onClick={() => onSelect({ type: 'scene', id: scene.id })}
       className={cn(
-        'group flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-primary/10',
+        'group h-auto min-w-0 flex-1 gap-3 px-3 py-2 hover:bg-primary/10',
         isPrev ? 'justify-start' : 'justify-end text-right'
       )}
     >
@@ -214,7 +218,7 @@ function SceneNavLink({
       {!isPrev ? (
         <Chevron className='h-4 w-4 shrink-0 text-primary' />
       ) : null}
-    </button>
+    </Button>
   );
 }
 
@@ -248,13 +252,14 @@ function SlugLine({
         {hasLocations
           ? locationIds.map((locationId, index) => (
               <span key={locationId} className='inline-flex items-center'>
-                <button
+                <Button
                   type='button'
+                  variant='link'
                   onClick={() => onSelect({ type: 'location', id: locationId })}
-                  className='font-medium text-foreground/85 underline-offset-4 transition-colors hover:text-primary hover:underline'
+                  className='h-auto p-0 align-baseline font-[inherit] text-[inherit] font-medium leading-[inherit] text-foreground/85 hover:text-primary'
                 >
                   {resource.locationLabels[locationId] ?? locationId}
-                </button>
+                </Button>
                 {index < locationIds.length - 1 ? (
                   <span aria-hidden>,</span>
                 ) : null}
@@ -310,13 +315,14 @@ function DialogueBlockView({
     <div className='mx-auto max-w-[28rem] rounded-lg bg-foreground/[0.035] px-6 py-4 dark:bg-muted/30'>
       <div className='text-center text-[12.5px] font-semibold uppercase tracking-[0.18em] text-primary'>
         {castMemberId ? (
-          <button
+          <Button
             type='button'
+            variant='link'
             onClick={() => onSelect({ type: 'castMember', id: castMemberId })}
-            className='underline-offset-4 transition-colors hover:text-foreground hover:underline'
+            className='h-auto p-0 align-baseline font-[inherit] text-[inherit] leading-[inherit] hover:text-foreground'
           >
             {characterName}
-          </button>
+          </Button>
         ) : (
           <span>{characterName}</span>
         )}
@@ -414,14 +420,15 @@ function InlineText({
     const entity = resolveHandle(handle, resource);
     if (entity) {
       nodes.push(
-        <button
+        <Button
           key={`l${key++}`}
           type='button'
+          variant='link'
           onClick={() => onSelect({ type: entity.kind, id: entity.id })}
-          className='font-semibold text-primary underline decoration-primary/40 decoration-1 underline-offset-[3px] transition-colors hover:decoration-primary'
+          className='h-auto p-0 align-baseline font-[inherit] text-[inherit] font-semibold leading-[inherit] text-primary underline decoration-primary/40 decoration-1 underline-offset-[3px] hover:decoration-primary'
         >
           {entity.label}
-        </button>
+        </Button>
       );
     } else {
       nodes.push(
