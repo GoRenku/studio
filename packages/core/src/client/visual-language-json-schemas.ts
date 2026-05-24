@@ -156,6 +156,43 @@ export const inspiredBySectionSchema = {
   additionalProperties: false,
 } as const;
 
+export const inspirationAnalysisSectionsSchema = {
+  $id: 'https://schemas.gorenku.com/studio/inspiration-analysis-sections.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: [
+    'thesis',
+    'palette',
+    'toneMood',
+    'composition',
+    'lighting',
+    'texture',
+    'inspiredBy',
+  ],
+  properties: {
+    thesis: { $ref: thesisSectionSchema.$id },
+    palette: { $ref: paletteSectionSchema.$id },
+    toneMood: { $ref: toneMoodSectionSchema.$id },
+    composition: { $ref: patternSectionSchema.$id },
+    lighting: { $ref: patternSectionSchema.$id },
+    texture: { $ref: textureSectionSchema.$id },
+    inspiredBy: { $ref: inspiredBySectionSchema.$id },
+  },
+  additionalProperties: false,
+} as const;
+
+export const inspirationAnalysisDocumentSchema = {
+  $id: 'https://schemas.gorenku.com/studio/inspiration-analysis-document.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['kind', 'analysis'],
+  properties: {
+    kind: { const: 'inspirationAnalysis' },
+    analysis: { $ref: inspirationAnalysisSectionsSchema.$id },
+  },
+  additionalProperties: false,
+} as const;
+
 export const cameraSectionSchema = {
   $id: 'https://schemas.gorenku.com/studio/visual-language-camera-section.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',

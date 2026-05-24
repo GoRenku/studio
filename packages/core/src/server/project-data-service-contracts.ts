@@ -7,8 +7,10 @@ import type {
   CastOverviewResource,
   CastDesignResource,
   CastNavigationRow,
-  InspirationAnalysis,
+  InspirationAnalysisValidationReport,
+  InspirationAnalysisWriteReport,
   InspirationFolder,
+  InspirationFolderReport,
   InspirationFolderResource,
   InspirationResource,
   Lookbook,
@@ -38,7 +40,7 @@ import type {
   StoryArcResource,
 } from '../client/index.js';
 import type {
-  InspirationAnalysisSections,
+  InspirationAnalysisDocument,
   LookbookSections,
 } from './visual-language-json/validator.js';
 import type {
@@ -151,7 +153,9 @@ export interface ProjectDataService {
   deleteInspirationFolder(input: DeleteInspirationFolderInput): Promise<void>;
   writeInspirationImage(input: WriteInspirationImageInput): Promise<InspirationFolderResource>;
   deleteInspirationImage(input: DeleteInspirationImageInput): Promise<InspirationFolderResource>;
-  upsertInspirationAnalysis(input: UpsertInspirationAnalysisInput): Promise<InspirationAnalysis>;
+  readInspirationAnalysis(input: ReadInspirationAnalysisInput): Promise<InspirationFolderReport>;
+  validateInspirationAnalysis(input: ValidateInspirationAnalysisInput): Promise<InspirationAnalysisValidationReport>;
+  writeInspirationAnalysis(input: WriteInspirationAnalysisInput): Promise<InspirationAnalysisWriteReport>;
   listLookbooks(input: ListLookbooksInput): Promise<LookbooksResource>;
   readLookbook(input: ReadLookbookInput): Promise<LookbookResource>;
   createLookbook(input: CreateLookbookInput): Promise<Lookbook>;
@@ -281,9 +285,19 @@ export interface DeleteInspirationImageInput extends VisualLanguageProjectInput 
   fileName: string;
 }
 
-export interface UpsertInspirationAnalysisInput extends VisualLanguageProjectInput {
+export interface ReadInspirationAnalysisInput extends VisualLanguageProjectInput {
   folderId: string;
-  sections: InspirationAnalysisSections;
+}
+
+export interface ValidateInspirationAnalysisInput extends VisualLanguageProjectInput {
+  folderId: string;
+  document: InspirationAnalysisDocument;
+  filePath?: string;
+}
+
+export interface WriteInspirationAnalysisInput extends VisualLanguageProjectInput {
+  folderId: string;
+  document: InspirationAnalysisDocument;
   filePath?: string;
 }
 

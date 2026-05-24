@@ -263,6 +263,127 @@ describe('renku CLI', () => {
     });
   });
 
+  it('validates and writes Inspiration analysis through the top-level command', async () => {
+    const storageRoot = await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    const createFolderExitCode = await runRenkuCli(
+      ['inspiration', 'create', '--name', 'Blade Runner 2049', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(createFolderExitCode).toBe(0);
+    const folder = JSON.parse(stdout.join('\n')) as {
+      id: string;
+      projectRelativePath: string;
+    };
+
+    const inspirationFolderPath = path.join(
+      storageRoot,
+      'constantinople',
+      folder.projectRelativePath
+    );
+    await fs.writeFile(path.join(inspirationFolderPath, 'frame-001.png'), 'image bytes');
+
+    const analysisPath = path.join(homeDir, 'inspiration-analysis.json');
+    await fs.writeFile(
+      analysisPath,
+      JSON.stringify(inspirationAnalysisJson('frame-001.png'), null, 2),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const showExitCode = await runRenkuCli(
+      ['inspiration', 'show', '--folder', folder.id, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(showExitCode).toBe(0);
+    const showReport = JSON.parse(stdout.join('\n'));
+    expect(showReport).toMatchObject({
+      valid: true,
+      folder: {
+        id: folder.id,
+        absolutePath: inspirationFolderPath,
+      },
+      analysis: null,
+    });
+    expect(showReport.images).toBeUndefined();
+
+    stdout = [];
+    stderr = [];
+    const validateExitCode = await runRenkuCli(
+      [
+        'inspiration',
+        'analysis',
+        'validate',
+        '--folder',
+        folder.id,
+        '--file',
+        analysisPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(validateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      folder: { id: folder.id },
+    });
+
+    stdout = [];
+    stderr = [];
+    const writeExitCode = await runRenkuCli(
+      [
+        'inspiration',
+        'analysis',
+        'write',
+        '--folder',
+        folder.id,
+        '--file',
+        analysisPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(writeExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      changes: [{ type: 'inspirationAnalysis.upserted', folderId: folder.id }],
+      analysis: {
+        folderId: folder.id,
+        thesis: { statement: expect.stringContaining('Reference images') },
+      },
+      resourceKeys: expect.arrayContaining([
+        'surface:visual-language:inspiration',
+        `surface:visual-language:inspiration:${folder.id}`,
+      ]),
+    });
+
+    stdout = [];
+    stderr = [];
+    const oldCommandExitCode = await runRenkuCli(
+      [
+        'visual-language',
+        'inspiration',
+        'read',
+        '--folder',
+        folder.id,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(oldCommandExitCode).toBe(1);
+    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
+      error: { code: 'CLI091' },
+    });
+  });
+
   it('registers and selects a scene asset through the asset command', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
@@ -618,6 +739,68 @@ function minimalScreenplayJson() {
         ],
       },
     ],
+  };
+}
+
+function inspirationAnalysisJson(imageFile: string) {
+  return {
+    kind: 'inspirationAnalysis',
+    analysis: {
+      thesis: {
+        statement: 'Reference images use quiet contrast. The visual logic is restrained and precise.',
+        principles: ['Preserve motivated contrast.'],
+        imageFiles: [imageFile],
+      },
+      palette: {
+        description: 'Muted colors with disciplined warmth.',
+        colors: [
+          { hex: '#AABBCC', name: 'Cold dawn', meaning: 'Distance and control.' },
+        ],
+        observations: [{ text: 'Blue-gray dominates.', imageFiles: [imageFile] }],
+      },
+      toneMood: {
+        tone: 'weathered restraint',
+        moodTags: ['restrained'],
+        description: 'Low saturation and soft contrast keep the images subdued.',
+        imageFiles: [imageFile],
+      },
+      composition: {
+        description: 'Frames favor stillness and pressure.',
+        patterns: [
+          {
+            name: 'Centered pressure',
+            description: 'Subjects hold center while negative space bears down.',
+            imageFiles: [imageFile],
+          },
+        ],
+      },
+      lighting: {
+        description: 'Light is motivated and directional.',
+        patterns: [
+          {
+            name: 'Practical falloff',
+            description: 'Faces fall away quickly from practical sources.',
+            imageFiles: [imageFile],
+          },
+        ],
+      },
+      texture: {
+        description: 'Surfaces feel tactile and worn.',
+        observations: [{ text: 'Soft grain supports worn surfaces.', imageFiles: [imageFile] }],
+      },
+      inspiredBy: {
+        description: 'Visual lineage is treated as affinity, not confirmed influence.',
+        items: [
+          {
+            category: 'cinematographer',
+            name: 'Roger Deakins',
+            confidence: 'medium',
+            why: 'Controlled contrast and disciplined negative space are visible affinities.',
+            imageFiles: [imageFile],
+          },
+        ],
+      },
+    },
   };
 }
 

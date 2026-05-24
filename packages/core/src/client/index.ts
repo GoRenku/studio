@@ -82,7 +82,11 @@ export type {
   CameraSection,
   ColorSwatch,
   InspirationAnalysis,
+  InspirationAnalysisValidationReport,
+  InspirationAnalysisWriteReport,
   InspirationFolder,
+  InspirationFolderReport,
+  InspirationFolderWithResolvedPath,
   InspirationImage,
   InspiredByItem,
   InspiredBySection,
@@ -99,6 +103,9 @@ export type {
   TextureSection,
   ThesisSection,
   ToneMoodSection,
+  VisualLanguageChange,
+  VisualLanguageCommandReport,
+  VisualLanguageProjectReport,
 } from './visual-language.js';
 export type {
   ProjectDataErrorContract,
@@ -113,6 +120,8 @@ export {
 } from './screenplay-json-schemas.js';
 export {
   cameraSectionSchema as visualLanguageCameraSectionSchema,
+  inspirationAnalysisDocumentSchema,
+  inspirationAnalysisSectionsSchema,
   inspiredBySectionSchema as visualLanguageInspiredBySectionSchema,
   paletteSectionSchema as visualLanguagePaletteSectionSchema,
   patternSectionSchema as visualLanguagePatternSectionSchema,

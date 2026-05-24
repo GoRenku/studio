@@ -42,25 +42,18 @@ export function LookbookPanel({
   }
 
   return (
-    <div className='space-y-4'>
-      <div className='flex flex-wrap items-start justify-between gap-3'>
-        <div>
-          <p className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-            Lookbook
-          </p>
-          <h2 className='mt-1 text-lg font-semibold'>{resource.lookbook.name}</h2>
-          <p className='mt-1 text-xs text-muted-foreground'>
-            {resource.isActive ? 'Active lookbook' : 'Not active'}
-          </p>
-        </div>
-        {!resource.isActive ? (
-          <Button type='button' variant='outline' size='sm' onClick={() => void makeActive()}>
-            Set active
-          </Button>
-        ) : null}
-      </div>
+    <div className='min-h-full'>
       <VisualLanguageReport
         projectName={projectName}
+        title={resource.lookbook.name}
+        subtitle={resource.isActive ? 'Active lookbook' : 'Draft lookbook'}
+        action={
+          !resource.isActive ? (
+            <Button type='button' variant='outline' size='sm' onClick={() => void makeActive()}>
+              Set active
+            </Button>
+          ) : null
+        }
         source={{ kind: 'lookbook', imagesBySection: resource.imagesBySection }}
         sections={{
           thesis: resource.lookbook.thesis,

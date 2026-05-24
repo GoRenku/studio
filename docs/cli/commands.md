@@ -456,6 +456,140 @@ Behavior:
 - Uses the current Studio selection when `--project` is omitted.
 - Appends Studio refresh and focus events after a successful mutation.
 
+## `renku inspiration`
+
+Manage Visual Language Inspiration folders for the current authoring project.
+
+```bash
+renku inspiration list --json
+renku inspiration create --name <name> --json
+renku inspiration show --folder <folder-id> --json
+renku inspiration rename --folder <folder-id> --name <name> --json
+renku inspiration reorder --file <folder-order-json> --json
+renku inspiration delete --folder <folder-id> --json
+```
+
+Options:
+
+- `--project`: optional explicit project name. If omitted, the command uses the
+  current authoring project.
+- `--folder`: Inspiration folder ID for commands that target one folder.
+- `--name`: folder name for create and rename.
+- `--file`: JSON file for reorder. The file may be either an array of folder IDs
+  or an object with `folderIds`.
+
+Behavior:
+
+- `show` returns folder metadata, the project-relative folder path, the absolute
+  folder path for agent filesystem inspection, any existing analysis, and
+  Studio resource keys.
+- Renku does not return per-image listings from this CLI surface. Agents should
+  inspect folder files with normal filesystem commands such as `cd`, `ls`, and
+  `find`.
+- Inspiration images are not registered as assets or tracked as per-image
+  SQLite rows.
+
+## `renku inspiration analysis`
+
+Validate, write, and show schema-validated Inspiration Analysis JSON.
+
+```bash
+renku inspiration analysis show --folder <folder-id> --json
+renku inspiration analysis validate --folder <folder-id> --file <analysis-json> --json
+renku inspiration analysis write --folder <folder-id> --file <analysis-json> --json
+renku inspiration analysis validate --folder <folder-id> --file - --json
+renku inspiration analysis write --folder <folder-id> --file - --json
+```
+
+Input JSON:
+
+```json
+{
+  "kind": "inspirationAnalysis",
+  "analysis": {
+    "thesis": {
+      "statement": "Visual-language thesis.",
+      "principles": ["Repeatable cinematography principle."],
+      "imageFiles": ["frame-001.png"]
+    },
+    "palette": {
+      "description": "Muted blues with restrained practical warmth.",
+      "colors": [
+        {
+          "hex": "#334455",
+          "name": "Siege steel",
+          "meaning": "Controlled pressure and distance."
+        }
+      ],
+      "observations": [
+        {
+          "text": "Cool shadows dominate the frame.",
+          "imageFiles": ["frame-001.png"]
+        }
+      ]
+    },
+    "toneMood": {
+      "tone": "controlled dread",
+      "moodTags": ["restrained"],
+      "description": "Low saturation and soft contrast keep the images subdued.",
+      "imageFiles": ["frame-001.png"]
+    },
+    "composition": {
+      "description": "Frames use stillness and negative space as pressure.",
+      "patterns": [
+        {
+          "name": "Centered pressure",
+          "description": "Subjects hold center while empty space bears down.",
+          "imageFiles": ["frame-001.png"]
+        }
+      ]
+    },
+    "lighting": {
+      "description": "Light is motivated, directional, and quick to fall off.",
+      "patterns": [
+        {
+          "name": "Practical falloff",
+          "description": "Faces fall away quickly from practical sources.",
+          "imageFiles": ["frame-001.png"]
+        }
+      ]
+    },
+    "texture": {
+      "description": "Surfaces feel tactile and worn.",
+      "observations": [
+        {
+          "text": "Fine grain supports worn metal and stone.",
+          "imageFiles": ["frame-001.png"]
+        }
+      ]
+    },
+    "inspiredBy": {
+      "description": "Visual lineage is treated as affinity, not confirmed influence.",
+      "items": [
+        {
+          "category": "cinematographer",
+          "name": "Roger Deakins",
+          "confidence": "medium",
+          "why": "Disciplined contrast and negative space are visible affinities.",
+          "imageFiles": ["frame-001.png"]
+        }
+      ]
+    }
+  }
+}
+```
+
+Behavior:
+
+- The input must be a tagged `kind: "inspirationAnalysis"` document with all
+  required analysis sections.
+- `imageFiles` values are folder-local filenames only.
+- Validation checks referenced filenames against files in the Inspiration
+  folder, but Renku still does not store per-image rows.
+- `write` appends Studio resource refresh events after a successful mutation.
+- The old `renku visual-language inspiration ...` command surface is not kept
+  as a compatibility alias.
+
 ## `renku asset register`
 
 Register a project asset.

@@ -5,7 +5,6 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
-  type InspirationAnalysisSections,
   type LookbookSection,
   type LookbookSections,
 } from '@gorenku/studio-core/server';
@@ -29,71 +28,6 @@ export async function runVisualLanguageCommand(options: {
   const service = createProjectDataService();
   const projectName = options.flags.project;
 
-  if (area === 'inspiration' && action === 'list') {
-    writeJson(
-      options.io,
-      await service.listInspirationFolders({
-        projectName,
-        homeDir: options.homeDir,
-      })
-    );
-    return 0;
-  }
-  if (area === 'inspiration' && action === 'create') {
-    writeJson(
-      options.io,
-      await service.createInspirationFolder({
-        projectName,
-        homeDir: options.homeDir,
-        name: requiredFlag(options.flags.name, '--name'),
-      })
-    );
-    return 0;
-  }
-  if (area === 'inspiration' && action === 'delete') {
-    await service.deleteInspirationFolder({
-      projectName,
-      homeDir: options.homeDir,
-      folderId: requiredFlag(options.flags.folder, '--folder'),
-    });
-    writeJson(options.io, { ok: true });
-    return 0;
-  }
-  if (area === 'inspiration' && action === 'read') {
-    writeJson(
-      options.io,
-      await service.readInspirationFolder({
-        projectName,
-        homeDir: options.homeDir,
-        folderId: requiredFlag(options.flags.folder, '--folder'),
-      })
-    );
-    return 0;
-  }
-  if (area === 'inspiration' && action === 'write-analysis') {
-    const filePath = requiredFlag(options.flags.file, '--file');
-    const sections = await readJsonInput(filePath);
-    writeJson(
-      options.io,
-      await service.upsertInspirationAnalysis({
-        projectName,
-        homeDir: options.homeDir,
-        folderId: requiredFlag(options.flags.folder, '--folder'),
-        sections: sections as InspirationAnalysisSections,
-        filePath: filePath !== '-' ? filePath : undefined,
-      })
-    );
-    return 0;
-  }
-  if (area === 'inspiration' && action === 'read-analysis') {
-    const resource = await service.readInspirationFolder({
-      projectName,
-      homeDir: options.homeDir,
-      folderId: requiredFlag(options.flags.folder, '--folder'),
-    });
-    writeJson(options.io, resource.analysis);
-    return 0;
-  }
   if (area === 'lookbook' && action === 'read') {
     writeJson(
       options.io,
@@ -203,7 +137,7 @@ export async function runVisualLanguageCommand(options: {
         'CLI091',
         'Unknown visual-language command.',
         { path: ['visual-language', area ?? '', action ?? ''] },
-        'Use inspiration list/create/delete/read/write-analysis/read-analysis or lookbook list/read/create/update/delete/set-active/clear-active/import-image/set-card-image.'
+        'Use lookbook list/read/create/update/delete/set-active/clear-active/import-image/set-card-image. Inspiration commands now live under `renku inspiration`.'
       ),
     ],
     suggestion: 'Use a supported visual-language command.',

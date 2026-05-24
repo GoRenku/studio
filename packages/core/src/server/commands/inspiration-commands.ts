@@ -1,11 +1,19 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
-  InspirationAnalysis,
   InspirationFolder,
+  InspirationAnalysisValidationReport,
+  InspirationAnalysisWriteReport,
+  InspirationFolderReport,
+  InspirationFolderWithResolvedPath,
   InspirationFolderResource,
   PageResponse,
+  VisualLanguageProjectReport,
 } from '../../client/index.js';
+import {
+  readProjectRecord,
+  type ProjectRecord,
+} from '../database/access/project.js';
 import {
   deleteInspirationFolderRecord,
   listAllInspirationFolderRecords,
@@ -42,7 +50,9 @@ import type {
   ReadInspirationFolderInput,
   RenameInspirationFolderInput,
   ReorderInspirationFoldersInput,
-  UpsertInspirationAnalysisInput,
+  ReadInspirationAnalysisInput,
+  ValidateInspirationAnalysisInput,
+  WriteInspirationAnalysisInput,
   WriteInspirationImageInput,
 } from '../project-data-service-contracts.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -55,9 +65,15 @@ import {
   pathExists,
 } from '../visual-language-paths.js';
 import {
-  serializeInspirationAnalysisSections,
+  serializeInspirationAnalysisDocument,
+  validateInspirationAnalysisDocument,
   type InspirationAnalysisSections,
 } from '../visual-language-json/validator.js';
+
+const inspirationResourceKeys = (folderId: string): string[] => [
+  'surface:visual-language:inspiration',
+  `surface:visual-language:inspiration:${folderId}`,
+];
 
 export async function listInspirationFolders(
   input: ListInspirationFoldersInput
@@ -262,19 +278,51 @@ export async function deleteInspirationImage(
   });
 }
 
-export async function upsertInspirationAnalysis(
-  input: UpsertInspirationAnalysisInput
-): Promise<InspirationAnalysis> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+export async function readInspirationAnalysis(
+  input: ReadInspirationAnalysisInput
+): Promise<InspirationFolderReport> {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
-    const folderImageFiles = new Set(
-      (await listInspirationImagesFromFolder(projectFolder, folder)).map(
-        (image) => image.fileName
-      )
-    );
-    const sections = serializeInspirationAnalysisSections({
-      sections: input.sections,
-      folderImageFiles,
+    const analysis = readInspirationAnalysisRecord(session, input.folderId);
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      folder: toResolvedInspirationFolder(projectFolder, folder),
+      analysis: analysis ? toInspirationAnalysis(analysis) : null,
+      resourceKeys: inspirationResourceKeys(input.folderId),
+    };
+  });
+}
+
+export async function validateInspirationAnalysis(
+  input: ValidateInspirationAnalysisInput
+): Promise<InspirationAnalysisValidationReport> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
+    const folder = requireInspirationFolderRecord(session, input.folderId);
+    validateInspirationAnalysisDocument({
+      document: input.document,
+      folderImageFiles: await readFolderImageFileNames(projectFolder, folder),
+      filePath: input.filePath,
+    });
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      folder: toResolvedInspirationFolder(projectFolder, folder),
+      resourceKeys: inspirationResourceKeys(input.folderId),
+    };
+  });
+}
+
+export async function writeInspirationAnalysis(
+  input: WriteInspirationAnalysisInput
+): Promise<InspirationAnalysisWriteReport> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
+    const folder = requireInspirationFolderRecord(session, input.folderId);
+    const sections = serializeInspirationAnalysisDocument({
+      document: input.document,
+      folderImageFiles: await readFolderImageFileNames(projectFolder, folder),
       filePath: input.filePath,
     });
     upsertInspirationAnalysisRecord(session, {
@@ -289,13 +337,30 @@ export async function upsertInspirationAnalysis(
         `Inspiration analysis was not written: ${input.folderId}.`
       );
     }
-    return toInspirationAnalysis(row);
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      changes: [
+        {
+          type: 'inspirationAnalysis.upserted',
+          folderId: input.folderId,
+        },
+      ],
+      folder: toResolvedInspirationFolder(projectFolder, folder),
+      analysis: toInspirationAnalysis(row),
+      resourceKeys: inspirationResourceKeys(input.folderId),
+    };
   });
 }
 
 async function withVisualLanguageSession<T>(
   input: { projectName?: string; homeDir?: string },
-  fn: (handle: { projectFolder: string; session: DatabaseSession }) => T | Promise<T>
+  fn: (handle: {
+    projectFolder: string;
+    project: Pick<ProjectRecord, 'id' | 'name'>;
+    session: DatabaseSession;
+  }) => T | Promise<T>
 ): Promise<T> {
   if (input.projectName) {
     const handle = await openProjectSession({
@@ -303,14 +368,68 @@ async function withVisualLanguageSession<T>(
       homeDir: input.homeDir,
     });
     try {
-      return await fn(handle);
+      return await fn({
+        ...handle,
+        project: requireProjectRecord(handle.session),
+      });
     } finally {
       handle.session.close();
     }
   }
   return withCurrentProjectSession(input, ({ currentProject, session }) =>
-    fn({ projectFolder: currentProject.projectFolder, session })
+    fn({
+      projectFolder: currentProject.projectFolder,
+      project: { id: currentProject.projectId, name: currentProject.projectName },
+      session,
+    })
   );
+}
+
+function requireProjectRecord(session: DatabaseSession): ProjectRecord {
+  const project = readProjectRecord(session);
+  if (!project) {
+    throw new ProjectDataError(
+      'PROJECT_DATA021',
+      `Project database has no project row: ${session.databasePath}.`
+    );
+  }
+  return project;
+}
+
+async function readFolderImageFileNames(
+  projectFolder: string,
+  folder: ReturnType<typeof requireInspirationFolderRecord>
+): Promise<Set<string>> {
+  return new Set(
+    (await listInspirationImagesFromFolder(projectFolder, folder)).map(
+      (image) => image.fileName
+    )
+  );
+}
+
+function toProjectReport(
+  project: Pick<ProjectRecord, 'id' | 'name'>,
+  projectFolder: string
+): VisualLanguageProjectReport {
+  return {
+    id: project.id,
+    name: project.name,
+    projectFolder,
+  };
+}
+
+function toResolvedInspirationFolder(
+  projectFolder: string,
+  row: Pick<
+    ReturnType<typeof requireInspirationFolderRecord>,
+    'id' | 'name' | 'projectRelativePath'
+  >
+): InspirationFolderWithResolvedPath {
+  const folder = toInspirationFolder(row);
+  return {
+    ...folder,
+    absolutePath: resolveProjectRelativePath(projectFolder, folder.projectRelativePath),
+  };
 }
 
 function requireTrimmed(value: string, fieldName: string): string {

@@ -163,12 +163,15 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const folderId = c.req.param('folderId') as string;
         const sections = await c.req.json();
-        const analysis = await projectData.upsertInspirationAnalysis({
+        const report = await projectData.writeInspirationAnalysis({
           projectName,
           folderId,
-          sections,
+          document: {
+            kind: 'inspirationAnalysis',
+            analysis: sections as never,
+          },
         });
-        return c.json({ analysis });
+        return c.json({ analysis: report.analysis });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

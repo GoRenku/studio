@@ -20,7 +20,9 @@ import {
   readInspirationFolder,
   renameInspirationFolder,
   reorderInspirationFolders,
-  upsertInspirationAnalysis,
+  readInspirationAnalysis,
+  validateInspirationAnalysis,
+  writeInspirationAnalysis,
   writeInspirationImage,
 } from './commands/inspiration-commands.js';
 import {
@@ -153,7 +155,9 @@ export function createProjectDataService(): ProjectDataService {
     deleteInspirationFolder,
     writeInspirationImage,
     deleteInspirationImage,
-    upsertInspirationAnalysis,
+    readInspirationAnalysis,
+    validateInspirationAnalysis,
+    writeInspirationAnalysis,
     listLookbooks,
     readLookbook,
     createLookbook,

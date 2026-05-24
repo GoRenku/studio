@@ -307,8 +307,50 @@ export function fakeProjectDataService(): NonNullable<
         analysis: null,
       };
     },
-    async upsertInspirationAnalysis(input) {
-      return { folderId: input.folderId, ...input.sections };
+    async readInspirationAnalysis(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        folder: {
+          id: input.folderId,
+          name: 'Reference',
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+          absolutePath: '/tmp/reference',
+        },
+        analysis: null,
+        resourceKeys: [],
+      };
+    },
+    async validateInspirationAnalysis(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        folder: {
+          id: input.folderId,
+          name: 'Reference',
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+          absolutePath: '/tmp/reference',
+        },
+        resourceKeys: [],
+      };
+    },
+    async writeInspirationAnalysis(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        changes: [{ type: 'inspirationAnalysis.upserted', folderId: input.folderId }],
+        folder: {
+          id: input.folderId,
+          name: 'Reference',
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+          absolutePath: '/tmp/reference',
+        },
+        analysis: { folderId: input.folderId, ...input.document.analysis },
+        resourceKeys: [],
+      };
     },
     async listLookbooks() {
       return {

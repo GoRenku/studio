@@ -134,22 +134,87 @@ describe('visual language commands', () => {
       analysis: null,
     });
 
-    const analysis = await projectData.upsertInspirationAnalysis({
+    const validation = await projectData.validateInspirationAnalysis({
       projectName: 'constantinople',
       homeDir,
       folderId: folder.id,
-      sections: inspirationAnalysisSections('frame-001.png'),
+      document: {
+        kind: 'inspirationAnalysis',
+        analysis: inspirationAnalysisSections('frame-001.png'),
+      },
     });
+    expect(validation).toMatchObject({
+      valid: true,
+      folder: { absolutePath: path.join(created.projectPath, folder.projectRelativePath) },
+    });
+
+    const report = await projectData.writeInspirationAnalysis({
+      projectName: 'constantinople',
+      homeDir,
+      folderId: folder.id,
+      document: {
+        kind: 'inspirationAnalysis',
+        analysis: inspirationAnalysisSections('frame-001.png'),
+      },
+    });
+    const analysis = report.analysis;
     expect(analysis.thesis.statement).toContain('Reference images');
+    expect(report).toMatchObject({
+      valid: true,
+      changes: [{ type: 'inspirationAnalysis.upserted', folderId: folder.id }],
+      resourceKeys: expect.arrayContaining([
+        'surface:visual-language:inspiration',
+        `surface:visual-language:inspiration:${folder.id}`,
+      ]),
+    });
 
     await expect(
-      projectData.upsertInspirationAnalysis({
+      projectData.writeInspirationAnalysis({
         projectName: 'constantinople',
         homeDir,
         folderId: folder.id,
-        sections: inspirationAnalysisSections('missing.png'),
+        document: {
+          kind: 'inspirationAnalysis',
+          analysis: inspirationAnalysisSections('missing.png'),
+        },
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA230' });
+    await expect(
+      projectData.readInspirationAnalysis({
+        projectName: 'constantinople',
+        homeDir,
+        folderId: folder.id,
+      })
+    ).resolves.toMatchObject({
+      valid: true,
+      folder: {
+        id: folder.id,
+        absolutePath: path.join(created.projectPath, folder.projectRelativePath),
+      },
+      analysis: {
+        thesis: {
+          statement: expect.stringContaining('Reference images'),
+        },
+      },
+    });
+
+    await expect(
+      projectData.validateInspirationAnalysis({
+        projectName: 'constantinople',
+        homeDir,
+        folderId: folder.id,
+        document: {
+          kind: 'inspirationAnalysis',
+          analysis: {
+            ...inspirationAnalysisSections('frame-001.png'),
+            unknownSection: {},
+          },
+        } as never,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA230',
+      issues: [expect.objectContaining({ code: 'PROJECT_DATA232' })],
+    });
 
     await projectData.deleteInspirationImage({
       projectName: 'constantinople',

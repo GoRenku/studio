@@ -12,6 +12,8 @@ import type {
 } from '../../client/index.js';
 import {
   cameraSectionSchema,
+  inspirationAnalysisDocumentSchema,
+  inspirationAnalysisSectionsSchema,
   inspiredBySectionSchema,
   paletteSectionSchema,
   patternSectionSchema,
@@ -47,10 +49,17 @@ ajv.addSchema(patternSectionSchema);
 ajv.addSchema(textureSectionSchema);
 ajv.addSchema(inspiredBySectionSchema);
 ajv.addSchema(cameraSectionSchema);
+ajv.addSchema(inspirationAnalysisSectionsSchema);
+ajv.addSchema(inspirationAnalysisDocumentSchema);
 
 export type InspirationAnalysisSections = Omit<InspirationAnalysis, 'folderId'>;
 export type LookbookSections = Omit<Lookbook, 'id' | 'name'>;
 export type VisualLanguageStoredSectionKind = keyof typeof schemaIds;
+
+export interface InspirationAnalysisDocument {
+  kind: 'inspirationAnalysis';
+  analysis: InspirationAnalysisSections;
+}
 
 export function parseVisualLanguageJson(input: {
   contents: string;
@@ -70,6 +79,18 @@ export function parseVisualLanguageJson(input: {
   }
 }
 
+export function parseInspirationAnalysisDocument(input: {
+  contents: string;
+  filePath?: string;
+}): InspirationAnalysisDocument {
+  const parsed = parseVisualLanguageJson(input);
+  validateInspirationAnalysisDocumentShape({
+    document: parsed,
+    filePath: input.filePath,
+  });
+  return parsed as InspirationAnalysisDocument;
+}
+
 export function serializeInspirationAnalysisSections(input: {
   sections: InspirationAnalysisSections;
   folderImageFiles: Set<string>;
@@ -77,6 +98,15 @@ export function serializeInspirationAnalysisSections(input: {
 }): Record<keyof InspirationAnalysisSections, string> {
   validateInspirationAnalysisSections(input);
   return serializeSections(input.sections);
+}
+
+export function serializeInspirationAnalysisDocument(input: {
+  document: InspirationAnalysisDocument;
+  folderImageFiles: Set<string>;
+  filePath?: string;
+}): Record<keyof InspirationAnalysisSections, string> {
+  validateInspirationAnalysisDocument(input);
+  return serializeSections(input.document.analysis);
 }
 
 export function serializeLookbookSections(input: {
@@ -111,6 +141,30 @@ export function validateInspirationAnalysisSections(input: {
     );
   }
   throwVisualLanguageValidationIssues(issues, 'Visual Language JSON failed validation.');
+}
+
+export function validateInspirationAnalysisDocument(input: {
+  document: InspirationAnalysisDocument;
+  folderImageFiles: Set<string>;
+  filePath?: string;
+}): void {
+  const shapeIssues = validateInspirationAnalysisDocumentShape({
+    document: input.document,
+    filePath: input.filePath,
+  });
+  if (shapeIssues.length > 0) {
+    return;
+  }
+  const imageIssues = validateReferencedImageFiles(
+    input.document.analysis,
+    input.folderImageFiles,
+    input.filePath,
+    ['analysis']
+  );
+  throwVisualLanguageValidationIssues(
+    imageIssues,
+    'Visual Language JSON failed validation.'
+  );
 }
 
 export function validateLookbookSections(input: {
@@ -202,6 +256,23 @@ function validateSection(
   return valid ? [] : mapAjvErrors(validator.errors ?? [], path, filePath);
 }
 
+function validateInspirationAnalysisDocumentShape(input: {
+  document: unknown;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  const validator = ajv.getSchema(inspirationAnalysisDocumentSchema.$id);
+  if (!validator) {
+    throw new Error('Inspiration Analysis JSON schema was not registered.');
+  }
+  const valid = validator(input.document);
+  const issues = valid ? [] : mapAjvErrors(validator.errors ?? [], [], input.filePath);
+  throwVisualLanguageValidationIssues(
+    issues,
+    'Visual Language JSON failed validation.'
+  );
+  return issues;
+}
+
 function serializeSections<T extends Record<string, unknown>>(
   sections: T
 ): Record<keyof T, string> {
@@ -213,10 +284,11 @@ function serializeSections<T extends Record<string, unknown>>(
 function validateReferencedImageFiles(
   value: unknown,
   folderImageFiles: Set<string>,
-  filePath?: string
+  filePath?: string,
+  pathPrefix: string[] = []
 ): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
-  visitImageFiles(value, [], (path, imageFile) => {
+  visitImageFiles(value, pathPrefix, (path, imageFile) => {
     if (!folderImageFiles.has(imageFile)) {
       issues.push(
         createDiagnosticError(

@@ -10,6 +10,7 @@ import { runAboutCommand } from './commands/about-command.js';
 import { runAssetCommand } from './commands/asset-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
+import { runInspirationCommand } from './commands/inspiration-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionCommand } from './commands/production-command.js';
@@ -54,13 +55,14 @@ Commands
   info set             Update project information
   info clear           Clear optional project information fields
   info language        Add, update, remove, or set base languages
+  inspiration          Manage Inspiration folders and analysis
   project current      Show the current authoring project
   project open         Set the current authoring project
   project close        Clear the current authoring project
   project select       Request Studio to select a project
   project migrate      Apply pending project database migrations
   screenplay           Inspect, validate, create, and revise screenplay JSON
-  visual-language      Read and write Inspiration and Lookbook data
+  visual-language      Read and write Lookbook data
   studio current       Show current Studio focus and context
 
 Options
@@ -319,6 +321,19 @@ export async function runRenkuCli(
             allLocales: cli.flags.allLocales,
             dryRun: cli.flags.dryRun,
             fresh: cli.flags.fresh,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'inspiration':
+        return await runInspirationCommand({
+          input,
+          flags: {
+            file: cli.flags.file,
+            folder: cli.flags.folder,
+            name: cli.flags.name,
+            project: cli.flags.project,
           },
           json: cli.flags.json,
           io,

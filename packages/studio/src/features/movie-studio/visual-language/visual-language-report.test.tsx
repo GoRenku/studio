@@ -27,13 +27,13 @@ describe('VisualLanguageReport', () => {
       />
     );
 
-    expect(screen.getByText('Thesis')).not.toBeNull();
+    expect(screen.getByText('The thesis')).not.toBeNull();
     expect(screen.getByText('Palette')).not.toBeNull();
-    expect(screen.getByText('Tone & Mood')).not.toBeNull();
-    expect(screen.getByText('Composition')).not.toBeNull();
+    expect(screen.getByText('Tone')).not.toBeNull();
+    expect(screen.getByText('Frames')).not.toBeNull();
     expect(screen.getByText('Lighting')).not.toBeNull();
     expect(screen.getByText('Texture')).not.toBeNull();
-    expect(screen.getByText('Lineage')).not.toBeNull();
+    expect(screen.getByText('Inspired by')).not.toBeNull();
     expect(screen.getByText('Roger Deakins')).not.toBeNull();
   });
 

@@ -1,9 +1,14 @@
+import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { ProjectRelativePath } from './project.js';
 
 export interface InspirationFolder {
   id: string;
   name: string;
   projectRelativePath: ProjectRelativePath;
+}
+
+export interface InspirationFolderWithResolvedPath extends InspirationFolder {
+  absolutePath: string;
 }
 
 export interface InspirationImage {
@@ -147,4 +152,39 @@ export interface CameraSection {
   movement: Pattern[];
   motion: Pattern[];
   framing: Pattern[];
+}
+
+export interface VisualLanguageProjectReport {
+  name: string;
+  id?: string;
+  projectFolder?: string;
+}
+
+export interface VisualLanguageChange {
+  type: string;
+  [key: string]: string;
+}
+
+export interface VisualLanguageCommandReport {
+  valid: true;
+  warnings: DiagnosticIssue[];
+  project: VisualLanguageProjectReport;
+  changes?: VisualLanguageChange[];
+  resourceKeys: string[];
+}
+
+export interface InspirationFolderReport extends VisualLanguageCommandReport {
+  folder: InspirationFolderWithResolvedPath;
+  analysis: InspirationAnalysis | null;
+}
+
+export interface InspirationAnalysisValidationReport
+  extends VisualLanguageCommandReport {
+  folder: InspirationFolderWithResolvedPath;
+}
+
+export interface InspirationAnalysisWriteReport
+  extends VisualLanguageCommandReport {
+  folder: InspirationFolderWithResolvedPath;
+  analysis: InspirationAnalysis;
 }
