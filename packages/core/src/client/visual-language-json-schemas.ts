@@ -206,3 +206,59 @@ export const cameraSectionSchema = {
   },
   additionalProperties: false,
 } as const;
+
+export const lookbookSectionsSchema = {
+  $id: 'https://schemas.gorenku.com/studio/lookbook-sections.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: [
+    'thesis',
+    'palette',
+    'toneMood',
+    'composition',
+    'lighting',
+    'texture',
+    'camera',
+  ],
+  properties: {
+    thesis: { $ref: thesisSectionSchema.$id },
+    palette: { $ref: paletteSectionSchema.$id },
+    toneMood: { $ref: toneMoodSectionSchema.$id },
+    composition: { $ref: patternSectionSchema.$id },
+    lighting: { $ref: patternSectionSchema.$id },
+    texture: { $ref: textureSectionSchema.$id },
+    camera: { $ref: cameraSectionSchema.$id },
+  },
+  additionalProperties: false,
+} as const;
+
+export const lookbookDocumentSchema = {
+  $id: 'https://schemas.gorenku.com/studio/lookbook-document.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['kind', 'lookbook'],
+  properties: {
+    kind: { const: 'lookbook' },
+    lookbook: { $ref: lookbookSectionsSchema.$id },
+    sourceInspirationFolderIds: {
+      type: 'array',
+      items: trimmedString,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const lookbookSourceInspirationsDocumentSchema = {
+  $id: 'https://schemas.gorenku.com/studio/lookbook-source-inspirations-document.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['kind', 'inspirationFolderIds'],
+  properties: {
+    kind: { const: 'lookbookSourceInspirations' },
+    inspirationFolderIds: {
+      type: 'array',
+      items: trimmedString,
+    },
+  },
+  additionalProperties: false,
+} as const;

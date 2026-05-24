@@ -13,11 +13,13 @@ import type {
   InspirationFolderReport,
   InspirationFolderResource,
   InspirationResource,
-  Lookbook,
-  LookbookImage,
+  LookbookImageMutationReport,
   LookbookResource,
+  LookbookSourceInspirationsReport,
   LookbooksResource,
   LookbookSection,
+  LookbookValidationReport,
+  LookbookWriteReport,
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
@@ -38,10 +40,12 @@ import type {
   SequenceNavigationRow,
   SequenceResource,
   StoryArcResource,
+  VisualLanguageCommandReport,
 } from '../client/index.js';
 import type {
   InspirationAnalysisDocument,
-  LookbookSections,
+  LookbookDocument,
+  LookbookSourceInspirationsDocument,
 } from './visual-language-json/validator.js';
 import type {
   Act as ScreenplayAct,
@@ -158,15 +162,20 @@ export interface ProjectDataService {
   writeInspirationAnalysis(input: WriteInspirationAnalysisInput): Promise<InspirationAnalysisWriteReport>;
   listLookbooks(input: ListLookbooksInput): Promise<LookbooksResource>;
   readLookbook(input: ReadLookbookInput): Promise<LookbookResource>;
-  createLookbook(input: CreateLookbookInput): Promise<Lookbook>;
-  updateLookbook(input: UpdateLookbookInput): Promise<Lookbook>;
-  deleteLookbook(input: DeleteLookbookInput): Promise<void>;
-  setActiveLookbook(input: SetActiveLookbookInput): Promise<void>;
-  clearActiveLookbook(input: ClearActiveLookbookInput): Promise<void>;
-  setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImage>;
-  importLookbookImage(input: ImportLookbookImageInput): Promise<LookbookImage>;
-  deleteLookbookImage(input: DeleteLookbookImageInput): Promise<void>;
-  setLookbookImageSections(input: SetLookbookImageSectionsInput): Promise<LookbookImage>;
+  validateLookbook(input: ValidateLookbookInput): Promise<LookbookValidationReport>;
+  createLookbook(input: CreateLookbookInput): Promise<LookbookWriteReport>;
+  updateLookbook(input: UpdateLookbookInput): Promise<LookbookWriteReport>;
+  renameLookbook(input: RenameLookbookInput): Promise<LookbookWriteReport>;
+  deleteLookbook(input: DeleteLookbookInput): Promise<VisualLanguageCommandReport>;
+  setActiveLookbook(input: SetActiveLookbookInput): Promise<VisualLanguageCommandReport>;
+  clearActiveLookbook(input: ClearActiveLookbookInput): Promise<VisualLanguageCommandReport>;
+  setLookbookSourceInspirations(input: SetLookbookSourceInspirationsInput): Promise<LookbookWriteReport>;
+  listLookbookSourceInspirations(input: ListLookbookSourceInspirationsInput): Promise<LookbookSourceInspirationsReport>;
+  setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImageMutationReport>;
+  clearLookbookCardImage(input: ClearLookbookCardImageInput): Promise<LookbookImageMutationReport>;
+  importLookbookImage(input: ImportLookbookImageInput): Promise<LookbookImageMutationReport>;
+  deleteLookbookImage(input: DeleteLookbookImageInput): Promise<LookbookImageMutationReport>;
+  setLookbookImageSections(input: SetLookbookImageSectionsInput): Promise<LookbookImageMutationReport>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -309,7 +318,7 @@ export interface ReadLookbookInput extends VisualLanguageProjectInput {
 
 export interface CreateLookbookInput extends VisualLanguageProjectInput {
   name: string;
-  sections: LookbookSections;
+  document: LookbookDocument;
   filePath?: string;
   idGenerator?: ProjectIdGenerator;
 }
@@ -317,8 +326,19 @@ export interface CreateLookbookInput extends VisualLanguageProjectInput {
 export interface UpdateLookbookInput extends VisualLanguageProjectInput {
   lookbookId: string;
   name?: string;
-  sections?: LookbookSections;
+  document?: LookbookDocument;
   filePath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ValidateLookbookInput extends VisualLanguageProjectInput {
+  document: LookbookDocument;
+  filePath?: string;
+}
+
+export interface RenameLookbookInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+  name: string;
 }
 
 export interface DeleteLookbookInput extends VisualLanguageProjectInput {
@@ -331,9 +351,24 @@ export interface SetActiveLookbookInput extends VisualLanguageProjectInput {
 
 export interface ClearActiveLookbookInput extends VisualLanguageProjectInput {}
 
+export interface SetLookbookSourceInspirationsInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+  document: LookbookSourceInspirationsDocument;
+  filePath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ListLookbookSourceInspirationsInput extends VisualLanguageProjectInput {
+  lookbookId: string;
+}
+
 export interface SetLookbookCardImageInput extends VisualLanguageProjectInput {
   lookbookId: string;
   imageId: string;
+}
+
+export interface ClearLookbookCardImageInput extends VisualLanguageProjectInput {
+  lookbookId: string;
 }
 
 export interface ImportLookbookImageInput extends VisualLanguageProjectInput {

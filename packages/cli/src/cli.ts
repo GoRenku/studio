@@ -11,12 +11,12 @@ import { runAssetCommand } from './commands/asset-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
+import { runLookbookCommand } from './commands/lookbook-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionCommand } from './commands/production-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCurrentCommand } from './commands/studio-current-command.js';
-import { runVisualLanguageCommand } from './commands/visual-language-command.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -56,13 +56,13 @@ Commands
   info clear           Clear optional project information fields
   info language        Add, update, remove, or set base languages
   inspiration          Manage Inspiration folders and analysis
+  lookbook             Manage Lookbooks and Lookbook images
   project current      Show the current authoring project
   project open         Set the current authoring project
   project close        Clear the current authoring project
   project select       Request Studio to select a project
   project migrate      Apply pending project database migrations
   screenplay           Inspect, validate, create, and revise screenplay JSON
-  visual-language      Read and write Lookbook data
   studio current       Show current Studio focus and context
 
 Options
@@ -80,6 +80,7 @@ Options
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
   --lookbook           Lookbook id
+  --image              Lookbook image id
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
   --all-locales        Export every locale with production selects
@@ -152,6 +153,9 @@ function createCliFlags() {
       type: 'string',
     },
     lookbook: {
+      type: 'string',
+    },
+    image: {
       type: 'string',
     },
     name: {
@@ -339,6 +343,21 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
+      case 'lookbook':
+        return await runLookbookCommand({
+          input,
+          flags: {
+            file: cli.flags.file,
+            image: cli.flags.image,
+            lookbook: cli.flags.lookbook,
+            name: cli.flags.name,
+            project: cli.flags.project,
+            sections: cli.flags.sections,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
       case 'project':
         return await runProjectSelectionCommand({
           input,
@@ -360,26 +379,27 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
-      case 'visual-language':
-        return await runVisualLanguageCommand({
-          input,
-          flags: {
-            file: cli.flags.file,
-            folder: cli.flags.folder,
-            name: cli.flags.name,
-            project: cli.flags.project,
-            sections: cli.flags.sections,
-          },
-          json: cli.flags.json,
-          io,
-          homeDir: options.homeDir,
-        });
       case 'studio':
         return await runStudioCurrentCommand({
           input,
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,
+        });
+      case 'visual-language':
+        throw new StructuredError({
+          code: 'CLI091',
+          message: 'The visual-language command has been removed.',
+          issues: [
+            createDiagnosticError(
+              'CLI091',
+              'The visual-language command has been removed.',
+              { path: ['visual-language'] },
+              'Use top-level `renku inspiration ...` and `renku lookbook ...` commands.'
+            ),
+          ],
+          suggestion:
+            'Use top-level `renku inspiration ...` and `renku lookbook ...` commands.',
         });
       default:
         io.stderr.error(`Unknown command: ${command}`);

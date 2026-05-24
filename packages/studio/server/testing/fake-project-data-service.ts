@@ -1,4 +1,7 @@
-import type { ProjectLibrary } from '@gorenku/studio-core/client';
+import type {
+  LookbookSection,
+  ProjectLibrary,
+} from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
 import { makeAsset, makeProject, makeProjectShell } from './route-fixtures.js';
 
@@ -354,13 +357,21 @@ export function fakeProjectDataService(): NonNullable<
     },
     async listLookbooks() {
       return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
         activeLookbookId: null,
         lookbooks: [],
+        resourceKeys: [],
       };
     },
     async readLookbook(input) {
       return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
         lookbook: makeLookbook(input.lookbookId),
+        sourceInspirationFolders: [],
         cardImage: null,
         isActive: false,
         images: [],
@@ -373,26 +384,81 @@ export function fakeProjectDataService(): NonNullable<
           texture: [],
           camera: [],
         },
+        resourceKeys: [],
       };
     },
     async createLookbook(input) {
-      return { id: 'lookbook_test0001', ...input.sections, name: input.name };
+      return makeLookbookWriteReport({
+        lookbook: {
+          id: 'lookbook_test0001',
+          ...input.document.lookbook,
+          name: input.name,
+        },
+      });
     },
     async updateLookbook(input) {
-      return makeLookbook(input.lookbookId, input.name);
+      return makeLookbookWriteReport({
+        lookbook: makeLookbook(input.lookbookId, input.name),
+      });
     },
-    async deleteLookbook() {},
-    async setActiveLookbook() {},
-    async clearActiveLookbook() {},
+    async renameLookbook(input) {
+      return makeLookbookWriteReport({
+        lookbook: makeLookbook(input.lookbookId, input.name),
+      });
+    },
+    async validateLookbook() {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        sourceInspirationFolders: [],
+        resourceKeys: [],
+      };
+    },
+    async deleteLookbook() {
+      return makeVisualLanguageCommandReport('lookbook.deleted');
+    },
+    async setActiveLookbook() {
+      return makeVisualLanguageCommandReport('lookbook.activeSet');
+    },
+    async clearActiveLookbook() {
+      return makeVisualLanguageCommandReport('lookbook.activeCleared');
+    },
+    async setLookbookSourceInspirations(input) {
+      return makeLookbookWriteReport({
+        lookbook: makeLookbook(input.lookbookId),
+      });
+    },
+    async listLookbookSourceInspirations(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        lookbookId: input.lookbookId,
+        sourceInspirationFolders: [],
+        resourceKeys: [],
+      };
+    },
     async setLookbookCardImage(input) {
-      return makeLookbookImage(input.imageId);
+      return makeLookbookImageMutationReport(input.lookbookId, makeLookbookImage(input.imageId));
     },
-    async importLookbookImage() {
-      return makeLookbookImage('lookbook_image_test0001');
+    async clearLookbookCardImage(input) {
+      return makeLookbookImageMutationReport(input.lookbookId);
     },
-    async deleteLookbookImage() {},
+    async importLookbookImage(input) {
+      return makeLookbookImageMutationReport(
+        input.lookbookId,
+        makeLookbookImage('lookbook_image_test0001')
+      );
+    },
+    async deleteLookbookImage() {
+      return makeLookbookImageMutationReport('lookbook_test0001');
+    },
     async setLookbookImageSections(input) {
-      return { ...makeLookbookImage(input.imageId), sections: input.sections };
+      return makeLookbookImageMutationReport('lookbook_test0001', {
+        ...makeLookbookImage(input.imageId),
+        sections: input.sections,
+      });
     },
   };
 }
@@ -450,6 +516,35 @@ function makeLookbookImage(id: string) {
       createdAt: '2026-05-22T00:00:00.000Z',
       updatedAt: '2026-05-22T00:00:00.000Z',
     },
-    sections: [],
+    sections: [] as LookbookSection[],
+  };
+}
+
+function makeVisualLanguageCommandReport(type: string) {
+  return {
+    valid: true as const,
+    warnings: [],
+    project: { name: 'test-project' },
+    changes: [{ type }],
+    resourceKeys: [],
+  };
+}
+
+function makeLookbookWriteReport(input: { lookbook: ReturnType<typeof makeLookbook> }) {
+  return {
+    ...makeVisualLanguageCommandReport('lookbook.updated'),
+    lookbook: input.lookbook,
+    sourceInspirationFolders: [],
+  };
+}
+
+function makeLookbookImageMutationReport(
+  lookbookId: string,
+  image?: ReturnType<typeof makeLookbookImage>
+) {
+  return {
+    ...makeVisualLanguageCommandReport('lookbook.imageChanged'),
+    lookbookId,
+    ...(image ? { image } : {}),
   };
 }

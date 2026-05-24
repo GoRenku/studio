@@ -1,10 +1,15 @@
 import type {
   LookbookImage,
-  LookbookListItem,
+  LookbookListItemWithSources,
   LookbookResource,
   LookbooksResource,
   LookbookSection,
+  VisualLanguageProjectReport,
 } from '../../client/index.js';
+import {
+  readProjectRecord,
+  type ProjectRecord,
+} from '../database/access/project.js';
 import {
   listLookbookCardImageIds,
   listLookbookRecords,
@@ -12,6 +17,10 @@ import {
   requireLookbookRecordById,
   toLookbook,
 } from '../database/access/lookbook.js';
+import {
+  listLookbookSourceFoldersByLookbookId,
+  listLookbookSourceInspirationFolders,
+} from '../database/access/lookbook-inspirations.js';
 import {
   listLookbookImages,
   readLookbookImage,
@@ -23,35 +32,63 @@ import type {
   ListLookbooksInput,
   ReadLookbookInput,
 } from '../project-data-service-contracts.js';
+import { ProjectDataError } from '../project-data-error.js';
 
 export async function listLookbooksResource(
   input: ListLookbooksInput
 ): Promise<LookbooksResource> {
-  return withVisualLanguageSession(input, ({ session }) => {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const activeLookbookId = readActiveLookbookId(session);
     const cardImageIds = listLookbookCardImageIds(session);
-    const lookbooks: LookbookListItem[] = listLookbookRecords(session).map((row) => ({
+    const rows = listLookbookRecords(session);
+    const sourceFoldersByLookbookId = listLookbookSourceFoldersByLookbookId(
+      session,
+      {
+        projectFolder,
+        lookbookIds: rows.map((row) => row.id),
+      }
+    );
+    const lookbooks: LookbookListItemWithSources[] = rows.map((row) => ({
       lookbook: toLookbook(row),
       cardImage: readCardImage(session, cardImageIds.get(row.id)),
       isActive: activeLookbookId === row.id,
+      sourceInspirationFolders: sourceFoldersByLookbookId.get(row.id) ?? [],
     }));
-    return { activeLookbookId, lookbooks };
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      activeLookbookId,
+      lookbooks,
+      resourceKeys: ['surface:visual-language:lookbooks'],
+    };
   });
 }
 
 export async function readLookbookResource(
   input: ReadLookbookInput
 ): Promise<LookbookResource> {
-  return withVisualLanguageSession(input, ({ session }) => {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const row = requireLookbookRecordById(session, input.lookbookId);
     const images = listLookbookImages(session, row.id);
     const cardImageIds = listLookbookCardImageIds(session);
     return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
       lookbook: toLookbook(row),
+      sourceInspirationFolders: listLookbookSourceInspirationFolders(session, {
+        projectFolder,
+        lookbookId: row.id,
+      }),
       cardImage: readCardImage(session, cardImageIds.get(row.id)),
       isActive: readActiveLookbookId(session) === row.id,
       images,
       imagesBySection: buildImagesBySection(images),
+      resourceKeys: [
+        'surface:visual-language:lookbooks',
+        `surface:visual-language:lookbook:${row.id}`,
+      ],
     };
   });
 }
@@ -85,7 +122,11 @@ function readCardImage(
 
 async function withVisualLanguageSession<T>(
   input: { projectName?: string; homeDir?: string },
-  fn: (handle: { projectFolder: string; session: DatabaseSession }) => T | Promise<T>
+  fn: (handle: {
+    projectFolder: string;
+    project: Pick<ProjectRecord, 'id' | 'name'>;
+    session: DatabaseSession;
+  }) => T | Promise<T>
 ): Promise<T> {
   if (input.projectName) {
     const handle = await openProjectSession({
@@ -93,12 +134,38 @@ async function withVisualLanguageSession<T>(
       homeDir: input.homeDir,
     });
     try {
-      return await fn(handle);
+      return await fn({ ...handle, project: requireProjectRecord(handle.session) });
     } finally {
       handle.session.close();
     }
   }
   return withCurrentProjectSession(input, ({ currentProject, session }) =>
-    fn({ projectFolder: currentProject.projectFolder, session })
+    fn({
+      projectFolder: currentProject.projectFolder,
+      project: { id: currentProject.projectId, name: currentProject.projectName },
+      session,
+    })
   );
+}
+
+function requireProjectRecord(session: DatabaseSession): ProjectRecord {
+  const project = readProjectRecord(session);
+  if (!project) {
+    throw new ProjectDataError(
+      'PROJECT_DATA021',
+      `Project database has no project row: ${session.databasePath}.`
+    );
+  }
+  return project;
+}
+
+function toProjectReport(
+  project: Pick<ProjectRecord, 'id' | 'name'>,
+  projectFolder: string
+): VisualLanguageProjectReport {
+  return {
+    id: project.id,
+    name: project.name,
+    projectFolder,
+  };
 }

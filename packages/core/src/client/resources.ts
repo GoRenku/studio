@@ -17,11 +17,13 @@ import type { ProjectLanguage } from './project-languages.js';
 import type {
   InspirationAnalysis,
   InspirationFolder,
+  InspirationFolderWithResolvedPath,
   InspirationImage,
   Lookbook,
   LookbookImage,
-  LookbookListItem,
+  LookbookListItemWithSources,
   LookbookSection,
+  VisualLanguageCommandReport,
 } from './visual-language.js';
 
 export interface PageResponse<T> {
@@ -184,17 +186,18 @@ export interface InspirationFolderResource {
   analysis: InspirationAnalysis | null;
 }
 
-export interface LookbookResource {
+export interface LookbookResource extends VisualLanguageCommandReport {
   lookbook: Lookbook;
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
   cardImage: LookbookImage | null;
   isActive: boolean;
   images: LookbookImage[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;
 }
 
-export interface LookbooksResource {
+export interface LookbooksResource extends VisualLanguageCommandReport {
   activeLookbookId: string | null;
-  lookbooks: LookbookListItem[];
+  lookbooks: LookbookListItemWithSources[];
 }
 
 export interface ProjectInformationResource {

@@ -1,8 +1,8 @@
 # 0023 Visual Language Lookbook CLI And Skill
 
-Date: 2026-05-23
+Date: 2026-05-24
 
-Status: active draft
+Status: implemented
 
 ## Goal
 
@@ -15,6 +15,13 @@ The Lookbook workflow is agent-assisted but project-native:
 - the user can ask to revise an existing lookbook;
 - the user can base a lookbook on one or more Inspiration folders and their
   analysis;
+- the user can base a lookbook on Inspiration folder images even when no
+  analysis has been written yet;
+- the user can cite movies, directors, cinematographers, photographers,
+  painters, movements, periods, locations, or other visual references as
+  creative context;
+- the user can describe a desired visual system directly, for example "similar
+  to The Substance, but use acid green to mean contamination and tenderness";
 - the agent reads existing Inspiration analyses, folder paths, current lookbooks,
   screenplay/project context when useful, and user preferences;
 - when the agent needs to inspect source images, it uses normal filesystem
@@ -34,6 +41,11 @@ The CLI should make the mechanical parts simple enough for skills:
 - read source Inspiration folders and analyses;
 - attach generated example images to Lookbook sections.
 
+The first implementation is not a browser-side generation workflow. The skill
+and commands should make it possible for an agent to create the Lookbook,
+generate example images later, and attach those images cleanly, but model
+selection, prompt dispatch, and editing controls are deliberately deferred.
+
 Agents must not write SQLite directly, preserve obsolete command aliases, or use
 Lookbook JSON as an image placement mechanism.
 
@@ -50,6 +62,10 @@ Lookbook JSON as an image placement mechanism.
 - `docs/architecture/json-storage-validation.md`
 - `docs/architecture/naming-guidelines.md`
 - `/Users/keremk/Projects/aitinkerbox/studio-skills/README.md`
+- `/Users/keremk/Projects/aitinkerbox/studio-skills/skills/inspiration-analyzer/SKILL.md`
+- `/Users/keremk/Projects/aitinkerbox/studio-skills/skills/inspiration-analyzer/references/inspiration-analysis-cli-workflow.md`
+- `/Users/keremk/Projects/aitinkerbox/studio-skills/skills/inspiration-analyzer/references/inspiration-analysis-json-contract.md`
+- `/Users/keremk/Projects/aitinkerbox/studio-skills/skills/inspiration-analyzer/references/cinematography-analysis-guidelines.md`
 - `/Users/keremk/Projects/aitinkerbox/studio-skills/skills/screenplay-drafter/SKILL.md`
 
 ## Current Baseline
@@ -98,12 +114,59 @@ Gaps for agent and skill use:
 - The top-level Lookbook JSON document shape is not represented as a stable
   schema. The validator currently validates the sections object directly.
 - Commands do not yet append Studio refresh events after successful mutations.
+- The current Lookbooks UI has a rendering target, but the Lookbook designer
+  skill needs a clear contract that its output will appear in the same report
+  language as Inspiration Analysis.
 
 Because Renku Studio is pre-customer software, update the command names
 directly. Remove the `visual-language` CLI prefix instead of keeping it as an
 agent-facing namespace. Do not keep compatibility aliases for the old
 `visual-language lookbook ...`, `read`, `set-card-image --file`, or direct
 bare-section JSON input.
+
+## Conversational Product Scope
+
+The Lookbook designer skill is a creative-direction conversation, not a single
+fire-and-forget command wrapper.
+
+Supported user intents:
+
+- "Create me a new lookbook based on the X inspiration folder."
+- "Create a new look from these two folders, but make it warmer and less
+  clinical."
+- "Use the analysis from the Substance folder, but make the red/green logic mean
+  body horror versus tenderness."
+- "Give me something like early Fincher, but for a coastal family drama."
+- "Revise the active lookbook so the palette is colder and the camera language
+  is less handheld."
+- "Generate two images that represent the color palette in this lookbook."
+
+The first five intents belong in this plan. The last intent is important
+context for the future image-generation workflow, but this plan should only
+prepare the durable Lookbook, section placement, CLI discovery, and skill
+structure that later generation commands can build on.
+
+When creating a Lookbook, the skill should synthesize from these inputs in
+priority order:
+
+1. The user's explicit creative direction.
+2. The existing Lookbook being revised, when this is an update.
+3. Existing Inspiration Analysis documents.
+4. The actual images in selected Inspiration folders.
+5. General film, photography, painting, design, or cinematography context when
+   the user names a reference and that context is reliable.
+6. Project screenplay, cast, location, or story context when it helps make the
+   Lookbook specific to the movie.
+
+The output should be a new project visual language, not a summary of the
+references. For example, if the user asks for "The Substance but with color X
+to denote Y", the Lookbook should translate that into a usable color system,
+tone, lighting, camera, composition, and texture strategy for the user's movie.
+It should not merely describe The Substance.
+
+The skill may brainstorm before persistence when the user is still exploring.
+It should only call `lookbook create` or `lookbook update` once the user has
+asked for a durable Lookbook or the conversation clearly implies persistence.
 
 ## Command Design
 
@@ -342,11 +405,15 @@ renku inspiration show --folder <folder-id> --json
 renku inspiration analysis show --folder <folder-id> --json
 ```
 
-Those commands return folder metadata and folder paths, not per-image listings.
+Those commands return folder metadata and resolved folder paths only. They must
+not add image filename arrays, image counts, image manifests, thumbnails, or
+per-image records to their JSON results. The folder path is enough.
+
 If an agent needs to inspect the source images, it should `cd` into the returned
-folder path and use shell commands such as `ls` or `find`. Renku should not
-register individual Inspiration images as assets or track them as per-image
-SQLite rows.
+folder path and use regular shell commands such as `ls`, `find`, or `rg
+--files`. Renku should not register individual Inspiration images as assets,
+track them as per-image SQLite rows, or duplicate normal filesystem discovery in
+the CLI response.
 
 The Lookbook command surface should also support durable source relationships:
 
@@ -539,6 +606,10 @@ Rules:
 
 ## Schema And Validation Implementation
 
+All agent-authored JSON inputs for this workflow must have explicit JSON
+Schemas. The CLI should validate those schemas before any write command mutates
+project state.
+
 Add top-level document schemas to:
 
 ```text
@@ -724,6 +795,101 @@ Use the same structured CLI diagnostics as screenplay:
 - `CLI083` for stdin read failure.
 - `PROJECT_DATA201` for invalid JSON.
 
+## Studio Visual Representation
+
+The visual representation lives in Studio. The CLI stays JSON-first so agents
+can inspect, validate, mutate, and refresh project state predictably.
+
+The Lookbook UI should follow the design direction from
+`plans/active/0021-visual-language-inspiration-lookbook-ui.md`:
+
+- reuse the same shared report rendering components used by Inspiration
+  Analysis, especially `visual-language-report.tsx`,
+  `visual-language-report-section.tsx`, section-specific visual language
+  renderers, and the shared image grid/card components;
+- render the same compact numbered section rhythm: Thesis, Palette, Tone &
+  Mood, Composition, Lighting, Texture, and Camera;
+- use the same palette swatches, tone strip, mood tags, pattern rows, and image
+  grids wherever the schemas overlap;
+- show source Inspiration folders as durable relationships, not copied analysis
+  text;
+- show the active Lookbook state clearly on the Lookbooks index and detail
+  surface;
+- show the chosen card image through the explicit `lookbook_card_image`
+  relationship;
+- show generated example images through `lookbook_image` and
+  `lookbook_image_section`, never through JSON embedded in a section;
+- expose future action slots near sections for editing, probing, or generation,
+  but do not implement those controls in this plan.
+
+The initial Lookbook detail surface is read-oriented, matching the Analysis
+section. Editing controls for palettes, tone tags, section copy, and generated
+image prompts will be designed later. The component contract should still make
+future edit slots possible without rewriting the report layout.
+
+Component reuse should be explicit, not just visual similarity:
+
+- shared components own report spacing, typography, numbered section labels,
+  section headings, palette rendering, tone/mood rendering, pattern rows,
+  texture observations, and image grid/card presentation;
+- Inspiration Analysis and Lookbook pass different image-source adapters into
+  the shared image components;
+- Inspiration Analysis resolves supporting images from folder-local `imageFiles`
+  in the analysis JSON;
+- Lookbook resolves supporting images from `imagesBySection` backed by
+  `lookbook_image_section` rows and registered assets;
+- source-specific containers own resource loading, empty states, route handling,
+  active Lookbook controls, source Inspiration badges, and card-image behavior;
+- the shared report renderer should not branch on loose object shapes or infer
+  storage ownership from paths. It should receive normalized section data and
+  explicit image props.
+
+The expected non-shared pieces are also clear:
+
+- Inspiration Analysis includes Lineage/Inspired By.
+- Lookbook includes Camera.
+- Lookbook has active-state, card-image, source-Inspiration, and future edit or
+  generation action slots.
+
+When a CLI mutation succeeds, returned `resourceKeys` should allow Studio to
+refresh:
+
+- the Lookbooks index;
+- the selected Lookbook detail surface;
+- active Lookbook state in the Visual Language sidebar;
+- generated image placement in affected sections.
+
+Do not add a separate terminal-rendered lookbook board in this phase. Human
+readability in the terminal can improve through concise non-JSON summaries
+later, but the agent contract is the structured `--json` output.
+
+## Future Image Generation Hooks
+
+The user should eventually be able to ask:
+
+```text
+Generate 2 images that represent the color palette in this lookbook.
+```
+
+This plan should not implement model/provider image generation yet. It should
+make that next plan straightforward by keeping the boundaries clean:
+
+- `renku lookbook show` returns the sections, active state, source Inspiration
+  folders, card image, and placed images needed to build prompts;
+- source Inspiration folder paths remain available through Inspiration commands
+  so a generation agent can inspect reference images when needed;
+- generated files are attached with `renku lookbook image import`, then placed
+  with section keys;
+- section placement stays in `lookbook_image_section`, so generated examples can
+  appear under Palette, Lighting, Camera, or multiple sections without changing
+  the Lookbook JSON schema;
+- workflows that require a project direction can explicitly require an active
+  Lookbook and fail with a structured diagnostic when none is set.
+
+Later generation work can add a higher-level command such as
+`renku lookbook image generate`, but this plan should not reserve flags or fake
+provider behavior before that workflow is designed.
+
 ## Studio Skills Project
 
 Add a new skill to:
@@ -748,6 +914,7 @@ skills/lookbook-designer/
     create-lookbook.json
     update-lookbook.json
     source-inspirations.json
+    reference-driven-lookbook.json
 ```
 
 Update:
@@ -815,10 +982,21 @@ renku lookbook list --json
 - attaching generated example images;
 - only brainstorming before persistence.
 
-4. If the user references Inspiration folders, inspect them:
+4. Collect source context. The user may provide:
+
+- one Inspiration folder;
+- multiple Inspiration folders;
+- named references such as movies, directors, cinematographers, photographers,
+  painters, movements, locations, or periods;
+- direct art direction with custom symbolism, such as a color meaning or camera
+  behavior;
+- project context from story, cast, or locations.
+
+5. If the user references Inspiration folders, inspect them:
 
 ```bash
 renku inspiration list --json
+renku inspiration show --folder <folder-id> --json
 renku inspiration analysis show --folder <folder-id> --json
 ```
 
@@ -829,6 +1007,15 @@ Use the returned:
 - existing analysis;
 - analysis image filename citations.
 
+Do not expect or request an image list from the Renku CLI. The Inspiration
+folder path is the discovery boundary. To find grabs, use regular shell
+commands inside that path:
+
+```bash
+cd "<folder.absolutePath>"
+find . -maxdepth 1 -type f
+```
+
 If an Inspiration folder has no analysis and the user wants to rely on it, the
 skill should either:
 
@@ -836,35 +1023,35 @@ skill should either:
 - proceed with direct image inspection by using filesystem commands inside the
   returned folder path when the user wants momentum.
 
-5. For updates, read the existing Lookbook first:
+6. For updates, read the existing Lookbook first:
 
 ```bash
 renku lookbook show --lookbook <lookbook-id> --json
 ```
 
-6. Write a `kind: "lookbook"` JSON document.
+7. Write a `kind: "lookbook"` JSON document.
 
-7. Validate:
+8. Validate:
 
 ```bash
 renku lookbook validate --file <lookbook-json> --json
 ```
 
-8. Create or update:
+9. Create or update:
 
 ```bash
 renku lookbook create --name <name> --file <lookbook-json> --json
 renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
 ```
 
-9. Set active only when the user asked for it or the workflow clearly calls for
+10. Set active only when the user asked for it or the workflow clearly calls for
    the new Lookbook to become the project direction:
 
 ```bash
 renku lookbook set-active --lookbook <lookbook-id> --json
 ```
 
-10. Read back after mutation:
+11. Read back after mutation:
 
 ```bash
 renku lookbook show --lookbook <lookbook-id> --json
@@ -900,6 +1087,8 @@ The skill must say:
 - Do not write directly to `.renku/project.sqlite`.
 - Do not register Inspiration folder images as assets or create per-image
   database records for them.
+- Do not add or depend on image lists in Inspiration CLI results. Use the
+  returned folder path and regular shell commands to discover images.
 - Do not store `imageFiles` in Lookbook JSON.
 - Do not attach example images by editing Lookbook JSON.
 - Use Lookbook image commands for image placement.
@@ -941,43 +1130,83 @@ Add core tests covering:
 - Studio resource keys after create, update, source update, active change, and
   image placement.
 
-## Implementation Checklist
+Add Studio tests covering:
 
-- [ ] Add `lookbook_inspiration` to the Drizzle schema.
-- [ ] Generate the SQL migration with Drizzle Kit.
-- [ ] Add database access module for Lookbook source Inspirations.
-- [ ] Add top-level Lookbook document schema.
-- [ ] Add top-level source Inspirations document schema.
-- [ ] Add Lookbook document parse and validation functions.
-- [ ] Add command report types for Lookbook list/show/write/image mutations.
-- [ ] Add `validateLookbook`.
-- [ ] Update `createLookbook` and `updateLookbook` to accept tagged documents
+- Lookbook detail renders through the same shared report section components as
+  Inspiration Analysis.
+- shared report components receive normalized section data and explicit image
+  props instead of inferring mode from folder paths or loose object shape.
+- source Inspiration folders appear on the Lookbook detail surface.
+- active Lookbook state appears on the Lookbooks index and sidebar context.
+- section image grids render images from `imagesBySection`.
+- no raw browser controls are introduced in feature components.
+
+## Completion Checklist
+
+Use this checklist to decide whether the Lookbook designer plan is fully
+implemented. The plan is not complete until the skill, CLI, core service,
+source relationships, Studio rendering, documentation, and focused tests are all
+done.
+
+- [x] Add `lookbook_inspiration` to the Drizzle schema.
+- [x] Generate the SQL migration with Drizzle Kit.
+- [x] Add database access module for Lookbook source Inspirations.
+- [x] Add top-level Lookbook document schema.
+- [x] Add top-level source Inspirations document schema.
+- [x] Add Lookbook document parse and validation functions.
+- [x] Add command report types for Lookbook list/show/write/image mutations.
+- [x] Add `validateLookbook`.
+- [x] Update `createLookbook` and `updateLookbook` to accept tagged documents
       and return reports.
-- [ ] Add `renameLookbook`.
-- [ ] Add source Inspiration set/list commands.
-- [ ] Add `lookbook image set-sections` CLI command.
-- [ ] Add `lookbook card-image set --image` and optional `card-image clear`.
-- [ ] Add `--image` CLI flag.
-- [ ] Replace `read` with `show`.
-- [ ] Add direct top-level `lookbook` CLI parsing.
-- [ ] Remove the `visual-language lookbook ...` CLI surface instead of keeping
+- [x] Add `renameLookbook`.
+- [x] Add source Inspiration set/list commands.
+- [x] Ensure Inspiration command reports used by this workflow return folder
+      paths only for image discovery, with no image filename lists, image
+      counts, manifests, or per-image records.
+- [x] Add `lookbook image set-sections` CLI command.
+- [x] Add `lookbook card-image set --image` and optional `card-image clear`.
+- [x] Add `--image` CLI flag.
+- [x] Replace `read` with `show`.
+- [x] Add direct top-level `lookbook` CLI parsing.
+- [x] Remove the `visual-language lookbook ...` CLI surface instead of keeping
       aliases.
-- [ ] Replace bare-section JSON input with `kind: "lookbook"` document input.
-- [ ] Return consistent command reports.
-- [ ] Append Studio refresh events after successful Lookbook mutations.
-- [ ] Document the new commands in `docs/cli/commands.md`.
-- [ ] Add the `lookbook-designer` skill to `studio-skills`.
-- [ ] Add progressive disclosure reference files for the skill.
-- [ ] Update `studio-skills/README.md`.
+- [x] Replace bare-section JSON input with `kind: "lookbook"` document input.
+- [x] Return consistent command reports.
+- [x] Append Studio refresh events after successful Lookbook mutations.
+- [x] Document the new commands in `docs/cli/commands.md`.
+- [x] Ensure Lookbook list/show reports include the source relationships and
+      image placement data Studio needs for rendering.
+- [x] Ensure the Lookbooks UI reuses the shared Inspiration Analysis report
+      rendering components where the section schemas overlap.
+- [x] Ensure Inspiration Analysis and Lookbook use source-specific containers
+      plus shared section/image renderers, with explicit image-source props.
+- [x] Ensure the Lookbook detail surface renders source Inspiration folders,
+      active state, card image, and generated example images by section.
+- [x] Leave editing controls and browser-side generation out of this first
+      implementation while keeping component action slots available for later.
+- [x] Preserve future image-generation compatibility by keeping generated
+      examples attached through Lookbook image commands, not embedded section
+      JSON.
+- [x] Add the `lookbook-designer` skill to `studio-skills`.
+- [x] Add progressive disclosure reference files for the skill.
+- [x] Add skill samples for a new Lookbook, an update, source Inspiration
+      relationships, and a reference-driven/custom-symbolism Lookbook.
+- [x] Update `studio-skills/README.md`.
+- [x] Verify the skill supports creating from one folder, multiple folders,
+      existing analyses, direct image inspection, named references, and direct
+      user art direction.
+- [x] Run focused core, CLI, and Studio tests relevant to the touched packages.
 
-## Open Questions
+## Resolved Decisions
 
-- Should `lookbook create` set the new Lookbook active by default? The safer
-  first behavior is no. The skill can explicitly call `set-active` when the user
-  wants the new Lookbook to become the project direction.
-- Should Lookbook source relationships be required for Lookbooks created from
-  Inspiration? The CLI should allow source-free Lookbooks because a user may
-  create one from conversation, screenplay context, or direct art direction.
-- Should Lookbook documents eventually include prompt-oriented generation notes
-  per section? Keep that out of this first plan unless a concrete downstream
-  generator contract needs it.
+- `lookbook create` does not set the new Lookbook active by default. The skill
+  explicitly calls `set-active` when the user wants the new Lookbook to become
+  the project direction.
+- Lookbook source relationships are optional. The CLI allows source-free
+  Lookbooks because a user may create one from conversation, screenplay context,
+  named references, or direct art direction.
+- Prompt-oriented generation notes stay out of the first Lookbook document
+  schema unless a concrete downstream generator contract needs them.
+- The first CLI implementation stays JSON-first for agents and Studio refresh
+  correctness. A human-readable terminal summary can come later after the Studio
+  representation is stable.

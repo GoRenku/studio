@@ -47,6 +47,10 @@ export interface LookbookListItem {
   isActive: boolean;
 }
 
+export interface LookbookListItemWithSources extends LookbookListItem {
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+}
+
 export type LookbookSection =
   | 'thesis'
   | 'palette'
@@ -187,4 +191,38 @@ export interface InspirationAnalysisWriteReport
   extends VisualLanguageCommandReport {
   folder: InspirationFolderWithResolvedPath;
   analysis: InspirationAnalysis;
+}
+
+export interface LookbookListReport extends VisualLanguageCommandReport {
+  activeLookbookId: string | null;
+  lookbooks: LookbookListItemWithSources[];
+}
+
+export interface LookbookShowReport extends VisualLanguageCommandReport {
+  lookbook: Lookbook;
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+  cardImage: LookbookImage | null;
+  isActive: boolean;
+  images: LookbookImage[];
+  imagesBySection: Record<LookbookSection, LookbookImage[]>;
+}
+
+export interface LookbookValidationReport extends VisualLanguageCommandReport {
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+}
+
+export interface LookbookWriteReport extends VisualLanguageCommandReport {
+  lookbook: Lookbook;
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+}
+
+export interface LookbookImageMutationReport extends VisualLanguageCommandReport {
+  image?: LookbookImage;
+  lookbookId: string;
+}
+
+export interface LookbookSourceInspirationsReport
+  extends VisualLanguageCommandReport {
+  lookbookId: string;
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
 }

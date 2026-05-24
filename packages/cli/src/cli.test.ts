@@ -384,6 +384,99 @@ describe('renku CLI', () => {
     });
   });
 
+  it('validates and creates Lookbooks through the top-level command', async () => {
+    const storageRoot = await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    const createFolderExitCode = await runRenkuCli(
+      ['inspiration', 'create', '--name', 'The Substance', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(createFolderExitCode).toBe(0);
+    const folder = JSON.parse(stdout.join('\n')) as {
+      id: string;
+      projectRelativePath: string;
+    };
+    const inspirationFolderPath = path.join(
+      storageRoot,
+      'constantinople',
+      folder.projectRelativePath
+    );
+
+    const lookbookPath = path.join(homeDir, 'lookbook.json');
+    await fs.writeFile(
+      lookbookPath,
+      JSON.stringify(lookbookJson([folder.id]), null, 2),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const validateExitCode = await runRenkuCli(
+      ['lookbook', 'validate', '--file', lookbookPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(validateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      sourceInspirationFolders: [
+        {
+          id: folder.id,
+          absolutePath: inspirationFolderPath,
+        },
+      ],
+    });
+
+    stdout = [];
+    stderr = [];
+    const createLookbookExitCode = await runRenkuCli(
+      [
+        'lookbook',
+        'create',
+        '--name',
+        'Contaminated Tenderness',
+        '--file',
+        lookbookPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(createLookbookExitCode).toBe(0);
+    const report = JSON.parse(stdout.join('\n'));
+    expect(report).toMatchObject({
+      valid: true,
+      changes: [{ type: 'lookbook.created' }],
+      lookbook: {
+        name: 'Contaminated Tenderness',
+        palette: { colors: [{ hex: '#39FF75' }] },
+      },
+      sourceInspirationFolders: [{ id: folder.id }],
+      resourceKeys: expect.arrayContaining([
+        'surface:visual-language:lookbooks',
+      ]),
+    });
+
+    stdout = [];
+    stderr = [];
+    const showExitCode = await runRenkuCli(
+      ['lookbook', 'show', '--lookbook', report.lookbook.id, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(showExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      lookbook: { id: report.lookbook.id },
+      sourceInspirationFolders: [{ id: folder.id }],
+      imagesBySection: { palette: [] },
+    });
+  });
+
   it('registers and selects a scene asset through the asset command', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
@@ -801,6 +894,80 @@ function inspirationAnalysisJson(imageFile: string) {
         ],
       },
     },
+  };
+}
+
+function lookbookJson(sourceInspirationFolderIds: string[] = []) {
+  return {
+    kind: 'lookbook',
+    lookbook: {
+      thesis: {
+        statement:
+          'The movie should feel tender and contaminated at once. Beauty is never clean, and threat is never purely hostile.',
+        principles: ['Let attraction and danger share the same frame.'],
+      },
+      palette: {
+        description:
+          'Acid green marks contamination and tenderness, held against fleshy reds and clinic whites.',
+        colors: [
+          {
+            hex: '#39FF75',
+            name: 'Acid tenderness',
+            meaning: 'A charged color for care that has become unstable.',
+          },
+        ],
+        observations: [{ text: 'Green should feel alive rather than decorative.' }],
+      },
+      toneMood: {
+        tone: 'surgical intimacy',
+        moodTags: ['charged', 'bodily'],
+        description: 'Clean surfaces should feel too bright and too close.',
+      },
+      composition: {
+        description: 'Faces and bodies press into symmetrical frames.',
+        patterns: [
+          {
+            name: 'Clinical symmetry',
+            description: 'Use centered frames when a body becomes an argument.',
+          },
+        ],
+      },
+      lighting: {
+        description: 'High-key institutional light breaks into colored threat.',
+        patterns: [
+          {
+            name: 'Contaminated practicals',
+            description: 'Let green sources corrupt otherwise clean environments.',
+          },
+        ],
+      },
+      texture: {
+        description: 'Skin, gloss, condensation, and plastic carry the image.',
+        observations: [{ text: 'Texture should make clean rooms feel biological.' }],
+      },
+      camera: {
+        description: 'The camera is precise until bodily pressure breaks composure.',
+        movement: [
+          {
+            name: 'Controlled drift',
+            description: 'Move slowly when desire and unease merge.',
+          },
+        ],
+        motion: [
+          {
+            name: 'Sudden rupture',
+            description: 'Reserve abrupt motion for moments when control collapses.',
+          },
+        ],
+        framing: [
+          {
+            name: 'Body as diagram',
+            description: 'Frame bodies like evidence without losing empathy.',
+          },
+        ],
+      },
+    },
+    sourceInspirationFolderIds,
   };
 }
 

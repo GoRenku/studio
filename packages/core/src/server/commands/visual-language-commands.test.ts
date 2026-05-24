@@ -238,26 +238,36 @@ describe('visual language commands', () => {
     if (!created) {
       return;
     }
+    const firstSource = await projectData.createInspirationFolder({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'The Substance',
+    });
+    const secondSource = await projectData.createInspirationFolder({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Body Double',
+    });
 
     const lookbookIds = createDeterministicIdGenerator();
     const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
       homeDir,
       name: 'Siege Steel',
-      sections: lookbookSections(),
+      document: lookbookDocument([secondSource.id, firstSource.id]),
       idGenerator: lookbookIds,
     });
-    expect(lookbook.id).toBe('lookbook_test0001');
-    expect(lookbook.name).toBe('Siege Steel');
+    expect(lookbook.lookbook.id).toBe('lookbook_test0001');
+    expect(lookbook.lookbook.name).toBe('Siege Steel');
 
     const alternate = await projectData.createLookbook({
       projectName: 'constantinople',
       homeDir,
       name: 'Ivory Fog',
-      sections: lookbookSections(),
+      document: lookbookDocument(),
       idGenerator: lookbookIds,
     });
-    expect(alternate.id).toBe('lookbook_test0002');
+    expect(alternate.lookbook.id).toBe('lookbook_test0002');
 
     await expect(
       projectData.listLookbooks({ projectName: 'constantinople', homeDir })
@@ -272,7 +282,7 @@ describe('visual language commands', () => {
     await projectData.setActiveLookbook({
       projectName: 'constantinople',
       homeDir,
-      lookbookId: lookbook.id,
+      lookbookId: lookbook.lookbook.id,
     });
 
     const firstGeneratedPath = 'visual-language/tmp/run-a/generated-look.png';
@@ -290,57 +300,61 @@ describe('visual language commands', () => {
     const image = await projectData.importLookbookImage({
       projectName: 'constantinople',
       homeDir,
-      lookbookId: lookbook.id,
+      lookbookId: lookbook.lookbook.id,
       projectRelativePath: firstGeneratedPath,
       sections: ['palette', 'lighting'],
       idGenerator: imageIds,
     });
-    expect(image.asset.files[0]?.projectRelativePath).toBe(
+    expect(image.image?.asset.files[0]?.projectRelativePath).toBe(
       'visual-language/lookbook/generated-look.png'
     );
     const secondImage = await projectData.importLookbookImage({
       projectName: 'constantinople',
       homeDir,
-      lookbookId: lookbook.id,
+      lookbookId: lookbook.lookbook.id,
       projectRelativePath: secondGeneratedPath,
       sections: ['palette'],
       idGenerator: imageIds,
     });
-    expect(secondImage.asset.files[0]?.projectRelativePath).toBe(
+    expect(secondImage.image?.asset.files[0]?.projectRelativePath).toBe(
       'visual-language/lookbook/generated-look-2.png'
     );
 
     await projectData.setLookbookCardImage({
       projectName: 'constantinople',
       homeDir,
-      lookbookId: lookbook.id,
-      imageId: image.id,
+      lookbookId: lookbook.lookbook.id,
+      imageId: image.image!.id,
     });
 
     const resource = await projectData.readLookbook({
       projectName: 'constantinople',
       homeDir,
-      lookbookId: lookbook.id,
+      lookbookId: lookbook.lookbook.id,
     });
     expect(resource.lookbook.name).toBe('Siege Steel');
+    expect(resource.sourceInspirationFolders.map((folder) => folder.id)).toEqual([
+      secondSource.id,
+      firstSource.id,
+    ]);
     expect(resource.isActive).toBe(true);
-    expect(resource.cardImage?.id).toBe(image.id);
+    expect(resource.cardImage?.id).toBe(image.image?.id);
     expect(resource.imagesBySection.palette).toHaveLength(2);
     expect(resource.imagesBySection.lighting).toHaveLength(1);
 
     const updated = await projectData.setLookbookImageSections({
       projectName: 'constantinople',
       homeDir,
-      imageId: image.id,
+      imageId: image.image!.id,
       sections: ['camera', 'texture'],
       idGenerator: createDeterministicIdGenerator(),
     });
-    expect(updated.sections).toEqual(['camera', 'texture']);
+    expect(updated.image?.sections).toEqual(['camera', 'texture']);
 
     await projectData.deleteLookbookImage({
       projectName: 'constantinople',
       homeDir,
-      imageId: image.id,
+      imageId: image.image!.id,
     });
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look.png'))
@@ -352,7 +366,7 @@ describe('visual language commands', () => {
     await projectData.deleteLookbook({
       projectName: 'constantinople',
       homeDir,
-      lookbookId: lookbook.id,
+      lookbookId: lookbook.lookbook.id,
     });
     await expect(
       projectData.listLookbooks({ projectName: 'constantinople', homeDir })
@@ -377,18 +391,35 @@ describe('visual language commands', () => {
         projectName: 'constantinople',
         homeDir,
         name: 'Invalid Lookbook',
-        sections: {
-          ...lookbookSections(),
-          thesis: { statement: 'Missing principles' },
+        document: {
+          ...lookbookDocument(),
+          lookbook: {
+            ...lookbookSections(),
+            thesis: { statement: 'Missing principles' },
+          },
         } as never,
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA230' });
+
+    const source = await projectData.createInspirationFolder({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'The Substance',
+    });
+    await expect(
+      projectData.createLookbook({
+        projectName: 'constantinople',
+        homeDir,
+        name: 'Duplicate Sources',
+        document: lookbookDocument([source.id, source.id]),
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA249' });
 
     const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
       homeDir,
       name: 'Corruptible Lookbook',
-      sections: lookbookSections(),
+      document: lookbookDocument(),
       idGenerator: createDeterministicIdGenerator(),
     });
 
@@ -403,7 +434,7 @@ describe('visual language commands', () => {
       projectData.readLookbook({
         projectName: 'constantinople',
         homeDir,
-        lookbookId: lookbook.id,
+        lookbookId: lookbook.lookbook.id,
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA230' });
   });
@@ -488,5 +519,13 @@ function lookbookSections() {
       motion: [{ name: 'Held labor', description: 'Blocking moves with deliberate weight.' }],
       framing: [{ name: 'Measured distance', description: 'Close-ups are rare and earned.' }],
     },
+  };
+}
+
+function lookbookDocument(sourceInspirationFolderIds: string[] = []) {
+  return {
+    kind: 'lookbook' as const,
+    lookbook: lookbookSections(),
+    sourceInspirationFolderIds,
   };
 }

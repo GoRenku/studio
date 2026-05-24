@@ -8,6 +8,7 @@ export type EntityIdPrefix =
   | 'locale'
   | 'inspiration_folder'
   | 'lookbook'
+  | 'lookbook_inspiration'
   | 'lookbook_image'
   | 'lookbook_image_section'
   | 'cast'

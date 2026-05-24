@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import type { LookbookResource } from '@gorenku/studio-core/client';
+import type {
+  InspirationFolderWithResolvedPath,
+  LookbookResource,
+} from '@gorenku/studio-core/client';
 import { readLookbook, setActiveLookbook } from '@/services/studio-visual-language-api';
 import { Button } from '@/ui/button';
 import { EmptyState } from './empty-state';
@@ -43,6 +46,9 @@ export function LookbookPanel({
 
   return (
     <div className='min-h-full'>
+      <SourceInspirationStrip
+        sourceInspirationFolders={resource.sourceInspirationFolders}
+      />
       <VisualLanguageReport
         projectName={projectName}
         title={resource.lookbook.name}
@@ -65,6 +71,34 @@ export function LookbookPanel({
           camera: resource.lookbook.camera,
         }}
       />
+    </div>
+  );
+}
+
+function SourceInspirationStrip({
+  sourceInspirationFolders,
+}: {
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+}) {
+  if (sourceInspirationFolders.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className='border-b border-border/40 bg-panel-bg px-5 py-3 sm:px-8 lg:px-12'>
+      <div className='mx-auto flex max-w-[1240px] flex-wrap items-center gap-2'>
+        <span className='text-[11px] font-semibold uppercase text-muted-foreground'>
+          Source Inspiration
+        </span>
+        {sourceInspirationFolders.map((folder) => (
+          <span
+            key={folder.id}
+            className='rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground/75'
+          >
+            {folder.name}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

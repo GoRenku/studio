@@ -15,6 +15,9 @@ import {
   inspirationAnalysisDocumentSchema,
   inspirationAnalysisSectionsSchema,
   inspiredBySectionSchema,
+  lookbookDocumentSchema,
+  lookbookSectionsSchema,
+  lookbookSourceInspirationsDocumentSchema,
   paletteSectionSchema,
   patternSectionSchema,
   textureSectionSchema,
@@ -51,6 +54,9 @@ ajv.addSchema(inspiredBySectionSchema);
 ajv.addSchema(cameraSectionSchema);
 ajv.addSchema(inspirationAnalysisSectionsSchema);
 ajv.addSchema(inspirationAnalysisDocumentSchema);
+ajv.addSchema(lookbookSectionsSchema);
+ajv.addSchema(lookbookDocumentSchema);
+ajv.addSchema(lookbookSourceInspirationsDocumentSchema);
 
 export type InspirationAnalysisSections = Omit<InspirationAnalysis, 'folderId'>;
 export type LookbookSections = Omit<Lookbook, 'id' | 'name'>;
@@ -59,6 +65,17 @@ export type VisualLanguageStoredSectionKind = keyof typeof schemaIds;
 export interface InspirationAnalysisDocument {
   kind: 'inspirationAnalysis';
   analysis: InspirationAnalysisSections;
+}
+
+export interface LookbookDocument {
+  kind: 'lookbook';
+  lookbook: LookbookSections;
+  sourceInspirationFolderIds?: string[];
+}
+
+export interface LookbookSourceInspirationsDocument {
+  kind: 'lookbookSourceInspirations';
+  inspirationFolderIds: string[];
 }
 
 export function parseVisualLanguageJson(input: {
@@ -91,6 +108,27 @@ export function parseInspirationAnalysisDocument(input: {
   return parsed as InspirationAnalysisDocument;
 }
 
+export function parseLookbookDocument(input: {
+  contents: string;
+  filePath?: string;
+}): LookbookDocument {
+  const parsed = parseVisualLanguageJson(input);
+  validateLookbookDocumentShape({
+    document: parsed,
+    filePath: input.filePath,
+  });
+  return parsed as LookbookDocument;
+}
+
+export function parseLookbookSourceInspirationsDocument(input: {
+  contents: string;
+  filePath?: string;
+}): LookbookSourceInspirationsDocument {
+  const parsed = parseVisualLanguageJson(input);
+  validateLookbookSourceInspirationsDocument(input.filePath, parsed);
+  return parsed as LookbookSourceInspirationsDocument;
+}
+
 export function serializeInspirationAnalysisSections(input: {
   sections: InspirationAnalysisSections;
   folderImageFiles: Set<string>;
@@ -115,6 +153,17 @@ export function serializeLookbookSections(input: {
 }): Record<keyof LookbookSections, string> {
   validateLookbookSections(input);
   return serializeSections(input.sections);
+}
+
+export function serializeLookbookDocument(input: {
+  document: LookbookDocument;
+  filePath?: string;
+}): Record<keyof LookbookSections, string> {
+  validateLookbookDocument({
+    document: input.document,
+    filePath: input.filePath,
+  });
+  return serializeSections(input.document.lookbook);
 }
 
 export function validateInspirationAnalysisSections(input: {
@@ -184,6 +233,44 @@ export function validateLookbookSections(input: {
     issues.push(...rejectLookbookImageFileReferences(input.sections, input.filePath));
   }
   throwVisualLanguageValidationIssues(issues, 'Visual Language JSON failed validation.');
+}
+
+export function validateLookbookDocument(input: {
+  document: LookbookDocument;
+  filePath?: string;
+}): void {
+  const shapeIssues = validateLookbookDocumentShape({
+    document: input.document,
+    filePath: input.filePath,
+  });
+  if (shapeIssues.length > 0) {
+    return;
+  }
+  const imageIssues = rejectLookbookImageFileReferences(
+    input.document.lookbook,
+    input.filePath,
+    ['lookbook']
+  );
+  throwVisualLanguageValidationIssues(
+    imageIssues,
+    'Visual Language JSON failed validation.'
+  );
+}
+
+export function validateLookbookSourceInspirationsDocument(
+  filePath: string | undefined,
+  document: unknown
+): void {
+  const validator = ajv.getSchema(lookbookSourceInspirationsDocumentSchema.$id);
+  if (!validator) {
+    throw new Error('Lookbook source Inspirations JSON schema was not registered.');
+  }
+  const valid = validator(document);
+  const issues = valid ? [] : mapAjvErrors(validator.errors ?? [], [], filePath);
+  throwVisualLanguageValidationIssues(
+    issues,
+    'Visual Language JSON failed validation.'
+  );
 }
 
 export function parseStoredVisualLanguageSection<T>(input: {
@@ -273,6 +360,23 @@ function validateInspirationAnalysisDocumentShape(input: {
   return issues;
 }
 
+function validateLookbookDocumentShape(input: {
+  document: unknown;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  const validator = ajv.getSchema(lookbookDocumentSchema.$id);
+  if (!validator) {
+    throw new Error('Lookbook JSON schema was not registered.');
+  }
+  const valid = validator(input.document);
+  const issues = valid ? [] : mapAjvErrors(validator.errors ?? [], [], input.filePath);
+  throwVisualLanguageValidationIssues(
+    issues,
+    'Visual Language JSON failed validation.'
+  );
+  return issues;
+}
+
 function serializeSections<T extends Record<string, unknown>>(
   sections: T
 ): Record<keyof T, string> {
@@ -305,10 +409,11 @@ function validateReferencedImageFiles(
 
 function rejectLookbookImageFileReferences(
   value: unknown,
-  filePath?: string
+  filePath?: string,
+  pathPrefix: string[] = []
 ): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
-  visitImageFiles(value, [], (path) => {
+  visitImageFiles(value, pathPrefix, (path) => {
     issues.push(
       createDiagnosticError(
         'PROJECT_DATA235',

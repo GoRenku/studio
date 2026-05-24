@@ -6,6 +6,10 @@ import { describe, expect, it } from 'vitest';
 const projectSourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const coreSourceRoot = path.join(projectSourceRoot, '..');
 const clientSourceRoot = path.join(coreSourceRoot, 'client');
+const projectDataServiceWiringRoot = path.join(
+  projectSourceRoot,
+  'project-data-service-wiring'
+);
 
 describe('core server architecture', () => {
   it('does not revive transitional resource or node modules', async () => {
@@ -34,7 +38,7 @@ describe('core server architecture', () => {
     }
   });
 
-  it('keeps ProjectDataService as a small facade over commands and resources', async () => {
+  it('keeps ProjectDataService as a small facade over explicit domain wiring', async () => {
     const source = await fs.readFile(
       path.join(projectSourceRoot, 'project-data-service.ts'),
       'utf8'
@@ -47,13 +51,37 @@ describe('core server architecture', () => {
       'openProjectStore',
     ];
 
-    expect(lineCount).toBeLessThanOrEqual(180);
+    expect(lineCount).toBeLessThanOrEqual(80);
     expect(
       forbiddenNeedles.filter((needle) => source.includes(needle))
     ).toEqual([]);
     expect(source).not.toMatch(
+      /from ['"]\.\/(?:commands|database|files|production-export|resources|schema)\//
+    );
+    expect(source).not.toMatch(
       /^\s*export\s+(?:type\s+)?(?:\*|\{[^}]*\})\s+from\s+['"]\.\/project-data-service-contracts\.js['"]/m
     );
+  });
+
+  it('keeps ProjectDataService domain wiring shallow', async () => {
+    const files = await listTypeScriptFiles(projectDataServiceWiringRoot);
+    const forbiddenNeedles = [
+      'node:fs',
+      'node:path',
+      'database/access',
+      'session.db',
+      'openProjectStore',
+    ];
+
+    expect(files.length).toBeGreaterThanOrEqual(5);
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      expect(source.split('\n').length).toBeLessThanOrEqual(90);
+      expect(
+        forbiddenNeedles.filter((needle) => source.includes(needle))
+      ).toEqual([]);
+      expect(source).not.toMatch(/from ['"]\.\.\/(?:files|schema)\//);
+    }
   });
 
   it('keeps re-export facades limited to index files', async () => {

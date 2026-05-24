@@ -4,6 +4,7 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
+import type { LookbookDocument } from '@gorenku/studio-core/server';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -188,13 +189,14 @@ export function createVisualLanguageRoute({
     .post('/visual-language/lookbooks', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const body = await c.req.json<{ name?: string; sections?: unknown }>();
-        const lookbook = await projectData.createLookbook({
+        const body = readLookbookRequestBody(await c.req.json<unknown>());
+        rejectUnsupportedLookbookSectionsField(body);
+        const report = await projectData.createLookbook({
           projectName,
-          name: body.name ?? '',
-          sections: body.sections as never,
+          name: readLookbookName(body) ?? '',
+          document: readRequiredLookbookDocument(body),
         });
-        return c.json({ lookbook });
+        return c.json({ lookbook: report.lookbook });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -213,14 +215,15 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
-        const body = await c.req.json<{ name?: string; sections?: unknown }>();
-        const lookbook = await projectData.updateLookbook({
+        const body = readLookbookRequestBody(await c.req.json<unknown>());
+        rejectUnsupportedLookbookSectionsField(body);
+        const report = await projectData.updateLookbook({
           projectName,
           lookbookId,
-          name: body.name,
-          sections: body.sections as never,
+          name: readLookbookName(body),
+          document: readOptionalLookbookDocument(body),
         });
-        return c.json({ lookbook });
+        return c.json({ lookbook: report.lookbook });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -264,7 +267,7 @@ export function createVisualLanguageRoute({
           title?: string;
           oneLineSummary?: string;
         }>();
-        const image = await projectData.importLookbookImage({
+        const report = await projectData.importLookbookImage({
           projectName,
           lookbookId,
           projectRelativePath: body.projectRelativePath ?? '',
@@ -272,7 +275,7 @@ export function createVisualLanguageRoute({
           title: body.title,
           oneLineSummary: body.oneLineSummary,
         });
-        return c.json({ image }, 201);
+        return c.json({ image: report.image }, 201);
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -282,12 +285,12 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
         const body = await c.req.json<{ imageId?: string }>();
-        const image = await projectData.setLookbookCardImage({
+        const report = await projectData.setLookbookCardImage({
           projectName,
           lookbookId,
           imageId: body.imageId ?? '',
         });
-        return c.json({ image });
+        return c.json({ image: report.image });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -343,12 +346,12 @@ export function createVisualLanguageRoute({
         const imageId = c.req.param('imageId') as string;
         const body = await c.req.json<unknown>();
         const sections = readLookbookImageSectionsRequest(body);
-        const image = await projectData.setLookbookImageSections({
+        const report = await projectData.setLookbookImageSections({
           projectName,
           imageId,
           sections: sections as never,
         });
-        return c.json({ image });
+        return c.json({ image: report.image });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -405,6 +408,92 @@ function contentTypeForPath(projectRelativePath: string): string {
   if (lower.endsWith('.webp')) return 'image/webp';
   if (lower.endsWith('.gif')) return 'image/gif';
   return 'image/png';
+}
+
+function readLookbookRequestBody(body: unknown): Record<string, unknown> {
+  if (isJsonObject(body)) {
+    return body;
+  }
+
+  throwInvalidLookbookDocumentRequest(
+    [],
+    'Lookbook request body must be a JSON object.',
+    'Send a JSON object with a document field.'
+  );
+}
+
+function readLookbookName(body: Record<string, unknown>): string | undefined {
+  return typeof body.name === 'string' ? body.name : undefined;
+}
+
+function readRequiredLookbookDocument(
+  body: Record<string, unknown>
+): LookbookDocument {
+  return readLookbookDocument(body.document);
+}
+
+function readOptionalLookbookDocument(
+  body: Record<string, unknown>
+): LookbookDocument | undefined {
+  if (!Object.prototype.hasOwnProperty.call(body, 'document')) {
+    return undefined;
+  }
+
+  return readLookbookDocument(body.document);
+}
+
+function readLookbookDocument(document: unknown): LookbookDocument {
+  if (
+    isJsonObject(document) &&
+    document.kind === 'lookbook' &&
+    Object.prototype.hasOwnProperty.call(document, 'lookbook')
+  ) {
+    return document as unknown as LookbookDocument;
+  }
+
+  throwInvalidLookbookDocumentRequest(
+    ['document'],
+    'document must contain kind: lookbook and a lookbook payload.',
+    'Send the Lookbook content as { document: { kind: "lookbook", lookbook: ... } }.'
+  );
+}
+
+function rejectUnsupportedLookbookSectionsField(
+  body: Record<string, unknown>
+): void {
+  if (!Object.prototype.hasOwnProperty.call(body, 'sections')) {
+    return;
+  }
+
+  throwInvalidLookbookDocumentRequest(
+    ['sections'],
+    'sections is not a supported Lookbook request field.',
+    'Send the Lookbook content under document.lookbook.'
+  );
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function throwInvalidLookbookDocumentRequest(
+  path: string[],
+  message: string,
+  suggestion: string
+): never {
+  throw createStructuredError({
+    code: 'STUDIO_SERVER039',
+    message: 'Lookbook document request is invalid.',
+    issues: [
+      createDiagnosticError(
+        'STUDIO_SERVER039',
+        message,
+        { path, context: 'Lookbook document request body' },
+        suggestion
+      ),
+    ],
+    suggestion,
+  });
 }
 
 function readLookbookImageSectionsRequest(body: unknown): string[] {

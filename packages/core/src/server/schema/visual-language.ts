@@ -1,4 +1,10 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 import { assets } from './assets.js';
 
 export const inspirationFolders = sqliteTable(
@@ -44,6 +50,36 @@ export const lookbook = sqliteTable('lookbook', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+export const lookbookInspirations = sqliteTable(
+  'lookbook_inspiration',
+  {
+    id: text('id').primaryKey(),
+    lookbookId: text('lookbook_id')
+      .notNull()
+      .references(() => lookbook.id, { onDelete: 'cascade' }),
+    inspirationFolderId: text('inspiration_folder_id')
+      .notNull()
+      .references(() => inspirationFolders.id, { onDelete: 'cascade' }),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('lookbook_inspiration_folder_unique_idx').on(
+      table.lookbookId,
+      table.inspirationFolderId
+    ),
+    uniqueIndex('lookbook_inspiration_order_unique_idx').on(
+      table.lookbookId,
+      table.sortOrder
+    ),
+    index('lookbook_inspiration_lookup_idx').on(
+      table.inspirationFolderId,
+      table.lookbookId
+    ),
+  ]
+);
 
 export const visualLanguageState = sqliteTable('visual_language_state', {
   id: text('id').primaryKey(),

@@ -590,6 +590,140 @@ Behavior:
 - The old `renku visual-language inspiration ...` command surface is not kept
   as a compatibility alias.
 
+## `renku lookbook`
+
+Manage Visual Language Lookbooks for the current authoring project.
+
+```bash
+renku lookbook list --json
+renku lookbook show --lookbook <lookbook-id> --json
+renku lookbook validate --file <lookbook-json> --json
+renku lookbook create --name <name> --file <lookbook-json> --json
+renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
+renku lookbook rename --lookbook <lookbook-id> --name <name> --json
+renku lookbook delete --lookbook <lookbook-id> --json
+renku lookbook set-active --lookbook <lookbook-id> --json
+renku lookbook clear-active --json
+```
+
+Input JSON:
+
+```json
+{
+  "kind": "lookbook",
+  "lookbook": {
+    "thesis": {
+      "statement": "Project visual-language thesis.",
+      "principles": ["Repeatable visual principle."]
+    },
+    "palette": {
+      "description": "How color works in this movie.",
+      "colors": [
+        {
+          "hex": "#39FF75",
+          "name": "Acid tenderness",
+          "meaning": "Care that has become unstable."
+        }
+      ],
+      "observations": [{ "text": "Green should feel alive, not decorative." }]
+    },
+    "toneMood": {
+      "tone": "surgical intimacy",
+      "moodTags": ["charged", "bodily"],
+      "description": "Clean surfaces feel too bright and too close."
+    },
+    "composition": {
+      "description": "Overall composition strategy.",
+      "patterns": [
+        {
+          "name": "Clinical symmetry",
+          "description": "Use centered frames when a body becomes an argument."
+        }
+      ]
+    },
+    "lighting": {
+      "description": "Overall lighting strategy.",
+      "patterns": [
+        {
+          "name": "Contaminated practicals",
+          "description": "Let green sources corrupt clean environments."
+        }
+      ]
+    },
+    "texture": {
+      "description": "Surface, grain, and material strategy.",
+      "observations": [{ "text": "Clean rooms should feel biological." }]
+    },
+    "camera": {
+      "description": "Movement, motion, and framing strategy.",
+      "movement": [{ "name": "Controlled drift", "description": "Move slowly when unease merges with desire." }],
+      "motion": [{ "name": "Sudden rupture", "description": "Reserve abrupt motion for collapse." }],
+      "framing": [{ "name": "Body as diagram", "description": "Frame bodies like evidence without losing empathy." }]
+    }
+  },
+  "sourceInspirationFolderIds": ["inspiration_folder_abc"]
+}
+```
+
+Behavior:
+
+- The input must be a tagged `kind: "lookbook"` document with all required
+  Lookbook sections.
+- `sourceInspirationFolderIds` is optional. When present on create or update,
+  every folder id must exist and duplicates are rejected.
+- Lookbook JSON must not contain `imageFiles`; generated examples are attached
+  through Lookbook image commands.
+- `lookbook create` does not set the Lookbook active by default. Use
+  `lookbook set-active` when the new Lookbook should become project direction.
+- The old `renku visual-language lookbook ...` command surface is not kept as a
+  compatibility alias.
+
+## `renku lookbook image`
+
+Attach generated example images to Lookbook sections.
+
+```bash
+renku lookbook image import --lookbook <lookbook-id> --file <project-relative-path> --sections palette,lighting --json
+renku lookbook image set-sections --image <lookbook-image-id> --sections camera,texture --json
+renku lookbook image delete --image <lookbook-image-id> --json
+renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
+renku lookbook card-image clear --lookbook <lookbook-id> --json
+```
+
+Behavior:
+
+- `--file` is a project-relative source file only for `image import`.
+- `--image` is always a Lookbook image id.
+- Valid section keys are `thesis`, `palette`, `tone_mood`, `composition`,
+  `lighting`, `texture`, and `camera`.
+- Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
+
+## `renku lookbook inspiration`
+
+Read or replace the durable source Inspiration folders for a Lookbook.
+
+```bash
+renku lookbook inspiration list --lookbook <lookbook-id> --json
+renku lookbook inspiration set --lookbook <lookbook-id> --file <source-json> --json
+```
+
+Input JSON:
+
+```json
+{
+  "kind": "lookbookSourceInspirations",
+  "inspirationFolderIds": ["inspiration_folder_abc"]
+}
+```
+
+Behavior:
+
+- Source Inspiration relationships are ordered and durable.
+- The CLI stores relationships only. It does not copy Inspiration analysis into
+  the Lookbook.
+- To inspect Inspiration images, use `renku inspiration show` to get the folder
+  path, then use normal shell commands such as `find` or `ls`.
+
 ## `renku asset register`
 
 Register a project asset.

@@ -198,6 +198,16 @@ export function setLookbookCardImageRecord(
     .run();
 }
 
+export function clearLookbookCardImageRecord(
+  session: DatabaseSession,
+  lookbookId: string
+): void {
+  session.db
+    .delete(lookbookCardImages)
+    .where(eq(lookbookCardImages.lookbookId, lookbookId))
+    .run();
+}
+
 export function toLookbook(row: LookbookRecord): Lookbook {
   return {
     id: row.id,
