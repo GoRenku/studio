@@ -3,6 +3,7 @@ import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { existsSync } from 'node:fs';
 import { ProjectDataError } from '../../project-data-error.js';
 import { resolveProjectDatabasePath } from '../../files/project-paths.js';
+import { migrateProjectDatabase } from './migrator.js';
 
 export interface DatabaseSession {
   databasePath: string;
@@ -25,6 +26,7 @@ export function openProjectStore(input: {
   projectFolder: string;
   create: boolean;
   lifetime?: DatabaseSessionLifetime;
+  autoMigrate?: boolean;
 }): DatabaseSession {
   const databasePath = resolveProjectDatabasePath(input.projectFolder);
   if (!input.create && !existsSync(databasePath)) {
@@ -41,14 +43,10 @@ export function openProjectStore(input: {
     }
   }
 
-  const sqlite = new Database(databasePath);
-  try {
-    sqlite.pragma('foreign_keys = ON');
-    assertProjectStoreSchema(sqlite, databasePath);
-  } catch (error) {
-    sqlite.close();
-    throw error;
-  }
+  const sqlite = openSqliteWithCurrentSchema({
+    databasePath,
+    autoMigrate: input.autoMigrate ?? !input.create,
+  });
   const db = drizzle(sqlite);
 
   const session: SqliteDatabaseSession = {
@@ -70,6 +68,34 @@ export function openProjectStore(input: {
   }
 
   return session;
+}
+
+function openSqliteWithCurrentSchema(input: {
+  databasePath: string;
+  autoMigrate: boolean;
+}): Database.Database {
+  const sqlite = new Database(input.databasePath);
+  try {
+    sqlite.pragma('foreign_keys = ON');
+    assertProjectStoreSchema(sqlite, input.databasePath);
+    return sqlite;
+  } catch (error) {
+    if (input.autoMigrate && canAutoMigrateProjectStore(sqlite)) {
+      sqlite.close();
+      migrateProjectDatabase(input.databasePath);
+      const migrated = new Database(input.databasePath);
+      try {
+        migrated.pragma('foreign_keys = ON');
+        assertProjectStoreSchema(migrated, input.databasePath);
+        return migrated;
+      } catch (migrationError) {
+        migrated.close();
+        throw migrationError;
+      }
+    }
+    sqlite.close();
+    throw error;
+  }
 }
 
 export function closeProjectStore(input: { projectFolder: string }): void {
@@ -122,5 +148,27 @@ function assertProjectStoreSchema(
       throw error;
     }
     throw invalidSchema('Project database is not a valid Renku Studio database');
+  }
+}
+
+function canAutoMigrateProjectStore(sqlite: Database.Database): boolean {
+  try {
+    const migrationRow = sqlite
+      .prepare(`select 1 from ${DRIZZLE_MIGRATIONS_TABLE} limit 1`)
+      .get();
+    const projectRow = sqlite.prepare('select 1 from project limit 1').get();
+    const schemaGeneration = sqlite.pragma('user_version', {
+      simple: true,
+    });
+    return Boolean(
+      migrationRow &&
+        projectRow &&
+        typeof schemaGeneration === 'number' &&
+        Number.isInteger(schemaGeneration) &&
+        schemaGeneration > 0 &&
+        schemaGeneration < PROJECT_STORE_SCHEMA_GENERATION
+    );
+  } catch {
+    return false;
   }
 }
