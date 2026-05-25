@@ -12,6 +12,7 @@ interface VisualLanguagePanelProps {
   >;
   onSelect: (selection: StudioSelection) => void;
   onLookbooksChange: () => void;
+  onInspirationFoldersChange: () => void;
   inspirationFoldersRevision: number;
 }
 
@@ -20,6 +21,7 @@ export function VisualLanguagePanel({
   selection,
   onSelect,
   onLookbooksChange,
+  onInspirationFoldersChange,
   inspirationFoldersRevision,
 }: VisualLanguagePanelProps) {
   const projectName = project.identity.name;
@@ -49,6 +51,8 @@ export function VisualLanguagePanel({
       projectName={projectName}
       folderId={selection.folderId}
       foldersRevision={inspirationFoldersRevision}
+      onOpenFolder={(folderId) => onSelect({ type: 'inspiration', folderId })}
+      onInspirationFoldersChange={onInspirationFoldersChange}
     />
   );
 }

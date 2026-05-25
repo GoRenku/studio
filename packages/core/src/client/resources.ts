@@ -17,6 +17,7 @@ import type { ProjectLanguage } from './project-languages.js';
 import type {
   InspirationAnalysis,
   InspirationFolder,
+  InspirationFolderListItem,
   InspirationFolderWithResolvedPath,
   InspirationImage,
   Lookbook,
@@ -177,7 +178,7 @@ export interface SceneDesignResource {
 }
 
 export interface InspirationResource {
-  folders: PageResponse<InspirationFolder>;
+  folders: PageResponse<InspirationFolderListItem>;
 }
 
 export interface InspirationFolderResource {

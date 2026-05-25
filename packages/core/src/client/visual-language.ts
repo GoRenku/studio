@@ -11,6 +11,12 @@ export interface InspirationFolderWithResolvedPath extends InspirationFolder {
   absolutePath: string;
 }
 
+export interface InspirationFolderListItem {
+  folder: InspirationFolder;
+  cardImage: InspirationImage | null;
+  imageCount: number;
+}
+
 export interface InspirationImage {
   fileName: string;
   projectRelativePath: ProjectRelativePath;

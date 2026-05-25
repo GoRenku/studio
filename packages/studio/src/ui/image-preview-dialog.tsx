@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/ui/button';
 import {
@@ -25,10 +25,6 @@ export function ImagePreviewDialog({
   onOpenChange,
 }: ImagePreviewDialogProps) {
   const [aspectRatio, setAspectRatio] = useState(16 / 9);
-
-  useEffect(() => {
-    setAspectRatio(16 / 9);
-  }, [image?.src]);
 
   return (
     <Dialog open={Boolean(image)} onOpenChange={onOpenChange}>
@@ -60,6 +56,7 @@ export function ImagePreviewDialog({
             }}
           >
             <img
+              key={image.src}
               src={image.src}
               alt={image.alt}
               className='block h-full w-full object-contain'

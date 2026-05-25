@@ -144,6 +144,14 @@ export async function setActiveLookbook(
   );
 }
 
+export async function clearActiveLookbook(projectName: string): Promise<void> {
+  await writeJson(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/active-selection`,
+    'DELETE',
+    {}
+  );
+}
+
 export async function deleteLookbook(
   projectName: string,
   lookbookId: string

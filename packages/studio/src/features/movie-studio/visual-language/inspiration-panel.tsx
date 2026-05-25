@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type {
-  InspirationFolder,
   InspirationFolderResource,
+  InspirationResource,
 } from '@gorenku/studio-core/client';
 import {
+  deleteInspirationFolder,
   deleteInspirationImage,
   readInspirationFolder,
   readInspirationResource,
@@ -14,29 +15,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import { EmptyState } from './empty-state';
 import { GrabsTab } from './grabs-tab';
 import { InspirationAnalysisTab } from './inspiration-analysis-tab';
+import { InspirationFoldersPanel } from './inspiration-folders-panel';
 
 interface InspirationPanelProps {
   projectName: string;
   folderId?: string;
   foldersRevision: number;
+  onOpenFolder: (folderId: string) => void;
+  onInspirationFoldersChange: () => void;
 }
 
 export function InspirationPanel({
   projectName,
   folderId,
   foldersRevision,
+  onOpenFolder,
+  onInspirationFoldersChange,
 }: InspirationPanelProps) {
-  const [folders, setFolders] = useState<InspirationFolder[] | null>(null);
+  const [inspirationResource, setInspirationResource] =
+    useState<InspirationResource | null>(null);
   const [resource, setResource] = useState<InspirationFolderResource | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
-  const selectedFolderId = folderId ?? folders?.[0]?.id ?? null;
+  const selectedFolderId = folderId ?? null;
 
   useEffect(() => {
     let cancelled = false;
     void readInspirationResource(projectName)
       .then((nextResource) => {
         if (cancelled) return;
-        setFolders(nextResource.folders.items);
+        setInspirationResource(nextResource);
       })
       .catch((error) => toast.error(errorMessage(error)));
     return () => {
@@ -82,26 +89,45 @@ export function InspirationPanel({
   }, [projectName, resourceRevision, selectedFolderId]);
 
   const selectedFolder = useMemo(
-    () => folders?.find((folder) => folder.id === selectedFolderId) ?? null,
-    [folders, selectedFolderId]
+    () =>
+      inspirationResource?.folders.items.find(
+        (item) => item.folder.id === selectedFolderId
+      )?.folder ?? null,
+    [inspirationResource, selectedFolderId]
   );
 
   const uploadImages = async (files: File[]) => {
     if (!selectedFolderId || !files.length) return;
     const nextResource = await uploadInspirationImages(projectName, selectedFolderId, files);
     setResource(nextResource);
+    setInspirationResource(await readInspirationResource(projectName));
   };
 
   const removeImage = async (fileName: string) => {
     if (!selectedFolderId) return;
     const nextResource = await deleteInspirationImage(projectName, selectedFolderId, fileName);
     setResource(nextResource);
+    setInspirationResource(await readInspirationResource(projectName));
+  };
+
+  const removeFolder = async (deletedFolderId: string) => {
+    await deleteInspirationFolder(projectName, deletedFolderId);
+    const nextResource = await readInspirationResource(projectName);
+    setInspirationResource(nextResource);
+    onInspirationFoldersChange();
   };
 
   return (
     <div className='h-full min-h-0'>
-      {!folders ? (
+      {!inspirationResource ? (
         <EmptyState title='Loading Inspiration folders.' />
+      ) : !selectedFolderId ? (
+        <InspirationFoldersPanel
+          projectName={projectName}
+          resource={inspirationResource}
+          onOpenFolder={onOpenFolder}
+          onDeleteFolder={removeFolder}
+        />
       ) : !selectedFolder ? (
         <EmptyState title='No Inspiration folder selected.' />
       ) : resource && resource.folder.id === selectedFolderId ? (

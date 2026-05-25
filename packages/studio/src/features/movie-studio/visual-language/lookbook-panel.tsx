@@ -83,13 +83,14 @@ export function LookbookPanel({
 
   return (
     <div className='min-h-full'>
-      <SourceInspirationStrip
-        sourceInspirationFolders={resource.sourceInspirationFolders}
-      />
       <VisualLanguageReport
         projectName={projectName}
         title={resource.lookbook.name}
-        subtitle={resource.isActive ? 'Active lookbook' : 'Draft lookbook'}
+        headerMeta={
+          <SourceInspirationList
+            sourceInspirationFolders={resource.sourceInspirationFolders}
+          />
+        }
         action={
           !resource.isActive ? (
             <Button type='button' variant='outline' size='sm' onClick={() => void makeActive()}>
@@ -118,7 +119,7 @@ interface StudioResourceChangedDetail {
   resourceKeys: string[];
 }
 
-function SourceInspirationStrip({
+function SourceInspirationList({
   sourceInspirationFolders,
 }: {
   sourceInspirationFolders: InspirationFolderWithResolvedPath[];
@@ -128,20 +129,18 @@ function SourceInspirationStrip({
   }
 
   return (
-    <div className='border-b border-border/40 bg-panel-bg px-5 py-3 sm:px-8 lg:px-12'>
-      <div className='mx-auto flex max-w-[1240px] flex-wrap items-center gap-2'>
-        <span className='text-[11px] font-semibold uppercase text-muted-foreground'>
-          Source Inspiration
+    <div className='flex flex-wrap items-center gap-2'>
+      <span className='text-[11px] font-semibold uppercase text-muted-foreground'>
+        Source Inspiration
+      </span>
+      {sourceInspirationFolders.map((folder) => (
+        <span
+          key={folder.id}
+          className='rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground/75'
+        >
+          {folder.name}
         </span>
-        {sourceInspirationFolders.map((folder) => (
-          <span
-            key={folder.id}
-            className='rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground/75'
-          >
-            {folder.name}
-          </span>
-        ))}
-      </div>
+      ))}
     </div>
   );
 }

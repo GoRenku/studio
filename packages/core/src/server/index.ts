@@ -163,6 +163,7 @@ export type {
   InspirationAnalysisValidationReport,
   InspirationAnalysisWriteReport,
   InspirationFolder,
+  InspirationFolderListItem,
   InspirationFolderReport,
   InspirationFolderResource,
   InspirationFolderWithResolvedPath,

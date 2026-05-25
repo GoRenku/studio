@@ -50,7 +50,7 @@ export async function listLookbooksResource(
     );
     const lookbooks: LookbookListItemWithSources[] = rows.map((row) => ({
       lookbook: toLookbook(row),
-      cardImage: readCardImage(session, cardImageIds.get(row.id)),
+      cardImage: readCardImage(session, cardImageIds.get(row.id), row.id),
       isActive: activeLookbookId === row.id,
       sourceInspirationFolders: sourceFoldersByLookbookId.get(row.id) ?? [],
     }));
@@ -81,7 +81,7 @@ export async function readLookbookResource(
         projectFolder,
         lookbookId: row.id,
       }),
-      cardImage: readCardImage(session, cardImageIds.get(row.id)),
+      cardImage: readCardImage(session, cardImageIds.get(row.id), row.id),
       isActive: readActiveLookbookId(session) === row.id,
       images,
       imagesBySection: buildImagesBySection(images),
@@ -115,9 +115,13 @@ export function buildImagesBySection(
 
 function readCardImage(
   session: DatabaseSession,
-  imageId: string | undefined
+  imageId: string | undefined,
+  lookbookId: string
 ): LookbookImage | null {
-  return imageId ? readLookbookImage(session, imageId) : null;
+  if (imageId) {
+    return readLookbookImage(session, imageId);
+  }
+  return listLookbookImages(session, lookbookId)[0] ?? null;
 }
 
 async function withVisualLanguageSession<T>(

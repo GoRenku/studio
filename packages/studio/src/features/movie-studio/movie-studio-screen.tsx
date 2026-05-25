@@ -191,7 +191,6 @@ export function MovieStudioScreen({
           onProductionExport={handleProductionExport}
           lookbooksRevision={lookbooksRevision}
           inspirationFoldersRevision={inspirationFoldersRevision}
-          onLookbooksChange={handleLookbooksChange}
           onInspirationFoldersChange={handleInspirationFoldersChange}
         />
         <PanelShell
@@ -225,6 +224,7 @@ export function MovieStudioScreen({
               selection={selection}
               onSelect={selectMovieStudioSurface}
               onLookbooksChange={handleLookbooksChange}
+              onInspirationFoldersChange={handleInspirationFoldersChange}
               inspirationFoldersRevision={inspirationFoldersRevision}
             />
           ) : selection.type === 'cast' ? (

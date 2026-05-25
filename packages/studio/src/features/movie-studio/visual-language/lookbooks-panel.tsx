@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type { LookbooksResource } from '@gorenku/studio-core/client';
 import {
+  clearActiveLookbook,
   deleteLookbook,
   listLookbooks,
   setActiveLookbook,
@@ -54,10 +55,20 @@ export function LookbooksPanel({
       .catch((error) => toast.error(errorMessage(error)));
   }, [projectName, resourceRevision]);
 
-  const setActive = async (lookbookId: string) => {
-    await setActiveLookbook(projectName, lookbookId);
-    await reload();
-    onLookbooksChange();
+  const toggleActive = async (lookbookId: string, isActive: boolean) => {
+    try {
+      if (isActive) {
+        await clearActiveLookbook(projectName);
+        toast.success('Active lookbook cleared.');
+      } else {
+        await setActiveLookbook(projectName, lookbookId);
+        toast.success('Active lookbook updated.');
+      }
+      await reload();
+      onLookbooksChange();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   };
 
   const removeLookbook = async (lookbookId: string) => {
@@ -75,19 +86,7 @@ export function LookbooksPanel({
   }
 
   return (
-    <div className='space-y-4'>
-      <div>
-        <p className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-          Lookbooks
-        </p>
-        <h2 className='mt-1 text-lg font-semibold'>Generated visual directions</h2>
-        {!resource.activeLookbookId ? (
-          <p className='mt-2 text-sm text-muted-foreground'>
-            No lookbook is active. Generation workflows that require a lookbook
-            will ask you to choose one.
-          </p>
-        ) : null}
-      </div>
+    <div className='p-4 sm:p-5 lg:p-6'>
       <LookbookCardGrid>
         {resource.lookbooks.map((item) => (
           <LookbookCard
@@ -95,7 +94,7 @@ export function LookbooksPanel({
             projectName={projectName}
             item={item}
             onOpen={() => onOpenLookbook(item.lookbook.id)}
-            onSetActive={() => setActive(item.lookbook.id)}
+            onToggleActive={() => toggleActive(item.lookbook.id, item.isActive)}
             onDelete={() => removeLookbook(item.lookbook.id)}
           />
         ))}

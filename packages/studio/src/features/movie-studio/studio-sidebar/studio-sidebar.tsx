@@ -26,7 +26,6 @@ import {
   deleteInspirationFolder,
   listLookbooks,
   readInspirationResource,
-  setActiveLookbook,
 } from '@/services/studio-visual-language-api';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
@@ -47,7 +46,6 @@ interface StudioSidebarProps {
   onProductionExport: () => void;
   lookbooksRevision: number;
   inspirationFoldersRevision: number;
-  onLookbooksChange: () => void;
   onInspirationFoldersChange: () => void;
 }
 
@@ -61,7 +59,6 @@ export function StudioSidebar({
   onProductionExport,
   lookbooksRevision,
   inspirationFoldersRevision,
-  onLookbooksChange,
   onInspirationFoldersChange,
 }: StudioSidebarProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -113,7 +110,8 @@ export function StudioSidebar({
     };
   }, [project.identity.name, inspirationFoldersRevision]);
 
-  const inspirationFolders = inspirationResource?.folders.items ?? [];
+  const inspirationFolders =
+    inspirationResource?.folders.items.map((item) => item.folder) ?? [];
   const selectedInspirationFolderId =
     selection.type === 'inspiration' ? selection.folderId ?? null : null;
 
@@ -178,12 +176,6 @@ export function StudioSidebar({
     }
   };
 
-  const markLookbookActive = async (lookbookId: string) => {
-    await setActiveLookbook(project.identity.name, lookbookId);
-    setLookbooksResource(await listLookbooks(project.identity.name));
-    onLookbooksChange();
-  };
-
   const removeInspirationFolder = async (folderId: string) => {
     await deleteInspirationFolder(project.identity.name, folderId);
     setInspirationResource((current) =>
@@ -192,7 +184,9 @@ export function StudioSidebar({
             ...current,
             folders: {
               ...current.folders,
-              items: current.folders.items.filter((folder) => folder.id !== folderId),
+              items: current.folders.items.filter(
+                (item) => item.folder.id !== folderId
+              ),
             },
           }
         : current
@@ -326,7 +320,7 @@ export function StudioSidebar({
                 onClick={() => onSelect({ type: 'lookbooks' })}
               />
               {lookbooksResource?.lookbooks.map((item) => (
-                <div key={item.lookbook.id} className='flex items-center gap-1 pl-3'>
+                <div key={item.lookbook.id} className='pl-3'>
                   <StudioSidebarButton
                     active={
                       selection.type === 'lookbook' &&
@@ -343,17 +337,6 @@ export function StudioSidebar({
                       })
                     }
                   />
-                  {!item.isActive ? (
-                    <Button
-                      type='button'
-                      variant='ghost'
-                      size='sm'
-                      className='h-7 px-2 text-[11px]'
-                      onClick={() => void markLookbookActive(item.lookbook.id)}
-                    >
-                      Active
-                    </Button>
-                  ) : null}
                 </div>
               ))}
             </div>

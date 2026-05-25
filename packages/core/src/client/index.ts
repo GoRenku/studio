@@ -106,6 +106,7 @@ export type {
   InspirationAnalysisValidationReport,
   InspirationAnalysisWriteReport,
   InspirationFolder,
+  InspirationFolderListItem,
   InspirationFolderReport,
   InspirationFolderWithResolvedPath,
   InspirationImage,

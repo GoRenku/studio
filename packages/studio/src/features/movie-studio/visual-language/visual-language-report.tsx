@@ -42,7 +42,7 @@ interface ReportImage {
 interface VisualLanguageReportProps {
   projectName: string;
   title?: string;
-  subtitle?: string;
+  headerMeta?: ReactNode;
   action?: ReactNode;
   onDeleteLookbookImage?: (imageId: string) => Promise<void>;
   sections: {
@@ -69,7 +69,7 @@ interface VisualLanguageReportProps {
 export function VisualLanguageReport({
   projectName,
   title,
-  subtitle,
+  headerMeta,
   action,
   sections,
   source,
@@ -79,7 +79,7 @@ export function VisualLanguageReport({
     null
   );
   const [deleteImage, setDeleteImage] = useState<ReportImage | null>(null);
-  const hasHeader = Boolean(title || subtitle || action);
+  const hasHeader = Boolean(title || headerMeta || action);
   const themeColors = sections.palette.colors.map((color) => color.hex);
   const thesisImages = imagesForSection(
     projectName,
@@ -104,23 +104,18 @@ export function VisualLanguageReport({
           )}
         >
           {hasHeader ? (
-            <header className='mb-10 flex flex-wrap items-end justify-between gap-5 border-b border-border/40 pb-8'>
-              <div className='min-w-0'>
-                <p className='text-xs font-semibold uppercase text-muted-foreground'>
-                  Visual Language
-                </p>
-                {title ? (
-                  <h1 className='mt-3 max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
-                    {title}
-                  </h1>
-                ) : null}
-                {subtitle ? (
-                  <p className='mt-3 max-w-[760px] text-sm leading-6 text-muted-foreground'>
-                    {subtitle}
-                  </p>
-                ) : null}
+            <header className='flex flex-col gap-5 pb-8'>
+              <div className='flex flex-wrap items-end justify-between gap-5'>
+                <div className='min-w-0'>
+                  {title ? (
+                    <h1 className='max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
+                      {title}
+                    </h1>
+                  ) : null}
+                </div>
+                {action ? <div className='shrink-0'>{action}</div> : null}
               </div>
-              {action ? <div className='shrink-0'>{action}</div> : null}
+              {headerMeta ? <div>{headerMeta}</div> : null}
             </header>
           ) : null}
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   InspirationAnalysis,
@@ -9,6 +9,7 @@ import type {
   InspirationResource,
 } from '@gorenku/studio-core/client';
 import {
+  deleteInspirationFolder,
   deleteInspirationImage,
   readInspirationFolder,
   readInspirationResource,
@@ -23,6 +24,7 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('@/services/studio-visual-language-api', () => ({
+  deleteInspirationFolder: vi.fn(),
   deleteInspirationImage: vi.fn(),
   readInspirationFolder: vi.fn(),
   readInspirationResource: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock('@/services/studio-visual-language-api', () => ({
 
 describe('InspirationPanel', () => {
   beforeEach(() => {
+    vi.mocked(deleteInspirationFolder).mockReset();
     vi.mocked(deleteInspirationImage).mockReset();
     vi.mocked(readInspirationFolder).mockReset();
     vi.mocked(readInspirationResource).mockReset();
@@ -48,6 +51,8 @@ describe('InspirationPanel', () => {
         projectName='constantinople'
         folderId='inspiration_folder_test0001'
         foldersRevision={0}
+        onOpenFolder={vi.fn()}
+        onInspirationFoldersChange={vi.fn()}
       />
     );
 
@@ -72,6 +77,51 @@ describe('InspirationPanel', () => {
     expect(await screen.findByText('The thesis')).not.toBeNull();
     expect(screen.getByText('Reference images use quiet contrast.')).not.toBeNull();
   });
+
+  it('refreshes overview card metadata after uploading images to the selected folder', async () => {
+    vi.mocked(readInspirationResource)
+      .mockResolvedValueOnce(inspirationResource({ imageCount: 0, cardImage: null }))
+      .mockResolvedValueOnce(inspirationResource());
+    vi.mocked(readInspirationFolder).mockResolvedValue(
+      inspirationFolderResource(null, { images: [] })
+    );
+    vi.mocked(uploadInspirationImages).mockResolvedValue(
+      inspirationFolderResource(null)
+    );
+
+    const { container, rerender } = render(
+      <InspirationPanel
+        projectName='constantinople'
+        folderId='inspiration_folder_test0001'
+        foldersRevision={0}
+        onOpenFolder={vi.fn()}
+        onInspirationFoldersChange={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText('Drop grabs here or upload images.')).not.toBeNull();
+
+    const input = container.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement | null;
+    const files = [new File(['first'], 'frame-001.png', { type: 'image/png' })];
+    fireEvent.change(input!, { target: { files } });
+
+    await waitFor(() => {
+      expect(vi.mocked(readInspirationResource)).toHaveBeenCalledTimes(2);
+    });
+
+    rerender(
+      <InspirationPanel
+        projectName='constantinople'
+        foldersRevision={0}
+        onOpenFolder={vi.fn()}
+        onInspirationFoldersChange={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText('1 image')).not.toBeNull();
+  });
 });
 
 const folder: InspirationFolder = {
@@ -80,20 +130,44 @@ const folder: InspirationFolder = {
   projectRelativePath: 'visual-language/inspiration/blade-runner-2049' as never,
 };
 
-function inspirationResource(): InspirationResource {
+function inspirationResource({
+  imageCount = 1,
+  cardImage = {
+    fileName: 'frame-001.png',
+    mediaKind: 'image',
+    projectRelativePath:
+      'visual-language/inspiration/blade-runner-2049/frame-001.png' as never,
+  },
+}: {
+  imageCount?: number;
+  cardImage?: InspirationResource['folders']['items'][number]['cardImage'];
+} = {}): InspirationResource {
   return {
     folders: {
-      items: [folder],
+      items: [
+        {
+          folder,
+          cardImage,
+          imageCount,
+        },
+      ],
       nextCursor: null,
     },
   };
 }
 
 function inspirationFolderResource(
-  analysis: InspirationAnalysis | null
-): InspirationFolderResource {
-  return {
-    folder,
+  analysis: InspirationAnalysis | null,
+  {
+    images = [
+      {
+        fileName: 'frame-001.png',
+        mediaKind: 'image',
+        projectRelativePath:
+          'visual-language/inspiration/blade-runner-2049/frame-001.png' as never,
+      },
+    ],
+  }: Pick<InspirationFolderResource, 'images'> = {
     images: [
       {
         fileName: 'frame-001.png',
@@ -102,6 +176,11 @@ function inspirationFolderResource(
           'visual-language/inspiration/blade-runner-2049/frame-001.png' as never,
       },
     ],
+  }
+): InspirationFolderResource {
+  return {
+    folder,
+    images,
     analysis,
   };
 }
