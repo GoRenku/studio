@@ -1,6 +1,11 @@
 import fs from 'node:fs/promises';
 import {
   createProjectDataService,
+  createStudioCoordinationService,
+  createStudioOperationId,
+  resolveRenkuStorageRoot,
+  type LookbookImageMediaImportReport,
+  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { RenkuCliIo } from '../cli.js';
@@ -24,24 +29,27 @@ export async function runMediaCommand(options: {
   const [action] = options.input;
   if (action === 'import') {
     const service = createProjectDataService();
-    writeJson(
-      options.io,
-        await service.importLookbookImageMedia({
-          projectName: options.flags.project,
-          homeDir: options.homeDir,
-          lookbookId: parseLookbookImport(
-            requiredFlag(options.flags.purpose, '--purpose'),
-            requiredFlag(options.flags.target, '--target')
-          ),
-          sourceProjectRelativePath: requiredFlag(options.flags.source, '--source'),
-          title: options.flags.title,
-        oneLineSummary: options.flags.summary,
-        sections: parseSections(options.flags.sections),
-        receipt: options.flags.receipt
-          ? await readReceipt(options.flags.receipt)
-          : undefined,
-      })
-    );
+    const report = await service.importLookbookImageMedia({
+      projectName: options.flags.project,
+      homeDir: options.homeDir,
+      lookbookId: parseLookbookImport(
+        requiredFlag(options.flags.purpose, '--purpose'),
+        requiredFlag(options.flags.target, '--target')
+      ),
+      sourceProjectRelativePath: requiredFlag(options.flags.source, '--source'),
+      title: options.flags.title,
+      oneLineSummary: options.flags.summary,
+      sections: parseSections(options.flags.sections),
+      receipt: options.flags.receipt
+        ? await readReceipt(options.flags.receipt)
+        : undefined,
+    });
+    await appendMediaResourceChangedEvent({
+      options,
+      report,
+      command: 'media import',
+    });
+    writeJson(options.io, report);
     return 0;
   }
 
@@ -83,6 +91,71 @@ function parseSections(value: string | undefined): string[] | undefined {
     ?.split(',')
     .map((section) => section.trim())
     .filter(Boolean);
+}
+
+async function appendMediaResourceChangedEvent(input: {
+  options: {
+    json: boolean;
+    io: RenkuCliIo;
+    homeDir?: string;
+  };
+  report: LookbookImageMediaImportReport;
+  command: string;
+}): Promise<void> {
+  if (input.report.resourceKeys.length === 0) {
+    return;
+  }
+
+  try {
+    const coordination = createStudioCoordinationService({
+      homeDir: input.options.homeDir,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.projectResourcesChanged',
+      projectRef: await toProjectRef(input.report.project, input.options.homeDir),
+      resourceKeys: input.report.resourceKeys,
+      source: { kind: 'cli', command: input.command },
+      operationId: createStudioOperationId(),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Studio coordination event could not be appended.';
+    if (input.options.json) {
+      input.options.io.stderr.error(
+        JSON.stringify(
+          {
+            warnings: [
+              {
+                code: 'CLI026',
+                message:
+                  'Media import succeeded, but Studio refresh coordination failed.',
+                detail: message,
+              },
+            ],
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    input.options.io.stderr.error(
+      `[CLI026] WARNING Media import succeeded, but Studio refresh coordination failed: ${message}`
+    );
+  }
+}
+
+async function toProjectRef(
+  project: LookbookImageMediaImportReport['project'],
+  homeDir?: string
+): Promise<StudioProjectRef> {
+  return {
+    name: project.name,
+    id: project.id ?? project.name,
+    storageRoot: await resolveRenkuStorageRoot({ homeDir }),
+  };
 }
 
 function requiredFlag(value: string | undefined, flag: string): string {

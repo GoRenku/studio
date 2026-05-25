@@ -17,6 +17,22 @@ describe('Lookbook Image provider payload mapping', () => {
     ).toThrow(/Lookbook image sections failed validation/);
   });
 
+  it('rejects unknown model choices with a structured Project Data diagnostic', () => {
+    expect(() =>
+      buildLookbookImageProviderPayload(
+        spec({
+          modelChoice:
+            'fal-ai/nano-banana' as LookbookImageGenerationSpec['modelChoice'],
+        }),
+        context()
+      )
+    ).toThrow(
+      expect.objectContaining({
+        code: 'PROJECT_DATA274',
+      })
+    );
+  });
+
   it('maps GPT Image 2 and rejects seed and 21:9', () => {
     expect(
       buildLookbookImageProviderPayload(

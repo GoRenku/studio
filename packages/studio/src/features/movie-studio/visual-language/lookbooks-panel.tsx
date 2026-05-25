@@ -22,16 +22,37 @@ export function LookbooksPanel({
   onLookbooksChange,
 }: LookbooksPanelProps) {
   const [resource, setResource] = useState<LookbooksResource | null>(null);
+  const [resourceRevision, setResourceRevision] = useState(0);
 
   const reload = useCallback(async () => {
     setResource(await listLookbooks(projectName));
   }, [projectName]);
 
   useEffect(() => {
+    const handleResourceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
+      if (!detail || detail.projectName !== projectName) {
+        return;
+      }
+      const hasLookbooksChange = detail.resourceKeys.includes(
+        'surface:visual-language:lookbooks'
+      );
+      if (hasLookbooksChange) {
+        setResourceRevision((current) => current + 1);
+      }
+    };
+
+    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
+    return () => {
+      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
+    };
+  }, [projectName]);
+
+  useEffect(() => {
     void listLookbooks(projectName)
       .then(setResource)
       .catch((error) => toast.error(errorMessage(error)));
-  }, [projectName]);
+  }, [projectName, resourceRevision]);
 
   const setActive = async (lookbookId: string) => {
     await setActiveLookbook(projectName, lookbookId);
@@ -81,6 +102,11 @@ export function LookbooksPanel({
       </LookbookCardGrid>
     </div>
   );
+}
+
+interface StudioResourceChangedDetail {
+  projectName: string;
+  resourceKeys: string[];
 }
 
 function errorMessage(error: unknown): string {

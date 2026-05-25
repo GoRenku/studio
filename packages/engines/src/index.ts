@@ -38,4 +38,9 @@ export type {
 export {
   createSimulatedFallbackArtifacts,
 } from './simulated-fallback-output.js';
+export {
+  loadProviderEnvFiles,
+  type LoadProviderEnvFilesOptions,
+  type LoadProviderEnvFilesResult,
+} from './provider-env-files.js';
 export * from './generation/index.js';

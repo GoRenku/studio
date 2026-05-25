@@ -33,7 +33,7 @@ export async function estimateGeneration(input: {
     model: input.policy.model,
     payload,
   });
-  const count = input.policy.outputCount ?? outputCount(payload);
+  const count = input.policy.outputCount ?? deriveGenerationOutputCount(payload);
   const pricing = model.price ?? null;
   const price = pricing === null
     ? null
@@ -47,7 +47,10 @@ export async function estimateGeneration(input: {
     mediaKind: input.policy.mediaKind,
     pricing,
     estimatedCostUsd: price,
-    approvalToken: hashGenerationRequest(input),
+    approvalToken: hashGenerationRequest({
+      policy: input.policy,
+      request: input.request,
+    }),
     billableUnits: {
       outputCount: count,
       ...payload,
@@ -103,7 +106,9 @@ function priceFromConfig(
   return null;
 }
 
-function outputCount(payload: Record<string, unknown>): number {
+export function deriveGenerationOutputCount(
+  payload: Record<string, unknown>
+): number {
   const raw = payload.num_images ?? payload.numImages ?? payload.count;
   return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : 1;
 }

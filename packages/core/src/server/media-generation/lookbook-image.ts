@@ -7,6 +7,7 @@ import type {
   LookbookImageGenerationContext,
   LookbookImageGenerationSpec,
   LookbookImageMediaImportReport,
+  LookbookImageModelChoice,
   LookbookImageModelChoiceReport,
   LookbookImageModelListReport,
   LookbookImageOutputFormat,
@@ -61,6 +62,12 @@ import {
 
 const PROJECT_ASPECT_RATIOS = new Set(['1:1', '3:4', '4:3', '16:9', '9:16', '21:9']);
 const OUTPUT_FORMATS = new Set(['png', 'jpeg', 'webp']);
+const LOOKBOOK_IMAGE_MODEL_CHOICES = new Set<string>([
+  'fal-ai/openai/gpt-image-2',
+  'fal-ai/nano-banana-2',
+  'fal-ai/xai/grok-imagine-image',
+  'fal-ai/bytedance/seedream/v5/lite/text-to-image',
+]);
 
 export interface LookbookImageProjectInput extends RenkuConfigPathOptions {
   projectName?: string;
@@ -477,6 +484,7 @@ function normalizeSpec(
       `Lookbook image generation requires target.kind "lookbook". Received: ${spec.target.kind}.`
     );
   }
+  assertLookbookImageModelChoice(spec.modelChoice);
   assertLookbookSections(spec.focusSections);
   const takeCount = spec.takeCount ?? 1;
   if (!Number.isInteger(takeCount) || takeCount < 1) {
@@ -538,6 +546,8 @@ export function buildLookbookImageProviderPayload(
       return buildGrokImaginePayload(spec, context);
     case 'fal-ai/bytedance/seedream/v5/lite/text-to-image':
       return buildSeedreamV5Payload(spec, context);
+    default:
+      return unsupportedLookbookImageModel(spec.modelChoice);
   }
 }
 
@@ -748,6 +758,21 @@ function requireOutputFormat(
 
 function unsupported(message: string): never {
   throw new ProjectDataError('PROJECT_DATA272', message);
+}
+
+function assertLookbookImageModelChoice(
+  modelChoice: string
+): asserts modelChoice is LookbookImageModelChoice {
+  if (!LOOKBOOK_IMAGE_MODEL_CHOICES.has(modelChoice)) {
+    unsupportedLookbookImageModel(modelChoice);
+  }
+}
+
+function unsupportedLookbookImageModel(modelChoice: string): never {
+  throw new ProjectDataError(
+    'PROJECT_DATA274',
+    `Unsupported Lookbook image model: ${modelChoice}.`
+  );
 }
 
 function titleForSpec(spec: LookbookImageGenerationSpec): string {

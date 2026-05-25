@@ -22,7 +22,10 @@ import {
   loadBundledGenerationCatalog,
   resolveBundledModelCatalogDir,
 } from './model-discovery.js';
-import { estimateGeneration } from './estimates.js';
+import {
+  deriveGenerationOutputCount,
+  estimateGeneration,
+} from './estimates.js';
 import { hashGenerationRequest } from './request-hash.js';
 import { validateGenerationProviderPayload } from './provider-payload-validation.js';
 
@@ -77,13 +80,15 @@ export async function runGeneration(
     model: options.policy.model,
     payload,
   });
+  const outputCount =
+    options.policy.outputCount ?? deriveGenerationOutputCount(payload);
   const jobContext = createProviderJobContext({
     provider: options.policy.provider,
     model: options.policy.model,
     payload,
     rawSchema,
     mediaKind: options.policy.mediaKind,
-    outputCount: options.policy.outputCount ?? 1,
+    outputCount,
   });
   const result = options.mode === 'simulated'
     ? {
@@ -237,10 +242,12 @@ async function persistOutputs(input: {
     const mimeType = artifact.blob?.mimeType;
     let projectRelativePath: string | undefined;
     if (bytes && input.outputRoot && input.outputProjectRelativeRoot) {
-      const fileName =
+      const fileName = safeOutputFileName(
         input.requestedNames?.[index] ??
-        `${artifact.artifactId}${extensionForMime(mimeType)}`;
-      const absolutePath = path.join(input.outputRoot, fileName);
+          `${artifact.artifactId}${extensionForMime(mimeType)}`
+      );
+      const root = path.resolve(input.outputRoot);
+      const absolutePath = resolveOutputPath(root, fileName);
       await fs.mkdir(path.dirname(absolutePath), { recursive: true });
       await fs.writeFile(absolutePath, bytes);
       projectRelativePath = path.posix.join(
@@ -257,6 +264,35 @@ async function persistOutputs(input: {
     });
   }
   return outputs;
+}
+
+function safeOutputFileName(fileName: string): string {
+  if (
+    fileName.length === 0 ||
+    fileName === '.' ||
+    fileName === '..' ||
+    fileName.includes('/') ||
+    fileName.includes('\\') ||
+    fileName.includes('\0') ||
+    path.isAbsolute(fileName) ||
+    path.win32.isAbsolute(fileName)
+  ) {
+    throw new Error(
+      `Generation outputNames entries must be file names inside the output directory. Received: ${fileName}`
+    );
+  }
+  return fileName;
+}
+
+function resolveOutputPath(outputRoot: string, fileName: string): string {
+  const absolutePath = path.resolve(outputRoot, fileName);
+  const relativePath = path.relative(outputRoot, absolutePath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(
+      `Generation output path must stay inside the output directory. Received: ${fileName}`
+    );
+  }
+  return absolutePath;
 }
 
 function extensionForMime(mimeType?: string): string {

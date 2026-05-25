@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { LoadedModelCatalog } from '../model-catalog.js';
 import { estimateGeneration } from './estimates.js';
 import { listGenerationModels } from './model-discovery.js';
+import { hashGenerationRequest } from './request-hash.js';
 
 describe('generation estimates', () => {
   it('lists generation models by media kind', async () => {
@@ -71,6 +72,30 @@ describe('generation estimates', () => {
         resolution: '2K',
         num_images: 3,
       },
+    });
+  });
+
+  it('approval tokens hash the policy and request without the optional catalog', async () => {
+    const catalog = createCatalog();
+    const policy = {
+      provider: 'fal-ai',
+      model: 'image-model',
+      mediaKind: 'image' as const,
+      parameters: { image_size: '1024x1024', quality: 'medium' },
+    };
+    const request = {
+      prompt: 'A test image',
+      parameters: { num_images: 2 },
+    };
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy,
+        request,
+      })
+    ).resolves.toMatchObject({
+      approvalToken: hashGenerationRequest({ policy, request }),
     });
   });
 });

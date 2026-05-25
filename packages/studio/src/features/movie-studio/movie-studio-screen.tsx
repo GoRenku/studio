@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
@@ -66,6 +66,23 @@ export function MovieStudioScreen({
   const handleInspirationFoldersChange = useCallback(() => {
     setInspirationFoldersRevision((current) => current + 1);
   }, []);
+
+  useEffect(() => {
+    const handleResourceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
+      if (!detail || detail.projectName !== project.identity.name) {
+        return;
+      }
+      if (detail.resourceKeys.includes('surface:visual-language:lookbooks')) {
+        handleLookbooksChange();
+      }
+    };
+
+    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
+    return () => {
+      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
+    };
+  }, [handleLookbooksChange, project.identity.name]);
   const selectMovieStudioSurface = useCallback(
     (nextSelection: StudioSelection) => {
       void onNavigateSelection(nextSelection);
@@ -257,4 +274,9 @@ export function MovieStudioScreen({
       <GenerationActivityFooter project={project} />
     </div>
   );
+}
+
+interface StudioResourceChangedDetail {
+  projectName: string;
+  resourceKeys: string[];
 }

@@ -1,7 +1,10 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createProjectDataService } from '@gorenku/studio-core/server';
+import {
+  createProjectDataService,
+  createStudioCoordinationService,
+} from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { runRenkuCli } from './cli.js';
 
@@ -569,7 +572,8 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(mediaImportExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+    const mediaImportReport = JSON.parse(stdout.join('\n'));
+    expect(mediaImportReport).toMatchObject({
       purpose: 'lookbook.image',
       imported: {
         sections: ['palette', 'lighting'],
@@ -581,6 +585,17 @@ describe('renku CLI', () => {
           ],
         },
       },
+    });
+    await expect(
+      createStudioCoordinationService({ homeDir }).readStudioEvents()
+    ).resolves.toMatchObject({
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'studio.projectResourcesChanged',
+          resourceKeys: mediaImportReport.resourceKeys,
+          source: { kind: 'cli', command: 'media import' },
+        }),
+      ]),
     });
 
     const specPath = path.join(homeDir, 'lookbook-image-spec.json');

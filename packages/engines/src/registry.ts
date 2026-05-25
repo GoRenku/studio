@@ -15,6 +15,7 @@ import {
   lookupModel,
   type LoadedModelCatalog,
 } from './model-catalog.js';
+import { loadProviderEnvFiles } from './provider-env-files.js';
 import { generateProviderImplementations } from './registry-generator.js';
 import { createSimulatedFallbackProducerHandler } from './simulated-fallback-producers.js';
 
@@ -182,8 +183,13 @@ function toCacheKey(
 }
 
 function createEnvSecretResolver(): SecretResolver {
+  let envFilesLoaded = false;
   return {
     async getSecret(key: string): Promise<string | null> {
+      if (!envFilesLoaded) {
+        loadProviderEnvFiles();
+        envFilesLoaded = true;
+      }
       return process.env[key] ?? null;
     },
   };
