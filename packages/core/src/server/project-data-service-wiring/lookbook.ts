@@ -4,7 +4,6 @@ import {
   createLookbook,
   deleteLookbook,
   deleteLookbookImage,
-  importLookbookImage,
   listLookbookSourceInspirations,
   renameLookbook,
   setActiveLookbook,
@@ -35,7 +34,6 @@ export function createLookbookServiceWiring(): Pick<
   | 'listLookbookSourceInspirations'
   | 'clearLookbookCardImage'
   | 'setLookbookCardImage'
-  | 'importLookbookImage'
   | 'deleteLookbookImage'
   | 'setLookbookImageSections'
 > {
@@ -53,7 +51,6 @@ export function createLookbookServiceWiring(): Pick<
     listLookbookSourceInspirations,
     clearLookbookCardImage,
     setLookbookCardImage,
-    importLookbookImage,
     deleteLookbookImage,
     setLookbookImageSections,
   };

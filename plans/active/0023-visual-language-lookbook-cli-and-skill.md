@@ -339,12 +339,13 @@ Examples of `changes`:
 After successful mutation, append Studio resource-changed coordination events
 for returned `resourceKeys`.
 
-## Lookbook Image Commands
+## Lookbook Image And Media Import Commands
 
 ```bash
-renku lookbook image import \
-  --lookbook <lookbook-id> \
-  --file <project-relative-path> \
+renku media import \
+  --purpose lookbook.image \
+  --target lookbook:<lookbook-id> \
+  --source <project-relative-path> \
   --sections <comma-separated-section-keys> \
   --json
 
@@ -878,17 +879,17 @@ make that next plan straightforward by keeping the boundaries clean:
   folders, card image, and placed images needed to build prompts;
 - source Inspiration folder paths remain available through Inspiration commands
   so a generation agent can inspect reference images when needed;
-- generated files are attached with `renku lookbook image import`, then placed
-  with section keys;
+- generated or uploaded files are imported with
+  `renku media import --purpose lookbook.image`, then placed with section keys;
 - section placement stays in `lookbook_image_section`, so generated examples can
   appear under Palette, Lighting, Camera, or multiple sections without changing
   the Lookbook JSON schema;
 - workflows that require a project direction can explicitly require an active
   Lookbook and fail with a structured diagnostic when none is set.
 
-Later generation work can add a higher-level command such as
-`renku lookbook image generate`, but this plan should not reserve flags or fake
-provider behavior before that workflow is designed.
+Generation work is handled by the generic `renku generation ...` command family
+and the reusable `media-producer` skill, not by a Lookbook-specific generation
+command.
 
 ## Studio Skills Project
 

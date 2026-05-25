@@ -5,6 +5,20 @@ import { createLookbookServiceWiring } from './project-data-service-wiring/lookb
 import { createNavigationServiceWiring } from './project-data-service-wiring/navigation.js';
 import { createProjectAdministrationServiceWiring } from './project-data-service-wiring/project-administration.js';
 import { createScreenplayServiceWiring } from './project-data-service-wiring/screenplay.js';
+import {
+  buildLookbookImageContext,
+  createLookbookImageSpec,
+  importLookbookImageMedia,
+  estimateLookbookImageSpec,
+  listLookbookImageModels,
+  listLookbookImageSpecs,
+  prepareLookbookImageSpec,
+  recordLookbookImageRun,
+  readLookbookImageSpec,
+  runLookbookImageSpec,
+  updateLookbookImageSpec,
+  validateLookbookImageSpec,
+} from './media-generation/lookbook-image.js';
 import type { ProjectDataService } from './project-data-service-contracts.js';
 
 export function createProjectDataService(): ProjectDataService {
@@ -16,6 +30,18 @@ export function createProjectDataService(): ProjectDataService {
     ...createScreenplayServiceWiring(),
     ...createInspirationServiceWiring(),
     ...createLookbookServiceWiring(),
+    buildLookbookImageContext,
+    listLookbookImageModels,
+    validateLookbookImageSpec,
+    createLookbookImageSpec,
+    updateLookbookImageSpec,
+    readLookbookImageSpec,
+    listLookbookImageSpecs,
+    prepareLookbookImageSpec,
+    estimateLookbookImageSpec,
+    runLookbookImageSpec,
+    recordLookbookImageRun,
+    importLookbookImageMedia,
   } satisfies ProjectDataService;
 
   return service;

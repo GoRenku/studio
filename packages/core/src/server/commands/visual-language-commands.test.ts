@@ -297,26 +297,26 @@ describe('visual language commands', () => {
     await fs.writeFile(path.join(created.projectPath, secondGeneratedPath), 'other image bytes');
 
     const imageIds = createDeterministicIdGenerator();
-    const image = await projectData.importLookbookImage({
+    const image = await projectData.importLookbookImageMedia({
       projectName: 'constantinople',
       homeDir,
       lookbookId: lookbook.lookbook.id,
-      projectRelativePath: firstGeneratedPath,
+      sourceProjectRelativePath: firstGeneratedPath,
       sections: ['palette', 'lighting'],
       idGenerator: imageIds,
     });
-    expect(image.image?.asset.files[0]?.projectRelativePath).toBe(
+    expect(image.imported.asset.files[0]?.projectRelativePath).toBe(
       'visual-language/lookbook/generated-look.png'
     );
-    const secondImage = await projectData.importLookbookImage({
+    const secondImage = await projectData.importLookbookImageMedia({
       projectName: 'constantinople',
       homeDir,
       lookbookId: lookbook.lookbook.id,
-      projectRelativePath: secondGeneratedPath,
+      sourceProjectRelativePath: secondGeneratedPath,
       sections: ['palette'],
       idGenerator: imageIds,
     });
-    expect(secondImage.image?.asset.files[0]?.projectRelativePath).toBe(
+    expect(secondImage.imported.asset.files[0]?.projectRelativePath).toBe(
       'visual-language/lookbook/generated-look-2.png'
     );
 
@@ -324,7 +324,7 @@ describe('visual language commands', () => {
       projectName: 'constantinople',
       homeDir,
       lookbookId: lookbook.lookbook.id,
-      imageId: image.image!.id,
+      imageId: image.imported.id,
     });
 
     const resource = await projectData.readLookbook({
@@ -338,14 +338,14 @@ describe('visual language commands', () => {
       firstSource.id,
     ]);
     expect(resource.isActive).toBe(true);
-    expect(resource.cardImage?.id).toBe(image.image?.id);
+    expect(resource.cardImage?.id).toBe(image.imported.id);
     expect(resource.imagesBySection.palette).toHaveLength(2);
     expect(resource.imagesBySection.lighting).toHaveLength(1);
 
     const updated = await projectData.setLookbookImageSections({
       projectName: 'constantinople',
       homeDir,
-      imageId: image.image!.id,
+      imageId: image.imported.id,
       sections: ['camera', 'texture'],
       idGenerator: createDeterministicIdGenerator(),
     });
@@ -354,7 +354,7 @@ describe('visual language commands', () => {
     await projectData.deleteLookbookImage({
       projectName: 'constantinople',
       homeDir,
-      imageId: image.image!.id,
+      imageId: image.imported.id,
     });
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look.png'))

@@ -26,7 +26,21 @@ describe('renku CLI', () => {
     expect(stdout.join('\n')).toContain('$ renku <command>');
     expect(stdout.join('\n')).toContain('create <project-name>');
     expect(stdout.join('\n')).toContain('init <storage-root>');
+    expect(stdout.join('\n')).toContain('generation');
+    expect(stdout.join('\n')).toContain('media');
     expect(stderr).toEqual([]);
+  });
+
+  it('fails clearly when generation model list is missing a purpose', async () => {
+    const exitCode = await runRenkuCli(
+      ['generation', 'model', 'list', '--media-kind', 'image', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
+      error: { code: 'CLI001' },
+    });
   });
 
   it('creates config with renku init <storage-root>', async () => {
@@ -474,6 +488,177 @@ describe('renku CLI', () => {
       lookbook: { id: report.lookbook.id },
       sourceInspirationFolders: [{ id: folder.id }],
       imagesBySection: { palette: [] },
+    });
+
+    stdout = [];
+    stderr = [];
+    const contextExitCode = await runRenkuCli(
+      [
+        'generation',
+        'context',
+        '--purpose',
+        'lookbook.image',
+        '--target',
+        `lookbook:${report.lookbook.id}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(contextExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'lookbook.image',
+      target: { kind: 'lookbook', id: report.lookbook.id },
+      lookbook: { id: report.lookbook.id },
+      defaults: {
+        takeCount: 1,
+        detail: 'standard',
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const modelListExitCode = await runRenkuCli(
+      [
+        'generation',
+        'model',
+        'list',
+        '--purpose',
+        'lookbook.image',
+        '--target',
+        `lookbook:${report.lookbook.id}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(modelListExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'lookbook.image',
+      models: expect.arrayContaining([
+        expect.objectContaining({
+          modelChoice: 'fal-ai/nano-banana-2',
+          available: true,
+        }),
+      ]),
+    });
+
+    const generatedPath = 'generated/media/lookbook-palette.png';
+    await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', generatedPath)), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', generatedPath),
+      'image bytes'
+    );
+
+    stdout = [];
+    stderr = [];
+    const mediaImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'lookbook.image',
+        '--target',
+        `lookbook:${report.lookbook.id}`,
+        '--source',
+        generatedPath,
+        '--sections',
+        'palette,lighting',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(mediaImportExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'lookbook.image',
+      imported: {
+        sections: ['palette', 'lighting'],
+        asset: {
+          files: [
+            {
+              projectRelativePath: 'visual-language/lookbook/lookbook-palette.png',
+            },
+          ],
+        },
+      },
+    });
+
+    const specPath = path.join(homeDir, 'lookbook-image-spec.json');
+    await fs.writeFile(
+      specPath,
+      JSON.stringify(
+        {
+          purpose: 'lookbook.image',
+          target: { kind: 'lookbook', id: report.lookbook.id },
+          modelChoice: 'fal-ai/nano-banana-2',
+          prompt: 'A simulated Lookbook palette frame.',
+          focusSections: ['palette', 'lighting'],
+          takeCount: 1,
+          seed: null,
+          imageFrame: '16:9',
+          detail: 'draft',
+          outputFormat: 'png',
+          title: 'Simulated Lookbook',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const specCreateExitCode = await runRenkuCli(
+      [
+        'generation',
+        'spec',
+        'create',
+        '--file',
+        specPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(specCreateExitCode).toBe(0);
+    const createdSpec = JSON.parse(stdout.join('\n')) as { id: string };
+
+    stdout = [];
+    stderr = [];
+    const estimateExitCode = await runRenkuCli(
+      ['generation', 'estimate', '--spec', createdSpec.id, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(estimateExitCode).toBe(0);
+    const estimate = JSON.parse(stdout.join('\n')) as {
+      estimate: { approvalToken: string };
+    };
+    expect(estimate.estimate.approvalToken).toMatch(/^sha256:/);
+
+    stdout = [];
+    stderr = [];
+    const runExitCode = await runRenkuCli(
+      [
+        'generation',
+        'run',
+        '--spec',
+        createdSpec.id,
+        '--simulate',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(runExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      run: {
+        provider: 'fal-ai',
+        model: 'nano-banana-2',
+        simulated: true,
+        outputs: [
+          {
+            projectRelativePath: 'generated/media/simulated-lookbook.png',
+          },
+        ],
+      },
     });
   });
 

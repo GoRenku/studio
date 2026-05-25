@@ -33,6 +33,27 @@ export type {
   ProductionExportVariantSummary,
 } from './production-export.js';
 export type {
+  LookbookImageDetail,
+  LookbookImageFrame,
+  LookbookImageGenerationContext,
+  LookbookImageGenerationSpec,
+  LookbookImageGenerationTarget,
+  LookbookImageMediaImportReport,
+  LookbookImageModelChoice,
+  LookbookImageModelChoiceReport,
+  LookbookImageModelListReport,
+  LookbookImageOutputFormat,
+  MediaGenerationEstimateReport,
+  MediaGenerationRun,
+  MediaGenerationRunReport,
+  MediaGenerationSpecRecord,
+  MediaKind,
+  PreparedMediaGeneration,
+} from './media-generation.js';
+export {
+  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+} from './media-generation.js';
+export type {
   ProjectLanguage,
 } from './project-languages.js';
 export type {

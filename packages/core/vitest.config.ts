@@ -9,4 +9,12 @@ export default defineConfig({
     minWorkers: 1,
     maxWorkers: 1,
   },
+  resolve: {
+    alias: [
+      {
+        find: '@gorenku/studio-engines',
+        replacement: new URL('../engines/src/index.ts', import.meta.url).pathname,
+      },
+    ],
+  },
 });

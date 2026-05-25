@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import type {
   LookbookImage,
   LookbookImageMutationReport,
@@ -9,14 +8,8 @@ import type {
   VisualLanguageCommandReport,
   VisualLanguageProjectReport,
 } from '../../client/index.js';
-import {
-  deleteAssetFileRecordsForAsset,
-  insertAssetFileRecord,
-} from '../database/access/asset-files.js';
-import {
-  deleteAssetRecord,
-  insertAssetRecord,
-} from '../database/access/assets.js';
+import { deleteAssetFileRecordsForAsset } from '../database/access/asset-files.js';
+import { deleteAssetRecord } from '../database/access/assets.js';
 import {
   clearLookbookCardImageRecord,
   deleteLookbookRecord,
@@ -35,9 +28,7 @@ import {
 } from '../database/access/lookbook-inspirations.js';
 import {
   deleteLookbookImageRecord,
-  insertLookbookImageRecord,
   listLookbookImages,
-  nextLookbookImageSortOrder,
   readLookbookImage,
   requireLookbookImageRecord,
   setLookbookImageSectionRecords,
@@ -65,7 +56,6 @@ import type {
   CreateLookbookInput,
   DeleteLookbookImageInput,
   DeleteLookbookInput,
-  ImportLookbookImageInput,
   ListLookbookSourceInspirationsInput,
   RenameLookbookInput,
   SetActiveLookbookInput,
@@ -83,9 +73,7 @@ import {
   validateLookbookSourceInspirationsDocument,
 } from '../visual-language-json/validator.js';
 import {
-  allocateProjectRelativeFilePath,
   assertProjectRelativeChildPath,
-  assertResolvedPathInsideProject,
   LOOKBOOK_ROOT,
 } from '../visual-language-paths.js';
 
@@ -405,96 +393,6 @@ export async function clearLookbookCardImage(
   });
 }
 
-export async function importLookbookImage(
-  input: ImportLookbookImageInput
-): Promise<LookbookImageMutationReport> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
-    requireLookbookRecordById(session, input.lookbookId);
-
-    const sourceProjectRelativePath = normalizeProjectRelativePath(
-      input.projectRelativePath
-    );
-    const sourcePath = resolveProjectRelativePath(
-      projectFolder,
-      sourceProjectRelativePath
-    );
-    assertResolvedPathInsideProject(projectFolder, sourcePath);
-    const stats = await statExistingFile(sourcePath);
-
-    const destinationProjectRelativePath = await allocateProjectRelativeFilePath({
-      projectFolder,
-      parent: LOOKBOOK_ROOT,
-      fileName: path.basename(sourceProjectRelativePath),
-    });
-    const destinationPath = resolveProjectRelativePath(
-      projectFolder,
-      destinationProjectRelativePath
-    );
-    assertResolvedPathInsideProject(projectFolder, destinationPath);
-    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-    if (sourcePath !== destinationPath) {
-      await fs.copyFile(sourcePath, destinationPath);
-    }
-
-    const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-    const now = new Date().toISOString();
-    const assetId = ids('asset');
-    const imageId = ids('lookbook_image');
-    session.db.transaction((tx) => {
-      const txSession = { ...session, db: tx };
-      insertAssetRecord(txSession, {
-        id: assetId,
-        type: 'lookbook_image',
-        mediaKind: 'image',
-        title: input.title?.trim() || path.parse(destinationProjectRelativePath).name,
-        oneLineSummary: input.oneLineSummary?.trim() || undefined,
-        origin: 'generated',
-        availability: 'ready',
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertAssetFileRecord(txSession, {
-        id: ids('asset_file'),
-        assetId,
-        role: 'source',
-        projectRelativePath: destinationProjectRelativePath,
-        mediaKind: 'image',
-        sizeBytes: stats.size,
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertLookbookImageRecord(txSession, {
-        id: imageId,
-        lookbookId: input.lookbookId,
-        assetId,
-        sortOrder: nextLookbookImageSortOrder(txSession, input.lookbookId),
-        now,
-      });
-      setLookbookImageSectionRecords(txSession, {
-        imageId,
-        sections: assertLookbookSections(input.sections ?? []),
-        nextId: () => ids('lookbook_image_section'),
-        now,
-      });
-    });
-
-    const image = readLookbookImage(session, imageId);
-    if (!image) {
-      throw new ProjectDataError(
-        'PROJECT_DATA244',
-        `Lookbook image was not imported: ${imageId}.`
-      );
-    }
-    return imageMutationReport({
-      project,
-      projectFolder,
-      lookbookId: input.lookbookId,
-      image,
-      changeType: 'lookbook.imageImported',
-    });
-  });
-}
-
 export async function setLookbookImageSections(
   input: SetLookbookImageSectionsInput
 ): Promise<LookbookImageMutationReport> {
@@ -574,21 +472,6 @@ function normalizeLookbookName(name: string): string {
     throw new ProjectDataError('PROJECT_DATA248', 'Lookbook name is required.');
   }
   return normalized;
-}
-
-async function statExistingFile(absolutePath: string): Promise<{ size: number }> {
-  try {
-    const stats = await fs.stat(absolutePath);
-    if (!stats.isFile()) {
-      throw new Error('not a regular file');
-    }
-    return { size: stats.size };
-  } catch {
-    throw new ProjectDataError(
-      'PROJECT_DATA245',
-      `Generated Lookbook image file does not exist: ${absolutePath}.`
-    );
-  }
 }
 
 async function withVisualLanguageSession<T>(

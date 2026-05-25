@@ -98,6 +98,17 @@ unless the user explicitly asks for dependency installation.
   active implementation direction.
 - When a plan becomes accepted project direction, summarize the final decision
   in `docs/` instead of leaving the plan as the only source of truth.
+- Write plans for the current pre-customer iteration model. Do not describe
+  long-lived coexistence, migration periods, compatibility aliases, fallback
+  command paths, or "until the new path exists" behavior unless the user
+  explicitly asks for a staged migration. When a plan changes an API, command,
+  schema, file structure, or workflow, plan to update callers directly and
+  remove the old path in the same implementation slice.
+- Plans must be reviewable before implementation. Name public commands,
+  contracts, folders, files, package responsibilities, and domain concepts
+  deliberately in the plan. Do not defer interface-level naming with phrases
+  such as "names can be refined during implementation"; only low-level local
+  variable or private helper naming may be left to implementation.
 
 ## Very Important: Fail Fast With Structured Errors
 

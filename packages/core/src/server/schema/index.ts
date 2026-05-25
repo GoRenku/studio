@@ -2,6 +2,7 @@ export * from './acts.js';
 export * from './assets.js';
 export * from './cast-members.js';
 export * from './locations.js';
+export * from './media-generation.js';
 export * from './project.js';
 export * from './project-locales.js';
 export * from './scene-locations.js';

@@ -14,6 +14,10 @@ import type {
   InspirationFolderResource,
   InspirationResource,
   LookbookImageMutationReport,
+  LookbookImageGenerationContext,
+  LookbookImageGenerationSpec,
+  LookbookImageMediaImportReport,
+  LookbookImageModelListReport,
   LookbookResource,
   LookbookSourceInspirationsReport,
   LookbooksResource,
@@ -23,6 +27,10 @@ import type {
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
+  MediaGenerationEstimateReport,
+  MediaGenerationRunReport,
+  MediaGenerationSpecRecord,
+  PreparedMediaGeneration,
   SceneDesignResource,
   SceneNarrativeResource,
   StudioSelection,
@@ -173,9 +181,20 @@ export interface ProjectDataService {
   listLookbookSourceInspirations(input: ListLookbookSourceInspirationsInput): Promise<LookbookSourceInspirationsReport>;
   setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImageMutationReport>;
   clearLookbookCardImage(input: ClearLookbookCardImageInput): Promise<LookbookImageMutationReport>;
-  importLookbookImage(input: ImportLookbookImageInput): Promise<LookbookImageMutationReport>;
   deleteLookbookImage(input: DeleteLookbookImageInput): Promise<LookbookImageMutationReport>;
   setLookbookImageSections(input: SetLookbookImageSectionsInput): Promise<LookbookImageMutationReport>;
+  buildLookbookImageContext(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageGenerationContext>;
+  listLookbookImageModels(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageModelListReport>;
+  validateLookbookImageSpec(input: ValidateLookbookImageGenerationSpecInput): Promise<{ valid: true; spec: LookbookImageGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createLookbookImageSpec(input: CreateLookbookImageGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateLookbookImageSpec(input: UpdateLookbookImageGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readLookbookImageSpec(input: ReadLookbookImageGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listLookbookImageSpecs(input: ReadLookbookImageGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareLookbookImageSpec(input: ReadLookbookImageGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateLookbookImageSpec(input: ReadLookbookImageGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runLookbookImageSpec(input: RunLookbookImageGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  recordLookbookImageRun(input: RecordLookbookImageGenerationRunInput): Promise<MediaGenerationRunReport>;
+  importLookbookImageMedia(input: ImportLookbookImageMediaInput): Promise<LookbookImageMediaImportReport>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -371,15 +390,6 @@ export interface ClearLookbookCardImageInput extends VisualLanguageProjectInput 
   lookbookId: string;
 }
 
-export interface ImportLookbookImageInput extends VisualLanguageProjectInput {
-  lookbookId: string;
-  projectRelativePath: string;
-  sections?: LookbookSection[];
-  title?: string;
-  oneLineSummary?: string;
-  idGenerator?: ProjectIdGenerator;
-}
-
 export interface DeleteLookbookImageInput extends VisualLanguageProjectInput {
   imageId: string;
 }
@@ -387,6 +397,63 @@ export interface DeleteLookbookImageInput extends VisualLanguageProjectInput {
 export interface SetLookbookImageSectionsInput extends VisualLanguageProjectInput {
   imageId: string;
   sections: LookbookSection[];
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ReadLookbookImageGenerationContextInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  lookbookId: string;
+}
+
+export interface ValidateLookbookImageGenerationSpecInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: LookbookImageGenerationSpec;
+}
+
+export interface CreateLookbookImageGenerationSpecInput
+  extends ValidateLookbookImageGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateLookbookImageGenerationSpecInput
+  extends ValidateLookbookImageGenerationSpecInput {
+  specId: string;
+}
+
+export interface ReadLookbookImageGenerationSpecInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  specId: string;
+}
+
+export interface RunLookbookImageGenerationSpecInput
+  extends ReadLookbookImageGenerationSpecInput {
+  approvalToken?: string;
+  simulate?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface RecordLookbookImageGenerationRunInput
+  extends ReadLookbookImageGenerationSpecInput {
+  provider: 'fal-ai';
+  model: string;
+  providerPayload: Record<string, unknown>;
+  estimate: unknown;
+  approvalToken?: string;
+  simulated: boolean;
+  status: 'simulated' | 'completed' | 'failed';
+  outputs: unknown;
+  diagnostics: unknown;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ImportLookbookImageMediaInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  lookbookId: string;
+  sourceProjectRelativePath: string;
+  title?: string;
+  oneLineSummary?: string;
+  sections?: string[];
+  receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
 }
 

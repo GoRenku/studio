@@ -9,9 +9,11 @@ import meow from 'meow';
 import { runAboutCommand } from './commands/about-command.js';
 import { runAssetCommand } from './commands/asset-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
+import { runGenerationCommand } from './commands/generation-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
 import { runLookbookCommand } from './commands/lookbook-command.js';
+import { runMediaCommand } from './commands/media-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionCommand } from './commands/production-command.js';
@@ -56,7 +58,9 @@ Commands
   info clear           Clear optional project information fields
   info language        Add, update, remove, or set base languages
   inspiration          Manage Inspiration folders and analysis
+  generation           Gather media context, inspect models, estimate cost, and run generation
   lookbook             Manage Lookbooks and Lookbook images
+  media                Import media files for a purpose
   project current      Show the current authoring project
   project open         Set the current authoring project
   project close        Clear the current authoring project
@@ -70,8 +74,15 @@ Options
   --storage-root       Override configured storage root for this command
   --project            Project name for project information commands
   --target             Asset attachment target
+  --purpose            Media purpose key
+  --source             Project-relative source file for media import
   --type               Asset type
   --media-kind         Asset media kind
+  --provider           Generation provider
+  --model              Generation model
+  --spec               Media Generation Spec id
+  --approval-token     Binding token returned by generation estimate
+  --receipt            Generation Receipt JSON file
   --role               Asset relationship role
   --file-role          Asset file role
   --order              Selection order
@@ -85,6 +96,7 @@ Options
   --sections           Comma-separated Lookbook section keys
   --all-locales        Export every locale with production selects
   --dry-run            Report production export operations without writing
+  --simulate           Run generation without calling a paid provider
   --fresh              Rebuild production export manifest
   --title              Project title
   --aspect-ratio       Project aspect ratio
@@ -125,10 +137,31 @@ function createCliFlags() {
     target: {
       type: 'string',
     },
+    purpose: {
+      type: 'string',
+    },
+    source: {
+      type: 'string',
+    },
     type: {
       type: 'string',
     },
     mediaKind: {
+      type: 'string',
+    },
+    provider: {
+      type: 'string',
+    },
+    model: {
+      type: 'string',
+    },
+    spec: {
+      type: 'string',
+    },
+    approvalToken: {
+      type: 'string',
+    },
+    receipt: {
       type: 'string',
     },
     role: {
@@ -169,6 +202,10 @@ function createCliFlags() {
       default: false,
     },
     dryRun: {
+      type: 'boolean',
+      default: false,
+    },
+    simulate: {
       type: 'boolean',
       default: false,
     },
@@ -343,6 +380,25 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
+      case 'generation':
+        return await runGenerationCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            purpose: cli.flags.purpose,
+            target: cli.flags.target,
+            mediaKind: cli.flags.mediaKind,
+            provider: cli.flags.provider,
+            model: cli.flags.model,
+            file: cli.flags.file,
+            spec: cli.flags.spec,
+            approvalToken: cli.flags.approvalToken,
+            simulate: cli.flags.simulate,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
       case 'lookbook':
         return await runLookbookCommand({
           input,
@@ -353,6 +409,23 @@ export async function runRenkuCli(
             name: cli.flags.name,
             project: cli.flags.project,
             sections: cli.flags.sections,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'media':
+        return await runMediaCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            purpose: cli.flags.purpose,
+            target: cli.flags.target,
+            source: cli.flags.source,
+            title: cli.flags.title,
+            summary: cli.flags.summary,
+            sections: cli.flags.sections,
+            receipt: cli.flags.receipt,
           },
           json: cli.flags.json,
           io,

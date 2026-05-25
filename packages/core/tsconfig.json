@@ -16,6 +16,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "paths": {
+      "@gorenku/studio-engines": ["../engines/dist/index.d.ts"]
+    },
     "typeRoots": [
       "./node_modules/@types",
       "../../node_modules/@types"

@@ -1,5 +1,7 @@
 import type {
+  LookbookImageGenerationSpec,
   LookbookSection,
+  MediaGenerationSpecRecord,
   ProjectLibrary,
 } from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
@@ -445,11 +447,168 @@ export function fakeProjectDataService(): NonNullable<
     async clearLookbookCardImage(input) {
       return makeLookbookImageMutationReport(input.lookbookId);
     },
-    async importLookbookImage(input) {
-      return makeLookbookImageMutationReport(
-        input.lookbookId,
-        makeLookbookImage('lookbook_image_test0001')
-      );
+    async buildLookbookImageContext(input) {
+      return {
+        purpose: 'lookbook.image',
+        target: { kind: 'lookbook', id: input.lookbookId },
+        project: {
+          id: 'project_test',
+          name: 'test-project',
+          title: project.identity.title,
+          aspectRatio: project.identity.aspectRatio ?? null,
+        },
+        lookbook: makeLookbook(input.lookbookId),
+        sourceInspirationFolders: [],
+        existingImages: [],
+        imagesBySection: {
+          thesis: [],
+          palette: [],
+          tone_mood: [],
+          composition: [],
+          lighting: [],
+          texture: [],
+          camera: [],
+        },
+        cardImage: null,
+        defaults: {
+          takeCount: 1,
+          seed: null,
+          imageFrame: 'project',
+          resolvedAspectRatio: project.identity.aspectRatio ?? null,
+          detail: 'standard',
+          outputFormat: 'png',
+        },
+        resourceKeys: [],
+      };
+    },
+    async listLookbookImageModels(input) {
+      return {
+        purpose: 'lookbook.image',
+        target: { kind: 'lookbook', id: input.lookbookId },
+        models: [],
+      };
+    },
+    async validateLookbookImageSpec(input) {
+      return {
+        valid: true,
+        spec: input.spec,
+        providerPayload: {},
+      };
+    },
+    async createLookbookImageSpec(input) {
+      return makeMediaGenerationSpecRecord('media_generation_spec_test0001', input.spec);
+    },
+    async updateLookbookImageSpec(input) {
+      return makeMediaGenerationSpecRecord(input.specId, input.spec);
+    },
+    async readLookbookImageSpec(input) {
+      return makeMediaGenerationSpecRecord(input.specId, makeLookbookImageSpec());
+    },
+    async listLookbookImageSpecs() {
+      return { specs: [] };
+    },
+    async prepareLookbookImageSpec(input) {
+      return {
+        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookImageSpec()),
+        providerPayload: {},
+        generation: {
+          policy: {
+            provider: 'fal-ai',
+            model: 'nano-banana-2',
+            mediaKind: 'image',
+            mode: 'text-to-image',
+            outputCount: 1,
+          },
+          request: {
+            prompt: 'A Lookbook image.',
+            parameters: {},
+            outputNames: ['lookbook-image.png'],
+          },
+        },
+      };
+    },
+    async estimateLookbookImageSpec(input) {
+      return {
+        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookImageSpec()),
+        providerPayload: {},
+        generation: {
+          policy: {
+            provider: 'fal-ai',
+            model: 'nano-banana-2',
+            mediaKind: 'image',
+            mode: 'text-to-image',
+            outputCount: 1,
+          },
+          request: {
+            prompt: 'A Lookbook image.',
+            parameters: {},
+            outputNames: ['lookbook-image.png'],
+          },
+        },
+        estimate: {
+          estimatedCostUsd: 0,
+          approvalToken: 'sha256:test',
+        },
+      };
+    },
+    async runLookbookImageSpec(input) {
+      return {
+        run: {
+          id: 'media_generation_run_test0001',
+          specId: input.specId,
+          purpose: 'lookbook.image',
+          target: { kind: 'lookbook', id: 'lookbook_test0001' },
+          modelChoice: 'fal-ai/nano-banana-2',
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          specSnapshot: makeLookbookImageSpec(),
+          providerPayload: {},
+          estimateSnapshot: {
+            estimatedCostUsd: 0,
+            approvalToken: 'sha256:test',
+          },
+          simulated: Boolean(input.simulate),
+          status: input.simulate ? 'simulated' : 'completed',
+          outputs: [],
+          diagnostics: {},
+          startedAt: '2026-05-22T00:00:00.000Z',
+          completedAt: '2026-05-22T00:00:00.000Z',
+        },
+      };
+    },
+    async recordLookbookImageRun(input) {
+      return {
+        run: {
+          id: 'media_generation_run_test0001',
+          specId: input.specId,
+          purpose: 'lookbook.image',
+          target: { kind: 'lookbook', id: 'lookbook_test0001' },
+          modelChoice: 'fal-ai/nano-banana-2',
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          specSnapshot: makeLookbookImageSpec(),
+          providerPayload: {},
+          estimateSnapshot: {},
+          simulated: true,
+          status: 'simulated',
+          outputs: [],
+          diagnostics: {},
+          startedAt: '2026-05-22T00:00:00.000Z',
+          completedAt: '2026-05-22T00:00:00.000Z',
+        },
+      };
+    },
+    async importLookbookImageMedia(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        changes: [{ type: 'lookbook.imageImported', lookbookId: input.lookbookId }],
+        purpose: 'lookbook.image',
+        target: { kind: 'lookbook', id: input.lookbookId },
+        imported: makeLookbookImage('lookbook_image_test0001'),
+        resourceKeys: [],
+      };
     },
     async deleteLookbookImage() {
       return makeLookbookImageMutationReport('lookbook_test0001');
@@ -460,6 +619,37 @@ export function fakeProjectDataService(): NonNullable<
         sections: input.sections,
       });
     },
+  };
+}
+
+function makeLookbookImageSpec() {
+  return {
+    purpose: 'lookbook.image' as const,
+    target: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
+    modelChoice: 'fal-ai/nano-banana-2' as const,
+    prompt: 'A Lookbook image.',
+    focusSections: ['palette'] as LookbookSection[],
+    takeCount: 1,
+    seed: null,
+    imageFrame: 'project' as const,
+    detail: 'standard' as const,
+    outputFormat: 'png' as const,
+  };
+}
+
+function makeMediaGenerationSpecRecord(
+  id: string,
+  spec: LookbookImageGenerationSpec
+): MediaGenerationSpecRecord {
+  return {
+    id,
+    purpose: 'lookbook.image' as const,
+    target: spec.target,
+    modelChoice: spec.modelChoice,
+    title: 'Lookbook image',
+    spec,
+    createdAt: '2026-05-22T00:00:00.000Z',
+    updatedAt: '2026-05-22T00:00:00.000Z',
   };
 }
 

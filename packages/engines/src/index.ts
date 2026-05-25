@@ -38,3 +38,4 @@ export type {
 export {
   createSimulatedFallbackArtifacts,
 } from './simulated-fallback-output.js';
+export * from './generation/index.js';

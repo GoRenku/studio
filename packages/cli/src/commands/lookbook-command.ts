@@ -181,25 +181,6 @@ export async function runLookbookCommand(options: {
     return 0;
   }
 
-  if (action === 'image' && nested === 'import') {
-    const report = await service.importLookbookImage({
-      projectName,
-      homeDir: options.homeDir,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-      projectRelativePath: requiredFlag(options.flags.file, '--file'),
-      sections: parseSections(options.flags.sections),
-    });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
-      command: 'lookbook image import',
-    });
-    writeJson(options.io, report);
-    return 0;
-  }
-
   if (action === 'image' && nested === 'set-sections') {
     const report = await service.setLookbookImageSections({
       projectName,
@@ -311,7 +292,7 @@ export async function runLookbookCommand(options: {
         'CLI095',
         'Unknown lookbook command.',
         { path: ['lookbook', action ?? '', nested ?? '', operation ?? ''] },
-        'Use list/show/validate/create/update/rename/delete/set-active/clear-active, image import/set-sections/delete, card-image set/clear, or inspiration list/set.'
+        'Use list/show/validate/create/update/rename/delete/set-active/clear-active, image set-sections/delete, card-image set/clear, or inspiration list/set.'
       ),
     ],
     suggestion: 'Use a supported lookbook command.',

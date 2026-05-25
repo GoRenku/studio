@@ -267,15 +267,15 @@ export function createVisualLanguageRoute({
           title?: string;
           oneLineSummary?: string;
         }>();
-        const report = await projectData.importLookbookImage({
+        const report = await projectData.importLookbookImageMedia({
           projectName,
           lookbookId,
-          projectRelativePath: body.projectRelativePath ?? '',
+          sourceProjectRelativePath: body.projectRelativePath ?? '',
           sections: body.sections as never,
           title: body.title,
           oneLineSummary: body.oneLineSummary,
         });
-        return c.json({ image: report.image }, 201);
+        return c.json({ image: report.imported }, 201);
       } catch (error) {
         return projectErrorResponse(c, error);
       }

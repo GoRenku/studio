@@ -150,12 +150,15 @@ Use **Select** for a currently chosen asset, **Pin** for cast favorites, and
 
 | Canonical term | Use for | Notes |
 | --- | --- | --- |
-| Generation Type | A category of generation work, such as `cast.character-sheet` or `clip.video-take`. | This usually appears as a stable generation key. |
-| Generation Definition | The code-owned setup for one generation type. | Owns prompt templates, provider/model selection, model settings, validation, and execution steps. It is not a project-local editable folder. |
-| Generation Key | The stable key identifying a generation type. | Example: `cast.character-sheet`. |
+| Media Purpose | The project-facing reason media is being made or imported. | Example: `lookbook.image`. The purpose supplies context and import behavior; it does not replace persisted generation choices. |
+| Media Purpose Key | The stable key identifying a media purpose. | Example: `lookbook.image`. |
+| Generation Type | A category of generation work, such as `cast.character-sheet` or `clip.video-take`. | Use Media Purpose when the work is about producing or importing media for a domain object. |
+| Generation Definition | The code-owned setup for reusable generation guidance. | Owns purpose guidance and prompt templates. Provider/model selection and user-facing parameters are persisted in a `Generation Spec`. It is not a project-local editable folder. |
+| Generation Key | The stable key identifying a generation type. | Prefer Media Purpose Key for media-producing commands. |
+| Generation Spec | The persisted, user-editable generation choices for a concrete target. | Agents must not override binding fields such as model choice, take count, seed, frame, detail, or output format. |
 | Task | A queued or running unit of work. | Example: generate a character sheet for one cast member. |
-| Generation Record | A lightweight durable record that connects a generated output to the task and generation definition that produced it. | It is not a full historical copy of prompt templates or runtime code. |
-| Generation Packet | A system-generated execution snapshot of resolved inputs for one task. | Useful for debugging and execution repeatability, but not the user-facing generation history model. |
+| Generation Run | A durable execution record created from a generation spec. | Stores the spec snapshot, provider payload, estimate snapshot, approval token, simulation flag, status, diagnostics, and outputs. |
+| Generation Packet | A system-generated execution snapshot of resolved inputs for one task. | Useful for debugging and execution repeatability, but not the user-facing generation history model. Prefer Generation Run for persisted media-generation execution history. |
 | Provider Run | A lower-level record of a call to an external or local generation provider. | Useful for diagnostics, cost, retries, and error reporting. |
 
 ## Budget And Cost
@@ -182,10 +185,10 @@ Money storage rules:
 
 | Canonical term | Use for | Notes |
 | --- | --- | --- |
-| Catalog | System-level definitions bundled with Renku or Renku Studio. | Includes providers, models, model schemas, and generation definitions. |
+| Catalog | System-level definitions bundled with Renku or Renku Studio. | Includes providers, models, model schemas, media purpose guidance, and generation definitions. |
 | Provider | A service or runtime that supplies a model. | Example: OpenAI, Replicate, ElevenLabs, local runtime. |
-| Model | A provider-specific generation model. | Provider/model selection belongs in code-owned generation definitions unless a current feature explicitly models user-adjustable settings. |
-| Model Schema | A JSON Schema describing valid parameters for a provider model. | Lives in the catalog. Code-owned generation definitions choose concrete values unless a current feature explicitly models user-adjustable settings. |
+| Model | A provider-specific generation model. | When a `Generation Spec` is present, the model choice is binding and overrides agent preference. |
+| Model Schema | A JSON Schema describing valid parameters for a provider model. | Lives in the catalog. Code-owned generation code builds provider payloads, and engines validate those payloads against the schema before estimate or execution. |
 
 ## Terms To Avoid Or Scope Carefully
 
@@ -196,5 +199,5 @@ Money storage rules:
 | Preset | Avoid because it is vague. Use Generation Definition or a more specific domain name. |
 | Style | Avoid as the top-level domain concept. Use Visual Language. `style_sheet` is acceptable as a visual language asset type. |
 | Selection | Use only for the take/select classification on an asset relationship. Use Select for currently chosen assets, Pin for cast favorites, and Binding for scoped usage relationships. |
-| Lineage / Provenance | Avoid for the v1 data model. Use Generation Record for the lightweight output/task/generation link and Generation Packet for the resolved execution snapshot. |
+| Lineage / Provenance | Avoid for the v1 data model. Use Generation Run for persisted media-generation execution history and Generation Packet for a resolved execution snapshot when that distinction is needed. |
 | Act / Chapter | Do not use as canonical v1 schema terms. Use Sequence for the movie hierarchy, with future display labels if needed. |

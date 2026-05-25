@@ -22,7 +22,9 @@ export type EntityIdPrefix =
   | 'cast_asset'
   | 'location_asset'
   | 'sequence_asset'
-  | 'scene_asset';
+  | 'scene_asset'
+  | 'media_generation_spec'
+  | 'media_generation_run';
 
 export interface ProjectIdGenerator {
   next(prefix: EntityIdPrefix): string;
