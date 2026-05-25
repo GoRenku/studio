@@ -1,8 +1,8 @@
 import type { LookbookListItem } from '@gorenku/studio-core/client';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, Trash2 } from 'lucide-react';
 import { Button } from '@/ui/button';
+import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import { LookbookActiveControl } from './lookbook-active-control';
-import { LookbookDeleteDialog } from './lookbook-delete-dialog';
 import { lookbookImageFileUrl } from './visual-language-image-urls';
 
 interface LookbookCardProps {
@@ -57,10 +57,24 @@ export function LookbookCard({
         </div>
         <div className='flex items-center justify-between gap-2'>
           <LookbookActiveControl isActive={item.isActive} onSetActive={onSetActive} />
-          <LookbookDeleteDialog
-            lookbookName={item.lookbook.name}
-            isActive={item.isActive}
+          <DeleteConfirmDialog
+            title='Delete Lookbook?'
+            message={
+              item.isActive
+                ? `Remove "${item.lookbook.name}". The project will have no active lookbook.`
+                : `Remove "${item.lookbook.name}". This cannot be undone.`
+            }
             onDelete={onDelete}
+            trigger={
+              <Button
+                type='button'
+                size='icon'
+                variant='ghost'
+                aria-label={`Delete ${item.lookbook.name}`}
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            }
           />
         </div>
       </div>

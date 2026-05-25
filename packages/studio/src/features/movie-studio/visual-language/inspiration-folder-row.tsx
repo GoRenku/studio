@@ -1,8 +1,8 @@
 import type { InspirationFolder } from '@gorenku/studio-core/client';
-import { Images } from 'lucide-react';
+import { Images, Trash2 } from 'lucide-react';
 import { Button } from '@/ui/button';
+import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import { cn } from '@/lib/utils';
-import { InspirationFolderDeleteDialog } from './inspiration-folder-delete-dialog';
 
 interface InspirationFolderRowProps {
   folder: InspirationFolder;
@@ -31,7 +31,22 @@ export function InspirationFolderRow({
         <Images className='h-3.5 w-3.5 shrink-0' />
         <span className='truncate'>{folder.name}</span>
       </Button>
-      <InspirationFolderDeleteDialog folderName={folder.name} onDelete={onDelete} />
+      <DeleteConfirmDialog
+        title='Delete Folder?'
+        message={`Remove "${folder.name}" and its saved grabs.`}
+        onDelete={onDelete}
+        trigger={
+          <Button
+            type='button'
+            size='icon'
+            variant='ghost'
+            className='h-6 w-6 rounded-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+            aria-label={`Delete ${folder.name}`}
+          >
+            <Trash2 className='h-3.5 w-3.5' />
+          </Button>
+        }
+      />
     </div>
   );
 }

@@ -4,7 +4,11 @@ import type {
   InspirationFolderWithResolvedPath,
   LookbookResource,
 } from '@gorenku/studio-core/client';
-import { readLookbook, setActiveLookbook } from '@/services/studio-visual-language-api';
+import {
+  deleteLookbookImage,
+  readLookbook,
+  setActiveLookbook,
+} from '@/services/studio-visual-language-api';
 import { Button } from '@/ui/button';
 import { EmptyState } from './empty-state';
 import { VisualLanguageReport } from './visual-language-report';
@@ -63,6 +67,16 @@ export function LookbookPanel({
     onLookbooksChange();
   };
 
+  const removeImage = async (imageId: string) => {
+    try {
+      await deleteLookbookImage(projectName, imageId);
+      setResource(await readLookbook(projectName, lookbookId));
+      onLookbooksChange();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
+  };
+
   if (!resource) {
     return <EmptyState title='Loading Lookbook.' />;
   }
@@ -93,6 +107,7 @@ export function LookbookPanel({
           texture: resource.lookbook.texture,
           camera: resource.lookbook.camera,
         }}
+        onDeleteLookbookImage={removeImage}
       />
     </div>
   );

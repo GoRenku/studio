@@ -30,6 +30,10 @@ That means:
 - do not add shims for prior APIs;
 - do not add fallback branches for old structures;
 - do not add compatibility layers;
+- do not add wrapper components, wrapper functions, adapter files, facade
+  modules, or thin pass-through helpers whose main purpose is to preserve,
+  rename, or locally repackage another API, component, command, route, schema,
+  or import path;
 - do not add convenience re-exports to avoid fixing callers;
 - do not keep tests whose only purpose is to reject an obsolete format;
 - do not keep old loaders after the model changes;

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type {
   CameraSection,
   ColorSwatch,
@@ -13,7 +13,19 @@ import type {
   ThesisSection,
   ToneMoodSection,
 } from '@gorenku/studio-core/client';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/ui/button';
+import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
+import {
+  ImagePreviewDialog,
+  type PreviewImage,
+} from '@/ui/image-preview-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/ui/tooltip';
 import {
   inspirationImageUrl,
   lookbookImageFileUrl,
@@ -24,6 +36,7 @@ interface ReportImage {
   src: string;
   title: string;
   alt: string;
+  lookbookImageId?: string;
 }
 
 interface VisualLanguageReportProps {
@@ -31,6 +44,7 @@ interface VisualLanguageReportProps {
   title?: string;
   subtitle?: string;
   action?: ReactNode;
+  onDeleteLookbookImage?: (imageId: string) => Promise<void>;
   sections: {
     thesis: ThesisSection;
     palette: PaletteSection;
@@ -59,7 +73,12 @@ export function VisualLanguageReport({
   action,
   sections,
   source,
+  onDeleteLookbookImage,
 }: VisualLanguageReportProps) {
+  const [previewImage, setPreviewImage] = useState<PreviewImage | null>(
+    null
+  );
+  const [deleteImage, setDeleteImage] = useState<ReportImage | null>(null);
   const hasHeader = Boolean(title || subtitle || action);
   const themeColors = sections.palette.colors.map((color) => color.hex);
   const thesisImages = imagesForSection(
@@ -112,7 +131,14 @@ export function VisualLanguageReport({
           </ReportSection>
           <SectionWideContent>
             <div className='space-y-8'>
-              <EvidenceGrid images={thesisImages} size='feature' />
+              <EvidenceGrid
+                images={thesisImages}
+                size='feature'
+                onOpenImage={setPreviewImage}
+                onRequestDeleteImage={
+                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                }
+              />
               {sections.thesis.principles.length ? (
                 <PrincipleList principles={sections.thesis.principles} />
               ) : null}
@@ -131,6 +157,18 @@ export function VisualLanguageReport({
                 observations={sections.palette.observations}
                 projectName={projectName}
                 source={source}
+                onOpenImage={setPreviewImage}
+                onRequestDeleteImage={
+                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                }
+              />
+              <EvidenceGrid
+                images={imagesForSection(projectName, source, 'palette')}
+                size='feature'
+                onOpenImage={setPreviewImage}
+                onRequestDeleteImage={
+                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                }
               />
             </div>
           </SectionWideContent>
@@ -160,7 +198,14 @@ export function VisualLanguageReport({
           <SectionWideContent>
             <div className='space-y-8'>
               <ToneBand colors={themeColors} />
-              <EvidenceGrid images={toneImages} size='feature' />
+              <EvidenceGrid
+                images={toneImages}
+                size='feature'
+                onOpenImage={setPreviewImage}
+                onRequestDeleteImage={
+                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                }
+              />
             </div>
           </SectionWideContent>
 
@@ -172,6 +217,10 @@ export function VisualLanguageReport({
             section={sections.composition}
             projectName={projectName}
             source={source}
+            onOpenImage={setPreviewImage}
+            onRequestDeleteImage={
+              source.kind === 'lookbook' ? setDeleteImage : undefined
+            }
           />
 
           <PatternReportSection
@@ -182,6 +231,10 @@ export function VisualLanguageReport({
             section={sections.lighting}
             projectName={projectName}
             source={source}
+            onOpenImage={setPreviewImage}
+            onRequestDeleteImage={
+              source.kind === 'lookbook' ? setDeleteImage : undefined
+            }
           />
 
           <ReportSection number='06' kicker='Surface' title='Texture'>
@@ -195,10 +248,18 @@ export function VisualLanguageReport({
                 observations={sections.texture.observations}
                 projectName={projectName}
                 source={source}
+                onOpenImage={setPreviewImage}
+                onRequestDeleteImage={
+                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                }
               />
               <EvidenceGrid
                 images={imagesForSection(projectName, source, 'texture')}
                 size='feature'
+                onOpenImage={setPreviewImage}
+                onRequestDeleteImage={
+                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                }
               />
             </div>
           </SectionWideContent>
@@ -218,22 +279,38 @@ export function VisualLanguageReport({
                   patterns={sections.camera.movement}
                   projectName={projectName}
                   source={source}
+                  onOpenImage={setPreviewImage}
+                  onRequestDeleteImage={
+                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                  }
                 />
                 <PatternDeck
                   title='Motion'
                   patterns={sections.camera.motion}
                   projectName={projectName}
                   source={source}
+                  onOpenImage={setPreviewImage}
+                  onRequestDeleteImage={
+                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                  }
                 />
                 <PatternDeck
                   title='Framing'
                   patterns={sections.camera.framing}
                   projectName={projectName}
                   source={source}
+                  onOpenImage={setPreviewImage}
+                  onRequestDeleteImage={
+                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                  }
                 />
                 <EvidenceGrid
                   images={imagesForSection(projectName, source, 'camera')}
                   size='feature'
+                  onOpenImage={setPreviewImage}
+                  onRequestDeleteImage={
+                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                  }
                 />
               </div>
             </SectionWideContent>
@@ -257,12 +334,34 @@ export function VisualLanguageReport({
                   section={sections.inspiredBy}
                   projectName={projectName}
                   source={source}
+                  onOpenImage={setPreviewImage}
+                  onRequestDeleteImage={
+                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                  }
                 />
               </div>
             </SectionWideContent>
           ) : null}
         </div>
       </div>
+      <ImagePreviewDialog
+        image={previewImage}
+        onOpenChange={(open) => !open && setPreviewImage(null)}
+      />
+      <DeleteConfirmDialog
+        open={Boolean(deleteImage)}
+        onOpenChange={(open) => !open && setDeleteImage(null)}
+        title='Delete Image?'
+        message='Remove this image from the lookbook. This cannot be undone.'
+        onDelete={async () => {
+          if (!deleteImage?.lookbookImageId || !onDeleteLookbookImage) return;
+          await onDeleteLookbookImage(deleteImage.lookbookImageId);
+          setDeleteImage(null);
+          if (previewImage?.src === deleteImage.src) {
+            setPreviewImage(null);
+          }
+        }}
+      />
     </article>
   );
 }
@@ -360,6 +459,8 @@ function PatternReportSection({
   section,
   projectName,
   source,
+  onOpenImage,
+  onRequestDeleteImage,
 }: {
   number: string;
   kicker: string;
@@ -368,6 +469,8 @@ function PatternReportSection({
   section: PatternSection;
   projectName: string;
   source: VisualLanguageReportProps['source'];
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
   return (
     <>
@@ -382,10 +485,14 @@ function PatternReportSection({
             patterns={section.patterns}
             projectName={projectName}
             source={source}
+            onOpenImage={onOpenImage}
+            onRequestDeleteImage={onRequestDeleteImage}
           />
           <EvidenceGrid
             images={imagesForSection(projectName, source, sectionKey)}
             size='feature'
+            onOpenImage={onOpenImage}
+            onRequestDeleteImage={onRequestDeleteImage}
           />
         </div>
       </SectionWideContent>
@@ -398,11 +505,15 @@ function PatternDeck({
   patterns,
   projectName,
   source,
+  onOpenImage,
+  onRequestDeleteImage,
 }: {
   title?: string;
   patterns: Pattern[];
   projectName: string;
   source: VisualLanguageReportProps['source'];
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
   if (!patterns.length) return null;
   return (
@@ -428,6 +539,8 @@ function PatternDeck({
               <EvidenceGrid
                 images={imagesForNestedReferences(projectName, source, pattern.imageFiles)}
                 size='compact'
+                onOpenImage={onOpenImage}
+                onRequestDeleteImage={onRequestDeleteImage}
               />
             </div>
           </div>
@@ -441,10 +554,14 @@ function ObservationDeck({
   observations,
   projectName,
   source,
+  onOpenImage,
+  onRequestDeleteImage,
 }: {
   observations: Observation[];
   projectName: string;
   source: VisualLanguageReportProps['source'];
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
   if (!observations.length) return null;
   return (
@@ -461,6 +578,8 @@ function ObservationDeck({
             images={imagesForNestedReferences(projectName, source, observation.imageFiles)}
             size='compact'
             className='mt-4'
+            onOpenImage={onOpenImage}
+            onRequestDeleteImage={onRequestDeleteImage}
           />
         </div>
       ))}
@@ -472,10 +591,14 @@ function LineageGrid({
   section,
   projectName,
   source,
+  onOpenImage,
+  onRequestDeleteImage,
 }: {
   section: InspiredBySection;
   projectName: string;
   source: VisualLanguageReportProps['source'];
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
   if (!section.items.length) return null;
   return (
@@ -501,6 +624,8 @@ function LineageGrid({
             images={imagesForNestedReferences(projectName, source, item.imageFiles)}
             size='compact'
             className='mt-4'
+            onOpenImage={onOpenImage}
+            onRequestDeleteImage={onRequestDeleteImage}
           />
         </div>
       ))}
@@ -512,10 +637,14 @@ function EvidenceGrid({
   images,
   size,
   className,
+  onOpenImage,
+  onRequestDeleteImage,
 }: {
   images: ReportImage[];
   size: 'feature' | 'compact';
   className?: string;
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
   if (!images.length) return null;
   return (
@@ -529,7 +658,23 @@ function EvidenceGrid({
       )}
     >
       {images.map((image) => (
-        <EvidenceImage key={image.id} image={image} size={size} />
+        <EvidenceImage
+          key={image.id}
+          image={image}
+          size={size}
+          onOpen={() =>
+            onOpenImage({
+              src: image.src,
+              alt: image.alt,
+              title: readableImageTitle(image),
+            })
+          }
+          onRequestDelete={
+            image.lookbookImageId && onRequestDeleteImage
+              ? () => onRequestDeleteImage(image)
+              : undefined
+          }
+        />
       ))}
     </div>
   );
@@ -538,9 +683,13 @@ function EvidenceGrid({
 function EvidenceImage({
   image,
   size,
+  onOpen,
+  onRequestDelete,
 }: {
   image: ReportImage;
   size: 'feature' | 'compact';
+  onOpen: () => void;
+  onRequestDelete?: () => void;
 }) {
   return (
     <figure
@@ -550,12 +699,40 @@ function EvidenceImage({
       )}
       title={image.title}
     >
-      <div className='aspect-video'>
-        <img src={image.src} alt={image.alt} className='h-full w-full object-cover' />
-      </div>
-      <figcaption className='pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.82))] px-3 pb-2 pt-8 text-xs font-semibold text-white opacity-90'>
-        {compactImageTitle(image.title)}
-      </figcaption>
+      <Button
+        type='button'
+        variant='ghost'
+        className='block h-auto w-full rounded-none p-0 hover:bg-transparent'
+        onClick={onOpen}
+      >
+        <span className='block aspect-video'>
+          <img src={image.src} alt={image.alt} className='h-full w-full object-cover' />
+        </span>
+      </Button>
+      {image.lookbookImageId ? (
+        <figcaption className='pointer-events-none absolute bottom-2 left-2 right-2 flex justify-start'>
+          <span className='max-w-full overflow-hidden rounded-sm border border-border/20 bg-panel-bg/70 px-2 py-1 text-[10px] font-medium leading-4 text-foreground/65 shadow-sm backdrop-blur-sm transition-opacity group-hover:text-foreground/85 group-focus-within:text-foreground/85 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]'>
+            {readableImageTitle(image)}
+          </span>
+        </figcaption>
+      ) : null}
+      {onRequestDelete ? (
+        <Tooltip className='absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
+          <TooltipTrigger asChild>
+            <Button
+              type='button'
+              size='icon'
+              variant='ghost'
+              className='h-7 w-7 bg-black/50 text-white shadow-sm hover:bg-destructive hover:text-destructive-foreground'
+              aria-label={`Delete ${readableImageTitle(image)}`}
+              onClick={onRequestDelete}
+            >
+              <Trash2 className='h-3.5 w-3.5' />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Delete image</TooltipContent>
+        </Tooltip>
+      ) : null}
     </figure>
   );
 }
@@ -597,17 +774,35 @@ function imagesForSection(
         src: lookbookImageFileUrl(projectName, image.id, file.id),
         alt: image.asset.title,
         title: image.asset.title,
+        lookbookImageId: image.id,
       },
     ];
   });
 }
 
-function compactImageTitle(title: string): string {
+function readableImageTitle(image: ReportImage): string {
+  if (image.lookbookImageId) {
+    return humanizeTitle(image.title);
+  }
+  return compactInspirationTitle(image.title);
+}
+
+function compactInspirationTitle(title: string): string {
   const fileName = title.split('/').at(-1) ?? title;
   const withoutExtension = fileName.replace(/\.[^.]+$/, '');
   const stillMatch = /^(still-\d+)/i.exec(withoutExtension);
   if (stillMatch?.[1]) return stillMatch[1];
-  return withoutExtension.length > 22
-    ? `${withoutExtension.slice(0, 19)}...`
-    : withoutExtension;
+  return humanizeTitle(withoutExtension);
+}
+
+function humanizeTitle(title: string): string {
+  const fileName = title.split('/').at(-1) ?? title;
+  const withoutExtension = fileName.replace(/\.[^.]+$/, '');
+  const words = withoutExtension
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  if (!words) return title;
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

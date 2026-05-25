@@ -7,7 +7,7 @@ interface FileUploadDropzoneProps {
   accept?: string;
   multiple?: boolean;
   title: string;
-  description: string;
+  description?: string;
   className?: string;
   onFilesSelected: (files: FileList | null) => void;
 }
@@ -26,7 +26,7 @@ export function FileUploadDropzone({
     <label
       htmlFor={inputId}
       className={cn(
-        'block cursor-pointer rounded-xl border-2 border-dashed border-border bg-muted/20 p-8 text-center transition hover:bg-muted/30',
+        'flex min-h-40 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border/40 bg-muted/20 p-8 text-center transition-colors hover:border-border/60 hover:bg-item-hover-bg',
         className
       )}
     >
@@ -41,17 +41,19 @@ export function FileUploadDropzone({
           event.currentTarget.value = '';
         }}
       />
-      <span className='flex flex-col items-center gap-3'>
-        <span className='flex h-12 w-12 items-center justify-center rounded-full bg-muted'>
-          <CloudUpload className='h-6 w-6 text-muted-foreground' />
+      <span className='flex flex-col items-center justify-center gap-3'>
+        <span className='flex h-12 w-12 items-center justify-center rounded-full bg-muted/70 text-muted-foreground'>
+          <CloudUpload className='h-5 w-5' />
         </span>
-        <span className='space-y-1'>
-          <span className='block text-sm font-medium text-foreground'>
+        <span className='space-y-1 text-center'>
+          <span className='block text-sm font-medium leading-none text-foreground'>
             {title}
           </span>
-          <span className='block text-xs text-muted-foreground'>
-            {description}
-          </span>
+          {description ? (
+            <span className='block max-w-64 text-xs leading-5 text-muted-foreground'>
+              {description}
+            </span>
+          ) : null}
         </span>
       </span>
     </label>

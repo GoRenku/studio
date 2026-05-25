@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { VisualLanguageReport } from './visual-language-report';
 
@@ -82,6 +82,10 @@ describe('VisualLanguageReport', () => {
     expect(screen.getByAltText('palette-frame.png inspiration grab')).not.toBeNull();
     expect(screen.getByAltText('composition-frame.png inspiration grab')).not.toBeNull();
     expect(screen.getByAltText('lineage-frame.png inspiration grab')).not.toBeNull();
+    expect(screen.queryByText('Palette frame')).toBeNull();
+
+    fireEvent.click(screen.getByAltText('palette-frame.png inspiration grab'));
+    expect(screen.getByRole('dialog', { name: 'Palette frame' })).not.toBeNull();
   });
 
   it('renders shared Lookbook sections including Camera', () => {

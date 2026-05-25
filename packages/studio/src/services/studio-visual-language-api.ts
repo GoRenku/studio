@@ -155,6 +155,17 @@ export async function deleteLookbook(
   );
 }
 
+export async function deleteLookbookImage(
+  projectName: string,
+  imageId: string
+): Promise<void> {
+  await writeJson(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/images/${encodeURIComponent(imageId)}`,
+    'DELETE',
+    {}
+  );
+}
+
 export async function setLookbookCardImage(
   projectName: string,
   lookbookId: string,

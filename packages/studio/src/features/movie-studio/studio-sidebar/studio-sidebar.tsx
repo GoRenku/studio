@@ -8,6 +8,7 @@ import {
   Layers3,
   MapPin,
   Palette,
+  Trash2,
   UserRound,
   UsersRound,
 } from 'lucide-react';
@@ -28,9 +29,9 @@ import {
   setActiveLookbook,
 } from '@/services/studio-visual-language-api';
 import { Button } from '@/ui/button';
+import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import type { StudioSelection } from '../movie-studio-selection';
 import type { ScreenplayNavigationState } from '../use-screenplay-navigation';
-import { InspirationFolderDeleteDialog } from '../visual-language/inspiration-folder-delete-dialog';
 import { StudioSidebarActions } from './studio-sidebar-actions';
 import { StudioSidebarButton } from './studio-sidebar-button';
 import { StudioSidebarHoverActionRow } from './studio-sidebar-hover-action-row';
@@ -291,9 +292,21 @@ export function StudioSidebar({
                           onSelect({ type: 'inspiration', folderId: folder.id })
                         }
                         action={
-                          <InspirationFolderDeleteDialog
-                            folderName={folder.name}
+                          <DeleteConfirmDialog
+                            title='Delete Folder?'
+                            message={`Remove "${folder.name}" and its saved grabs.`}
                             onDelete={() => removeInspirationFolder(folder.id)}
+                            trigger={
+                              <Button
+                                type='button'
+                                size='icon'
+                                variant='ghost'
+                                className='h-6 w-6 rounded-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+                                aria-label={`Delete ${folder.name}`}
+                              >
+                                <Trash2 className='h-3.5 w-3.5' />
+                              </Button>
+                            }
                           />
                         }
                       />
