@@ -18,6 +18,10 @@ Decision history:
 - `../decisions/0003-use-better-sqlite3-with-async-storage-boundary.md`
 - `../decisions/0009-use-structured-diagnostics-at-package-boundaries.md`
 - `../decisions/0010-use-domain-naming-and-remove-obsolete-compatibility.md`
+- `../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
+- `../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
+- `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+- `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 
 ## Source Of Truth
 
@@ -25,6 +29,8 @@ Decision history:
 - Use SQLite for metadata, relationships, selects, pins, bindings, task state,
   provider run records, generation records, budget records, and cost records.
 - Store content files and generated media on the filesystem.
+- Treat Inspiration folder images as filesystem-owned content, not per-image
+  assets.
 - Treat Markdown files, subtitle files, transcripts, media files, and compound
   folders as assets when they are part of the project graph.
 - Keep short single-line display text in SQLite when that is clearer than
@@ -60,9 +66,17 @@ Decision history:
 - Generation definitions are code-owned system behavior in the current
   direction, not project-authored source folders.
 - Project files provide context and outputs for generation.
+- Persist user-editable generation specs before estimate or execution.
+- Store generation run records with spec, provider-payload, estimate, output,
+  and diagnostic snapshots.
+- Keep generation and media import separate. A generated file is not attached to
+  project metadata until an import command succeeds.
 - Generated candidates are assets and may be treated as takes.
 - Durable chosen takes/assets should be modeled as selects.
 - Production-ready selects can be exported into `production-assets/`.
+- Do not introduce generic media-purpose registries, model adapters, capability
+  YAML, or schema overlays until multiple concrete purposes prove the
+  abstraction is needed.
 
 ## Fail Fast
 

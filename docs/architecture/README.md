@@ -31,6 +31,10 @@ Use this page as the map:
 
 - `data-model-and-storage.md` is the short entry point for project data and
   storage architecture.
+- `visual-language.md` explains Inspiration Analysis and Lookbooks as
+  project-native creative direction surfaces.
+- `media-generation.md` explains the current persisted media generation and
+  separate media import architecture.
 - `drizzle-first-project-data.md` defines the Drizzle-first runtime query
   policy and raw SQL escape hatch.
 - `json-storage-validation.md` records the AJV and JSON Schema requirement for
@@ -40,6 +44,12 @@ Use this page as the map:
 - `reference/project-files-and-assets.md` explains assets, files, takes, selects, and
   production exports.
 - `reference/project-relative-paths.md` defines the stored path contract.
+- `reference/visual-language.md` defines current Inspiration Analysis,
+  Lookbook, source Inspiration, and Lookbook image rules.
+- `reference/media-generation.md` defines current persisted generation spec,
+  run, and media import rules.
+- `reference/studio-skills.md` defines how external Studio Skills use CLI and
+  architecture contracts.
 - `reference/drizzle-migrations.md` defines the Drizzle Kit migration workflow.
 - `reference/project-create-from-yaml.md` documents the current internal setup YAML
   creation path.
@@ -55,6 +65,11 @@ Use this page as the map:
   - `../decisions/0017-use-scalable-studio-resource-loading.md`
     for current project shell, lazy resource, pagination, and scoped
     invalidation architecture.
+  - `../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
+  - `../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
+  - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+  - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
+  - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 
 ## Studio App, Server, Routes, And Coordination
 
@@ -81,16 +96,24 @@ Use this page as the map:
 - `reference/structured-diagnostics.md` explains the shared diagnostics contract.
 - `naming-guidelines.md` explains domain naming rules and current contract
   names.
+- `reference/studio-skills.md` explains the CLI-backed contract for external
+  Studio Skills.
 - Related ADRs:
   - `../decisions/0004-use-human-first-cli-guidelines.md`
   - `../decisions/0007-use-core-owned-project-reference-validation-for-agent-coordination.md`
   - `../decisions/0008-use-url-owned-studio-routes.md`
   - `../decisions/0009-use-structured-diagnostics-at-package-boundaries.md`
   - `../decisions/0010-use-domain-naming-and-remove-obsolete-compatibility.md`
+  - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 
 ## Generation And Engines
 
-- `plans/exploration/project-generation-definitions.md` explores a possible
+- `media-generation.md` explains the current implemented Lookbook Image
+  generation slice, persisted generation specs, generation runs, and separate
+  media import.
+- `reference/media-generation.md` defines the current exact generation and
+  import contract.
+- `plans/exploration/project-generation-definitions.md` explores a broader
   code-owned generation boundary.
 - `plans/exploration/generation-recipes-and-task-execution.md` is a draft for
   shared generation request/task execution architecture.
@@ -98,7 +121,10 @@ Use this page as the map:
   micro-workflows and queue behavior.
 - Related ADRs:
   - `../decisions/0002-use-engines-for-ai-integrations.md`
+  - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+  - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 
-Do not promote generation explorations to architecture or ADRs until
+Do not promote broader generation explorations to architecture or ADRs until
 implementation proves the exact generation-definition, request, task, queue, and
-catalog contracts.
+catalog contracts. The current accepted implementation is the persisted
+Lookbook Image generation slice.

@@ -35,6 +35,15 @@ Use the focused documents below for current direction.
 - SQLite JSON text columns must be validated with AJV against explicit JSON
   Schemas before writes and after reads. TypeScript types, `JSON.parse`, and
   ad hoc guards are not enough for persisted JSON.
+- Inspiration folder images are filesystem-owned content and are not registered
+  as per-image assets. The persisted Inspiration Analysis JSON is SQLite-owned
+  project data.
+- Lookbooks are durable SQLite-owned project direction. Source Inspiration
+  folders and Lookbook image placement are relationships, not embedded section
+  JSON.
+- Media generation specs and runs are SQLite-owned records. Generated output
+  files remain filesystem content until an explicit media import registers and
+  attaches them as assets.
 - The canonical project database path is:
 
 ```text
@@ -59,6 +68,10 @@ The durable decision history is recorded in:
 - `docs/decisions/0012-store-project-file-references-as-project-relative-paths.md`
 - `docs/decisions/0013-use-core-owned-project-assets-and-production-exports.md`
 - `docs/decisions/0017-use-scalable-studio-resource-loading.md`
+- `docs/decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
+- `docs/decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
+- `docs/decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+- `docs/decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data
@@ -88,6 +101,14 @@ direction is superseded by ADR 0017.
 - `docs/architecture/reference/project-relative-paths.md`
   Defines the `ProjectRelativePath` contract and how paths are validated and
   resolved.
+
+- `docs/architecture/reference/visual-language.md`
+  Defines Inspiration Analysis, Lookbooks, source Inspiration relationships,
+  and Lookbook image placement.
+
+- `docs/architecture/reference/media-generation.md`
+  Defines persisted generation specs, generation runs, and separate media
+  import for the current Lookbook Image slice.
 
 - `docs/architecture/json-storage-validation.md`
   Defines the AJV and JSON Schema validation rule for SQLite JSON columns.

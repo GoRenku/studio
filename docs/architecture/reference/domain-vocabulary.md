@@ -21,6 +21,10 @@ competing product terms.
 Decision history:
 
 - `../../decisions/0010-use-domain-naming-and-remove-obsolete-compatibility.md`
+- `../../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
+- `../../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
+- `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+- `../../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 
 ## Naming Rules
 
@@ -83,6 +87,11 @@ Related terms:
 | Visual Language Entry | A reusable project decision inside a category, backed by Markdown guidance, prompt text, and optional references. | Do not call this a style profile in schema, code, or docs. |
 | Visual Language Asset | A registered asset attached to a visual language entry. | The asset type can still be `style_sheet`, `look_reference`, etc. |
 | Visual Language Catalog Entry | A system-owned option shown in Studio and readable by agents. Choosing one creates an editable project Visual Language entry. | Do not store catalog entries in project SQLite. |
+| Inspiration Folder | A project Visual Language folder containing user-provided reference images. | Folder metadata is stored in SQLite. Images inside the folder are filesystem content, not per-image assets. |
+| Inspiration Analysis | A validated visual study of one Inspiration Folder. | Stored as tagged JSON through `renku inspiration analysis`; image citations use folder-local filenames. |
+| Lookbook | A durable project visual direction made from user direction, Inspiration sources, screenplay context, or named references. | Stored as tagged JSON plus relationships. It is not a neutral reference summary. |
+| Source Inspiration | An ordered relationship between a Lookbook and an Inspiration Folder. | Do not copy Inspiration Analysis JSON into the Lookbook. |
+| Lookbook Image | A registered image asset attached to a Lookbook. | Section placement is stored in relationship rows, not in Lookbook JSON. |
 | Continuity Reference | A reusable subject that must stay visually consistent, such as a location, prop, costume, architecture, vehicle, ship, symbol, or group. | Do not hide these under Visual Language or a vague "world" bucket. |
 | Style Sheet | A visual language asset type, usually an image or board that demonstrates a desired look. | This is an asset type, not the name of the whole creative-direction system. |
 
@@ -151,11 +160,11 @@ Use **Select** for a currently chosen asset, **Pin** for cast favorites, and
 | Canonical term | Use for | Notes |
 | --- | --- | --- |
 | Media Purpose | The project-facing reason media is being made or imported. | Example: `lookbook.image`. The purpose supplies context and import behavior; it does not replace persisted generation choices. |
-| Media Purpose Key | The stable key identifying a media purpose. | Example: `lookbook.image`. |
+| Media Purpose Key | The stable key identifying a media purpose. | Example: `lookbook.image`. A purpose key does not imply a generic registry or adapter framework. |
 | Generation Type | A category of generation work, such as `cast.character-sheet` or `clip.video-take`. | Use Media Purpose when the work is about producing or importing media for a domain object. |
 | Generation Definition | The code-owned setup for reusable generation guidance. | Owns purpose guidance and prompt templates. Provider/model selection and user-facing parameters are persisted in a `Generation Spec`. It is not a project-local editable folder. |
 | Generation Key | The stable key identifying a generation type. | Prefer Media Purpose Key for media-producing commands. |
-| Generation Spec | The persisted, user-editable generation choices for a concrete target. | Agents must not override binding fields such as model choice, take count, seed, frame, detail, or output format. |
+| Generation Spec | The persisted, user-editable generation choices for a concrete target. | Agents must not override binding fields such as model choice, take count, seed, frame, detail, or output format. The current implemented spec is Lookbook Image. |
 | Task | A queued or running unit of work. | Example: generate a character sheet for one cast member. |
 | Generation Run | A durable execution record created from a generation spec. | Stores the spec snapshot, provider payload, estimate snapshot, approval token, simulation flag, status, diagnostics, and outputs. |
 | Generation Packet | A system-generated execution snapshot of resolved inputs for one task. | Useful for debugging and execution repeatability, but not the user-facing generation history model. Prefer Generation Run for persisted media-generation execution history. |
@@ -189,6 +198,7 @@ Money storage rules:
 | Provider | A service or runtime that supplies a model. | Example: OpenAI, Replicate, ElevenLabs, local runtime. |
 | Model | A provider-specific generation model. | When a `Generation Spec` is present, the model choice is binding and overrides agent preference. |
 | Model Schema | A JSON Schema describing valid parameters for a provider model. | Lives in the catalog. Code-owned generation code builds provider payloads, and engines validate those payloads against the schema before estimate or execution. |
+| Model Capability YAML | Avoid for current media generation. | Do not add capability YAML or schema overlays; validate final provider payloads against real model schemas. |
 
 ## Terms To Avoid Or Scope Carefully
 

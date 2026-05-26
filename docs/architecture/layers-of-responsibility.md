@@ -20,6 +20,10 @@ Decision history:
 - `../decisions/0003-use-better-sqlite3-with-async-storage-boundary.md`
 - `../decisions/0009-use-structured-diagnostics-at-package-boundaries.md`
 - `../decisions/0010-use-domain-naming-and-remove-obsolete-compatibility.md`
+- `../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
+- `../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
+- `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+- `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 
 ## Architecture Center
 
@@ -48,12 +52,18 @@ It should contain:
 - project-relative path validation and resolution;
 - import/export helpers;
 - shared DTOs for UI and CLI.
+- Visual Language analysis and Lookbook mutation commands.
+- persisted media generation specs and run records.
+- media import behavior that registers generated or imported files as assets.
 
-Future generation/task responsibilities also belong in core once accepted and
-implemented. Those include queue and task state logic, generation records,
-provider or engine run records, stale-state calculation, and cost approval
-state. They are architectural direction, not current implemented tables or
-services.
+Broader future generation/task responsibilities also belong in core once
+accepted and implemented. Those include queue state, general task transition
+logic, stale-state calculation, and broader cost approval state. They are
+architectural direction, not current implemented tables or services.
+
+The current accepted generation implementation is narrower: Lookbook Image
+generation uses persisted generation specs and run records owned by core, with
+provider execution delegated to engines.
 
 `studio-core` should be the only package that knows how to apply a metadata
 mutation correctly.
@@ -71,6 +81,9 @@ Examples of core-owned mutations:
 - add or update a supported language;
 - register a subtitle track or timed transcript;
 - register generated media files as assets.
+- write Inspiration Analysis documents;
+- create, update, activate, and link Lookbooks to source Inspiration folders;
+- create and run Lookbook Image generation specs.
 
 Future generation examples, after that model is accepted, include queueing a
 generation task, marking a task completed, and computing whether a clip is
@@ -254,9 +267,16 @@ Examples:
 - setting a budget;
 - approving an estimated cost;
 - queueing a generation task.
+- writing Inspiration Analysis or Lookbook JSON into project metadata;
+- creating or updating a persisted generation spec;
+- importing generated media into a Lookbook.
 
 If an agent creates a new file directly, that file is not project metadata until
 it is registered through a Renku command.
+
+External Studio Skills are operational guides over these CLI boundaries. They
+may inspect project files, but they must not write `.renku/project.sqlite`
+directly.
 
 ## Distribution Notes
 

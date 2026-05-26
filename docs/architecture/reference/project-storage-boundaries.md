@@ -18,6 +18,8 @@ Decision history:
 - `../../decisions/0011-use-drizzle-kit-for-project-sqlite-migrations.md`
 - `../../decisions/0012-store-project-file-references-as-project-relative-paths.md`
 - `../../decisions/0013-use-core-owned-project-assets-and-production-exports.md`
+- `../../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
+- `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 
 ## Core Rule
 
@@ -38,7 +40,10 @@ This means SQLite stores facts such as:
 - asset file records;
 - asset selects;
 - bindings between domain objects;
+- Inspiration folder metadata and persisted Inspiration Analysis JSON;
+- Lookbooks, source Inspiration relationships, and Lookbook image placement;
 - task, generation, provider run, budget, and cost records;
+- media generation specs and media generation runs;
 - validation state and structured diagnostics.
 
 The filesystem stores content such as:
@@ -50,6 +55,8 @@ The filesystem stores content such as:
 - audio;
 - video;
 - generated media;
+- Inspiration folder image files;
+- staged generation outputs;
 - compound asset folders.
 
 ## Text Storage

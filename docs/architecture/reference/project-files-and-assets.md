@@ -14,6 +14,9 @@ Decision history:
 
 - `../../decisions/0012-store-project-file-references-as-project-relative-paths.md`
 - `../../decisions/0013-use-core-owned-project-assets-and-production-exports.md`
+- `../../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
+- `../../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
+- `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 
 ## Asset Vocabulary
 
@@ -46,6 +49,15 @@ that must remain consistent across the movie, such as a location, prop, costume,
 architecture, ship, vehicle, symbol, or group. Initial roles include
 `description`, `reference`, `anti_reference`, and `sheet`.
 
+An **Inspiration folder image** is not an asset by default. It is plain
+filesystem content inside a Visual Language Inspiration folder. Agents inspect
+these files directly and cite them by folder-local filename in Inspiration
+Analysis JSON.
+
+A **Lookbook Image** is an asset. It is registered and attached to a Lookbook
+through Lookbook image relationships. Section placement belongs in
+`lookbook_image_section`, not in Lookbook JSON.
+
 ## Working Assets Versus Production Assets
 
 Working assets are for development and iteration.
@@ -59,6 +71,7 @@ They include:
 - selected working options;
 - localization working files;
 - character sheets;
+- Lookbook images;
 - voice samples;
 - helper images;
 - intermediate media.
@@ -92,6 +105,8 @@ at the project root. There is no `working-assets/` root and no
   props/
 
   visual-language/
+    inspiration/
+    lookbook/
 
   shotlist/
 
@@ -115,6 +130,11 @@ Folder responsibilities:
 - `screenplay/` contains authored screenplay source files.
 - `cast/`, `locations/`, `props/`, and `visual-language/` contain
   feature-owned definitions, reference material, and working files.
+- `visual-language/inspiration/` contains Inspiration folder content. Images in
+  those folders are not per-image assets unless a future command explicitly
+  registers one.
+- `visual-language/lookbook/` contains imported or generated Lookbook image
+  assets.
 - `shotlist/` contains shot planning files and shot-owned assets.
 - `production-assets/` contains clean post-production handoff files.
 
@@ -232,3 +252,7 @@ SQLite owns identity and relationships.
 
 Do not infer IDs, owners, languages, selects, clips, or bindings from file names
 or folder names.
+
+The same rule applies to Visual Language folders. A folder name may be a useful
+creative hint for an agent, but Renku relationships come from SQLite rows and
+CLI commands, not parsed names or paths.

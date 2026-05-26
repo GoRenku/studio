@@ -680,10 +680,9 @@ Behavior:
 
 ## `renku lookbook image`
 
-Attach generated example images to Lookbook sections.
+Edit generated or imported Lookbook image relationships.
 
 ```bash
-renku lookbook image import --lookbook <lookbook-id> --file <project-relative-path> --sections palette,lighting --json
 renku lookbook image set-sections --image <lookbook-image-id> --sections camera,texture --json
 renku lookbook image delete --image <lookbook-image-id> --json
 renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
@@ -692,11 +691,12 @@ renku lookbook card-image clear --lookbook <lookbook-id> --json
 
 Behavior:
 
-- `--file` is a project-relative source file only for `image import`.
 - `--image` is always a Lookbook image id.
 - Valid section keys are `thesis`, `palette`, `tone_mood`, `composition`,
   `lighting`, `texture`, and `camera`.
 - Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
+- Use `renku media import --purpose lookbook.image` to attach a new generated,
+  uploaded, or downloaded file to a Lookbook.
 
 ## `renku lookbook inspiration`
 
@@ -723,6 +723,125 @@ Behavior:
   the Lookbook.
 - To inspect Inspiration images, use `renku inspiration show` to get the folder
   path, then use normal shell commands such as `find` or `ls`.
+
+## `renku generation`
+
+Create, estimate, and run persisted media generation specs.
+
+Current implemented purpose:
+
+```text
+lookbook.image
+```
+
+Current target format:
+
+```text
+lookbook:<lookbook-id>
+```
+
+Read context and available model choices:
+
+```bash
+renku generation context --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation model list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+```
+
+Manage persisted specs:
+
+```bash
+renku generation spec validate --file <spec-json> --json
+renku generation spec create --file <spec-json> --json
+renku generation spec update --spec <spec-id> --file <spec-json> --json
+renku generation spec show --spec <spec-id> --json
+renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+```
+
+Estimate and run:
+
+```bash
+renku generation estimate --spec <spec-id> --json
+renku generation run --spec <spec-id> --approval-token <approval-token> --json
+renku generation run --spec <spec-id> --simulate --json
+```
+
+Lookbook Image spec shape:
+
+```json
+{
+  "purpose": "lookbook.image",
+  "target": { "kind": "lookbook", "id": "lookbook_abc" },
+  "modelChoice": "fal-ai/nano-banana-2",
+  "prompt": "A horror hallway showing the Lookbook palette under dread lighting.",
+  "focusSections": ["palette", "lighting"],
+  "takeCount": 1,
+  "seed": null,
+  "imageFrame": "project",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Horror palette hallway"
+}
+```
+
+Behavior:
+
+- The persisted spec is the source of truth for estimate and run.
+- Agents must not override user-selected model choice, take count, seed, image
+  frame, detail, or output format.
+- Final provider payloads are validated against the provider model JSON Schema
+  before estimate or execution.
+- Live generation requires an approval token from `generation estimate`.
+- `generation run --simulate` validates and records a simulated run without a
+  paid provider call.
+- Generation creates staged outputs and run records. It does not attach files
+  to a Lookbook. Use `renku media import` after inspecting the output.
+
+## `renku media import`
+
+Attach an existing media file to a project domain purpose.
+
+Current implemented purpose:
+
+```text
+lookbook.image
+```
+
+```bash
+renku media import \
+  --purpose lookbook.image \
+  --target lookbook:<lookbook-id> \
+  --source <project-relative-path> \
+  --sections palette,lighting \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
+```
+
+Options:
+
+- `--purpose`: required media purpose. Current supported value:
+  `lookbook.image`.
+- `--target`: required target. Current supported shape:
+  `lookbook:<lookbook-id>`.
+- `--source`: required project-relative media source path.
+- `--sections`: optional comma-separated Lookbook section keys.
+- `--title`: optional title for the imported media.
+- `--summary`: optional one-line summary.
+- `--receipt`: optional generation run or receipt JSON.
+
+Behavior:
+
+- Import is separate from generation. A generated file is not attached to a
+  Lookbook until this command succeeds.
+- The file may come from Renku generation, another tool, a manual upload, or a
+  download.
+- For Lookbook Images, import registers an asset, creates the Lookbook image
+  relationship, stores section placement, and appends Studio resource refresh
+  events.
+- Agents should inspect generated images before import and tag only the
+  sections the image visibly demonstrates. Do not blindly copy
+  `focusSections` into `--sections`.
 
 ## `renku asset register`
 
