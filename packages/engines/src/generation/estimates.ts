@@ -1,4 +1,8 @@
-import { lookupModel, type LoadedModelCatalog, type ModelPriceConfig } from '../model-catalog.js';
+import {
+  lookupModel,
+  type LoadedModelCatalog,
+  type ModelPriceConfig,
+} from '../model-catalog.js';
 import {
   type GenerationEstimate,
   type GenerationPolicy,
@@ -7,39 +11,39 @@ import {
 import { loadBundledGenerationCatalog } from './model-discovery.js';
 import { hashGenerationRequest } from './request-hash.js';
 import { validateGenerationProviderPayload } from './provider-payload-validation.js';
+import {
+  assignGenerationInputFilePayloadValue,
+  createGenerationProviderPayloadBase,
+} from './input-file-payload.js';
 
 export async function estimateGeneration(input: {
   policy: GenerationPolicy;
   request: GenerationRequest;
   catalog?: LoadedModelCatalog;
 }): Promise<GenerationEstimate> {
-  const catalog = input.catalog ?? await loadBundledGenerationCatalog();
+  const catalog = input.catalog ?? (await loadBundledGenerationCatalog());
   const model = lookupModel(catalog, input.policy.provider, input.policy.model);
   if (!model) {
     throw new Error(
       `Unknown generation model: ${input.policy.provider}/${input.policy.model}.`
     );
   }
-  const payload: Record<string, unknown> = {
-    ...(input.request.parameters ?? {}),
-    ...(input.policy.parameters ?? {}),
-  };
-  if (input.request.prompt) {
-    payload.prompt = input.request.prompt;
-  }
+  const payload = buildLogicalProviderPayload(input.policy, input.request);
   await validateGenerationProviderPayload({
     catalog,
     provider: input.policy.provider,
     model: input.policy.model,
     payload,
   });
-  const count = input.policy.outputCount ?? deriveGenerationOutputCount(payload);
+  const count =
+    input.policy.outputCount ?? deriveGenerationOutputCount(payload);
   const pricing = model.price ?? null;
-  const price = pricing === null
-    ? null
-    : typeof pricing === 'number'
-      ? pricing * count
-      : priceFromConfig(pricing, payload, count);
+  const price =
+    pricing === null
+      ? null
+      : typeof pricing === 'number'
+        ? pricing * count
+        : priceFromConfig(pricing, payload, count);
 
   return {
     provider: input.policy.provider,
@@ -55,8 +59,26 @@ export async function estimateGeneration(input: {
       outputCount: count,
       ...payload,
     },
-    warnings: price === null ? ['No pricing is configured for this model.'] : [],
+    warnings:
+      price === null ? ['No pricing is configured for this model.'] : [],
   };
+}
+
+export function buildLogicalProviderPayload(
+  policy: GenerationPolicy,
+  request: GenerationRequest
+): Record<string, unknown> {
+  const payload = createGenerationProviderPayloadBase(policy, request);
+  for (const file of request.inputFiles ?? []) {
+    if (file.required && !file.projectRelativePath) {
+      throw new Error(
+        `Missing required generation input file for ${file.field}.`
+      );
+    }
+    const value = `renku-input://${encodeURI(file.projectRelativePath)}`;
+    assignGenerationInputFilePayloadValue({ payload, file, value });
+  }
+  return payload;
 }
 
 function priceFromConfig(
@@ -114,7 +136,8 @@ export function deriveGenerationOutputCount(
 }
 
 function seconds(payload: Record<string, unknown>): number {
-  const raw = payload.duration_seconds ?? payload.durationSeconds ?? payload.duration;
+  const raw =
+    payload.duration_seconds ?? payload.durationSeconds ?? payload.duration;
   return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : 1;
 }
 

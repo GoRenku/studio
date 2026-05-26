@@ -7,6 +7,7 @@ import { ThemeProvider } from './theme-provider';
 import type {
   ProjectLibraryWithHttp,
   ProjectShellWithHttp,
+  StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
@@ -441,10 +442,44 @@ describe('App', () => {
         });
       }
       if (
+        url.startsWith(
+          '/studio-api/projects/constantinople/cast/cast_narrator/assets'
+        )
+      ) {
+        const asset = makeStudioAsset({
+          assetId: 'asset_cast_narrator_profile',
+          castMemberId: 'cast_narrator',
+          role: 'profile',
+          title: 'Narrator profile',
+          selection: { kind: 'select', order: 1 },
+        });
+        return jsonResponse({
+          assets: [asset],
+          page: { items: [asset], nextCursor: null },
+        });
+      }
+      if (
         url ===
         '/studio-api/projects/constantinople/screenplay/cast/cast_mehmed'
       ) {
         return mehmedAssets.promise;
+      }
+      if (
+        url.startsWith(
+          '/studio-api/projects/constantinople/cast/cast_mehmed/assets'
+        )
+      ) {
+        const asset = makeStudioAsset({
+          assetId: 'asset_cast_mehmed_profile',
+          castMemberId: 'cast_mehmed',
+          role: 'profile',
+          title: 'Mehmed profile',
+          selection: { kind: 'select', order: 1 },
+        });
+        return jsonResponse({
+          assets: [asset],
+          page: { items: [asset], nextCursor: null },
+        });
       }
       if (url === '/studio-api/studio/events/current') {
         return jsonResponse(emptyStudioCurrent());
@@ -484,7 +519,7 @@ describe('App', () => {
       })
     );
 
-    await screen.findByAltText('Mehmed');
+    await screen.findByText('Mehmed anchors the audience point of view.');
     expect(projectReadCount).toBe(1);
   });
 
@@ -1199,6 +1234,23 @@ function mockStudioFetch(input: {
         }),
       });
     }
+    if (
+      url.startsWith(
+        '/studio-api/projects/constantinople/cast/cast_narrator/assets'
+      )
+    ) {
+      const asset = makeStudioAsset({
+        assetId: 'asset_cast_narrator_profile',
+        castMemberId: 'cast_narrator',
+        role: 'profile',
+        title: 'Narrator profile',
+        selection: { kind: 'select', order: 1 },
+      });
+      return jsonResponse({
+        assets: [asset],
+        page: { items: [asset], nextCursor: null },
+      });
+    }
     if (url === '/studio-api/projects/constantinople/screenplay/locations') {
       return jsonResponse({
         resource: {
@@ -1617,6 +1669,47 @@ function makeScreenplayImageReference(
     width: 1200,
     height: 900,
     url: `/studio-api/assets/${assetId}`,
+  };
+}
+
+function makeStudioAsset(options: {
+  assetId: string;
+  castMemberId: string;
+  role: string;
+  title: string;
+  selection?: StudioAssetResponse['selection'];
+}): StudioAssetResponse {
+  return {
+    assetId: options.assetId,
+    relationshipId: `${options.assetId}_relationship`,
+    target: { kind: 'castMember', castMemberId: options.castMemberId },
+    localeId: null,
+    type: options.role === 'profile' ? 'cast_profile' : 'character_sheet',
+    selection: options.selection ?? { kind: 'take' },
+    availability: 'ready',
+    mediaKind: 'image',
+    title: options.title,
+    oneLineSummary: null,
+    origin: 'imported',
+    role: options.role,
+    sortOrder: 1,
+    files: [
+      {
+        id: `${options.assetId}_file`,
+        role: 'primary',
+        projectRelativePath:
+          `cast/${options.castMemberId}/${options.assetId}.png` as StudioAssetResponse['files'][number]['projectRelativePath'],
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        sizeBytes: 12,
+        contentHash: null,
+        width: 1024,
+        height: 1024,
+        durationSeconds: null,
+      },
+    ],
+    createdAt: '2026-05-12T00:00:00.000Z',
+    updatedAt: '2026-05-12T00:00:00.000Z',
   };
 }
 

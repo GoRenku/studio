@@ -252,10 +252,11 @@ export async function prepareLookbookImageSpec(
   input: LookbookImageSpecIdInput
 ): Promise<PreparedMediaGeneration> {
   const specRecord = await readLookbookImageSpec(input);
+  assertLookbookImageSpec(specRecord.spec);
   const context = await buildLookbookImageContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    lookbookId: specRecord.target.id,
+    lookbookId: specRecord.spec.target.id,
   });
   const plan = buildLookbookImageProviderPayload(specRecord.spec, context);
   return {
@@ -321,6 +322,7 @@ export async function recordLookbookImageRun(
   input: RecordLookbookImageRunInput
 ): Promise<MediaGenerationRunReport> {
   const specRecord = await readLookbookImageSpec(input);
+  assertLookbookImageSpec(specRecord.spec);
   const now = new Date().toISOString();
   const run = await withProjectSession(input, ({ session }) => {
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
@@ -765,6 +767,17 @@ function assertLookbookImageModelChoice(
 ): asserts modelChoice is LookbookImageModelChoice {
   if (!LOOKBOOK_IMAGE_MODEL_CHOICES.has(modelChoice)) {
     unsupportedLookbookImageModel(modelChoice);
+  }
+}
+
+function assertLookbookImageSpec(
+  spec: MediaGenerationSpecRecord['spec']
+): asserts spec is LookbookImageGenerationSpec {
+  if (spec.purpose !== LOOKBOOK_IMAGE_GENERATION_PURPOSE) {
+    throw new ProjectDataError(
+      'PROJECT_DATA262',
+      `Unsupported media generation spec purpose: ${spec.purpose}.`
+    );
   }
 }
 

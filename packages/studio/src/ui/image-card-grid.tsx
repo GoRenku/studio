@@ -1,15 +1,12 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-interface VisualLanguageImageGridProps {
+interface ImageCardGridProps {
   children: ReactNode;
   className?: string;
 }
 
-export function VisualLanguageImageGrid({
-  children,
-  className,
-}: VisualLanguageImageGridProps) {
+export function ImageCardGrid({ children, className }: ImageCardGridProps) {
   return (
     <div
       className={cn(

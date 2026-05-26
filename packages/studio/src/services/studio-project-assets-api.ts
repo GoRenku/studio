@@ -7,10 +7,19 @@ import { readStudioApiError } from './studio-api-errors';
 
 interface CastAssetsResponse {
   assets: StudioAssetResponse[];
+  page: {
+    items: StudioAssetResponse[];
+    nextCursor: string | null;
+  };
 }
 
 interface CastAssetResponse {
   asset: StudioAssetResponse | null;
+  resourceKeys?: string[];
+}
+
+interface CastAssetDeleteResponse {
+  assetId: string;
   resourceKeys?: string[];
 }
 
@@ -26,13 +35,23 @@ export async function readCastAssets(
   projectName: string,
   castMemberId: string
 ): Promise<StudioAssetResponse[]> {
-  const response = await fetch(castAssetsUrl(projectName, castMemberId));
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
+  const assets: StudioAssetResponse[] = [];
+  let cursor: string | null = null;
+  do {
+    const search = new URLSearchParams({ limit: '200' });
+    if (cursor) search.set('cursor', cursor);
+    const response = await fetch(
+      `${castAssetsUrl(projectName, castMemberId)}?${search.toString()}`
+    );
+    if (!response.ok) {
+      throw await readStudioApiError(response);
+    }
 
-  const body = (await response.json()) as CastAssetsResponse;
-  return body.assets;
+    const body = (await response.json()) as CastAssetsResponse;
+    assets.push(...body.page.items);
+    cursor = body.page.nextCursor;
+  } while (cursor);
+  return assets;
 }
 
 export async function readCastDesignResource(
@@ -133,6 +152,25 @@ export async function unselectCastAsset(
   return body.asset;
 }
 
+export async function deleteCastAsset(
+  projectName: string,
+  castMemberId: string,
+  assetId: string
+): Promise<string> {
+  const response = await fetch(castAssetUrl(projectName, castMemberId, assetId), {
+    method: 'DELETE',
+    headers: {
+      'X-Renku-Studio-Token': readStudioApiToken(),
+    },
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as CastAssetDeleteResponse;
+  return body.assetId;
+}
+
 export function castAssetFileUrl(
   projectName: string,
   castMemberId: string,
@@ -151,6 +189,14 @@ function castDesignResourceUrl(
 
 function castAssetsUrl(projectName: string, castMemberId: string): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/assets`;
+}
+
+function castAssetUrl(
+  projectName: string,
+  castMemberId: string,
+  assetId: string
+): string {
+  return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}`;
 }
 
 function castAssetSelectUrl(

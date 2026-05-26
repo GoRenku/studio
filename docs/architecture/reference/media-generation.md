@@ -17,25 +17,33 @@ Decision history:
 - `../../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `../../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 
-## Current Purpose
+## Current Purposes
 
-The first implemented media generation purpose is:
+The implemented media generation purposes are:
 
 ```text
 lookbook.image
+cast.character-sheet
+cast.profile
 ```
 
-Target format:
+Target formats:
 
 ```text
 lookbook:<lookbook-id>
+cast:<cast-member-id>
 ```
 
-Core contract target shape:
+Core contract target shapes:
 
 ```ts
 {
   kind: 'lookbook';
+  id: string;
+}
+
+{
+  kind: 'castMember';
   id: string;
 }
 ```
@@ -46,21 +54,29 @@ Current CLI surface:
 
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<id> --json
+renku generation context --purpose cast.character-sheet --target cast:<id> --json
+renku generation context --purpose cast.profile --target cast:<id> --json
+
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
+renku generation model list --purpose cast.character-sheet --target cast:<id> --json
+renku generation model list --purpose cast.profile --target cast:<id> --json
 
 renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
+
 renku generation spec list --purpose lookbook.image --target lookbook:<id> --json
+renku generation spec list --purpose cast.character-sheet --target cast:<id> --json
+renku generation spec list --purpose cast.profile --target cast:<id> --json
 
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
 renku generation run --spec <spec-id> --simulate --json
 ```
 
-The CLI command names are generic. The implementation is currently a direct
-Lookbook Image vertical slice.
+The CLI command names are generic. The implementation uses direct purpose
+switching rather than a generic purpose registry.
 
 ## Lookbook Image Context
 
@@ -81,6 +97,50 @@ The context includes:
 
 It does not return generic model requirements, prompt instructions, provider
 capability summaries, or an import contract.
+
+## Cast Character Sheet Context
+
+`cast.character-sheet` context is built for one cast member and requires an
+active Lookbook. The context includes:
+
+- project title, summary, aspect ratio, and languages;
+- screenplay summary and major story signals when a screenplay exists;
+- cast member facts such as handle, role, want, need, arc, voice notes, and
+  description;
+- time-period signals from screenplay history, cast-referenced scene settings,
+  and referenced locations;
+- the active Lookbook and its card image;
+- selected cast assets and existing character sheet/profile takes;
+- image file references for attached cast assets;
+- defaults for take count, seed, image frame, detail, and output format.
+
+Character sheet generation should create a full reusable design reference for
+the character. It should account for the story, the character, the period, and
+the active visual language. The best current model choices are:
+
+- `fal-ai/openai/gpt-image-2`
+- `fal-ai/nano-banana-2`
+- `fal-ai/xai/grok-imagine-image`
+
+## Cast Profile Context
+
+`cast.profile` context is built for one cast member. It can run text-to-image
+without a source sheet, but edit models require `sourceAssetId`.
+
+The profile context includes the same project, screenplay, cast member,
+time-period, Lookbook, and asset signals as character sheets. It also returns:
+
+- selected character sheets;
+- character sheet takes;
+- profile takes;
+- `recommendedSourceAssetId`, which is the selected character sheet when one is
+  available;
+- a square `1:1` default image frame.
+
+Profile images should usually be generated after a character sheet exists. When
+using an edit model, the generated request carries a logical `image_urls` file
+input. The engine resolves that project-relative source file immediately before
+provider execution.
 
 ## Lookbook Image Spec
 
@@ -145,6 +205,64 @@ Supported output formats:
 Model-specific validation may reject a supported product option when the chosen
 model cannot execute it. For example, some models reject `21:9` or seeds.
 
+## Cast Character Sheet Spec
+
+```json
+{
+  "purpose": "cast.character-sheet",
+  "target": { "kind": "castMember", "id": "cast_ada" },
+  "modelChoice": "fal-ai/nano-banana-2",
+  "prompt": "A full character sheet for Ada, a determined investigator in late 1970s New York...",
+  "takeCount": 1,
+  "seed": null,
+  "imageFrame": "project",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Ada character sheet"
+}
+```
+
+## Cast Profile Spec
+
+Text-to-image profile spec:
+
+```json
+{
+  "purpose": "cast.profile",
+  "target": { "kind": "castMember", "id": "cast_ada" },
+  "modelChoice": "fal-ai/nano-banana-2",
+  "prompt": "A square profile portrait of Ada...",
+  "takeCount": 1,
+  "seed": null,
+  "imageFrame": "1:1",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Ada profile"
+}
+```
+
+Edit profile spec:
+
+```json
+{
+  "purpose": "cast.profile",
+  "target": { "kind": "castMember", "id": "cast_ada" },
+  "modelChoice": "fal-ai/nano-banana-2/edit",
+  "sourceAssetId": "asset_character_sheet",
+  "prompt": "Create a square profile portrait derived from the attached character sheet...",
+  "takeCount": 1,
+  "seed": null,
+  "imageFrame": "1:1",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Ada profile from sheet"
+}
+```
+
+Profile text-to-image models must not include `sourceAssetId`. Profile edit
+models must include `sourceAssetId`, and that asset must be an image attached to
+the cast member with the `character_sheet` role.
+
 ## Estimate And Run
 
 Estimate and run both use the persisted spec.
@@ -152,7 +270,7 @@ Estimate and run both use the persisted spec.
 The command sequence is:
 
 1. Read the persisted spec.
-2. Build current Lookbook Image context.
+2. Build current purpose context.
 3. Validate the spec against that context.
 4. Build the final provider payload.
 5. Validate the provider payload against the model JSON Schema.
@@ -212,6 +330,34 @@ renku media import \
 For Lookbook Images, import registers an asset, creates the Lookbook image
 relationship, stores section placement, and emits Lookbook resource keys.
 
+For Cast Character Sheets, import registers an image asset with type
+`character_sheet`, attaches it to the cast member with role `character_sheet`,
+and stores the file under `cast/<handle>/character-sheets/`.
+
+For Cast Profiles, import registers an image asset with type `cast_profile`,
+attaches it to the cast member with role `profile`, and stores the file under
+`cast/<handle>/profiles/`.
+
+```bash
+renku media import \
+  --purpose cast.character-sheet \
+  --target cast:<cast-member-id> \
+  --source <project-relative-path> \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
+
+renku media import \
+  --purpose cast.profile \
+  --target cast:<cast-member-id> \
+  --source <project-relative-path> \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
+```
+
 The current CLI expects a project-relative source path. Importing absolute paths
 can be reconsidered in a future implementation slice, but it is not the current
 contract.
@@ -222,10 +368,9 @@ import and choose section tags based on what the image visibly demonstrates.
 
 ## Future Purpose Rule
 
-When adding the next purpose, add a second concrete implementation file and
+When adding the next purpose, add another concrete implementation file and
 direct switch cases. Do not introduce a registry or adapter framework until
 multiple concrete purposes prove that shared code would remove real complexity.
 
 Do not add model capability YAML, schema overlays, or inferred model support.
 Provider model JSON Schemas validate final payloads only.
-

@@ -1,0 +1,139 @@
+import type { PreviewImage } from '@/ui/image-preview-dialog';
+import { imageAspectRatioFromDimensions } from '@/ui/image-aspect-ratio';
+import type { StudioAssetResponse } from '@/services/studio-project-contracts';
+import { castAssetFileUrl } from '@/services/studio-project-assets-api';
+
+export const CAST_PROFILE_ROLE = 'profile';
+export const CAST_CHARACTER_SHEET_ROLE = 'character_sheet';
+
+export function castImageAssetsForRole(
+  assets: StudioAssetResponse[],
+  role: string
+): StudioAssetResponse[] {
+  return sortCastAssets(
+    assets.filter(
+      (asset) => asset.role === role && Boolean(castImageAssetFile(asset))
+    )
+  );
+}
+
+export function selectedCastImageAssetForRole(
+  assets: StudioAssetResponse[],
+  role: string
+): StudioAssetResponse | null {
+  return (
+    castImageAssetsForRole(assets, role).find(
+      (asset) => asset.selection.kind === 'select'
+    ) ?? null
+  );
+}
+
+export function preferredCastImageAssetForRole(
+  assets: StudioAssetResponse[],
+  role: string
+): StudioAssetResponse | null {
+  const roleAssets = castImageAssetsForRole(assets, role);
+  return (
+    roleAssets.find((asset) => asset.selection.kind === 'select') ??
+    roleAssets[0] ??
+    null
+  );
+}
+
+export function castImageAssetFile(asset: StudioAssetResponse) {
+  return asset.files.find((file) => file.mediaKind === 'image') ?? null;
+}
+
+export function castImageAssetUrl(
+  projectName: string,
+  castMemberId: string,
+  asset: StudioAssetResponse
+): string | null {
+  const file = castImageAssetFile(asset);
+  return file
+    ? castAssetFileUrl(projectName, castMemberId, asset.assetId, file.id)
+    : null;
+}
+
+export function castImageAssetAspectRatio(
+  asset: StudioAssetResponse,
+  fallbackAspectRatio: number
+): number {
+  const file = castImageAssetFile(asset);
+  return imageAspectRatioFromDimensions(
+    file?.width,
+    file?.height,
+    fallbackAspectRatio
+  );
+}
+
+export function castPreviewImageForAsset(
+  projectName: string,
+  castMemberId: string,
+  asset: StudioAssetResponse
+): PreviewImage | null {
+  const src = castImageAssetUrl(projectName, castMemberId, asset);
+  if (!src) return null;
+  return {
+    src,
+    alt: asset.title,
+    title: readableCastImageTitle(asset),
+  };
+}
+
+export function readableCastImageTitle(asset: StudioAssetResponse): string {
+  const title = asset.title.trim();
+  if (title) return humanizeAssetTitle(title);
+  return humanizeAssetRole(asset.role);
+}
+
+export function humanizeAssetRole(role: string): string {
+  return role
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function humanizeAssetTitle(title: string): string {
+  const withoutExtension = title.replace(/\.[^.]+$/, '');
+  const titleWithSpaces = withoutExtension
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!titleWithSpaces) return title;
+  if (titleWithSpaces.includes(' ')) {
+    return titleWithSpaces.charAt(0).toUpperCase() + titleWithSpaces.slice(1);
+  }
+  return title;
+}
+
+function sortCastAssets(assets: StudioAssetResponse[]): StudioAssetResponse[] {
+  return [...assets].sort((left, right) => {
+    const selectionDifference =
+      selectionRank(left) - selectionRank(right);
+    if (selectionDifference !== 0) return selectionDifference;
+
+    const selectionOrderDifference =
+      selectionOrderRank(left) - selectionOrderRank(right);
+    if (selectionOrderDifference !== 0) return selectionOrderDifference;
+
+    const sortDifference = left.sortOrder - right.sortOrder;
+    if (sortDifference !== 0) return sortDifference;
+
+    const titleDifference = left.title.localeCompare(right.title);
+    if (titleDifference !== 0) return titleDifference;
+
+    return left.assetId.localeCompare(right.assetId);
+  });
+}
+
+function selectionRank(asset: StudioAssetResponse): number {
+  return asset.selection.kind === 'select' ? 0 : 1;
+}
+
+function selectionOrderRank(asset: StudioAssetResponse): number {
+  return asset.selection.kind === 'select'
+    ? asset.selection.order
+    : Number.MAX_SAFE_INTEGER;
+}

@@ -74,6 +74,8 @@ Use this page as the map:
 ## Studio App, Server, Routes, And Coordination
 
 - `reference/studio-server-hono.md` explains the local Hono server structure.
+- `frontend.md` summarizes the current Studio frontend architecture, including
+  reusable UI primitive ownership and media-surface conventions.
 - `reference/front-end-guidelines.md` explains frontend folder and component boundaries.
 - `studio-coordination-events.md` explains local browser/CLI/agent coordination
   events.
@@ -90,6 +92,8 @@ Use this page as the map:
   - `../decisions/0017-use-scalable-studio-resource-loading.md`
     for current project shell, selected resource, keyset pagination, and
     `studio.projectResourcesChanged` behavior.
+  - `../decisions/0023-use-domain-neutral-ui-primitives-for-shared-frontend-patterns.md`
+    for shared UI primitive ownership and reusable image-card behavior.
 
 ## Diagnostics, Naming, CLI, And Contracts
 

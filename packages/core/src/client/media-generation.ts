@@ -1,9 +1,22 @@
+import type { Asset } from './assets.js';
+import type { CastMember } from './cast-members.js';
+import type { ProjectLanguage } from './project-languages.js';
+import type { ProjectRelativePath } from './project.js';
+import type { SceneSetting } from './screenplay.js';
 import type { Lookbook, LookbookImage, LookbookSection } from './visual-language.js';
 import type { InspirationFolderWithResolvedPath } from './visual-language.js';
 
 export const LOOKBOOK_IMAGE_GENERATION_PURPOSE = 'lookbook.image' as const;
+export const CAST_CHARACTER_SHEET_GENERATION_PURPOSE =
+  'cast.character-sheet' as const;
+export const CAST_PROFILE_GENERATION_PURPOSE = 'cast.profile' as const;
 
 export type MediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
+
+export type MediaGenerationPurpose =
+  | typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE
+  | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE
+  | typeof CAST_PROFILE_GENERATION_PURPOSE;
 
 export type LookbookImageModelChoice =
   | 'fal-ai/openai/gpt-image-2'
@@ -24,9 +37,133 @@ export type LookbookImageDetail = 'draft' | 'standard' | 'high';
 
 export type LookbookImageOutputFormat = 'png' | 'jpeg' | 'webp';
 
+export type CastImageFrame = LookbookImageFrame;
+export type CastImageDetail = LookbookImageDetail;
+export type CastImageOutputFormat = LookbookImageOutputFormat;
+
+export type CastCharacterSheetModelChoice =
+  | 'fal-ai/openai/gpt-image-2'
+  | 'fal-ai/nano-banana-2'
+  | 'fal-ai/xai/grok-imagine-image';
+
+export type CastProfileModelChoice =
+  | 'fal-ai/openai/gpt-image-2'
+  | 'fal-ai/nano-banana-2'
+  | 'fal-ai/xai/grok-imagine-image'
+  | 'fal-ai/openai/gpt-image-2/edit'
+  | 'fal-ai/nano-banana-2/edit'
+  | 'fal-ai/xai/grok-imagine-image/edit';
+
 export interface LookbookImageGenerationTarget {
   kind: 'lookbook';
   id: string;
+}
+
+export interface CastMediaGenerationTarget {
+  kind: 'castMember';
+  id: string;
+}
+
+export type MediaGenerationTarget =
+  | LookbookImageGenerationTarget
+  | CastMediaGenerationTarget;
+
+export interface CastGenerationProjectContext {
+  id?: string;
+  name: string;
+  title: string;
+  aspectRatio: string | null;
+  logline?: string | null;
+  summary?: string | null;
+  languages: ProjectLanguage[];
+}
+
+export interface CastGenerationScreenplayContext {
+  title?: string;
+  genrePrimary?: string;
+  genreSecondary?: string[];
+  tone?: string[];
+  logline?: string;
+  summary?: string;
+  premiseOverview?: string;
+  centralConflict?: string;
+  dramaticQuestion?: string;
+  themes?: string[];
+  historicalBasis?: string[];
+}
+
+export interface CastGenerationTimePeriodContext {
+  historicalBasis: string[];
+  locationTimePeriods: string[];
+  sceneSignals: Array<{
+    sceneId: string;
+    title: string;
+    setting?: SceneSetting;
+  }>;
+}
+
+export interface CastGenerationAssetFileReference {
+  assetId: string;
+  assetFileId: string;
+  role: string;
+  projectRelativePath: ProjectRelativePath;
+  absolutePath: string;
+  mediaKind: string;
+  mimeType: string | null;
+}
+
+export interface CastGenerationLookbookContext {
+  lookbook: Lookbook;
+  cardImage: LookbookImage | null;
+  isActive: boolean;
+}
+
+export interface CastCharacterSheetGenerationContext {
+  purpose: typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  project: CastGenerationProjectContext;
+  screenplay: CastGenerationScreenplayContext | null;
+  castMember: CastMember;
+  timePeriod: CastGenerationTimePeriodContext;
+  activeLookbook: CastGenerationLookbookContext;
+  selectedAssets: Asset[];
+  characterSheetTakes: Asset[];
+  profileTakes: Asset[];
+  imageFiles: CastGenerationAssetFileReference[];
+  defaults: {
+    takeCount: 1;
+    seed: null;
+    imageFrame: 'project';
+    resolvedAspectRatio: string | null;
+    detail: 'standard';
+    outputFormat: 'png';
+  };
+  resourceKeys: string[];
+}
+
+export interface CastProfileGenerationContext {
+  purpose: typeof CAST_PROFILE_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  project: CastGenerationProjectContext;
+  screenplay: CastGenerationScreenplayContext | null;
+  castMember: CastMember;
+  timePeriod: CastGenerationTimePeriodContext;
+  activeLookbook: CastGenerationLookbookContext | null;
+  selectedAssets: Asset[];
+  selectedCharacterSheets: Asset[];
+  characterSheetTakes: Asset[];
+  profileTakes: Asset[];
+  imageFiles: CastGenerationAssetFileReference[];
+  recommendedSourceAssetId: string | null;
+  defaults: {
+    takeCount: 1;
+    seed: null;
+    imageFrame: '1:1';
+    resolvedAspectRatio: '1:1';
+    detail: 'standard';
+    outputFormat: 'png';
+  };
+  resourceKeys: string[];
 }
 
 export interface LookbookImageGenerationContext {
@@ -68,6 +205,38 @@ export interface LookbookImageGenerationSpec {
   title?: string;
 }
 
+export interface CastCharacterSheetGenerationSpec {
+  purpose: typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  modelChoice: CastCharacterSheetModelChoice;
+  prompt: string;
+  takeCount?: number;
+  seed?: number | null;
+  imageFrame?: CastImageFrame;
+  detail?: CastImageDetail;
+  outputFormat?: CastImageOutputFormat;
+  title?: string;
+}
+
+export interface CastProfileGenerationSpec {
+  purpose: typeof CAST_PROFILE_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  modelChoice: CastProfileModelChoice;
+  prompt: string;
+  sourceAssetId?: string | null;
+  takeCount?: number;
+  seed?: number | null;
+  imageFrame?: CastImageFrame;
+  detail?: CastImageDetail;
+  outputFormat?: CastImageOutputFormat;
+  title?: string;
+}
+
+export type MediaGenerationSpec =
+  | LookbookImageGenerationSpec
+  | CastCharacterSheetGenerationSpec
+  | CastProfileGenerationSpec;
+
 export interface LookbookImageModelChoiceReport {
   modelChoice: LookbookImageModelChoice;
   label: string;
@@ -84,6 +253,35 @@ export interface LookbookImageModelChoiceReport {
   supportedOutputFormats: LookbookImageOutputFormat[];
 }
 
+export interface CastImageModelChoiceReport {
+  modelChoice: CastCharacterSheetModelChoice | CastProfileModelChoice;
+  label: string;
+  available: boolean;
+  unavailableReason?: string;
+  supportsSeed: boolean;
+  requiresSourceAsset: boolean;
+  takeCount: {
+    min: 1;
+    max: number;
+    default: 1;
+  };
+  supportedFrames: CastImageFrame[];
+  supportedDetails: CastImageDetail[];
+  supportedOutputFormats: CastImageOutputFormat[];
+}
+
+export interface CastCharacterSheetModelListReport {
+  purpose: typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  models: CastImageModelChoiceReport[];
+}
+
+export interface CastProfileModelListReport {
+  purpose: typeof CAST_PROFILE_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  models: CastImageModelChoiceReport[];
+}
+
 export interface LookbookImageModelListReport {
   purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
   target: LookbookImageGenerationTarget;
@@ -92,11 +290,14 @@ export interface LookbookImageModelListReport {
 
 export interface MediaGenerationSpecRecord {
   id: string;
-  purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
-  target: LookbookImageGenerationTarget;
-  modelChoice: LookbookImageModelChoice;
+  purpose: MediaGenerationPurpose;
+  target: MediaGenerationTarget;
+  modelChoice:
+    | LookbookImageModelChoice
+    | CastCharacterSheetModelChoice
+    | CastProfileModelChoice;
   title: string;
-  spec: LookbookImageGenerationSpec;
+  spec: MediaGenerationSpec;
   createdAt: string;
   updatedAt: string;
 }
@@ -104,12 +305,15 @@ export interface MediaGenerationSpecRecord {
 export interface MediaGenerationRun {
   id: string;
   specId: string;
-  purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
-  target: LookbookImageGenerationTarget;
-  modelChoice: LookbookImageModelChoice;
+  purpose: MediaGenerationPurpose;
+  target: MediaGenerationTarget;
+  modelChoice:
+    | LookbookImageModelChoice
+    | CastCharacterSheetModelChoice
+    | CastProfileModelChoice;
   provider: 'fal-ai';
   model: string;
-  specSnapshot: LookbookImageGenerationSpec;
+  specSnapshot: MediaGenerationSpec;
   providerPayload: Record<string, unknown>;
   estimateSnapshot: unknown;
   approvalToken?: string;
@@ -135,11 +339,18 @@ export interface PreparedMediaGeneration {
       provider: 'fal-ai';
       model: string;
       mediaKind: 'image';
-      mode: 'text-to-image';
+      mode: 'text-to-image' | 'image-edit';
       outputCount: number;
     };
     request: {
       prompt: string;
+      inputFiles?: Array<{
+        field: string;
+        projectRelativePath: string;
+        mediaKind: 'image';
+        asArray?: boolean;
+        required?: boolean;
+      }>;
       parameters: Record<string, unknown>;
       outputNames: string[];
     };
@@ -162,6 +373,24 @@ export interface LookbookImageMediaImportReport {
   purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
   target: LookbookImageGenerationTarget;
   imported: LookbookImage;
+  receipt?: unknown;
+  resourceKeys: string[];
+}
+
+export interface CastMediaImportReport {
+  valid: true;
+  warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  project: {
+    name: string;
+    id?: string;
+    projectFolder?: string;
+  };
+  changes?: Array<{ type: string; [key: string]: string }>;
+  purpose:
+    | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE
+    | typeof CAST_PROFILE_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  imported: Asset;
   receipt?: unknown;
   resourceKeys: string[];
 }

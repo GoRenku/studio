@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/ui/button';
 import {
@@ -8,6 +7,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/ui/dialog';
+import { useImageAspectRatio } from '@/ui/image-aspect-ratio';
 
 export interface PreviewImage {
   src: string;
@@ -24,7 +24,8 @@ export function ImagePreviewDialog({
   image,
   onOpenChange,
 }: ImagePreviewDialogProps) {
-  const [aspectRatio, setAspectRatio] = useState(16 / 9);
+  const { aspectRatio, aspectRatioStyle, onImageLoad } =
+    useImageAspectRatio(16 / 9, image?.src ?? null);
 
   return (
     <Dialog open={Boolean(image)} onOpenChange={onOpenChange}>
@@ -51,7 +52,7 @@ export function ImagePreviewDialog({
           <div
             className='overflow-hidden bg-panel-bg'
             style={{
-              aspectRatio,
+              ...aspectRatioStyle,
               width: `min(calc(100vw - 3rem), calc((100vh - 3rem) * ${aspectRatio}))`,
             }}
           >
@@ -60,12 +61,7 @@ export function ImagePreviewDialog({
               src={image.src}
               alt={image.alt}
               className='block h-full w-full object-contain'
-              onLoad={(event) => {
-                const { naturalHeight, naturalWidth } = event.currentTarget;
-                if (naturalWidth > 0 && naturalHeight > 0) {
-                  setAspectRatio(naturalWidth / naturalHeight);
-                }
-              }}
+              onLoad={onImageLoad}
             />
           </div>
         ) : null}

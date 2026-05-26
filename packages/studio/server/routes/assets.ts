@@ -88,6 +88,25 @@ export function createAssetsRoute({
         }
       }
     )
+    .delete('/cast/:castMemberId/assets/:assetId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const castMemberId = c.req.param('castMemberId') as string;
+        const assetId = c.req.param('assetId') as string;
+        await projectData.deleteAsset({
+          projectName,
+          target: { kind: 'castMember', castMemberId },
+          assetId,
+        });
+        const resourceKeys = studioResourceKeysForAssetTarget({
+          kind: 'castMember',
+          castMemberId,
+        });
+        return c.json({ assetId, resourceKeys });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/cast/:castMemberId/assets/:assetId/files/:assetFileId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

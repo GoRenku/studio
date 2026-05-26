@@ -4,6 +4,7 @@ import {
   createStudioCoordinationService,
   createStudioOperationId,
   resolveRenkuStorageRoot,
+  type CastMediaImportReport,
   type LookbookImageMediaImportReport,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
@@ -29,21 +30,44 @@ export async function runMediaCommand(options: {
   const [action] = options.input;
   if (action === 'import') {
     const service = createProjectDataService();
-    const report = await service.importLookbookImageMedia({
-      projectName: options.flags.project,
-      homeDir: options.homeDir,
-      lookbookId: parseLookbookImport(
-        requiredFlag(options.flags.purpose, '--purpose'),
-        requiredFlag(options.flags.target, '--target')
-      ),
-      sourceProjectRelativePath: requiredFlag(options.flags.source, '--source'),
-      title: options.flags.title,
-      oneLineSummary: options.flags.summary,
-      sections: parseSections(options.flags.sections),
-      receipt: options.flags.receipt
-        ? await readReceipt(options.flags.receipt)
-        : undefined,
-    });
+    const purpose = requiredFlag(options.flags.purpose, '--purpose');
+    const target = requiredFlag(options.flags.target, '--target');
+    const sourceProjectRelativePath = requiredFlag(options.flags.source, '--source');
+    const receipt = options.flags.receipt
+      ? await readReceipt(options.flags.receipt)
+      : undefined;
+    const report = purpose === 'lookbook.image'
+      ? await service.importLookbookImageMedia({
+          projectName: options.flags.project,
+          homeDir: options.homeDir,
+          lookbookId: parseLookbookTarget(target),
+          sourceProjectRelativePath,
+          title: options.flags.title,
+          oneLineSummary: options.flags.summary,
+          sections: parseSections(options.flags.sections),
+          receipt,
+        })
+      : purpose === 'cast.character-sheet'
+        ? await service.importCastCharacterSheetMedia({
+            projectName: options.flags.project,
+            homeDir: options.homeDir,
+            castMemberId: parseCastTarget(target),
+            sourceProjectRelativePath,
+            title: options.flags.title,
+            oneLineSummary: options.flags.summary,
+            receipt,
+          })
+        : purpose === 'cast.profile'
+          ? await service.importCastProfileMedia({
+              projectName: options.flags.project,
+              homeDir: options.homeDir,
+              castMemberId: parseCastTarget(target),
+              sourceProjectRelativePath,
+              title: options.flags.title,
+              oneLineSummary: options.flags.summary,
+              receipt,
+            })
+          : unsupportedMediaPurpose(purpose);
     await appendMediaResourceChangedEvent({
       options,
       report,
@@ -67,14 +91,7 @@ async function readReceipt(filePath: string): Promise<unknown> {
   return parsed.receipt ?? parsed;
 }
 
-function parseLookbookImport(purpose: string, target: string): string {
-  if (purpose !== 'lookbook.image') {
-    throw new StructuredError({
-      code: 'CLI024',
-      message: `Unsupported media import purpose: ${purpose}.`,
-      suggestion: 'Use --purpose lookbook.image.',
-    });
-  }
+function parseLookbookTarget(target: string): string {
   const [kind, id, extra] = target.split(':');
   if (kind !== 'lookbook' || !id || extra !== undefined) {
     throw new StructuredError({
@@ -84,6 +101,27 @@ function parseLookbookImport(purpose: string, target: string): string {
     });
   }
   return id;
+}
+
+function parseCastTarget(target: string): string {
+  const [kind, id, extra] = target.split(':');
+  if (kind !== 'cast' || !id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI025',
+      message: `Cast image import target must use cast:<id>. Received: ${target}.`,
+      suggestion: 'Use --target cast:<cast-member-id>.',
+    });
+  }
+  return id;
+}
+
+function unsupportedMediaPurpose(purpose: string): never {
+  throw new StructuredError({
+    code: 'CLI024',
+    message: `Unsupported media import purpose: ${purpose}.`,
+    suggestion:
+      'Use --purpose lookbook.image, --purpose cast.character-sheet, or --purpose cast.profile.',
+  });
 }
 
 function parseSections(value: string | undefined): string[] | undefined {
@@ -99,7 +137,7 @@ async function appendMediaResourceChangedEvent(input: {
     io: RenkuCliIo;
     homeDir?: string;
   };
-  report: LookbookImageMediaImportReport;
+  report: LookbookImageMediaImportReport | CastMediaImportReport;
   command: string;
 }): Promise<void> {
   if (input.report.resourceKeys.length === 0) {
@@ -148,7 +186,7 @@ async function appendMediaResourceChangedEvent(input: {
 }
 
 async function toProjectRef(
-  project: LookbookImageMediaImportReport['project'],
+  project: (LookbookImageMediaImportReport | CastMediaImportReport)['project'],
   homeDir?: string
 ): Promise<StudioProjectRef> {
   return {

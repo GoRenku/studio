@@ -1,9 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-  createProviderRegistry,
-} from '../registry.js';
+import { createProviderRegistry } from '../registry.js';
 import {
   loadModelInputSchema,
   lookupModel,
@@ -23,9 +21,14 @@ import {
   resolveBundledModelCatalogDir,
 } from './model-discovery.js';
 import {
+  buildLogicalProviderPayload,
   deriveGenerationOutputCount,
   estimateGeneration,
 } from './estimates.js';
+import {
+  assignGenerationInputFilePayloadValue,
+  createGenerationProviderPayloadBase,
+} from './input-file-payload.js';
 import { hashGenerationRequest } from './request-hash.js';
 import { validateGenerationProviderPayload } from './provider-payload-validation.js';
 
@@ -37,13 +40,18 @@ export interface RunGenerationOptions {
   catalog?: LoadedModelCatalog;
   outputRoot?: string;
   outputProjectRelativeRoot?: string;
+  inputRoot?: string;
 }
 
 export async function runGeneration(
   options: RunGenerationOptions
 ): Promise<GenerationRunResult> {
-  const catalog = options.catalog ?? await loadBundledGenerationCatalog();
-  const model = lookupModel(catalog, options.policy.provider, options.policy.model);
+  const catalog = options.catalog ?? (await loadBundledGenerationCatalog());
+  const model = lookupModel(
+    catalog,
+    options.policy.provider,
+    options.policy.model
+  );
   if (!model) {
     throw new Error(
       `Unknown generation model: ${options.policy.provider}/${options.policy.model}.`
@@ -73,7 +81,7 @@ export async function runGeneration(
     options.policy.provider,
     options.policy.model
   );
-  const payload = buildProviderPayload(options.policy, options.request);
+  const payload = buildLogicalProviderPayload(options.policy, options.request);
   await validateGenerationProviderPayload({
     catalog,
     provider: options.policy.provider,
@@ -82,29 +90,35 @@ export async function runGeneration(
   });
   const outputCount =
     options.policy.outputCount ?? deriveGenerationOutputCount(payload);
+  const executionPayload = await buildExecutionProviderPayload({
+    policy: options.policy,
+    request: options.request,
+    inputRoot: options.inputRoot,
+  });
   const jobContext = createProviderJobContext({
     provider: options.policy.provider,
     model: options.policy.model,
-    payload,
+    payload: executionPayload,
     rawSchema,
     mediaKind: options.policy.mediaKind,
     outputCount,
   });
-  const result = options.mode === 'simulated'
-    ? {
-        artifacts: await createSimulatedFallbackArtifacts(jobContext),
-        diagnostics: {
-          provider: options.policy.provider,
-          model: options.policy.model,
-          simulated: true,
-        },
-      }
-    : await runLiveGeneration({
-        catalog,
-        catalogModelsDir,
-        policy: options.policy,
-        jobContext,
-      });
+  const result =
+    options.mode === 'simulated'
+      ? {
+          artifacts: await createSimulatedFallbackArtifacts(jobContext),
+          diagnostics: {
+            provider: options.policy.provider,
+            model: options.policy.model,
+            simulated: true,
+          },
+        }
+      : await runLiveGeneration({
+          catalog,
+          catalogModelsDir,
+          policy: options.policy,
+          jobContext,
+        });
   const outputs = await persistOutputs({
     artifacts: result.artifacts,
     outputRoot: options.outputRoot,
@@ -136,17 +150,6 @@ export async function runGeneration(
   };
 }
 
-function buildProviderPayload(
-  policy: GenerationPolicy,
-  request: GenerationRequest
-): Record<string, unknown> {
-  return {
-    ...(request.prompt ? { prompt: request.prompt } : {}),
-    ...(request.parameters ?? {}),
-    ...(policy.parameters ?? {}),
-  };
-}
-
 function createProviderJobContext(input: {
   provider: string;
   model: string;
@@ -172,8 +175,10 @@ function createProviderJobContext(input: {
     layerIndex: 0,
     attempt: 1,
     inputs: Object.keys(input.payload),
-    produces: Array.from({ length: Math.max(1, input.outputCount) }, (_, index) =>
-      `Artifact:${artifactKindForMedia(input.mediaKind)}[output=${index + 1}]`
+    produces: Array.from(
+      { length: Math.max(1, input.outputCount) },
+      (_, index) =>
+        `Artifact:${artifactKindForMedia(input.mediaKind)}[output=${index + 1}]`
     ),
     context: {
       extras: {
@@ -188,6 +193,67 @@ function createProviderJobContext(input: {
       },
     },
   };
+}
+
+async function buildExecutionProviderPayload(input: {
+  policy: GenerationPolicy;
+  request: GenerationRequest;
+  inputRoot?: string;
+}): Promise<Record<string, unknown>> {
+  const payload = createGenerationProviderPayloadBase(
+    input.policy,
+    input.request
+  );
+  const files = input.request.inputFiles ?? [];
+  if (files.length === 0) {
+    return payload;
+  }
+  if (!input.inputRoot) {
+    throw new Error(
+      'Generation inputRoot is required when inputFiles are present.'
+    );
+  }
+  for (const file of files) {
+    const blob = await readGenerationInputFile(
+      input.inputRoot,
+      file.projectRelativePath
+    );
+    assignGenerationInputFilePayloadValue({ payload, file, value: blob });
+  }
+  return payload;
+}
+
+async function readGenerationInputFile(
+  inputRoot: string,
+  projectRelativePath: string
+): Promise<{ data: Uint8Array; mimeType: string }> {
+  const root = path.resolve(inputRoot);
+  const absolutePath = path.resolve(root, projectRelativePath);
+  const relativePath = path.relative(root, absolutePath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(
+      `Generation input file must stay inside the project folder. Received: ${projectRelativePath}`
+    );
+  }
+  const data = await fs.readFile(absolutePath);
+  return {
+    data,
+    mimeType: mimeTypeForPath(projectRelativePath),
+  };
+}
+
+function mimeTypeForPath(filePath: string): string {
+  const extension = path.extname(filePath).toLowerCase();
+  if (extension === '.jpg' || extension === '.jpeg') {
+    return 'image/jpeg';
+  }
+  if (extension === '.png') {
+    return 'image/png';
+  }
+  if (extension === '.webp') {
+    return 'image/webp';
+  }
+  return 'application/octet-stream';
 }
 
 async function runLiveGeneration(input: {

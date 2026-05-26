@@ -20,6 +20,7 @@ Decision history:
 - `../../decisions/0005-use-latest-only-save-queues-for-autosave.md`
 - `../../decisions/0008-use-url-owned-studio-routes.md`
 - `../../decisions/0015-use-feature-service-ui-layering-for-the-studio-frontend.md`
+- `../../decisions/0023-use-domain-neutral-ui-primitives-for-shared-frontend-patterns.md`
 
 Current implementation steps belong in `plans/active/`. This document should
 remain useful after the first refactor is complete.
@@ -373,8 +374,8 @@ Rules:
 - Footer or command-bar controls are not exempt. Model selectors, take-count
   controls, cost summaries, and generate buttons should align visually with the
   form sections above them.
-- When a workflow needs custom styling around Shadcn primitives, create a small
-  shared local style helper or wrapper for that workflow, then reuse it across
+- When a workflow needs custom styling around Shadcn primitives, create a
+  shared local primitive or variant for that workflow, then reuse it across
   every control in the workflow. Do not scatter one-off class strings that make
   the same primitive look different from screen to screen.
 - If a visual convention proves useful across more than one feature, promote it
@@ -384,6 +385,108 @@ Rules:
 The goal is that a user can move between Studio surfaces and immediately
 understand what is selectable, focused, selected, destructive, disabled, or
 primary without relearning the visual language.
+
+## Shared Visual Primitives
+
+When a repeated visual pattern appears in more than one product surface, choose
+one owner deliberately.
+
+Rules:
+
+- Put domain-neutral reusable components in `src/ui`.
+- Keep feature-local components only when they express product-specific
+  composition or behavior.
+- Do not import another feature's private child component just to reuse its
+  styling.
+- Do not add pass-through wrappers, compatibility aliases, or re-export files to
+  preserve an old component name.
+- When promoting a shared pattern, move the real implementation, update all
+  callers directly, and delete the obsolete feature-owned component.
+
+For example, Cast should not import a Visual Language image card to get the
+Lookbook card treatment. The shared image-card treatment belongs in `src/ui`;
+Cast and Visual Language should both compose that primitive with their own
+product data.
+
+Feature components are allowed only when they add real product meaning. A
+`CastAssetSection` that filters assets by role and wires Cast callbacks is a
+feature component. A `CastImageCard` that only renames a generic image card is
+not.
+
+## Reusable Image Card Contracts
+
+Media-heavy surfaces must use consistent image-card anatomy across the app.
+This includes Cast profile images, Cast character sheets, Inspiration folders,
+Inspiration grabs, Lookbooks, and future generated take surfaces.
+
+Reusable image-card primitives should expose explicit props for:
+
+- the image URL and alt text;
+- the intended display aspect ratio;
+- optional runtime image aspect-ratio detection;
+- image fitting and cropping behavior;
+- optional overlay title and description;
+- selected state;
+- a top-right action slot;
+- a lower-right control slot;
+- opening the shared image preview dialog.
+
+Use the same slot positions consistently:
+
+- top-right is for actions such as delete;
+- lower-right is for pick, active, or selected-state controls;
+- text overlays should stay quiet and should not overwhelm the image.
+
+Selection controls on image cards should use one app-wide control, tooltip, and
+pressed-state treatment. The control must toggle both directions. Clicking an
+unselected item selects it; clicking the current selected item clears it.
+
+Delete actions on image cards should use a trash icon, the shared confirmation
+dialog, and concise generic copy when no meaningful product name exists.
+
+Do not fill image cards with raw filenames, asset ids, producer identifiers,
+generated role names, or kebab-case labels. If there is no meaningful
+product/domain label, leave the card without visible copy.
+
+## Image Aspect Ratios
+
+Aspect ratio is part of the image-card contract. Callers must pass the intended
+numeric aspect ratio when using a reusable image card.
+
+Examples:
+
+- Cast profile images are `1`.
+- Cast character sheets are `4 / 3`.
+- Wider cinematic frames and Lookbook cards may use wider defaults.
+
+The Tailwind aspect class and numeric aspect ratio must agree. Do not pass
+`aspect-square` while leaving the reusable card's numeric ratio at a wide
+default; inline aspect-ratio styles will override the visual intent.
+
+When stored image dimensions are available, calculate the ratio through the
+shared aspect-ratio utility. When dimensions are only known after image load,
+use the same utility inside the reusable card or preview component. Do not
+duplicate image `onLoad` ratio calculation in each feature.
+
+Use `object-contain` when preserving the whole image matters, such as character
+sheets and design boards. Use `object-cover` only when cropping is intentional,
+such as portrait cards where the subject should fill the frame.
+
+## Generated Media Refresh
+
+Surfaces that display generated or imported assets must refresh when Studio
+reports resource changes. The user should not need to reload the browser to see
+newly attached media.
+
+Use scoped resource keys from the Studio event payload to decide whether to
+reload. For example, a Cast member panel should refresh when keys for that Cast
+member's assets or surface change. A top-level Cast overview should refresh when
+Cast navigation or any Cast member media that contributes to overview imagery
+changes.
+
+Keep this refresh local to the owning container. Do not expand the project shell
+to include every asset collection just to make a tab feel live. The current
+architecture follows lazy selected-resource loading and scoped invalidation.
 
 ### `assets/` And `styles/`
 
@@ -642,3 +745,12 @@ folder names, old aliases, or previous API shapes.
 
 Because Renku Studio is pre-customer software, do not leave compatibility
 aliases behind during frontend migrations.
+
+Renku Studio is desktop-first. Do not test or optimize mobile viewport behavior
+unless the user explicitly asks for mobile support.
+
+For media-card work, add focused tests for behavior that can regress without a
+visual failure, such as toggling the current pick off, refreshing after
+resource-change events, and calling the correct delete endpoint after
+confirmation. Use desktop browser verification for rendered card size,
+placement, aspect ratio, and overlay consistency.

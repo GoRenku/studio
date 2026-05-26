@@ -276,6 +276,23 @@ export function updateAssetRelationshipSelection(
     .run();
 }
 
+export function deleteAssetRelationshipRecord(
+  session: DatabaseSession,
+  input: { target: AssetTarget; assetId: string }
+): void {
+  const config = assetRelationshipTableConfig(input.target);
+  const table = config.table;
+  session.db
+    .delete(table)
+    .where(
+      and(
+        eq(table.assetId, input.assetId),
+        ...assetRelationshipConditions(config, { target: input.target })
+      )
+    )
+    .run();
+}
+
 export function nextAssetRelationshipSortOrder(
   session: DatabaseSession,
   input: { target: AssetTarget; role: string; localeId: string | null }

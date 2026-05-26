@@ -1,5 +1,6 @@
 import type {
   AssetTarget,
+  Asset,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
@@ -236,11 +237,59 @@ function firstImageForTarget(
   session: DatabaseSession,
   target: AssetTarget
 ): ScreenplayImageReference | undefined {
-  const asset = listAssetRelationshipPage(session, {
+  const asset = firstPreferredImageAsset(session, target);
+  return asset ? toScreenplayImageReference(asset) : undefined;
+}
+
+function firstPreferredImageAsset(
+  session: DatabaseSession,
+  target: AssetTarget
+): Asset | undefined {
+  if (target.kind === 'castMember') {
+    return (
+      listAssetRelationshipPage(session, {
+        target,
+        role: 'profile',
+        mediaKind: 'image',
+        selection: 'select',
+        limit: 1,
+      }).items[0] ??
+      listAssetRelationshipPage(session, {
+        target,
+        role: 'profile',
+        mediaKind: 'image',
+        selection: 'take',
+        limit: 1,
+      }).items[0] ??
+      listAssetRelationshipPage(session, {
+        target,
+        role: 'character_sheet',
+        mediaKind: 'image',
+        selection: 'select',
+        limit: 1,
+      }).items[0] ??
+      listAssetRelationshipPage(session, {
+        target,
+        mediaKind: 'image',
+        selection: 'select',
+        limit: 1,
+      }).items[0] ??
+      listAssetRelationshipPage(session, {
+        target,
+        mediaKind: 'image',
+        selection: 'take',
+        limit: 1,
+      }).items[0]
+    );
+  }
+  return listAssetRelationshipPage(session, {
     target,
     mediaKind: 'image',
     limit: 1,
   }).items[0];
+}
+
+function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | undefined {
   const file = asset?.files.find((candidate) => candidate.mediaKind === 'image');
   if (!asset || !file) {
     return undefined;

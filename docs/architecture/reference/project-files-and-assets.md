@@ -58,6 +58,14 @@ A **Lookbook Image** is an asset. It is registered and attached to a Lookbook
 through Lookbook image relationships. Section placement belongs in
 `lookbook_image_section`, not in Lookbook JSON.
 
+A **Cast Character Sheet** is an image asset attached to a cast member with the
+`character_sheet` role. Imported/generated character sheets are stored under
+`cast/<handle>/character-sheets/`.
+
+A **Cast Profile** is an image asset attached to a cast member with the
+`profile` role. Imported/generated profile images are stored under
+`cast/<handle>/profiles/`.
+
 ## Working Assets Versus Production Assets
 
 Working assets are for development and iteration.
@@ -130,6 +138,10 @@ Folder responsibilities:
 - `screenplay/` contains authored screenplay source files.
 - `cast/`, `locations/`, `props/`, and `visual-language/` contain
   feature-owned definitions, reference material, and working files.
+- `cast/<handle>/character-sheets/` contains imported or generated cast
+  character sheet image assets.
+- `cast/<handle>/profiles/` contains imported or generated cast profile image
+  assets.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
   those folders are not per-image assets unless a future command explicitly
   registers one.

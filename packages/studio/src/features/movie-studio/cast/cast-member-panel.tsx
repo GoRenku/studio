@@ -1,9 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { LineTabBar } from '@/ui/line-tab-bar';
 import { Tabs, TabsContent } from '@/ui/tabs';
-import type { CastMemberResourceResponse } from '@/services/studio-project-contracts';
+import type {
+  CastMemberResourceResponse,
+  StudioAssetResponse,
+} from '@/services/studio-project-contracts';
+import {
+  deleteCastAsset,
+  readCastAssets,
+  selectCastAsset,
+  unselectCastAsset,
+} from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-screenplay-api';
-import { ScreenplayPrimaryImage } from '../screenplay-media/screenplay-primary-image';
+import { CastMemberDetailsTab } from './cast-member-details-tab';
+import { CastMemberVisualContentTab } from './cast-member-visual-content-tab';
 
 interface CastMemberPanelProps {
   projectName: string;
@@ -12,14 +23,31 @@ interface CastMemberPanelProps {
 
 export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelProps) {
   const [resource, setResource] = useState<CastMemberResourceResponse | null>(null);
+  const [assets, setAssets] = useState<StudioAssetResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [resourceRevision, setResourceRevision] = useState(0);
+
+  const refreshCastMember = useCallback(async () => {
+    const [nextResource, nextAssets] = await Promise.all([
+      readCastMemberResource(projectName, castMemberId),
+      readCastAssets(projectName, castMemberId),
+    ]);
+    setResource(nextResource);
+    setAssets(nextAssets);
+    setError(null);
+  }, [castMemberId, projectName]);
 
   useEffect(() => {
     let cancelled = false;
-    void readCastMemberResource(projectName, castMemberId)
-      .then((nextResource) => {
+    void Promise.all([
+      readCastMemberResource(projectName, castMemberId),
+      readCastAssets(projectName, castMemberId),
+    ])
+      .then(([nextResource, nextAssets]) => {
         if (!cancelled) {
           setResource(nextResource);
+          setAssets(nextAssets);
+          setError(null);
         }
       })
       .catch((loadError) => {
@@ -30,7 +58,59 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
     return () => {
       cancelled = true;
     };
+  }, [castMemberId, projectName, resourceRevision]);
+
+  useEffect(() => {
+    const handleResourceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
+      if (!detail || detail.projectName !== projectName) {
+        return;
+      }
+      if (hasCastMemberResourceChange(detail.resourceKeys, castMemberId)) {
+        setResourceRevision((current) => current + 1);
+      }
+    };
+
+    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
+    return () => {
+      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
+    };
   }, [castMemberId, projectName]);
+
+  const togglePick = async (asset: StudioAssetResponse) => {
+    try {
+      if (asset.selection.kind === 'select') {
+        await unselectCastAsset(projectName, castMemberId, asset.assetId);
+        await refreshCastMember();
+        return;
+      }
+
+      const selectedAssetsWithSameRole = assets.filter(
+        (candidate) =>
+          candidate.role === asset.role &&
+          candidate.assetId !== asset.assetId &&
+          candidate.selection.kind === 'select'
+      );
+      await selectCastAsset(projectName, castMemberId, asset.assetId);
+      await Promise.all(
+        selectedAssetsWithSameRole.map((candidate) =>
+          unselectCastAsset(projectName, castMemberId, candidate.assetId)
+        )
+      );
+      await refreshCastMember();
+    } catch (selectError) {
+      toast.error(errorMessage(selectError));
+    }
+  };
+
+  const removeAsset = async (asset: StudioAssetResponse) => {
+    try {
+      await deleteCastAsset(projectName, castMemberId, asset.assetId);
+      await refreshCastMember();
+    } catch (deleteError) {
+      toast.error(errorMessage(deleteError));
+    }
+  };
 
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
@@ -38,14 +118,6 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
   if (!resource) {
     return <p className='text-sm text-muted-foreground'>Loading cast member...</p>;
   }
-
-  const castMember = resource.castMember;
-  const fields = [
-    ['Role', castMember.role],
-    ['Age', castMember.age?.toString()],
-    ['Want', castMember.want],
-    ['Need', castMember.need],
-  ].filter((field): field is [string, string] => Boolean(field[1]));
 
   return (
     <Tabs defaultValue='details' className='h-full gap-0'>
@@ -56,34 +128,22 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
           { value: 'voice', label: 'Voice Design' },
         ]}
       />
-      <TabsContent value='details' className='overflow-y-auto p-4'>
-        <div className='grid gap-5 lg:grid-cols-[minmax(240px,360px)_minmax(0,1fr)]'>
-          <ScreenplayPrimaryImage
-            image={resource.firstImage}
-            label={castMember.name}
-            placeholder='No cast image yet'
-          />
-          <div className='space-y-5'>
-            {fields.length ? (
-              <dl className='grid gap-3 sm:grid-cols-2'>
-                {fields.map(([label, value]) => (
-                  <div key={label} className='rounded-md border border-border/40 bg-card p-3'>
-                    <dt className='text-[11px] uppercase tracking-[0.12em] text-muted-foreground'>
-                      {label}
-                    </dt>
-                    <dd className='mt-1 text-sm'>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-            <TextSection title='Arc' text={castMember.arc} />
-            <TextSection title='Description' text={castMember.description} />
-            <TextSection title='Voice Notes' text={castMember.voiceNotes} />
-          </div>
-        </div>
+      <TabsContent value='details' className='min-h-0 overflow-y-auto p-0'>
+        <CastMemberDetailsTab
+          projectName={projectName}
+          castMemberId={castMemberId}
+          resource={resource}
+          assets={assets}
+        />
       </TabsContent>
-      <TabsContent value='visual' className='p-4 text-sm text-muted-foreground'>
-        Visual content will appear here when project assets are attached.
+      <TabsContent value='visual' className='min-h-0 overflow-y-auto p-0'>
+        <CastMemberVisualContentTab
+          projectName={projectName}
+          castMemberId={castMemberId}
+          assets={assets}
+          onTogglePick={togglePick}
+          onDeleteAsset={removeAsset}
+        />
       </TabsContent>
       <TabsContent value='voice' className='p-4 text-sm text-muted-foreground'>
         Voice design will appear here when project assets are attached.
@@ -92,16 +152,22 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
   );
 }
 
-function TextSection({ title, text }: { title: string; text?: string }) {
-  if (!text) {
-    return null;
-  }
-  return (
-    <section className='space-y-2'>
-      <h3 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
-        {title}
-      </h3>
-      <p className='whitespace-pre-wrap text-sm leading-6'>{text}</p>
-    </section>
+interface StudioResourceChangedDetail {
+  projectName: string;
+  resourceKeys: string[];
+}
+
+function hasCastMemberResourceChange(
+  resourceKeys: string[],
+  castMemberId: string
+): boolean {
+  return resourceKeys.some(
+    (resourceKey) =>
+      resourceKey === `assets:castMember:${castMemberId}` ||
+      resourceKey === `surface:castMember:${castMemberId}`
   );
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Cast member request failed.';
 }

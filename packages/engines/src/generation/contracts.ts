@@ -32,9 +32,11 @@ export interface GenerationPolicy {
 }
 
 export interface GenerationInputFile {
-  name: string;
+  field: string;
   projectRelativePath: string;
   mediaKind: GenerationMediaKind;
+  asArray?: boolean;
+  required?: boolean;
 }
 
 export interface GenerationRequest {

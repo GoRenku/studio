@@ -1,10 +1,15 @@
 import { desc, eq, and } from 'drizzle-orm';
 import type {
-  LookbookImageGenerationSpec,
+  MediaGenerationPurpose,
   MediaGenerationRun,
+  MediaGenerationSpec,
   MediaGenerationSpecRecord,
 } from '../../../client/index.js';
-import { LOOKBOOK_IMAGE_GENERATION_PURPOSE } from '../../../client/index.js';
+import {
+  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  CAST_PROFILE_GENERATION_PURPOSE,
+  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+} from '../../../client/index.js';
 import { mediaGenerationRuns, mediaGenerationSpecs } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
@@ -16,7 +21,7 @@ export function insertMediaGenerationSpec(
   session: DatabaseSession,
   input: {
     id: string;
-    spec: LookbookImageGenerationSpec;
+    spec: MediaGenerationSpec;
     title: string;
     now: string;
   }
@@ -42,7 +47,7 @@ export function updateMediaGenerationSpec(
   session: DatabaseSession,
   input: {
     id: string;
-    spec: LookbookImageGenerationSpec;
+    spec: MediaGenerationSpec;
     title: string;
     now: string;
   }
@@ -94,8 +99,8 @@ export function requireMediaGenerationSpec(
 export function listMediaGenerationSpecs(
   session: DatabaseSession,
   input: {
-    purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
-    targetKind: 'lookbook';
+    purpose: MediaGenerationPurpose;
+    targetKind: 'lookbook' | 'castMember';
     targetId: string;
   }
 ): MediaGenerationSpecRecord[] {
@@ -119,7 +124,7 @@ export function insertMediaGenerationRun(
   input: {
     id: string;
     specId: string;
-    spec: LookbookImageGenerationSpec;
+    spec: MediaGenerationSpec;
     provider: 'fal-ai';
     model: string;
     providerPayload: Record<string, unknown>;
@@ -179,16 +184,11 @@ export function requireMediaGenerationRun(
 }
 
 function toSpecRecord(row: MediaGenerationSpecRow): MediaGenerationSpecRecord {
-  const spec = JSON.parse(row.specJson) as LookbookImageGenerationSpec;
-  if (spec.purpose !== LOOKBOOK_IMAGE_GENERATION_PURPOSE) {
-    throw new ProjectDataError(
-      'PROJECT_DATA262',
-      `Unsupported media generation spec purpose: ${spec.purpose}.`
-    );
-  }
+  const spec = JSON.parse(row.specJson) as MediaGenerationSpec;
+  assertMediaGenerationPurpose(spec.purpose);
   return {
     id: row.id,
-    purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+    purpose: spec.purpose,
     target: spec.target,
     modelChoice: spec.modelChoice,
     title: row.title,
@@ -199,11 +199,12 @@ function toSpecRecord(row: MediaGenerationSpecRow): MediaGenerationSpecRecord {
 }
 
 function toRunRecord(row: MediaGenerationRunRow): MediaGenerationRun {
-  const spec = JSON.parse(row.specSnapshotJson) as LookbookImageGenerationSpec;
+  const spec = JSON.parse(row.specSnapshotJson) as MediaGenerationSpec;
+  assertMediaGenerationPurpose(spec.purpose);
   return {
     id: row.id,
     specId: row.specId,
-    purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+    purpose: spec.purpose,
     target: spec.target,
     modelChoice: spec.modelChoice,
     provider: 'fal-ai',
@@ -219,4 +220,19 @@ function toRunRecord(row: MediaGenerationRunRow): MediaGenerationRun {
     startedAt: row.startedAt,
     completedAt: row.completedAt,
   };
+}
+
+function assertMediaGenerationPurpose(
+  purpose: string
+): asserts purpose is MediaGenerationPurpose {
+  if (
+    purpose !== LOOKBOOK_IMAGE_GENERATION_PURPOSE &&
+    purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
+    purpose !== CAST_PROFILE_GENERATION_PURPOSE
+  ) {
+    throw new ProjectDataError(
+      'PROJECT_DATA262',
+      `Unsupported media generation spec purpose: ${purpose}.`
+    );
+  }
 }

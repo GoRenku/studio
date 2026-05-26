@@ -287,6 +287,7 @@ describe('renku CLI', () => {
       return;
     }
     expect(createExitCode).toBe(0);
+    await openProjectAndCreateScreenplay();
 
     stdout = [];
     stderr = [];
@@ -408,6 +409,7 @@ describe('renku CLI', () => {
       return;
     }
     expect(createExitCode).toBe(0);
+    await openProjectAndCreateScreenplay();
 
     stdout = [];
     stderr = [];
@@ -478,6 +480,14 @@ describe('renku CLI', () => {
         'surface:visual-language:lookbooks',
       ]),
     });
+
+    stdout = [];
+    stderr = [];
+    const setActiveLookbookExitCode = await runRenkuCli(
+      ['lookbook', 'set-active', '--lookbook', report.lookbook.id, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(setActiveLookbookExitCode).toBe(0);
 
     stdout = [];
     stderr = [];
@@ -671,6 +681,189 @@ describe('renku CLI', () => {
         outputs: [
           {
             projectRelativePath: 'generated/media/simulated-lookbook.png',
+          },
+        ],
+      },
+    });
+
+    const project = await createProjectDataService().readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const castMemberId = project.cast[0]!.id;
+
+    stdout = [];
+    stderr = [];
+    const castContextExitCode = await runRenkuCli(
+      [
+        'generation',
+        'context',
+        '--purpose',
+        'cast.character-sheet',
+        '--target',
+        `cast:${castMemberId}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(castContextExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'cast.character-sheet',
+      target: { kind: 'castMember', id: castMemberId },
+      castMember: { name: 'Urban' },
+      activeLookbook: { lookbook: { id: report.lookbook.id } },
+    });
+
+    const characterSheetSpecPath = path.join(homeDir, 'cast-character-sheet-spec.json');
+    await fs.writeFile(
+      characterSheetSpecPath,
+      JSON.stringify(
+        {
+          purpose: 'cast.character-sheet',
+          target: { kind: 'castMember', id: castMemberId },
+          modelChoice: 'fal-ai/nano-banana-2',
+          prompt: 'A simulated full character sheet for Urban.',
+          takeCount: 1,
+          seed: null,
+          imageFrame: '16:9',
+          detail: 'draft',
+          outputFormat: 'png',
+          title: 'Urban Character Sheet',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const characterSheetCreateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'create', '--file', characterSheetSpecPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(characterSheetCreateExitCode).toBe(0);
+    const characterSheetSpec = JSON.parse(stdout.join('\n')) as { id: string };
+
+    stdout = [];
+    stderr = [];
+    const characterSheetRunExitCode = await runRenkuCli(
+      ['generation', 'run', '--spec', characterSheetSpec.id, '--simulate', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(characterSheetRunExitCode).toBe(0);
+    const characterSheetRun = JSON.parse(stdout.join('\n')) as {
+      run: { outputs: Array<{ projectRelativePath: string }> };
+    };
+
+    stdout = [];
+    stderr = [];
+    const characterSheetImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'cast.character-sheet',
+        '--target',
+        `cast:${castMemberId}`,
+        '--source',
+        characterSheetRun.run.outputs[0]!.projectRelativePath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(characterSheetImportExitCode).toBe(0);
+    const characterSheetImport = JSON.parse(stdout.join('\n')) as {
+      imported: { assetId: string; files: Array<{ projectRelativePath: string }> };
+    };
+    expect(characterSheetImport).toMatchObject({
+      purpose: 'cast.character-sheet',
+      imported: {
+        role: 'character_sheet',
+        files: [
+          {
+            projectRelativePath:
+              'cast/urban/character-sheets/urban-character-sheet.png',
+          },
+        ],
+      },
+    });
+
+    const profileSpecPath = path.join(homeDir, 'cast-profile-spec.json');
+    await fs.writeFile(
+      profileSpecPath,
+      JSON.stringify(
+        {
+          purpose: 'cast.profile',
+          target: { kind: 'castMember', id: castMemberId },
+          modelChoice: 'fal-ai/nano-banana-2/edit',
+          sourceAssetId: characterSheetImport.imported.assetId,
+          prompt: 'A simulated square profile portrait for Urban from the sheet.',
+          takeCount: 1,
+          seed: null,
+          imageFrame: '1:1',
+          detail: 'draft',
+          outputFormat: 'png',
+          title: 'Urban Profile',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const profileCreateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'create', '--file', profileSpecPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(profileCreateExitCode).toBe(0);
+    const profileSpec = JSON.parse(stdout.join('\n')) as { id: string };
+
+    stdout = [];
+    stderr = [];
+    const profileRunExitCode = await runRenkuCli(
+      ['generation', 'run', '--spec', profileSpec.id, '--simulate', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(profileRunExitCode).toBe(0);
+    const profileRun = JSON.parse(stdout.join('\n')) as {
+      run: { outputs: Array<{ projectRelativePath: string }> };
+    };
+    expect(profileRun).toMatchObject({
+      run: {
+        provider: 'fal-ai',
+        model: 'nano-banana-2/edit',
+        simulated: true,
+        purpose: 'cast.profile',
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const profileImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'cast.profile',
+        '--target',
+        `cast:${castMemberId}`,
+        '--source',
+        profileRun.run.outputs[0]!.projectRelativePath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(profileImportExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'cast.profile',
+      imported: {
+        role: 'profile',
+        files: [
+          {
+            projectRelativePath: 'cast/urban/profiles/urban-profile.png',
           },
         ],
       },

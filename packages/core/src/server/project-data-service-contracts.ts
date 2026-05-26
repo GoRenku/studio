@@ -27,6 +27,13 @@ import type {
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
+  CastCharacterSheetGenerationContext,
+  CastCharacterSheetGenerationSpec,
+  CastCharacterSheetModelListReport,
+  CastMediaImportReport,
+  CastProfileGenerationContext,
+  CastProfileGenerationSpec,
+  CastProfileModelListReport,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -134,6 +141,7 @@ export interface ProjectDataService {
   createAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
   updateAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
   removeAssetSelect(input: RemoveAssetSelectInput): Promise<Asset>;
+  deleteAsset(input: DeleteAssetInput): Promise<void>;
   listAssetSelects(input: ListAssetsInput): Promise<Asset[]>;
   exportProductionAssets(
     input: ProductionExportInput & RenkuConfigPathOptions
@@ -195,6 +203,30 @@ export interface ProjectDataService {
   runLookbookImageSpec(input: RunLookbookImageGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordLookbookImageRun(input: RecordLookbookImageGenerationRunInput): Promise<MediaGenerationRunReport>;
   importLookbookImageMedia(input: ImportLookbookImageMediaInput): Promise<LookbookImageMediaImportReport>;
+  buildCastCharacterSheetContext(input: CastMediaGenerationContextInput): Promise<CastCharacterSheetGenerationContext>;
+  listCastCharacterSheetModels(input: CastMediaGenerationContextInput): Promise<CastCharacterSheetModelListReport>;
+  validateCastCharacterSheetSpec(input: ValidateCastCharacterSheetGenerationSpecInput): Promise<{ valid: true; spec: CastCharacterSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createCastCharacterSheetSpec(input: CreateCastCharacterSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateCastCharacterSheetSpec(input: UpdateCastCharacterSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readCastCharacterSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listCastCharacterSheetSpecs(input: CastMediaGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareCastCharacterSheetSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateCastCharacterSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runCastCharacterSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  recordCastCharacterSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
+  importCastCharacterSheetMedia(input: ImportCastMediaInput): Promise<CastMediaImportReport>;
+  buildCastProfileContext(input: CastMediaGenerationContextInput): Promise<CastProfileGenerationContext>;
+  listCastProfileModels(input: CastMediaGenerationContextInput): Promise<CastProfileModelListReport>;
+  validateCastProfileSpec(input: ValidateCastProfileGenerationSpecInput): Promise<{ valid: true; spec: CastProfileGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createCastProfileSpec(input: CreateCastProfileGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateCastProfileSpec(input: UpdateCastProfileGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readCastProfileSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listCastProfileSpecs(input: CastMediaGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareCastProfileSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateCastProfileSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runCastProfileSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  recordCastProfileRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
+  importCastProfileMedia(input: ImportCastMediaInput): Promise<CastMediaImportReport>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -457,6 +489,79 @@ export interface ImportLookbookImageMediaInput extends RenkuConfigPathOptions {
   idGenerator?: ProjectIdGenerator;
 }
 
+export interface CastMediaGenerationContextInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  castMemberId: string;
+}
+
+export interface ValidateCastCharacterSheetGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: CastCharacterSheetGenerationSpec;
+}
+
+export interface CreateCastCharacterSheetGenerationSpecInput
+  extends ValidateCastCharacterSheetGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateCastCharacterSheetGenerationSpecInput
+  extends ValidateCastCharacterSheetGenerationSpecInput {
+  specId: string;
+}
+
+export interface ValidateCastProfileGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: CastProfileGenerationSpec;
+}
+
+export interface CreateCastProfileGenerationSpecInput
+  extends ValidateCastProfileGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateCastProfileGenerationSpecInput
+  extends ValidateCastProfileGenerationSpecInput {
+  specId: string;
+}
+
+export interface ReadMediaGenerationSpecInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  specId: string;
+}
+
+export interface RunMediaGenerationSpecInput
+  extends ReadMediaGenerationSpecInput {
+  approvalToken?: string;
+  simulate?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface RecordMediaGenerationRunInput
+  extends ReadMediaGenerationSpecInput {
+  provider: 'fal-ai';
+  model: string;
+  providerPayload: Record<string, unknown>;
+  estimate: unknown;
+  approvalToken?: string;
+  simulated: boolean;
+  status: 'simulated' | 'completed' | 'failed';
+  outputs: unknown;
+  diagnostics: unknown;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ImportCastMediaInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  castMemberId: string;
+  sourceProjectRelativePath: string;
+  title?: string;
+  oneLineSummary?: string;
+  receipt?: unknown;
+  idGenerator?: ProjectIdGenerator;
+}
+
 export interface ListNavigationInput extends RenkuConfigPathOptions {
   projectName: string;
   limit?: number;
@@ -607,6 +712,12 @@ export interface ChangeAssetSelectInput extends RenkuConfigPathOptions {
 }
 
 export interface RemoveAssetSelectInput extends RenkuConfigPathOptions {
+  projectName: string;
+  target: AssetTarget;
+  assetId: string;
+}
+
+export interface DeleteAssetInput extends RenkuConfigPathOptions {
   projectName: string;
   target: AssetTarget;
   assetId: string;

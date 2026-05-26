@@ -54,6 +54,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'listAssets'
   | 'createAssetSelect'
   | 'removeAssetSelect'
+  | 'deleteAsset'
   | 'exportProductionAssets'
   | 'readInspirationResource'
   | 'readInspirationFolder'

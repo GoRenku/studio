@@ -22,7 +22,7 @@ export function LineTabBar<Value extends string>({
         <TabsTrigger
           key={item.value}
           value={item.value}
-          className='h-full flex-none rounded-none border-0 px-5 text-[11px] uppercase tracking-[0.12em] font-semibold data-[state=active]:bg-item-active-bg data-[state=active]:text-foreground data-[state=active]:after:bg-primary'
+          className='h-full flex-none rounded-none border-0 px-3 text-[11px] uppercase tracking-[0.12em] font-semibold data-[state=active]:bg-item-active-bg data-[state=active]:text-foreground data-[state=active]:after:bg-primary sm:px-5'
         >
           {item.label}
         </TabsTrigger>

@@ -2,7 +2,7 @@ import type { InspirationFolderListItem } from '@gorenku/studio-core/client';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
-import { VisualLanguageGalleryCard } from './visual-language-gallery-card';
+import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import { inspirationImageUrl } from './visual-language-image-urls';
 
 interface InspirationFolderCardProps {
@@ -25,13 +25,13 @@ export function InspirationFolderCard({
     item.imageCount === 1 ? '1 image' : `${item.imageCount} images`;
 
   return (
-    <VisualLanguageGalleryCard
+    <ImageOverlayCard
       title={item.folder.name}
       description={imageCountLabel}
       imageUrl={imageUrl}
       imageAlt={`${item.folder.name} inspiration card image`}
       onOpen={onOpen}
-      action={
+      topRightAction={
         <DeleteConfirmDialog
           title='Delete Folder?'
           message={`Remove "${item.folder.name}" and its saved grabs.`}

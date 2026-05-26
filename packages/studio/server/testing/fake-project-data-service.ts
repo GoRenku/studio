@@ -249,6 +249,9 @@ export function fakeProjectDataService(): NonNullable<
     async removeAssetSelect(input) {
       return makeAsset(input.assetId);
     },
+    async deleteAsset() {
+      return undefined;
+    },
     async exportProductionAssets() {
       return {
         copiedFileCount: 1,

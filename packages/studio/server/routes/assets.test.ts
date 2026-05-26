@@ -85,6 +85,24 @@ describe('assets Hono route', () => {
     });
   });
 
+  it('deletes cast member assets through ProjectDataService', async () => {
+    const app = createMountedAssetsRoute();
+
+    const response = await app.request(
+      '/constantinople/cast/cast_narrator/assets/asset_cast_reference',
+      { method: 'DELETE' }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      assetId: 'asset_cast_reference',
+      resourceKeys: [
+        'assets:castMember:cast_narrator',
+        'surface:castMember:cast_narrator',
+      ],
+    });
+  });
+
   it('serves a registered cast member asset file', async () => {
     vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('png bytes'));
     const app = createMountedAssetsRoute();

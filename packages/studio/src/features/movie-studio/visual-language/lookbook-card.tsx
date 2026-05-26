@@ -2,8 +2,8 @@ import type { LookbookListItemWithSources } from '@gorenku/studio-core/client';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
-import { LookbookActiveControl } from './lookbook-active-control';
-import { VisualLanguageGalleryCard } from './visual-language-gallery-card';
+import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { ImageSelectionControl } from '@/ui/image-selection-control';
 import { lookbookImageFileUrl } from './visual-language-image-urls';
 
 interface LookbookCardProps {
@@ -31,14 +31,14 @@ export function LookbookCard({
     sourceCount === 1 ? '1 source' : `${sourceCount} sources`;
 
   return (
-    <VisualLanguageGalleryCard
+    <ImageOverlayCard
       title={item.lookbook.name}
       description={sourceLabel}
       imageUrl={cardImageUrl}
       imageAlt={`${item.lookbook.name} lookbook card image`}
-      emphasized={item.isActive}
+      selected={item.isActive}
       onOpen={onOpen}
-      action={
+      topRightAction={
         <DeleteConfirmDialog
           title='Delete Lookbook?'
           message={
@@ -60,10 +60,12 @@ export function LookbookCard({
           }
         />
       }
-      control={
-        <LookbookActiveControl
-          isActive={item.isActive}
-          onToggleActive={onToggleActive}
+      bottomRightControl={
+        <ImageSelectionControl
+          selected={item.isActive}
+          selectedLabel='Clear active lookbook'
+          unselectedLabel='Set active lookbook'
+          onToggleSelected={onToggleActive}
         />
       }
     />

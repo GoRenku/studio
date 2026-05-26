@@ -17,6 +17,21 @@ That means:
 - feature code may use semantic non-control HTML such as `section`, `fieldset`,
   `legend`, `div`, `span`, and `p` for structure and copy.
 
+## Top Instruction: Keep UI Copy Intentional
+
+Do not invent visible UI text just to fill space. In particular, do not show raw
+filenames, kebab-case identifiers, asset ids, generated role names, or generic
+pick labels on visual cards unless that copy is meaningful product/domain text
+that the user or current data model actually supplies.
+
+If a visual surface does not have useful text to show, keep the surface quiet
+and let the image, controls, and surrounding section title carry the interface.
+
+## Top Instruction: Desktop-First Verification
+
+Renku Studio is not intended for mobile use. Do not test, optimize, or report
+mobile viewport behavior unless the user explicitly asks for mobile support.
+
 ## Top Instruction: No Shims, No Compatibility Layers
 
 Renku Studio is pre-customer software and will be continuously iterated.

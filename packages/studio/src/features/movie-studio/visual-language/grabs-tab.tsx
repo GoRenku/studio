@@ -6,9 +6,9 @@ import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
+import { ImageCardGrid } from '@/ui/image-card-grid';
 import { cn } from '@/lib/utils';
 import { GrabCard } from './grab-card';
-import { GrabGrid } from './grab-grid';
 import { inspirationImageUrl } from './visual-language-image-urls';
 
 interface GrabsTabProps {
@@ -68,7 +68,7 @@ export function GrabsTab({
         onDrop={uploadDroppedFiles}
       >
         {images.length ? (
-          <GrabGrid>
+          <ImageCardGrid>
             {images.map((image) => {
               const src = inspirationImageUrl(
                 projectName,
@@ -92,7 +92,7 @@ export function GrabsTab({
               );
             })}
             <FileButton onFiles={(files) => void onUpload(files)} />
-          </GrabGrid>
+          </ImageCardGrid>
         ) : (
           <FileUploadDropzone
             accept='image/*'
