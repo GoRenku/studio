@@ -656,9 +656,24 @@ Input JSON:
     },
     "camera": {
       "description": "Movement, motion, and framing strategy.",
-      "movement": [{ "name": "Controlled drift", "description": "Move slowly when unease merges with desire." }],
-      "motion": [{ "name": "Sudden rupture", "description": "Reserve abrupt motion for collapse." }],
-      "framing": [{ "name": "Body as diagram", "description": "Frame bodies like evidence without losing empathy." }]
+      "movement": [
+        {
+          "name": "Controlled drift",
+          "description": "Move slowly when unease merges with desire."
+        }
+      ],
+      "motion": [
+        {
+          "name": "Sudden rupture",
+          "description": "Reserve abrupt motion for collapse."
+        }
+      ],
+      "framing": [
+        {
+          "name": "Body as diagram",
+          "description": "Frame bodies like evidence without losing empathy."
+        }
+      ]
     }
   },
   "sourceInspirationFolderIds": ["inspiration_folder_abc"]
@@ -732,12 +747,17 @@ Current implemented purpose:
 
 ```text
 lookbook.image
+cast.character-sheet
+cast.profile
+location.environment-sheet
 ```
 
-Current target format:
+Current target formats:
 
 ```text
 lookbook:<lookbook-id>
+cast:<cast-member-id>
+location:<location-id>
 ```
 
 Read context and available model choices:
@@ -745,6 +765,12 @@ Read context and available model choices:
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<lookbook-id> --json
 renku generation model list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json
+renku generation model list --purpose cast.character-sheet --target cast:<cast-member-id> --json
+renku generation context --purpose cast.profile --target cast:<cast-member-id> --json
+renku generation model list --purpose cast.profile --target cast:<cast-member-id> --json
+renku generation context --purpose location.environment-sheet --target location:<location-id> --json
+renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
 ```
 
 Manage persisted specs:
@@ -755,6 +781,7 @@ renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
 renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
 ```
 
 Estimate and run:
@@ -783,6 +810,24 @@ Lookbook Image spec shape:
 }
 ```
 
+Location Environment Sheet spec shape:
+
+```json
+{
+  "purpose": "location.environment-sheet",
+  "target": { "kind": "location", "id": "location_sea_walls" },
+  "modelChoice": "fal-ai/nano-banana-2",
+  "prompt": "A four-view environment sheet for the sea walls location...",
+  "takeCount": 1,
+  "seed": null,
+  "sheetFrame": "4:3",
+  "viewFrame": "16:9",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Sea walls environment sheet"
+}
+```
+
 Behavior:
 
 - The persisted spec is the source of truth for estimate and run.
@@ -794,7 +839,12 @@ Behavior:
 - `generation run --simulate` validates and records a simulated run without a
   paid provider call.
 - Generation creates staged outputs and run records. It does not attach files
-  to a Lookbook. Use `renku media import` after inspecting the output.
+  to the target asset relationship. Use `renku media import` after inspecting
+  the output.
+- Location environment sheet runs create one composite image. The
+  media-producer agent inspects that composite with vision, writes the four
+  sliced scenic views locally, and imports the grouped files only when the
+  generated sheet is clean enough to slice.
 
 ## `renku media import`
 
@@ -804,6 +854,9 @@ Current implemented purpose:
 
 ```text
 lookbook.image
+cast.character-sheet
+cast.profile
+location.environment-sheet
 ```
 
 ```bash
@@ -818,17 +871,49 @@ renku media import \
   --json
 ```
 
+Location Environment Sheet import:
+
+```bash
+renku media import \
+  --purpose location.environment-sheet \
+  --target location:<location-id> \
+  --file location-environment-sheet-import.json \
+  --title <title> \
+  --summary <one-line-summary> \
+  --json
+```
+
+The import JSON must explicitly list the composite and four sliced view files:
+
+```json
+{
+  "title": "Sea walls environment sheet",
+  "files": {
+    "composite": "generated/media/sea-walls-sheet.png",
+    "view_front": "generated/media/sea-walls-front.png",
+    "view_right": "generated/media/sea-walls-right.png",
+    "view_back": "generated/media/sea-walls-back.png",
+    "view_left": "generated/media/sea-walls-left.png"
+  }
+}
+```
+
 Options:
 
-- `--purpose`: required media purpose. Current supported value:
-  `lookbook.image`.
-- `--target`: required target. Current supported shape:
-  `lookbook:<lookbook-id>`.
-- `--source`: required project-relative media source path.
+- `--purpose`: required media purpose. Current supported values are
+  `lookbook.image`, `cast.character-sheet`, `cast.profile`, and
+  `location.environment-sheet`.
+- `--target`: required target. Current supported shapes are
+  `lookbook:<lookbook-id>`, `cast:<cast-member-id>`, and
+  `location:<location-id>`.
+- `--source`: required project-relative media source path for single-file
+  imports. Location environment sheet import uses `--file` instead.
+- `--file`: grouped import JSON for `location.environment-sheet`.
 - `--sections`: optional comma-separated Lookbook section keys.
 - `--title`: optional title for the imported media.
 - `--summary`: optional one-line summary.
-- `--receipt`: optional generation run or receipt JSON.
+- `--receipt`: optional generation run or receipt JSON for single-file imports.
+  Location environment sheet import does not accept receipts.
 
 Behavior:
 
@@ -839,6 +924,9 @@ Behavior:
 - For Lookbook Images, import registers an asset, creates the Lookbook image
   relationship, stores section placement, and appends Studio resource refresh
   events.
+- For Location Environment Sheets, import registers one grouped asset, copies
+  the composite plus `view_front`, `view_right`, `view_back`, and `view_left`
+  files under `locations/<handle>/environment-sheets/<sheet-slug>/`.
 - Agents should inspect generated images before import and tag only the
   sections the image visibly demonstrates. Do not blindly copy
   `focusSections` into `--sections`.

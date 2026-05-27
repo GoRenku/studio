@@ -12,7 +12,8 @@ Media generation is the Renku Studio path for creating AI media from project
 context while preserving user choices, cost approval, and project metadata
 boundaries.
 
-The first implemented purpose is `lookbook.image`. Precise contracts live in
+The implemented purposes are `lookbook.image`, `cast.character-sheet`,
+`cast.profile`, and `location.environment-sheet`. Precise contracts live in
 `reference/media-generation.md`.
 
 ## Current Shape
@@ -20,14 +21,16 @@ The first implemented purpose is `lookbook.image`. Precise contracts live in
 Generation and import are separate.
 
 Generation reads project context, lists supported models for a purpose, persists
-the user's generation spec, estimates cost, and runs the approved spec. It
-creates staged outputs and durable run records.
+the user's generation spec, estimates cost, and returns a structured approval
+summary. That approval covers both the estimated cost and the provider transfer
+needed to run the exact request. A live run then uses the approval token from
+that estimate, creates staged outputs, and records a durable generation run.
 
 Import attaches an existing file to a project domain target. The file may come
 from a Renku generation run, an external tool, a manual upload, or a download.
 The domain target does not care how the file was produced.
 
-For Lookbook Images, the CLI surface is generic:
+For all current purposes, the CLI surface is generic:
 
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<id> --json
@@ -41,6 +44,13 @@ renku media import --purpose lookbook.image --target lookbook:<id> --source <pat
 Internally, this is a direct vertical slice rather than a generic media-purpose
 framework.
 
+Location environment sheets add a reusable post-processing step after
+generation. Core asks the selected text-to-image model for a four-azimuth
+contact sheet, then uses
+`packages/core/src/server/image-processing/` to derive tolerant azimuth crops,
+confidence metadata, and a diagnostic overlay before import groups the
+composite and views in SQLite.
+
 ## Related References
 
 - `reference/media-generation.md`
@@ -49,4 +59,3 @@ framework.
 - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
-

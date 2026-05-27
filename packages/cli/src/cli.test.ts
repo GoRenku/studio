@@ -655,7 +655,9 @@ describe('renku CLI', () => {
     );
     expect(estimateExitCode).toBe(0);
     const estimate = JSON.parse(stdout.join('\n')) as {
-      estimate: { approvalToken: string };
+      estimate: {
+        approvalToken: string;
+      };
     };
     expect(estimate.estimate.approvalToken).toMatch(/^sha256:/);
 
@@ -867,6 +869,189 @@ describe('renku CLI', () => {
           },
         ],
       },
+    });
+
+    const locationId = project.locations[0]!.id;
+
+    stdout = [];
+    stderr = [];
+    const locationContextExitCode = await runRenkuCli(
+      [
+        'generation',
+        'context',
+        '--purpose',
+        'location.environment-sheet',
+        '--target',
+        `location:${locationId}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationContextExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'location.environment-sheet',
+      target: { kind: 'location', id: locationId },
+      defaults: {
+        sheetFrame: '4:3',
+        viewFrame: '16:9',
+      },
+      activeLookbook: { lookbook: { id: report.lookbook.id } },
+    });
+
+    stdout = [];
+    stderr = [];
+    const locationModelListExitCode = await runRenkuCli(
+      [
+        'generation',
+        'model',
+        'list',
+        '--purpose',
+        'location.environment-sheet',
+        '--target',
+        `location:${locationId}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationModelListExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      models: expect.arrayContaining([
+        expect.objectContaining({
+          modelChoice: 'fal-ai/nano-banana-2',
+          available: true,
+        }),
+      ]),
+    });
+
+    const locationSpecPath = path.join(homeDir, 'location-environment-sheet-spec.json');
+    await fs.writeFile(
+      locationSpecPath,
+      JSON.stringify(
+        {
+          purpose: 'location.environment-sheet',
+          target: { kind: 'location', id: locationId },
+          modelChoice: 'fal-ai/nano-banana-2',
+          prompt: 'A simulated four-view environment sheet for the council chamber.',
+          takeCount: 1,
+          seed: null,
+          sheetFrame: '4:3',
+          viewFrame: '16:9',
+          detail: 'draft',
+          outputFormat: 'png',
+          title: 'Council Chamber Environment Sheet',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const locationCreateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'create', '--file', locationSpecPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationCreateExitCode).toBe(0);
+    const locationSpec = JSON.parse(stdout.join('\n')) as { id: string };
+
+    stdout = [];
+    stderr = [];
+    const locationRunExitCode = await runRenkuCli(
+      ['generation', 'run', '--spec', locationSpec.id, '--simulate', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationRunExitCode).toBe(0);
+    const locationRun = JSON.parse(stdout.join('\n')) as {
+      run: {
+        outputs: Array<{ projectRelativePath: string }>;
+      };
+    };
+    expect(locationRun).toMatchObject({
+      run: {
+        provider: 'fal-ai',
+        model: 'nano-banana-2',
+        simulated: true,
+        purpose: 'location.environment-sheet',
+        outputs: [
+          expect.objectContaining({
+            projectRelativePath: 'generated/media/council-chamber-environment-sheet.png',
+          }),
+        ],
+      },
+    });
+
+    const locationImportFilePath = path.join(
+      homeDir,
+      'location-environment-sheet-import.json'
+    );
+    const locationViewFiles = {
+      view_front: 'generated/media/council-chamber-front.png',
+      view_right: 'generated/media/council-chamber-right.png',
+      view_back: 'generated/media/council-chamber-back.png',
+      view_left: 'generated/media/council-chamber-left.png',
+    };
+    await fs.mkdir(path.join(storageRoot, 'constantinople', 'generated/media'), {
+      recursive: true,
+    });
+    for (const [role, projectRelativePath] of Object.entries(locationViewFiles)) {
+      await fs.writeFile(
+        path.join(storageRoot, 'constantinople', projectRelativePath),
+        role
+      );
+    }
+    await fs.writeFile(
+      locationImportFilePath,
+      JSON.stringify(
+        {
+          title: 'Council Chamber Environment Sheet',
+          files: {
+            composite: locationRun.run.outputs[0]!.projectRelativePath,
+            ...locationViewFiles,
+          },
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const locationImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'location.environment-sheet',
+        '--target',
+        `location:${locationId}`,
+        '--file',
+        locationImportFilePath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationImportExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'location.environment-sheet',
+      imported: {
+        role: 'environment_sheet',
+        files: expect.arrayContaining([
+          expect.objectContaining({ role: 'composite' }),
+          expect.objectContaining({ role: 'view_front' }),
+          expect.objectContaining({ role: 'view_right' }),
+          expect.objectContaining({ role: 'view_back' }),
+          expect.objectContaining({ role: 'view_left' }),
+        ]),
+      },
+      files: [
+        expect.objectContaining({ role: 'composite' }),
+        expect.objectContaining({ role: 'view_front' }),
+        expect.objectContaining({ role: 'view_right' }),
+        expect.objectContaining({ role: 'view_back' }),
+        expect.objectContaining({ role: 'view_left' }),
+      ],
     });
   });
 

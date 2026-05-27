@@ -34,6 +34,10 @@ import type {
   CastProfileGenerationContext,
   CastProfileGenerationSpec,
   CastProfileModelListReport,
+  LocationEnvironmentSheetGenerationContext,
+  LocationEnvironmentSheetGenerationSpec,
+  LocationEnvironmentSheetMediaImportReport,
+  LocationEnvironmentSheetModelListReport,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -227,6 +231,18 @@ export interface ProjectDataService {
   runCastProfileSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordCastProfileRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
   importCastProfileMedia(input: ImportCastMediaInput): Promise<CastMediaImportReport>;
+  buildLocationEnvironmentSheetContext(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetGenerationContext>;
+  listLocationEnvironmentSheetModels(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetModelListReport>;
+  validateLocationEnvironmentSheetSpec(input: ValidateLocationEnvironmentSheetGenerationSpecInput): Promise<{ valid: true; spec: LocationEnvironmentSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createLocationEnvironmentSheetSpec(input: CreateLocationEnvironmentSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateLocationEnvironmentSheetSpec(input: UpdateLocationEnvironmentSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readLocationEnvironmentSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listLocationEnvironmentSheetSpecs(input: LocationMediaGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareLocationEnvironmentSheetSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateLocationEnvironmentSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runLocationEnvironmentSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  recordLocationEnvironmentSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
+  importLocationEnvironmentSheetMedia(input: ImportLocationEnvironmentSheetMediaInput): Promise<LocationEnvironmentSheetMediaImportReport>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -559,6 +575,43 @@ export interface ImportCastMediaInput extends RenkuConfigPathOptions {
   title?: string;
   oneLineSummary?: string;
   receipt?: unknown;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface LocationMediaGenerationContextInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  locationId: string;
+}
+
+export interface ValidateLocationEnvironmentSheetGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: LocationEnvironmentSheetGenerationSpec;
+}
+
+export interface CreateLocationEnvironmentSheetGenerationSpecInput
+  extends ValidateLocationEnvironmentSheetGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateLocationEnvironmentSheetGenerationSpecInput
+  extends ValidateLocationEnvironmentSheetGenerationSpecInput {
+  specId: string;
+}
+
+export interface ImportLocationEnvironmentSheetMediaInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  locationId: string;
+  files: {
+    composite: string;
+    view_front: string;
+    view_right: string;
+    view_back: string;
+    view_left: string;
+  };
+  title?: string;
+  oneLineSummary?: string;
   idGenerator?: ProjectIdGenerator;
 }
 

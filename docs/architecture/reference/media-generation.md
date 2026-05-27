@@ -25,6 +25,7 @@ The implemented media generation purposes are:
 lookbook.image
 cast.character-sheet
 cast.profile
+location.environment-sheet
 ```
 
 Target formats:
@@ -32,18 +33,24 @@ Target formats:
 ```text
 lookbook:<lookbook-id>
 cast:<cast-member-id>
+location:<location-id>
 ```
 
 Core contract target shapes:
 
 ```ts
 {
-  kind: 'lookbook';
+  kind: "lookbook";
   id: string;
 }
 
 {
-  kind: 'castMember';
+  kind: "castMember";
+  id: string;
+}
+
+{
+  kind: "location";
   id: string;
 }
 ```
@@ -56,10 +63,12 @@ Current CLI surface:
 renku generation context --purpose lookbook.image --target lookbook:<id> --json
 renku generation context --purpose cast.character-sheet --target cast:<id> --json
 renku generation context --purpose cast.profile --target cast:<id> --json
+renku generation context --purpose location.environment-sheet --target location:<id> --json
 
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
 renku generation model list --purpose cast.character-sheet --target cast:<id> --json
 renku generation model list --purpose cast.profile --target cast:<id> --json
+renku generation model list --purpose location.environment-sheet --target location:<id> --json
 
 renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
@@ -69,6 +78,7 @@ renku generation spec show --spec <spec-id> --json
 renku generation spec list --purpose lookbook.image --target lookbook:<id> --json
 renku generation spec list --purpose cast.character-sheet --target cast:<id> --json
 renku generation spec list --purpose cast.profile --target cast:<id> --json
+renku generation spec list --purpose location.environment-sheet --target location:<id> --json
 
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
@@ -141,6 +151,39 @@ Profile images should usually be generated after a character sheet exists. When
 using an edit model, the generated request carries a logical `image_urls` file
 input. The engine resolves that project-relative source file immediately before
 provider execution.
+
+## Location Environment Sheet Context
+
+`location.environment-sheet` context is built for one screenplay location and
+requires an active Lookbook. The target location must already exist in the
+screenplay location list. When a requested historical location is missing, core
+returns a structured error with a suggestion to add the Location first instead
+of generating against free text.
+
+The context includes:
+
+- project title, summary, aspect ratio, and languages;
+- screenplay overview, dramatic signals, historical basis, dramatized elements,
+  research sources, and assumptions when available;
+- target location name, handle, description, time period, and visual notes;
+- scene usage and compact setting/action signals for scenes that use the
+  location;
+- the active Lookbook and its card image when available;
+- selected location assets, existing environment sheet takes, reference assets,
+  anti-reference assets, and image file references;
+- fixed defaults for the generated sheet frame, sliced view frame, detail, and
+  output format;
+- the fixed view file roles: `view_front`, `view_right`, `view_back`, and
+  `view_left`.
+
+Core returns factual context only. Prompt guardrails are written by the
+media-producer skill from those facts. Historical prompts should include
+concrete exclusions when the context calls for them, such as avoiding telegraph
+poles, electrical wires, asphalt roads, or modern signage in a 1400s setting.
+
+The generated provider image is one composite sheet, not four provider calls.
+The media-producer agent inspects that composite with vision and slices the four
+scenic view images locally before import.
 
 ## Lookbook Image Spec
 
@@ -263,6 +306,68 @@ Profile text-to-image models must not include `sourceAssetId`. Profile edit
 models must include `sourceAssetId`, and that asset must be an image attached to
 the cast member with the `character_sheet` role.
 
+## Location Environment Sheet Spec
+
+```json
+{
+  "purpose": "location.environment-sheet",
+  "target": { "kind": "location", "id": "location_sea_walls" },
+  "modelChoice": "fal-ai/nano-banana-2",
+  "prompt": "A four-view environment sheet for the Constantinople sea walls...",
+  "takeCount": 1,
+  "seed": null,
+  "sheetFrame": "4:3",
+  "viewFrame": "16:9",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Constantinople sea walls environment sheet"
+}
+```
+
+Binding fields:
+
+- `modelChoice`
+- `seed`
+- `sheetFrame`
+- `viewFrame`
+- `detail`
+- `outputFormat`
+- `prompt`
+- `title`
+
+`takeCount` is always `1` for this purpose.
+
+Supported model choices:
+
+- `fal-ai/openai/gpt-image-2`
+- `fal-ai/nano-banana-2`
+- `fal-ai/xai/grok-imagine-image`
+
+Supported sheet frames:
+
+- `4:3`
+
+Supported sliced view frames:
+
+- `16:9`
+
+Location environment sheets are direct text-to-image contact sheets. Core does
+not create or send a visual template, mask, fiducial markers, labeled cells, or
+bottom guideline strip. Instead, the provider prompt asks for one cinematic
+four-panel location sheet with panels ordered by azimuth.
+
+### Agent-Sliced Views
+
+Core does not crop the generated composite. After generation, the
+media-producer agent uses vision to identify the four scenic image blocks in the
+composite and writes local sliced files for `view_front`, `view_right`,
+`view_back`, and `view_left`.
+
+If the generated composite does not have four clean scenic view blocks, the
+agent shows the composite to the user, says the generation is not good enough to
+slice cleanly, and asks for regeneration instead of importing a broken grouped
+asset.
+
 ## Estimate And Run
 
 Estimate and run both use the persisted spec.
@@ -275,9 +380,17 @@ The command sequence is:
 4. Build the final provider payload.
 5. Validate the provider payload against the model JSON Schema.
 6. Estimate cost through engines.
-7. Require the approval token for live execution.
+7. Return the estimated cost and approval token for the exact request.
+8. Require the approval token for live execution.
 
 No live provider call should happen when the estimate is unknown or unapproved.
+The approval token is bound to the exact generation policy and request. If the
+model, prompt, parameters, bound input files, or output count change, callers
+must estimate again before running.
+
+User-facing approval should be calm and singular, such as "Generate image -
+estimated $0.054" with provider details available nearby. Do not require a
+second content-disclosure confirmation after the user has approved the cost.
 
 Generation runs store:
 
@@ -292,9 +405,12 @@ Generation runs store:
 - diagnostics;
 - start and completion timestamps.
 
+For `location.environment-sheet`, run outputs contain the single provider
+composite image. Generation does not import the asset automatically.
+
 ## Persistence
 
-The first implementation uses two tables:
+Generation specs and runs use two common tables:
 
 ```text
 media_generation_spec
@@ -310,6 +426,17 @@ even after the spec is edited.
 `media_generation_run.outputs_json` stores output paths, returned seeds,
 revised prompts, imported asset ids, and per-take metadata for now. Do not add a
 separate output table until a concrete UI or query needs it.
+
+Location Environment Sheet imports also use purpose-specific grouping tables:
+
+```text
+location_environment_sheet
+location_environment_sheet_view
+```
+
+Those rows connect the imported composite to its four direction-specific view
+files. The current import path uses agent-provided slices, so Core stores the
+grouping and azimuth ownership without running image extraction itself.
 
 ## Media Import
 
@@ -338,6 +465,41 @@ For Cast Profiles, import registers an image asset with type `cast_profile`,
 attaches it to the cast member with role `profile`, and stores the file under
 `cast/<handle>/profiles/`.
 
+For Location Environment Sheets, import registers one image asset with type
+`location_environment_sheet`, attaches it to the location with role
+`environment_sheet`, stores the composite and four azimuth view files under
+`locations/<handle>/environment-sheets/<sheet-slug>/`, and records those files
+with explicit asset-file roles: `composite`, `view_front`, `view_right`,
+`view_back`, and `view_left`. Import also writes the purpose-owned grouping
+rows in `location_environment_sheet` and `location_environment_sheet_view` so
+runtime code can read the composite-to-view relationship from SQLite instead of
+inferring it from filenames.
+
+```bash
+renku media import \
+  --purpose location.environment-sheet \
+  --target location:<location-id> \
+  --file location-environment-sheet-import.json \
+  --title <title> \
+  --summary <one-line-summary> \
+  --json
+```
+
+Location Environment Sheet import file:
+
+```json
+{
+  "title": "Constantinople sea walls environment sheet",
+  "files": {
+    "composite": "generated/media/sea-walls-sheet.png",
+    "view_front": "generated/media/sea-walls-front.png",
+    "view_right": "generated/media/sea-walls-right.png",
+    "view_back": "generated/media/sea-walls-back.png",
+    "view_left": "generated/media/sea-walls-left.png"
+  }
+}
+```
+
 ```bash
 renku media import \
   --purpose cast.character-sheet \
@@ -358,9 +520,9 @@ renku media import \
   --json
 ```
 
-The current CLI expects a project-relative source path. Importing absolute paths
-can be reconsidered in a future implementation slice, but it is not the current
-contract.
+Single-file imports expect a project-relative source path. Location Environment
+Sheet import expects a JSON file whose `files` entries are project-relative
+paths.
 
 For generated Lookbook images, agents must inspect the generated image before
 import and choose section tags based on what the image visibly demonstrates.

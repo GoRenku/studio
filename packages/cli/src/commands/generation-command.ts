@@ -50,6 +50,12 @@ export async function runGenerationCommand(options: {
                 homeDir: options.homeDir,
                 castMemberId: parseCastTarget(target),
               })
+            : purpose === 'location.environment-sheet'
+              ? await service.buildLocationEnvironmentSheetContext({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  locationId: parseLocationTarget(target),
+                })
             : unsupportedGenerationPurpose(purpose)
     );
     return 0;
@@ -78,6 +84,12 @@ export async function runGenerationCommand(options: {
                 homeDir: options.homeDir,
                 castMemberId: parseCastTarget(target),
               })
+            : purpose === 'location.environment-sheet'
+              ? await service.listLocationEnvironmentSheetModels({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  locationId: parseLocationTarget(target),
+                })
             : unsupportedGenerationPurpose(purpose)
     );
     return 0;
@@ -106,6 +118,12 @@ export async function runGenerationCommand(options: {
                 homeDir: options.homeDir,
                 spec,
               })
+            : spec.purpose === 'location.environment-sheet'
+              ? await service.validateLocationEnvironmentSheetSpec({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  spec,
+                })
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -134,6 +152,12 @@ export async function runGenerationCommand(options: {
                 homeDir: options.homeDir,
                 spec,
               })
+            : spec.purpose === 'location.environment-sheet'
+              ? await service.createLocationEnvironmentSheetSpec({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  spec,
+                })
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -165,6 +189,13 @@ export async function runGenerationCommand(options: {
                 specId: requiredFlag(options.flags.spec, '--spec'),
                 spec,
               })
+            : spec.purpose === 'location.environment-sheet'
+              ? await service.updateLocationEnvironmentSheetSpec({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  specId: requiredFlag(options.flags.spec, '--spec'),
+                  spec,
+                })
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -205,6 +236,12 @@ export async function runGenerationCommand(options: {
                 homeDir: options.homeDir,
                 castMemberId: parseCastTarget(target),
               })
+            : purpose === 'location.environment-sheet'
+              ? await service.listLocationEnvironmentSheetSpecs({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  locationId: parseLocationTarget(target),
+                })
             : unsupportedGenerationPurpose(purpose)
     );
     return 0;
@@ -226,6 +263,8 @@ export async function runGenerationCommand(options: {
           ? await service.estimateCastCharacterSheetSpec(specInput)
           : specRecord.spec.purpose === 'cast.profile'
             ? await service.estimateCastProfileSpec(specInput)
+            : specRecord.spec.purpose === 'location.environment-sheet'
+              ? await service.estimateLocationEnvironmentSheetSpec(specInput)
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -249,6 +288,8 @@ export async function runGenerationCommand(options: {
           ? await service.runCastCharacterSheetSpec(specInput)
           : specRecord.spec.purpose === 'cast.profile'
             ? await service.runCastProfileSpec(specInput)
+            : specRecord.spec.purpose === 'location.environment-sheet'
+              ? await service.runLocationEnvironmentSheetSpec(specInput)
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -290,12 +331,24 @@ function parseCastTarget(value: string): string {
   return id;
 }
 
+function parseLocationTarget(value: string): string {
+  const [kind, id, extra] = value.split(':');
+  if (kind !== 'location' || !id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI025',
+      message: `Location image generation target must use location:<id>. Received: ${value}.`,
+      suggestion: 'Use --target location:<location-id>.',
+    });
+  }
+  return id;
+}
+
 function unsupportedGenerationPurpose(purpose: string): never {
   throw new StructuredError({
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose cast.character-sheet, or --purpose cast.profile.',
+      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, or --purpose location.environment-sheet.',
   });
 }
 

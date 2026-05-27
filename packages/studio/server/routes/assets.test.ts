@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import type { Asset } from '@gorenku/studio-core/client';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
@@ -119,13 +120,31 @@ describe('assets Hono route', () => {
     await expect(response.text()).resolves.toBe('png bytes');
   });
 
-  it('lists, selects, unselects, and serves location assets through ProjectDataService', async () => {
+  it('lists, selects, unselects, and serves grouped location environment sheet files through ProjectDataService', async () => {
     vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('location bytes'));
     const locationAsset = {
       ...makeAsset('asset_location_reference'),
       relationshipId: 'location_asset_test0001',
       target: { kind: 'location' as const, locationId: 'location_gate' },
-      title: 'Gate reference',
+      type: 'location_environment_sheet',
+      role: 'environment_sheet',
+      title: 'Gate environment sheet',
+      files: [
+        {
+          ...makeAsset('asset_location_reference').files[0]!,
+          id: 'asset_file_location_composite',
+          role: 'composite',
+          projectRelativePath:
+            'locations/gate/environment-sheets/gate/composite.png' as Asset['files'][number]['projectRelativePath'],
+        },
+        {
+          ...makeAsset('asset_location_reference').files[0]!,
+          id: 'asset_file_location_view_front',
+          role: 'view_front',
+          projectRelativePath:
+            'locations/gate/environment-sheets/gate/front.png' as Asset['files'][number]['projectRelativePath'],
+        },
+      ],
     };
     const app = new Hono().route(
       '/:projectName',
@@ -163,8 +182,9 @@ describe('assets Hono route', () => {
             });
             return {
               asset: locationAsset,
-              file: locationAsset.files[0],
-              absolutePath: '/tmp/renku/constantinople/locations/gate/reference.png',
+              file: locationAsset.files[1]!,
+              absolutePath:
+                '/tmp/renku/constantinople/locations/gate/environment-sheets/gate/front.png',
             };
           },
         },
@@ -186,12 +206,22 @@ describe('assets Hono route', () => {
       { method: 'DELETE' }
     );
     const file = await app.request(
-      '/constantinople/locations/location_gate/assets/asset_location_reference/files/asset_file_cast_reference'
+      '/constantinople/locations/location_gate/assets/asset_location_reference/files/asset_file_location_view_front'
     );
 
     expect(listed.status).toBe(200);
     await expect(listed.json()).resolves.toMatchObject({
-      assets: [{ target: { kind: 'location', locationId: 'location_gate' } }],
+      assets: [
+        {
+          type: 'location_environment_sheet',
+          role: 'environment_sheet',
+          target: { kind: 'location', locationId: 'location_gate' },
+          files: [
+            { role: 'composite' },
+            { role: 'view_front' },
+          ],
+        },
+      ],
     });
     expect(selected.status).toBe(200);
     await expect(selected.json()).resolves.toMatchObject({

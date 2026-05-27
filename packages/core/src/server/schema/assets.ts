@@ -4,6 +4,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 import { castMembers } from './cast-members.js';
 import { locations } from './locations.js';
@@ -127,6 +128,73 @@ export const locationAssets = sqliteTable(
       table.selectionOrder,
       table.sortOrder,
       table.assetId,
+    ),
+  ],
+);
+
+export const locationEnvironmentSheets = sqliteTable(
+  'location_environment_sheet',
+  {
+    id: text('id').primaryKey(),
+    locationId: text('location_id')
+      .notNull()
+      .references(() => locations.id),
+    assetId: text('asset_id')
+      .notNull()
+      .references(() => assets.id, { onDelete: 'cascade' }),
+    compositeFileId: text('composite_file_id')
+      .notNull()
+      .references(() => assetFiles.id),
+    layoutTemplate: text('layout_template').notNull(),
+    viewFrame: text('view_frame').notNull(),
+    sheetFrame: text('sheet_frame').notNull(),
+    gridLayout: text('grid_layout').notNull(),
+    extractionConfidence: text('extraction_confidence').notNull(),
+    extractionMethod: text('extraction_method').notNull(),
+    extractionDiagnosticsJson: text('extraction_diagnostics_json'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('location_environment_sheet_asset_idx').on(table.assetId),
+    index('location_environment_sheet_location_created_idx').on(
+      table.locationId,
+      table.createdAt,
+      table.id
+    ),
+  ],
+);
+
+export const locationEnvironmentSheetViews = sqliteTable(
+  'location_environment_sheet_view',
+  {
+    id: text('id').primaryKey(),
+    sheetId: text('sheet_id')
+      .notNull()
+      .references(() => locationEnvironmentSheets.id, { onDelete: 'cascade' }),
+    azimuthDegrees: integer('azimuth_degrees').notNull(),
+    assetFileId: text('asset_file_id')
+      .notNull()
+      .references(() => assetFiles.id),
+    cropX: integer('crop_x').notNull(),
+    cropY: integer('crop_y').notNull(),
+    cropWidth: integer('crop_width').notNull(),
+    cropHeight: integer('crop_height').notNull(),
+    extractionConfidence: text('extraction_confidence').notNull(),
+    extractionMethod: text('extraction_method').notNull(),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('location_environment_sheet_view_azimuth_idx').on(
+      table.sheetId,
+      table.azimuthDegrees
+    ),
+    index('location_environment_sheet_view_order_idx').on(
+      table.sheetId,
+      table.sortOrder,
+      table.id
     ),
   ],
 );

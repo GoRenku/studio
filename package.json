@@ -61,7 +61,6 @@
       "better-sqlite3",
       "bufferutil",
       "esbuild",
-      "sharp",
       "ffmpeg-static"
     ]
   }

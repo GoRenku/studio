@@ -549,8 +549,14 @@ export function fakeProjectDataService(): NonNullable<
           },
         },
         estimate: {
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          mediaKind: 'image',
+          pricing: 0,
           estimatedCostUsd: 0,
           approvalToken: 'sha256:test',
+          billableUnits: { outputCount: 1 },
+          warnings: [],
         },
       };
     },

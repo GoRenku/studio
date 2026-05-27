@@ -421,6 +421,7 @@ export async function runRenkuCli(
             project: cli.flags.project,
             purpose: cli.flags.purpose,
             target: cli.flags.target,
+            file: cli.flags.file,
             source: cli.flags.source,
             title: cli.flags.title,
             summary: cli.flags.summary,

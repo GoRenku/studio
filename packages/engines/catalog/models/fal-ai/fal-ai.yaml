@@ -124,59 +124,41 @@ models:
       inputs: [image_size, quality, num_images]
       prices:
         - quality: "low"
-          image_size: "landscape_4_3"
-          pricePerImage: 0.01
+          image_size: "1024x768"
+          pricePerImage: 0.005
         - quality: "low"
-          image_size: "portrait_4_3"
-          pricePerImage: 0.01
+          image_size: "1024x1024"
+          pricePerImage: 0.006
         - quality: "low"
-          image_size: "square"
-          pricePerImage: 0.01
+          image_size: "1024x1536"
+          pricePerImage: 0.005
         - quality: "low"
-          image_size: "square_hd"
-          pricePerImage: 0.01
-        - quality: "low"
-          image_size: "landscape_16_9"
-          pricePerImage: 0.01
-        - quality: "low"
-          image_size: "portrait_16_9"
-          pricePerImage: 0.01
+          image_size: "1920x1080"
+          pricePerImage: 0.005
         - quality: "medium"
-          image_size: "landscape_4_3"
-          pricePerImage: 0.04
+          image_size: "1024x768"
+          pricePerImage: 0.037
         - quality: "medium"
-          image_size: "portrait_4_3"
-          pricePerImage: 0.04
+          image_size: "1024x1024"
+          pricePerImage: 0.053
         - quality: "medium"
-          image_size: "square"
-          pricePerImage: 0.06
+          image_size: "1024x1536"
+          pricePerImage: 0.042
         - quality: "medium"
-          image_size: "square_hd"
-          pricePerImage: 0.06
-        - quality: "medium"
-          image_size: "landscape_16_9"
-          pricePerImage: 0.04
-        - quality: "medium"
-          image_size: "portrait_16_9"
+          image_size: "1920x1080"
           pricePerImage: 0.04
         - quality: "high"
-          image_size: "landscape_4_3"
-          pricePerImage: 0.15
+          image_size: "1024x768"
+          pricePerImage: 0.145
         - quality: "high"
-          image_size: "portrait_4_3"
-          pricePerImage: 0.15
+          image_size: "1024x1024"
+          pricePerImage: 0.211
         - quality: "high"
-          image_size: "square"
-          pricePerImage: 0.22
+          image_size: "1024x1536"
+          pricePerImage: 0.165
         - quality: "high"
-          image_size: "square_hd"
-          pricePerImage: 0.22
-        - quality: "high"
-          image_size: "landscape_16_9"
-          pricePerImage: 0.16
-        - quality: "high"
-          image_size: "portrait_16_9"
-          pricePerImage: 0.16
+          image_size: "1920x1080"
+          pricePerImage: 0.158
   - name: openai/gpt-image-2/edit
     subProvider: openai
     type: image
@@ -189,68 +171,68 @@ models:
       inputs: [image_size, quality, num_images]
       prices:
         - quality: "low"
-          image_size: "landscape_4_3"
-          pricePerImage: 0.01
+          image_size: "1024x768"
+          pricePerImage: 0.011
         - quality: "low"
-          image_size: "portrait_4_3"
-          pricePerImage: 0.01
+          image_size: "1024x1024"
+          pricePerImage: 0.015
         - quality: "low"
-          image_size: "square"
-          pricePerImage: 0.01
+          image_size: "1024x1536"
+          pricePerImage: 0.018
         - quality: "low"
-          image_size: "square_hd"
-          pricePerImage: 0.01
+          image_size: "1920x1080"
+          pricePerImage: 0.017
         - quality: "low"
-          image_size: "landscape_16_9"
-          pricePerImage: 0.01
+          image_size: "2560x1440"
+          pricePerImage: 0.019
         - quality: "low"
-          image_size: "portrait_16_9"
-          pricePerImage: 0.01
+          image_size: "3840x2160"
+          pricePerImage: 0.024
         - quality: "low"
           image_size: "auto"
-          pricePerImage: 0.01
+          pricePerImage: 0.015
         - quality: "medium"
-          image_size: "landscape_4_3"
-          pricePerImage: 0.04
+          image_size: "1024x768"
+          pricePerImage: 0.043
         - quality: "medium"
-          image_size: "portrait_4_3"
-          pricePerImage: 0.04
+          image_size: "1024x1024"
+          pricePerImage: 0.061
         - quality: "medium"
-          image_size: "square"
-          pricePerImage: 0.06
+          image_size: "1024x1536"
+          pricePerImage: 0.054
         - quality: "medium"
-          image_size: "square_hd"
-          pricePerImage: 0.06
+          image_size: "1920x1080"
+          pricePerImage: 0.053
         - quality: "medium"
-          image_size: "landscape_16_9"
-          pricePerImage: 0.04
+          image_size: "2560x1440"
+          pricePerImage: 0.068
         - quality: "medium"
-          image_size: "portrait_16_9"
-          pricePerImage: 0.04
+          image_size: "3840x2160"
+          pricePerImage: 0.113
         - quality: "medium"
           image_size: "auto"
-          pricePerImage: 0.06
+          pricePerImage: 0.061
         - quality: "high"
-          image_size: "landscape_4_3"
-          pricePerImage: 0.15
+          image_size: "1024x768"
+          pricePerImage: 0.151
         - quality: "high"
-          image_size: "portrait_4_3"
-          pricePerImage: 0.15
+          image_size: "1024x1024"
+          pricePerImage: 0.219
         - quality: "high"
-          image_size: "square"
-          pricePerImage: 0.22
+          image_size: "1024x1536"
+          pricePerImage: 0.178
         - quality: "high"
-          image_size: "square_hd"
-          pricePerImage: 0.22
+          image_size: "1920x1080"
+          pricePerImage: 0.158
         - quality: "high"
-          image_size: "landscape_16_9"
-          pricePerImage: 0.16
+          image_size: "2560x1440"
+          pricePerImage: 0.234
         - quality: "high"
-          image_size: "portrait_16_9"
-          pricePerImage: 0.16
+          image_size: "3840x2160"
+          pricePerImage: 0.413
         - quality: "high"
           image_size: "auto"
-          pricePerImage: 0.22
+          pricePerImage: 0.219
   - name: nano-banana-pro/edit
     type: image
     mime:

@@ -66,6 +66,12 @@ A **Cast Profile** is an image asset attached to a cast member with the
 `profile` role. Imported/generated profile images are stored under
 `cast/<handle>/profiles/`.
 
+A **Location Environment Sheet** is a grouped image asset attached to a
+location with the `environment_sheet` role. It contains one composite sheet and
+four derived azimuth view files for 0, 90, 180, and 270 degrees. The grouping,
+azimuth ownership, import method, and confidence metadata are stored in SQLite,
+not inferred from filenames.
+
 ## Working Assets Versus Production Assets
 
 Working assets are for development and iteration.
@@ -142,6 +148,9 @@ Folder responsibilities:
   character sheet image assets.
 - `cast/<handle>/profiles/` contains imported or generated cast profile image
   assets.
+- `locations/<handle>/environment-sheets/<sheet-slug>/` contains imported or
+  generated Location Environment Sheets: one composite file and four azimuth
+  view files.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
   those folders are not per-image assets unless a future command explicitly
   registers one.
@@ -262,8 +271,13 @@ The folder structure is for humans.
 
 SQLite owns identity and relationships.
 
-Do not infer IDs, owners, languages, selects, clips, or bindings from file names
-or folder names.
+Do not infer IDs, owners, languages, selects, clips, bindings, azimuths, or
+grouped asset membership from file names or folder names.
+
+For Location Environment Sheets, paths such as `front.png` are readable storage
+names only. Runtime code must read explicit asset-file roles such as
+`view_front`, `view_right`, `view_back`, and `view_left` to know which file
+belongs to which azimuth.
 
 The same rule applies to Visual Language folders. A folder name may be a useful
 creative hint for an agent, but Renku relationships come from SQLite rows and

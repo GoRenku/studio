@@ -282,6 +282,29 @@ function firstPreferredImageAsset(
       }).items[0]
     );
   }
+  if (target.kind === 'location') {
+    return (
+      listAssetRelationshipPage(session, {
+        target,
+        role: 'environment_sheet',
+        mediaKind: 'image',
+        selection: 'select',
+        limit: 1,
+      }).items[0] ??
+      listAssetRelationshipPage(session, {
+        target,
+        mediaKind: 'image',
+        selection: 'select',
+        limit: 1,
+      }).items[0] ??
+      listAssetRelationshipPage(session, {
+        target,
+        mediaKind: 'image',
+        selection: 'take',
+        limit: 1,
+      }).items[0]
+    );
+  }
   return listAssetRelationshipPage(session, {
     target,
     mediaKind: 'image',

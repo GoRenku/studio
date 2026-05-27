@@ -45,16 +45,18 @@ export async function estimateGeneration(input: {
         ? pricing * count
         : priceFromConfig(pricing, payload, count);
 
+  const approvalToken = hashGenerationRequest({
+    policy: input.policy,
+    request: input.request,
+  });
+
   return {
     provider: input.policy.provider,
     model: input.policy.model,
     mediaKind: input.policy.mediaKind,
     pricing,
     estimatedCostUsd: price,
-    approvalToken: hashGenerationRequest({
-      policy: input.policy,
-      request: input.request,
-    }),
+    approvalToken,
     billableUnits: {
       outputCount: count,
       ...payload,
@@ -102,14 +104,10 @@ function priceFromConfig(
     return pricing.pricePerCharacter * characters(payload) * count;
   }
   if (pricing.function === 'costByImageSizeAndQuality' && pricing.prices) {
-    const row = pricing.prices.find((candidate) =>
-      Object.entries(candidate).every(([key, value]) => {
-        if (key === 'pricePerImage') {
-          return true;
-        }
-        return payload[key] === value;
-      })
-    );
+    const row =
+      pricing.prices.find((candidate) =>
+        imageSizeAndQualityRowMatches(candidate, payload)
+      ) ?? nearestCustomImageSizeRow(pricing.prices, payload);
     const pricePerImage = row?.pricePerImage;
     return typeof pricePerImage === 'number' ? pricePerImage * count : null;
   }
@@ -126,6 +124,133 @@ function priceFromConfig(
     return typeof pricePerImage === 'number' ? pricePerImage * count : null;
   }
   return null;
+}
+
+interface PricingImageDimensions {
+  width: number;
+  height: number;
+}
+
+const IMAGE_SIZE_PRICING_DIMENSIONS: Record<string, PricingImageDimensions> = {
+  square: { width: 1024, height: 1024 },
+  square_hd: { width: 1024, height: 1024 },
+  landscape_4_3: { width: 1024, height: 768 },
+  portrait_4_3: { width: 768, height: 1024 },
+  landscape_16_9: { width: 1920, height: 1080 },
+  portrait_16_9: { width: 1080, height: 1920 },
+};
+
+function imageSizeAndQualityRowMatches(
+  row: Record<string, unknown>,
+  payload: Record<string, unknown>
+): boolean {
+  return Object.entries(row).every(([key, value]) => {
+    if (key === 'pricePerImage') {
+      return true;
+    }
+    if (key === 'image_size') {
+      return imageSizesMatch(value, payload.image_size);
+    }
+    return Object.is(payload[key], value);
+  });
+}
+
+function nearestCustomImageSizeRow(
+  rows: Array<Record<string, unknown>>,
+  payload: Record<string, unknown>
+): Record<string, unknown> | null {
+  const payloadSize = readImageSizeDimensions(payload.image_size);
+  if (!payloadSize || typeof payload.image_size !== 'object') {
+    return null;
+  }
+  let best: { row: Record<string, unknown>; distance: number } | null = null;
+  for (const row of rows) {
+    if (!nonImageSizePriceFieldsMatch(row, payload)) {
+      continue;
+    }
+    const rowSize = readImageSizeDimensions(row.image_size);
+    if (!rowSize) {
+      continue;
+    }
+    const distance = Math.abs(pixelArea(rowSize) - pixelArea(payloadSize));
+    if (!best || distance < best.distance) {
+      best = { row, distance };
+    }
+  }
+  return best?.row ?? null;
+}
+
+function nonImageSizePriceFieldsMatch(
+  row: Record<string, unknown>,
+  payload: Record<string, unknown>
+): boolean {
+  return Object.entries(row).every(([key, value]) => {
+    if (key === 'pricePerImage' || key === 'image_size') {
+      return true;
+    }
+    return Object.is(payload[key], value);
+  });
+}
+
+function imageSizesMatch(expected: unknown, actual: unknown): boolean {
+  if (Object.is(expected, actual)) {
+    return true;
+  }
+  const expectedSize = readImageSizeDimensions(expected);
+  const actualSize = readImageSizeDimensions(actual);
+  return Boolean(
+    expectedSize &&
+      actualSize &&
+      dimensionsMatch(expectedSize, actualSize)
+  );
+}
+
+function readImageSizeDimensions(value: unknown): PricingImageDimensions | null {
+  if (typeof value === 'string') {
+    const preset = IMAGE_SIZE_PRICING_DIMENSIONS[value];
+    if (preset) {
+      return preset;
+    }
+    const match = /^(\d+)x(\d+)$/.exec(value);
+    if (!match) {
+      return null;
+    }
+    return {
+      width: Number(match[1]!),
+      height: Number(match[2]!),
+    };
+  }
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const width = record.width;
+  const height = record.height;
+  if (
+    typeof width !== 'number' ||
+    typeof height !== 'number' ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return null;
+  }
+  return { width, height };
+}
+
+function dimensionsMatch(
+  expected: PricingImageDimensions,
+  actual: PricingImageDimensions
+): boolean {
+  return (
+    (expected.width === actual.width && expected.height === actual.height) ||
+    (expected.width === actual.height && expected.height === actual.width)
+  );
+}
+
+function pixelArea(dimensions: PricingImageDimensions): number {
+  return dimensions.width * dimensions.height;
 }
 
 export function deriveGenerationOutputCount(

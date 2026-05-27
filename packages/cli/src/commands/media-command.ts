@@ -5,6 +5,7 @@ import {
   createStudioOperationId,
   resolveRenkuStorageRoot,
   type CastMediaImportReport,
+  type LocationEnvironmentSheetMediaImportReport,
   type LookbookImageMediaImportReport,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
@@ -17,6 +18,7 @@ export async function runMediaCommand(options: {
     project?: string;
     purpose?: string;
     target?: string;
+    file?: string;
     source?: string;
     title?: string;
     summary?: string;
@@ -32,33 +34,61 @@ export async function runMediaCommand(options: {
     const service = createProjectDataService();
     const purpose = requiredFlag(options.flags.purpose, '--purpose');
     const target = requiredFlag(options.flags.target, '--target');
-    const sourceProjectRelativePath = requiredFlag(options.flags.source, '--source');
-    const receipt = options.flags.receipt
-      ? await readReceipt(options.flags.receipt)
-      : undefined;
-    const report = purpose === 'lookbook.image'
-      ? await service.importLookbookImageMedia({
-          projectName: options.flags.project,
-          homeDir: options.homeDir,
-          lookbookId: parseLookbookTarget(target),
-          sourceProjectRelativePath,
-          title: options.flags.title,
-          oneLineSummary: options.flags.summary,
-          sections: parseSections(options.flags.sections),
-          receipt,
-        })
-      : purpose === 'cast.character-sheet'
-        ? await service.importCastCharacterSheetMedia({
+    let report:
+      | LookbookImageMediaImportReport
+      | CastMediaImportReport
+      | LocationEnvironmentSheetMediaImportReport;
+
+    if (purpose === 'location.environment-sheet') {
+      if (options.flags.source) {
+        throw new StructuredError({
+          code: 'CLI027',
+          message: 'Location environment sheet import does not accept --source.',
+          suggestion:
+            'Use --file with a JSON document that lists composite, view_front, view_right, view_back, and view_left.',
+        });
+      }
+      if (options.flags.receipt) {
+        throw new StructuredError({
+          code: 'CLI028',
+          message:
+            'Location environment sheet import does not accept --receipt.',
+          suggestion:
+            'The generation receipt stays with the composite generation run; import only the grouped image files.',
+        });
+      }
+      const document = await readLocationEnvironmentSheetImportDocument(
+        requiredFlag(options.flags.file, '--file')
+      );
+      report = await service.importLocationEnvironmentSheetMedia({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        locationId: parseLocationTarget(target),
+        files: document.files,
+        title: options.flags.title ?? document.title,
+        oneLineSummary: options.flags.summary ?? document.oneLineSummary,
+      });
+    } else {
+      const sourceProjectRelativePath = requiredFlag(
+        options.flags.source,
+        '--source'
+      );
+      const receipt = options.flags.receipt
+        ? await readReceipt(options.flags.receipt)
+        : undefined;
+      report = purpose === 'lookbook.image'
+        ? await service.importLookbookImageMedia({
             projectName: options.flags.project,
             homeDir: options.homeDir,
-            castMemberId: parseCastTarget(target),
+            lookbookId: parseLookbookTarget(target),
             sourceProjectRelativePath,
             title: options.flags.title,
             oneLineSummary: options.flags.summary,
+            sections: parseSections(options.flags.sections),
             receipt,
           })
-        : purpose === 'cast.profile'
-          ? await service.importCastProfileMedia({
+        : purpose === 'cast.character-sheet'
+          ? await service.importCastCharacterSheetMedia({
               projectName: options.flags.project,
               homeDir: options.homeDir,
               castMemberId: parseCastTarget(target),
@@ -67,7 +97,18 @@ export async function runMediaCommand(options: {
               oneLineSummary: options.flags.summary,
               receipt,
             })
-          : unsupportedMediaPurpose(purpose);
+          : purpose === 'cast.profile'
+            ? await service.importCastProfileMedia({
+                projectName: options.flags.project,
+                homeDir: options.homeDir,
+                castMemberId: parseCastTarget(target),
+                sourceProjectRelativePath,
+                title: options.flags.title,
+                oneLineSummary: options.flags.summary,
+                receipt,
+              })
+            : unsupportedMediaPurpose(purpose);
+    }
     await appendMediaResourceChangedEvent({
       options,
       report,
@@ -89,6 +130,90 @@ async function readReceipt(filePath: string): Promise<unknown> {
     receipt?: unknown;
   };
   return parsed.receipt ?? parsed;
+}
+
+async function readLocationEnvironmentSheetImportDocument(filePath: string): Promise<{
+  title?: string;
+  oneLineSummary?: string;
+  files: {
+    composite: string;
+    view_front: string;
+    view_right: string;
+    view_back: string;
+    view_left: string;
+  };
+}> {
+  const parsed = JSON.parse(await fs.readFile(filePath, 'utf8')) as unknown;
+  if (!isRecord(parsed)) {
+    throw invalidLocationEnvironmentSheetImportFile(filePath);
+  }
+  const files = parsed.files;
+  if (!isRecord(files)) {
+    throw invalidLocationEnvironmentSheetImportFile(filePath);
+  }
+  const composite = readLocationEnvironmentSheetImportFileRole(
+    files,
+    filePath,
+    'composite'
+  );
+  const viewFront = readLocationEnvironmentSheetImportFileRole(
+    files,
+    filePath,
+    'view_front'
+  );
+  const viewRight = readLocationEnvironmentSheetImportFileRole(
+    files,
+    filePath,
+    'view_right'
+  );
+  const viewBack = readLocationEnvironmentSheetImportFileRole(
+    files,
+    filePath,
+    'view_back'
+  );
+  const viewLeft = readLocationEnvironmentSheetImportFileRole(
+    files,
+    filePath,
+    'view_left'
+  );
+  return {
+    ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
+    ...(typeof parsed.oneLineSummary === 'string'
+      ? { oneLineSummary: parsed.oneLineSummary }
+      : {}),
+    files: {
+      composite,
+      view_front: viewFront,
+      view_right: viewRight,
+      view_back: viewBack,
+      view_left: viewLeft,
+    },
+  };
+}
+
+function readLocationEnvironmentSheetImportFileRole(
+  files: Record<string, unknown>,
+  filePath: string,
+  role: 'composite' | 'view_front' | 'view_right' | 'view_back' | 'view_left'
+): string {
+  const value = files[role];
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw invalidLocationEnvironmentSheetImportFile(filePath);
+  }
+  return value;
+}
+
+function invalidLocationEnvironmentSheetImportFile(filePath: string): StructuredError {
+  return new StructuredError({
+    code: 'CLI029',
+    message: `Invalid Location environment sheet import file: ${filePath}.`,
+    suggestion:
+      'Provide JSON with files.composite, files.view_front, files.view_right, files.view_back, and files.view_left.',
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function parseLookbookTarget(target: string): string {
@@ -115,12 +240,24 @@ function parseCastTarget(target: string): string {
   return id;
 }
 
+function parseLocationTarget(target: string): string {
+  const [kind, id, extra] = target.split(':');
+  if (kind !== 'location' || !id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI025',
+      message: `Location image import target must use location:<id>. Received: ${target}.`,
+      suggestion: 'Use --target location:<location-id>.',
+    });
+  }
+  return id;
+}
+
 function unsupportedMediaPurpose(purpose: string): never {
   throw new StructuredError({
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose cast.character-sheet, or --purpose cast.profile.',
+      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, or --purpose location.environment-sheet.',
   });
 }
 
@@ -137,7 +274,10 @@ async function appendMediaResourceChangedEvent(input: {
     io: RenkuCliIo;
     homeDir?: string;
   };
-  report: LookbookImageMediaImportReport | CastMediaImportReport;
+  report:
+    | LookbookImageMediaImportReport
+    | CastMediaImportReport
+    | LocationEnvironmentSheetMediaImportReport;
   command: string;
 }): Promise<void> {
   if (input.report.resourceKeys.length === 0) {
@@ -186,7 +326,11 @@ async function appendMediaResourceChangedEvent(input: {
 }
 
 async function toProjectRef(
-  project: (LookbookImageMediaImportReport | CastMediaImportReport)['project'],
+  project: (
+    | LookbookImageMediaImportReport
+    | CastMediaImportReport
+    | LocationEnvironmentSheetMediaImportReport
+  )['project'],
   homeDir?: string
 ): Promise<StudioProjectRef> {
   return {
