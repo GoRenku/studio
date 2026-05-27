@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Buffer } from 'node:buffer';
 
 export type Id = string;
@@ -347,59 +344,4 @@ export function inferBlobExtension(mimeType?: string): string | null {
     return normalized.slice('image/'.length);
   }
   return null;
-}
-
-export interface EnvLoaderOptions {
-  verbose?: boolean;
-}
-
-export interface EnvLoaderResult {
-  loaded: string[];
-}
-
-export function loadEnv(
-  callerUrl: string,
-  options: EnvLoaderOptions = {}
-): EnvLoaderResult {
-  const cwd = dirname(fileURLToPath(callerUrl));
-  const candidates = [
-    resolve(cwd, '.env'),
-    resolve(cwd, '..', '.env'),
-    resolve(cwd, '..', '..', '.env'),
-  ];
-  const loaded: string[] = [];
-
-  for (const file of candidates) {
-    try {
-      const contents = readFileSync(file, 'utf8');
-      applyEnvFile(contents);
-      loaded.push(file);
-      if (options.verbose) {
-        console.info(`Loaded env file ${file}`);
-      }
-    } catch {
-      // Optional local env files are intentionally absent in most test runs.
-    }
-  }
-
-  return { loaded };
-}
-
-function applyEnvFile(contents: string): void {
-  for (const line of contents.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
-    const separatorIndex = trimmed.indexOf('=');
-    if (separatorIndex === -1) {
-      continue;
-    }
-    const key = trimmed.slice(0, separatorIndex).trim();
-    const rawValue = trimmed.slice(separatorIndex + 1).trim();
-    if (!key || process.env[key] !== undefined) {
-      continue;
-    }
-    process.env[key] = rawValue.replace(/^['"]|['"]$/g, '');
-  }
 }

@@ -20,27 +20,47 @@ describe('loadProviderEnvFiles', () => {
     originalValues.clear();
   });
 
-  it('loads provider API keys from .env files in the current directory ancestry', async () => {
+  it('loads provider API keys from stable Studio and Renku config roots', async () => {
     rememberEnv('FAL_KEY');
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-provider-env-'));
-    const nested = path.join(root, 'packages', 'studio');
-    await fs.mkdir(nested, { recursive: true });
+    const tempRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'renku-provider-env-')
+    );
+    const studioWorkspaceRoot = path.join(tempRoot, 'studio');
+    const renkuConfigDir = path.join(tempRoot, 'home', '.config', 'renku');
+    const unrelatedWorkingDir = path.join(tempRoot, 'somewhere-else');
+    await fs.mkdir(studioWorkspaceRoot, { recursive: true });
+    await fs.mkdir(renkuConfigDir, { recursive: true });
+    await fs.mkdir(unrelatedWorkingDir, { recursive: true });
     await fs.writeFile(
-      path.join(root, '.env'),
+      path.join(studioWorkspaceRoot, '.env'),
       [
         '# Provider credentials',
-        'FAL_KEY="fal-key-from-root-env"',
+        'FAL_KEY="fal-key-from-studio-env"',
       ].join('\n'),
       'utf8'
     );
+    await fs.writeFile(
+      path.join(renkuConfigDir, '.env.local'),
+      'FAL_KEY=fal-key-from-renku-config\n',
+      'utf8'
+    );
 
-    const result = loadProviderEnvFiles({
-      startDir: nested,
-      stopDir: root,
-    });
+    const originalCwd = process.cwd();
+    process.chdir(unrelatedWorkingDir);
+    try {
+      const result = loadProviderEnvFiles({
+        studioWorkspaceRoot,
+        renkuConfigDir,
+      });
 
-    expect(result.loaded).toEqual([path.join(root, '.env')]);
-    expect(process.env.FAL_KEY).toBe('fal-key-from-root-env');
+      expect(result.loaded).toEqual([
+        path.join(renkuConfigDir, '.env.local'),
+        path.join(studioWorkspaceRoot, '.env'),
+      ]);
+      expect(process.env.FAL_KEY).toBe('fal-key-from-studio-env');
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 
   it('keeps explicitly exported environment variables ahead of .env values', async () => {
@@ -50,39 +70,37 @@ describe('loadProviderEnvFiles', () => {
     await fs.writeFile(path.join(root, '.env'), 'FAL_KEY=file-fal-key\n', 'utf8');
 
     loadProviderEnvFiles({
-      startDir: root,
-      stopDir: root,
+      providerEnvRoots: [root],
     });
 
     expect(process.env.FAL_KEY).toBe('exported-fal-key');
   });
 
-  it('lets closer env files override ancestor env files', async () => {
+  it('lets later provider env roots override earlier provider env roots', async () => {
     rememberEnv('OPENAI_API_KEY');
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-provider-env-'));
-    const nested = path.join(root, 'packages', 'engines');
-    await fs.mkdir(nested, { recursive: true });
+    const renkuConfigDir = path.join(root, 'home', '.config', 'renku');
+    await fs.mkdir(renkuConfigDir, { recursive: true });
     await fs.writeFile(
       path.join(root, '.env'),
       'OPENAI_API_KEY=openai-from-root\n',
       'utf8'
     );
     await fs.writeFile(
-      path.join(nested, '.env'),
-      'OPENAI_API_KEY=openai-from-nested\n',
+      path.join(renkuConfigDir, '.env'),
+      'OPENAI_API_KEY=openai-from-renku-config\n',
       'utf8'
     );
 
     const result = loadProviderEnvFiles({
-      startDir: nested,
-      stopDir: root,
+      providerEnvRoots: [root, renkuConfigDir],
     });
 
     expect(result.loaded).toEqual([
       path.join(root, '.env'),
-      path.join(nested, '.env'),
+      path.join(renkuConfigDir, '.env'),
     ]);
-    expect(process.env.OPENAI_API_KEY).toBe('openai-from-nested');
+    expect(process.env.OPENAI_API_KEY).toBe('openai-from-renku-config');
   });
 
   it('lets .env.local override .env when both files live in the same directory', async () => {
@@ -100,8 +118,7 @@ describe('loadProviderEnvFiles', () => {
     );
 
     loadProviderEnvFiles({
-      startDir: root,
-      stopDir: root,
+      providerEnvRoots: [root],
     });
 
     expect(process.env.REPLICATE_API_TOKEN).toBe('replicate-from-env-local');
