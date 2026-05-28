@@ -1,9 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { LineTabBar } from '@/ui/line-tab-bar';
 import { Tabs, TabsContent } from '@/ui/tabs';
-import type { LocationResourceResponse } from '@/services/studio-project-contracts';
+import type {
+  LocationResourceResponse,
+  StudioAssetResponse,
+} from '@/services/studio-project-contracts';
+import {
+  deleteLocationAsset,
+  readLocationAssets,
+  selectLocationAsset,
+  unselectLocationAsset,
+} from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
-import { ScreenplayPrimaryImage } from '../screenplay-media/screenplay-primary-image';
+import { LOCATION_ENVIRONMENT_SHEET_ROLE } from './location-assets';
+import { LocationDetailsTab } from './location-details-tab';
+import { LocationVisualContentTab } from './location-visual-content-tab';
 
 interface LocationPanelProps {
   projectName: string;
@@ -12,14 +24,31 @@ interface LocationPanelProps {
 
 export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
   const [resource, setResource] = useState<LocationResourceResponse | null>(null);
+  const [assets, setAssets] = useState<StudioAssetResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [resourceRevision, setResourceRevision] = useState(0);
+
+  const refreshLocation = useCallback(async () => {
+    const [nextResource, nextAssets] = await Promise.all([
+      readLocationResource(projectName, locationId),
+      readLocationAssets(projectName, locationId),
+    ]);
+    setResource(nextResource);
+    setAssets(nextAssets);
+    setError(null);
+  }, [locationId, projectName]);
 
   useEffect(() => {
     let cancelled = false;
-    void readLocationResource(projectName, locationId)
-      .then((nextResource) => {
+    void Promise.all([
+      readLocationResource(projectName, locationId),
+      readLocationAssets(projectName, locationId),
+    ])
+      .then(([nextResource, nextAssets]) => {
         if (!cancelled) {
           setResource(nextResource);
+          setAssets(nextAssets);
+          setError(null);
         }
       })
       .catch((loadError) => {
@@ -30,7 +59,59 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
     return () => {
       cancelled = true;
     };
+  }, [locationId, projectName, resourceRevision]);
+
+  useEffect(() => {
+    const handleResourceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
+      if (!detail || detail.projectName !== projectName) {
+        return;
+      }
+      if (hasLocationResourceChange(detail.resourceKeys, locationId)) {
+        setResourceRevision((current) => current + 1);
+      }
+    };
+
+    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
+    return () => {
+      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
+    };
   }, [locationId, projectName]);
+
+  const toggleActive = async (asset: StudioAssetResponse) => {
+    try {
+      if (asset.selection.kind === 'select') {
+        await unselectLocationAsset(projectName, locationId, asset.assetId);
+        await refreshLocation();
+        return;
+      }
+
+      const selectedEnvironmentSheets = assets.filter(
+        (candidate) =>
+          candidate.role === LOCATION_ENVIRONMENT_SHEET_ROLE &&
+          candidate.assetId !== asset.assetId &&
+          candidate.selection.kind === 'select'
+      );
+      await selectLocationAsset(projectName, locationId, asset.assetId);
+      await Promise.all(
+        selectedEnvironmentSheets.map((candidate) =>
+          unselectLocationAsset(projectName, locationId, candidate.assetId)
+        )
+      );
+      await refreshLocation();
+    } catch (selectError) {
+      toast.error(errorMessage(selectError));
+    }
+  };
+
+  const removeAsset = async (asset: StudioAssetResponse) => {
+    try {
+      await deleteLocationAsset(projectName, locationId, asset.assetId);
+      await refreshLocation();
+    } catch (deleteError) {
+      toast.error(errorMessage(deleteError));
+    }
+  };
 
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
@@ -39,7 +120,6 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
     return <p className='text-sm text-muted-foreground'>Loading location...</p>;
   }
 
-  const location = resource.location;
   return (
     <Tabs defaultValue='details' className='h-full gap-0'>
       <LineTabBar
@@ -48,52 +128,43 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
           { value: 'visual', label: 'Visual Content' },
         ]}
       />
-      <TabsContent value='details' className='overflow-y-auto p-4'>
-        <div className='grid gap-5 lg:grid-cols-[minmax(240px,360px)_minmax(0,1fr)]'>
-          <ScreenplayPrimaryImage
-            image={resource.firstImage}
-            label={location.name}
-            placeholder='No location image yet'
-          />
-          <div className='space-y-5'>
-            {location.timePeriod ? (
-              <div className='rounded-md border border-border/40 bg-card p-3'>
-                <div className='text-[11px] uppercase tracking-[0.12em] text-muted-foreground'>
-                  Time Period
-                </div>
-                <div className='mt-1 text-sm'>{location.timePeriod}</div>
-              </div>
-            ) : null}
-            <TextSection title='Description' text={location.description} />
-            <TextSection title='Visual Notes' text={location.visualNotes} framed />
-          </div>
-        </div>
+      <TabsContent value='details' className='min-h-0 overflow-y-auto p-0'>
+        <LocationDetailsTab
+          projectName={projectName}
+          locationId={locationId}
+          resource={resource}
+          assets={assets}
+        />
       </TabsContent>
-      <TabsContent value='visual' className='p-4 text-sm text-muted-foreground'>
-        Visual content will appear here when project assets are attached.
+      <TabsContent value='visual' className='min-h-0 overflow-y-auto p-0'>
+        <LocationVisualContentTab
+          projectName={projectName}
+          locationId={locationId}
+          assets={assets}
+          onToggleActive={toggleActive}
+          onDeleteAsset={removeAsset}
+        />
       </TabsContent>
     </Tabs>
   );
 }
 
-function TextSection({
-  title,
-  text,
-  framed = false,
-}: {
-  title: string;
-  text?: string;
-  framed?: boolean;
-}) {
-  if (!text) {
-    return null;
-  }
-  return (
-    <section className={framed ? 'rounded-md border border-border/40 bg-card p-4' : 'space-y-2'}>
-      <h3 className='text-[11px] uppercase tracking-[0.12em] font-semibold text-muted-foreground'>
-        {title}
-      </h3>
-      <p className='mt-2 whitespace-pre-wrap text-sm leading-6'>{text}</p>
-    </section>
+interface StudioResourceChangedDetail {
+  projectName: string;
+  resourceKeys: string[];
+}
+
+function hasLocationResourceChange(
+  resourceKeys: string[],
+  locationId: string
+): boolean {
+  return resourceKeys.some(
+    (resourceKey) =>
+      resourceKey === `assets:location:${locationId}` ||
+      resourceKey === `surface:location:${locationId}`
   );
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Location request failed.';
 }

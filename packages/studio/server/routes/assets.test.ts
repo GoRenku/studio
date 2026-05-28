@@ -120,8 +120,9 @@ describe('assets Hono route', () => {
     await expect(response.text()).resolves.toBe('png bytes');
   });
 
-  it('lists, selects, unselects, and serves grouped location environment sheet files through ProjectDataService', async () => {
+  it('lists, selects, unselects, deletes, and serves grouped location environment sheet files through ProjectDataService', async () => {
     vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('location bytes'));
+    const deleteAsset = vi.fn(async () => undefined);
     const locationAsset = {
       ...makeAsset('asset_location_reference'),
       relationshipId: 'location_asset_test0001',
@@ -175,6 +176,7 @@ describe('assets Hono route', () => {
             });
             return locationAsset;
           },
+          deleteAsset,
           async resolveProjectAssetFile(input) {
             expect(input.target).toEqual({
               kind: 'location',
@@ -203,6 +205,10 @@ describe('assets Hono route', () => {
     );
     const unselected = await app.request(
       '/constantinople/locations/location_gate/assets/asset_location_reference/select',
+      { method: 'DELETE' }
+    );
+    const deleted = await app.request(
+      '/constantinople/locations/location_gate/assets/asset_location_reference',
       { method: 'DELETE' }
     );
     const file = await app.request(
@@ -234,6 +240,19 @@ describe('assets Hono route', () => {
     expect(unselected.status).toBe(200);
     await expect(unselected.json()).resolves.toMatchObject({
       asset: { selection: { kind: 'take' } },
+    });
+    expect(deleted.status).toBe(200);
+    expect(deleteAsset).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      target: { kind: 'location', locationId: 'location_gate' },
+      assetId: 'asset_location_reference',
+    });
+    await expect(deleted.json()).resolves.toMatchObject({
+      assetId: 'asset_location_reference',
+      resourceKeys: [
+        'assets:location:location_gate',
+        'surface:location:location_gate',
+      ],
     });
     expect(file.status).toBe(200);
     expect(file.headers.get('Content-Type')).toBe('image/png');

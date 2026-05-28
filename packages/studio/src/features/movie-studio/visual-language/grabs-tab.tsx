@@ -104,7 +104,8 @@ export function GrabsTab({
         )}
       </div>
       <ImagePreviewDialog
-        image={previewImage}
+        images={previewImage ? [previewImage] : []}
+        currentIndex={0}
         onOpenChange={(open) => !open && setPreviewImage(null)}
       />
       <DeleteConfirmDialog

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { LocationOverviewResourceResponse } from '@/services/studio-project-contracts';
 import { readLocationOverviewResource } from '@/services/studio-screenplay-api';
-import { ScreenplayImageCard } from '../screenplay-media/screenplay-image-card';
-import { ScreenplayImageCardGrid } from '../screenplay-media/screenplay-image-card-grid';
+import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import type { StudioSelection } from '../movie-studio-selection';
 
 interface LocationOverviewPanelProps {
@@ -16,6 +15,7 @@ export function LocationOverviewPanel({
 }: LocationOverviewPanelProps) {
   const [resource, setResource] = useState<LocationOverviewResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resourceRevision, setResourceRevision] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +33,29 @@ export function LocationOverviewPanel({
     return () => {
       cancelled = true;
     };
+  }, [projectName, resourceRevision]);
+
+  useEffect(() => {
+    const handleResourceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
+      if (!detail || detail.projectName !== projectName) {
+        return;
+      }
+      const hasLocationChange = detail.resourceKeys.some(
+        (resourceKey) =>
+          resourceKey === 'navigation:locations' ||
+          resourceKey.startsWith('assets:location:') ||
+          resourceKey.startsWith('surface:location:')
+      );
+      if (hasLocationChange) {
+        setResourceRevision((current) => current + 1);
+      }
+    };
+
+    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
+    return () => {
+      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
+    };
   }, [projectName]);
 
   if (error) {
@@ -43,17 +66,25 @@ export function LocationOverviewPanel({
   }
 
   return (
-    <ScreenplayImageCardGrid>
+    <div className='grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4'>
       {resource.locations.items.map((location) => (
-        <ScreenplayImageCard
+        <ImageOverlayCard
           key={location.id}
           title={location.name}
-          metadata={location.timePeriod}
-          image={location.firstImage}
-          placeholder='No location image yet'
-          onClick={() => onSelect({ type: 'location', id: location.id })}
+          description={location.timePeriod}
+          imageUrl={location.firstImage?.url ?? null}
+          imageAlt={`${location.name} location sheet`}
+          aspectClassName='aspect-[4/3]'
+          aspectRatio={4 / 3}
+          imageClassName='object-contain'
+          onOpen={() => onSelect({ type: 'location', id: location.id })}
         />
       ))}
-    </ScreenplayImageCardGrid>
+    </div>
   );
+}
+
+interface StudioResourceChangedDetail {
+  projectName: string;
+  resourceKeys: string[];
 }

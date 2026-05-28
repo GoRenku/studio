@@ -5,7 +5,7 @@ import type {
 } from '@/services/studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
 
-interface CastAssetsResponse {
+interface StudioAssetsResponse {
   assets: StudioAssetResponse[];
   page: {
     items: StudioAssetResponse[];
@@ -13,12 +13,12 @@ interface CastAssetsResponse {
   };
 }
 
-interface CastAssetResponse {
+interface StudioAssetApiResponse {
   asset: StudioAssetResponse | null;
   resourceKeys?: string[];
 }
 
-interface CastAssetDeleteResponse {
+interface StudioAssetDeleteResponse {
   assetId: string;
   resourceKeys?: string[];
 }
@@ -47,7 +47,30 @@ export async function readCastAssets(
       throw await readStudioApiError(response);
     }
 
-    const body = (await response.json()) as CastAssetsResponse;
+    const body = (await response.json()) as StudioAssetsResponse;
+    assets.push(...body.page.items);
+    cursor = body.page.nextCursor;
+  } while (cursor);
+  return assets;
+}
+
+export async function readLocationAssets(
+  projectName: string,
+  locationId: string
+): Promise<StudioAssetResponse[]> {
+  const assets: StudioAssetResponse[] = [];
+  let cursor: string | null = null;
+  do {
+    const search = new URLSearchParams({ limit: '200' });
+    if (cursor) search.set('cursor', cursor);
+    const response = await fetch(
+      `${locationAssetsUrl(projectName, locationId)}?${search.toString()}`
+    );
+    if (!response.ok) {
+      throw await readStudioApiError(response);
+    }
+
+    const body = (await response.json()) as StudioAssetsResponse;
     assets.push(...body.page.items);
     cursor = body.page.nextCursor;
   } while (cursor);
@@ -120,7 +143,7 @@ export async function selectCastAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as CastAssetResponse;
+  const body = (await response.json()) as StudioAssetApiResponse;
   if (!body.asset) {
     throw new Error('Renku Studio API returned no cast asset.');
   }
@@ -145,7 +168,7 @@ export async function unselectCastAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as CastAssetResponse;
+  const body = (await response.json()) as StudioAssetApiResponse;
   if (!body.asset) {
     throw new Error('Renku Studio API returned no cast asset.');
   }
@@ -167,7 +190,78 @@ export async function deleteCastAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as CastAssetDeleteResponse;
+  const body = (await response.json()) as StudioAssetDeleteResponse;
+  return body.assetId;
+}
+
+export async function selectLocationAsset(
+  projectName: string,
+  locationId: string,
+  assetId: string
+): Promise<StudioAssetResponse> {
+  const response = await fetch(
+    locationAssetSelectUrl(projectName, locationId, assetId),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify({}),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as StudioAssetApiResponse;
+  if (!body.asset) {
+    throw new Error('Renku Studio API returned no location asset.');
+  }
+  return body.asset;
+}
+
+export async function unselectLocationAsset(
+  projectName: string,
+  locationId: string,
+  assetId: string
+): Promise<StudioAssetResponse> {
+  const response = await fetch(
+    locationAssetSelectUrl(projectName, locationId, assetId),
+    {
+      method: 'DELETE',
+      headers: {
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as StudioAssetApiResponse;
+  if (!body.asset) {
+    throw new Error('Renku Studio API returned no location asset.');
+  }
+  return body.asset;
+}
+
+export async function deleteLocationAsset(
+  projectName: string,
+  locationId: string,
+  assetId: string
+): Promise<string> {
+  const response = await fetch(locationAssetUrl(projectName, locationId, assetId), {
+    method: 'DELETE',
+    headers: {
+      'X-Renku-Studio-Token': readStudioApiToken(),
+    },
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as StudioAssetDeleteResponse;
   return body.assetId;
 }
 
@@ -178,6 +272,15 @@ export function castAssetFileUrl(
   assetFileId: string
 ): string {
   return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
+}
+
+export function locationAssetFileUrl(
+  projectName: string,
+  locationId: string,
+  assetId: string,
+  assetFileId: string
+): string {
+  return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
 }
 
 function castDesignResourceUrl(
@@ -191,6 +294,10 @@ function castAssetsUrl(projectName: string, castMemberId: string): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/assets`;
 }
 
+function locationAssetsUrl(projectName: string, locationId: string): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/locations/${encodeURIComponent(locationId)}/assets`;
+}
+
 function castAssetUrl(
   projectName: string,
   castMemberId: string,
@@ -199,12 +306,28 @@ function castAssetUrl(
   return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}`;
 }
 
+function locationAssetUrl(
+  projectName: string,
+  locationId: string,
+  assetId: string
+): string {
+  return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}`;
+}
+
 function castAssetSelectUrl(
   projectName: string,
   castMemberId: string,
   assetId: string
 ): string {
   return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}/select`;
+}
+
+function locationAssetSelectUrl(
+  projectName: string,
+  locationId: string,
+  assetId: string
+): string {
+  return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}/select`;
 }
 
 function readStudioApiToken(): string {

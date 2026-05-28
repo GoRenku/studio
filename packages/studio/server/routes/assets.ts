@@ -175,6 +175,25 @@ export function createAssetsRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .delete('/locations/:locationId/assets/:assetId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const locationId = c.req.param('locationId') as string;
+        const assetId = c.req.param('assetId') as string;
+        await projectData.deleteAsset({
+          projectName,
+          target: { kind: 'location', locationId },
+          assetId,
+        });
+        const resourceKeys = studioResourceKeysForAssetTarget({
+          kind: 'location',
+          locationId,
+        });
+        return c.json({ assetId, resourceKeys });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/locations/:locationId/assets/:assetId/files/:assetFileId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
