@@ -1168,12 +1168,6 @@ async function insertImportedLocationEnvironmentSheet(input: {
         assetFileIdsByRole,
         'composite'
       ),
-      sheetFrame: '4:3',
-      viewFrame: '16:9',
-      extractionDiagnostics: {
-        source: 'agent-provided view files',
-        fileRoles: FILE_ROLES,
-      },
       now: input.now,
     });
     for (const [index, azimuth] of AZIMUTHS.entries()) {

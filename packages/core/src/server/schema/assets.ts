@@ -145,13 +145,6 @@ export const locationEnvironmentSheets = sqliteTable(
     compositeFileId: text('composite_file_id')
       .notNull()
       .references(() => assetFiles.id),
-    layoutTemplate: text('layout_template').notNull(),
-    viewFrame: text('view_frame').notNull(),
-    sheetFrame: text('sheet_frame').notNull(),
-    gridLayout: text('grid_layout').notNull(),
-    extractionConfidence: text('extraction_confidence').notNull(),
-    extractionMethod: text('extraction_method').notNull(),
-    extractionDiagnosticsJson: text('extraction_diagnostics_json'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -176,12 +169,6 @@ export const locationEnvironmentSheetViews = sqliteTable(
     assetFileId: text('asset_file_id')
       .notNull()
       .references(() => assetFiles.id),
-    cropX: integer('crop_x').notNull(),
-    cropY: integer('crop_y').notNull(),
-    cropWidth: integer('crop_width').notNull(),
-    cropHeight: integer('crop_height').notNull(),
-    extractionConfidence: text('extraction_confidence').notNull(),
-    extractionMethod: text('extraction_method').notNull(),
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

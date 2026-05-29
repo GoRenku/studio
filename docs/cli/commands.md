@@ -1009,7 +1009,10 @@ Behavior:
   events.
 - For Location Environment Sheets, import registers one grouped asset, copies
   the composite plus `view_front`, `view_right`, `view_back`, and `view_left`
-  files under `locations/<handle>/environment-sheets/<sheet-slug>/`.
+  files under `locations/<handle>/environment-sheets/<sheet-slug>/`, and stores
+  only the grouped asset and azimuth relationships. It does not accept or store
+  crop coordinates, extraction methods, extraction confidence, or extraction
+  diagnostics.
 - Agents should inspect generated images before import and tag only the
   sections the image visibly demonstrates. Do not blindly copy
   `focusSections` into `--sections`.

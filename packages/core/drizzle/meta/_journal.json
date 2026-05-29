@@ -106,6 +106,13 @@
       "when": 1780045685250,
       "tag": "0014_screenplay_analysis",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1780071056554,
+      "tag": "0015_remove_location_sheet_slicing_metadata",
+      "breakpoints": true
     }
   ]
 }

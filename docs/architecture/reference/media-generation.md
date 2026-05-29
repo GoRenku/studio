@@ -436,7 +436,8 @@ location_environment_sheet_view
 
 Those rows connect the imported composite to its four direction-specific view
 files. The current import path uses agent-provided slices, so Core stores the
-grouping and azimuth ownership without running image extraction itself.
+grouping, azimuth ownership, and display order without running image extraction
+or storing crop/extraction metadata itself.
 
 ## Media Import
 

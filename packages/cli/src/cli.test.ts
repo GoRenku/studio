@@ -1168,7 +1168,8 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(locationImportExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+    const locationImportReport = JSON.parse(stdout.join('\n'));
+    expect(locationImportReport).toMatchObject({
       purpose: 'location.environment-sheet',
       imported: {
         role: 'environment_sheet',
@@ -1188,6 +1189,8 @@ describe('renku CLI', () => {
         expect.objectContaining({ role: 'view_left' }),
       ],
     });
+    expect(JSON.stringify(locationImportReport)).not.toContain('crop');
+    expect(JSON.stringify(locationImportReport)).not.toContain('extraction');
   });
 
   it('registers and selects a scene asset through the asset command', async () => {

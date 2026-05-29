@@ -6,11 +6,6 @@ import {
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
-const AGENT_SLICED_LAYOUT_TEMPLATE = 'agent_sliced_location_sheet_v1';
-const TWO_BY_TWO_GRID_LAYOUT = 'two_by_two';
-const PROVIDED_SLICES_EXTRACTION_METHOD = 'provided_slices';
-const PROVIDED_SLICES_EXTRACTION_CONFIDENCE = 'high';
-
 export type LocationEnvironmentSheetRecord =
   typeof locationEnvironmentSheets.$inferSelect;
 
@@ -22,9 +17,6 @@ export interface InsertLocationEnvironmentSheetRecord {
   locationId: string;
   assetId: string;
   compositeFileId: string;
-  sheetFrame: '4:3';
-  viewFrame: '16:9';
-  extractionDiagnostics?: unknown;
   now: string;
 }
 
@@ -34,12 +26,6 @@ export interface InsertLocationEnvironmentSheetViewRecord {
   azimuthDegrees: 0 | 90 | 180 | 270;
   assetFileId: string;
   sortOrder: number;
-  crop?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
   now: string;
 }
 
@@ -54,17 +40,6 @@ export function insertLocationEnvironmentSheetRecord(
       locationId: input.locationId,
       assetId: input.assetId,
       compositeFileId: input.compositeFileId,
-      layoutTemplate: AGENT_SLICED_LAYOUT_TEMPLATE,
-      viewFrame: input.viewFrame,
-      sheetFrame: input.sheetFrame,
-      gridLayout: TWO_BY_TWO_GRID_LAYOUT,
-      extractionConfidence: PROVIDED_SLICES_EXTRACTION_CONFIDENCE,
-      extractionMethod: PROVIDED_SLICES_EXTRACTION_METHOD,
-      extractionDiagnosticsJson: JSON.stringify(
-        input.extractionDiagnostics ?? {
-          source: 'agent-provided view files',
-        }
-      ),
       createdAt: input.now,
       updatedAt: input.now,
     })
@@ -83,7 +58,6 @@ export function insertLocationEnvironmentSheetViewRecord(
   session: DatabaseSession,
   input: InsertLocationEnvironmentSheetViewRecord
 ): LocationEnvironmentSheetViewRecord {
-  const crop = input.crop ?? { x: 0, y: 0, width: 0, height: 0 };
   session.db
     .insert(locationEnvironmentSheetViews)
     .values({
@@ -91,12 +65,6 @@ export function insertLocationEnvironmentSheetViewRecord(
       sheetId: input.sheetId,
       azimuthDegrees: input.azimuthDegrees,
       assetFileId: input.assetFileId,
-      cropX: crop.x,
-      cropY: crop.y,
-      cropWidth: crop.width,
-      cropHeight: crop.height,
-      extractionConfidence: PROVIDED_SLICES_EXTRACTION_CONFIDENCE,
-      extractionMethod: PROVIDED_SLICES_EXTRACTION_METHOD,
       sortOrder: input.sortOrder,
       createdAt: input.now,
       updatedAt: input.now,

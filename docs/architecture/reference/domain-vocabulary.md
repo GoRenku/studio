@@ -25,6 +25,7 @@ Decision history:
 - `../../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
+- `../../decisions/0024-keep-media-slicing-out-of-app-state.md`
 
 ## Naming Rules
 
@@ -94,7 +95,7 @@ Related terms:
 | Source Inspiration            | An ordered relationship between a Lookbook and an Inspiration Folder.                                                                    | Do not copy Inspiration Analysis JSON into the Lookbook.                                                    |
 | Lookbook Image                | A registered image asset attached to a Lookbook.                                                                                         | Section placement is stored in relationship rows, not in Lookbook JSON.                                     |
 | Continuity Reference          | A reusable subject that must stay visually consistent, such as a location, prop, costume, architecture, vehicle, ship, symbol, or group. | Do not hide these under Visual Language or a vague "world" bucket.                                          |
-| Location Environment Sheet    | A grouped location image asset with one composite sheet and four extracted directional views.                                            | Attached to a Location with role `environment_sheet`; grouping and extraction metadata live in SQLite.      |
+| Location Environment Sheet    | A grouped location image asset with one composite sheet and four extracted directional views.                                            | Attached to a Location with role `environment_sheet`; SQLite stores grouping, azimuth ownership, and order, not crop or extraction metadata. |
 | Azimuth View                  | One direction-specific image extracted from a Location Environment Sheet.                                                                | Current azimuths are 0 front, 90 right, 180 back, and 270 left.                                             |
 | Style Sheet                   | A visual language asset type, usually an image or board that demonstrates a desired look.                                                | This is an asset type, not the name of the whole creative-direction system.                                 |
 

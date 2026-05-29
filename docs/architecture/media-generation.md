@@ -44,12 +44,13 @@ renku media import --purpose lookbook.image --target lookbook:<id> --source <pat
 Internally, this is a direct vertical slice rather than a generic media-purpose
 framework.
 
-Location environment sheets add a reusable post-processing step after
+Location environment sheets add an agent-owned post-processing step after
 generation. Core asks the selected text-to-image model for a four-azimuth
-contact sheet, then uses
-`packages/core/src/server/image-processing/` to derive tolerant azimuth crops,
-confidence metadata, and a diagnostic overlay before import groups the
-composite and views in SQLite.
+contact sheet. The media-producer agent then inspects the returned composite,
+crops four view files, and imports the composite plus the already-sliced views.
+SQLite stores the grouped asset and azimuth relationships; it does not store
+crop boxes, extraction confidence, extraction methods, or extraction
+diagnostics.
 
 ## Related References
 

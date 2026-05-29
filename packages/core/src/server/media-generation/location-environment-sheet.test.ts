@@ -184,6 +184,8 @@ describe('Location environment sheet import', () => {
     });
 
     expect(imported.imported.files).toHaveLength(5);
+    expect(JSON.stringify(imported)).not.toContain('crop');
+    expect(JSON.stringify(imported)).not.toContain('extraction');
     for (const file of imported.imported.files) {
       expect(file.width).toBeNull();
       expect(file.height).toBeNull();
@@ -213,7 +215,7 @@ describe('Location environment sheet import', () => {
     try {
       const sheet = sqlite
         .prepare(
-          'select id, asset_id, location_id, composite_file_id, extraction_method from location_environment_sheet where asset_id = ?'
+          'select id, asset_id, location_id, composite_file_id from location_environment_sheet where asset_id = ?'
         )
         .get(imported.imported.assetId) as
         | {
@@ -221,17 +223,38 @@ describe('Location environment sheet import', () => {
             asset_id: string;
             location_id: string;
             composite_file_id: string;
-            extraction_method: string;
           }
         | undefined;
       expect(sheet).toMatchObject({
         asset_id: imported.imported.assetId,
         location_id: fixture.location.id,
-        extraction_method: 'provided_slices',
       });
       expect(
         imported.imported.files.some((file) => file.id === sheet?.composite_file_id)
       ).toBe(true);
+      expect(readTableColumns(sqlite, 'location_environment_sheet')).not.toEqual(
+        expect.arrayContaining([
+          'layout_template',
+          'grid_layout',
+          'extraction_confidence',
+          'extraction_method',
+          'extraction_diagnostics_json',
+          'sheet_frame',
+          'view_frame',
+        ])
+      );
+      expect(
+        readTableColumns(sqlite, 'location_environment_sheet_view')
+      ).not.toEqual(
+        expect.arrayContaining([
+          'crop_x',
+          'crop_y',
+          'crop_width',
+          'crop_height',
+          'extraction_confidence',
+          'extraction_method',
+        ])
+      );
 
       const views = sqlite
         .prepare(
@@ -349,6 +372,11 @@ function spec(
     outputFormat: 'png',
     ...overrides,
   };
+}
+
+function readTableColumns(sqlite: Database.Database, tableName: string): string[] {
+  const rows = sqlite.pragma(`table_info(${tableName})`) as Array<{ name: string }>;
+  return rows.map((row) => row.name);
 }
 
 async function createProjectWithoutLookbook() {

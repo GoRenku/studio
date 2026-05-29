@@ -68,9 +68,10 @@ A **Cast Profile** is an image asset attached to a cast member with the
 
 A **Location Environment Sheet** is a grouped image asset attached to a
 location with the `environment_sheet` role. It contains one composite sheet and
-four derived azimuth view files for 0, 90, 180, and 270 degrees. The grouping,
-azimuth ownership, import method, and confidence metadata are stored in SQLite,
-not inferred from filenames.
+four derived azimuth view files for 0, 90, 180, and 270 degrees. SQLite stores
+the grouping, asset-file roles, azimuth ownership, and display order. The agent
+owns visual inspection and slicing decisions; Studio does not store crop boxes,
+extraction methods, extraction confidence, or extraction diagnostics.
 
 ## Working Assets Versus Production Assets
 

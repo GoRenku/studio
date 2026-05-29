@@ -39,7 +39,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(8);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(9);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -62,6 +62,29 @@ describe('migrate database command', () => {
           'visual_language_asset',
         ])
       );
+      expect(readColumnNames(sqlite, 'location_environment_sheet')).not.toEqual(
+        expect.arrayContaining([
+          'layout_template',
+          'grid_layout',
+          'extraction_confidence',
+          'extraction_method',
+          'extraction_diagnostics_json',
+          'sheet_frame',
+          'view_frame',
+        ])
+      );
+      expect(
+        readColumnNames(sqlite, 'location_environment_sheet_view')
+      ).not.toEqual(
+        expect.arrayContaining([
+          'crop_x',
+          'crop_y',
+          'crop_width',
+          'crop_height',
+          'extraction_confidence',
+          'extraction_method',
+        ])
+      );
     } finally {
       sqlite.close();
     }
@@ -73,4 +96,9 @@ function readTableNames(sqlite: Database.Database): string[] {
     .prepare("select name from sqlite_master where type = 'table'")
     .all()
     .map((row) => (row as { name: string }).name);
+}
+
+function readColumnNames(sqlite: Database.Database, tableName: string): string[] {
+  const rows = sqlite.pragma(`table_info(${tableName})`) as Array<{ name: string }>;
+  return rows.map((row) => row.name);
 }
