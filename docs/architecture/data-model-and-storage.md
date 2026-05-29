@@ -38,6 +38,9 @@ Use the focused documents below for current direction.
 - Inspiration folder images are filesystem-owned content and are not registered
   as per-image assets. The persisted Inspiration Analysis JSON is SQLite-owned
   project data.
+- Screenplay Analysis is SQLite-owned project data. It stores validated,
+  agent-authored critique history as tagged JSON in `screenplay_analysis`, with
+  one active analysis tracked in `screenplay_analysis_state`.
 - Lookbooks are durable SQLite-owned project direction. Source Inspiration
   folders and Lookbook image placement are relationships, not embedded section
   JSON.

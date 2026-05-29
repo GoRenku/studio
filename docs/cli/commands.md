@@ -293,6 +293,89 @@ Behavior:
 - Applies operation documents such as screenplay, act, sequence, scene, cast, or
   location revisions.
 
+## `renku screenplay analyze`
+
+Read, validate, write, and activate durable Screenplay Analysis documents.
+
+```bash
+renku screenplay analyze context --json
+renku screenplay analyze list --json
+renku screenplay analyze show --active --json
+renku screenplay analyze show --analysis <analysis-id> --json
+renku screenplay analyze validate --file <analysis-json> --json
+renku screenplay analyze validate --file - --json
+renku screenplay analyze write --file <analysis-json> --json
+renku screenplay analyze write --file - --json
+renku screenplay analyze set-active --analysis <analysis-id> --json
+```
+
+Options:
+
+- `--file`: required for `validate` and `write`. Use `-` to read stdin.
+- `--analysis`: required for `show` by id and `set-active`.
+- `--active`: shows the active analysis. Returns `analysis: null` when no
+  active analysis exists.
+- `--json`: print machine-readable JSON.
+
+Behavior:
+
+- Requires a current authoring project and existing screenplay data.
+- `context` returns the screenplay text, ordered acts/sequences/scenes, cast and
+  location labels, default criteria, and active analysis summary for an agent.
+- `validate` checks a tagged `kind: "screenplayAnalysis"` document without
+  writing.
+- `write` creates a new analysis history row and makes it active.
+- `set-active` changes only the active analysis pointer.
+- `write` and `set-active` append Studio resource-change events for
+  `surface:story-arc`, `screenplay-analysis`, and the specific analysis id.
+- The command uses US spelling only: `analyze`. There is no `analyse` alias.
+
+Input JSON shape:
+
+```json
+{
+  "kind": "screenplayAnalysis",
+  "structureModel": "threeAct",
+  "title": "Three-act screenplay analysis",
+  "summary": "Short critique summary.",
+  "criteria": [
+    {
+      "key": "dramaticEnergy",
+      "label": "Dramatic Energy",
+      "description": "How strongly the moment pulls the audience forward."
+    },
+    {
+      "key": "stakes",
+      "label": "Stakes",
+      "description": "How clearly the audience understands what can be lost or gained."
+    },
+    {
+      "key": "characterAgency",
+      "label": "Character Agency",
+      "description": "How clearly a character's choice drives the story."
+    }
+  ],
+  "acts": [],
+  "keyBeats": [],
+  "sequences": [],
+  "scenes": [],
+  "suggestedSceneAdditions": []
+}
+```
+
+Validation rules:
+
+- The current v1 structure model is `threeAct`.
+- Three-act documents must analyze exactly three current screenplay acts in
+  screenplay order.
+- Default criteria `dramaticEnergy`, `stakes`, and `characterAgency` are
+  required. Additional criteria are allowed.
+- Scores must be integers from `0` to `100` and must reference declared
+  criteria.
+- Act, sequence, and scene ids must match the current screenplay graph.
+- Suggested scene additions are critique only. They do not create scene rows.
+- Unknown fields are rejected for this agent-authored JSON format.
+
 ## `renku screenplay cast`
 
 List or show cast members from the current authoring project's screenplay.

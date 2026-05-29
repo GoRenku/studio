@@ -280,6 +280,141 @@ describe('renku CLI', () => {
     });
   });
 
+  it('validates, writes, lists, and activates Screenplay Analysis through the CLI', async () => {
+    await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    expect(
+      await runRenkuCli(['project', 'open', 'constantinople', '--json'], {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      })
+    ).toBe(0);
+
+    const screenplayPath = path.join(homeDir, 'screenplay-three-act.json');
+    await fs.writeFile(
+      screenplayPath,
+      JSON.stringify(threeActScreenplayJson(), null, 2),
+      'utf8'
+    );
+    stdout = [];
+    stderr = [];
+    expect(
+      await runRenkuCli(
+        ['screenplay', 'create', '--file', screenplayPath, '--json'],
+        { homeDir, io: captureIo(stdout, stderr) }
+      )
+    ).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    expect(
+      await runRenkuCli(['screenplay', 'analyze', 'context', '--json'], {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      })
+    ).toBe(0);
+    const context = JSON.parse(stdout.join('\n'));
+    expect(context).toMatchObject({
+      valid: true,
+      defaultCriteria: [
+        expect.objectContaining({ key: 'dramaticEnergy' }),
+        expect.objectContaining({ key: 'stakes' }),
+        expect.objectContaining({ key: 'characterAgency' }),
+      ],
+      activeAnalysis: null,
+    });
+
+    const analysisPath = path.join(homeDir, 'screenplay-analysis.json');
+    await fs.writeFile(
+      analysisPath,
+      JSON.stringify(screenplayAnalysisJson(context), null, 2),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    expect(
+      await runRenkuCli(
+        ['screenplay', 'analyze', 'validate', '--file', analysisPath, '--json'],
+        { homeDir, io: captureIo(stdout, stderr) }
+      )
+    ).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      analysis: { kind: 'screenplayAnalysis' },
+    });
+
+    stdout = [];
+    stderr = [];
+    expect(
+      await runRenkuCli(
+        ['screenplay', 'analyze', 'write', '--file', analysisPath, '--json'],
+        { homeDir, io: captureIo(stdout, stderr) }
+      )
+    ).toBe(0);
+    const writeReport = JSON.parse(stdout.join('\n'));
+    expect(writeReport).toMatchObject({
+      valid: true,
+      changes: [
+        { type: 'screenplayAnalysis.created' },
+        { type: 'screenplayAnalysis.activeSet' },
+      ],
+      resourceKeys: expect.arrayContaining([
+        'surface:story-arc',
+        'screenplay-analysis',
+      ]),
+    });
+
+    stdout = [];
+    stderr = [];
+    expect(
+      await runRenkuCli(['screenplay', 'analyze', 'list', '--json'], {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      })
+    ).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      activeAnalysisId: writeReport.analysis.id,
+      analyses: [expect.objectContaining({ id: writeReport.analysis.id })],
+    });
+
+    stdout = [];
+    stderr = [];
+    expect(
+      await runRenkuCli(['screenplay', 'analyze', 'show', '--active', '--json'], {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      })
+    ).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      summary: { id: writeReport.analysis.id },
+      analysis: { kind: 'screenplayAnalysis' },
+    });
+
+    stdout = [];
+    stderr = [];
+    await expect(
+      createStudioCoordinationService({ homeDir }).readStudioEvents()
+    ).resolves.toMatchObject({
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'studio.projectResourcesChanged',
+          resourceKeys: expect.arrayContaining([
+            'surface:story-arc',
+            `screenplay-analysis:${writeReport.analysis.id}`,
+          ]),
+        }),
+      ]),
+    });
+  });
+
   it('validates and writes Inspiration analysis through the top-level command', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
@@ -1410,6 +1545,213 @@ function minimalScreenplayJson() {
         ],
       },
     ],
+  };
+}
+
+function threeActScreenplayJson() {
+  return {
+    kind: 'screenplayCreate',
+    screenplay: {
+      title: 'Urban Basilica',
+      logline: 'A founder builds a weapon and a conscience.',
+      summary: 'Urban sells his craft and must face what it makes possible.',
+      dramaticQuestion: 'Can Urban understand responsibility before the walls fall?',
+      themes: ['craft and complicity'],
+      tone: ['grave', 'precise'],
+      genrePrimary: 'historical drama',
+    },
+    cast: [
+      {
+        key: 'urban',
+        handle: 'urban',
+        name: 'Urban',
+      },
+    ],
+    locations: [
+      {
+        key: 'foundry',
+        handle: 'foundry',
+        name: 'Foundry',
+      },
+    ],
+    acts: [
+      cliScreenplayAct('act-one', 'The Offer', 'commission', 'The Refusal'),
+      cliScreenplayAct('act-two', 'The Patron', 'casting', 'The Bargain'),
+      cliScreenplayAct('act-three', 'The Sound', 'siege', 'The Wall Answers'),
+    ],
+  };
+}
+
+function cliScreenplayAct(
+  actKey: string,
+  actTitle: string,
+  sequenceKey: string,
+  sceneTitle: string
+) {
+  return {
+    key: actKey,
+    title: actTitle,
+    purpose: 'Move Urban through the moral cost of his craft.',
+    sequences: [
+      {
+        key: sequenceKey,
+        title: sceneTitle,
+        purpose: 'Pressure Urban toward a choice.',
+        scenes: [
+          {
+            key: `${sequenceKey}-scene`,
+            title: sceneTitle,
+            setting: {
+              interiorExterior: 'INT',
+              timeOfDay: 'NIGHT',
+              locationReferences: [{ key: 'foundry' }],
+            },
+            storyFunction: ['Pressure Urban'],
+            blocks: [
+              {
+                type: 'action',
+                text: 'Urban studies the cracked bronze and hears the city waiting.',
+                castMemberReferences: [{ key: 'urban' }],
+                locationReferences: [{ key: 'foundry' }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function screenplayAnalysisJson(context: {
+  screenplay: {
+    acts: Array<{
+      id: string;
+      title: string;
+      sequences: Array<{
+        id: string;
+        title: string;
+        scenes: Array<{ id: string; title: string }>;
+      }>;
+    }>;
+  };
+}) {
+  const acts = context.screenplay.acts;
+  const sequences = acts.map((act) => act.sequences[0]);
+  const scenes = sequences.map((sequence) => sequence?.scenes[0]);
+  return {
+    kind: 'screenplayAnalysis',
+    structureModel: 'threeAct',
+    title: 'Three-act screenplay analysis',
+    summary:
+      'Urban has a clear moral engine, but the opening can sharpen agency.',
+    criteria: [
+      {
+        key: 'dramaticEnergy',
+        label: 'Dramatic Energy',
+        description: 'How strongly the moment pulls the audience forward.',
+      },
+      {
+        key: 'stakes',
+        label: 'Stakes',
+        description:
+          'How clearly the audience understands what can be lost or gained.',
+      },
+      {
+        key: 'characterAgency',
+        label: 'Character Agency',
+        description: "How clearly a character's choice drives the story.",
+      },
+    ],
+    acts: acts.map((act, index) => ({
+      actId: act.id,
+      actRole: ['actOne', 'actTwo', 'actThree'][index],
+      title: act.title,
+      synopsis: 'The act presents pressure and moral consequence.',
+      scoreByCriterion: {
+        dramaticEnergy: 60,
+        stakes: 55,
+        characterAgency: 50,
+      },
+      critique: cliUsefulCritique(scenes[index]?.id),
+    })),
+    keyBeats: [
+      {
+        key: 'hook',
+        label: 'Hook',
+        actId: acts[0]?.id,
+        sequenceId: sequences[0]?.id,
+        sceneId: scenes[0]?.id,
+        synopsis: 'The story opens with the cost of Urban refusing limits.',
+        scoreByCriterion: {
+          dramaticEnergy: 70,
+          stakes: 65,
+          characterAgency: 55,
+        },
+        critique: cliUsefulCritique(scenes[0]?.id),
+      },
+    ],
+    sequences: sequences.map((sequence, index) => ({
+      sequenceId: sequence?.id,
+      actId: acts[index]?.id,
+      title: sequence?.title,
+      synopsis: 'The sequence advances pressure on Urban.',
+      beatRole: index === 0 ? 'hook' : undefined,
+      scoreByCriterion: {
+        dramaticEnergy: 60,
+        stakes: 58,
+        characterAgency: 53,
+      },
+      critique: cliUsefulCritique(scenes[index]?.id),
+    })),
+    scenes: scenes.map((scene, index) => ({
+      sceneId: scene?.id,
+      sequenceId: sequences[index]?.id,
+      actId: acts[index]?.id,
+      title: scene?.title,
+      synopsis: 'The scene shows Urban under pressure.',
+      beatRole: index === 0 ? 'hook' : undefined,
+      scoreByCriterion: {
+        dramaticEnergy: 64,
+        stakes: 59,
+        characterAgency: 51,
+      },
+      critique: cliUsefulCritique(scene?.id),
+    })),
+    suggestedSceneAdditions: [
+      {
+        targetActId: acts[0]?.id,
+        targetSequenceId: sequences[0]?.id,
+        placement: { afterSceneId: scenes[0]?.id },
+        title: 'The Maker Calculates',
+        purpose: 'Give Urban a clearer active choice after the hook.',
+        synopsis:
+          'Urban privately weighs whether his craft can survive without patronage.',
+        rationale:
+          'The added beat would make the hook personal instead of only situational.',
+        expectedCriterionChanges: [
+          {
+            criterionKey: 'characterAgency',
+            direction: 'increase',
+            reason: 'The audience sees Urban choose pressure.',
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function cliUsefulCritique(sceneId?: string) {
+  return {
+    summary: 'The dramatic pressure is clear, but the choice can be sharper.',
+    strengths: ['The scene gives the audience concrete pressure.'],
+    concerns: ['Urban reacts before the audience fully sees his want.'],
+    evidence: [
+      {
+        sceneId,
+        text: 'The scene emphasizes pressure before a fully active decision.',
+      },
+    ],
+    suggestions: ['Make the decision point more visible on the page.'],
   };
 }
 

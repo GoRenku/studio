@@ -267,7 +267,8 @@ Examples:
 - setting a budget;
 - approving an estimated cost;
 - queueing a generation task.
-- writing Inspiration Analysis or Lookbook JSON into project metadata;
+- writing Screenplay Analysis, Inspiration Analysis, or Lookbook JSON into
+  project metadata;
 - creating or updating a persisted generation spec;
 - importing generated media into a Lookbook.
 

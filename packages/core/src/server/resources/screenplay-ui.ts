@@ -132,7 +132,6 @@ export async function readStoryArcResource(
         premiseOverview: document.screenplay.premiseOverview,
         centralConflict: document.screenplay.centralConflict,
         summary: document.screenplay.summary,
-        storyArc: document.screenplay.storyArc,
       },
       acts: actPage.items.map((act) => ({
         ...act,

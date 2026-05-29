@@ -11,6 +11,7 @@ export type EntityIdPrefix =
   | 'lookbook_inspiration'
   | 'lookbook_image'
   | 'lookbook_image_section'
+  | 'screenplay_analysis'
   | 'cast'
   | 'location'
   | 'act'

@@ -43,6 +43,15 @@ operational companions that teach agents how to use those contracts.
 - Writes validated `kind: "lookbook"` JSON through the CLI.
 - Hands generated image requests to `media-producer`.
 
+`screenplay-analyst`
+
+- Analyzes the current screenplay through `renku screenplay analyze`.
+- Reads ordered acts, sequences, scenes, cast, locations, and default analysis
+  criteria from the CLI context command.
+- Writes validated `kind: "screenplayAnalysis"` JSON through the CLI.
+- Suggests scene additions or revisions as critique only; it does not mutate the
+  screenplay graph.
+
 `media-producer`
 
 - Generates purpose-specific media from Renku context.
@@ -74,4 +83,3 @@ JSON contracts, craft guidance, and samples belong in the skill's
 When a Renku architecture contract changes, update the architecture/reference
 docs and CLI docs in this repository first, then update the external skill
 references to match the current contract.
-

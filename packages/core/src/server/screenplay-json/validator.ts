@@ -13,7 +13,6 @@ import {
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,
-  screenplayStoryArcSchema,
   screenplayStringArraySchema,
 } from '../../client/screenplay-json-schemas.js';
 
@@ -27,8 +26,6 @@ const SCREENPLAY_BLOCK_ARRAY_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-block-array.schema.json';
 const SCREENPLAY_STRING_ARRAY_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-string-array.schema.json';
-const SCREENPLAY_STORY_ARC_SCHEMA_ID =
-  'https://schemas.gorenku.com/studio/screenplay-story-arc.schema.json';
 
 const ajv = new Ajv2020({
   allErrors: true,
@@ -43,7 +40,6 @@ ajv.addSchema(screenplayReferenceSchema);
 ajv.addSchema(screenplayBlockSchema);
 ajv.addSchema(screenplayBlockArraySchema);
 ajv.addSchema(screenplayStringArraySchema);
-ajv.addSchema(screenplayStoryArcSchema);
 ajv.addSchema(screenplayDocumentSchema);
 ajv.addSchema(screenplayCreateDocumentSchema);
 ajv.addSchema(screenplayOperationsSchema);
@@ -99,7 +95,7 @@ export function validateScreenplayJsonDocument(input: {
   return issues;
 }
 
-export type ScreenplayStoredJsonFragmentKind = 'blockArray' | 'stringArray' | 'storyArc';
+export type ScreenplayStoredJsonFragmentKind = 'blockArray' | 'stringArray';
 
 export function validateScreenplayStoredJsonFragment(input: {
   value: unknown;
@@ -110,9 +106,7 @@ export function validateScreenplayStoredJsonFragment(input: {
   const schemaId =
     input.fragment === 'blockArray'
       ? SCREENPLAY_BLOCK_ARRAY_SCHEMA_ID
-      : input.fragment === 'storyArc'
-        ? SCREENPLAY_STORY_ARC_SCHEMA_ID
-        : SCREENPLAY_STRING_ARRAY_SCHEMA_ID;
+      : SCREENPLAY_STRING_ARRAY_SCHEMA_ID;
   const validator = ajv.getSchema(schemaId);
   if (!validator) {
     throw new Error(`Screenplay stored JSON schema was not registered for ${input.fragment}.`);
@@ -225,16 +219,12 @@ const allowedFields: Record<string, Set<string>> = {
     'themes',
     'historicalBasis',
     'dramatizedElements',
-    'storyArc',
     'status',
     'researchSources',
     'assumptionsMade',
   ]),
   castMember: new Set(['id', 'key', 'handle', 'name', 'role', 'age', 'want', 'need', 'arc', 'voiceNotes', 'description']),
   location: new Set(['id', 'key', 'handle', 'name', 'timePeriod', 'description', 'visualNotes']),
-  storyArc: new Set(['structureModel', 'acts']),
-  storyArcAct: new Set(['actReference', 'title', 'purpose', 'estimatedPages', 'keyBeats']),
-  storyArcKeyBeat: new Set(['type', 'label', 'description']),
   act: new Set(['id', 'key', 'title', 'purpose', 'sequences']),
   sequence: new Set(['id', 'key', 'title', 'purpose', 'scenes']),
   scene: new Set(['id', 'key', 'title', 'setting', 'storyFunction', 'blocks']),
@@ -280,16 +270,6 @@ function visitObject(
     visitArray(record.locations, [...path, 'locations'], 'location', issues, filePath);
     visitArray(record.acts, [...path, 'acts'], 'act', issues, filePath);
     visitArray(record.operations, [...path, 'operations'], 'operation', issues, filePath);
-  }
-  if (shape === 'screenplay') {
-    visitObject(record.storyArc, [...path, 'storyArc'], 'storyArc', issues, filePath);
-  }
-  if (shape === 'storyArc') {
-    visitArray(record.acts, [...path, 'acts'], 'storyArcAct', issues, filePath);
-  }
-  if (shape === 'storyArcAct') {
-    visitObject(record.actReference, [...path, 'actReference'], 'ref', issues, filePath);
-    visitArray(record.keyBeats, [...path, 'keyBeats'], 'storyArcKeyBeat', issues, filePath);
   }
   if (shape === 'act') {
     visitArray(record.sequences, [...path, 'sequences'], 'sequence', issues, filePath);

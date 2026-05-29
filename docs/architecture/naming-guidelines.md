@@ -29,6 +29,19 @@ The central rule:
 > when a shape is internal to a specific boundary, such as setup input or
 > database records.
 
+## Very Important: Use US English
+
+Renku Studio uses US English for public commands, schema fields, TypeScript
+names, file names, documentation headings, and user-facing product terms.
+
+Do not introduce parallel British-English spellings for the same concept. For
+example, use `analyze`, `analyzer`, `analyzing`, `color`, and `canceled`, not
+`analyse`, `analyser`, `analysing`, `colour`, or `cancelled`.
+
+When existing code or docs contain a British-English spelling for a product or
+contract name, rename the current surface directly to the US-English spelling
+and update callers. Do not keep aliases or compatibility command paths.
+
 ## Very Important: Do Not Preserve Obsolete Names
 
 Renku Studio is pre-customer software and will be continuously iterated.

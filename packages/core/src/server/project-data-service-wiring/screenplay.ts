@@ -1,5 +1,13 @@
 import { applyScreenplayOperations } from '../commands/apply-screenplay-operations.js';
 import { createScreenplay } from '../commands/create-screenplay.js';
+import {
+  listScreenplayAnalyses,
+  readScreenplayAnalysis,
+  readScreenplayAnalysisContext,
+  setActiveScreenplayAnalysis,
+  validateScreenplayAnalysis,
+  writeScreenplayAnalysis,
+} from '../commands/screenplay-analysis-commands.js';
 import { validateScreenplayJson } from '../commands/validate-screenplay-json.js';
 import {
   listScreenplayActs,
@@ -34,6 +42,12 @@ export function createScreenplayServiceWiring(): Pick<
   | 'validateScreenplayJson'
   | 'createScreenplay'
   | 'applyScreenplayOperations'
+  | 'readScreenplayAnalysisContext'
+  | 'listScreenplayAnalyses'
+  | 'readScreenplayAnalysis'
+  | 'validateScreenplayAnalysis'
+  | 'writeScreenplayAnalysis'
+  | 'setActiveScreenplayAnalysis'
 > {
   return {
     readScreenplayStatus,
@@ -51,5 +65,11 @@ export function createScreenplayServiceWiring(): Pick<
     validateScreenplayJson,
     createScreenplay,
     applyScreenplayOperations,
+    readScreenplayAnalysisContext,
+    listScreenplayAnalyses,
+    readScreenplayAnalysis,
+    validateScreenplayAnalysis,
+    writeScreenplayAnalysis,
+    setActiveScreenplayAnalysis,
   };
 }

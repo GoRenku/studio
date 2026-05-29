@@ -98,6 +98,7 @@ export type {
   ReadSceneDesignResourceInput,
   ReadProjectInput,
   ReadScreenplayActInput,
+  ReadScreenplayAnalysisInput,
   ReadScreenplayCastMemberInput,
   ReadScreenplayLocationInput,
   ReadScreenplaySceneInput,
@@ -112,7 +113,9 @@ export type {
   ReadMediaGenerationSpecInput,
   RecordMediaGenerationRunInput,
   RunMediaGenerationSpecInput,
+  ScreenplayAnalysisProjectInput,
   SetLookbookImageSectionsInput,
+  SetActiveScreenplayAnalysisInput,
   SetActiveLookbookInput,
   SetLookbookCardImageInput,
   UpdateProjectInformationInput,
@@ -129,10 +132,24 @@ export type {
   ValidateCastProfileGenerationSpecInput,
   ValidateLocationEnvironmentSheetGenerationSpecInput,
   ValidateLookbookInput,
+  ValidateScreenplayAnalysisInput,
   ValidateScreenplayJsonInput,
+  WriteScreenplayAnalysisInput,
   WriteInspirationAnalysisInput,
   WriteInspirationImageInput,
 } from './project-data-service-contracts.js';
+export {
+  DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
+} from '../client/screenplay-analysis.js';
+export type {
+  ScreenplayAnalysisContextReport,
+  ScreenplayAnalysisDocument,
+  ScreenplayAnalysisListReport,
+  ScreenplayAnalysisReadReport,
+  ScreenplayAnalysisSummary,
+  ScreenplayAnalysisValidationReport,
+  ScreenplayAnalysisWriteReport,
+} from '../client/screenplay-analysis.js';
 export type {
   InspirationAnalysisDocument,
   InspirationAnalysisSections,

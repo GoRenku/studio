@@ -67,13 +67,6 @@ describe('screenplay JSON commands', () => {
     });
 
     const read = await projectData.readScreenplay({ homeDir });
-    const actId = read.screenplay?.acts[0]?.id;
-    const storyArcAct = read.screenplay?.screenplay.storyArc?.acts[0];
-    expect(storyArcAct?.actReference).toEqual({ id: actId });
-    expect(storyArcAct?.keyBeats[0]).toMatchObject({
-      type: 'hook',
-      label: "Urban hears the bombard's first voice.",
-    });
     const scene = read.screenplay?.acts[0]?.sequences[0]?.scenes[0];
     expect(scene?.setting.locationIds).toHaveLength(1);
     expect(scene?.blocks[0]).toMatchObject({
@@ -194,15 +187,14 @@ describe('screenplay JSON commands', () => {
     });
   });
 
-  it('updates structured story arc JSON with durable act references', async () => {
+  it('updates screenplay metadata without changing the screenplay graph', async () => {
     await createBlankProject();
     await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
     await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
 
     const current = await projectData.readScreenplay({ homeDir });
-    const actId = current.screenplay?.acts[0]?.id;
     const screenplay = current.screenplay?.screenplay;
-    if (!actId || !screenplay) {
+    if (!screenplay) {
       throw new Error('Expected seeded screenplay ids.');
     }
 
@@ -215,25 +207,7 @@ describe('screenplay JSON commands', () => {
             operation: 'screenplay.update',
             screenplay: {
               ...screenplay,
-              storyArc: {
-                structureModel: 'three_act',
-                acts: [
-                  {
-                    actReference: { id: actId },
-                    title: 'The Offer',
-                    purpose: 'Reframe the first act around the failed Byzantine sale.',
-                    estimatedPages: '1-3',
-                    keyBeats: [
-                      {
-                        type: 'hook',
-                        label: 'The walls shake under Urban\'s cannon.',
-                        description:
-                          'The audience first meets Urban through the destructive consequence of his work.',
-                      },
-                    ],
-                  },
-                ],
-              },
+              summary: 'Urban understands that craft can become consequence.',
             },
           },
         ],
@@ -242,14 +216,9 @@ describe('screenplay JSON commands', () => {
 
     expect(report.changes).toEqual([{ operation: 'screenplay.update' }]);
     const updated = await projectData.readScreenplay({ homeDir });
-    expect(updated.screenplay?.screenplay.storyArc?.acts[0]).toMatchObject({
-      actReference: { id: actId },
-      keyBeats: [
-        expect.objectContaining({
-          label: "The walls shake under Urban's cannon.",
-        }),
-      ],
-    });
+    expect(updated.screenplay?.screenplay.summary).toBe(
+      'Urban understands that craft can become consequence.'
+    );
   });
 
   it('honors placement and warns when duplicate relationship refs are normalized', async () => {
@@ -490,25 +459,6 @@ function minimalScreenplayDocument(): ScreenplayCreateDocument {
     screenplay: {
       title: 'Urban Basilica',
       logline: 'A founder builds a weapon and a conscience.',
-      storyArc: {
-        structureModel: 'three_act',
-        acts: [
-          {
-            actReference: { key: 'act-one' },
-            title: 'Act I',
-            purpose: 'Introduce Urban through the first moral cost of his craft.',
-            estimatedPages: '1-3',
-            keyBeats: [
-              {
-                type: 'hook',
-                label: "Urban hears the bombard's first voice.",
-                description:
-                  'The opening beat connects his technical gift to the violence it can release.',
-              },
-            ],
-          },
-        ],
-      },
     },
     cast: [
       {

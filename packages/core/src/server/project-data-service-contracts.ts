@@ -44,6 +44,12 @@ import type {
   PreparedMediaGeneration,
   SceneDesignResource,
   SceneNarrativeResource,
+  ScreenplayAnalysisContextReport,
+  ScreenplayAnalysisDocument,
+  ScreenplayAnalysisListReport,
+  ScreenplayAnalysisReadReport,
+  ScreenplayAnalysisValidationReport,
+  ScreenplayAnalysisWriteReport,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -168,6 +174,12 @@ export interface ProjectDataService {
   validateScreenplayJson(input: ValidateScreenplayJsonInput): Promise<ScreenplayCommandReport>;
   createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayCommandReport>;
   applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayCommandReport>;
+  readScreenplayAnalysisContext(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisContextReport>;
+  listScreenplayAnalyses(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisListReport>;
+  readScreenplayAnalysis(input: ReadScreenplayAnalysisInput): Promise<ScreenplayAnalysisReadReport>;
+  validateScreenplayAnalysis(input: ValidateScreenplayAnalysisInput): Promise<ScreenplayAnalysisValidationReport>;
+  writeScreenplayAnalysis(input: WriteScreenplayAnalysisInput): Promise<ScreenplayAnalysisWriteReport>;
+  setActiveScreenplayAnalysis(input: SetActiveScreenplayAnalysisInput): Promise<ScreenplayAnalysisWriteReport>;
   listInspirationFolders(input: ListInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
   readInspirationResource(input: ListInspirationFoldersInput): Promise<InspirationResource>;
   readInspirationFolder(input: ReadInspirationFolderInput): Promise<InspirationFolderResource>;
@@ -317,6 +329,26 @@ export interface ApplyScreenplayOperationsInput extends RenkuConfigPathOptions {
   filePath?: string;
   dryRun?: boolean;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface ScreenplayAnalysisProjectInput extends RenkuConfigPathOptions {}
+
+export interface ReadScreenplayAnalysisInput extends ScreenplayAnalysisProjectInput {
+  active?: boolean;
+  analysisId?: string;
+}
+
+export interface ValidateScreenplayAnalysisInput extends ScreenplayAnalysisProjectInput {
+  document: ScreenplayAnalysisDocument;
+  filePath?: string;
+}
+
+export interface WriteScreenplayAnalysisInput extends ValidateScreenplayAnalysisInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface SetActiveScreenplayAnalysisInput extends ScreenplayAnalysisProjectInput {
+  analysisId: string;
 }
 
 export interface VisualLanguageProjectInput extends RenkuConfigPathOptions {

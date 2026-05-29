@@ -1524,7 +1524,6 @@ function makeStoryArcResource() {
       premiseOverview: 'A city and an army prepare for a decisive confrontation.',
       centralConflict: 'Defenders and attackers make irreversible choices.',
       summary: 'The story follows the pressure building before the fall.',
-      storyArc: 'Preparation, pressure, confrontation.',
     },
     acts: [
       {

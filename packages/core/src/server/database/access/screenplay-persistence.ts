@@ -10,7 +10,6 @@ import type {
   Scene,
   ScreenplayDocument,
   Sequence,
-  StoryArc,
 } from '../../../client/screenplay.js';
 import {
   acts,
@@ -88,16 +87,7 @@ export function resolveScreenplayDocumentIds(input: {
 
   const castIds = new Set(document.cast.map((castMember) => castMember.id ?? ''));
   const locationIds = new Set(document.locations.map((location) => location.id ?? ''));
-  const actIds = new Set(document.acts.map((act) => act.id ?? ''));
   validateHandles(document, issues);
-  resolveStoryArcReferences(
-    document.screenplay.storyArc,
-    actIds,
-    keys.acts,
-    ['screenplay', 'storyArc'],
-    issues,
-    mode
-  );
   collectDuplicateNameWarnings(document.cast, ['cast'], 'cast member', warnings);
   collectDuplicateNameWarnings(document.locations, ['locations'], 'location', warnings);
   document.acts.forEach((act, actIndex) =>
@@ -314,7 +304,6 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
           'screenplay',
           'dramatizedElements',
         ]),
-        storyArc: stringifyStoryArc(document.screenplay.storyArc, ['screenplay', 'storyArc']),
         status: document.screenplay.status ?? null,
         researchSources: stringifyStringArray(document.screenplay.researchSources, [
           'screenplay',
@@ -634,27 +623,6 @@ function collectDuplicateNameWarnings(
   });
 }
 
-function resolveStoryArcReferences(
-  storyArc: StoryArc | undefined,
-  durableIds: Set<string>,
-  keys: Map<string, string>,
-  path: string[],
-  issues: DiagnosticIssue[],
-  mode: ScreenplayResolveMode
-): void {
-  storyArc?.acts.forEach((act, actIndex) => {
-    const refPath = [...path, 'acts', String(actIndex), 'actReference'];
-    if (mode === 'canonical' && act.actReference.key) {
-      issues.push(mutationOnlyFieldError([...refPath, 'key']));
-      return;
-    }
-    const id = resolveRef(act.actReference, durableIds, keys, refPath, issues);
-    if (id) {
-      act.actReference = { id };
-    }
-  });
-}
-
 function validateTextMentions(
   text: string,
   document: ScreenplayDocument,
@@ -767,18 +735,6 @@ function stringifyBlocks(value: Block[], path: string[]): string {
   validateScreenplayStoredJsonFragment({
     value,
     fragment: 'blockArray',
-    path,
-  });
-  return JSON.stringify(value);
-}
-
-function stringifyStoryArc(value: StoryArc | undefined, path: string[]): string | null {
-  if (!value) {
-    return null;
-  }
-  validateScreenplayStoredJsonFragment({
-    value,
-    fragment: 'storyArc',
     path,
   });
   return JSON.stringify(value);

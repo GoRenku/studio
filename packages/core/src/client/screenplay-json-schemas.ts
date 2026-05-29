@@ -98,38 +98,6 @@ export const screenplayStringArraySchema = {
   items: { type: 'string' },
 } as const;
 
-export const screenplayStoryArcSchema = {
-  $id: 'https://schemas.gorenku.com/studio/screenplay-story-arc.schema.json',
-  $schema: 'https://json-schema.org/draft/2020-12/schema',
-  type: 'object',
-  required: ['acts'],
-  properties: {
-    structureModel: { type: 'string' },
-    acts: {
-      type: 'array',
-      items: { $ref: '#/$defs/storyArcAct' },
-    },
-  },
-  additionalProperties: true,
-  $defs: {
-    storyArcAct: objectWith(['actReference', 'title', 'purpose', 'keyBeats'], {
-      actReference: ref(),
-      title: { type: 'string' },
-      purpose: { type: 'string' },
-      estimatedPages: { type: 'string' },
-      keyBeats: {
-        type: 'array',
-        items: { $ref: '#/$defs/storyArcKeyBeat' },
-      },
-    }),
-    storyArcKeyBeat: objectWith(['type', 'label', 'description'], {
-      type: { type: 'string' },
-      label: { type: 'string' },
-      description: { type: 'string' },
-    }),
-  },
-} as const;
-
 export const screenplayDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -165,9 +133,6 @@ export const screenplayDocumentSchema = {
         themes: stringArray(),
         historicalBasis: stringArray(),
         dramatizedElements: stringArray(),
-        storyArc: {
-          $ref: 'https://schemas.gorenku.com/studio/screenplay-story-arc.schema.json',
-        },
         status: { type: 'string' },
         researchSources: stringArray(),
         assumptionsMade: stringArray(),

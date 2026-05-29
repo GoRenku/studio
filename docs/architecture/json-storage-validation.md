@@ -137,7 +137,6 @@ caller-caused JSON validation failures.
   used by CLI and server commands.
 - Future JSON-shaped feature sections, including Visual Language, should reuse
   this pattern instead of inventing local validation rules.
-- Current Visual Language and media generation examples include Inspiration
-  Analysis documents, Lookbook documents, Lookbook source Inspiration
-  documents, Lookbook Image generation specs, and media generation run
-  snapshots.
+- Current examples include Screenplay Analysis documents, Inspiration Analysis
+  documents, Lookbook documents, Lookbook source Inspiration documents,
+  Lookbook Image generation specs, and media generation run snapshots.

@@ -88,6 +88,7 @@ Options
   --order              Selection order
   --locale             Project locale id
   --act                Act id for screenplay sequence list
+  --analysis           Screenplay Analysis id
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
   --lookbook           Lookbook id
@@ -178,6 +179,13 @@ function createCliFlags() {
     },
     act: {
       type: 'string',
+    },
+    analysis: {
+      type: 'string',
+    },
+    active: {
+      type: 'boolean',
+      default: false,
     },
     sequence: {
       type: 'string',
@@ -446,6 +454,8 @@ export async function runRenkuCli(
           flags: {
             file: cli.flags.file,
             act: cli.flags.act,
+            active: cli.flags.active,
+            analysis: cli.flags.analysis,
             sequence: cli.flags.sequence,
             dryRun: cli.flags.dryRun,
           },

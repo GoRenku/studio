@@ -128,6 +128,42 @@ export type {
   StudioSelectionContext,
   StudioSelectionContextResult,
 } from './resources.js';
+export {
+  DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
+} from './screenplay-analysis.js';
+export type {
+  DefaultScreenplayAnalysisCriterionKey,
+  ScreenplayActAnalysis,
+  ScreenplayActRole,
+  ScreenplayAnalysisChange,
+  ScreenplayAnalysisCommandReport,
+  ScreenplayAnalysisContextAct,
+  ScreenplayAnalysisContextCastMember,
+  ScreenplayAnalysisContextLocation,
+  ScreenplayAnalysisContextReport,
+  ScreenplayAnalysisContextScene,
+  ScreenplayAnalysisContextScreenplay,
+  ScreenplayAnalysisContextSequence,
+  ScreenplayAnalysisCriterion,
+  ScreenplayAnalysisCritique,
+  ScreenplayAnalysisDocument,
+  ScreenplayAnalysisEvidence,
+  ScreenplayAnalysisListReport,
+  ScreenplayAnalysisProjectReport,
+  ScreenplayAnalysisReadReport,
+  ScreenplayAnalysisScoreMap,
+  ScreenplayAnalysisStructureModel,
+  ScreenplayAnalysisSummary,
+  ScreenplayAnalysisValidationReport,
+  ScreenplayAnalysisWriteReport,
+  ScreenplayBeatRole,
+  ScreenplayKeyBeatAnalysis,
+  ScreenplaySceneAnalysis,
+  ScreenplaySequenceAnalysis,
+  SuggestedCriterionChange,
+  SuggestedSceneAddition,
+  SuggestedScenePlacement,
+} from './screenplay-analysis.js';
 export type {
   Project,
   ProjectCoverImage,
@@ -186,8 +222,10 @@ export {
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,
-  screenplayStoryArcSchema,
 } from './screenplay-json-schemas.js';
+export {
+  screenplayAnalysisDocumentSchema,
+} from './screenplay-analysis-json-schemas.js';
 export {
   cameraSectionSchema as visualLanguageCameraSectionSchema,
   inspirationAnalysisDocumentSchema,

@@ -5,25 +5,6 @@ export interface Reference {
   key?: string;
 }
 
-export interface StoryArc {
-  structureModel?: string;
-  acts: StoryArcAct[];
-}
-
-export interface StoryArcAct {
-  actReference: Reference;
-  title: string;
-  purpose: string;
-  estimatedPages?: string;
-  keyBeats: StoryArcKeyBeat[];
-}
-
-export interface StoryArcKeyBeat {
-  type: string;
-  label: string;
-  description: string;
-}
-
 export interface Screenplay {
   title: string;
   intendedAudience?: string;
@@ -42,7 +23,6 @@ export interface Screenplay {
   themes?: string[];
   historicalBasis?: string[];
   dramatizedElements?: string[];
-  storyArc?: StoryArc;
   status?: string;
   researchSources?: string[];
   assumptionsMade?: string[];

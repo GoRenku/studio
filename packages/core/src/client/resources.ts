@@ -135,7 +135,6 @@ export interface StoryArcResource {
     | 'premiseOverview'
     | 'centralConflict'
     | 'summary'
-    | 'storyArc'
   >;
   acts: Array<ActNavigationRow & { sequences: SequenceNavigationRow[] }>;
 }

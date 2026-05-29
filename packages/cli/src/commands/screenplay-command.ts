@@ -5,9 +5,14 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
+  createStudioCoordinationService,
+  createStudioOperationId,
+  resolveRenkuStorageRoot,
+  type ScreenplayAnalysisDocument,
   type ScreenplayCreateDocument,
   type ScreenplayDocument,
   type ScreenplayOperationDocument,
+  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 
@@ -16,6 +21,8 @@ export async function runScreenplayCommand(options: {
   flags: {
     file?: string;
     act?: string;
+    active?: boolean;
+    analysis?: string;
     sequence?: string;
     dryRun?: boolean;
   };
@@ -25,6 +32,74 @@ export async function runScreenplayCommand(options: {
 }): Promise<number> {
   const [subcommand, nested, id] = options.input;
   const service = createProjectDataService();
+
+  if (subcommand === 'analyze') {
+    if (nested === 'context') {
+      writeJson(options.io, await service.readScreenplayAnalysisContext({ homeDir: options.homeDir }));
+      return 0;
+    }
+    if (nested === 'list') {
+      writeJson(options.io, await service.listScreenplayAnalyses({ homeDir: options.homeDir }));
+      return 0;
+    }
+    if (nested === 'show') {
+      writeJson(
+        options.io,
+        await service.readScreenplayAnalysis({
+          homeDir: options.homeDir,
+          active: options.flags.active,
+          analysisId: options.flags.analysis,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'validate') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readJsonInput(filePath);
+      writeJson(
+        options.io,
+        await service.validateScreenplayAnalysis({
+          homeDir: options.homeDir,
+          document: document as ScreenplayAnalysisDocument,
+          filePath: filePath !== '-' ? filePath : undefined,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'write') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readJsonInput(filePath);
+      const report = await service.writeScreenplayAnalysis({
+        homeDir: options.homeDir,
+        document: document as ScreenplayAnalysisDocument,
+        filePath: filePath !== '-' ? filePath : undefined,
+      });
+      await appendScreenplayAnalysisResourceChangedEvent({
+        options,
+        projectName: report.project.name,
+        projectId: report.project.id,
+        resourceKeys: report.resourceKeys,
+        command: 'screenplay analyze write',
+      });
+      writeJson(options.io, report);
+      return 0;
+    }
+    if (nested === 'set-active') {
+      const report = await service.setActiveScreenplayAnalysis({
+        homeDir: options.homeDir,
+        analysisId: requiredFlag(options.flags.analysis, '--analysis'),
+      });
+      await appendScreenplayAnalysisResourceChangedEvent({
+        options,
+        projectName: report.project.name,
+        projectId: report.project.id,
+        resourceKeys: report.resourceKeys,
+        command: 'screenplay analyze set-active',
+      });
+      writeJson(options.io, report);
+      return 0;
+    }
+  }
 
   if (subcommand === 'status') {
     writeJson(options.io, await service.readScreenplayStatus({ homeDir: options.homeDir }));
@@ -124,10 +199,29 @@ export async function runScreenplayCommand(options: {
         'CLI081',
         'Unknown screenplay command.',
         { path: ['screenplay', subcommand ?? ''] },
-        'Use status, show, validate, create, apply, cast, location, act, sequence, or scene.'
+        'Use status, show, validate, create, apply, analyze, cast, location, act, sequence, or scene.'
       ),
     ],
     suggestion: 'Use a supported screenplay command.',
+  });
+}
+
+function requiredFlag(value: string | undefined, flag: string): string {
+  if (value?.trim()) {
+    return value.trim();
+  }
+  throw new StructuredError({
+    code: 'CLI090',
+    message: `${flag} is required.`,
+    issues: [
+      createDiagnosticError(
+        'CLI090',
+        `${flag} is required.`,
+        { path: [flag], context: 'renku CLI arguments' },
+        `Pass ${flag}.`
+      ),
+    ],
+    suggestion: `Pass ${flag}.`,
   });
 }
 
@@ -212,4 +306,71 @@ async function readStdin(): Promise<string> {
 
 function writeJson(io: RenkuCliIo, value: unknown): void {
   io.stdout.log(JSON.stringify(value, null, 2));
+}
+
+async function appendScreenplayAnalysisResourceChangedEvent(input: {
+  options: {
+    json: boolean;
+    io: RenkuCliIo;
+    homeDir?: string;
+  };
+  projectName: string;
+  projectId?: string;
+  resourceKeys: string[];
+  command: string;
+}): Promise<void> {
+  if (input.resourceKeys.length === 0) {
+    return;
+  }
+
+  try {
+    const coordination = createStudioCoordinationService({
+      homeDir: input.options.homeDir,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.projectResourcesChanged',
+      projectRef: await toProjectRef(input, input.options.homeDir),
+      resourceKeys: input.resourceKeys,
+      source: { kind: 'cli', command: input.command },
+      operationId: createStudioOperationId(),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Studio coordination event could not be appended.';
+    if (input.options.json) {
+      input.options.io.stderr.error(
+        JSON.stringify(
+          {
+            warnings: [
+              {
+                code: 'CLI084',
+                message:
+                  'Screenplay Analysis mutation succeeded, but Studio refresh coordination failed.',
+                detail: message,
+              },
+            ],
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    input.options.io.stderr.error(
+      `[CLI084] WARNING Screenplay Analysis mutation succeeded, but Studio refresh coordination failed: ${message}`
+    );
+  }
+}
+
+async function toProjectRef(
+  input: { projectName: string; projectId?: string },
+  homeDir?: string
+): Promise<StudioProjectRef> {
+  return {
+    name: input.projectName,
+    id: input.projectId ?? input.projectName,
+    storageRoot: await resolveRenkuStorageRoot({ homeDir }),
+  };
 }

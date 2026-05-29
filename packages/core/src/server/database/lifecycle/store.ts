@@ -17,7 +17,7 @@ interface SqliteDatabaseSession extends DatabaseSession {
 
 type DatabaseSessionLifetime = 'operation' | 'project';
 
-const PROJECT_STORE_SCHEMA_GENERATION = 7;
+const PROJECT_STORE_SCHEMA_GENERATION = 8;
 const DRIZZLE_MIGRATIONS_TABLE = '__drizzle_migrations';
 
 const projectSessions = new Map<string, SqliteDatabaseSession>();
