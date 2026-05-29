@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-Status: proposed
+Status: implemented
 
 ## Goal
 
@@ -543,33 +543,33 @@ Add desktop browser verification:
 
 ## Implementation Checklist
 
-- [ ] Extend `StoryArcResource` with ordered scenes and `activeAnalysis`.
-- [ ] Remove `screenplay.storyArc` from `StoryArcResource`.
-- [ ] Update core Story Arc resource reads to include scene rows without block
+- [x] Extend `StoryArcResource` with ordered scenes and `activeAnalysis`.
+- [x] Remove `screenplay.storyArc` from `StoryArcResource`.
+- [x] Update core Story Arc resource reads to include scene rows without block
       text.
-- [ ] Validate active analysis JSON on resource read.
-- [ ] Update Studio server route response typing.
-- [ ] Update frontend service contracts.
-- [ ] Replace the current text-card Story Arc panel with the visualization
+- [x] Validate active analysis JSON on resource read.
+- [x] Update Studio server route response typing.
+- [x] Update frontend service contracts.
+- [x] Replace the current text-card Story Arc panel with the visualization
       shell.
-- [ ] Add chart model projection code.
-- [ ] Add the three-act chart component.
-- [ ] Add key beat markers.
-- [ ] Add the compact scene rail.
-- [ ] Use local shadcn `Button` for interactive scene blocks.
-- [ ] Use local shadcn `Tooltip` for hover summaries.
-- [ ] Add the scene analysis dialog with local shadcn `Dialog`.
-- [ ] Add quiet no-analysis and partial-analysis states.
-- [ ] Wire resource refresh for `surface:story-arc` and screenplay analysis
+- [x] Add chart model projection code.
+- [x] Add the three-act chart component.
+- [x] Add key beat markers.
+- [x] Add the compact scene rail.
+- [x] Use local shadcn `Button` for interactive scene blocks.
+- [x] Use local shadcn `Tooltip` for hover summaries.
+- [x] Add the scene analysis dialog with local shadcn `Dialog`.
+- [x] Add quiet no-analysis and partial-analysis states.
+- [x] Wire resource refresh for `surface:story-arc` and screenplay analysis
       changes.
-- [ ] Add route/service tests.
-- [ ] Add Story Arc component tests.
-- [ ] Run `pnpm test:studio`.
-- [ ] Run `pnpm lint:studio`.
-- [ ] Run `pnpm build:studio`.
-- [ ] Verify in Browser at a desktop viewport.
-- [ ] Confirm there are no raw form or interactive controls in feature code.
-- [ ] Confirm there are no tabs, AI controls, export controls, fake timings,
+- [x] Add route/service tests.
+- [x] Add Story Arc component tests.
+- [x] Run `pnpm test:studio`.
+- [x] Run `pnpm lint:studio`.
+- [x] Run `pnpm build:studio`.
+- [x] Verify in Browser at a desktop viewport.
+- [x] Confirm there are no raw form or interactive controls in feature code.
+- [x] Confirm there are no tabs, AI controls, export controls, fake timings,
       scene thumbnails, or invented metadata on the page.
 
 ## Resolved Decisions

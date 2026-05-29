@@ -1539,10 +1539,24 @@ function makeStoryArcResource() {
             title: 'Opening',
             purpose: 'Establish the siege preparations.',
             sceneCount: 1,
+            scenes: [
+              {
+                id: 'scene_1_1',
+                sequenceId: 'seq_opening',
+                title: 'Opening Scene',
+                setting: {
+                  interiorExterior: 'EXT',
+                  locationIds: [],
+                  timeOfDay: 'DAY',
+                },
+                storyFunction: ['Establish the siege preparations.'],
+              },
+            ],
           },
         ],
       },
     ],
+    activeAnalysis: null,
   };
 }
 

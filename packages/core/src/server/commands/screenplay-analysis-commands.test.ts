@@ -336,6 +336,35 @@ describe('screenplay analysis commands', () => {
     });
   });
 
+  it('returns ordered scenes and active analysis in the Story Arc resource', async () => {
+    await writeAnalysis('Story Arc pass');
+
+    const resource = await projectData.readStoryArcResource({
+      homeDir,
+      projectName: 'blank-movie',
+    });
+
+    expect(resource.screenplay.title).toBe('Urban Basilica');
+    expect(resource.acts[0]?.sequences[0]?.scenes[0]).toMatchObject({
+      title: 'The Refusal',
+      storyFunction: ['Pressure Urban'],
+    });
+    expect(resource.activeAnalysis).toMatchObject({
+      kind: 'screenplayAnalysis',
+      title: 'Story Arc pass',
+      scenes: expect.arrayContaining([
+        expect.objectContaining({
+          title: 'The Refusal',
+          scoreByCriterion: {
+            dramaticEnergy: 64,
+            stakes: 59,
+            characterAgency: 51,
+          },
+        }),
+      ]),
+    });
+  });
+
   async function writeAnalysis(title: string): Promise<ScreenplayAnalysisWriteReport> {
     const analysis = await analysisDocument();
     return await projectData.writeScreenplayAnalysis({

@@ -21,6 +21,10 @@ import {
   readSceneNavigationContext,
   readSequenceNavigationContext,
 } from '../database/access/navigation.js';
+import {
+  readActiveScreenplayAnalysisRecord,
+  readScreenplayAnalysisDocument,
+} from '../database/access/screenplay-analysis.js';
 import { listAssetRelationshipPage } from '../database/access/asset-relationships/index.js';
 import {
   readScreenplayCastMemberFromSession,
@@ -124,6 +128,7 @@ export async function readStoryArcResource(
   try {
     const document = requireScreenplayDocument(session);
     const actPage = listActNavigationPage(session, { limit: 200 });
+    const activeAnalysisRow = readActiveScreenplayAnalysisRecord(session);
     return {
       screenplay: {
         title: document.screenplay.title,
@@ -138,8 +143,23 @@ export async function readStoryArcResource(
         sequences: listSequenceNavigationPage(session, {
           actId: act.id,
           limit: 200,
-        }).items,
+        }).items.map((sequence) => ({
+          ...sequence,
+          scenes: listSceneNavigationPage(session, {
+            sequenceId: sequence.id,
+            limit: 200,
+          }).items.map((scene) => ({
+            ...scene,
+            storyFunction: findScreenplayDocumentScene(document, scene.id)?.storyFunction,
+          })),
+        })),
       })),
+      activeAnalysis: activeAnalysisRow
+        ? readScreenplayAnalysisDocument({
+            row: activeAnalysisRow,
+            screenplay: document,
+          })
+        : null,
     };
   } finally {
     session.close();
@@ -214,6 +234,21 @@ export async function readSceneNarrativeResource(
   } finally {
     session.close();
   }
+}
+
+function findScreenplayDocumentScene(
+  document: ReturnType<typeof requireScreenplayDocument>,
+  sceneId: string
+) {
+  for (const act of document.acts) {
+    for (const sequence of act.sequences) {
+      const scene = sequence.scenes.find((candidate) => candidate.id === sceneId);
+      if (scene) {
+        return scene;
+      }
+    }
+  }
+  return undefined;
 }
 
 function mapCastImages(

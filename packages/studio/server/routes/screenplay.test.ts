@@ -111,7 +111,18 @@ describe('screenplay Hono route', () => {
     await expect(storyArc.json()).resolves.toMatchObject({
       resource: {
         screenplay: { title: 'Preparation of the Siege' },
-        acts: [{ id: 'act_opening', sequences: [{ id: 'seq_opening' }] }],
+        acts: [
+          {
+            id: 'act_opening',
+            sequences: [
+              {
+                id: 'seq_opening',
+                scenes: [{ id: 'scene_opening' }],
+              },
+            ],
+          },
+        ],
+        activeAnalysis: null,
       },
     });
     expect(acts.status).toBe(200);

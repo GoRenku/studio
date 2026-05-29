@@ -8,6 +8,7 @@ import type {
   Screenplay,
   Sequence,
 } from './screenplay.js';
+import type { ScreenplayAnalysisDocument } from './screenplay-analysis.js';
 import type {
   ProjectCounts,
   ProjectCoverImage,
@@ -136,7 +137,20 @@ export interface StoryArcResource {
     | 'centralConflict'
     | 'summary'
   >;
-  acts: Array<ActNavigationRow & { sequences: SequenceNavigationRow[] }>;
+  acts: StoryArcActResource[];
+  activeAnalysis: ScreenplayAnalysisDocument | null;
+}
+
+export interface StoryArcActResource extends ActNavigationRow {
+  sequences: StoryArcSequenceResource[];
+}
+
+export interface StoryArcSequenceResource extends SequenceNavigationRow {
+  scenes: StoryArcSceneResource[];
+}
+
+export interface StoryArcSceneResource extends SceneNavigationRow {
+  storyFunction?: string[];
 }
 
 export interface SequenceResource {

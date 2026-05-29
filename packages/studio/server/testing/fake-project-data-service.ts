@@ -178,10 +178,20 @@ export function fakeProjectDataService(): NonNullable<
                 number: 1,
                 title: 'Opening',
                 sceneCount: 1,
+                scenes: [
+                  {
+                    id: 'scene_opening',
+                    sequenceId: 'seq_opening',
+                    title: 'Opening Scene',
+                    setting: { locationIds: [] },
+                    storyFunction: ['Establish the siege preparations.'],
+                  },
+                ],
               },
             ],
           },
         ],
+        activeAnalysis: null,
       };
     },
     async readSequenceResource() {
