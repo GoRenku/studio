@@ -18,6 +18,7 @@ import { pathExists } from '../files/path-existence.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { resolveRenkuStorageRoot } from '../renku-config.js';
 import type { CreateMovieProjectInput } from '../project-data-service-contracts.js';
+import { DEFAULT_MOVIE_PROJECT_ASPECT_RATIO } from '../database/access/project-information.js';
 
 export async function createMovieProject(
   input: CreateMovieProjectInput
@@ -57,7 +58,7 @@ export async function createMovieProject(
           name: input.projectName,
           title: input.title,
           logline: input.logline,
-          aspectRatio: input.aspectRatio,
+          aspectRatio: input.aspectRatio ?? DEFAULT_MOVIE_PROJECT_ASPECT_RATIO,
           summary: input.summary,
           coverFile: null,
           createdAt: now,

@@ -27,6 +27,7 @@ import {
   type ProjectLocaleRecord,
 } from '../database/access/project-locales.js';
 import { readProjectRecord, type ProjectRecord } from '../database/access/project.js';
+import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { listScreenplayLocationsFromSession } from '../database/access/screenplay-resource.js';
 import { resolveProjectFolder } from '../files/project-paths.js';
 import type { ReadProjectInput } from '../project-data-service-contracts.js';
@@ -112,7 +113,7 @@ function toProjectInfo(
     title: row.title,
     folderPath,
     databasePath,
-    aspectRatio: nullable(row.aspectRatio),
+    aspectRatio: effectiveProjectAspectRatio(row.aspectRatio),
     logline: nullable(row.logline),
     summary: nonEmpty(row.summary ?? undefined),
   };

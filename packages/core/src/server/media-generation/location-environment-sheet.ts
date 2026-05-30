@@ -768,7 +768,7 @@ async function readLocationProjectContext(
       id: project.id,
       name: project.name,
       title: info.title,
-      aspectRatio: info.aspectRatio ?? null,
+      aspectRatio: info.aspectRatio ?? '16:9',
       logline: info.logline ?? null,
       summary: info.summary ?? null,
       languages: info.languages,

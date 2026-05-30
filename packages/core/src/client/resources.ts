@@ -216,7 +216,7 @@ export interface LookbooksResource extends VisualLanguageCommandReport {
 
 export interface ProjectInformationResource {
   title: string;
-  aspectRatio?: string;
+  aspectRatio: string;
   logline?: string;
   summary?: string;
   languages: ProjectLanguage[];

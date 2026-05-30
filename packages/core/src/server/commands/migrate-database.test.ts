@@ -39,7 +39,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(10);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(11);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -89,6 +89,9 @@ describe('migrate database command', () => {
           'extraction_method',
         ])
       );
+      expect(readIndex(sqlite, 'scene_shot_storyboard_sheet_asset_idx')).toMatchObject({
+        isUnique: 0,
+      });
     } finally {
       sqlite.close();
     }
@@ -105,4 +108,15 @@ function readTableNames(sqlite: Database.Database): string[] {
 function readColumnNames(sqlite: Database.Database, tableName: string): string[] {
   const rows = sqlite.pragma(`table_info(${tableName})`) as Array<{ name: string }>;
   return rows.map((row) => row.name);
+}
+
+function readIndex(
+  sqlite: Database.Database,
+  indexName: string
+): { name: string; isUnique: number } | undefined {
+  return sqlite
+    .prepare(
+      'select name, il."unique" as isUnique from pragma_index_list(\'scene_shot_storyboard_sheet\') as il where name = ?'
+    )
+    .get(indexName) as { name: string; isUnique: number } | undefined;
 }

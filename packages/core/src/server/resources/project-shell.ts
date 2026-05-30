@@ -7,6 +7,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readProjectRecord } from '../database/access/project.js';
+import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import {
   listCastNavigationPage,
   listActNavigationPage,
@@ -46,7 +47,7 @@ export function readProjectShellProjection(
     title: project.title,
     folderPath: input.projectFolder,
     databasePath: session.databasePath,
-    aspectRatio: nullable(project.aspectRatio),
+    aspectRatio: effectiveProjectAspectRatio(project.aspectRatio),
     logline: nullable(project.logline),
     summary: nullable(project.summary),
   };

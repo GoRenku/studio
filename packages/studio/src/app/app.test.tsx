@@ -1436,6 +1436,7 @@ function makeProject(
       title: 'Preparation of the Siege',
       folderPath: '/tmp/constantinople',
       databasePath: '/tmp/constantinople/.renku/project.sqlite',
+      aspectRatio: '16:9',
     },
     coverImage: coverUrl ? { fileName: 'cover.png' } : null,
     coverUrl,

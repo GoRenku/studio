@@ -58,7 +58,7 @@ export const sceneShotStoryboardSheets = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    uniqueIndex('scene_shot_storyboard_sheet_asset_idx').on(table.assetId),
+    index('scene_shot_storyboard_sheet_asset_idx').on(table.assetId),
     index('scene_shot_storyboard_sheet_list_created_idx').on(
       table.shotListId,
       table.createdAt,

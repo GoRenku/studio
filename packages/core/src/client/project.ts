@@ -21,7 +21,7 @@ export interface ProjectInfo {
   title: string;
   folderPath: string;
   databasePath: string;
-  aspectRatio?: string;
+  aspectRatio: string;
   logline?: string;
   summary?: string;
 }

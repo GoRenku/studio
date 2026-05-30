@@ -5,13 +5,15 @@ import type { DatabaseSession } from '../lifecycle/store.js';
 import { readProjectRecord } from './project.js';
 import { listProjectLocaleRecords } from './project-locales.js';
 
+export const DEFAULT_MOVIE_PROJECT_ASPECT_RATIO = '16:9';
+
 export function readProjectInformationResourceFromDatabase(
   session: DatabaseSession
 ): ProjectInformationResource {
   const project = readRequiredProjectRecord(session);
   return {
     title: project.title,
-    aspectRatio: project.aspectRatio ?? undefined,
+    aspectRatio: effectiveProjectAspectRatio(project.aspectRatio),
     logline: project.logline ?? undefined,
     summary: project.summary ?? undefined,
     languages: listProjectLocaleRecords(session).map((row) => ({
@@ -31,7 +33,7 @@ export function readProjectInformationUpdateFromDatabase(
   const project = readRequiredProjectRecord(session);
   return {
     title: project.title,
-    aspectRatio: project.aspectRatio ?? undefined,
+    aspectRatio: effectiveProjectAspectRatio(project.aspectRatio),
     logline: project.logline ?? undefined,
     summary: project.summary ?? undefined,
     languages: listProjectLocaleRecords(session).map((row) => ({
@@ -42,6 +44,12 @@ export function readProjectInformationUpdateFromDatabase(
       supportsSubtitles: row.supportsSubtitles,
     })),
   };
+}
+
+export function effectiveProjectAspectRatio(
+  aspectRatio: string | null | undefined
+): string {
+  return aspectRatio ?? DEFAULT_MOVIE_PROJECT_ASPECT_RATIO;
 }
 
 function readRequiredProjectRecord(

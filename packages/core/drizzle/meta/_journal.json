@@ -120,6 +120,13 @@
       "when": 1780075690133,
       "tag": "0016_scene_shot_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1780135943845,
+      "tag": "0017_brainy_manta",
+      "breakpoints": true
     }
   ]
 }

@@ -289,7 +289,7 @@ export type {
   SceneStoryboardSheetModelChoiceReport,
   SceneStoryboardSheetModelListReport,
   SceneStoryboardSheetOutputFormat,
-  SceneStoryboardSheetVisualizationStyle,
+  SceneStoryboardShotFrame,
   LookbookListItem,
   LookbookListItemWithSources,
   LookbookListReport,

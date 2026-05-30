@@ -65,7 +65,7 @@ export async function readSceneShotListContext(
         id: currentProject.projectId,
         projectFolder: currentProject.projectFolder,
         title: projectInfo.title,
-        aspectRatio: projectInfo.aspectRatio ?? null,
+        aspectRatio: projectInfo.aspectRatio ?? '16:9',
       },
       resourceKeys: sceneShotListResourceKeys({
         sceneId: input.sceneId,
@@ -356,16 +356,22 @@ export function sceneShotListResourceKeys(input: {
   sceneId: string;
   shotListId?: string | null;
   storyboardSheetId?: string;
+  storyboardSheetIds?: string[];
   shotIds?: string[];
 }): string[] {
+  const storyboardSheetIds = [
+    ...(input.storyboardSheetId ? [input.storyboardSheetId] : []),
+    ...(input.storyboardSheetIds ?? []),
+  ].filter((id, index, ids) => ids.indexOf(id) === index);
   return [
     `surface:scene:${input.sceneId}:shots`,
     SCENE_SHOT_LIST_RESOURCE_KEY,
     ...(input.shotListId ? [`scene-shot-list:${input.shotListId}`] : []),
-    ...(input.shotListId && input.storyboardSheetId
-      ? [
-          `scene-shot-list:${input.shotListId}:storyboard-sheet:${input.storyboardSheetId}`,
-        ]
+    ...(input.shotListId
+      ? storyboardSheetIds.map(
+          (storyboardSheetId) =>
+            `scene-shot-list:${input.shotListId}:storyboard-sheet:${storyboardSheetId}`
+        )
       : []),
     ...(input.shotListId
       ? (input.shotIds ?? []).map(

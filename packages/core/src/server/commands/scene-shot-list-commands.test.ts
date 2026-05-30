@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
 import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
@@ -188,9 +189,16 @@ describe('scene shot list commands', () => {
         shotListId: written.shotList.id,
         document: {
           kind: 'sceneStoryboardSheetImport',
-          sheet: { source: 'generated/media/sheet.png' },
-          shots: [
-            { shotId: 'shot_001', source: 'generated/media/missing-shot.png' },
+          sheets: [
+            {
+              source: 'generated/media/sheet.png',
+              shots: [
+                {
+                  shotId: 'shot_001',
+                  source: 'generated/media/missing-shot.png',
+                },
+              ],
+            },
           ],
         },
       })
@@ -205,12 +213,32 @@ describe('scene shot list commands', () => {
         shotListId: written.shotList.id,
         document: {
           kind: 'sceneStoryboardSheetImport',
-          sheet: { source: 'generated/media/sheet.png' },
-          shots: [{ shotId: 'shot_missing', source: 'generated/media/shot.png' }],
+          sheets: [
+            {
+              source: 'generated/media/sheet.png',
+              shots: [
+                { shotId: 'shot_missing', source: 'generated/media/shot.png' },
+              ],
+            },
+          ],
         },
       })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA325',
+    });
+
+    await expect(
+      projectData.importSceneStoryboardSheetMedia({
+        homeDir,
+        sceneId: ids.sceneId,
+        shotListId: written.shotList.id,
+        document: {
+          kind: 'sceneStoryboardSheetImport',
+          sheets: [{ source: 'generated/media/sheet.png', shots: [] }],
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA337',
     });
 
     const report = await projectData.importSceneStoryboardSheetMedia({
@@ -219,8 +247,12 @@ describe('scene shot list commands', () => {
       shotListId: written.shotList.id,
       document: {
         kind: 'sceneStoryboardSheetImport',
-        sheet: { source: 'generated/media/sheet.png' },
-        shots: [{ shotId: 'shot_001', source: 'generated/media/shot.png' }],
+        sheets: [
+          {
+            source: 'generated/media/sheet.png',
+            shots: [{ shotId: 'shot_001', source: 'generated/media/shot.png' }],
+          },
+        ],
       },
       idGenerator: createDeterministicIdGenerator(),
     });
@@ -239,11 +271,244 @@ describe('scene shot list commands', () => {
     );
   });
 
+  it('imports a partial storyboard sheet for a longer shot list', async () => {
+    const ids = await sampleIds();
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: sampleShotList(ids, 'Longer coverage', 5),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const project = await projectData.readCurrentProject({ homeDir });
+    expect(project).not.toBeNull();
+    const mediaFolder = path.join(project!.projectFolder, 'generated', 'media');
+    await fs.mkdir(mediaFolder, { recursive: true });
+    await fs.writeFile(path.join(mediaFolder, 'sheet.png'), 'sheet');
+    await fs.writeFile(path.join(mediaFolder, 'shot-001.png'), 'shot 1');
+    await fs.writeFile(path.join(mediaFolder, 'shot-002.png'), 'shot 2');
+
+    await expect(
+      projectData.importSceneStoryboardSheetMedia({
+        homeDir,
+        sceneId: ids.sceneId,
+        shotListId: written.shotList.id,
+        document: {
+          kind: 'sceneStoryboardSheetImport',
+          sheets: [
+            {
+              source: 'generated/media/sheet.png',
+              shots: [
+                { shotId: 'shot_001', source: 'generated/media/shot-001.png' },
+                { shotId: 'shot_001', source: 'generated/media/shot-002.png' },
+              ],
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA336',
+    });
+
+    const report = await projectData.importSceneStoryboardSheetMedia({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      document: {
+        kind: 'sceneStoryboardSheetImport',
+        sheets: [
+          {
+            source: 'generated/media/sheet.png',
+            shots: [
+              { shotId: 'shot_001', source: 'generated/media/shot-001.png' },
+              { shotId: 'shot_002', source: 'generated/media/shot-002.png' },
+            ],
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    expect(report.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'sheet' }),
+        expect.objectContaining({ role: 'shot', shotId: 'shot_001' }),
+        expect.objectContaining({ role: 'shot', shotId: 'shot_002' }),
+      ])
+    );
+    expect(report.files).toHaveLength(3);
+    expect(report.resourceKeys).toEqual(
+      expect.not.arrayContaining([
+        `scene-shot-list:${written.shotList.id}:shot:shot_005`,
+      ])
+    );
+  });
+
+  it('imports multiple storyboard sheets as one grouped scene storyboard asset', async () => {
+    const ids = await sampleIds();
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: sampleShotList(ids, 'Longer coverage', 5),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const project = await projectData.readCurrentProject({ homeDir });
+    expect(project).not.toBeNull();
+    const mediaFolder = path.join(project!.projectFolder, 'generated', 'media');
+    await fs.mkdir(mediaFolder, { recursive: true });
+    for (const filename of [
+      'sheet-1.png',
+      'sheet-2.png',
+      'shot-001.png',
+      'shot-002.png',
+      'shot-005.png',
+    ]) {
+      await fs.writeFile(path.join(mediaFolder, filename), filename);
+    }
+
+    await expect(
+      projectData.importSceneStoryboardSheetMedia({
+        homeDir,
+        sceneId: ids.sceneId,
+        shotListId: written.shotList.id,
+        document: {
+          kind: 'sceneStoryboardSheetImport',
+          title: 'Grouped storyboard package',
+          sheets: [],
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA337' });
+
+    await expect(
+      projectData.importSceneStoryboardSheetMedia({
+        homeDir,
+        sceneId: ids.sceneId,
+        shotListId: written.shotList.id,
+        document: {
+          kind: 'sceneStoryboardSheetImport',
+          sheets: [{ source: 'generated/media/sheet-1.png', shots: [] }],
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA337' });
+
+    await expect(
+      projectData.importSceneStoryboardSheetMedia({
+        homeDir,
+        sceneId: ids.sceneId,
+        shotListId: written.shotList.id,
+        document: {
+          kind: 'sceneStoryboardSheetImport',
+          sheets: [
+            {
+              source: 'generated/media/sheet-1.png',
+              shots: [{ shotId: 'shot_001', source: 'generated/media/shot-001.png' }],
+            },
+            {
+              source: 'generated/media/sheet-2.png',
+              shots: [{ shotId: 'shot_001', source: 'generated/media/shot-002.png' }],
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA336' });
+
+    await expect(
+      projectData.importSceneStoryboardSheetMedia({
+        homeDir,
+        sceneId: ids.sceneId,
+        shotListId: written.shotList.id,
+        document: {
+          kind: 'sceneStoryboardSheetImport',
+          sheets: [
+            {
+              source: 'generated/media/sheet-1.png',
+              shots: [{ shotId: 'shot_001', source: 'generated/media/sheet-1.png' }],
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA338' });
+
+    const report = await projectData.importSceneStoryboardSheetMedia({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      document: {
+        kind: 'sceneStoryboardSheetImport',
+        title: 'Grouped storyboard package',
+        sheets: [
+          {
+            source: 'generated/media/sheet-1.png',
+            title: 'Shots 1-2',
+            shots: [
+              { shotId: 'shot_001', source: 'generated/media/shot-001.png' },
+              { shotId: 'shot_002', source: 'generated/media/shot-002.png' },
+            ],
+          },
+          {
+            source: 'generated/media/sheet-2.png',
+            title: 'Shot 5',
+            shots: [{ shotId: 'shot_005', source: 'generated/media/shot-005.png' }],
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    expect(report.imported.type).toBe('scene_storyboard_sheet');
+    expect(report.storyboardSheetIds).toHaveLength(2);
+    expect(report.storyboardSheetId).toBe(report.storyboardSheetIds[0]);
+    expect(report.files).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'sheet', sheetIndex: 1 }),
+        expect.objectContaining({ role: 'sheet', sheetIndex: 2 }),
+        expect.objectContaining({ role: 'shot', sheetIndex: 1, shotId: 'shot_001' }),
+        expect.objectContaining({ role: 'shot', sheetIndex: 1, shotId: 'shot_002' }),
+        expect.objectContaining({ role: 'shot', sheetIndex: 2, shotId: 'shot_005' }),
+      ])
+    );
+    expect(report.files).toHaveLength(5);
+    expect(new Set(report.files.map((file) => path.dirname(file.projectRelativePath))).size).toBe(1);
+    expect(report.resourceKeys).toEqual(
+      expect.arrayContaining([
+        `scene-shot-list:${written.shotList.id}:storyboard-sheet:${report.storyboardSheetIds[0]}`,
+        `scene-shot-list:${written.shotList.id}:storyboard-sheet:${report.storyboardSheetIds[1]}`,
+        `scene-shot-list:${written.shotList.id}:shot:shot_005`,
+      ])
+    );
+
+    const sqlite = new Database(
+      path.join(project!.projectFolder, '.renku', 'project.sqlite')
+    );
+    try {
+      const sheets = sqlite
+        .prepare(
+          'select id, asset_id from scene_shot_storyboard_sheet where asset_id = ? order by created_at, id'
+        )
+        .all(report.imported.assetId) as Array<{ id: string; asset_id: string }>;
+      expect(sheets.map((sheet) => sheet.id)).toEqual(report.storyboardSheetIds);
+      const firstSheetImages = sqlite
+        .prepare(
+          'select shot_id from scene_shot_storyboard_image where storyboard_sheet_id = ? order by position'
+        )
+        .all(report.storyboardSheetIds[0]) as Array<{ shot_id: string }>;
+      const secondSheetImages = sqlite
+        .prepare(
+          'select shot_id from scene_shot_storyboard_image where storyboard_sheet_id = ? order by position'
+        )
+        .all(report.storyboardSheetIds[1]) as Array<{ shot_id: string }>;
+      expect(firstSheetImages.map((row) => row.shot_id)).toEqual([
+        'shot_001',
+        'shot_002',
+      ]);
+      expect(secondSheetImages.map((row) => row.shot_id)).toEqual(['shot_005']);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it('validates scene storyboard sheet specs and preserves binding options', async () => {
     const ids = await sampleIds();
     const written = await projectData.writeSceneShotList({
       homeDir,
-      document: sampleShotList(ids),
+      document: sampleShotList(ids, 'Longer coverage', 5),
       idGenerator: createDeterministicIdGenerator(),
     });
 
@@ -252,7 +517,12 @@ describe('scene shot list commands', () => {
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
     });
-    expect(context.defaults.visualizationStyle).toBe('charcoalPencil');
+    expect(context.defaults).toMatchObject({
+      sheetFrame: '4:3',
+      shotFrame: 'project',
+      resolvedShotFrame: '16:9',
+      maxShotsPerSheet: 4,
+    });
 
     await expect(
       projectData.validateSceneStoryboardSheetSpec({
@@ -261,11 +531,12 @@ describe('scene shot list commands', () => {
           purpose: 'scene.storyboard-sheet',
           target: { kind: 'scene', id: ids.sceneId },
           shotListId: written.shotList.id,
+          shotIds: ['shot_001', 'shot_002'],
           modelChoice: 'fal-ai/nano-banana-2',
-          prompt: 'A clean one-panel storyboard sheet for this one-shot scene.',
-          visualizationStyle: 'charcoalPencil',
+          prompt: 'A clean storyboard sheet for selected shots.',
           takeCount: 1,
-          imageFrame: 'project',
+          sheetFrame: '4:3',
+          shotFrame: 'project',
           detail: 'standard',
           outputFormat: 'png',
         },
@@ -273,13 +544,66 @@ describe('scene shot list commands', () => {
     ).resolves.toMatchObject({
       valid: true,
       spec: {
-        visualizationStyle: 'charcoalPencil',
+        sheetFrame: '4:3',
+        shotFrame: 'project',
+        shotIds: ['shot_001', 'shot_002'],
         takeCount: 1,
       },
       providerPayload: {
-        aspect_ratio: '16:9',
+        aspect_ratio: '4:3',
       },
     });
+
+    const validation = await projectData.validateSceneStoryboardSheetSpec({
+      homeDir,
+      spec: {
+        purpose: 'scene.storyboard-sheet',
+        target: { kind: 'scene', id: ids.sceneId },
+        shotListId: written.shotList.id,
+        shotIds: ['shot_001', 'shot_002'],
+        modelChoice: 'fal-ai/nano-banana-2',
+        prompt: 'A clean storyboard sheet for selected shots.',
+        takeCount: 1,
+        sheetFrame: '4:3',
+        shotFrame: 'project',
+        detail: 'standard',
+        outputFormat: 'png',
+      },
+    });
+    expect(validation.providerPayload.prompt).toContain(
+      'Each panel is a clean 16:9 landscape storyboard frame.'
+    );
+    expect(validation.providerPayload.prompt).toContain('shot_001');
+    expect(validation.providerPayload.prompt).toContain('shot_002');
+    expect(validation.providerPayload.prompt).not.toContain('shot_005');
+
+    await expect(
+      projectData.validateSceneStoryboardSheetSpec({
+        homeDir,
+        spec: {
+          purpose: 'scene.storyboard-sheet',
+          target: { kind: 'scene', id: ids.sceneId },
+          shotListId: written.shotList.id,
+          shotIds: ['shot_001', 'shot_002', 'shot_003', 'shot_004', 'shot_005'],
+          modelChoice: 'fal-ai/nano-banana-2',
+          prompt: 'Too many shots for one storyboard sheet.',
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA345' });
+
+    await expect(
+      projectData.validateSceneStoryboardSheetSpec({
+        homeDir,
+        spec: {
+          purpose: 'scene.storyboard-sheet',
+          target: { kind: 'scene', id: ids.sceneId },
+          shotListId: written.shotList.id,
+          shotIds: ['shot_missing'],
+          modelChoice: 'fal-ai/nano-banana-2',
+          prompt: 'A storyboard sheet with a missing shot.',
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA325' });
   });
 
   async function sampleIds() {
@@ -295,8 +619,28 @@ describe('scene shot list commands', () => {
 
 function sampleShotList(
   ids: { sceneId: string; castMemberId: string; locationId: string },
-  title = 'Council chamber coverage'
+  title = 'Council chamber coverage',
+  shotCount = 1
 ): SceneShotListDocument {
+  const baseShot = {
+    title: 'Map study',
+    storyBeat: 'Mehmed studies the city map before the siege plan hardens.',
+    narrativePurpose: 'Establish the strategic obsession driving the scene.',
+    description: 'Wide static shot of Mehmed at the table with the map visible.',
+    shotType: 'wide',
+    cameraAngle: 'eye level',
+    cameraMovement: 'static',
+    framing: 'centered table composition',
+    lensIntent: 'moderate wide lens feel',
+    subject: 'Mehmed and the city map',
+    action: 'Mehmed studies the map in silence.',
+    dialogue: [],
+    coveredBlockIndexes: [0],
+    castMemberIds: [ids.castMemberId],
+    locationIds: [ids.locationId],
+    audioNotes: 'Quiet room tone and paper movement.',
+    productionNotes: 'Keep warm lamplight restrained.',
+  };
   return {
     kind: 'sceneShotList',
     sceneId: ids.sceneId,
@@ -305,27 +649,10 @@ function sampleShotList(
     coverageStrategy:
       'Hold the map table and Mehmed in one composed frame to emphasize planning.',
     lookbookInfluence: 'Use the project aspect ratio unless a shot specifies otherwise.',
-    shots: [
-      {
-        shotId: 'shot_001',
-        title: 'Map study',
-        storyBeat: 'Mehmed studies the city map before the siege plan hardens.',
-        narrativePurpose: 'Establish the strategic obsession driving the scene.',
-        description: 'Wide static shot of Mehmed at the table with the map visible.',
-        shotType: 'wide',
-        cameraAngle: 'eye level',
-        cameraMovement: 'static',
-        framing: 'centered table composition',
-        lensIntent: 'moderate wide lens feel',
-        subject: 'Mehmed and the city map',
-        action: 'Mehmed studies the map in silence.',
-        dialogue: [],
-        coveredBlockIndexes: [0],
-        castMemberIds: [ids.castMemberId],
-        locationIds: [ids.locationId],
-        audioNotes: 'Quiet room tone and paper movement.',
-        productionNotes: 'Keep warm lamplight restrained.',
-      },
-    ],
+    shots: Array.from({ length: shotCount }, (_, index) => ({
+      ...baseShot,
+      shotId: `shot_${String(index + 1).padStart(3, '0')}`,
+      title: index === 0 ? baseShot.title : `Map study alternate ${index + 1}`,
+    })),
   };
 }

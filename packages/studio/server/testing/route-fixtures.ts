@@ -83,6 +83,7 @@ export function makeProject(): Project {
       title: 'Preparation of the Siege',
       folderPath: '/tmp/renku/constantinople',
       databasePath: '/tmp/renku/constantinople/.renku/project.sqlite',
+      aspectRatio: '16:9',
     },
     coverImage: { fileName: 'cover.png' },
     languages: [],

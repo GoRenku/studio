@@ -1480,6 +1480,20 @@ describe('renku CLI', () => {
               castMemberIds: [castMemberId],
               locationIds: [locationId],
             },
+            {
+              shotId: 'shot_002',
+              title: 'Mara watches the crack',
+              storyBeat: 'Mara notices the damage Urban does not want named.',
+              narrativePurpose: 'Give the coverage a second selected storyboard panel.',
+              description: 'Medium shot of Mara studying the cracked bronze.',
+              shotType: 'medium',
+              subject: 'Mara and the cracked bronze',
+              action: 'Mara watches the crack in the bronze.',
+              dialogue: [],
+              coveredBlockIndexes: [0],
+              castMemberIds: [castMemberId],
+              locationIds: [locationId],
+            },
           ],
         },
         null,
@@ -1625,7 +1639,12 @@ describe('renku CLI', () => {
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
       shotListId: writeReport.activeShotListId,
-      defaults: { visualizationStyle: 'charcoalPencil' },
+      defaults: {
+        sheetFrame: '4:3',
+        shotFrame: 'project',
+        resolvedShotFrame: '16:9',
+        maxShotsPerSheet: 4,
+      },
     });
 
     stdout = [];
@@ -1660,12 +1679,13 @@ describe('renku CLI', () => {
           purpose: 'scene.storyboard-sheet',
           target: { kind: 'scene', id: sceneId },
           shotListId: writeReport.activeShotListId,
+          shotIds: ['shot_001'],
           modelChoice: 'fal-ai/nano-banana-2',
           prompt: 'A clean charcoal pencil storyboard sheet for this scene.',
-          visualizationStyle: 'charcoalPencil',
           takeCount: 1,
           seed: null,
-          imageFrame: '16:9',
+          sheetFrame: '4:3',
+          shotFrame: 'project',
           detail: 'standard',
           outputFormat: 'png',
           title: 'Foundry storyboard sheet',
@@ -1736,8 +1756,14 @@ describe('renku CLI', () => {
       JSON.stringify(
         {
           kind: 'sceneStoryboardSheetImport',
-          sheet: { source: 'generated/media/sheet.png' },
-          shots: [{ shotId: 'shot_001', source: 'generated/media/shot.png' }],
+          sheets: [
+            {
+              source: 'generated/media/sheet.png',
+              shots: [
+                { shotId: 'shot_001', source: 'generated/media/shot.png' },
+              ],
+            },
+          ],
         },
         null,
         2
@@ -1766,6 +1792,67 @@ describe('renku CLI', () => {
     expect(importExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
+      imported: {
+        type: 'scene_storyboard_sheet',
+        files: expect.arrayContaining([
+          expect.objectContaining({ role: 'sheet' }),
+          expect.objectContaining({ role: 'shot' }),
+        ]),
+      },
+    });
+
+    const multiImportPath = path.join(homeDir, 'scene-storyboard-multi-import.json');
+    for (const filename of ['sheet-1.png', 'sheet-2.png', 'shot-1.png', 'shot-2.png']) {
+      await fs.writeFile(
+        path.join(storageRoot, 'constantinople', `generated/media/${filename}`),
+        filename
+      );
+    }
+    await fs.writeFile(
+      multiImportPath,
+      JSON.stringify(
+        {
+          kind: 'sceneStoryboardSheetImport',
+          title: 'Foundry grouped storyboard',
+          sheets: [
+            {
+              source: 'generated/media/sheet-1.png',
+              shots: [{ shotId: 'shot_001', source: 'generated/media/shot-1.png' }],
+            },
+            {
+              source: 'generated/media/sheet-2.png',
+              shots: [{ shotId: 'shot_002', source: 'generated/media/shot-2.png' }],
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const multiImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'scene.storyboard-sheet',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--file',
+        multiImportPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(multiImportExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'scene.storyboard-sheet',
+      storyboardSheetIds: [expect.any(String), expect.any(String)],
       imported: {
         type: 'scene_storyboard_sheet',
         files: expect.arrayContaining([

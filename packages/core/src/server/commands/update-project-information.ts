@@ -17,6 +17,7 @@ import {
 } from '../database/access/project-locales.js';
 import { listProjectAssetRecords } from '../database/access/asset-relationships/project.js';
 import {
+  effectiveProjectAspectRatio,
   readProjectInformationResourceFromDatabase,
   readProjectInformationUpdateFromDatabase,
 } from '../database/access/project-information.js';
@@ -70,7 +71,7 @@ export async function updateProjectInformation(
       const transactionSession = { ...session, db: tx };
       updateProjectInformationRecord(transactionSession, projectRecord.id, {
         title: input.information.title.trim(),
-        aspectRatio: input.information.aspectRatio,
+        aspectRatio: effectiveProjectAspectRatio(input.information.aspectRatio),
         logline: nullableTrimmed(input.information.logline),
         summary: nullableTrimmed(input.information.summary),
         updatedAt: now,

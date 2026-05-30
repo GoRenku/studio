@@ -408,12 +408,13 @@ asset.
   "purpose": "scene.storyboard-sheet",
   "target": { "kind": "scene", "id": "scene_control_room" },
   "shotListId": "scene_shot_list_control_room_v1",
+  "shotIds": ["shot_001", "shot_002", "shot_003", "shot_004"],
   "modelChoice": "fal-ai/nano-banana-2",
   "prompt": "A complete charcoal pencil storyboard sheet laid out as a clean grid...",
-  "visualizationStyle": "charcoalPencil",
   "takeCount": 1,
   "seed": null,
-  "imageFrame": "project",
+  "sheetFrame": "4:3",
+  "shotFrame": "project",
   "detail": "standard",
   "outputFormat": "png",
   "title": "Control room storyboard sheet"
@@ -424,16 +425,17 @@ Binding fields:
 
 - `modelChoice`
 - `shotListId`
+- `shotIds`
 - `takeCount`
 - `seed`
-- `imageFrame`
+- `sheetFrame`
+- `shotFrame`
 - `detail`
 - `outputFormat`
 
-`takeCount` is fixed to `1` for this purpose. The default
-`visualizationStyle` is `charcoalPencil`; detailed charcoal-pencil prompt
-wording, grid prompting, panel labeling, and slicing procedure belong in the
-`scene-shot-designer` skill references, not in core or Studio app code.
+`takeCount` is fixed to `1` for this purpose. `sheetFrame` is fixed to `4:3`.
+`shotIds` selects one to four shots for the sheet, and `shotFrame` controls the
+panel frame inside the sheet.
 
 ## Estimate And Run
 

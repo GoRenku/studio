@@ -88,13 +88,8 @@ export type SceneStoryboardSheetModelChoice =
   | 'fal-ai/nano-banana-2'
   | 'fal-ai/xai/grok-imagine-image';
 
-export type SceneStoryboardSheetVisualizationStyle =
-  | 'charcoalPencil'
-  | 'lookbookIllustration'
-  | 'realistic'
-  | 'custom';
-
-export type SceneStoryboardSheetFrame = LookbookImageFrame;
+export type SceneStoryboardSheetFrame = '4:3';
+export type SceneStoryboardShotFrame = LookbookImageFrame;
 export type SceneStoryboardSheetDetail = LookbookImageDetail;
 export type SceneStoryboardSheetOutputFormat = LookbookImageOutputFormat;
 
@@ -330,13 +325,14 @@ export interface SceneStoryboardSheetGenerationContext {
   shotList: SceneShotListDocument;
   shotListSummary: SceneShotListSummary;
   defaults: {
-    visualizationStyle: 'charcoalPencil';
     takeCount: 1;
     seed: null;
-    imageFrame: 'project';
-    resolvedAspectRatio: string | null;
+    sheetFrame: '4:3';
+    shotFrame: 'project';
+    resolvedShotFrame: string;
     detail: 'standard';
     outputFormat: 'png';
+    maxShotsPerSheet: 4;
   };
   resourceKeys: string[];
 }
@@ -425,12 +421,13 @@ export interface SceneStoryboardSheetGenerationSpec {
   purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE;
   target: SceneMediaGenerationTarget;
   shotListId: string;
+  shotIds: string[];
   modelChoice: SceneStoryboardSheetModelChoice;
   prompt: string;
-  visualizationStyle?: SceneStoryboardSheetVisualizationStyle;
   takeCount?: 1;
   seed?: number | null;
-  imageFrame?: SceneStoryboardSheetFrame;
+  sheetFrame?: SceneStoryboardSheetFrame;
+  shotFrame?: SceneStoryboardShotFrame;
   detail?: SceneStoryboardSheetDetail;
   outputFormat?: SceneStoryboardSheetOutputFormat;
   title?: string;
@@ -516,7 +513,8 @@ export interface SceneStoryboardSheetModelChoiceReport {
     max: 1;
     default: 1;
   };
-  supportedFrames: SceneStoryboardSheetFrame[];
+  supportedSheetFrames: SceneStoryboardSheetFrame[];
+  supportedShotFrames: SceneStoryboardShotFrame[];
   supportedDetails: SceneStoryboardSheetDetail[];
   supportedOutputFormats: SceneStoryboardSheetOutputFormat[];
 }

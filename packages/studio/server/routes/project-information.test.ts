@@ -43,7 +43,8 @@ describe('project information Hono route', () => {
           identity: {
             ...currentProject.identity,
             title: input.information.title,
-            aspectRatio: input.information.aspectRatio,
+            aspectRatio:
+              input.information.aspectRatio ?? currentProject.identity.aspectRatio,
           },
           languages: input.information.languages.map((language, index) => ({
             id: `language_${index + 1}`,

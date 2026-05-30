@@ -88,7 +88,7 @@ export type {
   SceneStoryboardSheetModelChoiceReport,
   SceneStoryboardSheetModelListReport,
   SceneStoryboardSheetOutputFormat,
-  SceneStoryboardSheetVisualizationStyle,
+  SceneStoryboardShotFrame,
   MediaGenerationEstimateReport,
   MediaGenerationPurpose,
   MediaGenerationRun,

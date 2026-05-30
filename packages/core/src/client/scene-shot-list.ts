@@ -173,10 +173,13 @@ export interface SceneShotListWriteReport extends SceneShotListCommandReport {
 
 export interface SceneStoryboardSheetImportDocument {
   kind: 'sceneStoryboardSheetImport';
-  sheet: {
-    source: string;
-    title?: string;
-  };
+  title?: string;
+  sheets: SceneStoryboardSheetImportSheet[];
+}
+
+export interface SceneStoryboardSheetImportSheet {
+  source: string;
+  title?: string;
   shots: SceneStoryboardSheetImportShot[];
 }
 
@@ -188,6 +191,7 @@ export interface SceneStoryboardSheetImportShot {
 
 export interface SceneStoryboardSheetImportedFile {
   role: 'sheet' | 'shot';
+  sheetIndex?: number;
   shotId?: string;
   projectRelativePath: string;
 }
@@ -199,6 +203,7 @@ export interface SceneStoryboardSheetImportReport
   target: { kind: 'scene'; id: string };
   shotListId: string;
   storyboardSheetId: string;
+  storyboardSheetIds: string[];
   imported: import('./assets.js').Asset;
   files: SceneStoryboardSheetImportedFile[];
 }

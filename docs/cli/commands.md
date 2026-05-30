@@ -1007,12 +1007,13 @@ Scene Storyboard Sheet spec shape:
   "purpose": "scene.storyboard-sheet",
   "target": { "kind": "scene", "id": "scene_control_room" },
   "shotListId": "scene_shot_list_control_room_v1",
+  "shotIds": ["shot_001", "shot_002", "shot_003", "shot_004"],
   "modelChoice": "fal-ai/nano-banana-2",
   "prompt": "A complete charcoal pencil storyboard sheet laid out as a clean grid...",
-  "visualizationStyle": "charcoalPencil",
   "takeCount": 1,
   "seed": null,
-  "imageFrame": "project",
+  "sheetFrame": "4:3",
+  "shotFrame": "project",
   "detail": "standard",
   "outputFormat": "png",
   "title": "Control room storyboard sheet"
@@ -1023,7 +1024,7 @@ Behavior:
 
 - The persisted spec is the source of truth for estimate and run.
 - Agents must not override user-selected model choice, take count, seed, image
-  frame, detail, or output format.
+  frames, selected shot ids, detail, or output format.
 - Final provider payloads are validated against the provider model JSON Schema
   before estimate or execution.
 - Live generation requires an approval token from `generation estimate`.
@@ -1036,9 +1037,9 @@ Behavior:
   media-producer agent inspects that composite with vision, writes the four
   sliced scenic views locally, and imports the grouped files only when the
   generated sheet is clean enough to slice.
-- Scene storyboard sheet runs create one composite storyboard grid for every
-  shot in one Scene Shot List. The scene-shot-designer agent inspects that
-  composite, slices one image per shot, and imports the original sheet plus all
+- Scene storyboard sheet runs create one composite storyboard grid for the
+  selected `shotIds`. The scene-shot-designer agent inspects that composite,
+  slices one image per selected shot, and imports the original sheet plus all
   slices together.
 
 ## `renku media import`
@@ -1105,21 +1106,35 @@ renku media import \
   --json
 ```
 
-The import JSON must explicitly list the original sheet and one sliced file for
-every shot in the shot list:
+The import JSON lists one or more generated sheets in one semantic storyboard
+package, with one sliced file for every imported shot in each sheet:
 
 ```json
 {
   "kind": "sceneStoryboardSheetImport",
-  "sheet": {
-    "source": "generated/media/storyboards/control-room-sheet.png",
-    "title": "Control room storyboard sheet"
-  },
-  "shots": [
+  "title": "Control room storyboard package",
+  "sheets": [
     {
-      "shotId": "shot_001",
-      "source": "generated/media/storyboards/control-room-shot-001.png",
-      "title": "Shot 1"
+      "source": "generated/media/storyboards/control-room-sheet-1.png",
+      "title": "Control room shots 1-4",
+      "shots": [
+        {
+          "shotId": "shot_001",
+          "source": "generated/media/storyboards/control-room-shot-001.png",
+          "title": "Shot 1"
+        }
+      ]
+    },
+    {
+      "source": "generated/media/storyboards/control-room-sheet-2.png",
+      "title": "Control room shots 5-8",
+      "shots": [
+        {
+          "shotId": "shot_005",
+          "source": "generated/media/storyboards/control-room-shot-005.png",
+          "title": "Shot 5"
+        }
+      ]
     }
   ]
 }

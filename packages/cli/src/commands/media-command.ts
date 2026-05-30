@@ -98,7 +98,10 @@ export async function runMediaCommand(options: {
         sceneId: parseSceneTarget(target),
         shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
         document,
-        title: options.flags.title ?? document.sheet.title,
+        title:
+          options.flags.title ??
+          document.title ??
+          document.sheets?.[0]?.title,
       });
     } else {
       const sourceProjectRelativePath = requiredFlag(
@@ -230,28 +233,38 @@ async function readSceneStoryboardSheetImportDocument(
   if (!isRecord(parsed) || parsed.kind !== 'sceneStoryboardSheetImport') {
     throw invalidSceneStoryboardSheetImportFile(filePath);
   }
-  const sheet = parsed.sheet;
-  if (!isRecord(sheet) || typeof sheet.source !== 'string') {
-    throw invalidSceneStoryboardSheetImportFile(filePath);
-  }
-  const shots = parsed.shots;
-  if (!Array.isArray(shots)) {
+  const sheets = parsed.sheets;
+  if (!Array.isArray(sheets)) {
     throw invalidSceneStoryboardSheetImportFile(filePath);
   }
   return {
     kind: 'sceneStoryboardSheetImport',
-    sheet: {
-      source: sheet.source,
-      ...(typeof sheet.title === 'string' ? { title: sheet.title } : {}),
-    },
-    shots: shots.map((shot) => {
-      if (!isRecord(shot) || typeof shot.shotId !== 'string' || typeof shot.source !== 'string') {
+    ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
+    sheets: sheets.map((sheet) => {
+      if (!isRecord(sheet) || typeof sheet.source !== 'string') {
+        throw invalidSceneStoryboardSheetImportFile(filePath);
+      }
+      const shots = sheet.shots;
+      if (!Array.isArray(shots)) {
         throw invalidSceneStoryboardSheetImportFile(filePath);
       }
       return {
-        shotId: shot.shotId,
-        source: shot.source,
-        ...(typeof shot.title === 'string' ? { title: shot.title } : {}),
+        source: sheet.source,
+        ...(typeof sheet.title === 'string' ? { title: sheet.title } : {}),
+        shots: shots.map((shot) => {
+          if (
+            !isRecord(shot) ||
+            typeof shot.shotId !== 'string' ||
+            typeof shot.source !== 'string'
+          ) {
+            throw invalidSceneStoryboardSheetImportFile(filePath);
+          }
+          return {
+            shotId: shot.shotId,
+            source: shot.source,
+            ...(typeof shot.title === 'string' ? { title: shot.title } : {}),
+          };
+        }),
       };
     }),
   };
@@ -283,7 +296,7 @@ function invalidSceneStoryboardSheetImportFile(filePath: string): StructuredErro
     code: 'CLI029',
     message: `Invalid Scene storyboard sheet import file: ${filePath}.`,
     suggestion:
-      'Provide JSON with kind, sheet.source, and shots containing shotId and source.',
+      'Provide JSON with kind and sheets[] entries containing source plus shots[] with shotId and source.',
   });
 }
 
