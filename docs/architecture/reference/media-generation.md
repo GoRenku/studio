@@ -26,6 +26,7 @@ lookbook.image
 cast.character-sheet
 cast.profile
 location.environment-sheet
+scene.storyboard-sheet
 ```
 
 Target formats:
@@ -34,6 +35,7 @@ Target formats:
 lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
+scene:<scene-id>
 ```
 
 Core contract target shapes:
@@ -53,6 +55,11 @@ Core contract target shapes:
   kind: "location";
   id: string;
 }
+
+{
+  kind: "scene";
+  id: string;
+}
 ```
 
 ## Generation Commands
@@ -64,11 +71,13 @@ renku generation context --purpose lookbook.image --target lookbook:<id> --json
 renku generation context --purpose cast.character-sheet --target cast:<id> --json
 renku generation context --purpose cast.profile --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
+renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
 renku generation model list --purpose cast.character-sheet --target cast:<id> --json
 renku generation model list --purpose cast.profile --target cast:<id> --json
 renku generation model list --purpose location.environment-sheet --target location:<id> --json
+renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 
 renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
@@ -79,6 +88,7 @@ renku generation spec list --purpose lookbook.image --target lookbook:<id> --jso
 renku generation spec list --purpose cast.character-sheet --target cast:<id> --json
 renku generation spec list --purpose cast.profile --target cast:<id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<id> --json
+renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
@@ -184,6 +194,29 @@ poles, electrical wires, asphalt roads, or modern signage in a 1400s setting.
 The generated provider image is one composite sheet, not four provider calls.
 The media-producer agent inspects that composite with vision and slices the four
 scenic view images locally before import.
+
+## Scene Storyboard Sheet Context
+
+`scene.storyboard-sheet` context is built for one screenplay scene and one
+Scene Shot List. The target scene must exist, and the shot list must belong to
+that scene.
+
+The context includes:
+
+- project title, summary, and default aspect ratio;
+- screenplay scene hierarchy, setting, story function, and ordered scene
+  blocks;
+- the selected Scene Shot List and its ordered shots;
+- referenced cast and locations for the scene and shot list;
+- active Lookbook text guidance when available;
+- defaults for visualization style, take count, seed, image frame, detail, and
+  output format.
+
+The generated provider image is one composite storyboard sheet for the full
+shot list, not one provider call per shot. The scene-shot-designer skill owns
+the grid prompt, visual inspection, slicing, and per-shot import mapping. Core
+does not store crop boxes, grid cells, extraction confidence, extraction
+methods, or slicing diagnostics.
 
 ## Lookbook Image Spec
 
@@ -367,6 +400,40 @@ If the generated composite does not have four clean scenic view blocks, the
 agent shows the composite to the user, says the generation is not good enough to
 slice cleanly, and asks for regeneration instead of importing a broken grouped
 asset.
+
+## Scene Storyboard Sheet Spec
+
+```json
+{
+  "purpose": "scene.storyboard-sheet",
+  "target": { "kind": "scene", "id": "scene_control_room" },
+  "shotListId": "scene_shot_list_control_room_v1",
+  "modelChoice": "fal-ai/nano-banana-2",
+  "prompt": "A complete charcoal pencil storyboard sheet laid out as a clean grid...",
+  "visualizationStyle": "charcoalPencil",
+  "takeCount": 1,
+  "seed": null,
+  "imageFrame": "project",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Control room storyboard sheet"
+}
+```
+
+Binding fields:
+
+- `modelChoice`
+- `shotListId`
+- `takeCount`
+- `seed`
+- `imageFrame`
+- `detail`
+- `outputFormat`
+
+`takeCount` is fixed to `1` for this purpose. The default
+`visualizationStyle` is `charcoalPencil`; detailed charcoal-pencil prompt
+wording, grid prompting, panel labeling, and slicing procedure belong in the
+`scene-shot-designer` skill references, not in core or Studio app code.
 
 ## Estimate And Run
 

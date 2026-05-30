@@ -1440,6 +1440,342 @@ describe('renku CLI', () => {
     });
   });
 
+  it('writes a scene shot list and imports a storyboard sheet through the CLI', async () => {
+    const storageRoot = await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    await openProjectAndCreateScreenplay();
+
+    const project = await createProjectDataService().readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const sceneId = project.sequences[0]!.scenes[0]!.id;
+    const castMemberId = project.cast[0]!.id;
+    const locationId = project.locations[0]!.id;
+    const shotListPath = path.join(homeDir, 'scene-shot-list.json');
+    await fs.writeFile(
+      shotListPath,
+      JSON.stringify(
+        {
+          kind: 'sceneShotList',
+          sceneId,
+          title: 'Foundry coverage',
+          summary: 'A one-shot coverage pass for Urban in the foundry.',
+          coverageStrategy: 'Hold Urban and the bronze in one readable frame.',
+          shots: [
+            {
+              shotId: 'shot_001',
+              title: 'Urban studies the bronze',
+              storyBeat: 'Urban studies the damaged material.',
+              narrativePurpose: 'Establish attention and craft.',
+              description: 'Wide static shot of Urban with the bronze.',
+              shotType: 'wide',
+              subject: 'Urban and the cracked bronze',
+              action: 'Urban studies the cracked bronze.',
+              dialogue: [],
+              coveredBlockIndexes: [0],
+              castMemberIds: [castMemberId],
+              locationIds: [locationId],
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const writeExitCode = await runRenkuCli(
+      ['screenplay', 'shot-list', 'write', '--file', shotListPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(writeExitCode).toBe(0);
+    const writeReport = JSON.parse(stdout.join('\n'));
+    expect(writeReport).toMatchObject({
+      valid: true,
+      shotList: { sceneId, title: 'Foundry coverage' },
+      activeShotListId: expect.any(String),
+    });
+
+    stdout = [];
+    stderr = [];
+    const contextExitCode = await runRenkuCli(
+      [
+        'screenplay',
+        'shot-list',
+        'context',
+        '--scene',
+        sceneId,
+        '--include-visual-references',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(contextExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      scene: { id: sceneId },
+      activeShotList: { id: writeReport.activeShotListId },
+    });
+
+    stdout = [];
+    stderr = [];
+    const validateExitCode = await runRenkuCli(
+      ['screenplay', 'shot-list', 'validate', '--file', shotListPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(validateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({ valid: true });
+
+    stdout = [];
+    stderr = [];
+    const listExitCode = await runRenkuCli(
+      ['screenplay', 'shot-list', 'list', '--scene', sceneId, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(listExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      shotLists: [
+        expect.objectContaining({
+          id: writeReport.activeShotListId,
+          isActive: true,
+        }),
+      ],
+    });
+
+    stdout = [];
+    stderr = [];
+    const showActiveExitCode = await runRenkuCli(
+      [
+        'screenplay',
+        'shot-list',
+        'show',
+        '--active',
+        '--scene',
+        sceneId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(showActiveExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      summary: { id: writeReport.activeShotListId },
+      shotList: { title: 'Foundry coverage' },
+    });
+
+    stdout = [];
+    stderr = [];
+    const showByIdExitCode = await runRenkuCli(
+      [
+        'screenplay',
+        'shot-list',
+        'show',
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(showByIdExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      summary: { id: writeReport.activeShotListId },
+    });
+
+    stdout = [];
+    stderr = [];
+    const setActiveExitCode = await runRenkuCli(
+      [
+        'screenplay',
+        'shot-list',
+        'set-active',
+        '--scene',
+        sceneId,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(setActiveExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      activeShotListId: writeReport.activeShotListId,
+    });
+
+    stdout = [];
+    stderr = [];
+    const generationContextExitCode = await runRenkuCli(
+      [
+        'generation',
+        'context',
+        '--purpose',
+        'scene.storyboard-sheet',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(generationContextExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'scene.storyboard-sheet',
+      shotListId: writeReport.activeShotListId,
+      defaults: { visualizationStyle: 'charcoalPencil' },
+    });
+
+    stdout = [];
+    stderr = [];
+    const modelListExitCode = await runRenkuCli(
+      [
+        'generation',
+        'model',
+        'list',
+        '--purpose',
+        'scene.storyboard-sheet',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(modelListExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      models: expect.arrayContaining([
+        expect.objectContaining({ modelChoice: 'fal-ai/nano-banana-2' }),
+      ]),
+    });
+
+    const specPath = path.join(homeDir, 'scene-storyboard-spec.json');
+    await fs.writeFile(
+      specPath,
+      JSON.stringify(
+        {
+          purpose: 'scene.storyboard-sheet',
+          target: { kind: 'scene', id: sceneId },
+          shotListId: writeReport.activeShotListId,
+          modelChoice: 'fal-ai/nano-banana-2',
+          prompt: 'A clean charcoal pencil storyboard sheet for this scene.',
+          visualizationStyle: 'charcoalPencil',
+          takeCount: 1,
+          seed: null,
+          imageFrame: '16:9',
+          detail: 'standard',
+          outputFormat: 'png',
+          title: 'Foundry storyboard sheet',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const specValidateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'validate', '--file', specPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(specValidateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      spec: { purpose: 'scene.storyboard-sheet' },
+    });
+
+    stdout = [];
+    stderr = [];
+    const specCreateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'create', '--file', specPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(specCreateExitCode).toBe(0);
+    const createdSpec = JSON.parse(stdout.join('\n')) as { id: string };
+
+    stdout = [];
+    stderr = [];
+    const estimateExitCode = await runRenkuCli(
+      ['generation', 'estimate', '--spec', createdSpec.id, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(estimateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      estimate: { approvalToken: expect.stringMatching(/^sha256:/) },
+    });
+
+    stdout = [];
+    stderr = [];
+    const runExitCode = await runRenkuCli(
+      ['generation', 'run', '--spec', createdSpec.id, '--simulate', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(runExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      run: { simulated: true },
+    });
+
+    const importPath = path.join(homeDir, 'scene-storyboard-import.json');
+    await fs.mkdir(path.join(storageRoot, 'constantinople', 'generated/media'), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', 'generated/media/sheet.png'),
+      'sheet'
+    );
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', 'generated/media/shot.png'),
+      'shot'
+    );
+    await fs.writeFile(
+      importPath,
+      JSON.stringify(
+        {
+          kind: 'sceneStoryboardSheetImport',
+          sheet: { source: 'generated/media/sheet.png' },
+          shots: [{ shotId: 'shot_001', source: 'generated/media/shot.png' }],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const importExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'scene.storyboard-sheet',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--file',
+        importPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(importExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'scene.storyboard-sheet',
+      imported: {
+        type: 'scene_storyboard_sheet',
+        files: expect.arrayContaining([
+          expect.objectContaining({ role: 'sheet' }),
+          expect.objectContaining({ role: 'shot' }),
+        ]),
+      },
+    });
+  });
+
   async function initializeStorageRoot(): Promise<string> {
     const storageRoot = path.join(homeDir, 'movies');
     const exitCode = await runRenkuCli(['init', storageRoot], {

@@ -12,6 +12,7 @@ import {
   type ScreenplayCreateDocument,
   type ScreenplayDocument,
   type ScreenplayOperationDocument,
+  type SceneShotListDocument,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
@@ -23,6 +24,9 @@ export async function runScreenplayCommand(options: {
     act?: string;
     active?: boolean;
     analysis?: string;
+    scene?: string;
+    shotList?: string;
+    includeVisualReferences?: boolean;
     sequence?: string;
     dryRun?: boolean;
   };
@@ -74,12 +78,14 @@ export async function runScreenplayCommand(options: {
         document: document as ScreenplayAnalysisDocument,
         filePath: filePath !== '-' ? filePath : undefined,
       });
-      await appendScreenplayAnalysisResourceChangedEvent({
+      await appendScreenplayResourceChangedEvent({
         options,
         projectName: report.project.name,
         projectId: report.project.id,
         resourceKeys: report.resourceKeys,
         command: 'screenplay analyze write',
+        warningMessage:
+          'Screenplay Analysis mutation succeeded, but Studio refresh coordination failed.',
       });
       writeJson(options.io, report);
       return 0;
@@ -89,12 +95,101 @@ export async function runScreenplayCommand(options: {
         homeDir: options.homeDir,
         analysisId: requiredFlag(options.flags.analysis, '--analysis'),
       });
-      await appendScreenplayAnalysisResourceChangedEvent({
+      await appendScreenplayResourceChangedEvent({
         options,
         projectName: report.project.name,
         projectId: report.project.id,
         resourceKeys: report.resourceKeys,
         command: 'screenplay analyze set-active',
+        warningMessage:
+          'Screenplay Analysis mutation succeeded, but Studio refresh coordination failed.',
+      });
+      writeJson(options.io, report);
+      return 0;
+    }
+  }
+
+  if (subcommand === 'shot-list') {
+    if (nested === 'context') {
+      writeJson(
+        options.io,
+        await service.readSceneShotListContext({
+          homeDir: options.homeDir,
+          sceneId: requiredFlag(options.flags.scene, '--scene'),
+          includeVisualReferences: options.flags.includeVisualReferences,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'list') {
+      writeJson(
+        options.io,
+        await service.listSceneShotLists({
+          homeDir: options.homeDir,
+          sceneId: requiredFlag(options.flags.scene, '--scene'),
+        })
+      );
+      return 0;
+    }
+    if (nested === 'show') {
+      writeJson(
+        options.io,
+        await service.readSceneShotList({
+          homeDir: options.homeDir,
+          active: options.flags.active,
+          sceneId: options.flags.scene,
+          shotListId: options.flags.shotList,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'validate') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readJsonInput(filePath);
+      writeJson(
+        options.io,
+        await service.validateSceneShotList({
+          homeDir: options.homeDir,
+          document: document as SceneShotListDocument,
+          filePath: filePath !== '-' ? filePath : undefined,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'write') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readJsonInput(filePath);
+      const report = await service.writeSceneShotList({
+        homeDir: options.homeDir,
+        document: document as SceneShotListDocument,
+        filePath: filePath !== '-' ? filePath : undefined,
+      });
+      await appendScreenplayResourceChangedEvent({
+        options,
+        projectName: report.project.name,
+        projectId: report.project.id,
+        resourceKeys: report.resourceKeys,
+        command: 'screenplay shot-list write',
+        warningMessage:
+          'Scene Shot List mutation succeeded, but Studio refresh coordination failed.',
+      });
+      writeJson(options.io, report);
+      return 0;
+    }
+    if (nested === 'set-active') {
+      const report = await service.setActiveSceneShotList({
+        homeDir: options.homeDir,
+        sceneId: requiredFlag(options.flags.scene, '--scene'),
+        shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+      });
+      await appendScreenplayResourceChangedEvent({
+        options,
+        projectName: report.project.name,
+        projectId: report.project.id,
+        resourceKeys: report.resourceKeys,
+        command: 'screenplay shot-list set-active',
+        warningMessage:
+          'Scene Shot List mutation succeeded, but Studio refresh coordination failed.',
       });
       writeJson(options.io, report);
       return 0;
@@ -199,7 +294,7 @@ export async function runScreenplayCommand(options: {
         'CLI081',
         'Unknown screenplay command.',
         { path: ['screenplay', subcommand ?? ''] },
-        'Use status, show, validate, create, apply, analyze, cast, location, act, sequence, or scene.'
+        'Use status, show, validate, create, apply, analyze, shot-list, cast, location, act, sequence, or scene.'
       ),
     ],
     suggestion: 'Use a supported screenplay command.',
@@ -308,7 +403,7 @@ function writeJson(io: RenkuCliIo, value: unknown): void {
   io.stdout.log(JSON.stringify(value, null, 2));
 }
 
-async function appendScreenplayAnalysisResourceChangedEvent(input: {
+async function appendScreenplayResourceChangedEvent(input: {
   options: {
     json: boolean;
     io: RenkuCliIo;
@@ -318,6 +413,7 @@ async function appendScreenplayAnalysisResourceChangedEvent(input: {
   projectId?: string;
   resourceKeys: string[];
   command: string;
+  warningMessage: string;
 }): Promise<void> {
   if (input.resourceKeys.length === 0) {
     return;
@@ -346,8 +442,7 @@ async function appendScreenplayAnalysisResourceChangedEvent(input: {
             warnings: [
               {
                 code: 'CLI084',
-                message:
-                  'Screenplay Analysis mutation succeeded, but Studio refresh coordination failed.',
+                message: input.warningMessage,
                 detail: message,
               },
             ],
@@ -359,7 +454,7 @@ async function appendScreenplayAnalysisResourceChangedEvent(input: {
       return;
     }
     input.options.io.stderr.error(
-      `[CLI084] WARNING Screenplay Analysis mutation succeeded, but Studio refresh coordination failed: ${message}`
+      `[CLI084] WARNING ${input.warningMessage}: ${message}`
     );
   }
 }

@@ -79,6 +79,16 @@ export type {
   LocationGenerationScreenplayContext,
   LocationGenerationUsageContext,
   LocationMediaGenerationTarget,
+  SceneMediaGenerationTarget,
+  SceneStoryboardSheetDetail,
+  SceneStoryboardSheetFrame,
+  SceneStoryboardSheetGenerationContext,
+  SceneStoryboardSheetGenerationSpec,
+  SceneStoryboardSheetModelChoice,
+  SceneStoryboardSheetModelChoiceReport,
+  SceneStoryboardSheetModelListReport,
+  SceneStoryboardSheetOutputFormat,
+  SceneStoryboardSheetVisualizationStyle,
   MediaGenerationEstimateReport,
   MediaGenerationPurpose,
   MediaGenerationRun,
@@ -93,6 +103,7 @@ export {
   CAST_PROFILE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
 } from './media-generation.js';
 export type {
   ProjectLanguage,
@@ -165,6 +176,31 @@ export type {
   SuggestedScenePlacement,
 } from './screenplay-analysis.js';
 export type {
+  SceneShot,
+  SceneShotDialogueReference,
+  SceneShotListChange,
+  SceneShotListCommandReport,
+  SceneShotListContextAct,
+  SceneShotListContextCastMember,
+  SceneShotListContextLocation,
+  SceneShotListContextLookbook,
+  SceneShotListContextReport,
+  SceneShotListContextScene,
+  SceneShotListContextScreenplay,
+  SceneShotListDocument,
+  SceneShotListListReport,
+  SceneShotListProjectReport,
+  SceneShotListReadReport,
+  SceneShotListSummary,
+  SceneShotListValidationReport,
+  SceneShotListVisualReferences,
+  SceneShotListWriteReport,
+  SceneStoryboardSheetImportDocument,
+  SceneStoryboardSheetImportReport,
+  SceneStoryboardSheetImportShot,
+  SceneStoryboardSheetImportedFile,
+} from './scene-shot-list.js';
+export type {
   Project,
   ProjectCoverImage,
   ProjectCounts,
@@ -226,6 +262,9 @@ export {
 export {
   screenplayAnalysisDocumentSchema,
 } from './screenplay-analysis-json-schemas.js';
+export {
+  sceneShotListDocumentSchema,
+} from './scene-shot-list-json-schemas.js';
 export {
   cameraSectionSchema as visualLanguageCameraSectionSchema,
   inspirationAnalysisDocumentSchema,

@@ -9,6 +9,7 @@ import {
   readAssetRelationship,
 } from '../database/access/asset-relationships/index.js';
 import { deleteLocationEnvironmentSheetByAssetId } from '../database/access/location-environment-sheets.js';
+import { deleteSceneShotStoryboardSheetByAssetId } from '../database/access/scene-shot-lists.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import {
   normalizeProjectRelativePath,
@@ -52,6 +53,7 @@ export async function deleteAsset(
         assetId: input.assetId,
       });
       deleteLocationEnvironmentSheetByAssetId(txSession, input.assetId);
+      deleteSceneShotStoryboardSheetByAssetId(txSession, input.assetId);
       deleteAssetFileRecordsForAsset(txSession, input.assetId);
       deleteAssetRecord(txSession, input.assetId);
     });

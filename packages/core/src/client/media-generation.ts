@@ -4,6 +4,11 @@ import type { CastMember } from './cast-members.js';
 import type { Location } from './locations.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type { ProjectRelativePath } from './project.js';
+import type {
+  SceneShotListContextReport,
+  SceneShotListDocument,
+  SceneShotListSummary,
+} from './scene-shot-list.js';
 import type { SceneSetting } from './screenplay.js';
 import type { Lookbook, LookbookImage, LookbookSection } from './visual-language.js';
 import type { InspirationFolderWithResolvedPath } from './visual-language.js';
@@ -14,6 +19,8 @@ export const CAST_CHARACTER_SHEET_GENERATION_PURPOSE =
 export const CAST_PROFILE_GENERATION_PURPOSE = 'cast.profile' as const;
 export const LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE =
   'location.environment-sheet' as const;
+export const SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE =
+  'scene.storyboard-sheet' as const;
 
 export type MediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
@@ -21,7 +28,8 @@ export type MediaGenerationPurpose =
   | typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE
   | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE
   | typeof CAST_PROFILE_GENERATION_PURPOSE
-  | typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE;
+  | typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE
+  | typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE;
 
 export type LookbookImageModelChoice =
   | 'fal-ai/openai/gpt-image-2'
@@ -75,6 +83,21 @@ export type LocationEnvironmentSheetModelChoice =
   | 'fal-ai/nano-banana-2'
   | 'fal-ai/xai/grok-imagine-image';
 
+export type SceneStoryboardSheetModelChoice =
+  | 'fal-ai/openai/gpt-image-2'
+  | 'fal-ai/nano-banana-2'
+  | 'fal-ai/xai/grok-imagine-image';
+
+export type SceneStoryboardSheetVisualizationStyle =
+  | 'charcoalPencil'
+  | 'lookbookIllustration'
+  | 'realistic'
+  | 'custom';
+
+export type SceneStoryboardSheetFrame = LookbookImageFrame;
+export type SceneStoryboardSheetDetail = LookbookImageDetail;
+export type SceneStoryboardSheetOutputFormat = LookbookImageOutputFormat;
+
 export interface LookbookImageGenerationTarget {
   kind: 'lookbook';
   id: string;
@@ -90,10 +113,16 @@ export interface LocationMediaGenerationTarget {
   id: string;
 }
 
+export interface SceneMediaGenerationTarget {
+  kind: 'scene';
+  id: string;
+}
+
 export type MediaGenerationTarget =
   | LookbookImageGenerationTarget
   | CastMediaGenerationTarget
-  | LocationMediaGenerationTarget;
+  | LocationMediaGenerationTarget
+  | SceneMediaGenerationTarget;
 
 export interface CastGenerationProjectContext {
   id?: string;
@@ -286,6 +315,32 @@ export interface LocationEnvironmentSheetGenerationContext {
   resourceKeys: string[];
 }
 
+export interface SceneStoryboardSheetGenerationContext {
+  purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE;
+  target: SceneMediaGenerationTarget;
+  shotListId: string;
+  project: SceneShotListContextReport['project'];
+  screenplay: SceneShotListContextReport['screenplay'];
+  act: SceneShotListContextReport['act'];
+  sequence: SceneShotListContextReport['sequence'];
+  scene: SceneShotListContextReport['scene'];
+  cast: SceneShotListContextReport['cast'];
+  locations: SceneShotListContextReport['locations'];
+  activeLookbook: SceneShotListContextReport['activeLookbook'];
+  shotList: SceneShotListDocument;
+  shotListSummary: SceneShotListSummary;
+  defaults: {
+    visualizationStyle: 'charcoalPencil';
+    takeCount: 1;
+    seed: null;
+    imageFrame: 'project';
+    resolvedAspectRatio: string | null;
+    detail: 'standard';
+    outputFormat: 'png';
+  };
+  resourceKeys: string[];
+}
+
 export interface LookbookImageGenerationContext {
   purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
   target: LookbookImageGenerationTarget;
@@ -366,11 +421,27 @@ export interface LocationEnvironmentSheetGenerationSpec {
   title?: string;
 }
 
+export interface SceneStoryboardSheetGenerationSpec {
+  purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE;
+  target: SceneMediaGenerationTarget;
+  shotListId: string;
+  modelChoice: SceneStoryboardSheetModelChoice;
+  prompt: string;
+  visualizationStyle?: SceneStoryboardSheetVisualizationStyle;
+  takeCount?: 1;
+  seed?: number | null;
+  imageFrame?: SceneStoryboardSheetFrame;
+  detail?: SceneStoryboardSheetDetail;
+  outputFormat?: SceneStoryboardSheetOutputFormat;
+  title?: string;
+}
+
 export type MediaGenerationSpec =
   | LookbookImageGenerationSpec
   | CastCharacterSheetGenerationSpec
   | CastProfileGenerationSpec
-  | LocationEnvironmentSheetGenerationSpec;
+  | LocationEnvironmentSheetGenerationSpec
+  | SceneStoryboardSheetGenerationSpec;
 
 export interface LookbookImageModelChoiceReport {
   modelChoice: LookbookImageModelChoice;
@@ -434,6 +505,29 @@ export interface LocationEnvironmentSheetModelChoiceReport {
   supportedOutputFormats: LocationEnvironmentSheetOutputFormat[];
 }
 
+export interface SceneStoryboardSheetModelChoiceReport {
+  modelChoice: SceneStoryboardSheetModelChoice;
+  label: string;
+  available: boolean;
+  unavailableReason?: string;
+  supportsSeed: boolean;
+  takeCount: {
+    min: 1;
+    max: 1;
+    default: 1;
+  };
+  supportedFrames: SceneStoryboardSheetFrame[];
+  supportedDetails: SceneStoryboardSheetDetail[];
+  supportedOutputFormats: SceneStoryboardSheetOutputFormat[];
+}
+
+export interface SceneStoryboardSheetModelListReport {
+  purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE;
+  target: SceneMediaGenerationTarget;
+  shotListId: string;
+  models: SceneStoryboardSheetModelChoiceReport[];
+}
+
 export interface LocationEnvironmentSheetModelListReport {
   purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE;
   target: LocationMediaGenerationTarget;
@@ -454,7 +548,8 @@ export interface MediaGenerationSpecRecord {
     | LookbookImageModelChoice
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
-    | LocationEnvironmentSheetModelChoice;
+    | LocationEnvironmentSheetModelChoice
+    | SceneStoryboardSheetModelChoice;
   title: string;
   spec: MediaGenerationSpec;
   createdAt: string;
@@ -470,7 +565,8 @@ export interface MediaGenerationRun {
     | LookbookImageModelChoice
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
-    | LocationEnvironmentSheetModelChoice;
+    | LocationEnvironmentSheetModelChoice
+    | SceneStoryboardSheetModelChoice;
   provider: 'fal-ai';
   model: string;
   specSnapshot: MediaGenerationSpec;

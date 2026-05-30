@@ -89,6 +89,10 @@ Options
   --locale             Project locale id
   --act                Act id for screenplay sequence list
   --analysis           Screenplay Analysis id
+  --scene              Scene id for scene-owned commands
+  --shot-list          Scene Shot List id
+  --include-visual-references
+                       Include selected visual references in shot-list context
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
   --lookbook           Lookbook id
@@ -182,6 +186,16 @@ function createCliFlags() {
     },
     analysis: {
       type: 'string',
+    },
+    scene: {
+      type: 'string',
+    },
+    shotList: {
+      type: 'string',
+    },
+    includeVisualReferences: {
+      type: 'boolean',
+      default: false,
     },
     active: {
       type: 'boolean',
@@ -400,6 +414,7 @@ export async function runRenkuCli(
             model: cli.flags.model,
             file: cli.flags.file,
             spec: cli.flags.spec,
+            shotList: cli.flags.shotList,
             approvalToken: cli.flags.approvalToken,
             simulate: cli.flags.simulate,
           },
@@ -435,6 +450,7 @@ export async function runRenkuCli(
             summary: cli.flags.summary,
             sections: cli.flags.sections,
             receipt: cli.flags.receipt,
+            shotList: cli.flags.shotList,
           },
           json: cli.flags.json,
           io,
@@ -456,6 +472,9 @@ export async function runRenkuCli(
             act: cli.flags.act,
             active: cli.flags.active,
             analysis: cli.flags.analysis,
+            scene: cli.flags.scene,
+            shotList: cli.flags.shotList,
+            includeVisualReferences: cli.flags.includeVisualReferences,
             sequence: cli.flags.sequence,
             dryRun: cli.flags.dryRun,
           },

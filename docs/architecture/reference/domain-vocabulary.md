@@ -57,12 +57,16 @@ Standalone movie project
   -> Sequence
     -> Scene
       -> Clip
+      -> Scene Shot List
+        -> Shot
 
 Series project
   -> Episode
     -> Sequence
       -> Scene
         -> Clip
+        -> Scene Shot List
+          -> Shot
 ```
 
 `Sequence` is a film and screenwriting term for a meaningful group of scenes
@@ -75,9 +79,13 @@ Related terms:
   the v1 hierarchy.
 - **Chapter** can be a friendly display label for documentaries, courses,
   serialized web videos, or exports. It should not be the canonical schema term.
-- **Shot** is usually a lower-level camera/editing unit inside a scene. Since
-  the current model is organized around clips, `Clip` should stay the v1
-  production unit. A future shot model can be introduced below clips if needed.
+- **Scene Shot List** is a scene-owned coverage planning document. It is stored
+  as validated project data with history and one active shot list per scene.
+- **Shot** is one planned camera unit inside a Scene Shot List. Shots are
+  ordered by their array position in the shot-list JSON. They are not final edit
+  timeline entries.
+- **Clip** remains a structural unit in the existing project hierarchy. Do not
+  use Clip as a synonym for Shot when describing scene coverage.
 
 ## Creative Direction
 
@@ -91,12 +99,15 @@ Related terms:
 | Inspiration Folder            | A project Visual Language folder containing user-provided reference images.                                                              | Folder metadata is stored in SQLite. Images inside the folder are filesystem content, not per-image assets. |
 | Inspiration Analysis          | A validated visual study of one Inspiration Folder.                                                                                      | Stored as tagged JSON through `renku inspiration analysis`; image citations use folder-local filenames.     |
 | Screenplay Analysis           | A validated critique of the current screenplay structure, scene energy, evidence, and suggested additions.                               | Stored as history through `renku screenplay analyze`; suggestions do not mutate screenplay rows.            |
+| Scene Shot List               | A validated scene-owned coverage plan made of ordered Shots.                                                                             | Stored as history through `renku screenplay shot-list`; one active shot list can be selected per Scene.     |
+| Shot                          | One planned camera unit inside a Scene Shot List.                                                                                       | Stores stable `shotId` values scoped to one shot list. Shot labels are derived from order.                  |
 | Lookbook                      | A durable project visual direction made from user direction, Inspiration sources, screenplay context, or named references.               | Stored as tagged JSON plus relationships. It is not a neutral reference summary.                            |
 | Source Inspiration            | An ordered relationship between a Lookbook and an Inspiration Folder.                                                                    | Do not copy Inspiration Analysis JSON into the Lookbook.                                                    |
 | Lookbook Image                | A registered image asset attached to a Lookbook.                                                                                         | Section placement is stored in relationship rows, not in Lookbook JSON.                                     |
 | Continuity Reference          | A reusable subject that must stay visually consistent, such as a location, prop, costume, architecture, vehicle, ship, symbol, or group. | Do not hide these under Visual Language or a vague "world" bucket.                                          |
 | Location Environment Sheet    | A grouped location image asset with one composite sheet and four extracted directional views.                                            | Attached to a Location with role `environment_sheet`; SQLite stores grouping, azimuth ownership, and order, not crop or extraction metadata. |
 | Azimuth View                  | One direction-specific image extracted from a Location Environment Sheet.                                                                | Current azimuths are 0 front, 90 right, 180 back, and 270 left.                                             |
+| Scene Storyboard Sheet        | A compound storyboard image asset generated for one Scene Shot List.                                                                     | The original sheet and all sliced shot files are Asset Files under one Asset. SQLite stores shot ownership, not crop or grid metadata. |
 | Style Sheet                   | A visual language asset type, usually an image or board that demonstrates a desired look.                                                | This is an asset type, not the name of the whole creative-direction system.                                 |
 
 ## Language And Localization
@@ -170,7 +181,7 @@ Use **Select** for a currently chosen asset, **Pin** for cast favorites, and
 | Generation Type       | A category of generation work, such as `cast.character-sheet` or `clip.video-take`. | Use Media Purpose when the work is about producing or importing media for a domain object.                                                                                                                       |
 | Generation Definition | The code-owned setup for reusable generation guidance.                              | Owns purpose guidance and prompt templates. Provider/model selection and user-facing parameters are persisted in a `Generation Spec`. It is not a project-local editable folder.                                 |
 | Generation Key        | The stable key identifying a generation type.                                       | Prefer Media Purpose Key for media-producing commands.                                                                                                                                                           |
-| Generation Spec       | The persisted, user-editable generation choices for a concrete target.              | Agents must not override binding fields such as model choice, take count, seed, frame, detail, or output format. Current implemented media specs include Lookbook Image, Cast Character Sheet, and Cast Profile. |
+| Generation Spec       | The persisted, user-editable generation choices for a concrete target.              | Agents must not override binding fields such as model choice, take count, seed, frame, detail, or output format. Current implemented media specs include Lookbook Image, Cast Character Sheet, Cast Profile, Location Environment Sheet, and Scene Storyboard Sheet. |
 | Task                  | A queued or running unit of work.                                                   | Example: generate a character sheet for one cast member.                                                                                                                                                         |
 | Generation Run        | A durable execution record created from a generation spec.                          | Stores the spec snapshot, provider payload, estimate snapshot, approval token, simulation flag, status, diagnostics, and outputs.                                                                                |
 | Generation Packet     | A system-generated execution snapshot of resolved inputs for one task.              | Useful for debugging and execution repeatability, but not the user-facing generation history model. Prefer Generation Run for persisted media-generation execution history.                                      |

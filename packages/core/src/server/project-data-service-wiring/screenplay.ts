@@ -1,13 +1,7 @@
 import { applyScreenplayOperations } from '../commands/apply-screenplay-operations.js';
 import { createScreenplay } from '../commands/create-screenplay.js';
-import {
-  listScreenplayAnalyses,
-  readScreenplayAnalysis,
-  readScreenplayAnalysisContext,
-  setActiveScreenplayAnalysis,
-  validateScreenplayAnalysis,
-  writeScreenplayAnalysis,
-} from '../commands/screenplay-analysis-commands.js';
+import { listScreenplayAnalyses, readScreenplayAnalysis, readScreenplayAnalysisContext, setActiveScreenplayAnalysis, validateScreenplayAnalysis, writeScreenplayAnalysis } from '../commands/screenplay-analysis-commands.js';
+import { listSceneShotLists, readSceneShotList, readSceneShotListContext, setActiveSceneShotList, validateSceneShotList, writeSceneShotList } from '../commands/scene-shot-list-commands.js';
 import { validateScreenplayJson } from '../commands/validate-screenplay-json.js';
 import {
   listScreenplayActs,
@@ -48,6 +42,12 @@ export function createScreenplayServiceWiring(): Pick<
   | 'validateScreenplayAnalysis'
   | 'writeScreenplayAnalysis'
   | 'setActiveScreenplayAnalysis'
+  | 'readSceneShotListContext'
+  | 'listSceneShotLists'
+  | 'readSceneShotList'
+  | 'validateSceneShotList'
+  | 'writeSceneShotList'
+  | 'setActiveSceneShotList'
 > {
   return {
     readScreenplayStatus,
@@ -71,5 +71,11 @@ export function createScreenplayServiceWiring(): Pick<
     validateScreenplayAnalysis,
     writeScreenplayAnalysis,
     setActiveScreenplayAnalysis,
+    readSceneShotListContext,
+    listSceneShotLists,
+    readSceneShotList,
+    validateSceneShotList,
+    writeSceneShotList,
+    setActiveSceneShotList,
   };
 }

@@ -10,6 +10,7 @@ import {
   CAST_PROFILE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import { mediaGenerationRuns, mediaGenerationSpecs } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -101,7 +102,7 @@ export function listMediaGenerationSpecs(
   session: DatabaseSession,
   input: {
     purpose: MediaGenerationPurpose;
-    targetKind: 'lookbook' | 'castMember' | 'location';
+    targetKind: 'lookbook' | 'castMember' | 'location' | 'scene';
     targetId: string;
   }
 ): MediaGenerationSpecRecord[] {
@@ -230,7 +231,8 @@ function assertMediaGenerationPurpose(
     purpose !== LOOKBOOK_IMAGE_GENERATION_PURPOSE &&
     purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_PROFILE_GENERATION_PURPOSE &&
-    purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE
+    purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE &&
+    purpose !== SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE
   ) {
     throw new ProjectDataError(
       'PROJECT_DATA262',

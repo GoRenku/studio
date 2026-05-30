@@ -59,6 +59,17 @@ operational companions that teach agents how to use those contracts.
 - Estimates cost and runs only approved specs.
 - Imports finished files separately with `renku media import`.
 
+`scene-shot-designer`
+
+- Designs and persists Scene Shot Lists for individual screenplay scenes.
+- Uses `renku screenplay shot-list context` to read screenplay blocks,
+  referenced cast, referenced locations, active Lookbook text, and active shot
+  list history.
+- Writes validated `kind: "sceneShotList"` JSON through the CLI.
+- Optionally creates one `scene.storyboard-sheet` generation spec for the full
+  shot list, slices the generated sheet into per-shot files, and imports the
+  original sheet plus slices as one compound Asset.
+
 ## Skill Rules
 
 Skills may inspect project files and media when those files are content. Skills
@@ -73,6 +84,9 @@ Skills must not:
 - store absolute paths in authored JSON documents;
 - run paid generation without an estimate and approval token;
 - override user-selected generation controls.
+- store generated storyboard image paths inside Scene Shot List JSON;
+- add analog shooting logistics such as setup minutes, crew assignments, or
+  call-sheet timing to Scene Shot List documents.
 
 ## Reference Structure
 

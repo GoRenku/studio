@@ -376,6 +376,90 @@ Validation rules:
 - Suggested scene additions are critique only. They do not create scene rows.
 - Unknown fields are rejected for this agent-authored JSON format.
 
+## `renku screenplay shot-list`
+
+Read, validate, write, and activate durable Scene Shot List documents for one
+screenplay scene.
+
+```bash
+renku screenplay shot-list context --scene <scene-id> --json
+renku screenplay shot-list context --scene <scene-id> --include-visual-references --json
+renku screenplay shot-list list --scene <scene-id> --json
+renku screenplay shot-list show --active --scene <scene-id> --json
+renku screenplay shot-list show --shot-list <shot-list-id> --json
+renku screenplay shot-list validate --file <shot-list-json> --json
+renku screenplay shot-list validate --file - --json
+renku screenplay shot-list write --file <shot-list-json> --json
+renku screenplay shot-list write --file - --json
+renku screenplay shot-list set-active --scene <scene-id> --shot-list <shot-list-id> --json
+```
+
+Options:
+
+- `--scene`: required for `context`, `list`, `show --active`, and
+  `set-active`.
+- `--shot-list`: required for `show --shot-list` and `set-active`.
+- `--file`: required for `validate` and `write`. Use `-` to read stdin.
+- `--include-visual-references`: opt-in context flag for user-requested visual
+  inspection. Default context stays text-only.
+- `--active`: shows the active shot list for a scene. Returns
+  `shotList: null` when no active shot list exists.
+- `--json`: print machine-readable JSON.
+
+Behavior:
+
+- Requires a current authoring project and existing screenplay data.
+- `context` returns the scene hierarchy, scene blocks, referenced cast and
+  locations, project default aspect ratio, active Lookbook text, and active shot
+  list summary.
+- `validate` checks a tagged `kind: "sceneShotList"` document without writing.
+- `write` creates a new scene-owned shot-list history row and makes it active.
+- `set-active` changes only the active shot-list pointer for the scene.
+- `write` and `set-active` append Studio resource-change events for the scene
+  Shots surface, the shot-list collection, the specific shot list, and the
+  scene.
+- Shot-level `aspectRatio` is optional. When omitted, the shot inherits the
+  project aspect ratio.
+- Unknown fields are rejected. Shot-list JSON must not store absolute paths,
+  generated image paths, setup minutes, crew assignments, call-sheet timing, or
+  other analog shooting logistics.
+
+Input JSON shape:
+
+```json
+{
+  "kind": "sceneShotList",
+  "sceneId": "scene_control_room",
+  "title": "Ada confronts the empty control room",
+  "summary": "A restrained coverage plan that starts wide and ends intimate.",
+  "coverageStrategy": "Open with geography, then tighten toward Ada's face and hands.",
+  "lookbookInfluence": "Use cold practical light and centered institutional framing.",
+  "shots": [
+    {
+      "shotId": "shot_001",
+      "title": "Empty room establishes the absence",
+      "storyBeat": "Ada enters expecting someone and finds the room abandoned.",
+      "narrativePurpose": "Establish geography, absence, and emotional distance.",
+      "description": "Wide static frame from the doorway with Ada small against the consoles.",
+      "shotType": "wide",
+      "cameraAngle": "eye level",
+      "cameraMovement": "static",
+      "framing": "centered doorway frame with deep background symmetry",
+      "lensIntent": "moderate wide lens feel; keep room geometry legible",
+      "subject": "Ada and the empty control room",
+      "action": "Ada pauses in the doorway before stepping inside.",
+      "dialogue": [],
+      "coveredBlockIndexes": [0, 1],
+      "castMemberIds": ["cast_ada"],
+      "locationIds": ["location_control_room"],
+      "audioNotes": "Let room tone and distant machinery carry the silence.",
+      "productionNotes": "Avoid warm fill; the absence should feel institutional."
+    }
+  ],
+  "openQuestions": []
+}
+```
+
 ## `renku screenplay cast`
 
 List or show cast members from the current authoring project's screenplay.
@@ -833,6 +917,7 @@ lookbook.image
 cast.character-sheet
 cast.profile
 location.environment-sheet
+scene.storyboard-sheet
 ```
 
 Current target formats:
@@ -841,6 +926,7 @@ Current target formats:
 lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
+scene:<scene-id>
 ```
 
 Read context and available model choices:
@@ -854,6 +940,8 @@ renku generation context --purpose cast.profile --target cast:<cast-member-id> -
 renku generation model list --purpose cast.profile --target cast:<cast-member-id> --json
 renku generation context --purpose location.environment-sheet --target location:<location-id> --json
 renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
+renku generation context --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
+renku generation model list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
 ```
 
 Manage persisted specs:
@@ -865,6 +953,7 @@ renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
 renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
+renku generation spec list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
 ```
 
 Estimate and run:
@@ -911,6 +1000,25 @@ Location Environment Sheet spec shape:
 }
 ```
 
+Scene Storyboard Sheet spec shape:
+
+```json
+{
+  "purpose": "scene.storyboard-sheet",
+  "target": { "kind": "scene", "id": "scene_control_room" },
+  "shotListId": "scene_shot_list_control_room_v1",
+  "modelChoice": "fal-ai/nano-banana-2",
+  "prompt": "A complete charcoal pencil storyboard sheet laid out as a clean grid...",
+  "visualizationStyle": "charcoalPencil",
+  "takeCount": 1,
+  "seed": null,
+  "imageFrame": "project",
+  "detail": "standard",
+  "outputFormat": "png",
+  "title": "Control room storyboard sheet"
+}
+```
+
 Behavior:
 
 - The persisted spec is the source of truth for estimate and run.
@@ -928,6 +1036,10 @@ Behavior:
   media-producer agent inspects that composite with vision, writes the four
   sliced scenic views locally, and imports the grouped files only when the
   generated sheet is clean enough to slice.
+- Scene storyboard sheet runs create one composite storyboard grid for every
+  shot in one Scene Shot List. The scene-shot-designer agent inspects that
+  composite, slices one image per shot, and imports the original sheet plus all
+  slices together.
 
 ## `renku media import`
 
@@ -940,6 +1052,7 @@ lookbook.image
 cast.character-sheet
 cast.profile
 location.environment-sheet
+scene.storyboard-sheet
 ```
 
 ```bash
@@ -981,17 +1094,51 @@ The import JSON must explicitly list the composite and four sliced view files:
 }
 ```
 
+Scene Storyboard Sheet import:
+
+```bash
+renku media import \
+  --purpose scene.storyboard-sheet \
+  --target scene:<scene-id> \
+  --shot-list <shot-list-id> \
+  --file scene-storyboard-sheet-import.json \
+  --json
+```
+
+The import JSON must explicitly list the original sheet and one sliced file for
+every shot in the shot list:
+
+```json
+{
+  "kind": "sceneStoryboardSheetImport",
+  "sheet": {
+    "source": "generated/media/storyboards/control-room-sheet.png",
+    "title": "Control room storyboard sheet"
+  },
+  "shots": [
+    {
+      "shotId": "shot_001",
+      "source": "generated/media/storyboards/control-room-shot-001.png",
+      "title": "Shot 1"
+    }
+  ]
+}
+```
+
 Options:
 
 - `--purpose`: required media purpose. Current supported values are
   `lookbook.image`, `cast.character-sheet`, `cast.profile`, and
-  `location.environment-sheet`.
+  `location.environment-sheet`, and `scene.storyboard-sheet`.
 - `--target`: required target. Current supported shapes are
   `lookbook:<lookbook-id>`, `cast:<cast-member-id>`, and
-  `location:<location-id>`.
+  `location:<location-id>`, and `scene:<scene-id>`.
 - `--source`: required project-relative media source path for single-file
-  imports. Location environment sheet import uses `--file` instead.
-- `--file`: grouped import JSON for `location.environment-sheet`.
+  imports. Location environment sheet and scene storyboard sheet imports use
+  `--file` instead.
+- `--file`: grouped import JSON for `location.environment-sheet` and
+  `scene.storyboard-sheet`.
+- `--shot-list`: required when importing `scene.storyboard-sheet`.
 - `--sections`: optional comma-separated Lookbook section keys.
 - `--title`: optional title for the imported media.
 - `--summary`: optional one-line summary.
@@ -1012,6 +1159,13 @@ Behavior:
   files under `locations/<handle>/environment-sheets/<sheet-slug>/`, and stores
   only the grouped asset and azimuth relationships. It does not accept or store
   crop coordinates, extraction methods, extraction confidence, or extraction
+  diagnostics.
+- For Scene Storyboard Sheets, import registers one compound asset, copies the
+  original sheet plus one sliced file per shot under
+  `screenplay/storyboards/<scene-label>/<sheet-slug>/`, attaches the asset to
+  the Scene with role `storyboard_sheet`, and stores only the sheet and
+  per-shot image relationships. It does not accept or store crop coordinates,
+  grid cell metadata, extraction methods, extraction confidence, or extraction
   diagnostics.
 - Agents should inspect generated images before import and tag only the
   sections the image visibly demonstrates. Do not blindly copy

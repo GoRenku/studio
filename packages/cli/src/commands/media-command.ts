@@ -7,6 +7,8 @@ import {
   type CastMediaImportReport,
   type LocationEnvironmentSheetMediaImportReport,
   type LookbookImageMediaImportReport,
+  type SceneStoryboardSheetImportDocument,
+  type SceneStoryboardSheetImportReport,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
@@ -24,6 +26,7 @@ export async function runMediaCommand(options: {
     summary?: string;
     sections?: string;
     receipt?: string;
+    shotList?: string;
   };
   json: boolean;
   io: RenkuCliIo;
@@ -37,7 +40,8 @@ export async function runMediaCommand(options: {
     let report:
       | LookbookImageMediaImportReport
       | CastMediaImportReport
-      | LocationEnvironmentSheetMediaImportReport;
+      | LocationEnvironmentSheetMediaImportReport
+      | SceneStoryboardSheetImportReport;
 
     if (purpose === 'location.environment-sheet') {
       if (options.flags.source) {
@@ -67,6 +71,34 @@ export async function runMediaCommand(options: {
         files: document.files,
         title: options.flags.title ?? document.title,
         oneLineSummary: options.flags.summary ?? document.oneLineSummary,
+      });
+    } else if (purpose === 'scene.storyboard-sheet') {
+      if (options.flags.source) {
+        throw new StructuredError({
+          code: 'CLI027',
+          message: 'Scene storyboard sheet import does not accept --source.',
+          suggestion:
+            'Use --file with a JSON document that lists the original sheet and one sliced image per shot.',
+        });
+      }
+      if (options.flags.receipt) {
+        throw new StructuredError({
+          code: 'CLI028',
+          message: 'Scene storyboard sheet import does not accept --receipt.',
+          suggestion:
+            'The generation receipt stays with the storyboard sheet generation run; import only the grouped image files.',
+        });
+      }
+      const document = await readSceneStoryboardSheetImportDocument(
+        requiredFlag(options.flags.file, '--file')
+      );
+      report = await service.importSceneStoryboardSheetMedia({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        sceneId: parseSceneTarget(target),
+        shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+        document,
+        title: options.flags.title ?? document.sheet.title,
       });
     } else {
       const sourceProjectRelativePath = requiredFlag(
@@ -191,6 +223,40 @@ async function readLocationEnvironmentSheetImportDocument(filePath: string): Pro
   };
 }
 
+async function readSceneStoryboardSheetImportDocument(
+  filePath: string
+): Promise<SceneStoryboardSheetImportDocument> {
+  const parsed = JSON.parse(await fs.readFile(filePath, 'utf8')) as unknown;
+  if (!isRecord(parsed) || parsed.kind !== 'sceneStoryboardSheetImport') {
+    throw invalidSceneStoryboardSheetImportFile(filePath);
+  }
+  const sheet = parsed.sheet;
+  if (!isRecord(sheet) || typeof sheet.source !== 'string') {
+    throw invalidSceneStoryboardSheetImportFile(filePath);
+  }
+  const shots = parsed.shots;
+  if (!Array.isArray(shots)) {
+    throw invalidSceneStoryboardSheetImportFile(filePath);
+  }
+  return {
+    kind: 'sceneStoryboardSheetImport',
+    sheet: {
+      source: sheet.source,
+      ...(typeof sheet.title === 'string' ? { title: sheet.title } : {}),
+    },
+    shots: shots.map((shot) => {
+      if (!isRecord(shot) || typeof shot.shotId !== 'string' || typeof shot.source !== 'string') {
+        throw invalidSceneStoryboardSheetImportFile(filePath);
+      }
+      return {
+        shotId: shot.shotId,
+        source: shot.source,
+        ...(typeof shot.title === 'string' ? { title: shot.title } : {}),
+      };
+    }),
+  };
+}
+
 function readLocationEnvironmentSheetImportFileRole(
   files: Record<string, unknown>,
   filePath: string,
@@ -209,6 +275,15 @@ function invalidLocationEnvironmentSheetImportFile(filePath: string): Structured
     message: `Invalid Location environment sheet import file: ${filePath}.`,
     suggestion:
       'Provide JSON with files.composite, files.view_front, files.view_right, files.view_back, and files.view_left.',
+  });
+}
+
+function invalidSceneStoryboardSheetImportFile(filePath: string): StructuredError {
+  return new StructuredError({
+    code: 'CLI029',
+    message: `Invalid Scene storyboard sheet import file: ${filePath}.`,
+    suggestion:
+      'Provide JSON with kind, sheet.source, and shots containing shotId and source.',
   });
 }
 
@@ -252,12 +327,24 @@ function parseLocationTarget(target: string): string {
   return id;
 }
 
+function parseSceneTarget(target: string): string {
+  const [kind, id, extra] = target.split(':');
+  if (kind !== 'scene' || !id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI025',
+      message: `Scene storyboard sheet import target must use scene:<id>. Received: ${target}.`,
+      suggestion: 'Use --target scene:<scene-id>.',
+    });
+  }
+  return id;
+}
+
 function unsupportedMediaPurpose(purpose: string): never {
   throw new StructuredError({
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, or --purpose location.environment-sheet.',
+      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, or --purpose scene.storyboard-sheet.',
   });
 }
 
@@ -277,7 +364,8 @@ async function appendMediaResourceChangedEvent(input: {
   report:
     | LookbookImageMediaImportReport
     | CastMediaImportReport
-    | LocationEnvironmentSheetMediaImportReport;
+    | LocationEnvironmentSheetMediaImportReport
+    | SceneStoryboardSheetImportReport;
   command: string;
 }): Promise<void> {
   if (input.report.resourceKeys.length === 0) {
@@ -330,6 +418,7 @@ async function toProjectRef(
     | LookbookImageMediaImportReport
     | CastMediaImportReport
     | LocationEnvironmentSheetMediaImportReport
+    | SceneStoryboardSheetImportReport
   )['project'],
   homeDir?: string
 ): Promise<StudioProjectRef> {

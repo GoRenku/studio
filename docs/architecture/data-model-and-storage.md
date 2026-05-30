@@ -41,12 +41,21 @@ Use the focused documents below for current direction.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
   agent-authored critique history as tagged JSON in `screenplay_analysis`, with
   one active analysis tracked in `screenplay_analysis_state`.
+- Scene Shot Lists are SQLite-owned project data. They store validated,
+  agent-authored scene coverage history as tagged JSON in `scene_shot_list`,
+  with one active shot list per scene tracked in `scene_shot_list_state`.
 - Lookbooks are durable SQLite-owned project direction. Source Inspiration
   folders and Lookbook image placement are relationships, not embedded section
   JSON.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
   attaches them as assets.
+- Scene storyboard sheets are compound Assets. The original generated sheet and
+  sliced per-shot storyboard images are Asset Files under one Asset, while
+  `scene_shot_storyboard_sheet` and `scene_shot_storyboard_image` store the
+  relationship to the Scene Shot List and its scoped `shotId` values. Core does
+  not store crop boxes, grid cells, or extraction metadata for storyboard
+  slicing.
 - The canonical project database path is:
 
 ```text
@@ -111,7 +120,7 @@ direction is superseded by ADR 0017.
 
 - `docs/architecture/reference/media-generation.md`
   Defines persisted generation specs, generation runs, and separate media
-  import for the current Lookbook Image slice.
+  import for the current media purposes.
 
 - `docs/architecture/json-storage-validation.md`
   Defines the AJV and JSON Schema validation rule for SQLite JSON columns.

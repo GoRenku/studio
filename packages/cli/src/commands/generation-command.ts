@@ -17,6 +17,7 @@ export async function runGenerationCommand(options: {
     model?: string;
     file?: string;
     spec?: string;
+    shotList?: string;
     approvalToken?: string;
     simulate?: boolean;
   };
@@ -56,6 +57,13 @@ export async function runGenerationCommand(options: {
                   homeDir: options.homeDir,
                   locationId: parseLocationTarget(target),
                 })
+              : purpose === 'scene.storyboard-sheet'
+                ? await service.buildSceneStoryboardSheetContext({
+                    projectName: options.flags.project,
+                    homeDir: options.homeDir,
+                    sceneId: parseSceneTarget(target),
+                    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  })
             : unsupportedGenerationPurpose(purpose)
     );
     return 0;
@@ -90,6 +98,13 @@ export async function runGenerationCommand(options: {
                   homeDir: options.homeDir,
                   locationId: parseLocationTarget(target),
                 })
+              : purpose === 'scene.storyboard-sheet'
+                ? await service.listSceneStoryboardSheetModels({
+                    projectName: options.flags.project,
+                    homeDir: options.homeDir,
+                    sceneId: parseSceneTarget(target),
+                    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  })
             : unsupportedGenerationPurpose(purpose)
     );
     return 0;
@@ -124,6 +139,12 @@ export async function runGenerationCommand(options: {
                   homeDir: options.homeDir,
                   spec,
                 })
+              : spec.purpose === 'scene.storyboard-sheet'
+                ? await service.validateSceneStoryboardSheetSpec({
+                    projectName: options.flags.project,
+                    homeDir: options.homeDir,
+                    spec,
+                  })
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -158,6 +179,12 @@ export async function runGenerationCommand(options: {
                   homeDir: options.homeDir,
                   spec,
                 })
+              : spec.purpose === 'scene.storyboard-sheet'
+                ? await service.createSceneStoryboardSheetSpec({
+                    projectName: options.flags.project,
+                    homeDir: options.homeDir,
+                    spec,
+                  })
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -196,6 +223,13 @@ export async function runGenerationCommand(options: {
                   specId: requiredFlag(options.flags.spec, '--spec'),
                   spec,
                 })
+              : spec.purpose === 'scene.storyboard-sheet'
+                ? await service.updateSceneStoryboardSheetSpec({
+                    projectName: options.flags.project,
+                    homeDir: options.homeDir,
+                    specId: requiredFlag(options.flags.spec, '--spec'),
+                    spec,
+                  })
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -242,6 +276,13 @@ export async function runGenerationCommand(options: {
                   homeDir: options.homeDir,
                   locationId: parseLocationTarget(target),
                 })
+              : purpose === 'scene.storyboard-sheet'
+                ? await service.listSceneStoryboardSheetSpecs({
+                    projectName: options.flags.project,
+                    homeDir: options.homeDir,
+                    sceneId: parseSceneTarget(target),
+                    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  })
             : unsupportedGenerationPurpose(purpose)
     );
     return 0;
@@ -265,6 +306,8 @@ export async function runGenerationCommand(options: {
             ? await service.estimateCastProfileSpec(specInput)
             : specRecord.spec.purpose === 'location.environment-sheet'
               ? await service.estimateLocationEnvironmentSheetSpec(specInput)
+              : specRecord.spec.purpose === 'scene.storyboard-sheet'
+                ? await service.estimateSceneStoryboardSheetSpec(specInput)
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -290,6 +333,8 @@ export async function runGenerationCommand(options: {
             ? await service.runCastProfileSpec(specInput)
             : specRecord.spec.purpose === 'location.environment-sheet'
               ? await service.runLocationEnvironmentSheetSpec(specInput)
+              : specRecord.spec.purpose === 'scene.storyboard-sheet'
+                ? await service.runSceneStoryboardSheetSpec(specInput)
             : unsupportedGenerationPurpose(specPurpose)
     );
     return 0;
@@ -343,12 +388,24 @@ function parseLocationTarget(value: string): string {
   return id;
 }
 
+function parseSceneTarget(value: string): string {
+  const [kind, id, extra] = value.split(':');
+  if (kind !== 'scene' || !id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI025',
+      message: `Scene storyboard sheet generation target must use scene:<id>. Received: ${value}.`,
+      suggestion: 'Use --target scene:<scene-id>.',
+    });
+  }
+  return id;
+}
+
 function unsupportedGenerationPurpose(purpose: string): never {
   throw new StructuredError({
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, or --purpose location.environment-sheet.',
+      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, or --purpose scene.storyboard-sheet.',
   });
 }
 

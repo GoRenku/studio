@@ -2,7 +2,7 @@ import * as characterSheet from '../media-generation/cast-character-sheet.js';
 import * as castProfile from '../media-generation/cast-profile.js';
 import * as locationSheet from '../media-generation/location-environment-sheet.js';
 import * as lookbookImage from '../media-generation/lookbook-image.js';
-
+import * as sceneStoryboardSheet from '../media-generation/scene-storyboard-sheet.js';
 export function createMediaGenerationServiceWiring() {
   return {
     buildLookbookImageContext: lookbookImage.buildLookbookImageContext,
@@ -17,23 +17,12 @@ export function createMediaGenerationServiceWiring() {
     runLookbookImageSpec: lookbookImage.runLookbookImageSpec,
     recordLookbookImageRun: lookbookImage.recordLookbookImageRun,
     importLookbookImageMedia: lookbookImage.importLookbookImageMedia,
-    buildCastCharacterSheetContext:
-      characterSheet.buildCastCharacterSheetContext,
-    listCastCharacterSheetModels: characterSheet.listCastCharacterSheetModels,
-    validateCastCharacterSheetSpec:
-      characterSheet.validateCastCharacterSheetSpec,
-    createCastCharacterSheetSpec: characterSheet.createCastCharacterSheetSpec,
-    updateCastCharacterSheetSpec: characterSheet.updateCastCharacterSheetSpec,
-    readCastCharacterSheetSpec: characterSheet.readCastCharacterSheetSpec,
-    listCastCharacterSheetSpecs: characterSheet.listCastCharacterSheetSpecs,
-    prepareCastCharacterSheetSpec:
-      characterSheet.prepareCastCharacterSheetSpec,
-    estimateCastCharacterSheetSpec:
-      characterSheet.estimateCastCharacterSheetSpec,
-    runCastCharacterSheetSpec: characterSheet.runCastCharacterSheetSpec,
-    recordCastCharacterSheetRun: characterSheet.recordCastCharacterSheetRun,
-    importCastCharacterSheetMedia:
-      characterSheet.importCastCharacterSheetMedia,
+    buildCastCharacterSheetContext: characterSheet.buildCastCharacterSheetContext, listCastCharacterSheetModels: characterSheet.listCastCharacterSheetModels,
+    validateCastCharacterSheetSpec: characterSheet.validateCastCharacterSheetSpec, createCastCharacterSheetSpec: characterSheet.createCastCharacterSheetSpec,
+    updateCastCharacterSheetSpec: characterSheet.updateCastCharacterSheetSpec, readCastCharacterSheetSpec: characterSheet.readCastCharacterSheetSpec,
+    listCastCharacterSheetSpecs: characterSheet.listCastCharacterSheetSpecs, prepareCastCharacterSheetSpec: characterSheet.prepareCastCharacterSheetSpec,
+    estimateCastCharacterSheetSpec: characterSheet.estimateCastCharacterSheetSpec, runCastCharacterSheetSpec: characterSheet.runCastCharacterSheetSpec,
+    recordCastCharacterSheetRun: characterSheet.recordCastCharacterSheetRun, importCastCharacterSheetMedia: characterSheet.importCastCharacterSheetMedia,
     buildCastProfileContext: castProfile.buildCastProfileContext,
     listCastProfileModels: castProfile.listCastProfileModels,
     validateCastProfileSpec: castProfile.validateCastProfileSpec,
@@ -46,29 +35,29 @@ export function createMediaGenerationServiceWiring() {
     runCastProfileSpec: castProfile.runCastProfileSpec,
     recordCastProfileRun: castProfile.recordCastProfileRun,
     importCastProfileMedia: castProfile.importCastProfileMedia,
-    buildLocationEnvironmentSheetContext:
-      locationSheet.buildLocationEnvironmentSheetContext,
-    listLocationEnvironmentSheetModels:
-      locationSheet.listLocationEnvironmentSheetModels,
-    validateLocationEnvironmentSheetSpec:
-      locationSheet.validateLocationEnvironmentSheetSpec,
-    createLocationEnvironmentSheetSpec:
-      locationSheet.createLocationEnvironmentSheetSpec,
-    updateLocationEnvironmentSheetSpec:
-      locationSheet.updateLocationEnvironmentSheetSpec,
-    readLocationEnvironmentSheetSpec:
-      locationSheet.readLocationEnvironmentSheetSpec,
-    listLocationEnvironmentSheetSpecs:
-      locationSheet.listLocationEnvironmentSheetSpecs,
-    prepareLocationEnvironmentSheetSpec:
-      locationSheet.prepareLocationEnvironmentSheetSpec,
-    estimateLocationEnvironmentSheetSpec:
-      locationSheet.estimateLocationEnvironmentSheetSpec,
-    runLocationEnvironmentSheetSpec:
-      locationSheet.runLocationEnvironmentSheetSpec,
-    recordLocationEnvironmentSheetRun:
-      locationSheet.recordLocationEnvironmentSheetRun,
-    importLocationEnvironmentSheetMedia:
-      locationSheet.importLocationEnvironmentSheetMedia,
+    buildLocationEnvironmentSheetContext: locationSheet.buildLocationEnvironmentSheetContext,
+    listLocationEnvironmentSheetModels: locationSheet.listLocationEnvironmentSheetModels,
+    validateLocationEnvironmentSheetSpec: locationSheet.validateLocationEnvironmentSheetSpec,
+    createLocationEnvironmentSheetSpec: locationSheet.createLocationEnvironmentSheetSpec,
+    updateLocationEnvironmentSheetSpec: locationSheet.updateLocationEnvironmentSheetSpec,
+    readLocationEnvironmentSheetSpec: locationSheet.readLocationEnvironmentSheetSpec,
+    listLocationEnvironmentSheetSpecs: locationSheet.listLocationEnvironmentSheetSpecs,
+    prepareLocationEnvironmentSheetSpec: locationSheet.prepareLocationEnvironmentSheetSpec,
+    estimateLocationEnvironmentSheetSpec: locationSheet.estimateLocationEnvironmentSheetSpec,
+    runLocationEnvironmentSheetSpec: locationSheet.runLocationEnvironmentSheetSpec,
+    recordLocationEnvironmentSheetRun: locationSheet.recordLocationEnvironmentSheetRun,
+    importLocationEnvironmentSheetMedia: locationSheet.importLocationEnvironmentSheetMedia,
+    buildSceneStoryboardSheetContext: sceneStoryboardSheet.buildSceneStoryboardSheetContext,
+    listSceneStoryboardSheetModels: sceneStoryboardSheet.listSceneStoryboardSheetModels,
+    validateSceneStoryboardSheetSpec: sceneStoryboardSheet.validateSceneStoryboardSheetSpec,
+    createSceneStoryboardSheetSpec: sceneStoryboardSheet.createSceneStoryboardSheetSpec,
+    updateSceneStoryboardSheetSpec: sceneStoryboardSheet.updateSceneStoryboardSheetSpec,
+    readSceneStoryboardSheetSpec: sceneStoryboardSheet.readSceneStoryboardSheetSpec,
+    listSceneStoryboardSheetSpecs: sceneStoryboardSheet.listSceneStoryboardSheetSpecs,
+    prepareSceneStoryboardSheetSpec: sceneStoryboardSheet.prepareSceneStoryboardSheetSpec,
+    estimateSceneStoryboardSheetSpec: sceneStoryboardSheet.estimateSceneStoryboardSheetSpec,
+    runSceneStoryboardSheetSpec: sceneStoryboardSheet.runSceneStoryboardSheetSpec,
+    recordSceneStoryboardSheetRun: sceneStoryboardSheet.recordSceneStoryboardSheetRun,
+    importSceneStoryboardSheetMedia: sceneStoryboardSheet.importSceneStoryboardSheetMedia,
   };
 }

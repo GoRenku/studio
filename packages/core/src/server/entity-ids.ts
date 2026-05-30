@@ -27,7 +27,10 @@ export type EntityIdPrefix =
   | 'media_generation_spec'
   | 'media_generation_run'
   | 'location_environment_sheet'
-  | 'location_environment_sheet_view';
+  | 'location_environment_sheet_view'
+  | 'scene_shot_list'
+  | 'scene_shot_storyboard_sheet'
+  | 'scene_shot_storyboard_image';
 
 export interface ProjectIdGenerator {
   next(prefix: EntityIdPrefix): string;

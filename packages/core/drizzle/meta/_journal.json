@@ -113,6 +113,13 @@
       "when": 1780071056554,
       "tag": "0015_remove_location_sheet_slicing_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1780075690133,
+      "tag": "0016_scene_shot_lists",
+      "breakpoints": true
     }
   ]
 }

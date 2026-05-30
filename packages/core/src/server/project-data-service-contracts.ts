@@ -38,6 +38,9 @@ import type {
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
   LocationEnvironmentSheetModelListReport,
+  SceneStoryboardSheetGenerationContext,
+  SceneStoryboardSheetGenerationSpec,
+  SceneStoryboardSheetModelListReport,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -50,6 +53,14 @@ import type {
   ScreenplayAnalysisReadReport,
   ScreenplayAnalysisValidationReport,
   ScreenplayAnalysisWriteReport,
+  SceneShotListContextReport,
+  SceneShotListDocument,
+  SceneShotListListReport,
+  SceneShotListReadReport,
+  SceneShotListValidationReport,
+  SceneShotListWriteReport,
+  SceneStoryboardSheetImportDocument,
+  SceneStoryboardSheetImportReport,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -180,6 +191,12 @@ export interface ProjectDataService {
   validateScreenplayAnalysis(input: ValidateScreenplayAnalysisInput): Promise<ScreenplayAnalysisValidationReport>;
   writeScreenplayAnalysis(input: WriteScreenplayAnalysisInput): Promise<ScreenplayAnalysisWriteReport>;
   setActiveScreenplayAnalysis(input: SetActiveScreenplayAnalysisInput): Promise<ScreenplayAnalysisWriteReport>;
+  readSceneShotListContext(input: ReadSceneShotListContextInput): Promise<SceneShotListContextReport>;
+  listSceneShotLists(input: ListSceneShotListsInput): Promise<SceneShotListListReport>;
+  readSceneShotList(input: ReadSceneShotListInput): Promise<SceneShotListReadReport>;
+  validateSceneShotList(input: ValidateSceneShotListInput): Promise<SceneShotListValidationReport>;
+  writeSceneShotList(input: WriteSceneShotListInput): Promise<SceneShotListWriteReport>;
+  setActiveSceneShotList(input: SetActiveSceneShotListInput): Promise<SceneShotListWriteReport>;
   listInspirationFolders(input: ListInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
   readInspirationResource(input: ListInspirationFoldersInput): Promise<InspirationResource>;
   readInspirationFolder(input: ReadInspirationFolderInput): Promise<InspirationFolderResource>;
@@ -255,6 +272,18 @@ export interface ProjectDataService {
   runLocationEnvironmentSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordLocationEnvironmentSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
   importLocationEnvironmentSheetMedia(input: ImportLocationEnvironmentSheetMediaInput): Promise<LocationEnvironmentSheetMediaImportReport>;
+  buildSceneStoryboardSheetContext(input: ReadSceneStoryboardSheetGenerationContextInput): Promise<SceneStoryboardSheetGenerationContext>;
+  listSceneStoryboardSheetModels(input: ReadSceneStoryboardSheetGenerationContextInput): Promise<SceneStoryboardSheetModelListReport>;
+  validateSceneStoryboardSheetSpec(input: ValidateSceneStoryboardSheetGenerationSpecInput): Promise<{ valid: true; spec: SceneStoryboardSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createSceneStoryboardSheetSpec(input: CreateSceneStoryboardSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateSceneStoryboardSheetSpec(input: UpdateSceneStoryboardSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readSceneStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listSceneStoryboardSheetSpecs(input: ReadSceneStoryboardSheetGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareSceneStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateSceneStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runSceneStoryboardSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  recordSceneStoryboardSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
+  importSceneStoryboardSheetMedia(input: ImportSceneStoryboardSheetMediaInput): Promise<SceneStoryboardSheetImportReport>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -349,6 +378,37 @@ export interface WriteScreenplayAnalysisInput extends ValidateScreenplayAnalysis
 
 export interface SetActiveScreenplayAnalysisInput extends ScreenplayAnalysisProjectInput {
   analysisId: string;
+}
+
+export interface SceneShotListProjectInput extends RenkuConfigPathOptions {}
+
+export interface ReadSceneShotListContextInput extends SceneShotListProjectInput {
+  sceneId: string;
+  includeVisualReferences?: boolean;
+}
+
+export interface ListSceneShotListsInput extends SceneShotListProjectInput {
+  sceneId: string;
+}
+
+export interface ReadSceneShotListInput extends SceneShotListProjectInput {
+  active?: boolean;
+  sceneId?: string;
+  shotListId?: string;
+}
+
+export interface ValidateSceneShotListInput extends SceneShotListProjectInput {
+  document: SceneShotListDocument;
+  filePath?: string;
+}
+
+export interface WriteSceneShotListInput extends ValidateSceneShotListInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface SetActiveSceneShotListInput extends SceneShotListProjectInput {
+  sceneId: string;
+  shotListId: string;
 }
 
 export interface VisualLanguageProjectInput extends RenkuConfigPathOptions {
@@ -644,6 +704,39 @@ export interface ImportLocationEnvironmentSheetMediaInput
   };
   title?: string;
   oneLineSummary?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ReadSceneStoryboardSheetGenerationContextInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  shotListId: string;
+}
+
+export interface ValidateSceneStoryboardSheetGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: SceneStoryboardSheetGenerationSpec;
+}
+
+export interface CreateSceneStoryboardSheetGenerationSpecInput
+  extends ValidateSceneStoryboardSheetGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateSceneStoryboardSheetGenerationSpecInput
+  extends ValidateSceneStoryboardSheetGenerationSpecInput {
+  specId: string;
+}
+
+export interface ImportSceneStoryboardSheetMediaInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  shotListId: string;
+  document: SceneStoryboardSheetImportDocument;
+  title?: string;
   idGenerator?: ProjectIdGenerator;
 }
 
