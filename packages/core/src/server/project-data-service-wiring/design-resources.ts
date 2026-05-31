@@ -9,6 +9,10 @@ import {
   readSequenceResource,
   readStoryArcResource,
 } from '../resources/screenplay-ui.js';
+import {
+  readActStoryboardResource,
+  readSceneShotListResource,
+} from '../resources/scene-storyboard-ui.js';
 import { readStudioSelectionContext } from '../resources/selection-context.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
@@ -23,6 +27,8 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readStoryArcResource'
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
+  | 'readSceneShotListResource'
+  | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
 > {
   return {
@@ -35,6 +41,8 @@ export function createDesignResourceServiceWiring(): Pick<
     readStoryArcResource,
     readSequenceResource,
     readSceneNarrativeResource,
+    readSceneShotListResource,
+    readActStoryboardResource,
     readStudioSelectionContext,
   };
 }

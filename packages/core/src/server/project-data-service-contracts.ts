@@ -76,6 +76,8 @@ import type {
   SequenceNavigationRow,
   SequenceResource,
   StoryArcResource,
+  ActStoryboardResource,
+  SceneShotListResource,
   VisualLanguageCommandReport,
 } from '../client/index.js';
 import type {
@@ -142,6 +144,12 @@ export interface ProjectDataService {
   readSceneNarrativeResource(
     input: ReadSceneNarrativeResourceInput
   ): Promise<SceneNarrativeResource>;
+  readSceneShotListResource(
+    input: ReadSceneShotListResourceInput
+  ): Promise<SceneShotListResource>;
+  readActStoryboardResource(
+    input: ReadActStoryboardResourceInput
+  ): Promise<ActStoryboardResource>;
   readStudioSelectionContext(input: {
     projectName: string;
     selection: StudioSelection;
@@ -794,6 +802,16 @@ export interface ReadSequenceResourceInput extends RenkuConfigPathOptions {
 export interface ReadSceneNarrativeResourceInput extends RenkuConfigPathOptions {
   projectName: string;
   sceneId: string;
+}
+
+export interface ReadSceneShotListResourceInput extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+}
+
+export interface ReadActStoryboardResourceInput extends RenkuConfigPathOptions {
+  projectName: string;
+  actId: string;
 }
 
 export interface ReadSceneDesignResourceInput

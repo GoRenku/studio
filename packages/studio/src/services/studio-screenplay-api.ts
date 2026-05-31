@@ -1,11 +1,13 @@
 import type {
   ActNavigationPageResponse,
+  ActStoryboardResourceResponse,
   CastMemberResourceResponse,
   CastOverviewResourceResponse,
   LocationOverviewResourceResponse,
   LocationResourceResponse,
   SceneNarrativeResourceResponse,
   SceneNavigationPageResponse,
+  SceneShotListResourceResponse,
   SequenceNavigationPageResponse,
   SequenceResourceResponse,
   StoryArcResourceResponse,
@@ -109,6 +111,24 @@ export async function readSceneNarrativeResource(
 ): Promise<SceneNarrativeResourceResponse> {
   return readResource(
     screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}`)
+  );
+}
+
+export async function readSceneShotListResource(
+  projectName: string,
+  sceneId: string
+): Promise<SceneShotListResourceResponse> {
+  return readResource(
+    screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/shot-list`)
+  );
+}
+
+export async function readActStoryboardResource(
+  projectName: string,
+  actId: string
+): Promise<ActStoryboardResourceResponse> {
+  return readResource(
+    screenplayPath(projectName, `/acts/${encodeURIComponent(actId)}/storyboard`)
   );
 }
 

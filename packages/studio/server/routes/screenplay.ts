@@ -2,10 +2,13 @@ import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import {
+  toActStoryboardResourceResponse,
   toCastMemberResourceResponse,
   toCastOverviewResourceResponse,
   toLocationOverviewResourceResponse,
   toLocationResourceResponse,
+  toSceneShotListResourceResponse,
+  toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
@@ -94,6 +97,21 @@ export function createScreenplayRoute({ projectData }: CreateScreenplayRouteOpti
         return projectErrorResponse(c, error);
       }
     })
+    .get('/screenplay/acts/:actId/storyboard', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const actId = c.req.param('actId') as string;
+        const resource = await projectData.readActStoryboardResource({
+          projectName,
+          actId,
+        });
+        return c.json({
+          resource: toActStoryboardResourceResponse(projectName, resource),
+        });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/screenplay/acts/:actId/sequences', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
@@ -117,7 +135,9 @@ export function createScreenplayRoute({ projectData }: CreateScreenplayRouteOpti
           sequenceId,
           ...readPageRequest(c.req.query()),
         });
-        return c.json({ resource });
+        return c.json({
+          resource: toSequenceResourceResponse(projectName, resource),
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -132,6 +152,21 @@ export function createScreenplayRoute({ projectData }: CreateScreenplayRouteOpti
           ...readPageRequest(c.req.query()),
         });
         return c.json({ page });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .get('/screenplay/scenes/:sceneId/shot-list', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sceneId = c.req.param('sceneId') as string;
+        const resource = await projectData.readSceneShotListResource({
+          projectName,
+          sceneId,
+        });
+        return c.json({
+          resource: toSceneShotListResourceResponse(projectName, resource),
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

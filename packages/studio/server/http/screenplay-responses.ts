@@ -1,12 +1,18 @@
 import type {
+  ActStoryboardResource,
+  ActStoryboardSequence,
+  ActStoryboardShot,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
   LocationResource,
   SceneNarrativeResource,
+  SceneShotListResource,
+  SceneStoryboardSheetReference,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
   SequenceResource,
+  SequenceSceneRow,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
 
@@ -44,8 +50,54 @@ export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
 };
 
 export type StoryArcResourceResponse = StoryArcResource;
-export type SequenceResourceResponse = SequenceResource;
 export type SceneNarrativeResourceResponse = SceneNarrativeResource;
+
+export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardSheet'> & {
+  storyboardSheet?: ScreenplayImageReferenceWithHttp;
+};
+
+export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
+  scenes: {
+    items: SequenceSceneRowResponse[];
+    nextCursor: string | null;
+  };
+};
+
+export type SceneStoryboardSheetReferenceResponse = Omit<
+  SceneStoryboardSheetReference,
+  'sheet'
+> & {
+  sheet: ScreenplayImageReferenceWithHttp;
+};
+
+export type SceneShotListResourceResponse = Omit<
+  SceneShotListResource,
+  'storyboardSheet' | 'storyboardImagesByShotId'
+> & {
+  storyboardSheet: SceneStoryboardSheetReferenceResponse | null;
+  storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
+};
+
+export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {
+  image: ScreenplayImageReferenceWithHttp | null;
+};
+
+export type ActStoryboardSequenceResponse = Omit<
+  ActStoryboardSequence,
+  'scenes'
+> & {
+  scenes: Array<{
+    scene: ActStoryboardSequence['scenes'][number]['scene'];
+    shots: ActStoryboardShotResponse[];
+  }>;
+};
+
+export type ActStoryboardResourceResponse = Omit<
+  ActStoryboardResource,
+  'sequences'
+> & {
+  sequences: ActStoryboardSequenceResponse[];
+};
 
 export function toCastOverviewResourceResponse(
   projectName: string,
@@ -105,6 +157,71 @@ export function toLocationResourceResponse(
   };
 }
 
+export function toSequenceResourceResponse(
+  projectName: string,
+  resource: SequenceResource
+): SequenceResourceResponse {
+  return {
+    ...resource,
+    scenes: {
+      ...resource.scenes,
+      items: resource.scenes.items.map((scene) => ({
+        ...scene,
+        storyboardSheet: scene.storyboardSheet
+          ? withSceneImageUrl(projectName, scene.id, scene.storyboardSheet)
+          : undefined,
+      })),
+    },
+  };
+}
+
+export function toSceneShotListResourceResponse(
+  projectName: string,
+  resource: SceneShotListResource
+): SceneShotListResourceResponse {
+  const sceneId = resource.scene.id;
+  return {
+    ...resource,
+    storyboardSheet: resource.storyboardSheet
+      ? {
+          ...resource.storyboardSheet,
+          sheet: withSceneImageUrl(
+            projectName,
+            sceneId,
+            resource.storyboardSheet.sheet
+          ),
+        }
+      : null,
+    storyboardImagesByShotId: Object.fromEntries(
+      Object.entries(resource.storyboardImagesByShotId).map(([shotId, image]) => [
+        shotId,
+        withSceneImageUrl(projectName, sceneId, image),
+      ])
+    ),
+  };
+}
+
+export function toActStoryboardResourceResponse(
+  projectName: string,
+  resource: ActStoryboardResource
+): ActStoryboardResourceResponse {
+  return {
+    ...resource,
+    sequences: resource.sequences.map((sequence) => ({
+      ...sequence,
+      scenes: sequence.scenes.map((scene) => ({
+        scene: scene.scene,
+        shots: scene.shots.map((shot) => ({
+          ...shot,
+          image: shot.image
+            ? withSceneImageUrl(projectName, scene.scene.id, shot.image)
+            : null,
+        })),
+      })),
+    })),
+  };
+}
+
 function withImageUrl(
   projectName: string,
   ownerPath: 'cast' | 'locations',
@@ -114,5 +231,16 @@ function withImageUrl(
   return {
     ...image,
     url: `/studio-api/projects/${encodeURIComponent(projectName)}/${ownerPath}/${encodeURIComponent(ownerId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
+  };
+}
+
+function withSceneImageUrl(
+  projectName: string,
+  sceneId: string,
+  image: ScreenplayImageReference
+): ScreenplayImageReferenceWithHttp {
+  return {
+    ...image,
+    url: `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
   };
 }

@@ -46,6 +46,10 @@ export function readMovieStudioSelectionRequest(input: unknown): {
     typeof selection.lookbookId === 'string' && selection.lookbookId.trim()
       ? selection.lookbookId.trim()
       : undefined;
+  const shotId =
+    typeof selection.shotId === 'string' && selection.shotId.trim()
+      ? selection.shotId.trim()
+      : undefined;
   const result = buildDiagnosticResult(issues);
   if (!result.valid || type === null) {
     throwMovieStudioSelectionRequestError(result.issues);
@@ -61,7 +65,8 @@ export function readMovieStudioSelectionRequest(input: unknown): {
     ]);
   }
   if (
-    (type === 'sequence' ||
+    (type === 'act' ||
+      type === 'sequence' ||
       type === 'scene' ||
       type === 'castMember' ||
       type === 'location') &&
@@ -87,7 +92,12 @@ export function readMovieStudioSelectionRequest(input: unknown): {
     ]);
   }
   return {
-    selection: studioSelectionFromRequest(type, { id, folderId, lookbookId }),
+    selection: studioSelectionFromRequest(type, {
+      id,
+      folderId,
+      lookbookId,
+      shotId,
+    }),
   };
 }
 
@@ -102,6 +112,7 @@ function isStudioSelectionType(
     type === 'cast' ||
     type === 'locations' ||
     type === 'storyArc' ||
+    type === 'act' ||
     type === 'sequence' ||
     type === 'scene' ||
     type === 'castMember' ||
@@ -111,11 +122,15 @@ function isStudioSelectionType(
 
 function studioSelectionFromRequest(
   type: StudioSelection['type'],
-  ids: { id?: string; folderId?: string; lookbookId?: string }
+  ids: { id?: string; folderId?: string; lookbookId?: string; shotId?: string }
 ): StudioSelection {
   switch (type) {
-    case 'sequence':
     case 'scene':
+      return ids.shotId
+        ? { type, id: ids.id as string, shotId: ids.shotId }
+        : { type, id: ids.id as string };
+    case 'act':
+    case 'sequence':
     case 'castMember':
     case 'location':
       return { type, id: ids.id as string };

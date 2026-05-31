@@ -259,6 +259,57 @@ describe('assets Hono route', () => {
     await expect(file.text()).resolves.toBe('location bytes');
   });
 
+  it('serves a storyboard shot file for a scene target', async () => {
+    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('shot bytes'));
+    const sceneAsset = {
+      ...makeAsset('asset_scene_storyboard'),
+      target: { kind: 'scene' as const, sceneId: 'scene_hook' },
+      type: 'scene_storyboard_sheet',
+      role: 'storyboard_sheet',
+      files: [
+        {
+          ...makeAsset('asset_scene_storyboard').files[0]!,
+          id: 'asset_file_shot_001',
+          role: 'shot',
+          projectRelativePath:
+            'generated/storyboards/scene_hook/shot-001.png' as Asset['files'][number]['projectRelativePath'],
+        },
+      ],
+    };
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData: {
+          ...fakeProjectDataService(),
+          async resolveProjectAssetFile(input) {
+            expect(input.target).toEqual({
+              kind: 'scene',
+              sceneId: 'scene_hook',
+            });
+            expect(input.assetFileId).toBe('asset_file_shot_001');
+            return {
+              asset: sceneAsset,
+              file: sceneAsset.files[0]!,
+              absolutePath:
+                '/tmp/renku/constantinople/generated/storyboards/scene_hook/shot-001.png',
+            };
+          },
+        },
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    const response = await app.request(
+      '/constantinople/scenes/scene_hook/assets/asset_scene_storyboard/files/asset_file_shot_001'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/png');
+    await expect(response.text()).resolves.toBe('shot bytes');
+  });
+
   it('rejects malformed asset target and selection query values', async () => {
     const app = createMountedAssetsRoute();
 

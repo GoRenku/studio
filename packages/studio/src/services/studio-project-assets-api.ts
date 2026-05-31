@@ -283,6 +283,15 @@ export function locationAssetFileUrl(
   return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
 }
 
+export function sceneAssetFileUrl(
+  projectName: string,
+  sceneId: string,
+  assetId: string,
+  assetFileId: string
+): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
+}
+
 function castDesignResourceUrl(
   projectName: string,
   castMemberId: string

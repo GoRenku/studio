@@ -207,7 +207,7 @@ export function useProjectSession(): ProjectSession {
       }
       const path = studioSelectionRoutePath(projectName, selection);
       if (
-        window.location.pathname === path &&
+        currentRoutePath() === path &&
         route.screen === 'movieStudio' &&
         route.projectName === projectName &&
         studioSelectionKey(route.selection) === studioSelectionKey(selection)
@@ -346,10 +346,14 @@ function readStudioRoute(): StudioRoute {
     window.location.pathname
   );
   if (sceneRoute?.[1] && sceneRoute[2]) {
+    const shotParam = new URLSearchParams(window.location.search).get('shot');
+    const shotId = shotParam || undefined;
     return {
       screen: 'movieStudio',
       projectName: decodeURIComponent(sceneRoute[1]),
-      selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+      selection: shotId
+        ? { type: 'scene', id: decodeURIComponent(sceneRoute[2]), shotId }
+        : { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
     };
   }
 
@@ -394,6 +398,17 @@ function readStudioRoute(): StudioRoute {
       screen: 'movieStudio',
       projectName: decodeURIComponent(locationOverviewRoute[1]),
       selection: { type: 'locations' },
+    };
+  }
+
+  const actRoute = /^\/projects\/([^/]+)\/acts\/([^/]+)\/?$/.exec(
+    window.location.pathname
+  );
+  if (actRoute?.[1] && actRoute[2]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(actRoute[1]),
+      selection: { type: 'act', id: decodeURIComponent(actRoute[2]) },
     };
   }
 
@@ -469,6 +484,8 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Cast member';
     case 'location':
       return 'Location';
+    case 'act':
+      return 'Act';
     case 'sequence':
       return 'Sequence';
     case 'scene':
@@ -499,6 +516,9 @@ function canResolveRouteSelection(
   }
   if (selection.type === 'location') {
     return project.navigation.locations?.items.some((location) => location.id === selection.id) ?? false;
+  }
+  if (selection.type === 'act') {
+    return false;
   }
   if (selection.type === 'sequence') {
     return false;
@@ -550,11 +570,17 @@ function studioSelectionRoutePath(
   if (selection.type === 'storyArc') {
     return `${projectRoutePath(projectName)}/acts`;
   }
+  if (selection.type === 'act') {
+    return `${projectRoutePath(projectName)}/acts/${encodeURIComponent(selection.id)}`;
+  }
   if (selection.type === 'sequence') {
     return `${projectRoutePath(projectName)}/sequences/${encodeURIComponent(selection.id)}`;
   }
   if (selection.type === 'scene') {
-    return `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;
+    const base = `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;
+    return selection.shotId
+      ? `${base}?shot=${encodeURIComponent(selection.shotId)}`
+      : base;
   }
   return projectRoutePath(projectName);
 }
@@ -564,8 +590,12 @@ function studioSelectionKey(selection: StudioSelection): string {
 }
 
 function pushRoutePath(path: string): void {
-  if (window.location.pathname === path) {
+  if (currentRoutePath() === path) {
     return;
   }
   window.history.pushState({}, '', path);
+}
+
+function currentRoutePath(): string {
+  return `${window.location.pathname}${window.location.search}`;
 }

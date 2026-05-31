@@ -48,6 +48,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'readStoryArcResource'
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
+  | 'readSceneShotListResource'
+  | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
   | 'updateProjectInformation'
   | 'resolveCoverImage'

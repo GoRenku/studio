@@ -209,5 +209,21 @@ export function createAssetsRoute({
       } catch (error) {
         return projectErrorResponse(c, error);
       }
+    })
+    .get('/scenes/:sceneId/assets/:assetId/files/:assetFileId', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sceneId = c.req.param('sceneId') as string;
+        const assetId = c.req.param('assetId') as string;
+        const assetFileId = c.req.param('assetFileId') as string;
+        return await readAssetFileResponse(projectData, {
+          projectName,
+          target: { kind: 'scene', sceneId },
+          assetId,
+          assetFileId,
+        });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
     });
 }

@@ -135,7 +135,11 @@ export function useScreenplayNavigation(
   }, [projectName, selection]);
 
   useEffect(() => {
-    if (selection.type !== 'scene' && selection.type !== 'sequence') {
+    if (
+      selection.type !== 'scene' &&
+      selection.type !== 'sequence' &&
+      selection.type !== 'act'
+    ) {
       return;
     }
     void loadActs();
@@ -293,7 +297,9 @@ function needsSelectionContext(selection: StudioSelection): boolean {
   if (selection.type === 'inspiration' && selection.folderId) {
     return true;
   }
-  return ['castMember', 'location', 'sequence', 'scene'].includes(selection.type);
+  return ['castMember', 'location', 'act', 'sequence', 'scene'].includes(
+    selection.type
+  );
 }
 
 function appendUniqueRows<T extends { id: string }>(rows: T[], extraRows: T[]): T[] {

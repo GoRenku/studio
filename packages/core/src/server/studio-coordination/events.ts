@@ -45,8 +45,9 @@ export type StudioSelection =
   | { type: 'locations' }
   | { type: 'location'; id: string }
   | { type: 'storyArc' }
+  | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string };
+  | { type: 'scene'; id: string; shotId?: string };
 
 export type StudioFocusRequest =
   | { screen: 'projectLibrary' }

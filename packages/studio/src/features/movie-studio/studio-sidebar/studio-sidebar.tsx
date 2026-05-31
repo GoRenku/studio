@@ -130,6 +130,7 @@ export function StudioSidebar({
     }
     if (
       selection.type === 'storyArc' ||
+      selection.type === 'act' ||
       selection.type === 'sequence' ||
       selection.type === 'scene'
     ) {
@@ -541,13 +542,20 @@ function ActTree({
   onSelect: (selection: StudioSelection) => void;
 }) {
   const expanded = expandedActs.has(act.id);
+  const active = selection.type === 'act' && selection.id === act.id;
   return (
     <div className='space-y-1'>
       <Button
         type='button'
         variant='ghost'
-        onClick={() => onToggleAct(act.id)}
-        className='h-auto w-full justify-start gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-item-hover-bg'
+        onClick={() => {
+          onSelect({ type: 'act', id: act.id });
+          onToggleAct(act.id);
+        }}
+        className={cn(
+          'h-auto w-full justify-start gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-item-hover-bg',
+          active && 'bg-item-active-bg'
+        )}
       >
         {expanded ? <ChevronDown className='h-4 w-4' /> : <ChevronRight className='h-4 w-4' />}
         <span className='min-w-0 flex-1 truncate'>{act.title}</span>

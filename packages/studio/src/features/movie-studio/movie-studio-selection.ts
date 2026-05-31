@@ -18,8 +18,9 @@ export type StudioSelection =
   | { type: 'locations' }
   | { type: 'location'; id: string }
   | { type: 'storyArc' }
+  | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string };
+  | { type: 'scene'; id: string; shotId?: string };
 
 export interface MovieStudioLookup {
   cast: Map<string, CastNavigationRow>;
@@ -96,6 +97,12 @@ export function resolveStudioSelection(
       return valid('Locations', 'Locations loaded from screenplay data.');
     case 'storyArc':
       return valid('Story Arc', 'Acts and sequences loaded from screenplay data.');
+    case 'act': {
+      const act = lookup.acts.get(selection.id);
+      return act
+        ? { ...valid(act.title, `${act.sceneCount} scenes.`), act }
+        : invalid();
+    }
     case 'castMember': {
       const castMember = lookup.cast.get(selection.id);
       return castMember

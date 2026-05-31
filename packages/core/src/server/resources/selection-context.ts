@@ -136,6 +136,17 @@ export function readStudioSelectionContextProjection(
           },
           resourceKeys: ['surface:story-arc'],
         };
+      case 'act': {
+        const act = readActNavigationRow(session, input.selection.id);
+        return act
+          ? {
+              valid: true,
+              selection: input.selection,
+              context: { surface: 'act', act },
+              resourceKeys: [`surface:act:${act.id}`],
+            }
+          : selectionNotFound(input.selection);
+      }
       case 'sequence': {
         const chain = readSequenceNavigationContext(session, input.selection.id);
         const act = chain ? readActNavigationRow(session, chain.sequence.actId) : null;

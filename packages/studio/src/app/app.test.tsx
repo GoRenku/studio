@@ -747,6 +747,11 @@ describe('App', () => {
       { type: 'scene', id: 'scene_1_1' },
       '/projects/constantinople/scenes/scene_1_1',
     ],
+    [
+      'Scene shot',
+      { type: 'scene', id: 'scene_1_1', shotId: 'shot_001' },
+      '/projects/constantinople/scenes/scene_1_1?shot=shot_001',
+    ],
     ['Cast overview', { type: 'cast' }, '/projects/constantinople/cast'],
     [
       'Cast member',
@@ -821,7 +826,7 @@ describe('App', () => {
     renderApp();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe(expectedPath);
+      expect(currentTestRoutePath()).toBe(expectedPath);
     }, { timeout: 2_500 });
     await waitFor(() => {
       expect(reportedAppliedRequestIds).toContain('studio_event_selection_focus');
@@ -829,6 +834,89 @@ describe('App', () => {
     expect(reportedAppliedFocuses).toContainEqual({
       screen: 'movieStudio',
       selection,
+    });
+  });
+
+  it('clears a stale shot query when focus moves to the scene without a shot', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/projects/constantinople/scenes/scene_1_1?shot=shot_001'
+    );
+    const reportedAppliedRequestIds: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = requestUrl(input);
+      if (url === '/studio-api/projects') {
+        return jsonResponse({ library: makeLibrary([]) });
+      }
+      if (url === '/studio-api/projects/constantinople') {
+        return jsonResponse({ project: makeProject() });
+      }
+      if (
+        url ===
+        '/studio-api/projects/constantinople/movie-studio-selection/context'
+      ) {
+        const body = requestJsonBody<{ selection: StudioSelection }>(init);
+        return jsonResponse(makeSelectionContextResponse(body.selection));
+      }
+      if (url === '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1') {
+        return jsonResponse({ resource: makeSceneNarrativeResource() });
+      }
+      if (
+        url ===
+        '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1/shot-list'
+      ) {
+        return jsonResponse({ resource: makeSceneShotListResource() });
+      }
+      if (url === '/studio-api/studio/events/current') {
+        return jsonResponse({
+          ...emptyStudioCurrent(),
+          pendingRequest: {
+            eventId: 'studio_event_scene_focus',
+            createdAt: '2026-05-12T00:00:00.000Z',
+            projectRef: {
+              name: 'constantinople',
+              id: 'project_test0001',
+              storageRoot: '/tmp',
+            },
+            focus: {
+              screen: 'movieStudio',
+              selection: { type: 'scene', id: 'scene_1_1' },
+            },
+          },
+        });
+      }
+      if (url === '/studio-api/studio/events/focus-requests/validate') {
+        return jsonResponse({ valid: true });
+      }
+      if (url === '/studio-api/studio/events/focus-changes') {
+        const body = requestJsonBody<{ appliedRequestId?: string }>(init);
+        if (body.appliedRequestId) {
+          reportedAppliedRequestIds.push(body.appliedRequestId);
+        }
+        return jsonResponse({});
+      }
+      if (
+        url === '/studio-api/studio/events/browser-sessions/active' ||
+        url === '/studio-api/studio/events/focus-failures'
+      ) {
+        return jsonResponse({});
+      }
+      if (url.startsWith('/studio-api/studio/events')) {
+        return jsonResponse({ events: [], nextCursor: '100', warnings: [] });
+      }
+      return jsonResponse({});
+    });
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(currentTestRoutePath()).toBe(
+        '/projects/constantinople/scenes/scene_1_1'
+      );
+    }, { timeout: 2_500 });
+    await waitFor(() => {
+      expect(reportedAppliedRequestIds).toContain('studio_event_scene_focus');
     });
   });
 
@@ -1321,6 +1409,10 @@ function requestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
+function currentTestRoutePath(): string {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 function requestJsonBody<T>(init: RequestInit | undefined): T {
   return JSON.parse(String(init?.body ?? '{}')) as T;
 }
@@ -1659,6 +1751,35 @@ function makeSceneNarrativeResource(
     castMemberLabels: {
       cast_narrator: 'Narrator',
     },
+    locationLabels: {},
+  };
+}
+
+function makeSceneShotListResource() {
+  return {
+    scene: {
+      id: 'scene_1_1',
+      sequenceId: 'seq_opening',
+      title: 'Opening Scene',
+    },
+    sequence: {
+      id: 'seq_opening',
+      actId: 'act_opening',
+      number: 1,
+      title: 'Opening',
+      sceneCount: 1,
+    },
+    act: {
+      id: 'act_opening',
+      title: 'Opening Act',
+      sequenceCount: 1,
+      sceneCount: 1,
+    },
+    projectAspectRatio: '16:9',
+    activeShotList: null,
+    storyboardSheet: null,
+    storyboardImagesByShotId: {},
+    castMemberLabels: {},
     locationLabels: {},
   };
 }

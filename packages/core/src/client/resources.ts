@@ -9,6 +9,7 @@ import type {
   Sequence,
 } from './screenplay.js';
 import type { ScreenplayAnalysisDocument } from './screenplay-analysis.js';
+import type { SceneShotListDocument } from './scene-shot-list.js';
 import type {
   ProjectCounts,
   ProjectCoverImage,
@@ -153,10 +154,54 @@ export interface StoryArcSceneResource extends SceneNavigationRow {
   storyFunction?: string[];
 }
 
+export interface SequenceSceneRow extends SceneNavigationRow {
+  // Active storyboard sheet ('sheet' file) for the scene, if any.
+  storyboardSheet?: ScreenplayImageReference;
+}
+
 export interface SequenceResource {
   act: ActNavigationRow;
   sequence: SequenceNavigationRow & Pick<Sequence, 'purpose'>;
-  scenes: PageResponse<SceneNavigationRow>;
+  scenes: PageResponse<SequenceSceneRow>;
+}
+
+export interface SceneStoryboardSheetReference {
+  shotListId: string;
+  sheet: ScreenplayImageReference; // original sheet file (role 'sheet')
+}
+
+export interface SceneShotListResource {
+  scene: SceneNavigationRow;
+  sequence: SequenceNavigationRow;
+  act: ActNavigationRow;
+  projectAspectRatio: string | null;
+  activeShotList: SceneShotListDocument | null;
+  storyboardSheet: SceneStoryboardSheetReference | null;
+  storyboardImagesByShotId: Record<string, ScreenplayImageReference>;
+  castMemberLabels: Record<string, string>;
+  locationLabels: Record<string, string>;
+}
+
+export interface ActStoryboardResource {
+  act: ActNavigationRow;
+  sequences: ActStoryboardSequence[];
+}
+
+export interface ActStoryboardSequence {
+  sequence: SequenceNavigationRow;
+  scenes: ActStoryboardScene[];
+}
+
+export interface ActStoryboardScene {
+  scene: SceneNavigationRow;
+  shots: ActStoryboardShot[]; // empty -> render one scene placeholder slot
+}
+
+export interface ActStoryboardShot {
+  shotId: string;
+  label: string; // app-derived ('Shot 1')
+  title: string;
+  image: ScreenplayImageReference | null;
 }
 
 export interface SceneNarrativeResource {
@@ -245,8 +290,9 @@ export type StudioSelection =
   | { type: 'locations' }
   | { type: 'location'; id: string }
   | { type: 'storyArc' }
+  | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string };
+  | { type: 'scene'; id: string; shotId?: string };
 
 export type StudioSelectionContext =
   | { surface: 'project-information' }
@@ -258,6 +304,7 @@ export type StudioSelectionContext =
   | { surface: 'locations'; locations: PageResponse<LocationNavigationRow> }
   | { surface: 'location'; location: LocationNavigationRow }
   | { surface: 'story-arc'; acts: PageResponse<ActNavigationRow> }
+  | { surface: 'act'; act: ActNavigationRow }
   | {
       surface: 'sequence';
       act: ActNavigationRow;

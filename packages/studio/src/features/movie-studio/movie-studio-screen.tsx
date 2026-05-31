@@ -12,6 +12,7 @@ import { LocationOverviewPanel } from './locations/location-overview-panel';
 import { LocationPanel } from './locations/location-panel';
 import { PanelShell } from './panel-shell';
 import { ProjectInformationPanel } from './project-information/project-information-panel';
+import { ActStoryboardPanel } from './acts/act-storyboard-panel';
 import { ScenePanel } from './scenes/scene-panel';
 import { SequencePanel } from './sequences/sequence-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
@@ -258,11 +259,19 @@ export function MovieStudioScreen({
               sequenceId={selection.id}
               onSelect={selectMovieStudioSurface}
             />
+          ) : selection.type === 'act' ? (
+            <ActStoryboardPanel
+              key={selection.id}
+              projectName={project.identity.name}
+              actId={selection.id}
+              onSelect={selectMovieStudioSurface}
+            />
           ) : (
             <ScenePanel
               key={selection.id}
               projectName={project.identity.name}
               sceneId={selection.id}
+              shotId={selection.shotId}
               onSelect={selectMovieStudioSurface}
               previousScene={sceneNeighbors.previousScene}
               nextScene={sceneNeighbors.nextScene}

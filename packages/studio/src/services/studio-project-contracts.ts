@@ -27,6 +27,12 @@ import type {
   SceneNavigationRow,
   SequenceNavigationRow,
   SequenceResource,
+  SequenceSceneRow,
+  SceneShotListResource,
+  SceneStoryboardSheetReference,
+  ActStoryboardResource,
+  ActStoryboardSequence,
+  ActStoryboardShot,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
 
@@ -102,8 +108,54 @@ export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
 };
 
 export type StoryArcResourceResponse = StoryArcResource;
-export type SequenceResourceResponse = SequenceResource;
 export type SceneNarrativeResourceResponse = SceneNarrativeResource;
+
+export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardSheet'> & {
+  storyboardSheet?: ScreenplayImageReferenceWithHttp;
+};
+
+export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
+  scenes: {
+    items: SequenceSceneRowResponse[];
+    nextCursor: string | null;
+  };
+};
+
+export type SceneStoryboardSheetReferenceResponse = Omit<
+  SceneStoryboardSheetReference,
+  'sheet'
+> & {
+  sheet: ScreenplayImageReferenceWithHttp;
+};
+
+export type SceneShotListResourceResponse = Omit<
+  SceneShotListResource,
+  'storyboardSheet' | 'storyboardImagesByShotId'
+> & {
+  storyboardSheet: SceneStoryboardSheetReferenceResponse | null;
+  storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
+};
+
+export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {
+  image: ScreenplayImageReferenceWithHttp | null;
+};
+
+export type ActStoryboardSequenceResponse = Omit<
+  ActStoryboardSequence,
+  'scenes'
+> & {
+  scenes: Array<{
+    scene: ActStoryboardSequence['scenes'][number]['scene'];
+    shots: ActStoryboardShotResponse[];
+  }>;
+};
+
+export type ActStoryboardResourceResponse = Omit<
+  ActStoryboardResource,
+  'sequences'
+> & {
+  sequences: ActStoryboardSequenceResponse[];
+};
 export type InspirationResourceResponse = InspirationResource;
 export type InspirationFolderResourceResponse = InspirationFolderResource;
 export type InspirationFolderResponse = InspirationFolder;

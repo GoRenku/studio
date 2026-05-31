@@ -144,7 +144,8 @@ function validateSelection(value: unknown, path: string[], issues: ReturnType<ty
     return;
   }
   if (
-    (selection.type === 'sequence' ||
+    (selection.type === 'act' ||
+      selection.type === 'sequence' ||
       selection.type === 'scene' ||
       selection.type === 'castMember' ||
       selection.type === 'location') &&

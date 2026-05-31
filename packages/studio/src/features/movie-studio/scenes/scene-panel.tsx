@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneNarrativeResource } from '@/services/studio-screenplay-api';
 import type { StudioSelection } from '../movie-studio-selection';
+import { SceneShotsTab } from './scene-shots-tab';
 
 interface SceneNeighbor {
   id: string;
@@ -27,22 +28,29 @@ interface SceneNeighbor {
 interface ScenePanelProps {
   projectName: string;
   sceneId: string;
+  shotId?: string;
   onSelect: (selection: StudioSelection) => void;
   previousScene?: SceneNeighbor | null;
   nextScene?: SceneNeighbor | null;
 }
 
 type ReferenceKind = 'castMember' | 'location';
+type ScenePanelTab = 'narrative' | 'shots';
 
 export function ScenePanel({
   projectName,
   sceneId,
+  shotId,
   onSelect,
   previousScene,
   nextScene,
 }: ScenePanelProps) {
   const [resource, setResource] = useState<SceneNarrativeResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [userActiveTab, setUserActiveTab] = useState<ScenePanelTab>(
+    shotId ? 'shots' : 'narrative'
+  );
+  const activeTab: ScenePanelTab = shotId ? 'shots' : userActiveTab;
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +78,11 @@ export function ScenePanel({
   }
 
   return (
-    <Tabs defaultValue='narrative' className='h-full gap-0'>
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => setUserActiveTab(value as ScenePanelTab)}
+      className='h-full gap-0'
+    >
       <LineTabBar
         items={[
           { value: 'narrative', label: 'Narrative' },
@@ -104,8 +116,12 @@ export function ScenePanel({
           />
         </article>
       </TabsContent>
-      <TabsContent value='shots' className='p-4 text-sm text-muted-foreground'>
-        Scene shots will appear here when a shot model is added.
+      <TabsContent value='shots' className='flex min-h-0'>
+        <SceneShotsTab
+          projectName={projectName}
+          sceneId={sceneId}
+          shotId={shotId}
+        />
       </TabsContent>
     </Tabs>
   );
