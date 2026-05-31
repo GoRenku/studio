@@ -148,6 +148,70 @@ describe('generation estimates', () => {
     });
   });
 
+  it('estimates video cost by duration, resolution, and input image count', async () => {
+    const catalog = createCatalog();
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: 'image-to-video-model',
+          mediaKind: 'video',
+        },
+        request: {
+          prompt: 'A test camera move',
+          parameters: { duration: 5, resolution: '720p' },
+          inputFiles: [
+            {
+              field: 'image_url',
+              projectRelativePath: 'generated/images/start-frame.png',
+              mediaKind: 'image',
+              required: true,
+            },
+          ],
+        },
+      })
+    ).resolves.toMatchObject({
+      estimatedCostUsd: 0.7100000000000001,
+      billableUnits: {
+        duration: 5,
+        resolution: '720p',
+        image_url: 'renku-input://generated/images/start-frame.png',
+      },
+    });
+  });
+
+  it('estimates bundled Grok Imagine Video v1.5 image-to-video pricing', async () => {
+    const catalog = await loadBundledGenerationCatalog();
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: 'xai/grok-imagine-video/v1.5/image-to-video',
+          mediaKind: 'video',
+        },
+        request: {
+          prompt: 'A smooth pan across a lobby.',
+          parameters: { duration: 5, resolution: '480p' },
+          inputFiles: [
+            {
+              field: 'image_url',
+              projectRelativePath: 'generated/images/movement-pan-start.png',
+              mediaKind: 'image',
+              required: true,
+            },
+          ],
+        },
+      })
+    ).resolves.toMatchObject({
+      estimatedCostUsd: 0.41000000000000003,
+      approvalToken: expect.stringMatching(/^sha256:/),
+    });
+  });
+
   it('keeps unknown image size pricing unknown', async () => {
     const catalog = createCatalog();
 
@@ -358,6 +422,29 @@ function createCatalog(): LoadedModelCatalog {
                   {
                     resolution: '2K',
                     pricePerImage: 0.12,
+                  },
+                ],
+              },
+            },
+          ],
+          [
+            'image-to-video-model',
+            {
+              name: 'image-to-video-model',
+              type: 'video',
+              mime: ['video/mp4'],
+              price: {
+                function: 'costByVideoDurationAndResolution',
+                inputs: ['duration', 'resolution', 'image_url'],
+                pricePerInputImage: 0.01,
+                prices: [
+                  {
+                    resolution: '480p',
+                    pricePerSecond: 0.08,
+                  },
+                  {
+                    resolution: '720p',
+                    pricePerSecond: 0.14,
                   },
                 ],
               },

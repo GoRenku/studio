@@ -1,0 +1,274 @@
+{
+  "input_schema": {
+    "properties": {
+      "duration": {
+        "default": 6,
+        "title": "Duration",
+        "maximum": 15,
+        "minimum": 1,
+        "description": "Video duration in seconds.",
+        "type": "integer"
+      },
+      "resolution": {
+        "default": "720p",
+        "title": "Resolution",
+        "type": "string",
+        "description": "Resolution of the output video.",
+        "enum": [
+          "480p",
+          "720p"
+        ]
+      },
+      "prompt": {
+        "type": "string",
+        "title": "Prompt",
+        "examples": [
+          "Medieval knight in ornate armor walking through a mystical forest, bioluminescent plants pulsing with light, ancient stone ruins overgrown with glowing vines, over-the-shoulder camera, dark fantasy aesthetic, volumetric fog and Lumen lighting"
+        ],
+        "description": "Text description of desired changes or motion in the video.",
+        "maxLength": 4096
+      },
+      "image_url": {
+        "type": "string",
+        "title": "Image URL",
+        "examples": [
+          "https://v3b.fal.media/files/b/0a8b90e0/BFLE9VDlZqsryU-UA3BoD_image_004.png"
+        ],
+        "description": "URL of the input image for video generation."
+      }
+    },
+    "x-fal-order-properties": [
+      "prompt",
+      "duration",
+      "resolution",
+      "image_url"
+    ],
+    "title": "XAIImageToVideoV15Input",
+    "type": "object",
+    "description": "``grok-imagine-video-1.5-preview`` image-to-video (no ``aspect_ratio``).",
+    "required": [
+      "prompt",
+      "image_url"
+    ],
+    "x-renku-constraints": {
+      "fields": {
+        "duration": {
+          "minimum": {
+            "value": 1,
+            "source": "explicit",
+            "confidence": "high"
+          },
+          "maximum": {
+            "value": 15,
+            "source": "explicit",
+            "confidence": "high"
+          }
+        },
+        "resolution": {
+          "enum": {
+            "values": [
+              "480p",
+              "720p"
+            ],
+            "source": "explicit",
+            "confidence": "high"
+          }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "properties": {
+      "video": {
+        "examples": [
+          {
+            "num_frames": 145,
+            "duration": 6.041667,
+            "url": "https://v3b.fal.media/files/b/0a8b90e0/0Ci1dviuSnEyUZzBUq-_5_nu7MrAAa.mp4",
+            "width": 1280,
+            "file_name": "0Ci1dviuSnEyUZzBUq-_5_nu7MrAAa.mp4",
+            "fps": 24,
+            "height": 720,
+            "content_type": "video/mp4"
+          }
+        ],
+        "$ref": "#/VideoFile",
+        "description": "The generated video."
+      }
+    },
+    "x-fal-order-properties": [
+      "video"
+    ],
+    "title": "XAIImageToVideoOutput",
+    "type": "object",
+    "required": [
+      "video"
+    ]
+  },
+  "VideoFile": {
+    "properties": {
+      "num_frames": {
+        "title": "Num Frames",
+        "description": "The number of frames in the video",
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "duration": {
+        "title": "Duration",
+        "description": "The duration of the video",
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "url": {
+        "type": "string",
+        "title": "Url",
+        "description": "The URL where the file can be downloaded from."
+      },
+      "file_size": {
+        "title": "File Size",
+        "examples": [
+          4404019
+        ],
+        "description": "The size of the file in bytes.",
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "width": {
+        "title": "Width",
+        "description": "The width of the video",
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "file_name": {
+        "title": "File Name",
+        "examples": [
+          "z9RV14K95DvU.png"
+        ],
+        "description": "The name of the file. It will be auto-generated if not provided.",
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "fps": {
+        "title": "Fps",
+        "description": "The FPS of the video",
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "height": {
+        "title": "Height",
+        "description": "The height of the video",
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "content_type": {
+        "title": "Content Type",
+        "examples": [
+          "image/png"
+        ],
+        "description": "The mime type of the file.",
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "x-fal-order-properties": [
+      "url",
+      "content_type",
+      "file_name",
+      "file_size",
+      "width",
+      "height",
+      "fps",
+      "duration",
+      "num_frames"
+    ],
+    "title": "VideoFile",
+    "type": "object",
+    "required": [
+      "url"
+    ]
+  },
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "/input_schema",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "prompt",
+        "duration",
+        "resolution",
+        "image_url"
+      ],
+      "fields": {
+        "prompt": {
+          "pointer": "/input_schema/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
+        },
+        "duration": {
+          "pointer": "/input_schema/properties/duration",
+          "component": "integer",
+          "label": "Duration"
+        },
+        "resolution": {
+          "pointer": "/input_schema/properties/resolution",
+          "component": "string-enum",
+          "label": "Resolution"
+        },
+        "image_url": {
+          "pointer": "/input_schema/properties/image_url",
+          "component": "file-uri",
+          "label": "Image Url"
+        }
+      }
+    }
+  }
+}

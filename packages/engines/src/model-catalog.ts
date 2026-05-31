@@ -24,6 +24,7 @@ export interface ModelPriceConfig {
   pricePerCharacter?: number;
   pricePerMillionTokens?: number;
   pricePerMegapixel?: number;
+  pricePerInputImage?: number;
   prices?: Array<Record<string, unknown>>;
   pricePerCharByPlan?: Record<string, number>;
   defaultPlan?: string;

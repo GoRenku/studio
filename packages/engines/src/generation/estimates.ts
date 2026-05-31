@@ -95,7 +95,10 @@ function priceFromConfig(
     return pricing.pricePerImage * count;
   }
   if (typeof pricing.pricePerSecond === 'number') {
-    return pricing.pricePerSecond * seconds(payload) * count;
+    return (
+      pricing.pricePerSecond * seconds(payload) * count +
+      inputImageCost(pricing, payload, count)
+    );
   }
   if (typeof pricing.pricePerMinute === 'number') {
     return pricing.pricePerMinute * Math.ceil(seconds(payload) / 60) * count;
@@ -122,6 +125,21 @@ function priceFromConfig(
     );
     const pricePerImage = row?.pricePerImage;
     return typeof pricePerImage === 'number' ? pricePerImage * count : null;
+  }
+  if (pricing.function === 'costByVideoDurationAndResolution' && pricing.prices) {
+    const row = pricing.prices.find((candidate) =>
+      Object.entries(candidate).every(([key, value]) => {
+        if (key === 'pricePerSecond') {
+          return true;
+        }
+        return payload[key] === value;
+      })
+    );
+    const pricePerSecond = row?.pricePerSecond;
+    return typeof pricePerSecond === 'number'
+      ? pricePerSecond * seconds(payload) * count +
+          inputImageCost(pricing, payload, count)
+      : null;
   }
   return null;
 }
@@ -263,10 +281,45 @@ export function deriveGenerationOutputCount(
 function seconds(payload: Record<string, unknown>): number {
   const raw =
     payload.duration_seconds ?? payload.durationSeconds ?? payload.duration;
-  return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : 1;
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+    return raw;
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    const secondsMatch = /^(\d+(?:\.\d+)?)s$/.exec(trimmed);
+    const parsed = Number(secondsMatch?.[1] ?? trimmed);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return 1;
 }
 
 function characters(payload: Record<string, unknown>): number {
   const raw = payload.text ?? payload.prompt ?? '';
   return typeof raw === 'string' ? raw.length : 0;
+}
+
+function inputImageCost(
+  pricing: ModelPriceConfig,
+  payload: Record<string, unknown>,
+  outputCount: number
+): number {
+  if (typeof pricing.pricePerInputImage !== 'number') {
+    return 0;
+  }
+  return pricing.pricePerInputImage * inputImageCount(payload) * outputCount;
+}
+
+function inputImageCount(payload: Record<string, unknown>): number {
+  let count = 0;
+  if (typeof payload.image_url === 'string' && payload.image_url.length > 0) {
+    count += 1;
+  }
+  if (Array.isArray(payload.image_urls)) {
+    count += payload.image_urls.filter(
+      (value) => typeof value === 'string' && value.length > 0
+    ).length;
+  }
+  return count;
 }

@@ -1701,6 +1701,20 @@ models:
       function: costByVideoDuration
       inputs: [duration]
       pricePerSecond: 0.05
+  - name: xai/grok-imagine-video/v1.5/image-to-video
+    subProvider: xai
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDurationAndResolution
+      inputs: [duration, resolution, image_url]
+      pricePerInputImage: 0.01
+      prices:
+        - resolution: 480p
+          pricePerSecond: 0.08
+        - resolution: 720p
+          pricePerSecond: 0.14
   - name: xai/grok-imagine-video/edit-video
     subProvider: xai
     type: video
