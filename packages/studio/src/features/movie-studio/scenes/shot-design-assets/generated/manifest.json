@@ -1,0 +1,37 @@
+{
+  "generatedBy": "generate-assets",
+  "outputRoot": "packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated",
+  "sheets": [
+    {
+      "number": 1,
+      "name": "shot-size-close",
+      "title": "Close Shot Sizes",
+      "path": "sheets/sheet-001.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7e0d-5146-7c01-ad6b-19aa06c4b417",
+      "prompt": "Create sheet 1 (Close Shot Sizes) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. Keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nCells in reading order:\n1. Extreme Close-Up: An extreme close-up of one expressive eye and cheek texture, filling the frame.\n2. Close-Up: A close-up portrait of the performer from shoulders up, intimate and direct.\n3. Medium Close-Up: A medium close-up framing chest and head, with a hint of the pastel ochre hotel set.\n4. Medium Shot: A medium shot from waist up, centered in a refined pastel hotel room.",
+      "status": "review_required"
+    },
+    {
+      "number": 2,
+      "name": "shot-size-wide",
+      "title": "Wide Shot Sizes",
+      "path": "sheets/sheet-002.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7e2c-94b4-75c3-a51a-1ddcde636386",
+      "prompt": "Create sheet 2 (Wide Shot Sizes) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. Keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nCells in reading order:\n1. Medium Full Shot: A cowboy-style crop from mid-thigh up, balanced and theatrical.\n2. Full Shot: A full-body view of the performer, readable from head to shoes.\n3. Wide / Long Shot: A wide shot where the performer is small but clearly present in the room.\n4. Extreme Wide / Long Shot: An extreme wide shot emphasizing the full architectural set, with the performer tiny and centered.",
+      "status": "review_required"
+    }
+  ],
+  "motion": [],
+  "reference": {
+    "path": "reference/consistency-sheet.png",
+    "model": "fal-ai/nano-banana-pro",
+    "requestId": "019e7e08-67e1-7e42-9f7e-44fca346701a",
+    "prompt": "Create one 4:3 consistency reference sheet for a Renku Studio camera-design UI tile set.\nCompose it like a practical visual reference board with multiple bordered image panels distributed across the full canvas, not a rigid UI grid and not a single scene.\nThe reference board must lock one original unnamed female performer across all performer panels: fair skin, soft oval face, center-parted brown hair pinned into a neat low bun, understated expression, no jewelry, no bag, no changing accessories.\nLock one simple wardrobe across all performer panels: timeless cream dress with pale mint-sage paneling and soft ivory outer layer, refined and cinematic, not a historic costume, not a jacket, not a blazer.\nInclude performer panels for close portrait, full body, three-quarter pose, profile, and small figure in environment. The same face, hair, dress, and absence of accessories must remain consistent.\nShow a pastel Mustard Lobby world: European hotel lobby, corridor, room corner, patterned floor, architectural details, polished wood, plaster, tile, upholstery, and soft lamps.\nUse a softened application-compatible palette: pastel ochre and antique gold as warm architectural accents, parchment cream as the base, pale mint-sage as the key secondary color, muted terracotta material warmth, small oxblood details, and warm ink shadows.\nThe tone should be closer to pastel palace-hotel softness than saturated yellow: dusty rose-plaster warmth may appear subtly in walls or background atmosphere, but blush, rose, and pink must not dominate the palette.\nThis palette must harmonize with Renku Studio light and dark themes: warm amber and parchment in light mode, neutral gray surfaces with amber identity accents in dark mode.\nAvoid bright warning-yellow, saturated mustard clothing, modern handbags, changing jewelry, changing hair, extra costumes, and inconsistent accessories.\nUse soft frontal light, gentle contrast, centered formal staging, refined theatrical production design, and enough warm ink, oxblood, wood, and shadow detail for downstream 16:9 tiles to read in both light and dark UI themes.\nThis is a reference sheet, not a UI tile. Do not include text, labels, captions, logos, watermarks, UI controls, crop marks, or explanatory typography.",
+    "status": "review_required"
+  },
+  "updatedAt": "2026-05-31T13:15:46.734Z"
+}

@@ -1,0 +1,3 @@
+display_name: Generate Assets
+short_description: Generate Studio UI assets with reviewed vision-guided slicing.
+default_prompt: Use $generate-assets to generate the next reviewed Shot Design asset sheet.

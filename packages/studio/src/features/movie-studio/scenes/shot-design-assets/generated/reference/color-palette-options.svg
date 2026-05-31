@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180">
+  <rect width="1600" height="1180" fill="#f7f4ee"/>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; }
+    .title { font-size: 44px; font-weight: 700; fill: #1f2524; }
+    .subtitle { font-size: 22px; font-weight: 400; fill: #59615e; }
+    .name { font-size: 25px; font-weight: 700; fill: #202625; }
+    .note { font-size: 18px; font-weight: 400; fill: #59615e; }
+    .hex { font-family: Menlo, Consolas, monospace; font-size: 15px; font-weight: 600; fill: #202625; }
+    .hex-light { font-family: Menlo, Consolas, monospace; font-size: 15px; font-weight: 600; fill: #fffaf4; }
+    .label { font-size: 13px; font-weight: 700; letter-spacing: 1px; fill: #747c78; }
+  </style>
+
+  <text class="title" x="80" y="82">Shot Design Reference Palette Options</text>
+  <text class="subtitle" x="80" y="120">Non-AI palette board. Each row proposes one dominant color direction plus supporting neutrals and accents.</text>
+
+  <g transform="translate(80 170)">
+    <text class="name" x="0" y="0">1. Sage Hotel</text>
+    <text class="note" x="0" y="31">Calm, designed, lightly cinematic; cooler than the selected app-native direction.</text>
+    <g transform="translate(0 58)">
+      <rect x="0" y="0" width="210" height="86" rx="8" fill="#8fa690"/><text class="hex" x="18" y="54">#8FA690</text>
+      <rect x="210" y="0" width="210" height="86" rx="0" fill="#e9e1d3"/><text class="hex" x="228" y="54">#E9E1D3</text>
+      <rect x="420" y="0" width="210" height="86" rx="0" fill="#f4c9b8"/><text class="hex" x="438" y="54">#F4C9B8</text>
+      <rect x="630" y="0" width="210" height="86" rx="0" fill="#b9a171"/><text class="hex" x="648" y="54">#B9A171</text>
+      <rect x="840" y="0" width="210" height="86" rx="0" fill="#6f2e36"/><text class="hex-light" x="858" y="54">#6F2E36</text>
+      <rect x="1050" y="0" width="210" height="86" rx="8" fill="#263331"/><text class="hex-light" x="1068" y="54">#263331</text>
+    </g>
+  </g>
+
+  <g transform="translate(80 315)">
+    <text class="name" x="0" y="0">2. Celadon Gallery</text>
+    <text class="note" x="0" y="31">Airy and editorial; useful as an alternate if the selected direction feels too warm.</text>
+    <g transform="translate(0 58)">
+      <rect x="0" y="0" width="210" height="86" rx="8" fill="#a9bdb2"/><text class="hex" x="18" y="54">#A9BDB2</text>
+      <rect x="210" y="0" width="210" height="86" rx="0" fill="#f1eadf"/><text class="hex" x="228" y="54">#F1EADF</text>
+      <rect x="420" y="0" width="210" height="86" rx="0" fill="#d4c4a0"/><text class="hex" x="438" y="54">#D4C4A0</text>
+      <rect x="630" y="0" width="210" height="86" rx="0" fill="#8b6655"/><text class="hex-light" x="648" y="54">#8B6655</text>
+      <rect x="840" y="0" width="210" height="86" rx="0" fill="#9d4450"/><text class="hex-light" x="858" y="54">#9D4450</text>
+      <rect x="1050" y="0" width="210" height="86" rx="8" fill="#2d3338"/><text class="hex-light" x="1068" y="54">#2D3338</text>
+    </g>
+  </g>
+
+  <g transform="translate(80 460)">
+    <text class="name" x="0" y="0">3. Duck Egg Palace</text>
+    <text class="note" x="0" y="31">Still whimsical, but cooler and more architectural than feminine.</text>
+    <g transform="translate(0 58)">
+      <rect x="0" y="0" width="210" height="86" rx="8" fill="#86aeb3"/><text class="hex" x="18" y="54">#86AEB3</text>
+      <rect x="210" y="0" width="210" height="86" rx="0" fill="#efe7d8"/><text class="hex" x="228" y="54">#EFE7D8</text>
+      <rect x="420" y="0" width="210" height="86" rx="0" fill="#d8b88f"/><text class="hex" x="438" y="54">#D8B88F</text>
+      <rect x="630" y="0" width="210" height="86" rx="0" fill="#b56b53"/><text class="hex-light" x="648" y="54">#B56B53</text>
+      <rect x="840" y="0" width="210" height="86" rx="0" fill="#702f3f"/><text class="hex-light" x="858" y="54">#702F3F</text>
+      <rect x="1050" y="0" width="210" height="86" rx="8" fill="#1f3638"/><text class="hex-light" x="1068" y="54">#1F3638</text>
+    </g>
+  </g>
+
+  <g transform="translate(80 605)">
+    <text class="name" x="0" y="0">4. Pastel Mustard Lobby</text>
+    <text class="note" x="0" y="31">Selected: softer pastel ochre, app-aligned warmth, and mint-sage character continuity.</text>
+    <g transform="translate(0 58)">
+      <rect x="0" y="0" width="210" height="86" rx="8" fill="#d6be79"/><text class="hex" x="18" y="54">#D6BE79</text>
+      <rect x="210" y="0" width="210" height="86" rx="0" fill="#f1e8d6"/><text class="hex" x="228" y="54">#F1E8D6</text>
+      <rect x="420" y="0" width="210" height="86" rx="0" fill="#b8c8b6"/><text class="hex" x="438" y="54">#B8C8B6</text>
+      <rect x="630" y="0" width="210" height="86" rx="0" fill="#c58d74"/><text class="hex" x="648" y="54">#C58D74</text>
+      <rect x="840" y="0" width="210" height="86" rx="0" fill="#7d3a45"/><text class="hex-light" x="858" y="54">#7D3A45</text>
+      <rect x="1050" y="0" width="210" height="86" rx="8" fill="#302a25"/><text class="hex-light" x="1068" y="54">#302A25</text>
+    </g>
+  </g>
+
+  <g transform="translate(80 750)">
+    <text class="name" x="0" y="0">5. Oxide Conservatory</text>
+    <text class="note" x="0" y="31">A richer terracotta route: less pink, more material, tile, plaster, wood.</text>
+    <g transform="translate(0 58)">
+      <rect x="0" y="0" width="210" height="86" rx="8" fill="#b86f57"/><text class="hex-light" x="18" y="54">#B86F57</text>
+      <rect x="210" y="0" width="210" height="86" rx="0" fill="#ead9c4"/><text class="hex" x="228" y="54">#EAD9C4</text>
+      <rect x="420" y="0" width="210" height="86" rx="0" fill="#a7ad8a"/><text class="hex" x="438" y="54">#A7AD8A</text>
+      <rect x="630" y="0" width="210" height="86" rx="0" fill="#d1b36f"/><text class="hex" x="648" y="54">#D1B36F</text>
+      <rect x="840" y="0" width="210" height="86" rx="0" fill="#77323b"/><text class="hex-light" x="858" y="54">#77323B</text>
+      <rect x="1050" y="0" width="210" height="86" rx="8" fill="#303331"/><text class="hex-light" x="1068" y="54">#303331</text>
+    </g>
+  </g>
+
+  <g transform="translate(80 895)">
+    <text class="name" x="0" y="0">6. Oxblood Library</text>
+    <text class="note" x="0" y="31">Most dramatic option; useful if the shot tiles should feel premium and filmic.</text>
+    <g transform="translate(0 58)">
+      <rect x="0" y="0" width="210" height="86" rx="8" fill="#6f2e36"/><text class="hex-light" x="18" y="54">#6F2E36</text>
+      <rect x="210" y="0" width="210" height="86" rx="0" fill="#eadfcf"/><text class="hex" x="228" y="54">#EADFCF</text>
+      <rect x="420" y="0" width="210" height="86" rx="0" fill="#a7aa88"/><text class="hex" x="438" y="54">#A7AA88</text>
+      <rect x="630" y="0" width="210" height="86" rx="0" fill="#b99961"/><text class="hex" x="648" y="54">#B99961</text>
+      <rect x="840" y="0" width="210" height="86" rx="0" fill="#8c6047"/><text class="hex-light" x="858" y="54">#8C6047</text>
+      <rect x="1050" y="0" width="210" height="86" rx="8" fill="#25292b"/><text class="hex-light" x="1068" y="54">#25292B</text>
+    </g>
+  </g>
+
+  <text class="label" x="80" y="1095">MY RECOMMENDATION</text>
+  <text class="subtitle" x="80" y="1130">Selected direction: Pastel Mustard Lobby. Softer than mustard, still native to Renku Studio's amber/parchment theme.</text>
+</svg>
