@@ -23,9 +23,120 @@
       "requestId": "019e7e2c-94b4-75c3-a51a-1ddcde636386",
       "prompt": "Create sheet 2 (Wide Shot Sizes) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. Keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nCells in reading order:\n1. Medium Full Shot: A cowboy-style crop from mid-thigh up, balanced and theatrical.\n2. Full Shot: A full-body view of the performer, readable from head to shoes.\n3. Wide / Long Shot: A wide shot where the performer is small but clearly present in the room.\n4. Extreme Wide / Long Shot: An extreme wide shot emphasizing the full architectural set, with the performer tiny and centered.",
       "status": "review_required"
+    },
+    {
+      "number": 3,
+      "name": "subject-grouping",
+      "title": "Subject Grouping",
+      "path": "sheets/sheet-003.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7e4d-8c51-7730-839f-f1965f181bb0",
+      "prompt": "Create sheet 3 (Subject Grouping) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. Keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nCells in reading order:\n1. Single: One performer alone in frame, clearly the subject.\n2. Two-Shot: Two women sharing the frame in balanced profile positions.\n3. Three-Shot: Three women staged as a clean triangular arrangement.\n4. Group: A small ensemble grouped in the pastel hotel set with clear spacing.",
+      "status": "review_required"
+    },
+    {
+      "number": 4,
+      "name": "subject-perspective",
+      "title": "Subject Perspective",
+      "path": "sheets/sheet-004.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7e7a-297d-7660-a2db-ada55da185b6",
+      "prompt": "Create sheet 4 (Subject Perspective) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. When the main woman is visible, keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nFor true POV and insert-shot cells, do not force the main woman to appear. POV should show what she sees. Insert should isolate an important object, detail, or small action.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nCells in reading order:\n1. Over-the-Shoulder: A close conversation scene at a dinner table: blurred foreground back-of-head and shoulder of another seated woman frame the main woman across the table in close-up or medium close-up, with visible eyeline and dialogue tension. No male foreground character.\n2. Over-the-Hip: A low over-the-hip composition: the foreground hip and side of a standing woman form a near-frame edge, while the main woman is the focused subject beyond, seated or lower in the frame to suggest uneven height and power imbalance. No male foreground character.\n3. Point of View: A true subjective POV from the woman: do not show the woman herself; show what she sees from her eye level, such as two or three people leaning over a table looking directly toward camera in the pastel hotel room. The viewed people and table detail must be sharp and readable, not blurry.\n4. Insert: A close-up insert of an important scene detail only, not a portrait: a brass hotel key and small folded note on a pale ochre desk, isolated as story information with no face visible.",
+      "status": "review_required"
+    },
+    {
+      "number": 7,
+      "name": "movement-foundation",
+      "title": "Foundational Movement",
+      "path": "sheets/sheet-007.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7ece-5d18-71a3-be5b-6212bf629306",
+      "prompt": "Create sheet 7 (Foundational Movement) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. When the main woman is visible, keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nFor true POV and insert-shot cells, do not force the main woman to appear. POV should show what she sees. Insert should isolate an important object, detail, or small action.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nMovement grammar for these stills must be precise: pan and tilt rotate from a fixed camera position; tracking moves the whole camera sideways with parallax; push-in and pull-out physically move the camera forward or backward with parallax; zoom changes lens focal length from a locked camera position with no parallax.\nFor swish or whip movement cells, show controlled directional motion blur only where the fast movement is the concept. Keep all other cells crisp and usable as still UI tiles.\nCells in reading order:\n1. Ground Level: The lens sits almost on the floor, looking across polished tile toward the performer.\n2. Static: A locked-off tripod frame: perfectly stable, symmetrical, no pan, no tilt, no dolly, no zoom, and no motion blur.\n3. Pan: A fixed-position camera pivots horizontally left-to-right across the pastel Mustard Lobby, with directional background reveal and a stable tripod feeling; do not move the camera forward, backward, or sideways.\n4. Tilt: A fixed-position camera pivots vertically upward from the polished patterned floor and performer to the ornate ceiling, clearly reading as tilt rather than a vertical pedestal or crane move.",
+      "status": "review_required"
+    },
+    {
+      "number": 8,
+      "name": "movement-dynamic",
+      "title": "Dynamic Movement",
+      "path": "sheets/sheet-008.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7ed0-580c-7b90-9a9f-977e28a5e707",
+      "prompt": "Create sheet 8 (Dynamic Movement) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. When the main woman is visible, keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nFor true POV and insert-shot cells, do not force the main woman to appear. POV should show what she sees. Insert should isolate an important object, detail, or small action.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nMovement grammar for these stills must be precise: pan and tilt rotate from a fixed camera position; tracking moves the whole camera sideways with parallax; push-in and pull-out physically move the camera forward or backward with parallax; zoom changes lens focal length from a locked camera position with no parallax.\nFor swish or whip movement cells, show controlled directional motion blur only where the fast movement is the concept. Keep all other cells crisp and usable as still UI tiles.\nCells in reading order:\n1. Swish Pan: A fast horizontal whip-pan moment: the frame has elegant left-to-right motion streaks and directional blur between readable lobby details, like a transition, while keeping the same pastel set language.\n2. Swish Tilt: A fast vertical whip-tilt moment: floor, dress, columns, and ceiling smear upward in controlled vertical motion blur before landing on the performer or architecture.\n3. Tracking: A lateral tracking shot: the whole camera travels sideways parallel with the walking performer at a nearly constant distance, creating foreground/background parallax through columns and furniture; do not make it a pan.\n4. Push-In: A dolly push-in: the whole camera physically moves forward toward the performer, changing spatial relationships and turning a medium view into a more intimate close view; do not describe it as an optical zoom.",
+      "status": "review_required"
+    },
+    {
+      "number": 5,
+      "name": "angle-basic",
+      "title": "Basic Angles",
+      "path": "sheets/sheet-005.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7edd-20f1-7742-a10c-b3641a7de9ec",
+      "prompt": "Create sheet 5 (Basic Angles) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. When the main woman is visible, keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nFor true POV and insert-shot cells, do not force the main woman to appear. POV should show what she sees. Insert should isolate an important object, detail, or small action.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nFor this angle sheet, make the camera placement unmistakable. Do not confuse eye level, low angle, and high angle.\nEye level must feel neutral and straight-on. Low angle must clearly look upward from below the subject. High angle must clearly look down from above but remain oblique, not overhead.\nCells in reading order:\n1. Reaction: A close or medium-close reaction shot of the woman responding to something off-camera, with her eyeline clearly aimed just outside the frame. The shot is about reaction, not a new camera angle.\n2. Eye Level: A neutral straight-on eye-level shot: the lens is exactly at the woman's eye height, horizon and architecture feel natural, with no looking up or down.\n3. Low Angle: A low-angle shot: the camera is physically below the woman's eye line and tilts upward, making her and the tall hotel columns feel more imposing. Show ceiling or upper architecture to prove the upward view.\n4. High Angle: A high-angle shot: the camera is above the woman and looks down obliquely, making her feel smaller within the patterned floor and room. This is not a straight-down overhead shot.",
+      "status": "review_required"
+    },
+    {
+      "number": 6,
+      "name": "angle-height",
+      "title": "Camera Heights",
+      "path": "sheets/sheet-006.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "referencePath": "reference/consistency-sheet.png",
+      "requestId": "019e7ee1-4f24-7f41-93f1-0cdb82c89b58",
+      "prompt": "Create sheet 6 (Camera Heights) of a Renku Studio camera-design UI tile set.\nUse the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.\nThe new sheet must look like it came from the exact same origin as the reference image. When the main woman is visible, keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.\nFor true POV and insert-shot cells, do not force the main woman to appear. POV should show what she sees. Insert should isolate an important object, detail, or small action.\nCreate one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.\nIt is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.\nUse the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.\nNo text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.\nFor this height sheet, make camera height unmistakable. Do not confuse overhead, shoulder level, hip level, and knee level.\nOverhead must be a true top-down bird's-eye view. Shoulder level sits near shoulder height, slightly below eye level. Hip level is a camera-height shot near the waist, not an over-the-hip foreground framing. Knee level is low near the knees, not floor or ground level.\nCells in reading order:\n1. Overhead: A true overhead bird's-eye shot: the camera looks straight down from above at the woman and the patterned floor, with strong top-down geometry and minimal wall perspective.\n2. Shoulder Level: A shoulder-level shot: the camera lens sits at the woman's shoulder height, slightly below eye level, framing her upper torso and shoulders with a subtly more grounded presence.\n3. Hip Level: A hip-level camera-height shot, not an over-the-hip shot: the lens sits near the woman's waist/hip height, emphasizing hands, beltline, dress, and vertical architecture while looking slightly upward.\n4. Knee Level: A knee-level shot: the lens sits around the woman's knee height, with legs, lower dress, floor pattern, and rising columns prominent. It is low, but not on the ground.",
+      "status": "review_required"
     }
   ],
-  "motion": [],
+  "motion": [
+    {
+      "id": "movement-pan",
+      "path": "motion/movement-pan.mp4",
+      "inputPath": "images/movement-pan.png",
+      "model": "xai/grok-imagine-video/v1.5/image-to-video",
+      "requestId": "019e7f27-0da8-7f93-9a1a-50f3f467a025",
+      "prompt": "Smooth horizontal pan from a fixed position across the empty hotel exterior and garden, revealing facade, terrace, hedges, fountain or garden path. No people. No dolly, no tracking, no zoom. Create a short elegant camera-design preview from this still image. Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
+      "duration": 4,
+      "resolution": "480p",
+      "status": "review_required"
+    },
+    {
+      "id": "movement-tilt",
+      "path": "motion/movement-tilt.mp4",
+      "inputPath": "images/movement-tilt.png",
+      "model": "xai/grok-imagine-video/v1.5/image-to-video",
+      "requestId": "019e7fa7-4041-7792-8042-7bcb9ece2978",
+      "prompt": "Smooth vertical tilt upward from the woman's shoes and exterior path to her torso, face, and upper hotel facade, fixed camera position. Create a short elegant camera-design preview from this still image. Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
+      "duration": 3,
+      "resolution": "480p",
+      "status": "review_required"
+    },
+    {
+      "id": "movement-swish-pan",
+      "path": "motion/movement-swish-pan.mp4",
+      "inputPath": "images/movement-swish-pan.png",
+      "model": "xai/grok-imagine-video/v1.5/image-to-video",
+      "requestId": "019e7fae-0a54-7e51-9bab-1044286da1db",
+      "prompt": "Fast horizontal swish pan from a fixed position across the empty garden exterior with tasteful directional motion blur, landing on another readable exterior area. No people. Create a short elegant camera-design preview from this still image. Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
+      "duration": 3,
+      "resolution": "480p",
+      "status": "review_required"
+    },
+    {
+      "id": "movement-tracking",
+      "path": "motion/movement-tracking.mp4",
+      "inputPath": "images/movement-tracking.png",
+      "model": "xai/grok-imagine-video/v1.5/image-to-video",
+      "requestId": "019e7fb3-c199-7403-9871-449deb53a792",
+      "prompt": "Gentle sideways tracking move following the walking woman along the garden path or terrace at a constant distance, stable and cinematic, with foreground/background parallax. Create a short elegant camera-design preview from this still image. Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
+      "duration": 3,
+      "resolution": "480p",
+      "status": "review_required"
+    }
+  ],
   "reference": {
     "path": "reference/consistency-sheet.png",
     "model": "fal-ai/nano-banana-pro",
@@ -33,5 +144,46 @@
     "prompt": "Create one 4:3 consistency reference sheet for a Renku Studio camera-design UI tile set.\nCompose it like a practical visual reference board with multiple bordered image panels distributed across the full canvas, not a rigid UI grid and not a single scene.\nThe reference board must lock one original unnamed female performer across all performer panels: fair skin, soft oval face, center-parted brown hair pinned into a neat low bun, understated expression, no jewelry, no bag, no changing accessories.\nLock one simple wardrobe across all performer panels: timeless cream dress with pale mint-sage paneling and soft ivory outer layer, refined and cinematic, not a historic costume, not a jacket, not a blazer.\nInclude performer panels for close portrait, full body, three-quarter pose, profile, and small figure in environment. The same face, hair, dress, and absence of accessories must remain consistent.\nShow a pastel Mustard Lobby world: European hotel lobby, corridor, room corner, patterned floor, architectural details, polished wood, plaster, tile, upholstery, and soft lamps.\nUse a softened application-compatible palette: pastel ochre and antique gold as warm architectural accents, parchment cream as the base, pale mint-sage as the key secondary color, muted terracotta material warmth, small oxblood details, and warm ink shadows.\nThe tone should be closer to pastel palace-hotel softness than saturated yellow: dusty rose-plaster warmth may appear subtly in walls or background atmosphere, but blush, rose, and pink must not dominate the palette.\nThis palette must harmonize with Renku Studio light and dark themes: warm amber and parchment in light mode, neutral gray surfaces with amber identity accents in dark mode.\nAvoid bright warning-yellow, saturated mustard clothing, modern handbags, changing jewelry, changing hair, extra costumes, and inconsistent accessories.\nUse soft frontal light, gentle contrast, centered formal staging, refined theatrical production design, and enough warm ink, oxblood, wood, and shadow detail for downstream 16:9 tiles to read in both light and dark UI themes.\nThis is a reference sheet, not a UI tile. Do not include text, labels, captions, logos, watermarks, UI controls, crop marks, or explanatory typography.",
     "status": "review_required"
   },
-  "updatedAt": "2026-05-31T13:15:46.734Z"
+  "updatedAt": "2026-05-31T20:22:51.085Z",
+  "images": [
+    {
+      "id": "movement-pan",
+      "path": "images/movement-pan.png",
+      "sourceSheet": null,
+      "model": "fal-ai/nano-banana-pro/edit",
+      "requestId": "019e7f26-1543-72a0-9b9b-91fe9ae3c138",
+      "prompt": "Create one 16:9 first-frame image for the \"Pan\" Shot Design motion preview.\nThis motion preview must not include any person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.\nUse the reference only for palette, lighting, architectural language, materials, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nPan: No person. Empty exterior hotel garden wide composition with terrace seating or fountain on one side, facade, hedges, and archway on the other; fixed camera pivots horizontally across the exterior location.",
+      "status": "review_required"
+    },
+    {
+      "id": "movement-tilt",
+      "path": "images/movement-tilt.png",
+      "sourceSheet": null,
+      "locationReferencePath": "images/movement-pan.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "requestId": "019e7fa6-39fe-7501-8ac7-31ad448aee5f",
+      "prompt": "Create one 16:9 first-frame image for the \"Tilt\" Shot Design motion preview.\nUse the provided reference image as binding source for the same woman, center-parted low bun, cream dress with pale mint-sage paneling, lack of accessories, lighting, palette, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nKeep the woman visually consistent with the reference whenever she is visible.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nTilt: Person included. Low frame on the woman's shoes, lower dress, gravel or stone path, steps, and facade base; fixed camera tilts upward to her torso, face, and upper hotel facade, balcony, or arched window.",
+      "status": "review_required"
+    },
+    {
+      "id": "movement-swish-pan",
+      "path": "images/movement-swish-pan.png",
+      "sourceSheet": null,
+      "locationReferencePath": "images/movement-pan.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "requestId": "019e7fac-eb86-7bf2-afe5-de8b8d482ab0",
+      "prompt": "Create one 16:9 first-frame image for the \"Swish Pan\" Shot Design motion preview.\nThis motion preview must not include any person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.\nUse the reference only for palette, lighting, architectural language, materials, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nSwish Pan: No person. Empty garden path or terrace with hedge, fountain, column, or doorway at one edge and a second exterior area across frame; fast horizontal whip pan with controlled blur.",
+      "status": "review_required"
+    },
+    {
+      "id": "movement-tracking",
+      "path": "images/movement-tracking.png",
+      "sourceSheet": null,
+      "locationReferencePath": "images/movement-pan.png",
+      "model": "fal-ai/nano-banana-pro/edit",
+      "requestId": "019e7fb2-b223-75e1-9721-e269abfc217c",
+      "prompt": "Create one 16:9 first-frame image for the \"Tracking\" Shot Design motion preview.\nUse the provided reference image as binding source for the same woman, center-parted low bun, cream dress with pale mint-sage paneling, lack of accessories, lighting, palette, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nKeep the woman visually consistent with the reference whenever she is visible.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nTracking: Person included. Side-profile woman walking along a garden path or terrace, with foreground hedges or columns and background facade; camera travels sideways with her at constant distance.",
+      "status": "review_required"
+    }
+  ]
 }

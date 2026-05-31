@@ -12,9 +12,9 @@ choose crop boxes, crop with ImageMagick, inspect the slices, and iterate.
 
 ## Shot Design Visual Direction
 
-The approved Shot Design asset direction is **Pastel Mustard Lobby**. This direction
-was chosen because it fits Renku Studio's product design system better than the
-earlier pink-heavy palace reference:
+The approved Shot Design asset direction for still sheets is **Pastel Mustard
+Lobby**. This direction was chosen because it fits Renku Studio's product design
+system better than the earlier pink-heavy palace reference:
 
 - the app's light theme uses warm amber, golden, and parchment surfaces;
 - the app's dark theme keeps amber as the primary identity color against neutral
@@ -65,8 +65,8 @@ mustard blazer character. Keep wardrobe, hairstyle, and accessories locked:
 - Each generated sheet is a `4:3` image.
 - Each sheet contains exactly four separate `16:9` stills in a 2x2 arrangement.
 - Final sliced stills in `generated/images/*.png` should be `16:9`.
-- Motion previews should be generated from accepted `16:9` stills and should
-  also use `16:9`.
+- Motion previews should be generated from accepted dedicated `16:9` start
+  frames and should preserve that framing.
 
 This intentionally replaces the old square 3x3 sheet structure. The 2x2 sheet
 structure increases the number of sheets, but gives every final UI tile the
@@ -91,6 +91,54 @@ When writing or revising prompts for `fal-ai/nano-banana-pro` and
   controls in generated images.
 - Inspect every result with vision. If identity, wardrobe, palette, or cell
   layout drifts, regenerate before slicing.
+
+## Subject Perspective Shot Grammar
+
+Use precise cinematography definitions for the subject perspective sheet:
+
+- **Over-the-shoulder**: a close dialogue setup. A blurred foreground shoulder
+  and back of head frame the subject across a table or conversational distance.
+  The subject should usually be in close-up or medium close-up, not a tiny
+  full-body figure across the room. For the bundled Shot Design assets, use
+  another woman as the foreground figure, not a man.
+- **Over-the-hip**: similar to over-the-shoulder, but the foreground shape is a
+  character's hip/waist/side. It often works when one character is standing and
+  the other is sitting, kneeling, or lower in frame, creating an uneven-terrain
+  or power-imbalance feeling. The focused subject remains visible beyond the
+  hip foreground. For the bundled Shot Design assets, use a standing woman as
+  the foreground figure, not a man.
+- **Point of view**: show what the character sees. Do not show the subject
+  whose POV it is: no face, dress, hands, or body of the main woman. The camera
+  is the subject's eyes. The viewed people or important scene detail should be
+  sharp and readable, not dreamy or blurred. For this bundled sheet, use women
+  as viewed characters and avoid men.
+- **Insert**: isolate an important scene detail, object, or small action that
+  directs attention. It is not a portrait of the subject.
+
+## Camera Angle And Height Grammar
+
+Use precise cinematography definitions for the angle sheets:
+
+- **Reaction shot**: a close or medium-close shot of the subject responding to
+  something off-camera. It is about the subject's response and eyeline, not a
+  new camera height.
+- **Eye level**: the camera lens is at the subject's eye height. The view feels
+  neutral and straight-on, with no obvious looking up or down.
+- **Low angle**: the camera is below the subject's eye line and looks upward.
+  The subject and architecture should feel taller or more imposing. Include
+  ceiling or upper architecture when useful to make the upward angle clear.
+- **High angle**: the camera is above the subject and looks down obliquely. The
+  subject should feel smaller within the room or floor pattern. This is not a
+  straight-down overhead shot.
+- **Overhead**: a true top-down or bird's-eye view from above. The floor pattern
+  should dominate and the walls should have minimal perspective.
+- **Shoulder level**: the camera sits around shoulder height, slightly below eye
+  level. It frames upper torso/shoulders with a grounded feeling.
+- **Hip level**: the camera is placed near the subject's waist or hip height.
+  This is a camera-height shot, not an over-the-hip foreground framing.
+- **Knee level**: the camera is near knee height. It emphasizes legs, lower
+  wardrobe, floor pattern, and rising vertical architecture. It is low, but not
+  ground level.
 
 ## Core Workflow
 
@@ -160,15 +208,44 @@ magick packages/studio/src/features/movie-studio/scenes/shot-design-assets/gener
 9. Show the user the generated sheet and slices after slicing. Do not wait for
    approval between a usable sheet and its slices.
 10. Repeat sheet generation, vision slicing, and review one sheet at a time.
-11. Generate motion only after the matching sliced still exists and has been
-    accepted. Motion starts from:
+11. Generate motion previews from dedicated motion start frames, not from sheet
+    cells. Movement UI tiles can describe the concept, but the video model needs
+    a clean first frame that is composed specifically for animation.
+
+Generate exactly one motion start frame first:
+
+```bash
+node .agents/skills/generate-assets/scripts/generate-shot-design-asset.mjs motion-frame --asset movement-pan --yes
+```
+
+Motion start frames use a separate **Pastel Garden Hotel Exterior** direction.
+This exterior direction applies only to motion previews, because lobby motion
+clips read too much like a travel or hotel-booking product. Use a real exterior
+filming location: elegant European hotel, manor, or villa facade, garden path,
+terrace, hedges, fountain, stone steps, veranda, balcony, arched windows,
+shutters, and planted foreground layers. Do not show lobby interiors, reception
+desks, check-in counters, luggage, guests, tourism signage, street storefronts,
+film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or
+behind-the-scenes production language.
+
+Inspect the returned `16:9` PNG with vision. Accept it only if it is a useful
+first frame for the requested camera move: consistent character identity,
+wardrobe when a subject is required, palette, and exterior location; enough
+architecture, garden depth, and off-screen space for the motion to read; no
+explanatory blur unless the asset is a swish/whip movement.
+
+After `movement-pan` has been accepted, use
+`generated/images/movement-pan.png` as the binding exterior location reference
+for the other movement start frames. Keep the same hotel facade, garden,
+fountain, terrace, paths, hedges, color, and time of day while changing only the
+camera height/framing needed to demonstrate each movement.
+
+Motion starts from the accepted start frame:
 
 ```text
 packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated/images/<motion-asset-id>.png
 ```
 
-If the still is missing, use the sheet map to find which sheet contains that
-asset, generate/slice that sheet first, inspect the slice, and stop for approval.
 Then generate exactly one motion preview:
 
 ```bash
@@ -181,6 +258,8 @@ node .agents/skills/generate-assets/scripts/generate-shot-design-asset.mjs motio
 
 - Do not run all sheets in one shot.
 - Do not run all motion videos in one shot.
+- Do not use ordinary movement sheet cells as motion-video source frames unless
+  the user explicitly accepts that specific frame as a start frame.
 - Do not generate a new consistency reference if one already exists unless the
   user asks to replace it.
 - Do not proceed from a newly generated consistency reference to a sheet until
@@ -224,7 +303,11 @@ Use `scripts/generate-shot-design-asset.mjs` for provider calls only:
   reference through `fal-ai/nano-banana-pro/edit`.
 - `sheet --name <sheet-name> --yes`: same as `--number`, using the stable sheet
   names from `references/shot-design-asset-map.md`.
-- `motion --asset <motion-id> --yes`: generate one MP4 from an accepted sliced
-  still in `generated/images/<motion-id>.png`.
+- `motion-frame --asset <motion-id> --yes`: generate one dedicated `16:9`
+  first-frame PNG in `generated/images/<motion-id>.png` for a motion asset.
+- `motion --asset <motion-id> --yes`: generate one MP4 from an accepted motion
+  start frame in `generated/images/<motion-id>.png`. The default is a
+  small-UI-friendly `4s` clip at `480p`; use `--duration <1-15>` or
+  `--resolution 720p` only when the user explicitly asks.
 
 The helper writes `generated/manifest.json`. It never crops a sheet.

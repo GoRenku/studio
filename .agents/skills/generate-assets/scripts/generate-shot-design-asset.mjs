@@ -16,11 +16,11 @@ const manifestPath = path.join(outputRoot, 'manifest.json');
 
 const consistencyModel = 'fal-ai/nano-banana-pro';
 const sheetModel = 'fal-ai/nano-banana-pro/edit';
-const motionModel = 'fal-ai/xai/grok-imagine-video/image-to-video';
-const motionDurationSeconds = 4;
+const motionModel = 'xai/grok-imagine-video/v1.5/image-to-video';
+const defaultMotionDurationSeconds = 4;
+const defaultMotionResolution = '480p';
 const referenceAspectRatio = '4:3';
 const sheetAspectRatio = '4:3';
-const tileAspectRatio = '16:9';
 
 await loadRootEnvFiles();
 
@@ -39,30 +39,30 @@ const ASSETS = [
   asset('subject-two-shot', 'Subject Framing', 'Two-Shot', 'still', 'Two women sharing the frame in balanced profile positions.'),
   asset('subject-three-shot', 'Subject Framing', 'Three-Shot', 'still', 'Three women staged as a clean triangular arrangement.'),
   asset('subject-group', 'Subject Framing', 'Group', 'still', 'A small ensemble grouped in the pastel hotel set with clear spacing.'),
-  asset('subject-over-the-shoulder', 'Subject Framing', 'Over-the-Shoulder', 'still', 'Foreground shoulder frames the main performer across the room.'),
-  asset('subject-over-the-hip', 'Subject Framing', 'Over-the-Hip', 'still', 'Foreground hip-level silhouette frames the performer beyond.'),
-  asset('subject-point-of-view', 'Subject Framing', 'Point of View', 'still', 'A subjective view looking toward hands and the performer ahead.'),
-  asset('subject-insert', 'Subject Framing', 'Insert', 'still', 'A close detail insert of a hand placing a key on a pale ochre counter.'),
-  asset('subject-reaction', 'Subject Framing', 'Reaction', 'still', 'The performer reacting subtly to something off frame.'),
-  asset('angle-eye-level', 'Camera Angle / Height', 'Eye Level', 'still', 'The camera is level with the performer\'s eyes, neutral and calm.'),
-  asset('angle-low-angle', 'Camera Angle / Height', 'Low Angle', 'still', 'A low camera looks upward at the performer and tall pastel hotel architecture.'),
-  asset('angle-high-angle', 'Camera Angle / Height', 'High Angle', 'still', 'A high camera looks down at the performer in the geometric room.'),
-  asset('angle-overhead', 'Camera Angle / Height', 'Overhead', 'still', 'A direct overhead bird\'s-eye view of the performer and patterned floor.'),
-  asset('angle-shoulder-level', 'Camera Angle / Height', 'Shoulder Level', 'still', 'The lens sits at shoulder height, framing posture and upper body.'),
-  asset('angle-hip-level', 'Camera Angle / Height', 'Hip Level', 'still', 'The lens sits at hip height, emphasizing wardrobe and stance.'),
-  asset('angle-knee-level', 'Camera Angle / Height', 'Knee Level', 'still', 'The lens sits at knee height, showing legs, floor pattern, and vertical set lines.'),
+  asset('subject-over-the-shoulder', 'Subject Framing', 'Over-the-Shoulder', 'still', 'A close conversation scene at a dinner table: blurred foreground back-of-head and shoulder of another seated woman frame the main woman across the table in close-up or medium close-up, with visible eyeline and dialogue tension. No men.'),
+  asset('subject-over-the-hip', 'Subject Framing', 'Over-the-Hip', 'still', 'A low over-the-hip composition: the foreground hip and side of a standing woman form a near-frame edge, while the main woman is the focused subject beyond, seated or lower in the frame to suggest uneven height and power imbalance. No men.'),
+  asset('subject-point-of-view', 'Subject Framing', 'Point of View', 'still', 'A true subjective POV from the main woman: do not show the main woman, her dress, her hands, or her body; show what she sees from her eye level, such as two other women leaning over a table looking directly toward camera in the pastel hotel room. The viewed women and table detail must be sharp and readable, not blurry. No men.'),
+  asset('subject-insert', 'Subject Framing', 'Insert', 'still', 'A close-up insert of an important scene detail only, not a portrait: a brass hotel key and small folded note on a pale ochre desk, isolated as story information with no face visible.'),
+  asset('subject-reaction', 'Subject Framing', 'Reaction', 'still', 'A close or medium-close reaction shot of the woman responding to something off-camera, with her eyeline clearly aimed just outside the frame. The shot is about reaction, not a new camera angle.'),
+  asset('angle-eye-level', 'Camera Angle / Height', 'Eye Level', 'still', 'A neutral straight-on eye-level shot: the lens is exactly at the woman\'s eye height, horizon and architecture feel natural, with no looking up or down.'),
+  asset('angle-low-angle', 'Camera Angle / Height', 'Low Angle', 'still', 'A low-angle shot: the camera is physically below the woman\'s eye line and tilts upward, making her and the tall hotel columns feel more imposing. Show ceiling or upper architecture to prove the upward view.'),
+  asset('angle-high-angle', 'Camera Angle / Height', 'High Angle', 'still', 'A high-angle shot: the camera is above the woman and looks down obliquely, making her feel smaller within the patterned floor and room. This is not a straight-down overhead shot.'),
+  asset('angle-overhead', 'Camera Angle / Height', 'Overhead', 'still', 'A true overhead bird\'s-eye shot: the camera looks straight down from above at the woman and the patterned floor, with strong top-down geometry and minimal wall perspective.'),
+  asset('angle-shoulder-level', 'Camera Angle / Height', 'Shoulder Level', 'still', 'A shoulder-level shot: the camera lens sits at the woman\'s shoulder height, slightly below eye level, framing her upper torso and shoulders with a subtly more grounded presence.'),
+  asset('angle-hip-level', 'Camera Angle / Height', 'Hip Level', 'still', 'A hip-level camera-height shot, not an over-the-hip shot: the lens sits near the woman\'s waist/hip height, emphasizing hands, beltline, dress, and vertical architecture while looking slightly upward.'),
+  asset('angle-knee-level', 'Camera Angle / Height', 'Knee Level', 'still', 'A knee-level shot: the lens sits around the woman\'s knee height, with legs, lower dress, floor pattern, and rising columns prominent. It is low, but not on the ground.'),
   asset('angle-ground-level', 'Camera Angle / Height', 'Ground Level', 'still', 'The lens sits almost on the floor, looking across polished tile toward the performer.'),
-  asset('movement-static', 'Camera Motion', 'Static', 'still', 'A locked-off symmetrical frame with no implied movement.'),
-  asset('movement-pan', 'Camera Motion', 'Pan', 'motion', 'A horizontal camera pan across the pastel Mustard Lobby room while the performer remains poised.', 'Smooth horizontal pan from left to right across the set, preserving the original composition and color palette.'),
-  asset('movement-tilt', 'Camera Motion', 'Tilt', 'motion', 'A camera tilt from the performer up to the ornate ceiling and back.', 'Smooth vertical tilt upward from the performer to the architecture, then settling gently.'),
-  asset('movement-swish-pan', 'Camera Motion', 'Swish Pan', 'motion', 'A fast horizontal whip-pan with controlled motion blur between matching set details.', 'Fast horizontal swish pan with tasteful motion blur, ending on the performer.'),
-  asset('movement-swish-tilt', 'Camera Motion', 'Swish Tilt', 'motion', 'A fast vertical whip-tilt with controlled blur from floor to subject.', 'Fast vertical swish tilt with controlled motion blur, landing on the performer.'),
-  asset('movement-tracking', 'Camera Motion', 'Tracking', 'motion', 'A lateral tracking move alongside the performer walking through the set.', 'Gentle sideways tracking move following the performer, stable and cinematic.'),
-  asset('movement-push-in', 'Camera Motion', 'Push-In', 'motion', 'A slow push-in toward the performer, turning a medium shot into a close view.', 'Slow dolly push-in toward the performer, subtle and steady.'),
-  asset('movement-pull-out', 'Camera Motion', 'Pull-Out', 'motion', 'A slow pull-out revealing the larger pastel hotel room around the performer.', 'Slow dolly pull-out revealing more of the room, stable and elegant.'),
-  asset('movement-zoom', 'Camera Motion', 'Zoom', 'motion', 'An optical zoom changes the crop while the camera stays centered and fixed.', 'Optical zoom inward while the camera position remains fixed, no dolly movement.'),
-  asset('rig-sticks', 'Rig / Mechanism', 'Sticks', 'still', 'A locked tripod setup implied by a stable, formal composition.'),
-  asset('rig-hand-held', 'Rig / Mechanism', 'Hand-Held', 'still', 'A slightly intimate handheld-feeling frame with human looseness but no chaos.'),
+  asset('movement-static', 'Camera Motion', 'Static', 'still', 'A locked-off tripod frame: perfectly stable, symmetrical, no pan, no tilt, no dolly, no zoom, and no motion blur.'),
+  asset('movement-pan', 'Camera Motion', 'Pan', 'motion', 'No person. Empty exterior hotel garden wide composition with terrace seating or fountain on one side, facade, hedges, and archway on the other; fixed camera pivots horizontally across the exterior location.', 'Smooth horizontal pan from a fixed position across the empty hotel exterior and garden, revealing facade, terrace, hedges, fountain or garden path. No people. No dolly, no tracking, no zoom.'),
+  asset('movement-tilt', 'Camera Motion', 'Tilt', 'motion', 'Person included. Low frame on the woman\'s shoes, lower dress, gravel or stone path, steps, and facade base; fixed camera tilts upward to her torso, face, and upper hotel facade, balcony, or arched window.', 'Smooth vertical tilt upward from the woman\'s shoes and exterior path to her torso, face, and upper hotel facade, fixed camera position.'),
+  asset('movement-swish-pan', 'Camera Motion', 'Swish Pan', 'motion', 'No person. Empty garden path or terrace with hedge, fountain, column, or doorway at one edge and a second exterior area across frame; fast horizontal whip pan with controlled blur.', 'Fast horizontal swish pan from a fixed position across the empty garden exterior with tasteful directional motion blur, landing on another readable exterior area. No people.'),
+  asset('movement-swish-tilt', 'Camera Motion', 'Swish Tilt', 'motion', 'No person. Low empty exterior frame with gravel path, flowers, stone steps, planter, and facade base; fast vertical whip tilt upward.', 'Fast vertical swish tilt through empty exterior lines, from garden path and stone details up to balcony, upper facade, arched window, or tree canopy. No people.'),
+  asset('movement-tracking', 'Camera Motion', 'Tracking', 'motion', 'Person included. Side-profile woman walking along a garden path or terrace, with foreground hedges or columns and background facade; camera travels sideways with her at constant distance.', 'Gentle sideways tracking move following the walking woman along the garden path or terrace at a constant distance, stable and cinematic, with foreground/background parallax.'),
+  asset('movement-push-in', 'Camera Motion', 'Push-In', 'motion', 'Person included. Medium-wide centered frame of the woman at garden gate, stone steps, terrace, or arched doorway, with exterior depth around her; camera physically moves forward toward her.', 'Slow dolly push-in toward the woman at the garden or hotel exterior with subtle parallax and changing spatial relationships, steady and restrained.'),
+  asset('movement-pull-out', 'Camera Motion', 'Pull-Out', 'motion', 'Person included. Medium-close frame of the woman near center, with limited garden or facade visible; camera physically moves backward to reveal the larger hotel exterior and garden.', 'Slow dolly pull-out from the woman, revealing more of the hotel exterior and garden with stable parallax and elegant composition.'),
+  asset('movement-zoom', 'Camera Motion', 'Zoom', 'motion', 'Person included. Locked-off centered frame of the woman with strong facade, terrace, path, or hedge lines around her; optical zoom changes crop without camera movement or parallax.', 'Optical zoom inward toward the woman at the hotel exterior while the camera position remains fixed, no dolly movement and no parallax shift.'),
+  asset('rig-sticks', 'Rig / Mechanism', 'Sticks', 'still', 'A camera on sticks: a grounded tripod viewpoint with perfectly level horizon, formal composition, crisp detail, no handheld shake, and no implied movement.'),
+  asset('rig-hand-held', 'Rig / Mechanism', 'Hand-Held', 'still', 'A handheld-feeling frame: intimate human-operated looseness, very slight off-level framing and organic micro-instability, but still polished, readable, and not chaotic.'),
   asset('rig-gimbal', 'Rig / Mechanism', 'Gimbal', 'still', 'A smooth floating frame following the performer through a corridor.'),
   asset('rig-slider', 'Rig / Mechanism', 'Slider', 'still', 'A short lateral slider move implied by foreground parallax on the counter.'),
   asset('rig-jib', 'Rig / Mechanism', 'Jib', 'still', 'A gentle elevated jib perspective over the performer in the room.'),
@@ -106,6 +106,9 @@ if (command === 'reference') {
 } else if (command === 'sheet') {
   await requireYes(options, 'sheet generation');
   await generateSheet(options);
+} else if (command === 'motion-frame') {
+  await requireYes(options, 'motion start-frame generation');
+  await generateMotionFrame(options);
 } else if (command === 'motion') {
   await requireYes(options, 'motion generation');
   await generateMotion(options);
@@ -141,6 +144,12 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === '--asset') {
       options.asset = rest[index + 1];
+      index += 1;
+    } else if (arg === '--duration') {
+      options.duration = Number(rest[index + 1]);
+      index += 1;
+    } else if (arg === '--resolution') {
+      options.resolution = rest[index + 1];
       index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -217,6 +226,49 @@ async function generateSheet(options) {
   console.log(relativeOutputPath(sheetPath));
 }
 
+async function generateMotionFrame(options) {
+  const source = ASSETS.find((entry) => entry.id === options.asset);
+  if (!source || source.kind !== 'motion') {
+    throw new Error(`Unknown motion asset. Use one of: ${motionIds().join(', ')}`);
+  }
+  await prepareFolders();
+  if (!await fileExists(consistencyPath)) {
+    throw new Error('reference/consistency-sheet.png is required before motion start-frame generation.');
+  }
+  const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+  if (!options.force && await fileExists(imagePath)) {
+    throw new Error(`${relativeOutputPath(imagePath)} already exists. Pass --force to replace it.`);
+  }
+  const locationAnchorPath = await resolveMovementLocationAnchorPath(source);
+  const fal = await loadFal();
+  const referenceUrl = await uploadPng(fal, consistencyPath);
+  const imageUrls = [referenceUrl];
+  if (locationAnchorPath) {
+    imageUrls.push(await uploadPng(fal, locationAnchorPath));
+  }
+  const prompt = buildMotionFramePrompt(source, { hasLocationAnchor: Boolean(locationAnchorPath) });
+  const result = await fal.subscribe(sheetModel, {
+    input: {
+      ...commonImageInput(prompt, '16:9'),
+      image_urls: imageUrls,
+    },
+  });
+  await downloadToFile(firstImageUrl(result.data), imagePath);
+  const manifest = await readManifestOrCreate();
+  upsertByKey(manifest.images, 'id', {
+    id: source.id,
+    path: relativeOutputPath(imagePath),
+    sourceSheet: null,
+    locationReferencePath: locationAnchorPath ? relativeOutputPath(locationAnchorPath) : null,
+    model: sheetModel,
+    requestId: result.requestId ?? null,
+    prompt,
+    status: 'review_required',
+  });
+  await writeManifest(manifest);
+  console.log(relativeOutputPath(imagePath));
+}
+
 async function generateMotion(options) {
   const source = ASSETS.find((entry) => entry.id === options.asset);
   if (!source || source.kind !== 'motion') {
@@ -225,13 +277,14 @@ async function generateMotion(options) {
   await prepareFolders();
   const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
   if (!await fileExists(imagePath)) {
-    const sourceSheet = sheetForAsset(source.id);
-    throw new Error(`${relativeOutputPath(imagePath)} is required before motion generation. Generate and slice ${sourceSheet.title} first with: sheet --name ${sourceSheet.name} --yes`);
+    throw new Error(`${relativeOutputPath(imagePath)} is required before motion generation. Generate and inspect a dedicated first frame first with: motion-frame --asset ${source.id} --yes`);
   }
   const motionPath = path.join(outputRoot, 'motion', `${source.id}.mp4`);
   if (!options.force && await fileExists(motionPath)) {
     throw new Error(`${relativeOutputPath(motionPath)} already exists. Pass --force to replace it.`);
   }
+  const duration = resolveMotionDuration(options);
+  const resolution = resolveMotionResolution(options);
   const fal = await loadFal();
   const imageUrl = await uploadPng(fal, imagePath);
   const prompt = buildMotionPrompt(source);
@@ -239,9 +292,8 @@ async function generateMotion(options) {
     input: {
       prompt,
       image_url: imageUrl,
-      duration: motionDurationSeconds,
-      aspect_ratio: tileAspectRatio,
-      resolution: '720p',
+      duration,
+      resolution,
     },
   });
   await downloadToFile(videoUrl(result.data), motionPath);
@@ -253,6 +305,8 @@ async function generateMotion(options) {
     model: motionModel,
     requestId: result.requestId ?? null,
     prompt,
+    duration,
+    resolution,
     status: 'review_required',
   });
   await writeManifest(manifest);
@@ -261,7 +315,7 @@ async function generateMotion(options) {
 
 function printPlan() {
   console.log('Shot Design asset generation plan');
-  console.log('Estimated provider cost: $0.15 reference + $0.15 per 4-cell sheet + $0.20 per 4s motion preview.');
+  console.log('Estimated provider cost: $0.15 reference + $0.15 per 4-cell sheet + $0.33 per 4s 480p motion preview with one input image.');
   console.log('1. reference --yes');
   for (let index = 0; index < sheetCells.length; index += 1) {
     const selectedSheet = SHEETS[index];
@@ -270,8 +324,16 @@ function printPlan() {
     console.log(`   title: ${selectedSheet.title}`);
     console.log(`   ${sheetCells[index].map((cell) => cell.id).join(', ')}`);
   }
-  console.log('Motion ids:');
-  console.log(motionIds().join(', '));
+  console.log('Movement motion frame commands:');
+  for (const id of movementMotionIds()) {
+    console.log(`motion-frame --asset ${id} --yes`);
+  }
+  console.log('Movement motion preview commands:');
+  for (const id of movementMotionIds()) {
+    console.log(`motion --asset ${id} --yes`);
+  }
+  console.log('Movement motion ids:');
+  console.log(movementMotionIds().join(', '));
 }
 
 async function printStatus() {
@@ -321,16 +383,63 @@ function buildReferencePrompt() {
 }
 
 function buildSheetPrompt(cells, selectedSheet) {
+  const movementGuidance = selectedSheet.name.startsWith('movement-')
+    ? [
+      'Movement grammar for these stills must be precise: pan and tilt rotate from a fixed camera position; tracking moves the whole camera sideways with parallax; push-in and pull-out physically move the camera forward or backward with parallax; zoom changes lens focal length from a locked camera position with no parallax.',
+      'For swish or whip movement cells, show controlled directional motion blur only where the fast movement is the concept. Keep all other cells crisp and usable as still UI tiles.',
+    ]
+    : [];
+  const angleGuidance = sheetSpecificPromptNotes(selectedSheet);
   return [
     `Create sheet ${selectedSheet.number} (${selectedSheet.title}) of a Renku Studio camera-design UI tile set.`,
     'Use the provided reference image as binding source for character identity, hairstyle, wardrobe, lack of accessories, environment, pastel color palette, lighting, lens feeling, and production design.',
-    'The new sheet must look like it came from the exact same origin as the reference image. Keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.',
+    'The new sheet must look like it came from the exact same origin as the reference image. When the main woman is visible, keep the same woman, same center-parted low bun, same cream and pale mint-sage dress, and no added jewelry, bags, jackets, or changing accessories.',
+    'For true POV and insert-shot cells, do not force the main woman to appear. POV should show what she sees. Insert should isolate an important object, detail, or small action.',
     'Create one 4:3 sheet containing exactly four separate 16:9 cinematic stills in a clean 2x2 arrangement. Each still should be easy to crop as a standalone 16:9 image.',
     'It is acceptable for the 4:3 sheet to have tasteful parchment margins and gutters around the 16:9 stills. Do not stretch cells or make square cells.',
     'Use the pastel Mustard Lobby palette: parchment cream, pale mint-sage, pastel ochre or antique gold architecture, muted terracotta materials, tiny oxblood details, and warm ink contrast. Avoid saturated yellow and pink-dominant scenes.',
     'No text, captions, numbers, watermarks, UI controls, crop marks, or labels inside any cell.',
+    ...angleGuidance,
+    ...movementGuidance,
     'Cells in reading order:',
     ...cells.map((cell, index) => `${index + 1}. ${cell.label}: ${cell.description}`),
+  ].join('\n');
+}
+
+function sheetSpecificPromptNotes(selectedSheet) {
+  if (selectedSheet.name === 'angle-basic') {
+    return [
+      'For this angle sheet, make the camera placement unmistakable. Do not confuse eye level, low angle, and high angle.',
+      'Eye level must feel neutral and straight-on. Low angle must clearly look upward from below the subject. High angle must clearly look down from above but remain oblique, not overhead.',
+    ];
+  }
+  if (selectedSheet.name === 'angle-height') {
+    return [
+      'For this height sheet, make camera height unmistakable. Do not confuse overhead, shoulder level, hip level, and knee level.',
+      'Overhead must be a true top-down bird\'s-eye view. Shoulder level sits near shoulder height, slightly below eye level. Hip level is a camera-height shot near the waist, not an over-the-hip foreground framing. Knee level is low near the knees, not floor or ground level.',
+    ];
+  }
+  return [];
+}
+
+function buildMotionFramePrompt(source, options = {}) {
+  const locationAnchorGuidance = options.hasLocationAnchor
+    ? [
+      'Use the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.',
+      'Adapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.',
+    ]
+    : [];
+  return [
+    `Create one 16:9 first-frame image for the "${source.label}" Shot Design motion preview.`,
+    ...motionFrameSubjectGuidance(source),
+    ...locationAnchorGuidance,
+    'Motion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.',
+    'Do not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.',
+    'This is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.',
+    'Make the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.',
+    'Use a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.',
+    'Movement intent:',
+    `${source.label}: ${source.description}`,
   ].join('\n');
 }
 
@@ -338,7 +447,9 @@ function buildMotionPrompt(source) {
   return [
     source.motionPrompt,
     'Create a short elegant camera-design preview from this still image.',
-    'Preserve the original subject identity, set, color palette, wardrobe, and composition.',
+    source.description.startsWith('No person.')
+      ? 'Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person.'
+      : 'Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition.',
     'Keep motion smooth, restrained, and useful as a UI preview.',
     'Do not add text, captions, graphics, logos, watermarks, or new characters.',
   ].join(' ');
@@ -358,6 +469,50 @@ function chunkWithFillers(items, size) {
 
 function motionIds() {
   return ASSETS.filter((entry) => entry.kind === 'motion').map((entry) => entry.id);
+}
+
+function movementMotionIds() {
+  return motionIds().filter((id) => id.startsWith('movement-'));
+}
+
+async function resolveMovementLocationAnchorPath(source) {
+  if (!source.id.startsWith('movement-') || source.id === 'movement-pan') {
+    return null;
+  }
+  const anchorPath = path.join(outputRoot, 'images', 'movement-pan.png');
+  if (!await fileExists(anchorPath)) {
+    throw new Error(`${relativeOutputPath(anchorPath)} is required as the movement location anchor before generating ${source.id}. Generate and approve movement-pan first.`);
+  }
+  return anchorPath;
+}
+
+function motionFrameSubjectGuidance(source) {
+  if (source.description.startsWith('No person.')) {
+    return [
+      'This motion preview must not include any person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.',
+      'Use the reference only for palette, lighting, architectural language, materials, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.',
+    ];
+  }
+  return [
+    'Use the provided reference image as binding source for the same woman, center-parted low bun, cream dress with pale mint-sage paneling, lack of accessories, lighting, palette, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.',
+    'Keep the woman visually consistent with the reference whenever she is visible.',
+  ];
+}
+
+function resolveMotionDuration(options) {
+  const duration = options.duration ?? defaultMotionDurationSeconds;
+  if (!Number.isInteger(duration) || duration < 1 || duration > 15) {
+    throw new Error('--duration must be an integer from 1 to 15.');
+  }
+  return duration;
+}
+
+function resolveMotionResolution(options) {
+  const resolution = options.resolution ?? defaultMotionResolution;
+  if (resolution !== '480p' && resolution !== '720p') {
+    throw new Error('--resolution must be either 480p or 720p.');
+  }
+  return resolution;
 }
 
 function resolveSheetSelection(options) {
@@ -380,14 +535,6 @@ function resolveSheetSelection(options) {
 
 function normalizeSheetName(name) {
   return String(name).trim().toLowerCase().replaceAll('_', '-');
-}
-
-function sheetForAsset(assetId) {
-  const index = sheetCells.findIndex((cells) => cells.some((cell) => cell.id === assetId));
-  if (index === -1) {
-    throw new Error(`Could not find sheet for asset ${assetId}.`);
-  }
-  return SHEETS[index];
 }
 
 async function countExistingSlices(cells) {
@@ -451,6 +598,7 @@ async function readManifestOrCreate() {
     const raw = await readFile(manifestPath, 'utf8');
     const parsed = JSON.parse(raw);
     parsed.sheets ??= [];
+    parsed.images ??= [];
     parsed.motion ??= [];
     return parsed;
   } catch (error) {
@@ -459,6 +607,7 @@ async function readManifestOrCreate() {
         generatedBy: 'generate-assets',
         outputRoot: path.relative(repoRoot, outputRoot),
         sheets: [],
+        images: [],
         motion: [],
       };
     }

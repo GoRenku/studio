@@ -70,12 +70,12 @@ All sheet generations use this reference image as `image_urls` input.
 
 ## Approved Palette: Pastel Mustard Lobby
 
-Use **Pastel Mustard Lobby** as the standing Shot Design asset direction. It
-keeps the app-aligned mustard/amber identity, but softens the palette toward the
-pastel reference the user preferred. It was chosen because it aligns with Renku
-Studio's warm amber/golden/parchment design system: light mode uses warm cream
-and amber surfaces, while dark mode keeps amber as the identity accent against
-neutral gray panels.
+Use **Pastel Mustard Lobby** as the standing Shot Design asset direction for
+still sheets. It keeps the app-aligned mustard/amber identity, but softens the
+palette toward the pastel reference the user preferred. It was chosen because it
+aligns with Renku Studio's warm amber/golden/parchment design system: light mode
+uses warm cream and amber surfaces, while dark mode keeps amber as the identity
+accent against neutral gray panels.
 
 | Role | Color | Hex | Usage |
 |------|-------|-----|-------|
@@ -107,7 +107,8 @@ The output geometry is part of the asset contract:
 - each sheet is generated as `4:3`;
 - each sheet contains exactly four separate `16:9` stills in a 2x2 arrangement;
 - final sliced stills in `images/<asset-id>.png` are `16:9`;
-- motion previews are generated from accepted `16:9` stills and use `16:9`.
+- motion previews are generated from accepted dedicated `16:9` start frames
+  and use the input image's `16:9` framing.
 
 The 4:3 sheet may include parchment gutters or margins around the four 16:9
 stills. Do not stretch cells into squares. Do not return to the old square 3x3
@@ -129,6 +130,47 @@ Use the provider deliberately:
   visual concept per cell.
 - Inspect reference and sheet outputs with vision before slicing. Regenerate if
   the model changes face, hairstyle, dress, accessories, palette, or 2x2 layout.
+
+## Subject Perspective Shot Grammar
+
+The `subject-perspective` sheet must use precise cinematography definitions:
+
+- `subject-over-the-shoulder`: close dialogue coverage with a blurred foreground
+  shoulder/back-of-head framing the subject across a table or conversational
+  distance. The subject should usually be close-up or medium close-up. Use
+  another woman as the foreground figure, not a man.
+- `subject-over-the-hip`: a foreground hip/waist/side frames the focused
+  subject beyond. It often implies uneven subject height, such as one character
+  standing while the other is sitting, kneeling, or lower in the frame. Use a
+  standing woman as the foreground figure, not a man.
+- `subject-point-of-view`: a subjective view from the character's eyes. Do not
+  show the character whose POV it is; show what she sees. The viewed people or
+  important scene detail should be sharp and readable, not blurry.
+- `subject-insert`: a close shot of an important object, detail, or small action.
+  It is not a subject portrait.
+
+## Camera Angle And Height Grammar
+
+The `angle-basic` and `angle-height` sheets must use precise cinematography
+definitions:
+
+- `subject-reaction`: close or medium-close response to something off-camera,
+  with clear eyeline. It is not a camera-height example.
+- `angle-eye-level`: lens at the subject's eye height, neutral and straight-on,
+  with no obvious upward or downward view.
+- `angle-low-angle`: camera below the subject's eye line looking upward, making
+  the subject and hotel architecture feel taller or more imposing.
+- `angle-high-angle`: camera above the subject looking down obliquely, making
+  the subject feel smaller in the patterned room. This is not overhead.
+- `angle-overhead`: true top-down bird's-eye view from above, with strong floor
+  geometry and minimal wall perspective.
+- `angle-shoulder-level`: lens around shoulder height, slightly below eye level,
+  emphasizing upper torso and shoulders.
+- `angle-hip-level`: lens around waist or hip height. This is a camera-height
+  shot, not an over-the-hip foreground framing.
+- `angle-knee-level`: lens around knee height, emphasizing lower wardrobe, legs,
+  floor pattern, and rising vertical architecture. This is low, but not ground
+  level.
 
 ## Visual Direction
 
@@ -207,7 +249,7 @@ Sheet payload:
 Motion model:
 
 ```text
-fal-ai/xai/grok-imagine-video/image-to-video
+xai/grok-imagine-video/v1.5/image-to-video
 ```
 
 Motion payload:
@@ -215,10 +257,9 @@ Motion payload:
 ```json
 {
   "prompt": "...",
-  "image_url": "<uploaded accepted sliced tile URL>",
+  "image_url": "<uploaded accepted 16:9 motion start-frame URL>",
   "duration": 4,
-  "aspect_ratio": "16:9",
-  "resolution": "720p"
+  "resolution": "480p"
 }
 ```
 
@@ -226,7 +267,8 @@ Expected provider cost estimate:
 
 - consistency reference: about `$0.15`;
 - each image sheet: about `$0.15`;
-- each 4-second motion preview: about `$0.20`.
+- each dedicated motion start frame: about `$0.15`;
+- each 4-second 480p motion preview with one input image: `$0.33`.
 
 ## Sheet Calls
 
@@ -253,19 +295,62 @@ with exactly four 16:9 stills in a 2x2 arrangement.
 
 ## Motion Calls
 
-Run after the still PNG exists and has been visually accepted. The still is the
-agent-cropped output at `images/<motion-asset-id>.png`; it is created by slicing
-the sheet listed in the source sheet column below. If that image file does not
-exist, do not run motion generation yet.
+Run after a dedicated `16:9` motion start frame exists and has been visually
+accepted at `images/<motion-asset-id>.png`. Do not treat ordinary movement sheet
+cells as motion sources unless the user explicitly approves that exact frame as
+a start frame.
 
-| Motion asset | Source sheet | Command | Input | Output |
-|--------------|--------------|---------|-------|--------|
-| `movement-pan` | `movement-foundation` | `motion --asset movement-pan --yes` | `images/movement-pan.png` | `motion/movement-pan.mp4` |
-| `movement-tilt` | `movement-foundation` | `motion --asset movement-tilt --yes` | `images/movement-tilt.png` | `motion/movement-tilt.mp4` |
-| `movement-swish-pan` | `movement-dynamic` | `motion --asset movement-swish-pan --yes` | `images/movement-swish-pan.png` | `motion/movement-swish-pan.mp4` |
-| `movement-swish-tilt` | `movement-dynamic` | `motion --asset movement-swish-tilt --yes` | `images/movement-swish-tilt.png` | `motion/movement-swish-tilt.mp4` |
-| `movement-tracking` | `movement-dynamic` | `motion --asset movement-tracking --yes` | `images/movement-tracking.png` | `motion/movement-tracking.mp4` |
-| `movement-push-in` | `movement-dynamic` | `motion --asset movement-push-in --yes` | `images/movement-push-in.png` | `motion/movement-push-in.mp4` |
-| `movement-pull-out` | `movement-rig-basic` | `motion --asset movement-pull-out --yes` | `images/movement-pull-out.png` | `motion/movement-pull-out.mp4` |
-| `movement-zoom` | `movement-rig-basic` | `motion --asset movement-zoom --yes` | `images/movement-zoom.png` | `motion/movement-zoom.mp4` |
-| `focus-rack-focus` | `focus-depth` | `motion --asset focus-rack-focus --yes` | `images/focus-rack-focus.png` | `motion/focus-rack-focus.mp4` |
+Motion start frames use a separate **Pastel Garden Hotel Exterior** direction.
+This direction applies only to motion previews. It replaces lobby interiors for
+motion because lobby motion reads too much like travel or hotel-booking product
+imagery. Use a real exterior filming location: elegant European hotel, manor, or
+villa facade, garden path, terrace, hedges, fountain, stone steps, veranda,
+balcony, arched windows, shutters, and planted foreground layers. Do not show
+lobby interiors, reception desks, check-in counters, luggage, guests, tourism
+signage, street storefronts, film sets, soundstages, visible crew, cameras,
+lights, set flats, floor tape, or behind-the-scenes production language.
+
+After `movement-pan` is accepted, use `images/movement-pan.png` as the binding
+location reference for the remaining movement start frames. Preserve the same
+hotel facade, garden, fountain, terrace, paths, hedges, color, and time of day.
+Change only the camera height, subject placement, and framing required for each
+motion demonstration.
+
+Use this concrete subject plan for movement previews:
+
+| Motion asset | Subject | Start frame | Motion direction | Demonstration goal |
+|--------------|---------|-------------|------------------|--------------------|
+| `movement-pan` | No person | Empty exterior hotel garden wide composition with terrace seating or fountain on one side, facade, hedges, and archway on the other. | Fixed camera pivots horizontally across the exterior location. | Show exterior architecture and garden space moving laterally through frame. |
+| `movement-tilt` | Person included | Low frame on the woman's shoes, lower dress, gravel or stone path, steps, and facade base. | Fixed camera tilts upward to her torso/face and upper hotel facade, balcony, or arched window. | Show vertical camera rotation through a standing subject and exterior architecture. |
+| `movement-swish-pan` | No person | Empty garden path or terrace with hedge, fountain, column, or doorway at one edge and a second exterior area across frame. | Fast horizontal whip pan with controlled blur, landing on another readable exterior area. | Show speed and horizontal blur without a smeared person. |
+| `movement-swish-tilt` | No person | Low empty exterior frame with gravel path, flowers, stone steps, planter, and facade base. | Fast vertical whip tilt upward, landing on balcony, upper facade, arched window, or tree canopy. | Show vertical speed and blur through clean exterior lines. |
+| `movement-tracking` | Person included | Side-profile woman walking along a garden path or terrace, with foreground hedges/columns and background facade. | Camera travels sideways with her at constant distance. | Show subject-following translation and foreground/background parallax. |
+| `movement-push-in` | Person included | Medium-wide centered frame of the woman at garden gate, stone steps, terrace, or arched doorway, with exterior depth around her. | Camera physically moves forward toward her. | Show attention moving toward a subject with parallax. |
+| `movement-pull-out` | Person included | Medium-close frame of the woman near center, with limited garden or facade visible. | Camera physically moves backward to reveal the larger hotel exterior and garden. | Show context revealed around a subject. |
+| `movement-zoom` | Person included | Locked-off centered frame of the woman with strong facade, terrace, path, or hedge lines around her. | Optical zoom changes crop without camera movement or parallax. | Show lens framing change distinct from a push-in. |
+
+Generate the start frame first with:
+
+```bash
+node .agents/skills/generate-assets/scripts/generate-shot-design-asset.mjs motion-frame --asset movement-pan --yes
+```
+
+Then generate the motion preview with:
+
+```bash
+node .agents/skills/generate-assets/scripts/generate-shot-design-asset.mjs motion --asset movement-pan --yes
+```
+
+| Motion asset | Start frame command | Motion command | Input | Output |
+|--------------|---------------------|----------------|-------|--------|
+| `movement-pan` | `motion-frame --asset movement-pan --yes` | `motion --asset movement-pan --yes` | `images/movement-pan.png` | `motion/movement-pan.mp4` |
+| `movement-tilt` | `motion-frame --asset movement-tilt --yes` | `motion --asset movement-tilt --yes` | `images/movement-tilt.png` | `motion/movement-tilt.mp4` |
+| `movement-swish-pan` | `motion-frame --asset movement-swish-pan --yes` | `motion --asset movement-swish-pan --yes` | `images/movement-swish-pan.png` | `motion/movement-swish-pan.mp4` |
+| `movement-swish-tilt` | `motion-frame --asset movement-swish-tilt --yes` | `motion --asset movement-swish-tilt --yes` | `images/movement-swish-tilt.png` | `motion/movement-swish-tilt.mp4` |
+| `movement-tracking` | `motion-frame --asset movement-tracking --yes` | `motion --asset movement-tracking --yes` | `images/movement-tracking.png` | `motion/movement-tracking.mp4` |
+| `movement-push-in` | `motion-frame --asset movement-push-in --yes` | `motion --asset movement-push-in --yes` | `images/movement-push-in.png` | `motion/movement-push-in.mp4` |
+| `movement-pull-out` | `motion-frame --asset movement-pull-out --yes` | `motion --asset movement-pull-out --yes` | `images/movement-pull-out.png` | `motion/movement-pull-out.mp4` |
+| `movement-zoom` | `motion-frame --asset movement-zoom --yes` | `motion --asset movement-zoom --yes` | `images/movement-zoom.png` | `motion/movement-zoom.mp4` |
+
+`focus-rack-focus` is not part of the movement preview set. Generate it later
+with focus/depth assets.
