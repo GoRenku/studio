@@ -17,6 +17,7 @@ const manifestPath = path.join(outputRoot, 'manifest.json');
 const consistencyModel = 'fal-ai/nano-banana-pro';
 const sheetModel = 'fal-ai/nano-banana-pro/edit';
 const motionModel = 'xai/grok-imagine-video/v1.5/image-to-video';
+const firstLastFrameMotionModel = 'fal-ai/veo3.1/fast/first-last-frame-to-video';
 const defaultMotionDurationSeconds = 4;
 const defaultMotionResolution = '480p';
 const referenceAspectRatio = '4:3';
@@ -48,19 +49,19 @@ const ASSETS = [
   asset('angle-low-angle', 'Camera Angle / Height', 'Low Angle', 'still', 'A low-angle shot: the camera is physically below the woman\'s eye line and tilts upward, making her and the tall hotel columns feel more imposing. Show ceiling or upper architecture to prove the upward view.'),
   asset('angle-high-angle', 'Camera Angle / Height', 'High Angle', 'still', 'A high-angle shot: the camera is above the woman and looks down obliquely, making her feel smaller within the patterned floor and room. This is not a straight-down overhead shot.'),
   asset('angle-overhead', 'Camera Angle / Height', 'Overhead', 'still', 'A true overhead bird\'s-eye shot: the camera looks straight down from above at the woman and the patterned floor, with strong top-down geometry and minimal wall perspective.'),
-  asset('angle-shoulder-level', 'Camera Angle / Height', 'Shoulder Level', 'still', 'A shoulder-level shot: the camera lens sits at the woman\'s shoulder height, slightly below eye level, framing her upper torso and shoulders with a subtly more grounded presence.'),
-  asset('angle-hip-level', 'Camera Angle / Height', 'Hip Level', 'still', 'A hip-level camera-height shot, not an over-the-hip shot: the lens sits near the woman\'s waist/hip height, emphasizing hands, beltline, dress, and vertical architecture while looking slightly upward.'),
-  asset('angle-knee-level', 'Camera Angle / Height', 'Knee Level', 'still', 'A knee-level shot: the lens sits around the woman\'s knee height, with legs, lower dress, floor pattern, and rising columns prominent. It is low, but not on the ground.'),
+  asset('angle-shoulder-level', 'Camera Angle / Height', 'Shoulder Level', 'still', 'A shoulder-level shot: the camera lens sits at the woman\'s shoulder height, a little below her eyes. Frame her upper torso and shoulders; her eyes should sit slightly above the lens line, with a subtle upward perspective but not a dramatic low angle.'),
+  asset('angle-hip-level', 'Camera Angle / Height', 'Hip Level', 'still', 'A hip-level camera-height shot, not an over-the-hip foreground shot: the lens sits near the woman\'s waist/hip height. Put her beltline, hands, and lower torso near the optical center, with columns rising behind her to reveal the waist-high viewpoint.'),
+  asset('angle-knee-level', 'Camera Angle / Height', 'Knee Level', 'still', 'A knee-level shot: the lens sits around the woman\'s knee height. Her knees, legs, lower dress, shoes, floor pattern, and rising columns should dominate; the camera is low but still several feet above the floor, not ground level.'),
   asset('angle-ground-level', 'Camera Angle / Height', 'Ground Level', 'still', 'The lens sits almost on the floor, looking across polished tile toward the performer.'),
   asset('movement-static', 'Camera Motion', 'Static', 'still', 'A locked-off tripod frame: perfectly stable, symmetrical, no pan, no tilt, no dolly, no zoom, and no motion blur.'),
   asset('movement-pan', 'Camera Motion', 'Pan', 'motion', 'No person. Empty exterior hotel garden wide composition with terrace seating or fountain on one side, facade, hedges, and archway on the other; fixed camera pivots horizontally across the exterior location.', 'Smooth horizontal pan from a fixed position across the empty hotel exterior and garden, revealing facade, terrace, hedges, fountain or garden path. No people. No dolly, no tracking, no zoom.'),
   asset('movement-tilt', 'Camera Motion', 'Tilt', 'motion', 'Person included. Low frame on the woman\'s shoes, lower dress, gravel or stone path, steps, and facade base; fixed camera tilts upward to her torso, face, and upper hotel facade, balcony, or arched window.', 'Smooth vertical tilt upward from the woman\'s shoes and exterior path to her torso, face, and upper hotel facade, fixed camera position.'),
   asset('movement-swish-pan', 'Camera Motion', 'Swish Pan', 'motion', 'No person. Empty garden path or terrace with hedge, fountain, column, or doorway at one edge and a second exterior area across frame; fast horizontal whip pan with controlled blur.', 'Fast horizontal swish pan from a fixed position across the empty garden exterior with tasteful directional motion blur, landing on another readable exterior area. No people.'),
   asset('movement-swish-tilt', 'Camera Motion', 'Swish Tilt', 'motion', 'No person. Low empty exterior frame with gravel path, flowers, stone steps, planter, and facade base; fast vertical whip tilt upward.', 'Fast vertical swish tilt through empty exterior lines, from garden path and stone details up to balcony, upper facade, arched window, or tree canopy. No people.'),
-  asset('movement-tracking', 'Camera Motion', 'Tracking', 'motion', 'Person included. Side-profile woman walking along a garden path or terrace, with foreground hedges or columns and background facade; camera travels sideways with her at constant distance.', 'Gentle sideways tracking move following the walking woman along the garden path or terrace at a constant distance, stable and cinematic, with foreground/background parallax.'),
-  asset('movement-push-in', 'Camera Motion', 'Push-In', 'motion', 'Person included. Medium-wide centered frame of the woman at garden gate, stone steps, terrace, or arched doorway, with exterior depth around her; camera physically moves forward toward her.', 'Slow dolly push-in toward the woman at the garden or hotel exterior with subtle parallax and changing spatial relationships, steady and restrained.'),
-  asset('movement-pull-out', 'Camera Motion', 'Pull-Out', 'motion', 'Person included. Medium-close frame of the woman near center, with limited garden or facade visible; camera physically moves backward to reveal the larger hotel exterior and garden.', 'Slow dolly pull-out from the woman, revealing more of the hotel exterior and garden with stable parallax and elegant composition.'),
-  asset('movement-zoom', 'Camera Motion', 'Zoom', 'motion', 'Person included. Locked-off centered frame of the woman with strong facade, terrace, path, or hedge lines around her; optical zoom changes crop without camera movement or parallax.', 'Optical zoom inward toward the woman at the hotel exterior while the camera position remains fixed, no dolly movement and no parallax shift.'),
+  asset('movement-tracking', 'Camera Motion', 'Tracking', 'motion', 'Person included. Side-profile woman walking along a garden path or terrace, with foreground hedges or columns and background facade; camera travels sideways with her at constant distance.', 'True lateral tracking shot: the woman walks from left to right and the camera moves sideways with her on a dolly or slider, keeping her nearly the same size and screen position while foreground hedges and background hotel facade slide with clear parallax. Do not use a locked-off static camera, do not pan from a fixed point, and do not merely animate the woman walking through a stationary frame.'),
+  asset('movement-push-in', 'Camera Motion', 'Push-In', 'motion', 'Person included. Medium-wide centered frame of the woman near garden steps, terrace, or arched doorway; she should be noticeably closer than an establishing wide shot, roughly full-body to knees-up and large enough that a 4-second dolly forward can visibly approach her without rushing. Keep strong foreground flowers, path stones, railings, and background facade depth around her.', 'True dolly push-in over 4 seconds: the camera physically moves forward through the garden toward the woman, changing the camera-to-subject distance. The subject should grow clearly but gracefully, and foreground flowers, path stones, and railings should grow faster than the background facade, creating visible parallax and perspective change. Do not use an optical zoom, digital crop, locked-off camera, or focal-length-only magnification.'),
+  asset('movement-pull-out', 'Camera Motion', 'Pull-Out', 'motion', 'Group included. Tight starting frame on three people standing together in front of the hotel, cropped as a close group portrait with only small hints of the exterior behind them; camera physically retreats backward to reveal the garden grounds, fountain or path, and hotel facade around them.', 'True dolly pull-out over 4 seconds: the three-person group stands still while the camera physically retreats backward from them, changing camera-to-subject distance and revealing the hotel grounds and facade. The group should become smaller in frame as foreground flowers, path stones, and railings separate from the background with visible parallax. Do not use a zoom-out, digital crop, locked-off camera, or focal-length-only change.'),
+  asset('movement-zoom', 'Camera Motion', 'Zoom', 'motion', 'No person. First-person point of view near the hotel entrance door, looking slightly upward. The carved founding year 1825 sits above the door but starts small and not yet dominant; frame begins close enough that a fast 4-second optical zoom can make the year nearly fill the frame without an impossible rush.', 'Fast optical zoom-in over 4 seconds from a first-person point of view near the hotel entrance: change lens focal length so the carved year 1825 above the door rapidly becomes the focus and nearly fills the frame. Add only a slight upward tilt during the zoom, like someone entering the hotel and looking up. Keep the camera physically fixed in place: no dolly, no push-in, no forward travel, no parallax. Do not show any person.'),
   asset('rig-sticks', 'Rig / Mechanism', 'Sticks', 'still', 'A camera on sticks: a grounded tripod viewpoint with perfectly level horizon, formal composition, crisp detail, no handheld shake, and no implied movement.'),
   asset('rig-hand-held', 'Rig / Mechanism', 'Hand-Held', 'still', 'A handheld-feeling frame: intimate human-operated looseness, very slight off-level framing and organic micro-instability, but still polished, readable, and not chaotic.'),
   asset('rig-gimbal', 'Rig / Mechanism', 'Gimbal', 'still', 'A smooth floating frame following the performer through a corridor.'),
@@ -283,6 +284,10 @@ async function generateMotion(options) {
   if (!options.force && await fileExists(motionPath)) {
     throw new Error(`${relativeOutputPath(motionPath)} already exists. Pass --force to replace it.`);
   }
+  if (source.id === 'movement-zoom') {
+    await generateZoomFirstLastMotion(source, imagePath, motionPath);
+    return;
+  }
   const duration = resolveMotionDuration(options);
   const resolution = resolveMotionResolution(options);
   const fal = await loadFal();
@@ -307,6 +312,47 @@ async function generateMotion(options) {
     prompt,
     duration,
     resolution,
+    status: 'review_required',
+  });
+  await writeManifest(manifest);
+  console.log(relativeOutputPath(motionPath));
+}
+
+async function generateZoomFirstLastMotion(source, imagePath, motionPath) {
+  const lastFramePath = path.join(outputRoot, 'images', 'movement-zoom-last.png');
+  if (!await fileExists(lastFramePath)) {
+    throw new Error(`${relativeOutputPath(lastFramePath)} is required before zoom motion generation. Create a close 16:9 last frame of the carved 1825 detail first.`);
+  }
+  const fal = await loadFal();
+  const firstFrameUrl = await uploadPng(fal, imagePath);
+  const lastFrameUrl = await uploadPng(fal, lastFramePath);
+  const prompt = buildZoomFirstLastPrompt(source);
+  const result = await fal.subscribe(firstLastFrameMotionModel, {
+    input: {
+      prompt,
+      first_frame_url: firstFrameUrl,
+      last_frame_url: lastFrameUrl,
+      duration: '4s',
+      resolution: '720p',
+      aspect_ratio: '16:9',
+      generate_audio: false,
+      auto_fix: false,
+    },
+  });
+  await downloadToFile(videoUrl(result.data), motionPath);
+  const manifest = await readManifestOrCreate();
+  upsertByKey(manifest.motion, 'id', {
+    id: source.id,
+    path: relativeOutputPath(motionPath),
+    inputPath: relativeOutputPath(imagePath),
+    lastFramePath: relativeOutputPath(lastFramePath),
+    model: firstLastFrameMotionModel,
+    requestId: result.requestId ?? null,
+    prompt,
+    duration: 4,
+    resolution: '720p',
+    aspectRatio: '16:9',
+    generateAudio: false,
     status: 'review_required',
   });
   await writeManifest(manifest);
@@ -417,6 +463,7 @@ function sheetSpecificPromptNotes(selectedSheet) {
     return [
       'For this height sheet, make camera height unmistakable. Do not confuse overhead, shoulder level, hip level, and knee level.',
       'Overhead must be a true top-down bird\'s-eye view. Shoulder level sits near shoulder height, slightly below eye level. Hip level is a camera-height shot near the waist, not an over-the-hip foreground framing. Knee level is low near the knees, not floor or ground level.',
+      'Use composition cues to prove the height: shoulder-level keeps the face and shoulders close but the eyeline slightly above camera; hip-level centers the waist and hands; knee-level centers knees, shoes, floor tiles, and vertical columns rising upward.',
     ];
   }
   return [];
@@ -437,7 +484,8 @@ function buildMotionFramePrompt(source, options = {}) {
     'Do not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.',
     'This is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.',
     'Make the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.',
-    'Use a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.',
+    'Use a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition.',
+    motionFrameTextGuidance(source),
     'Movement intent:',
     `${source.label}: ${source.description}`,
   ].join('\n');
@@ -447,11 +495,21 @@ function buildMotionPrompt(source) {
   return [
     source.motionPrompt,
     'Create a short elegant camera-design preview from this still image.',
-    source.description.startsWith('No person.')
-      ? 'Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person.'
-      : 'Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition.',
+    motionPreservationGuidance(source),
     'Keep motion smooth, restrained, and useful as a UI preview.',
-    'Do not add text, captions, graphics, logos, watermarks, or new characters.',
+    motionVideoTextGuidance(source),
+  ].join(' ');
+}
+
+function buildZoomFirstLastPrompt(source) {
+  return [
+    source.motionPrompt,
+    'Use the first image as the exact first frame and the second image as the exact final frame.',
+    'Create a fast optical zoom toward the carved founding year 1825 above the hotel entrance door.',
+    'The viewpoint is first-person, as if someone entering the hotel notices the date and looks slightly upward while zooming in.',
+    'Keep the camera physically fixed in place: no dolly, no push-in, no forward travel, no parallax, and no walking movement.',
+    'Preserve the architectural carving and keep the numerals 1825 stable, legible, and physically carved into the stone/plaster.',
+    'Do not add people, captions, subtitles, graphic overlays, logos, watermarks, extra text, or additional numbers.',
   ].join(' ');
 }
 
@@ -493,10 +551,40 @@ function motionFrameSubjectGuidance(source) {
       'Use the reference only for palette, lighting, architectural language, materials, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.',
     ];
   }
+  if (source.id === 'movement-pull-out') {
+    return [
+      'Create three people standing together as a small group. The central woman must match the reference: center-parted low bun, cream dress with pale mint-sage paneling, no accessories. Add two companion adults with compatible understated wardrobe and the same refined cinematic palette.',
+      'The group should be standing still in front of the hotel exterior. Do not stage them walking, stepping, or moving toward/away from camera.',
+    ];
+  }
   return [
     'Use the provided reference image as binding source for the same woman, center-parted low bun, cream dress with pale mint-sage paneling, lack of accessories, lighting, palette, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.',
     'Keep the woman visually consistent with the reference whenever she is visible.',
   ];
+}
+
+function motionPreservationGuidance(source) {
+  if (source.description.startsWith('No person.')) {
+    return 'Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person.';
+  }
+  if (source.id === 'movement-pull-out') {
+    return 'Preserve the three-person group, their standing poses, wardrobe, exterior garden location, color palette, lighting, and composition. The group remains standing still; only the camera physically retreats backward.';
+  }
+  return 'Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition.';
+}
+
+function motionVideoTextGuidance(source) {
+  if (source.id === 'movement-zoom') {
+    return 'Preserve the carved founding year 1825 above the entrance door. Do not add captions, subtitles, graphic overlays, logos, watermarks, extra text, or additional numbers.';
+  }
+  return 'Do not add text, captions, graphics, logos, watermarks, or new characters.';
+}
+
+function motionFrameTextGuidance(source) {
+  if (source.id === 'movement-zoom') {
+    return 'The only visible writing may be the architectural carved founding year "1825" above the entrance door. It must be physically carved into stone or plaster, not a sign, label, caption, UI element, watermark, or graphic overlay. Do not add any other text, arrows, numbers, UI controls, crop marks, logos, or watermarks.';
+  }
+  return 'Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.';
 }
 
 function resolveMotionDuration(options) {

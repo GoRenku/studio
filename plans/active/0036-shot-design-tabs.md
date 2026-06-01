@@ -13,7 +13,7 @@ Status: proposed
 ## Goal
 
 Turn each shot's design surface from a scaffold into a working camera-design tool
-where a director selects shot framing, camera motion and blocking, location
+where a director selects shot framing, quick camera motion descriptors, location
 angle, and camera/lens equipment through **visual, rendered controls** rather than
 flat checkbox lists, and where those choices persist as durable per-shot design
 parameters that will feed the future video-generation prompt.
@@ -64,9 +64,9 @@ each as its own axis with explicit selection semantics:
 | Camera Angle / Height | vertical viewpoint on the subject | single | Camera Framing |
 | Dutch Tilt | lateral roll of the horizon | none / left / right | Camera Framing |
 | Camera Movement | what the frame does over time | single primary + optional combo | Camera Motion |
-| Rig / Mechanism | how the camera is supported and moved | single | Camera Motion + Camera Type |
-| Move Direction / Path | direction and track of the move | multi (direction) + single (track) | Camera Motion |
-| Blocking | top-down positions of subjects, props, camera | spatial | Camera Motion |
+| Rig / Mechanism | how the camera is supported and moved | single | Camera Motion |
+| Move Direction / Track | quick direction and track descriptors | multi (direction) + single (track) | Camera Motion |
+| Camera Blocking | precise camera position, subject placement, prop placement, path, and eye-line geometry | spatial | Future Camera Blocking tab |
 | Location & Angle | environment and the covered angle | reference (scene-level) | Location |
 | Body / Lens / DOF | equipment and optical character | single body, single lens, single DOF | Camera Type |
 
@@ -232,8 +232,12 @@ grayscale files.
 
 ## Tab 3 — Camera Motion
 
-Two coordinated halves: a **top-down blocking stage** (the centerpiece) and a
-set of **motion selectors**.
+V1 Camera Motion is a fast descriptor surface, not a geometry editor. It answers:
+"what kind of move is this, in what rough direction, on what kind of support?"
+It deliberately avoids precise camera placement, actor blocking, prop positions,
+eye-line rules, and path drawing because those decisions overlap with Camera
+Framing and Location angle choices. Those more powerful spatial controls belong
+to the future **Camera Blocking** tab described below.
 
 ### Motion selectors
 
@@ -243,21 +247,19 @@ set of **motion selectors**.
   optical/temporal modifiers referenced from Camera Type; show them here as
   read-through chips, not independently editable, per the cross-cutting rule.)
 - **Direction** (multi): `forward`, `backward`, `left`, `right`, `up`, `down`.
+  These are rough prompt descriptors, not literal stage coordinates.
 - **Track** (single): `straight`, `circular`.
+- **Rig / Mechanism** (single): `sticks` (tripod), `hand-held`, `gimbal`,
+  `slider`, `jib`, `drone`, `dolly`, `steadicam`, `crane`. Rig belongs in this
+  simpler tab because it explains how the motion is achieved. Camera Type may
+  show the selected rig as context, but Camera Motion owns the editable value.
 
-### Blocking stage (top-down)
+The tab uses the same rendered tile system as Camera Framing. Movement and rig
+use visual tiles. Direction and track can use compact icon/segmented controls
+because they are modifiers, not full visual categories.
 
-A 2D top-down diagram of the scene where the director positions tokens:
-
-- character tokens (seeded from the shot's `castMemberIds`, labeled by name),
-- prop tokens (free-add),
-- a camera token with a position and a facing direction, and a motion path when
-  the movement is not `static`.
-
-Interaction: drag tokens to place them; rotate the camera to set facing; for
-`tracking`/`push-in`/`pull-out` draw a simple path/arrow from start to end. The
-relative arrangement (who is left/right of whom, where the camera sits) is the
-durable output, stored in `cameraDesign.movement`:
+On change, derive the human-readable `cameraMovement` string from the movement,
+direction, track, rig, and custom motion text.
 
 ```ts
 export interface ShotMovementDesign {
@@ -265,31 +267,29 @@ export interface ShotMovementDesign {
   secondary?: ShotMovementId;
   directions?: MoveDirectionId[];
   track?: 'straight' | 'circular';
-  blocking?: {
-    subjects: BlockingToken[]; // {refId?, label, x, y}
-    props: BlockingToken[];
-    camera: { x: number; y: number; facingDeg: number;
-              path?: { x: number; y: number }[] };
-  };
+  rig?: RigId;
 }
 ```
 
-Coordinates are normalized (0..1) and resolution-independent. The stage is a
-plain SVG/canvas surface in feature code; no third-party scene-graph dependency
-in v1.
+### Future Tab — Camera Blocking
 
-### Phasing (important)
+Camera Blocking is a later, advanced surface. It is intentionally out of scope
+for V1 so the first implementation can ship a clear, quick Motion tab without
+mixing descriptor picks and spatial authoring.
 
-The interactive blocking stage is the most ambitious element. Phase it:
+Camera Blocking will own precise spatial decisions:
 
-- **Phase A (this plan, required):** motion selectors (movement/direction/track)
-  fully working and persisted; a **static** top-down stage that renders seeded
-  character tokens and a camera token at sensible defaults, with drag-to-position
-  and camera facing. No motion-path drawing yet.
-- **Phase B (follow-up, flagged):** motion paths, circular-track visualization,
-  prop library, and eye-line/180-degree-line guides.
+- character token placement seeded from `castMemberIds`;
+- prop token placement;
+- camera position and facing direction;
+- optional motion path points for moves such as tracking, push-in, pull-out, and
+  circular movement;
+- relationship to the Location tab's selected environment angle;
+- relationship to Camera Framing's subject framing and viewpoint choices.
 
-Do not block the rest of the tab on Phase B.
+When designed, Camera Blocking should store normalized, resolution-independent
+coordinates in a separate `cameraDesign.blocking` object or equivalent. Do not
+add that schema in this V1 plan.
 
 ## Tab 4 — Location
 
@@ -320,22 +320,20 @@ Equipment and optics that materially shape the generated image and belong in the
 video-gen prompt. Richer than the mockup's flat checklist — grouped, visual
 presets:
 
-- **Rig / Mechanism** (single): `sticks` (tripod), `hand-held`, `gimbal`,
-  `slider`, `jib`, `drone`, `dolly`, `steadicam`, `crane`. (Shared vocabulary
-  with Camera Motion's rig concept — define the list once and reference it from
-  both tabs.)
 - **Lens** (single, focal-length intent): `ultra-wide`, `wide`, `normal`,
   `short-tele`, `tele`, `macro`, with a custom mm entry. This supersedes the
   free-text `lensIntent` string while continuing to derive it.
 - **Focus / DOF** (single) — relocated here from the framing mockup:
   `deep-focus`, `shallow-focus`, `rack-focus`, `tilt-shift`. Camera Motion
   references the rack-focus value read-only.
+- **Rig context** (read-only in Camera Type): show the rig selected in Camera
+  Motion when it helps explain lens/body feasibility, but do not edit the rig in
+  two tabs.
 - Optional **format/look** presets later (film stock, anamorphic) — out of scope
   now; leave room in `ShotEquipmentDesign`.
 
 ```ts
 export interface ShotEquipmentDesign {
-  rig?: RigId;
   lens?: LensId;
   lensMillimeters?: number;
   focus?: FocusId;
@@ -344,7 +342,8 @@ export interface ShotEquipmentDesign {
 ```
 
 Each option uses the same rendered-tile primitive as Camera Framing, with a small
-illustration of the rig/lens/DOF effect.
+illustration of the lens/DOF effect. Rig illustrations use the same asset style
+but are edited in Camera Motion.
 
 ## Shared UI Primitive
 
@@ -392,7 +391,6 @@ packages/studio/src/features/movie-studio/scenes/
   scene-shot-detail.tsx                                 (replace placeholders with real tabs)
   scene-shot-camera-framing-tab.tsx
   scene-shot-camera-motion-tab.tsx
-  scene-shot-blocking-stage.tsx
   scene-shot-location-tab.tsx
   scene-shot-camera-type-tab.tsx
   shot-design-vocabulary.ts
@@ -424,10 +422,9 @@ the Sequence cards all listen on `scene:<sceneId>` /
 ## Accessibility
 
 - Every tile is a labeled, focusable control with pressed state.
-- The blocking stage tokens are keyboard-movable (arrow-key nudge) and labeled;
-  provide a text summary of positions for assistive tech ("Camera below Ada,
-  facing up").
 - Dutch/track/direction controls expose their state, not just visual styling.
+- The future Camera Blocking tab will need a separate accessibility design for
+  keyboard movement, camera rotation, path editing, and spatial summaries.
 
 ## Tests
 
@@ -444,8 +441,8 @@ Frontend:
   top;
 - focus/DOF appears only in Camera Type and is read-only in Camera Motion;
 - editing a framing tile derives and persists the `shotType`/`framing` strings;
-- the blocking stage seeds character tokens from `castMemberIds` and persists
-  normalized positions;
+- editing a movement, direction, track, or rig option derives and persists the
+  `cameraMovement` string;
 - Location tab renders the scene's environment reference and the flashback
   override affordance;
 - autosave debounces and emits the scoped refresh.
@@ -454,23 +451,46 @@ Run focused tests, `pnpm test:core`, `pnpm lint`, `pnpm check`.
 
 ## Implementation Checklist
 
-- [ ] Settle the persistence contract (route vs CLI; in-place vs history).
-- [ ] Add `ShotCameraDesign` types, schema, and validation.
-- [ ] Add the shot update path and resource surfacing.
-- [ ] Build `OptionTile` / `OptionTileGroup` shared primitives.
-- [ ] Define `shot-design-vocabulary.ts` controlled lists + illustration refs.
-- [ ] Wire approved generated assets into `shot-design-vocabulary.ts`.
-- [ ] Implement tile image treatment: grayscale idle, color hover, color
+- [x] Settle the persistence contract (route vs CLI; in-place vs history).
+      Shipped a Studio `PATCH /screenplay/scenes/:sceneId/shots/:shotId` route
+      that revalidates the whole document and updates the active shot list
+      in place (no new history row).
+- [x] Add `ShotCameraDesign` types, schema, and validation.
+- [x] Add the shot update path and resource surfacing.
+- [x] Build `OptionTile` / `OptionTileGroup` shared primitives.
+- [x] Define `shot-design-vocabulary.ts` controlled lists + illustration refs.
+- [x] Wire approved generated assets into `shot-design-vocabulary.ts`
+      (Vite `import.meta.glob`; missing assets fall back to a placeholder tile).
+- [x] Implement tile image treatment: grayscale idle, color hover, color
       selected.
-- [ ] Support optional motion preview refs for motion-capable tiles.
-- [ ] Build Camera Framing tab (shot size ladder, subject framing, angle, Dutch).
-- [ ] Build Camera Motion tab: selectors + Phase-A static blocking stage.
+- [x] Support optional motion preview refs for motion-capable tiles
+      (movement tiles play their `.mp4` on hover).
+- [x] Build Camera Framing tab (shot size ladder, subject framing, angle, Dutch).
+- [x] Build Camera Motion tab (movement, direction, track, rig, custom motion).
 - [ ] Build Location tab (scene-scoped reference + flashback override).
-- [ ] Build Camera Type tab (rig, lens, focus/DOF).
-- [ ] Add `use-shot-camera-design` load + debounced autosave.
-- [ ] Wire scoped refresh and rail-label updates.
-- [ ] Add core + frontend tests.
+      _Out of scope for this pass._
+- [ ] Build Camera Type tab (lens, focus/DOF, read-only rig context where useful).
+      _Out of scope for this pass._
+- [x] Add `use-shot-camera-design` load + debounced autosave (shared across the
+      Framing and Motion tabs via `ShotCameraDesignProvider` so neither tab
+      clobbers the other's selections).
+- [x] Wire scoped refresh and rail-label updates (PATCH emits the
+      `scene-shot-list:<id>:shot:<shotId>` / `scene:<sceneId>` keys).
+- [x] Add core + frontend tests.
 - [ ] Verify desktop interaction manually.
+
+### Deviations from the original design (this pass)
+
+- **Camera Motion tab:** Zoom and Rack Focus are rendered as ordinary
+  single-select movement tiles (matching the updated mockup) rather than
+  read-only chips referenced from Camera Type, since Camera Type is not built
+  yet. The cross-cutting "DOF owned by Camera Type" rule is revisited when that
+  tab lands.
+- **Resizable video stage:** the top video stage and the tab area now live in a
+  vertical ShadCn resizable panel group (`@/ui/resizable`, built on
+  `react-resizable-panels`) so the director can drag the divider to make the
+  preview taller or shorter. Demonstration stills/motion are 16:9; rig tiles are
+  square.
 
 ## Resolved Decisions
 
@@ -485,9 +505,13 @@ Run focused tests, `pnpm test:core`, `pnpm lint`, `pnpm check`.
 - Subject Framing is multi-select with a mutually-exclusive headcount subgroup.
 - Focus / Depth of Field belongs to Camera Type; Camera Motion only references
   rack-focus read-only.
+- Rig / Mechanism is edited in Camera Motion because it explains how the move is
+  achieved; Camera Type may show it as read-only context but does not edit it.
 - Structured `cameraDesign` coexists with the existing free-text strings, which
   remain the prompt-facing contract.
-- The blocking stage ships static-with-drag (Phase A); motion paths are Phase B.
+- Precise camera placement, subject blocking, prop layout, and motion path
+  drawing belong to a future **Camera Blocking** tab, not the V1 Camera Motion
+  tab.
 - Tile illustration source is the approved generated bundled asset set produced
   through the project-local `$generate-assets` skill. The app consumes the
   approved still and optional motion files; generation, slicing, and visual QA
@@ -498,5 +522,6 @@ Run focused tests, `pnpm test:core`, `pnpm lint`, `pnpm check`.
 - **Write path shape:** a Studio `PATCH` route vs a `renku screenplay shot-list
   update-shot` CLI command invoked by the server. Leaning toward a Studio route
   for direct UI editing, with the CLI command as the agent-facing equivalent.
-- **Blocking-stage scope:** confirm Phase A (static + drag) is enough for the
-  first release before investing in motion-path authoring.
+- **Camera Blocking follow-up:** define when the advanced Camera Blocking tab
+  enters scope, and design its relationship to Camera Framing and Location angle
+  selections before adding schema for spatial coordinates.
