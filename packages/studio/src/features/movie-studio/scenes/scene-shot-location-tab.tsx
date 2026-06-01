@@ -15,7 +15,7 @@ import {
   PillToggle,
 } from './scene-shot-design-controls';
 import { projectShotLocationAssets } from './scene-shot-location-assets';
-import { useShotCameraDesignContext } from './shot-camera-design-context';
+import { useShotSpecsContext } from './shot-specs-context';
 
 interface SceneShotLocationTabProps {
   projectName: string;
@@ -28,20 +28,20 @@ export function SceneShotLocationTab({
   shot,
   locationLabels,
 }: SceneShotLocationTabProps) {
-  const { design, update, status } = useShotCameraDesignContext();
+  const { shotSpecs, update, status } = useShotSpecsContext();
   const [assetSet, setAssetSet] = useState<ShotLocationAssetSet>({
     locationId: null,
     assets: [],
   });
   const [assetError, setAssetError] = useState<string | null>(null);
   const [assetRevision, setAssetRevision] = useState(0);
-  const locationDesign = design.location ?? {};
-  const usesDifferentLocation = locationDesign.usesDifferentLocation === true;
+  const locationSpecs = shotSpecs.location ?? {};
+  const usesDifferentLocation = locationSpecs.usesDifferentLocation === true;
   const selectableLocationIds = usesDifferentLocation
     ? Object.keys(locationLabels)
     : shot.locationIds;
   const selectedLocationId =
-    locationDesign.locationId ?? selectableLocationIds[0] ?? shot.locationIds[0];
+    locationSpecs.locationId ?? selectableLocationIds[0] ?? shot.locationIds[0];
 
   useEffect(() => {
     if (!selectedLocationId) {
@@ -108,8 +108,8 @@ export function SceneShotLocationTab({
 
   const setLocationId = (locationId: string) =>
     update({
-      ...design,
-      location: { ...locationDesign, locationId },
+      ...shotSpecs,
+      location: { ...locationSpecs, locationId },
     });
 
   const setUsesDifferentLocation = (checked: boolean) => {
@@ -119,9 +119,9 @@ export function SceneShotLocationTab({
         ? selectedLocationId
         : shot.locationIds[0];
     update({
-      ...design,
+      ...shotSpecs,
       location: {
-        ...locationDesign,
+        ...locationSpecs,
         locationId: nextLocationId,
         usesDifferentLocation: checked ? true : undefined,
       },
@@ -130,21 +130,21 @@ export function SceneShotLocationTab({
 
   const toggleAzimuthView = (viewId: LocationAzimuthViewId) =>
     update({
-      ...design,
+      ...shotSpecs,
       location: {
-        ...locationDesign,
+        ...locationSpecs,
         locationId: selectedLocationId,
         azimuthView:
-          locationDesign.azimuthView === viewId ? undefined : viewId,
+          locationSpecs.azimuthView === viewId ? undefined : viewId,
         customView: undefined,
       },
     });
 
   const setCustomView = (customView: string) =>
     update({
-      ...design,
+      ...shotSpecs,
       location: {
-        ...locationDesign,
+        ...locationSpecs,
         locationId: selectedLocationId,
         azimuthView: undefined,
         customView,
@@ -192,11 +192,11 @@ export function SceneShotLocationTab({
               variant={null}
               size={null}
               disabled={!view.selectable}
-              aria-pressed={locationDesign.azimuthView === view.id}
+              aria-pressed={locationSpecs.azimuthView === view.id}
               onClick={() => toggleAzimuthView(view.id)}
               className={cn(
                 'group flex flex-col gap-2 rounded-md border bg-muted/20 p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-55',
-                locationDesign.azimuthView === view.id
+                locationSpecs.azimuthView === view.id
                   ? 'border-primary ring-1 ring-primary'
                   : 'border-border/50 hover:border-border'
               )}
@@ -224,7 +224,7 @@ export function SceneShotLocationTab({
       <DesignSection title='Custom View'>
         <CustomFieldRow
           placeholder='Custom view...'
-          value={locationDesign.customView ?? ''}
+          value={locationSpecs.customView ?? ''}
           onChange={setCustomView}
           status={status}
         />

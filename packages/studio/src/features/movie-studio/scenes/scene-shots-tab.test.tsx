@@ -13,7 +13,7 @@ import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneShotListResource: vi.fn(),
-  updateSceneShotCameraDesign: vi.fn(),
+  updateSceneShotSpecs: vi.fn(),
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({

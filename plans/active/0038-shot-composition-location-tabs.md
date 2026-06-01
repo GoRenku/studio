@@ -6,7 +6,7 @@ Status: implemented
 
 ## Goal
 
-Finish the non-generation shot design tabs by making the current Camera
+Finish the non-generation shot specs tabs by making the current Camera
 Framing work match the director-facing workflow:
 
 - rename **Camera Framing** to **Composition**;
@@ -17,7 +17,7 @@ Framing work match the director-facing workflow:
 - keep all Composition, Motion, and Location selections persisted through the
   existing active Scene Shot List document.
 
-This plan intentionally covers only shot design. The AI Production tab and
+This plan intentionally covers only shot specs. The AI Production tab and
 shot-video-take generation storage are specified separately in
 `0039-shot-ai-production-tab.md`.
 
@@ -30,10 +30,10 @@ shot-video-take generation storage are specified separately in
 - `docs/architecture/reference/front-end-guidelines.md`
 - `packages/core/src/client/scene-shot-list.ts`
 - `packages/core/src/client/scene-shot-list-json-schemas.ts`
-- `packages/core/src/client/shot-camera-design-labels.ts`
+- `packages/core/src/client/shot-specs-labels.ts`
 - `packages/core/src/server/scene-shot-list-json/validator.ts`
 - `packages/studio/src/features/movie-studio/scenes/scene-shot-detail.tsx`
-- `packages/studio/src/features/movie-studio/scenes/use-shot-camera-design.ts`
+- `packages/studio/src/features/movie-studio/scenes/use-shot-specs.ts`
 - `packages/studio/server/routes/screenplay.ts`
 - `packages/studio/src/services/studio-screenplay-api.ts`
 
@@ -55,17 +55,17 @@ Camera Type
 Only Camera Framing and Camera Motion have real tab content. Location and Camera
 Type still render `SceneShotDetailTabPlaceholder`.
 
-The current persistent design object is `SceneShot.cameraDesign` in
+The current persistent specs object is `SceneShot.shotSpecs` in
 `packages/core/src/client/scene-shot-list.ts`. It currently stores:
 
 ```ts
-export interface ShotCameraDesign {
+export interface ShotSpecs {
   shotSize?: ShotSizeId;
   subjectFraming?: SubjectFramingId[];
   cameraAngle?: CameraAngleId;
   dutch?: 'left' | 'right';
   movement?: ShotMovementDesign;
-  custom?: ShotCameraDesignCustom;
+  custom?: ShotCustomSpecs;
 }
 ```
 
@@ -73,11 +73,11 @@ Studio already autosaves that object through:
 
 - browser service:
   `packages/studio/src/services/studio-screenplay-api.ts`
-  `updateSceneShotCameraDesign`;
+  `updateSceneShotSpecs`;
 - server route:
   `PATCH /screenplay/scenes/:sceneId/shots/:shotId`;
 - core project data service:
-  `updateSceneShotCameraDesign`;
+  `updateSceneShotSpecs`;
 - active shot-list row update through
   `updateSceneShotListRecordDocument`.
 
@@ -114,7 +114,7 @@ though those decisions are creatively interdependent:
 
 ## Persistence Decision
 
-Composition and Location persist on `SceneShot.cameraDesign`.
+Composition and Location persist on `SceneShot.shotSpecs`.
 
 Reason:
 
@@ -156,12 +156,12 @@ export type LocationAzimuthViewId =
   | 'left';
 ```
 
-Add structured equipment and location design:
+Add structured lens and location design:
 
 ```ts
-export interface ShotEquipmentDesign {
+export interface ShotLensSpecs {
   lens?: LensId;
-  lensMillimeters?: number;
+  millimeters?: number;
   focus?: FocusId;
 }
 
@@ -173,23 +173,23 @@ export interface ShotLocationDesign {
 }
 ```
 
-Update the custom note and camera design contracts:
+Update the custom note and shot specs contracts:
 
 ```ts
-export interface ShotCameraDesignCustom {
+export interface ShotCustomSpecs {
   composition?: string;
   movement?: string;
 }
 
-export interface ShotCameraDesign {
+export interface ShotSpecs {
   shotSize?: ShotSizeId;
   subjectFraming?: SubjectFramingId[];
   cameraAngle?: CameraAngleId;
   dutch?: 'left' | 'right';
   movement?: ShotMovementDesign;
-  equipment?: ShotEquipmentDesign;
+  lens?: ShotLensSpecs;
   location?: ShotLocationDesign;
-  custom?: ShotCameraDesignCustom;
+  custom?: ShotCustomSpecs;
 }
 ```
 
@@ -216,26 +216,26 @@ Update `packages/core/src/client/scene-shot-list-json-schemas.ts`.
 
 The schema must:
 
-- allow `cameraDesign.equipment.lens` only from `LensId`;
-- allow `cameraDesign.equipment.focus` only from `FocusId`;
-- allow `cameraDesign.equipment.lensMillimeters` as a positive number;
-- allow `cameraDesign.location.locationId` as a non-empty string;
-- allow `cameraDesign.location.usesDifferentLocation` as a boolean;
-- allow `cameraDesign.location.azimuthView` only from
+- allow `shotSpecs.lens.type` only from `LensId`;
+- allow `shotSpecs.lens.focus` only from `FocusId`;
+- allow `shotSpecs.lens.millimeters` as a positive number;
+- allow `shotSpecs.location.locationId` as a non-empty string;
+- allow `shotSpecs.location.usesDifferentLocation` as a boolean;
+- allow `shotSpecs.location.azimuthView` only from
   `LocationAzimuthViewId`;
-- allow `cameraDesign.location.customView` as a non-empty string;
-- allow `cameraDesign.custom.composition`;
-- reject `cameraDesign.custom.framing`;
+- allow `shotSpecs.location.customView` as a non-empty string;
+- allow `shotSpecs.custom.composition`;
+- reject `shotSpecs.custom.framing`;
 - keep `additionalProperties: false` for every structured object.
 
 Expected shape:
 
 ```ts
-equipment: {
+lens: {
   type: 'object',
   properties: {
     lens: enumValue(LENS_IDS),
-    lensMillimeters: { type: 'number', exclusiveMinimum: 0 },
+    millimeters: { type: 'number', exclusiveMinimum: 0 },
     focus: enumValue(FOCUS_IDS),
   },
   additionalProperties: false,
@@ -249,7 +249,7 @@ dropping them.
 
 Update `packages/core/src/server/scene-shot-list-json/validator.ts`.
 
-Add semantic checks for `shot.cameraDesign?.location`:
+Add semantic checks for `shot.shotSpecs?.location`:
 
 - when `location.locationId` is set and `usesDifferentLocation` is not `true`,
   the location id must already appear in `shot.locationIds`;
@@ -261,16 +261,16 @@ Add semantic checks for `shot.cameraDesign?.location`:
   `productionNotes` warning behavior from `shot.locationIds` when the shot
   itself references that outside-scene location.
 
-Add semantic checks for `shot.cameraDesign?.equipment`:
+Add semantic checks for `shot.shotSpecs?.lens`:
 
-- `lensMillimeters` may only be present with `lens`;
-- `lensMillimeters` should be within a practical range, for example `1` to
+- `millimeters` may only be present with `lens`;
+- `millimeters` should be within a practical range, for example `1` to
   `300`;
 - `rack-focus` must be reconciled with Camera Motion:
   if `movement.movement === 'rack-focus'` or
   `movement.secondary === 'rack-focus'`, then
-  `equipment.focus` must be `rack-focus`;
-- if `equipment.focus === 'rack-focus'` and there is no rack-focus movement,
+  `lens.focus` must be `rack-focus`;
+- if `lens.focus === 'rack-focus'` and there is no rack-focus movement,
   keep it valid because the optical intent may be preparatory or subtle.
 
 Use structured diagnostics through the existing validator helpers.
@@ -287,30 +287,30 @@ sections:
 1. Shot Size
    - existing single-select ladder from `extreme-close-up` through
      `extreme-wide-shot`;
-   - persists `cameraDesign.shotSize`.
+   - persists `shotSpecs.shotSize`.
 
 2. Subject Framing
    - existing multi-select relationship controls;
-   - persists `cameraDesign.subjectFraming`.
+   - persists `shotSpecs.subjectFraming`.
 
 3. Camera Angle / Height
    - existing single-select viewpoint ladder;
-   - persists `cameraDesign.cameraAngle`;
+   - persists `shotSpecs.cameraAngle`;
    - Dutch tilt remains a separate left/right modifier.
 
 4. Lens Intent
    - single-select lens intent;
    - optional numeric millimeter field;
-   - persists `cameraDesign.equipment.lens` and
-     `cameraDesign.equipment.lensMillimeters`.
+   - persists `shotSpecs.lens.type` and
+     `shotSpecs.lens.millimeters`.
 
 5. Focus / Depth of Field
    - single-select focus intent;
-   - persists `cameraDesign.equipment.focus`.
+   - persists `shotSpecs.lens.focus`.
 
 6. Custom Composition
    - one textarea;
-   - persists `cameraDesign.custom.composition`.
+   - persists `shotSpecs.custom.composition`.
 
 Do not add visible instructional text to explain every control. The tab should
 stay as dense and direct as the shipped Camera Framing surface.
@@ -321,10 +321,10 @@ Rack focus crosses Composition and Camera Motion.
 
 Implementation behavior:
 
-- selecting rack focus in Composition sets `cameraDesign.equipment.focus`;
+- selecting rack focus in Composition sets `shotSpecs.lens.focus`;
 - selecting rack focus in Camera Motion sets
-  `cameraDesign.equipment.focus = 'rack-focus'` in the same update;
-- clearing `equipment.focus` while a rack-focus movement remains should either
+  `shotSpecs.lens.focus = 'rack-focus'` in the same update;
+- clearing `lens.focus` while a rack-focus movement remains should either
   clear the rack-focus movement in the same deliberate action or show a compact
   validation state that blocks persistence until reconciled;
 - do not store two independent rack-focus values that can disagree.
@@ -340,24 +340,24 @@ shot-detail tab region.
    - shows the shot's screenplay locations by meaningful name;
    - lets the user choose which shot location this shot uses when more than one
      is present;
-   - persists `cameraDesign.location.locationId`.
+   - persists `shotSpecs.location.locationId`.
 
 2. Different Location
    - lets the user intentionally use another project location for flashbacks,
      inserts, screens-within-scenes, cutaways, or imagined views;
-   - persists `cameraDesign.location.usesDifferentLocation = true`;
-   - selected location id still persists in `cameraDesign.location.locationId`;
+   - persists `shotSpecs.location.usesDifferentLocation = true`;
+   - selected location id still persists in `shotSpecs.location.locationId`;
    - does not mutate `shot.locationIds`.
 
 3. Environment Sheet Views
    - uses the selected Location Environment Sheet when one exists;
    - displays the four extracted azimuth views:
      `front`, `right`, `back`, `left`;
-   - persists `cameraDesign.location.azimuthView`.
+   - persists `shotSpecs.location.azimuthView`.
 
 4. Custom View
    - one textarea for a view that does not match the four azimuths;
-   - persists `cameraDesign.location.customView`;
+   - persists `shotSpecs.location.customView`;
    - mutually exclusive with `azimuthView`.
 
 The tab must keep visual cards quiet when there is no meaningful product copy.
@@ -407,8 +407,8 @@ scene-shot-composition-tab.tsx
 scene-shot-location-tab.tsx
 scene-shot-location-assets.ts
 scene-shot-design-vocabulary.ts
-use-shot-camera-design.ts
-shot-camera-design-context.tsx
+use-shot-specs.ts
+shot-specs-context.tsx
 ```
 
 Direct rename:
@@ -427,7 +427,7 @@ remain responsible for:
 - the current video stage;
 - the resizable split;
 - the lower tab region;
-- wiring the `ShotCameraDesignProvider`;
+- wiring the `ShotSpecsProvider`;
 - passing labels and resource refresh callbacks.
 
 The Composition and Location tabs should only own their controls and
@@ -439,7 +439,7 @@ All controls in feature code must use local shadcn-style primitives from
 
 ## Studio API
 
-Reuse the existing camera-design autosave endpoint for this slice:
+Reuse the existing shot specs autosave endpoint for this slice:
 
 ```text
 PATCH /screenplay/scenes/:sceneId/shots/:shotId
@@ -449,7 +449,7 @@ Request body:
 
 ```json
 {
-  "cameraDesign": {
+  "shotSpecs": {
     "shotSize": "wide-shot",
     "equipment": {
       "lens": "wide",
@@ -472,11 +472,11 @@ No new Studio server route is required for Composition or Location persistence.
 
 ## Autosave
 
-Update `use-shot-camera-design.ts`:
+Update `use-shot-specs.ts`:
 
-- initialize from `shot.cameraDesign`;
-- autosave the full `ShotCameraDesign` object;
-- treat `equipment`, `location`, and `custom.composition` as meaningful when
+- initialize from `shot.shotSpecs`;
+- autosave the full `ShotSpecs` object;
+- treat `lens`, `location`, and `custom.composition` as meaningful when
   deciding whether an empty object should be persisted as `null`;
 - keep `custom.movement` behavior for Camera Motion;
 - preserve the current debounced save behavior.
@@ -485,7 +485,7 @@ There is no explicit Save button.
 
 ## Derived Labels
 
-Update `packages/core/src/client/shot-camera-design-labels.ts`.
+Update `packages/core/src/client/shot-specs-labels.ts`.
 
 Derive:
 
@@ -512,13 +512,13 @@ to eagerly load all location assets.
 
 ## Implementation Checklist
 
-- [x] Update `SceneShot.cameraDesign` contracts with `equipment`, `location`,
+- [x] Update `SceneShot.shotSpecs` contracts with `lens`, `location`,
       and `custom.composition`.
 - [x] Update shot-list JSON schema for the new fields.
 - [x] Update shot-list semantic validation for location references,
       azimuth/custom exclusivity, lens millimeters, and rack-focus
       reconciliation.
-- [x] Update camera-design label derivation.
+- [x] Update shot specs label derivation.
 - [x] Rename Camera Framing UI files and symbols to Composition.
 - [x] Remove the Camera Type tab and placeholder.
 - [x] Add Lens Intent controls to Composition.
@@ -526,7 +526,7 @@ to eagerly load all location assets.
 - [x] Update Camera Motion rack-focus behavior.
 - [x] Implement `SceneShotLocationTab`.
 - [x] Add `scene-shot-location-assets.ts` projection.
-- [x] Update `use-shot-camera-design.ts` empty-design detection.
+- [x] Update `use-shot-specs.ts` empty-specs detection.
 - [x] Add focused core tests for schema, semantic validation, and label
       derivation.
 - [x] Add focused Studio tests for tab list, autosave payloads, Location
@@ -536,11 +536,11 @@ to eagerly load all location assets.
 
 Core tests:
 
-- schema accepts the new Composition equipment fields;
+- schema accepts the new Composition lens fields;
 - schema rejects `custom.framing`;
 - schema accepts `custom.composition`;
 - schema accepts valid Location tab selections;
-- schema rejects unknown fields under `equipment`, `location`, and `custom`;
+- schema rejects unknown fields under `lens`, `location`, and `custom`;
 - semantic validation rejects a `locationId` outside `shot.locationIds` unless
   `usesDifferentLocation` is `true`;
 - semantic validation rejects both `azimuthView` and `customView`;
@@ -552,10 +552,10 @@ Studio tests:
 - tab bar shows `Description`, `Composition`, `Camera Motion`, `Location`, and
   later `AI Production`;
 - tab bar does not show `Camera Framing` or `Camera Type`;
-- Composition updates call `updateSceneShotCameraDesign` with the extended
+- Composition updates call `updateSceneShotSpecs` with the extended
   object;
-- Location selection updates `cameraDesign.location`;
-- clearing the last design field sends `cameraDesign: null`;
+- Location selection updates `shotSpecs.location`;
+- clearing the last specs field sends `shotSpecs: null`;
 - Location visual cards do not render raw ids or filenames.
 
 ## Acceptance Criteria
@@ -570,7 +570,7 @@ Studio tests:
 - Location is implemented as a real tab and persists structured shot-location
   choices.
 - All Composition and Location choices persist in the active Scene Shot List
-  document through the existing camera-design autosave route.
+  document through the existing shot specs autosave route.
 - Stored shot-list JSON fails fast on malformed Composition or Location data.
 - Feature code uses local shadcn-style UI controls only.
 - No new model-generation UI, run setup, estimate, or preflight behavior is

@@ -12,7 +12,7 @@ import type {
   SequenceResourceResponse,
   StoryArcResourceResponse,
 } from './studio-project-contracts';
-import type { ShotCameraDesign } from '@gorenku/studio-core/client';
+import type { ShotSpecs } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
 interface ResourceResponse<T> {
@@ -125,14 +125,14 @@ export async function readSceneShotListResource(
 }
 
 /**
- * Persist a shot's structured camera design (0036). Sends the full design
+ * Persist a shot's structured shot specs (0036). Sends the full specs
  * object (or null to clear it) and returns the refreshed shot-list resource.
  */
-export async function updateSceneShotCameraDesign(
+export async function updateSceneShotSpecs(
   projectName: string,
   sceneId: string,
   shotId: string,
-  cameraDesign: ShotCameraDesign | null
+  shotSpecs: ShotSpecs | null
 ): Promise<SceneShotListResourceResponse> {
   const response = await fetch(
     screenplayPath(
@@ -145,7 +145,7 @@ export async function updateSceneShotCameraDesign(
         'Content-Type': 'application/json',
         'X-Renku-Studio-Token': readStudioApiToken(),
       },
-      body: JSON.stringify({ cameraDesign }),
+      body: JSON.stringify({ shotSpecs }),
     }
   );
   if (!response.ok) {

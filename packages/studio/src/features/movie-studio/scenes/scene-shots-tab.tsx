@@ -132,7 +132,7 @@ export function SceneShotsTab({ projectName, sceneId, shotId }: SceneShotsTabPro
         label={selectedShotLabel}
         castMemberLabels={resource.castMemberLabels}
         locationLabels={resource.locationLabels}
-        onCameraDesignSaved={setResource}
+        onShotSpecsSaved={setResource}
       />
     </div>
   );

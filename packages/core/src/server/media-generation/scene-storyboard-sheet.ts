@@ -71,6 +71,8 @@ import type {
 } from '../project-data-service-contracts.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { sceneShotListResourceKeys } from '../commands/scene-shot-list-commands.js';
+import type { SceneShot } from '../../client/scene-shot-list.js';
+import { LOCATION_AZIMUTH_VIEW_LABELS } from '../../client/shot-spec-labels.js';
 import {
   mapGptQuality,
   mapNanoBananaResolution,
@@ -838,7 +840,9 @@ function collectShotListReferences(
   const castMemberIds = new Set(
     shotList.shots.flatMap((shot) => shot.castMemberIds)
   );
-  const locationIds = new Set(shotList.shots.flatMap((shot) => shot.locationIds));
+  const locationIds = new Set(
+    shotList.shots.flatMap((shot) => effectiveShotLocationIds(shot))
+  );
   return {
     cast: screenplay.cast
       .filter((castMember) => castMember.id && castMemberIds.has(castMember.id))
@@ -947,9 +951,14 @@ function buildProviderPrompt(
   context: SceneStoryboardSheetGenerationContext
 ): string {
   const selectedShots = selectedShotsForSpec(spec, context);
-  const selectedCastIds = new Set(selectedShots.flatMap((shot) => shot.castMemberIds));
+  const selectedCastIds = new Set(
+    selectedShots.flatMap((shot) => shot.castMemberIds)
+  );
   const selectedLocationIds = new Set(
-    selectedShots.flatMap((shot) => shot.locationIds)
+    selectedShots.flatMap((shot) => effectiveShotLocationIds(shot))
+  );
+  const locationsById = new Map(
+    context.locations.map((location) => [location.id, location])
   );
   const shotFrame = resolvedShotFrame(spec, context);
   return [
@@ -968,8 +977,10 @@ function buildProviderPrompt(
       [
         `${index + 1}. ${shot.shotId}: ${shot.title}`,
         `subject: ${shot.subject}`,
+        `location: ${shotLocationPromptText(shot, locationsById)}`,
         `framing: ${shot.framing ?? shot.shotType}`,
         `camera angle: ${shot.cameraAngle ?? 'not specified'}`,
+        `lens intent: ${shot.lensIntent ?? 'not specified'}`,
         `movement: ${shot.cameraMovement ?? 'not specified'}`,
         `story purpose: ${shot.narrativePurpose}`,
         `action: ${shot.action}`,
@@ -1009,6 +1020,45 @@ function selectedShotsForSpec(
     );
   }
   return context.shotList.shots.filter((shot) => selectedIds.has(shot.shotId));
+}
+
+function effectiveShotLocationIds(shot: SceneShot): string[] {
+  const selectedLocationId = shot.shotSpecs?.location?.locationId;
+  return selectedLocationId ? [selectedLocationId] : shot.locationIds;
+}
+
+function shotLocationPromptText(
+  shot: SceneShot,
+  locationsById: Map<
+    string,
+    SceneStoryboardSheetGenerationContext['locations'][number]
+  >
+): string {
+  const locationIds = effectiveShotLocationIds(shot);
+  if (!locationIds.length) {
+    return 'not specified';
+  }
+
+  const locationText = locationIds
+    .map((locationId) => {
+      const location = locationsById.get(locationId);
+      return location ? `${location.name} (${location.id})` : locationId;
+    })
+    .join(', ');
+  const viewText = shotLocationViewPromptText(shot);
+  return viewText ? `${locationText}; view: ${viewText}` : locationText;
+}
+
+function shotLocationViewPromptText(shot: SceneShot): string | null {
+  const location = shot.shotSpecs?.location;
+  const customView = location?.customView?.trim();
+  if (customView) {
+    return customView;
+  }
+  if (location?.azimuthView) {
+    return LOCATION_AZIMUTH_VIEW_LABELS[location.azimuthView];
+  }
+  return null;
 }
 
 function orientationForFrame(frame: string): string {

@@ -22,7 +22,7 @@ import {
   shotDesignMotionUrl,
 } from './shot-design-asset-urls';
 
-// Controlled tile lists for the camera-design tabs (0036). Display labels live
+// Controlled tile lists for the shot specs tabs (0036). Display labels live
 // in core (shared with prompt-string derivation); this module only attaches the
 // bundled illustration/motion references. Asset filenames follow the
 // `<category>-<id>` convention emitted by the generate-assets skill.

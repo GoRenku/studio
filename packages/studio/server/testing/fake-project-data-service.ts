@@ -279,7 +279,7 @@ export function fakeProjectDataService(): NonNullable<
         locationLabels: {},
       };
     },
-    async updateSceneShotCameraDesign() {
+    async updateSceneShotSpecs() {
       return {
         scene: {
           id: 'scene_opening',

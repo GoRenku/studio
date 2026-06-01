@@ -242,7 +242,7 @@ function validateSceneShotListSemantics(input: {
         );
       }
     });
-    validateCameraDesignSemantics(shot, shotPath, context, issues, filePath);
+    validateShotSpecsSemantics(shot, shotPath, context, issues, filePath);
     shot.dialogue.forEach((dialogue, dialogueIndex) => {
       const block = scene.blocks[dialogue.blockIndex];
       if (!block) {
@@ -326,33 +326,33 @@ function validateSceneShotListSemantics(input: {
   return issues;
 }
 
-function validateCameraDesignSemantics(
+function validateShotSpecsSemantics(
   shot: SceneShot,
   shotPath: string[],
   context: ReturnType<typeof buildSceneValidationContext>,
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
-  const design = shot.cameraDesign;
+  const design = shot.shotSpecs;
   if (!design) {
     return;
   }
-  validateCameraDesignLocation(shot, shotPath, context, issues, filePath);
-  validateCameraDesignEquipment(shot, shotPath, issues, filePath);
+  validateShotSpecsLocation(shot, shotPath, context, issues, filePath);
+  validateShotSpecsLens(shot, shotPath, issues, filePath);
 }
 
-function validateCameraDesignLocation(
+function validateShotSpecsLocation(
   shot: SceneShot,
   shotPath: string[],
   context: ReturnType<typeof buildSceneValidationContext>,
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
-  const location = shot.cameraDesign?.location;
+  const location = shot.shotSpecs?.location;
   if (!location) {
     return;
   }
-  const locationPath = [...shotPath, 'cameraDesign', 'location'];
+  const locationPath = [...shotPath, 'shotSpecs', 'location'];
   if (location.locationId) {
     if (location.usesDifferentLocation === true) {
       if (!context.locationIds.has(location.locationId)) {
@@ -368,7 +368,7 @@ function validateCameraDesignLocation(
     } else if (!shot.locationIds.includes(location.locationId)) {
       issues.push(
         error(
-          'Shot camera-design location must be one of the shot locationIds unless usesDifferentLocation is true.',
+          'Shot specs location must be one of the shot locationIds unless usesDifferentLocation is true.',
           [...locationPath, 'locationId'],
           filePath,
           'Choose a shot location id, or set usesDifferentLocation to true for an intentional override.'
@@ -379,7 +379,7 @@ function validateCameraDesignLocation(
   if (location.azimuthView && location.customView) {
     issues.push(
       error(
-        'Shot location design cannot use both azimuthView and customView.',
+        'Shot location specs cannot use both azimuthView and customView.',
         locationPath,
         filePath,
         'Choose an environment-sheet azimuth view or describe a custom view, not both.'
@@ -401,47 +401,47 @@ function validateCameraDesignLocation(
   }
 }
 
-function validateCameraDesignEquipment(
+function validateShotSpecsLens(
   shot: SceneShot,
   shotPath: string[],
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
-  const equipment = shot.cameraDesign?.equipment;
-  const equipmentPath = [...shotPath, 'cameraDesign', 'equipment'];
-  if (equipment?.lensMillimeters !== undefined && !equipment.lens) {
+  const lens = shot.shotSpecs?.lens;
+  const lensPath = [...shotPath, 'shotSpecs', 'lens'];
+  if (lens?.millimeters !== undefined && !lens.type) {
     issues.push(
       error(
-        'Shot lensMillimeters requires a lens selection.',
-        [...equipmentPath, 'lensMillimeters'],
+        'Shot lens millimeters requires a lens type selection.',
+        [...lensPath, 'millimeters'],
         filePath,
-        'Set equipment.lens before setting lensMillimeters.'
+        'Set lens.type before setting lens.millimeters.'
       )
     );
   }
   if (
-    equipment?.lensMillimeters !== undefined &&
-    (equipment.lensMillimeters < 1 || equipment.lensMillimeters > 300)
+    lens?.millimeters !== undefined &&
+    (lens.millimeters < 1 || lens.millimeters > 300)
   ) {
     issues.push(
       error(
-        'Shot lensMillimeters must be between 1 and 300.',
-        [...equipmentPath, 'lensMillimeters'],
+        'Shot lens millimeters must be between 1 and 300.',
+        [...lensPath, 'millimeters'],
         filePath,
         'Use a practical lens millimeter value from 1 to 300.'
       )
     );
   }
-  const movement = shot.cameraDesign?.movement;
+  const movement = shot.shotSpecs?.movement;
   const hasRackFocusMovement =
     movement?.movement === 'rack-focus' || movement?.secondary === 'rack-focus';
-  if (hasRackFocusMovement && equipment?.focus !== 'rack-focus') {
+  if (hasRackFocusMovement && lens?.focus !== 'rack-focus') {
     issues.push(
       error(
         'Rack-focus camera motion requires rack-focus composition focus.',
-        [...equipmentPath, 'focus'],
+        [...lensPath, 'focus'],
         filePath,
-        'Set equipment.focus to rack-focus or choose a different camera motion.'
+        'Set lens.focus to rack-focus or choose a different camera motion.'
       )
     );
   }

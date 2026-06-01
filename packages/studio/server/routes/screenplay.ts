@@ -11,7 +11,7 @@ import {
   toSceneShotListResourceResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
-import { readSceneShotCameraDesignRequest } from '../http/scene-shot-camera-design-request.js';
+import { readSceneShotSpecsRequest } from '../http/scene-shot-specs-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
 export interface CreateScreenplayRouteOptions {
@@ -185,14 +185,14 @@ export function createScreenplayRoute({
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
           const shotId = c.req.param('shotId') as string;
-          const cameraDesign = readSceneShotCameraDesignRequest(
+          const shotSpecs = readSceneShotSpecsRequest(
             await c.req.json()
           );
-          const resource = await projectData.updateSceneShotCameraDesign({
+          const resource = await projectData.updateSceneShotSpecs({
             projectName,
             sceneId,
             shotId,
-            cameraDesign,
+            shotSpecs,
           });
           return c.json({
             resource: toSceneShotListResourceResponse(projectName, resource),

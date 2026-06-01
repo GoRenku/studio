@@ -13,7 +13,7 @@ import {
   DesignSection,
   PillToggle,
 } from './scene-shot-design-controls';
-import { useShotCameraDesignContext } from './shot-camera-design-context';
+import { useShotSpecsContext } from './shot-specs-context';
 import {
   CAMERA_ANGLE_OPTIONS,
   FOCUS_OPTIONS,
@@ -24,19 +24,19 @@ import {
 } from './scene-shot-design-vocabulary';
 
 export function SceneShotCompositionTab() {
-  const { design, update, status } = useShotCameraDesignContext();
-  const equipment = design.equipment ?? {};
+  const { shotSpecs, update, status } = useShotSpecsContext();
+  const lens = shotSpecs.lens ?? {};
 
   const toggleShotSize = (id: string) =>
     update({
-      ...design,
+      ...shotSpecs,
       shotSize:
-        design.shotSize === id ? undefined : (id as ShotSizeId),
+        shotSpecs.shotSize === id ? undefined : (id as ShotSizeId),
     });
 
   const toggleSubjectFraming = (raw: string) => {
     const id = raw as SubjectFramingId;
-    const current = design.subjectFraming ?? [];
+    const current = shotSpecs.subjectFraming ?? [];
     let next: SubjectFramingId[];
     if (current.includes(id)) {
       next = current.filter((value) => value !== id);
@@ -51,67 +51,67 @@ export function SceneShotCompositionTab() {
     } else {
       next = [...current, id];
     }
-    update({ ...design, subjectFraming: next });
+    update({ ...shotSpecs, subjectFraming: next });
   };
 
   const toggleAngle = (id: string) =>
     update({
-      ...design,
+      ...shotSpecs,
       cameraAngle:
-        design.cameraAngle === id ? undefined : (id as CameraAngleId),
+        shotSpecs.cameraAngle === id ? undefined : (id as CameraAngleId),
     });
 
   const setDutch = (value: 'left' | 'right' | undefined) =>
-    update({ ...design, dutch: value });
+    update({ ...shotSpecs, dutch: value });
 
   const toggleLens = (id: LensId) =>
     update({
-      ...design,
-      equipment: {
-        ...equipment,
-        lens: equipment.lens === id ? undefined : id,
-        lensMillimeters:
-          equipment.lens === id ? undefined : equipment.lensMillimeters,
+      ...shotSpecs,
+      lens: {
+        ...lens,
+        type: lens.type === id ? undefined : id,
+        millimeters:
+          lens.type === id ? undefined : lens.millimeters,
       },
     });
 
   const setLensMillimeters = (value: string) => {
     const trimmed = value.trim();
     update({
-      ...design,
-      equipment: {
-        ...equipment,
-        lensMillimeters: trimmed ? Number(trimmed) : undefined,
+      ...shotSpecs,
+      lens: {
+        ...lens,
+        millimeters: trimmed ? Number(trimmed) : undefined,
       },
     });
   };
 
   const toggleFocus = (id: FocusId) => {
-    const clearingRackFocus = equipment.focus === id && id === 'rack-focus';
+    const clearingRackFocus = lens.focus === id && id === 'rack-focus';
     update({
-      ...design,
-      equipment: {
-        ...equipment,
-        focus: equipment.focus === id ? undefined : id,
+      ...shotSpecs,
+      lens: {
+        ...lens,
+        focus: lens.focus === id ? undefined : id,
       },
       movement: clearingRackFocus
         ? {
-            ...design.movement,
+            ...shotSpecs.movement,
             movement:
-              design.movement?.movement === 'rack-focus'
+              shotSpecs.movement?.movement === 'rack-focus'
                 ? undefined
-                : design.movement?.movement,
+                : shotSpecs.movement?.movement,
             secondary:
-              design.movement?.secondary === 'rack-focus'
+              shotSpecs.movement?.secondary === 'rack-focus'
                 ? undefined
-                : design.movement?.secondary,
+                : shotSpecs.movement?.secondary,
           }
-        : design.movement,
+        : shotSpecs.movement,
     });
   };
 
   const setCustomComposition = (value: string) =>
-    update({ ...design, custom: { ...design.custom, composition: value } });
+    update({ ...shotSpecs, custom: { ...shotSpecs.custom, composition: value } });
 
   return (
     <div className='space-y-6 py-4'>
@@ -119,7 +119,7 @@ export function SceneShotCompositionTab() {
         <OptionTileGroup
           ariaLabel='Shot size'
           options={SHOT_SIZE_OPTIONS}
-          selectedIds={design.shotSize ? [design.shotSize] : []}
+          selectedIds={shotSpecs.shotSize ? [shotSpecs.shotSize] : []}
           onToggle={toggleShotSize}
         />
       </DesignSection>
@@ -128,7 +128,7 @@ export function SceneShotCompositionTab() {
         <OptionTileGroup
           ariaLabel='Subject framing'
           options={SUBJECT_FRAMING_OPTIONS}
-          selectedIds={design.subjectFraming ?? []}
+          selectedIds={shotSpecs.subjectFraming ?? []}
           onToggle={toggleSubjectFraming}
         />
       </DesignSection>
@@ -137,7 +137,7 @@ export function SceneShotCompositionTab() {
         <OptionTileGroup
           ariaLabel='Camera angle and height'
           options={CAMERA_ANGLE_OPTIONS}
-          selectedIds={design.cameraAngle ? [design.cameraAngle] : []}
+          selectedIds={shotSpecs.cameraAngle ? [shotSpecs.cameraAngle] : []}
           onToggle={toggleAngle}
         />
       </DesignSection>
@@ -145,20 +145,20 @@ export function SceneShotCompositionTab() {
       <DesignSection title='Dutch'>
         <div className='flex flex-wrap gap-2'>
           <PillToggle
-            selected={!design.dutch}
+            selected={!shotSpecs.dutch}
             onClick={() => setDutch(undefined)}
           >
             None
           </PillToggle>
           <PillToggle
-            selected={design.dutch === 'left'}
+            selected={shotSpecs.dutch === 'left'}
             onClick={() => setDutch('left')}
           >
             <RotateCcw className='h-3.5 w-3.5' />
             Left
           </PillToggle>
           <PillToggle
-            selected={design.dutch === 'right'}
+            selected={shotSpecs.dutch === 'right'}
             onClick={() => setDutch('right')}
           >
             <RotateCw className='h-3.5 w-3.5' />
@@ -172,7 +172,7 @@ export function SceneShotCompositionTab() {
           {LENS_OPTIONS.map((option) => (
             <PillToggle
               key={option.id}
-              selected={equipment.lens === option.id}
+              selected={lens.type === option.id}
               onClick={() => toggleLens(option.id)}
             >
               {option.label}
@@ -183,10 +183,10 @@ export function SceneShotCompositionTab() {
             min={1}
             max={300}
             step={1}
-            value={equipment.lensMillimeters ?? ''}
+            value={lens.millimeters ?? ''}
             placeholder='mm'
             aria-label='Lens millimeters'
-            disabled={!equipment.lens}
+            disabled={!lens.type}
             onChange={(event) => setLensMillimeters(event.target.value)}
             className='h-8 w-24'
           />
@@ -198,7 +198,7 @@ export function SceneShotCompositionTab() {
           {FOCUS_OPTIONS.map((option) => (
             <PillToggle
               key={option.id}
-              selected={equipment.focus === option.id}
+              selected={lens.focus === option.id}
               onClick={() => toggleFocus(option.id)}
             >
               {option.label}
@@ -210,7 +210,7 @@ export function SceneShotCompositionTab() {
       <DesignSection title='6. Custom Composition'>
         <CustomFieldRow
           placeholder='Custom composition...'
-          value={design.custom?.composition ?? ''}
+          value={shotSpecs.custom?.composition ?? ''}
           onChange={setCustomComposition}
           status={status}
         />

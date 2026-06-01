@@ -7,16 +7,16 @@ import type {
   SceneShotListResourceResponse,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
-import { updateSceneShotCameraDesign } from '@/services/studio-screenplay-api';
+import { updateSceneShotSpecs } from '@/services/studio-screenplay-api';
 import { readLocationAssets } from '@/services/studio-project-assets-api';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotDetail } from './scene-shot-detail';
 import { SceneShotLocationTab } from './scene-shot-location-tab';
-import { ShotCameraDesignProvider } from './shot-camera-design-context';
+import { ShotSpecsProvider } from './shot-specs-context';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
-  updateSceneShotCameraDesign: vi.fn().mockResolvedValue({}),
+  updateSceneShotSpecs: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
@@ -62,14 +62,14 @@ function renderWithProvider(
   } = {}
 ) {
   return render(
-    <ShotCameraDesignProvider
+    <ShotSpecsProvider
       projectName='constantinople'
       sceneId='scene_hook'
       shot={options.shot ?? SHOT}
       onSaved={options.onSaved}
     >
       {children}
-    </ShotCameraDesignProvider>
+    </ShotSpecsProvider>
   );
 }
 
@@ -103,7 +103,7 @@ describe('SceneShotDetail', () => {
 
 describe('SceneShotCompositionTab', () => {
   beforeEach(() => {
-    vi.mocked(updateSceneShotCameraDesign).mockClear();
+    vi.mocked(updateSceneShotSpecs).mockClear();
   });
 
   it('treats shot size as a single-select ladder', () => {
@@ -117,7 +117,7 @@ describe('SceneShotCompositionTab', () => {
     expect(pressed('Close-Up')).toBe(false);
   });
 
-  it('keeps pill toggles on the compact camera-design styling', () => {
+  it('keeps pill toggles on the compact shot specs styling', () => {
     renderWithProvider(<SceneShotCompositionTab />);
 
     const noneToggle = screen.getByRole('button', { name: 'None' });
@@ -151,7 +151,7 @@ describe('SceneShotCompositionTab', () => {
 
     await waitFor(
       () => {
-        expect(updateSceneShotCameraDesign).toHaveBeenCalledWith(
+        expect(updateSceneShotSpecs).toHaveBeenCalledWith(
           'constantinople',
           'scene_hook',
           'shot_001',
@@ -165,9 +165,9 @@ describe('SceneShotCompositionTab', () => {
   it('publishes the saved shot-list resource after autosave', async () => {
     const savedResource = sceneShotListResource({
       ...SHOT,
-      cameraDesign: { shotSize: 'medium-close-up' },
+      shotSpecs: { shotSize: 'medium-close-up' },
     });
-    vi.mocked(updateSceneShotCameraDesign).mockResolvedValueOnce(savedResource);
+    vi.mocked(updateSceneShotSpecs).mockResolvedValueOnce(savedResource);
     const onSaved = vi.fn();
     renderWithProvider(<SceneShotCompositionTab />, { onSaved });
 
@@ -192,14 +192,14 @@ describe('SceneShotCompositionTab', () => {
 
     await waitFor(
       () => {
-        expect(updateSceneShotCameraDesign).toHaveBeenLastCalledWith(
+        expect(updateSceneShotSpecs).toHaveBeenLastCalledWith(
           'constantinople',
           'scene_hook',
           'shot_001',
           expect.objectContaining({
-            equipment: expect.objectContaining({
-              lens: 'wide',
-              lensMillimeters: 28,
+            lens: expect.objectContaining({
+              type: 'wide',
+              millimeters: 28,
               focus: 'shallow-focus',
             }),
           })
@@ -209,11 +209,11 @@ describe('SceneShotCompositionTab', () => {
     );
   });
 
-  it('clearing the last design field sends a null camera design', async () => {
+  it('clearing the last specs field sends null shot specs', async () => {
     renderWithProvider(<SceneShotCompositionTab />, {
       shot: {
         ...SHOT,
-        cameraDesign: { shotSize: 'close-up' },
+        shotSpecs: { shotSize: 'close-up' },
       },
     });
 
@@ -221,7 +221,7 @@ describe('SceneShotCompositionTab', () => {
 
     await waitFor(
       () => {
-        expect(updateSceneShotCameraDesign).toHaveBeenCalledWith(
+        expect(updateSceneShotSpecs).toHaveBeenCalledWith(
           'constantinople',
           'scene_hook',
           'shot_001',
@@ -235,7 +235,7 @@ describe('SceneShotCompositionTab', () => {
 
 describe('SceneShotCameraMotionTab', () => {
   beforeEach(() => {
-    vi.mocked(updateSceneShotCameraDesign).mockClear();
+    vi.mocked(updateSceneShotSpecs).mockClear();
   });
 
   it('persists movement, direction, track, and rig selections', async () => {
@@ -253,7 +253,7 @@ describe('SceneShotCameraMotionTab', () => {
 
     await waitFor(
       () => {
-        expect(updateSceneShotCameraDesign).toHaveBeenLastCalledWith(
+        expect(updateSceneShotSpecs).toHaveBeenLastCalledWith(
           'constantinople',
           'scene_hook',
           'shot_001',
@@ -274,7 +274,7 @@ describe('SceneShotCameraMotionTab', () => {
 
 describe('SceneShotLocationTab', () => {
   beforeEach(() => {
-    vi.mocked(updateSceneShotCameraDesign).mockClear();
+    vi.mocked(updateSceneShotSpecs).mockClear();
     vi.mocked(readLocationAssets).mockReset();
     vi.mocked(readLocationAssets).mockResolvedValue([]);
   });
@@ -304,7 +304,7 @@ describe('SceneShotLocationTab', () => {
 
     await waitFor(
       () => {
-        expect(updateSceneShotCameraDesign).toHaveBeenLastCalledWith(
+        expect(updateSceneShotSpecs).toHaveBeenLastCalledWith(
           'constantinople',
           'scene_hook',
           'shot_001',
@@ -343,9 +343,9 @@ describe('SceneShotLocationTab', () => {
   });
 });
 
-describe('shared camera-design state across tabs', () => {
+describe('shared shot specs state across tabs', () => {
   beforeEach(() => {
-    vi.mocked(updateSceneShotCameraDesign).mockClear();
+    vi.mocked(updateSceneShotSpecs).mockClear();
   });
 
   it('does not let one tab clobber the other tab’s selections', async () => {
@@ -362,7 +362,7 @@ describe('shared camera-design state across tabs', () => {
 
     await waitFor(
       () => {
-        expect(updateSceneShotCameraDesign).toHaveBeenLastCalledWith(
+        expect(updateSceneShotSpecs).toHaveBeenLastCalledWith(
           'constantinople',
           'scene_hook',
           'shot_001',

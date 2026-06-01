@@ -19,7 +19,7 @@ import {
   DesignSection,
   PillToggle,
 } from './scene-shot-design-controls';
-import { useShotCameraDesignContext } from './shot-camera-design-context';
+import { useShotSpecsContext } from './shot-specs-context';
 import { MOVEMENT_OPTIONS, RIG_OPTIONS } from './scene-shot-design-vocabulary';
 
 // Minimum tile width (px) for the Movement preview grid. The grid is
@@ -50,21 +50,21 @@ const TRACK_OPTIONS: Array<{
 ];
 
 export function SceneShotCameraMotionTab() {
-  const { design, update, status } = useShotCameraDesignContext();
-  const movement = design.movement ?? {};
+  const { shotSpecs, update, status } = useShotSpecsContext();
+  const movement = shotSpecs.movement ?? {};
 
   const toggleMovement = (id: string) =>
     update({
-      ...design,
+      ...shotSpecs,
       movement: {
         ...movement,
         movement:
           movement.movement === id ? undefined : (id as ShotMovementId),
       },
-      equipment:
+      lens:
         movement.movement !== id && id === 'rack-focus'
-          ? { ...design.equipment, focus: 'rack-focus' }
-          : design.equipment,
+          ? { ...shotSpecs.lens, focus: 'rack-focus' }
+          : shotSpecs.lens,
     });
 
   const toggleDirection = (id: MoveDirectionId) => {
@@ -72,12 +72,12 @@ export function SceneShotCameraMotionTab() {
     const next = current.includes(id)
       ? current.filter((value) => value !== id)
       : [...current, id];
-    update({ ...design, movement: { ...movement, directions: next } });
+    update({ ...shotSpecs, movement: { ...movement, directions: next } });
   };
 
   const toggleTrack = (id: MoveTrackId) =>
     update({
-      ...design,
+      ...shotSpecs,
       movement: {
         ...movement,
         track: movement.track === id ? undefined : id,
@@ -86,7 +86,7 @@ export function SceneShotCameraMotionTab() {
 
   const toggleRig = (id: string) =>
     update({
-      ...design,
+      ...shotSpecs,
       movement: {
         ...movement,
         rig: movement.rig === id ? undefined : (id as RigId),
@@ -94,7 +94,7 @@ export function SceneShotCameraMotionTab() {
     });
 
   const setCustomMotion = (value: string) =>
-    update({ ...design, custom: { ...design.custom, movement: value } });
+    update({ ...shotSpecs, custom: { ...shotSpecs.custom, movement: value } });
 
   return (
     <div className='space-y-6 py-4'>
@@ -161,7 +161,7 @@ export function SceneShotCameraMotionTab() {
       <DesignSection title='Custom motion'>
         <CustomFieldRow
           placeholder='Custom motion…'
-          value={design.custom?.movement ?? ''}
+          value={shotSpecs.custom?.movement ?? ''}
           onChange={setCustomMotion}
           status={status}
         />

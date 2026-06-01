@@ -4,7 +4,7 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
   SceneShotListDocument,
-  ShotCameraDesign,
+  ShotSpecs,
 } from '../../client/scene-shot-list.js';
 import { createProjectDataService } from '../index.js';
 import {
@@ -14,33 +14,33 @@ import {
 
 const PROJECT_NAME = 'constantinople';
 
-describe('updateSceneShotCameraDesign', () => {
+describe('updateSceneShotSpecs', () => {
   let homeDir: string;
   let projectData = createProjectDataService();
 
   beforeEach(async () => {
     homeDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), 'renku-shot-camera-design-')
+      path.join(os.tmpdir(), 'renku-shot-specs-')
     );
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
     projectData = createProjectDataService();
     await createSampleMovieProject({ projectData, homeDir });
   });
 
-  it('persists the structured design and derives the prompt strings in place', async () => {
+  it('persists the structured specs and derives the prompt strings in place', async () => {
     const { sceneId } = await writeShotList();
     const before = await projectData.listSceneShotLists({ homeDir, sceneId });
     expect(before.shotLists).toHaveLength(1);
     const shotListId = before.activeShotListId;
 
-    const design: ShotCameraDesign = {
+    const shotSpecs: ShotSpecs = {
       shotSize: 'medium-close-up',
       subjectFraming: ['single', 'over-the-shoulder'],
       cameraAngle: 'eye-level',
       dutch: 'left',
-      equipment: {
-        lens: 'wide',
-        lensMillimeters: 28,
+      lens: {
+        type: 'wide',
+        millimeters: 28,
         focus: 'deep-focus',
       },
       movement: {
@@ -51,18 +51,18 @@ describe('updateSceneShotCameraDesign', () => {
       },
     };
 
-    const resource = await projectData.updateSceneShotCameraDesign({
+    const resource = await projectData.updateSceneShotSpecs({
       homeDir,
       projectName: PROJECT_NAME,
       sceneId,
       shotId: 'shot_001',
-      cameraDesign: design,
+      shotSpecs,
     });
 
     const shot = resource.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
     );
-    expect(shot?.cameraDesign).toEqual(design);
+    expect(shot?.shotSpecs).toEqual(shotSpecs);
     // Derived contract strings stay populated for the prompt builder.
     expect(shot?.shotType).toBe('Medium Close-Up');
     expect(shot?.cameraAngle).toBe('Eye-Level, Dutch left');
@@ -77,53 +77,53 @@ describe('updateSceneShotCameraDesign', () => {
     expect(after.activeShotListId).toBe(shotListId);
   });
 
-  it('clears the structured design when passed null', async () => {
+  it('clears the structured specs when passed null', async () => {
     const { sceneId } = await writeShotList();
-    await projectData.updateSceneShotCameraDesign({
+    await projectData.updateSceneShotSpecs({
       homeDir,
       projectName: PROJECT_NAME,
       sceneId,
       shotId: 'shot_001',
-      cameraDesign: { shotSize: 'close-up' },
+      shotSpecs: { shotSize: 'close-up' },
     });
 
-    const cleared = await projectData.updateSceneShotCameraDesign({
+    const cleared = await projectData.updateSceneShotSpecs({
       homeDir,
       projectName: PROJECT_NAME,
       sceneId,
       shotId: 'shot_001',
-      cameraDesign: null,
+      shotSpecs: null,
     });
 
     const shot = cleared.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
     );
-    expect(shot?.cameraDesign).toBeUndefined();
+    expect(shot?.shotSpecs).toBeUndefined();
     expect(shot?.shotType).toBe('Unspecified');
   });
 
   it('clears stale prompt strings when saved camera axes are removed', async () => {
     const { sceneId } = await writeShotList();
-    await projectData.updateSceneShotCameraDesign({
+    await projectData.updateSceneShotSpecs({
       homeDir,
       projectName: PROJECT_NAME,
       sceneId,
       shotId: 'shot_001',
-      cameraDesign: {
+      shotSpecs: {
         shotSize: 'close-up',
         subjectFraming: ['single'],
         cameraAngle: 'eye-level',
-        equipment: { lens: 'tele', focus: 'shallow-focus' },
+        lens: { type: 'tele', focus: 'shallow-focus' },
         movement: { movement: 'push-in' },
       },
     });
 
-    const updated = await projectData.updateSceneShotCameraDesign({
+    const updated = await projectData.updateSceneShotSpecs({
       homeDir,
       projectName: PROJECT_NAME,
       sceneId,
       shotId: 'shot_001',
-      cameraDesign: {
+      shotSpecs: {
         movement: { movement: 'tracking' },
       },
     });
@@ -131,7 +131,7 @@ describe('updateSceneShotCameraDesign', () => {
     const shot = updated.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
     );
-    expect(shot?.cameraDesign).toEqual({
+    expect(shot?.shotSpecs).toEqual({
       movement: { movement: 'tracking' },
     });
     expect(shot?.shotType).toBe('Unspecified');
@@ -141,15 +141,15 @@ describe('updateSceneShotCameraDesign', () => {
     expect(shot?.cameraMovement).toBe('Tracking');
   });
 
-  it('preserves prompt strings for axes the structured design never owned', async () => {
+  it('preserves prompt strings for axes the structured specs never owned', async () => {
     const { sceneId } = await writeShotList();
 
-    const updated = await projectData.updateSceneShotCameraDesign({
+    const updated = await projectData.updateSceneShotSpecs({
       homeDir,
       projectName: PROJECT_NAME,
       sceneId,
       shotId: 'shot_001',
-      cameraDesign: {
+      shotSpecs: {
         movement: { movement: 'tracking' },
       },
     });
@@ -164,14 +164,14 @@ describe('updateSceneShotCameraDesign', () => {
   it('rejects an unknown vocabulary id', async () => {
     const { sceneId } = await writeShotList();
     await expect(
-      projectData.updateSceneShotCameraDesign({
+      projectData.updateSceneShotSpecs({
         homeDir,
         projectName: PROJECT_NAME,
         sceneId,
         shotId: 'shot_001',
-        cameraDesign: {
+        shotSpecs: {
           shotSize: 'not-a-real-size',
-        } as unknown as ShotCameraDesign,
+        } as unknown as ShotSpecs,
       })
     ).rejects.toThrow();
   });
@@ -179,12 +179,12 @@ describe('updateSceneShotCameraDesign', () => {
   it('throws when the shot is not in the active shot list', async () => {
     const { sceneId } = await writeShotList();
     await expect(
-      projectData.updateSceneShotCameraDesign({
+      projectData.updateSceneShotSpecs({
         homeDir,
         projectName: PROJECT_NAME,
         sceneId,
         shotId: 'shot_999',
-        cameraDesign: { shotSize: 'close-up' },
+        shotSpecs: { shotSize: 'close-up' },
       })
     ).rejects.toThrow();
   });

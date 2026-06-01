@@ -11,9 +11,9 @@ import type {
 import type {
   SceneShot,
   SceneShotListDocument,
-  ShotCameraDesign,
+  ShotSpecs,
 } from '../../client/scene-shot-list.js';
-import { deriveCameraDesignStrings } from '../../client/shot-camera-design-labels.js';
+import { deriveShotSpecPromptStrings } from '../../client/shot-spec-labels.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
 import {
@@ -36,7 +36,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type {
   ReadActStoryboardResourceInput,
   ReadSceneShotListResourceInput,
-  UpdateSceneShotCameraDesignInput,
+  UpdateSceneShotSpecsInput,
 } from '../project-data-service-contracts.js';
 
 export async function readSceneShotListResource(
@@ -79,13 +79,13 @@ export async function readSceneShotListResource(
 }
 
 /**
- * In-place update of a single shot's structured camera design on the scene's
+ * In-place update of a single shot's structured shot specs on the scene's
  * active shot list (0036). Re-derives the prompt-facing free-text strings,
  * revalidates the whole document, and writes it back without creating a new
  * history row. Returns the refreshed shot-list resource for the active surface.
  */
-export async function updateSceneShotCameraDesign(
-  input: UpdateSceneShotCameraDesignInput
+export async function updateSceneShotSpecs(
+  input: UpdateSceneShotSpecsInput
 ): Promise<SceneShotListResource> {
   const { session } = await openProjectSession(input);
   try {
@@ -96,7 +96,7 @@ export async function updateSceneShotCameraDesign(
         `Scene has no active shot list to update: ${input.sceneId}.`,
         {
           suggestion:
-            'Create or activate a shot list for this scene before editing camera design.',
+            'Create or activate a shot list for this scene before editing shot specs.',
         }
       );
     }
@@ -113,7 +113,7 @@ export async function updateSceneShotCameraDesign(
         { suggestion: 'Use a shot id from the active shot list.' }
       );
     }
-    applyCameraDesign(shot, input.cameraDesign);
+    applyShotSpecs(shot, input.shotSpecs);
     const now = new Date().toISOString();
     updateSceneShotListRecordDocument({
       session,
@@ -132,152 +132,152 @@ export async function updateSceneShotCameraDesign(
   });
 }
 
-function applyCameraDesign(
+function applyShotSpecs(
   shot: SceneShot,
-  cameraDesign: ShotCameraDesign | null
+  shotSpecs: ShotSpecs | null
 ): void {
-  const previous = shot.cameraDesign;
-  const normalized = normalizeCameraDesign(cameraDesign);
+  const previous = shot.shotSpecs;
+  const normalized = normalizeShotSpecs(shotSpecs);
   if (normalized) {
-    shot.cameraDesign = normalized;
+    shot.shotSpecs = normalized;
   } else {
-    delete shot.cameraDesign;
+    delete shot.shotSpecs;
   }
 
-  // Derive prompt-facing strings for axes owned by the structured design. When
-  // a previously designed axis is removed, clear its old derived text so stale
+  // Derive prompt-facing strings for axes owned by the structured specs. When
+  // a previously specified axis is removed, clear its old derived text so stale
   // selections do not leak into generation prompts.
-  const derived = deriveCameraDesignStrings(shot.cameraDesign);
+  const derived = deriveShotSpecPromptStrings(shot.shotSpecs);
   if (derived.shotType !== undefined) {
     shot.shotType = derived.shotType;
-  } else if (hasShotSizeDesign(previous)) {
+  } else if (hasShotSizeSpecs(previous)) {
     shot.shotType = 'Unspecified';
   }
   if (derived.cameraAngle !== undefined) {
     shot.cameraAngle = derived.cameraAngle;
-  } else if (hasCameraAngleDesign(previous)) {
+  } else if (hasCameraAngleSpecs(previous)) {
     delete shot.cameraAngle;
   }
   if (derived.framing !== undefined) {
     shot.framing = derived.framing;
-  } else if (hasFramingDesign(previous)) {
+  } else if (hasFramingSpecs(previous)) {
     delete shot.framing;
   }
   if (derived.cameraMovement !== undefined) {
     shot.cameraMovement = derived.cameraMovement;
-  } else if (hasMovementDesign(previous)) {
+  } else if (hasMovementSpecs(previous)) {
     delete shot.cameraMovement;
   }
   if (derived.lensIntent !== undefined) {
     shot.lensIntent = derived.lensIntent;
-  } else if (hasLensIntentDesign(previous)) {
+  } else if (hasLensIntentSpecs(previous)) {
     delete shot.lensIntent;
   }
 }
 
-function hasShotSizeDesign(design: ShotCameraDesign | undefined): boolean {
-  return Boolean(design?.shotSize);
+function hasShotSizeSpecs(shotSpecs: ShotSpecs | undefined): boolean {
+  return Boolean(shotSpecs?.shotSize);
 }
 
-function hasCameraAngleDesign(design: ShotCameraDesign | undefined): boolean {
-  return Boolean(design?.cameraAngle || design?.dutch);
+function hasCameraAngleSpecs(shotSpecs: ShotSpecs | undefined): boolean {
+  return Boolean(shotSpecs?.cameraAngle || shotSpecs?.dutch);
 }
 
-function hasFramingDesign(design: ShotCameraDesign | undefined): boolean {
+function hasFramingSpecs(shotSpecs: ShotSpecs | undefined): boolean {
   return Boolean(
-    design?.subjectFraming?.length || design?.custom?.composition?.trim()
+    shotSpecs?.subjectFraming?.length || shotSpecs?.custom?.composition?.trim()
   );
 }
 
-function hasLensIntentDesign(design: ShotCameraDesign | undefined): boolean {
+function hasLensIntentSpecs(shotSpecs: ShotSpecs | undefined): boolean {
   return Boolean(
-    design?.equipment?.lens ||
-      design?.equipment?.lensMillimeters !== undefined ||
-      design?.equipment?.focus
+    shotSpecs?.lens?.type ||
+      shotSpecs?.lens?.millimeters !== undefined ||
+      shotSpecs?.lens?.focus
   );
 }
 
-function hasMovementDesign(design: ShotCameraDesign | undefined): boolean {
-  const movement = design?.movement;
+function hasMovementSpecs(shotSpecs: ShotSpecs | undefined): boolean {
+  const movement = shotSpecs?.movement;
   return Boolean(
     movement?.movement ||
       movement?.secondary ||
       movement?.track ||
       movement?.rig ||
       movement?.directions?.length ||
-      design?.custom?.movement?.trim()
+      shotSpecs?.custom?.movement?.trim()
   );
 }
 
 /**
  * Drop empty arrays, blank custom strings, and empty nested objects so the
- * stored design stays minimal and satisfies the non-empty-string schema rules.
+ * stored specs stay minimal and satisfy the non-empty-string schema rules.
  * Returns undefined when nothing meaningful is selected.
  */
-function normalizeCameraDesign(
-  cameraDesign: ShotCameraDesign | null
-): ShotCameraDesign | undefined {
-  if (!cameraDesign) {
+function normalizeShotSpecs(
+  shotSpecs: ShotSpecs | null
+): ShotSpecs | undefined {
+  if (!shotSpecs) {
     return undefined;
   }
-  const next: ShotCameraDesign = {};
-  if (cameraDesign.shotSize) {
-    next.shotSize = cameraDesign.shotSize;
+  const next: ShotSpecs = {};
+  if (shotSpecs.shotSize) {
+    next.shotSize = shotSpecs.shotSize;
   }
-  if (cameraDesign.subjectFraming?.length) {
-    next.subjectFraming = [...cameraDesign.subjectFraming];
+  if (shotSpecs.subjectFraming?.length) {
+    next.subjectFraming = [...shotSpecs.subjectFraming];
   }
-  if (cameraDesign.cameraAngle) {
-    next.cameraAngle = cameraDesign.cameraAngle;
+  if (shotSpecs.cameraAngle) {
+    next.cameraAngle = shotSpecs.cameraAngle;
   }
-  if (cameraDesign.dutch) {
-    next.dutch = cameraDesign.dutch;
+  if (shotSpecs.dutch) {
+    next.dutch = shotSpecs.dutch;
   }
-  const movement = normalizeMovement(cameraDesign.movement);
+  const movement = normalizeMovement(shotSpecs.movement);
   if (movement) {
     next.movement = movement;
   }
-  const equipment = normalizeEquipment(cameraDesign.equipment);
-  if (equipment) {
-    next.equipment = equipment;
+  const lens = normalizeLens(shotSpecs.lens);
+  if (lens) {
+    next.lens = lens;
   }
-  const location = normalizeLocation(cameraDesign.location);
+  const location = normalizeLocation(shotSpecs.location);
   if (location) {
     next.location = location;
   }
-  const custom = normalizeCustom(cameraDesign.custom);
+  const custom = normalizeCustom(shotSpecs.custom);
   if (custom) {
     next.custom = custom;
   }
   return Object.keys(next).length ? next : undefined;
 }
 
-function normalizeEquipment(
-  equipment: ShotCameraDesign['equipment']
-): ShotCameraDesign['equipment'] | undefined {
-  if (!equipment) {
+function normalizeLens(
+  lens: ShotSpecs['lens']
+): ShotSpecs['lens'] | undefined {
+  if (!lens) {
     return undefined;
   }
-  const next: NonNullable<ShotCameraDesign['equipment']> = {};
-  if (equipment.lens) {
-    next.lens = equipment.lens;
+  const next: NonNullable<ShotSpecs['lens']> = {};
+  if (lens.type) {
+    next.type = lens.type;
   }
-  if (equipment.lensMillimeters !== undefined) {
-    next.lensMillimeters = equipment.lensMillimeters;
+  if (lens.millimeters !== undefined) {
+    next.millimeters = lens.millimeters;
   }
-  if (equipment.focus) {
-    next.focus = equipment.focus;
+  if (lens.focus) {
+    next.focus = lens.focus;
   }
   return Object.keys(next).length ? next : undefined;
 }
 
 function normalizeLocation(
-  location: ShotCameraDesign['location']
-): ShotCameraDesign['location'] | undefined {
+  location: ShotSpecs['location']
+): ShotSpecs['location'] | undefined {
   if (!location) {
     return undefined;
   }
-  const next: NonNullable<ShotCameraDesign['location']> = {};
+  const next: NonNullable<ShotSpecs['location']> = {};
   const locationId = location.locationId?.trim();
   if (locationId) {
     next.locationId = locationId;
@@ -296,12 +296,12 @@ function normalizeLocation(
 }
 
 function normalizeMovement(
-  movement: ShotCameraDesign['movement']
-): ShotCameraDesign['movement'] | undefined {
+  movement: ShotSpecs['movement']
+): ShotSpecs['movement'] | undefined {
   if (!movement) {
     return undefined;
   }
-  const next: NonNullable<ShotCameraDesign['movement']> = {};
+  const next: NonNullable<ShotSpecs['movement']> = {};
   if (movement.movement) {
     next.movement = movement.movement;
   }
@@ -321,12 +321,12 @@ function normalizeMovement(
 }
 
 function normalizeCustom(
-  custom: ShotCameraDesign['custom']
-): ShotCameraDesign['custom'] | undefined {
+  custom: ShotSpecs['custom']
+): ShotSpecs['custom'] | undefined {
   if (!custom) {
     return undefined;
   }
-  const next: NonNullable<ShotCameraDesign['custom']> = {};
+  const next: NonNullable<ShotSpecs['custom']> = {};
   const composition = custom.composition?.trim();
   if (composition) {
     next.composition = composition;

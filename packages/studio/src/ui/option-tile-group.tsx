@@ -21,7 +21,7 @@ export interface OptionTileGroupProps {
 /**
  * Presentational grid of {@link OptionTile}s (0036). Selection semantics
  * (single vs multi, mutually-exclusive subgroups) are owned by the caller's
- * `onToggle`, so the same primitive serves every camera-design axis.
+ * `onToggle`, so the same primitive serves every shot specs axis.
  */
 export function OptionTileGroup({
   options,

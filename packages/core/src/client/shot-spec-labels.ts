@@ -6,13 +6,13 @@ import type {
   MoveDirectionId,
   MoveTrackId,
   RigId,
-  ShotCameraDesign,
+  ShotSpecs,
   ShotMovementId,
   ShotSizeId,
   SubjectFramingId,
 } from './scene-shot-list.js';
 
-// Canonical display labels for the structured camera-design vocabularies (0036).
+// Canonical display labels for the structured shot specs vocabularies (0036).
 // These are the single source of truth shared by the prompt-string derivation
 // (server write path) and the Studio tile UI, so the same term never drifts.
 
@@ -113,13 +113,13 @@ export const LOCATION_AZIMUTH_VIEW_LABELS: Record<LocationAzimuthViewId, string>
 };
 
 /**
- * Human-readable contract strings derived from the structured camera-design
+ * Human-readable contract strings derived from the structured shot specs
  * selection (0036). These keep the existing free-text `SceneShot` fields
  * populated — they remain the prompt-facing contract the skill already reads.
  * Each value is `undefined` when nothing is selected so callers can omit the
  * field (the schema requires non-empty strings).
  */
-export interface DerivedCameraDesignStrings {
+export interface DerivedShotSpecPromptStrings {
   shotType?: string;
   cameraAngle?: string;
   framing?: string;
@@ -127,63 +127,65 @@ export interface DerivedCameraDesignStrings {
   cameraMovement?: string;
 }
 
-export function deriveCameraDesignStrings(
-  design: ShotCameraDesign | undefined
-): DerivedCameraDesignStrings {
-  if (!design) {
+export function deriveShotSpecPromptStrings(
+  shotSpecs: ShotSpecs | undefined
+): DerivedShotSpecPromptStrings {
+  if (!shotSpecs) {
     return {};
   }
   return {
-    shotType: design.shotSize ? SHOT_SIZE_LABELS[design.shotSize] : undefined,
-    cameraAngle: deriveCameraAngle(design),
-    framing: deriveFraming(design),
-    lensIntent: deriveLensIntent(design),
-    cameraMovement: deriveCameraMovement(design),
+    shotType: shotSpecs.shotSize
+      ? SHOT_SIZE_LABELS[shotSpecs.shotSize]
+      : undefined,
+    cameraAngle: deriveCameraAngle(shotSpecs),
+    framing: deriveFraming(shotSpecs),
+    lensIntent: deriveLensIntent(shotSpecs),
+    cameraMovement: deriveCameraMovement(shotSpecs),
   };
 }
 
-function deriveCameraAngle(design: ShotCameraDesign): string | undefined {
+function deriveCameraAngle(shotSpecs: ShotSpecs): string | undefined {
   const parts: string[] = [];
-  if (design.cameraAngle) {
-    parts.push(CAMERA_ANGLE_LABELS[design.cameraAngle]);
+  if (shotSpecs.cameraAngle) {
+    parts.push(CAMERA_ANGLE_LABELS[shotSpecs.cameraAngle]);
   }
-  if (design.dutch) {
-    parts.push(`Dutch ${design.dutch}`);
+  if (shotSpecs.dutch) {
+    parts.push(`Dutch ${shotSpecs.dutch}`);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
 
-function deriveFraming(design: ShotCameraDesign): string | undefined {
+function deriveFraming(shotSpecs: ShotSpecs): string | undefined {
   const parts: string[] = [];
-  for (const id of design.subjectFraming ?? []) {
+  for (const id of shotSpecs.subjectFraming ?? []) {
     parts.push(SUBJECT_FRAMING_LABELS[id]);
   }
-  const custom = design.custom?.composition?.trim();
+  const custom = shotSpecs.custom?.composition?.trim();
   if (custom) {
     parts.push(custom);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
 
-function deriveLensIntent(design: ShotCameraDesign): string | undefined {
-  const equipment = design.equipment;
+function deriveLensIntent(shotSpecs: ShotSpecs): string | undefined {
+  const lens = shotSpecs.lens;
   const parts: string[] = [];
-  if (equipment?.lens) {
-    const lensLabel = LENS_LABELS[equipment.lens];
+  if (lens?.type) {
+    const lensLabel = LENS_LABELS[lens.type];
     parts.push(
-      equipment.lensMillimeters
-        ? `${lensLabel} ${formatMillimeters(equipment.lensMillimeters)}`
+      lens.millimeters
+        ? `${lensLabel} ${formatMillimeters(lens.millimeters)}`
         : lensLabel
     );
   }
-  if (equipment?.focus) {
-    parts.push(FOCUS_LABELS[equipment.focus]);
+  if (lens?.focus) {
+    parts.push(FOCUS_LABELS[lens.focus]);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
 
-function deriveCameraMovement(design: ShotCameraDesign): string | undefined {
-  const movement = design.movement;
+function deriveCameraMovement(shotSpecs: ShotSpecs): string | undefined {
+  const movement = shotSpecs.movement;
   const parts: string[] = [];
   if (movement?.movement) {
     parts.push(MOVEMENT_LABELS[movement.movement]);
@@ -204,7 +206,7 @@ function deriveCameraMovement(design: ShotCameraDesign): string | undefined {
   if (movement?.rig) {
     parts.push(`on ${RIG_LABELS[movement.rig].toLowerCase()}`);
   }
-  const custom = design.custom?.movement?.trim();
+  const custom = shotSpecs.custom?.movement?.trim();
   if (custom) {
     parts.push(custom);
   }

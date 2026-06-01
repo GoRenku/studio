@@ -192,11 +192,11 @@ export type {
   RigId,
   SceneShot,
   SceneShotDialogueReference,
-  ShotCameraDesign,
-  ShotCameraDesignCustom,
-  ShotEquipmentDesign,
-  ShotLocationDesign,
-  ShotMovementDesign,
+  ShotCustomSpecs,
+  ShotLensSpecs,
+  ShotLocationSpecs,
+  ShotMovementSpecs,
+  ShotSpecs,
   ShotMovementId,
   ShotSizeId,
   SubjectFramingId,
@@ -233,9 +233,9 @@ export {
   RIG_LABELS,
   SHOT_SIZE_LABELS,
   SUBJECT_FRAMING_LABELS,
-  deriveCameraDesignStrings,
-} from './shot-camera-design-labels.js';
-export type { DerivedCameraDesignStrings } from './shot-camera-design-labels.js';
+  deriveShotSpecPromptStrings,
+} from './shot-spec-labels.js';
+export type { DerivedShotSpecPromptStrings } from './shot-spec-labels.js';
 export type {
   Project,
   ProjectCoverImage,

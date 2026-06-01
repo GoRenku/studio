@@ -12,7 +12,7 @@ import { SceneShotDescriptionTab } from './scene-shot-description-tab';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotLocationTab } from './scene-shot-location-tab';
-import { ShotCameraDesignProvider } from './shot-camera-design-context';
+import { ShotSpecsProvider } from './shot-specs-context';
 
 interface SceneShotDetailProps {
   projectName: string;
@@ -21,7 +21,7 @@ interface SceneShotDetailProps {
   label: string;
   castMemberLabels: Record<string, string>;
   locationLabels: Record<string, string>;
-  onCameraDesignSaved?: (resource: SceneShotListResourceResponse) => void;
+  onShotSpecsSaved?: (resource: SceneShotListResourceResponse) => void;
 }
 
 const DESIGN_TABS = [
@@ -38,7 +38,7 @@ export function SceneShotDetail({
   label,
   castMemberLabels,
   locationLabels,
-  onCameraDesignSaved,
+  onShotSpecsSaved,
 }: SceneShotDetailProps) {
   return (
     <section className='flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
@@ -48,12 +48,12 @@ export function SceneShotDetail({
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={58} minSize={25} className='min-h-0'>
-          <ShotCameraDesignProvider
+          <ShotSpecsProvider
             key={shot.shotId}
             projectName={projectName}
             sceneId={sceneId}
             shot={shot}
-            onSaved={onCameraDesignSaved}
+            onSaved={onShotSpecsSaved}
           >
             <Tabs
               defaultValue='description'
@@ -84,7 +84,7 @@ export function SceneShotDetail({
                 </TabsContent>
               </div>
             </Tabs>
-          </ShotCameraDesignProvider>
+          </ShotSpecsProvider>
         </ResizablePanel>
       </ResizablePanelGroup>
     </section>

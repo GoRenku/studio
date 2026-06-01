@@ -33,12 +33,12 @@ export interface SceneShot {
   audioNotes?: string;
   productionNotes?: string;
   /**
-   * Optional structured camera-design selections (0036). Absence means the shot
-   * has not been designed in the Studio camera tabs yet. The free-text strings
-   * above (`shotType`, `cameraAngle`, `cameraMovement`, `framing`) remain the
+   * Optional structured shot specifications (0036). Absence means the shot has
+   * not been specified in the Studio shot tabs yet. The free-text strings above
+   * (`shotType`, `cameraAngle`, `cameraMovement`, `framing`) remain the
    * prompt-facing contract and are derived from this structure on each edit.
    */
-  cameraDesign?: ShotCameraDesign;
+  shotSpecs?: ShotSpecs;
 }
 
 /**
@@ -135,7 +135,7 @@ export type LocationAzimuthViewId =
   | 'back'
   | 'left';
 
-export interface ShotMovementDesign {
+export interface ShotMovementSpecs {
   movement?: ShotMovementId;
   secondary?: ShotMovementId;
   directions?: MoveDirectionId[];
@@ -143,33 +143,33 @@ export interface ShotMovementDesign {
   rig?: RigId;
 }
 
-export interface ShotEquipmentDesign {
-  lens?: LensId;
-  lensMillimeters?: number;
+export interface ShotLensSpecs {
+  type?: LensId;
+  millimeters?: number;
   focus?: FocusId;
 }
 
-export interface ShotLocationDesign {
+export interface ShotLocationSpecs {
   locationId?: string;
   usesDifferentLocation?: boolean;
   azimuthView?: LocationAzimuthViewId;
   customView?: string;
 }
 
-export interface ShotCameraDesignCustom {
+export interface ShotCustomSpecs {
   composition?: string;
   movement?: string;
 }
 
-export interface ShotCameraDesign {
+export interface ShotSpecs {
   shotSize?: ShotSizeId;
   subjectFraming?: SubjectFramingId[];
   cameraAngle?: CameraAngleId;
   dutch?: 'left' | 'right';
-  movement?: ShotMovementDesign;
-  equipment?: ShotEquipmentDesign;
-  location?: ShotLocationDesign;
-  custom?: ShotCameraDesignCustom;
+  movement?: ShotMovementSpecs;
+  lens?: ShotLensSpecs;
+  location?: ShotLocationSpecs;
+  custom?: ShotCustomSpecs;
 }
 
 export interface SceneShotDialogueReference {

@@ -1,4 +1,4 @@
-// Controlled vocabularies for the structured camera-design selections (0036).
+// Controlled vocabularies for the structured shot specs selections (0036).
 // Declared before the schema literal below so they are initialised when the
 // literal evaluates. Keep aligned with the id unions in `scene-shot-list.ts`.
 const SHOT_SIZE_IDS = [
@@ -158,7 +158,7 @@ export const sceneShotListDocumentSchema = {
           },
           audioNotes: nonEmptyString(),
           productionNotes: nonEmptyString(),
-          cameraDesign: cameraDesignSchema(),
+          shotSpecs: shotSpecsSchema(),
         }
       ),
     },
@@ -170,7 +170,7 @@ export const sceneShotListDocumentSchema = {
   additionalProperties: false,
 } as const;
 
-function cameraDesignSchema(): Record<string, unknown> {
+function shotSpecsSchema(): Record<string, unknown> {
   return {
     type: 'object',
     properties: {
@@ -205,11 +205,11 @@ function cameraDesignSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
-      equipment: {
+      lens: {
         type: 'object',
         properties: {
-          lens: enumValue(LENS_IDS),
-          lensMillimeters: { type: 'number', exclusiveMinimum: 0 },
+          type: enumValue(LENS_IDS),
+          millimeters: { type: 'number', exclusiveMinimum: 0 },
           focus: enumValue(FOCUS_IDS),
         },
         additionalProperties: false,

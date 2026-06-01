@@ -110,7 +110,7 @@ export function writeSceneShotListRecord(input: {
  * Update an existing shot list's stored document in place (0036). Unlike
  * {@link writeSceneShotListRecord}, this mutates the active row rather than
  * inserting a new history row, matching the debounced-autosave contract for
- * direct UI tuning of camera-design fields.
+ * direct UI tuning of shot specs fields.
  */
 export function updateSceneShotListRecordDocument(input: {
   session: DatabaseSession;

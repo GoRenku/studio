@@ -155,8 +155,8 @@ export {
 export type {
   SceneShot,
   SceneShotDialogueReference,
-  ShotCameraDesign,
-  ShotMovementDesign,
+  ShotMovementSpecs,
+  ShotSpecs,
   SceneShotListContextReport,
   SceneShotListDocument,
   SceneShotListListReport,

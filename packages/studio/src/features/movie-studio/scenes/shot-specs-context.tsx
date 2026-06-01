@@ -3,15 +3,15 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { SceneShot } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import {
-  useShotCameraDesign,
-  type UseShotCameraDesignResult,
-} from './use-shot-camera-design';
+  useShotSpecs,
+  type UseShotSpecsResult,
+} from './use-shot-specs';
 
-const ShotCameraDesignContext = createContext<UseShotCameraDesignResult | null>(
+const ShotSpecsContext = createContext<UseShotSpecsResult | null>(
   null
 );
 
-interface ShotCameraDesignProviderProps {
+interface ShotSpecsProviderProps {
   projectName: string;
   sceneId: string;
   shot: SceneShot;
@@ -20,38 +20,38 @@ interface ShotCameraDesignProviderProps {
 }
 
 /**
- * Owns one shared camera-design state per shot so the Composition, Camera
- * Motion, and Location tabs edit the same object. The server persists `cameraDesign`
+ * Owns one shared shot specs state per shot so the Composition, Camera
+ * Motion, and Location tabs edit the same object. The server persists `shotSpecs`
  * wholesale, so a single source of truth is required to avoid one tab clobbering
  * the other's selections. Mount this keyed by `shot.shotId` for a clean reset on
  * shot switch.
  */
-export function ShotCameraDesignProvider({
+export function ShotSpecsProvider({
   projectName,
   sceneId,
   shot,
   onSaved,
   children,
-}: ShotCameraDesignProviderProps) {
-  const value = useShotCameraDesign({
+}: ShotSpecsProviderProps) {
+  const value = useShotSpecs({
     projectName,
     sceneId,
     shotId: shot.shotId,
-    initial: shot.cameraDesign,
+    initial: shot.shotSpecs,
     onSaved,
   });
   return (
-    <ShotCameraDesignContext.Provider value={value}>
+    <ShotSpecsContext.Provider value={value}>
       {children}
-    </ShotCameraDesignContext.Provider>
+    </ShotSpecsContext.Provider>
   );
 }
 
-export function useShotCameraDesignContext(): UseShotCameraDesignResult {
-  const value = useContext(ShotCameraDesignContext);
+export function useShotSpecsContext(): UseShotSpecsResult {
+  const value = useContext(ShotSpecsContext);
   if (!value) {
     throw new Error(
-      'useShotCameraDesignContext must be used within a ShotCameraDesignProvider.'
+      'useShotSpecsContext must be used within a ShotSpecsProvider.'
     );
   }
   return value;

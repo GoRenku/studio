@@ -114,7 +114,7 @@ describe('scene shot list commands', () => {
     });
   });
 
-  it('validates Composition and Location camera-design fields', async () => {
+  it('validates Composition and Location shot specs fields', async () => {
     const ids = await sampleIds();
     const valid = sampleShotList(ids);
     const extended: SceneShotListDocument = {
@@ -122,12 +122,12 @@ describe('scene shot list commands', () => {
       shots: [
         {
           ...valid.shots[0]!,
-          cameraDesign: {
+          shotSpecs: {
             shotSize: 'wide-shot',
             subjectFraming: ['single'],
-            equipment: {
-              lens: 'wide',
-              lensMillimeters: 28,
+            lens: {
+              type: 'wide',
+              millimeters: 28,
               focus: 'rack-focus',
             },
             movement: { movement: 'rack-focus' },
@@ -155,13 +155,13 @@ describe('scene shot list commands', () => {
           shots: [
             {
               ...extended.shots[0]!,
-              cameraDesign: {
-                ...extended.shots[0]!.cameraDesign!,
+              shotSpecs: {
+                ...extended.shots[0]!.shotSpecs!,
                 custom: {
                   framing: 'obsolete custom field',
                 } as unknown as NonNullable<
                   NonNullable<
-                    SceneShotListDocument['shots'][number]['cameraDesign']
+                    SceneShotListDocument['shots'][number]['shotSpecs']
                   >['custom']
                 >,
               },
@@ -185,15 +185,15 @@ describe('scene shot list commands', () => {
           shots: [
             {
               ...extended.shots[0]!,
-              cameraDesign: {
-                ...extended.shots[0]!.cameraDesign!,
-                equipment: {
-                  lens: 'wide',
+              shotSpecs: {
+                ...extended.shots[0]!.shotSpecs!,
+                lens: {
+                  type: 'wide',
                   matteBox: true,
                 } as unknown as NonNullable<
                   NonNullable<
-                    SceneShotListDocument['shots'][number]['cameraDesign']
-                  >['equipment']
+                    SceneShotListDocument['shots'][number]['shotSpecs']
+                  >['lens']
                 >,
               },
             },
@@ -216,10 +216,10 @@ describe('scene shot list commands', () => {
           shots: [
             {
               ...extended.shots[0]!,
-              cameraDesign: {
-                ...extended.shots[0]!.cameraDesign!,
-                equipment: {
-                  lensMillimeters: 28,
+              shotSpecs: {
+                ...extended.shots[0]!.shotSpecs!,
+                lens: {
+                  millimeters: 28,
                 },
               },
             },
@@ -229,7 +229,7 @@ describe('scene shot list commands', () => {
     ).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('requires a lens selection'),
+                  message: expect.stringContaining('requires a lens type'),
         }),
       ]),
     });
@@ -242,9 +242,9 @@ describe('scene shot list commands', () => {
           shots: [
             {
               ...extended.shots[0]!,
-              cameraDesign: {
-                ...extended.shots[0]!.cameraDesign!,
-                equipment: { lens: 'wide', focus: 'deep-focus' },
+              shotSpecs: {
+                ...extended.shots[0]!.shotSpecs!,
+                lens: { type: 'wide', focus: 'deep-focus' },
                 movement: { movement: 'rack-focus' },
               },
             },
@@ -267,8 +267,8 @@ describe('scene shot list commands', () => {
           shots: [
             {
               ...extended.shots[0]!,
-              cameraDesign: {
-                ...extended.shots[0]!.cameraDesign!,
+              shotSpecs: {
+                ...extended.shots[0]!.shotSpecs!,
                 location: {
                   locationId: 'location_elsewhere',
                 },
@@ -293,8 +293,8 @@ describe('scene shot list commands', () => {
           shots: [
             {
               ...extended.shots[0]!,
-              cameraDesign: {
-                ...extended.shots[0]!.cameraDesign!,
+              shotSpecs: {
+                ...extended.shots[0]!.shotSpecs!,
                 location: {
                   locationId: ids.locationId,
                   azimuthView: 'front',
@@ -322,8 +322,8 @@ describe('scene shot list commands', () => {
             {
               ...extended.shots[0]!,
               locationIds: [],
-              cameraDesign: {
-                ...extended.shots[0]!.cameraDesign!,
+              shotSpecs: {
+                ...extended.shots[0]!.shotSpecs!,
                 location: {
                   locationId: ids.locationId,
                   usesDifferentLocation: true,
@@ -729,9 +729,30 @@ describe('scene shot list commands', () => {
 
   it('validates scene storyboard sheet specs and preserves binding options', async () => {
     const ids = await sampleIds();
+    const overrideLocationId = await addFlashbackLocation();
+    const shotList = sampleShotList(ids, 'Longer coverage', 5);
+    shotList.shots[0] = {
+      ...shotList.shots[0]!,
+      shotSpecs: {
+        location: {
+          locationId: overrideLocationId,
+          usesDifferentLocation: true,
+          azimuthView: 'right',
+        },
+      },
+    };
+    shotList.shots[1] = {
+      ...shotList.shots[1]!,
+      shotSpecs: {
+        location: {
+          locationId: ids.locationId,
+          customView: 'Low balcony toward the map table',
+        },
+      },
+    };
     const written = await projectData.writeSceneShotList({
       homeDir,
-      document: sampleShotList(ids, 'Longer coverage', 5),
+      document: shotList,
       idGenerator: createDeterministicIdGenerator(),
     });
 
@@ -798,6 +819,18 @@ describe('scene shot list commands', () => {
     );
     expect(validation.providerPayload.prompt).toContain('shot_001');
     expect(validation.providerPayload.prompt).toContain('shot_002');
+    expect(validation.providerPayload.prompt).toContain(
+      'lens intent: moderate wide lens feel'
+    );
+    expect(validation.providerPayload.prompt).toContain(
+      `location: Golden Horn overlook (${overrideLocationId}); view: Right`
+    );
+    expect(validation.providerPayload.prompt).toContain(
+      'view: Low balcony toward the map table'
+    );
+    expect(validation.providerPayload.prompt).toContain(
+      `Golden Horn overlook (${overrideLocationId})`
+    );
     expect(validation.providerPayload.prompt).not.toContain('shot_005');
 
     await expect(
@@ -837,6 +870,34 @@ describe('scene shot list commands', () => {
       castMemberId: screenplay.screenplay!.cast[1]!.id as string,
       locationId: screenplay.screenplay!.locations[0]!.id as string,
     };
+  }
+
+  async function addFlashbackLocation() {
+    await projectData.applyScreenplayOperations({
+      homeDir,
+      document: {
+        kind: 'screenplayOperations',
+        operations: [
+          {
+            operation: 'location.add',
+            location: {
+              key: 'golden-horn-overlook',
+              handle: 'golden-horn-overlook',
+              name: 'Golden Horn overlook',
+              description: 'A wind-exposed overlook above the harbor.',
+            },
+          },
+        ],
+      },
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const location = screenplay.screenplay!.locations.find(
+      (entry) => entry.handle === 'golden-horn-overlook'
+    );
+    if (!location?.id) {
+      throw new Error('Expected test location to be created.');
+    }
+    return location.id as string;
   }
 });
 

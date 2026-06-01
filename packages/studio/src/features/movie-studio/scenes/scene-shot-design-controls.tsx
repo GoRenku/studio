@@ -5,7 +5,7 @@ import { Button } from '@/ui/button';
 import { Textarea } from '@/ui/textarea';
 import { cn } from '@/lib/utils';
 
-/** A labelled camera-design section with a micro-heading. */
+/** A labelled shot specs section with a micro-heading. */
 export function DesignSection({
   title,
   children,

@@ -1,10 +1,10 @@
-# 0036 Shot Design Tabs
+# 0036 Shot Specs Tabs
 
 Date: 2026-05-30
 
 Status: proposed
 
-> Companion to `0033-scene-shot-list-ui.md`. That plan ships the Shot Design
+> Companion to `0033-scene-shot-list-ui.md`. That plan ships the Shot Specs
 > Surface shell (top video stage + a `LineTabBar` with five tabs) and the
 > read-only Description tab. This plan designs the four remaining tabs — Camera
 > Framing, Camera Motion, Location, Camera Type — and the write-back path that
@@ -12,10 +12,10 @@ Status: proposed
 
 ## Goal
 
-Turn each shot's design surface from a scaffold into a working camera-design tool
+Turn each shot's specs surface from a scaffold into a working shot specs tool
 where a director selects shot framing, quick camera motion descriptors, location
-angle, and camera/lens equipment through **visual, rendered controls** rather than
-flat checkbox lists, and where those choices persist as durable per-shot design
+angle, and camera/lens specs through **visual, rendered controls** rather than
+flat checkbox lists, and where those choices persist as durable per-shot specs
 parameters that will feed the future video-generation prompt.
 
 Primary design problem this plan owns: the reference mockups present camera
@@ -68,7 +68,7 @@ each as its own axis with explicit selection semantics:
 | Move Direction / Track | quick direction and track descriptors | multi (direction) + single (track) | Camera Motion |
 | Camera Blocking | precise camera position, subject placement, prop placement, path, and eye-line geometry | spatial | Future Camera Blocking tab |
 | Location & Angle | environment and the covered angle | reference (scene-level) | Location |
-| Body / Lens / DOF | equipment and optical character | single body, single lens, single DOF | Camera Type |
+| Body / Lens / DOF | lens and optical character | single body, single lens, single DOF | Camera Type |
 
 Two cross-cutting rules resolve the mockups' ambiguities:
 
@@ -86,13 +86,13 @@ Two cross-cutting rules resolve the mockups' ambiguities:
 ## Persistence — The Key New Capability
 
 `0033` is read-only. These tabs are editable, so this plan introduces a
-**per-shot design write-back path**. The decisions, in order of preference:
+**per-shot specs write-back path**. The decisions, in order of preference:
 
 - The `SceneShotListDocument` already stores shot-level camera strings
   (`shotType`, `cameraAngle`, `cameraMovement`, `framing`, `lensIntent`,
   `aspectRatio`). `0032` deliberately kept these as free director-language strings
   and deferred structured camera controls.
-- This plan adds an **optional structured `cameraDesign` object per shot** that
+- This plan adds an **optional structured `shotSpecs` object per shot** that
   holds the controlled-vocabulary selections, while continuing to maintain the
   existing free-text strings as human-readable summaries derived from the
   structured selection. Structured and string forms coexist; the string fields
@@ -100,17 +100,17 @@ Two cross-cutting rules resolve the mockups' ambiguities:
 
 ```ts
 // added to SceneShot (all optional; absence = "not yet designed")
-cameraDesign?: ShotCameraDesign;
+shotSpecs?: ShotSpecs;
 
-export interface ShotCameraDesign {
+export interface ShotSpecs {
   shotSize?: ShotSizeId;                 // single
   subjectFraming?: SubjectFramingId[];   // multi
   cameraAngle?: CameraAngleId;           // single
   dutch?: 'left' | 'right';              // optional roll
   movement?: ShotMovementDesign;
-  equipment?: ShotEquipmentDesign;
+  lens?: ShotLensSpecs;
   // location/angle is scene-level; see Location tab
-  custom?: { framing?: string; movement?: string; equipment?: string };
+  custom?: { framing?: string; movement?: string; lens?: string };
 }
 ```
 
@@ -140,7 +140,7 @@ plan and should be settled before the tab UIs are built. See Open Decisions.
 
 Shipped read-only in `0033`. This plan leaves it read-only. If inline editing of
 narrative text is wanted later, it follows the same autosave/validation path
-above, but it is out of scope here to keep the plan focused on camera design.
+above, but it is out of scope here to keep the plan focused on shot specs.
 
 ## Tab 2 — Camera Framing
 
@@ -205,11 +205,11 @@ shot size and an angle.
 
 ### Custom and write-back
 
-- A "Custom framing…" input feeds `cameraDesign.custom.framing` and is appended to
+- A "Custom framing…" input feeds `shotSpecs.custom.framing` and is appended to
   the derived `framing` string.
 - On change, derive the human-readable `shotType` (from shot size),
   `cameraAngle`, and `framing` strings so the existing contract stays populated,
-  and persist `cameraDesign` via the write path above.
+  and persist `shotSpecs` via the write path above.
 
 ### Rendered tile assets
 
@@ -288,7 +288,7 @@ Camera Blocking will own precise spatial decisions:
 - relationship to Camera Framing's subject framing and viewpoint choices.
 
 When designed, Camera Blocking should store normalized, resolution-independent
-coordinates in a separate `cameraDesign.blocking` object or equivalent. Do not
+coordinates in a separate `shotSpecs.blocking` object or equivalent. Do not
 add that schema in this V1 plan.
 
 ## Tab 4 — Location
@@ -312,7 +312,7 @@ per-shot override, not a per-shot picker by default.
 
 No new media generation here; this tab reuses location assets already in the
 project. The only new persistence is the optional per-shot location/angle
-override on `cameraDesign`.
+override on `shotSpecs`.
 
 ## Tab 5 — Camera Type
 
@@ -330,12 +330,12 @@ presets:
   Motion when it helps explain lens/body feasibility, but do not edit the rig in
   two tabs.
 - Optional **format/look** presets later (film stock, anamorphic) — out of scope
-  now; leave room in `ShotEquipmentDesign`.
+  now; leave room in `ShotLensSpecs`.
 
 ```ts
-export interface ShotEquipmentDesign {
+export interface ShotLensSpecs {
   lens?: LensId;
-  lensMillimeters?: number;
+  millimeters?: number;
   focus?: FocusId;
   custom?: string;
 }
@@ -377,12 +377,12 @@ labels here, not scattered through JSX.
 ## Files
 
 ```text
-packages/core/src/client/scene-shot-list.ts            (add ShotCameraDesign + ids)
+packages/core/src/client/scene-shot-list.ts            (add ShotSpecs + ids)
 packages/core/src/client/scene-shot-list-json-schemas.ts (extend schema, optional)
-packages/core/src/server/scene-shot-list-json/validator.ts (validate cameraDesign)
+packages/core/src/server/scene-shot-list-json/validator.ts (validate shotSpecs)
 packages/core/src/server/database/access/scene-shot-lists.ts (in-place active update)
 packages/core/src/server/commands/scene-shot-list-commands.ts (update-shot command)
-packages/core/src/server/resources/scene-storyboard-ui.ts (surface cameraDesign in resource)
+packages/core/src/server/resources/scene-storyboard-ui.ts (surface shotSpecs in resource)
 packages/studio/server/routes/screenplay.ts            (PATCH shot route)
 packages/studio/src/services/studio-screenplay-api.ts  (updateSceneShot)
 packages/studio/src/ui/option-tile.tsx
@@ -395,7 +395,7 @@ packages/studio/src/features/movie-studio/scenes/
   scene-shot-camera-type-tab.tsx
   shot-design-vocabulary.ts
   shot-design-assets/generated/                         (approved generated tile assets)
-  use-shot-camera-design.ts                             (load + debounced autosave)
+  use-shot-specs.ts                             (load + debounced autosave)
 ```
 
 ## Resource Refresh
@@ -429,10 +429,10 @@ the Sequence cards all listen on `scene:<sceneId>` /
 ## Tests
 
 Core:
-- schema accepts a valid `cameraDesign` and rejects unknown ids/fields;
+- schema accepts a valid `shotSpecs` and rejects unknown ids/fields;
 - the update-shot path revalidates the whole document and persists in place
   without creating a history row;
-- the resource surfaces `cameraDesign` for the active shot.
+- the resource surfaces `shotSpecs` for the active shot.
 
 Frontend:
 - shot-size ladder is single-select and maps each reference label to the right
@@ -455,7 +455,7 @@ Run focused tests, `pnpm test:core`, `pnpm lint`, `pnpm check`.
       Shipped a Studio `PATCH /screenplay/scenes/:sceneId/shots/:shotId` route
       that revalidates the whole document and updates the active shot list
       in place (no new history row).
-- [x] Add `ShotCameraDesign` types, schema, and validation.
+- [x] Add `ShotSpecs` types, schema, and validation.
 - [x] Add the shot update path and resource surfacing.
 - [x] Build `OptionTile` / `OptionTileGroup` shared primitives.
 - [x] Define `shot-design-vocabulary.ts` controlled lists + illustration refs.
@@ -471,8 +471,8 @@ Run focused tests, `pnpm test:core`, `pnpm lint`, `pnpm check`.
       _Out of scope for this pass._
 - [ ] Build Camera Type tab (lens, focus/DOF, read-only rig context where useful).
       _Out of scope for this pass._
-- [x] Add `use-shot-camera-design` load + debounced autosave (shared across the
-      Framing and Motion tabs via `ShotCameraDesignProvider` so neither tab
+- [x] Add `use-shot-specs` load + debounced autosave (shared across the
+      Framing and Motion tabs via `ShotSpecsProvider` so neither tab
       clobbers the other's selections).
 - [x] Wire scoped refresh and rail-label updates (PATCH emits the
       `scene-shot-list:<id>:shot:<shotId>` / `scene:<sceneId>` keys).
@@ -507,7 +507,7 @@ Run focused tests, `pnpm test:core`, `pnpm lint`, `pnpm check`.
   rack-focus read-only.
 - Rig / Mechanism is edited in Camera Motion because it explains how the move is
   achieved; Camera Type may show it as read-only context but does not edit it.
-- Structured `cameraDesign` coexists with the existing free-text strings, which
+- Structured `shotSpecs` coexists with the existing free-text strings, which
   remain the prompt-facing contract.
 - Precise camera placement, subject blocking, prop layout, and motion path
   drawing belong to a future **Camera Blocking** tab, not the V1 Camera Motion
