@@ -38,6 +38,11 @@ describe('updateSceneShotCameraDesign', () => {
       subjectFraming: ['single', 'over-the-shoulder'],
       cameraAngle: 'eye-level',
       dutch: 'left',
+      equipment: {
+        lens: 'wide',
+        lensMillimeters: 28,
+        focus: 'deep-focus',
+      },
       movement: {
         movement: 'push-in',
         directions: ['forward'],
@@ -62,6 +67,7 @@ describe('updateSceneShotCameraDesign', () => {
     expect(shot?.shotType).toBe('Medium Close-Up');
     expect(shot?.cameraAngle).toBe('Eye-Level, Dutch left');
     expect(shot?.framing).toBe('Single, Over Shoulder');
+    expect(shot?.lensIntent).toBe('Wide 28mm, Deep Focus');
     expect(shot?.cameraMovement).toContain('Push In');
     expect(shot?.cameraMovement).toContain('on dolly');
 
@@ -107,6 +113,7 @@ describe('updateSceneShotCameraDesign', () => {
         shotSize: 'close-up',
         subjectFraming: ['single'],
         cameraAngle: 'eye-level',
+        equipment: { lens: 'tele', focus: 'shallow-focus' },
         movement: { movement: 'push-in' },
       },
     });
@@ -130,6 +137,7 @@ describe('updateSceneShotCameraDesign', () => {
     expect(shot?.shotType).toBe('Unspecified');
     expect(shot?.cameraAngle).toBeUndefined();
     expect(shot?.framing).toBeUndefined();
+    expect(shot?.lensIntent).toBeUndefined();
     expect(shot?.cameraMovement).toBe('Tracking');
   });
 

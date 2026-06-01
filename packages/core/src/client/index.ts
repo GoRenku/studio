@@ -184,6 +184,9 @@ export type {
 } from './screenplay-analysis.js';
 export type {
   CameraAngleId,
+  FocusId,
+  LensId,
+  LocationAzimuthViewId,
   MoveDirectionId,
   MoveTrackId,
   RigId,
@@ -191,6 +194,8 @@ export type {
   SceneShotDialogueReference,
   ShotCameraDesign,
   ShotCameraDesignCustom,
+  ShotEquipmentDesign,
+  ShotLocationDesign,
   ShotMovementDesign,
   ShotMovementId,
   ShotSizeId,
@@ -219,6 +224,9 @@ export type {
 } from './scene-shot-list.js';
 export {
   CAMERA_ANGLE_LABELS,
+  FOCUS_LABELS,
+  LENS_LABELS,
+  LOCATION_AZIMUTH_VIEW_LABELS,
   MOVE_DIRECTION_LABELS,
   MOVE_TRACK_LABELS,
   MOVEMENT_LABELS,

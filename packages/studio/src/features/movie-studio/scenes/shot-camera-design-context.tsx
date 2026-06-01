@@ -20,8 +20,8 @@ interface ShotCameraDesignProviderProps {
 }
 
 /**
- * Owns one shared camera-design state per shot so the Camera Framing and Camera
- * Motion tabs edit the same object (0036). The server persists `cameraDesign`
+ * Owns one shared camera-design state per shot so the Composition, Camera
+ * Motion, and Location tabs edit the same object. The server persists `cameraDesign`
  * wholesale, so a single source of truth is required to avoid one tab clobbering
  * the other's selections. Mount this keyed by `shot.shotId` for a clean reset on
  * shot switch.

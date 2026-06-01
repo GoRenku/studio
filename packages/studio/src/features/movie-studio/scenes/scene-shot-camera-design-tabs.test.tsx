@@ -3,15 +3,41 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SceneShot } from '@gorenku/studio-core/client';
-import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
+import type {
+  SceneShotListResourceResponse,
+  StudioAssetResponse,
+} from '@/services/studio-project-contracts';
 import { updateSceneShotCameraDesign } from '@/services/studio-screenplay-api';
-import { SceneShotCameraFramingTab } from './scene-shot-camera-framing-tab';
+import { readLocationAssets } from '@/services/studio-project-assets-api';
+import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
+import { SceneShotDetail } from './scene-shot-detail';
+import { SceneShotLocationTab } from './scene-shot-location-tab';
 import { ShotCameraDesignProvider } from './shot-camera-design-context';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   updateSceneShotCameraDesign: vi.fn().mockResolvedValue({}),
 }));
+
+vi.mock('@/services/studio-project-assets-api', () => ({
+  readLocationAssets: vi.fn().mockResolvedValue([]),
+  locationAssetFileUrl: vi.fn(
+    (
+      projectName: string,
+      locationId: string,
+      assetId: string,
+      fileId: string
+    ) =>
+      `/studio-api/projects/${projectName}/locations/${locationId}/assets/${assetId}/files/${fileId}`
+  ),
+}));
+
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= ResizeObserverStub;
 
 const SHOT: SceneShot = {
   shotId: 'shot_001',
@@ -53,13 +79,35 @@ function pressed(name: string): boolean {
   );
 }
 
-describe('SceneShotCameraFramingTab', () => {
+describe('SceneShotDetail', () => {
+  it('shows the shot-design tabs without Camera Framing or Camera Type', () => {
+    render(
+      <SceneShotDetail
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        label='Shot 1'
+        castMemberLabels={{}}
+        locationLabels={{}}
+      />
+    );
+
+    expect(screen.getByRole('tab', { name: 'Description' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Composition' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Camera Motion' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Location' })).not.toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Camera Framing' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Camera Type' })).toBeNull();
+  });
+});
+
+describe('SceneShotCompositionTab', () => {
   beforeEach(() => {
     vi.mocked(updateSceneShotCameraDesign).mockClear();
   });
 
   it('treats shot size as a single-select ladder', () => {
-    renderWithProvider(<SceneShotCameraFramingTab />);
+    renderWithProvider(<SceneShotCompositionTab />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Close-Up' }));
     expect(pressed('Close-Up')).toBe(true);
@@ -70,7 +118,7 @@ describe('SceneShotCameraFramingTab', () => {
   });
 
   it('keeps pill toggles on the compact camera-design styling', () => {
-    renderWithProvider(<SceneShotCameraFramingTab />);
+    renderWithProvider(<SceneShotCompositionTab />);
 
     const noneToggle = screen.getByRole('button', { name: 'None' });
     expect(noneToggle.className).toContain('px-3');
@@ -82,7 +130,7 @@ describe('SceneShotCameraFramingTab', () => {
   });
 
   it('keeps subject-framing headcount mutually exclusive while layering OTS on top', () => {
-    renderWithProvider(<SceneShotCameraFramingTab />);
+    renderWithProvider(<SceneShotCompositionTab />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Single' }));
     fireEvent.click(screen.getByRole('button', { name: 'Over Shoulder' }));
@@ -96,8 +144,8 @@ describe('SceneShotCameraFramingTab', () => {
     expect(pressed('Over Shoulder')).toBe(true);
   });
 
-  it('persists the structured framing selection via autosave', async () => {
-    renderWithProvider(<SceneShotCameraFramingTab />);
+  it('persists the structured composition selection via autosave', async () => {
+    renderWithProvider(<SceneShotCompositionTab />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Medium Close-Up' }));
 
@@ -121,13 +169,64 @@ describe('SceneShotCameraFramingTab', () => {
     });
     vi.mocked(updateSceneShotCameraDesign).mockResolvedValueOnce(savedResource);
     const onSaved = vi.fn();
-    renderWithProvider(<SceneShotCameraFramingTab />, { onSaved });
+    renderWithProvider(<SceneShotCompositionTab />, { onSaved });
 
     fireEvent.click(screen.getByRole('button', { name: 'Medium Close-Up' }));
 
     await waitFor(
       () => {
         expect(onSaved).toHaveBeenCalledWith(savedResource);
+      },
+      { timeout: 2000 }
+    );
+  });
+
+  it('persists lens and focus selections via autosave', async () => {
+    renderWithProvider(<SceneShotCompositionTab />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wide' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Lens millimeters' }), {
+      target: { value: '28' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Shallow Focus' }));
+
+    await waitFor(
+      () => {
+        expect(updateSceneShotCameraDesign).toHaveBeenLastCalledWith(
+          'constantinople',
+          'scene_hook',
+          'shot_001',
+          expect.objectContaining({
+            equipment: expect.objectContaining({
+              lens: 'wide',
+              lensMillimeters: 28,
+              focus: 'shallow-focus',
+            }),
+          })
+        );
+      },
+      { timeout: 2000 }
+    );
+  });
+
+  it('clearing the last design field sends a null camera design', async () => {
+    renderWithProvider(<SceneShotCompositionTab />, {
+      shot: {
+        ...SHOT,
+        cameraDesign: { shotSize: 'close-up' },
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close-Up' }));
+
+    await waitFor(
+      () => {
+        expect(updateSceneShotCameraDesign).toHaveBeenCalledWith(
+          'constantinople',
+          'scene_hook',
+          'shot_001',
+          null
+        );
       },
       { timeout: 2000 }
     );
@@ -173,6 +272,77 @@ describe('SceneShotCameraMotionTab', () => {
   });
 });
 
+describe('SceneShotLocationTab', () => {
+  beforeEach(() => {
+    vi.mocked(updateSceneShotCameraDesign).mockClear();
+    vi.mocked(readLocationAssets).mockReset();
+    vi.mocked(readLocationAssets).mockResolvedValue([]);
+  });
+
+  it('persists the selected shot location', async () => {
+    renderWithProvider(
+      <SceneShotLocationTab
+        projectName='constantinople'
+        shot={{
+          ...SHOT,
+          locationIds: ['location_gate', 'location_harbor'],
+        }}
+        locationLabels={{
+          location_gate: 'Sea Gate',
+          location_harbor: 'Golden Horn',
+        }}
+      />,
+      {
+        shot: {
+          ...SHOT,
+          locationIds: ['location_gate', 'location_harbor'],
+        },
+      }
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Golden Horn' }));
+
+    await waitFor(
+      () => {
+        expect(updateSceneShotCameraDesign).toHaveBeenLastCalledWith(
+          'constantinople',
+          'scene_hook',
+          'shot_001',
+          expect.objectContaining({
+            location: expect.objectContaining({
+              locationId: 'location_harbor',
+            }),
+          })
+        );
+      },
+      { timeout: 2000 }
+    );
+  });
+
+  it('renders environment views without raw ids or filenames on visual cards', async () => {
+    vi.mocked(readLocationAssets).mockResolvedValue([environmentSheetAsset()]);
+
+    renderWithProvider(
+      <SceneShotLocationTab
+        projectName='constantinople'
+        shot={{ ...SHOT, locationIds: ['location_gate'] }}
+        locationLabels={{ location_gate: 'Sea Gate' }}
+      />,
+      {
+        shot: { ...SHOT, locationIds: ['location_gate'] },
+      }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Front/i })).not.toBeNull();
+    });
+
+    expect(screen.queryByText(/asset_location_environment_sheet/i)).toBeNull();
+    expect(screen.queryByText(/asset_file_location_view_front/i)).toBeNull();
+    expect(screen.queryByText(/sheet-front\.png/i)).toBeNull();
+  });
+});
+
 describe('shared camera-design state across tabs', () => {
   beforeEach(() => {
     vi.mocked(updateSceneShotCameraDesign).mockClear();
@@ -182,7 +352,7 @@ describe('shared camera-design state across tabs', () => {
     // Both tabs share one provider, mirroring the live layout.
     renderWithProvider(
       <>
-        <SceneShotCameraFramingTab />
+        <SceneShotCompositionTab />
         <SceneShotCameraMotionTab />
       </>
     );
@@ -242,5 +412,51 @@ function sceneShotListResource(
     storyboardImagesByShotId: {},
     castMemberLabels: {},
     locationLabels: {},
+  };
+}
+
+function environmentSheetAsset(): StudioAssetResponse {
+  return {
+    assetId: 'asset_location_environment_sheet',
+    relationshipId: 'relationship_location_environment_sheet',
+    target: { kind: 'location', locationId: 'location_gate' },
+    localeId: null,
+    type: 'location_environment_sheet',
+    selection: { kind: 'select', order: 1 },
+    availability: 'ready',
+    mediaKind: 'image',
+    title: 'sheet-front.png',
+    oneLineSummary: null,
+    origin: 'generated',
+    role: 'environment_sheet',
+    sortOrder: 1,
+    files: [
+      environmentSheetFile('asset_file_location_composite', 'composite'),
+      environmentSheetFile('asset_file_location_view_front', 'view_front'),
+      environmentSheetFile('asset_file_location_view_right', 'view_right'),
+      environmentSheetFile('asset_file_location_view_back', 'view_back'),
+      environmentSheetFile('asset_file_location_view_left', 'view_left'),
+    ],
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+  };
+}
+
+function environmentSheetFile(
+  id: string,
+  role: string
+): StudioAssetResponse['files'][number] {
+  return {
+    id,
+    role,
+    projectRelativePath:
+      `assets/locations/location_gate/${id}.png` as StudioAssetResponse['files'][number]['projectRelativePath'],
+    mediaKind: 'image',
+    mimeType: 'image/png',
+    sizeBytes: 1000,
+    contentHash: null,
+    width: 1280,
+    height: 720,
+    durationSeconds: null,
   };
 }

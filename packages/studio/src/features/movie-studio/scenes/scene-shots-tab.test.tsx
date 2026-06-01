@@ -7,12 +7,26 @@ import type {
   SceneShotListDocument,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
+import { readLocationAssets } from '@/services/studio-project-assets-api';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneShotListResource: vi.fn(),
   updateSceneShotCameraDesign: vi.fn(),
+}));
+
+vi.mock('@/services/studio-project-assets-api', () => ({
+  readLocationAssets: vi.fn().mockResolvedValue([]),
+  locationAssetFileUrl: vi.fn(
+    (
+      projectName: string,
+      locationId: string,
+      assetId: string,
+      fileId: string
+    ) =>
+      `/studio-api/projects/${projectName}/locations/${locationId}/assets/${assetId}/files/${fileId}`
+  ),
 }));
 
 // jsdom lacks ResizeObserver, which the Radix Slider in the video stage uses.
@@ -26,6 +40,8 @@ class ResizeObserverStub {
 describe('SceneShotsTab', () => {
   beforeEach(() => {
     vi.mocked(readSceneShotListResource).mockReset();
+    vi.mocked(readLocationAssets).mockReset();
+    vi.mocked(readLocationAssets).mockResolvedValue([]);
   });
 
   it('renders the empty state when there is no active shot list', async () => {
@@ -93,7 +109,7 @@ describe('SceneShotsTab', () => {
     expect(screen.queryByText('loc_chamber')).toBeNull();
   });
 
-  it('renders the scaffold placeholder for a not-yet-built design tab', async () => {
+  it('renders the Location design tab', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
       resource(shotList())
     );
@@ -107,9 +123,8 @@ describe('SceneShotsTab', () => {
     // not move focus, so drive the focus directly.
     fireEvent.focus(locationTab);
     fireEvent.click(locationTab);
-    expect(
-      await screen.findByText('Designed in the shot-design surface.')
-    ).not.toBeNull();
+    expect(await screen.findByText('Council Chamber')).not.toBeNull();
+    expect(screen.getByText('Environment Sheet Views')).not.toBeNull();
   });
 
   it('shows the empty video stage with a disabled transport', async () => {

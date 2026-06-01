@@ -1,5 +1,7 @@
 import {
   CAMERA_ANGLE_LABELS,
+  FOCUS_LABELS,
+  LENS_LABELS,
   MOVEMENT_LABELS,
   RIG_LABELS,
   SHOT_SIZE_LABELS,
@@ -7,6 +9,8 @@ import {
 } from '@gorenku/studio-core/client';
 import type {
   CameraAngleId,
+  FocusId,
+  LensId,
   RigId,
   ShotMovementId,
   ShotSizeId,
@@ -61,10 +65,20 @@ export const RIG_OPTIONS: ShotDesignTileOption<RigId>[] = fromLabels(
   'rig'
 );
 
+export const LENS_OPTIONS: Array<{ id: LensId; label: string }> = Object.entries(
+  LENS_LABELS
+).map(([id, label]) => ({ id: id as LensId, label }));
+
+export const FOCUS_OPTIONS: Array<{ id: FocusId; label: string }> =
+  Object.entries(FOCUS_LABELS).map(([id, label]) => ({
+    id: id as FocusId,
+    label,
+  }));
+
 /**
  * Subject-framing headcount values are mutually exclusive (a shot is a single,
  * a two-shot, a three-shot, or a group). The remaining subject-framing ids
- * layer freely on top, so the Camera Framing tab enforces exclusivity only
+ * layer freely on top, so the Composition tab enforces exclusivity only
  * within this subset.
  */
 export const SUBJECT_FRAMING_HEADCOUNT_IDS: readonly SubjectFramingId[] = [

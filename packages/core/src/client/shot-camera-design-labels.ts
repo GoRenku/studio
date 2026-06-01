@@ -1,5 +1,8 @@
 import type {
   CameraAngleId,
+  FocusId,
+  LensId,
+  LocationAzimuthViewId,
   MoveDirectionId,
   MoveTrackId,
   RigId,
@@ -86,6 +89,29 @@ export const RIG_LABELS: Record<RigId, string> = {
   crane: 'Crane',
 };
 
+export const LENS_LABELS: Record<LensId, string> = {
+  'ultra-wide': 'Ultra-Wide',
+  wide: 'Wide',
+  normal: 'Normal',
+  'short-tele': 'Short Telephoto',
+  tele: 'Telephoto',
+  macro: 'Macro',
+};
+
+export const FOCUS_LABELS: Record<FocusId, string> = {
+  'deep-focus': 'Deep Focus',
+  'shallow-focus': 'Shallow Focus',
+  'rack-focus': 'Rack Focus',
+  'tilt-shift': 'Tilt-Shift',
+};
+
+export const LOCATION_AZIMUTH_VIEW_LABELS: Record<LocationAzimuthViewId, string> = {
+  front: 'Front',
+  right: 'Right',
+  back: 'Back',
+  left: 'Left',
+};
+
 /**
  * Human-readable contract strings derived from the structured camera-design
  * selection (0036). These keep the existing free-text `SceneShot` fields
@@ -97,6 +123,7 @@ export interface DerivedCameraDesignStrings {
   shotType?: string;
   cameraAngle?: string;
   framing?: string;
+  lensIntent?: string;
   cameraMovement?: string;
 }
 
@@ -110,6 +137,7 @@ export function deriveCameraDesignStrings(
     shotType: design.shotSize ? SHOT_SIZE_LABELS[design.shotSize] : undefined,
     cameraAngle: deriveCameraAngle(design),
     framing: deriveFraming(design),
+    lensIntent: deriveLensIntent(design),
     cameraMovement: deriveCameraMovement(design),
   };
 }
@@ -130,9 +158,26 @@ function deriveFraming(design: ShotCameraDesign): string | undefined {
   for (const id of design.subjectFraming ?? []) {
     parts.push(SUBJECT_FRAMING_LABELS[id]);
   }
-  const custom = design.custom?.framing?.trim();
+  const custom = design.custom?.composition?.trim();
   if (custom) {
     parts.push(custom);
+  }
+  return parts.length ? parts.join(', ') : undefined;
+}
+
+function deriveLensIntent(design: ShotCameraDesign): string | undefined {
+  const equipment = design.equipment;
+  const parts: string[] = [];
+  if (equipment?.lens) {
+    const lensLabel = LENS_LABELS[equipment.lens];
+    parts.push(
+      equipment.lensMillimeters
+        ? `${lensLabel} ${formatMillimeters(equipment.lensMillimeters)}`
+        : lensLabel
+    );
+  }
+  if (equipment?.focus) {
+    parts.push(FOCUS_LABELS[equipment.focus]);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
@@ -164,4 +209,8 @@ function deriveCameraMovement(design: ShotCameraDesign): string | undefined {
     parts.push(custom);
   }
   return parts.length ? parts.join(', ') : undefined;
+}
+
+function formatMillimeters(value: number): string {
+  return Number.isInteger(value) ? `${value}mm` : `${value.toFixed(1)}mm`;
 }

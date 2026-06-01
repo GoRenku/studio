@@ -115,6 +115,26 @@ export type RigId =
   | 'steadicam'
   | 'crane';
 
+export type LensId =
+  | 'ultra-wide'
+  | 'wide'
+  | 'normal'
+  | 'short-tele'
+  | 'tele'
+  | 'macro';
+
+export type FocusId =
+  | 'deep-focus'
+  | 'shallow-focus'
+  | 'rack-focus'
+  | 'tilt-shift';
+
+export type LocationAzimuthViewId =
+  | 'front'
+  | 'right'
+  | 'back'
+  | 'left';
+
 export interface ShotMovementDesign {
   movement?: ShotMovementId;
   secondary?: ShotMovementId;
@@ -123,8 +143,21 @@ export interface ShotMovementDesign {
   rig?: RigId;
 }
 
+export interface ShotEquipmentDesign {
+  lens?: LensId;
+  lensMillimeters?: number;
+  focus?: FocusId;
+}
+
+export interface ShotLocationDesign {
+  locationId?: string;
+  usesDifferentLocation?: boolean;
+  azimuthView?: LocationAzimuthViewId;
+  customView?: string;
+}
+
 export interface ShotCameraDesignCustom {
-  framing?: string;
+  composition?: string;
   movement?: string;
 }
 
@@ -134,6 +167,8 @@ export interface ShotCameraDesign {
   cameraAngle?: CameraAngleId;
   dutch?: 'left' | 'right';
   movement?: ShotMovementDesign;
+  equipment?: ShotEquipmentDesign;
+  location?: ShotLocationDesign;
   custom?: ShotCameraDesignCustom;
 }
 

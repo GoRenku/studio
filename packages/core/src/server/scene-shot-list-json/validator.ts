@@ -242,6 +242,7 @@ function validateSceneShotListSemantics(input: {
         );
       }
     });
+    validateCameraDesignSemantics(shot, shotPath, context, issues, filePath);
     shot.dialogue.forEach((dialogue, dialogueIndex) => {
       const block = scene.blocks[dialogue.blockIndex];
       if (!block) {
@@ -323,6 +324,127 @@ function validateSceneShotListSemantics(input: {
   });
 
   return issues;
+}
+
+function validateCameraDesignSemantics(
+  shot: SceneShot,
+  shotPath: string[],
+  context: ReturnType<typeof buildSceneValidationContext>,
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const design = shot.cameraDesign;
+  if (!design) {
+    return;
+  }
+  validateCameraDesignLocation(shot, shotPath, context, issues, filePath);
+  validateCameraDesignEquipment(shot, shotPath, issues, filePath);
+}
+
+function validateCameraDesignLocation(
+  shot: SceneShot,
+  shotPath: string[],
+  context: ReturnType<typeof buildSceneValidationContext>,
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const location = shot.cameraDesign?.location;
+  if (!location) {
+    return;
+  }
+  const locationPath = [...shotPath, 'cameraDesign', 'location'];
+  if (location.locationId) {
+    if (location.usesDifferentLocation === true) {
+      if (!context.locationIds.has(location.locationId)) {
+        issues.push(
+          error(
+            'Shot location override references an unknown project location.',
+            [...locationPath, 'locationId'],
+            filePath,
+            'Use a location id from the current project.'
+          )
+        );
+      }
+    } else if (!shot.locationIds.includes(location.locationId)) {
+      issues.push(
+        error(
+          'Shot camera-design location must be one of the shot locationIds unless usesDifferentLocation is true.',
+          [...locationPath, 'locationId'],
+          filePath,
+          'Choose a shot location id, or set usesDifferentLocation to true for an intentional override.'
+        )
+      );
+    }
+  }
+  if (location.azimuthView && location.customView) {
+    issues.push(
+      error(
+        'Shot location design cannot use both azimuthView and customView.',
+        locationPath,
+        filePath,
+        'Choose an environment-sheet azimuth view or describe a custom view, not both.'
+      )
+    );
+  }
+  if (
+    location.customView !== undefined &&
+    location.customView.trim().length < 3
+  ) {
+    issues.push(
+      error(
+        'Shot location customView must contain useful text.',
+        [...locationPath, 'customView'],
+        filePath,
+        'Describe the intended view in a few words.'
+      )
+    );
+  }
+}
+
+function validateCameraDesignEquipment(
+  shot: SceneShot,
+  shotPath: string[],
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const equipment = shot.cameraDesign?.equipment;
+  const equipmentPath = [...shotPath, 'cameraDesign', 'equipment'];
+  if (equipment?.lensMillimeters !== undefined && !equipment.lens) {
+    issues.push(
+      error(
+        'Shot lensMillimeters requires a lens selection.',
+        [...equipmentPath, 'lensMillimeters'],
+        filePath,
+        'Set equipment.lens before setting lensMillimeters.'
+      )
+    );
+  }
+  if (
+    equipment?.lensMillimeters !== undefined &&
+    (equipment.lensMillimeters < 1 || equipment.lensMillimeters > 300)
+  ) {
+    issues.push(
+      error(
+        'Shot lensMillimeters must be between 1 and 300.',
+        [...equipmentPath, 'lensMillimeters'],
+        filePath,
+        'Use a practical lens millimeter value from 1 to 300.'
+      )
+    );
+  }
+  const movement = shot.cameraDesign?.movement;
+  const hasRackFocusMovement =
+    movement?.movement === 'rack-focus' || movement?.secondary === 'rack-focus';
+  if (hasRackFocusMovement && equipment?.focus !== 'rack-focus') {
+    issues.push(
+      error(
+        'Rack-focus camera motion requires rack-focus composition focus.',
+        [...equipmentPath, 'focus'],
+        filePath,
+        'Set equipment.focus to rack-focus or choose a different camera motion.'
+      )
+    );
+  }
 }
 
 function buildSceneValidationContext(

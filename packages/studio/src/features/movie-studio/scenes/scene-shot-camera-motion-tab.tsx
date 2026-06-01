@@ -20,7 +20,7 @@ import {
   PillToggle,
 } from './scene-shot-design-controls';
 import { useShotCameraDesignContext } from './shot-camera-design-context';
-import { MOVEMENT_OPTIONS, RIG_OPTIONS } from './shot-design-vocabulary';
+import { MOVEMENT_OPTIONS, RIG_OPTIONS } from './scene-shot-design-vocabulary';
 
 // Minimum tile width (px) for the Movement preview grid. The grid is
 // responsive auto-fill, so this is the *minimum* — larger means bigger 16:9
@@ -61,6 +61,10 @@ export function SceneShotCameraMotionTab() {
         movement:
           movement.movement === id ? undefined : (id as ShotMovementId),
       },
+      equipment:
+        movement.movement !== id && id === 'rack-focus'
+          ? { ...design.equipment, focus: 'rack-focus' }
+          : design.equipment,
     });
 
   const toggleDirection = (id: MoveDirectionId) => {

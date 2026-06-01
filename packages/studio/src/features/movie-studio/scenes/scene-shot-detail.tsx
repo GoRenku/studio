@@ -9,9 +9,9 @@ import {
 import { Tabs, TabsContent } from '@/ui/tabs';
 import { SceneShotVideoStage } from './scene-shot-video-stage';
 import { SceneShotDescriptionTab } from './scene-shot-description-tab';
-import { SceneShotCameraFramingTab } from './scene-shot-camera-framing-tab';
+import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
-import { SceneShotDetailTabPlaceholder } from './scene-shot-detail-tab-placeholder';
+import { SceneShotLocationTab } from './scene-shot-location-tab';
 import { ShotCameraDesignProvider } from './shot-camera-design-context';
 
 interface SceneShotDetailProps {
@@ -26,10 +26,9 @@ interface SceneShotDetailProps {
 
 const DESIGN_TABS = [
   { value: 'description', label: 'Description' },
-  { value: 'camera-framing', label: 'Camera Framing' },
+  { value: 'composition', label: 'Composition' },
   { value: 'camera-motion', label: 'Camera Motion' },
   { value: 'location', label: 'Location' },
-  { value: 'camera-type', label: 'Camera Type' },
 ] as const;
 
 export function SceneShotDetail({
@@ -70,17 +69,18 @@ export function SceneShotDetail({
                     locationLabels={locationLabels}
                   />
                 </TabsContent>
-                <TabsContent value='camera-framing'>
-                  <SceneShotCameraFramingTab />
+                <TabsContent value='composition'>
+                  <SceneShotCompositionTab />
                 </TabsContent>
                 <TabsContent value='camera-motion'>
                   <SceneShotCameraMotionTab />
                 </TabsContent>
                 <TabsContent value='location'>
-                  <SceneShotDetailTabPlaceholder />
-                </TabsContent>
-                <TabsContent value='camera-type'>
-                  <SceneShotDetailTabPlaceholder />
+                  <SceneShotLocationTab
+                    projectName={projectName}
+                    shot={shot}
+                    locationLabels={locationLabels}
+                  />
                 </TabsContent>
               </div>
             </Tabs>

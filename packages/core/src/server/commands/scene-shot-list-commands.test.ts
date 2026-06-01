@@ -114,6 +114,229 @@ describe('scene shot list commands', () => {
     });
   });
 
+  it('validates Composition and Location camera-design fields', async () => {
+    const ids = await sampleIds();
+    const valid = sampleShotList(ids);
+    const extended: SceneShotListDocument = {
+      ...valid,
+      shots: [
+        {
+          ...valid.shots[0]!,
+          cameraDesign: {
+            shotSize: 'wide-shot',
+            subjectFraming: ['single'],
+            equipment: {
+              lens: 'wide',
+              lensMillimeters: 28,
+              focus: 'rack-focus',
+            },
+            movement: { movement: 'rack-focus' },
+            location: {
+              locationId: ids.locationId,
+              azimuthView: 'front',
+            },
+            custom: {
+              composition: 'hold the map edge in the lower foreground',
+            },
+          },
+        },
+      ],
+    };
+
+    await expect(
+      projectData.validateSceneShotList({ homeDir, document: extended })
+    ).resolves.toMatchObject({ valid: true });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...extended,
+          shots: [
+            {
+              ...extended.shots[0]!,
+              cameraDesign: {
+                ...extended.shots[0]!.cameraDesign!,
+                custom: {
+                  framing: 'obsolete custom field',
+                } as unknown as NonNullable<
+                  NonNullable<
+                    SceneShotListDocument['shots'][number]['cameraDesign']
+                  >['custom']
+                >,
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('Unknown field'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...extended,
+          shots: [
+            {
+              ...extended.shots[0]!,
+              cameraDesign: {
+                ...extended.shots[0]!.cameraDesign!,
+                equipment: {
+                  lens: 'wide',
+                  matteBox: true,
+                } as unknown as NonNullable<
+                  NonNullable<
+                    SceneShotListDocument['shots'][number]['cameraDesign']
+                  >['equipment']
+                >,
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('Unknown field'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...extended,
+          shots: [
+            {
+              ...extended.shots[0]!,
+              cameraDesign: {
+                ...extended.shots[0]!.cameraDesign!,
+                equipment: {
+                  lensMillimeters: 28,
+                },
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('requires a lens selection'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...extended,
+          shots: [
+            {
+              ...extended.shots[0]!,
+              cameraDesign: {
+                ...extended.shots[0]!.cameraDesign!,
+                equipment: { lens: 'wide', focus: 'deep-focus' },
+                movement: { movement: 'rack-focus' },
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('requires rack-focus'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...extended,
+          shots: [
+            {
+              ...extended.shots[0]!,
+              cameraDesign: {
+                ...extended.shots[0]!.cameraDesign!,
+                location: {
+                  locationId: 'location_elsewhere',
+                },
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('must be one of the shot locationIds'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...extended,
+          shots: [
+            {
+              ...extended.shots[0]!,
+              cameraDesign: {
+                ...extended.shots[0]!.cameraDesign!,
+                location: {
+                  locationId: ids.locationId,
+                  azimuthView: 'front',
+                  customView: 'near the carved arch',
+                },
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('cannot use both azimuthView'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...extended,
+          shots: [
+            {
+              ...extended.shots[0]!,
+              locationIds: [],
+              cameraDesign: {
+                ...extended.shots[0]!.cameraDesign!,
+                location: {
+                  locationId: ids.locationId,
+                  usesDifferentLocation: true,
+                  customView: 'imagined memory angle',
+                },
+              },
+            },
+          ],
+        },
+      })
+    ).resolves.toMatchObject({ valid: true });
+  });
+
   it('writes shot-list history, sets active, and preserves older rows', async () => {
     const ids = await sampleIds();
     const idGenerator = createDeterministicIdGenerator();

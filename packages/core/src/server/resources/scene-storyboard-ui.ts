@@ -168,6 +168,11 @@ function applyCameraDesign(
   } else if (hasMovementDesign(previous)) {
     delete shot.cameraMovement;
   }
+  if (derived.lensIntent !== undefined) {
+    shot.lensIntent = derived.lensIntent;
+  } else if (hasLensIntentDesign(previous)) {
+    delete shot.lensIntent;
+  }
 }
 
 function hasShotSizeDesign(design: ShotCameraDesign | undefined): boolean {
@@ -180,7 +185,15 @@ function hasCameraAngleDesign(design: ShotCameraDesign | undefined): boolean {
 
 function hasFramingDesign(design: ShotCameraDesign | undefined): boolean {
   return Boolean(
-    design?.subjectFraming?.length || design?.custom?.framing?.trim()
+    design?.subjectFraming?.length || design?.custom?.composition?.trim()
+  );
+}
+
+function hasLensIntentDesign(design: ShotCameraDesign | undefined): boolean {
+  return Boolean(
+    design?.equipment?.lens ||
+      design?.equipment?.lensMillimeters !== undefined ||
+      design?.equipment?.focus
   );
 }
 
@@ -224,9 +237,60 @@ function normalizeCameraDesign(
   if (movement) {
     next.movement = movement;
   }
+  const equipment = normalizeEquipment(cameraDesign.equipment);
+  if (equipment) {
+    next.equipment = equipment;
+  }
+  const location = normalizeLocation(cameraDesign.location);
+  if (location) {
+    next.location = location;
+  }
   const custom = normalizeCustom(cameraDesign.custom);
   if (custom) {
     next.custom = custom;
+  }
+  return Object.keys(next).length ? next : undefined;
+}
+
+function normalizeEquipment(
+  equipment: ShotCameraDesign['equipment']
+): ShotCameraDesign['equipment'] | undefined {
+  if (!equipment) {
+    return undefined;
+  }
+  const next: NonNullable<ShotCameraDesign['equipment']> = {};
+  if (equipment.lens) {
+    next.lens = equipment.lens;
+  }
+  if (equipment.lensMillimeters !== undefined) {
+    next.lensMillimeters = equipment.lensMillimeters;
+  }
+  if (equipment.focus) {
+    next.focus = equipment.focus;
+  }
+  return Object.keys(next).length ? next : undefined;
+}
+
+function normalizeLocation(
+  location: ShotCameraDesign['location']
+): ShotCameraDesign['location'] | undefined {
+  if (!location) {
+    return undefined;
+  }
+  const next: NonNullable<ShotCameraDesign['location']> = {};
+  const locationId = location.locationId?.trim();
+  if (locationId) {
+    next.locationId = locationId;
+  }
+  if (location.usesDifferentLocation !== undefined) {
+    next.usesDifferentLocation = location.usesDifferentLocation;
+  }
+  if (location.azimuthView) {
+    next.azimuthView = location.azimuthView;
+  }
+  const customView = location.customView?.trim();
+  if (customView) {
+    next.customView = customView;
   }
   return Object.keys(next).length ? next : undefined;
 }
@@ -263,9 +327,9 @@ function normalizeCustom(
     return undefined;
   }
   const next: NonNullable<ShotCameraDesign['custom']> = {};
-  const framing = custom.framing?.trim();
-  if (framing) {
-    next.framing = framing;
+  const composition = custom.composition?.trim();
+  if (composition) {
+    next.composition = composition;
   }
   const movement = custom.movement?.trim();
   if (movement) {

@@ -57,6 +57,29 @@ const MOVE_DIRECTION_IDS = [
   'down',
 ] as const;
 
+const LENS_IDS = [
+  'ultra-wide',
+  'wide',
+  'normal',
+  'short-tele',
+  'tele',
+  'macro',
+] as const;
+
+const FOCUS_IDS = [
+  'deep-focus',
+  'shallow-focus',
+  'rack-focus',
+  'tilt-shift',
+] as const;
+
+const LOCATION_AZIMUTH_VIEW_IDS = [
+  'front',
+  'right',
+  'back',
+  'left',
+] as const;
+
 export const sceneShotListDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/scene-shot-list-document.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -182,10 +205,29 @@ function cameraDesignSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
+      equipment: {
+        type: 'object',
+        properties: {
+          lens: enumValue(LENS_IDS),
+          lensMillimeters: { type: 'number', exclusiveMinimum: 0 },
+          focus: enumValue(FOCUS_IDS),
+        },
+        additionalProperties: false,
+      },
+      location: {
+        type: 'object',
+        properties: {
+          locationId: nonEmptyString(),
+          usesDifferentLocation: { type: 'boolean' },
+          azimuthView: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
+          customView: nonEmptyString(),
+        },
+        additionalProperties: false,
+      },
       custom: {
         type: 'object',
         properties: {
-          framing: nonEmptyString(),
+          composition: nonEmptyString(),
           movement: nonEmptyString(),
         },
         additionalProperties: false,

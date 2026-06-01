@@ -1,9 +1,12 @@
 import { RotateCcw, RotateCw } from 'lucide-react';
 import type {
   CameraAngleId,
+  FocusId,
+  LensId,
   ShotSizeId,
   SubjectFramingId,
 } from '@gorenku/studio-core/client';
+import { Input } from '@/ui/input';
 import { OptionTileGroup } from '@/ui/option-tile-group';
 import {
   CustomFieldRow,
@@ -13,13 +16,16 @@ import {
 import { useShotCameraDesignContext } from './shot-camera-design-context';
 import {
   CAMERA_ANGLE_OPTIONS,
+  FOCUS_OPTIONS,
+  LENS_OPTIONS,
   SHOT_SIZE_OPTIONS,
   SUBJECT_FRAMING_HEADCOUNT_IDS,
   SUBJECT_FRAMING_OPTIONS,
-} from './shot-design-vocabulary';
+} from './scene-shot-design-vocabulary';
 
-export function SceneShotCameraFramingTab() {
+export function SceneShotCompositionTab() {
   const { design, update, status } = useShotCameraDesignContext();
+  const equipment = design.equipment ?? {};
 
   const toggleShotSize = (id: string) =>
     update({
@@ -58,8 +64,54 @@ export function SceneShotCameraFramingTab() {
   const setDutch = (value: 'left' | 'right' | undefined) =>
     update({ ...design, dutch: value });
 
-  const setCustomFraming = (value: string) =>
-    update({ ...design, custom: { ...design.custom, framing: value } });
+  const toggleLens = (id: LensId) =>
+    update({
+      ...design,
+      equipment: {
+        ...equipment,
+        lens: equipment.lens === id ? undefined : id,
+        lensMillimeters:
+          equipment.lens === id ? undefined : equipment.lensMillimeters,
+      },
+    });
+
+  const setLensMillimeters = (value: string) => {
+    const trimmed = value.trim();
+    update({
+      ...design,
+      equipment: {
+        ...equipment,
+        lensMillimeters: trimmed ? Number(trimmed) : undefined,
+      },
+    });
+  };
+
+  const toggleFocus = (id: FocusId) => {
+    const clearingRackFocus = equipment.focus === id && id === 'rack-focus';
+    update({
+      ...design,
+      equipment: {
+        ...equipment,
+        focus: equipment.focus === id ? undefined : id,
+      },
+      movement: clearingRackFocus
+        ? {
+            ...design.movement,
+            movement:
+              design.movement?.movement === 'rack-focus'
+                ? undefined
+                : design.movement?.movement,
+            secondary:
+              design.movement?.secondary === 'rack-focus'
+                ? undefined
+                : design.movement?.secondary,
+          }
+        : design.movement,
+    });
+  };
+
+  const setCustomComposition = (value: string) =>
+    update({ ...design, custom: { ...design.custom, composition: value } });
 
   return (
     <div className='space-y-6 py-4'>
@@ -115,11 +167,51 @@ export function SceneShotCameraFramingTab() {
         </div>
       </DesignSection>
 
-      <DesignSection title='Custom framing'>
+      <DesignSection title='4. Lens Intent'>
+        <div className='flex flex-wrap items-center gap-2'>
+          {LENS_OPTIONS.map((option) => (
+            <PillToggle
+              key={option.id}
+              selected={equipment.lens === option.id}
+              onClick={() => toggleLens(option.id)}
+            >
+              {option.label}
+            </PillToggle>
+          ))}
+          <Input
+            type='number'
+            min={1}
+            max={300}
+            step={1}
+            value={equipment.lensMillimeters ?? ''}
+            placeholder='mm'
+            aria-label='Lens millimeters'
+            disabled={!equipment.lens}
+            onChange={(event) => setLensMillimeters(event.target.value)}
+            className='h-8 w-24'
+          />
+        </div>
+      </DesignSection>
+
+      <DesignSection title='5. Focus / Depth of Field'>
+        <div className='flex flex-wrap gap-2'>
+          {FOCUS_OPTIONS.map((option) => (
+            <PillToggle
+              key={option.id}
+              selected={equipment.focus === option.id}
+              onClick={() => toggleFocus(option.id)}
+            >
+              {option.label}
+            </PillToggle>
+          ))}
+        </div>
+      </DesignSection>
+
+      <DesignSection title='6. Custom Composition'>
         <CustomFieldRow
-          placeholder='Custom framing…'
-          value={design.custom?.framing ?? ''}
-          onChange={setCustomFraming}
+          placeholder='Custom composition...'
+          value={design.custom?.composition ?? ''}
+          onChange={setCustomComposition}
           status={status}
         />
       </DesignSection>

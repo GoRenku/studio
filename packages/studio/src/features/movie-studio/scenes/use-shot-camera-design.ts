@@ -59,6 +59,8 @@ function isEmptyDesign(design: ShotCameraDesign): boolean {
     !design.dutch &&
     !(design.subjectFraming && design.subjectFraming.length) &&
     !hasMovement(design.movement) &&
+    !hasEquipment(design.equipment) &&
+    !hasLocation(design.location) &&
     !hasCustom(design.custom)
   );
 }
@@ -74,7 +76,26 @@ function hasMovement(movement: ShotCameraDesign['movement']): boolean {
   );
 }
 
+function hasEquipment(equipment: ShotCameraDesign['equipment']): boolean {
+  if (!equipment) return false;
+  return Boolean(
+    equipment.lens ||
+      equipment.lensMillimeters !== undefined ||
+      equipment.focus
+  );
+}
+
+function hasLocation(location: ShotCameraDesign['location']): boolean {
+  if (!location) return false;
+  return Boolean(
+    location.locationId?.trim() ||
+      location.usesDifferentLocation !== undefined ||
+      location.azimuthView ||
+      location.customView?.trim()
+  );
+}
+
 function hasCustom(custom: ShotCameraDesign['custom']): boolean {
   if (!custom) return false;
-  return Boolean(custom.framing?.trim() || custom.movement?.trim());
+  return Boolean(custom.composition?.trim() || custom.movement?.trim());
 }
