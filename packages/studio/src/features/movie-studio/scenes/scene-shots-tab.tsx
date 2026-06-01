@@ -126,10 +126,13 @@ export function SceneShotsTab({ projectName, sceneId, shotId }: SceneShotsTabPro
         onSelectShot={setUserSelectedShotId}
       />
       <SceneShotDetail
+        projectName={projectName}
+        sceneId={sceneId}
         shot={selectedShot}
         label={selectedShotLabel}
         castMemberLabels={resource.castMemberLabels}
         locationLabels={resource.locationLabels}
+        onCameraDesignSaved={setResource}
       />
     </div>
   );

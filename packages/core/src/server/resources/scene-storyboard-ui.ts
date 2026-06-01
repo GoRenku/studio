@@ -8,7 +8,12 @@ import type {
   SceneStoryboardSheetReference,
   ScreenplayImageReference,
 } from '../../client/index.js';
-import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
+import type {
+  SceneShot,
+  SceneShotListDocument,
+  ShotCameraDesign,
+} from '../../client/scene-shot-list.js';
+import { deriveCameraDesignStrings } from '../../client/shot-camera-design-labels.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
 import {
@@ -23,6 +28,7 @@ import {
   listSceneShotStoryboardSheetRecords,
   readActiveSceneShotListRecord,
   readSceneShotListDocument,
+  updateSceneShotListRecordDocument,
 } from '../database/access/scene-shot-lists.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
@@ -30,6 +36,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type {
   ReadActStoryboardResourceInput,
   ReadSceneShotListResourceInput,
+  UpdateSceneShotCameraDesignInput,
 } from '../project-data-service-contracts.js';
 
 export async function readSceneShotListResource(
@@ -69,6 +76,202 @@ export async function readSceneShotListResource(
   } finally {
     session.close();
   }
+}
+
+/**
+ * In-place update of a single shot's structured camera design on the scene's
+ * active shot list (0036). Re-derives the prompt-facing free-text strings,
+ * revalidates the whole document, and writes it back without creating a new
+ * history row. Returns the refreshed shot-list resource for the active surface.
+ */
+export async function updateSceneShotCameraDesign(
+  input: UpdateSceneShotCameraDesignInput
+): Promise<SceneShotListResource> {
+  const { session } = await openProjectSession(input);
+  try {
+    const shotListRow = readActiveSceneShotListRecord(session, input.sceneId);
+    if (!shotListRow) {
+      throw new ProjectDataError(
+        'PROJECT_DATA329',
+        `Scene has no active shot list to update: ${input.sceneId}.`,
+        {
+          suggestion:
+            'Create or activate a shot list for this scene before editing camera design.',
+        }
+      );
+    }
+    const screenplay = requireScreenplayDocument(session);
+    const document = readSceneShotListDocument({
+      row: shotListRow,
+      screenplay,
+    });
+    const shot = document.shots.find((entry) => entry.shotId === input.shotId);
+    if (!shot) {
+      throw new ProjectDataError(
+        'PROJECT_DATA330',
+        `Shot was not found in the active shot list: ${input.shotId}.`,
+        { suggestion: 'Use a shot id from the active shot list.' }
+      );
+    }
+    applyCameraDesign(shot, input.cameraDesign);
+    const now = new Date().toISOString();
+    updateSceneShotListRecordDocument({
+      session,
+      id: shotListRow.id,
+      document,
+      screenplay,
+      now,
+    });
+  } finally {
+    session.close();
+  }
+  return readSceneShotListResource({
+    projectName: input.projectName,
+    sceneId: input.sceneId,
+    homeDir: input.homeDir,
+  });
+}
+
+function applyCameraDesign(
+  shot: SceneShot,
+  cameraDesign: ShotCameraDesign | null
+): void {
+  const previous = shot.cameraDesign;
+  const normalized = normalizeCameraDesign(cameraDesign);
+  if (normalized) {
+    shot.cameraDesign = normalized;
+  } else {
+    delete shot.cameraDesign;
+  }
+
+  // Derive prompt-facing strings for axes owned by the structured design. When
+  // a previously designed axis is removed, clear its old derived text so stale
+  // selections do not leak into generation prompts.
+  const derived = deriveCameraDesignStrings(shot.cameraDesign);
+  if (derived.shotType !== undefined) {
+    shot.shotType = derived.shotType;
+  } else if (hasShotSizeDesign(previous)) {
+    shot.shotType = 'Unspecified';
+  }
+  if (derived.cameraAngle !== undefined) {
+    shot.cameraAngle = derived.cameraAngle;
+  } else if (hasCameraAngleDesign(previous)) {
+    delete shot.cameraAngle;
+  }
+  if (derived.framing !== undefined) {
+    shot.framing = derived.framing;
+  } else if (hasFramingDesign(previous)) {
+    delete shot.framing;
+  }
+  if (derived.cameraMovement !== undefined) {
+    shot.cameraMovement = derived.cameraMovement;
+  } else if (hasMovementDesign(previous)) {
+    delete shot.cameraMovement;
+  }
+}
+
+function hasShotSizeDesign(design: ShotCameraDesign | undefined): boolean {
+  return Boolean(design?.shotSize);
+}
+
+function hasCameraAngleDesign(design: ShotCameraDesign | undefined): boolean {
+  return Boolean(design?.cameraAngle || design?.dutch);
+}
+
+function hasFramingDesign(design: ShotCameraDesign | undefined): boolean {
+  return Boolean(
+    design?.subjectFraming?.length || design?.custom?.framing?.trim()
+  );
+}
+
+function hasMovementDesign(design: ShotCameraDesign | undefined): boolean {
+  const movement = design?.movement;
+  return Boolean(
+    movement?.movement ||
+      movement?.secondary ||
+      movement?.track ||
+      movement?.rig ||
+      movement?.directions?.length ||
+      design?.custom?.movement?.trim()
+  );
+}
+
+/**
+ * Drop empty arrays, blank custom strings, and empty nested objects so the
+ * stored design stays minimal and satisfies the non-empty-string schema rules.
+ * Returns undefined when nothing meaningful is selected.
+ */
+function normalizeCameraDesign(
+  cameraDesign: ShotCameraDesign | null
+): ShotCameraDesign | undefined {
+  if (!cameraDesign) {
+    return undefined;
+  }
+  const next: ShotCameraDesign = {};
+  if (cameraDesign.shotSize) {
+    next.shotSize = cameraDesign.shotSize;
+  }
+  if (cameraDesign.subjectFraming?.length) {
+    next.subjectFraming = [...cameraDesign.subjectFraming];
+  }
+  if (cameraDesign.cameraAngle) {
+    next.cameraAngle = cameraDesign.cameraAngle;
+  }
+  if (cameraDesign.dutch) {
+    next.dutch = cameraDesign.dutch;
+  }
+  const movement = normalizeMovement(cameraDesign.movement);
+  if (movement) {
+    next.movement = movement;
+  }
+  const custom = normalizeCustom(cameraDesign.custom);
+  if (custom) {
+    next.custom = custom;
+  }
+  return Object.keys(next).length ? next : undefined;
+}
+
+function normalizeMovement(
+  movement: ShotCameraDesign['movement']
+): ShotCameraDesign['movement'] | undefined {
+  if (!movement) {
+    return undefined;
+  }
+  const next: NonNullable<ShotCameraDesign['movement']> = {};
+  if (movement.movement) {
+    next.movement = movement.movement;
+  }
+  if (movement.secondary) {
+    next.secondary = movement.secondary;
+  }
+  if (movement.directions?.length) {
+    next.directions = [...movement.directions];
+  }
+  if (movement.track) {
+    next.track = movement.track;
+  }
+  if (movement.rig) {
+    next.rig = movement.rig;
+  }
+  return Object.keys(next).length ? next : undefined;
+}
+
+function normalizeCustom(
+  custom: ShotCameraDesign['custom']
+): ShotCameraDesign['custom'] | undefined {
+  if (!custom) {
+    return undefined;
+  }
+  const next: NonNullable<ShotCameraDesign['custom']> = {};
+  const framing = custom.framing?.trim();
+  if (framing) {
+    next.framing = framing;
+  }
+  const movement = custom.movement?.trim();
+  if (movement) {
+    next.movement = movement;
+  }
+  return Object.keys(next).length ? next : undefined;
 }
 
 export async function readActStoryboardResource(

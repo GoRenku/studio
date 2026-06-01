@@ -12,6 +12,7 @@ import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneShotListResource: vi.fn(),
+  updateSceneShotCameraDesign: vi.fn(),
 }));
 
 // jsdom lacks ResizeObserver, which the Radix Slider in the video stage uses.
@@ -92,20 +93,20 @@ describe('SceneShotsTab', () => {
     expect(screen.queryByText('loc_chamber')).toBeNull();
   });
 
-  it('renders the scaffold placeholder for a design tab', async () => {
+  it('renders the scaffold placeholder for a not-yet-built design tab', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
       resource(shotList())
     );
 
     render(<SceneShotsTab projectName='constantinople' sceneId='scene_hook' />);
 
-    const framingTab = await screen.findByRole('tab', {
-      name: 'Camera Framing',
+    const locationTab = await screen.findByRole('tab', {
+      name: 'Location',
     });
     // Radix Tabs use automatic activation (select on focus); jsdom clicks do
     // not move focus, so drive the focus directly.
-    fireEvent.focus(framingTab);
-    fireEvent.click(framingTab);
+    fireEvent.focus(locationTab);
+    fireEvent.click(locationTab);
     expect(
       await screen.findByText('Designed in the shot-design surface.')
     ).not.toBeNull();

@@ -8,6 +8,9 @@ function createMountedScreenplayRoute() {
     '/:projectName',
     createScreenplayRoute({
       projectData: fakeProjectDataService(),
+      requireToken: async (_c, next) => {
+        await next();
+      },
     })
   );
 }
@@ -28,6 +31,9 @@ describe('screenplay Hono route', () => {
     const app = new Hono().route(
       '/:projectName',
       createScreenplayRoute({
+        requireToken: async (_c, next) => {
+          await next();
+        },
         projectData: {
           ...fakeProjectDataService(),
           async readCastMemberResource(input) {

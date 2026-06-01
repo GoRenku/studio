@@ -279,6 +279,35 @@ export function fakeProjectDataService(): NonNullable<
         locationLabels: {},
       };
     },
+    async updateSceneShotCameraDesign() {
+      return {
+        scene: {
+          id: 'scene_opening',
+          sequenceId: 'seq_opening',
+          title: 'Opening Scene',
+          setting: { locationIds: [] },
+        },
+        sequence: {
+          id: 'seq_opening',
+          actId: 'act_opening',
+          number: 1,
+          title: 'Opening',
+          sceneCount: 1,
+        },
+        act: {
+          id: 'act_opening',
+          title: 'Opening Act',
+          sequenceCount: 1,
+          sceneCount: 1,
+        },
+        projectAspectRatio: '16:9',
+        activeShotList: null,
+        storyboardSheet: null,
+        storyboardImagesByShotId: {},
+        castMemberLabels: {},
+        locationLabels: {},
+      };
+    },
     async readActStoryboardResource() {
       return {
         act: {

@@ -106,6 +106,37 @@ export function writeSceneShotListRecord(input: {
   return requireSceneShotListRecord(input.session, input.id);
 }
 
+/**
+ * Update an existing shot list's stored document in place (0036). Unlike
+ * {@link writeSceneShotListRecord}, this mutates the active row rather than
+ * inserting a new history row, matching the debounced-autosave contract for
+ * direct UI tuning of camera-design fields.
+ */
+export function updateSceneShotListRecordDocument(input: {
+  session: DatabaseSession;
+  id: string;
+  document: SceneShotListDocument;
+  screenplay: ScreenplayDocument;
+  now: string;
+  filePath?: string;
+}): SceneShotListRecord {
+  const document = serializeSceneShotListDocument({
+    document: input.document,
+    screenplay: input.screenplay,
+    filePath: input.filePath,
+  });
+  input.session.db
+    .update(sceneShotLists)
+    .set({
+      title: input.document.title,
+      document,
+      updatedAt: input.now,
+    })
+    .where(eq(sceneShotLists.id, input.id))
+    .run();
+  return requireSceneShotListRecord(input.session, input.id);
+}
+
 export function readSceneShotListDocument(input: {
   row: SceneShotListRecord;
   screenplay: ScreenplayDocument;

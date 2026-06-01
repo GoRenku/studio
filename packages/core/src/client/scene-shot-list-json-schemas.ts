@@ -1,3 +1,62 @@
+// Controlled vocabularies for the structured camera-design selections (0036).
+// Declared before the schema literal below so they are initialised when the
+// literal evaluates. Keep aligned with the id unions in `scene-shot-list.ts`.
+const SHOT_SIZE_IDS = [
+  'extreme-close-up',
+  'close-up',
+  'medium-close-up',
+  'medium-shot',
+  'medium-full-shot',
+  'full-shot',
+  'wide-shot',
+  'extreme-wide-shot',
+] as const;
+
+const SUBJECT_FRAMING_IDS = [
+  'single',
+  'two-shot',
+  'three-shot',
+  'group',
+  'over-the-shoulder',
+  'over-the-hip',
+  'point-of-view',
+  'insert',
+  'reaction',
+] as const;
+
+const CAMERA_ANGLE_IDS = [
+  'ground-level',
+  'knee-level',
+  'hip-level',
+  'shoulder-level',
+  'eye-level',
+  'low-angle',
+  'high-angle',
+  'overhead',
+] as const;
+
+const MOVEMENT_IDS = [
+  'static',
+  'pan',
+  'tilt',
+  'swish-pan',
+  'swish-tilt',
+  'tracking',
+  'push-in',
+  'pull-out',
+  'zoom',
+  'rack-focus',
+] as const;
+
+const MOVE_DIRECTION_IDS = [
+  'forward',
+  'backward',
+  'left',
+  'right',
+  'up',
+  'down',
+] as const;
+
 export const sceneShotListDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/scene-shot-list-document.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -76,6 +135,7 @@ export const sceneShotListDocumentSchema = {
           },
           audioNotes: nonEmptyString(),
           productionNotes: nonEmptyString(),
+          cameraDesign: cameraDesignSchema(),
         }
       ),
     },
@@ -86,6 +146,58 @@ export const sceneShotListDocumentSchema = {
   },
   additionalProperties: false,
 } as const;
+
+function cameraDesignSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      shotSize: enumValue(SHOT_SIZE_IDS),
+      subjectFraming: {
+        type: 'array',
+        items: enumValue(SUBJECT_FRAMING_IDS),
+      },
+      cameraAngle: enumValue(CAMERA_ANGLE_IDS),
+      dutch: enumValue(['left', 'right'] as const),
+      movement: {
+        type: 'object',
+        properties: {
+          movement: enumValue(MOVEMENT_IDS),
+          secondary: enumValue(MOVEMENT_IDS),
+          directions: {
+            type: 'array',
+            items: enumValue(MOVE_DIRECTION_IDS),
+          },
+          track: enumValue(['straight', 'circular'] as const),
+          rig: enumValue([
+            'sticks',
+            'hand-held',
+            'gimbal',
+            'slider',
+            'jib',
+            'drone',
+            'dolly',
+            'steadicam',
+            'crane',
+          ] as const),
+        },
+        additionalProperties: false,
+      },
+      custom: {
+        type: 'object',
+        properties: {
+          framing: nonEmptyString(),
+          movement: nonEmptyString(),
+        },
+        additionalProperties: false,
+      },
+    },
+    additionalProperties: false,
+  };
+}
+
+function enumValue(values: readonly string[]): Record<string, unknown> {
+  return { type: 'string', enum: [...values] };
+}
 
 function objectWith(
   required: string[],

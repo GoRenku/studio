@@ -78,6 +78,7 @@ import type {
   StoryArcResource,
   ActStoryboardResource,
   SceneShotListResource,
+  ShotCameraDesign,
   VisualLanguageCommandReport,
 } from '../client/index.js';
 import type {
@@ -146,6 +147,9 @@ export interface ProjectDataService {
   ): Promise<SceneNarrativeResource>;
   readSceneShotListResource(
     input: ReadSceneShotListResourceInput
+  ): Promise<SceneShotListResource>;
+  updateSceneShotCameraDesign(
+    input: UpdateSceneShotCameraDesignInput
   ): Promise<SceneShotListResource>;
   readActStoryboardResource(
     input: ReadActStoryboardResourceInput
@@ -807,6 +811,15 @@ export interface ReadSceneNarrativeResourceInput extends RenkuConfigPathOptions 
 export interface ReadSceneShotListResourceInput extends RenkuConfigPathOptions {
   projectName: string;
   sceneId: string;
+}
+
+export interface UpdateSceneShotCameraDesignInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  /** Full structured selection for the shot, or null to clear it. */
+  cameraDesign: ShotCameraDesign | null;
 }
 
 export interface ReadActStoryboardResourceInput extends RenkuConfigPathOptions {

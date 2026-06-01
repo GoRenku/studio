@@ -1,4 +1,5 @@
-import { Hono } from 'hono';
+import { sceneShotListResourceKeys } from '@gorenku/studio-core/server';
+import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import {
@@ -10,13 +11,18 @@ import {
   toSceneShotListResourceResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
+import { readSceneShotCameraDesignRequest } from '../http/scene-shot-camera-design-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
 export interface CreateScreenplayRouteOptions {
   projectData: ProjectsRouteProjectData;
+  requireToken: MiddlewareHandler;
 }
 
-export function createScreenplayRoute({ projectData }: CreateScreenplayRouteOptions) {
+export function createScreenplayRoute({
+  projectData,
+  requireToken,
+}: CreateScreenplayRouteOptions) {
   return new Hono()
     .get('/screenplay/cast', async (c) => {
       try {
@@ -171,6 +177,36 @@ export function createScreenplayRoute({ projectData }: CreateScreenplayRouteOpti
         return projectErrorResponse(c, error);
       }
     })
+    .patch(
+      '/screenplay/scenes/:sceneId/shots/:shotId',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const shotId = c.req.param('shotId') as string;
+          const cameraDesign = readSceneShotCameraDesignRequest(
+            await c.req.json()
+          );
+          const resource = await projectData.updateSceneShotCameraDesign({
+            projectName,
+            sceneId,
+            shotId,
+            cameraDesign,
+          });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: sceneShotListResourceKeys({
+              sceneId,
+              shotListId: resource.storyboardSheet?.shotListId ?? null,
+              shotIds: [shotId],
+            }),
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .get('/screenplay/scenes/:sceneId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

@@ -4,8 +4,8 @@ import { Slider } from '@/ui/slider';
 
 export function SceneShotVideoStage() {
   return (
-    <div className='flex flex-col gap-3'>
-      <div className='aspect-video w-full overflow-hidden rounded-lg border border-border/40 bg-black/80'>
+    <div className='flex h-full min-h-0 flex-col gap-3'>
+      <div className='min-h-0 w-full flex-1 overflow-hidden rounded-lg border border-border/40 bg-black/80'>
         <div className='flex h-full flex-col items-center justify-center text-center'>
           <span className='mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white/70'>
             <Film className='h-5 w-5' />

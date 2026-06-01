@@ -155,6 +155,8 @@ export {
 export type {
   SceneShot,
   SceneShotDialogueReference,
+  ShotCameraDesign,
+  ShotMovementDesign,
   SceneShotListContextReport,
   SceneShotListDocument,
   SceneShotListListReport,
@@ -361,6 +363,7 @@ export {
   studioSurfaceResourceKeyForAssetTarget,
   validateStudioFocusRequestForProject,
 } from './studio-coordination/index.js';
+export { sceneShotListResourceKeys } from './commands/scene-shot-list-commands.js';
 export type {
   AppendStudioEventInput,
   ProjectInformationRefreshField,

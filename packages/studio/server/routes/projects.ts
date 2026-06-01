@@ -49,6 +49,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
   | 'readSceneShotListResource'
+  | 'updateSceneShotCameraDesign'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
   | 'updateProjectInformation'
@@ -142,7 +143,7 @@ export function createProjectsRoute(
       }
     })
     .route('/:projectName', createNavigationRoute({ projectData }))
-    .route('/:projectName', createScreenplayRoute({ projectData }))
+    .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
     .route(

@@ -12,6 +12,7 @@ import type {
   SequenceResourceResponse,
   StoryArcResourceResponse,
 } from './studio-project-contracts';
+import type { ShotCameraDesign } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
 interface ResourceResponse<T> {
@@ -121,6 +122,48 @@ export async function readSceneShotListResource(
   return readResource(
     screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/shot-list`)
   );
+}
+
+/**
+ * Persist a shot's structured camera design (0036). Sends the full design
+ * object (or null to clear it) and returns the refreshed shot-list resource.
+ */
+export async function updateSceneShotCameraDesign(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  cameraDesign: ShotCameraDesign | null
+): Promise<SceneShotListResourceResponse> {
+  const response = await fetch(
+    screenplayPath(
+      projectName,
+      `/scenes/${encodeURIComponent(sceneId)}/shots/${encodeURIComponent(shotId)}`
+    ),
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify({ cameraDesign }),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ResourceResponse<SceneShotListResourceResponse>;
+  if (!body.resource) {
+    throw new Error('Renku Studio API returned no screenplay resource.');
+  }
+  return body.resource;
+}
+
+function readStudioApiToken(): string {
+  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
+  if (!token) {
+    throw new Error('Studio API token is not available.');
+  }
+  return token;
 }
 
 export async function readActStoryboardResource(
