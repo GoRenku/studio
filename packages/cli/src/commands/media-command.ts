@@ -9,6 +9,8 @@ import {
   type LookbookImageMediaImportReport,
   type SceneStoryboardSheetImportDocument,
   type SceneStoryboardSheetImportReport,
+  type ShotVideoTakeInputMediaImportReport,
+  type ShotVideoTakeMediaImportReport,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
@@ -27,6 +29,8 @@ export async function runMediaCommand(options: {
     sections?: string;
     receipt?: string;
     shotList?: string;
+    shots?: string;
+    selection?: string;
   };
   json: boolean;
   io: RenkuCliIo;
@@ -41,7 +45,9 @@ export async function runMediaCommand(options: {
       | LookbookImageMediaImportReport
       | CastMediaImportReport
       | LocationEnvironmentSheetMediaImportReport
-      | SceneStoryboardSheetImportReport;
+      | SceneStoryboardSheetImportReport
+      | ShotVideoTakeInputMediaImportReport
+      | ShotVideoTakeMediaImportReport;
 
     if (purpose === 'location.environment-sheet') {
       if (options.flags.source) {
@@ -132,7 +138,7 @@ export async function runMediaCommand(options: {
               oneLineSummary: options.flags.summary,
               receipt,
             })
-          : purpose === 'cast.profile'
+            : purpose === 'cast.profile'
             ? await service.importCastProfileMedia({
                 projectName: options.flags.project,
                 homeDir: options.homeDir,
@@ -142,6 +148,65 @@ export async function runMediaCommand(options: {
                 oneLineSummary: options.flags.summary,
                 receipt,
               })
+            : purpose === 'shot.first-frame'
+              ? await service.importShotFirstFrame({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  sceneId: parseSceneTarget(target),
+                  shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+                  sourceProjectRelativePath,
+                  title: options.flags.title,
+                  receipt,
+                  selection: parseSelection(options.flags.selection),
+                })
+            : purpose === 'shot.last-frame'
+              ? await service.importShotLastFrame({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  sceneId: parseSceneTarget(target),
+                  shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+                  sourceProjectRelativePath,
+                  title: options.flags.title,
+                  receipt,
+                  selection: parseSelection(options.flags.selection),
+                })
+            : purpose === 'shot.reference-sheet'
+              ? await service.importShotReferenceSheet({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  sceneId: parseSceneTarget(target),
+                  shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+                  sourceProjectRelativePath,
+                  title: options.flags.title,
+                  receipt,
+                  selection: parseSelection(options.flags.selection),
+                })
+            : purpose === 'shot.multi-shot-storyboard-sheet'
+              ? await service.importShotMultiShotStoryboardSheet({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  sceneId: parseSceneTarget(target),
+                  shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+                  sourceProjectRelativePath,
+                  title: options.flags.title,
+                  receipt,
+                  selection: parseSelection(options.flags.selection),
+                })
+            : purpose === 'shot.video-take'
+              ? await service.importShotVideoTake({
+                  projectName: options.flags.project,
+                  homeDir: options.homeDir,
+                  sceneId: parseSceneTarget(target),
+                  shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+                  shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+                  sourceProjectRelativePath,
+                  title: options.flags.title,
+                  receipt,
+                })
             : unsupportedMediaPurpose(purpose);
     }
     await appendMediaResourceChangedEvent({
@@ -352,12 +417,41 @@ function parseSceneTarget(target: string): string {
   return id;
 }
 
+function parseShots(value: string): string[] {
+  const shots = value
+    .split(',')
+    .map((shotId) => shotId.trim())
+    .filter(Boolean);
+  if (shots.length === 0) {
+    throw new StructuredError({
+      code: 'CLI030',
+      message: '--shots must include at least one shot id.',
+      suggestion: 'Use --shots shot_001 or --shots shot_001,shot_002.',
+    });
+  }
+  return shots;
+}
+
+function parseSelection(value: string | undefined): 'select' | 'take' | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === 'select' || value === 'take') {
+    return value;
+  }
+  throw new StructuredError({
+    code: 'CLI031',
+    message: `Unsupported media import selection: ${value}.`,
+    suggestion: 'Use --selection select or --selection take.',
+  });
+}
+
 function unsupportedMediaPurpose(purpose: string): never {
   throw new StructuredError({
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, or --purpose scene.storyboard-sheet.',
+      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-sheet, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
   });
 }
 
@@ -378,7 +472,9 @@ async function appendMediaResourceChangedEvent(input: {
     | LookbookImageMediaImportReport
     | CastMediaImportReport
     | LocationEnvironmentSheetMediaImportReport
-    | SceneStoryboardSheetImportReport;
+    | SceneStoryboardSheetImportReport
+    | ShotVideoTakeInputMediaImportReport
+    | ShotVideoTakeMediaImportReport;
   command: string;
 }): Promise<void> {
   if (input.report.resourceKeys.length === 0) {
@@ -432,6 +528,8 @@ async function toProjectRef(
     | CastMediaImportReport
     | LocationEnvironmentSheetMediaImportReport
     | SceneStoryboardSheetImportReport
+    | ShotVideoTakeInputMediaImportReport
+    | ShotVideoTakeMediaImportReport
   )['project'],
   homeDir?: string
 ): Promise<StudioProjectRef> {

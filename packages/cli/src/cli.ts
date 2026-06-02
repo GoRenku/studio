@@ -91,6 +91,13 @@ Options
   --analysis           Screenplay Analysis id
   --scene              Scene id for scene-owned commands
   --shot-list          Scene Shot List id
+  --shots              Comma-separated shot ids for shot video take generation
+  --intent             Shot video take intent id
+  --input              Shot video take reusable input id
+  --kind               Shot video take input kind
+  --subject-kind       Shot video take input subject kind
+  --subject-id         Shot video take input subject id
+  --selection          Media import selection: select or take
   --include-visual-references
                        Include selected visual references in shot-list context
   --sequence           Sequence id for screenplay scene list
@@ -191,6 +198,27 @@ function createCliFlags() {
       type: 'string',
     },
     shotList: {
+      type: 'string',
+    },
+    shots: {
+      type: 'string',
+    },
+    intent: {
+      type: 'string',
+    },
+    input: {
+      type: 'string',
+    },
+    kind: {
+      type: 'string',
+    },
+    subjectKind: {
+      type: 'string',
+    },
+    subjectId: {
+      type: 'string',
+    },
+    selection: {
       type: 'string',
     },
     includeVisualReferences: {
@@ -415,6 +443,12 @@ export async function runRenkuCli(
             file: cli.flags.file,
             spec: cli.flags.spec,
             shotList: cli.flags.shotList,
+            shots: cli.flags.shots,
+            intent: cli.flags.intent,
+            input: cli.flags.input,
+            kind: cli.flags.kind,
+            subjectKind: cli.flags.subjectKind,
+            subjectId: cli.flags.subjectId,
             approvalToken: cli.flags.approvalToken,
             simulate: cli.flags.simulate,
           },
@@ -451,6 +485,8 @@ export async function runRenkuCli(
             sections: cli.flags.sections,
             receipt: cli.flags.receipt,
             shotList: cli.flags.shotList,
+            shots: cli.flags.shots,
+            selection: cli.flags.selection,
           },
           json: cli.flags.json,
           io,

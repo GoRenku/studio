@@ -466,12 +466,16 @@ export function requireTakeCount(spec: { takeCount?: number }, max: number): num
 }
 
 export function outputNames(
-  spec: MediaGenerationSpec,
+  spec: MediaGenerationSpec & { outputFormat?: string },
   count: number,
   fallback: string
 ): string[] {
   const base = slugify(titleForSpec(spec, fallback));
-  const extension = extensionForOutputFormat(spec.outputFormat ?? 'png');
+  const outputFormat =
+    spec.outputFormat === 'jpeg' || spec.outputFormat === 'webp'
+      ? spec.outputFormat
+      : 'png';
+  const extension = extensionForOutputFormat(outputFormat);
   return Array.from({ length: count }, (_, index) =>
     count === 1
       ? `${base}${extension}`

@@ -41,6 +41,14 @@ import type {
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
   SceneStoryboardSheetModelListReport,
+  ShotVideoTakeAvailableInput,
+  ShotVideoTakeGenerationContext,
+  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeInputGenerationSpec,
+  ShotVideoTakeInputMediaImportReport,
+  ShotVideoTakeMediaImportReport,
+  ShotVideoTakeModelListReport,
+  ShotVideoTakePreflightReport,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -59,6 +67,10 @@ import type {
   SceneShotListReadReport,
   SceneShotListValidationReport,
   SceneShotListWriteReport,
+  ShotVideoTakeInputKind,
+  ShotVideoTakeInputSubjectKind,
+  ShotVideoTakeIntentId,
+  ShotVideoTakeProductionPlan,
   SceneStoryboardSheetImportDocument,
   SceneStoryboardSheetImportReport,
   StudioSelection,
@@ -296,6 +308,58 @@ export interface ProjectDataService {
   runSceneStoryboardSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordSceneStoryboardSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
   importSceneStoryboardSheetMedia(input: ImportSceneStoryboardSheetMediaInput): Promise<SceneStoryboardSheetImportReport>;
+  buildShotVideoTakeContext(input: ShotVideoTakeContextInput): Promise<ShotVideoTakeGenerationContext>;
+  listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
+  listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: ShotVideoTakeAvailableInput[]; resourceKeys: string[] }>;
+  updateShotVideoTakeProductionGroup(input: UpdateShotVideoTakeProductionGroupInput): Promise<ShotVideoTakeGenerationContext>;
+  previewShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakePreflightReport>;
+  selectShotVideoTakeInput(input: SelectShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
+  clearShotVideoTakeInputSelection(input: ClearShotVideoTakeInputSelectionInput): Promise<ShotVideoTakeGenerationContext>;
+  validateShotFirstFrameSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createShotFirstFrameSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateShotFirstFrameSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readShotFirstFrameSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listShotFirstFrameSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareShotFirstFrameSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateShotFirstFrameSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runShotFirstFrameSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  validateShotLastFrameSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createShotLastFrameSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateShotLastFrameSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readShotLastFrameSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listShotLastFrameSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareShotLastFrameSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateShotLastFrameSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runShotLastFrameSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  validateShotReferenceSheetSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createShotReferenceSheetSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateShotReferenceSheetSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readShotReferenceSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listShotReferenceSheetSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareShotReferenceSheetSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateShotReferenceSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runShotReferenceSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  validateShotMultiShotStoryboardSheetSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createShotMultiShotStoryboardSheetSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateShotMultiShotStoryboardSheetSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readShotMultiShotStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listShotMultiShotStoryboardSheetSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareShotMultiShotStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateShotMultiShotStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runShotMultiShotStoryboardSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  validateShotVideoTakeSpec(input: ValidateShotVideoTakeGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createShotVideoTakeSpec(input: CreateShotVideoTakeGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateShotVideoTakeSpec(input: UpdateShotVideoTakeGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readShotVideoTakeSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listShotVideoTakeSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareShotVideoTakeSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateShotVideoTakeSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runShotVideoTakeSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  importShotFirstFrame(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
+  importShotLastFrame(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
+  importShotReferenceSheet(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
+  importShotMultiShotStoryboardSheet(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
+  importShotVideoTake(input: ImportShotVideoTakeMediaInput): Promise<ShotVideoTakeMediaImportReport>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -750,6 +814,88 @@ export interface ImportSceneStoryboardSheetMediaInput
   document: SceneStoryboardSheetImportDocument;
   title?: string;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface ShotVideoTakeContextInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  shotListId: string;
+  shotIds: string[];
+  productionGroupId?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ShotVideoTakeModelListInput extends ShotVideoTakeContextInput {
+  intentId?: ShotVideoTakeIntentId;
+}
+
+export interface UpdateShotVideoTakeProductionGroupInput
+  extends ShotVideoTakeContextInput {
+  production: ShotVideoTakeProductionPlan;
+}
+
+export interface PreviewShotVideoTakeProductionInput
+  extends ShotVideoTakeContextInput {
+  production?: ShotVideoTakeProductionPlan;
+}
+
+export interface SelectShotVideoTakeInputInput
+  extends ShotVideoTakeContextInput {
+  inputId: string;
+}
+
+export interface ClearShotVideoTakeInputSelectionInput
+  extends ShotVideoTakeContextInput {
+  kind: ShotVideoTakeInputKind;
+  subjectKind: ShotVideoTakeInputSubjectKind;
+  subjectId: string;
+}
+
+export interface ValidateShotVideoTakeInputGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: ShotVideoTakeInputGenerationSpec;
+}
+
+export interface CreateShotVideoTakeInputGenerationSpecInput
+  extends ValidateShotVideoTakeInputGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateShotVideoTakeInputGenerationSpecInput
+  extends ValidateShotVideoTakeInputGenerationSpecInput {
+  specId: string;
+}
+
+export interface ValidateShotVideoTakeGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: ShotVideoTakeGenerationSpec;
+}
+
+export interface CreateShotVideoTakeGenerationSpecInput
+  extends ValidateShotVideoTakeGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateShotVideoTakeGenerationSpecInput
+  extends ValidateShotVideoTakeGenerationSpecInput {
+  specId: string;
+}
+
+export interface ImportShotVideoTakeInputMediaInput
+  extends ShotVideoTakeContextInput {
+  sourceProjectRelativePath: string;
+  title?: string;
+  receipt?: unknown;
+  selection?: 'select' | 'take';
+}
+
+export interface ImportShotVideoTakeMediaInput extends ShotVideoTakeContextInput {
+  sourceProjectRelativePath: string;
+  title?: string;
+  receipt?: unknown;
+  isSelected?: boolean;
 }
 
 export interface ListNavigationInput extends RenkuConfigPathOptions {

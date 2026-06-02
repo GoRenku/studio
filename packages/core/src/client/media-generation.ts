@@ -8,6 +8,14 @@ import type {
   SceneShotListContextReport,
   SceneShotListDocument,
   SceneShotListSummary,
+  SceneShot,
+  ShotVideoTakeDependencyKind,
+  ShotVideoTakeInputKind,
+  ShotVideoTakeInputSubjectKind,
+  ShotVideoTakeIntentId,
+  ShotVideoTakeModelChoice,
+  ShotVideoTakeParameterValues,
+  ShotVideoTakeProductionGroup,
 } from './scene-shot-list.js';
 import type { SceneSetting } from './screenplay.js';
 import type { Lookbook, LookbookImage, LookbookSection } from './visual-language.js';
@@ -21,6 +29,16 @@ export const LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE =
   'location.environment-sheet' as const;
 export const SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE =
   'scene.storyboard-sheet' as const;
+export const SHOT_FIRST_FRAME_GENERATION_PURPOSE =
+  'shot.first-frame' as const;
+export const SHOT_LAST_FRAME_GENERATION_PURPOSE =
+  'shot.last-frame' as const;
+export const SHOT_REFERENCE_SHEET_GENERATION_PURPOSE =
+  'shot.reference-sheet' as const;
+export const SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE =
+  'shot.multi-shot-storyboard-sheet' as const;
+export const SHOT_VIDEO_TAKE_GENERATION_PURPOSE =
+  'shot.video-take' as const;
 
 export type MediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
@@ -29,7 +47,12 @@ export type MediaGenerationPurpose =
   | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE
   | typeof CAST_PROFILE_GENERATION_PURPOSE
   | typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE
-  | typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE;
+  | typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
+  | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
+  | typeof SHOT_REFERENCE_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
 
 export type LookbookImageModelChoice =
   | 'fal-ai/openai/gpt-image-2'
@@ -88,6 +111,17 @@ export type SceneStoryboardSheetModelChoice =
   | 'fal-ai/nano-banana-2'
   | 'fal-ai/xai/grok-imagine-image';
 
+export type ShotVideoTakeInputModelChoice =
+  | 'fal-ai/openai/gpt-image-2'
+  | 'fal-ai/nano-banana-2'
+  | 'fal-ai/xai/grok-imagine-image';
+
+export type ShotVideoTakeInputGenerationPurpose =
+  | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
+  | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
+  | typeof SHOT_REFERENCE_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE;
+
 export type SceneStoryboardSheetFrame = '4:3';
 export type SceneStoryboardShotFrame = LookbookImageFrame;
 export type SceneStoryboardSheetDetail = LookbookImageDetail;
@@ -113,11 +147,21 @@ export interface SceneMediaGenerationTarget {
   id: string;
 }
 
+export interface SceneShotMediaGenerationTarget {
+  kind: 'sceneShotGroup';
+  id: string;
+  sceneId: string;
+  shotListId: string;
+  productionGroupId: string;
+  shotIds: string[];
+}
+
 export type MediaGenerationTarget =
   | LookbookImageGenerationTarget
   | CastMediaGenerationTarget
   | LocationMediaGenerationTarget
-  | SceneMediaGenerationTarget;
+  | SceneMediaGenerationTarget
+  | SceneShotMediaGenerationTarget;
 
 export interface CastGenerationProjectContext {
   id?: string;
@@ -337,6 +381,107 @@ export interface SceneStoryboardSheetGenerationContext {
   resourceKeys: string[];
 }
 
+export interface ShotVideoTakeProjectContext {
+  id?: string;
+  name: string;
+  title: string;
+  aspectRatio: string | null;
+}
+
+export interface ShotVideoTakeSceneContext {
+  id: string;
+  title: string;
+  setting: SceneSetting;
+  storyFunction: string[];
+}
+
+export interface ShotVideoTakeShotListContext {
+  id: string;
+  title: string;
+  summary: string;
+  createdAt: string;
+  updatedAt: string;
+  isActive: boolean;
+}
+
+export interface ShotVideoTakeCastReference {
+  id: string;
+  handle: string;
+  name: string;
+  role?: string;
+  description?: string;
+}
+
+export interface ShotVideoTakeLocationReference {
+  id: string;
+  handle: string;
+  name: string;
+  description?: string;
+}
+
+export interface ShotVideoTakeLookbookReference {
+  id: string;
+  name: string;
+  thesis: string;
+}
+
+export interface ShotVideoTakeStoryboardImageReference {
+  shotId: string;
+  assetId: string;
+  assetFileId: string;
+  projectRelativePath: ProjectRelativePath;
+}
+
+export interface ShotVideoTakeAvailableInput {
+  inputId: string;
+  kind: ShotVideoTakeInputKind;
+  assetId: string;
+  assetFileId: string;
+  projectRelativePath: ProjectRelativePath;
+  mediaKind: 'image' | 'audio' | 'video';
+  subjectKind: ShotVideoTakeInputSubjectKind;
+  subjectId: string;
+  productionGroupId?: string;
+  shotIds: string[];
+  mediaGenerationRunId?: string;
+  selected: boolean;
+  createdAt: string;
+}
+
+export interface SceneShotVideoTake {
+  takeId: string;
+  assetId: string;
+  assetFileId: string;
+  mediaGenerationRunId?: string;
+  shotIds: string[];
+  selected: boolean;
+  createdAt: string;
+}
+
+export interface ShotVideoTakeDefaults {
+  intentId: ShotVideoTakeIntentId;
+  imageDependencyModelChoice: ShotVideoTakeInputModelChoice;
+  parameterValues: ShotVideoTakeParameterValues;
+}
+
+export interface ShotVideoTakeGenerationContext {
+  purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  target: SceneShotMediaGenerationTarget;
+  project: ShotVideoTakeProjectContext;
+  scene: ShotVideoTakeSceneContext;
+  shotList: ShotVideoTakeShotListContext;
+  productionGroup: ShotVideoTakeProductionGroup;
+  shots: SceneShot[];
+  referencedCast: ShotVideoTakeCastReference[];
+  referencedLocations: ShotVideoTakeLocationReference[];
+  activeLookbook: ShotVideoTakeLookbookReference | null;
+  storyboardImages: ShotVideoTakeStoryboardImageReference[];
+  availableInputs: ShotVideoTakeAvailableInput[];
+  existingTakes: SceneShotVideoTake[];
+  defaults: ShotVideoTakeDefaults;
+  resourceKeys: string[];
+}
+
 export interface LookbookImageGenerationContext {
   purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
   target: LookbookImageGenerationTarget;
@@ -433,12 +578,48 @@ export interface SceneStoryboardSheetGenerationSpec {
   title?: string;
 }
 
+export interface ShotVideoTakeInputGenerationSpec {
+  purpose: ShotVideoTakeInputGenerationPurpose;
+  target: SceneShotMediaGenerationTarget;
+  dependencyKind: ShotVideoTakeDependencyKind;
+  outputInputKind: ShotVideoTakeInputKind;
+  modelChoice: ShotVideoTakeInputModelChoice;
+  prompt: string;
+  parameterValues: ShotVideoTakeParameterValues;
+  title?: string;
+}
+
+export interface ShotVideoTakeGenerationInput {
+  kind: ShotVideoTakeInputKind;
+  assetId: string;
+  assetFileId: string;
+  role: string;
+  mediaKind: 'image' | 'audio' | 'video';
+  projectRelativePath: ProjectRelativePath;
+  subjectKind?: ShotVideoTakeInputSubjectKind;
+  subjectId?: string;
+}
+
+export interface ShotVideoTakeGenerationSpec {
+  purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  target: SceneShotMediaGenerationTarget;
+  intentId: ShotVideoTakeIntentId;
+  modelChoice: ShotVideoTakeModelChoice;
+  prompt: string;
+  negativePrompt?: string;
+  parameterValues: ShotVideoTakeParameterValues;
+  inputs: ShotVideoTakeGenerationInput[];
+  title?: string;
+}
+
 export type MediaGenerationSpec =
   | LookbookImageGenerationSpec
   | CastCharacterSheetGenerationSpec
   | CastProfileGenerationSpec
   | LocationEnvironmentSheetGenerationSpec
-  | SceneStoryboardSheetGenerationSpec;
+  | SceneStoryboardSheetGenerationSpec
+  | ShotVideoTakeInputGenerationSpec
+  | ShotVideoTakeGenerationSpec;
 
 export interface LookbookImageModelChoiceReport {
   modelChoice: LookbookImageModelChoice;
@@ -526,6 +707,106 @@ export interface SceneStoryboardSheetModelListReport {
   models: SceneStoryboardSheetModelChoiceReport[];
 }
 
+export interface ShotVideoTakeDurationSupport {
+  supported: boolean;
+  values?: number[];
+  default?: number;
+}
+
+export interface ShotVideoTakeModelInputRoleReport {
+  kind: ShotVideoTakeInputKind;
+  required: boolean;
+  minCount: number;
+  maxCount: number | null;
+  mediaKind: 'image' | 'audio' | 'video';
+}
+
+export interface ShotVideoTakeParameterReport {
+  name: string;
+  label: string;
+  required: boolean;
+  defaultValue?: import('./scene-shot-list.js').ShotVideoTakeParameterValue;
+  allowedValues?: import('./scene-shot-list.js').ShotVideoTakeParameterValue[];
+}
+
+export interface ShotVideoTakeEstimateInputReport {
+  canEstimateBeforeDependenciesExist: boolean;
+  requiresPreparedInputs: boolean;
+}
+
+export interface ShotVideoTakeModelChoiceReport {
+  modelChoice: ShotVideoTakeModelChoice;
+  label: string;
+  available: boolean;
+  unavailableReason?: string;
+  supportedIntents: ShotVideoTakeIntentId[];
+  duration: ShotVideoTakeDurationSupport;
+  inputRoles: ShotVideoTakeModelInputRoleReport[];
+  parameters: ShotVideoTakeParameterReport[];
+  estimateInputs: ShotVideoTakeEstimateInputReport;
+}
+
+export interface ShotVideoTakeModelListReport {
+  purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  target: SceneShotMediaGenerationTarget;
+  intentId?: ShotVideoTakeIntentId;
+  models: ShotVideoTakeModelChoiceReport[];
+}
+
+export interface ShotVideoTakePreflightInput extends ShotVideoTakeGenerationInput {
+  subjectKind: ShotVideoTakeInputSubjectKind;
+  subjectId: string;
+}
+
+export interface ShotVideoTakePreflightDependency {
+  dependencyKind?: ShotVideoTakeDependencyKind;
+  purpose?: ShotVideoTakeInputGenerationPurpose;
+  outputInputKind: ShotVideoTakeInputKind;
+  subjectKind?: ShotVideoTakeInputSubjectKind;
+  subjectId?: string;
+  mediaKind: 'image' | 'audio' | 'video';
+  reason: string;
+}
+
+export interface ShotVideoTakePreflightPrompt {
+  purpose: ShotVideoTakeInputGenerationPurpose | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  prompt: string;
+  negativePrompt?: string;
+  title?: string;
+}
+
+export interface ShotVideoTakeEstimateLine {
+  purpose: ShotVideoTakeInputGenerationPurpose | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  dependencyKind?: ShotVideoTakeDependencyKind;
+  label: string;
+  specId?: string;
+  estimate: GenerationEstimate | null;
+  issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface ShotVideoTakePreflightFinalTake {
+  purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  canCreateSpec: boolean;
+  title: string;
+}
+
+export interface ShotVideoTakePreflightReport {
+  valid: boolean;
+  issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  target: SceneShotMediaGenerationTarget;
+  productionGroup: ShotVideoTakeProductionGroup;
+  intentId: ShotVideoTakeIntentId;
+  modelChoice: ShotVideoTakeModelChoice;
+  preparedInputs: ShotVideoTakePreflightInput[];
+  availableInputs: ShotVideoTakeAvailableInput[];
+  inputsToCreate: ShotVideoTakePreflightDependency[];
+  prompts: ShotVideoTakePreflightPrompt[];
+  estimateLines: ShotVideoTakeEstimateLine[];
+  finalTake: ShotVideoTakePreflightFinalTake;
+  agentBrief: string;
+  estimate: GenerationEstimate | null;
+}
+
 export interface LocationEnvironmentSheetModelListReport {
   purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE;
   target: LocationMediaGenerationTarget;
@@ -547,7 +828,9 @@ export interface MediaGenerationSpecRecord {
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
     | LocationEnvironmentSheetModelChoice
-    | SceneStoryboardSheetModelChoice;
+    | SceneStoryboardSheetModelChoice
+    | ShotVideoTakeInputModelChoice
+    | ShotVideoTakeModelChoice;
   title: string;
   spec: MediaGenerationSpec;
   createdAt: string;
@@ -564,7 +847,9 @@ export interface MediaGenerationRun {
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
     | LocationEnvironmentSheetModelChoice
-    | SceneStoryboardSheetModelChoice;
+    | SceneStoryboardSheetModelChoice
+    | ShotVideoTakeInputModelChoice
+    | ShotVideoTakeModelChoice;
   provider: 'fal-ai';
   model: string;
   specSnapshot: MediaGenerationSpec;
@@ -592,8 +877,8 @@ export interface PreparedMediaGeneration {
     policy: {
       provider: 'fal-ai';
       model: string;
-      mediaKind: 'image';
-      mode: 'text-to-image' | 'image-edit';
+      mediaKind: 'image' | 'video';
+      mode: 'text-to-image' | 'image-edit' | 'text-to-video' | 'image-to-video';
       outputCount: number;
     };
     request: {
@@ -601,7 +886,7 @@ export interface PreparedMediaGeneration {
       inputFiles?: Array<{
         field: string;
         projectRelativePath: string;
-        mediaKind: 'image';
+        mediaKind: 'image' | 'audio' | 'video';
         asArray?: boolean;
         required?: boolean;
       }>;
@@ -665,5 +950,39 @@ export interface LocationEnvironmentSheetMediaImportReport {
     role: LocationEnvironmentSheetFileRole;
     projectRelativePath: ProjectRelativePath;
   }>;
+  resourceKeys: string[];
+}
+
+export interface ShotVideoTakeInputMediaImportReport {
+  valid: true;
+  warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  project: {
+    name: string;
+    id?: string;
+    projectFolder?: string;
+  };
+  changes?: Array<{ type: string; [key: string]: string }>;
+  purpose: ShotVideoTakeInputGenerationPurpose;
+  target: SceneShotMediaGenerationTarget;
+  imported: Asset;
+  input: ShotVideoTakeAvailableInput;
+  receipt?: unknown;
+  resourceKeys: string[];
+}
+
+export interface ShotVideoTakeMediaImportReport {
+  valid: true;
+  warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  project: {
+    name: string;
+    id?: string;
+    projectFolder?: string;
+  };
+  changes?: Array<{ type: string; [key: string]: string }>;
+  purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  target: SceneShotMediaGenerationTarget;
+  imported: Asset;
+  take: SceneShotVideoTake;
+  receipt?: unknown;
   resourceKeys: string[];
 }

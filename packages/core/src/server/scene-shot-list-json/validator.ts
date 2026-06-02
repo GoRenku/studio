@@ -10,7 +10,11 @@ import {
 import type {
   SceneShot,
   SceneShotListDocument,
+  ShotVideoTakeDependencyKind,
+  ShotVideoTakeInputKind,
+  ShotVideoTakeProductionGroup,
 } from '../../client/scene-shot-list.js';
+import type { ShotVideoTakeInputGenerationPurpose } from '../../client/media-generation.js';
 import { sceneShotListDocumentSchema } from '../../client/scene-shot-list-json-schemas.js';
 import type { ScreenplayDocument } from '../../client/screenplay.js';
 
@@ -322,8 +326,209 @@ function validateSceneShotListSemantics(input: {
       );
     }
   });
+  validateShotVideoTakeProductionGroups(document, issues, filePath);
 
   return issues;
+}
+
+function validateShotVideoTakeProductionGroups(
+  document: SceneShotListDocument,
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const groups = document.videoTakeProductionGroups ?? [];
+  const shotOrder = new Map(
+    document.shots.map((shot, index) => [shot.shotId, index])
+  );
+  const assignedShotIds = new Map<string, string>();
+  const productionGroupIds = new Set<string>();
+  groups.forEach((group, groupIndex) => {
+    const groupPath = ['videoTakeProductionGroups', String(groupIndex)];
+    if (productionGroupIds.has(group.productionGroupId)) {
+      issues.push(
+        error(
+          'Duplicate shot video take productionGroupId.',
+          [...groupPath, 'productionGroupId'],
+          filePath,
+          'Use one stable productionGroupId per production group.'
+        )
+      );
+    }
+    productionGroupIds.add(group.productionGroupId);
+    const sortedShotIds = [...group.shotIds].sort(
+      (left, right) => (shotOrder.get(left) ?? Infinity) - (shotOrder.get(right) ?? Infinity)
+    );
+    group.shotIds.forEach((shotId, shotIndex) => {
+      if (!shotOrder.has(shotId)) {
+        issues.push(
+          error(
+            'Shot video take production group references an unknown shot.',
+            [...groupPath, 'shotIds', String(shotIndex)],
+            filePath,
+            'Use shot ids from this Scene Shot List.'
+          )
+        );
+      }
+      const existingGroupId = assignedShotIds.get(shotId);
+      if (existingGroupId) {
+        issues.push(
+          error(
+            'Shot belongs to more than one video take production group.',
+            [...groupPath, 'shotIds', String(shotIndex)],
+            filePath,
+            `Remove this shot from either ${existingGroupId} or ${group.productionGroupId}.`
+          )
+        );
+      }
+      assignedShotIds.set(shotId, group.productionGroupId);
+      if (sortedShotIds[shotIndex] !== shotId) {
+        issues.push(
+          error(
+            'Shot video take production group shotIds must be stored in shot-list order.',
+            [...groupPath, 'shotIds'],
+            filePath,
+            'Save the group with shot ids ordered exactly as they appear in the active Scene Shot List.'
+          )
+        );
+      }
+    });
+    if (group.shotIds.length > 1 && !isContiguousShotGroup(group, shotOrder)) {
+      issues.push(
+        error(
+          'Multi-shot video take production groups must be contiguous.',
+          [...groupPath, 'shotIds'],
+          filePath,
+          'Select adjacent shots or split the group into separate production groups.'
+        )
+      );
+    }
+    validateShotVideoTakeIntentForGroup(group, groupPath, issues, filePath);
+    validateShotVideoTakeAgentProposal(group, groupPath, issues, filePath);
+  });
+}
+
+function isContiguousShotGroup(
+  group: ShotVideoTakeProductionGroup,
+  shotOrder: Map<string, number>
+): boolean {
+  const indexes = group.shotIds.map((shotId) => shotOrder.get(shotId));
+  if (indexes.some((index) => index === undefined)) {
+    return false;
+  }
+  return indexes.every((index, position) => {
+    if (position === 0) {
+      return true;
+    }
+    return index === (indexes[position - 1] as number) + 1;
+  });
+}
+
+function validateShotVideoTakeIntentForGroup(
+  group: ShotVideoTakeProductionGroup,
+  groupPath: string[],
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const intentId = group.videoTakeProduction.intentId;
+  if (!intentId) {
+    return;
+  }
+  if (group.shotIds.length === 1 && intentId === 'multi-shot') {
+    issues.push(
+      error(
+        'Single-shot video take production groups cannot use the multi-shot intent.',
+        [...groupPath, 'videoTakeProduction', 'intentId'],
+        filePath,
+        'Choose a single-shot intent such as first-frame, first-last-frame, reference, or text-only.'
+      )
+    );
+  }
+  if (group.shotIds.length > 1 && intentId !== 'multi-shot') {
+    issues.push(
+      error(
+        'Multi-shot video take production groups must use the multi-shot intent.',
+        [...groupPath, 'videoTakeProduction', 'intentId'],
+        filePath,
+        'Use intentId "multi-shot" for grouped adjacent shots.'
+      )
+    );
+  }
+}
+
+function validateShotVideoTakeAgentProposal(
+  group: ShotVideoTakeProductionGroup,
+  groupPath: string[],
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const proposal = group.videoTakeProduction.agentProposal;
+  if (!proposal) {
+    return;
+  }
+  const plan = group.videoTakeProduction;
+  if (plan.intentId && proposal.basedOnIntentId !== plan.intentId) {
+    issues.push(
+      error(
+        'Shot video take agent proposal is stale for the selected intent.',
+        [...groupPath, 'videoTakeProduction', 'agentProposal', 'basedOnIntentId'],
+        filePath,
+        'Refresh the proposal after changing intent.'
+      )
+    );
+  }
+  if (plan.modelChoice && proposal.basedOnModelChoice !== plan.modelChoice) {
+    issues.push(
+      error(
+        'Shot video take agent proposal is stale for the selected model.',
+        [...groupPath, 'videoTakeProduction', 'agentProposal', 'basedOnModelChoice'],
+        filePath,
+        'Refresh the proposal after changing model.'
+      )
+    );
+  }
+  proposal.dependencyDrafts.forEach((draft, draftIndex) => {
+    const expected = dependencyPurposeMapping(draft.dependencyKind);
+    if (!expected) {
+      return;
+    }
+    if (draft.purpose !== expected.purpose || draft.outputInputKind !== expected.outputInputKind) {
+      issues.push(
+        error(
+          'Shot video take dependency draft purpose does not match its dependency kind.',
+          [
+            ...groupPath,
+            'videoTakeProduction',
+            'agentProposal',
+            'dependencyDrafts',
+            String(draftIndex),
+          ],
+          filePath,
+          'Use the concrete dependency purpose and output input kind for the selected dependency kind.'
+        )
+      );
+    }
+  });
+}
+
+function dependencyPurposeMapping(
+  kind: ShotVideoTakeDependencyKind
+): { purpose: ShotVideoTakeInputGenerationPurpose; outputInputKind: ShotVideoTakeInputKind } | null {
+  if (kind === 'first-frame') {
+    return { purpose: 'shot.first-frame', outputInputKind: 'first-frame' };
+  }
+  if (kind === 'last-frame') {
+    return { purpose: 'shot.last-frame', outputInputKind: 'last-frame' };
+  }
+  if (kind === 'shot-reference-sheet') {
+    return { purpose: 'shot.reference-sheet', outputInputKind: 'shot-reference-sheet' };
+  }
+  if (kind === 'multi-shot-storyboard-sheet') {
+    return {
+      purpose: 'shot.multi-shot-storyboard-sheet',
+      outputInputKind: 'multi-shot-storyboard-sheet',
+    };
+  }
+  return null;
 }
 
 function validateShotSpecsSemantics(

@@ -9,7 +9,120 @@ export interface SceneShotListDocument {
   coverageStrategy: string;
   lookbookInfluence?: string;
   shots: SceneShot[];
+  videoTakeProductionGroups?: ShotVideoTakeProductionGroup[];
   openQuestions?: string[];
+}
+
+export type ShotVideoTakeIntentId =
+  | 'text-only'
+  | 'first-frame'
+  | 'first-last-frame'
+  | 'reference'
+  | 'multi-shot'
+  | 'audio-to-video'
+  | 'extend-or-edit';
+
+export type ShotVideoTakeModelChoice =
+  | 'fal-ai/xai/grok-imagine-video/text-to-video'
+  | 'fal-ai/xai/grok-imagine-video/image-to-video'
+  | 'fal-ai/veo3.1/first-last-frame-to-video'
+  | 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
+  | 'fal-ai/bytedance/seedance/v1.5/pro/image-to-video';
+
+export type ShotVideoTakeParameterValue =
+  | string
+  | number
+  | boolean
+  | null
+  | string[]
+  | number[]
+  | boolean[];
+
+export type ShotVideoTakeParameterValues = Record<
+  string,
+  ShotVideoTakeParameterValue
+>;
+
+export type ShotVideoTakeInputKind =
+  | 'first-frame'
+  | 'last-frame'
+  | 'reference-image'
+  | 'shot-reference-sheet'
+  | 'character-sheet'
+  | 'location-sheet'
+  | 'multi-shot-storyboard-sheet'
+  | 'source-video'
+  | 'audio';
+
+export type ShotVideoTakeInputSubjectKind =
+  | 'asset'
+  | 'cast-member'
+  | 'location'
+  | 'lookbook'
+  | 'production-group'
+  | 'shot';
+
+export type ShotVideoTakeDependencyKind =
+  | 'first-frame'
+  | 'last-frame'
+  | 'shot-reference-sheet'
+  | 'multi-shot-storyboard-sheet'
+  | 'reference-audio'
+  | 'source-video-extract';
+
+export interface ShotVideoTakeRequestedInput {
+  kind: ShotVideoTakeInputKind;
+  subjectKind?: ShotVideoTakeInputSubjectKind;
+  subjectId?: string;
+  fulfillmentMode?: 'reuse-existing' | 'generate-new';
+  note?: string;
+}
+
+export interface ShotVideoTakePreparedInput {
+  kind: ShotVideoTakeInputKind;
+  assetId: string;
+  assetFileId?: string;
+  subjectKind: ShotVideoTakeInputSubjectKind;
+  subjectId: string;
+}
+
+export interface ShotVideoTakeProductionGroup {
+  productionGroupId: string;
+  shotIds: string[];
+  videoTakeProduction: ShotVideoTakeProductionPlan;
+}
+
+export interface ShotVideoTakeProductionPlan {
+  intentId?: ShotVideoTakeIntentId;
+  modelChoice?: ShotVideoTakeModelChoice;
+  parameterValues?: ShotVideoTakeParameterValues;
+  requestedInputs?: ShotVideoTakeRequestedInput[];
+  preparedInputs?: ShotVideoTakePreparedInput[];
+  agentProposal?: ShotVideoTakeAgentProposal;
+  customPromptNote?: string;
+}
+
+export interface ShotVideoTakeAgentProposal {
+  basedOnIntentId: ShotVideoTakeIntentId;
+  basedOnModelChoice: ShotVideoTakeModelChoice;
+  dependencyDrafts: ShotVideoTakeDependencyDraft[];
+  finalPromptDraft?: ShotVideoTakePromptDraft;
+}
+
+export interface ShotVideoTakeDependencyDraft {
+  purpose: import('./media-generation.js').ShotVideoTakeInputGenerationPurpose;
+  dependencyKind: ShotVideoTakeDependencyKind;
+  outputInputKind: ShotVideoTakeInputKind;
+  modelChoice?: import('./media-generation.js').ShotVideoTakeInputModelChoice;
+  prompt: string;
+  parameterValues?: ShotVideoTakeParameterValues;
+  title?: string;
+}
+
+export interface ShotVideoTakePromptDraft {
+  prompt: string;
+  negativePrompt?: string;
+  title?: string;
 }
 
 export interface SceneShot {

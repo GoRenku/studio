@@ -39,7 +39,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(12);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(13);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -57,6 +57,10 @@ describe('migrate database command', () => {
           'scene_shot_list_state',
           'scene_shot_storyboard_sheet',
           'scene_shot_storyboard_image',
+          'scene_shot_video_take_input',
+          'scene_shot_video_take_input_shot',
+          'scene_shot_video_take',
+          'scene_shot_video_take_shot',
         ])
       );
       expect(readTableNames(sqlite)).not.toEqual(
@@ -92,6 +96,20 @@ describe('migrate database command', () => {
       expect(readIndex(sqlite, 'scene_shot_storyboard_sheet_asset_idx')).toMatchObject({
         isUnique: 0,
       });
+      expect(
+        readIndexForTable(
+          sqlite,
+          'scene_shot_video_take_input',
+          'scene_shot_video_take_input_selected_idx'
+        )
+      ).toMatchObject({ isUnique: 1 });
+      expect(
+        readIndexForTable(
+          sqlite,
+          'scene_shot_video_take',
+          'scene_shot_video_take_selected_idx'
+        )
+      ).toMatchObject({ isUnique: 1 });
     } finally {
       sqlite.close();
     }
@@ -117,6 +135,18 @@ function readIndex(
   return sqlite
     .prepare(
       'select name, il."unique" as isUnique from pragma_index_list(\'scene_shot_storyboard_sheet\') as il where name = ?'
+    )
+    .get(indexName) as { name: string; isUnique: number } | undefined;
+}
+
+function readIndexForTable(
+  sqlite: Database.Database,
+  tableName: string,
+  indexName: string
+): { name: string; isUnique: number } | undefined {
+  return sqlite
+    .prepare(
+      `select name, il."unique" as isUnique from pragma_index_list('${tableName}') as il where name = ?`
     )
     .get(indexName) as { name: string; isUnique: number } | undefined;
 }

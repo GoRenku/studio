@@ -337,6 +337,108 @@ describe('scene shot list commands', () => {
     ).resolves.toMatchObject({ valid: true });
   });
 
+  it('validates shot video take production groups', async () => {
+    const ids = await sampleIds();
+    const valid = {
+      ...sampleShotList(ids, 'Grouped video take coverage', 3),
+      videoTakeProductionGroups: [
+        {
+          productionGroupId: 'scene_shot_video_take_group_001',
+          shotIds: ['shot_001'],
+          videoTakeProduction: {
+            intentId: 'first-last-frame',
+            modelChoice: 'fal-ai/veo3.1/first-last-frame-to-video',
+            parameterValues: { duration: '6s' },
+          },
+        },
+        {
+          productionGroupId: 'scene_shot_video_take_group_002',
+          shotIds: ['shot_002', 'shot_003'],
+          videoTakeProduction: {
+            intentId: 'multi-shot',
+            modelChoice: 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video',
+          },
+        },
+      ],
+    } satisfies SceneShotListDocument;
+
+    await expect(
+      projectData.validateSceneShotList({ homeDir, document: valid })
+    ).resolves.toMatchObject({ valid: true });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...valid,
+          videoTakeProductionGroups: [
+            valid.videoTakeProductionGroups[0]!,
+            {
+              ...valid.videoTakeProductionGroups[1]!,
+              shotIds: ['shot_001', 'shot_003'],
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('more than one video take production group'),
+        }),
+        expect.objectContaining({
+          message: expect.stringContaining('contiguous'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...valid,
+          videoTakeProductionGroups: [
+            {
+              ...valid.videoTakeProductionGroups[0]!,
+              videoTakeProduction: {
+                intentId: 'multi-shot',
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('Single-shot'),
+        }),
+      ]),
+    });
+
+    await expect(
+      projectData.validateSceneShotList({
+        homeDir,
+        document: {
+          ...valid,
+          videoTakeProductionGroups: [
+            {
+              productionGroupId: 'scene_shot_video_take_group_003',
+              shotIds: ['shot_001'],
+              videoTakeProduction: {
+                unexpectedField: true,
+              } as never,
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining('Unknown field'),
+        }),
+      ]),
+    });
+  });
+
   it('writes shot-list history, sets active, and preserves older rows', async () => {
     const ids = await sampleIds();
     const idGenerator = createDeterministicIdGenerator();

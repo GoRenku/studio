@@ -80,6 +80,67 @@ const LOCATION_AZIMUTH_VIEW_IDS = [
   'left',
 ] as const;
 
+const SHOT_VIDEO_TAKE_INTENT_IDS = [
+  'text-only',
+  'first-frame',
+  'first-last-frame',
+  'reference',
+  'multi-shot',
+  'audio-to-video',
+  'extend-or-edit',
+] as const;
+
+const SHOT_VIDEO_TAKE_INPUT_KINDS = [
+  'first-frame',
+  'last-frame',
+  'reference-image',
+  'shot-reference-sheet',
+  'character-sheet',
+  'location-sheet',
+  'multi-shot-storyboard-sheet',
+  'source-video',
+  'audio',
+] as const;
+
+const SHOT_VIDEO_TAKE_INPUT_SUBJECT_KINDS = [
+  'asset',
+  'cast-member',
+  'location',
+  'lookbook',
+  'production-group',
+  'shot',
+] as const;
+
+const SHOT_VIDEO_TAKE_DEPENDENCY_KINDS = [
+  'first-frame',
+  'last-frame',
+  'shot-reference-sheet',
+  'multi-shot-storyboard-sheet',
+  'reference-audio',
+  'source-video-extract',
+] as const;
+
+const SHOT_VIDEO_TAKE_INPUT_PURPOSES = [
+  'shot.first-frame',
+  'shot.last-frame',
+  'shot.reference-sheet',
+  'shot.multi-shot-storyboard-sheet',
+] as const;
+
+const SHOT_VIDEO_TAKE_INPUT_MODELS = [
+  'fal-ai/openai/gpt-image-2',
+  'fal-ai/nano-banana-2',
+  'fal-ai/xai/grok-imagine-image',
+] as const;
+
+const SHOT_VIDEO_TAKE_MODELS = [
+  'fal-ai/xai/grok-imagine-video/text-to-video',
+  'fal-ai/xai/grok-imagine-video/image-to-video',
+  'fal-ai/veo3.1/first-last-frame-to-video',
+  'fal-ai/bytedance/seedance/v1.5/pro/text-to-video',
+  'fal-ai/bytedance/seedance/v1.5/pro/image-to-video',
+] as const;
+
 export const sceneShotListDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/scene-shot-list-document.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -162,6 +223,18 @@ export const sceneShotListDocumentSchema = {
         }
       ),
     },
+    videoTakeProductionGroups: {
+      type: 'array',
+      items: objectWith(['productionGroupId', 'shotIds', 'videoTakeProduction'], {
+        productionGroupId: nonEmptyString(),
+        shotIds: {
+          type: 'array',
+          minItems: 1,
+          items: nonEmptyString(),
+        },
+        videoTakeProduction: shotVideoTakeProductionPlanSchema(),
+      }),
+    },
     openQuestions: {
       type: 'array',
       items: nonEmptyString(),
@@ -234,6 +307,90 @@ function shotSpecsSchema(): Record<string, unknown> {
       },
     },
     additionalProperties: false,
+  };
+}
+
+function shotVideoTakeProductionPlanSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      intentId: enumValue(SHOT_VIDEO_TAKE_INTENT_IDS),
+      modelChoice: enumValue(SHOT_VIDEO_TAKE_MODELS),
+      parameterValues: shotVideoTakeParameterValuesSchema(),
+      requestedInputs: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            kind: enumValue(SHOT_VIDEO_TAKE_INPUT_KINDS),
+            subjectKind: enumValue(SHOT_VIDEO_TAKE_INPUT_SUBJECT_KINDS),
+            subjectId: nonEmptyString(),
+            fulfillmentMode: enumValue(['reuse-existing', 'generate-new'] as const),
+            note: nonEmptyString(),
+          },
+          required: ['kind'],
+          additionalProperties: false,
+        },
+      },
+      preparedInputs: {
+        type: 'array',
+        items: objectWith(['kind', 'assetId', 'subjectKind', 'subjectId'], {
+          kind: enumValue(SHOT_VIDEO_TAKE_INPUT_KINDS),
+          assetId: nonEmptyString(),
+          assetFileId: nonEmptyString(),
+          subjectKind: enumValue(SHOT_VIDEO_TAKE_INPUT_SUBJECT_KINDS),
+          subjectId: nonEmptyString(),
+        }),
+      },
+      agentProposal: {
+        type: 'object',
+        required: ['basedOnIntentId', 'basedOnModelChoice', 'dependencyDrafts'],
+        properties: {
+          basedOnIntentId: enumValue(SHOT_VIDEO_TAKE_INTENT_IDS),
+          basedOnModelChoice: enumValue(SHOT_VIDEO_TAKE_MODELS),
+          dependencyDrafts: {
+            type: 'array',
+            items: objectWith(
+              ['purpose', 'dependencyKind', 'outputInputKind', 'prompt'],
+              {
+                purpose: enumValue(SHOT_VIDEO_TAKE_INPUT_PURPOSES),
+                dependencyKind: enumValue(SHOT_VIDEO_TAKE_DEPENDENCY_KINDS),
+                outputInputKind: enumValue(SHOT_VIDEO_TAKE_INPUT_KINDS),
+                modelChoice: enumValue(SHOT_VIDEO_TAKE_INPUT_MODELS),
+                prompt: nonEmptyString(),
+                parameterValues: shotVideoTakeParameterValuesSchema(),
+                title: nonEmptyString(),
+              }
+            ),
+          },
+          finalPromptDraft: objectWith(['prompt'], {
+            prompt: nonEmptyString(),
+            negativePrompt: nonEmptyString(),
+            title: nonEmptyString(),
+          }),
+        },
+        additionalProperties: false,
+      },
+      customPromptNote: nonEmptyString(),
+    },
+    additionalProperties: false,
+  };
+}
+
+function shotVideoTakeParameterValuesSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    additionalProperties: {
+      anyOf: [
+        { type: 'string' },
+        { type: 'number' },
+        { type: 'boolean' },
+        { type: 'null' },
+        { type: 'array', items: { type: 'string' } },
+        { type: 'array', items: { type: 'number' } },
+        { type: 'array', items: { type: 'boolean' } },
+      ],
+    },
   };
 }
 
