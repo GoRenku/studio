@@ -59,6 +59,8 @@ export async function readSceneShotListResource(
       sequence: context.sequence,
       act,
       projectAspectRatio: readProjectRecord(session)?.aspectRatio ?? null,
+      activeShotListId:
+        readActiveSceneShotListRecord(session, input.sceneId)?.id ?? null,
       activeShotList: projection.document,
       storyboardSheet: projection.sheetReference,
       storyboardImagesByShotId: projection.imagesByShotId,

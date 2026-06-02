@@ -1206,7 +1206,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 1
   - name: bytedance/seedance/v1/pro/fast/image-to-video
     type: video
@@ -1215,7 +1215,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 1
   - name: bytedance/seedance/v1.5/pro/image-to-video
     type: video
@@ -1250,7 +1250,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 14
   - name: bytedance/seedance-2.0/image-to-video
     subProvider: bytedance
@@ -1260,7 +1260,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 14
   - name: bytedance/seedance-2.0/reference-to-video
     subProvider: bytedance
@@ -1270,7 +1270,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 14
   - name: bytedance/seedance-2.0/fast/text-to-video
     subProvider: bytedance
@@ -1280,7 +1280,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 11.2
   - name: bytedance/seedance-2.0/fast/image-to-video
     subProvider: bytedance
@@ -1290,7 +1290,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 11.2
   - name: bytedance/seedance-2.0/fast/reference-to-video
     subProvider: bytedance
@@ -1300,7 +1300,7 @@ models:
     price:
       function: costByVideoPerMillionTokens
       inputs: [duration, resolution, aspect_ratio]
-      price:
+      prices:
         - pricePerMillionTokens: 11.2
 
   - name: bytedance/omnihuman/v1.5

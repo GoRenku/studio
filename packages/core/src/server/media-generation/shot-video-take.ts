@@ -2,6 +2,12 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import {
+  SHOT_VIDEO_TAKE_ENGINE_MODELS,
+  selectShotVideoTakeProviderRoute,
+  type ShotVideoTakeEngineInputRole,
+  type ShotVideoTakeProviderIntentRoute,
+} from '@gorenku/studio-engines';
 import type {
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
@@ -27,6 +33,7 @@ import type {
   ShotVideoTakePreflightDependency,
   ShotVideoTakePreflightInput,
   ShotVideoTakePreflightReport,
+  ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionGroup,
   ShotVideoTakeProductionPlan,
   ShotVideoTakeRequestedInput,
@@ -183,10 +190,12 @@ export async function listShotVideoTakeModels(
   input: ShotVideoTakeModelListInput
 ): Promise<ShotVideoTakeModelListReport> {
   const context = await buildShotVideoTakeContext(input);
+  const intentId = input.intentId ?? context.defaults.intentId;
   return {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     target: context.target,
     ...(input.intentId ? { intentId: input.intentId } : {}),
+    defaultModelChoice: defaultModelChoiceForIntent(intentId),
     models: modelChoices(context, input.intentId),
   };
 }
@@ -264,9 +273,16 @@ export async function previewShotVideoTakeProduction(
           ),
         ]
       : [];
+  const finalTakeEstimate = await estimateFinalTakeForPreflight({
+    context,
+    intentId,
+    modelChoice,
+    preparedInputs,
+    canEstimate: issues.length === 0 && inputsToCreate.length === 0,
+  });
   return {
     valid: issues.length === 0 && inputsToCreate.length === 0,
-    issues: [...issues, ...estimateLineIssues],
+    issues: [...issues, ...estimateLineIssues, ...finalTakeEstimate.issues],
     target: context.target,
     productionGroup: context.productionGroup,
     intentId,
@@ -301,8 +317,8 @@ export async function previewShotVideoTakeProduction(
       {
         purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
         label: 'Final video take',
-        estimate: null,
-        issues: estimateLineIssues,
+        estimate: finalTakeEstimate.estimate,
+        issues: [...estimateLineIssues, ...finalTakeEstimate.issues],
       },
     ],
     finalTake: {
@@ -311,8 +327,223 @@ export async function previewShotVideoTakeProduction(
       title: finalDraft?.title ?? `${context.scene.title} video take`,
     },
     agentBrief: agentBrief(context),
-    estimate: null,
+    estimate: finalTakeEstimate.estimate,
   };
+}
+
+export async function estimateShotVideoTakeProduction(
+  input: PreviewShotVideoTakeProductionInput
+): Promise<ShotVideoTakeProductionEstimateReport> {
+  const context = await withShotProjectSession(input, ({ session, projectFolder, project }) => {
+    const now = new Date().toISOString();
+    const prepared = prepareShotGroupInSession({
+      session,
+      input,
+      now,
+      production: input.production,
+      persist: false,
+    });
+    return buildContextFromPrepared({
+      session,
+      projectFolder,
+      project,
+      prepared,
+    });
+  });
+  const issues = validatePreflight(context);
+  const intentId = context.productionGroup.videoTakeProduction.intentId ?? context.defaults.intentId;
+  const modelChoice =
+    context.productionGroup.videoTakeProduction.modelChoice ??
+    defaultModelChoiceForIntent(intentId);
+  const preparedInputs = await withShotProjectSession(input, ({ session }) =>
+    preparedInputsForContext(context, session, issues)
+  );
+  const estimateInputs = estimateInputsForRequiredSlots({
+    context,
+    intentId,
+    modelChoice,
+    preparedInputs,
+  });
+  const finalTakeEstimate = await estimateFinalTakeForPreflight({
+    context,
+    intentId,
+    modelChoice,
+    preparedInputs: estimateInputs,
+    canEstimate: issues.length === 0,
+  });
+  return {
+    target: context.target,
+    productionGroup: context.productionGroup,
+    intentId,
+    modelChoice,
+    estimate: finalTakeEstimate.estimate,
+    issues: [...issues, ...finalTakeEstimate.issues],
+  };
+}
+
+async function estimateFinalTakeForPreflight(input: {
+  context: ShotVideoTakeGenerationContext;
+  intentId: ShotVideoTakeIntentId;
+  modelChoice: ShotVideoTakeModelChoice;
+  preparedInputs: ShotVideoTakePreflightInput[];
+  canEstimate: boolean;
+}): Promise<{
+  estimate: ShotVideoTakePreflightReport['estimate'];
+  issues: DiagnosticIssue[];
+}> {
+  if (!input.canEstimate) {
+    return { estimate: null, issues: [] };
+  }
+  try {
+    const spec = finalTakeSpecForPreflight(input);
+    validateFinalSpecAgainstContext(spec, input.context);
+    const plan = buildShotVideoTakeProviderPayload(spec, input.context);
+    const { estimateGeneration } = await import('@gorenku/studio-engines');
+    return {
+      estimate: await estimateGeneration(toGenerationRequest(plan, spec)),
+      issues: [],
+    };
+  } catch (error) {
+    return {
+      estimate: null,
+      issues: [
+        issue(
+          'PROJECT_DATA385',
+          error instanceof Error
+            ? `Final video estimate failed: ${error.message}`
+            : 'Final video estimate failed.',
+          ['productionGroup', 'videoTakeProduction'],
+          'Review the selected model, run setup values, and prepared inputs.'
+        ),
+      ],
+    };
+  }
+}
+
+function finalTakeSpecForPreflight(input: {
+  context: ShotVideoTakeGenerationContext;
+  intentId: ShotVideoTakeIntentId;
+  modelChoice: ShotVideoTakeModelChoice;
+  preparedInputs: ShotVideoTakePreflightInput[];
+}): ShotVideoTakeGenerationSpec {
+  const plan = input.context.productionGroup.videoTakeProduction;
+  const finalDraft = plan.agentProposal?.finalPromptDraft;
+  return {
+    purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+    target: input.context.target,
+    intentId: input.intentId,
+    modelChoice: input.modelChoice,
+    prompt: finalDraft?.prompt ?? agentBrief(input.context),
+    ...(finalDraft?.negativePrompt ? { negativePrompt: finalDraft.negativePrompt } : {}),
+    parameterValues: parameterValuesForFinalTake(input.context, input.intentId, input.modelChoice),
+    inputs: input.preparedInputs.map((preparedInput) => ({
+      kind: preparedInput.kind,
+      assetId: preparedInput.assetId,
+      assetFileId: preparedInput.assetFileId,
+      role: preparedInput.role,
+      mediaKind: preparedInput.mediaKind,
+      projectRelativePath: preparedInput.projectRelativePath,
+      ...(preparedInput.subjectKind ? { subjectKind: preparedInput.subjectKind } : {}),
+      ...(preparedInput.subjectId ? { subjectId: preparedInput.subjectId } : {}),
+    })),
+    title: finalDraft?.title ?? `${input.context.scene.title} video take`,
+  };
+}
+
+function estimateInputsForRequiredSlots(input: {
+  context: ShotVideoTakeGenerationContext;
+  intentId: ShotVideoTakeIntentId;
+  modelChoice: ShotVideoTakeModelChoice;
+  preparedInputs: ShotVideoTakePreflightInput[];
+}): ShotVideoTakePreflightInput[] {
+  const required = requiredInputSlots(input.context, input.intentId, input.modelChoice);
+  const missing = required.filter(
+    (slot) => !input.preparedInputs.some((prepared) => preparedInputMatchesSlot(prepared, slot))
+  );
+  return [
+    ...input.preparedInputs,
+    ...missing.map((slot, index): ShotVideoTakePreflightInput => {
+      const subjectKind = slot.subjectKind ?? 'production-group';
+      const subjectId = slot.subjectId ?? input.context.target.productionGroupId;
+      return {
+        kind: slot.outputInputKind,
+        assetId: `estimate_asset_${index}`,
+        assetFileId: `estimate_asset_file_${index}`,
+        role: slot.outputInputKind,
+        mediaKind: slot.mediaKind,
+        projectRelativePath:
+          `generated/estimate/${input.context.target.productionGroupId}/${slot.outputInputKind}-${index}.${estimateInputExtension(slot.mediaKind)}` as ProjectRelativePath,
+        subjectKind,
+        subjectId,
+      };
+    }),
+  ];
+}
+
+function estimateInputExtension(mediaKind: 'image' | 'audio' | 'video'): string {
+  if (mediaKind === 'audio') {
+    return 'wav';
+  }
+  if (mediaKind === 'video') {
+    return 'mp4';
+  }
+  return 'png';
+}
+
+function parameterValuesForFinalTake(
+  context: ShotVideoTakeGenerationContext,
+  intentId: ShotVideoTakeIntentId,
+  modelChoice: ShotVideoTakeModelChoice
+): NonNullable<ShotVideoTakeProductionPlan['parameterValues']> {
+  const report = modelChoices(context, intentId).find((model) => model.modelChoice === modelChoice);
+  if (!report) {
+    return {};
+  }
+  const values: NonNullable<ShotVideoTakeProductionPlan['parameterValues']> = {};
+  const planValues = context.productionGroup.videoTakeProduction.parameterValues ?? {};
+  for (const parameter of report.parameters) {
+    const contextDefault = context.defaults.parameterValues[parameter.name];
+    if (parameter.defaultValue !== undefined) {
+      values[parameter.name] = parameter.defaultValue;
+    }
+    if (contextDefault !== undefined) {
+      values[parameter.name] = contextDefault;
+    }
+    if (planValues[parameter.name] !== undefined) {
+      values[parameter.name] = planValues[parameter.name];
+    }
+    if (values[parameter.name] !== undefined) {
+      values[parameter.name] = canonicalParameterValue(parameter, values[parameter.name]);
+    }
+  }
+  return values;
+}
+
+function canonicalParameterValue(
+  parameter: ShotVideoTakeModelChoiceReport['parameters'][number],
+  value: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>[string]
+): NonNullable<ShotVideoTakeProductionPlan['parameterValues']>[string] {
+  if (!parameter.allowedValues?.length) {
+    return value;
+  }
+  const exactMatch = parameter.allowedValues.find((allowed) => allowed === value);
+  if (exactMatch !== undefined) {
+    return exactMatch;
+  }
+  const stringMatch = parameter.allowedValues.find(
+    (allowed) => String(allowed) === String(value)
+  );
+  if (stringMatch !== undefined) {
+    return stringMatch;
+  }
+  const seconds = durationSeconds(value);
+  if (seconds === null) {
+    return value;
+  }
+  const durationMatch = parameter.allowedValues.find(
+    (allowed) => durationSeconds(allowed) === seconds
+  );
+  return durationMatch ?? value;
 }
 
 export async function selectShotVideoTakeInput(
@@ -836,23 +1067,20 @@ export function buildShotVideoTakeProviderPayload(
   if (spec.negativePrompt) {
     payload.negative_prompt = spec.negativePrompt;
   }
-  const model = providerModel(spec.modelChoice);
-  let mode: GenerationMode = 'text-to-video';
-  if (spec.intentId === 'first-last-frame') {
-    mode = 'image-to-video';
-    mapRequiredInput(spec, inputFiles, 'first-frame', 'first_frame_url');
-    mapRequiredInput(spec, inputFiles, 'last-frame', 'last_frame_url');
-  } else if (spec.intentId === 'first-frame') {
-    mode = 'image-to-video';
-    mapRequiredInput(spec, inputFiles, 'first-frame', 'image_url');
-  } else if (spec.intentId === 'reference' || spec.intentId === 'multi-shot') {
-    mode = model.includes('text-to-video') ? 'text-to-video' : 'image-to-video';
-    mapOptionalReferenceInputs(spec, inputFiles);
+  const route = requireShotVideoTakeProviderRoute(spec.modelChoice, spec.intentId);
+  if (route.firstFrameField) {
+    mapRequiredInput(spec, inputFiles, 'first-frame', route.firstFrameField);
+  }
+  if (route.lastFrameField) {
+    mapRequiredInput(spec, inputFiles, 'last-frame', route.lastFrameField);
+  }
+  if (route.referenceField) {
+    mapReferenceInputs(spec, inputFiles, route.referenceField);
   }
   return {
     provider: 'fal-ai',
-    model,
-    mode,
+    model: route.providerModel,
+    mode: route.mode,
     outputCount: 1,
     payload,
     inputFiles,
@@ -922,9 +1150,10 @@ function mapRequiredInput(
   });
 }
 
-function mapOptionalReferenceInputs(
+function mapReferenceInputs(
   spec: ShotVideoTakeGenerationSpec,
-  inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>
+  inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>,
+  field: string
 ): void {
   const references = spec.inputs.filter((input) =>
     [
@@ -937,7 +1166,7 @@ function mapOptionalReferenceInputs(
   );
   references.forEach((input) => {
     inputFiles.push({
-      field: 'image_urls',
+      field,
       projectRelativePath: input.projectRelativePath,
       mediaKind: input.mediaKind,
       asArray: true,
@@ -1016,7 +1245,7 @@ function validateFinalSpecAgainstContext(
     );
   }
   validateIntentForShotCount(spec.intentId, spec.target.shotIds);
-  const report = modelChoices(context).find((model) => model.modelChoice === spec.modelChoice);
+  const report = modelChoices(context, spec.intentId).find((model) => model.modelChoice === spec.modelChoice);
   if (!report || !report.supportedIntents.includes(spec.intentId)) {
     throw new ProjectDataError(
       'PROJECT_DATA371',
@@ -1064,53 +1293,9 @@ function modelChoices(
   context: ShotVideoTakeGenerationContext,
   intentId?: ShotVideoTakeIntentId
 ): ShotVideoTakeModelChoiceReport[] {
-  const models: ShotVideoTakeModelChoiceReport[] = [
-    modelReport({
-      modelChoice: 'fal-ai/xai/grok-imagine-video/text-to-video',
-      label: 'Grok Imagine Video Text',
-      supportedIntents: ['text-only'],
-      inputRoles: [],
-      durationValues: [6],
-    }),
-    modelReport({
-      modelChoice: 'fal-ai/xai/grok-imagine-video/image-to-video',
-      label: 'Grok Imagine Video Image',
-      supportedIntents: ['first-frame', 'reference'],
-      inputRoles: [
-        { kind: 'first-frame', required: true, minCount: 1, maxCount: 1, mediaKind: 'image' },
-      ],
-      durationValues: [6],
-    }),
-    modelReport({
-      modelChoice: 'fal-ai/veo3.1/first-last-frame-to-video',
-      label: 'Veo 3.1 First/Last Frame',
-      supportedIntents: ['first-last-frame'],
-      inputRoles: [
-        { kind: 'first-frame', required: true, minCount: 1, maxCount: 1, mediaKind: 'image' },
-        { kind: 'last-frame', required: true, minCount: 1, maxCount: 1, mediaKind: 'image' },
-      ],
-      durationValues: [4, 6, 8],
-    }),
-    modelReport({
-      modelChoice: 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video',
-      label: 'Seedance Pro Text',
-      supportedIntents: ['text-only', 'multi-shot'],
-      inputRoles: [
-        { kind: 'multi-shot-storyboard-sheet', required: context.target.shotIds.length > 1, minCount: 0, maxCount: 1, mediaKind: 'image' },
-      ],
-      durationValues: [5, 8, 10],
-    }),
-    modelReport({
-      modelChoice: 'fal-ai/bytedance/seedance/v1.5/pro/image-to-video',
-      label: 'Seedance Pro Image',
-      supportedIntents: ['first-frame', 'reference', 'multi-shot'],
-      inputRoles: [
-        { kind: 'first-frame', required: true, minCount: 1, maxCount: 1, mediaKind: 'image' },
-        { kind: 'multi-shot-storyboard-sheet', required: false, minCount: 0, maxCount: 1, mediaKind: 'image' },
-      ],
-      durationValues: [5, 8, 10],
-    }),
-  ];
+  const models = SHOT_VIDEO_TAKE_ENGINE_MODELS.map((definition) =>
+    modelReport(definition, intentId ?? context.defaults.intentId)
+  );
   return models.map((model) => ({
     ...model,
     available:
@@ -1122,45 +1307,83 @@ function modelChoices(
   }));
 }
 
-function modelReport(input: {
-  modelChoice: ShotVideoTakeModelChoice;
-  label: string;
-  supportedIntents: ShotVideoTakeIntentId[];
-  inputRoles: ShotVideoTakeModelChoiceReport['inputRoles'];
-  durationValues: number[];
-}): ShotVideoTakeModelChoiceReport {
+function modelReport(
+  definition: (typeof SHOT_VIDEO_TAKE_ENGINE_MODELS)[number],
+  intentId: ShotVideoTakeIntentId
+): ShotVideoTakeModelChoiceReport {
+  const parameters = parametersForEngineModel(definition, intentId);
   return {
-    modelChoice: input.modelChoice,
-    label: input.label,
+    modelChoice: definition.modelChoice as ShotVideoTakeModelChoice,
+    label: definition.label,
     available: true,
-    supportedIntents: input.supportedIntents,
-    duration: {
-      supported: true,
-      values: input.durationValues,
-      default: input.durationValues[0],
-    },
-    inputRoles: input.inputRoles,
-    parameters: [
-      {
-        name: 'duration',
-        label: 'Duration',
-        required: false,
-        defaultValue: String(input.durationValues[0]),
-        allowedValues: input.durationValues.map((value) => String(value)),
-      },
-      {
-        name: 'aspect_ratio',
-        label: 'Aspect Ratio',
-        required: false,
-        defaultValue: '16:9',
-        allowedValues: ['16:9', '9:16', '4:3', '1:1', 'auto'],
-      },
-    ],
+    supportedIntents: definition.supportedIntents as ShotVideoTakeIntentId[],
+    duration: durationSupport(parameters),
+    inputRoles: inputRolesForEngineModel(definition.inputRoles[intentId] ?? []),
+    parameters,
     estimateInputs: {
-      canEstimateBeforeDependenciesExist: input.inputRoles.length === 0,
-      requiresPreparedInputs: input.inputRoles.some((role) => role.required),
+      canEstimateBeforeDependenciesExist:
+        (definition.inputRoles[intentId] ?? []).filter((role) => role.required).length === 0,
+      requiresPreparedInputs: (definition.inputRoles[intentId] ?? []).some((role) => role.required),
     },
   };
+}
+
+function parametersForEngineModel(
+  definition: (typeof SHOT_VIDEO_TAKE_ENGINE_MODELS)[number],
+  intentId: ShotVideoTakeIntentId
+): ShotVideoTakeModelChoiceReport['parameters'] {
+  return (definition.parameters[intentId] ?? []).map((parameter) => ({
+    name: parameter.name,
+    label: parameter.label,
+    required: parameter.required,
+    ...(parameter.defaultValue !== undefined ? { defaultValue: parameter.defaultValue } : {}),
+    ...(parameter.allowedValues ? { allowedValues: parameter.allowedValues } : {}),
+    ...(parameter.minimum !== undefined ? { minimum: parameter.minimum } : {}),
+    ...(parameter.maximum !== undefined ? { maximum: parameter.maximum } : {}),
+  }));
+}
+
+function inputRolesForEngineModel(
+  roles: ShotVideoTakeEngineInputRole[]
+): ShotVideoTakeModelChoiceReport['inputRoles'] {
+  return roles.map((role) => ({
+    kind: role.kind as ShotVideoTakeInputKind,
+    required: role.required,
+    minCount: role.minCount,
+    maxCount: role.maxCount,
+    mediaKind: role.mediaKind,
+  }));
+}
+
+function durationSupport(
+  parameters: ShotVideoTakeModelChoiceReport['parameters']
+): ShotVideoTakeModelChoiceReport['duration'] {
+  const duration = parameters.find((parameter) => parameter.name === 'duration');
+  if (!duration) {
+    return { supported: false };
+  }
+  const values = duration.allowedValues
+    ?.map((value) => durationSeconds(value))
+    .filter((value): value is number => value !== null);
+  const defaultValue = durationSeconds(duration.defaultValue);
+  return {
+    supported: true,
+    ...(values && values.length > 0 ? { values } : {}),
+    ...(typeof duration.minimum === 'number' ? { minimum: duration.minimum } : {}),
+    ...(typeof duration.maximum === 'number' ? { maximum: duration.maximum } : {}),
+    ...(defaultValue !== null ? { default: defaultValue } : {}),
+  };
+}
+
+function durationSeconds(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const match = /^(\d+)(?:s)?$/.exec(value);
+  return match ? Number(match[1]) : null;
 }
 
 function validatePreflight(context: ShotVideoTakeGenerationContext): DiagnosticIssue[] {
@@ -1419,6 +1642,7 @@ function prepareShotGroupInSession(input: {
   input: ShotVideoTakeContextInput;
   now: string;
   production?: ShotVideoTakeProductionPlan;
+  persist?: boolean;
 }): PreparedShotGroup {
   const screenplay = requireScreenplayDocument(input.session);
   const shotListRow = requireSceneShotListForScene({
@@ -1465,13 +1689,15 @@ function prepareShotGroupInSession(input: {
         shotIds: normalizeShotIds(shotList.shots, group.shotIds),
       })),
   };
-  updateSceneShotListRecordDocument({
-    session: input.session,
-    id: input.input.shotListId,
-    document: updatedShotList,
-    screenplay,
-    now: input.now,
-  });
+  if (input.persist !== false) {
+    updateSceneShotListRecordDocument({
+      session: input.session,
+      id: input.input.shotListId,
+      document: updatedShotList,
+      screenplay,
+      now: input.now,
+    });
+  }
   const target = {
     kind: 'sceneShotGroup' as const,
     id: sceneShotGroupTargetId({
@@ -1831,17 +2057,31 @@ function providerModel(
   return modelChoice;
 }
 
+function requireShotVideoTakeProviderRoute(
+  modelChoice: ShotVideoTakeModelChoice,
+  intentId: ShotVideoTakeIntentId
+): ShotVideoTakeProviderIntentRoute {
+  const route = selectShotVideoTakeProviderRoute({ modelChoice, intentId });
+  if (!route) {
+    throw new ProjectDataError(
+      'PROJECT_DATA386',
+      `Shot video take model does not support the selected intent: ${modelChoice} / ${intentId}.`
+    );
+  }
+  return route;
+}
+
 function defaultModelChoiceForIntent(intentId: ShotVideoTakeIntentId): ShotVideoTakeModelChoice {
   if (intentId === 'first-last-frame') {
-    return 'fal-ai/veo3.1/first-last-frame-to-video';
+    return 'fal-ai/veo3.1';
   }
   if (intentId === 'text-only') {
-    return 'fal-ai/xai/grok-imagine-video/text-to-video';
+    return 'fal-ai/bytedance/seedance-2.0';
   }
   if (intentId === 'multi-shot') {
-    return 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video';
+    return 'fal-ai/bytedance/seedance-2.0';
   }
-  return 'fal-ai/xai/grok-imagine-video/image-to-video';
+  return 'fal-ai/bytedance/seedance-2.0';
 }
 
 function titleForInputSpec(spec: ShotVideoTakeInputGenerationSpec): string {

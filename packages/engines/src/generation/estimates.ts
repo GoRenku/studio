@@ -141,7 +141,91 @@ function priceFromConfig(
           inputImageCost(pricing, payload, count)
       : null;
   }
+  if (pricing.function === 'costByVideoPerMillionTokens') {
+    return videoTokenPrice(pricing, payload, count);
+  }
   return null;
+}
+
+function videoTokenPrice(
+  pricing: ModelPriceConfig,
+  payload: Record<string, unknown>,
+  count: number
+): number | null {
+  const pricePerMillionTokens = videoTokenPricePerMillion(pricing, payload);
+  if (typeof pricePerMillionTokens !== 'number') {
+    return null;
+  }
+  const duration = seconds(payload);
+  const { width, height } = videoDimensions(payload);
+  const tokens = (width * height * duration * 30) / 1024;
+  return (tokens / 1_000_000) * pricePerMillionTokens * count;
+}
+
+function videoTokenPricePerMillion(
+  pricing: ModelPriceConfig,
+  payload: Record<string, unknown>
+): number | null {
+  if (typeof pricing.pricePerMillionTokens === 'number') {
+    return pricing.pricePerMillionTokens;
+  }
+  const rows = pricing.prices;
+  if (!rows?.length) {
+    return null;
+  }
+  const row =
+    rows.find((candidate) =>
+      Object.entries(candidate).every(([key, value]) => {
+        if (key === 'pricePerMillionTokens') {
+          return true;
+        }
+        return payload[key] === value;
+      })
+    ) ?? rows.find((candidate) => typeof candidate.pricePerMillionTokens === 'number');
+  return typeof row?.pricePerMillionTokens === 'number'
+    ? row.pricePerMillionTokens
+    : null;
+}
+
+function videoDimensions(payload: Record<string, unknown>): PricingImageDimensions {
+  const height = videoHeight(payload.resolution);
+  return {
+    width: videoWidthForAspectRatio(height, payload.aspect_ratio),
+    height,
+  };
+}
+
+function videoHeight(value: unknown): number {
+  if (typeof value !== 'string') {
+    return 1080;
+  }
+  const normalized = value.toLowerCase();
+  if (normalized.includes('480')) {
+    return 480;
+  }
+  if (normalized.includes('720')) {
+    return 720;
+  }
+  if (normalized.includes('4k') || normalized.includes('2160')) {
+    return 2160;
+  }
+  return 1080;
+}
+
+function videoWidthForAspectRatio(height: number, value: unknown): number {
+  if (typeof value !== 'string') {
+    return Math.round(height * (16 / 9));
+  }
+  const match = /^(\d+):(\d+)$/.exec(value);
+  if (!match) {
+    return Math.round(height * (16 / 9));
+  }
+  const widthRatio = Number(match[1]);
+  const heightRatio = Number(match[2]);
+  if (!Number.isFinite(widthRatio) || !Number.isFinite(heightRatio) || heightRatio <= 0) {
+    return Math.round(height * (16 / 9));
+  }
+  return Math.round(height * (widthRatio / heightRatio));
 }
 
 interface PricingImageDimensions {

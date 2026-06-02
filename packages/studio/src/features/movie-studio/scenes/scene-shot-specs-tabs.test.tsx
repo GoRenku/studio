@@ -86,6 +86,8 @@ describe('SceneShotDetail', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
+        shots={[SHOT]}
+        productionGroups={[]}
         label='Shot 1'
         castMemberLabels={{}}
         locationLabels={{}}
@@ -400,6 +402,7 @@ function sceneShotListResource(
       sceneCount: 1,
     },
     projectAspectRatio: '16:9',
+    activeShotListId: 'shot_list_hook',
     activeShotList: {
       kind: 'sceneShotList',
       sceneId: 'scene_hook',

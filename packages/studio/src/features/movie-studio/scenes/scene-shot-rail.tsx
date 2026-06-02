@@ -1,33 +1,78 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { Link2 } from 'lucide-react';
 import type {
   SceneShot,
   ScreenplayImageReferenceWithHttp,
+  ShotVideoTakeProductionGroup,
 } from '@gorenku/studio-core/client';
+import { Button } from '@/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
 import { SceneShotRailRow } from './scene-shot-rail-row';
 import { shotLabel } from './scene-shot-labels';
+import { buildShotGroupingProjection } from './shot-video-take-grouping';
 
 interface SceneShotRailProps {
   shots: SceneShot[];
   imagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
   selectedShotId: string | null;
+  productionGroups: ShotVideoTakeProductionGroup[];
   onSelectShot: (shotId: string) => void;
+  onCycleShotGroup: (shotId: string) => void;
+}
+
+const GROUP_VARIANT_CLASS: Record<0 | 1, string> = {
+  0: 'bg-primary/5',
+  1: 'bg-muted/50',
+};
+
+interface RailSegment {
+  key: string;
+  groupId: string | null;
+  variant: 0 | 1 | null;
+  rows: Array<{ shot: SceneShot; index: number }>;
 }
 
 export function SceneShotRail({
   shots,
   imagesByShotId,
   selectedShotId,
+  productionGroups,
   onSelectShot,
+  onCycleShotGroup,
 }: SceneShotRailProps) {
-  const rowRefs = useRef(new Map<string, HTMLLIElement>());
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
     if (!selectedShotId) return;
     const row = rowRefs.current.get(selectedShotId);
     row?.scrollIntoView?.({ block: 'nearest' });
   }, [selectedShotId]);
+
+  // Build contiguous segments: each durable group is one segment with a shared
+  // background; ungrouped shots are standalone segments. Adjacent segments are
+  // separated by the list gap.
+  const segments = useMemo<RailSegment[]>(() => {
+    const projection = buildShotGroupingProjection(shots, productionGroups);
+    const result: RailSegment[] = [];
+    shots.forEach((shot, index) => {
+      const entry = projection.entries[index];
+      const groupId = entry.productionGroupId;
+      const previous = result[result.length - 1];
+      if (groupId && previous && previous.groupId === groupId) {
+        previous.rows.push({ shot, index });
+        return;
+      }
+      result.push({
+        key: groupId ?? `single-${shot.shotId}`,
+        groupId,
+        variant: entry.variant,
+        rows: [{ shot, index }],
+      });
+    });
+    return result;
+  }, [productionGroups, shots]);
 
   return (
     <aside
@@ -36,24 +81,57 @@ export function SceneShotRail({
       aria-label='Shots'
     >
       <ul className={cn('flex flex-col', SCENE_SHOT_LAYOUT.railRowGapClass)}>
-        {shots.map((shot, index) => (
-          <li
-            key={shot.shotId}
-            ref={(node) => {
-              if (node) {
-                rowRefs.current.set(shot.shotId, node);
-              } else {
-                rowRefs.current.delete(shot.shotId);
-              }
-            }}
-          >
-            <SceneShotRailRow
-              label={shotLabel(index)}
-              title={shot.title}
-              image={imagesByShotId[shot.shotId]}
-              selected={shot.shotId === selectedShotId}
-              onSelect={() => onSelectShot(shot.shotId)}
-            />
+        {segments.map((segment) => (
+          <li key={segment.key}>
+            <div
+              className={cn(
+                'flex flex-col gap-1 rounded-lg',
+                segment.groupId && segment.variant !== null
+                  ? cn('p-1', GROUP_VARIANT_CLASS[segment.variant])
+                  : ''
+              )}
+              data-group-id={segment.groupId ?? undefined}
+            >
+              {segment.rows.map(({ shot, index }) => (
+                <div
+                  key={shot.shotId}
+                  className='group/card relative'
+                  ref={(node) => {
+                    if (node) {
+                      rowRefs.current.set(shot.shotId, node);
+                    } else {
+                      rowRefs.current.delete(shot.shotId);
+                    }
+                  }}
+                >
+                  <SceneShotRailRow
+                    label={shotLabel(index)}
+                    title={shot.title}
+                    image={imagesByShotId[shot.shotId]}
+                    selected={shot.shotId === selectedShotId}
+                    onSelect={() => onSelectShot(shot.shotId)}
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type='button'
+                        variant='secondary'
+                        size='icon'
+                        aria-label={`Toggle grouping for ${shotLabel(index)}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onCycleShotGroup(shot.shotId);
+                        }}
+                        className='absolute bottom-2 right-2 h-7 w-7 opacity-0 shadow-sm transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100'
+                      >
+                        <Link2 className='h-3.5 w-3.5' />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Cycle shot grouping</TooltipContent>
+                  </Tooltip>
+                </div>
+              ))}
+            </div>
           </li>
         ))}
       </ul>

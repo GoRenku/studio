@@ -49,6 +49,7 @@ import type {
   ShotVideoTakeMediaImportReport,
   ShotVideoTakeModelListReport,
   ShotVideoTakePreflightReport,
+  ShotVideoTakeProductionEstimateReport,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -312,6 +313,7 @@ export interface ProjectDataService {
   listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
   listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: ShotVideoTakeAvailableInput[]; resourceKeys: string[] }>;
   updateShotVideoTakeProductionGroup(input: UpdateShotVideoTakeProductionGroupInput): Promise<ShotVideoTakeGenerationContext>;
+  estimateShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionEstimateReport>;
   previewShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakePreflightReport>;
   selectShotVideoTakeInput(input: SelectShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
   clearShotVideoTakeInputSelection(input: ClearShotVideoTakeInputSelectionInput): Promise<ShotVideoTakeGenerationContext>;

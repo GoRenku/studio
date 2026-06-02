@@ -31,7 +31,7 @@ describe('shot video take preflight and validation', () => {
       shotIds: ['shot_001'],
       production: {
         intentId: 'text-only',
-        modelChoice: 'fal-ai/xai/grok-imagine-video/text-to-video',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
         requestedInputs: [
           {
             kind: 'character-sheet',
@@ -95,7 +95,7 @@ describe('shot video take preflight and validation', () => {
           purpose: 'shot.video-take',
           target: context.target,
           intentId: 'multi-shot',
-          modelChoice: 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
           prompt: 'One continuous two-shot video take.',
           parameterValues: {},
           inputs: [],
@@ -138,6 +138,37 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
+  it('estimates a first-frame take when saved duration is numeric but provider expects a string enum', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+
+    const estimate = await projectData.estimateShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        intentId: 'first-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: {
+          duration: 9,
+        },
+      },
+    });
+
+    expect(estimate.issues).toEqual([]);
+    expect(estimate.estimate).toMatchObject({
+      model: 'bytedance/seedance-2.0/image-to-video',
+      estimatedCostUsd: 3.402,
+      billableUnits: {
+        duration: '9',
+        resolution: '720p',
+        aspect_ratio: '16:9',
+      },
+      warnings: [],
+    });
+  });
+
   it('resolves prepared cast sheet inputs without a shot video take input row', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 1);
@@ -157,7 +188,7 @@ describe('shot video take preflight and validation', () => {
       shotIds: ['shot_001'],
       production: {
         intentId: 'text-only',
-        modelChoice: 'fal-ai/xai/grok-imagine-video/text-to-video',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
         requestedInputs: [
           {
             kind: 'character-sheet',

@@ -116,6 +116,7 @@ export type {
   ShotVideoTakePreflightInput,
   ShotVideoTakePreflightPrompt,
   ShotVideoTakePreflightReport,
+  ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProjectContext,
   ShotVideoTakeSceneContext,
   ShotVideoTakeShotListContext,

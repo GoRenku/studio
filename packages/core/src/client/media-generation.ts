@@ -710,6 +710,8 @@ export interface SceneStoryboardSheetModelListReport {
 export interface ShotVideoTakeDurationSupport {
   supported: boolean;
   values?: number[];
+  minimum?: number;
+  maximum?: number;
   default?: number;
 }
 
@@ -727,6 +729,8 @@ export interface ShotVideoTakeParameterReport {
   required: boolean;
   defaultValue?: import('./scene-shot-list.js').ShotVideoTakeParameterValue;
   allowedValues?: import('./scene-shot-list.js').ShotVideoTakeParameterValue[];
+  minimum?: number;
+  maximum?: number;
 }
 
 export interface ShotVideoTakeEstimateInputReport {
@@ -750,6 +754,7 @@ export interface ShotVideoTakeModelListReport {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   target: SceneShotMediaGenerationTarget;
   intentId?: ShotVideoTakeIntentId;
+  defaultModelChoice: ShotVideoTakeModelChoice;
   models: ShotVideoTakeModelChoiceReport[];
 }
 
@@ -805,6 +810,15 @@ export interface ShotVideoTakePreflightReport {
   finalTake: ShotVideoTakePreflightFinalTake;
   agentBrief: string;
   estimate: GenerationEstimate | null;
+}
+
+export interface ShotVideoTakeProductionEstimateReport {
+  target: SceneShotMediaGenerationTarget;
+  productionGroup: ShotVideoTakeProductionGroup;
+  intentId: ShotVideoTakeIntentId;
+  modelChoice: ShotVideoTakeModelChoice;
+  estimate: GenerationEstimate | null;
+  issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
 export interface LocationEnvironmentSheetModelListReport {

@@ -3,7 +3,10 @@ import type {
   LookbookSection,
   MediaGenerationSpecRecord,
   ProjectLibrary,
+  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionPlan,
 } from '@gorenku/studio-core/client';
+import { SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
 import { makeAsset, makeProject, makeProjectShell } from './route-fixtures.js';
 
@@ -272,6 +275,7 @@ export function fakeProjectDataService(): NonNullable<
           sceneCount: 1,
         },
         projectAspectRatio: '16:9',
+        activeShotListId: 'shot_list_opening',
         activeShotList: null,
         storyboardSheet: null,
         storyboardImagesByShotId: {},
@@ -301,6 +305,7 @@ export function fakeProjectDataService(): NonNullable<
           sceneCount: 1,
         },
         projectAspectRatio: '16:9',
+        activeShotListId: 'shot_list_opening',
         activeShotList: null,
         storyboardSheet: null,
         storyboardImagesByShotId: {},
@@ -707,6 +712,170 @@ export function fakeProjectDataService(): NonNullable<
         sections: input.sections,
       });
     },
+    async buildShotVideoTakeContext(input) {
+      return makeShotVideoTakeContext(input);
+    },
+    async listShotVideoTakeModels(input) {
+      return {
+        purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+        target: makeShotVideoTakeTarget(input),
+        ...(input.intentId ? { intentId: input.intentId } : {}),
+        defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
+        models: [
+          {
+            modelChoice: 'fal-ai/bytedance/seedance-2.0',
+            label: 'Seedance 2.0',
+            available: true,
+            supportedIntents: ['text-only', 'first-frame', 'first-last-frame', 'reference', 'multi-shot'],
+            duration: { supported: true, values: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
+            inputRoles: [],
+            parameters: [],
+            estimateInputs: {
+              canEstimateBeforeDependenciesExist: true,
+              requiresPreparedInputs: false,
+            },
+          },
+        ],
+      };
+    },
+    async updateShotVideoTakeProductionGroup(input) {
+      return makeShotVideoTakeContext(input, input.production);
+    },
+    async estimateShotVideoTakeProduction(input) {
+      const target = makeShotVideoTakeTarget(input);
+      return {
+        target,
+        productionGroup: {
+          productionGroupId: target.productionGroupId,
+          shotIds: target.shotIds,
+          videoTakeProduction: input.production ?? {},
+        },
+        intentId: input.production?.intentId ?? 'text-only',
+        modelChoice:
+          input.production?.modelChoice ??
+          'fal-ai/bytedance/seedance-2.0',
+        estimate: {
+          provider: 'fal-ai',
+          model: 'fal-ai/bytedance/seedance-2.0',
+          mediaKind: 'video',
+          pricing: null,
+          estimatedCostUsd: 0.42,
+          approvalToken: 'fake-approval-token',
+          billableUnits: {},
+          warnings: [],
+        },
+        issues: [],
+      };
+    },
+    async previewShotVideoTakeProduction(input) {
+      const target = makeShotVideoTakeTarget(input);
+      return {
+        valid: true,
+        issues: [],
+        target,
+        productionGroup: {
+          productionGroupId: target.productionGroupId,
+          shotIds: target.shotIds,
+          videoTakeProduction: input.production ?? {},
+        },
+        intentId: input.production?.intentId ?? 'text-only',
+        modelChoice:
+          input.production?.modelChoice ??
+          'fal-ai/bytedance/seedance-2.0',
+        preparedInputs: [],
+        availableInputs: [],
+        inputsToCreate: [],
+        prompts: [],
+        estimateLines: [],
+        finalTake: {
+          purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+          canCreateSpec: true,
+          title: 'Opening Scene video take',
+        },
+        agentBrief: 'Agent brief for the opening scene video take.',
+        estimate: null,
+      };
+    },
+    async selectShotVideoTakeInput(input) {
+      return makeShotVideoTakeContext(input);
+    },
+    async clearShotVideoTakeInputSelection(input) {
+      return makeShotVideoTakeContext(input);
+    },
+  };
+}
+
+function makeShotVideoTakeTarget(input: {
+  sceneId: string;
+  shotListId: string;
+  shotIds: string[];
+  productionGroupId?: string;
+}) {
+  return {
+    kind: 'sceneShotGroup' as const,
+    id: input.productionGroupId ?? 'scene_shot_video_take_group_001',
+    sceneId: input.sceneId,
+    shotListId: input.shotListId,
+    productionGroupId:
+      input.productionGroupId ?? 'scene_shot_video_take_group_001',
+    shotIds: input.shotIds,
+  };
+}
+
+function makeShotVideoTakeContext(
+  input: {
+    sceneId: string;
+    shotListId: string;
+    shotIds: string[];
+    productionGroupId?: string;
+  },
+  production?: ShotVideoTakeProductionPlan
+): ShotVideoTakeGenerationContext {
+  const target = makeShotVideoTakeTarget(input);
+  return {
+    purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+    target,
+    project: {
+      name: 'test-project',
+      title: 'Test Project',
+      aspectRatio: '16:9',
+    },
+    scene: {
+      id: input.sceneId,
+      title: 'Opening Scene',
+      setting: { locationIds: [] },
+      storyFunction: [],
+    },
+    shotList: {
+      id: input.shotListId,
+      title: 'Opening coverage',
+      summary: 'Coverage summary.',
+      createdAt: '2026-05-22T00:00:00.000Z',
+      updatedAt: '2026-05-22T00:00:00.000Z',
+      isActive: true,
+    },
+    productionGroup: {
+      productionGroupId: target.productionGroupId,
+      shotIds: target.shotIds,
+      videoTakeProduction: production ?? {},
+    },
+    shots: [],
+    referencedCast: [],
+    referencedLocations: [],
+    activeLookbook: null,
+    storyboardImages: [],
+    availableInputs: [],
+    existingTakes: [],
+    defaults: {
+      intentId: 'text-only',
+      imageDependencyModelChoice: 'fal-ai/nano-banana-2',
+      parameterValues: {},
+    },
+    resourceKeys: [
+      `surface:scene:${input.sceneId}:shots`,
+      `scene-shot-list:${input.shotListId}:video-take-production`,
+      `scene-shot-video-take-group:${target.productionGroupId}`,
+    ],
   };
 }
 

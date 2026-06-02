@@ -86,8 +86,6 @@ const SHOT_VIDEO_TAKE_INTENT_IDS = [
   'first-last-frame',
   'reference',
   'multi-shot',
-  'audio-to-video',
-  'extend-or-edit',
 ] as const;
 
 const SHOT_VIDEO_TAKE_INPUT_KINDS = [
@@ -134,11 +132,12 @@ const SHOT_VIDEO_TAKE_INPUT_MODELS = [
 ] as const;
 
 const SHOT_VIDEO_TAKE_MODELS = [
-  'fal-ai/xai/grok-imagine-video/text-to-video',
-  'fal-ai/xai/grok-imagine-video/image-to-video',
-  'fal-ai/veo3.1/first-last-frame-to-video',
-  'fal-ai/bytedance/seedance/v1.5/pro/text-to-video',
-  'fal-ai/bytedance/seedance/v1.5/pro/image-to-video',
+  'fal-ai/bytedance/seedance-2.0',
+  'fal-ai/kling-video/v3/pro',
+  'fal-ai/veo3.1',
+  'fal-ai/xai/grok-imagine-video-1.5',
+  'fal-ai/ltx-3.2',
+  'fal-ai/alibaba/happy-horse',
 ] as const;
 
 export const sceneShotListDocumentSchema = {

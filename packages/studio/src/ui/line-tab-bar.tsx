@@ -8,10 +8,13 @@ interface LineTabBarItem<Value extends string> {
 
 interface LineTabBarProps<Value extends string> {
   items: Array<LineTabBarItem<Value>>;
+  /** Optional content pinned to the far right of the tab bar row. */
+  trailing?: ReactNode;
 }
 
 export function LineTabBar<Value extends string>({
   items,
+  trailing,
 }: LineTabBarProps<Value>) {
   return (
     <TabsList
@@ -27,6 +30,9 @@ export function LineTabBar<Value extends string>({
           {item.label}
         </TabsTrigger>
       ))}
+      {trailing ? (
+        <span className='ml-auto flex items-center pr-3'>{trailing}</span>
+      ) : null}
     </TabsList>
   );
 }

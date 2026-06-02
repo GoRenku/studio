@@ -44,3 +44,15 @@ export {
   type LoadProviderEnvFilesResult,
 } from './provider-env-files.js';
 export * from './generation/index.js';
+export {
+  SHOT_VIDEO_TAKE_ENGINE_MODELS,
+  findShotVideoTakeEngineModel,
+  selectShotVideoTakeProviderRoute,
+  type ShotVideoTakeEngineInputKind,
+  type ShotVideoTakeEngineInputRole,
+  type ShotVideoTakeEngineIntentId,
+  type ShotVideoTakeEngineModelDefinition,
+  type ShotVideoTakeEngineParameter,
+  type ShotVideoTakeEngineParameterValue,
+  type ShotVideoTakeProviderIntentRoute,
+} from './shot-video-take-models.js';

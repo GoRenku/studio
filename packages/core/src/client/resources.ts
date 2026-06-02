@@ -175,6 +175,7 @@ export interface SceneShotListResource {
   sequence: SequenceNavigationRow;
   act: ActNavigationRow;
   projectAspectRatio: string | null;
+  activeShotListId: string | null;
   activeShotList: SceneShotListDocument | null;
   storyboardSheet: SceneStoryboardSheetReference | null;
   storyboardImagesByShotId: Record<string, ScreenplayImageReference>;

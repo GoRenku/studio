@@ -347,7 +347,7 @@ describe('scene shot list commands', () => {
           shotIds: ['shot_001'],
           videoTakeProduction: {
             intentId: 'first-last-frame',
-            modelChoice: 'fal-ai/veo3.1/first-last-frame-to-video',
+            modelChoice: 'fal-ai/veo3.1',
             parameterValues: { duration: '6s' },
           },
         },
@@ -356,7 +356,7 @@ describe('scene shot list commands', () => {
           shotIds: ['shot_002', 'shot_003'],
           videoTakeProduction: {
             intentId: 'multi-shot',
-            modelChoice: 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video',
+            modelChoice: 'fal-ai/bytedance/seedance-2.0',
           },
         },
       ],

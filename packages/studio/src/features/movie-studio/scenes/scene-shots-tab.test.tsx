@@ -194,6 +194,7 @@ function resource(
       sceneCount: 1,
     },
     projectAspectRatio: '16:9',
+    activeShotListId: activeShotList ? 'shot_list_hook' : null,
     activeShotList,
     storyboardSheet: null,
     storyboardImagesByShotId: {},

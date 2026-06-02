@@ -18,16 +18,15 @@ export type ShotVideoTakeIntentId =
   | 'first-frame'
   | 'first-last-frame'
   | 'reference'
-  | 'multi-shot'
-  | 'audio-to-video'
-  | 'extend-or-edit';
+  | 'multi-shot';
 
 export type ShotVideoTakeModelChoice =
-  | 'fal-ai/xai/grok-imagine-video/text-to-video'
-  | 'fal-ai/xai/grok-imagine-video/image-to-video'
-  | 'fal-ai/veo3.1/first-last-frame-to-video'
-  | 'fal-ai/bytedance/seedance/v1.5/pro/text-to-video'
-  | 'fal-ai/bytedance/seedance/v1.5/pro/image-to-video';
+  | 'fal-ai/bytedance/seedance-2.0'
+  | 'fal-ai/kling-video/v3/pro'
+  | 'fal-ai/veo3.1'
+  | 'fal-ai/xai/grok-imagine-video-1.5'
+  | 'fal-ai/ltx-3.2'
+  | 'fal-ai/alibaba/happy-horse';
 
 export type ShotVideoTakeParameterValue =
   | string
