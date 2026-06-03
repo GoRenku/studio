@@ -791,6 +791,39 @@ export interface ShotVideoTakeEstimateLine {
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
+export type ShotVideoTakePreflightInputItemStatus =
+  | 'ready'
+  | 'available'
+  | 'needed';
+
+export interface ShotVideoTakePreflightInputCandidate {
+  inputId: string;
+  label: string;
+}
+
+export interface ShotVideoTakePreflightInputSlot {
+  kind: ShotVideoTakeInputKind;
+  subjectKind?: ShotVideoTakeInputSubjectKind;
+  subjectId?: string;
+}
+
+export interface ShotVideoTakePreflightInputItem {
+  key: string;
+  title: string;
+  caption: string;
+  mediaKind: 'image' | 'audio' | 'video';
+  status: ShotVideoTakePreflightInputItemStatus;
+  assetId?: string;
+  assetFileId?: string;
+  projectRelativePath?: ProjectRelativePath;
+  url?: string;
+  billable?: boolean;
+  cost?: number | null;
+  slot?: ShotVideoTakePreflightInputSlot;
+  candidates?: ShotVideoTakePreflightInputCandidate[];
+  selectedInputId?: string | null;
+}
+
 export interface ShotVideoTakePreflightFinalTake {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   canCreateSpec: boolean;
@@ -808,6 +841,7 @@ export interface ShotVideoTakePreflightReport {
   preparedInputs: ShotVideoTakePreflightInput[];
   availableInputs: ShotVideoTakeAvailableInput[];
   inputsToCreate: ShotVideoTakePreflightDependency[];
+  inputPlanItems: ShotVideoTakePreflightInputItem[];
   prompts: ShotVideoTakePreflightPrompt[];
   estimateLines: ShotVideoTakeEstimateLine[];
   finalTake: ShotVideoTakePreflightFinalTake;

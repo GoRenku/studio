@@ -43,6 +43,7 @@ import type {
   ShotVideoTakeModelListReport,
   ShotVideoTakePreflightDependency,
   ShotVideoTakePreflightInput,
+  ShotVideoTakePreflightInputItem,
   ShotVideoTakePreflightReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionGroup,
@@ -292,6 +293,43 @@ export async function previewShotVideoTakeProduction(
     preparedInputs,
     canEstimate: issues.length === 0 && inputsToCreate.length === 0,
   });
+  const estimateLines: ShotVideoTakePreflightReport['estimateLines'] = [
+    ...inputsToCreate
+      .filter(
+        (
+          inputToCreate
+        ): inputToCreate is ShotVideoTakePreflightDependency & {
+          purpose: NonNullable<ShotVideoTakePreflightDependency['purpose']>;
+        } => Boolean(inputToCreate.purpose)
+      )
+      .map((inputToCreate) => ({
+        purpose: inputToCreate.purpose,
+        dependencyKind: inputToCreate.dependencyKind,
+        label: inputToCreate.reason,
+        estimate: null,
+        issues: [
+          issue(
+            'PROJECT_DATA374',
+            'Dependency estimate requires a persisted dependency spec.',
+            ['inputsToCreate'],
+            'Create the concrete dependency spec before estimating it.'
+          ),
+        ],
+      })),
+    {
+      purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+      label: 'Final video take',
+      estimate: finalTakeEstimate.estimate,
+      issues: [...estimateLineIssues, ...finalTakeEstimate.issues],
+    },
+  ];
+  const inputPlanItems = buildShotVideoTakePreflightInputItems({
+    context,
+    preparedInputs,
+    availableInputs: context.availableInputs,
+    inputsToCreate,
+    estimateLines,
+  });
   const plan = await planShotVideoTakeProduction(input);
   return {
     valid: issues.length === 0 && inputsToCreate.length === 0,
@@ -304,37 +342,9 @@ export async function previewShotVideoTakeProduction(
     preparedInputs,
     availableInputs: context.availableInputs,
     inputsToCreate,
+    inputPlanItems,
     prompts,
-    estimateLines: [
-      ...inputsToCreate
-        .filter(
-          (
-            inputToCreate
-          ): inputToCreate is ShotVideoTakePreflightDependency & {
-            purpose: NonNullable<ShotVideoTakePreflightDependency['purpose']>;
-          } => Boolean(inputToCreate.purpose)
-        )
-        .map((inputToCreate) => ({
-          purpose: inputToCreate.purpose,
-          dependencyKind: inputToCreate.dependencyKind,
-          label: inputToCreate.reason,
-          estimate: null,
-          issues: [
-            issue(
-              'PROJECT_DATA374',
-              'Dependency estimate requires a persisted dependency spec.',
-              ['inputsToCreate'],
-              'Create the concrete dependency spec before estimating it.'
-            ),
-          ],
-        })),
-      {
-        purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-        label: 'Final video take',
-        estimate: finalTakeEstimate.estimate,
-        issues: [...estimateLineIssues, ...finalTakeEstimate.issues],
-      },
-    ],
+    estimateLines,
     finalTake: {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
       canCreateSpec: issues.length === 0 && inputsToCreate.length === 0,
@@ -1043,6 +1053,209 @@ async function estimateFinalTakeForPreflight(input: {
       ],
     };
   }
+}
+
+const SHOT_VIDEO_TAKE_INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, string> = {
+  'first-frame': 'First frame',
+  'last-frame': 'Last frame',
+  'reference-image': 'Reference image',
+  'shot-reference-sheet': 'Reference sheet',
+  'character-sheet': 'Character sheet',
+  'location-sheet': 'Location sheet',
+  'multi-shot-storyboard-sheet': 'Storyboard sheet',
+  'source-video': 'Source video',
+  audio: 'Audio',
+};
+
+function buildShotVideoTakePreflightInputItems(input: {
+  context: ShotVideoTakeGenerationContext;
+  preparedInputs: ShotVideoTakePreflightInput[];
+  availableInputs: ShotVideoTakeAvailableInput[];
+  inputsToCreate: ShotVideoTakePreflightDependency[];
+  estimateLines: ShotVideoTakePreflightReport['estimateLines'];
+}): ShotVideoTakePreflightInputItem[] {
+  const items: ShotVideoTakePreflightInputItem[] = [];
+  const subjectStatus = (
+    kind: ShotVideoTakeInputKind,
+    subjectId?: string
+  ): Pick<
+    ShotVideoTakePreflightInputItem,
+    'status' | 'assetId' | 'assetFileId' | 'projectRelativePath'
+  > => {
+    const ready = matchPreflightInput(input.preparedInputs, kind, subjectId);
+    if (ready) {
+      return {
+        status: 'ready',
+        assetId: ready.assetId,
+        assetFileId: ready.assetFileId,
+        projectRelativePath: ready.projectRelativePath,
+      };
+    }
+    const available = matchPreflightInput(input.availableInputs, kind, subjectId);
+    if (available) {
+      return {
+        status: 'available',
+        assetId: available.assetId,
+        assetFileId: available.assetFileId,
+        projectRelativePath: available.projectRelativePath,
+      };
+    }
+    return { status: 'needed' };
+  };
+
+  input.context.referencedCast.forEach((castMember) => {
+    items.push({
+      key: `cast-${castMember.id}`,
+      title: castMember.name,
+      caption: 'Character sheet',
+      mediaKind: 'image',
+      ...subjectStatus('character-sheet', castMember.id),
+    });
+  });
+  input.context.referencedLocations.forEach((location) => {
+    items.push({
+      key: `location-${location.id}`,
+      title: location.name,
+      caption: 'Location sheet',
+      mediaKind: 'image',
+      ...subjectStatus('location-sheet', location.id),
+    });
+  });
+  if (input.context.activeLookbook) {
+    items.push({
+      key: `lookbook-${input.context.activeLookbook.id}`,
+      title: input.context.activeLookbook.name,
+      caption: 'Lookbook reference',
+      mediaKind: 'image',
+      ...subjectStatus('reference-image', input.context.activeLookbook.id),
+    });
+  }
+
+  const shotOrder = new Map(
+    input.context.shots.map((shot, index) => [shot.shotId, index])
+  );
+  input.context.storyboardImages.forEach((image) => {
+    items.push({
+      key: `storyboard-${image.shotId}`,
+      title: `Shot ${(shotOrder.get(image.shotId) ?? 0) + 1} frame`,
+      caption: 'Storyboard',
+      mediaKind: 'image',
+      status: 'ready',
+      assetId: image.assetId,
+      assetFileId: image.assetFileId,
+      projectRelativePath: image.projectRelativePath,
+    });
+  });
+
+  const candidatesBySlot = new Map<string, ShotVideoTakeAvailableInput[]>();
+  input.availableInputs.forEach((availableInput) => {
+    const key = preflightInputSlotKey(
+      availableInput.kind,
+      availableInput.subjectId
+    );
+    candidatesBySlot.set(key, [
+      ...(candidatesBySlot.get(key) ?? []),
+      availableInput,
+    ]);
+  });
+  const costByDependencyKind = new Map<string, number | null>();
+  input.estimateLines.forEach((line) => {
+    if (line.dependencyKind) {
+      costByDependencyKind.set(
+        line.dependencyKind,
+        line.estimate?.estimatedCostUsd ?? null
+      );
+    }
+  });
+
+  const seen = new Set<string>();
+  input.preparedInputs.forEach((preparedInput) => {
+    const key = preflightInputSlotKey(preparedInput.kind, preparedInput.subjectId);
+    seen.add(key);
+    items.push({
+      key: `model-${key}`,
+      title: inputKindLabel(preparedInput.kind),
+      caption: 'Model input',
+      mediaKind: preparedInput.mediaKind,
+      status: 'ready',
+      assetId: preparedInput.assetId,
+      assetFileId: preparedInput.assetFileId,
+      projectRelativePath: preparedInput.projectRelativePath,
+    });
+  });
+  input.inputsToCreate.forEach((inputToCreate) => {
+    const key = preflightInputSlotKey(
+      inputToCreate.outputInputKind,
+      inputToCreate.subjectId
+    );
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    const candidates = candidatesBySlot.get(key) ?? [];
+    const selected = candidates.find((candidate) => candidate.selected);
+    items.push({
+      key: `model-${key}`,
+      title: inputKindLabel(inputToCreate.outputInputKind),
+      caption: 'Model input',
+      mediaKind: inputToCreate.mediaKind,
+      status: selected ? 'available' : 'needed',
+      ...(selected
+        ? {
+            assetId: selected.assetId,
+            assetFileId: selected.assetFileId,
+            projectRelativePath: selected.projectRelativePath,
+          }
+        : {}),
+      billable: Boolean(inputToCreate.purpose),
+      cost: inputToCreate.dependencyKind
+        ? (costByDependencyKind.get(inputToCreate.dependencyKind) ?? null)
+        : null,
+      slot: {
+        kind: inputToCreate.outputInputKind,
+        ...(inputToCreate.subjectKind
+          ? { subjectKind: inputToCreate.subjectKind }
+          : {}),
+        ...(inputToCreate.subjectId ? { subjectId: inputToCreate.subjectId } : {}),
+      },
+      candidates:
+        candidates.length > 0
+          ? candidates.map((candidate, index) => ({
+              inputId: candidate.inputId,
+              label: `${inputKindLabel(candidate.kind)} ${index + 1}`,
+            }))
+          : undefined,
+      selectedInputId: selected?.inputId ?? null,
+    });
+  });
+
+  return items;
+}
+
+function matchPreflightInput<T extends {
+  kind: ShotVideoTakeInputKind;
+  subjectId?: string;
+}>(
+  inputs: T[],
+  kind: ShotVideoTakeInputKind,
+  subjectId?: string
+): T | undefined {
+  return inputs.find(
+    (candidate) =>
+      candidate.kind === kind &&
+      (subjectId ? candidate.subjectId === subjectId : true)
+  );
+}
+
+function preflightInputSlotKey(
+  kind: ShotVideoTakeInputKind,
+  subjectId?: string
+): string {
+  return `${kind}::${subjectId ?? ''}`;
+}
+
+function inputKindLabel(kind: ShotVideoTakeInputKind): string {
+  return SHOT_VIDEO_TAKE_INPUT_KIND_LABELS[kind] ?? kind;
 }
 
 function finalTakeSpecForPreflight(input: {

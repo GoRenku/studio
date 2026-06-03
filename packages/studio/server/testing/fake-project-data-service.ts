@@ -792,6 +792,7 @@ export function fakeProjectDataService(): NonNullable<
         preparedInputs: [],
         availableInputs: [],
         inputsToCreate: [],
+        inputPlanItems: [],
         prompts: [],
         estimateLines: [],
         finalTake: {

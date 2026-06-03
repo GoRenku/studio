@@ -179,6 +179,7 @@ function preflight(): ShotVideoTakePreflightReport {
     preparedInputs: [],
     availableInputs: [],
     inputsToCreate: [],
+    inputPlanItems: [],
     prompts: [],
     estimateLines: [],
     finalTake: {
@@ -294,6 +295,15 @@ describe('AI Production tab', () => {
       ...preflight(),
       target: lookbookContext.target,
       productionGroup: lookbookContext.productionGroup,
+      inputPlanItems: [
+        {
+          key: 'lookbook-lookbook_imperial_wound',
+          title: 'Imperial Wound',
+          caption: 'Lookbook reference',
+          mediaKind: 'image',
+          status: 'needed',
+        },
+      ],
     });
 
     render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);

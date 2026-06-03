@@ -48,7 +48,6 @@ export function SceneShotAiProductionTab({
   const {
     loadState,
     loadError,
-    context,
     models,
     productionGroup,
     selectedIntent,
@@ -137,7 +136,6 @@ export function SceneShotAiProductionTab({
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         preflight={preflight}
-        context={context}
         modelLabel={selectedModelReport?.label}
         parameters={enabledParameters(selectedModelReport)}
         previewLoading={previewState === 'loading'}

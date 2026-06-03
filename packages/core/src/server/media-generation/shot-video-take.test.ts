@@ -312,6 +312,47 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
+  it('reports an active Lookbook reference as needed when no reference image exists', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        intentId: 'first-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    expect(preflight.inputPlanItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: `lookbook-${lookbook.lookbook.id}`,
+          title: 'Imperial Wound',
+          caption: 'Lookbook reference',
+          mediaKind: 'image',
+          status: 'needed',
+        }),
+      ])
+    );
+  });
+
   it('validates selected input ownership before mutating another group selection', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 2);
@@ -427,5 +468,68 @@ function sampleShotList(
       shotId: `shot_${String(index + 1).padStart(3, '0')}`,
       title: index === 0 ? baseShot.title : `Map study alternate ${index + 1}`,
     })),
+  };
+}
+
+function lookbookDocument() {
+  return {
+    kind: 'lookbook' as const,
+    lookbook: {
+      thesis: {
+        statement: 'The movie should feel rigorous and tense.',
+        principles: ['Use negative space as pressure.'],
+      },
+      palette: {
+        description: 'Stone, smoke, and muted gold.',
+        colors: [
+          {
+            hex: '#8a6f2a',
+            name: 'Wounded gold',
+            meaning: 'Ceremony under pressure.',
+          },
+        ],
+        observations: [{ text: 'Warmth appears only where authority is strained.' }],
+      },
+      toneMood: {
+        tone: 'controlled dread',
+        moodTags: ['tense'],
+        description: 'The image language stays austere and watchful.',
+      },
+      composition: {
+        description: 'Orderly compositions tighten around decisions.',
+        patterns: [
+          {
+            name: 'Map pressure',
+            description: 'Maps and walls compress the frame.',
+          },
+        ],
+      },
+      lighting: {
+        description: 'Practical pools of warm light cut through cool rooms.',
+        patterns: [
+          {
+            name: 'Lamp islands',
+            description: 'Oil lamps isolate decision makers.',
+          },
+        ],
+      },
+      texture: {
+        description: 'Stone, vellum, smoke, and worn metal carry texture.',
+        observations: [{ text: 'Fine surface texture is visible in midtones.' }],
+      },
+      camera: {
+        description: 'Camera grammar is patient and observant.',
+        movement: [
+          { name: 'Slow push', description: 'Push in only when a decision hardens.' },
+        ],
+        motion: [
+          { name: 'Held labor', description: 'Blocking moves with deliberate weight.' },
+        ],
+        framing: [
+          { name: 'Measured distance', description: 'Close-ups are rare and earned.' },
+        ],
+      },
+    },
+    sourceInspirationFolderIds: [],
   };
 }

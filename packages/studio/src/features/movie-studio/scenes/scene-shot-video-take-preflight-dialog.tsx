@@ -1,12 +1,9 @@
 import { useMemo, type ReactNode } from 'react';
 import { AudioLines, Film, Image as ImageIcon } from 'lucide-react';
 import type {
-  ShotVideoTakeAvailableInput,
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeInputKind,
-  ShotVideoTakeInputSubjectKind,
   ShotVideoTakeParameterReport,
   ShotVideoTakeParameterValue,
+  ShotVideoTakePreflightInputItem,
   ShotVideoTakePreflightReport,
 } from '@gorenku/studio-core/client';
 import {
@@ -19,28 +16,11 @@ import {
 } from '@/ui/dialog';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  SceneShotAiProductionInputPicker,
-  type ReusableInputCandidate,
-} from './scene-shot-ai-production-input-picker';
+import { SceneShotAiProductionInputPicker } from './scene-shot-ai-production-input-picker';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
-import { shotDisplayLabel } from './shot-video-take-grouping';
 import type { ShotVideoTakeInputSlot } from '@/services/studio-shot-video-takes-api';
 
-type MediaKind = 'image' | 'audio' | 'video';
 type ReferenceStatus = 'ready' | 'available' | 'needed';
-
-const INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, string> = {
-  'first-frame': 'First frame',
-  'last-frame': 'Last frame',
-  'reference-image': 'Reference image',
-  'shot-reference-sheet': 'Reference sheet',
-  'character-sheet': 'Character sheet',
-  'location-sheet': 'Location sheet',
-  'multi-shot-storyboard-sheet': 'Storyboard sheet',
-  'source-video': 'Source video',
-  audio: 'Audio',
-};
 
 const DEPENDENCY_KIND_LABELS: Record<string, string> = {
   'first-frame': 'First frame',
@@ -51,26 +31,10 @@ const DEPENDENCY_KIND_LABELS: Record<string, string> = {
   'source-video-extract': 'Source video',
 };
 
-interface ReferenceItem {
-  key: string;
-  title: string;
-  caption: string;
-  mediaKind: MediaKind;
-  url?: string;
-  status: ReferenceStatus;
-  /** Billable generation (shows a cost in the card footer). */
-  billable?: boolean;
-  cost?: number | null;
-  slot?: ShotVideoTakeInputSlot;
-  candidates?: ReusableInputCandidate[];
-  selectedInputId?: string | null;
-}
-
 interface SceneShotVideoTakePreflightDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preflight: ShotVideoTakePreflightReport | null;
-  context: ShotVideoTakeGenerationContext | null;
   modelLabel?: string;
   parameters: ShotVideoTakeParameterReport[];
   previewLoading: boolean;
@@ -78,161 +42,10 @@ interface SceneShotVideoTakePreflightDialogProps {
   onRegenerate: (slot: ShotVideoTakeInputSlot) => void;
 }
 
-function urlOf(input: { url?: string } | undefined): string | undefined {
-  return input?.url;
-}
-
-function matchInput(
-  inputs: Array<{ kind: string; subjectId?: string; url?: string; selected?: boolean }>,
-  kind: ShotVideoTakeInputKind,
-  subjectId?: string
-) {
-  return inputs.find(
-    (input) => input.kind === kind && (subjectId ? input.subjectId === subjectId : true)
-  );
-}
-
-/**
- * Compose every input that feeds this take — character sheets, location sheets,
- * lookbook, storyboard frames, and the model inputs — each with a created /
- * not-yet status (0041).
- */
-function buildReferenceItems(
-  context: ShotVideoTakeGenerationContext,
-  preflight: ShotVideoTakePreflightReport
-): ReferenceItem[] {
-  const available = preflight.availableInputs;
-  const prepared = preflight.preparedInputs as Array<{
-    kind: string;
-    subjectId?: string;
-    url?: string;
-  }>;
-
-  const subjectStatus = (
-    kind: ShotVideoTakeInputKind,
-    subjectId?: string
-  ): { status: ReferenceStatus; url?: string } => {
-    const ready = matchInput(prepared, kind, subjectId);
-    if (ready) return { status: 'ready', url: urlOf(ready) };
-    const avail = matchInput(available, kind, subjectId);
-    if (avail) return { status: 'available', url: urlOf(avail) };
-    return { status: 'needed' };
-  };
-
-  const items: ReferenceItem[] = [];
-
-  context.referencedCast.forEach((cast) => {
-    const { status, url } = subjectStatus('character-sheet', cast.id);
-    items.push({
-      key: `cast-${cast.id}`,
-      title: cast.name,
-      caption: 'Character sheet',
-      mediaKind: 'image',
-      url,
-      status,
-    });
-  });
-
-  context.referencedLocations.forEach((location) => {
-    const { status, url } = subjectStatus('location-sheet', location.id);
-    items.push({
-      key: `location-${location.id}`,
-      title: location.name,
-      caption: 'Location sheet',
-      mediaKind: 'image',
-      url,
-      status,
-    });
-  });
-
-  if (context.activeLookbook) {
-    const { status, url } = subjectStatus('reference-image', context.activeLookbook.id);
-    items.push({
-      key: `lookbook-${context.activeLookbook.id}`,
-      title: context.activeLookbook.name,
-      caption: 'Lookbook reference',
-      mediaKind: 'image',
-      url,
-      status,
-    });
-  }
-
-  const indexByShotId = new Map(
-    context.shots.map((shot, index) => [shot.shotId, index])
-  );
-  context.storyboardImages.forEach((image) => {
-    items.push({
-      key: `storyboard-${image.shotId}`,
-      title: `${shotDisplayLabel(indexByShotId.get(image.shotId) ?? 0)} frame`,
-      caption: 'Storyboard',
-      mediaKind: 'image',
-      url: urlOf(image as { url?: string }),
-      status: 'ready',
-    });
-  });
-
-  // Model inputs: union of prepared (ready) and inputsToCreate (needed / reusable).
-  const candidatesBySlot = new Map<string, ShotVideoTakeAvailableInput[]>();
-  available.forEach((input) => {
-    const key = `${input.kind}::${input.subjectId ?? ''}`;
-    candidatesBySlot.set(key, [...(candidatesBySlot.get(key) ?? []), input]);
-  });
-  const costByDependencyKind = new Map<string, number | null>();
-  preflight.estimateLines.forEach((line) => {
-    if (line.dependencyKind) {
-      costByDependencyKind.set(line.dependencyKind, line.estimate?.estimatedCostUsd ?? null);
-    }
-  });
-  const seen = new Set<string>();
-  preflight.preparedInputs.forEach((input) => {
-    const key = `${input.kind}::${input.subjectId ?? ''}`;
-    seen.add(key);
-    items.push({
-      key: `model-${key}`,
-      title: INPUT_KIND_LABELS[input.kind] ?? input.kind,
-      caption: 'Model input',
-      mediaKind: input.mediaKind,
-      url: urlOf(input as { url?: string }),
-      status: 'ready',
-    });
-  });
-  preflight.inputsToCreate.forEach((row) => {
-    const key = `${row.outputInputKind}::${row.subjectId ?? ''}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    const candidates = candidatesBySlot.get(key) ?? [];
-    const reusable: ReusableInputCandidate[] = candidates.map((candidate, index) => ({
-      inputId: candidate.inputId,
-      label: `${INPUT_KIND_LABELS[candidate.kind] ?? candidate.kind} ${index + 1}`,
-    }));
-    const selected = candidates.find((candidate) => candidate.selected);
-    items.push({
-      key: `model-${key}`,
-      title: INPUT_KIND_LABELS[row.outputInputKind] ?? row.outputInputKind,
-      caption: 'Model input',
-      mediaKind: row.mediaKind as MediaKind,
-      url: urlOf(selected as { url?: string } | undefined),
-      status: selected ? 'available' : 'needed',
-      billable: Boolean(row.purpose),
-      cost: row.dependencyKind ? (costByDependencyKind.get(row.dependencyKind) ?? null) : null,
-      slot: {
-        kind: row.outputInputKind,
-        subjectKind: row.subjectKind as ShotVideoTakeInputSubjectKind | undefined,
-        subjectId: row.subjectId,
-      },
-      candidates: reusable.length > 0 ? reusable : undefined,
-      selectedInputId: selected?.inputId ?? null,
-    });
-  });
-
-  return items;
-}
-
 export function SceneShotVideoTakePreflightDialog({
   open,
   onOpenChange,
   preflight,
-  context,
   modelLabel,
   parameters,
   previewLoading,
@@ -240,16 +53,16 @@ export function SceneShotVideoTakePreflightDialog({
   onRegenerate,
 }: SceneShotVideoTakePreflightDialogProps) {
   const items = useMemo(() => {
-    if (!preflight || !context) return [];
+    if (!preflight) return [];
     // Sorted ready → needed so prepared inputs lead the grid.
-    return buildReferenceItems(context, preflight)
+    return preflight.inputPlanItems
       .map((item, index) => ({ item, index }))
       .sort((a, b) => {
         const rank = (status: ReferenceStatus) => (status === 'needed' ? 1 : 0);
         return rank(a.item.status) - rank(b.item.status) || a.index - b.index;
       })
       .map((entry) => entry.item);
-  }, [context, preflight]);
+  }, [preflight]);
   const total = preflight?.plan?.estimate.estimatedTotalUsd ??
     preflight?.estimate?.estimatedCostUsd ??
     null;
@@ -355,7 +168,7 @@ function InputCard({
   onReuse,
   onRegenerate,
 }: {
-  item: ReferenceItem;
+  item: ShotVideoTakePreflightInputItem;
   onReuse: (inputId: string) => void;
   onRegenerate: (slot: ShotVideoTakeInputSlot) => void;
 }) {
