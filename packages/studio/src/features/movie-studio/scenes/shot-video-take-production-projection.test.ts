@@ -78,10 +78,13 @@ describe('buildModelRows', () => {
     const grok = rows.find((row) => row.label === 'XAI Grok Imagine Video 1.5');
     const veo = rows.find((row) => row.label === 'Veo 3.1');
     expect(grok?.available).toBe(false);
-    expect(grok?.status).toBe('N/A');
+    expect(grok?.status).toBe('Unavailable');
     expect(grok?.statusTitle).toBe('No first/last frame');
     expect(veo?.available).toBe(true);
-    expect(veo?.status).toBe('Ready');
+    expect(veo?.status).toBe('Input required');
+    expect(veo?.statusTitle).toBe(
+      'The selected intent needs a prepared input, such as a first frame or reference image.'
+    );
     expect(veo?.duration).toBe('4, 6, 8s');
   });
 });

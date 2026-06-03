@@ -29,6 +29,10 @@ export {
   validateGenerationProviderPayload,
 } from './provider-payload-validation.js';
 export {
+  readGenerationPricingSupport,
+  type GenerationPricingSupport,
+} from './generation-pricing-registry.js';
+export {
   runGeneration,
   type RunGenerationOptions,
 } from './runner.js';

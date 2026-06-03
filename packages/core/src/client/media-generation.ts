@@ -581,6 +581,7 @@ export interface SceneStoryboardSheetGenerationSpec {
 export interface ShotVideoTakeInputGenerationSpec {
   purpose: ShotVideoTakeInputGenerationPurpose;
   target: SceneShotMediaGenerationTarget;
+  planId?: string;
   dependencyKind: ShotVideoTakeDependencyKind;
   outputInputKind: ShotVideoTakeInputKind;
   modelChoice: ShotVideoTakeInputModelChoice;
@@ -603,6 +604,7 @@ export interface ShotVideoTakeGenerationInput {
 export interface ShotVideoTakeGenerationSpec {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   target: SceneShotMediaGenerationTarget;
+  planId?: string;
   intentId: ShotVideoTakeIntentId;
   modelChoice: ShotVideoTakeModelChoice;
   prompt: string;
@@ -798,6 +800,7 @@ export interface ShotVideoTakePreflightFinalTake {
 export interface ShotVideoTakePreflightReport {
   valid: boolean;
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  plan?: ShotVideoTakeGenerationPlan;
   target: SceneShotMediaGenerationTarget;
   productionGroup: ShotVideoTakeProductionGroup;
   intentId: ShotVideoTakeIntentId;
@@ -818,7 +821,160 @@ export interface ShotVideoTakeProductionEstimateReport {
   intentId: ShotVideoTakeIntentId;
   modelChoice: ShotVideoTakeModelChoice;
   estimate: GenerationEstimate | null;
+  plan?: ShotVideoTakeGenerationPlan;
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export type ShotVideoInputPolicyMode = 'reuse-selected' | 'regenerate' | 'auto';
+
+export interface ShotVideoTakeInputPolicy {
+  defaultMode: ShotVideoInputPolicyMode;
+  slotModes?: Record<string, ShotVideoInputPolicyMode>;
+}
+
+export type MediaGenerationDependencyNodeKind =
+  | 'existing-asset'
+  | 'planned-generation'
+  | 'external-input-required'
+  | 'final-generation';
+
+export type MediaGenerationDependencyNodeState = 'ready' | 'planned' | 'missing';
+
+export type MediaGenerationDependencyPricing =
+  | {
+      state: 'priced';
+      estimatedUsd: number;
+    }
+  | {
+      state: 'unpriced';
+      estimatedUsd: null;
+      reason: string;
+      overrideRequired: true;
+    }
+  | {
+      state: 'not-applicable';
+      estimatedUsd: null;
+    };
+
+export interface DraftMediaGenerationSpec {
+  purpose: MediaGenerationPurpose;
+  spec: MediaGenerationSpec;
+}
+
+export interface MediaGenerationDependencyNode {
+  id: string;
+  kind: MediaGenerationDependencyNodeKind;
+  purpose: MediaGenerationPurpose | null;
+  mediaKind: MediaKind;
+  label: string;
+  state: MediaGenerationDependencyNodeState;
+  pricing: MediaGenerationDependencyPricing;
+  slotId?: string;
+  routeInputKind?: ShotVideoTakeInputKind;
+  generationTarget?: MediaGenerationTarget;
+  assetId?: string;
+  assetFileId?: string;
+  draftGenerationSpec?: DraftMediaGenerationSpec;
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface MediaGenerationDependencyEdge {
+  fromNodeId: string;
+  toNodeId: string;
+  slotId: string;
+}
+
+export interface MediaGenerationDependencyEstimate {
+  state: 'complete' | 'partial' | 'unavailable';
+  estimatedTotalUsd: number | null;
+  pricedNodeCount: number;
+  unpricedNodeCount: number;
+  missingNodeCount: number;
+  requiresPriceOverride: boolean;
+}
+
+export interface MediaGenerationDependencyExecution {
+  topologicalNodeIds: string[];
+  levels: string[][];
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface MediaGenerationDependencyMap {
+  rootPurpose: MediaGenerationPurpose;
+  nodes: MediaGenerationDependencyNode[];
+  edges: MediaGenerationDependencyEdge[];
+  estimate: MediaGenerationDependencyEstimate;
+  execution: MediaGenerationDependencyExecution;
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export type MediaGenerationPlanLineKind =
+  | 'reused-asset'
+  | 'dependency-generation'
+  | 'required-attachment'
+  | 'final-video-generation';
+
+export interface MediaGenerationPlanLine {
+  id: string;
+  nodeId: string;
+  kind: MediaGenerationPlanLineKind;
+  label: string;
+  purpose: MediaGenerationPurpose | null;
+  mediaKind: MediaKind;
+  slotId?: string;
+  depth: number;
+  state: MediaGenerationDependencyNodeState;
+  pricing: MediaGenerationDependencyPricing;
+  sourceAssetId?: string;
+  draftGenerationSpec?: DraftMediaGenerationSpec;
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface ShotVideoTakeGenerationPlanRequest {
+  projectId: string;
+  sceneId: string;
+  shotListId: string;
+  productionGroupId: string;
+  intent: ShotVideoTakeIntentId;
+  modelChoice: ShotVideoTakeModelChoice;
+  routeSettings: ShotVideoTakeParameterValues;
+  inputPolicy: ShotVideoTakeInputPolicy;
+}
+
+export interface ShotVideoTakePlanModel {
+  choice: ShotVideoTakeModelChoice;
+  label: string;
+  version: string;
+  provider: 'fal-ai';
+}
+
+export interface ShotVideoTakePlanRoute {
+  intent: ShotVideoTakeIntentId;
+  providerModel: string;
+  mode: 'text-to-video' | 'image-to-video';
+  inputRoles: ShotVideoTakeModelInputRoleReport[];
+  parameters: ShotVideoTakeParameterReport[];
+}
+
+export interface ShotVideoTakeGenerationPlanEstimate {
+  state: 'complete' | 'partial' | 'unavailable';
+  estimatedTotalUsd: number | null;
+  pricedLineCount: number;
+  unpricedLineCount: number;
+  missingLineCount: number;
+  requiresPriceOverride: boolean;
+}
+
+export interface ShotVideoTakeGenerationPlan {
+  planId: string;
+  request: ShotVideoTakeGenerationPlanRequest;
+  model: ShotVideoTakePlanModel;
+  route: ShotVideoTakePlanRoute;
+  dependencyMap: MediaGenerationDependencyMap;
+  lines: MediaGenerationPlanLine[];
+  estimate: ShotVideoTakeGenerationPlanEstimate;
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  finalEstimate: GenerationEstimate | null;
 }
 
 export interface LocationEnvironmentSheetModelListReport {

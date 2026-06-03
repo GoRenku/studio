@@ -1,4 +1,7 @@
-import type { ShotVideoTakeProductionGroup } from '@gorenku/studio-core/server';
+import type {
+  ShotVideoTakeInputPolicy,
+  ShotVideoTakeProductionGroup,
+} from '@gorenku/studio-core/client';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -35,7 +38,47 @@ export function readShotVideoTakeProductionGroupRequest(
     'Send only the productionGroup field.'
   );
 
-  const value = record.productionGroup;
+  const productionGroup = readProductionGroupValue(record.productionGroup, issues);
+
+  finishOrThrow(issues);
+  return productionGroup;
+}
+
+export interface ShotVideoTakeProductionPlanRequest {
+  productionGroup: ShotVideoTakeProductionGroup;
+  inputPolicy?: ShotVideoTakeInputPolicy;
+}
+
+export function readShotVideoTakeProductionPlanRequest(
+  input: unknown
+): ShotVideoTakeProductionPlanRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['productionGroup', 'inputPolicy'],
+    issues,
+    CONTEXT,
+    'Send only the productionGroup and inputPolicy fields.'
+  );
+
+  const productionGroup = readProductionGroupValue(record.productionGroup, issues);
+
+  finishOrThrow(issues);
+  return {
+    productionGroup,
+    inputPolicy: record.inputPolicy as ShotVideoTakeInputPolicy | undefined,
+  };
+}
+
+function readProductionGroupValue(
+  value: unknown,
+  issues: DiagnosticIssue[]
+): ShotVideoTakeProductionGroup {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     issues.push(
       createDiagnosticError(
@@ -47,8 +90,6 @@ export function readShotVideoTakeProductionGroupRequest(
     );
     throwRequestError(issues);
   }
-
-  finishOrThrow(issues);
   return value as ShotVideoTakeProductionGroup;
 }
 

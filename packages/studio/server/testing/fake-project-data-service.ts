@@ -4,6 +4,7 @@ import type {
   MediaGenerationSpecRecord,
   ProjectLibrary,
   ShotVideoTakeGenerationContext,
+  ShotVideoTakeGenerationPlan,
   ShotVideoTakeProductionPlan,
 } from '@gorenku/studio-core/client';
 import { SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from '@gorenku/studio-core/client';
@@ -741,8 +742,12 @@ export function fakeProjectDataService(): NonNullable<
     async updateShotVideoTakeProductionGroup(input) {
       return makeShotVideoTakeContext(input, input.production);
     },
+    async planShotVideoTakeProduction(input) {
+      return makeShotVideoTakePlan(input);
+    },
     async estimateShotVideoTakeProduction(input) {
       const target = makeShotVideoTakeTarget(input);
+      const plan = makeShotVideoTakePlan(input);
       return {
         target,
         productionGroup: {
@@ -764,6 +769,7 @@ export function fakeProjectDataService(): NonNullable<
           billableUnits: {},
           warnings: [],
         },
+        plan,
         issues: [],
       };
     },
@@ -772,6 +778,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         issues: [],
+        plan: makeShotVideoTakePlan(input),
         target,
         productionGroup: {
           productionGroupId: target.productionGroupId,
@@ -801,6 +808,109 @@ export function fakeProjectDataService(): NonNullable<
     },
     async clearShotVideoTakeInputSelection(input) {
       return makeShotVideoTakeContext(input);
+    },
+  };
+}
+
+function makeShotVideoTakePlan(input: {
+  sceneId: string;
+  shotListId: string;
+  shotIds: string[];
+  productionGroupId?: string;
+  production?: ShotVideoTakeProductionPlan;
+}): ShotVideoTakeGenerationPlan {
+  const target = makeShotVideoTakeTarget(input);
+  const intent = input.production?.intentId ?? 'text-only';
+  const modelChoice = input.production?.modelChoice ?? 'fal-ai/bytedance/seedance-2.0';
+  const productionGroupId = target.productionGroupId;
+  return {
+    planId: 'shot_video_take_plan_fake',
+    request: {
+      projectId: 'project_test',
+      sceneId: input.sceneId,
+      shotListId: input.shotListId,
+      productionGroupId,
+      intent,
+      modelChoice,
+      routeSettings: input.production?.parameterValues ?? {},
+      inputPolicy: { defaultMode: 'auto' },
+    },
+    model: {
+      choice: modelChoice,
+      label: 'Seedance 2.0',
+      version: '2.0',
+      provider: 'fal-ai',
+    },
+    route: {
+      intent,
+      providerModel: 'bytedance/seedance-2.0/text-to-video',
+      mode: 'text-to-video',
+      inputRoles: [],
+      parameters: [],
+    },
+    dependencyMap: {
+      rootPurpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+      nodes: [
+        {
+          id: 'final:shot.video-take',
+          kind: 'final-generation',
+          purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+          mediaKind: 'video',
+          label: 'Final video take',
+          state: 'planned',
+          pricing: { state: 'priced', estimatedUsd: 0.42 },
+          generationTarget: target,
+          diagnostics: [],
+        },
+      ],
+      edges: [],
+      estimate: {
+        state: 'complete',
+        estimatedTotalUsd: 0.42,
+        pricedNodeCount: 1,
+        unpricedNodeCount: 0,
+        missingNodeCount: 0,
+        requiresPriceOverride: false,
+      },
+      execution: {
+        topologicalNodeIds: ['final:shot.video-take'],
+        levels: [['final:shot.video-take']],
+        diagnostics: [],
+      },
+      diagnostics: [],
+    },
+    lines: [
+      {
+        id: 'line:final:shot.video-take',
+        nodeId: 'final:shot.video-take',
+        kind: 'final-video-generation',
+        label: 'Final video take',
+        purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+        mediaKind: 'video',
+        depth: 0,
+        state: 'planned',
+        pricing: { state: 'priced', estimatedUsd: 0.42 },
+        diagnostics: [],
+      },
+    ],
+    estimate: {
+      state: 'complete',
+      estimatedTotalUsd: 0.42,
+      pricedLineCount: 1,
+      unpricedLineCount: 0,
+      missingLineCount: 0,
+      requiresPriceOverride: false,
+    },
+    diagnostics: [],
+    finalEstimate: {
+      provider: 'fal-ai',
+      model: 'bytedance/seedance-2.0/text-to-video',
+      mediaKind: 'video',
+      pricing: null,
+      estimatedCostUsd: 0.42,
+      approvalToken: 'fake-approval-token',
+      billableUnits: {},
+      warnings: [],
     },
   };
 }

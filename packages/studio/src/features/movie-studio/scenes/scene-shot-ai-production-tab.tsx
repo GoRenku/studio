@@ -120,6 +120,8 @@ export function SceneShotAiProductionTab({
           values={productionGroup.videoTakeProduction.parameterValues ?? {}}
           onParameterChange={setParameter}
           estimate={
+            estimate?.plan?.estimate.estimatedTotalUsd ??
+            preflight?.plan?.estimate.estimatedTotalUsd ??
             estimate?.estimate?.estimatedCostUsd ??
             preflight?.estimate?.estimatedCostUsd ??
             null

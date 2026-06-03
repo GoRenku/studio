@@ -153,7 +153,7 @@ function buildReferenceItems(
       caption: 'Lookbook reference',
       mediaKind: 'image',
       url,
-      status: status === 'needed' ? 'available' : status,
+      status,
     });
   }
 
@@ -250,7 +250,9 @@ export function SceneShotVideoTakePreflightDialog({
       })
       .map((entry) => entry.item);
   }, [context, preflight]);
-  const total = preflight?.estimate?.estimatedCostUsd ?? null;
+  const total = preflight?.plan?.estimate.estimatedTotalUsd ??
+    preflight?.estimate?.estimatedCostUsd ??
+    null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -330,15 +332,20 @@ function SectionHeading({ children }: { children: ReactNode }) {
 }
 
 function StatusBadge({ status }: { status: ReferenceStatus }) {
-  const needed = status === 'needed';
+  const label =
+    status === 'ready' ? 'Ready' : status === 'available' ? 'Available' : 'Needed';
   return (
     <span
       className={cn(
         'rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-white shadow-sm',
-        needed ? 'bg-amber-500/80' : 'bg-emerald-500'
+        status === 'ready'
+          ? 'bg-emerald-500'
+          : status === 'available'
+            ? 'bg-sky-500'
+            : 'bg-amber-500/80'
       )}
     >
-      {needed ? 'Needed' : 'Ready'}
+      {label}
     </span>
   );
 }
@@ -483,27 +490,71 @@ function CostSummary({
   preflight: ShotVideoTakePreflightReport;
   total: number | null;
 }) {
-  const breakdown = preflight.estimateLines.filter(
+  const plan = preflight.plan;
+  const planBreakdown = plan?.lines.filter((line) => line.kind !== 'reused-asset') ?? [];
+  const legacyBreakdown = preflight.estimateLines.filter(
     (line) => line.estimate?.estimatedCostUsd != null
   );
+  const breakdownCount = plan ? planBreakdown.length : legacyBreakdown.length;
+  const stateLabel = plan ? estimateStateLabel(plan.estimate.state) : null;
   return (
     <div className='flex min-w-0 items-baseline gap-3'>
       <span className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
         Estimated total
       </span>
       <span className='font-mono text-lg font-semibold leading-none text-foreground'>
-        {formatEstimateUsd(total)}
+        {plan ? formatPlanEstimate(plan.estimate.estimatedTotalUsd, plan.estimate.state) : formatEstimateUsd(total)}
       </span>
-      {breakdown.length > 1 ? (
+      {stateLabel ? (
+        <span className='text-[11px] text-muted-foreground'>{stateLabel}</span>
+      ) : null}
+      {breakdownCount > 1 ? (
         <span className='truncate text-[11px] text-muted-foreground'>
-          {breakdown
-            .map(
-              (line) =>
-                `${costLabel(line)} ${formatEstimateUsd(line.estimate?.estimatedCostUsd ?? null)}`
-            )
-            .join('  ·  ')}
+          {plan
+            ? planBreakdown.map(planLineCostLabel).join('  ·  ')
+            : legacyBreakdown
+                .map(
+                  (line) =>
+                    `${costLabel(line)} ${formatEstimateUsd(line.estimate?.estimatedCostUsd ?? null)}`
+                )
+                .join('  ·  ')}
         </span>
       ) : null}
     </div>
   );
+}
+
+function formatPlanEstimate(
+  value: number | null,
+  state: 'complete' | 'partial' | 'unavailable'
+): string {
+  if (state === 'unavailable') {
+    return 'Needs plan';
+  }
+  if (state === 'partial') {
+    return `${formatEstimateUsd(value)} + unpriced`;
+  }
+  return formatEstimateUsd(value);
+}
+
+function estimateStateLabel(state: 'complete' | 'partial' | 'unavailable'): string {
+  if (state === 'partial') {
+    return 'Some lines need override';
+  }
+  if (state === 'unavailable') {
+    return 'Attachment needed';
+  }
+  return 'Complete';
+}
+
+function planLineCostLabel(
+  line: NonNullable<ShotVideoTakePreflightReport['plan']>['lines'][number]
+): string {
+  if (line.pricing.state === 'priced') {
+    return `${line.label} ${formatEstimateUsd(line.pricing.estimatedUsd)}`;
+  }
+  if (line.pricing.state === 'unpriced') {
+    return `${line.label} unpriced`;
+  }
+  return `${line.label} attach needed`;
 }

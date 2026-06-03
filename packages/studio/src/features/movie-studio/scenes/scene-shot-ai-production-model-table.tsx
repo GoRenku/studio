@@ -91,9 +91,11 @@ export function SceneShotAiProductionModelTable({
                       title={row.statusTitle ?? undefined}
                       className={cn(
                         'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
-                        row.available
+                        row.available && row.status === 'Ready'
                           ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-muted/60 text-muted-foreground'
+                          : row.available
+                            ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300'
+                            : 'bg-muted/60 text-muted-foreground'
                       )}
                     >
                       {row.status}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
@@ -275,5 +275,40 @@ describe('AI Production tab', () => {
     );
     expect(await screen.findByText('References')).not.toBeNull();
     expect(screen.getAllByText('Estimated total').length).toBeGreaterThan(0);
+  });
+
+  it('does not mark an active Lookbook as ready without a reference image', async () => {
+    const lookbookContext = {
+      ...context(),
+      activeLookbook: {
+        id: 'lookbook_imperial_wound',
+        name: 'Imperial Wound',
+        thesis: 'Stone, smoke, and wounded ceremony.',
+      },
+    };
+    vi.mocked(readShotVideoTakeProduction).mockResolvedValue({
+      context: lookbookContext,
+      models: models(),
+    });
+    vi.mocked(previewShotVideoTakeProduction).mockResolvedValue({
+      ...preflight(),
+      target: lookbookContext.target,
+      productionGroup: lookbookContext.productionGroup,
+    });
+
+    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    await openAiProductionTab();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Preview Take Plan' })
+    );
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Preview Take Plan',
+    });
+    expect(within(dialog).getByText('Imperial Wound')).not.toBeNull();
+    expect(within(dialog).getByText('Lookbook reference')).not.toBeNull();
+    expect(within(dialog).getByText('Needed')).not.toBeNull();
+    expect(within(dialog).queryByText('Available')).toBeNull();
+    expect(within(dialog).queryByText('Ready')).toBeNull();
   });
 });

@@ -54,6 +54,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'listShotVideoTakeModels'
   | 'updateShotVideoTakeProductionGroup'
   | 'estimateShotVideoTakeProduction'
+  | 'planShotVideoTakeProduction'
   | 'previewShotVideoTakeProduction'
   | 'selectShotVideoTakeInput'
   | 'clearShotVideoTakeInputSelection'

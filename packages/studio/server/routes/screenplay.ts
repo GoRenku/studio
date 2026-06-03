@@ -16,7 +16,10 @@ import {
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
 import { readSceneShotSpecsRequest } from '../http/scene-shot-specs-request.js';
-import { readShotVideoTakeProductionGroupRequest } from '../http/scene-shot-video-take-production-request.js';
+import {
+  readShotVideoTakeProductionGroupRequest,
+  readShotVideoTakeProductionPlanRequest,
+} from '../http/scene-shot-video-take-production-request.js';
 import {
   readShotVideoTakeInputClearRequest,
   readShotVideoTakeInputSelectRequest,
@@ -251,6 +254,35 @@ export function createScreenplayRoute({
             resource: toSceneShotListResourceResponse(projectName, resource),
             resourceKeys: context.resourceKeys,
           });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .post(
+      '/screenplay/scenes/:sceneId/video-take-production/plan',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const { productionGroup, inputPolicy } =
+            readShotVideoTakeProductionPlanRequest(await c.req.json());
+          const shotListId = await requireActiveShotListId(
+            projectData,
+            projectName,
+            sceneId
+          );
+          const plan = await projectData.planShotVideoTakeProduction({
+            projectName,
+            sceneId,
+            shotListId,
+            shotIds: productionGroup.shotIds,
+            productionGroupId: productionGroup.productionGroupId,
+            production: productionGroup.videoTakeProduction,
+            inputPolicy,
+          });
+          return c.json({ plan });
         } catch (error) {
           return projectErrorResponse(c, error);
         }

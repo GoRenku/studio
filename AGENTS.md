@@ -128,6 +128,13 @@ unless the user explicitly asks for dependency installation.
   deliberately in the plan. Do not defer interface-level naming with phrases
   such as "names can be refined during implementation"; only low-level local
   variable or private helper naming may be left to implementation.
+- Every active implementation plan must include a detailed, comprehensive
+  completion checklist near the end of the document, similar in depth to
+  `plans/active/0042-shot-video-take-generation-plan-architecture.md`. Group
+  checklist items by review area, architecture/contracts, implementation slices,
+  UI/CLI/agent surfaces when relevant, validation/tests, documentation/ADR work,
+  and final verification. The checklist should be specific enough that a reviewer
+  can track implementation progress without rereading the full plan.
 
 ## Very Important: Fail Fast With Structured Errors
 
@@ -237,6 +244,30 @@ Re-exporting is allowed only in `index.ts` files when the index is an
 intentional public entrypoint for a package or clearly bounded module API. Even
 then, it must not be used as a shortcut to avoid fixing callers after a rename,
 move, or ownership change. Non-index files must not be re-export facades.
+
+## Very Important: Keep Code Structure Reviewable
+
+Follow `docs/architecture/coding-practices.md`.
+
+Do not write large exported functions that route many unrelated command paths,
+dispatch many purposes, parse files, call services, format output, and emit side
+effects in one body.
+
+The default behavior should be:
+
+- keep functions focused and shallow;
+- avoid nested ternary dispatch;
+- avoid long `if` / `else if` command and purpose chains;
+- use command handlers, dispatch tables, typed registries, focused parsers, or
+  purpose-specific modules when code branches by command, purpose, provider,
+  route, or media kind;
+- keep exported command entry points thin but properly structured;
+- add lint rules or focused static tests when refactoring a complex command area
+  so the complexity does not return.
+
+The CLI is a crucial human-facing and agent-facing contract. It must remain a
+thin wrapper over core, but thin code is not allowed to be a single tangled
+function.
 
 ## Coding Rules
 

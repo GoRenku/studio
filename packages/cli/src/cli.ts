@@ -10,6 +10,7 @@ import { runAboutCommand } from './commands/about-command.js';
 import { runAssetCommand } from './commands/asset-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runGenerationCommand } from './commands/generation-command.js';
+import { runGenerationPlanCommand } from './commands/generation-plan-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
 import { runLookbookCommand } from './commands/lookbook-command.js';
@@ -92,6 +93,7 @@ Options
   --scene              Scene id for scene-owned commands
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for shot video take generation
+  --production-group   Shot video take production group id
   --intent             Shot video take intent id
   --input              Shot video take reusable input id
   --kind               Shot video take input kind
@@ -201,6 +203,9 @@ function createCliFlags() {
       type: 'string',
     },
     shots: {
+      type: 'string',
+    },
+    productionGroup: {
       type: 'string',
     },
     intent: {
@@ -431,6 +436,24 @@ export async function runRenkuCli(
           homeDir: options.homeDir,
         });
       case 'generation':
+        if (input[0] === 'plan') {
+          return await runGenerationPlanCommand({
+            input,
+            flags: {
+              project: cli.flags.project,
+              purpose: cli.flags.purpose,
+              target: cli.flags.target,
+              model: cli.flags.model,
+              shotList: cli.flags.shotList,
+              shots: cli.flags.shots,
+              productionGroup: cli.flags.productionGroup,
+              intent: cli.flags.intent,
+            },
+            json: cli.flags.json,
+            io,
+            homeDir: options.homeDir,
+          });
+        }
         return await runGenerationCommand({
           input,
           flags: {

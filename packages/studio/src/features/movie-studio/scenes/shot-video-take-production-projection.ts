@@ -153,8 +153,16 @@ export function buildModelRows(
       label: model.label,
       duration: durationLabel(model),
       available,
-      status: available ? 'Ready' : 'N/A',
-      statusTitle: available ? null : unavailableReason,
+      status: available
+        ? model.estimateInputs.requiresPreparedInputs
+          ? 'Input required'
+          : 'Ready'
+        : 'Unavailable',
+      statusTitle: available
+        ? model.estimateInputs.requiresPreparedInputs
+          ? 'The selected intent needs a prepared input, such as a first frame or reference image.'
+          : null
+        : unavailableReason,
     };
   });
 }

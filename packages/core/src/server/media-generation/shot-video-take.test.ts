@@ -169,6 +169,97 @@ describe('shot video take preflight and validation', () => {
     });
   });
 
+  it('drops stale settings that are unsupported by the selected route before estimating', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+
+    const estimate = await projectData.estimateShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        intentId: 'first-frame',
+        modelChoice: 'fal-ai/kling-video/v3/pro',
+        parameterValues: {
+          duration: 5,
+          aspect_ratio: '16:9',
+        },
+      },
+    });
+
+    expect(estimate.plan?.request.routeSettings).not.toHaveProperty('aspect_ratio');
+    expect(estimate.plan?.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_PLAN_STALE_SETTING_DROPPED',
+          severity: 'warning',
+        }),
+      ])
+    );
+    expect(estimate.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'PROJECT_DATA385',
+        }),
+      ])
+    );
+  });
+
+  it('includes planned dependency costs in the plan total', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+
+    const estimate = await projectData.estimateShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        intentId: 'first-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: {
+          duration: 9,
+        },
+        agentProposal: {
+          basedOnIntentId: 'first-frame',
+          basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+          dependencyDrafts: [
+            {
+              purpose: 'shot.first-frame',
+              dependencyKind: 'first-frame',
+              outputInputKind: 'first-frame',
+              modelChoice: 'fal-ai/openai/gpt-image-2',
+              prompt: 'First frame for the map-table shot.',
+              parameterValues: {
+                image_size: { width: 1024, height: 768 },
+                quality: 'low',
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    const plan = estimate.plan;
+    expect(plan).toBeTruthy();
+    expect(plan?.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'dependency-generation',
+          purpose: 'shot.first-frame',
+        }),
+        expect.objectContaining({
+          kind: 'final-video-generation',
+          purpose: 'shot.video-take',
+        }),
+      ])
+    );
+    expect(plan?.estimate.estimatedTotalUsd).toBeGreaterThan(
+      estimate.estimate?.estimatedCostUsd ?? 0
+    );
+  });
+
   it('resolves prepared cast sheet inputs without a shot video take input row', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 1);

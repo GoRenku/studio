@@ -252,6 +252,44 @@ describe('generation estimates', () => {
     });
   });
 
+  it('estimates bundled fal.ai video duration pricing with audio', async () => {
+    const catalog = await loadBundledGenerationCatalog();
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: 'kling-video/v3/pro/image-to-video',
+          mediaKind: 'video',
+        },
+        request: {
+          prompt: 'A siege wall collapses through drifting smoke.',
+          parameters: {
+            duration: '9',
+            generate_audio: true,
+            cfg_scale: 0.5,
+          },
+          inputFiles: [
+            {
+              field: 'start_image_url',
+              projectRelativePath: 'generated/images/kling-start.png',
+              mediaKind: 'image',
+              required: true,
+            },
+          ],
+        },
+      })
+    ).resolves.toMatchObject({
+      estimatedCostUsd: 1.512,
+      warnings: [],
+      billableUnits: {
+        duration: '9',
+        generate_audio: true,
+      },
+    });
+  });
+
   it('keeps unknown image size pricing unknown', async () => {
     const catalog = createCatalog();
 

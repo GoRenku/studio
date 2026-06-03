@@ -107,6 +107,43 @@ describe('shot video take production routes', () => {
     expect(typeof body.preflight.agentBrief).toBe('string');
   });
 
+  it('plan accepts inputPolicy and delegates to core', async () => {
+    const planShotVideoTakeProduction = vi.fn(
+      fakeProjectDataService().planShotVideoTakeProduction
+    );
+    const app = mount({ planShotVideoTakeProduction });
+    const response = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/video-take-production/plan',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productionGroup: PRODUCTION_GROUP,
+          inputPolicy: {
+            defaultMode: 'auto',
+            slotModes: { 'first-frame': 'regenerate' },
+          },
+        }),
+      }
+    );
+    expect(response.status).toBe(200);
+    expect(planShotVideoTakeProduction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sceneId: 'scene_opening',
+        shotListId: 'shot_list_opening',
+        shotIds: ['shot_001'],
+        productionGroupId: 'scene_shot_video_take_group_001',
+        production: { intentId: 'text-only' },
+        inputPolicy: {
+          defaultMode: 'auto',
+          slotModes: { 'first-frame': 'regenerate' },
+        },
+      })
+    );
+    const body = await response.json();
+    expect(body.plan.planId).toBe('shot_video_take_plan_fake');
+  });
+
   it('estimate delegates to core and returns an estimate report', async () => {
     const estimateShotVideoTakeProduction = vi.fn(
       fakeProjectDataService().estimateShotVideoTakeProduction

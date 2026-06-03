@@ -141,6 +141,21 @@ function priceFromConfig(
           inputImageCost(pricing, payload, count)
       : null;
   }
+  if (pricing.function === 'costByVideoDurationAndWithAudio' && pricing.prices) {
+    const row = pricing.prices.find((candidate) =>
+      Object.entries(candidate).every(([key, value]) => {
+        if (key === 'pricePerSecond') {
+          return true;
+        }
+        return payload[key] === value;
+      })
+    );
+    const pricePerSecond = row?.pricePerSecond;
+    return typeof pricePerSecond === 'number'
+      ? pricePerSecond * seconds(payload) * count +
+          inputImageCost(pricing, payload, count)
+      : null;
+  }
   if (pricing.function === 'costByVideoPerMillionTokens') {
     return videoTokenPrice(pricing, payload, count);
   }

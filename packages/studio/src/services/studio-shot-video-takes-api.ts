@@ -1,5 +1,7 @@
 import type {
   ShotVideoTakeGenerationContext,
+  ShotVideoTakeGenerationPlan,
+  ShotVideoTakeInputPolicy,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
   ShotVideoTakeIntentId,
@@ -31,6 +33,10 @@ interface MutationResponse {
 export interface ShotVideoTakeProductionMutation {
   resource: SceneShotListResourceResponse;
   resourceKeys: string[];
+}
+
+export interface ShotVideoTakePlanRead {
+  plan: ShotVideoTakeGenerationPlan;
 }
 
 /**
@@ -112,6 +118,24 @@ export async function estimateShotVideoTakeProduction(
     estimate: ShotVideoTakeProductionEstimateReport;
   };
   return body.estimate;
+}
+
+export async function planShotVideoTakeProduction(
+  projectName: string,
+  sceneId: string,
+  productionGroup: ShotVideoTakeProductionGroup,
+  inputPolicy: ShotVideoTakeInputPolicy = { defaultMode: 'auto' }
+): Promise<ShotVideoTakeGenerationPlan> {
+  const response = await fetch(`${productionPath(projectName, sceneId)}/plan`, {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ productionGroup, inputPolicy }),
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ShotVideoTakePlanRead;
+  return body.plan;
 }
 
 /** Reuse an existing dependency input for the group (0041). */

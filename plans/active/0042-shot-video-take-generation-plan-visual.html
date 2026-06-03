@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>0042 Shot Video Take Generation Plan - Visual Explainer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #191817;
+        --panel: #242322;
+        --panel-2: #2d2c2a;
+        --panel-3: #343230;
+        --line: #4d4a45;
+        --text: #f3efe7;
+        --muted: #b8b0a3;
+        --quiet: #837b70;
+        --gold: #e4ab18;
+        --gold-2: #7a5b13;
+        --green: #22c083;
+        --red: #e46650;
+        --blue: #78a8ff;
+        --violet: #b695ff;
+        --cyan: #58c8d7;
+        --radius: 8px;
+        --shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--bg);
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 15% 10%, rgba(228, 171, 24, 0.10), transparent 28rem),
+          linear-gradient(180deg, #1e1d1b 0%, var(--bg) 28rem);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      a {
+        color: var(--gold);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .page {
+        width: min(1280px, calc(100vw - 48px));
+        margin: 0 auto;
+        padding: 36px 0 72px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+        gap: 28px;
+        align-items: stretch;
+        margin-bottom: 28px;
+      }
+
+      .hero-copy,
+      .hero-card,
+      .section,
+      .diagram-card,
+      .note,
+      .concept-card,
+      .matrix-card {
+        border: 1px solid var(--line);
+        background: rgba(36, 35, 34, 0.88);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .hero-copy {
+        padding: 34px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 13ch;
+        font-size: clamp(42px, 6vw, 78px);
+        line-height: 0.94;
+      }
+
+      .hero-copy > p:last-child {
+        max-width: 720px;
+        margin: 22px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .hero-card {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .hero-card h2 {
+        font-size: 21px;
+      }
+
+      .hero-card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border: 1px solid rgba(228, 171, 24, 0.42);
+        background: rgba(228, 171, 24, 0.13);
+        color: #ffe7a5;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        margin: 0 0 28px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(25, 24, 23, 0.92);
+        backdrop-filter: blur(18px);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .nav a {
+        color: var(--muted);
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 7px 10px;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .nav a:hover {
+        color: var(--text);
+        border-color: var(--line);
+        background: var(--panel);
+        text-decoration: none;
+      }
+
+      .section {
+        margin: 0 0 28px;
+        padding: 28px;
+      }
+
+      .section-header {
+        display: grid;
+        grid-template-columns: minmax(0, 0.68fr) minmax(280px, 0.32fr);
+        gap: 24px;
+        align-items: start;
+        margin-bottom: 24px;
+      }
+
+      .section h2 {
+        font-size: clamp(28px, 4vw, 48px);
+        line-height: 1.02;
+      }
+
+      .section-header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid.four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .concept-card,
+      .matrix-card,
+      .note {
+        padding: 18px;
+      }
+
+      .concept-card h3,
+      .matrix-card h3,
+      .note h3 {
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      .concept-card p,
+      .matrix-card p,
+      .note p {
+        margin: 9px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        margin-bottom: 10px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .tag.engine {
+        color: #f9dc8b;
+        background: rgba(228, 171, 24, 0.15);
+        border: 1px solid rgba(228, 171, 24, 0.35);
+      }
+
+      .tag.core {
+        color: #bcd2ff;
+        background: rgba(120, 168, 255, 0.14);
+        border: 1px solid rgba(120, 168, 255, 0.32);
+      }
+
+      .tag.studio {
+        color: #b7f0dc;
+        background: rgba(34, 192, 131, 0.13);
+        border: 1px solid rgba(34, 192, 131, 0.3);
+      }
+
+      .tag.agent {
+        color: #ded1ff;
+        background: rgba(182, 149, 255, 0.13);
+        border: 1px solid rgba(182, 149, 255, 0.3);
+      }
+
+      .diagram-card {
+        overflow: hidden;
+        background: #211f1e;
+      }
+
+      .diagram-card svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .caption {
+        padding: 14px 16px 16px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .flow-row {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .flow-step {
+        position: relative;
+        min-height: 142px;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        border-radius: var(--radius);
+        padding: 16px;
+      }
+
+      .flow-step:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: -10px;
+        width: 10px;
+        height: 1px;
+        background: var(--gold);
+      }
+
+      .flow-step strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .flow-step span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 780px;
+        background: var(--panel-2);
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      th {
+        color: #d8cdbb;
+        background: #272624;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      td strong {
+        color: var(--text);
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .status.ready {
+        color: #8ef5ca;
+        background: rgba(34, 192, 131, 0.14);
+      }
+
+      .status.planned {
+        color: #ffe2a3;
+        background: rgba(228, 171, 24, 0.14);
+      }
+
+      .status.missing {
+        color: #ffb6a8;
+        background: rgba(228, 102, 80, 0.14);
+      }
+
+      .callout {
+        border: 1px solid rgba(228, 171, 24, 0.35);
+        background: rgba(228, 171, 24, 0.08);
+        border-radius: var(--radius);
+        padding: 18px;
+      }
+
+      .callout strong {
+        color: #ffe1a0;
+      }
+
+      .callout p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
+        gap: 16px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .mini-list {
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .mini-list li {
+        padding: 7px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+      }
+
+      .mini-list li:first-child {
+        border-top: 0;
+      }
+
+      .checklist {
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .checklist li {
+        position: relative;
+        padding: 8px 0 8px 28px;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+      }
+
+      .checklist li:first-child {
+        border-top: 0;
+      }
+
+      .checklist li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 11px;
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.16);
+      }
+
+      .code-card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #141312;
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        overflow: auto;
+        color: #e8dfcf;
+        font:
+          13px / 1.55 "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+          monospace;
+      }
+
+      .footer {
+        margin-top: 32px;
+        color: var(--quiet);
+        font-size: 14px;
+      }
+
+      @media (max-width: 1040px) {
+        .hero,
+        .section-header,
+        .split {
+          grid-template-columns: 1fr;
+        }
+
+        .grid.four,
+        .grid.three,
+        .grid.two,
+        .flow-row {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-step:not(:last-child)::after {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Plan 0042 visual explainer</p>
+          <h1>Generation plans are dependency graphs.</h1>
+          <p>
+            The AI Production pane should not ask, "How much does this one video
+            model call cost?" It should ask, "What complete graph of assets and
+            generations is needed to make this take, and what does that graph
+            cost?"
+          </p>
+        </div>
+        <aside class="hero-card">
+          <div>
+            <h2>The short version</h2>
+            <p>
+              Model variants live in an engine-owned route catalog. Project
+              references live in a core dependency map. Studio renders both,
+              but owns neither.
+            </p>
+          </div>
+          <div class="pill-row">
+            <span class="pill">model families</span>
+            <span class="pill">routes</span>
+            <span class="pill">dependency slots</span>
+            <span class="pill">plan lines</span>
+            <span class="pill">total estimate</span>
+          </div>
+        </aside>
+      </header>
+
+      <nav class="nav" aria-label="Page sections">
+        <a href="#forest">Forest</a>
+        <a href="#routes">Models And Variants</a>
+        <a href="#add-model">Adding A Model</a>
+        <a href="#dependency-map">Dependency Map</a>
+        <a href="#dependency-execution">Execution</a>
+        <a href="#reference-intent">Reference Intent</a>
+        <a href="#non-shot">Non-Shot Generations</a>
+        <a href="#contracts">Contracts</a>
+        <a href="#completion">Completion</a>
+        <a href="#plan-updates">Plan Updates</a>
+      </nav>
+
+      <main>
+        <section class="section" id="forest">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">01 - The forest</p>
+              <h2>Two facts meet in core: model truth and project truth.</h2>
+            </div>
+            <p>
+              Engines knows provider reality. Core knows project reality. Studio
+              should only display the answer core produces.
+            </p>
+          </div>
+
+          <div class="diagram-card" aria-label="Layered architecture diagram">
+            <svg viewBox="0 0 1180 520" role="img">
+              <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#e4ab18"></path>
+                </marker>
+                <style>
+                  .box { fill: #2d2c2a; stroke: #4d4a45; stroke-width: 2; }
+                  .engine { fill: rgba(228, 171, 24, 0.16); stroke: #8b6817; }
+                  .core { fill: rgba(120, 168, 255, 0.15); stroke: #5277bd; }
+                  .studio { fill: rgba(34, 192, 131, 0.14); stroke: #238b66; }
+                  .agent { fill: rgba(182, 149, 255, 0.14); stroke: #7560ae; }
+                  .title { fill: #f3efe7; font: 700 22px system-ui; }
+                  .label { fill: #d8cdbb; font: 700 15px system-ui; }
+                  .small { fill: #b8b0a3; font: 13px system-ui; }
+                  .arrow { stroke: #e4ab18; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+                </style>
+              </defs>
+
+              <text class="title" x="40" y="48">One request becomes one resolved plan</text>
+              <text class="small" x="40" y="73">The plan is the thing Studio previews, the CLI prints, and the agent materializes.</text>
+
+              <rect class="box engine" x="48" y="120" width="260" height="170" rx="8"></rect>
+              <text class="label" x="70" y="154">Engines</text>
+              <text class="small" x="70" y="184">Model families</text>
+              <text class="small" x="70" y="208">Intent routes</text>
+              <text class="small" x="70" y="232">Provider schemas</text>
+              <text class="small" x="70" y="256">Pricing functions</text>
+
+              <rect class="box core" x="390" y="94" width="390" height="220" rx="8"></rect>
+              <text class="label" x="414" y="132">Core</text>
+              <text class="small" x="414" y="162">Resolve selected shot and route</text>
+              <text class="small" x="414" y="186">Build dependency map</text>
+              <text class="small" x="414" y="210">Normalize route settings</text>
+              <text class="small" x="414" y="234">Estimate every line</text>
+              <text class="small" x="414" y="258">Return complete or partial total</text>
+
+              <rect class="box studio" x="862" y="102" width="250" height="132" rx="8"></rect>
+              <text class="label" x="884" y="136">Studio</text>
+              <text class="small" x="884" y="166">AI Production pane</text>
+              <text class="small" x="884" y="190">Preview Take Plan dialog</text>
+
+              <rect class="box agent" x="862" y="278" width="250" height="132" rx="8"></rect>
+              <text class="label" x="884" y="312">CLI and Agent</text>
+              <text class="small" x="884" y="342">Plan command</text>
+              <text class="small" x="884" y="366">Materialize specs</text>
+              <text class="small" x="884" y="390">Run approved graph</text>
+
+              <path class="arrow" d="M308 205 C338 205 350 205 390 205"></path>
+              <path class="arrow" d="M780 178 C815 168 830 164 862 164"></path>
+              <path class="arrow" d="M780 246 C823 282 832 322 862 340"></path>
+
+              <rect class="box" x="390" y="358" width="390" height="84" rx="8"></rect>
+              <text class="label" x="414" y="394">Project assets and generation specs</text>
+              <text class="small" x="414" y="420">Core reads current assets, but planning does not mutate storage.</text>
+              <path class="arrow" d="M585 358 C585 330 585 326 585 314"></path>
+            </svg>
+            <div class="caption">
+              The important shift: the browser no longer estimates a single
+              provider call. It asks core for a project-aware plan.
+            </div>
+          </div>
+
+          <div class="grid four" style="margin-top: 16px">
+            <article class="concept-card">
+              <span class="tag engine">Engine concept</span>
+              <h3>Model family</h3>
+              <p>
+                The user-facing base model row, such as Kling 3.0 or Veo 3.1.
+              </p>
+            </article>
+            <article class="concept-card">
+              <span class="tag engine">Engine concept</span>
+              <h3>Route</h3>
+              <p>
+                One family plus one intent maps to one provider endpoint, one
+                schema, one settings list, and one pricing function.
+              </p>
+            </article>
+            <article class="concept-card">
+              <span class="tag core">Core concept</span>
+              <h3>Dependency map</h3>
+              <p>
+                The graph of reused assets, missing inputs, generated
+                dependencies, and the final generation.
+              </p>
+            </article>
+            <article class="concept-card">
+              <span class="tag studio">UI concept</span>
+              <h3>Plan projection</h3>
+              <p>
+                The compact table rows, run controls, estimate total, and dialog
+                details rendered from the core plan.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="routes">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">02 - Models and variants</p>
+              <h2>The generic part is the route shape, not the parameters.</h2>
+            </div>
+            <p>
+              Different models can have wildly different provider variants. The
+              system handles that by making every intent route explicit.
+            </p>
+          </div>
+
+          <div class="split">
+            <div class="stack">
+              <article class="note">
+                <h3>What a route answers</h3>
+                <ul class="mini-list">
+                  <li>Does this base model support this intent?</li>
+                  <li>Which exact provider model id is used?</li>
+                  <li>What inputs does that provider route need?</li>
+                  <li>Which settings can be shown in Run Setup?</li>
+                  <li>How should duration be displayed and encoded?</li>
+                  <li>Can this route be priced?</li>
+                </ul>
+              </article>
+              <article class="callout">
+                <strong>Why schemas alone are not enough</strong>
+                <p>
+                  Provider schemas can validate a route, but they cannot tell us
+                  product semantics like "this is the Kling 3.0 first-frame
+                  route" or "this base row should be grayed out for
+                  first-and-last-frame."
+                </p>
+              </article>
+            </div>
+
+            <div class="diagram-card" aria-label="Model family route diagram">
+              <svg viewBox="0 0 760 420" role="img">
+                <defs>
+                  <marker id="arrow2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#e4ab18"></path>
+                  </marker>
+                  <style>
+                    .b { fill: #2d2c2a; stroke: #4d4a45; stroke-width: 2; }
+                    .family { fill: rgba(228, 171, 24, 0.15); stroke: #8b6817; }
+                    .route { fill: rgba(120, 168, 255, 0.14); stroke: #5277bd; }
+                    .schema { fill: rgba(34, 192, 131, 0.12); stroke: #238b66; }
+                    .t { fill: #f3efe7; font: 700 18px system-ui; }
+                    .s { fill: #b8b0a3; font: 13px system-ui; }
+                    .a { stroke: #e4ab18; stroke-width: 2.5; fill: none; marker-end: url(#arrow2); }
+                  </style>
+                </defs>
+                <rect class="b family" x="34" y="148" width="190" height="92" rx="8"></rect>
+                <text class="t" x="54" y="184">Kling 3.0</text>
+                <text class="s" x="54" y="212">one UI model row</text>
+
+                <rect class="b route" x="310" y="46" width="210" height="86" rx="8"></rect>
+                <text class="t" x="330" y="82">Text route</text>
+                <text class="s" x="330" y="108">has aspect ratio</text>
+
+                <rect class="b route" x="310" y="158" width="210" height="86" rx="8"></rect>
+                <text class="t" x="330" y="194">First-frame route</text>
+                <text class="s" x="330" y="220">no aspect ratio</text>
+
+                <rect class="b route" x="310" y="270" width="210" height="86" rx="8"></rect>
+                <text class="t" x="330" y="306">Reference route</text>
+                <text class="s" x="330" y="332">many image refs</text>
+
+                <rect class="b schema" x="584" y="46" width="132" height="86" rx="8"></rect>
+                <text class="t" x="606" y="82">Schema</text>
+                <text class="s" x="606" y="108">pricing</text>
+
+                <rect class="b schema" x="584" y="158" width="132" height="86" rx="8"></rect>
+                <text class="t" x="606" y="194">Schema</text>
+                <text class="s" x="606" y="220">pricing</text>
+
+                <rect class="b schema" x="584" y="270" width="132" height="86" rx="8"></rect>
+                <text class="t" x="606" y="306">Schema</text>
+                <text class="s" x="606" y="332">pricing</text>
+
+                <path class="a" d="M224 194 C260 112 276 90 310 88"></path>
+                <path class="a" d="M224 194 C256 196 274 200 310 200"></path>
+                <path class="a" d="M224 194 C260 282 276 310 310 312"></path>
+                <path class="a" d="M520 88 L584 88"></path>
+                <path class="a" d="M520 200 L584 200"></path>
+                <path class="a" d="M520 312 L584 312"></path>
+              </svg>
+              <div class="caption">
+                A base row can stay clean while each route remains precise.
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap" style="margin-top: 16px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Question</th>
+                  <th>Answered by</th>
+                  <th>Example</th>
+                  <th>Why it matters</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>What should the table row show?</strong></td>
+                  <td>Model family</td>
+                  <td>Seedance 2.0</td>
+                  <td>Users choose base models, not provider endpoint names.</td>
+                </tr>
+                <tr>
+                  <td><strong>Is first-frame supported?</strong></td>
+                  <td>Route catalog</td>
+                  <td>Kling 3.0 + first-frame -> image-to-video route</td>
+                  <td>Capability is explicit and reviewable.</td>
+                </tr>
+                <tr>
+                  <td><strong>Should Run Setup show seed?</strong></td>
+                  <td>Selected route parameters</td>
+                  <td>Veo image route does not expose seed</td>
+                  <td>Unsupported fields cannot leak into payloads.</td>
+                </tr>
+                <tr>
+                  <td><strong>How should duration render?</strong></td>
+                  <td>Route duration domain</td>
+                  <td>continuous: 3-10s, discrete: 4, 8, 12s</td>
+                  <td>Display and payload encoding come from the same source.</td>
+                </tr>
+                <tr>
+                  <td><strong>Can it estimate?</strong></td>
+                  <td>Pricing registry</td>
+                  <td>Ready, No price, Needs input</td>
+                  <td>The UI shows missing pricing without disabling override runs.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="section" id="add-model">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">03 - Adding a model</p>
+              <h2>Adding a model now means adding provider facts plus product routes.</h2>
+            </div>
+            <p>
+              The old work still exists: add the provider schema and register it.
+              The new work is declaring how that provider model appears in the
+              Studio product.
+            </p>
+          </div>
+
+          <div class="flow-row">
+            <div class="flow-step">
+              <strong>1. Add provider schema</strong>
+              <span>
+                Add the fal.ai model schema and register the provider model in
+                the provider catalog.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>2. Add family row</strong>
+              <span>
+                Declare the user-facing base model label, version, provider, and
+                stable model choice id.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>3. Add routes</strong>
+              <span>
+                For each supported intent, map to the exact provider model,
+                inputs, settings, duration, and defaults.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>4. Add pricing</strong>
+              <span>
+                Register or select the pricing function. If pricing is missing,
+                the route is marked No price and needs override before a run.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>5. Validate route matrix</strong>
+              <span>
+                Validation checks schemas, required fields, durations, defaults,
+                and estimateability.
+              </span>
+            </div>
+          </div>
+
+          <div class="callout" style="margin-top: 16px">
+            <strong>So yes, adding a model is more work now.</strong>
+            <p>
+              That extra work is the product contract. The schema tells us what
+              the provider accepts. The route catalog tells Studio what the model
+              means, when it is selectable, what controls it should show, and
+              whether the selected route can really estimate and run.
+            </p>
+          </div>
+        </section>
+
+        <section class="section" id="dependency-map">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">04 - Dependency map</p>
+              <h2>The shared service is a graph builder, not a video-only hack.</h2>
+            </div>
+            <p>
+              A generation request becomes a graph of assets and generation
+              steps. The same graph powers the estimate, the Preview Take Plan
+              dialog and the agent run.
+            </p>
+          </div>
+
+          <div class="diagram-card" aria-label="Dependency map diagram">
+            <svg viewBox="0 0 1180 560" role="img">
+              <defs>
+                <marker id="arrow3" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#e4ab18"></path>
+                </marker>
+                <style>
+                  .node { fill: #2d2c2a; stroke: #4d4a45; stroke-width: 2; }
+                  .ready { fill: rgba(34, 192, 131, 0.14); stroke: #238b66; }
+                  .planned { fill: rgba(228, 171, 24, 0.15); stroke: #8b6817; }
+                  .missing { fill: rgba(228, 102, 80, 0.14); stroke: #9c4638; }
+                  .final { fill: rgba(120, 168, 255, 0.15); stroke: #5277bd; }
+                  .txt { fill: #f3efe7; font: 700 17px system-ui; }
+                  .sub { fill: #b8b0a3; font: 13px system-ui; }
+                  .edge { stroke: #e4ab18; stroke-width: 2.5; fill: none; marker-end: url(#arrow3); }
+                </style>
+              </defs>
+
+              <text class="txt" x="46" y="48">Example: first-frame shot video take</text>
+              <text class="sub" x="46" y="72">The total is the sum of every priced line in this graph.</text>
+
+              <rect class="node ready" x="64" y="132" width="220" height="86" rx="8"></rect>
+              <text class="txt" x="84" y="166">Existing first frame</text>
+              <text class="sub" x="84" y="194">asset reused, $0</text>
+
+              <rect class="node planned" x="64" y="268" width="220" height="86" rx="8"></rect>
+              <text class="txt" x="84" y="302">Character sheet</text>
+              <text class="sub" x="84" y="330">planned generation, unpriced</text>
+
+              <rect class="node missing" x="64" y="404" width="220" height="86" rx="8"></rect>
+              <text class="txt" x="84" y="438">Audio reference</text>
+              <text class="sub" x="84" y="466">missing attachment</text>
+
+              <rect class="node final" x="458" y="238" width="280" height="110" rx="8"></rect>
+              <text class="txt" x="482" y="278">Final video route</text>
+              <text class="sub" x="482" y="306">audio-conditioned route</text>
+              <text class="sub" x="482" y="330">final waits until required inputs exist</text>
+
+              <rect class="node" x="878" y="170" width="230" height="80" rx="8"></rect>
+              <text class="txt" x="900" y="204">Preview dialog</text>
+              <text class="sub" x="900" y="230">shows graph details</text>
+
+              <rect class="node" x="878" y="302" width="230" height="80" rx="8"></rect>
+              <text class="txt" x="900" y="336">Estimate total</text>
+              <text class="sub" x="900" y="360">$3.40 + unpriced</text>
+
+              <path class="edge" d="M284 175 C356 184 392 236 458 270"></path>
+              <path class="edge" d="M284 311 C344 306 392 302 458 302"></path>
+              <path class="edge" d="M284 447 C358 430 392 352 458 330"></path>
+              <path class="edge" d="M738 285 C800 250 824 220 878 210"></path>
+              <path class="edge" d="M738 310 C800 326 824 340 878 342"></path>
+
+              <rect class="node ready" x="64" y="510" width="26" height="16" rx="4"></rect>
+              <text class="sub" x="100" y="523">ready or reused</text>
+              <rect class="node planned" x="222" y="510" width="26" height="16" rx="4"></rect>
+              <text class="sub" x="258" y="523">planned generation</text>
+              <rect class="node missing" x="438" y="510" width="26" height="16" rx="4"></rect>
+              <text class="sub" x="474" y="523">missing or unpriced</text>
+            </svg>
+            <div class="caption">
+              The dependency map is the forest. The selected model route is only
+              one node in that forest.
+            </div>
+          </div>
+
+          <div class="grid three" style="margin-top: 16px">
+            <article class="concept-card">
+              <span class="tag core">Resolver</span>
+              <h3>Find existing assets</h3>
+              <p>
+                If a selected first frame, character sheet, location sheet, or
+                lookbook already exists, the map adds it as a reused asset.
+              </p>
+            </article>
+            <article class="concept-card">
+              <span class="tag core">Planner</span>
+              <h3>Plan missing assets</h3>
+              <p>
+                If an input is missing and the product says it can be generated,
+                the map adds a dependency generation line.
+              </p>
+            </article>
+            <article class="concept-card">
+              <span class="tag core">Estimator</span>
+              <h3>Sum honest totals</h3>
+              <p>
+                The total is complete only when every required line is priced and
+                no required input is missing.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="dependency-execution">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">05 - Dependency execution</p>
+              <h2>Core resolves the tree; the agent executes the levels.</h2>
+            </div>
+            <p>
+              A plan is not just a flat list of missing inputs. Core walks
+              dependencies recursively, checks that the graph is valid, then
+              returns the order in which work can safely happen.
+            </p>
+          </div>
+
+          <div class="flow-row">
+            <div class="flow-step">
+              <strong>1. Start at final video</strong>
+              <span>
+                The selected route declares the immediate slots it needs:
+                first frame, reference images, audio input, or another route
+                input.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>2. Resolve each slot</strong>
+              <span>
+                Core first looks for a selected project asset. If none exists,
+                the slot either plans a concrete generation purpose or asks for
+                an attachment.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>3. Recurse into planned nodes</strong>
+              <span>
+                A planned character sheet can depend on a lookbook. A planned
+                location sheet can do the same. The resolver keeps walking until
+                it reaches leaves.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>4. Validate the graph</strong>
+              <span>
+                Cycles, missing purpose contracts, invalid route slots, and
+                unsupported provider mappings become structured diagnostics.
+              </span>
+            </div>
+            <div class="flow-step">
+              <strong>5. Return work levels</strong>
+              <span>
+                Core returns a topological order, then groups independent nodes
+                into levels the agent can work through.
+              </span>
+            </div>
+          </div>
+
+          <div class="grid two" style="margin-top: 16px">
+            <div class="code-card">
+              <pre>{
+  "execution": {
+    "topologicalNodeIds": [
+      "lookbook_reference",
+      "character_urban_sheet",
+      "location_basilica_sheet",
+      "dialogue_audio_guide",
+      "final_video"
+    ],
+    "levels": [
+      ["lookbook_reference"],
+      ["character_urban_sheet", "location_basilica_sheet"],
+      ["dialogue_audio_guide"],
+      ["final_video"]
+    ]
+  },
+  "diagnostics": [
+    {
+      "code": "CORE_MEDIA_DEPENDENCY_CYCLE",
+      "path": [
+        "cast.character-sheet",
+        "lookbook.image",
+        "cast.character-sheet"
+      ]
+    }
+  ]
+}</pre>
+            </div>
+            <div class="stack">
+              <article class="note">
+                <h3>Transitive dependencies</h3>
+                <p>
+                  The final video may need a character sheet. That character
+                  sheet may need a lookbook reference. The plan should show both
+                  levels, not pretend the character sheet is a leaf.
+                </p>
+              </article>
+              <article class="note">
+                <h3>Cycle diagnostics</h3>
+                <p>
+                  If purpose declarations accidentally loop, core reports the
+                  exact path. The affected branch is unavailable until the
+                  contract is fixed.
+                </p>
+              </article>
+              <article class="note">
+                <h3>Topological order</h3>
+                <p>
+                  Every node appears after its prerequisites. That gives the
+                  agent one safe serial sequence even before it decides what can
+                  run in parallel.
+                </p>
+              </article>
+              <article class="note">
+                <h3>Execution levels</h3>
+                <p>
+                  Level 1 must finish before level 2. Inside a level, independent
+                  nodes can be delegated to workers or subagents because they do
+                  not need each other's outputs.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <div class="table-wrap" style="margin-top: 16px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Concept</th>
+                  <th>What core returns</th>
+                  <th>What the agent does</th>
+                  <th>Why it matters</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Existing asset</strong></td>
+                  <td>A ready node with asset and file ids.</td>
+                  <td>Uses the file as an input; no generation needed.</td>
+                  <td>Reuse stays explicit and costs $0.</td>
+                </tr>
+                <tr>
+                  <td><strong>Planned generation</strong></td>
+                  <td>A node with a concrete purpose and draft spec.</td>
+                  <td>Runs the normal media flow for that purpose, then imports the result.</td>
+                  <td>Each asset keeps its own purpose contract.</td>
+                </tr>
+                <tr>
+                  <td><strong>Required attachment</strong></td>
+                  <td>A missing node with media kind and slot id.</td>
+                  <td>Asks the user to attach or upload a matching file.</td>
+                  <td>Audio or video inputs can exist before generation support exists.</td>
+                </tr>
+                <tr>
+                  <td><strong>Unpriced line</strong></td>
+                  <td>A planned node with an unpriced reason.</td>
+                  <td>Requests explicit unpriced override before a real run.</td>
+                  <td>Missing estimates are visible without preventing development runs.</td>
+                </tr>
+                <tr>
+                  <td><strong>Topological order</strong></td>
+                  <td>A serial node list with prerequisites first.</td>
+                  <td>Uses it as the safest fallback execution sequence.</td>
+                  <td>The final video cannot run before its required inputs exist.</td>
+                </tr>
+                <tr>
+                  <td><strong>Cycle</strong></td>
+                  <td>A diagnostic with the dependency path.</td>
+                  <td>Stops that branch and fixes the declaration before running.</td>
+                  <td>Bad contracts fail clearly instead of recursing forever.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout" style="margin-top: 16px">
+            <strong>The agent does not trust stale placeholders.</strong>
+            <p>
+              After each execution level completes, generated outputs must be
+              imported or attached as project assets. The agent then asks core
+              for a fresh plan, so the final video receives real file references
+              rather than imagined future outputs.
+            </p>
+          </div>
+        </section>
+
+        <section class="section" id="reference-intent">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">06 - Reference intent</p>
+              <h2>Reference intent resolves a dynamic bundle from the shot.</h2>
+            </div>
+            <p>
+              Reference does not mean one hard-coded reference image. It means
+              "collect the references that matter for this shot and this route."
+            </p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Reference slot</th>
+                  <th>Where it comes from</th>
+                  <th>Cardinality</th>
+                  <th>If asset exists</th>
+                  <th>If missing</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Character sheets</strong></td>
+                  <td>Cast members present in the shot</td>
+                  <td>zero to many</td>
+                  <td><span class="status ready">reuse</span></td>
+                  <td><span class="status planned">generate or attach</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Location sheets</strong></td>
+                  <td>Locations attached to the scene or shot</td>
+                  <td>zero to many</td>
+                  <td><span class="status ready">reuse</span></td>
+                  <td><span class="status planned">generate or attach</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Lookbook sheets</strong></td>
+                  <td>Active visual language selection</td>
+                  <td>zero to many</td>
+                  <td><span class="status ready">reuse</span></td>
+                  <td><span class="status planned">generate or attach</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Audio references</strong></td>
+                  <td>Only routes that accept audio inputs</td>
+                  <td>zero or one, or many by route</td>
+                  <td><span class="status ready">reuse</span></td>
+                  <td><span class="status missing">attach or generate</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="split" style="margin-top: 16px">
+            <article class="note">
+              <h3>No future-only rows</h3>
+              <p>
+                When a new reference domain exists, it joins through the same
+                asset selector, purpose, and dependency-slot contract. Studio
+                should not carry a one-off rule before that domain exists.
+              </p>
+            </article>
+            <article class="note">
+              <h3>What about audio?</h3>
+              <p>
+                Native audio generation is a route setting. Audio conditioning
+                is an input dependency. The route catalog tells core which one
+                applies, so the plan either shows a setting or a dependency
+                node, not both by accident.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="non-shot">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">07 - Non-shot generations</p>
+              <h2>The same dependency map can work for image generations later.</h2>
+            </div>
+            <p>
+              Shot video is the first place where this hurts, but it is not the
+              only place where dependencies exist.
+            </p>
+          </div>
+
+          <div class="diagram-card" aria-label="Non-shot dependency examples">
+            <svg viewBox="0 0 1180 430" role="img">
+              <defs>
+                <marker id="arrow4" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#e4ab18"></path>
+                </marker>
+                <style>
+                  .n { fill: #2d2c2a; stroke: #4d4a45; stroke-width: 2; }
+                  .dep { fill: rgba(228, 171, 24, 0.15); stroke: #8b6817; }
+                  .final2 { fill: rgba(120, 168, 255, 0.15); stroke: #5277bd; }
+                  .text { fill: #f3efe7; font: 700 17px system-ui; }
+                  .small2 { fill: #b8b0a3; font: 13px system-ui; }
+                  .arr { stroke: #e4ab18; stroke-width: 2.5; fill: none; marker-end: url(#arrow4); }
+                </style>
+              </defs>
+
+              <text class="text" x="44" y="46">Purpose-owned specs, shared dependency graph</text>
+              <text class="small2" x="44" y="70">0042 owns shot-video purposes. 0043 migrates older non-shot purposes.</text>
+
+              <rect class="n dep" x="70" y="136" width="230" height="86" rx="8"></rect>
+              <text class="text" x="92" y="170">Lookbook sheet</text>
+              <text class="small2" x="92" y="196">existing or planned</text>
+
+              <rect class="n final2" x="426" y="98" width="260" height="86" rx="8"></rect>
+              <text class="text" x="448" y="132">Character sheet</text>
+              <text class="small2" x="448" y="158">cast.character-sheet</text>
+
+              <rect class="n final2" x="426" y="230" width="260" height="86" rx="8"></rect>
+              <text class="text" x="448" y="264">Location sheet</text>
+              <text class="small2" x="448" y="290">location.environment-sheet</text>
+
+              <rect class="n final2" x="820" y="164" width="260" height="86" rx="8"></rect>
+              <text class="text" x="842" y="198">Shot video take</text>
+              <text class="small2" x="842" y="224">shot.video-take</text>
+
+              <path class="arr" d="M300 172 C350 146 376 140 426 140"></path>
+              <path class="arr" d="M300 186 C350 244 376 274 426 274"></path>
+              <path class="arr" d="M686 140 C746 148 776 172 820 190"></path>
+              <path class="arr" d="M686 274 C746 260 776 228 820 214"></path>
+
+              <text class="small2" x="70" y="352">Example: a character sheet can depend on the lookbook.</text>
+              <text class="small2" x="70" y="376">Later, that character sheet can become a reference node for shot video.</text>
+            </svg>
+            <div class="caption">
+              This avoids duplicating dependency logic in every purpose, while
+              leaving the existing generation-lifecycle refactor to the follow-up
+              plan.
+            </div>
+          </div>
+
+          <div class="callout" style="margin-top: 16px">
+            <strong>The proposal is generic where it should be generic.</strong>
+            <p>
+              Dependency resolution, graph display, estimate aggregation, and
+              execution ordering come from the shot-video plan. Refactoring
+              older non-shot image generations onto a shared lifecycle belongs
+              to plan 0043, after the shot-video dependency contract is proven.
+            </p>
+          </div>
+        </section>
+
+        <section class="section" id="contracts">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">08 - Contracts</p>
+              <h2>The Preview Take Plan dialog gets the same map the run uses.</h2>
+            </div>
+            <p>
+              The UI should not reconstruct dependencies. It should render the
+              `MediaGenerationDependencyMap` returned by core.
+            </p>
+          </div>
+
+          <div class="grid two">
+            <div class="code-card">
+              <pre>{
+  "rootPurpose": "shot.video-take",
+  "nodes": [
+    {
+      "id": "character_urban_sheet",
+      "kind": "existing-asset",
+      "purpose": "cast.character-sheet",
+      "mediaKind": "image",
+      "state": "ready",
+      "estimatedUsd": 0
+    },
+    {
+      "id": "dialogue_audio_guide",
+      "kind": "external-input-required",
+      "purpose": null,
+      "mediaKind": "audio",
+      "state": "missing",
+      "estimatedUsd": null
+    },
+    {
+      "id": "location_basilica_sheet",
+      "kind": "planned-generation",
+      "purpose": "location.environment-sheet",
+      "mediaKind": "image",
+      "state": "planned",
+      "estimatedUsd": null
+    },
+    {
+      "id": "final_video",
+      "kind": "final-generation",
+      "purpose": "shot.video-take",
+      "mediaKind": "video",
+      "state": "planned",
+      "estimatedUsd": 3.4
+    }
+  ],
+  "edges": [
+    {
+      "fromNodeId": "character_urban_sheet",
+      "toNodeId": "final_video",
+      "slotId": "reference_images"
+    }
+  ]
+}</pre>
+            </div>
+            <div class="stack">
+              <article class="note">
+                <h3>AI Production pane</h3>
+                <p>
+                  Shows compact model rows, route settings, and total estimate.
+                  It can show `$3.40`, `$3.40 + unpriced`, `$3.40 + pending`,
+                  or `Needs plan` based on plan state.
+                </p>
+              </article>
+              <article class="note">
+                <h3>Preview Take Plan dialog</h3>
+                <p>
+                  Shows the graph: reused references, planned generations,
+                  missing attachments, unpriced lines, individual estimates,
+                  and final video payload summary.
+                </p>
+              </article>
+              <article class="note">
+                <h3>Agent access</h3>
+                <p>
+                  Materialize the same graph into persisted specs, request
+                  approval for priced lines or explicit unpriced override, and
+                  run dependency steps before the final video.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="completion">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">09 - Completion checklist</p>
+              <h2>Done means the same graph estimates, previews, and runs.</h2>
+            </div>
+            <p>
+              The checklist in the markdown plan tracks the work from design
+              review through validation. This is the high-level version.
+            </p>
+          </div>
+
+          <div class="grid three">
+            <article class="concept-card">
+              <span class="tag engine">Engines</span>
+              <h3>Route catalog complete</h3>
+              <ul class="checklist">
+                <li>All six base models are explicit families.</li>
+                <li>Every supported intent has a route.</li>
+                <li>Each route declares inputs, settings, durations, and pricing.</li>
+                <li>Validation catches invalid fields before Studio says Ready.</li>
+              </ul>
+            </article>
+            <article class="concept-card">
+              <span class="tag core">Core</span>
+              <h3>Dependency planning complete</h3>
+              <ul class="checklist">
+                <li>Dependency map resolves reused, planned, missing, and unpriced lines.</li>
+                <li>Reference intent resolves cast, location, lookbook, audio, and video slots.</li>
+                <li>Total estimate includes dependency generation plus final video.</li>
+                <li>Partial and unpriced estimates are explicit, not silent dashes.</li>
+              </ul>
+            </article>
+            <article class="concept-card">
+              <span class="tag studio">Product surfaces</span>
+              <h3>Same plan everywhere</h3>
+              <ul class="checklist">
+                <li>AI Production renders model rows and route setup from core.</li>
+                <li>Preview Take Plan dialog renders the dependency map.</li>
+                <li>CLI prints the same plan for the agent workflow.</li>
+                <li>Agent materializes and runs the same graph after approval or override.</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="grid three" style="margin-top: 14px">
+            <article class="concept-card">
+              <span class="tag core">Purposes</span>
+              <h3>Purpose contracts complete</h3>
+              <ul class="checklist">
+                <li>Shot frame image purposes can build and estimate specs.</li>
+                <li>Reference bundles resolve concrete purposes or attached media.</li>
+                <li>Shot video take purpose can build and estimate specs.</li>
+                <li>Existing purposes are used without copying their internals into shot video.</li>
+              </ul>
+            </article>
+            <article class="concept-card">
+              <span class="tag agent">Run flow</span>
+              <h3>Materialization complete</h3>
+              <ul class="checklist">
+                <li>Dependency and final specs share a plan id.</li>
+                <li>Approval summary includes priced lines and unpriced overrides.</li>
+                <li>Dependency assets are generated or attached before final video.</li>
+                <li>Actual costs can be audited against the original plan.</li>
+              </ul>
+            </article>
+            <article class="concept-card">
+              <span class="tag core">Validation</span>
+              <h3>Confidence complete</h3>
+              <ul class="checklist">
+                <li>Engine route matrix is tested.</li>
+                <li>Core tests cover every supported model and intent.</li>
+                <li>Stale route settings cannot leak.</li>
+                <li>Studio renders all plan states correctly.</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="callout" style="margin-top: 16px">
+            <strong>The full checklist lives in the markdown plan.</strong>
+            <p>
+              It includes design review items, engine catalog tasks, core
+              planning tasks, generation-purpose tasks, materialization tasks,
+              Studio, CLI, agent workflow tasks, and validation tasks.
+            </p>
+          </div>
+        </section>
+
+        <section class="section" id="plan-updates">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">10 - What changed in the written plan</p>
+              <h2>The detailed plan now separates shot-video work from follow-up refactors.</h2>
+            </div>
+            <p>
+              I updated the companion markdown plan so this is not just a visual
+              interpretation. The detailed implementation plan now includes the
+              same concepts.
+            </p>
+          </div>
+
+          <div class="grid three">
+            <article class="concept-card">
+              <span class="tag core">New</span>
+              <h3>Shared dependency map</h3>
+              <p>
+                `MediaGenerationDependencyMap` is the graph returned to Studio,
+                CLI, and agent workflows.
+              </p>
+            </article>
+            <article class="concept-card">
+              <span class="tag core">New</span>
+              <h3>Follow-up plan</h3>
+              <p>
+                Older non-shot media-generation purpose refactoring belongs to
+                `0043`, after the shot-video dependency contract is implemented.
+              </p>
+            </article>
+            <article class="concept-card">
+              <span class="tag studio">New</span>
+              <h3>Preview dialog input</h3>
+              <p>
+                The dialog consumes the dependency map directly instead of
+                recreating reference logic in the browser.
+              </p>
+            </article>
+          </div>
+
+          <div class="callout" style="margin-top: 16px">
+            <strong>Open the companion markdown plan:</strong>
+            <p>
+              <a href="./0042-shot-video-take-generation-plan-architecture.md">
+                0042-shot-video-take-generation-plan-architecture.md
+              </a>
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        Generated for plan 0042. This page is self-contained and can be opened
+        directly from disk.
+      </footer>
+    </div>
+  </body>
+</html>

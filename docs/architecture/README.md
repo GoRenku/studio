@@ -18,6 +18,9 @@ Use this page as the map:
   frontend, CLI, agents, and future workers.
 - `core-design-principles.md` summarizes source-of-truth, fail-fast, package
   boundary, and no-compatibility rules.
+- `coding-practices.md` defines implementation shape rules for focused
+  functions, low cyclomatic complexity, command handlers, and reviewable
+  dispatch.
 - `naming-guidelines.md` is the top-level naming policy. Naming is architecture
   in Renku Studio and should be checked during every design or implementation
   change.

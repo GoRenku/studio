@@ -43,7 +43,9 @@ import type {
   SceneStoryboardSheetModelListReport,
   ShotVideoTakeAvailableInput,
   ShotVideoTakeGenerationContext,
+  ShotVideoTakeGenerationPlan,
   ShotVideoTakeGenerationSpec,
+  ShotVideoTakeInputPolicy,
   ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeInputMediaImportReport,
   ShotVideoTakeMediaImportReport,
@@ -314,6 +316,7 @@ export interface ProjectDataService {
   listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: ShotVideoTakeAvailableInput[]; resourceKeys: string[] }>;
   updateShotVideoTakeProductionGroup(input: UpdateShotVideoTakeProductionGroupInput): Promise<ShotVideoTakeGenerationContext>;
   estimateShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionEstimateReport>;
+  planShotVideoTakeProduction(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeGenerationPlan>;
   previewShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakePreflightReport>;
   selectShotVideoTakeInput(input: SelectShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
   clearShotVideoTakeInputSelection(input: ClearShotVideoTakeInputSelectionInput): Promise<ShotVideoTakeGenerationContext>;
@@ -839,6 +842,12 @@ export interface UpdateShotVideoTakeProductionGroupInput
 export interface PreviewShotVideoTakeProductionInput
   extends ShotVideoTakeContextInput {
   production?: ShotVideoTakeProductionPlan;
+}
+
+export interface PlanShotVideoTakeProductionInput
+  extends ShotVideoTakeContextInput {
+  production?: ShotVideoTakeProductionPlan;
+  inputPolicy?: ShotVideoTakeInputPolicy;
 }
 
 export interface SelectShotVideoTakeInputInput
