@@ -1072,10 +1072,6 @@ function shotLocationPromptText(
 
 function shotLocationViewPromptText(shot: SceneShot): string | null {
   const location = shot.shotSpecs?.location;
-  const customView = location?.customView?.trim();
-  if (customView) {
-    return customView;
-  }
   if (location?.azimuthView) {
     return LOCATION_AZIMUTH_VIEW_LABELS[location.azimuthView];
   }

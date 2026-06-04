@@ -314,6 +314,18 @@ export function fakeProjectDataService(): NonNullable<
         locationLabels: {},
       };
     },
+    async updateSceneShotCastReferences() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
+    async updateSceneShotLocationReference() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
+    async updateSceneShotLookbookReference() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
+    async updateSceneShotCustomReferenceImages() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
     async readActStoryboardResource() {
       return {
         act: {
@@ -745,6 +757,25 @@ export function fakeProjectDataService(): NonNullable<
     async planShotVideoTakeProduction(input) {
       return makeShotVideoTakePlan(input);
     },
+    async readShotVideoTakeProductionPlan(input) {
+      const target = makeShotVideoTakeTarget(input);
+      const plan = makeShotVideoTakePlan(input);
+      return {
+        target,
+        productionGroup: {
+          productionGroupId: target.productionGroupId,
+          shotIds: target.shotIds,
+          videoTakeProduction: input.production ?? {},
+        },
+        finalPrompt: null,
+        plan,
+        castReferences: [],
+        locationReferences: [],
+        lookbookReferences: [],
+        imageReferences: [],
+        diagnostics: plan.diagnostics,
+      };
+    },
     async estimateShotVideoTakeProduction(input) {
       const target = makeShotVideoTakeTarget(input);
       const plan = makeShotVideoTakePlan(input);
@@ -771,36 +802,6 @@ export function fakeProjectDataService(): NonNullable<
         },
         plan,
         issues: [],
-      };
-    },
-    async previewShotVideoTakeProduction(input) {
-      const target = makeShotVideoTakeTarget(input);
-      return {
-        valid: true,
-        issues: [],
-        plan: makeShotVideoTakePlan(input),
-        target,
-        productionGroup: {
-          productionGroupId: target.productionGroupId,
-          shotIds: target.shotIds,
-          videoTakeProduction: input.production ?? {},
-        },
-        intentId: input.production?.intentId ?? 'text-only',
-        modelChoice:
-          input.production?.modelChoice ??
-          'fal-ai/bytedance/seedance-2.0',
-        preparedInputs: [],
-        availableInputs: [],
-        inputsToCreate: [],
-        inputPlanItems: [],
-        prompts: [],
-        finalTake: {
-          purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-          canCreateSpec: true,
-          title: 'Opening Scene video take',
-        },
-        agentBrief: 'Agent brief for the opening scene video take.',
-        estimate: null,
       };
     },
     async selectShotVideoTakeInput(input) {

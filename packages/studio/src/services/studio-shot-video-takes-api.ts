@@ -1,14 +1,13 @@
 import type {
   ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationPlan,
   ShotVideoTakeInputPolicy,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
   ShotVideoTakeIntentId,
   ShotVideoTakeModelListReport,
-  ShotVideoTakePreflightReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionGroup,
+  ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from './studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
@@ -36,7 +35,7 @@ export interface ShotVideoTakeProductionMutation {
 }
 
 export interface ShotVideoTakePlanRead {
-  plan: ShotVideoTakeGenerationPlan;
+  report: ShotVideoTakeProductionPlanReport;
 }
 
 /**
@@ -74,29 +73,6 @@ export async function updateShotVideoTakeProduction(
   });
 }
 
-/** Open the preflight report for the current production group (0041). */
-export async function previewShotVideoTakeProduction(
-  projectName: string,
-  sceneId: string,
-  productionGroup: ShotVideoTakeProductionGroup
-): Promise<ShotVideoTakePreflightReport> {
-  const response = await fetch(
-    `${productionPath(projectName, sceneId)}/preview`,
-    {
-      method: 'POST',
-      headers: jsonHeaders(),
-      body: JSON.stringify({ productionGroup }),
-    }
-  );
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-  const body = (await response.json()) as {
-    preflight: ShotVideoTakePreflightReport;
-  };
-  return body.preflight;
-}
-
 /** Estimate the current production setup without opening the preflight plan. */
 export async function estimateShotVideoTakeProduction(
   projectName: string,
@@ -125,7 +101,7 @@ export async function planShotVideoTakeProduction(
   sceneId: string,
   productionGroup: ShotVideoTakeProductionGroup,
   inputPolicy: ShotVideoTakeInputPolicy = { defaultMode: 'auto' }
-): Promise<ShotVideoTakeGenerationPlan> {
+): Promise<ShotVideoTakeProductionPlanReport> {
   const response = await fetch(`${productionPath(projectName, sceneId)}/plan`, {
     method: 'POST',
     headers: jsonHeaders(),
@@ -135,7 +111,57 @@ export async function planShotVideoTakeProduction(
     throw await readStudioApiError(response);
   }
   const body = (await response.json()) as ShotVideoTakePlanRead;
-  return body.plan;
+  return body.report;
+}
+
+export async function updateShotCastReferences(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  castMemberIds: string[]
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(shotReferencePath(projectName, sceneId, shotId, 'cast-references'), 'PATCH', {
+    castMemberIds,
+  });
+}
+
+export async function updateShotLocationReference(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  input: { locationId: string; azimuthView?: 'front' | 'right' | 'back' | 'left' }
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    shotReferencePath(projectName, sceneId, shotId, 'location-reference'),
+    'PATCH',
+    input
+  );
+}
+
+export async function updateShotLookbookReference(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  lookbookImageId: string | null
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    shotReferencePath(projectName, sceneId, shotId, 'lookbook-reference'),
+    'PATCH',
+    { lookbookImageId }
+  );
+}
+
+export async function updateShotCustomReferenceImages(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  customReferenceInputIds: string[]
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    shotReferencePath(projectName, sceneId, shotId, 'custom-reference-images'),
+    'PATCH',
+    { customReferenceInputIds }
+  );
 }
 
 /** Reuse an existing dependency input for the group (0041). */
@@ -204,4 +230,13 @@ function readStudioApiToken(): string {
 
 function productionPath(projectName: string, sceneId: string): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/video-take-production`;
+}
+
+function shotReferencePath(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  suffix: string
+): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/shots/${encodeURIComponent(shotId)}/${suffix}`;
 }

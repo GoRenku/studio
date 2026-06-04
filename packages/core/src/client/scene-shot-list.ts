@@ -264,9 +264,19 @@ export interface ShotLensSpecs {
 
 export interface ShotLocationSpecs {
   locationId?: string;
-  usesDifferentLocation?: boolean;
   azimuthView?: LocationAzimuthViewId;
-  customView?: string;
+}
+
+export interface ShotCastReferenceSpecs {
+  castMemberIds?: string[];
+}
+
+export interface ShotLookbookReferenceSpecs {
+  lookbookImageId?: string;
+}
+
+export interface ShotReferenceImageSpecs {
+  customReferenceInputIds?: string[];
 }
 
 export interface ShotCustomSpecs {
@@ -282,6 +292,9 @@ export interface ShotSpecs {
   movement?: ShotMovementSpecs;
   lens?: ShotLensSpecs;
   location?: ShotLocationSpecs;
+  castReferences?: ShotCastReferenceSpecs;
+  lookbookReference?: ShotLookbookReferenceSpecs;
+  referenceImages?: ShotReferenceImageSpecs;
   custom?: ShotCustomSpecs;
 }
 

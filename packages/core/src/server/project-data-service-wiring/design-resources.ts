@@ -12,6 +12,10 @@ import {
 import {
   readActStoryboardResource,
   readSceneShotListResource,
+  updateSceneShotCastReferences,
+  updateSceneShotCustomReferenceImages,
+  updateSceneShotLocationReference,
+  updateSceneShotLookbookReference,
   updateSceneShotSpecs,
 } from '../resources/scene-storyboard-ui.js';
 import { readStudioSelectionContext } from '../resources/selection-context.js';
@@ -29,6 +33,10 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
   | 'readSceneShotListResource'
+  | 'updateSceneShotCastReferences'
+  | 'updateSceneShotLocationReference'
+  | 'updateSceneShotLookbookReference'
+  | 'updateSceneShotCustomReferenceImages'
   | 'updateSceneShotSpecs'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
@@ -44,6 +52,10 @@ export function createDesignResourceServiceWiring(): Pick<
     readSequenceResource,
     readSceneNarrativeResource,
     readSceneShotListResource,
+    updateSceneShotCastReferences,
+    updateSceneShotLocationReference,
+    updateSceneShotLookbookReference,
+    updateSceneShotCustomReferenceImages,
     updateSceneShotSpecs,
     readActStoryboardResource,
     readStudioSelectionContext,

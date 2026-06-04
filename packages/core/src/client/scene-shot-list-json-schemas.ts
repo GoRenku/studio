@@ -290,9 +290,34 @@ function shotSpecsSchema(): Record<string, unknown> {
         type: 'object',
         properties: {
           locationId: nonEmptyString(),
-          usesDifferentLocation: { type: 'boolean' },
           azimuthView: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
-          customView: nonEmptyString(),
+        },
+        additionalProperties: false,
+      },
+      castReferences: {
+        type: 'object',
+        properties: {
+          castMemberIds: {
+            type: 'array',
+            items: nonEmptyString(),
+          },
+        },
+        additionalProperties: false,
+      },
+      lookbookReference: {
+        type: 'object',
+        properties: {
+          lookbookImageId: nonEmptyString(),
+        },
+        additionalProperties: false,
+      },
+      referenceImages: {
+        type: 'object',
+        properties: {
+          customReferenceInputIds: {
+            type: 'array',
+            items: nonEmptyString(),
+          },
         },
         additionalProperties: false,
       },

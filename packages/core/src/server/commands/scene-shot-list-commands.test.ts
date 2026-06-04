@@ -280,7 +280,7 @@ describe('scene shot list commands', () => {
     ).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('must be one of the shot locationIds'),
+          message: expect.stringContaining('does not exist in the project'),
         }),
       ]),
     });
@@ -295,10 +295,8 @@ describe('scene shot list commands', () => {
               ...extended.shots[0]!,
               shotSpecs: {
                 ...extended.shots[0]!.shotSpecs!,
-                location: {
-                  locationId: ids.locationId,
-                  azimuthView: 'front',
-                  customView: 'near the carved arch',
+                castReferences: {
+                  castMemberIds: ['cast_elsewhere'],
                 },
               },
             },
@@ -308,7 +306,7 @@ describe('scene shot list commands', () => {
     ).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('cannot use both azimuthView'),
+          message: expect.stringContaining('does not exist in the project'),
         }),
       ]),
     });
@@ -326,8 +324,7 @@ describe('scene shot list commands', () => {
                 ...extended.shots[0]!.shotSpecs!,
                 location: {
                   locationId: ids.locationId,
-                  usesDifferentLocation: true,
-                  customView: 'imagined memory angle',
+                  azimuthView: 'front',
                 },
               },
             },
@@ -838,7 +835,6 @@ describe('scene shot list commands', () => {
       shotSpecs: {
         location: {
           locationId: overrideLocationId,
-          usesDifferentLocation: true,
           azimuthView: 'right',
         },
       },
@@ -848,7 +844,7 @@ describe('scene shot list commands', () => {
       shotSpecs: {
         location: {
           locationId: ids.locationId,
-          customView: 'Low balcony toward the map table',
+          azimuthView: 'left',
         },
       },
     };

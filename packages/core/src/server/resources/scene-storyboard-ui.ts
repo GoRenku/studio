@@ -31,11 +31,19 @@ import {
   updateSceneShotListRecordDocument,
 } from '../database/access/scene-shot-lists.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import { readCastMemberRecord } from '../database/access/cast-members.js';
+import { readLocationRecord } from '../database/access/locations.js';
+import { readLookbookImage } from '../database/access/lookbook-images.js';
+import { requireShotVideoTakeInput } from '../database/access/shot-video-takes.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type {
   ReadActStoryboardResourceInput,
   ReadSceneShotListResourceInput,
+  UpdateSceneShotCastReferencesInput,
+  UpdateSceneShotCustomReferenceImagesInput,
+  UpdateSceneShotLocationReferenceInput,
+  UpdateSceneShotLookbookReferenceInput,
   UpdateSceneShotSpecsInput,
 } from '../project-data-service-contracts.js';
 
@@ -132,6 +140,128 @@ export async function updateSceneShotSpecs(
     sceneId: input.sceneId,
     homeDir: input.homeDir,
   });
+}
+
+export async function updateSceneShotCastReferences(
+  input: UpdateSceneShotCastReferencesInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (session, shot) => {
+    for (const castMemberId of input.castMemberIds) {
+      if (!readCastMemberRecord(session, castMemberId)) {
+        throw new ProjectDataError(
+          'CORE_SHOT_REFERENCE_UNKNOWN_CAST_MEMBER',
+          `Cast member was not found: ${castMemberId}.`,
+          { suggestion: 'Choose a cast member from the current project.' }
+        );
+      }
+    }
+    const next = { ...(shot.shotSpecs ?? {}) };
+    next.castReferences = { castMemberIds: [...new Set(input.castMemberIds)] };
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
+export async function updateSceneShotLocationReference(
+  input: UpdateSceneShotLocationReferenceInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (session, shot) => {
+    if (!readLocationRecord(session, input.locationId)) {
+      throw new ProjectDataError(
+        'CORE_SHOT_REFERENCE_UNKNOWN_LOCATION',
+        `Location was not found: ${input.locationId}.`,
+        { suggestion: 'Choose a location from the current project.' }
+      );
+    }
+    const next = { ...(shot.shotSpecs ?? {}) };
+    next.location = {
+      locationId: input.locationId,
+      ...(input.azimuthView ? { azimuthView: input.azimuthView } : {}),
+    };
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
+export async function updateSceneShotLookbookReference(
+  input: UpdateSceneShotLookbookReferenceInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (session, shot) => {
+    const next = { ...(shot.shotSpecs ?? {}) };
+    if (input.lookbookImageId) {
+      if (!readLookbookImage(session, input.lookbookImageId)) {
+        throw new ProjectDataError(
+          'CORE_SHOT_REFERENCE_UNKNOWN_LOOKBOOK_IMAGE',
+          `Lookbook image was not found: ${input.lookbookImageId}.`,
+          { suggestion: 'Choose a Lookbook image from the current project.' }
+        );
+      }
+      next.lookbookReference = { lookbookImageId: input.lookbookImageId };
+    } else {
+      delete next.lookbookReference;
+    }
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
+export async function updateSceneShotCustomReferenceImages(
+  input: UpdateSceneShotCustomReferenceImagesInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (session, shot) => {
+    for (const inputId of input.customReferenceInputIds) {
+      requireShotVideoTakeInput(session, inputId);
+    }
+    const next = { ...(shot.shotSpecs ?? {}) };
+    next.referenceImages = {
+      customReferenceInputIds: [...new Set(input.customReferenceInputIds)],
+    };
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
+async function updateActiveShotSpecs(
+  input: { projectName: string; sceneId: string; shotId: string; homeDir?: string },
+  mutate: (session: DatabaseSession, shot: SceneShot) => void
+): Promise<void> {
+  const { session } = await openProjectSession(input);
+  try {
+    const shotListRow = readActiveSceneShotListRecord(session, input.sceneId);
+    if (!shotListRow) {
+      throw new ProjectDataError(
+        'PROJECT_DATA329',
+        `Scene has no active shot list to update: ${input.sceneId}.`,
+        {
+          suggestion:
+            'Create or activate a shot list for this scene before editing shot specs.',
+        }
+      );
+    }
+    const screenplay = requireScreenplayDocument(session);
+    const document = readSceneShotListDocument({
+      row: shotListRow,
+      screenplay,
+    });
+    const shot = document.shots.find((entry) => entry.shotId === input.shotId);
+    if (!shot) {
+      throw new ProjectDataError(
+        'PROJECT_DATA330',
+        `Shot was not found in the active shot list: ${input.shotId}.`,
+        { suggestion: 'Use a shot id from the active shot list.' }
+      );
+    }
+    mutate(session, shot);
+    updateSceneShotListRecordDocument({
+      session,
+      id: shotListRow.id,
+      document,
+      screenplay,
+      now: new Date().toISOString(),
+    });
+  } finally {
+    session.close();
+  }
 }
 
 function applyShotSpecs(
@@ -247,6 +377,20 @@ function normalizeShotSpecs(
   if (location) {
     next.location = location;
   }
+  const castReferences = normalizeCastReferences(shotSpecs.castReferences);
+  if (castReferences) {
+    next.castReferences = castReferences;
+  }
+  const lookbookReference = normalizeLookbookReference(
+    shotSpecs.lookbookReference
+  );
+  if (lookbookReference) {
+    next.lookbookReference = lookbookReference;
+  }
+  const referenceImages = normalizeReferenceImages(shotSpecs.referenceImages);
+  if (referenceImages) {
+    next.referenceImages = referenceImages;
+  }
   const custom = normalizeCustom(shotSpecs.custom);
   if (custom) {
     next.custom = custom;
@@ -284,17 +428,42 @@ function normalizeLocation(
   if (locationId) {
     next.locationId = locationId;
   }
-  if (location.usesDifferentLocation !== undefined) {
-    next.usesDifferentLocation = location.usesDifferentLocation;
-  }
   if (location.azimuthView) {
     next.azimuthView = location.azimuthView;
   }
-  const customView = location.customView?.trim();
-  if (customView) {
-    next.customView = customView;
-  }
   return Object.keys(next).length ? next : undefined;
+}
+
+function normalizeCastReferences(
+  castReferences: ShotSpecs['castReferences']
+): ShotSpecs['castReferences'] | undefined {
+  if (!castReferences) {
+    return undefined;
+  }
+  if (castReferences.castMemberIds) {
+    return {
+      castMemberIds: [...new Set(castReferences.castMemberIds)],
+    };
+  }
+  return undefined;
+}
+
+function normalizeLookbookReference(
+  lookbookReference: ShotSpecs['lookbookReference']
+): ShotSpecs['lookbookReference'] | undefined {
+  const lookbookImageId = lookbookReference?.lookbookImageId?.trim();
+  return lookbookImageId ? { lookbookImageId } : undefined;
+}
+
+function normalizeReferenceImages(
+  referenceImages: ShotSpecs['referenceImages']
+): ShotSpecs['referenceImages'] | undefined {
+  if (!referenceImages?.customReferenceInputIds) {
+    return undefined;
+  }
+  return {
+    customReferenceInputIds: [...new Set(referenceImages.customReferenceInputIds)],
+  };
 }
 
 function normalizeMovement(

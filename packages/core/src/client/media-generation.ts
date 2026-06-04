@@ -9,6 +9,8 @@ import type {
   SceneShotListDocument,
   SceneShotListSummary,
   SceneShot,
+  LocationAzimuthViewId,
+  ShotVideoTakePromptDraft,
   ShotVideoTakeDependencyKind,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
@@ -893,6 +895,92 @@ export interface ShotVideoTakeProductionEstimateReport {
   estimate: GenerationEstimate | null;
   plan?: ShotVideoTakeGenerationPlan;
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export type ShotVideoTakeReferenceChoiceState =
+  | 'selected-ready'
+  | 'selected-planned'
+  | 'available'
+  | 'not-selected'
+  | 'unavailable';
+
+export interface ShotVideoTakeReferenceImagePreview {
+  assetId: string;
+  assetFileId: string;
+  projectRelativePath: ProjectRelativePath;
+  title: string;
+  alt: string;
+  url?: string;
+}
+
+export interface ShotVideoTakeReferenceCardPlan {
+  state: ShotVideoTakeReferenceChoiceState;
+  mediaKind: MediaKind;
+  dependencyId?: string;
+  dependencyNodeId?: string;
+  planLineId?: string;
+  purpose?: MediaGenerationPurpose | null;
+  pricing: MediaGenerationDependencyPricing;
+  previews: ShotVideoTakeReferenceImagePreview[];
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface ShotVideoTakeCastReferenceChoice {
+  castMemberId: string;
+  name: string;
+  selected: boolean;
+  defaultSelected: boolean;
+  characterSheet: ShotVideoTakeReferenceCardPlan;
+}
+
+export interface ShotVideoTakeLocationViewChoice {
+  viewId: LocationAzimuthViewId;
+  label: string;
+  selected: boolean;
+  preview: ShotVideoTakeReferenceImagePreview | null;
+}
+
+export interface ShotVideoTakeLocationReferenceChoice {
+  locationId: string;
+  name: string;
+  selected: boolean;
+  defaultSelected: boolean;
+  environmentSheet: ShotVideoTakeReferenceCardPlan;
+  viewChoices: ShotVideoTakeLocationViewChoice[];
+}
+
+export interface ShotVideoTakeLookbookReferenceChoice {
+  lookbookImageId: string | null;
+  lookbookId: string;
+  title: string;
+  selected: boolean;
+  defaultSelected: boolean;
+  image: ShotVideoTakeReferenceCardPlan;
+}
+
+export type ShotVideoTakeImageReferenceKind =
+  | 'first-frame'
+  | 'last-frame'
+  | 'shot-reference-sheet'
+  | 'custom-reference-image';
+
+export interface ShotVideoTakeImageReferenceChoice {
+  referenceKind: ShotVideoTakeImageReferenceKind;
+  title: string;
+  selected: boolean;
+  image: ShotVideoTakeReferenceCardPlan;
+}
+
+export interface ShotVideoTakeProductionPlanReport {
+  target: SceneShotMediaGenerationTarget;
+  productionGroup: ShotVideoTakeProductionGroup;
+  finalPrompt: ShotVideoTakePromptDraft | null;
+  plan: ShotVideoTakeGenerationPlan;
+  castReferences: ShotVideoTakeCastReferenceChoice[];
+  locationReferences: ShotVideoTakeLocationReferenceChoice[];
+  lookbookReferences: ShotVideoTakeLookbookReferenceChoice[];
+  imageReferences: ShotVideoTakeImageReferenceChoice[];
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
 export type ShotVideoInputPolicyMode = 'reuse-selected' | 'regenerate' | 'auto';

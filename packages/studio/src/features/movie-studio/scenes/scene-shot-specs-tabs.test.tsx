@@ -2,13 +2,15 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SceneShot } from '@gorenku/studio-core/client';
+import type {
+  SceneShot,
+  ShotVideoTakeProductionPlanReport,
+} from '@gorenku/studio-core/client';
 import type {
   SceneShotListResourceResponse,
-  StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import { updateSceneShotSpecs } from '@/services/studio-screenplay-api';
-import { readLocationAssets } from '@/services/studio-project-assets-api';
+import { updateShotLocationReference } from '@/services/studio-shot-video-takes-api';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotDetail } from './scene-shot-detail';
@@ -20,7 +22,6 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
-  readLocationAssets: vi.fn().mockResolvedValue([]),
   locationAssetFileUrl: vi.fn(
     (
       projectName: string,
@@ -30,6 +31,13 @@ vi.mock('@/services/studio-project-assets-api', () => ({
     ) =>
       `/studio-api/projects/${projectName}/locations/${locationId}/assets/${assetId}/files/${fileId}`
   ),
+}));
+
+vi.mock('@/services/studio-shot-video-takes-api', () => ({
+  updateShotLocationReference: vi.fn().mockResolvedValue({
+    resource: {},
+    resourceKeys: [],
+  }),
 }));
 
 class ResizeObserverStub {
@@ -79,6 +87,124 @@ function pressed(name: string): boolean {
   );
 }
 
+function locationProductionPlan(): ShotVideoTakeProductionPlanReport {
+  return {
+    target: {
+      kind: 'sceneShotGroup',
+      id: 'scene-shot-group',
+      sceneId: 'scene_hook',
+      shotListId: 'shot_list_hook',
+      productionGroupId: 'production_group_hook',
+      shotIds: ['shot_001'],
+    },
+    productionGroup: {
+      productionGroupId: 'production_group_hook',
+      shotIds: ['shot_001'],
+      videoTakeProduction: {},
+    },
+    finalPrompt: null,
+    plan: {
+      planId: 'plan_hook',
+      request: {
+        projectId: 'project_hook',
+        sceneId: 'scene_hook',
+        shotListId: 'shot_list_hook',
+        productionGroupId: 'production_group_hook',
+        intent: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        routeSettings: {},
+        inputPolicy: { defaultMode: 'auto' },
+      },
+      model: {
+        choice: 'fal-ai/bytedance/seedance-2.0',
+        label: 'Seedance 2.0',
+        version: '2.0',
+        provider: 'fal-ai',
+      },
+      route: {
+        intent: 'text-only',
+        providerModel: 'bytedance/seedance-2.0/text-to-video',
+        mode: 'text-to-video',
+        inputRoles: [],
+        parameters: [],
+      },
+      dependencyMap: {
+        rootPurpose: 'shot.video-take',
+        nodes: [],
+        edges: [],
+        estimate: {
+          state: 'complete',
+          estimatedTotalUsd: 0,
+          pricedNodeCount: 0,
+          unpricedNodeCount: 0,
+          missingNodeCount: 0,
+          requiresPriceOverride: false,
+        },
+        execution: { topologicalNodeIds: [], levels: [], diagnostics: [] },
+        diagnostics: [],
+      },
+      lines: [],
+      estimate: {
+        state: 'complete',
+        estimatedTotalUsd: 0,
+        pricedLineCount: 0,
+        unpricedLineCount: 0,
+        missingLineCount: 0,
+        requiresPriceOverride: false,
+      },
+      diagnostics: [],
+      finalEstimate: null,
+    },
+    castReferences: [],
+    locationReferences: [
+      {
+        locationId: 'location_gate',
+        name: 'Sea Gate',
+        selected: true,
+        defaultSelected: true,
+        environmentSheet: {
+          state: 'selected-ready',
+          mediaKind: 'image',
+          pricing: { state: 'not-applicable', estimatedUsd: null },
+          previews: [],
+          diagnostics: [],
+        },
+        viewChoices: [
+          {
+            viewId: 'front',
+            label: 'Front',
+            selected: true,
+            preview: {
+              assetId: 'asset_location_environment_sheet',
+              assetFileId: 'asset_file_location_view_front',
+              projectRelativePath: 'locations/sea-gate/sheet-front.png' as never,
+              title: 'Front',
+              alt: 'Front',
+            },
+          },
+        ],
+      },
+      {
+        locationId: 'location_harbor',
+        name: 'Golden Horn',
+        selected: false,
+        defaultSelected: false,
+        environmentSheet: {
+          state: 'available',
+          mediaKind: 'image',
+          pricing: { state: 'not-applicable', estimatedUsd: null },
+          previews: [],
+          diagnostics: [],
+        },
+        viewChoices: [],
+      },
+    ],
+    lookbookReferences: [],
+    imageReferences: [],
+    diagnostics: [],
+  };
+}
+
 describe('SceneShotDetail', () => {
   it('shows the shot-design tabs without Camera Framing or Camera Type', () => {
     render(
@@ -95,9 +221,13 @@ describe('SceneShotDetail', () => {
     );
 
     expect(screen.getByRole('tab', { name: 'Description' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Lookbook' })).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Composition' })).not.toBeNull();
-    expect(screen.getByRole('tab', { name: 'Camera Motion' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Motion' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Cast' })).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Location' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'References' })).not.toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Camera Motion' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Camera Framing' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Camera Type' })).toBeNull();
   });
@@ -277,22 +407,19 @@ describe('SceneShotCameraMotionTab', () => {
 describe('SceneShotLocationTab', () => {
   beforeEach(() => {
     vi.mocked(updateSceneShotSpecs).mockClear();
-    vi.mocked(readLocationAssets).mockReset();
-    vi.mocked(readLocationAssets).mockResolvedValue([]);
+    vi.mocked(updateShotLocationReference).mockClear();
   });
 
   it('persists the selected shot location', async () => {
     renderWithProvider(
       <SceneShotLocationTab
         projectName='constantinople'
+        sceneId='scene_hook'
         shot={{
           ...SHOT,
           locationIds: ['location_gate', 'location_harbor'],
         }}
-        locationLabels={{
-          location_gate: 'Sea Gate',
-          location_harbor: 'Golden Horn',
-        }}
+        productionPlan={locationProductionPlan()}
       />,
       {
         shot: {
@@ -306,15 +433,11 @@ describe('SceneShotLocationTab', () => {
 
     await waitFor(
       () => {
-        expect(updateSceneShotSpecs).toHaveBeenLastCalledWith(
+        expect(updateShotLocationReference).toHaveBeenLastCalledWith(
           'constantinople',
           'scene_hook',
           'shot_001',
-          expect.objectContaining({
-            location: expect.objectContaining({
-              locationId: 'location_harbor',
-            }),
-          })
+          { locationId: 'location_harbor' }
         );
       },
       { timeout: 2000 }
@@ -322,13 +445,12 @@ describe('SceneShotLocationTab', () => {
   });
 
   it('renders environment views without raw ids or filenames on visual cards', async () => {
-    vi.mocked(readLocationAssets).mockResolvedValue([environmentSheetAsset()]);
-
     renderWithProvider(
       <SceneShotLocationTab
         projectName='constantinople'
+        sceneId='scene_hook'
         shot={{ ...SHOT, locationIds: ['location_gate'] }}
-        locationLabels={{ location_gate: 'Sea Gate' }}
+        productionPlan={locationProductionPlan()}
       />,
       {
         shot: { ...SHOT, locationIds: ['location_gate'] },
@@ -415,51 +537,5 @@ function sceneShotListResource(
     storyboardImagesByShotId: {},
     castMemberLabels: {},
     locationLabels: {},
-  };
-}
-
-function environmentSheetAsset(): StudioAssetResponse {
-  return {
-    assetId: 'asset_location_environment_sheet',
-    relationshipId: 'relationship_location_environment_sheet',
-    target: { kind: 'location', locationId: 'location_gate' },
-    localeId: null,
-    type: 'location_environment_sheet',
-    selection: { kind: 'select', order: 1 },
-    availability: 'ready',
-    mediaKind: 'image',
-    title: 'sheet-front.png',
-    oneLineSummary: null,
-    origin: 'generated',
-    role: 'environment_sheet',
-    sortOrder: 1,
-    files: [
-      environmentSheetFile('asset_file_location_composite', 'composite'),
-      environmentSheetFile('asset_file_location_view_front', 'view_front'),
-      environmentSheetFile('asset_file_location_view_right', 'view_right'),
-      environmentSheetFile('asset_file_location_view_back', 'view_back'),
-      environmentSheetFile('asset_file_location_view_left', 'view_left'),
-    ],
-    createdAt: '2026-06-01T00:00:00.000Z',
-    updatedAt: '2026-06-01T00:00:00.000Z',
-  };
-}
-
-function environmentSheetFile(
-  id: string,
-  role: string
-): StudioAssetResponse['files'][number] {
-  return {
-    id,
-    role,
-    projectRelativePath:
-      `assets/locations/location_gate/${id}.png` as StudioAssetResponse['files'][number]['projectRelativePath'],
-    mediaKind: 'image',
-    mimeType: 'image/png',
-    sizeBytes: 1000,
-    contentHash: null,
-    width: 1280,
-    height: 720,
-    durationSeconds: null,
   };
 }

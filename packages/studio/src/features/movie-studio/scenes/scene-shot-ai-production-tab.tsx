@@ -1,52 +1,26 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type {
-  SceneShot,
-  ShotVideoTakePreflightReport,
-  ShotVideoTakeProductionGroup,
   ShotVideoTakeProductionEstimateReport,
+  ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
-import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { SceneShotAiProductionIntentList } from './scene-shot-ai-production-intent-list';
 import { SceneShotAiProductionModelTable } from './scene-shot-ai-production-model-table';
 import { SceneShotAiProductionRunSetup } from './scene-shot-ai-production-run-setup';
-import { SceneShotVideoTakePreflightDialog } from './scene-shot-video-take-preflight-dialog';
-import { findGroupForShot } from './shot-video-take-grouping';
 import {
   buildIntentOptions,
   buildModelRows,
   enabledParameters,
   findModelReport,
 } from './shot-video-take-production-projection';
-import { useShotVideoTakeProduction } from './use-shot-video-take-production';
+import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-production';
 
 interface SceneShotAiProductionTabProps {
-  projectName: string;
-  sceneId: string;
-  shot: SceneShot;
-  productionGroups: ShotVideoTakeProductionGroup[];
-  onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
+  production: UseShotVideoTakeProductionResult;
 }
 
 export function SceneShotAiProductionTab({
-  projectName,
-  sceneId,
-  shot,
-  productionGroups,
-  onResourceRefreshed,
+  production,
 }: SceneShotAiProductionTabProps) {
-  const [previewOpen, setPreviewOpen] = useState(false);
-
-  const durableGroup = findGroupForShot(productionGroups, shot.shotId);
-  const shotIdsKey = (durableGroup?.shotIds ?? [shot.shotId]).join(',');
-  const shotIds = useMemo(() => shotIdsKey.split(','), [shotIdsKey]);
-
-  const production = useShotVideoTakeProduction({
-    projectName,
-    sceneId,
-    shotIds,
-    onResourceRefreshed,
-  });
-
   const {
     loadState,
     loadError,
@@ -58,18 +32,15 @@ export function SceneShotAiProductionTab({
     setModel,
     setParameter,
     autosave,
-    preflight,
+    productionPlan,
     estimate,
     estimateState,
-    previewState,
-    runPreview,
-    reuseInput,
-    regenerateInput,
+    planState,
   } = production;
 
   const intentOptions = useMemo(
-    () => buildIntentOptions(productionGroup?.shotIds.length ?? shotIds.length),
-    [productionGroup?.shotIds.length, shotIds.length]
+    () => buildIntentOptions(productionGroup?.shotIds.length ?? 1),
+    [productionGroup?.shotIds.length]
   );
 
   const modelRows = useMemo(
@@ -81,11 +52,6 @@ export function SceneShotAiProductionTab({
     () => (models ? findModelReport(models, selectedModel) : null),
     [models, selectedModel]
   );
-
-  const handleOpenPreview = useCallback(() => {
-    setPreviewOpen(true);
-    void runPreview();
-  }, [runPreview]);
 
   if (loadState === 'error') {
     return (
@@ -120,35 +86,23 @@ export function SceneShotAiProductionTab({
           parameters={enabledParameters(selectedModelReport)}
           values={productionGroup.videoTakeProduction.parameterValues ?? {}}
           onParameterChange={setParameter}
-          estimate={displayEstimateTotal(estimate, preflight)}
-          estimatePending={estimateState === 'loading' || previewState === 'loading'}
-          onPreview={handleOpenPreview}
-          previewLoading={previewState === 'loading'}
+          estimate={displayEstimateTotal(estimate, productionPlan)}
+          estimatePending={estimateState === 'loading' || planState === 'loading'}
+          finalPrompt={productionPlan?.finalPrompt ?? null}
           autosave={autosave}
         />
       </div>
-
-      <SceneShotVideoTakePreflightDialog
-        open={previewOpen}
-        onOpenChange={setPreviewOpen}
-        preflight={preflight}
-        modelLabel={selectedModelReport?.label}
-        parameters={enabledParameters(selectedModelReport)}
-        previewLoading={previewState === 'loading'}
-        onReuse={reuseInput}
-        onRegenerate={regenerateInput}
-      />
     </div>
   );
 }
 
 function displayEstimateTotal(
   estimate: ShotVideoTakeProductionEstimateReport | null,
-  preflight: ShotVideoTakePreflightReport | null
+  productionPlan: ShotVideoTakeProductionPlanReport | null
 ): number | null {
-  const graphEstimate = estimate?.plan?.estimate ?? preflight?.plan?.estimate ?? null;
+  const graphEstimate = estimate?.plan?.estimate ?? productionPlan?.plan.estimate ?? null;
   if (graphEstimate) {
     return graphEstimate.estimatedTotalUsd;
   }
-  return estimate?.estimate?.estimatedCostUsd ?? preflight?.estimate?.estimatedCostUsd ?? null;
+  return estimate?.estimate?.estimatedCostUsd ?? productionPlan?.plan.finalEstimate?.estimatedCostUsd ?? null;
 }

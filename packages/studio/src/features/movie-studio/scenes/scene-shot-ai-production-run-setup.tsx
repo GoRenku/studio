@@ -1,12 +1,11 @@
-import { Sparkles } from 'lucide-react';
 import type {
   ShotVideoTakeParameterReport,
   ShotVideoTakeParameterValue,
   ShotVideoTakeParameterValues,
+  ShotVideoTakePromptDraft,
 } from '@gorenku/studio-core/client';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { AutosaveStatus } from '@/ui/autosave-status';
-import { Button } from '@/ui/button';
 import { RunSetupParameter } from './run-setup-controls';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
 
@@ -17,24 +16,17 @@ interface SceneShotAiProductionRunSetupProps {
   /** Full-plan total in USD, or null while it is being calculated. */
   estimate: number | null;
   estimatePending: boolean;
-  onPreview: () => void;
-  previewLoading: boolean;
+  finalPrompt: ShotVideoTakePromptDraft | null;
   autosave: DebouncedAutosaveStatus;
 }
 
-/**
- * Run setup (column 3 of the AI Production tab, 0041). A scrollable parameter
- * area built from individually-designed controls plus a pinned footer with the
- * full-plan total and the always-enabled `Preview Take Plan` action.
- */
 export function SceneShotAiProductionRunSetup({
   parameters,
   values,
   onParameterChange,
   estimate,
   estimatePending,
-  onPreview,
-  previewLoading,
+  finalPrompt,
   autosave,
 }: SceneShotAiProductionRunSetupProps) {
   return (
@@ -46,6 +38,14 @@ export function SceneShotAiProductionRunSetup({
         <AutosaveStatus status={autosave} className='shrink-0' />
       </div>
       <div className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-lg border border-border/50 bg-card/40 px-3 py-3'>
+        <section className='border-b border-border/40 pb-3'>
+          <h5 className='mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
+            Final Prompt
+          </h5>
+          <p className='text-xs leading-5 text-foreground'>
+            {finalPrompt?.prompt?.trim() || 'No prompt drafted yet.'}
+          </p>
+        </section>
         {parameters.length === 0 ? (
           <p className='text-xs text-muted-foreground'>
             This model exposes no adjustable parameters.
@@ -72,10 +72,6 @@ export function SceneShotAiProductionRunSetup({
               : formatEstimateUsd(estimate)}
           </span>
         </div>
-        <Button type='button' size='sm' onClick={onPreview} disabled={previewLoading}>
-          <Sparkles data-icon='inline-start' />
-          {previewLoading ? 'Preparing…' : 'Preview Take Plan'}
-        </Button>
       </div>
     </div>
   );

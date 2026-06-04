@@ -91,27 +91,11 @@ describe('shot video take production routes', () => {
     );
   });
 
-  it('preview returns a preflight report', async () => {
-    const app = mount();
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/preview',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productionGroup: PRODUCTION_GROUP }),
-      }
-    );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.preflight.finalTake.purpose).toBe('shot.video-take');
-    expect(typeof body.preflight.agentBrief).toBe('string');
-  });
-
   it('plan accepts inputPolicy and delegates to core', async () => {
-    const planShotVideoTakeProduction = vi.fn(
-      fakeProjectDataService().planShotVideoTakeProduction
+    const readShotVideoTakeProductionPlan = vi.fn(
+      fakeProjectDataService().readShotVideoTakeProductionPlan
     );
-    const app = mount({ planShotVideoTakeProduction });
+    const app = mount({ readShotVideoTakeProductionPlan });
     const response = await app.request(
       '/constantinople/screenplay/scenes/scene_opening/video-take-production/plan',
       {
@@ -127,7 +111,7 @@ describe('shot video take production routes', () => {
       }
     );
     expect(response.status).toBe(200);
-    expect(planShotVideoTakeProduction).toHaveBeenCalledWith(
+    expect(readShotVideoTakeProductionPlan).toHaveBeenCalledWith(
       expect.objectContaining({
         sceneId: 'scene_opening',
         shotListId: 'shot_list_opening',
@@ -141,7 +125,7 @@ describe('shot video take production routes', () => {
       })
     );
     const body = await response.json();
-    expect(body.plan.planId).toBe('shot_video_take_plan_fake');
+    expect(body.report.plan.planId).toBe('shot_video_take_plan_fake');
   });
 
   it('estimate delegates to core and returns an estimate report', async () => {

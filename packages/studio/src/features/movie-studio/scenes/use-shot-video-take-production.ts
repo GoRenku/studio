@@ -5,9 +5,9 @@ import type {
   ShotVideoTakeModelChoice,
   ShotVideoTakeModelListReport,
   ShotVideoTakeParameterValue,
-  ShotVideoTakePreflightReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionGroup,
+  ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
 import {
   useDebouncedAutosave,
@@ -21,7 +21,7 @@ import {
 import {
   clearShotVideoTakeInput,
   estimateShotVideoTakeProduction,
-  previewShotVideoTakeProduction,
+  planShotVideoTakeProduction,
   readShotVideoTakeProduction,
   selectShotVideoTakeInput,
   updateShotVideoTakeProduction,
@@ -48,13 +48,13 @@ export interface UseShotVideoTakeProductionResult {
   setModel: (model: ShotVideoTakeModelChoice) => void;
   setParameter: (name: string, value: ShotVideoTakeParameterValue) => void;
   autosave: DebouncedAutosaveStatus;
-  preflight: ShotVideoTakePreflightReport | null;
+  productionPlan: ShotVideoTakeProductionPlanReport | null;
   estimate: ShotVideoTakeProductionEstimateReport | null;
   estimateState: 'idle' | 'loading' | 'error';
   estimateError: string | null;
-  previewState: 'idle' | 'loading' | 'error';
-  previewError: string | null;
-  runPreview: () => Promise<void>;
+  planState: 'idle' | 'loading' | 'error';
+  planError: string | null;
+  refreshProductionPlan: () => Promise<void>;
   reuseInput: (inputId: string) => Promise<void>;
   regenerateInput: (slot: ShotVideoTakeInputSlot) => Promise<void>;
 }
@@ -88,24 +88,22 @@ export function useShotVideoTakeProduction(
   );
   const [productionGroup, setProductionGroup] =
     useState<ShotVideoTakeProductionGroup | null>(null);
-  const [preflight, setPreflight] = useState<ShotVideoTakePreflightReport | null>(
-    null
-  );
+  const [productionPlan, setProductionPlan] =
+    useState<ShotVideoTakeProductionPlanReport | null>(null);
   const [estimate, setEstimate] =
     useState<ShotVideoTakeProductionEstimateReport | null>(null);
   const [estimateState, setEstimateState] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
   const [estimateError, setEstimateError] = useState<string | null>(null);
-  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'error'>(
+  const [planState, setPlanState] = useState<'idle' | 'loading' | 'error'>(
     'idle'
   );
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
 
   // Autosave only starts after the user edits a value, so loading the group
   // never triggers a spurious save.
   const hasUserEditedRef = useRef(false);
-  const previewOpenRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +112,7 @@ export function useShotVideoTakeProduction(
     const load = async () => {
       setLoadState('loading');
       setLoadError(null);
-      setPreflight(null);
+      setProductionPlan(null);
       setEstimate(null);
       setEstimateState('idle');
       setEstimateError(null);
@@ -338,36 +336,81 @@ export function useShotVideoTakeProduction(
     };
   }, [projectName, sceneId, productionGroup]);
 
-  const runPreview = useCallback(async () => {
+  const refreshProductionPlan = useCallback(async () => {
     if (!productionGroup) return;
-    previewOpenRef.current = true;
-    setPreviewState('loading');
-    setPreviewError(null);
+    setPlanState('loading');
+    setPlanError(null);
     try {
-      const report = await previewShotVideoTakeProduction(
+      const report = await planShotVideoTakeProduction(
         projectName,
         sceneId,
         productionGroup
       );
-      setPreflight(report);
+      setProductionPlan(report);
       setEstimate({
         target: report.target,
         productionGroup: report.productionGroup,
-        intentId: report.intentId,
-        modelChoice: report.modelChoice,
-        estimate: report.estimate,
+        intentId: report.plan.request.intent,
+        modelChoice: report.plan.request.modelChoice,
+        estimate: report.plan.finalEstimate,
         plan: report.plan,
-        issues: report.plan?.diagnostics ?? report.issues,
+        issues: report.plan.diagnostics,
       });
       setEstimateState('idle');
       setEstimateError(null);
-      setPreviewState('idle');
+      setPlanState('idle');
     } catch (error) {
-      setPreviewError(
-        error instanceof Error ? error.message : 'Unable to build preflight.'
+      setPlanError(
+        error instanceof Error ? error.message : 'Unable to build take plan.'
       );
-      setPreviewState('error');
+      setPlanState('error');
     }
+  }, [projectName, sceneId, productionGroup]);
+
+  useEffect(() => {
+    if (!productionGroup) {
+      return;
+    }
+    let cancelled = false;
+    const loadPlan = async () => {
+      setPlanState('loading');
+      setPlanError(null);
+      try {
+        const report = await planShotVideoTakeProduction(
+          projectName,
+          sceneId,
+          productionGroup
+        );
+        if (cancelled) {
+          return;
+        }
+        setProductionPlan(report);
+        setEstimate({
+          target: report.target,
+          productionGroup: report.productionGroup,
+          intentId: report.plan.request.intent,
+          modelChoice: report.plan.request.modelChoice,
+          estimate: report.plan.finalEstimate,
+          plan: report.plan,
+          issues: report.plan.diagnostics,
+        });
+        setEstimateState('idle');
+        setEstimateError(null);
+        setPlanState('idle');
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setPlanError(
+          error instanceof Error ? error.message : 'Unable to build take plan.'
+        );
+        setPlanState('error');
+      }
+    };
+    void loadPlan();
+    return () => {
+      cancelled = true;
+    };
   }, [projectName, sceneId, productionGroup]);
 
   const applyMutationResult = useCallback(
@@ -394,11 +437,9 @@ export function useShotVideoTakeProduction(
         inputId
       );
       applyMutationResult(result.resource, productionGroup.productionGroupId);
-      if (previewOpenRef.current) {
-        await runPreview();
-      }
+      await refreshProductionPlan();
     },
-    [applyMutationResult, productionGroup, projectName, runPreview, sceneId]
+    [applyMutationResult, productionGroup, projectName, refreshProductionPlan, sceneId]
   );
 
   const regenerateInput = useCallback(
@@ -411,11 +452,9 @@ export function useShotVideoTakeProduction(
         slot
       );
       applyMutationResult(result.resource, productionGroup.productionGroupId);
-      if (previewOpenRef.current) {
-        await runPreview();
-      }
+      await refreshProductionPlan();
     },
-    [applyMutationResult, productionGroup, projectName, runPreview, sceneId]
+    [applyMutationResult, productionGroup, projectName, refreshProductionPlan, sceneId]
   );
 
   const selectedModel =
@@ -436,13 +475,13 @@ export function useShotVideoTakeProduction(
     setModel,
     setParameter,
     autosave,
-    preflight,
+    productionPlan,
     estimate,
     estimateState,
     estimateError,
-    previewState,
-    previewError,
-    runPreview,
+    planState,
+    planError,
+    refreshProductionPlan,
     reuseInput,
     regenerateInput,
   };

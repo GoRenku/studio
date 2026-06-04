@@ -87,12 +87,7 @@ function hasLens(lens: ShotSpecs['lens']): boolean {
 
 function hasLocation(location: ShotSpecs['location']): boolean {
   if (!location) return false;
-  return Boolean(
-    location.locationId?.trim() ||
-      location.usesDifferentLocation !== undefined ||
-      location.azimuthView ||
-      location.customView?.trim()
-  );
+  return Boolean(location.locationId?.trim() || location.azimuthView);
 }
 
 function hasCustom(custom: ShotSpecs['custom']): boolean {

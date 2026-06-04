@@ -18,8 +18,12 @@ import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotLocationTab } from './scene-shot-location-tab';
 import { SceneShotAiProductionTab } from './scene-shot-ai-production-tab';
 import { SceneShotAiProductionGroupTag } from './scene-shot-ai-production-group-tag';
+import { SceneShotCastTab } from './scene-shot-cast-tab';
+import { SceneShotLookbookTab } from './scene-shot-lookbook-tab';
+import { SceneShotReferencesTab } from './scene-shot-references-tab';
 import { ShotSpecsProvider } from './shot-specs-context';
 import { findGroupForShot, groupTagLabel } from './shot-video-take-grouping';
+import { useShotVideoTakeProduction } from './use-shot-video-take-production';
 
 interface SceneShotDetailProps {
   projectName: string;
@@ -35,9 +39,12 @@ interface SceneShotDetailProps {
 
 const DESIGN_TABS = [
   { value: 'description', label: 'Description' },
+  { value: 'lookbook', label: 'Lookbook' },
   { value: 'composition', label: 'Composition' },
-  { value: 'camera-motion', label: 'Camera Motion' },
+  { value: 'motion', label: 'Motion' },
+  { value: 'cast', label: 'Cast' },
   { value: 'location', label: 'Location' },
+  { value: 'references', label: 'References' },
   { value: 'ai-production', label: 'AI Production' },
 ] as const;
 
@@ -56,6 +63,17 @@ export function SceneShotDetail({
     const group = findGroupForShot(productionGroups, shot.shotId);
     return groupTagLabel(shots, group);
   }, [productionGroups, shot.shotId, shots]);
+  const durableGroup = useMemo(
+    () => findGroupForShot(productionGroups, shot.shotId),
+    [productionGroups, shot.shotId]
+  );
+  const shotIdsKey = (durableGroup?.shotIds ?? [shot.shotId]).join(',');
+  const production = useShotVideoTakeProduction({
+    projectName,
+    sceneId,
+    shotIds: shotIdsKey.split(','),
+    onResourceRefreshed: onShotSpecsSaved,
+  });
 
   return (
     <section className='flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
@@ -93,27 +111,51 @@ export function SceneShotDetail({
                     locationLabels={locationLabels}
                   />
                 </TabsContent>
+                <TabsContent value='lookbook'>
+                  <SceneShotLookbookTab
+                    projectName={projectName}
+                    sceneId={sceneId}
+                    shot={shot}
+                    productionPlan={production.productionPlan}
+                    onResourceRefreshed={onShotSpecsSaved}
+                    onPlanRefresh={production.refreshProductionPlan}
+                  />
+                </TabsContent>
                 <TabsContent value='composition'>
                   <SceneShotCompositionTab />
                 </TabsContent>
-                <TabsContent value='camera-motion'>
+                <TabsContent value='motion'>
                   <SceneShotCameraMotionTab />
+                </TabsContent>
+                <TabsContent value='cast'>
+                  <SceneShotCastTab
+                    projectName={projectName}
+                    sceneId={sceneId}
+                    shot={shot}
+                    productionPlan={production.productionPlan}
+                    onResourceRefreshed={onShotSpecsSaved}
+                    onPlanRefresh={production.refreshProductionPlan}
+                  />
                 </TabsContent>
                 <TabsContent value='location'>
                   <SceneShotLocationTab
                     projectName={projectName}
+                    sceneId={sceneId}
                     shot={shot}
-                    locationLabels={locationLabels}
+                    productionPlan={production.productionPlan}
+                    onResourceRefreshed={onShotSpecsSaved}
+                    onPlanRefresh={production.refreshProductionPlan}
+                  />
+                </TabsContent>
+                <TabsContent value='references'>
+                  <SceneShotReferencesTab
+                    projectName={projectName}
+                    sceneId={sceneId}
+                    productionPlan={production.productionPlan}
                   />
                 </TabsContent>
                 <TabsContent value='ai-production' className='h-full'>
-                  <SceneShotAiProductionTab
-                    projectName={projectName}
-                    sceneId={sceneId}
-                    shot={shot}
-                    productionGroups={productionGroups}
-                    onResourceRefreshed={onShotSpecsSaved}
-                  />
+                  <SceneShotAiProductionTab production={production} />
                 </TabsContent>
               </div>
             </Tabs>

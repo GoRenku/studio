@@ -1,23 +1,22 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
   SceneShotListDocument,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeModelListReport,
-  ShotVideoTakePreflightReport,
   ShotVideoTakeProductionEstimateReport,
+  ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
   estimateShotVideoTakeProduction,
-  previewShotVideoTakeProduction,
+  planShotVideoTakeProduction,
   readShotVideoTakeProduction,
 } from '@/services/studio-shot-video-takes-api';
-import { readLocationAssets } from '@/services/studio-project-assets-api';
 import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -31,13 +30,12 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
   readShotVideoTakeProduction: vi.fn(),
   updateShotVideoTakeProduction: vi.fn(),
   estimateShotVideoTakeProduction: vi.fn(),
-  previewShotVideoTakeProduction: vi.fn(),
+  planShotVideoTakeProduction: vi.fn(),
   selectShotVideoTakeInput: vi.fn(),
   clearShotVideoTakeInput: vi.fn(),
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
-  readLocationAssets: vi.fn().mockResolvedValue([]),
   locationAssetFileUrl: vi.fn(() => ''),
 }));
 
@@ -168,26 +166,90 @@ function models(): ShotVideoTakeModelListReport {
   };
 }
 
-function preflight(): ShotVideoTakePreflightReport {
+function productionPlan(
+  input: {
+    finalPrompt?: string;
+    lookbook?: boolean;
+  } = {}
+): ShotVideoTakeProductionPlanReport {
   return {
-    valid: true,
-    issues: [],
     target: context().target,
     productionGroup: context().productionGroup,
-    intentId: 'multi-shot',
-    modelChoice: 'fal-ai/bytedance/seedance-2.0',
-    preparedInputs: [],
-    availableInputs: [],
-    inputsToCreate: [],
-    inputPlanItems: [],
-    prompts: [],
-    finalTake: {
-      purpose: 'shot.video-take',
-      canCreateSpec: true,
-      title: 'Scene video take',
+    finalPrompt: input.finalPrompt ? { prompt: input.finalPrompt } : null,
+    plan: {
+      planId: 'plan_001',
+      request: {
+        projectId: 'project_001',
+        sceneId: 'scene_hook',
+        shotListId: 'shot_list_hook',
+        productionGroupId: 'group_1',
+        intent: 'multi-shot',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        routeSettings: {},
+        inputPolicy: { defaultMode: 'auto' },
+      },
+      model: {
+        choice: 'fal-ai/bytedance/seedance-2.0',
+        label: 'Seedance 2.0',
+        version: '2.0',
+        provider: 'fal-ai',
+      },
+      route: {
+        intent: 'multi-shot',
+        providerModel: 'bytedance/seedance-2.0/text-to-video',
+        mode: 'text-to-video',
+        inputRoles: [],
+        parameters: [],
+      },
+      dependencyMap: {
+        rootPurpose: 'shot.video-take',
+        nodes: [],
+        edges: [],
+        estimate: {
+          state: 'complete',
+          estimatedTotalUsd: 0.42,
+          pricedNodeCount: 1,
+          unpricedNodeCount: 0,
+          missingNodeCount: 0,
+          requiresPriceOverride: false,
+        },
+        execution: { topologicalNodeIds: [], levels: [], diagnostics: [] },
+        diagnostics: [],
+      },
+      lines: [],
+      estimate: {
+        state: 'complete',
+        estimatedTotalUsd: 0.42,
+        pricedLineCount: 1,
+        unpricedLineCount: 0,
+        missingLineCount: 0,
+        requiresPriceOverride: false,
+      },
+      diagnostics: [],
+      finalEstimate: null,
     },
-    agentBrief: 'Do the thing.',
-    estimate: null,
+    castReferences: [],
+    locationReferences: [],
+    lookbookReferences: input.lookbook
+      ? [
+          {
+            lookbookImageId: null,
+            lookbookId: 'lookbook_imperial_wound',
+            title: 'Imperial Wound',
+            selected: true,
+            defaultSelected: true,
+            image: {
+              state: 'selected-planned',
+              mediaKind: 'image',
+              pricing: { state: 'priced', estimatedUsd: 0.04 },
+              previews: [],
+              diagnostics: [],
+            },
+          },
+        ]
+      : [],
+    imageReferences: [],
+    diagnostics: [],
   };
 }
 
@@ -226,10 +288,9 @@ describe('AI Production tab', () => {
     vi.mocked(estimateShotVideoTakeProduction)
       .mockReset()
       .mockResolvedValue(estimate());
-    vi.mocked(previewShotVideoTakeProduction)
+    vi.mocked(planShotVideoTakeProduction)
       .mockReset()
-      .mockResolvedValue(preflight());
-    vi.mocked(readLocationAssets).mockReset().mockResolvedValue([]);
+      .mockResolvedValue(productionPlan({ finalPrompt: 'Final siege prompt.' }));
   });
 
   it('shows AI Production inside the lower shot tab region', async () => {
@@ -250,7 +311,7 @@ describe('AI Production tab', () => {
     expect(groupButton.tagName).toBe('BUTTON');
   });
 
-  it('renders intent gating, the model table, and opens the preview dialog', async () => {
+  it('renders intent gating, the model table, and inline run setup', async () => {
     render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
     await openAiProductionTab();
 
@@ -267,13 +328,7 @@ describe('AI Production tab', () => {
     expect(screen.queryByRole('columnheader', { name: 'Cost' })).toBeNull();
     expect(screen.queryByRole('columnheader', { name: 'Fit' })).toBeNull();
     expect(await screen.findByText('$0.42')).not.toBeNull();
-
-    // Preview Take Plan opens the dialog.
-    fireEvent.click(screen.getByRole('button', { name: 'Preview Take Plan' }));
-    await waitFor(() =>
-      expect(previewShotVideoTakeProduction).toHaveBeenCalled()
-    );
-    expect(await screen.findByText('References')).not.toBeNull();
+    expect(await screen.findByText('Final siege prompt.')).not.toBeNull();
     expect(screen.getAllByText('Estimated total').length).toBeGreaterThan(0);
   });
 
@@ -290,36 +345,17 @@ describe('AI Production tab', () => {
       context: lookbookContext,
       models: models(),
     });
-    vi.mocked(previewShotVideoTakeProduction).mockResolvedValue({
-      ...preflight(),
-      target: lookbookContext.target,
-      productionGroup: lookbookContext.productionGroup,
-      inputPlanItems: [
-        {
-          key: 'line:planned:reference-image:lookbook:lookbook_imperial_wound',
-          title: 'Imperial Wound',
-          caption: 'Lookbook reference',
-          mediaKind: 'image',
-          status: 'needed',
-          pricing: { state: 'priced', estimatedUsd: 0.04 },
-        },
-      ],
-    });
-
-    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
-    await openAiProductionTab();
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Preview Take Plan' })
+    vi.mocked(planShotVideoTakeProduction).mockResolvedValue(
+      productionPlan({ lookbook: true })
     );
 
-    const dialog = await screen.findByRole('dialog', {
-      name: 'Preview Take Plan',
-    });
-    expect(within(dialog).getByText('Imperial Wound')).not.toBeNull();
-    expect(within(dialog).getByText('Lookbook reference')).not.toBeNull();
-    expect(within(dialog).getByText('Needed')).not.toBeNull();
-    expect(within(dialog).getByText('$0.04')).not.toBeNull();
-    expect(within(dialog).queryByText('Available')).toBeNull();
-    expect(within(dialog).queryByText('Ready')).toBeNull();
+    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    const tab = await screen.findByRole('tab', { name: 'Lookbook' });
+    fireEvent.click(tab);
+
+    expect(await screen.findByText('Imperial Wound')).not.toBeNull();
+    expect(await screen.findByText('$0.04')).not.toBeNull();
+    expect(screen.queryByText('Available')).toBeNull();
+    expect(screen.queryByText('Ready')).toBeNull();
   });
 });

@@ -15,6 +15,7 @@ import {
 } from '@gorenku/studio-engines';
 import type {
   MediaGenerationEstimateReport,
+  LocationAzimuthViewId,
   MediaGenerationPurpose,
   MediaGenerationDependencyMap,
   MediaGenerationDependencyNode,
@@ -23,6 +24,7 @@ import type {
   MediaGenerationSpec,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
+  Asset,
   PreparedMediaGeneration,
   ProjectRelativePath,
   SceneShot,
@@ -30,6 +32,7 @@ import type {
   ShotVideoTakeAvailableInput,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationPlan,
+  ShotVideoTakeCastReferenceChoice,
   ShotVideoTakeInputPolicy,
   ShotVideoTakeGenerationSpec,
   ShotVideoTakeInputGenerationPurpose,
@@ -41,6 +44,9 @@ import type {
   ShotVideoTakeInputModelChoiceReport,
   ShotVideoTakeInputModelListReport,
   ShotVideoTakeIntentId,
+  ShotVideoTakeImageReferenceChoice,
+  ShotVideoTakeLocationReferenceChoice,
+  ShotVideoTakeLookbookReferenceChoice,
   ShotVideoTakeMediaImportReport,
   ShotVideoTakeModelChoice,
   ShotVideoTakeModelChoiceReport,
@@ -51,7 +57,11 @@ import type {
   ShotVideoTakePreflightReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionGroup,
+  ShotVideoTakeProductionPlanReport,
   ShotVideoTakeProductionPlan,
+  ShotVideoTakeReferenceCardPlan,
+  ShotVideoTakeReferenceChoiceState,
+  ShotVideoTakeReferenceImagePreview,
   ShotVideoTakeRequestedInput,
 } from '../../client/index.js';
 import {
@@ -66,6 +76,15 @@ import {
 } from '../../client/index.js';
 import { insertAssetFileRecord, readAssetFileRecord } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
+import {
+  listAssetRelationshipPage,
+  MAX_RESOURCE_PAGE_LIMIT,
+} from '../database/access/asset-relationships/index.js';
+import {
+  listLocationEnvironmentSheetViews,
+  readLocationEnvironmentSheetByAssetId,
+} from '../database/access/location-environment-sheets.js';
+import { listLookbookImages } from '../database/access/lookbook-images.js';
 import {
   insertMediaGenerationRun,
   insertMediaGenerationSpec,
@@ -487,6 +506,597 @@ export async function planShotVideoTakeProduction(
     diagnostics: dependencyMap.diagnostics,
     finalEstimate,
   };
+}
+
+export async function readShotVideoTakeProductionPlan(
+  input: PlanShotVideoTakeProductionInput
+): Promise<ShotVideoTakeProductionPlanReport> {
+  const plan = await planShotVideoTakeProduction(input);
+  return withShotProjectSession(input, ({ session, projectFolder, project }) => {
+    const now = new Date().toISOString();
+    const prepared = prepareShotGroupInSession({
+      session,
+      input,
+      now,
+      production: input.production,
+      persist: false,
+    });
+    const context = buildContextFromPrepared({
+      session,
+      projectFolder,
+      project,
+      prepared,
+    });
+    return buildShotVideoTakeProductionPlanReport({
+      session,
+      context,
+      plan,
+    });
+  });
+}
+
+function buildShotVideoTakeProductionPlanReport(input: {
+  session: DatabaseSession;
+  context: ShotVideoTakeGenerationContext;
+  plan: ShotVideoTakeGenerationPlan;
+}): ShotVideoTakeProductionPlanReport {
+  const screenplay = requireScreenplayDocument(input.session);
+  return {
+    target: input.context.target,
+    productionGroup: input.context.productionGroup,
+    finalPrompt:
+      input.context.productionGroup.videoTakeProduction.agentProposal
+        ?.finalPromptDraft ?? null,
+    plan: input.plan,
+    castReferences: screenplay.cast
+      .filter((castMember) => castMember.id)
+      .map((castMember) =>
+        buildCastReferenceChoice({
+          session: input.session,
+          context: input.context,
+          plan: input.plan,
+          castMemberId: castMember.id as string,
+          name: castMember.name,
+        })
+      ),
+    locationReferences: screenplay.locations
+      .filter((location) => location.id)
+      .map((location) =>
+        buildLocationReferenceChoice({
+          session: input.session,
+          context: input.context,
+          plan: input.plan,
+          locationId: location.id as string,
+          name: location.name,
+        })
+      ),
+    lookbookReferences: buildLookbookReferenceChoices({
+      session: input.session,
+      context: input.context,
+      plan: input.plan,
+    }),
+    imageReferences: buildImageReferenceChoices({
+      context: input.context,
+      plan: input.plan,
+    }),
+    diagnostics: input.plan.diagnostics,
+  };
+}
+
+function buildCastReferenceChoice(input: {
+  session: DatabaseSession;
+  context: ShotVideoTakeGenerationContext;
+  plan: ShotVideoTakeGenerationPlan;
+  castMemberId: string;
+  name: string;
+}): ShotVideoTakeCastReferenceChoice {
+  const dependencyId = dependencyIdForInput(
+    'character-sheet',
+    'cast-member',
+    input.castMemberId
+  );
+  const node = dependencyNodeById(input.plan, dependencyId);
+  const previews = previewImagesForAsset(
+    firstAssetForTarget(input.session, {
+      target: { kind: 'castMember', castMemberId: input.castMemberId },
+      role: 'character_sheet',
+    }),
+    input.name,
+    `${input.name} character sheet`
+  );
+  const selected = selectedCastIdsForShots(input.context.shots).has(
+    input.castMemberId
+  );
+  return {
+    castMemberId: input.castMemberId,
+    name: input.name,
+    selected,
+    defaultSelected: defaultCastIdsForShots(input.context.shots).has(
+      input.castMemberId
+    ),
+    characterSheet: referenceCardPlan({
+      selected,
+      mediaKind: 'image',
+      dependencyId,
+      node,
+      line: planLineForNode(input.plan, node),
+      previews,
+    }),
+  };
+}
+
+function buildLocationReferenceChoice(input: {
+  session: DatabaseSession;
+  context: ShotVideoTakeGenerationContext;
+  plan: ShotVideoTakeGenerationPlan;
+  locationId: string;
+  name: string;
+}): ShotVideoTakeLocationReferenceChoice {
+  const dependencyId = dependencyIdForInput(
+    'location-sheet',
+    'location',
+    input.locationId
+  );
+  const node = dependencyNodeById(input.plan, dependencyId);
+  const environmentSheet = firstAssetForTarget(input.session, {
+    target: { kind: 'location', locationId: input.locationId },
+    role: 'environment_sheet',
+  });
+  const previews = previewImagesForAsset(
+    environmentSheet,
+    input.name,
+    `${input.name} environment sheet`
+  );
+  const selectedLocationIds = selectedLocationIdsForShots(input.context.shots);
+  const selected = selectedLocationIds.has(input.locationId);
+  return {
+    locationId: input.locationId,
+    name: input.name,
+    selected,
+    defaultSelected: defaultLocationIdsForShots(input.context.shots).has(
+      input.locationId
+    ),
+    environmentSheet: referenceCardPlan({
+      selected,
+      mediaKind: 'image',
+      dependencyId,
+      node,
+      line: planLineForNode(input.plan, node),
+      previews,
+    }),
+    viewChoices: selected
+      ? locationViewChoices(input.session, input.context.shots, environmentSheet)
+      : [],
+  };
+}
+
+function buildLookbookReferenceChoices(input: {
+  session: DatabaseSession;
+  context: ShotVideoTakeGenerationContext;
+  plan: ShotVideoTakeGenerationPlan;
+}): ShotVideoTakeLookbookReferenceChoice[] {
+  if (!input.context.activeLookbook) {
+    return [];
+  }
+  const lookbookImages = listLookbookImages(
+    input.session,
+    input.context.activeLookbook.id
+  );
+  const selectedImageId = selectedLookbookImageIdForShots(input.context.shots);
+  const defaultImageId = lookbookImages[0]?.id ?? null;
+  const selectedChoiceId = selectedImageId ?? defaultImageId;
+  const dependencyId = dependencyIdForInput(
+    'reference-image',
+    'lookbook',
+    input.context.activeLookbook.id
+  );
+  const node = dependencyNodeById(input.plan, dependencyId);
+  const line = planLineForNode(input.plan, node);
+  if (lookbookImages.length === 0) {
+    return [
+      {
+        lookbookImageId: null,
+        lookbookId: input.context.activeLookbook.id,
+        title: input.context.activeLookbook.name,
+        selected: true,
+        defaultSelected: true,
+        image: referenceCardPlan({
+          selected: true,
+          mediaKind: 'image',
+          dependencyId,
+          node,
+          line,
+          previews: [],
+        }),
+      },
+    ];
+  }
+  return lookbookImages.map((lookbookImage) => ({
+    lookbookImageId: lookbookImage.id,
+    lookbookId: input.context.activeLookbook!.id,
+    title: lookbookImage.asset.title,
+    selected: lookbookImage.id === selectedChoiceId,
+    defaultSelected: lookbookImage.id === defaultImageId,
+    image: referenceCardPlan({
+      selected: lookbookImage.id === selectedChoiceId,
+      mediaKind: 'image',
+      dependencyId,
+      node,
+      line,
+      previews: previewImagesForLookbookImage(
+        lookbookImage,
+        lookbookImage.asset.title,
+        `${lookbookImage.asset.title} lookbook reference`
+      ),
+    }),
+  }));
+}
+
+function buildImageReferenceChoices(input: {
+  context: ShotVideoTakeGenerationContext;
+  plan: ShotVideoTakeGenerationPlan;
+}): ShotVideoTakeImageReferenceChoice[] {
+  const plannedKinds: Array<{
+    referenceKind: Exclude<
+      ShotVideoTakeImageReferenceChoice['referenceKind'],
+      'custom-reference-image'
+    >;
+    title: string;
+    dependencyId: string;
+  }> = [
+    {
+      referenceKind: 'first-frame',
+      title: 'First frame',
+      dependencyId: dependencyIdForInput('first-frame'),
+    },
+    {
+      referenceKind: 'last-frame',
+      title: 'Last frame',
+      dependencyId: dependencyIdForInput('last-frame'),
+    },
+    {
+      referenceKind: 'shot-reference-sheet',
+      title: 'Shot reference sheet',
+      dependencyId: dependencyIdForInput('shot-reference-sheet'),
+    },
+  ];
+  const plannedChoices = plannedKinds.flatMap((entry) => {
+    const node = dependencyNodeById(input.plan, entry.dependencyId);
+    if (!node) {
+      return [];
+    }
+    return [
+      {
+        referenceKind: entry.referenceKind,
+        title: entry.title,
+        selected: true,
+        image: referenceCardPlan({
+          selected: true,
+          mediaKind: 'image',
+          dependencyId: entry.dependencyId,
+          node,
+          line: planLineForNode(input.plan, node),
+          previews: previewImagesForDependencyNode(input.context, node),
+        }),
+      },
+    ];
+  });
+  const selectedCustomIds = selectedCustomReferenceInputIdsForShots(
+    input.context.shots
+  );
+  const customChoices = input.context.availableInputs
+    .filter((availableInput) => selectedCustomIds.has(availableInput.inputId))
+    .map((availableInput) => ({
+      referenceKind: 'custom-reference-image' as const,
+      title: 'Custom reference image',
+      selected: true,
+      image: referenceCardPlan({
+        selected: true,
+        mediaKind: availableInput.mediaKind,
+        previews: [
+          {
+            assetId: availableInput.assetId,
+            assetFileId: availableInput.assetFileId,
+            projectRelativePath: availableInput.projectRelativePath,
+            title: 'Custom reference image',
+            alt: 'Custom reference image',
+          },
+        ],
+      }),
+    }));
+  return [...plannedChoices, ...customChoices];
+}
+
+function selectedCastIdsForShots(shots: SceneShot[]): Set<string> {
+  return new Set(
+    shots.flatMap(
+      (shot) => shot.shotSpecs?.castReferences?.castMemberIds ?? shot.castMemberIds
+    )
+  );
+}
+
+function defaultCastIdsForShots(shots: SceneShot[]): Set<string> {
+  return new Set(shots.flatMap((shot) => shot.castMemberIds));
+}
+
+function selectedLocationIdsForShots(shots: SceneShot[]): Set<string> {
+  return new Set(
+    shots.flatMap((shot) =>
+      shot.shotSpecs?.location?.locationId
+        ? [shot.shotSpecs.location.locationId]
+        : shot.locationIds
+    )
+  );
+}
+
+function defaultLocationIdsForShots(shots: SceneShot[]): Set<string> {
+  return new Set(shots.flatMap((shot) => shot.locationIds));
+}
+
+function selectedLookbookImageIdForShots(shots: SceneShot[]): string | null {
+  for (const shot of shots) {
+    const lookbookImageId = shot.shotSpecs?.lookbookReference?.lookbookImageId;
+    if (lookbookImageId) {
+      return lookbookImageId;
+    }
+  }
+  return null;
+}
+
+function selectedCustomReferenceInputIdsForShots(shots: SceneShot[]): Set<string> {
+  return new Set(
+    shots.flatMap(
+      (shot) => shot.shotSpecs?.referenceImages?.customReferenceInputIds ?? []
+    )
+  );
+}
+
+function selectedLocationAzimuthViewForShots(
+  shots: SceneShot[]
+): LocationAzimuthViewId | null {
+  for (const shot of shots) {
+    if (shot.shotSpecs?.location?.azimuthView) {
+      return shot.shotSpecs.location.azimuthView;
+    }
+  }
+  return null;
+}
+
+function locationViewChoices(
+  session: DatabaseSession,
+  shots: SceneShot[],
+  environmentSheet: Asset | null
+): ShotVideoTakeLocationReferenceChoice['viewChoices'] {
+  if (!environmentSheet) {
+    return [];
+  }
+  const sheet = readLocationEnvironmentSheetByAssetId(
+    session,
+    environmentSheet.assetId
+  );
+  if (!sheet) {
+    return [];
+  }
+  const selectedView = selectedLocationAzimuthViewForShots(shots);
+  return listLocationEnvironmentSheetViews(session, sheet.id).map((view) => {
+    const viewId = locationAzimuthViewId(requireLocationAzimuthDegrees(view.azimuthDegrees));
+    const assetFile = readAssetFileRecord(session, {
+      assetId: sheet.assetId,
+      assetFileId: view.assetFileId,
+    });
+    return {
+      viewId,
+      label: locationAzimuthViewLabel(viewId),
+      selected:
+        selectedView === viewId ||
+        (!selectedView && view.azimuthDegrees === 0),
+      preview: assetFile
+        ? {
+            assetId: sheet.assetId,
+            assetFileId: assetFile.id,
+            projectRelativePath:
+              assetFile.projectRelativePath as ProjectRelativePath,
+            title: locationAzimuthViewLabel(viewId),
+            alt: locationAzimuthViewLabel(viewId),
+          }
+        : null,
+    };
+  });
+}
+
+function requireLocationAzimuthDegrees(value: number): 0 | 90 | 180 | 270 {
+  if (value === 0 || value === 90 || value === 180 || value === 270) {
+    return value;
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA403',
+    `Unsupported location environment sheet azimuth: ${value}.`,
+    { suggestion: 'Regenerate the location environment sheet views.' }
+  );
+}
+
+function locationAzimuthViewId(
+  azimuthDegrees: 0 | 90 | 180 | 270
+): LocationAzimuthViewId {
+  if (azimuthDegrees === 90) {
+    return 'right';
+  }
+  if (azimuthDegrees === 180) {
+    return 'back';
+  }
+  if (azimuthDegrees === 270) {
+    return 'left';
+  }
+  return 'front';
+}
+
+function locationAzimuthViewLabel(viewId: LocationAzimuthViewId): string {
+  if (viewId === 'right') {
+    return 'Right';
+  }
+  if (viewId === 'back') {
+    return 'Back';
+  }
+  if (viewId === 'left') {
+    return 'Left';
+  }
+  return 'Front';
+}
+
+function firstAssetForTarget(
+  session: DatabaseSession,
+  input: {
+    target: Parameters<typeof listAssetRelationshipPage>[1]['target'];
+    role: string;
+  }
+): Asset | null {
+  return (
+    listAssetRelationshipPage(session, {
+      target: input.target,
+      role: input.role,
+      mediaKind: 'image',
+      limit: MAX_RESOURCE_PAGE_LIMIT,
+    }).items[0] ?? null
+  );
+}
+
+function previewImagesForAsset(
+  asset: Asset | null,
+  title: string,
+  alt: string
+): ShotVideoTakeReferenceImagePreview[] {
+  if (!asset) {
+    return [];
+  }
+  const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
+  return file
+    ? [
+        {
+          assetId: asset.assetId,
+          assetFileId: file.id,
+          projectRelativePath: file.projectRelativePath,
+          title,
+          alt,
+        },
+      ]
+    : [];
+}
+
+function previewImagesForLookbookImage(
+  lookbookImage: ReturnType<typeof listLookbookImages>[number],
+  title: string,
+  alt: string
+): ShotVideoTakeReferenceImagePreview[] {
+  const file = lookbookImage.asset.files.find(
+    (candidate) => candidate.mediaKind === 'image'
+  );
+  return file
+    ? [
+        {
+          assetId: lookbookImage.asset.assetId,
+          assetFileId: file.id,
+          projectRelativePath: file.projectRelativePath,
+          title,
+          alt,
+        },
+      ]
+    : [];
+}
+
+function previewImagesForDependencyNode(
+  context: ShotVideoTakeGenerationContext,
+  node: MediaGenerationDependencyNode | null
+): ShotVideoTakeReferenceImagePreview[] {
+  if (!node?.assetId || !node.assetFileId) {
+    return [];
+  }
+  const availableInput = context.availableInputs.find(
+    (input) =>
+      input.assetId === node.assetId && input.assetFileId === node.assetFileId
+  );
+  if (!availableInput) {
+    return [];
+  }
+  return [
+    {
+      assetId: node.assetId,
+      assetFileId: node.assetFileId,
+      projectRelativePath: availableInput.projectRelativePath,
+      title: node.label,
+      alt: node.label,
+    },
+  ];
+}
+
+function dependencyNodeById(
+  plan: ShotVideoTakeGenerationPlan,
+  dependencyId: string
+): MediaGenerationDependencyNode | null {
+  return (
+    plan.dependencyMap.nodes.find(
+      (node) => node.dependencyId === dependencyId
+    ) ?? null
+  );
+}
+
+function planLineForNode(
+  plan: ShotVideoTakeGenerationPlan,
+  node: MediaGenerationDependencyNode | null
+): MediaGenerationPlanLine | null {
+  if (!node) {
+    return null;
+  }
+  return plan.lines.find((line) => line.nodeId === node.id) ?? null;
+}
+
+function referenceCardPlan(input: {
+  selected: boolean;
+  mediaKind: ShotVideoTakeReferenceCardPlan['mediaKind'];
+  dependencyId?: string;
+  node?: MediaGenerationDependencyNode | null;
+  line?: MediaGenerationPlanLine | null;
+  previews?: ShotVideoTakeReferenceImagePreview[];
+}): ShotVideoTakeReferenceCardPlan {
+  const node = input.node ?? null;
+  const line = input.line ?? null;
+  const previews = input.previews ?? [];
+  return {
+    state: referenceChoiceState({
+      selected: input.selected,
+      node,
+      previews,
+    }),
+    mediaKind: input.mediaKind,
+    ...(input.dependencyId ? { dependencyId: input.dependencyId } : {}),
+    ...(node ? { dependencyNodeId: node.id } : {}),
+    ...(line ? { planLineId: line.id } : {}),
+    purpose: line?.purpose ?? node?.purpose ?? null,
+    pricing:
+      line?.pricing ??
+      node?.pricing ?? {
+        state: 'not-applicable',
+        estimatedUsd: null,
+      },
+    previews,
+    diagnostics: line?.diagnostics ?? node?.diagnostics ?? [],
+  };
+}
+
+function referenceChoiceState(input: {
+  selected: boolean;
+  node: MediaGenerationDependencyNode | null;
+  previews: ShotVideoTakeReferenceImagePreview[];
+}): ShotVideoTakeReferenceChoiceState {
+  if (input.selected && input.node?.state === 'ready') {
+    return 'selected-ready';
+  }
+  if (input.selected && input.node?.state === 'planned') {
+    return 'selected-planned';
+  }
+  if (input.selected) {
+    return input.previews.length > 0 ? 'selected-ready' : 'unavailable';
+  }
+  return input.previews.length > 0 ? 'available' : 'not-selected';
 }
 
 async function buildShotVideoTakeDependencyMap(input: {
@@ -2783,8 +3393,8 @@ function buildContextFromPrepared(input: {
   const shots = input.prepared.orderedShotIds.map((shotId) =>
     requireShot(input.prepared.shotList.shots, shotId)
   );
-  const castIds = new Set(shots.flatMap((shot) => shot.castMemberIds));
-  const locationIds = new Set(shots.flatMap((shot) => shot.locationIds));
+  const castIds = selectedCastIdsForShots(shots);
+  const locationIds = selectedLocationIdsForShots(shots);
   const activeLookbook = readActiveLookbookId(input.session);
   const activeShotListId = readActiveSceneShotListId(input.session, input.prepared.sceneId);
   return {

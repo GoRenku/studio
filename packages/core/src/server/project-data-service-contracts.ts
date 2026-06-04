@@ -38,6 +38,7 @@ import type {
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
   LocationEnvironmentSheetModelListReport,
+  LocationAzimuthViewId,
   MediaGenerationPurpose,
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
@@ -53,6 +54,7 @@ import type {
   ShotVideoTakeModelListReport,
   ShotVideoTakePreflightReport,
   ShotVideoTakeProductionEstimateReport,
+  ShotVideoTakeProductionPlanReport,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpec,
@@ -168,6 +170,18 @@ export interface ProjectDataService {
   ): Promise<SceneShotListResource>;
   updateSceneShotSpecs(
     input: UpdateSceneShotSpecsInput
+  ): Promise<SceneShotListResource>;
+  updateSceneShotCastReferences(
+    input: UpdateSceneShotCastReferencesInput
+  ): Promise<SceneShotListResource>;
+  updateSceneShotLocationReference(
+    input: UpdateSceneShotLocationReferenceInput
+  ): Promise<SceneShotListResource>;
+  updateSceneShotLookbookReference(
+    input: UpdateSceneShotLookbookReferenceInput
+  ): Promise<SceneShotListResource>;
+  updateSceneShotCustomReferenceImages(
+    input: UpdateSceneShotCustomReferenceImagesInput
   ): Promise<SceneShotListResource>;
   readActStoryboardResource(
     input: ReadActStoryboardResourceInput
@@ -332,6 +346,7 @@ export interface ProjectDataService {
   updateShotVideoTakeProductionGroup(input: UpdateShotVideoTakeProductionGroupInput): Promise<ShotVideoTakeGenerationContext>;
   estimateShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionEstimateReport>;
   planShotVideoTakeProduction(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeGenerationPlan>;
+  readShotVideoTakeProductionPlan(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionPlanReport>;
   previewShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakePreflightReport>;
   selectShotVideoTakeInput(input: SelectShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
   clearShotVideoTakeInputSelection(input: ClearShotVideoTakeInputSelectionInput): Promise<ShotVideoTakeGenerationContext>;
@@ -1027,6 +1042,39 @@ export interface UpdateSceneShotSpecsInput
   shotId: string;
   /** Full structured selection for the shot, or null to clear it. */
   shotSpecs: ShotSpecs | null;
+}
+
+export interface UpdateSceneShotCastReferencesInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  castMemberIds: string[];
+}
+
+export interface UpdateSceneShotLocationReferenceInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  locationId: string;
+  azimuthView?: LocationAzimuthViewId;
+}
+
+export interface UpdateSceneShotLookbookReferenceInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  lookbookImageId: string | null;
+}
+
+export interface UpdateSceneShotCustomReferenceImagesInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  customReferenceInputIds: string[];
 }
 
 export interface ReadActStoryboardResourceInput extends RenkuConfigPathOptions {

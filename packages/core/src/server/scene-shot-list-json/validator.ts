@@ -543,6 +543,7 @@ function validateShotSpecsSemantics(
     return;
   }
   validateShotSpecsLocation(shot, shotPath, context, issues, filePath);
+  validateShotSpecsCastReferences(shot, shotPath, context, issues, filePath);
   validateShotSpecsLens(shot, shotPath, issues, filePath);
 }
 
@@ -559,51 +560,62 @@ function validateShotSpecsLocation(
   }
   const locationPath = [...shotPath, 'shotSpecs', 'location'];
   if (location.locationId) {
-    if (location.usesDifferentLocation === true) {
-      if (!context.locationIds.has(location.locationId)) {
-        issues.push(
-          error(
-            'Shot location override references an unknown project location.',
-            [...locationPath, 'locationId'],
-            filePath,
-            'Use a location id from the current project.'
-          )
-        );
-      }
-    } else if (!shot.locationIds.includes(location.locationId)) {
+    if (!context.locationIds.has(location.locationId)) {
       issues.push(
         error(
-          'Shot specs location must be one of the shot locationIds unless usesDifferentLocation is true.',
+          'Shot location reference uses an unknown project location.',
           [...locationPath, 'locationId'],
           filePath,
-          'Choose a shot location id, or set usesDifferentLocation to true for an intentional override.'
+          'Use a location id from the current project.'
         )
       );
     }
   }
-  if (location.azimuthView && location.customView) {
-    issues.push(
-      error(
-        'Shot location specs cannot use both azimuthView and customView.',
-        locationPath,
-        filePath,
-        'Choose an environment-sheet azimuth view or describe a custom view, not both.'
-      )
-    );
+  void locationPath;
+}
+
+function validateShotSpecsCastReferences(
+  shot: SceneShot,
+  shotPath: string[],
+  context: ReturnType<typeof buildSceneValidationContext>,
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const castMemberIds = shot.shotSpecs?.castReferences?.castMemberIds;
+  if (!castMemberIds) {
+    return;
   }
-  if (
-    location.customView !== undefined &&
-    location.customView.trim().length < 3
-  ) {
-    issues.push(
-      error(
-        'Shot location customView must contain useful text.',
-        [...locationPath, 'customView'],
-        filePath,
-        'Describe the intended view in a few words.'
-      )
-    );
-  }
+  const seen = new Set<string>();
+  castMemberIds.forEach((castMemberId, castMemberIndex) => {
+    const path = [
+      ...shotPath,
+      'shotSpecs',
+      'castReferences',
+      'castMemberIds',
+      String(castMemberIndex),
+    ];
+    if (seen.has(castMemberId)) {
+      issues.push(
+        error(
+          'Shot cast references contain a duplicate cast member.',
+          path,
+          filePath,
+          'Use each cast member id only once.'
+        )
+      );
+    }
+    seen.add(castMemberId);
+    if (!context.castMemberIds.has(castMemberId)) {
+      issues.push(
+        error(
+          'Shot cast reference uses an unknown cast member.',
+          path,
+          filePath,
+          'Use a cast member id from the current project.'
+        )
+      );
+    }
+  });
 }
 
 function validateShotSpecsLens(

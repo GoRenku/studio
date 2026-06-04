@@ -4,7 +4,7 @@ import type { ShotVideoTakeProductionGroup } from '@gorenku/studio-core/client';
 import {
   clearShotVideoTakeInput,
   estimateShotVideoTakeProduction,
-  previewShotVideoTakeProduction,
+  planShotVideoTakeProduction,
   readShotVideoTakeProduction,
   selectShotVideoTakeInput,
   updateShotVideoTakeProduction,
@@ -74,17 +74,20 @@ describe('studio-shot-video-takes-api', () => {
     expect(lastBody()).toEqual({ productionGroup: PRODUCTION_GROUP });
   });
 
-  it('previews with the production group', async () => {
-    vi.mocked(global.fetch).mockResolvedValue(okResponse({ preflight: {} }));
-    await previewShotVideoTakeProduction(
+  it('reads the inline production plan report with the production group', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(okResponse({ report: {} }));
+    await planShotVideoTakeProduction(
       'constantinople',
       'scene_hook',
       PRODUCTION_GROUP
     );
     const [url, init] = lastCall();
-    expect(String(url)).toContain('/video-take-production/preview');
+    expect(String(url)).toContain('/video-take-production/plan');
     expect((init as RequestInit).method).toBe('POST');
-    expect(lastBody()).toEqual({ productionGroup: PRODUCTION_GROUP });
+    expect(lastBody()).toEqual({
+      productionGroup: PRODUCTION_GROUP,
+      inputPolicy: { defaultMode: 'auto' },
+    });
   });
 
   it('estimates with the production group', async () => {
