@@ -2,7 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneShotListDocument } from '../../src/client/index.js';
+import type {
+  LookbookSheetGenerationSpec,
+  SceneShotListDocument,
+} from '../../src/client/index.js';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
@@ -23,34 +26,22 @@ describe('media generation dependency graph estimates integration', () => {
     await createSampleMovieProject({ projectData, homeDir });
   });
 
-  it('estimates a draft dependency spec through the shared purpose registry without persisting it', async () => {
+  it('estimates a draft Lookbook sheet dependency spec through the shared purpose registry without persisting it', async () => {
     const lookbook = await createActiveLookbook(projectData, homeDir);
 
     const estimate = await projectData.estimateDraftMediaGenerationSpec({
       projectName: 'constantinople',
       homeDir,
-      spec: {
-        purpose: 'lookbook.image',
-        target: { kind: 'lookbook', id: lookbook.lookbook.id },
-        modelChoice: 'fal-ai/openai/gpt-image-2',
-        prompt: 'Architectural wound reference image.',
-        focusSections: ['thesis', 'palette'],
-        takeCount: 1,
-        seed: null,
-        imageFrame: 'project',
-        detail: 'standard',
-        outputFormat: 'png',
-        title: 'Architectural wound reference',
-      },
+      spec: lookbookSheetSpec(lookbook.lookbook.id),
     });
 
-    expect(estimate.spec.id).toBe(`draft:lookbook.image:lookbook:${lookbook.lookbook.id}`);
+    expect(estimate.spec.id).toBe(`draft:lookbook.sheet:lookbook:${lookbook.lookbook.id}`);
     expect(estimate.estimate.estimatedCostUsd).toEqual(expect.any(Number));
 
     const persisted = await projectData.listMediaGenerationSpecs({
       projectName: 'constantinople',
       homeDir,
-      purpose: 'lookbook.image',
+      purpose: 'lookbook.sheet',
       target: { kind: 'lookbook', id: lookbook.lookbook.id },
     });
     expect(persisted.specs).toEqual([]);
@@ -71,7 +62,7 @@ describe('media generation dependency graph estimates integration', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'reference',
+        inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         parameterValues: { duration: 6 },
       },
@@ -94,8 +85,8 @@ describe('media generation dependency graph estimates integration', () => {
         }),
         expect.objectContaining({
           kind: 'dependency-generation',
-          dependencyKind: 'lookbook-reference-image',
-          purpose: 'lookbook.image',
+          dependencyKind: 'lookbook-sheet',
+          purpose: 'lookbook.sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
@@ -132,9 +123,9 @@ describe('media generation dependency graph estimates integration', () => {
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
-          dependencyNodeId: `planned:reference-image:lookbook:${lookbook.lookbook.id}`,
+          dependencyNodeId: `planned:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
           title: 'Imperial Wound',
-          caption: 'Lookbook reference',
+          caption: 'Lookbook sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
@@ -157,7 +148,7 @@ describe('media generation dependency graph estimates integration', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'first-frame',
+        inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         parameterValues: {
           duration: 12,
@@ -171,7 +162,7 @@ describe('media generation dependency graph estimates integration', () => {
     const firstFrameNodeId = 'planned:first-frame:production-group:';
     const characterNodeId = `planned:character-sheet:cast-member:${ids.castMemberId}`;
     const locationNodeId = `planned:location-sheet:location:${ids.locationId}`;
-    const lookbookNodeId = `planned:reference-image:lookbook:${lookbook.lookbook.id}`;
+    const lookbookNodeId = `planned:lookbook-sheet:lookbook:${lookbook.lookbook.id}`;
 
     expect(preflight.plan?.dependencyMap.edges).toEqual(
       expect.arrayContaining([
@@ -217,7 +208,7 @@ describe('media generation dependency graph estimates integration', () => {
         expect.objectContaining({
           dependencyNodeId: lookbookNodeId,
           title: 'Imperial Wound',
-          caption: 'Lookbook reference',
+          caption: 'Lookbook sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced', estimatedUsd: 0.04 }),
         }),
@@ -251,6 +242,21 @@ async function sampleIds(
     sceneId: scene.id as string,
     castMemberId: screenplay.screenplay!.cast[1]!.id as string,
     locationId: screenplay.screenplay!.locations[0]!.id as string,
+  };
+}
+
+function lookbookSheetSpec(lookbookId: string): LookbookSheetGenerationSpec {
+  return {
+    purpose: 'lookbook.sheet',
+    target: { kind: 'lookbook', id: lookbookId },
+    modelChoice: 'fal-ai/openai/gpt-image-2',
+    prompt: 'Architectural wound reference sheet.',
+    takeCount: 1,
+    seed: null,
+    sheetFrame: 'project',
+    detail: 'standard',
+    outputFormat: 'png',
+    title: 'Architectural wound reference sheet',
   };
 }
 

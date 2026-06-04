@@ -25,6 +25,7 @@ import {
   listLookbookImages,
   readLookbookImage,
 } from '../database/access/lookbook-images.js';
+import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -71,6 +72,7 @@ export async function readLookbookResource(
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const row = requireLookbookRecordById(session, input.lookbookId);
     const images = listLookbookImages(session, row.id);
+    const sheets = listLookbookSheets(session, row.id);
     const cardImageIds = listLookbookCardImageIds(session);
     return {
       valid: true,
@@ -84,6 +86,7 @@ export async function readLookbookResource(
       cardImage: readCardImage(session, cardImageIds.get(row.id), row.id),
       isActive: readActiveLookbookId(session) === row.id,
       images,
+      sheets,
       imagesBySection: buildImagesBySection(images),
       resourceKeys: [
         'surface:visual-language:lookbooks',

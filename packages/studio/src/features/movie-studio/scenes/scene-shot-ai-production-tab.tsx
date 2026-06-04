@@ -3,11 +3,11 @@ import type {
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
-import { SceneShotAiProductionIntentList } from './scene-shot-ai-production-intent-list';
+import { SceneShotAiProductionInputModeList } from './scene-shot-ai-production-input-mode-list';
 import { SceneShotAiProductionModelTable } from './scene-shot-ai-production-model-table';
 import { SceneShotAiProductionRunSetup } from './scene-shot-ai-production-run-setup';
 import {
-  buildIntentOptions,
+  buildInputModeOptions,
   buildModelRows,
   enabledParameters,
   findModelReport,
@@ -26,9 +26,9 @@ export function SceneShotAiProductionTab({
     loadError,
     models,
     productionGroup,
-    selectedIntent,
+    selectedInputMode,
     selectedModel,
-    setIntent,
+    setInputMode,
     setModel,
     setParameter,
     autosave,
@@ -38,14 +38,12 @@ export function SceneShotAiProductionTab({
     planState,
   } = production;
 
-  const intentOptions = useMemo(
-    () => buildIntentOptions(productionGroup?.shotIds.length ?? 1),
-    [productionGroup?.shotIds.length]
-  );
+  const inputModeOptions = useMemo(() => buildInputModeOptions(), []);
+  const isMultiShotGroup = (productionGroup?.shotIds.length ?? 1) > 1;
 
   const modelRows = useMemo(
-    () => (models && selectedIntent ? buildModelRows(models, selectedIntent) : []),
-    [models, selectedIntent]
+    () => (models && selectedInputMode ? buildModelRows(models, selectedInputMode) : []),
+    [models, selectedInputMode]
   );
 
   const selectedModelReport = useMemo(
@@ -71,10 +69,10 @@ export function SceneShotAiProductionTab({
     <div className='flex h-full min-h-0 flex-col py-4'>
       <div className='grid min-h-0 flex-1 grid-cols-[150px_minmax(240px,1fr)_minmax(260px,1.1fr)] gap-4'>
         <div className='flex min-h-0 flex-col overflow-y-auto pr-1'>
-          <SceneShotAiProductionIntentList
-            options={intentOptions}
-            selectedIntent={selectedIntent}
-            onSelectIntent={setIntent}
+          <SceneShotAiProductionInputModeList
+            options={inputModeOptions}
+            selectedInputMode={selectedInputMode}
+            onSelectInputMode={setInputMode}
           />
         </div>
         <SceneShotAiProductionModelTable
@@ -90,6 +88,7 @@ export function SceneShotAiProductionTab({
           estimatePending={estimateState === 'loading' || planState === 'loading'}
           finalPrompt={productionPlan?.finalPrompt ?? null}
           autosave={autosave}
+          isMultiShotGroup={isMultiShotGroup}
         />
       </div>
     </div>

@@ -56,7 +56,7 @@ export {
   type ShotVideoRouteParameter,
   type ShotVideoRoutePricing,
   type ShotVideoTakeInputKind,
-  type ShotVideoTakeIntent,
+  type ShotVideoTakeInputMode,
   type ShotVideoTakeModelChoice,
   type ShotVideoTakeRouteParameterValue,
 } from './shot-video/shot-video-model-families.js';

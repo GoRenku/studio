@@ -26,6 +26,7 @@ import type {
   LookbookImage,
   LookbookListItemWithSources,
   LookbookSection,
+  LookbookSheet,
   VisualLanguageCommandReport,
 } from './visual-language.js';
 
@@ -252,6 +253,7 @@ export interface LookbookResource extends VisualLanguageCommandReport {
   cardImage: LookbookImage | null;
   isActive: boolean;
   images: LookbookImage[];
+  sheets: LookbookSheet[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;
 }
 

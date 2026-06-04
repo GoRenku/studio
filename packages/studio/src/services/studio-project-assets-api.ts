@@ -292,6 +292,15 @@ export function sceneAssetFileUrl(
   return `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
 }
 
+export function shotVideoTakeInputFileUrl(
+  projectName: string,
+  sceneId: string,
+  inputId: string,
+  assetFileId: string
+): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/video-take-production/inputs/${encodeURIComponent(inputId)}/files/${encodeURIComponent(assetFileId)}`;
+}
+
 function castDesignResourceUrl(
   projectName: string,
   castMemberId: string

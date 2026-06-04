@@ -1,5 +1,5 @@
 import type {
-  ShotVideoTakeIntentId,
+  ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
   ShotVideoTakeModelChoiceReport,
   ShotVideoTakeModelListReport,
@@ -7,71 +7,46 @@ import type {
 } from '@gorenku/studio-core/client';
 
 /**
- * Pure projection helpers for the AI Production tab (0041). Intent gating,
- * model availability, status reasons, and enabled parameters are derived here
+ * Pure projection helpers for the AI Production tab (0041). Input-mode
+ * availability, model status reasons, and enabled parameters are derived here
  * from core reports so the components stay thin. No hooks, services, or fetch.
  */
 
-export const SHOT_VIDEO_TAKE_INTENT_IDS: ShotVideoTakeIntentId[] = [
+export const SHOT_VIDEO_TAKE_INPUT_MODE_IDS: ShotVideoTakeInputModeId[] = [
   'text-only',
   'first-frame',
   'first-last-frame',
   'reference',
-  'multi-shot',
 ];
 
-const INTENT_LABELS: Partial<Record<ShotVideoTakeIntentId, string>> = {
+const INPUT_MODE_LABELS: Partial<Record<ShotVideoTakeInputModeId, string>> = {
   'text-only': 'Text only',
   'first-frame': 'First frame',
   'first-last-frame': 'First + last frame',
   reference: 'Reference',
-  'multi-shot': 'Multi-shot',
 };
 
-const MULTI_SHOT_DISABLED_TOOLTIP =
-  'Select adjacent shots in the rail to use multi-shot generation.';
-const SINGLE_SHOT_DISABLED_TOOLTIP =
-  'Multi-shot group selected. Split the group to use this intent.';
-
-const INTENT_UNAVAILABLE_REASON: Partial<Record<ShotVideoTakeIntentId, string>> = {
+const INPUT_MODE_UNAVAILABLE_REASON: Partial<Record<ShotVideoTakeInputModeId, string>> = {
   'text-only': 'No text-only support',
   'first-frame': 'No first frame',
   'first-last-frame': 'No first/last frame',
   reference: 'No reference input',
-  'multi-shot': 'No multi-shot support',
 };
 
-export interface IntentOption {
-  id: ShotVideoTakeIntentId;
+export interface InputModeOption {
+  id: ShotVideoTakeInputModeId;
   label: string;
   enabled: boolean;
   disabledTooltip: string | null;
 }
 
-/**
- * Intent gating follows group size. Disabled intents stay visible; no
- * dependency counts or badges appear.
- */
-export function buildIntentOptions(groupShotCount: number): IntentOption[] {
-  const isMultiShot = groupShotCount > 1;
-  return SHOT_VIDEO_TAKE_INTENT_IDS.map((id) => {
-    if (isMultiShot) {
-      const enabled = id === 'multi-shot';
-      return {
-        id,
-        label: INTENT_LABELS[id] ?? id,
-        enabled,
-        disabledTooltip: enabled ? null : SINGLE_SHOT_DISABLED_TOOLTIP,
-      };
-    }
-    const enabled = id !== 'multi-shot';
-    return {
-      id,
-      label: INTENT_LABELS[id] ?? id,
-      enabled,
-      disabledTooltip: enabled ? null : MULTI_SHOT_DISABLED_TOOLTIP,
-    };
-  });
+export function buildInputModeOptions(): InputModeOption[] {
+  return SHOT_VIDEO_TAKE_INPUT_MODE_IDS.map((id) => ({
+    id,
+    label: INPUT_MODE_LABELS[id] ?? id,
+    enabled: true,
+    disabledTooltip: null,
+  }));
 }
 
 export function findModelReport(
@@ -132,21 +107,22 @@ export interface ModelRow {
 }
 
 /**
- * Model table rows for the selected intent. The visible status stays compact;
- * full unavailable reasons are exposed as metadata so they do not stretch the row.
+ * Model table rows for the selected input mode. The visible status stays
+ * compact; full unavailable reasons are exposed as metadata so they do not
+ * stretch the row.
  */
 export function buildModelRows(
   models: ShotVideoTakeModelListReport,
-  selectedIntent: ShotVideoTakeIntentId
+  selectedInputMode: ShotVideoTakeInputModeId
 ): ModelRow[] {
   return models.models.map((model) => {
-    const supportsIntent = model.supportedIntents.includes(selectedIntent);
-    const available = model.available && supportsIntent;
+    const supportsInputMode = model.supportedInputModes.includes(selectedInputMode);
+    const available = model.available && supportsInputMode;
     const unavailableReason =
-      model.unavailableReason && !supportsIntent
-        ? (INTENT_UNAVAILABLE_REASON[selectedIntent] ?? 'Unavailable')
-        : !supportsIntent
-          ? (INTENT_UNAVAILABLE_REASON[selectedIntent] ?? 'Unavailable')
+      model.unavailableReason && !supportsInputMode
+        ? (INPUT_MODE_UNAVAILABLE_REASON[selectedInputMode] ?? 'Unavailable')
+        : !supportsInputMode
+          ? (INPUT_MODE_UNAVAILABLE_REASON[selectedInputMode] ?? 'Unavailable')
           : (model.unavailableReason ?? 'Unavailable');
     return {
       modelChoice: model.modelChoice,
@@ -160,14 +136,14 @@ export function buildModelRows(
         : 'Unavailable',
       statusTitle: available
         ? model.estimateInputs.requiresPreparedInputs
-          ? 'The selected intent needs a prepared input, such as a first frame or reference image.'
+          ? 'The selected input mode needs a prepared input, such as a first frame or reference image.'
           : null
         : unavailableReason,
     };
   });
 }
 
-/** Parameters valid for the current model (and therefore the current intent). */
+/** Parameters valid for the current model and selected input mode. */
 export function enabledParameters(
   model: ShotVideoTakeModelChoiceReport | null
 ): ShotVideoTakeParameterReport[] {
@@ -187,21 +163,21 @@ export function formatEstimateUsd(value: number | null | undefined): string {
   }).format(value);
 }
 
-export function defaultModelForIntent(
+export function defaultModelForInputMode(
   models: ShotVideoTakeModelListReport,
-  intent: ShotVideoTakeIntentId
+  inputMode: ShotVideoTakeInputModeId
 ): ShotVideoTakeModelChoice | undefined {
   const defaultModel = models.models.find(
     (model) =>
       model.modelChoice === models.defaultModelChoice &&
       model.available &&
-      model.supportedIntents.includes(intent)
+      model.supportedInputModes.includes(inputMode)
   );
   if (defaultModel) {
     return defaultModel.modelChoice;
   }
   const match = models.models.find(
-    (model) => model.available && model.supportedIntents.includes(intent)
+    (model) => model.available && model.supportedInputModes.includes(inputMode)
   );
   return match?.modelChoice;
 }

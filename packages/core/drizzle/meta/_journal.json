@@ -141,6 +141,13 @@
       "when": 1780403756657,
       "tag": "0019_mean_morbius",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1780583395222,
+      "tag": "0020_blue_loners",
+      "breakpoints": true
     }
   ]
 }

@@ -30,9 +30,8 @@ export function SceneShotCastTab({
   onPlanRefresh,
 }: SceneShotCastTabProps) {
   const selectedIds =
-    productionPlan?.castReferences
-      .filter((choice) => choice.selected)
-      .map((choice) => choice.castMemberId) ?? [];
+    shot.shotSpecs?.castReferences?.castMemberIds ?? shot.castMemberIds;
+  const selectedIdSet = new Set(selectedIds);
   const choices: ShotReferenceCardChoice[] =
     productionPlan?.castReferences.map((choice) => {
       const preview = choice.characterSheet.previews[0];
@@ -47,12 +46,13 @@ export function SceneShotCastTab({
       return {
         id: choice.castMemberId,
         title: choice.name,
-        selected: choice.selected,
+        selected: selectedIdSet.has(choice.castMemberId),
         card: choice.characterSheet,
         imageUrl,
         previewImages: previewImageUrl(preview, imageUrl),
         onSelect: async () => {
-          const nextIds = choice.selected
+          const selected = selectedIdSet.has(choice.castMemberId);
+          const nextIds = selected
             ? selectedIds.filter((castMemberId) => castMemberId !== choice.castMemberId)
             : [...selectedIds, choice.castMemberId];
           const result = await updateShotCastReferences(

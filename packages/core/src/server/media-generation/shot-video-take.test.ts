@@ -30,7 +30,7 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'text-only',
+        inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         requestedInputs: [
           {
@@ -44,7 +44,7 @@ describe('shot video take preflight and validation', () => {
             subjectId: ids.locationId,
           },
           {
-            kind: 'reference-image',
+            kind: 'lookbook-sheet',
             subjectKind: 'lookbook',
             subjectId: 'lookbook_test',
           },
@@ -68,7 +68,7 @@ describe('shot video take preflight and validation', () => {
           mediaKind: 'image',
         }),
         expect.objectContaining({
-          outputInputKind: 'reference-image',
+          outputInputKind: 'lookbook-sheet',
           subjectKind: 'lookbook',
           subjectId: 'lookbook_test',
           mediaKind: 'image',
@@ -94,7 +94,7 @@ describe('shot video take preflight and validation', () => {
         spec: {
           purpose: 'shot.video-take',
           target: context.target,
-          intentId: 'multi-shot',
+          inputModeId: 'reference',
           modelChoice: 'fal-ai/bytedance/seedance-2.0',
           prompt: 'One continuous two-shot video take.',
           parameterValues: {},
@@ -141,6 +141,18 @@ describe('shot video take preflight and validation', () => {
   it('estimates a first-frame take when saved duration is numeric but provider expects a string enum', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
@@ -148,7 +160,7 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'first-frame',
+        inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         parameterValues: {
           duration: 9,
@@ -165,18 +177,12 @@ describe('shot video take preflight and validation', () => {
         }),
         expect.objectContaining({
           kind: 'final-video-generation',
-          pricing: expect.objectContaining({ state: 'unpriced' }),
+          pricing: expect.objectContaining({ state: 'priced' }),
         }),
       ])
     );
-    expect(estimate.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'CORE_SHOT_VIDEO_PLAN_UNPRICED_LINE',
-          message: expect.stringContaining('missing required input: first-frame'),
-        }),
-      ])
-    );
+    expect(estimate.plan?.request.routeSettings.duration).toBe('9');
+    expect(estimate.issues).toEqual([]);
   });
 
   it('drops stale settings that are unsupported by the selected route before estimating', async () => {
@@ -189,7 +195,7 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'first-frame',
+        inputModeId: 'first-frame',
         modelChoice: 'fal-ai/kling-video/v3/pro',
         parameterValues: {
           duration: 5,
@@ -226,13 +232,13 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'first-frame',
+        inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         parameterValues: {
           duration: 9,
         },
         agentProposal: {
-          basedOnIntentId: 'first-frame',
+          basedOnInputModeId: 'first-frame',
           basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
           dependencyDrafts: [
             {
@@ -288,7 +294,7 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'text-only',
+        inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         requestedInputs: [
           {
@@ -344,7 +350,7 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'reference',
+        inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         parameterValues: { duration: 6 },
       },
@@ -353,15 +359,128 @@ describe('shot video take preflight and validation', () => {
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyNodeId: `planned:reference-image:lookbook:${lookbook.lookbook.id}`,
-          title: `reference-image (lookbook ${lookbook.lookbook.id})`,
-          caption: 'Planned generation',
+          dependencyNodeId: `planned:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
+          title: 'Imperial Wound',
+          caption: 'Lookbook sheet',
           mediaKind: 'image',
-          status: 'planned',
+          status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
       ])
     );
+  });
+
+  it('uses the selected lookbook sheet as the concrete ready reference input', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+    await writeProjectFile('generated/media/lookbook-sheet-a.png', 'sheet a');
+    await writeProjectFile('generated/media/lookbook-sheet-b.png', 'sheet b');
+    const sheetA = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet-a.png',
+      title: 'Sheet A',
+    });
+    const sheetB = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet-b.png',
+      title: 'Sheet B',
+    });
+
+    await projectData.updateSceneShotLookbookReference({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      lookbookSheetId: sheetB.imported.id,
+    });
+
+    const production = {
+      inputModeId: 'reference' as const,
+      modelChoice: 'fal-ai/bytedance/seedance-2.0' as const,
+      parameterValues: { duration: 6 },
+    };
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production,
+    });
+    const selectedSheetFile = sheetB.imported.asset.files[0]!;
+    expect(preflight.preparedInputs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'lookbook-sheet',
+          assetId: sheetB.imported.asset.assetId,
+          assetFileId: selectedSheetFile.id,
+          subjectKind: 'lookbook',
+          subjectId: lookbook.lookbook.id,
+        }),
+      ])
+    );
+    expect(preflight.preparedInputs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'lookbook-sheet',
+          assetId: sheetA.imported.asset.assetId,
+        }),
+      ])
+    );
+    expect(preflight.plan?.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `asset:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
+          kind: 'existing-asset',
+          dependencyKind: 'lookbook-sheet',
+          assetId: sheetB.imported.asset.assetId,
+          assetFileId: selectedSheetFile.id,
+        }),
+      ])
+    );
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production,
+    });
+    const sheetAChoice = report.lookbookReferences.find(
+      (choice) => choice.lookbookSheetId === sheetA.imported.id
+    );
+    const sheetBChoice = report.lookbookReferences.find(
+      (choice) => choice.lookbookSheetId === sheetB.imported.id
+    );
+
+    expect(sheetAChoice).toMatchObject({
+      selected: false,
+      image: {
+        state: 'available',
+      },
+    });
+    expect(sheetAChoice?.image.dependencyNodeId).toBeUndefined();
+    expect(sheetAChoice?.image.planLineId).toBeUndefined();
+    expect(sheetBChoice).toMatchObject({
+      selected: true,
+      image: {
+        state: 'selected-ready',
+        dependencyNodeId: `asset:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
+      },
+    });
   });
 
   it('validates selected input ownership before mutating another group selection', async () => {

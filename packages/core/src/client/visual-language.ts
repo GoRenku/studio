@@ -72,6 +72,11 @@ export interface LookbookImage {
   sections: LookbookSection[];
 }
 
+export interface LookbookSheet {
+  id: string;
+  asset: LookbookSheetAsset;
+}
+
 export interface LookbookImageAsset {
   assetId: string;
   type: string;
@@ -85,7 +90,33 @@ export interface LookbookImageAsset {
   updatedAt: string;
 }
 
+export interface LookbookSheetAsset {
+  assetId: string;
+  type: string;
+  mediaKind: string;
+  title: string;
+  oneLineSummary?: string;
+  origin: string;
+  availability: string;
+  files: LookbookSheetAssetFile[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LookbookImageAssetFile {
+  id: string;
+  role: string;
+  projectRelativePath: ProjectRelativePath;
+  mediaKind: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  contentHash: string | null;
+  width: number | null;
+  height: number | null;
+  durationSeconds: number | null;
+}
+
+export interface LookbookSheetAssetFile {
   id: string;
   role: string;
   projectRelativePath: ProjectRelativePath;
@@ -210,6 +241,7 @@ export interface LookbookShowReport extends VisualLanguageCommandReport {
   cardImage: LookbookImage | null;
   isActive: boolean;
   images: LookbookImage[];
+  sheets: LookbookSheet[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;
 }
 
@@ -224,6 +256,11 @@ export interface LookbookWriteReport extends VisualLanguageCommandReport {
 
 export interface LookbookImageMutationReport extends VisualLanguageCommandReport {
   image?: LookbookImage;
+  lookbookId: string;
+}
+
+export interface LookbookSheetMutationReport extends VisualLanguageCommandReport {
+  sheet?: LookbookSheet;
   lookbookId: string;
 }
 

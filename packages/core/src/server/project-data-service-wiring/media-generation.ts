@@ -2,6 +2,7 @@ import * as characterSheet from '../media-generation/cast-character-sheet.js';
 import * as castProfile from '../media-generation/cast-profile.js';
 import * as locationSheet from '../media-generation/location-environment-sheet.js';
 import * as lookbookImage from '../media-generation/lookbook-image.js';
+import * as lookbookSheet from '../media-generation/lookbook-sheet.js';
 import * as sceneStoryboardSheet from '../media-generation/scene-storyboard-sheet.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
 export function createMediaGenerationServiceWiring() {
@@ -18,6 +19,18 @@ export function createMediaGenerationServiceWiring() {
     runLookbookImageSpec: sharedGeneration.runMediaGenerationSpec,
     recordLookbookImageRun: lookbookImage.recordLookbookImageRun,
     importLookbookImageMedia: lookbookImage.importLookbookImageMedia,
+    buildLookbookSheetContext: lookbookSheet.buildLookbookSheetContext,
+    listLookbookSheetModels: lookbookSheet.listLookbookSheetModels,
+    validateLookbookSheetSpec: lookbookSheet.validateLookbookSheetSpec,
+    createLookbookSheetSpec: sharedGeneration.createMediaGenerationSpec,
+    updateLookbookSheetSpec: sharedGeneration.updateMediaGenerationSpec,
+    readLookbookSheetSpec: sharedGeneration.readMediaGenerationSpec,
+    listLookbookSheetSpecs: lookbookSheet.listLookbookSheetSpecs,
+    prepareLookbookSheetSpec: sharedGeneration.prepareMediaGenerationSpec,
+    estimateLookbookSheetSpec: sharedGeneration.estimateMediaGenerationSpec,
+    runLookbookSheetSpec: sharedGeneration.runMediaGenerationSpec,
+    recordLookbookSheetRun: lookbookSheet.recordLookbookSheetRun,
+    importLookbookSheetMedia: lookbookSheet.importLookbookSheetMedia,
     buildCastCharacterSheetContext: characterSheet.buildCastCharacterSheetContext, listCastCharacterSheetModels: characterSheet.listCastCharacterSheetModels,
     validateCastCharacterSheetSpec: characterSheet.validateCastCharacterSheetSpec, createCastCharacterSheetSpec: sharedGeneration.createMediaGenerationSpec,
     updateCastCharacterSheetSpec: sharedGeneration.updateMediaGenerationSpec, readCastCharacterSheetSpec: sharedGeneration.readMediaGenerationSpec,

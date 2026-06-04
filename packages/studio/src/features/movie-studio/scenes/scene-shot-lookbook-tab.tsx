@@ -4,7 +4,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { updateShotLookbookReference } from '@/services/studio-shot-video-takes-api';
-import { lookbookImageFileUrl } from '../visual-language/visual-language-image-urls';
+import { lookbookSheetFileUrl } from '../visual-language/visual-language-image-urls';
 import { DesignSection } from './scene-shot-design-controls';
 import { previewImageUrl } from './scene-shot-reference-card-images';
 import {
@@ -29,17 +29,19 @@ export function SceneShotLookbookTab({
   onResourceRefreshed,
   onPlanRefresh,
 }: SceneShotLookbookTabProps) {
+  const selectedLookbookSheetId =
+    shot.shotSpecs?.lookbookReference?.lookbookSheetId ?? null;
   const choices: ShotReferenceCardChoice[] =
     productionPlan?.lookbookReferences.map((choice) => {
       const preview = choice.image.previews[0];
       const imageUrl =
-        preview && choice.lookbookImageId
-          ? lookbookImageFileUrl(projectName, choice.lookbookImageId, preview.assetFileId)
+        preview && choice.lookbookSheetId
+          ? lookbookSheetFileUrl(projectName, choice.lookbookSheetId, preview.assetFileId)
           : null;
       return {
-        id: choice.lookbookImageId ?? choice.lookbookId,
+        id: choice.lookbookSheetId ?? choice.lookbookId,
         title: choice.title,
-        selected: choice.selected,
+        selected: choice.lookbookSheetId === selectedLookbookSheetId,
         card: choice.image,
         imageUrl,
         previewImages: previewImageUrl(preview, imageUrl),
@@ -48,7 +50,7 @@ export function SceneShotLookbookTab({
             projectName,
             sceneId,
             shot.shotId,
-            choice.lookbookImageId
+            choice.lookbookSheetId
           );
           onResourceRefreshed?.(result.resource);
           await onPlanRefresh?.();

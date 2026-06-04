@@ -3,7 +3,8 @@ import type { ShotVideoRoute } from './shot-video-model-families.js';
 import { normalizeShotVideoRouteSettings } from './shot-video-route-parameters.js';
 
 const route = {
-  intent: 'text-only',
+  inputMode: 'text-only',
+  shotGroupMode: 'single-shot',
   providerModel: 'fake-provider/text-to-video',
   mode: 'text-to-video',
   inputSlots: [],

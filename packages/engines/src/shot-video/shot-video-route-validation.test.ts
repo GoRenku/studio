@@ -21,13 +21,13 @@ describe('shot video route catalog validation', () => {
   it('keeps route parameters scoped to provider variant fields', () => {
     const klingImageRoute = SHOT_VIDEO_MODEL_FAMILIES
       .find((family) => family.choice === 'fal-ai/kling-video/v3/pro')
-      ?.routes.find((route) => route.intent === 'first-frame');
+      ?.routes.find((route) => route.inputMode === 'first-frame');
     const veoImageRoute = SHOT_VIDEO_MODEL_FAMILIES
       .find((family) => family.choice === 'fal-ai/veo3.1')
-      ?.routes.find((route) => route.intent === 'first-frame');
+      ?.routes.find((route) => route.inputMode === 'first-frame');
     const happyHorseImageRoute = SHOT_VIDEO_MODEL_FAMILIES
       .find((family) => family.choice === 'fal-ai/alibaba/happy-horse')
-      ?.routes.find((route) => route.intent === 'first-frame');
+      ?.routes.find((route) => route.inputMode === 'first-frame');
 
     expect(klingImageRoute?.parameters.map((parameter) => parameter.id)).not.toContain('aspect_ratio');
     expect(veoImageRoute?.parameters.map((parameter) => parameter.id)).not.toContain('seed');

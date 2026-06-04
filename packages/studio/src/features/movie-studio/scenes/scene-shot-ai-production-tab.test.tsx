@@ -77,7 +77,7 @@ function shotList(): SceneShotListDocument {
       {
         productionGroupId: 'group_1',
         shotIds: ['shot_001', 'shot_002'],
-        videoTakeProduction: { intentId: 'multi-shot' },
+        videoTakeProduction: { inputModeId: 'reference' },
       },
     ],
   };
@@ -123,7 +123,7 @@ function context(): ShotVideoTakeGenerationContext {
       productionGroupId: 'group_1',
       shotIds: ['shot_001', 'shot_002'],
       videoTakeProduction: {
-        intentId: 'multi-shot',
+        inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
       },
     },
@@ -135,7 +135,7 @@ function context(): ShotVideoTakeGenerationContext {
     availableInputs: [],
     existingTakes: [],
     defaults: {
-      intentId: 'multi-shot',
+      inputModeId: 'reference',
       imageDependencyModelChoice: 'fal-ai/nano-banana-2',
       parameterValues: {},
     },
@@ -153,7 +153,7 @@ function models(): ShotVideoTakeModelListReport {
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         label: 'Seedance 2.0',
         available: true,
-        supportedIntents: ['text-only', 'multi-shot'],
+        supportedInputModes: ['text-only', 'reference'],
         duration: { supported: true, values: [5, 8, 10], default: 5 },
         inputRoles: [],
         parameters: [],
@@ -183,7 +183,8 @@ function productionPlan(
         sceneId: 'scene_hook',
         shotListId: 'shot_list_hook',
         productionGroupId: 'group_1',
-        intent: 'multi-shot',
+        inputMode: 'reference',
+        shotGroupMode: 'multi-shot',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         routeSettings: {},
         inputPolicy: { defaultMode: 'auto' },
@@ -195,9 +196,10 @@ function productionPlan(
         provider: 'fal-ai',
       },
       route: {
-        intent: 'multi-shot',
-        providerModel: 'bytedance/seedance-2.0/text-to-video',
-        mode: 'text-to-video',
+        inputMode: 'reference',
+        shotGroupMode: 'multi-shot',
+        providerModel: 'bytedance/seedance-2.0/reference-to-video',
+        mode: 'image-to-video',
         inputRoles: [],
         parameters: [],
       },
@@ -233,7 +235,7 @@ function productionPlan(
     lookbookReferences: input.lookbook
       ? [
           {
-            lookbookImageId: null,
+            lookbookSheetId: null,
             lookbookId: 'lookbook_imperial_wound',
             title: 'Imperial Wound',
             selected: true,
@@ -257,7 +259,7 @@ function estimate(): ShotVideoTakeProductionEstimateReport {
   return {
     target: context().target,
     productionGroup: context().productionGroup,
-    intentId: 'multi-shot',
+    inputModeId: 'reference',
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
     estimate: {
       provider: 'fal-ai',
@@ -311,15 +313,16 @@ describe('AI Production tab', () => {
     expect(groupButton.tagName).toBe('BUTTON');
   });
 
-  it('renders intent gating, the model table, and inline run setup', async () => {
+  it('renders input modes, the model table, and inline run setup with a multi-shot group tag', async () => {
     render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
     await openAiProductionTab();
 
-    // Multi-shot group: multi-shot enabled, single-shot intents disabled.
-    const multiShot = await screen.findByRole('button', { name: 'Multi-shot' });
-    expect(multiShot.hasAttribute('disabled')).toBe(false);
-    const textOnly = screen.getByRole('button', { name: 'Text only' });
-    expect(textOnly.hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Multi-shot' })).toBeNull();
+    const textOnly = await screen.findByRole('button', { name: 'Text only' });
+    expect(textOnly.hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Reference' }).hasAttribute('disabled')).toBe(
+      false
+    );
 
     // Model table columns are exactly Model, Duration, Status.
     expect(screen.getByRole('columnheader', { name: 'Model' })).not.toBeNull();
@@ -330,6 +333,7 @@ describe('AI Production tab', () => {
     expect(await screen.findByText('$0.42')).not.toBeNull();
     expect(await screen.findByText('Final siege prompt.')).not.toBeNull();
     expect(screen.getAllByText('Estimated total').length).toBeGreaterThan(0);
+    expect(await screen.findByText('multi-shot')).not.toBeNull();
   });
 
   it('does not mark an active Lookbook as ready without a reference image', async () => {
@@ -351,6 +355,7 @@ describe('AI Production tab', () => {
 
     render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
     const tab = await screen.findByRole('tab', { name: 'Lookbook' });
+    fireEvent.focus(tab);
     fireEvent.click(tab);
 
     expect(await screen.findByText('Imperial Wound')).not.toBeNull();

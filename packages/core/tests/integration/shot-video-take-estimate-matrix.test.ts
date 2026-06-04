@@ -4,8 +4,9 @@ import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   listShotVideoModelFamilies,
-  type ShotVideoTakeIntent,
+  type ShotVideoTakeInputMode,
   type ShotVideoTakeModelChoice,
+  type ShotVideoTakeShotGroupMode,
 } from '@gorenku/studio-engines';
 import type {
   SceneShotListDocument,
@@ -34,7 +35,8 @@ interface SampleIds {
 interface EstimateMatrixCase {
   label: string;
   modelChoice: ShotVideoTakeModelChoice;
-  intentId: ShotVideoTakeIntent;
+  inputModeId: ShotVideoTakeInputMode;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
   parameterValues: ShotVideoTakeParameterValues;
   expectedRouteSettings: ShotVideoTakeParameterValues;
@@ -44,10 +46,21 @@ interface EstimateMatrixCase {
   expectedMissingDependencyLineCount: number;
 }
 
+type EstimateMatrixCaseTemplate = Omit<
+  EstimateMatrixCase,
+  | 'label'
+  | 'shotGroupMode'
+  | 'expectedMissingDependencyCostUsd'
+  | 'expectedMissingDependencyLineCount'
+> & {
+  label: string;
+};
+
 interface RunSetupPricingPermutationCase {
   label: string;
   modelChoice: ShotVideoTakeModelChoice;
-  intentId: ShotVideoTakeIntent;
+  inputModeId: ShotVideoTakeInputMode;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
   parameterValues: ShotVideoTakeParameterValues;
   expectedRouteSettings: ShotVideoTakeParameterValues;
@@ -68,6 +81,7 @@ const REFERENCE_BUNDLE_DEPENDENCY_COST_USD =
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD +
   GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD +
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
+const SHOT_GROUP_MODES: ShotVideoTakeShotGroupMode[] = ['single-shot', 'multi-shot'];
 
 const RUN_SETUP_PRICING_PERMUTATIONS: RunSetupPricingPermutationCase[] = [
   ...seedanceRunSetupPricingPermutations(),
@@ -86,33 +100,62 @@ interface MatrixProjectSetup {
   preparedInputs: {
     firstFrame: ShotVideoTakePreparedInput;
     lastFrame: ShotVideoTakePreparedInput;
+    multiShotFirstFrame: ShotVideoTakePreparedInput;
+    multiShotLastFrame: ShotVideoTakePreparedInput;
     storyboard: ShotVideoTakePreparedInput;
     referenceBundle: ShotVideoTakePreparedInput[];
   };
 }
 
 const ESTIMATE_MATRIX: EstimateMatrixCase[] = [
-  seedanceCase('text-only', 'bytedance/seedance-2.0/text-to-video'),
-  seedanceCase('first-frame', 'bytedance/seedance-2.0/image-to-video'),
-  seedanceCase('first-last-frame', 'bytedance/seedance-2.0/image-to-video'),
-  seedanceCase('reference', 'bytedance/seedance-2.0/reference-to-video'),
-  seedanceCase('multi-shot', 'bytedance/seedance-2.0/reference-to-video'),
-  klingCase('text-only', 'kling-video/v3/pro/text-to-video'),
-  klingCase('first-frame', 'kling-video/v3/pro/image-to-video'),
-  klingCase('first-last-frame', 'kling-video/v3/pro/image-to-video'),
-  klingCase('multi-shot', 'kling-video/v3/pro/text-to-video'),
-  veoCase('text-only', 'veo3.1', 1.2),
-  veoCase('first-frame', 'veo3.1/image-to-video', 3.2),
-  veoCase('first-last-frame', 'veo3.1/first-last-frame-to-video', 3.2),
-  veoCase('reference', 'veo3.1/reference-to-video', 3.2),
-  grokCase(),
-  ltxCase('text-only', 'ltx-2.3/text-to-video'),
-  ltxCase('first-frame', 'ltx-2.3/image-to-video'),
-  ltxCase('first-last-frame', 'ltx-2.3/image-to-video'),
-  happyHorseCase('text-only', 'alibaba/happy-horse/text-to-video'),
-  happyHorseCase('first-frame', 'alibaba/happy-horse/image-to-video'),
-  happyHorseCase('reference', 'alibaba/happy-horse/reference-to-video'),
+  ...shotGroupCases(seedanceCase('text-only', 'bytedance/seedance-2.0/text-to-video')),
+  ...shotGroupCases(seedanceCase('first-frame', 'bytedance/seedance-2.0/image-to-video')),
+  ...shotGroupCases(seedanceCase('first-last-frame', 'bytedance/seedance-2.0/image-to-video')),
+  ...shotGroupCases(seedanceCase('reference', 'bytedance/seedance-2.0/reference-to-video')),
+  ...shotGroupCases(klingCase('text-only', 'kling-video/v3/pro/text-to-video')),
+  ...shotGroupCases(klingCase('first-frame', 'kling-video/v3/pro/image-to-video')),
+  ...shotGroupCases(klingCase('first-last-frame', 'kling-video/v3/pro/image-to-video')),
+  ...shotGroupCases(veoCase('text-only', 'veo3.1', 1.2)),
+  ...shotGroupCases(veoCase('first-frame', 'veo3.1/image-to-video', 3.2)),
+  ...shotGroupCases(veoCase('first-last-frame', 'veo3.1/first-last-frame-to-video', 3.2)),
+  ...shotGroupCases(veoCase('reference', 'veo3.1/reference-to-video', 3.2)),
+  ...shotGroupCases(grokCase()),
+  ...shotGroupCases(ltxCase('text-only', 'ltx-2.3/text-to-video')),
+  ...shotGroupCases(ltxCase('first-frame', 'ltx-2.3/image-to-video')),
+  ...shotGroupCases(ltxCase('first-last-frame', 'ltx-2.3/image-to-video')),
+  ...shotGroupCases(happyHorseCase('text-only', 'alibaba/happy-horse/text-to-video')),
+  ...shotGroupCases(happyHorseCase('first-frame', 'alibaba/happy-horse/image-to-video')),
+  ...shotGroupCases(happyHorseCase('reference', 'alibaba/happy-horse/reference-to-video')),
 ];
+
+function shotGroupCases(template: EstimateMatrixCaseTemplate): EstimateMatrixCase[] {
+  return SHOT_GROUP_MODES.map((shotGroupMode) => {
+    const route = { ...template, shotGroupMode };
+    const expectedMissingDependencyCostUsd = missingDependencyCostForRoute(route);
+    return {
+      ...template,
+      shotGroupMode,
+      label: `${shotGroupMode} ${template.label}`,
+      expectedMissingDependencyCostUsd,
+      expectedMissingDependencyLineCount: missingDependencyLineCountForRoute(route),
+    };
+  });
+}
+
+function shotGroupRouteCases<
+  T extends {
+    inputModeId: ShotVideoTakeInputMode;
+    providerModel: string;
+  },
+>(templates: T[]): Array<T & { shotGroupMode: ShotVideoTakeShotGroupMode }> {
+  return templates.flatMap((template) =>
+    SHOT_GROUP_MODES.map((shotGroupMode) => ({
+      ...template,
+      shotGroupMode,
+    }))
+  );
+}
+
 
 describe('shot video take estimate integration matrix', () => {
   let homeDir: string;
@@ -132,11 +175,13 @@ describe('shot video take estimate integration matrix', () => {
   it('covers every current shot video model route exposed by the engines catalog', () => {
     const catalogRouteKeys = listShotVideoModelFamilies()
       .flatMap((family) =>
-        family.routes.map((route) => routeKey(family.choice, route.intent))
+        family.routes.map((route) =>
+          routeKey(family.choice, route.inputMode, route.shotGroupMode)
+        )
       )
       .sort();
     const matrixRouteKeys = ESTIMATE_MATRIX.map((entry) =>
-      routeKey(entry.modelChoice, entry.intentId)
+      routeKey(entry.modelChoice, entry.inputModeId, entry.shotGroupMode)
     ).sort();
 
     expect(matrixRouteKeys).toEqual(catalogRouteKeys);
@@ -146,14 +191,14 @@ describe('shot video take estimate integration matrix', () => {
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
       sceneId: setup.ids.sceneId,
-      shotListId: shotListIdForIntent(entry.intentId, setup),
-      shotIds: shotIdsForIntent(entry.intentId),
+      shotListId: shotListIdForCase(entry, setup),
+      shotIds: shotIdsForCase(entry),
       production: {
-        intentId: entry.intentId,
+        inputModeId: entry.inputModeId,
         modelChoice: entry.modelChoice,
         parameterValues: entry.parameterValues,
-        preparedInputs: preparedInputsForIntent(entry.intentId, setup),
-        requestedInputs: requestedInputsForIntent(entry.intentId, setup),
+        preparedInputs: preparedInputsForCase(entry, setup),
+        requestedInputs: requestedInputsForCase(entry, setup),
       },
     });
 
@@ -192,10 +237,10 @@ describe('shot video take estimate integration matrix', () => {
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
       sceneId: setup.ids.sceneId,
-      shotListId: shotListIdForIntent(entry.intentId, setup),
-      shotIds: shotIdsForIntent(entry.intentId),
+      shotListId: shotListIdForCase(entry, setup),
+      shotIds: shotIdsForCase(entry),
       production: {
-        intentId: entry.intentId,
+        inputModeId: entry.inputModeId,
         modelChoice: entry.modelChoice,
         parameterValues: entry.parameterValues,
       },
@@ -227,10 +272,10 @@ describe('shot video take estimate integration matrix', () => {
       const estimate = await projectData.estimateShotVideoTakeProduction({
         homeDir,
         sceneId: setup.ids.sceneId,
-        shotListId: shotListIdForIntent(entry.intentId, setup),
-        shotIds: shotIdsForIntent(entry.intentId),
+        shotListId: shotListIdForCase(entry, setup),
+        shotIds: shotIdsForCase(entry),
         production: {
-          intentId: entry.intentId,
+          inputModeId: entry.inputModeId,
           modelChoice: entry.modelChoice,
           parameterValues: entry.parameterValues,
         },
@@ -276,13 +321,13 @@ describe('shot video take estimate integration matrix', () => {
 });
 
 function seedanceCase(
-  intentId: ShotVideoTakeIntent,
+  inputModeId: ShotVideoTakeInputMode,
   providerModel: string
-): EstimateMatrixCase {
+): EstimateMatrixCaseTemplate {
   return {
-    label: `Seedance 2.0 ${intentId}`,
+    label: `Seedance 2.0 ${inputModeId}`,
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
-    intentId,
+    inputModeId,
     providerModel,
     parameterValues: {
       duration: 9,
@@ -303,8 +348,6 @@ function seedanceCase(
       resolution: '720p',
     },
     expectedCostUsd: 3.402,
-    expectedMissingDependencyCostUsd: missingDependencyCostForRoute({ intentId, providerModel }),
-    expectedMissingDependencyLineCount: missingDependencyLineCountForRoute({ intentId, providerModel }),
   };
 }
 
@@ -324,28 +367,24 @@ function seedanceRunSetupPricingPermutations(): RunSetupPricingPermutationCase[]
     { resolution: '720p' as const, aspectRatio: '3:4', expectedFinalCostUsd: 0.9568125 },
     { resolution: '720p' as const, aspectRatio: '9:16', expectedFinalCostUsd: 0.717609375 },
   ];
-  const routeCases = [
+  const routeCases = shotGroupRouteCases([
     {
-      intentId: 'text-only' as const,
+      inputModeId: 'text-only' as const,
       providerModel: 'bytedance/seedance-2.0/text-to-video',
     },
     {
-      intentId: 'first-frame' as const,
+      inputModeId: 'first-frame' as const,
       providerModel: 'bytedance/seedance-2.0/image-to-video',
     },
     {
-      intentId: 'first-last-frame' as const,
+      inputModeId: 'first-last-frame' as const,
       providerModel: 'bytedance/seedance-2.0/image-to-video',
     },
     {
-      intentId: 'reference' as const,
+      inputModeId: 'reference' as const,
       providerModel: 'bytedance/seedance-2.0/reference-to-video',
     },
-    {
-      intentId: 'multi-shot' as const,
-      providerModel: 'bytedance/seedance-2.0/reference-to-video',
-    },
-  ];
+  ]);
   return routeCases.flatMap((routeCase) =>
     expectedFinalCosts.map((costCase): RunSetupPricingPermutationCase => {
         const expectedRouteSettings = {
@@ -357,9 +396,10 @@ function seedanceRunSetupPricingPermutations(): RunSetupPricingPermutationCase[]
         };
         const expectedDependencyCostUsd = missingDependencyCostForRoute(routeCase);
         return {
-          label: `${routeCase.intentId} Seedance 2.0 ${duration}s ${costCase.resolution} ${costCase.aspectRatio}`,
+          label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} Seedance 2.0 ${duration}s ${costCase.resolution} ${costCase.aspectRatio}`,
           modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          intentId: routeCase.intentId,
+          inputModeId: routeCase.inputModeId,
+          shotGroupMode: routeCase.shotGroupMode,
           providerModel: routeCase.providerModel,
           parameterValues: {
             duration,
@@ -383,10 +423,10 @@ function seedanceRunSetupPricingPermutations(): RunSetupPricingPermutationCase[]
 }
 
 function klingCase(
-  intentId: ShotVideoTakeIntent,
+  inputModeId: ShotVideoTakeInputMode,
   providerModel: string
-): EstimateMatrixCase {
-  const hasAspectRatio = intentId === 'text-only' || intentId === 'multi-shot';
+): EstimateMatrixCaseTemplate {
+  const hasAspectRatio = inputModeId === 'text-only';
   const routeSettings = {
     duration: '9',
     ...(hasAspectRatio ? { aspect_ratio: '16:9' } : {}),
@@ -394,9 +434,9 @@ function klingCase(
     cfg_scale: 0.5,
   };
   return {
-    label: `Kling 3.0 ${intentId}`,
+    label: `Kling 3.0 ${inputModeId}`,
     modelChoice: 'fal-ai/kling-video/v3/pro',
-    intentId,
+    inputModeId,
     providerModel,
     parameterValues: routeSettings,
     expectedRouteSettings: routeSettings,
@@ -405,8 +445,6 @@ function klingCase(
       generate_audio: true,
     },
     expectedCostUsd: 1.512,
-    expectedMissingDependencyCostUsd: missingDependencyCostForRoute({ intentId, providerModel }),
-    expectedMissingDependencyLineCount: missingDependencyLineCountForRoute({ intentId, providerModel }),
   };
 }
 
@@ -416,28 +454,23 @@ function klingRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
     { generateAudio: true, expectedFinalCostUsd: 1.008 },
     { generateAudio: false, expectedFinalCostUsd: 0.672 },
   ];
-  const routeCases = [
+  const routeCases = shotGroupRouteCases([
     {
-      intentId: 'text-only' as const,
+      inputModeId: 'text-only' as const,
       providerModel: 'kling-video/v3/pro/text-to-video',
       hasAspectRatio: true,
     },
     {
-      intentId: 'first-frame' as const,
+      inputModeId: 'first-frame' as const,
       providerModel: 'kling-video/v3/pro/image-to-video',
       hasAspectRatio: false,
     },
     {
-      intentId: 'first-last-frame' as const,
+      inputModeId: 'first-last-frame' as const,
       providerModel: 'kling-video/v3/pro/image-to-video',
       hasAspectRatio: false,
     },
-    {
-      intentId: 'multi-shot' as const,
-      providerModel: 'kling-video/v3/pro/text-to-video',
-      hasAspectRatio: true,
-    },
-  ];
+  ]);
   return routeCases.flatMap((routeCase) =>
     expectedFinalCosts.map((costCase): RunSetupPricingPermutationCase => {
       const expectedDependencyCostUsd = missingDependencyCostForRoute(routeCase);
@@ -448,9 +481,10 @@ function klingRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
         cfg_scale: 0.5,
       };
       return {
-        label: `${routeCase.intentId} Kling 3.0 ${duration}s audio ${costCase.generateAudio ? 'on' : 'off'}`,
+        label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} Kling 3.0 ${duration}s audio ${costCase.generateAudio ? 'on' : 'off'}`,
         modelChoice: 'fal-ai/kling-video/v3/pro',
-        intentId: routeCase.intentId,
+        inputModeId: routeCase.inputModeId,
+        shotGroupMode: routeCase.shotGroupMode,
         providerModel: routeCase.providerModel,
         parameterValues: expectedRouteSettings,
         expectedRouteSettings,
@@ -468,12 +502,12 @@ function klingRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
 }
 
 function veoCase(
-  intentId: ShotVideoTakeIntent,
+  inputModeId: ShotVideoTakeInputMode,
   providerModel: string,
   expectedCostUsd: number
-): EstimateMatrixCase {
+): EstimateMatrixCaseTemplate {
   let routeSettings: ShotVideoTakeParameterValues;
-  if (intentId === 'reference') {
+  if (inputModeId === 'reference') {
     routeSettings = {
       auto_fix: false,
       duration: '8s',
@@ -486,13 +520,13 @@ function veoCase(
       aspect_ratio: '16:9',
       resolution: '720p',
       generate_audio: true,
-      auto_fix: intentId === 'text-only',
+      auto_fix: inputModeId === 'text-only',
     };
   }
   return {
-    label: `Veo 3.1 ${intentId}`,
+    label: `Veo 3.1 ${inputModeId}`,
     modelChoice: 'fal-ai/veo3.1',
-    intentId,
+    inputModeId,
     providerModel,
     parameterValues: routeSettings,
     expectedRouteSettings: routeSettings,
@@ -501,15 +535,13 @@ function veoCase(
       generate_audio: true,
     },
     expectedCostUsd,
-    expectedMissingDependencyCostUsd: missingDependencyCostForRoute({ intentId, providerModel }),
-    expectedMissingDependencyLineCount: missingDependencyLineCountForRoute({ intentId, providerModel }),
   };
 }
 
 function veoRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
-  const routeCases = [
+  const routeCases = shotGroupRouteCases([
     {
-      intentId: 'text-only' as const,
+      inputModeId: 'text-only' as const,
       providerModel: 'veo3.1',
       duration: '6s',
       expectedCosts: [
@@ -524,7 +556,7 @@ function veoRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
       autoFix: true,
     },
     {
-      intentId: 'first-frame' as const,
+      inputModeId: 'first-frame' as const,
       providerModel: 'veo3.1/image-to-video',
       duration: '6s',
       expectedCosts: [
@@ -537,7 +569,7 @@ function veoRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
       autoFix: false,
     },
     {
-      intentId: 'first-last-frame' as const,
+      inputModeId: 'first-last-frame' as const,
       providerModel: 'veo3.1/first-last-frame-to-video',
       duration: '6s',
       expectedCosts: [
@@ -552,7 +584,7 @@ function veoRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
       autoFix: false,
     },
     {
-      intentId: 'reference' as const,
+      inputModeId: 'reference' as const,
       providerModel: 'veo3.1/reference-to-video',
       duration: '8s',
       expectedCosts: [
@@ -563,7 +595,7 @@ function veoRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
       ],
       autoFix: false,
     },
-  ];
+  ]);
   return routeCases.flatMap((routeCase) =>
     routeCase.expectedCosts.map((costCase): RunSetupPricingPermutationCase => {
         const expectedDependencyCostUsd = missingDependencyCostForRoute(routeCase);
@@ -575,9 +607,10 @@ function veoRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
           auto_fix: routeCase.autoFix,
         };
         return {
-          label: `${routeCase.intentId} Veo 3.1 ${routeCase.duration} ${costCase.resolution} audio ${costCase.generateAudio ? 'on' : 'off'}`,
+          label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} Veo 3.1 ${routeCase.duration} ${costCase.resolution} audio ${costCase.generateAudio ? 'on' : 'off'}`,
           modelChoice: 'fal-ai/veo3.1',
-          intentId: routeCase.intentId,
+          inputModeId: routeCase.inputModeId,
+          shotGroupMode: routeCase.shotGroupMode,
           providerModel: routeCase.providerModel,
           parameterValues: expectedRouteSettings,
           expectedRouteSettings,
@@ -594,12 +627,14 @@ function veoRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
   );
 }
 
-function grokCase(): EstimateMatrixCase {
+function grokCase(): EstimateMatrixCaseTemplate {
+  const inputModeId = 'first-frame';
+  const providerModel = 'xai/grok-imagine-video/v1.5/image-to-video';
   return {
     label: 'XAI Grok Imagine Video 1.5 first-frame',
     modelChoice: 'fal-ai/xai/grok-imagine-video-1.5',
-    intentId: 'first-frame',
-    providerModel: 'xai/grok-imagine-video/v1.5/image-to-video',
+    inputModeId,
+    providerModel,
     parameterValues: {
       duration: 9,
       resolution: '720p',
@@ -613,14 +648,6 @@ function grokCase(): EstimateMatrixCase {
       resolution: '720p',
     },
     expectedCostUsd: 1.27,
-    expectedMissingDependencyCostUsd: missingDependencyCostForRoute({
-      intentId: 'first-frame',
-      providerModel: 'xai/grok-imagine-video/v1.5/image-to-video',
-    }),
-    expectedMissingDependencyLineCount: missingDependencyLineCountForRoute({
-      intentId: 'first-frame',
-      providerModel: 'xai/grok-imagine-video/v1.5/image-to-video',
-    }),
   };
 }
 
@@ -630,15 +657,19 @@ function grokRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
     { resolution: '480p' as const, expectedFinalCostUsd: 0.49 },
     { resolution: '720p' as const, expectedFinalCostUsd: 0.85 },
   ];
-  return expectedCosts.map((costCase): RunSetupPricingPermutationCase => {
-    const routeCase = {
-      intentId: 'first-frame' as const,
+  return shotGroupRouteCases([
+    {
+      inputModeId: 'first-frame' as const,
       providerModel: 'xai/grok-imagine-video/v1.5/image-to-video',
-    };
+    },
+  ]).flatMap((routeCase) =>
+    expectedCosts.map((costCase): RunSetupPricingPermutationCase => {
+      const expectedDependencyCostUsd = missingDependencyCostForRoute(routeCase);
       return {
-        label: `first-frame XAI Grok Imagine Video 1.5 ${duration}s ${costCase.resolution}`,
+        label: `${routeCase.shotGroupMode} first-frame XAI Grok Imagine Video 1.5 ${duration}s ${costCase.resolution}`,
         modelChoice: 'fal-ai/xai/grok-imagine-video-1.5',
-        intentId: routeCase.intentId,
+        inputModeId: routeCase.inputModeId,
+        shotGroupMode: routeCase.shotGroupMode,
         providerModel: routeCase.providerModel,
         parameterValues: {
           duration,
@@ -654,17 +685,18 @@ function grokRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
           inputImageCount: 1,
         },
         expectedFinalCostUsd: costCase.expectedFinalCostUsd,
-        expectedDependencyCostUsd: missingDependencyCostForRoute(routeCase),
+        expectedDependencyCostUsd,
         expectedDependencyLineCount: missingDependencyLineCountForRoute(routeCase),
-        expectedTotalCostUsd: costCase.expectedFinalCostUsd + missingDependencyCostForRoute(routeCase),
+        expectedTotalCostUsd: costCase.expectedFinalCostUsd + expectedDependencyCostUsd,
       };
     })
+  );
 }
 
 function ltxCase(
-  intentId: ShotVideoTakeIntent,
+  inputModeId: ShotVideoTakeInputMode,
   providerModel: string
-): EstimateMatrixCase {
+): EstimateMatrixCaseTemplate {
   const routeSettings = {
     duration: 8,
     aspect_ratio: '16:9',
@@ -673,9 +705,9 @@ function ltxCase(
     fps: 25,
   };
   return {
-    label: `LTX 3.2 ${intentId}`,
+    label: `LTX 3.2 ${inputModeId}`,
     modelChoice: 'fal-ai/ltx-3.2',
-    intentId,
+    inputModeId,
     providerModel,
     parameterValues: routeSettings,
     expectedRouteSettings: routeSettings,
@@ -684,8 +716,6 @@ function ltxCase(
       resolution: '1080p',
     },
     expectedCostUsd: 0.48,
-    expectedMissingDependencyCostUsd: missingDependencyCostForRoute({ intentId, providerModel }),
-    expectedMissingDependencyLineCount: missingDependencyLineCountForRoute({ intentId, providerModel }),
   };
 }
 
@@ -696,23 +726,23 @@ function ltxRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
     { resolution: '1440p' as const, expectedFinalCostUsd: 0.72 },
     { resolution: '2160p' as const, expectedFinalCostUsd: 1.44 },
   ];
-  const routeCases = [
+  const routeCases = shotGroupRouteCases([
     {
-      intentId: 'text-only' as const,
+      inputModeId: 'text-only' as const,
       providerModel: 'ltx-2.3/text-to-video',
       aspectRatio: '16:9',
     },
     {
-      intentId: 'first-frame' as const,
+      inputModeId: 'first-frame' as const,
       providerModel: 'ltx-2.3/image-to-video',
       aspectRatio: '16:9',
     },
     {
-      intentId: 'first-last-frame' as const,
+      inputModeId: 'first-last-frame' as const,
       providerModel: 'ltx-2.3/image-to-video',
       aspectRatio: '16:9',
     },
-  ];
+  ]);
   return routeCases.flatMap((routeCase) =>
     expectedCosts.map((costCase): RunSetupPricingPermutationCase => {
       const expectedDependencyCostUsd = missingDependencyCostForRoute(routeCase);
@@ -724,9 +754,10 @@ function ltxRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
         fps: 25,
       };
       return {
-        label: `${routeCase.intentId} LTX 3.2 ${duration}s ${costCase.resolution}`,
+        label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} LTX 3.2 ${duration}s ${costCase.resolution}`,
         modelChoice: 'fal-ai/ltx-3.2',
-        intentId: routeCase.intentId,
+        inputModeId: routeCase.inputModeId,
+        shotGroupMode: routeCase.shotGroupMode,
         providerModel: routeCase.providerModel,
         parameterValues: expectedRouteSettings,
         expectedRouteSettings,
@@ -744,10 +775,10 @@ function ltxRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
 }
 
 function happyHorseCase(
-  intentId: ShotVideoTakeIntent,
+  inputModeId: ShotVideoTakeInputMode,
   providerModel: string
-): EstimateMatrixCase {
-  const hasAspectRatio = intentId === 'text-only' || intentId === 'reference';
+): EstimateMatrixCaseTemplate {
+  const hasAspectRatio = inputModeId === 'text-only' || inputModeId === 'reference';
   const routeSettings = {
     ...(hasAspectRatio ? { aspect_ratio: '16:9' } : {}),
     enable_safety_checker: true,
@@ -756,9 +787,9 @@ function happyHorseCase(
     duration: 9,
   };
   return {
-    label: `Alibaba Happy Horse ${intentId}`,
+    label: `Alibaba Happy Horse ${inputModeId}`,
     modelChoice: 'fal-ai/alibaba/happy-horse',
-    intentId,
+    inputModeId,
     providerModel,
     parameterValues: routeSettings,
     expectedRouteSettings: routeSettings,
@@ -767,8 +798,6 @@ function happyHorseCase(
       resolution: '1080p',
     },
     expectedCostUsd: 2.52,
-    expectedMissingDependencyCostUsd: missingDependencyCostForRoute({ intentId, providerModel }),
-    expectedMissingDependencyLineCount: missingDependencyLineCountForRoute({ intentId, providerModel }),
   };
 }
 
@@ -778,23 +807,23 @@ function happyHorseRunSetupPricingPermutations(): RunSetupPricingPermutationCase
     { resolution: '720p' as const, expectedFinalCostUsd: 0.84 },
     { resolution: '1080p' as const, expectedFinalCostUsd: 1.68 },
   ];
-  const routeCases = [
+  const routeCases = shotGroupRouteCases([
     {
-      intentId: 'text-only' as const,
+      inputModeId: 'text-only' as const,
       providerModel: 'alibaba/happy-horse/text-to-video',
       hasAspectRatio: true,
     },
     {
-      intentId: 'first-frame' as const,
+      inputModeId: 'first-frame' as const,
       providerModel: 'alibaba/happy-horse/image-to-video',
       hasAspectRatio: false,
     },
     {
-      intentId: 'reference' as const,
+      inputModeId: 'reference' as const,
       providerModel: 'alibaba/happy-horse/reference-to-video',
       hasAspectRatio: true,
     },
-  ];
+  ]);
   return routeCases.flatMap((routeCase) =>
     expectedCosts.map((costCase): RunSetupPricingPermutationCase => {
       const expectedDependencyCostUsd = missingDependencyCostForRoute(routeCase);
@@ -806,9 +835,10 @@ function happyHorseRunSetupPricingPermutations(): RunSetupPricingPermutationCase
         duration,
       };
       return {
-        label: `${routeCase.intentId} Alibaba Happy Horse ${duration}s ${costCase.resolution}`,
+        label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} Alibaba Happy Horse ${duration}s ${costCase.resolution}`,
         modelChoice: 'fal-ai/alibaba/happy-horse',
-        intentId: routeCase.intentId,
+        inputModeId: routeCase.inputModeId,
+        shotGroupMode: routeCase.shotGroupMode,
         providerModel: routeCase.providerModel,
         parameterValues: expectedRouteSettings,
         expectedRouteSettings,
@@ -826,51 +856,60 @@ function happyHorseRunSetupPricingPermutations(): RunSetupPricingPermutationCase
 }
 
 function missingDependencyCostForRoute(input: {
-  intentId: ShotVideoTakeIntent;
+  inputModeId: ShotVideoTakeInputMode;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
 }): number {
-  if (input.intentId === 'first-frame') {
-    return FIRST_FRAME_DEPENDENCY_COST_USD + REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
+  let cost = 0;
+  if (input.inputModeId === 'first-frame') {
+    cost += FIRST_FRAME_DEPENDENCY_COST_USD + REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
   }
-  if (input.intentId === 'first-last-frame') {
-    return (
+  if (input.inputModeId === 'first-last-frame') {
+    cost +=
       FIRST_FRAME_DEPENDENCY_COST_USD +
       LAST_FRAME_DEPENDENCY_COST_USD +
-      REFERENCE_BUNDLE_DEPENDENCY_COST_USD
-    );
+      REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
   }
-  if (
-    input.intentId === 'multi-shot' &&
-    input.providerModel === 'bytedance/seedance-2.0/reference-to-video'
-  ) {
-    return MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD + REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
+  if (input.inputModeId === 'reference') {
+    cost += REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
   }
-  if (input.intentId === 'reference') {
-    return REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
+  if (requiresMultiShotStoryboard(input)) {
+    cost += MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD;
   }
-  return 0;
+  return cost;
 }
 
 function missingDependencyLineCountForRoute(input: {
-  intentId: ShotVideoTakeIntent;
+  inputModeId: ShotVideoTakeInputMode;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
 }): number {
-  if (input.intentId === 'first-last-frame') {
-    return 5;
+  let count = 0;
+  if (input.inputModeId === 'first-last-frame') {
+    count += 5;
   }
-  if (input.intentId === 'first-frame') {
-    return 4;
+  if (input.inputModeId === 'first-frame') {
+    count += 4;
   }
-  if (
-    input.intentId === 'multi-shot' &&
+  if (input.inputModeId === 'reference') {
+    count += 3;
+  }
+  if (requiresMultiShotStoryboard(input)) {
+    count += 1;
+  }
+  return count;
+}
+
+function requiresMultiShotStoryboard(input: {
+  inputModeId: ShotVideoTakeInputMode;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
+  providerModel: string;
+}): boolean {
+  return (
+    input.inputModeId === 'reference' &&
+    input.shotGroupMode === 'multi-shot' &&
     input.providerModel === 'bytedance/seedance-2.0/reference-to-video'
-  ) {
-    return 4;
-  }
-  if (input.intentId === 'reference') {
-    return 3;
-  }
-  return 0;
+  );
 }
 
 async function createMatrixProjectSetup(
@@ -884,6 +923,18 @@ async function createMatrixProjectSetup(
   const activeLookbook = await createActiveLookbook(projectData, homeDir);
   await writeProjectFile(projectData, homeDir, 'generated/media/first-frame.png', 'first frame');
   await writeProjectFile(projectData, homeDir, 'generated/media/last-frame.png', 'last frame');
+  await writeProjectFile(
+    projectData,
+    homeDir,
+    'generated/media/multi-shot-first-frame.png',
+    'multi-shot first frame'
+  );
+  await writeProjectFile(
+    projectData,
+    homeDir,
+    'generated/media/multi-shot-last-frame.png',
+    'multi-shot last frame'
+  );
   await writeProjectFile(
     projectData,
     homeDir,
@@ -910,6 +961,20 @@ async function createMatrixProjectSetup(
     shotListId: singleShotList.shotList.id,
     shotIds: ['shot_001'],
     sourceProjectRelativePath: 'generated/media/last-frame.png',
+  });
+  const multiShotFirstFrame = await projectData.importShotFirstFrame({
+    homeDir,
+    sceneId: ids.sceneId,
+    shotListId: multiShotList.shotList.id,
+    shotIds: ['shot_001', 'shot_002'],
+    sourceProjectRelativePath: 'generated/media/multi-shot-first-frame.png',
+  });
+  const multiShotLastFrame = await projectData.importShotLastFrame({
+    homeDir,
+    sceneId: ids.sceneId,
+    shotListId: multiShotList.shotList.id,
+    shotIds: ['shot_001', 'shot_002'],
+    sourceProjectRelativePath: 'generated/media/multi-shot-last-frame.png',
   });
   const storyboard = await projectData.importShotMultiShotStoryboardSheet({
     homeDir,
@@ -951,7 +1016,7 @@ async function createMatrixProjectSetup(
     ...(context.activeLookbook
       ? [
           {
-            kind: 'reference-image' as const,
+            kind: 'lookbook-sheet' as const,
             assetId: referenceImage.imported.assetId,
             assetFileId: referenceFile.id,
             subjectKind: 'lookbook' as const,
@@ -969,6 +1034,8 @@ async function createMatrixProjectSetup(
     preparedInputs: {
       firstFrame: preparedInputFromImported(firstFrame.input),
       lastFrame: preparedInputFromImported(lastFrame.input),
+      multiShotFirstFrame: preparedInputFromImported(multiShotFirstFrame.input),
+      multiShotLastFrame: preparedInputFromImported(multiShotLastFrame.input),
       storyboard: preparedInputFromImported(storyboard.input),
       referenceBundle,
     },
@@ -1048,30 +1115,38 @@ function preparedInputFromImported(
   };
 }
 
-function preparedInputsForIntent(
-  intentId: ShotVideoTakeIntent,
+function preparedInputsForCase(
+  input: EstimateMatrixCase | RunSetupPricingPermutationCase,
   setup: MatrixProjectSetup
 ): ShotVideoTakePreparedInput[] {
-  if (intentId === 'first-frame') {
-    return [setup.preparedInputs.firstFrame];
+  const firstFrame =
+    input.shotGroupMode === 'multi-shot'
+      ? setup.preparedInputs.multiShotFirstFrame
+      : setup.preparedInputs.firstFrame;
+  const lastFrame =
+    input.shotGroupMode === 'multi-shot'
+      ? setup.preparedInputs.multiShotLastFrame
+      : setup.preparedInputs.lastFrame;
+
+  if (input.inputModeId === 'first-frame') {
+    return [firstFrame];
   }
-  if (intentId === 'first-last-frame') {
-    return [setup.preparedInputs.firstFrame, setup.preparedInputs.lastFrame];
+  if (input.inputModeId === 'first-last-frame') {
+    return [firstFrame, lastFrame];
   }
-  if (intentId === 'multi-shot') {
-    return [setup.preparedInputs.storyboard];
-  }
-  if (intentId === 'reference') {
-    return setup.preparedInputs.referenceBundle;
+  if (input.inputModeId === 'reference') {
+    return requiresMultiShotStoryboard(input)
+      ? [...setup.preparedInputs.referenceBundle, setup.preparedInputs.storyboard]
+      : setup.preparedInputs.referenceBundle;
   }
   return [];
 }
 
-function requestedInputsForIntent(
-  intentId: ShotVideoTakeIntent,
+function requestedInputsForCase(
+  input: EstimateMatrixCase | RunSetupPricingPermutationCase,
   setup: MatrixProjectSetup
 ): ShotVideoTakeRequestedInput[] {
-  if (intentId !== 'reference') {
+  if (input.inputModeId !== 'reference') {
     return [];
   }
   return [
@@ -1088,7 +1163,7 @@ function requestedInputsForIntent(
     ...(setup.activeLookbookId
       ? [
           {
-            kind: 'reference-image' as const,
+            kind: 'lookbook-sheet' as const,
             subjectKind: 'lookbook' as const,
             subjectId: setup.activeLookbookId,
           },
@@ -1097,24 +1172,29 @@ function requestedInputsForIntent(
   ];
 }
 
-function shotIdsForIntent(intentId: ShotVideoTakeIntent): string[] {
-  return intentId === 'multi-shot' ? ['shot_001', 'shot_002'] : ['shot_001'];
+function shotIdsForCase(
+  input: EstimateMatrixCase | RunSetupPricingPermutationCase
+): string[] {
+  return input.shotGroupMode === 'multi-shot'
+    ? ['shot_001', 'shot_002']
+    : ['shot_001'];
 }
 
-function shotListIdForIntent(
-  intentId: ShotVideoTakeIntent,
+function shotListIdForCase(
+  input: EstimateMatrixCase | RunSetupPricingPermutationCase,
   setup: MatrixProjectSetup
 ): string {
-  return intentId === 'multi-shot'
+  return input.shotGroupMode === 'multi-shot'
     ? setup.multiShotListId
     : setup.singleShotListId;
 }
 
 function routeKey(
   modelChoice: ShotVideoTakeModelChoice,
-  intentId: ShotVideoTakeIntent
+  inputModeId: ShotVideoTakeInputMode,
+  shotGroupMode: ShotVideoTakeShotGroupMode
 ): string {
-  return `${modelChoice}:${intentId}`;
+  return `${modelChoice}:${inputModeId}:${shotGroupMode}`;
 }
 
 function sampleShotList(ids: SampleIds, shotCount: number): SceneShotListDocument {

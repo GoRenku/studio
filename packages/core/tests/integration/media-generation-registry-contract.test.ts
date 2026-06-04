@@ -4,6 +4,7 @@ import {
   CAST_PROFILE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
@@ -19,6 +20,7 @@ import {
 
 const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  LOOKBOOK_SHEET_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
@@ -48,6 +50,7 @@ describe('media generation purpose registry contract', () => {
       }))
     ).toEqual([
       { purpose: 'lookbook.image', mediaKind: 'image', targetKind: 'lookbook' },
+      { purpose: 'lookbook.sheet', mediaKind: 'image', targetKind: 'lookbook' },
       { purpose: 'cast.character-sheet', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.profile', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'location.environment-sheet', mediaKind: 'image', targetKind: 'location' },

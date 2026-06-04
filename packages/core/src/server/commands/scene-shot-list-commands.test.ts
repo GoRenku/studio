@@ -280,7 +280,7 @@ describe('scene shot list commands', () => {
     ).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('does not exist in the project'),
+          message: expect.stringContaining('unknown project location'),
         }),
       ]),
     });
@@ -306,7 +306,7 @@ describe('scene shot list commands', () => {
     ).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('does not exist in the project'),
+          message: expect.stringContaining('unknown cast member'),
         }),
       ]),
     });
@@ -343,7 +343,7 @@ describe('scene shot list commands', () => {
           productionGroupId: 'scene_shot_video_take_group_001',
           shotIds: ['shot_001'],
           videoTakeProduction: {
-            intentId: 'first-last-frame',
+            inputModeId: 'first-last-frame',
             modelChoice: 'fal-ai/veo3.1',
             parameterValues: { duration: '6s' },
           },
@@ -352,7 +352,7 @@ describe('scene shot list commands', () => {
           productionGroupId: 'scene_shot_video_take_group_002',
           shotIds: ['shot_002', 'shot_003'],
           videoTakeProduction: {
-            intentId: 'multi-shot',
+            inputModeId: 'reference',
             modelChoice: 'fal-ai/bytedance/seedance-2.0',
           },
         },
@@ -397,7 +397,7 @@ describe('scene shot list commands', () => {
             {
               ...valid.videoTakeProductionGroups[0]!,
               videoTakeProduction: {
-                intentId: 'multi-shot',
+                inputModeId: 'multi-shot',
               },
             },
           ],
@@ -406,7 +406,9 @@ describe('scene shot list commands', () => {
     ).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('Single-shot'),
+          message: expect.stringContaining(
+            'Unsupported value at videoTakeProductionGroups.0.videoTakeProduction.inputModeId'
+          ),
         }),
       ]),
     });
@@ -924,7 +926,7 @@ describe('scene shot list commands', () => {
       `location: Golden Horn overlook (${overrideLocationId}); view: Right`
     );
     expect(validation.providerPayload.prompt).toContain(
-      'view: Low balcony toward the map table'
+      `location: Mehmed's council chamber (${ids.locationId}); view: Left`
     );
     expect(validation.providerPayload.prompt).toContain(
       `Golden Horn overlook (${overrideLocationId})`

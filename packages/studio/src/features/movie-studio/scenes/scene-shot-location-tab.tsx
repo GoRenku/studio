@@ -29,8 +29,13 @@ export function SceneShotLocationTab({
   onResourceRefreshed,
   onPlanRefresh,
 }: SceneShotLocationTabProps) {
+  const selectedLocationId =
+    shot.shotSpecs?.location?.locationId ?? shot.locationIds[0] ?? null;
+  const selectedAzimuthView = shot.shotSpecs?.location?.azimuthView ?? null;
   const selectedLocation =
-    productionPlan?.locationReferences.find((choice) => choice.selected) ?? null;
+    productionPlan?.locationReferences.find(
+      (choice) => choice.locationId === selectedLocationId
+    ) ?? null;
   const locationChoices: ShotReferenceCardChoice[] =
     productionPlan?.locationReferences.map((choice) => {
       const preview = choice.environmentSheet.previews[0];
@@ -45,7 +50,7 @@ export function SceneShotLocationTab({
       return {
         id: choice.locationId,
         title: choice.name,
-        selected: choice.selected,
+        selected: choice.locationId === selectedLocationId,
         card: choice.environmentSheet,
         imageUrl,
         previewImages: previewImageUrl(preview, imageUrl),
@@ -76,7 +81,7 @@ export function SceneShotLocationTab({
       return {
         id: choice.viewId,
         title: choice.label,
-        selected: choice.selected,
+        selected: choice.viewId === selectedAzimuthView,
         card: {
           state: preview ? 'available' : 'unavailable',
           mediaKind: 'image',

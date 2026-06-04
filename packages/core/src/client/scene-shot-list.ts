@@ -13,12 +13,13 @@ export interface SceneShotListDocument {
   openQuestions?: string[];
 }
 
-export type ShotVideoTakeIntentId =
+export type ShotVideoTakeInputModeId =
   | 'text-only'
   | 'first-frame'
   | 'first-last-frame'
-  | 'reference'
-  | 'multi-shot';
+  | 'reference';
+
+export type ShotVideoTakeShotGroupMode = 'single-shot' | 'multi-shot';
 
 export type ShotVideoTakeModelChoice =
   | 'fal-ai/bytedance/seedance-2.0'
@@ -50,6 +51,7 @@ export type ShotVideoTakeInputKind =
   | 'shot-reference-sheet'
   | 'character-sheet'
   | 'location-sheet'
+  | 'lookbook-sheet'
   | 'multi-shot-storyboard-sheet'
   | 'source-video'
   | 'audio';
@@ -66,6 +68,7 @@ export type ShotVideoTakeDependencyKind =
   | 'first-frame'
   | 'last-frame'
   | 'shot-reference-sheet'
+  | 'lookbook-sheet'
   | 'multi-shot-storyboard-sheet'
   | 'reference-audio'
   | 'source-video-extract';
@@ -93,7 +96,7 @@ export interface ShotVideoTakeProductionGroup {
 }
 
 export interface ShotVideoTakeProductionPlan {
-  intentId?: ShotVideoTakeIntentId;
+  inputModeId?: ShotVideoTakeInputModeId;
   modelChoice?: ShotVideoTakeModelChoice;
   parameterValues?: ShotVideoTakeParameterValues;
   requestedInputs?: ShotVideoTakeRequestedInput[];
@@ -103,7 +106,7 @@ export interface ShotVideoTakeProductionPlan {
 }
 
 export interface ShotVideoTakeAgentProposal {
-  basedOnIntentId: ShotVideoTakeIntentId;
+  basedOnInputModeId: ShotVideoTakeInputModeId;
   basedOnModelChoice: ShotVideoTakeModelChoice;
   dependencyDrafts: ShotVideoTakeDependencyDraft[];
   finalPromptDraft?: ShotVideoTakePromptDraft;
@@ -272,7 +275,7 @@ export interface ShotCastReferenceSpecs {
 }
 
 export interface ShotLookbookReferenceSpecs {
-  lookbookImageId?: string;
+  lookbookSheetId?: string;
 }
 
 export interface ShotReferenceImageSpecs {

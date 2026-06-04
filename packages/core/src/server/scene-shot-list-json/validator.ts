@@ -402,7 +402,6 @@ function validateShotVideoTakeProductionGroups(
         )
       );
     }
-    validateShotVideoTakeIntentForGroup(group, groupPath, issues, filePath);
     validateShotVideoTakeAgentProposal(group, groupPath, issues, filePath);
   });
 }
@@ -423,38 +422,6 @@ function isContiguousShotGroup(
   });
 }
 
-function validateShotVideoTakeIntentForGroup(
-  group: ShotVideoTakeProductionGroup,
-  groupPath: string[],
-  issues: DiagnosticIssue[],
-  filePath?: string
-): void {
-  const intentId = group.videoTakeProduction.intentId;
-  if (!intentId) {
-    return;
-  }
-  if (group.shotIds.length === 1 && intentId === 'multi-shot') {
-    issues.push(
-      error(
-        'Single-shot video take production groups cannot use the multi-shot intent.',
-        [...groupPath, 'videoTakeProduction', 'intentId'],
-        filePath,
-        'Choose a single-shot intent such as first-frame, first-last-frame, reference, or text-only.'
-      )
-    );
-  }
-  if (group.shotIds.length > 1 && intentId !== 'multi-shot') {
-    issues.push(
-      error(
-        'Multi-shot video take production groups must use the multi-shot intent.',
-        [...groupPath, 'videoTakeProduction', 'intentId'],
-        filePath,
-        'Use intentId "multi-shot" for grouped adjacent shots.'
-      )
-    );
-  }
-}
-
 function validateShotVideoTakeAgentProposal(
   group: ShotVideoTakeProductionGroup,
   groupPath: string[],
@@ -466,13 +433,13 @@ function validateShotVideoTakeAgentProposal(
     return;
   }
   const plan = group.videoTakeProduction;
-  if (plan.intentId && proposal.basedOnIntentId !== plan.intentId) {
+  if (plan.inputModeId && proposal.basedOnInputModeId !== plan.inputModeId) {
     issues.push(
       error(
-        'Shot video take agent proposal is stale for the selected intent.',
-        [...groupPath, 'videoTakeProduction', 'agentProposal', 'basedOnIntentId'],
+        'Shot video take agent proposal is stale for the selected input mode.',
+        [...groupPath, 'videoTakeProduction', 'agentProposal', 'basedOnInputModeId'],
         filePath,
-        'Refresh the proposal after changing intent.'
+        'Refresh the proposal after changing input mode.'
       )
     );
   }

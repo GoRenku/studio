@@ -13,7 +13,7 @@ import {
 const PRODUCTION_GROUP: ShotVideoTakeProductionGroup = {
   productionGroupId: 'scene_shot_video_take_group_001',
   shotIds: ['shot_001', 'shot_002'],
-  videoTakeProduction: { intentId: 'multi-shot' },
+  videoTakeProduction: { inputModeId: 'reference' },
 };
 
 function okResponse(body: unknown): Response {

@@ -135,6 +135,29 @@ export const lookbookImageSections = sqliteTable(
   ]
 );
 
+export const lookbookSheets = sqliteTable(
+  'lookbook_sheet',
+  {
+    id: text('id').primaryKey(),
+    lookbookId: text('lookbook_id')
+      .notNull()
+      .references(() => lookbook.id, { onDelete: 'cascade' }),
+    assetId: text('asset_id')
+      .notNull()
+      .references(() => assets.id),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('lookbook_sheet_order_idx').on(
+      table.lookbookId,
+      table.sortOrder,
+      table.id
+    ),
+  ]
+);
+
 export const lookbookCardImages = sqliteTable('lookbook_card_image', {
   lookbookId: text('lookbook_id')
     .primaryKey()

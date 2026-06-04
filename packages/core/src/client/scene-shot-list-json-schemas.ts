@@ -80,12 +80,11 @@ const LOCATION_AZIMUTH_VIEW_IDS = [
   'left',
 ] as const;
 
-const SHOT_VIDEO_TAKE_INTENT_IDS = [
+const SHOT_VIDEO_TAKE_INPUT_MODE_IDS = [
   'text-only',
   'first-frame',
   'first-last-frame',
   'reference',
-  'multi-shot',
 ] as const;
 
 const SHOT_VIDEO_TAKE_INPUT_KINDS = [
@@ -95,6 +94,7 @@ const SHOT_VIDEO_TAKE_INPUT_KINDS = [
   'shot-reference-sheet',
   'character-sheet',
   'location-sheet',
+  'lookbook-sheet',
   'multi-shot-storyboard-sheet',
   'source-video',
   'audio',
@@ -113,6 +113,7 @@ const SHOT_VIDEO_TAKE_DEPENDENCY_KINDS = [
   'first-frame',
   'last-frame',
   'shot-reference-sheet',
+  'lookbook-sheet',
   'multi-shot-storyboard-sheet',
   'reference-audio',
   'source-video-extract',
@@ -307,7 +308,7 @@ function shotSpecsSchema(): Record<string, unknown> {
       lookbookReference: {
         type: 'object',
         properties: {
-          lookbookImageId: nonEmptyString(),
+          lookbookSheetId: nonEmptyString(),
         },
         additionalProperties: false,
       },
@@ -338,7 +339,7 @@ function shotVideoTakeProductionPlanSchema(): Record<string, unknown> {
   return {
     type: 'object',
     properties: {
-      intentId: enumValue(SHOT_VIDEO_TAKE_INTENT_IDS),
+      inputModeId: enumValue(SHOT_VIDEO_TAKE_INPUT_MODE_IDS),
       modelChoice: enumValue(SHOT_VIDEO_TAKE_MODELS),
       parameterValues: shotVideoTakeParameterValuesSchema(),
       requestedInputs: {
@@ -368,9 +369,9 @@ function shotVideoTakeProductionPlanSchema(): Record<string, unknown> {
       },
       agentProposal: {
         type: 'object',
-        required: ['basedOnIntentId', 'basedOnModelChoice', 'dependencyDrafts'],
+        required: ['basedOnInputModeId', 'basedOnModelChoice', 'dependencyDrafts'],
         properties: {
-          basedOnIntentId: enumValue(SHOT_VIDEO_TAKE_INTENT_IDS),
+          basedOnInputModeId: enumValue(SHOT_VIDEO_TAKE_INPUT_MODE_IDS),
           basedOnModelChoice: enumValue(SHOT_VIDEO_TAKE_MODELS),
           dependencyDrafts: {
             type: 'array',

@@ -43,7 +43,8 @@ import type {
   ShotVideoTakeInputModelChoice,
   ShotVideoTakeInputModelChoiceReport,
   ShotVideoTakeInputModelListReport,
-  ShotVideoTakeIntentId,
+  ShotVideoTakeInputModeId,
+  ShotVideoTakeShotGroupMode,
   ShotVideoTakeImageReferenceChoice,
   ShotVideoTakeLocationReferenceChoice,
   ShotVideoTakeLookbookReferenceChoice,
@@ -67,7 +68,7 @@ import type {
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
-  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -84,7 +85,11 @@ import {
   listLocationEnvironmentSheetViews,
   readLocationEnvironmentSheetByAssetId,
 } from '../database/access/location-environment-sheets.js';
-import { listLookbookImages } from '../database/access/lookbook-images.js';
+import {
+  listLookbookSheets,
+  readLookbookSheet,
+  readLookbookSheetRecord,
+} from '../database/access/lookbook-sheets.js';
 import {
   insertMediaGenerationRun,
   insertMediaGenerationSpec,
@@ -133,6 +138,8 @@ import type {
   PreviewShotVideoTakeProductionInput,
   PlanShotVideoTakeProductionInput,
   ReadMediaGenerationSpecInput,
+  ResolveShotVideoTakeInputFileInput,
+  ResolvedShotVideoTakeInputFile,
   RunMediaGenerationSpecInput,
   SelectShotVideoTakeInputInput,
   ShotVideoTakeContextInput,
@@ -233,13 +240,14 @@ export async function listShotVideoTakeModels(
   input: ShotVideoTakeModelListInput
 ): Promise<ShotVideoTakeModelListReport> {
   const context = await buildShotVideoTakeContext(input);
-  const intentId = input.intentId ?? context.defaults.intentId;
+  const inputModeId = input.inputModeId ?? context.defaults.inputModeId;
   return {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     target: context.target,
-    ...(input.intentId ? { intentId: input.intentId } : {}),
-    defaultModelChoice: defaultModelChoiceForIntent(intentId),
-    models: modelChoices(context, input.intentId),
+    ...(input.inputModeId ? { inputModeId: input.inputModeId } : {}),
+    shotGroupMode: context.shotGroupMode,
+    defaultModelChoice: defaultModelChoiceForInputMode(inputModeId),
+    models: modelChoices(context, input.inputModeId),
   };
 }
 
@@ -262,6 +270,51 @@ export async function listShotVideoTakeInputs(input: ShotVideoTakeContextInput) 
     inputs: context.availableInputs,
     resourceKeys: context.resourceKeys,
   };
+}
+
+export async function resolveShotVideoTakeInputFile(
+  input: ResolveShotVideoTakeInputFileInput
+): Promise<ResolvedShotVideoTakeInputFile> {
+  return withShotProjectSession(input, ({ session, projectFolder }) => {
+    const shotInput = requireShotVideoTakeInput(session, input.inputId);
+    if (shotInput.assetFileId !== input.assetFileId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA409',
+        `Shot video take input file is not attached to the requested input: ${input.assetFileId}.`
+      );
+    }
+    const fileRecord = readAssetFileRecord(session, {
+      assetId: shotInput.assetId,
+      assetFileId: input.assetFileId,
+    });
+    if (!fileRecord) {
+      throw new ProjectDataError(
+        'PROJECT_DATA410',
+        `Shot video take input asset file was not found: ${input.assetFileId}.`
+      );
+    }
+    const absolutePath = resolveProjectRelativePath(
+      projectFolder,
+      fileRecord.projectRelativePath as ProjectRelativePath
+    );
+    assertResolvedPathInsideProject(projectFolder, absolutePath);
+    return {
+      input: shotInput,
+      file: {
+        id: fileRecord.id,
+        role: fileRecord.role,
+        projectRelativePath: fileRecord.projectRelativePath as ProjectRelativePath,
+        mediaKind: fileRecord.mediaKind,
+        mimeType: fileRecord.mimeType,
+        sizeBytes: fileRecord.sizeBytes,
+        contentHash: fileRecord.contentHash,
+        width: fileRecord.width,
+        height: fileRecord.height,
+        durationSeconds: fileRecord.durationSeconds,
+      },
+      absolutePath,
+    };
+  });
 }
 
 export async function updateShotVideoTakeProductionGroup(
@@ -292,14 +345,14 @@ export async function previewShotVideoTakeProduction(
   }
   const context = await buildShotVideoTakeContext(input);
   const issues = validatePreflight(context);
-  const intentId = context.productionGroup.videoTakeProduction.intentId ?? context.defaults.intentId;
+  const inputModeId = context.productionGroup.videoTakeProduction.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
     context.productionGroup.videoTakeProduction.modelChoice ??
-    defaultModelChoiceForIntent(intentId);
+    defaultModelChoiceForInputMode(inputModeId);
   const preparedInputs = await withShotProjectSession(input, ({ session }) =>
     preparedInputsForContext(context, session, issues)
   );
-  const inputsToCreate = missingDependencies(context, intentId, modelChoice, preparedInputs);
+  const inputsToCreate = missingDependencies(context, inputModeId, modelChoice, preparedInputs);
   const finalDraft = context.productionGroup.videoTakeProduction.agentProposal?.finalPromptDraft;
   const prompts = [
     ...context.productionGroup.videoTakeProduction.agentProposal?.dependencyDrafts.map((draft) => ({
@@ -332,7 +385,8 @@ export async function previewShotVideoTakeProduction(
     plan,
     target: context.target,
     productionGroup: context.productionGroup,
-    intentId,
+    inputModeId,
+    shotGroupMode: context.shotGroupMode,
     modelChoice,
     preparedInputs,
     availableInputs: context.availableInputs,
@@ -358,7 +412,8 @@ export async function estimateShotVideoTakeProduction(
   return {
     target: reportContext.target,
     productionGroup: reportContext.productionGroup,
-    intentId: plan.request.intent,
+    inputModeId: plan.request.inputMode,
+    shotGroupMode: plan.request.shotGroupMode,
     modelChoice: plan.request.modelChoice,
     estimate: plan.finalEstimate,
     plan,
@@ -408,11 +463,11 @@ export async function planShotVideoTakeProduction(
     });
   });
   const diagnostics = validatePreflight(context);
-  const intentId = context.productionGroup.videoTakeProduction.intentId ?? context.defaults.intentId;
+  const inputModeId = context.productionGroup.videoTakeProduction.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
     context.productionGroup.videoTakeProduction.modelChoice ??
-    defaultModelChoiceForIntent(intentId);
-  const route = requireShotVideoTakeRoute(modelChoice, intentId);
+    defaultModelChoiceForInputMode(inputModeId);
+  const route = requireShotVideoTakeRoute(modelChoice, inputModeId, context.shotGroupMode);
   const family = SHOT_VIDEO_MODEL_FAMILIES.find((candidate) => candidate.choice === modelChoice);
   if (!family) {
     throw new ProjectDataError(
@@ -430,7 +485,7 @@ export async function planShotVideoTakeProduction(
         'CORE_SHOT_VIDEO_PLAN_STALE_SETTING_DROPPED',
         `Shot video take setting is not supported by the selected route and was ignored: ${settingId}.`,
         { path: ['productionGroup', 'videoTakeProduction', 'parameterValues', settingId] },
-        'Review Run Setup after switching model or intent.'
+        'Review Run Setup after switching model or input mode.'
       )
     );
   });
@@ -450,7 +505,7 @@ export async function planShotVideoTakeProduction(
   const inputPolicy = input.inputPolicy ?? { defaultMode: 'auto' as const };
   const dependencyMap = await buildShotVideoTakeDependencyMap({
     context,
-    intentId,
+    inputModeId,
     modelChoice,
     route,
     normalizedSettings: normalizedSettings.values,
@@ -465,7 +520,7 @@ export async function planShotVideoTakeProduction(
   return {
     planId: shotVideoTakePlanId({
       targetId: context.target.id,
-      intentId,
+      inputModeId,
       modelChoice,
       settings: normalizedSettings.values,
       inputPolicy,
@@ -475,7 +530,8 @@ export async function planShotVideoTakeProduction(
       sceneId: context.scene.id,
       shotListId: context.shotList.id,
       productionGroupId: context.productionGroup.productionGroupId,
-      intent: intentId,
+      inputMode: inputModeId,
+      shotGroupMode: context.shotGroupMode,
       modelChoice,
       routeSettings: normalizedSettings.values,
       inputPolicy,
@@ -487,7 +543,8 @@ export async function planShotVideoTakeProduction(
       provider: family.provider,
     },
     route: {
-      intent: route.intent,
+      inputMode: route.inputMode,
+      shotGroupMode: route.shotGroupMode,
       providerModel: route.providerModel,
       mode: route.mode,
       inputRoles: inputRolesForRoute(route.inputSlots),
@@ -678,24 +735,25 @@ function buildLookbookReferenceChoices(input: {
   if (!input.context.activeLookbook) {
     return [];
   }
-  const lookbookImages = listLookbookImages(
+  const lookbookSheets = listLookbookSheets(
     input.session,
     input.context.activeLookbook.id
   );
-  const selectedImageId = selectedLookbookImageIdForShots(input.context.shots);
-  const defaultImageId = lookbookImages[0]?.id ?? null;
-  const selectedChoiceId = selectedImageId ?? defaultImageId;
+  const selectedSheetId =
+    [...selectedLookbookSheetIdsForShots(input.context.shots)][0] ?? null;
+  const defaultSheetId = lookbookSheets[0]?.id ?? null;
+  const selectedChoiceId = selectedSheetId ?? defaultSheetId;
   const dependencyId = dependencyIdForInput(
-    'reference-image',
+    'lookbook-sheet',
     'lookbook',
     input.context.activeLookbook.id
   );
   const node = dependencyNodeById(input.plan, dependencyId);
   const line = planLineForNode(input.plan, node);
-  if (lookbookImages.length === 0) {
+  if (lookbookSheets.length === 0) {
     return [
       {
-        lookbookImageId: null,
+        lookbookSheetId: null,
         lookbookId: input.context.activeLookbook.id,
         title: input.context.activeLookbook.name,
         selected: true,
@@ -711,22 +769,22 @@ function buildLookbookReferenceChoices(input: {
       },
     ];
   }
-  return lookbookImages.map((lookbookImage) => ({
-    lookbookImageId: lookbookImage.id,
+  return lookbookSheets.map((lookbookSheet) => ({
+    lookbookSheetId: lookbookSheet.id,
     lookbookId: input.context.activeLookbook!.id,
-    title: lookbookImage.asset.title,
-    selected: lookbookImage.id === selectedChoiceId,
-    defaultSelected: lookbookImage.id === defaultImageId,
+    title: lookbookSheet.asset.title,
+    selected: lookbookSheet.id === selectedChoiceId,
+    defaultSelected: lookbookSheet.id === defaultSheetId,
     image: referenceCardPlan({
-      selected: lookbookImage.id === selectedChoiceId,
+      selected: lookbookSheet.id === selectedChoiceId,
       mediaKind: 'image',
-      dependencyId,
-      node,
-      line,
-      previews: previewImagesForLookbookImage(
-        lookbookImage,
-        lookbookImage.asset.title,
-        `${lookbookImage.asset.title} lookbook reference`
+      dependencyId: lookbookSheet.id === selectedChoiceId ? dependencyId : undefined,
+      node: lookbookSheet.id === selectedChoiceId ? node : undefined,
+      line: lookbookSheet.id === selectedChoiceId ? line : undefined,
+      previews: previewImagesForLookbookSheet(
+        lookbookSheet,
+        lookbookSheet.asset.title,
+        `${lookbookSheet.asset.title} lookbook sheet`
       ),
     }),
   }));
@@ -833,14 +891,15 @@ function defaultLocationIdsForShots(shots: SceneShot[]): Set<string> {
   return new Set(shots.flatMap((shot) => shot.locationIds));
 }
 
-function selectedLookbookImageIdForShots(shots: SceneShot[]): string | null {
+function selectedLookbookSheetIdsForShots(shots: SceneShot[]): Set<string> {
+  const selected = new Set<string>();
   for (const shot of shots) {
-    const lookbookImageId = shot.shotSpecs?.lookbookReference?.lookbookImageId;
-    if (lookbookImageId) {
-      return lookbookImageId;
+    const lookbookSheetId = shot.shotSpecs?.lookbookReference?.lookbookSheetId;
+    if (lookbookSheetId) {
+      selected.add(lookbookSheetId);
     }
   }
-  return null;
+  return selected;
 }
 
 function selectedCustomReferenceInputIdsForShots(shots: SceneShot[]): Set<string> {
@@ -982,18 +1041,18 @@ function previewImagesForAsset(
     : [];
 }
 
-function previewImagesForLookbookImage(
-  lookbookImage: ReturnType<typeof listLookbookImages>[number],
+function previewImagesForLookbookSheet(
+  lookbookSheet: ReturnType<typeof listLookbookSheets>[number],
   title: string,
   alt: string
 ): ShotVideoTakeReferenceImagePreview[] {
-  const file = lookbookImage.asset.files.find(
+  const file = lookbookSheet.asset.files.find(
     (candidate) => candidate.mediaKind === 'image'
   );
   return file
     ? [
         {
-          assetId: lookbookImage.asset.assetId,
+          assetId: lookbookSheet.asset.assetId,
           assetFileId: file.id,
           projectRelativePath: file.projectRelativePath,
           title,
@@ -1019,6 +1078,7 @@ function previewImagesForDependencyNode(
   }
   return [
     {
+      inputId: availableInput.inputId,
       assetId: node.assetId,
       assetFileId: node.assetFileId,
       projectRelativePath: availableInput.projectRelativePath,
@@ -1103,7 +1163,7 @@ async function buildShotVideoTakeDependencyMap(input: {
   projectName?: string;
   homeDir?: string;
   context: ShotVideoTakeGenerationContext;
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   route: ShotVideoRoute;
   normalizedSettings: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
@@ -1113,7 +1173,7 @@ async function buildShotVideoTakeDependencyMap(input: {
 }): Promise<MediaGenerationDependencyMap> {
   const nodes: MediaGenerationDependencyNode[] = [];
   const edges: MediaGenerationDependencyMap['edges'] = [];
-  const requiredSlots = requiredInputSlots(input.context, input.intentId, input.modelChoice, {
+  const requiredSlots = requiredInputSlots(input.context, input.inputModeId, input.modelChoice, {
     includeReferenceBundleForReferenceRoute: true,
   });
   const finalNodeId = 'final:shot.video-take';
@@ -1236,7 +1296,7 @@ async function buildShotVideoTakeDependencyMap(input: {
 
   const finalPricing = await estimateFinalPlanLine({
     context: input.context,
-    intentId: input.intentId,
+    inputModeId: input.inputModeId,
     modelChoice: input.modelChoice,
     normalizedSettings: input.normalizedSettings,
     preparedInputs: finalInputs,
@@ -1463,7 +1523,7 @@ async function estimateDraftDependency(
 
 async function estimateFinalPlanLine(input: {
   context: ShotVideoTakeGenerationContext;
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   normalizedSettings: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
   preparedInputs: ShotVideoTakePreflightInput[];
@@ -1476,7 +1536,7 @@ async function estimateFinalPlanLine(input: {
   try {
     const spec = finalTakeSpecForPreflight({
       context: input.context,
-      intentId: input.intentId,
+      inputModeId: input.inputModeId,
       modelChoice: input.modelChoice,
       preparedInputs: input.preparedInputs,
       parameterValues: input.normalizedSettings,
@@ -1577,16 +1637,15 @@ function draftSpecForDependency(input: {
     };
     return { purpose: input.slot.purpose, spec };
   }
-  if (input.slot.purpose === LOOKBOOK_IMAGE_GENERATION_PURPOSE) {
+  if (input.slot.purpose === LOOKBOOK_SHEET_GENERATION_PURPOSE) {
     const spec: MediaGenerationSpec = {
-      purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+      purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
       target: requireDependencyTarget(input.slot, 'lookbook'),
       modelChoice: 'fal-ai/openai/gpt-image-2',
       prompt: dependencyPrompt(input.context, input.slot),
-      focusSections: ['thesis', 'palette', 'composition'],
       takeCount: 1,
       seed: null,
-      imageFrame: 'project',
+      sheetFrame: 'project',
       detail: 'standard',
       outputFormat: 'png',
       title: requiredInputLabel(input.slot),
@@ -1735,7 +1794,7 @@ function durationSupportForRoute(
 
 function shotVideoTakePlanId(input: {
   targetId: string;
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   settings: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
   inputPolicy: ShotVideoTakeInputPolicy;
@@ -1755,6 +1814,7 @@ const SHOT_VIDEO_TAKE_INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, string> 
   'shot-reference-sheet': 'Reference sheet',
   'character-sheet': 'Character sheet',
   'location-sheet': 'Location sheet',
+  'lookbook-sheet': 'Lookbook sheet',
   'multi-shot-storyboard-sheet': 'Storyboard sheet',
   'source-video': 'Source video',
   audio: 'Audio',
@@ -1869,8 +1929,8 @@ function inputItemCaption(line: MediaGenerationPlanLine): string {
   if (line.dependencyKind === 'location-environment-sheet') {
     return 'Location sheet';
   }
-  if (line.dependencyKind === 'lookbook-reference-image') {
-    return 'Lookbook reference';
+  if (line.dependencyKind === 'lookbook-sheet') {
+    return 'Lookbook sheet';
   }
   const parsed = parseDependencyId(line.dependencyId);
   if (parsed) {
@@ -1933,7 +1993,7 @@ function inputKindLabel(kind: ShotVideoTakeInputKind): string {
 
 function finalTakeSpecForPreflight(input: {
   context: ShotVideoTakeGenerationContext;
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   preparedInputs: ShotVideoTakePreflightInput[];
   parameterValues?: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
@@ -1943,13 +2003,13 @@ function finalTakeSpecForPreflight(input: {
   return {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     target: input.context.target,
-    intentId: input.intentId,
+    inputModeId: input.inputModeId,
     modelChoice: input.modelChoice,
     prompt: finalDraft?.prompt ?? agentBrief(input.context),
     ...(finalDraft?.negativePrompt ? { negativePrompt: finalDraft.negativePrompt } : {}),
     parameterValues:
       input.parameterValues ??
-      parameterValuesForFinalTake(input.context, input.intentId, input.modelChoice),
+      parameterValuesForFinalTake(input.context, input.inputModeId, input.modelChoice),
     inputs: input.preparedInputs.map((preparedInput) => ({
       kind: preparedInput.kind,
       assetId: preparedInput.assetId,
@@ -1966,10 +2026,10 @@ function finalTakeSpecForPreflight(input: {
 
 function parameterValuesForFinalTake(
   context: ShotVideoTakeGenerationContext,
-  intentId: ShotVideoTakeIntentId,
+  inputModeId: ShotVideoTakeInputModeId,
   modelChoice: ShotVideoTakeModelChoice
 ): NonNullable<ShotVideoTakeProductionPlan['parameterValues']> {
-  const report = modelChoices(context, intentId).find((model) => model.modelChoice === modelChoice);
+  const report = modelChoices(context, inputModeId).find((model) => model.modelChoice === modelChoice);
   if (!report) {
     return {};
   }
@@ -2576,7 +2636,7 @@ async function recordShotGenerationRun(
 
 export function buildShotVideoTakeProviderPayload(
   spec: ShotVideoTakeGenerationSpec,
-  _context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeGenerationContext
 ): ShotVideoTakeProviderPlan {
   const parameters = { ...spec.parameterValues };
   const inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']> = [];
@@ -2587,7 +2647,11 @@ export function buildShotVideoTakeProviderPayload(
   if (spec.negativePrompt) {
     payload.negative_prompt = spec.negativePrompt;
   }
-  const route = requireShotVideoTakeRoute(spec.modelChoice, spec.intentId);
+  const route = requireShotVideoTakeRoute(
+    spec.modelChoice,
+    spec.inputModeId,
+    context.shotGroupMode
+  );
   for (const slot of route.inputSlots) {
     mapRouteInputSlot(spec, inputFiles, slot);
   }
@@ -2606,7 +2670,11 @@ function buildShotVideoTakePricingProviderPayload(input: {
   context: ShotVideoTakeGenerationContext;
 }): ShotVideoTakeProviderPlan {
   const { spec, context } = input;
-  const route = requireShotVideoTakeRoute(spec.modelChoice, spec.intentId);
+  const route = requireShotVideoTakeRoute(
+    spec.modelChoice,
+    spec.inputModeId,
+    context.shotGroupMode
+  );
   const payload: Record<string, unknown> = {
     prompt: spec.prompt,
     ...spec.parameterValues,
@@ -2629,10 +2697,14 @@ function finalVideoPricingInputCounts(input: {
   spec: ShotVideoTakeGenerationSpec;
   context: ShotVideoTakeGenerationContext;
 }): ShotVideoTakeProviderPlan['pricingInputCounts'] {
-  const route = requireShotVideoTakeRoute(input.spec.modelChoice, input.spec.intentId);
+  const route = requireShotVideoTakeRoute(
+    input.spec.modelChoice,
+    input.spec.inputModeId,
+    input.context.shotGroupMode
+  );
   const requiredImageInputCount = requiredInputSlots(
     input.context,
-    input.spec.intentId,
+    input.spec.inputModeId,
     input.spec.modelChoice,
     { includeReferenceBundleForReferenceRoute: true }
   ).filter((slot) => slot.mediaKind === 'image').length;
@@ -2723,6 +2795,7 @@ function finalInputMatchesRouteSlot(
     [
       'character-sheet',
       'location-sheet',
+      'lookbook-sheet',
       'shot-reference-sheet',
       'multi-shot-storyboard-sheet',
     ].includes(input.kind)
@@ -2793,7 +2866,7 @@ function validateFinalSpecAgainstContext(
   context: ShotVideoTakeGenerationContext
 ): void {
   validateFinalPricingSpecAgainstContext(spec, context);
-  const missingInputs = requiredInputSlots(context, spec.intentId, spec.modelChoice).filter(
+  const missingInputs = requiredInputSlots(context, spec.inputModeId, spec.modelChoice).filter(
     (slot) => !spec.inputs.some((input) => finalInputMatchesSlot(input, slot))
   );
   if (missingInputs.length > 0) {
@@ -2816,12 +2889,11 @@ function validateFinalPricingSpecAgainstContext(
       'Shot video take spec targets a stale shot group.'
     );
   }
-  validateIntentForShotCount(spec.intentId, spec.target.shotIds);
-  const report = modelChoices(context, spec.intentId).find((model) => model.modelChoice === spec.modelChoice);
-  if (!report || !report.supportedIntents.includes(spec.intentId)) {
+  const report = modelChoices(context, spec.inputModeId).find((model) => model.modelChoice === spec.modelChoice);
+  if (!report || !report.available || !report.supportedInputModes.includes(spec.inputModeId)) {
     throw new ProjectDataError(
       'PROJECT_DATA371',
-      'Shot video take model does not support the selected intent.'
+      'Shot video take model does not support the selected input mode for this shot group.'
     );
   }
   for (const key of Object.keys(spec.parameterValues)) {
@@ -2852,20 +2924,18 @@ function assertShotVideoTakeSpec(
 
 function modelChoices(
   context: ShotVideoTakeGenerationContext,
-  intentId?: ShotVideoTakeIntentId
+  inputModeId?: ShotVideoTakeInputModeId
 ): ShotVideoTakeModelChoiceReport[] {
-  const selectedIntent = intentId ?? context.defaults.intentId;
+  const selectedInputMode = inputModeId ?? context.defaults.inputModeId;
   const models = SHOT_VIDEO_MODEL_FAMILIES.map((family) =>
-    modelReport(family, selectedIntent)
+    modelReport(family, selectedInputMode, context.shotGroupMode)
   );
   return models.map((model) => ({
     ...model,
-    available:
-      (!intentId || model.supportedIntents.includes(intentId)) &&
-      intentCompatibleWithGroup(intentId ?? context.defaults.intentId, context.target.shotIds),
-    ...(!intentId || model.supportedIntents.includes(intentId)
+    available: !inputModeId || model.supportedInputModes.includes(inputModeId),
+    ...(!inputModeId || model.supportedInputModes.includes(inputModeId)
       ? {}
-      : { unavailableReason: `This model does not support ${intentId}.` }),
+      : { unavailableReason: `This model does not support ${inputModeId}.` }),
   }));
 }
 
@@ -2918,15 +2988,27 @@ function shotInputParameters(): ShotVideoTakeInputModelChoiceReport['parameters'
 
 function modelReport(
   family: (typeof SHOT_VIDEO_MODEL_FAMILIES)[number],
-  intentId: ShotVideoTakeIntentId
+  inputModeId: ShotVideoTakeInputModeId,
+  shotGroupMode: ShotVideoTakeShotGroupMode
 ): ShotVideoTakeModelChoiceReport {
-  const route = family.routes.find((candidate) => candidate.intent === intentId);
+  const route = family.routes.find(
+    (candidate) =>
+      candidate.inputMode === inputModeId &&
+      candidate.shotGroupMode === shotGroupMode
+  );
+  const supportedInputModes = [
+    ...new Set(
+      family.routes
+        .filter((candidate) => candidate.shotGroupMode === shotGroupMode)
+        .map((candidate) => candidate.inputMode)
+    ),
+  ];
   return {
     modelChoice: family.choice,
     label: modelFamilyLabel(family),
     available: Boolean(route),
-    ...(!route ? { unavailableReason: `This model does not support ${intentId}.` } : {}),
-    supportedIntents: family.routes.map((candidate) => candidate.intent),
+    ...(!route ? { unavailableReason: `This model does not support ${inputModeId}.` } : {}),
+    supportedInputModes,
     duration: route ? durationSupportForRoute(route) : { supported: false },
     inputRoles: route ? inputRolesForRoute(route.inputSlots) : [],
     parameters: route ? parametersForRoute(route) : [],
@@ -2952,29 +3034,34 @@ function durationSeconds(value: unknown): number | null {
 function validatePreflight(context: ShotVideoTakeGenerationContext): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
   const plan = context.productionGroup.videoTakeProduction;
-  const intentId = plan.intentId ?? context.defaults.intentId;
-  if (!intentCompatibleWithGroup(intentId, context.target.shotIds)) {
+  const inputModeId = plan.inputModeId ?? context.defaults.inputModeId;
+  const modelChoice = plan.modelChoice ?? defaultModelChoiceForInputMode(inputModeId);
+  const route = selectShotVideoRoute({
+    modelChoice,
+    inputMode: inputModeId,
+    shotGroupMode: context.shotGroupMode,
+  });
+  if (!route) {
     issues.push(
       issue(
         'PROJECT_DATA375',
-        'Shot video take intent is not compatible with the production group size.',
-        ['productionGroup', 'videoTakeProduction', 'intentId'],
-        'Use multi-shot for grouped shots and a single-shot intent for one shot.'
+        'Shot video take model does not support the selected input mode for this shot group.',
+        ['productionGroup', 'videoTakeProduction', 'inputModeId'],
+        'Choose a model and input mode combination that supports the current shot group.'
       )
     );
   }
   if (plan.agentProposal) {
-    if (plan.agentProposal.basedOnIntentId !== intentId) {
+    if (plan.agentProposal.basedOnInputModeId !== inputModeId) {
       issues.push(
         issue(
           'PROJECT_DATA376',
-          'Shot video take agent proposal is stale for the current intent.',
-          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'basedOnIntentId'],
+          'Shot video take agent proposal is stale for the current input mode.',
+          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'basedOnInputModeId'],
           'Refresh the proposal before creating specs.'
         )
       );
     }
-    const modelChoice = plan.modelChoice ?? defaultModelChoiceForIntent(intentId);
     if (plan.agentProposal.basedOnModelChoice !== modelChoice) {
       issues.push(
         issue(
@@ -3030,16 +3117,84 @@ function preparedInputsForContext(
         subjectId: input.subjectId,
       };
     });
-  return inputs.filter((input): input is ShotVideoTakePreflightInput => Boolean(input));
+  return [
+    ...inputs.filter((input): input is ShotVideoTakePreflightInput => Boolean(input)),
+    ...lookbookSheetInputsForContext(context, session, issues),
+  ];
+}
+
+function lookbookSheetInputsForContext(
+  context: ShotVideoTakeGenerationContext,
+  session: DatabaseSession,
+  issues: DiagnosticIssue[]
+): ShotVideoTakePreflightInput[] {
+  if (!context.activeLookbook) {
+    return [];
+  }
+  const selectedIds = selectedLookbookSheetIdsForShots(context.shots);
+  if (selectedIds.size === 0) {
+    const defaultSheet = listLookbookSheets(session, context.activeLookbook.id)[0];
+    if (defaultSheet) {
+      selectedIds.add(defaultSheet.id);
+    }
+  }
+  return [...selectedIds]
+    .map((sheetId) =>
+      lookbookSheetInputForId(context, session, issues, sheetId)
+    )
+    .filter((input): input is ShotVideoTakePreflightInput => Boolean(input));
+}
+
+function lookbookSheetInputForId(
+  context: ShotVideoTakeGenerationContext,
+  session: DatabaseSession,
+  issues: DiagnosticIssue[],
+  sheetId: string
+): ShotVideoTakePreflightInput | null {
+  const record = readLookbookSheetRecord(session, sheetId);
+  if (!record || record.lookbookId !== context.activeLookbook?.id) {
+    issues.push(
+      issue(
+        'PROJECT_DATA412',
+        'Selected lookbook sheet does not belong to the active lookbook.',
+        ['shots', 'shotSpecs', 'lookbookReference', 'lookbookSheetId'],
+        'Choose a lookbook sheet from the active lookbook.'
+      )
+    );
+    return null;
+  }
+  const sheet = readLookbookSheet(session, sheetId);
+  const file = sheet?.asset.files.find((candidate) => candidate.mediaKind === 'image');
+  if (!sheet || !file) {
+    issues.push(
+      issue(
+        'PROJECT_DATA413',
+        'Selected lookbook sheet has no image file.',
+        ['shots', 'shotSpecs', 'lookbookReference', 'lookbookSheetId'],
+        'Regenerate or import a lookbook sheet with an image file.'
+      )
+    );
+    return null;
+  }
+  return {
+    kind: 'lookbook-sheet',
+    assetId: sheet.asset.assetId,
+    assetFileId: file.id,
+    role: file.role,
+    mediaKind: 'image',
+    projectRelativePath: file.projectRelativePath,
+    subjectKind: 'lookbook',
+    subjectId: context.activeLookbook.id,
+  };
 }
 
 function missingDependencies(
   context: ShotVideoTakeGenerationContext,
-  intentId: ShotVideoTakeIntentId,
+  inputModeId: ShotVideoTakeInputModeId,
   modelChoice: ShotVideoTakeModelChoice,
   preparedInputs: ShotVideoTakePreflightInput[]
 ): ShotVideoTakePreflightDependency[] {
-  return requiredInputSlots(context, intentId, modelChoice)
+  return requiredInputSlots(context, inputModeId, modelChoice)
     .filter((slot) => !preparedInputs.some((input) => preparedInputMatchesSlot(input, slot)))
     .map((slot) => ({
       dependencyId: slot.dependencyId,
@@ -3055,12 +3210,12 @@ function missingDependencies(
 
 function requiredInputSlots(
   context: ShotVideoTakeGenerationContext,
-  intentId: ShotVideoTakeIntentId,
+  inputModeId: ShotVideoTakeInputModeId,
   modelChoice: ShotVideoTakeModelChoice,
   options: { includeReferenceBundleForReferenceRoute?: boolean } = {}
 ): RequiredShotVideoTakeInputSlot[] {
-  const report = modelChoices(context, intentId).find((model) => model.modelChoice === modelChoice);
-  const route = requireShotVideoTakeRoute(modelChoice, intentId);
+  const report = modelChoices(context, inputModeId).find((model) => model.modelChoice === modelChoice);
+  const route = requireShotVideoTakeRoute(modelChoice, inputModeId, context.shotGroupMode);
   const referenceSlots =
     options.includeReferenceBundleForReferenceRoute &&
     route.inputSlots.some((slot) => slot.kind === 'reference-image')
@@ -3108,17 +3263,48 @@ function referenceBundleSlots(
     )
   );
   const lookbookSlots = context.activeLookbook
-    ? [
-        requiredSlotForInputKind(
-          'reference-image',
-          'image',
-          `Lookbook reference is required for ${context.activeLookbook.name}.`,
-          'lookbook',
-          context.activeLookbook.id
-        ),
-      ]
+    ? lookbookSheetReferenceSlots(context)
     : [];
   return [...castSlots, ...locationSlots, ...lookbookSlots];
+}
+
+function lookbookSheetReferenceSlots(
+  context: ShotVideoTakeGenerationContext
+): RequiredShotVideoTakeInputSlot[] {
+  if (!context.activeLookbook) {
+    return [];
+  }
+  const selectedSheetIds = selectedLookbookSheetIdsForShots(context.shots);
+  if (selectedSheetIds.size > 0) {
+    const dependency = dependencyForInputKind(
+      'lookbook-sheet',
+      'lookbook',
+      context.activeLookbook.id
+    );
+    return [
+      {
+        outputInputKind: 'lookbook-sheet',
+        dependencyId: dependency.dependencyId,
+        dependencyKind: dependency.dependencyKind,
+        ...(dependency.dependencyTarget
+          ? { dependencyTarget: dependency.dependencyTarget }
+          : {}),
+        mediaKind: 'image',
+        subjectKind: 'lookbook',
+        subjectId: context.activeLookbook.id,
+        reason: `Selected lookbook sheet reference is missing for ${context.activeLookbook.name}.`,
+      },
+    ];
+  }
+  return [
+    requiredSlotForInputKind(
+      'lookbook-sheet',
+      'image',
+      `Lookbook sheet reference is required for ${context.activeLookbook.name}.`,
+      'lookbook',
+      context.activeLookbook.id
+    ),
+  ];
 }
 
 function requiredSlotForRequestedInput(
@@ -3206,12 +3392,12 @@ function dependencyForInputKind(
       purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
     };
   }
-  if (kind === 'reference-image' && subjectKind === 'lookbook' && subjectId) {
+  if (kind === 'lookbook-sheet' && subjectKind === 'lookbook' && subjectId) {
     return {
       dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
-      dependencyKind: 'lookbook-reference-image',
+      dependencyKind: 'lookbook-sheet',
       dependencyTarget: { kind: 'lookbook', id: subjectId },
-      purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+      purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
     };
   }
   return {
@@ -3312,7 +3498,6 @@ function prepareShotGroupInSession(input: {
   });
   const shotList = readSceneShotListDocument({ row: shotListRow, screenplay });
   const orderedShotIds = normalizeShotIds(shotList.shots, input.input.shotIds);
-  validateIntentForShotCount(input.production?.intentId, orderedShotIds);
   const ids = createUniqueIdAllocator(input.input.idGenerator ?? createRandomIdGenerator());
   const productionGroups = (shotList.videoTakeProductionGroups ?? []).filter(
     (group) => group.shotIds.length > 0
@@ -3458,8 +3643,10 @@ function buildContextFromPrepared(input: {
       shotListId: input.prepared.shotListId,
       productionGroupId: input.prepared.productionGroup.productionGroupId,
     }),
+    shotGroupMode:
+      input.prepared.orderedShotIds.length > 1 ? 'multi-shot' : 'single-shot',
     defaults: {
-      intentId: input.prepared.orderedShotIds.length > 1 ? 'multi-shot' : 'first-frame',
+      inputModeId: 'first-frame',
       imageDependencyModelChoice: 'fal-ai/openai/gpt-image-2',
       parameterValues: {
         aspect_ratio: projectInfo.aspectRatio ?? '16:9',
@@ -3686,28 +3873,6 @@ function isContiguous(shotIds: string[], shots: SceneShot[]): boolean {
   return indexes.every((index, position) => position === 0 || index === indexes[position - 1] + 1);
 }
 
-function validateIntentForShotCount(
-  intentId: ShotVideoTakeIntentId | undefined,
-  shotIds: string[]
-): void {
-  if (!intentId) {
-    return;
-  }
-  if (!intentCompatibleWithGroup(intentId, shotIds)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA375',
-      'Shot video take intent is not compatible with the production group size.'
-    );
-  }
-}
-
-function intentCompatibleWithGroup(
-  intentId: ShotVideoTakeIntentId,
-  shotIds: string[]
-): boolean {
-  return shotIds.length > 1 ? intentId === 'multi-shot' : intentId !== 'multi-shot';
-}
-
 function providerModel(
   modelChoice: ShotVideoTakeInputModelChoice | ShotVideoTakeModelChoice
 ): string {
@@ -3719,26 +3884,24 @@ function providerModel(
 
 function requireShotVideoTakeRoute(
   modelChoice: ShotVideoTakeModelChoice,
-  intentId: ShotVideoTakeIntentId
+  inputModeId: ShotVideoTakeInputModeId,
+  shotGroupMode: ShotVideoTakeShotGroupMode
 ): ShotVideoRoute {
-  const route = selectShotVideoRoute({ modelChoice, intent: intentId });
+  const route = selectShotVideoRoute({ modelChoice, inputMode: inputModeId, shotGroupMode });
   if (!route) {
     throw new ProjectDataError(
       'PROJECT_DATA386',
-      `Shot video take model does not support the selected intent: ${modelChoice} / ${intentId}.`
+      `Shot video take model does not support the selected input mode and shot group mode: ${modelChoice} / ${inputModeId} / ${shotGroupMode}.`
     );
   }
   return route;
 }
 
-function defaultModelChoiceForIntent(intentId: ShotVideoTakeIntentId): ShotVideoTakeModelChoice {
-  if (intentId === 'first-last-frame') {
+function defaultModelChoiceForInputMode(inputModeId: ShotVideoTakeInputModeId): ShotVideoTakeModelChoice {
+  if (inputModeId === 'first-last-frame') {
     return 'fal-ai/veo3.1';
   }
-  if (intentId === 'text-only') {
-    return 'fal-ai/bytedance/seedance-2.0';
-  }
-  if (intentId === 'multi-shot') {
+  if (inputModeId === 'text-only') {
     return 'fal-ai/bytedance/seedance-2.0';
   }
   return 'fal-ai/bytedance/seedance-2.0';
@@ -3787,7 +3950,8 @@ function agentBrief(context: ShotVideoTakeGenerationContext): string {
   return [
     `Scene: ${context.scene.title}`,
     `Shots: ${context.shots.map((shot) => `${shot.shotId}: ${shot.action}`).join(' | ')}`,
-    `Intent: ${context.productionGroup.videoTakeProduction.intentId ?? context.defaults.intentId}`,
+    `Input mode: ${context.productionGroup.videoTakeProduction.inputModeId ?? context.defaults.inputModeId}`,
+    `Shot group mode: ${context.shotGroupMode}`,
   ].join('\n');
 }
 

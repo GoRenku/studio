@@ -4,7 +4,7 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import type { LookbookDocument } from '@gorenku/studio-core/server';
+import type { LookbookDocument, LookbookSheet } from '@gorenku/studio-core/server';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -329,6 +329,46 @@ export function createVisualLanguageRoute({
               ),
             ],
             suggestion: 'Request an existing Lookbook image file.',
+          });
+        }
+        const project = await projectData.readProject({ projectName });
+        return await readProjectRelativeImageResponse(
+          project.identity.folderPath,
+          file.projectRelativePath
+        );
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .get('/visual-language/lookbooks/sheets/:sheetId/files/:assetFileId', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sheetId = c.req.param('sheetId') as string;
+        const assetFileId = c.req.param('assetFileId') as string;
+        const lookbooks = await projectData.listLookbooks({ projectName });
+        let sheet: LookbookSheet | null = null;
+        for (const candidate of lookbooks.lookbooks) {
+          const resource = await projectData.readLookbook({
+            projectName,
+            lookbookId: candidate.lookbook.id,
+          });
+          sheet = resource.sheets.find((item) => item.id === sheetId) ?? null;
+          if (sheet) break;
+        }
+        const file = sheet?.asset.files.find((candidate) => candidate.id === assetFileId);
+        if (!sheet || !file) {
+          throw createStructuredError({
+            code: 'STUDIO_SERVER352',
+            message: `Lookbook sheet file was not found: ${assetFileId}.`,
+            issues: [
+              createDiagnosticError(
+                'STUDIO_SERVER352',
+                `Lookbook sheet file was not found: ${assetFileId}.`,
+                { path: ['assetFileId'], context: 'Lookbook sheet file request' },
+                'Request an existing Lookbook sheet file.'
+              ),
+            ],
+            suggestion: 'Request an existing Lookbook sheet file.',
           });
         }
         const project = await projectData.readProject({ projectName });

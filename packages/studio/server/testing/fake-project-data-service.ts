@@ -1,7 +1,8 @@
 import type {
-  LookbookImageGenerationSpec,
+  MediaGenerationSpec,
   LookbookSection,
   MediaGenerationSpecRecord,
+  ProjectRelativePath,
   ProjectLibrary,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationPlan,
@@ -64,6 +65,32 @@ export function fakeProjectDataService(): NonNullable<
         asset,
         file: asset.files[0],
         absolutePath: '/tmp/renku/constantinople/cast/reference.png',
+      };
+    },
+    async resolveShotVideoTakeInputFile(input) {
+      const asset = makeAsset('asset_shot_video_input');
+      return {
+        input: {
+          inputId: input.inputId,
+          kind: 'first-frame',
+          assetId: asset.assetId,
+          assetFileId: input.assetFileId,
+          mediaKind: 'image',
+          projectRelativePath:
+            'generated/media/shot-video-input.png' as ProjectRelativePath,
+          subjectKind: 'shot',
+          subjectId: 'shot_001',
+          selected: true,
+          shotIds: ['shot_001'],
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        file: {
+          ...asset.files[0],
+          id: input.assetFileId,
+          projectRelativePath:
+            'generated/media/shot-video-input.png' as ProjectRelativePath,
+        },
+        absolutePath: '/tmp/renku/constantinople/generated/media/shot-video-input.png',
       };
     },
     async listAssets() {
@@ -477,6 +504,7 @@ export function fakeProjectDataService(): NonNullable<
         cardImage: null,
         isActive: false,
         images: [],
+        sheets: [makeLookbookSheet('lookbook_sheet_test0001')],
         imagesBySection: {
           thesis: [],
           palette: [],
@@ -716,6 +744,166 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
+    async buildLookbookSheetContext(input) {
+      return {
+        purpose: 'lookbook.sheet',
+        target: { kind: 'lookbook', id: input.lookbookId },
+        project: {
+          id: 'project_test',
+          name: 'test-project',
+          title: project.identity.title,
+          aspectRatio: project.identity.aspectRatio ?? null,
+        },
+        lookbook: makeLookbook(input.lookbookId),
+        sourceInspirationFolders: [],
+        existingSheets: [makeLookbookSheet('lookbook_sheet_test0001')],
+        cardImage: null,
+        defaults: {
+          takeCount: 1,
+          seed: null,
+          sheetFrame: 'project',
+          resolvedAspectRatio: project.identity.aspectRatio ?? null,
+          detail: 'standard',
+          outputFormat: 'png',
+        },
+        resourceKeys: [],
+      };
+    },
+    async listLookbookSheetModels(input) {
+      return {
+        purpose: 'lookbook.sheet',
+        target: { kind: 'lookbook', id: input.lookbookId },
+        models: [],
+      };
+    },
+    async validateLookbookSheetSpec(input) {
+      return {
+        valid: true,
+        spec: input.spec,
+        providerPayload: {},
+      };
+    },
+    async createLookbookSheetSpec(input) {
+      return makeMediaGenerationSpecRecord('media_generation_spec_test0001', input.spec);
+    },
+    async updateLookbookSheetSpec(input) {
+      return makeMediaGenerationSpecRecord(input.specId, input.spec);
+    },
+    async readLookbookSheetSpec(input) {
+      return makeMediaGenerationSpecRecord(input.specId, makeLookbookSheetSpec());
+    },
+    async listLookbookSheetSpecs() {
+      return { specs: [] };
+    },
+    async prepareLookbookSheetSpec(input) {
+      return {
+        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookSheetSpec()),
+        providerPayload: {},
+        generation: {
+          policy: {
+            provider: 'fal-ai',
+            model: 'nano-banana-2',
+            mediaKind: 'image',
+            mode: 'text-to-image',
+            outputCount: 1,
+          },
+          request: {
+            prompt: 'A Lookbook sheet.',
+            parameters: {},
+            outputNames: ['lookbook-sheet.png'],
+          },
+        },
+      };
+    },
+    async estimateLookbookSheetSpec(input) {
+      return {
+        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookSheetSpec()),
+        providerPayload: {},
+        generation: {
+          policy: {
+            provider: 'fal-ai',
+            model: 'nano-banana-2',
+            mediaKind: 'image',
+            mode: 'text-to-image',
+            outputCount: 1,
+          },
+          request: {
+            prompt: 'A Lookbook sheet.',
+            parameters: {},
+            outputNames: ['lookbook-sheet.png'],
+          },
+        },
+        estimate: {
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          mediaKind: 'image',
+          pricing: 0,
+          estimatedCostUsd: 0,
+          approvalToken: 'sha256:test',
+          billableUnits: { outputCount: 1 },
+          warnings: [],
+        },
+      };
+    },
+    async runLookbookSheetSpec(input) {
+      return {
+        run: {
+          id: 'media_generation_run_test0001',
+          specId: input.specId,
+          purpose: 'lookbook.sheet',
+          target: { kind: 'lookbook', id: 'lookbook_test0001' },
+          modelChoice: 'fal-ai/nano-banana-2',
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          specSnapshot: makeLookbookSheetSpec(),
+          providerPayload: {},
+          estimateSnapshot: {
+            estimatedCostUsd: 0,
+            approvalToken: 'sha256:test',
+          },
+          simulated: Boolean(input.simulate),
+          status: input.simulate ? 'simulated' : 'completed',
+          outputs: [],
+          diagnostics: {},
+          startedAt: '2026-05-22T00:00:00.000Z',
+          completedAt: '2026-05-22T00:00:00.000Z',
+        },
+      };
+    },
+    async recordLookbookSheetRun(input) {
+      return {
+        run: {
+          id: 'media_generation_run_test0001',
+          specId: input.specId,
+          purpose: 'lookbook.sheet',
+          target: { kind: 'lookbook', id: 'lookbook_test0001' },
+          modelChoice: 'fal-ai/nano-banana-2',
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          specSnapshot: makeLookbookSheetSpec(),
+          providerPayload: {},
+          estimateSnapshot: {},
+          simulated: true,
+          status: 'simulated',
+          outputs: [],
+          diagnostics: {},
+          startedAt: '2026-05-22T00:00:00.000Z',
+          completedAt: '2026-05-22T00:00:00.000Z',
+        },
+      };
+    },
+    async importLookbookSheetMedia(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        changes: [{ type: 'lookbook.sheetImported', lookbookId: input.lookbookId }],
+        purpose: 'lookbook.sheet',
+        target: { kind: 'lookbook', id: input.lookbookId },
+        imported: makeLookbookSheet('lookbook_sheet_test0001'),
+        resourceKeys: [],
+      };
+    },
     async deleteLookbookImage() {
       return makeLookbookImageMutationReport('lookbook_test0001');
     },
@@ -732,14 +920,15 @@ export function fakeProjectDataService(): NonNullable<
       return {
         purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
         target: makeShotVideoTakeTarget(input),
-        ...(input.intentId ? { intentId: input.intentId } : {}),
+        ...(input.inputModeId ? { inputModeId: input.inputModeId } : {}),
+        shotGroupMode: input.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
         defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
         models: [
           {
             modelChoice: 'fal-ai/bytedance/seedance-2.0',
             label: 'Seedance 2.0',
             available: true,
-            supportedIntents: ['text-only', 'first-frame', 'first-last-frame', 'reference', 'multi-shot'],
+            supportedInputModes: ['text-only', 'first-frame', 'first-last-frame', 'reference'],
             duration: { supported: true, values: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
             inputRoles: [],
             parameters: [],
@@ -786,7 +975,8 @@ export function fakeProjectDataService(): NonNullable<
           shotIds: target.shotIds,
           videoTakeProduction: input.production ?? {},
         },
-        intentId: input.production?.intentId ?? 'text-only',
+        inputModeId: input.production?.inputModeId ?? 'text-only',
+        shotGroupMode: input.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
         modelChoice:
           input.production?.modelChoice ??
           'fal-ai/bytedance/seedance-2.0',
@@ -821,7 +1011,8 @@ function makeShotVideoTakePlan(input: {
   production?: ShotVideoTakeProductionPlan;
 }): ShotVideoTakeGenerationPlan {
   const target = makeShotVideoTakeTarget(input);
-  const intent = input.production?.intentId ?? 'text-only';
+  const inputMode = input.production?.inputModeId ?? 'text-only';
+  const shotGroupMode = input.shotIds.length > 1 ? 'multi-shot' : 'single-shot';
   const modelChoice = input.production?.modelChoice ?? 'fal-ai/bytedance/seedance-2.0';
   const productionGroupId = target.productionGroupId;
   return {
@@ -831,7 +1022,8 @@ function makeShotVideoTakePlan(input: {
       sceneId: input.sceneId,
       shotListId: input.shotListId,
       productionGroupId,
-      intent,
+      inputMode,
+      shotGroupMode,
       modelChoice,
       routeSettings: input.production?.parameterValues ?? {},
       inputPolicy: { defaultMode: 'auto' },
@@ -843,7 +1035,8 @@ function makeShotVideoTakePlan(input: {
       provider: 'fal-ai',
     },
     route: {
-      intent,
+      inputMode,
+      shotGroupMode,
       providerModel: 'bytedance/seedance-2.0/text-to-video',
       mode: 'text-to-video',
       inputRoles: [],
@@ -970,6 +1163,7 @@ function makeShotVideoTakeContext(
       shotIds: target.shotIds,
       videoTakeProduction: production ?? {},
     },
+    shotGroupMode: input.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
     shots: [],
     referencedCast: [],
     referencedLocations: [],
@@ -978,7 +1172,7 @@ function makeShotVideoTakeContext(
     availableInputs: [],
     existingTakes: [],
     defaults: {
-      intentId: 'text-only',
+      inputModeId: 'text-only',
       imageDependencyModelChoice: 'fal-ai/nano-banana-2',
       parameterValues: {},
     },
@@ -1005,16 +1199,30 @@ function makeLookbookImageSpec() {
   };
 }
 
+function makeLookbookSheetSpec() {
+  return {
+    purpose: 'lookbook.sheet' as const,
+    target: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
+    modelChoice: 'fal-ai/nano-banana-2' as const,
+    prompt: 'A Lookbook sheet.',
+    takeCount: 1,
+    seed: null,
+    sheetFrame: 'project' as const,
+    detail: 'standard' as const,
+    outputFormat: 'png' as const,
+  };
+}
+
 function makeMediaGenerationSpecRecord(
   id: string,
-  spec: LookbookImageGenerationSpec
+  spec: MediaGenerationSpec
 ): MediaGenerationSpecRecord {
   return {
     id,
-    purpose: 'lookbook.image' as const,
+    purpose: spec.purpose,
     target: spec.target,
     modelChoice: spec.modelChoice,
-    title: 'Lookbook image',
+    title: 'title' in spec && spec.title ? spec.title : 'Media generation',
     spec,
     createdAt: '2026-05-22T00:00:00.000Z',
     updatedAt: '2026-05-22T00:00:00.000Z',
@@ -1075,6 +1283,37 @@ function makeLookbookImage(id: string) {
       updatedAt: '2026-05-22T00:00:00.000Z',
     },
     sections: [] as LookbookSection[],
+  };
+}
+
+function makeLookbookSheet(id: string) {
+  return {
+    id,
+    asset: {
+      assetId: 'asset_lookbook_sheet',
+      type: 'lookbook_sheet',
+      mediaKind: 'image',
+      title: 'Lookbook sheet',
+      origin: 'generated',
+      availability: 'ready',
+      files: [
+        {
+          id: 'asset_file_lookbook_sheet',
+          role: 'source',
+          projectRelativePath:
+            'generated/media/lookbook-sheet.png' as ProjectRelativePath,
+          mediaKind: 'image',
+          mimeType: 'image/png',
+          sizeBytes: 1024,
+          contentHash: 'sha256:lookbook-sheet',
+          width: 1024,
+          height: 768,
+          durationSeconds: null,
+        },
+      ],
+      createdAt: '2026-05-22T00:00:00.000Z',
+      updatedAt: '2026-05-22T00:00:00.000Z',
+    },
   };
 }
 

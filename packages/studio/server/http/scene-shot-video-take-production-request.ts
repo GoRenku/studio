@@ -19,7 +19,7 @@ const CONTEXT = 'scene shot video take production request';
 /**
  * Parse the `{ productionGroup }` envelope used by the AI Production autosave
  * and preview routes (0041). The reader only checks the envelope shape; deep
- * validation of intent, model, parameters, and group membership is delegated to
+ * validation of input mode, model, parameters, and group membership is delegated to
  * core (0040).
  */
 export function readShotVideoTakeProductionGroupRequest(
@@ -139,7 +139,7 @@ export function readShotLocationReferenceRequest(
 }
 
 export interface ShotLookbookReferenceRequest {
-  lookbookImageId: string | null;
+  lookbookSheetId: string | null;
 }
 
 export function readShotLookbookReferenceRequest(
@@ -153,17 +153,17 @@ export function readShotLookbookReferenceRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['lookbookImageId'],
+    ['lookbookSheetId'],
     issues,
     CONTEXT,
-    'Send only the lookbookImageId field.'
+    'Send only the lookbookSheetId field.'
   );
-  const lookbookImageId =
-    record.lookbookImageId === null
+  const lookbookSheetId =
+    record.lookbookSheetId === null
       ? null
-      : readStringValue(record.lookbookImageId, ['lookbookImageId'], issues);
+      : readStringValue(record.lookbookSheetId, ['lookbookSheetId'], issues);
   finishOrThrow(issues);
-  return { lookbookImageId };
+  return { lookbookSheetId };
 }
 
 export interface ShotCustomReferenceImagesRequest {

@@ -33,7 +33,7 @@ import {
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readLocationRecord } from '../database/access/locations.js';
-import { readLookbookImage } from '../database/access/lookbook-images.js';
+import { readLookbookSheet } from '../database/access/lookbook-sheets.js';
 import { requireShotVideoTakeInput } from '../database/access/shot-video-takes.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -188,15 +188,15 @@ export async function updateSceneShotLookbookReference(
 ): Promise<SceneShotListResource> {
   await updateActiveShotSpecs(input, (session, shot) => {
     const next = { ...(shot.shotSpecs ?? {}) };
-    if (input.lookbookImageId) {
-      if (!readLookbookImage(session, input.lookbookImageId)) {
+    if (input.lookbookSheetId) {
+      if (!readLookbookSheet(session, input.lookbookSheetId)) {
         throw new ProjectDataError(
-          'CORE_SHOT_REFERENCE_UNKNOWN_LOOKBOOK_IMAGE',
-          `Lookbook image was not found: ${input.lookbookImageId}.`,
-          { suggestion: 'Choose a Lookbook image from the current project.' }
+          'CORE_SHOT_REFERENCE_UNKNOWN_LOOKBOOK_SHEET',
+          `Lookbook sheet was not found: ${input.lookbookSheetId}.`,
+          { suggestion: 'Choose a Lookbook sheet from the current project.' }
         );
       }
-      next.lookbookReference = { lookbookImageId: input.lookbookImageId };
+      next.lookbookReference = { lookbookSheetId: input.lookbookSheetId };
     } else {
       delete next.lookbookReference;
     }
@@ -451,8 +451,8 @@ function normalizeCastReferences(
 function normalizeLookbookReference(
   lookbookReference: ShotSpecs['lookbookReference']
 ): ShotSpecs['lookbookReference'] | undefined {
-  const lookbookImageId = lookbookReference?.lookbookImageId?.trim();
-  return lookbookImageId ? { lookbookImageId } : undefined;
+  const lookbookSheetId = lookbookReference?.lookbookSheetId?.trim();
+  return lookbookSheetId ? { lookbookSheetId } : undefined;
 }
 
 function normalizeReferenceImages(

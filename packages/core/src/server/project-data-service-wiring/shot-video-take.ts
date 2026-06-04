@@ -15,6 +15,7 @@ export function createShotVideoTakeServiceWiring() {
     readShotVideoTakeProductionPlan:
       shotVideoTake.readShotVideoTakeProductionPlan,
     previewShotVideoTakeProduction: shotVideoTake.previewShotVideoTakeProduction,
+    resolveShotVideoTakeInputFile: shotVideoTake.resolveShotVideoTakeInputFile,
     selectShotVideoTakeInput: shotVideoTake.selectShotVideoTakeInput,
     clearShotVideoTakeInputSelection:
       shotVideoTake.clearShotVideoTakeInputSelection,

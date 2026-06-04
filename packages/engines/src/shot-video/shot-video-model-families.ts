@@ -1,11 +1,12 @@
 import type { GenerationMode } from '../generation/contracts.js';
 
-export type ShotVideoTakeIntent =
+export type ShotVideoTakeInputMode =
   | 'text-only'
   | 'first-frame'
   | 'first-last-frame'
-  | 'reference'
-  | 'multi-shot';
+  | 'reference';
+
+export type ShotVideoTakeShotGroupMode = 'single-shot' | 'multi-shot';
 
 export type ShotVideoTakeModelChoice =
   | 'fal-ai/bytedance/seedance-2.0'
@@ -22,6 +23,7 @@ export type ShotVideoTakeInputKind =
   | 'shot-reference-sheet'
   | 'character-sheet'
   | 'location-sheet'
+  | 'lookbook-sheet'
   | 'multi-shot-storyboard-sheet'
   | 'source-video'
   | 'audio';
@@ -77,7 +79,8 @@ export interface ShotVideoRoutePricing {
 }
 
 export interface ShotVideoRoute {
-  intent: ShotVideoTakeIntent;
+  inputMode: ShotVideoTakeInputMode;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
   mode: Extract<GenerationMode, 'text-to-video' | 'image-to-video'>;
   inputSlots: ShotVideoRouteInputSlot[];
@@ -303,36 +306,52 @@ const happyHorseImageParameters = happyHorseTextParameters.filter(
 
 export const SHOT_VIDEO_MODEL_FAMILIES: ShotVideoModelFamily[] = [
   family('fal-ai/bytedance/seedance-2.0', 'Seedance', '2.0', [
-    route('text-only', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
-    route('first-frame', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('first-last-frame', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('reference', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [MULTI_SHOT_STORYBOARD_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('text-only', 'single-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
+    route('text-only', 'multi-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
+    route('first-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('first-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('first-last-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('first-last-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('reference', 'single-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, MULTI_SHOT_STORYBOARD_SLOT], seedanceParameters, SEEDANCE_DURATION),
   ]),
   family('fal-ai/kling-video/v3/pro', 'Kling', '3.0', [
-    route('text-only', 'kling-video/v3/pro/text-to-video', 'text-to-video', [], klingTextParameters, KLING_DURATION),
-    route('first-frame', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }], klingImageParameters, KLING_DURATION),
-    route('first-last-frame', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'end_image_url' }], klingImageParameters, KLING_DURATION),
-    route('multi-shot', 'kling-video/v3/pro/text-to-video', 'text-to-video', [], klingTextParameters, KLING_DURATION),
+    route('text-only', 'single-shot', 'kling-video/v3/pro/text-to-video', 'text-to-video', [], klingTextParameters, KLING_DURATION),
+    route('text-only', 'multi-shot', 'kling-video/v3/pro/text-to-video', 'text-to-video', [], klingTextParameters, KLING_DURATION),
+    route('first-frame', 'single-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }], klingImageParameters, KLING_DURATION),
+    route('first-frame', 'multi-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }], klingImageParameters, KLING_DURATION),
+    route('first-last-frame', 'single-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'end_image_url' }], klingImageParameters, KLING_DURATION),
+    route('first-last-frame', 'multi-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'end_image_url' }], klingImageParameters, KLING_DURATION),
   ]),
   family('fal-ai/veo3.1', 'Veo', '3.1', [
-    route('text-only', 'veo3.1', 'text-to-video', [], veoTextParameters, VEO_DURATION),
-    route('first-frame', 'veo3.1/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], veoImageParameters, VEO_DURATION),
-    route('first-last-frame', 'veo3.1/first-last-frame-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'first_frame_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'last_frame_url' }], veoFirstLastParameters, VEO_DURATION),
-    route('reference', 'veo3.1/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], veoReferenceParameters, { kind: 'discrete', valuesSeconds: [8] }),
+    route('text-only', 'single-shot', 'veo3.1', 'text-to-video', [], veoTextParameters, VEO_DURATION),
+    route('text-only', 'multi-shot', 'veo3.1', 'text-to-video', [], veoTextParameters, VEO_DURATION),
+    route('first-frame', 'single-shot', 'veo3.1/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], veoImageParameters, VEO_DURATION),
+    route('first-frame', 'multi-shot', 'veo3.1/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], veoImageParameters, VEO_DURATION),
+    route('first-last-frame', 'single-shot', 'veo3.1/first-last-frame-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'first_frame_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'last_frame_url' }], veoFirstLastParameters, VEO_DURATION),
+    route('first-last-frame', 'multi-shot', 'veo3.1/first-last-frame-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'first_frame_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'last_frame_url' }], veoFirstLastParameters, VEO_DURATION),
+    route('reference', 'single-shot', 'veo3.1/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], veoReferenceParameters, { kind: 'discrete', valuesSeconds: [8] }),
+    route('reference', 'multi-shot', 'veo3.1/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], veoReferenceParameters, { kind: 'discrete', valuesSeconds: [8] }),
   ]),
   family('fal-ai/xai/grok-imagine-video-1.5', 'XAI Grok Imagine Video', '1.5', [
-    route('first-frame', 'xai/grok-imagine-video/v1.5/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], grokParameters, GROK_DURATION),
+    route('first-frame', 'single-shot', 'xai/grok-imagine-video/v1.5/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], grokParameters, GROK_DURATION),
+    route('first-frame', 'multi-shot', 'xai/grok-imagine-video/v1.5/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], grokParameters, GROK_DURATION),
   ]),
   family('fal-ai/ltx-3.2', 'LTX', '3.2', [
-    route('text-only', 'ltx-2.3/text-to-video', 'text-to-video', [], ltxTextParameters, LTX_DURATION),
-    route('first-frame', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], ltxImageParameters, LTX_DURATION),
-    route('first-last-frame', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], ltxImageParameters, LTX_DURATION),
+    route('text-only', 'single-shot', 'ltx-2.3/text-to-video', 'text-to-video', [], ltxTextParameters, LTX_DURATION),
+    route('text-only', 'multi-shot', 'ltx-2.3/text-to-video', 'text-to-video', [], ltxTextParameters, LTX_DURATION),
+    route('first-frame', 'single-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], ltxImageParameters, LTX_DURATION),
+    route('first-frame', 'multi-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], ltxImageParameters, LTX_DURATION),
+    route('first-last-frame', 'single-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], ltxImageParameters, LTX_DURATION),
+    route('first-last-frame', 'multi-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], ltxImageParameters, LTX_DURATION),
   ]),
   family('fal-ai/alibaba/happy-horse', 'Alibaba Happy Horse', '', [
-    route('text-only', 'alibaba/happy-horse/text-to-video', 'text-to-video', [], happyHorseTextParameters, HAPPY_HORSE_DURATION),
-    route('first-frame', 'alibaba/happy-horse/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], happyHorseImageParameters, HAPPY_HORSE_DURATION),
-    route('reference', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('text-only', 'single-shot', 'alibaba/happy-horse/text-to-video', 'text-to-video', [], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('text-only', 'multi-shot', 'alibaba/happy-horse/text-to-video', 'text-to-video', [], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('first-frame', 'single-shot', 'alibaba/happy-horse/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], happyHorseImageParameters, HAPPY_HORSE_DURATION),
+    route('first-frame', 'multi-shot', 'alibaba/happy-horse/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], happyHorseImageParameters, HAPPY_HORSE_DURATION),
+    route('reference', 'single-shot', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('reference', 'multi-shot', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
   ]),
 ];
 
@@ -348,11 +367,14 @@ export function findShotVideoModelFamily(
 
 export function selectShotVideoRoute(input: {
   modelChoice: string;
-  intent: ShotVideoTakeIntent;
+  inputMode: ShotVideoTakeInputMode;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
 }): ShotVideoRoute | null {
   return (
     findShotVideoModelFamily(input.modelChoice)?.routes.find(
-      (candidate) => candidate.intent === input.intent
+      (candidate) =>
+        candidate.inputMode === input.inputMode &&
+        candidate.shotGroupMode === input.shotGroupMode
     ) ?? null
   );
 }
@@ -367,7 +389,8 @@ function family(
 }
 
 function route(
-  intent: ShotVideoTakeIntent,
+  inputMode: ShotVideoTakeInputMode,
+  shotGroupMode: ShotVideoTakeShotGroupMode,
   providerModel: string,
   mode: ShotVideoRoute['mode'],
   inputSlots: ShotVideoRouteInputSlot[],
@@ -375,7 +398,8 @@ function route(
   duration: ShotVideoDurationDomain | null
 ): ShotVideoRoute {
   return {
-    intent,
+    inputMode,
+    shotGroupMode,
     providerModel,
     mode,
     inputSlots,

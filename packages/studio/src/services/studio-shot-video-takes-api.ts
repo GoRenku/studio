@@ -3,7 +3,7 @@ import type {
   ShotVideoTakeInputPolicy,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
-  ShotVideoTakeIntentId,
+  ShotVideoTakeInputModeId,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionGroup,
@@ -47,11 +47,11 @@ export async function readShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
   shotIds: string[],
-  intentId?: ShotVideoTakeIntentId
+  inputModeId?: ShotVideoTakeInputModeId
 ): Promise<ShotVideoTakeProductionRead> {
   const search = new URLSearchParams({ shotIds: shotIds.join(',') });
-  if (intentId) {
-    search.set('intentId', intentId);
+  if (inputModeId) {
+    search.set('inputModeId', inputModeId);
   }
   const response = await fetch(
     `${productionPath(projectName, sceneId)}?${search.toString()}`
@@ -142,12 +142,12 @@ export async function updateShotLookbookReference(
   projectName: string,
   sceneId: string,
   shotId: string,
-  lookbookImageId: string | null
+  lookbookSheetId: string | null
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendMutation(
     shotReferencePath(projectName, sceneId, shotId, 'lookbook-reference'),
     'PATCH',
-    { lookbookImageId }
+    { lookbookSheetId }
   );
 }
 

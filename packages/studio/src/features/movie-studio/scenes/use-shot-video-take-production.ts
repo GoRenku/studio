@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ShotVideoTakeGenerationContext,
-  ShotVideoTakeIntentId,
+  ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
   ShotVideoTakeModelListReport,
   ShotVideoTakeParameterValue,
@@ -15,7 +15,7 @@ import {
 } from '@/hooks/use-debounced-autosave';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import {
-  defaultModelForIntent,
+  defaultModelForInputMode,
   findModelReport,
 } from './shot-video-take-production-projection';
 import {
@@ -42,9 +42,9 @@ export interface UseShotVideoTakeProductionResult {
   context: ShotVideoTakeGenerationContext | null;
   models: ShotVideoTakeModelListReport | null;
   productionGroup: ShotVideoTakeProductionGroup | null;
-  selectedIntent: ShotVideoTakeIntentId | null;
+  selectedInputMode: ShotVideoTakeInputModeId | null;
   selectedModel: ShotVideoTakeModelChoice | undefined;
-  setIntent: (intent: ShotVideoTakeIntentId) => void;
+  setInputMode: (inputMode: ShotVideoTakeInputModeId) => void;
   setModel: (model: ShotVideoTakeModelChoice) => void;
   setParameter: (name: string, value: ShotVideoTakeParameterValue) => void;
   autosave: DebouncedAutosaveStatus;
@@ -180,24 +180,24 @@ export function useShotVideoTakeProduction(
     []
   );
 
-  const selectedIntent = useMemo<ShotVideoTakeIntentId | null>(() => {
+  const selectedInputMode = useMemo<ShotVideoTakeInputModeId | null>(() => {
     if (!productionGroup) return null;
     return (
-      productionGroup.videoTakeProduction.intentId ??
-      context?.defaults.intentId ??
+      productionGroup.videoTakeProduction.inputModeId ??
+      context?.defaults.inputModeId ??
       null
     );
-  }, [context?.defaults.intentId, productionGroup]);
+  }, [context?.defaults.inputModeId, productionGroup]);
   const productionGroupShotIdsKey = productionGroup?.shotIds.join(',') ?? '';
   const storedModelChoice = productionGroup?.videoTakeProduction.modelChoice;
 
-  const setIntent = useCallback(
-    (intent: ShotVideoTakeIntentId) => {
+  const setInputMode = useCallback(
+    (inputMode: ShotVideoTakeInputModeId) => {
       editProduction((group) => ({
         ...group,
         videoTakeProduction: {
           ...group.videoTakeProduction,
-          intentId: intent,
+          inputModeId: inputMode,
         },
       }));
     },
@@ -205,10 +205,10 @@ export function useShotVideoTakeProduction(
   );
 
   useEffect(() => {
-    if (!selectedIntent || !productionGroupShotIdsKey) {
+    if (!selectedInputMode || !productionGroupShotIdsKey) {
       return;
     }
-    if (models?.intentId === selectedIntent) {
+    if (models?.inputModeId === selectedInputMode) {
       return;
     }
     let cancelled = false;
@@ -221,7 +221,7 @@ export function useShotVideoTakeProduction(
           projectName,
           sceneId,
           shotIds,
-          selectedIntent
+          selectedInputMode
         );
         if (cancelled) {
           return;
@@ -233,11 +233,11 @@ export function useShotVideoTakeProduction(
         const currentReport = findModelReport(read.models, storedModelChoice);
         if (
           currentReport?.available &&
-          currentReport.supportedIntents.includes(selectedIntent)
+          currentReport.supportedInputModes.includes(selectedInputMode)
         ) {
           return;
         }
-        const nextModel = defaultModelForIntent(read.models, selectedIntent);
+        const nextModel = defaultModelForInputMode(read.models, selectedInputMode);
         if (nextModel && nextModel !== storedModelChoice) {
           editProduction((group) => ({
             ...group,
@@ -266,9 +266,9 @@ export function useShotVideoTakeProduction(
     productionGroupShotIdsKey,
     projectName,
     sceneId,
-    selectedIntent,
+    selectedInputMode,
     storedModelChoice,
-    models?.intentId,
+    models?.inputModeId,
   ]);
 
   const setModel = useCallback(
@@ -350,7 +350,8 @@ export function useShotVideoTakeProduction(
       setEstimate({
         target: report.target,
         productionGroup: report.productionGroup,
-        intentId: report.plan.request.intent,
+        inputModeId: report.plan.request.inputMode,
+        shotGroupMode: report.plan.request.shotGroupMode,
         modelChoice: report.plan.request.modelChoice,
         estimate: report.plan.finalEstimate,
         plan: report.plan,
@@ -388,7 +389,8 @@ export function useShotVideoTakeProduction(
         setEstimate({
           target: report.target,
           productionGroup: report.productionGroup,
-          intentId: report.plan.request.intent,
+          inputModeId: report.plan.request.inputMode,
+          shotGroupMode: report.plan.request.shotGroupMode,
           modelChoice: report.plan.request.modelChoice,
           estimate: report.plan.finalEstimate,
           plan: report.plan,
@@ -459,8 +461,8 @@ export function useShotVideoTakeProduction(
 
   const selectedModel =
     storedModelChoice ??
-    (models && selectedIntent
-      ? defaultModelForIntent(models, selectedIntent)
+    (models && selectedInputMode
+      ? defaultModelForInputMode(models, selectedInputMode)
       : undefined);
 
   return {
@@ -469,9 +471,9 @@ export function useShotVideoTakeProduction(
     context,
     models,
     productionGroup,
-    selectedIntent,
+    selectedInputMode,
     selectedModel,
-    setIntent,
+    setInputMode,
     setModel,
     setParameter,
     autosave,

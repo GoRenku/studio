@@ -12,6 +12,7 @@ import type {
   Lookbook,
   LookbookImage,
   LookbookResource,
+  LookbookSheet,
   LookbooksResource,
   SceneDesignResource,
   SceneNarrativeResource,
@@ -163,6 +164,7 @@ export type LookbooksResourceResponse = LookbooksResource;
 export type LookbookResourceResponse = LookbookResource;
 export type LookbookResponse = Lookbook;
 export type LookbookImageResponse = LookbookImage;
+export type LookbookSheetResponse = LookbookSheet;
 
 export type StudioPageResponse<T> = PageResponse<T>;
 

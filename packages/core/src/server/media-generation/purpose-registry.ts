@@ -14,6 +14,10 @@ import type {
   LookbookImageGenerationSpec,
   LookbookImageMediaImportReport,
   LookbookImageModelListReport,
+  LookbookSheetGenerationContext,
+  LookbookSheetGenerationSpec,
+  LookbookSheetMediaImportReport,
+  LookbookSheetModelListReport,
   MediaGenerationPurpose,
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
@@ -37,6 +41,7 @@ import {
   CAST_PROFILE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
@@ -51,12 +56,14 @@ import type {
   CreateCastProfileGenerationSpecInput,
   CreateLocationEnvironmentSheetGenerationSpecInput,
   CreateLookbookImageGenerationSpecInput,
+  CreateLookbookSheetGenerationSpecInput,
   CreateSceneStoryboardSheetGenerationSpecInput,
   CreateShotVideoTakeGenerationSpecInput,
   CreateShotVideoTakeInputGenerationSpecInput,
   ImportCastMediaInput,
   ImportLocationEnvironmentSheetMediaInput,
   ImportLookbookImageMediaInput,
+  ImportLookbookSheetMediaInput,
   ImportSceneStoryboardSheetMediaInput,
   ImportShotVideoTakeInputMediaInput,
   ImportShotVideoTakeMediaInput,
@@ -71,12 +78,14 @@ import type {
   UpdateCastProfileGenerationSpecInput,
   UpdateLocationEnvironmentSheetGenerationSpecInput,
   UpdateLookbookImageGenerationSpecInput,
+  UpdateLookbookSheetGenerationSpecInput,
   UpdateSceneStoryboardSheetGenerationSpecInput,
   UpdateShotVideoTakeGenerationSpecInput,
   UpdateShotVideoTakeInputGenerationSpecInput,
   ValidateCastCharacterSheetGenerationSpecInput,
   ValidateCastProfileGenerationSpecInput,
   ValidateLocationEnvironmentSheetGenerationSpecInput,
+  ValidateLookbookSheetGenerationSpecInput,
   ValidateSceneStoryboardSheetGenerationSpecInput,
   ValidateShotVideoTakeGenerationSpecInput,
   ValidateShotVideoTakeInputGenerationSpecInput,
@@ -85,11 +94,13 @@ import * as characterSheet from './cast-character-sheet.js';
 import * as castProfile from './cast-profile.js';
 import * as locationSheet from './location-environment-sheet.js';
 import * as lookbookImage from './lookbook-image.js';
+import * as lookbookSheet from './lookbook-sheet.js';
 import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
 import * as shotVideoTake from './shot-video-take.js';
 
 export type MediaGenerationContextReport =
   | LookbookImageGenerationContext
+  | LookbookSheetGenerationContext
   | CastCharacterSheetGenerationContext
   | CastProfileGenerationContext
   | LocationEnvironmentSheetGenerationContext
@@ -98,6 +109,7 @@ export type MediaGenerationContextReport =
 
 export type MediaGenerationModelListReport =
   | LookbookImageModelListReport
+  | LookbookSheetModelListReport
   | CastCharacterSheetModelListReport
   | CastProfileModelListReport
   | LocationEnvironmentSheetModelListReport
@@ -107,6 +119,7 @@ export type MediaGenerationModelListReport =
 
 export type MediaGenerationImportReport =
   | LookbookImageMediaImportReport
+  | LookbookSheetMediaImportReport
   | CastMediaImportReport
   | LocationEnvironmentSheetMediaImportReport
   | SceneStoryboardSheetImportReport
@@ -120,7 +133,7 @@ export interface MediaGenerationPurposeContextInput {
   target: MediaGenerationRequestTarget;
   shotListId?: string;
   shotIds?: string[];
-  intentId?: string;
+  inputModeId?: string;
 }
 
 export interface ListMediaGenerationSpecsInput {
@@ -202,6 +215,43 @@ const DEFINITIONS = [
         spec: input.spec as LookbookImageGenerationSpec,
       }),
     runSpec: lookbookImage.runLookbookImageSpec,
+  },
+  {
+    purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'lookbook',
+    buildContext: (input) =>
+      lookbookSheet.buildLookbookSheetContext(toLookbookInput(input)),
+    listModels: (input) => lookbookSheet.listLookbookSheetModels(toLookbookInput(input)),
+    validateSpec: (input) =>
+      lookbookSheet.validateLookbookSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LookbookSheetGenerationSpec,
+      } satisfies ValidateLookbookSheetGenerationSpecInput),
+    createSpec: (input) =>
+      lookbookSheet.createLookbookSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LookbookSheetGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateLookbookSheetGenerationSpecInput),
+    updateSpec: (input) =>
+      lookbookSheet.updateLookbookSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as LookbookSheetGenerationSpec,
+      } satisfies UpdateLookbookSheetGenerationSpecInput),
+    listSpecs: (input) => lookbookSheet.listLookbookSheetSpecs(toLookbookInput(input)),
+    prepareSpec: lookbookSheet.prepareLookbookSheetSpec,
+    prepareDraftSpec: (input) =>
+      lookbookSheet.prepareLookbookSheetDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LookbookSheetGenerationSpec,
+      }),
+    runSpec: lookbookSheet.runLookbookSheetSpec,
   },
   {
     purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
@@ -591,7 +641,7 @@ function toShotInput(
 function toShotModelInput(input: MediaGenerationPurposeContextInput): ShotVideoTakeModelListInput {
   return {
     ...toShotInput(input),
-    ...(input.intentId ? { intentId: input.intentId as never } : {}),
+    ...(input.inputModeId ? { inputModeId: input.inputModeId as never } : {}),
   };
 }
 
@@ -637,6 +687,7 @@ function requireShotListId(
 
 export async function importMediaGenerationByPurpose(input:
   | ({ purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE } & ImportLookbookImageMediaInput)
+  | ({ purpose: typeof LOOKBOOK_SHEET_GENERATION_PURPOSE } & ImportLookbookSheetMediaInput)
   | ({ purpose: typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE } & ImportCastMediaInput)
   | ({ purpose: typeof CAST_PROFILE_GENERATION_PURPOSE } & ImportCastMediaInput)
   | ({ purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE } & ImportLocationEnvironmentSheetMediaInput)
@@ -650,6 +701,8 @@ export async function importMediaGenerationByPurpose(input:
   switch (input.purpose) {
     case LOOKBOOK_IMAGE_GENERATION_PURPOSE:
       return lookbookImage.importLookbookImageMedia(input);
+    case LOOKBOOK_SHEET_GENERATION_PURPOSE:
+      return lookbookSheet.importLookbookSheetMedia(input);
     case CAST_CHARACTER_SHEET_GENERATION_PURPOSE:
       return characterSheet.importCastCharacterSheetMedia(input);
     case CAST_PROFILE_GENERATION_PURPOSE:

@@ -6,6 +6,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { AutosaveStatus } from '@/ui/autosave-status';
+import { Badge } from '@/ui/badge';
 import { RunSetupParameter } from './run-setup-controls';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
 
@@ -18,6 +19,7 @@ interface SceneShotAiProductionRunSetupProps {
   estimatePending: boolean;
   finalPrompt: ShotVideoTakePromptDraft | null;
   autosave: DebouncedAutosaveStatus;
+  isMultiShotGroup: boolean;
 }
 
 export function SceneShotAiProductionRunSetup({
@@ -28,6 +30,7 @@ export function SceneShotAiProductionRunSetup({
   estimatePending,
   finalPrompt,
   autosave,
+  isMultiShotGroup,
 }: SceneShotAiProductionRunSetupProps) {
   return (
     <div className='flex min-h-0 flex-col'>
@@ -72,6 +75,11 @@ export function SceneShotAiProductionRunSetup({
               : formatEstimateUsd(estimate)}
           </span>
         </div>
+        {isMultiShotGroup ? (
+          <Badge variant='accent' className='shrink-0'>
+            multi-shot
+          </Badge>
+        ) : null}
       </div>
     </div>
   );

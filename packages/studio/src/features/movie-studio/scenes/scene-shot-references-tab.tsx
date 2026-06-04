@@ -1,5 +1,8 @@
 import type { ShotVideoTakeProductionPlanReport } from '@gorenku/studio-core/client';
-import { sceneAssetFileUrl } from '@/services/studio-project-assets-api';
+import {
+  sceneAssetFileUrl,
+  shotVideoTakeInputFileUrl,
+} from '@/services/studio-project-assets-api';
 import { DesignSection } from './scene-shot-design-controls';
 import { previewImageUrl } from './scene-shot-reference-card-images';
 import {
@@ -22,7 +25,14 @@ export function SceneShotReferencesTab({
     productionPlan?.imageReferences.map((choice) => {
       const preview = choice.image.previews[0];
       const imageUrl = preview
-        ? sceneAssetFileUrl(projectName, sceneId, preview.assetId, preview.assetFileId)
+        ? preview.inputId
+          ? shotVideoTakeInputFileUrl(
+              projectName,
+              sceneId,
+              preview.inputId,
+              preview.assetFileId
+            )
+          : sceneAssetFileUrl(projectName, sceneId, preview.assetId, preview.assetFileId)
         : null;
       return {
         id: `${choice.referenceKind}:${choice.title}`,

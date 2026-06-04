@@ -1,10 +1,11 @@
 import {
   sceneShotListResourceKeys,
-  type ShotVideoTakeIntentId,
+  type ShotVideoTakeInputModeId,
 } from '@gorenku/studio-core/server';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
+import { readShotVideoTakeInputFileResponse } from '../http/asset-file-response.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import {
   toActStoryboardResourceResponse,
@@ -198,8 +199,8 @@ export function createScreenplayRoute({
         const projectName = c.req.param('projectName') as string;
         const sceneId = c.req.param('sceneId') as string;
         const shotIds = parseShotIdsQuery(c.req.query('shotIds'));
-        const requestedIntentId = parseShotVideoTakeIntentQuery(
-          c.req.query('intentId')
+        const requestedInputModeId = parseShotVideoTakeInputModeQuery(
+          c.req.query('inputModeId')
         );
         const shotListId = await requireActiveShotListId(
           projectData,
@@ -217,10 +218,10 @@ export function createScreenplayRoute({
           sceneId,
           shotListId,
           shotIds,
-          intentId:
-            requestedIntentId ??
-            context.productionGroup.videoTakeProduction.intentId ??
-            context.defaults.intentId,
+          inputModeId:
+            requestedInputModeId ??
+            context.productionGroup.videoTakeProduction.inputModeId ??
+            context.defaults.inputModeId,
         });
         return c.json({ context, models });
       } catch (error) {
@@ -316,6 +317,23 @@ export function createScreenplayRoute({
             production: productionGroup.videoTakeProduction,
           });
           return c.json({ estimate });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .get(
+      '/screenplay/scenes/:sceneId/video-take-production/inputs/:inputId/files/:assetFileId',
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const inputId = c.req.param('inputId') as string;
+          const assetFileId = c.req.param('assetFileId') as string;
+          return await readShotVideoTakeInputFileResponse(projectData, {
+            projectName,
+            inputId,
+            assetFileId,
+          });
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -493,7 +511,7 @@ export function createScreenplayRoute({
             projectName,
             sceneId,
             shotId,
-            lookbookImageId: request.lookbookImageId,
+            lookbookSheetId: request.lookbookSheetId,
           });
           return c.json({
             resource: toSceneShotListResourceResponse(projectName, resource),
@@ -568,9 +586,9 @@ function parseShotIdsQuery(raw: string | undefined): string[] {
   return shotIds;
 }
 
-function parseShotVideoTakeIntentQuery(
+function parseShotVideoTakeInputModeQuery(
   raw: string | undefined
-): ShotVideoTakeIntentId | undefined {
+): ShotVideoTakeInputModeId | undefined {
   if (!raw) {
     return undefined;
   }
@@ -578,17 +596,16 @@ function parseShotVideoTakeIntentQuery(
     raw === 'text-only' ||
     raw === 'first-frame' ||
     raw === 'first-last-frame' ||
-    raw === 'reference' ||
-    raw === 'multi-shot'
+    raw === 'reference'
   ) {
     return raw;
   }
   throw createStructuredError({
     code: 'STUDIO_SERVER346',
-    message: 'Unsupported shot video take intent query parameter.',
+    message: 'Unsupported shot video take input mode query parameter.',
     issues: [],
     suggestion:
-      'Pass a supported intentId value such as text-only, first-frame, first-last-frame, reference, or multi-shot.',
+      'Pass a supported inputModeId value such as text-only, first-frame, first-last-frame, or reference.',
   });
 }
 

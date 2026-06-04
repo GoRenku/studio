@@ -19,7 +19,7 @@ function mount(overrides: Partial<ReturnType<typeof fakeProjectDataService>> = {
 const PRODUCTION_GROUP = {
   productionGroupId: 'scene_shot_video_take_group_001',
   shotIds: ['shot_001'],
-  videoTakeProduction: { intentId: 'text-only' as const },
+  videoTakeProduction: { inputModeId: 'text-only' as const },
 };
 
 describe('shot video take production routes', () => {
@@ -81,7 +81,7 @@ describe('shot video take production routes', () => {
         shotListId: 'shot_list_opening',
         shotIds: ['shot_001'],
         productionGroupId: 'scene_shot_video_take_group_001',
-        production: { intentId: 'text-only' },
+        production: { inputModeId: 'text-only' },
       })
     );
     const body = await response.json();
@@ -117,7 +117,7 @@ describe('shot video take production routes', () => {
         shotListId: 'shot_list_opening',
         shotIds: ['shot_001'],
         productionGroupId: 'scene_shot_video_take_group_001',
-        production: { intentId: 'text-only' },
+        production: { inputModeId: 'text-only' },
         inputPolicy: {
           defaultMode: 'auto',
           slotModes: { 'first-frame': 'regenerate' },
@@ -148,7 +148,7 @@ describe('shot video take production routes', () => {
         shotListId: 'shot_list_opening',
         shotIds: ['shot_001'],
         productionGroupId: 'scene_shot_video_take_group_001',
-        production: { intentId: 'text-only' },
+        production: { inputModeId: 'text-only' },
       })
     );
     const body = await response.json();

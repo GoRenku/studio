@@ -13,3 +13,11 @@ export function lookbookImageFileUrl(
 ): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/images/${encodeURIComponent(imageId)}/files/${encodeURIComponent(assetFileId)}`;
 }
+
+export function lookbookSheetFileUrl(
+  projectName: string,
+  sheetId: string,
+  assetFileId: string
+): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/sheets/${encodeURIComponent(sheetId)}/files/${encodeURIComponent(assetFileId)}`;
+}

@@ -14,16 +14,18 @@ import type {
   ShotVideoTakeDependencyKind,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
-  ShotVideoTakeIntentId,
+  ShotVideoTakeInputModeId,
+  ShotVideoTakeShotGroupMode,
   ShotVideoTakeModelChoice,
   ShotVideoTakeParameterValues,
   ShotVideoTakeProductionGroup,
 } from './scene-shot-list.js';
 import type { SceneSetting } from './screenplay.js';
-import type { Lookbook, LookbookImage, LookbookSection } from './visual-language.js';
+import type { Lookbook, LookbookImage, LookbookSection, LookbookSheet } from './visual-language.js';
 import type { InspirationFolderWithResolvedPath } from './visual-language.js';
 
 export const LOOKBOOK_IMAGE_GENERATION_PURPOSE = 'lookbook.image' as const;
+export const LOOKBOOK_SHEET_GENERATION_PURPOSE = 'lookbook.sheet' as const;
 export const CAST_CHARACTER_SHEET_GENERATION_PURPOSE =
   'cast.character-sheet' as const;
 export const CAST_PROFILE_GENERATION_PURPOSE = 'cast.profile' as const;
@@ -46,6 +48,7 @@ export type MediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
 export type MediaGenerationPurpose =
   | typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE
+  | typeof LOOKBOOK_SHEET_GENERATION_PURPOSE
   | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE
   | typeof CAST_PROFILE_GENERATION_PURPOSE
   | typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE
@@ -63,7 +66,7 @@ export type MediaGenerationDependencyKind =
   | 'multi-shot-storyboard-sheet'
   | 'cast-character-sheet'
   | 'location-environment-sheet'
-  | 'lookbook-reference-image'
+  | 'lookbook-sheet'
   | 'manual-attachment';
 
 export type LookbookImageModelChoice =
@@ -84,6 +87,11 @@ export type LookbookImageFrame =
 export type LookbookImageDetail = 'draft' | 'standard' | 'high';
 
 export type LookbookImageOutputFormat = 'png' | 'jpeg' | 'webp';
+
+export type LookbookSheetModelChoice = LookbookImageModelChoice;
+export type LookbookSheetFrame = LookbookImageFrame;
+export type LookbookSheetDetail = LookbookImageDetail;
+export type LookbookSheetOutputFormat = LookbookImageOutputFormat;
 
 export type CastImageFrame = LookbookImageFrame;
 export type CastImageDetail = LookbookImageDetail;
@@ -487,7 +495,7 @@ export interface SceneShotVideoTake {
 }
 
 export interface ShotVideoTakeDefaults {
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
   imageDependencyModelChoice: ShotVideoTakeInputModelChoice;
   parameterValues: ShotVideoTakeParameterValues;
 }
@@ -499,6 +507,7 @@ export interface ShotVideoTakeGenerationContext {
   scene: ShotVideoTakeSceneContext;
   shotList: ShotVideoTakeShotListContext;
   productionGroup: ShotVideoTakeProductionGroup;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   shots: SceneShot[];
   referencedCast: ShotVideoTakeCastReference[];
   referencedLocations: ShotVideoTakeLocationReference[];
@@ -546,6 +555,43 @@ export interface LookbookImageGenerationSpec {
   imageFrame?: LookbookImageFrame;
   detail?: LookbookImageDetail;
   outputFormat?: LookbookImageOutputFormat;
+  title?: string;
+}
+
+export interface LookbookSheetGenerationContext {
+  purpose: typeof LOOKBOOK_SHEET_GENERATION_PURPOSE;
+  target: LookbookImageGenerationTarget;
+  project: {
+    id?: string;
+    name: string;
+    title: string;
+    aspectRatio: string | null;
+  };
+  lookbook: Lookbook;
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+  existingSheets: LookbookSheet[];
+  cardImage: LookbookImage | null;
+  defaults: {
+    takeCount: 1;
+    seed: null;
+    sheetFrame: 'project';
+    resolvedAspectRatio: string | null;
+    detail: 'standard';
+    outputFormat: 'png';
+  };
+  resourceKeys: string[];
+}
+
+export interface LookbookSheetGenerationSpec {
+  purpose: typeof LOOKBOOK_SHEET_GENERATION_PURPOSE;
+  target: LookbookImageGenerationTarget;
+  modelChoice: LookbookSheetModelChoice;
+  prompt: string;
+  takeCount?: number;
+  seed?: number | null;
+  sheetFrame?: LookbookSheetFrame;
+  detail?: LookbookSheetDetail;
+  outputFormat?: LookbookSheetOutputFormat;
   title?: string;
 }
 
@@ -633,7 +679,7 @@ export interface ShotVideoTakeGenerationSpec {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   target: SceneShotMediaGenerationTarget;
   planId?: string;
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   prompt: string;
   negativePrompt?: string;
@@ -644,6 +690,7 @@ export interface ShotVideoTakeGenerationSpec {
 
 export type MediaGenerationSpec =
   | LookbookImageGenerationSpec
+  | LookbookSheetGenerationSpec
   | CastCharacterSheetGenerationSpec
   | CastProfileGenerationSpec
   | LocationEnvironmentSheetGenerationSpec
@@ -665,6 +712,22 @@ export interface LookbookImageModelChoiceReport {
   supportedFrames: LookbookImageFrame[];
   supportedDetails: LookbookImageDetail[];
   supportedOutputFormats: LookbookImageOutputFormat[];
+}
+
+export interface LookbookSheetModelChoiceReport {
+  modelChoice: LookbookSheetModelChoice;
+  label: string;
+  available: boolean;
+  unavailableReason?: string;
+  supportsSeed: boolean;
+  takeCount: {
+    min: 1;
+    max: number;
+    default: 1;
+  };
+  supportedFrames: LookbookSheetFrame[];
+  supportedDetails: LookbookSheetDetail[];
+  supportedOutputFormats: LookbookSheetOutputFormat[];
 }
 
 export interface CastImageModelChoiceReport {
@@ -773,7 +836,7 @@ export interface ShotVideoTakeModelChoiceReport {
   label: string;
   available: boolean;
   unavailableReason?: string;
-  supportedIntents: ShotVideoTakeIntentId[];
+  supportedInputModes: ShotVideoTakeInputModeId[];
   duration: ShotVideoTakeDurationSupport;
   inputRoles: ShotVideoTakeModelInputRoleReport[];
   parameters: ShotVideoTakeParameterReport[];
@@ -783,7 +846,8 @@ export interface ShotVideoTakeModelChoiceReport {
 export interface ShotVideoTakeModelListReport {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   target: SceneShotMediaGenerationTarget;
-  intentId?: ShotVideoTakeIntentId;
+  inputModeId?: ShotVideoTakeInputModeId;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   defaultModelChoice: ShotVideoTakeModelChoice;
   models: ShotVideoTakeModelChoiceReport[];
 }
@@ -875,7 +939,8 @@ export interface ShotVideoTakePreflightReport {
   plan?: ShotVideoTakeGenerationPlan;
   target: SceneShotMediaGenerationTarget;
   productionGroup: ShotVideoTakeProductionGroup;
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
   preparedInputs: ShotVideoTakePreflightInput[];
   availableInputs: ShotVideoTakeAvailableInput[];
@@ -890,7 +955,8 @@ export interface ShotVideoTakePreflightReport {
 export interface ShotVideoTakeProductionEstimateReport {
   target: SceneShotMediaGenerationTarget;
   productionGroup: ShotVideoTakeProductionGroup;
-  intentId: ShotVideoTakeIntentId;
+  inputModeId: ShotVideoTakeInputModeId;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
   estimate: GenerationEstimate | null;
   plan?: ShotVideoTakeGenerationPlan;
@@ -905,6 +971,7 @@ export type ShotVideoTakeReferenceChoiceState =
   | 'unavailable';
 
 export interface ShotVideoTakeReferenceImagePreview {
+  inputId?: string;
   assetId: string;
   assetFileId: string;
   projectRelativePath: ProjectRelativePath;
@@ -950,7 +1017,7 @@ export interface ShotVideoTakeLocationReferenceChoice {
 }
 
 export interface ShotVideoTakeLookbookReferenceChoice {
-  lookbookImageId: string | null;
+  lookbookSheetId: string | null;
   lookbookId: string;
   title: string;
   selected: boolean;
@@ -1094,7 +1161,8 @@ export interface ShotVideoTakeGenerationPlanRequest {
   sceneId: string;
   shotListId: string;
   productionGroupId: string;
-  intent: ShotVideoTakeIntentId;
+  inputMode: ShotVideoTakeInputModeId;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
   routeSettings: ShotVideoTakeParameterValues;
   inputPolicy: ShotVideoTakeInputPolicy;
@@ -1108,7 +1176,8 @@ export interface ShotVideoTakePlanModel {
 }
 
 export interface ShotVideoTakePlanRoute {
-  intent: ShotVideoTakeIntentId;
+  inputMode: ShotVideoTakeInputModeId;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
   mode: 'text-to-video' | 'image-to-video';
   inputRoles: ShotVideoTakeModelInputRoleReport[];
@@ -1148,12 +1217,19 @@ export interface LookbookImageModelListReport {
   models: LookbookImageModelChoiceReport[];
 }
 
+export interface LookbookSheetModelListReport {
+  purpose: typeof LOOKBOOK_SHEET_GENERATION_PURPOSE;
+  target: LookbookImageGenerationTarget;
+  models: LookbookSheetModelChoiceReport[];
+}
+
 export interface MediaGenerationSpecRecord {
   id: string;
   purpose: MediaGenerationPurpose;
   target: MediaGenerationTarget;
   modelChoice:
     | LookbookImageModelChoice
+    | LookbookSheetModelChoice
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
     | LocationEnvironmentSheetModelChoice
@@ -1173,6 +1249,7 @@ export interface MediaGenerationRun {
   target: MediaGenerationTarget;
   modelChoice:
     | LookbookImageModelChoice
+    | LookbookSheetModelChoice
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
     | LocationEnvironmentSheetModelChoice
@@ -1242,6 +1319,22 @@ export interface LookbookImageMediaImportReport {
   purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE;
   target: LookbookImageGenerationTarget;
   imported: LookbookImage;
+  receipt?: unknown;
+  resourceKeys: string[];
+}
+
+export interface LookbookSheetMediaImportReport {
+  valid: true;
+  warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  project: {
+    name: string;
+    id?: string;
+    projectFolder?: string;
+  };
+  changes?: Array<{ type: string; [key: string]: string }>;
+  purpose: typeof LOOKBOOK_SHEET_GENERATION_PURPOSE;
+  target: LookbookImageGenerationTarget;
+  imported: LookbookSheet;
   receipt?: unknown;
   resourceKeys: string[];
 }

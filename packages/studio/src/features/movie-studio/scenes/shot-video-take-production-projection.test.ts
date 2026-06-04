@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ShotVideoTakeModelListReport } from '@gorenku/studio-core/client';
 import {
-  buildIntentOptions,
+  buildInputModeOptions,
   buildModelRows,
 } from './shot-video-take-production-projection';
 
@@ -21,7 +21,7 @@ const MODELS: ShotVideoTakeModelListReport = {
       modelChoice: 'fal-ai/xai/grok-imagine-video-1.5',
       label: 'XAI Grok Imagine Video 1.5',
       available: true,
-      supportedIntents: ['first-frame'],
+      supportedInputModes: ['first-frame'],
       duration: { supported: true, values: [6], default: 6 },
       inputRoles: [],
       parameters: [],
@@ -34,7 +34,7 @@ const MODELS: ShotVideoTakeModelListReport = {
       modelChoice: 'fal-ai/veo3.1',
       label: 'Veo 3.1',
       available: true,
-      supportedIntents: ['first-last-frame'],
+      supportedInputModes: ['first-last-frame'],
       duration: { supported: true, values: [4, 6, 8], default: 6 },
       inputRoles: [],
       parameters: [],
@@ -46,34 +46,22 @@ const MODELS: ShotVideoTakeModelListReport = {
   ],
 };
 
-describe('buildIntentOptions', () => {
-  it('disables multi-shot for single-shot groups with a tooltip', () => {
-    const options = buildIntentOptions(1);
-    const multi = options.find((option) => option.id === 'multi-shot');
-    expect(multi?.enabled).toBe(false);
-    expect(multi?.disabledTooltip).toBe(
-      'Select adjacent shots in the rail to use multi-shot generation.'
-    );
-    expect(options.find((option) => option.id === 'text-only')?.enabled).toBe(
-      true
-    );
-  });
-
-  it('enables only multi-shot for multi-shot groups', () => {
-    const options = buildIntentOptions(2);
-    expect(options.find((option) => option.id === 'multi-shot')?.enabled).toBe(
-      true
-    );
-    const textOnly = options.find((option) => option.id === 'text-only');
-    expect(textOnly?.enabled).toBe(false);
-    expect(textOnly?.disabledTooltip).toBe(
-      'Multi-shot group selected. Split the group to use this intent.'
-    );
+describe('buildInputModeOptions', () => {
+  it('returns only real input modes and leaves group mode out of the selector', () => {
+    const options = buildInputModeOptions();
+    expect(options.map((option) => option.id)).toEqual([
+      'text-only',
+      'first-frame',
+      'first-last-frame',
+      'reference',
+    ]);
+    expect(options.every((option) => option.enabled)).toBe(true);
+    expect(options.every((option) => option.disabledTooltip === null)).toBe(true);
   });
 });
 
 describe('buildModelRows', () => {
-  it('reports availability and a concise status per intent', () => {
+  it('reports availability and a concise status per input mode', () => {
     const rows = buildModelRows(MODELS, 'first-last-frame');
     const grok = rows.find((row) => row.label === 'XAI Grok Imagine Video 1.5');
     const veo = rows.find((row) => row.label === 'Veo 3.1');
@@ -83,7 +71,7 @@ describe('buildModelRows', () => {
     expect(veo?.available).toBe(true);
     expect(veo?.status).toBe('Input required');
     expect(veo?.statusTitle).toBe(
-      'The selected intent needs a prepared input, such as a first frame or reference image.'
+      'The selected input mode needs a prepared input, such as a first frame or reference image.'
     );
     expect(veo?.duration).toBe('4, 6, 8s');
   });

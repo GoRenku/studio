@@ -5,10 +5,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
   SceneShotListDocument,
+  ShotVideoTakeGenerationContext,
+  ShotVideoTakeModelListReport,
+  ShotVideoTakeProductionEstimateReport,
+  ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readLocationAssets } from '@/services/studio-project-assets-api';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
+import {
+  estimateShotVideoTakeProduction,
+  planShotVideoTakeProduction,
+  readShotVideoTakeProduction,
+} from '@/services/studio-shot-video-takes-api';
 import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -29,6 +38,16 @@ vi.mock('@/services/studio-project-assets-api', () => ({
   ),
 }));
 
+vi.mock('@/services/studio-shot-video-takes-api', () => ({
+  readShotVideoTakeProduction: vi.fn(),
+  updateShotVideoTakeProduction: vi.fn(),
+  estimateShotVideoTakeProduction: vi.fn(),
+  planShotVideoTakeProduction: vi.fn(),
+  selectShotVideoTakeInput: vi.fn(),
+  clearShotVideoTakeInput: vi.fn(),
+  updateShotLocationReference: vi.fn(),
+}));
+
 // jsdom lacks ResizeObserver, which the Radix Slider in the video stage uses.
 class ResizeObserverStub {
   observe() {}
@@ -42,6 +61,15 @@ describe('SceneShotsTab', () => {
     vi.mocked(readSceneShotListResource).mockReset();
     vi.mocked(readLocationAssets).mockReset();
     vi.mocked(readLocationAssets).mockResolvedValue([]);
+    vi.mocked(readShotVideoTakeProduction)
+      .mockReset()
+      .mockResolvedValue({ context: productionContext(), models: productionModels() });
+    vi.mocked(estimateShotVideoTakeProduction)
+      .mockReset()
+      .mockResolvedValue(productionEstimate());
+    vi.mocked(planShotVideoTakeProduction)
+      .mockReset()
+      .mockResolvedValue(productionPlan());
   });
 
   it('renders the empty state when there is no active shot list', async () => {
@@ -200,5 +228,159 @@ function resource(
     storyboardImagesByShotId: {},
     castMemberLabels: { cast_mehmed: 'Mehmed' },
     locationLabels: { loc_chamber: 'Council Chamber' },
+  };
+}
+
+function productionContext(): ShotVideoTakeGenerationContext {
+  return {
+    purpose: 'shot.video-take',
+    target: {
+      kind: 'sceneShotGroup',
+      id: 'production_group_hook',
+      sceneId: 'scene_hook',
+      shotListId: 'shot_list_hook',
+      productionGroupId: 'production_group_hook',
+      shotIds: ['shot_001'],
+    },
+    project: { name: 'constantinople', title: 'Constantinople', aspectRatio: '16:9' },
+    scene: {
+      id: 'scene_hook',
+      title: 'The Sound That Opens Stone',
+      setting: {},
+      storyFunction: [],
+    },
+    shotList: {
+      id: 'shot_list_hook',
+      title: 'Council chamber coverage',
+      summary: 'A restrained coverage plan.',
+      createdAt: '',
+      updatedAt: '',
+      isActive: true,
+    },
+    productionGroup: {
+      productionGroupId: 'production_group_hook',
+      shotIds: ['shot_001'],
+      videoTakeProduction: { inputModeId: 'text-only' },
+    },
+    shots: [shot('shot_001', 'Map study', 'Beat one.')],
+    referencedCast: [],
+    referencedLocations: [],
+    activeLookbook: null,
+    storyboardImages: [],
+    availableInputs: [],
+    existingTakes: [],
+    defaults: {
+      inputModeId: 'text-only',
+      imageDependencyModelChoice: 'fal-ai/nano-banana-2',
+      parameterValues: {},
+    },
+    shotGroupMode: 'single-shot',
+    resourceKeys: [],
+  };
+}
+
+function productionModels(): ShotVideoTakeModelListReport {
+  return {
+    purpose: 'shot.video-take',
+    target: productionContext().target,
+    inputModeId: 'text-only',
+    shotGroupMode: 'single-shot',
+    defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
+    models: [],
+  };
+}
+
+function productionEstimate(): ShotVideoTakeProductionEstimateReport {
+  return {
+    target: productionContext().target,
+    productionGroup: productionContext().productionGroup,
+    inputModeId: 'text-only',
+    shotGroupMode: 'single-shot',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0',
+    estimate: null,
+    issues: [],
+  };
+}
+
+function productionPlan(): ShotVideoTakeProductionPlanReport {
+  const context = productionContext();
+  return {
+    target: context.target,
+    productionGroup: context.productionGroup,
+    finalPrompt: null,
+    plan: {
+      planId: 'plan_hook',
+      request: {
+        projectId: 'project_hook',
+        sceneId: 'scene_hook',
+        shotListId: 'shot_list_hook',
+        productionGroupId: 'production_group_hook',
+        inputMode: 'text-only',
+        shotGroupMode: 'single-shot',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        routeSettings: {},
+        inputPolicy: { defaultMode: 'auto' },
+      },
+      model: {
+        choice: 'fal-ai/bytedance/seedance-2.0',
+        label: 'Seedance 2.0',
+        version: '2.0',
+        provider: 'fal-ai',
+      },
+      route: {
+        inputMode: 'text-only',
+        shotGroupMode: 'single-shot',
+        providerModel: 'bytedance/seedance-2.0/text-to-video',
+        mode: 'text-to-video',
+        inputRoles: [],
+        parameters: [],
+      },
+      dependencyMap: {
+        rootPurpose: 'shot.video-take',
+        nodes: [],
+        edges: [],
+        estimate: {
+          state: 'complete',
+          estimatedTotalUsd: 0,
+          pricedNodeCount: 0,
+          unpricedNodeCount: 0,
+          missingNodeCount: 0,
+          requiresPriceOverride: false,
+        },
+        execution: { topologicalNodeIds: [], levels: [], diagnostics: [] },
+        diagnostics: [],
+      },
+      lines: [],
+      estimate: {
+        state: 'complete',
+        estimatedTotalUsd: 0,
+        pricedLineCount: 0,
+        unpricedLineCount: 0,
+        missingLineCount: 0,
+        requiresPriceOverride: false,
+      },
+      diagnostics: [],
+      finalEstimate: null,
+    },
+    castReferences: [],
+    locationReferences: [
+      {
+        locationId: 'loc_chamber',
+        name: 'Council Chamber',
+        selected: true,
+        defaultSelected: true,
+        environmentSheet: {
+          state: 'needed',
+          mediaKind: 'image',
+          pricing: { state: 'not-applicable', estimatedUsd: null },
+          previews: [],
+          diagnostics: [],
+        },
+        viewChoices: [],
+      },
+    ],
+    lookbookReferences: [],
+    imageReferences: [],
+    diagnostics: [],
   };
 }

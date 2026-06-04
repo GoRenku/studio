@@ -1,5 +1,6 @@
 import type {
   Asset,
+  AssetFile,
   AssetLocaleContext,
   AssetTarget,
   ActNavigationRow,
@@ -18,6 +19,10 @@ import type {
   LookbookImageGenerationSpec,
   LookbookImageMediaImportReport,
   LookbookImageModelListReport,
+  LookbookSheetGenerationContext,
+  LookbookSheetGenerationSpec,
+  LookbookSheetMediaImportReport,
+  LookbookSheetModelListReport,
   LookbookResource,
   LookbookSourceInspirationsReport,
   LookbooksResource,
@@ -77,7 +82,7 @@ import type {
   SceneShotListWriteReport,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
-  ShotVideoTakeIntentId,
+  ShotVideoTakeInputModeId,
   ShotVideoTakeProductionPlan,
   SceneStoryboardSheetImportDocument,
   SceneStoryboardSheetImportReport,
@@ -201,6 +206,9 @@ export interface ProjectDataService {
   resolveProjectAssetFile(
     input: ResolveProjectAssetFileInput
   ): Promise<ResolvedProjectAssetFile>;
+  resolveShotVideoTakeInputFile(
+    input: ResolveShotVideoTakeInputFileInput
+  ): Promise<ResolvedShotVideoTakeInputFile>;
   registerAsset(input: RegisterAssetInput & RenkuConfigPathOptions): Promise<Asset>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
   createAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
@@ -280,6 +288,18 @@ export interface ProjectDataService {
   runLookbookImageSpec(input: RunLookbookImageGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordLookbookImageRun(input: RecordLookbookImageGenerationRunInput): Promise<MediaGenerationRunReport>;
   importLookbookImageMedia(input: ImportLookbookImageMediaInput): Promise<LookbookImageMediaImportReport>;
+  buildLookbookSheetContext(input: ReadLookbookSheetGenerationContextInput): Promise<LookbookSheetGenerationContext>;
+  listLookbookSheetModels(input: ReadLookbookSheetGenerationContextInput): Promise<LookbookSheetModelListReport>;
+  validateLookbookSheetSpec(input: ValidateLookbookSheetGenerationSpecInput): Promise<{ valid: true; spec: LookbookSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createLookbookSheetSpec(input: CreateLookbookSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateLookbookSheetSpec(input: UpdateLookbookSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readLookbookSheetSpec(input: ReadLookbookSheetGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listLookbookSheetSpecs(input: ReadLookbookSheetGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareLookbookSheetSpec(input: ReadLookbookSheetGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateLookbookSheetSpec(input: ReadLookbookSheetGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runLookbookSheetSpec(input: RunLookbookSheetGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  recordLookbookSheetRun(input: RecordLookbookSheetGenerationRunInput): Promise<MediaGenerationRunReport>;
+  importLookbookSheetMedia(input: ImportLookbookSheetMediaInput): Promise<LookbookSheetMediaImportReport>;
   buildCastCharacterSheetContext(input: CastMediaGenerationContextInput): Promise<CastCharacterSheetGenerationContext>;
   listCastCharacterSheetModels(input: CastMediaGenerationContextInput): Promise<CastCharacterSheetModelListReport>;
   validateCastCharacterSheetSpec(input: ValidateCastCharacterSheetGenerationSpecInput): Promise<{ valid: true; spec: CastCharacterSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
@@ -708,6 +728,62 @@ export interface ImportLookbookImageMediaInput extends RenkuConfigPathOptions {
   idGenerator?: ProjectIdGenerator;
 }
 
+export interface ReadLookbookSheetGenerationContextInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  lookbookId: string;
+}
+
+export interface ValidateLookbookSheetGenerationSpecInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: LookbookSheetGenerationSpec;
+}
+
+export interface CreateLookbookSheetGenerationSpecInput
+  extends ValidateLookbookSheetGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateLookbookSheetGenerationSpecInput
+  extends ValidateLookbookSheetGenerationSpecInput {
+  specId: string;
+}
+
+export interface ReadLookbookSheetGenerationSpecInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  specId: string;
+}
+
+export interface RunLookbookSheetGenerationSpecInput
+  extends ReadLookbookSheetGenerationSpecInput {
+  approvalToken?: string;
+  simulate?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface RecordLookbookSheetGenerationRunInput
+  extends ReadLookbookSheetGenerationSpecInput {
+  provider: 'fal-ai';
+  model: string;
+  providerPayload: Record<string, unknown>;
+  estimate: unknown;
+  approvalToken?: string;
+  simulated: boolean;
+  status: 'simulated' | 'completed' | 'failed';
+  outputs: unknown;
+  diagnostics: unknown;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ImportLookbookSheetMediaInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  lookbookId: string;
+  sourceProjectRelativePath: string;
+  title?: string;
+  oneLineSummary?: string;
+  receipt?: unknown;
+  idGenerator?: ProjectIdGenerator;
+}
+
 export interface CastMediaGenerationContextInput extends RenkuConfigPathOptions {
   projectName?: string;
   castMemberId: string;
@@ -764,7 +840,7 @@ export interface MediaGenerationPurposeContextInput extends RenkuConfigPathOptio
   target: MediaGenerationRequestTarget;
   shotListId?: string;
   shotIds?: string[];
-  intentId?: string;
+  inputModeId?: string;
 }
 
 export interface ListMediaGenerationSpecsInput extends RenkuConfigPathOptions {
@@ -896,7 +972,7 @@ export interface ShotVideoTakeContextInput extends RenkuConfigPathOptions {
 }
 
 export interface ShotVideoTakeModelListInput extends ShotVideoTakeContextInput {
-  intentId?: ShotVideoTakeIntentId;
+  inputModeId?: ShotVideoTakeInputModeId;
 }
 
 export interface UpdateShotVideoTakeProductionGroupInput
@@ -1066,7 +1142,7 @@ export interface UpdateSceneShotLookbookReferenceInput
   projectName: string;
   sceneId: string;
   shotId: string;
-  lookbookImageId: string | null;
+  lookbookSheetId: string | null;
 }
 
 export interface UpdateSceneShotCustomReferenceImagesInput
@@ -1159,6 +1235,19 @@ export interface ResolveProjectAssetFileInput extends RenkuConfigPathOptions {
 export interface ResolvedProjectAssetFile {
   asset: Asset;
   file: Asset['files'][number];
+  absolutePath: string;
+}
+
+export interface ResolveShotVideoTakeInputFileInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  inputId: string;
+  assetFileId: string;
+}
+
+export interface ResolvedShotVideoTakeInputFile {
+  input: ShotVideoTakeAvailableInput;
+  file: AssetFile;
   absolutePath: string;
 }
 
