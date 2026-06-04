@@ -15,10 +15,12 @@ import {
 } from '@gorenku/studio-engines';
 import type {
   MediaGenerationEstimateReport,
+  MediaGenerationPurpose,
   MediaGenerationDependencyMap,
   MediaGenerationDependencyNode,
   MediaGenerationDependencyPricing,
   MediaGenerationPlanLine,
+  MediaGenerationSpec,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
@@ -36,6 +38,8 @@ import type {
   ShotVideoTakeInputSubjectKind,
   ShotVideoTakeInputMediaImportReport,
   ShotVideoTakeInputModelChoice,
+  ShotVideoTakeInputModelChoiceReport,
+  ShotVideoTakeInputModelListReport,
   ShotVideoTakeIntentId,
   ShotVideoTakeMediaImportReport,
   ShotVideoTakeModelChoice,
@@ -51,6 +55,9 @@ import type {
   ShotVideoTakeRequestedInput,
 } from '../../client/index.js';
 import {
+  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -118,6 +125,7 @@ import type {
   ValidateShotVideoTakeInputGenerationSpecInput,
 } from '../project-data-service-contracts.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 
 type GenerationMode = PreparedMediaGeneration['generation']['policy']['mode'];
 
@@ -128,12 +136,15 @@ interface ShotVideoTakeProviderPlan {
   outputCount: 1;
   payload: Record<string, unknown>;
   inputFiles: PreparedMediaGeneration['generation']['request']['inputFiles'];
+  pricingInputCounts?: PreparedMediaGeneration['generation']['request']['pricingInputCounts'];
 }
 
 interface RequiredShotVideoTakeInputSlot {
   outputInputKind: ShotVideoTakeInputKind;
-  dependencyKind?: ShotVideoTakePreflightDependency['dependencyKind'];
-  purpose?: ShotVideoTakePreflightDependency['purpose'];
+  dependencyId: string;
+  dependencyKind: NonNullable<MediaGenerationDependencyNode['dependencyKind']>;
+  dependencyTarget?: MediaGenerationDependencyNode['dependencyTarget'];
+  purpose?: MediaGenerationPurpose;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
   mediaKind: 'image' | 'audio' | 'video';
@@ -213,6 +224,19 @@ export async function listShotVideoTakeModels(
   };
 }
 
+export async function listShotInputModels(
+  input: ShotVideoTakeContextInput,
+  purpose: ShotVideoTakeInputGenerationPurpose
+): Promise<ShotVideoTakeInputModelListReport> {
+  const context = await buildShotVideoTakeContext(input);
+  return {
+    purpose,
+    target: context.target,
+    defaultModelChoice: context.defaults.imageDependencyModelChoice,
+    models: shotInputModelChoices(),
+  };
+}
+
 export async function listShotVideoTakeInputs(input: ShotVideoTakeContextInput) {
   const context = await buildShotVideoTakeContext(input);
   return {
@@ -275,65 +299,17 @@ export async function previewShotVideoTakeProduction(
         ]
       : []),
   ];
-  const estimateLineIssues =
-    inputsToCreate.length > 0
-      ? [
-          issue(
-            'PROJECT_DATA373',
-            'Final video estimate requires prepared inputs that do not exist yet.',
-            ['productionGroup', 'videoTakeProduction', 'preparedInputs'],
-            'Generate or select the listed prerequisite inputs, then run preflight again.'
-          ),
-        ]
-      : [];
-  const finalTakeEstimate = await estimateFinalTakeForPreflight({
-    context,
-    intentId,
-    modelChoice,
-    preparedInputs,
-    canEstimate: issues.length === 0 && inputsToCreate.length === 0,
-  });
-  const estimateLines: ShotVideoTakePreflightReport['estimateLines'] = [
-    ...inputsToCreate
-      .filter(
-        (
-          inputToCreate
-        ): inputToCreate is ShotVideoTakePreflightDependency & {
-          purpose: NonNullable<ShotVideoTakePreflightDependency['purpose']>;
-        } => Boolean(inputToCreate.purpose)
-      )
-      .map((inputToCreate) => ({
-        purpose: inputToCreate.purpose,
-        dependencyKind: inputToCreate.dependencyKind,
-        label: inputToCreate.reason,
-        estimate: null,
-        issues: [
-          issue(
-            'PROJECT_DATA374',
-            'Dependency estimate requires a persisted dependency spec.',
-            ['inputsToCreate'],
-            'Create the concrete dependency spec before estimating it.'
-          ),
-        ],
-      })),
-    {
-      purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      label: 'Final video take',
-      estimate: finalTakeEstimate.estimate,
-      issues: [...estimateLineIssues, ...finalTakeEstimate.issues],
-    },
-  ];
+  const plan = await planShotVideoTakeProduction(input);
   const inputPlanItems = buildShotVideoTakePreflightInputItems({
     context,
     preparedInputs,
     availableInputs: context.availableInputs,
     inputsToCreate,
-    estimateLines,
+    plan,
   });
-  const plan = await planShotVideoTakeProduction(input);
   return {
-    valid: issues.length === 0 && inputsToCreate.length === 0,
-    issues: [...issues, ...estimateLineIssues, ...finalTakeEstimate.issues],
+    valid: plan.diagnostics.every((diagnostic) => diagnostic.severity !== 'error'),
+    issues: plan.diagnostics,
     plan,
     target: context.target,
     productionGroup: context.productionGroup,
@@ -344,14 +320,14 @@ export async function previewShotVideoTakeProduction(
     inputsToCreate,
     inputPlanItems,
     prompts,
-    estimateLines,
     finalTake: {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      canCreateSpec: issues.length === 0 && inputsToCreate.length === 0,
+      canCreateSpec: plan.dependencyMap.estimate.missingNodeCount === 0 &&
+        plan.diagnostics.every((diagnostic) => diagnostic.severity !== 'error'),
       title: finalDraft?.title ?? `${context.scene.title} video take`,
     },
     agentBrief: agentBrief(context),
-    estimate: finalTakeEstimate.estimate,
+    estimate: plan.finalEstimate,
   };
 }
 
@@ -462,6 +438,8 @@ export async function planShotVideoTakeProduction(
     preparedInputs,
     inputPolicy,
     diagnostics,
+    projectName: input.projectName,
+    homeDir: input.homeDir,
   });
   const lines = planLinesFromDependencyMap(dependencyMap);
   const finalEstimate = finalEstimateFromDependencyMap(dependencyMap);
@@ -512,6 +490,8 @@ export async function planShotVideoTakeProduction(
 }
 
 async function buildShotVideoTakeDependencyMap(input: {
+  projectName?: string;
+  homeDir?: string;
   context: ShotVideoTakeGenerationContext;
   intentId: ShotVideoTakeIntentId;
   modelChoice: ShotVideoTakeModelChoice;
@@ -523,18 +503,35 @@ async function buildShotVideoTakeDependencyMap(input: {
 }): Promise<MediaGenerationDependencyMap> {
   const nodes: MediaGenerationDependencyNode[] = [];
   const edges: MediaGenerationDependencyMap['edges'] = [];
-  const requiredSlots = requiredInputSlots(input.context, input.intentId, input.modelChoice);
+  const requiredSlots = requiredInputSlots(input.context, input.intentId, input.modelChoice, {
+    includeReferenceBundleForReferenceRoute: true,
+  });
   const finalNodeId = 'final:shot.video-take';
   const finalInputs: ShotVideoTakePreflightInput[] = [...input.preparedInputs];
   const diagnostics = [...input.diagnostics];
+  const nodeIds = new Set<string>();
 
-  for (const slot of requiredSlots) {
-    const slotKey = dependencySlotKey(slot);
+  const addRequiredSlotNode = async (
+    slot: RequiredShotVideoTakeInputSlot,
+    parentNodeId: string
+  ) => {
     const prepared = input.preparedInputs.find((candidate) =>
       preparedInputMatchesSlot(candidate, slot)
     );
-    if (prepared && inputPolicyMode(input.inputPolicy, slotKey) !== 'regenerate') {
-      const nodeId = `asset:${slotKey}`;
+    const nodeId = prepared && inputPolicyMode(input.inputPolicy, slot.dependencyId) !== 'regenerate'
+      ? `asset:${slot.dependencyId}`
+      : slot.purpose
+        ? `planned:${slot.dependencyId}`
+        : `missing:${slot.dependencyId}`;
+
+    if (nodeIds.has(nodeId)) {
+      edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
+      return nodeId;
+    }
+
+    nodeIds.add(nodeId);
+
+    if (prepared && inputPolicyMode(input.inputPolicy, slot.dependencyId) !== 'regenerate') {
       nodes.push({
         id: nodeId,
         kind: 'existing-asset',
@@ -543,15 +540,15 @@ async function buildShotVideoTakeDependencyMap(input: {
         label: requiredInputLabel(slot),
         state: 'ready',
         pricing: { state: 'priced', estimatedUsd: 0 },
-        slotId: slotKey,
-        routeInputKind: slot.outputInputKind,
-        generationTarget: input.context.target,
+        dependencyId: slot.dependencyId,
+        dependencyKind: slot.dependencyKind,
+        dependencyTarget: slot.dependencyTarget,
         assetId: prepared.assetId,
         assetFileId: prepared.assetFileId,
         diagnostics: [],
       });
-      edges.push({ fromNodeId: nodeId, toNodeId: finalNodeId, slotId: slotKey });
-      continue;
+      edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
+      return nodeId;
     }
 
     if (slot.purpose) {
@@ -559,8 +556,14 @@ async function buildShotVideoTakeDependencyMap(input: {
         context: input.context,
         slot,
       });
-      const pricing = await estimateDraftDependency(draftGenerationSpec, diagnostics);
-      const nodeId = `planned:${slotKey}`;
+      const pricing = await estimateDraftDependency(
+        {
+          projectName: input.projectName,
+          homeDir: input.homeDir,
+          draftGenerationSpec,
+        },
+        diagnostics
+      );
       nodes.push({
         id: nodeId,
         kind: 'planned-generation',
@@ -569,9 +572,9 @@ async function buildShotVideoTakeDependencyMap(input: {
         label: requiredInputLabel(slot),
         state: 'planned',
         pricing,
-        slotId: slotKey,
-        routeInputKind: slot.outputInputKind,
-        generationTarget: input.context.target,
+        dependencyId: slot.dependencyId,
+        dependencyKind: slot.dependencyKind,
+        dependencyTarget: slot.dependencyTarget,
         draftGenerationSpec,
         diagnostics: pricing.state === 'unpriced'
           ? [
@@ -584,12 +587,15 @@ async function buildShotVideoTakeDependencyMap(input: {
             ]
           : [],
       });
-      edges.push({ fromNodeId: nodeId, toNodeId: finalNodeId, slotId: slotKey });
-      finalInputs.push(estimateInputForSlot(input.context, slot, nodes.length));
-      continue;
+      edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
+      if (isShotInputPurpose(slot.purpose)) {
+        for (const referenceSlot of referenceBundleSlots(input.context)) {
+          await addRequiredSlotNode(referenceSlot, nodeId);
+        }
+      }
+      return nodeId;
     }
 
-    const nodeId = `missing:${slotKey}`;
     const missingIssue = issue(
       'CORE_SHOT_VIDEO_PLAN_REQUIRED_ATTACHMENT_MISSING',
       `Required shot video take input must be attached before final generation: ${requiredInputLabel(slot)}.`,
@@ -605,12 +611,17 @@ async function buildShotVideoTakeDependencyMap(input: {
       label: requiredInputLabel(slot),
       state: 'missing',
       pricing: { state: 'not-applicable', estimatedUsd: null },
-      slotId: slotKey,
-      routeInputKind: slot.outputInputKind,
-      generationTarget: input.context.target,
+      dependencyId: slot.dependencyId,
+      dependencyKind: slot.dependencyKind,
+      dependencyTarget: slot.dependencyTarget,
       diagnostics: [missingIssue],
     });
-    edges.push({ fromNodeId: nodeId, toNodeId: finalNodeId, slotId: slotKey });
+    edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
+    return nodeId;
+  };
+
+  for (const slot of requiredSlots) {
+    await addRequiredSlotNode(slot, finalNodeId);
   }
 
   const finalPricing = await estimateFinalPlanLine({
@@ -619,8 +630,6 @@ async function buildShotVideoTakeDependencyMap(input: {
     modelChoice: input.modelChoice,
     normalizedSettings: input.normalizedSettings,
     preparedInputs: finalInputs,
-    canEstimate: nodes.every((node) => node.kind !== 'external-input-required') &&
-      diagnostics.every((diagnostic) => diagnostic.severity !== 'error' || diagnostic.code === 'CORE_SHOT_VIDEO_PLAN_REQUIRED_ATTACHMENT_MISSING'),
     diagnostics,
   });
   nodes.push({
@@ -631,16 +640,14 @@ async function buildShotVideoTakeDependencyMap(input: {
     label: 'Final video take',
     state: nodes.some((node) => node.kind === 'external-input-required') ? 'missing' : 'planned',
     pricing: finalPricing.pricing,
-    generationTarget: input.context.target,
+    dependencyTarget: input.context.target,
     diagnostics: finalPricing.diagnostics,
   });
 
   const estimate = aggregateDependencyEstimate(nodes);
-  const dependencyLevels = nodes
-    .filter((node) => node.kind === 'planned-generation')
-    .map((node) => node.id);
+  const dependencyLevels = plannedGenerationLevels(nodes, edges);
   const levels = [
-    ...(dependencyLevels.length > 0 ? [dependencyLevels] : []),
+    ...dependencyLevels,
     ...(nodes.some((node) => node.kind === 'external-input-required') ? [] : [[finalNodeId]]),
   ];
   const dependencyMap: MediaGenerationDependencyMap & {
@@ -674,7 +681,7 @@ function aggregateDependencyEstimate(
   const total = priced.reduce((sum, node) => sum + node.pricing.estimatedUsd, 0);
   return {
     state: missing.length > 0 ? 'unavailable' : unpriced.length > 0 ? 'partial' : 'complete',
-    estimatedTotalUsd: missing.length > 0 ? null : total,
+    estimatedTotalUsd: total,
     pricedNodeCount: priced.length,
     unpricedNodeCount: unpriced.length,
     missingNodeCount: missing.length,
@@ -682,24 +689,101 @@ function aggregateDependencyEstimate(
   };
 }
 
+function plannedGenerationLevels(
+  nodes: MediaGenerationDependencyNode[],
+  edges: MediaGenerationDependencyMap['edges']
+): string[][] {
+  const plannedNodeIds = new Set(
+    nodes.filter((node) => node.kind === 'planned-generation').map((node) => node.id)
+  );
+  const unresolved = new Set(plannedNodeIds);
+  const levels: string[][] = [];
+
+  while (unresolved.size > 0) {
+    const level = [...unresolved].filter((nodeId) =>
+      edges
+        .filter((edge) => edge.toNodeId === nodeId)
+        .every((edge) => !plannedNodeIds.has(edge.fromNodeId) || !unresolved.has(edge.fromNodeId))
+    );
+    if (level.length === 0) {
+      throw new ProjectDataError(
+        'PROJECT_DATA389',
+        'Shot video take dependency graph contains a cycle.'
+      );
+    }
+    levels.push(level);
+    level.forEach((nodeId) => unresolved.delete(nodeId));
+  }
+
+  return levels;
+}
+
+function dependencyDepths(
+  dependencyMap: MediaGenerationDependencyMap
+): Map<string, number> {
+  const depths = new Map<string, number>();
+  const nodeIds = new Set(dependencyMap.nodes.map((node) => node.id));
+
+  const depthFor = (nodeId: string, visiting: Set<string>): number => {
+    const existing = depths.get(nodeId);
+    if (existing !== undefined) {
+      return existing;
+    }
+    if (visiting.has(nodeId)) {
+      throw new ProjectDataError(
+        'PROJECT_DATA389',
+        'Shot video take dependency graph contains a cycle.'
+      );
+    }
+    visiting.add(nodeId);
+    const childDepths = dependencyMap.edges
+      .filter((edge) => edge.toNodeId === nodeId && nodeIds.has(edge.fromNodeId))
+      .map((edge) => depthFor(edge.fromNodeId, visiting));
+    visiting.delete(nodeId);
+    const depth = childDepths.length > 0 ? Math.max(...childDepths) + 1 : 0;
+    depths.set(nodeId, depth);
+    return depth;
+  };
+
+  dependencyMap.nodes.forEach((node) => depthFor(node.id, new Set()));
+  return depths;
+}
+
 function planLinesFromDependencyMap(
   dependencyMap: MediaGenerationDependencyMap
 ): MediaGenerationPlanLine[] {
-  return dependencyMap.nodes.map((node, index) => ({
-    id: `line:${node.id}`,
-    nodeId: node.id,
-    kind: planLineKind(node),
-    label: node.label,
-    purpose: node.purpose,
-    mediaKind: node.mediaKind,
-    ...(node.slotId ? { slotId: node.slotId } : {}),
-    depth: node.kind === 'final-generation' ? 1 : 0,
-    state: node.state,
-    pricing: node.pricing,
-    ...(node.assetId ? { sourceAssetId: node.assetId } : {}),
-    ...(node.draftGenerationSpec ? { draftGenerationSpec: node.draftGenerationSpec } : {}),
-    diagnostics: node.diagnostics,
-  }));
+  const orderedNodeIds = [
+    ...dependencyMap.execution.topologicalNodeIds,
+    ...dependencyMap.nodes
+      .map((node) => node.id)
+      .filter((nodeId) => !dependencyMap.execution.topologicalNodeIds.includes(nodeId)),
+  ];
+  const nodesById = new Map(dependencyMap.nodes.map((node) => [node.id, node]));
+  const depths = dependencyDepths(dependencyMap);
+  return orderedNodeIds.flatMap((nodeId) => {
+    const node = nodesById.get(nodeId);
+    if (!node) {
+      return [];
+    }
+    return [
+      {
+        id: `line:${node.id}`,
+        nodeId: node.id,
+        kind: planLineKind(node),
+        label: node.label,
+        purpose: node.purpose,
+        mediaKind: node.mediaKind,
+        ...(node.dependencyId ? { dependencyId: node.dependencyId } : {}),
+        ...(node.dependencyKind ? { dependencyKind: node.dependencyKind } : {}),
+        depth: depths.get(node.id) ?? 0,
+        state: node.state,
+        pricing: node.pricing,
+        ...(node.assetId ? { sourceAssetId: node.assetId } : {}),
+        ...(node.draftGenerationSpec ? { draftGenerationSpec: node.draftGenerationSpec } : {}),
+        diagnostics: node.diagnostics,
+      },
+    ];
+  });
 }
 
 function planLineKind(node: MediaGenerationDependencyNode): MediaGenerationPlanLine['kind'] {
@@ -724,18 +808,21 @@ function finalEstimateFromDependencyMap(
 }
 
 async function estimateDraftDependency(
-  draftGenerationSpec: NonNullable<MediaGenerationDependencyNode['draftGenerationSpec']>,
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    draftGenerationSpec: NonNullable<MediaGenerationDependencyNode['draftGenerationSpec']>;
+  },
   diagnostics: DiagnosticIssue[]
 ): Promise<MediaGenerationDependencyPricing> {
   try {
-    if (!isShotInputPurpose(draftGenerationSpec.purpose)) {
-      return { state: 'not-applicable', estimatedUsd: null };
-    }
-    const plan = buildShotVideoTakeInputProviderPayload(
-      draftGenerationSpec.spec as ShotVideoTakeInputGenerationSpec
-    );
-    const { estimateGeneration } = await import('@gorenku/studio-engines');
-    const estimate = await estimateGeneration(toGenerationRequest(plan, draftGenerationSpec.spec as ShotVideoTakeInputGenerationSpec));
+    const { estimateDraftMediaGenerationSpec } = await import('./shared-generation-service.js');
+    const estimateReport = await estimateDraftMediaGenerationSpec({
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+      spec: input.draftGenerationSpec.spec,
+    });
+    const estimate = estimateReport.estimate;
     if (estimate.estimatedCostUsd === null) {
       return {
         state: 'unpriced',
@@ -770,20 +857,12 @@ async function estimateFinalPlanLine(input: {
   modelChoice: ShotVideoTakeModelChoice;
   normalizedSettings: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
   preparedInputs: ShotVideoTakePreflightInput[];
-  canEstimate: boolean;
   diagnostics: DiagnosticIssue[];
 }): Promise<{
   pricing: MediaGenerationDependencyPricing;
   diagnostics: DiagnosticIssue[];
   estimate: ShotVideoTakePreflightReport['estimate'];
 }> {
-  if (!input.canEstimate) {
-    return {
-      pricing: { state: 'not-applicable', estimatedUsd: null },
-      diagnostics: [],
-      estimate: null,
-    };
-  }
   try {
     const spec = finalTakeSpecForPreflight({
       context: input.context,
@@ -792,8 +871,11 @@ async function estimateFinalPlanLine(input: {
       preparedInputs: input.preparedInputs,
       parameterValues: input.normalizedSettings,
     });
-    validateFinalSpecAgainstContext(spec, input.context);
-    const plan = buildShotVideoTakeProviderPayload(spec, input.context);
+    validateFinalPricingSpecAgainstContext(spec, input.context);
+    const plan = buildShotVideoTakePricingProviderPayload({
+      spec,
+      context: input.context,
+    });
     const { estimateGeneration } = await import('@gorenku/studio-engines');
     const estimate = await estimateGeneration(toGenerationRequest(plan, spec));
     if (estimate.estimatedCostUsd === null) {
@@ -854,6 +936,59 @@ function draftSpecForDependency(input: {
       `Shot video dependency has no generation purpose: ${input.slot.outputInputKind}.`
     );
   }
+  if (input.slot.purpose === CAST_CHARACTER_SHEET_GENERATION_PURPOSE) {
+    const spec: MediaGenerationSpec = {
+      purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+      target: requireDependencyTarget(input.slot, 'castMember'),
+      modelChoice: 'fal-ai/openai/gpt-image-2',
+      prompt: dependencyPrompt(input.context, input.slot),
+      takeCount: 1,
+      seed: null,
+      imageFrame: 'project',
+      detail: 'standard',
+      outputFormat: 'png',
+      title: requiredInputLabel(input.slot),
+    };
+    return { purpose: input.slot.purpose, spec };
+  }
+  if (input.slot.purpose === LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE) {
+    const spec: MediaGenerationSpec = {
+      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+      target: requireDependencyTarget(input.slot, 'location'),
+      modelChoice: 'fal-ai/openai/gpt-image-2',
+      prompt: dependencyPrompt(input.context, input.slot),
+      takeCount: 1,
+      seed: null,
+      sheetFrame: '4:3',
+      viewFrame: '16:9',
+      detail: 'standard',
+      outputFormat: 'png',
+      title: requiredInputLabel(input.slot),
+    };
+    return { purpose: input.slot.purpose, spec };
+  }
+  if (input.slot.purpose === LOOKBOOK_IMAGE_GENERATION_PURPOSE) {
+    const spec: MediaGenerationSpec = {
+      purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+      target: requireDependencyTarget(input.slot, 'lookbook'),
+      modelChoice: 'fal-ai/openai/gpt-image-2',
+      prompt: dependencyPrompt(input.context, input.slot),
+      focusSections: ['thesis', 'palette', 'composition'],
+      takeCount: 1,
+      seed: null,
+      imageFrame: 'project',
+      detail: 'standard',
+      outputFormat: 'png',
+      title: requiredInputLabel(input.slot),
+    };
+    return { purpose: input.slot.purpose, spec };
+  }
+  if (!isShotInputPurpose(input.slot.purpose)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA387',
+      `Unsupported generated shot video dependency purpose: ${input.slot.purpose}.`
+    );
+  }
   const draft = input.context.productionGroup.videoTakeProduction.agentProposal?.dependencyDrafts.find(
     (candidate) =>
       candidate.purpose === input.slot.purpose &&
@@ -862,7 +997,7 @@ function draftSpecForDependency(input: {
   const spec: ShotVideoTakeInputGenerationSpec = {
     purpose: input.slot.purpose,
     target: input.context.target,
-    dependencyKind: input.slot.dependencyKind ?? dependencyKindForPurpose(input.slot.purpose),
+    dependencyKind: dependencyKindForPurpose(input.slot.purpose),
     outputInputKind: input.slot.outputInputKind,
     modelChoice: draft?.modelChoice ?? input.context.defaults.imageDependencyModelChoice,
     prompt: draft?.prompt ?? dependencyPrompt(input.context, input.slot),
@@ -870,6 +1005,21 @@ function draftSpecForDependency(input: {
     title: draft?.title ?? requiredInputLabel(input.slot),
   };
   return { purpose: input.slot.purpose, spec };
+}
+
+type DependencyTarget = NonNullable<MediaGenerationDependencyNode['dependencyTarget']>;
+
+function requireDependencyTarget<T extends DependencyTarget['kind']>(
+  slot: RequiredShotVideoTakeInputSlot,
+  kind: T
+): Extract<DependencyTarget, { kind: T }> {
+  if (!slot.dependencyTarget || slot.dependencyTarget.kind !== kind) {
+    throw new ProjectDataError(
+      'PROJECT_DATA387',
+      `Dependency ${slot.dependencyId} requires target.kind "${kind}".`
+    );
+  }
+  return slot.dependencyTarget as Extract<DependencyTarget, { kind: T }>;
 }
 
 function defaultShotInputParameterValues(): NonNullable<ShotVideoTakeProductionPlan['parameterValues']> {
@@ -893,34 +1043,6 @@ function dependencyKindForPurpose(
   purpose: ShotVideoTakeInputGenerationPurpose
 ): ShotVideoTakeInputGenerationSpec['dependencyKind'] {
   return PURPOSE_CONFIG[purpose].dependencyKind;
-}
-
-function estimateInputForSlot(
-  context: ShotVideoTakeGenerationContext,
-  slot: RequiredShotVideoTakeInputSlot,
-  index: number
-): ShotVideoTakePreflightInput {
-  const subjectKind = slot.subjectKind ?? 'production-group';
-  const subjectId = slot.subjectId ?? context.target.productionGroupId;
-  return {
-    kind: slot.outputInputKind,
-    assetId: `planned_asset_${index}`,
-    assetFileId: `planned_asset_file_${index}`,
-    role: slot.outputInputKind,
-    mediaKind: slot.mediaKind,
-    projectRelativePath:
-      `generated/planned/${context.target.productionGroupId}/${slot.outputInputKind}-${index}.${estimateInputExtension(slot.mediaKind)}` as ProjectRelativePath,
-    subjectKind,
-    subjectId,
-  };
-}
-
-function dependencySlotKey(slot: RequiredShotVideoTakeInputSlot): string {
-  return [
-    slot.outputInputKind,
-    slot.subjectKind ?? 'production-group',
-    slot.subjectId ?? '',
-  ].join(':');
 }
 
 function inputPolicyMode(
@@ -1016,45 +1138,6 @@ function shotVideoTakePlanId(input: {
   return `shot_video_take_plan_${hash}`;
 }
 
-async function estimateFinalTakeForPreflight(input: {
-  context: ShotVideoTakeGenerationContext;
-  intentId: ShotVideoTakeIntentId;
-  modelChoice: ShotVideoTakeModelChoice;
-  preparedInputs: ShotVideoTakePreflightInput[];
-  canEstimate: boolean;
-}): Promise<{
-  estimate: ShotVideoTakePreflightReport['estimate'];
-  issues: DiagnosticIssue[];
-}> {
-  if (!input.canEstimate) {
-    return { estimate: null, issues: [] };
-  }
-  try {
-    const spec = finalTakeSpecForPreflight(input);
-    validateFinalSpecAgainstContext(spec, input.context);
-    const plan = buildShotVideoTakeProviderPayload(spec, input.context);
-    const { estimateGeneration } = await import('@gorenku/studio-engines');
-    return {
-      estimate: await estimateGeneration(toGenerationRequest(plan, spec)),
-      issues: [],
-    };
-  } catch (error) {
-    return {
-      estimate: null,
-      issues: [
-        issue(
-          'PROJECT_DATA385',
-          error instanceof Error
-            ? `Final video estimate failed: ${error.message}`
-            : 'Final video estimate failed.',
-          ['productionGroup', 'videoTakeProduction'],
-          'Review the selected model, run setup values, and prepared inputs.'
-        ),
-      ],
-    };
-  }
-}
-
 const SHOT_VIDEO_TAKE_INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, string> = {
   'first-frame': 'First frame',
   'last-frame': 'Last frame',
@@ -1072,152 +1155,56 @@ function buildShotVideoTakePreflightInputItems(input: {
   preparedInputs: ShotVideoTakePreflightInput[];
   availableInputs: ShotVideoTakeAvailableInput[];
   inputsToCreate: ShotVideoTakePreflightDependency[];
-  estimateLines: ShotVideoTakePreflightReport['estimateLines'];
+  plan: ShotVideoTakeGenerationPlan;
 }): ShotVideoTakePreflightInputItem[] {
   const items: ShotVideoTakePreflightInputItem[] = [];
-  const subjectStatus = (
-    kind: ShotVideoTakeInputKind,
-    subjectId?: string
-  ): Pick<
-    ShotVideoTakePreflightInputItem,
-    'status' | 'assetId' | 'assetFileId' | 'projectRelativePath'
-  > => {
-    const ready = matchPreflightInput(input.preparedInputs, kind, subjectId);
-    if (ready) {
-      return {
-        status: 'ready',
-        assetId: ready.assetId,
-        assetFileId: ready.assetFileId,
-        projectRelativePath: ready.projectRelativePath,
-      };
-    }
-    const available = matchPreflightInput(input.availableInputs, kind, subjectId);
-    if (available) {
-      return {
-        status: 'available',
-        assetId: available.assetId,
-        assetFileId: available.assetFileId,
-        projectRelativePath: available.projectRelativePath,
-      };
-    }
-    return { status: 'needed' };
-  };
 
-  input.context.referencedCast.forEach((castMember) => {
-    items.push({
-      key: `cast-${castMember.id}`,
-      title: castMember.name,
-      caption: 'Character sheet',
-      mediaKind: 'image',
-      ...subjectStatus('character-sheet', castMember.id),
-    });
-  });
-  input.context.referencedLocations.forEach((location) => {
-    items.push({
-      key: `location-${location.id}`,
-      title: location.name,
-      caption: 'Location sheet',
-      mediaKind: 'image',
-      ...subjectStatus('location-sheet', location.id),
-    });
-  });
-  if (input.context.activeLookbook) {
-    items.push({
-      key: `lookbook-${input.context.activeLookbook.id}`,
-      title: input.context.activeLookbook.name,
-      caption: 'Lookbook reference',
-      mediaKind: 'image',
-      ...subjectStatus('reference-image', input.context.activeLookbook.id),
-    });
-  }
-
-  const shotOrder = new Map(
-    input.context.shots.map((shot, index) => [shot.shotId, index])
-  );
-  input.context.storyboardImages.forEach((image) => {
-    items.push({
-      key: `storyboard-${image.shotId}`,
-      title: `Shot ${(shotOrder.get(image.shotId) ?? 0) + 1} frame`,
-      caption: 'Storyboard',
-      mediaKind: 'image',
-      status: 'ready',
-      assetId: image.assetId,
-      assetFileId: image.assetFileId,
-      projectRelativePath: image.projectRelativePath,
-    });
-  });
-
-  const candidatesBySlot = new Map<string, ShotVideoTakeAvailableInput[]>();
+  const candidatesByDependencyId = new Map<string, ShotVideoTakeAvailableInput[]>();
   input.availableInputs.forEach((availableInput) => {
-    const key = preflightInputSlotKey(
+    const key = dependencyIdForInput(
       availableInput.kind,
+      availableInput.subjectKind,
       availableInput.subjectId
     );
-    candidatesBySlot.set(key, [
-      ...(candidatesBySlot.get(key) ?? []),
+    candidatesByDependencyId.set(key, [
+      ...(candidatesByDependencyId.get(key) ?? []),
       availableInput,
     ]);
   });
-  const costByDependencyKind = new Map<string, number | null>();
-  input.estimateLines.forEach((line) => {
-    if (line.dependencyKind) {
-      costByDependencyKind.set(
-        line.dependencyKind,
-        line.estimate?.estimatedCostUsd ?? null
-      );
-    }
-  });
 
-  const seen = new Set<string>();
-  input.preparedInputs.forEach((preparedInput) => {
-    const key = preflightInputSlotKey(preparedInput.kind, preparedInput.subjectId);
-    seen.add(key);
-    items.push({
-      key: `model-${key}`,
-      title: inputKindLabel(preparedInput.kind),
-      caption: 'Model input',
-      mediaKind: preparedInput.mediaKind,
-      status: 'ready',
-      assetId: preparedInput.assetId,
-      assetFileId: preparedInput.assetFileId,
-      projectRelativePath: preparedInput.projectRelativePath,
-    });
-  });
-  input.inputsToCreate.forEach((inputToCreate) => {
-    const key = preflightInputSlotKey(
-      inputToCreate.outputInputKind,
-      inputToCreate.subjectId
-    );
-    if (seen.has(key)) {
+  input.plan.lines.forEach((line) => {
+    if (line.kind === 'final-video-generation') {
       return;
     }
-    seen.add(key);
-    const candidates = candidatesBySlot.get(key) ?? [];
+    const node = input.plan.dependencyMap.nodes.find((candidate) => candidate.id === line.nodeId);
+    const dependencyId = line.dependencyId;
+    const candidates = dependencyId ? (candidatesByDependencyId.get(dependencyId) ?? []) : [];
     const selected = candidates.find((candidate) => candidate.selected);
+    const prepared = dependencyId
+      ? input.preparedInputs.find(
+          (candidate) =>
+            dependencyIdForInput(candidate.kind, candidate.subjectKind, candidate.subjectId) === dependencyId
+        )
+      : undefined;
+    const source = prepared ?? selected;
     items.push({
-      key: `model-${key}`,
-      title: inputKindLabel(inputToCreate.outputInputKind),
-      caption: 'Model input',
-      mediaKind: inputToCreate.mediaKind,
-      status: selected ? 'available' : 'needed',
-      ...(selected
+      key: line.id,
+      title: inputItemTitle(input.context, node, line),
+      caption: inputItemCaption(line),
+      mediaKind: line.mediaKind as 'image' | 'audio' | 'video',
+      status: itemStatusForLine(line, Boolean(selected)),
+      ...(source
         ? {
-            assetId: selected.assetId,
-            assetFileId: selected.assetFileId,
-            projectRelativePath: selected.projectRelativePath,
+            assetId: source.assetId,
+            assetFileId: source.assetFileId,
+            projectRelativePath: source.projectRelativePath,
           }
         : {}),
-      billable: Boolean(inputToCreate.purpose),
-      cost: inputToCreate.dependencyKind
-        ? (costByDependencyKind.get(inputToCreate.dependencyKind) ?? null)
-        : null,
-      slot: {
-        kind: inputToCreate.outputInputKind,
-        ...(inputToCreate.subjectKind
-          ? { subjectKind: inputToCreate.subjectKind }
-          : {}),
-        ...(inputToCreate.subjectId ? { subjectId: inputToCreate.subjectId } : {}),
-      },
+      planLineId: line.id,
+      dependencyNodeId: line.nodeId,
+      purpose: line.purpose,
+      pricing: line.pricing,
+      ...(node ? slotForNode(node) : {}),
       candidates:
         candidates.length > 0
           ? candidates.map((candidate, index) => ({
@@ -1232,26 +1219,102 @@ function buildShotVideoTakePreflightInputItems(input: {
   return items;
 }
 
-function matchPreflightInput<T extends {
-  kind: ShotVideoTakeInputKind;
-  subjectId?: string;
-}>(
-  inputs: T[],
-  kind: ShotVideoTakeInputKind,
-  subjectId?: string
-): T | undefined {
-  return inputs.find(
-    (candidate) =>
-      candidate.kind === kind &&
-      (subjectId ? candidate.subjectId === subjectId : true)
-  );
+function itemStatusForLine(
+  line: MediaGenerationPlanLine,
+  hasAvailableCandidate: boolean
+): ShotVideoTakePreflightInputItem['status'] {
+  if (line.kind === 'reused-asset') {
+    return 'ready';
+  }
+  if (hasAvailableCandidate) {
+    return 'available';
+  }
+  return 'needed';
 }
 
-function preflightInputSlotKey(
-  kind: ShotVideoTakeInputKind,
-  subjectId?: string
+function inputItemTitle(
+  context: ShotVideoTakeGenerationContext,
+  node: MediaGenerationDependencyNode | undefined,
+  line: MediaGenerationPlanLine
 ): string {
-  return `${kind}::${subjectId ?? ''}`;
+  const target = node?.dependencyTarget;
+  if (target?.kind === 'castMember') {
+    return context.referencedCast.find((castMember) => castMember.id === target.id)?.name ??
+      line.label;
+  }
+  if (target?.kind === 'location') {
+    return context.referencedLocations.find((location) => location.id === target.id)?.name ??
+      line.label;
+  }
+  if (target?.kind === 'lookbook') {
+    return context.activeLookbook?.id === target.id ? context.activeLookbook.name : line.label;
+  }
+  return inputKindLabel(parseDependencyId(line.dependencyId)?.kind ?? 'reference-image');
+}
+
+function inputItemCaption(line: MediaGenerationPlanLine): string {
+  if (line.dependencyKind === 'cast-character-sheet') {
+    return 'Character sheet';
+  }
+  if (line.dependencyKind === 'location-environment-sheet') {
+    return 'Location sheet';
+  }
+  if (line.dependencyKind === 'lookbook-reference-image') {
+    return 'Lookbook reference';
+  }
+  const parsed = parseDependencyId(line.dependencyId);
+  if (parsed) {
+    return inputKindLabel(parsed.kind);
+  }
+  return line.label;
+}
+
+function slotForNode(
+  node: MediaGenerationDependencyNode
+): Pick<ShotVideoTakePreflightInputItem, 'slot'> {
+  const parsed = parseDependencyId(node.dependencyId);
+  if (!parsed) {
+    return {};
+  }
+  return {
+    slot: {
+      kind: parsed.kind,
+      ...(parsed.subjectKind ? { subjectKind: parsed.subjectKind } : {}),
+      ...(parsed.subjectId ? { subjectId: parsed.subjectId } : {}),
+    },
+  };
+}
+
+function parseDependencyId(
+  dependencyId?: string
+): {
+  kind: ShotVideoTakeInputKind;
+  subjectKind?: ShotVideoTakeInputSubjectKind;
+  subjectId?: string;
+} | null {
+  if (!dependencyId) {
+    return null;
+  }
+  const [kind, subjectKind, subjectId] = dependencyId.split(':');
+  if (!isShotVideoTakeInputKind(kind)) {
+    return null;
+  }
+  return {
+    kind,
+    ...(isShotVideoTakeInputSubjectKind(subjectKind) ? { subjectKind } : {}),
+    ...(subjectId ? { subjectId } : {}),
+  };
+}
+
+function isShotVideoTakeInputKind(value: string | undefined): value is ShotVideoTakeInputKind {
+  return Boolean(value && value in SHOT_VIDEO_TAKE_INPUT_KIND_LABELS);
+}
+
+function isShotVideoTakeInputSubjectKind(
+  value: string | undefined
+): value is ShotVideoTakeInputSubjectKind {
+  return value === 'cast-member' || value === 'location' || value === 'lookbook' ||
+    value === 'shot' || value === 'production-group';
 }
 
 function inputKindLabel(kind: ShotVideoTakeInputKind): string {
@@ -1289,16 +1352,6 @@ function finalTakeSpecForPreflight(input: {
     })),
     title: finalDraft?.title ?? `${input.context.scene.title} video take`,
   };
-}
-
-function estimateInputExtension(mediaKind: 'image' | 'audio' | 'video'): string {
-  if (mediaKind === 'audio') {
-    return 'wav';
-  }
-  if (mediaKind === 'video') {
-    return 'mp4';
-  }
-  return 'png';
 }
 
 function parameterValuesForFinalTake(
@@ -1531,6 +1584,29 @@ export async function prepareShotInputSpec(
   };
 }
 
+export async function prepareShotInputDraftSpec(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: ShotVideoTakeInputGenerationSpec;
+}): Promise<PreparedMediaGeneration> {
+  const normalized = normalizeInputSpec(input.spec);
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: normalized.target.sceneId,
+    shotListId: normalized.target.shotListId,
+    shotIds: normalized.target.shotIds,
+    productionGroupId: normalized.target.productionGroupId,
+  });
+  validateInputSpecAgainstContext(normalized, context);
+  const plan = buildShotVideoTakeInputProviderPayload(normalized);
+  return {
+    spec: draftMediaGenerationSpecRecord(normalized),
+    providerPayload: plan.payload,
+    generation: toGenerationRequest(plan, normalized),
+  };
+}
+
 export const prepareShotFirstFrameSpec = prepareShotInputSpec;
 export const prepareShotLastFrameSpec = prepareShotInputSpec;
 export const prepareShotReferenceSheetSpec = prepareShotInputSpec;
@@ -1663,6 +1739,29 @@ export async function prepareShotVideoTakeSpec(
     spec: specRecord,
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, specRecord.spec),
+  };
+}
+
+export async function prepareShotVideoTakeDraftSpec(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: ShotVideoTakeGenerationSpec;
+}): Promise<PreparedMediaGeneration> {
+  const normalized = normalizeFinalSpec(input.spec);
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: normalized.target.sceneId,
+    shotListId: normalized.target.shotListId,
+    shotIds: normalized.target.shotIds,
+    productionGroupId: normalized.target.productionGroupId,
+  });
+  validateFinalSpecAgainstContext(normalized, context);
+  const plan = buildShotVideoTakeProviderPayload(normalized, context);
+  return {
+    spec: draftMediaGenerationSpecRecord(normalized),
+    providerPayload: plan.payload,
+    generation: toGenerationRequest(plan, normalized),
   };
 }
 
@@ -1892,6 +1991,50 @@ export function buildShotVideoTakeProviderPayload(
   };
 }
 
+function buildShotVideoTakePricingProviderPayload(input: {
+  spec: ShotVideoTakeGenerationSpec;
+  context: ShotVideoTakeGenerationContext;
+}): ShotVideoTakeProviderPlan {
+  const { spec, context } = input;
+  const route = requireShotVideoTakeRoute(spec.modelChoice, spec.intentId);
+  const payload: Record<string, unknown> = {
+    prompt: spec.prompt,
+    ...spec.parameterValues,
+  };
+  if (spec.negativePrompt) {
+    payload.negative_prompt = spec.negativePrompt;
+  }
+  return {
+    provider: 'fal-ai',
+    model: route.providerModel,
+    mode: route.mode,
+    outputCount: 1,
+    payload,
+    inputFiles: [],
+    pricingInputCounts: finalVideoPricingInputCounts({ spec, context }),
+  };
+}
+
+function finalVideoPricingInputCounts(input: {
+  spec: ShotVideoTakeGenerationSpec;
+  context: ShotVideoTakeGenerationContext;
+}): ShotVideoTakeProviderPlan['pricingInputCounts'] {
+  const route = requireShotVideoTakeRoute(input.spec.modelChoice, input.spec.intentId);
+  const requiredImageInputCount = requiredInputSlots(
+    input.context,
+    input.spec.intentId,
+    input.spec.modelChoice,
+    { includeReferenceBundleForReferenceRoute: true }
+  ).filter((slot) => slot.mediaKind === 'image').length;
+  const preparedImageInputCount = input.spec.inputs.filter(
+    (candidate) =>
+      candidate.mediaKind === 'image' &&
+      route.inputSlots.some((slot) => finalInputMatchesRouteSlot(candidate, slot))
+  ).length;
+  const imageCount = Math.max(requiredImageInputCount, preparedImageInputCount);
+  return imageCount > 0 ? { image: imageCount } : undefined;
+}
+
 function buildShotVideoTakeInputProviderPayload(
   spec: ShotVideoTakeInputGenerationSpec
 ): ShotVideoTakeProviderPlan {
@@ -1928,6 +2071,7 @@ function toGenerationRequest(
       ...(plan.inputFiles && plan.inputFiles.length > 0
         ? { inputFiles: plan.inputFiles }
         : {}),
+      ...(plan.pricingInputCounts ? { pricingInputCounts: plan.pricingInputCounts } : {}),
       parameters,
       outputNames: [outputName(spec)],
     },
@@ -2038,6 +2182,24 @@ function validateFinalSpecAgainstContext(
   spec: ShotVideoTakeGenerationSpec,
   context: ShotVideoTakeGenerationContext
 ): void {
+  validateFinalPricingSpecAgainstContext(spec, context);
+  const missingInputs = requiredInputSlots(context, spec.intentId, spec.modelChoice).filter(
+    (slot) => !spec.inputs.some((input) => finalInputMatchesSlot(input, slot))
+  );
+  if (missingInputs.length > 0) {
+    throw new ProjectDataError(
+      'PROJECT_DATA384',
+      `Shot video take spec is missing required input${
+        missingInputs.length === 1 ? '' : 's'
+      }: ${missingInputs.map((input) => requiredInputLabel(input)).join(', ')}.`
+    );
+  }
+}
+
+function validateFinalPricingSpecAgainstContext(
+  spec: ShotVideoTakeGenerationSpec,
+  context: ShotVideoTakeGenerationContext
+): void {
   if (!sameShotIds(spec.target.shotIds, context.target.shotIds)) {
     throw new ProjectDataError(
       'PROJECT_DATA370',
@@ -2059,17 +2221,6 @@ function validateFinalSpecAgainstContext(
         `Unsupported shot video take parameter for selected model: ${key}.`
       );
     }
-  }
-  const missingInputs = requiredInputSlots(context, spec.intentId, spec.modelChoice).filter(
-    (slot) => !spec.inputs.some((input) => finalInputMatchesSlot(input, slot))
-  );
-  if (missingInputs.length > 0) {
-    throw new ProjectDataError(
-      'PROJECT_DATA384',
-      `Shot video take spec is missing required input${
-        missingInputs.length === 1 ? '' : 's'
-      }: ${missingInputs.map((input) => requiredInputLabel(input)).join(', ')}.`
-    );
   }
 }
 
@@ -2106,6 +2257,53 @@ function modelChoices(
       ? {}
       : { unavailableReason: `This model does not support ${intentId}.` }),
   }));
+}
+
+function shotInputModelChoices(): ShotVideoTakeInputModelChoiceReport[] {
+  return [
+    {
+      modelChoice: 'fal-ai/openai/gpt-image-2',
+      label: 'GPT Image 2',
+      available: true,
+      mediaKind: 'image',
+      defaultParameterValues: defaultShotInputParameterValues(),
+      parameters: shotInputParameters(),
+    },
+    {
+      modelChoice: 'fal-ai/nano-banana-2',
+      label: 'Nano Banana 2',
+      available: true,
+      mediaKind: 'image',
+      defaultParameterValues: defaultShotInputParameterValues(),
+      parameters: shotInputParameters(),
+    },
+    {
+      modelChoice: 'fal-ai/xai/grok-imagine-image',
+      label: 'Grok Imagine',
+      available: true,
+      mediaKind: 'image',
+      defaultParameterValues: defaultShotInputParameterValues(),
+      parameters: shotInputParameters(),
+    },
+  ];
+}
+
+function shotInputParameters(): ShotVideoTakeInputModelChoiceReport['parameters'] {
+  return [
+    {
+      name: 'image_size',
+      label: 'Image size',
+      required: true,
+      defaultValue: { width: 1024, height: 768 },
+    },
+    {
+      name: 'quality',
+      label: 'Quality',
+      required: true,
+      defaultValue: 'low',
+      allowedValues: ['low', 'medium', 'high'],
+    },
+  ];
 }
 
 function modelReport(
@@ -2234,7 +2432,8 @@ function missingDependencies(
   return requiredInputSlots(context, intentId, modelChoice)
     .filter((slot) => !preparedInputs.some((input) => preparedInputMatchesSlot(input, slot)))
     .map((slot) => ({
-      ...(slot.dependencyKind ? { dependencyKind: slot.dependencyKind } : {}),
+      dependencyId: slot.dependencyId,
+      dependencyKind: slot.dependencyKind,
       ...(slot.purpose ? { purpose: slot.purpose } : {}),
       outputInputKind: slot.outputInputKind,
       ...(slot.subjectKind ? { subjectKind: slot.subjectKind } : {}),
@@ -2247,9 +2446,16 @@ function missingDependencies(
 function requiredInputSlots(
   context: ShotVideoTakeGenerationContext,
   intentId: ShotVideoTakeIntentId,
-  modelChoice: ShotVideoTakeModelChoice
+  modelChoice: ShotVideoTakeModelChoice,
+  options: { includeReferenceBundleForReferenceRoute?: boolean } = {}
 ): RequiredShotVideoTakeInputSlot[] {
   const report = modelChoices(context, intentId).find((model) => model.modelChoice === modelChoice);
+  const route = requireShotVideoTakeRoute(modelChoice, intentId);
+  const referenceSlots =
+    options.includeReferenceBundleForReferenceRoute &&
+    route.inputSlots.some((slot) => slot.kind === 'reference-image')
+      ? referenceBundleSlots(context)
+      : [];
   const modelSlots =
     report?.inputRoles
       .filter((role) => role.required)
@@ -2267,7 +2473,7 @@ function requiredInputSlots(
   const planSlots = (context.productionGroup.videoTakeProduction.requestedInputs ?? []).map(
     requiredSlotForRequestedInput
   );
-  return uniqueRequiredInputSlots([...modelSlots, ...planSlots]);
+  return uniqueRequiredInputSlots([...referenceSlots, ...modelSlots, ...planSlots]);
 }
 
 function referenceBundleSlots(
@@ -2327,10 +2533,10 @@ function requiredSlotForInputKind(
   subjectKind?: ShotVideoTakeInputSubjectKind,
   subjectId?: string
 ): RequiredShotVideoTakeInputSlot {
-  const dependency = dependencyForInputKind(kind);
+  const dependency = dependencyForInputKind(kind, subjectKind, subjectId);
   return {
     outputInputKind: kind,
-    ...(dependency ? dependency : {}),
+    ...dependency,
     ...(subjectKind ? { subjectKind } : {}),
     ...(subjectId ? { subjectId } : {}),
     mediaKind,
@@ -2339,27 +2545,77 @@ function requiredSlotForInputKind(
 }
 
 function dependencyForInputKind(
-  kind: ShotVideoTakeInputKind
-): Pick<RequiredShotVideoTakeInputSlot, 'dependencyKind' | 'purpose'> | null {
+  kind: ShotVideoTakeInputKind,
+  subjectKind?: ShotVideoTakeInputSubjectKind,
+  subjectId?: string
+): Pick<
+  RequiredShotVideoTakeInputSlot,
+  'dependencyId' | 'dependencyKind' | 'dependencyTarget' | 'purpose'
+> {
   if (kind === 'first-frame') {
-    return { dependencyKind: 'first-frame', purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE };
+    return {
+      dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
+      dependencyKind: 'first-frame',
+      purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+    };
   }
   if (kind === 'last-frame') {
-    return { dependencyKind: 'last-frame', purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE };
+    return {
+      dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
+      dependencyKind: 'last-frame',
+      purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
+    };
   }
   if (kind === 'shot-reference-sheet') {
     return {
+      dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
       dependencyKind: 'shot-reference-sheet',
       purpose: SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
     };
   }
   if (kind === 'multi-shot-storyboard-sheet') {
     return {
+      dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
       dependencyKind: 'multi-shot-storyboard-sheet',
       purpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
     };
   }
-  return null;
+  if (kind === 'character-sheet' && subjectKind === 'cast-member' && subjectId) {
+    return {
+      dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
+      dependencyKind: 'cast-character-sheet',
+      dependencyTarget: { kind: 'castMember', id: subjectId },
+      purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+    };
+  }
+  if (kind === 'location-sheet' && subjectKind === 'location' && subjectId) {
+    return {
+      dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
+      dependencyKind: 'location-environment-sheet',
+      dependencyTarget: { kind: 'location', id: subjectId },
+      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+    };
+  }
+  if (kind === 'reference-image' && subjectKind === 'lookbook' && subjectId) {
+    return {
+      dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
+      dependencyKind: 'lookbook-reference-image',
+      dependencyTarget: { kind: 'lookbook', id: subjectId },
+      purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+    };
+  }
+  return {
+    dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
+    dependencyKind: 'manual-attachment',
+  };
+}
+
+function dependencyIdForInput(
+  kind: ShotVideoTakeInputKind,
+  subjectKind?: ShotVideoTakeInputSubjectKind,
+  subjectId?: string
+): string {
+  return [kind, subjectKind ?? 'production-group', subjectId ?? ''].join(':');
 }
 
 function mediaKindForInputKind(kind: ShotVideoTakeInputKind): 'image' | 'audio' | 'video' {

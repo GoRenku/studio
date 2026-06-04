@@ -83,6 +83,8 @@ Options
   --model              Generation model
   --spec               Media Generation Spec id
   --approval-token     Binding token returned by generation estimate
+  --allow-unpriced-cost
+                       Approve running generation when no model price is configured
   --receipt            Generation Receipt JSON file
   --role               Asset relationship role
   --file-role          Asset file role
@@ -174,6 +176,10 @@ function createCliFlags() {
     },
     approvalToken: {
       type: 'string',
+    },
+    allowUnpricedCost: {
+      type: 'boolean',
+      default: false,
     },
     receipt: {
       type: 'string',
@@ -467,12 +473,14 @@ export async function runRenkuCli(
             spec: cli.flags.spec,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
+            productionGroup: cli.flags.productionGroup,
             intent: cli.flags.intent,
             input: cli.flags.input,
             kind: cli.flags.kind,
             subjectKind: cli.flags.subjectKind,
             subjectId: cli.flags.subjectId,
             approvalToken: cli.flags.approvalToken,
+            allowUnpricedCost: cli.flags.allowUnpricedCost,
             simulate: cli.flags.simulate,
           },
           json: cli.flags.json,

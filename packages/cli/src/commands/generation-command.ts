@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import {
   createProjectDataService,
+  type MediaGenerationPurpose,
+  type MediaGenerationRequestTarget,
   type MediaGenerationSpec,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
@@ -19,12 +21,14 @@ export async function runGenerationCommand(options: {
     spec?: string;
     shotList?: string;
     shots?: string;
+    productionGroup?: string;
     intent?: string;
     input?: string;
     kind?: string;
     subjectKind?: string;
     subjectId?: string;
     approvalToken?: string;
+    allowUnpricedCost?: boolean;
     simulate?: boolean;
   };
   json: boolean;
@@ -39,46 +43,20 @@ export async function runGenerationCommand(options: {
     const target = requiredFlag(options.flags.target, '--target');
     writeJson(
       options.io,
-      purpose === 'lookbook.image'
-        ? await service.buildLookbookImageContext({
-            projectName: options.flags.project,
-            homeDir: options.homeDir,
-            lookbookId: parseLookbookTarget(target),
-          })
-        : purpose === 'cast.character-sheet'
-          ? await service.buildCastCharacterSheetContext({
-              projectName: options.flags.project,
-              homeDir: options.homeDir,
-              castMemberId: parseCastTarget(target),
-            })
-          : purpose === 'cast.profile'
-            ? await service.buildCastProfileContext({
-                projectName: options.flags.project,
-                homeDir: options.homeDir,
-                castMemberId: parseCastTarget(target),
-              })
-            : purpose === 'location.environment-sheet'
-              ? await service.buildLocationEnvironmentSheetContext({
-                  projectName: options.flags.project,
-                  homeDir: options.homeDir,
-                  locationId: parseLocationTarget(target),
-                })
-              : purpose === 'scene.storyboard-sheet'
-                ? await service.buildSceneStoryboardSheetContext({
-                    projectName: options.flags.project,
-                    homeDir: options.homeDir,
-                    sceneId: parseSceneTarget(target),
-                    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
-                  })
-                : isShotVideoTakeContextPurpose(purpose)
-                  ? await service.buildShotVideoTakeContext({
-                      projectName: options.flags.project,
-                      homeDir: options.homeDir,
-                      sceneId: parseSceneTarget(target),
-                      shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
-                      shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
-                    })
-            : unsupportedGenerationPurpose(purpose)
+      await service.buildMediaGenerationContext({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        purpose: parseGenerationPurpose(purpose),
+        target: parseGenerationTarget({
+          purpose,
+          target,
+          shotListId: options.flags.shotList,
+          shots: options.flags.shots,
+          productionGroupId: options.flags.productionGroup,
+        }),
+        shotListId: options.flags.shotList,
+        shotIds: options.flags.shots ? parseShots(options.flags.shots) : undefined,
+      })
     );
     return 0;
   }
@@ -88,47 +66,21 @@ export async function runGenerationCommand(options: {
     const target = requiredFlag(options.flags.target, '--target');
     writeJson(
       options.io,
-      purpose === 'lookbook.image'
-        ? await service.listLookbookImageModels({
-            projectName: options.flags.project,
-            homeDir: options.homeDir,
-            lookbookId: parseLookbookTarget(target),
-          })
-        : purpose === 'cast.character-sheet'
-          ? await service.listCastCharacterSheetModels({
-              projectName: options.flags.project,
-              homeDir: options.homeDir,
-              castMemberId: parseCastTarget(target),
-            })
-          : purpose === 'cast.profile'
-            ? await service.listCastProfileModels({
-                projectName: options.flags.project,
-                homeDir: options.homeDir,
-                castMemberId: parseCastTarget(target),
-              })
-            : purpose === 'location.environment-sheet'
-              ? await service.listLocationEnvironmentSheetModels({
-                  projectName: options.flags.project,
-                  homeDir: options.homeDir,
-                  locationId: parseLocationTarget(target),
-                })
-              : purpose === 'scene.storyboard-sheet'
-                ? await service.listSceneStoryboardSheetModels({
-                    projectName: options.flags.project,
-                    homeDir: options.homeDir,
-                    sceneId: parseSceneTarget(target),
-                    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
-                  })
-                : purpose === 'shot.video-take'
-                  ? await service.listShotVideoTakeModels({
-                      projectName: options.flags.project,
-                      homeDir: options.homeDir,
-                      sceneId: parseSceneTarget(target),
-                      shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
-                      shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
-                      intentId: options.flags.intent as never,
-                    })
-            : unsupportedGenerationPurpose(purpose)
+      await service.listMediaGenerationModels({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        purpose: parseGenerationPurpose(purpose),
+        target: parseGenerationTarget({
+          purpose,
+          target,
+          shotListId: options.flags.shotList,
+          shots: options.flags.shots,
+          productionGroupId: options.flags.productionGroup,
+        }),
+        shotListId: options.flags.shotList,
+        shotIds: options.flags.shots ? parseShots(options.flags.shots) : undefined,
+        intentId: options.flags.intent,
+      })
     );
     return 0;
   }
@@ -148,6 +100,7 @@ export async function runGenerationCommand(options: {
         sceneId: parseSceneTarget(target),
         shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
         shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+        productionGroupId: options.flags.productionGroup,
         production: production as never,
       })
     );
@@ -171,6 +124,7 @@ export async function runGenerationCommand(options: {
         sceneId: parseSceneTarget(target),
         shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
         shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+        productionGroupId: options.flags.productionGroup,
         production,
       })
     );
@@ -191,6 +145,7 @@ export async function runGenerationCommand(options: {
         sceneId: parseSceneTarget(target),
         shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
         shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+        productionGroupId: options.flags.productionGroup,
       })
     );
     return 0;
@@ -210,6 +165,7 @@ export async function runGenerationCommand(options: {
         sceneId: parseSceneTarget(target),
         shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
         shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+        productionGroupId: options.flags.productionGroup,
         inputId: requiredFlag(options.flags.input, '--input'),
       })
     );
@@ -230,6 +186,7 @@ export async function runGenerationCommand(options: {
         sceneId: parseSceneTarget(target),
         shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
         shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
+        productionGroupId: options.flags.productionGroup,
         kind: requiredFlag(options.flags.kind, '--kind') as never,
         subjectKind: requiredFlag(options.flags.subjectKind, '--subject-kind') as never,
         subjectId: requiredFlag(options.flags.subjectId, '--subject-id'),
@@ -240,155 +197,40 @@ export async function runGenerationCommand(options: {
 
   if (action === 'spec' && nested === 'validate') {
     const spec = await readSpec(requiredFlag(options.flags.file, '--file'));
-    const specPurpose = spec.purpose as string;
     writeJson(
       options.io,
-      spec.purpose === 'lookbook.image'
-        ? await service.validateLookbookImageSpec({
-            projectName: options.flags.project,
-            homeDir: options.homeDir,
-            spec,
-          })
-        : spec.purpose === 'cast.character-sheet'
-          ? await service.validateCastCharacterSheetSpec({
-              projectName: options.flags.project,
-              homeDir: options.homeDir,
-              spec,
-            })
-          : spec.purpose === 'cast.profile'
-            ? await service.validateCastProfileSpec({
-                projectName: options.flags.project,
-                homeDir: options.homeDir,
-                spec,
-              })
-            : spec.purpose === 'location.environment-sheet'
-              ? await service.validateLocationEnvironmentSheetSpec({
-                  projectName: options.flags.project,
-                  homeDir: options.homeDir,
-                  spec,
-                })
-              : spec.purpose === 'scene.storyboard-sheet'
-                ? await service.validateSceneStoryboardSheetSpec({
-                    projectName: options.flags.project,
-                    homeDir: options.homeDir,
-                    spec,
-                  })
-                : spec.purpose === 'shot.first-frame'
-                  ? await service.validateShotFirstFrameSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.last-frame'
-                  ? await service.validateShotLastFrameSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.reference-sheet'
-                  ? await service.validateShotReferenceSheetSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.multi-shot-storyboard-sheet'
-                  ? await service.validateShotMultiShotStoryboardSheetSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.video-take'
-                  ? await service.validateShotVideoTakeSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-            : unsupportedGenerationPurpose(specPurpose)
+      await service.validateMediaGenerationSpec({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        spec,
+      })
     );
     return 0;
   }
 
   if (action === 'spec' && nested === 'create') {
     const spec = await readSpec(requiredFlag(options.flags.file, '--file'));
-    const specPurpose = spec.purpose as string;
     writeJson(
       options.io,
-      spec.purpose === 'lookbook.image'
-        ? await service.createLookbookImageSpec({
-            projectName: options.flags.project,
-            homeDir: options.homeDir,
-            spec,
-          })
-        : spec.purpose === 'cast.character-sheet'
-          ? await service.createCastCharacterSheetSpec({
-              projectName: options.flags.project,
-              homeDir: options.homeDir,
-              spec,
-            })
-          : spec.purpose === 'cast.profile'
-            ? await service.createCastProfileSpec({
-                projectName: options.flags.project,
-                homeDir: options.homeDir,
-                spec,
-              })
-            : spec.purpose === 'location.environment-sheet'
-              ? await service.createLocationEnvironmentSheetSpec({
-                  projectName: options.flags.project,
-                  homeDir: options.homeDir,
-                  spec,
-                })
-              : spec.purpose === 'scene.storyboard-sheet'
-                ? await service.createSceneStoryboardSheetSpec({
-                    projectName: options.flags.project,
-                    homeDir: options.homeDir,
-                    spec,
-                  })
-                : spec.purpose === 'shot.first-frame'
-                  ? await service.createShotFirstFrameSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.last-frame'
-                  ? await service.createShotLastFrameSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.reference-sheet'
-                  ? await service.createShotReferenceSheetSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.multi-shot-storyboard-sheet'
-                  ? await service.createShotMultiShotStoryboardSheetSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-                : spec.purpose === 'shot.video-take'
-                  ? await service.createShotVideoTakeSpec({ projectName: options.flags.project, homeDir: options.homeDir, spec })
-            : unsupportedGenerationPurpose(specPurpose)
+      await service.createMediaGenerationSpec({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        spec,
+      })
     );
     return 0;
   }
 
   if (action === 'spec' && nested === 'update') {
     const spec = await readSpec(requiredFlag(options.flags.file, '--file'));
-    const specPurpose = spec.purpose as string;
     writeJson(
       options.io,
-      spec.purpose === 'lookbook.image'
-        ? await service.updateLookbookImageSpec({
-            projectName: options.flags.project,
-            homeDir: options.homeDir,
-            specId: requiredFlag(options.flags.spec, '--spec'),
-            spec,
-          })
-        : spec.purpose === 'cast.character-sheet'
-          ? await service.updateCastCharacterSheetSpec({
-              projectName: options.flags.project,
-              homeDir: options.homeDir,
-              specId: requiredFlag(options.flags.spec, '--spec'),
-              spec,
-            })
-          : spec.purpose === 'cast.profile'
-            ? await service.updateCastProfileSpec({
-                projectName: options.flags.project,
-                homeDir: options.homeDir,
-                specId: requiredFlag(options.flags.spec, '--spec'),
-                spec,
-              })
-            : spec.purpose === 'location.environment-sheet'
-              ? await service.updateLocationEnvironmentSheetSpec({
-                  projectName: options.flags.project,
-                  homeDir: options.homeDir,
-                  specId: requiredFlag(options.flags.spec, '--spec'),
-                  spec,
-                })
-              : spec.purpose === 'scene.storyboard-sheet'
-                ? await service.updateSceneStoryboardSheetSpec({
-                    projectName: options.flags.project,
-                    homeDir: options.homeDir,
-                    specId: requiredFlag(options.flags.spec, '--spec'),
-                    spec,
-                  })
-                : spec.purpose === 'shot.first-frame'
-                  ? await service.updateShotFirstFrameSpec({ projectName: options.flags.project, homeDir: options.homeDir, specId: requiredFlag(options.flags.spec, '--spec'), spec })
-                : spec.purpose === 'shot.last-frame'
-                  ? await service.updateShotLastFrameSpec({ projectName: options.flags.project, homeDir: options.homeDir, specId: requiredFlag(options.flags.spec, '--spec'), spec })
-                : spec.purpose === 'shot.reference-sheet'
-                  ? await service.updateShotReferenceSheetSpec({ projectName: options.flags.project, homeDir: options.homeDir, specId: requiredFlag(options.flags.spec, '--spec'), spec })
-                : spec.purpose === 'shot.multi-shot-storyboard-sheet'
-                  ? await service.updateShotMultiShotStoryboardSheetSpec({ projectName: options.flags.project, homeDir: options.homeDir, specId: requiredFlag(options.flags.spec, '--spec'), spec })
-                : spec.purpose === 'shot.video-take'
-                  ? await service.updateShotVideoTakeSpec({ projectName: options.flags.project, homeDir: options.homeDir, specId: requiredFlag(options.flags.spec, '--spec'), spec })
-            : unsupportedGenerationPurpose(specPurpose)
+      await service.updateMediaGenerationSpec({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        specId: requiredFlag(options.flags.spec, '--spec'),
+        spec,
+      })
     );
     return 0;
   }
@@ -396,7 +238,7 @@ export async function runGenerationCommand(options: {
   if (action === 'spec' && nested === 'show') {
     writeJson(
       options.io,
-      await service.readLookbookImageSpec({
+      await service.readMediaGenerationSpec({
         projectName: options.flags.project,
         homeDir: options.homeDir,
         specId: requiredFlag(options.flags.spec, '--spec'),
@@ -410,48 +252,20 @@ export async function runGenerationCommand(options: {
     const target = requiredFlag(options.flags.target, '--target');
     writeJson(
       options.io,
-      purpose === 'lookbook.image'
-        ? await service.listLookbookImageSpecs({
-            projectName: options.flags.project,
-            homeDir: options.homeDir,
-            lookbookId: parseLookbookTarget(target),
-          })
-        : purpose === 'cast.character-sheet'
-          ? await service.listCastCharacterSheetSpecs({
-              projectName: options.flags.project,
-              homeDir: options.homeDir,
-              castMemberId: parseCastTarget(target),
-            })
-          : purpose === 'cast.profile'
-            ? await service.listCastProfileSpecs({
-                projectName: options.flags.project,
-                homeDir: options.homeDir,
-                castMemberId: parseCastTarget(target),
-              })
-            : purpose === 'location.environment-sheet'
-              ? await service.listLocationEnvironmentSheetSpecs({
-                  projectName: options.flags.project,
-                  homeDir: options.homeDir,
-                  locationId: parseLocationTarget(target),
-                })
-              : purpose === 'scene.storyboard-sheet'
-                ? await service.listSceneStoryboardSheetSpecs({
-                    projectName: options.flags.project,
-                    homeDir: options.homeDir,
-                    sceneId: parseSceneTarget(target),
-                    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
-                  })
-                : purpose === 'shot.first-frame'
-                  ? await service.listShotFirstFrameSpecs(shotContextInput(options, target))
-                : purpose === 'shot.last-frame'
-                  ? await service.listShotLastFrameSpecs(shotContextInput(options, target))
-                : purpose === 'shot.reference-sheet'
-                  ? await service.listShotReferenceSheetSpecs(shotContextInput(options, target))
-                : purpose === 'shot.multi-shot-storyboard-sheet'
-                  ? await service.listShotMultiShotStoryboardSheetSpecs(shotContextInput(options, target))
-                : purpose === 'shot.video-take'
-                  ? await service.listShotVideoTakeSpecs(shotContextInput(options, target))
-            : unsupportedGenerationPurpose(purpose)
+      await service.listMediaGenerationSpecs({
+        projectName: options.flags.project,
+        homeDir: options.homeDir,
+        purpose: parseGenerationPurpose(purpose),
+        target: parseGenerationTarget({
+          purpose,
+          target,
+          shotListId: options.flags.shotList,
+          shots: options.flags.shots,
+          productionGroupId: options.flags.productionGroup,
+        }),
+        shotListId: options.flags.shotList,
+        shotIds: options.flags.shots ? parseShots(options.flags.shots) : undefined,
+      })
     );
     return 0;
   }
@@ -462,31 +276,9 @@ export async function runGenerationCommand(options: {
       homeDir: options.homeDir,
       specId: requiredFlag(options.flags.spec, '--spec'),
     };
-    const specRecord = await service.readLookbookImageSpec(specInput);
-    const specPurpose = specRecord.spec.purpose as string;
     writeJson(
       options.io,
-      specRecord.spec.purpose === 'lookbook.image'
-        ? await service.estimateLookbookImageSpec(specInput)
-        : specRecord.spec.purpose === 'cast.character-sheet'
-          ? await service.estimateCastCharacterSheetSpec(specInput)
-          : specRecord.spec.purpose === 'cast.profile'
-            ? await service.estimateCastProfileSpec(specInput)
-            : specRecord.spec.purpose === 'location.environment-sheet'
-              ? await service.estimateLocationEnvironmentSheetSpec(specInput)
-              : specRecord.spec.purpose === 'scene.storyboard-sheet'
-                ? await service.estimateSceneStoryboardSheetSpec(specInput)
-              : specRecord.spec.purpose === 'shot.first-frame'
-                ? await service.estimateShotFirstFrameSpec(specInput)
-              : specRecord.spec.purpose === 'shot.last-frame'
-                ? await service.estimateShotLastFrameSpec(specInput)
-              : specRecord.spec.purpose === 'shot.reference-sheet'
-                ? await service.estimateShotReferenceSheetSpec(specInput)
-              : specRecord.spec.purpose === 'shot.multi-shot-storyboard-sheet'
-                ? await service.estimateShotMultiShotStoryboardSheetSpec(specInput)
-              : specRecord.spec.purpose === 'shot.video-take'
-                ? await service.estimateShotVideoTakeSpec(specInput)
-            : unsupportedGenerationPurpose(specPurpose)
+      await service.estimateMediaGenerationSpec(specInput)
     );
     return 0;
   }
@@ -497,33 +289,12 @@ export async function runGenerationCommand(options: {
       homeDir: options.homeDir,
       specId: requiredFlag(options.flags.spec, '--spec'),
       approvalToken: options.flags.approvalToken,
+      allowUnpricedCost: options.flags.allowUnpricedCost,
       simulate: options.flags.simulate,
     };
-    const specRecord = await service.readLookbookImageSpec(specInput);
-    const specPurpose = specRecord.spec.purpose as string;
     writeJson(
       options.io,
-      specRecord.spec.purpose === 'lookbook.image'
-        ? await service.runLookbookImageSpec(specInput)
-        : specRecord.spec.purpose === 'cast.character-sheet'
-          ? await service.runCastCharacterSheetSpec(specInput)
-          : specRecord.spec.purpose === 'cast.profile'
-            ? await service.runCastProfileSpec(specInput)
-            : specRecord.spec.purpose === 'location.environment-sheet'
-              ? await service.runLocationEnvironmentSheetSpec(specInput)
-              : specRecord.spec.purpose === 'scene.storyboard-sheet'
-                ? await service.runSceneStoryboardSheetSpec(specInput)
-              : specRecord.spec.purpose === 'shot.first-frame'
-                ? await service.runShotFirstFrameSpec(specInput)
-              : specRecord.spec.purpose === 'shot.last-frame'
-                ? await service.runShotLastFrameSpec(specInput)
-              : specRecord.spec.purpose === 'shot.reference-sheet'
-                ? await service.runShotReferenceSheetSpec(specInput)
-              : specRecord.spec.purpose === 'shot.multi-shot-storyboard-sheet'
-                ? await service.runShotMultiShotStoryboardSheetSpec(specInput)
-              : specRecord.spec.purpose === 'shot.video-take'
-                ? await service.runShotVideoTakeSpec(specInput)
-            : unsupportedGenerationPurpose(specPurpose)
+      await service.runMediaGenerationSpec(specInput)
     );
     return 0;
   }
@@ -607,34 +378,63 @@ function parseShots(value: string): string[] {
   return shots;
 }
 
-function isShotVideoTakeContextPurpose(purpose: string): boolean {
-  return (
-    purpose === 'shot.video-take' ||
-    purpose === 'shot.first-frame' ||
-    purpose === 'shot.last-frame' ||
-    purpose === 'shot.reference-sheet' ||
-    purpose === 'shot.multi-shot-storyboard-sheet'
-  );
+function parseGenerationPurpose(purpose: string): MediaGenerationPurpose {
+  switch (purpose) {
+    case 'lookbook.image':
+    case 'cast.character-sheet':
+    case 'cast.profile':
+    case 'location.environment-sheet':
+    case 'scene.storyboard-sheet':
+    case 'shot.first-frame':
+    case 'shot.last-frame':
+    case 'shot.reference-sheet':
+    case 'shot.multi-shot-storyboard-sheet':
+    case 'shot.video-take':
+      return purpose;
+    default:
+      return unsupportedGenerationPurpose(purpose);
+  }
 }
 
-function shotContextInput(
-  options: {
-    flags: {
-      project?: string;
-      shotList?: string;
-      shots?: string;
-    };
-    homeDir?: string;
-  },
-  target: string
-) {
-  return {
-    projectName: options.flags.project,
-    homeDir: options.homeDir,
-    sceneId: parseSceneTarget(target),
-    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
-    shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
-  };
+function parseGenerationTarget(input: {
+  purpose: string;
+  target: string;
+  shotListId?: string;
+  shots?: string;
+  productionGroupId?: string;
+}): MediaGenerationRequestTarget {
+  switch (parseGenerationPurpose(input.purpose)) {
+    case 'lookbook.image':
+      return { kind: 'lookbook', id: parseLookbookTarget(input.target) };
+    case 'cast.character-sheet':
+    case 'cast.profile':
+      return { kind: 'castMember', id: parseCastTarget(input.target) };
+    case 'location.environment-sheet':
+      return { kind: 'location', id: parseLocationTarget(input.target) };
+    case 'scene.storyboard-sheet':
+      return { kind: 'scene', id: parseSceneTarget(input.target) };
+    case 'shot.first-frame':
+    case 'shot.last-frame':
+    case 'shot.reference-sheet':
+    case 'shot.multi-shot-storyboard-sheet':
+    case 'shot.video-take': {
+      const sceneId = parseSceneTarget(input.target);
+      const shotListId = requiredFlag(input.shotListId, '--shot-list');
+      const shotIds = parseShots(requiredFlag(input.shots, '--shots'));
+      return {
+        kind: 'sceneShotGroup',
+        ...(input.productionGroupId
+          ? { id: `${sceneId}:${shotListId}:${input.productionGroupId}` }
+          : {}),
+        sceneId,
+        shotListId,
+        ...(input.productionGroupId
+          ? { productionGroupId: input.productionGroupId }
+          : {}),
+        shotIds,
+      };
+    }
+  }
 }
 
 function unsupportedGenerationPurpose(purpose: string): never {

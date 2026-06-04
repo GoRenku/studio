@@ -84,6 +84,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `docs/decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `docs/decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
+- `docs/decisions/0025-use-shared-media-generation-purpose-architecture.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

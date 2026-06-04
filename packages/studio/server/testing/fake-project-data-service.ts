@@ -794,7 +794,6 @@ export function fakeProjectDataService(): NonNullable<
         inputsToCreate: [],
         inputPlanItems: [],
         prompts: [],
-        estimateLines: [],
         finalTake: {
           purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
           canCreateSpec: true,
@@ -860,7 +859,7 @@ function makeShotVideoTakePlan(input: {
           label: 'Final video take',
           state: 'planned',
           pricing: { state: 'priced', estimatedUsd: 0.42 },
-          generationTarget: target,
+          dependencyTarget: target,
           diagnostics: [],
         },
       ],

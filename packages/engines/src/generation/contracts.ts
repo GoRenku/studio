@@ -42,6 +42,7 @@ export interface GenerationInputFile {
 export interface GenerationRequest {
   prompt?: string;
   inputFiles?: GenerationInputFile[];
+  pricingInputCounts?: Partial<Record<GenerationMediaKind, number>>;
   parameters?: Record<string, unknown>;
   outputNames?: string[];
 }

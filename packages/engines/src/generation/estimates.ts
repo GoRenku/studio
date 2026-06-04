@@ -29,12 +29,14 @@ export async function estimateGeneration(input: {
     );
   }
   const payload = buildLogicalProviderPayload(input.policy, input.request);
-  await validateGenerationProviderPayload({
-    catalog,
-    provider: input.policy.provider,
-    model: input.policy.model,
-    payload,
-  });
+  if (!input.request.pricingInputCounts) {
+    await validateGenerationProviderPayload({
+      catalog,
+      provider: input.policy.provider,
+      model: input.policy.model,
+      payload,
+    });
+  }
   const count =
     input.policy.outputCount ?? deriveGenerationOutputCount(payload);
   const pricing = model.price ?? null;
@@ -43,7 +45,7 @@ export async function estimateGeneration(input: {
       ? null
       : typeof pricing === 'number'
         ? pricing * count
-        : priceFromConfig(pricing, payload, count);
+        : priceFromConfig(pricing, payload, count, input.request.pricingInputCounts);
 
   const approvalToken = hashGenerationRequest({
     policy: input.policy,
@@ -60,6 +62,9 @@ export async function estimateGeneration(input: {
     billableUnits: {
       outputCount: count,
       ...payload,
+      ...(input.request.pricingInputCounts?.image !== undefined
+        ? { inputImageCount: input.request.pricingInputCounts.image }
+        : {}),
     },
     warnings:
       price === null ? ['No pricing is configured for this model.'] : [],
@@ -86,7 +91,8 @@ export function buildLogicalProviderPayload(
 function priceFromConfig(
   pricing: ModelPriceConfig,
   payload: Record<string, unknown>,
-  count: number
+  count: number,
+  pricingInputCounts: GenerationRequest['pricingInputCounts']
 ): number | null {
   if (typeof pricing.price === 'number') {
     return pricing.price * count;
@@ -97,7 +103,7 @@ function priceFromConfig(
   if (typeof pricing.pricePerSecond === 'number') {
     return (
       pricing.pricePerSecond * seconds(payload) * count +
-      inputImageCost(pricing, payload, count)
+      inputImageCost(pricing, payload, count, pricingInputCounts)
     );
   }
   if (typeof pricing.pricePerMinute === 'number') {
@@ -138,7 +144,7 @@ function priceFromConfig(
     const pricePerSecond = row?.pricePerSecond;
     return typeof pricePerSecond === 'number'
       ? pricePerSecond * seconds(payload) * count +
-          inputImageCost(pricing, payload, count)
+          inputImageCost(pricing, payload, count, pricingInputCounts)
       : null;
   }
   if (pricing.function === 'costByVideoDurationAndWithAudio' && pricing.prices) {
@@ -153,7 +159,7 @@ function priceFromConfig(
     const pricePerSecond = row?.pricePerSecond;
     return typeof pricePerSecond === 'number'
       ? pricePerSecond * seconds(payload) * count +
-          inputImageCost(pricing, payload, count)
+          inputImageCost(pricing, payload, count, pricingInputCounts)
       : null;
   }
   if (pricing.function === 'costByVideoPerMillionTokens') {
@@ -402,15 +408,22 @@ function characters(payload: Record<string, unknown>): number {
 function inputImageCost(
   pricing: ModelPriceConfig,
   payload: Record<string, unknown>,
-  outputCount: number
+  outputCount: number,
+  pricingInputCounts: GenerationRequest['pricingInputCounts']
 ): number {
   if (typeof pricing.pricePerInputImage !== 'number') {
     return 0;
   }
-  return pricing.pricePerInputImage * inputImageCount(payload) * outputCount;
+  return pricing.pricePerInputImage * inputImageCount(payload, pricingInputCounts) * outputCount;
 }
 
-function inputImageCount(payload: Record<string, unknown>): number {
+function inputImageCount(
+  payload: Record<string, unknown>,
+  pricingInputCounts: GenerationRequest['pricingInputCounts']
+): number {
+  if (pricingInputCounts?.image !== undefined) {
+    return pricingInputCounts.image;
+  }
   let count = 0;
   if (typeof payload.image_url === 'string' && payload.image_url.length > 0) {
     count += 1;

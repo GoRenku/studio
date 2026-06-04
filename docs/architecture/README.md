@@ -73,6 +73,7 @@ Use this page as the map:
   - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
   - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
   - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
+  - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 
 ## Studio App, Server, Routes, And Coordination
 
@@ -130,8 +131,10 @@ Use this page as the map:
   - `../decisions/0002-use-engines-for-ai-integrations.md`
   - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
   - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
+  - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 
 Do not promote broader generation explorations to architecture or ADRs until
 implementation proves the exact generation-definition, request, task, queue, and
-catalog contracts. The current accepted implementation is the persisted
-Lookbook Image generation slice.
+catalog contracts. The current accepted implementation is persisted media
+generation with a shared purpose registry, explicit purpose definitions, and
+separate media import.

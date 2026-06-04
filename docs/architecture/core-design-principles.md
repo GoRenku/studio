@@ -22,6 +22,7 @@ Decision history:
 - `../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
+- `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 
 ## Source Of Truth
 
@@ -74,9 +75,13 @@ Decision history:
 - Generated candidates are assets and may be treated as takes.
 - Durable chosen takes/assets should be modeled as selects.
 - Production-ready selects can be exported into `production-assets/`.
-- Do not introduce generic media-purpose registries, model adapters, capability
-  YAML, or schema overlays until multiple concrete purposes prove the
-  abstraction is needed.
+- Use the accepted shared media generation purpose registry for common
+  generation lifecycle behavior.
+- Keep purpose-specific context, prompt/spec, provider-payload, output, and
+  import behavior inside purpose definitions.
+- Do not introduce provider capability YAML, schema overlays, plugin-style
+  purpose frameworks, or generic prompt frameworks unless concrete current
+  implementation work proves the additional abstraction is needed.
 
 ## Fail Fast
 

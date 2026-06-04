@@ -69,6 +69,7 @@ import {
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import {
   mapGptQuality,
@@ -340,6 +341,25 @@ export async function prepareLocationEnvironmentSheetSpec(
     spec: specRecord,
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, specRecord.spec),
+  };
+}
+
+export async function prepareLocationEnvironmentSheetDraftSpec(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: LocationEnvironmentSheetGenerationSpec;
+}): Promise<PreparedMediaGeneration> {
+  const normalized = await normalizeSpec(input);
+  const context = await buildLocationEnvironmentSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    locationId: normalized.target.id,
+  });
+  const plan = buildLocationEnvironmentSheetProviderPayload(normalized, context);
+  return {
+    spec: draftMediaGenerationSpecRecord(normalized),
+    providerPayload: plan.payload,
+    generation: toGenerationRequest(plan, normalized),
   };
 }
 

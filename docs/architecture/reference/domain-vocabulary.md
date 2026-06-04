@@ -26,6 +26,7 @@ Decision history:
 - `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `../../decisions/0024-keep-media-slicing-out-of-app-state.md`
+- `../../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 
 ## Naming Rules
 

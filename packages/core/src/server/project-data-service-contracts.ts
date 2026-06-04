@@ -38,6 +38,7 @@ import type {
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
   LocationEnvironmentSheetModelListReport,
+  MediaGenerationPurpose,
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
   SceneStoryboardSheetModelListReport,
@@ -54,7 +55,9 @@ import type {
   ShotVideoTakeProductionEstimateReport,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
+  MediaGenerationSpec,
   MediaGenerationSpecRecord,
+  MediaGenerationRequestTarget,
   PreparedMediaGeneration,
   SceneDesignResource,
   SceneNarrativeResource,
@@ -311,6 +314,18 @@ export interface ProjectDataService {
   runSceneStoryboardSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordSceneStoryboardSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
   importSceneStoryboardSheetMedia(input: ImportSceneStoryboardSheetMediaInput): Promise<SceneStoryboardSheetImportReport>;
+  buildMediaGenerationContext(input: MediaGenerationPurposeContextInput): Promise<unknown>;
+  listMediaGenerationModels(input: MediaGenerationPurposeContextInput): Promise<unknown>;
+  validateMediaGenerationSpec(input: ValidateMediaGenerationSpecInput): Promise<{ valid: true; spec: MediaGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createMediaGenerationSpec(input: CreateMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateMediaGenerationSpec(input: UpdateMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listMediaGenerationSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  prepareDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runMediaGenerationSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   buildShotVideoTakeContext(input: ShotVideoTakeContextInput): Promise<ShotVideoTakeGenerationContext>;
   listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
   listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: ShotVideoTakeAvailableInput[]; resourceKeys: string[] }>;
@@ -724,7 +739,42 @@ export interface RunMediaGenerationSpecInput
   extends ReadMediaGenerationSpecInput {
   approvalToken?: string;
   simulate?: boolean;
+  allowUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface MediaGenerationPurposeContextInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  purpose: MediaGenerationPurpose;
+  target: MediaGenerationRequestTarget;
+  shotListId?: string;
+  shotIds?: string[];
+  intentId?: string;
+}
+
+export interface ListMediaGenerationSpecsInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  purpose: MediaGenerationPurpose;
+  target: MediaGenerationRequestTarget;
+  shotListId?: string;
+  shotIds?: string[];
+}
+
+export interface ValidateMediaGenerationSpecInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: MediaGenerationSpec;
+}
+
+export interface PrepareDraftMediaGenerationSpecInput extends ValidateMediaGenerationSpecInput {}
+
+export interface CreateMediaGenerationSpecInput
+  extends ValidateMediaGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateMediaGenerationSpecInput
+  extends ValidateMediaGenerationSpecInput {
+  specId: string;
 }
 
 export interface RecordMediaGenerationRunInput

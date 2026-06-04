@@ -356,7 +356,8 @@ export function useShotVideoTakeProduction(
         intentId: report.intentId,
         modelChoice: report.modelChoice,
         estimate: report.estimate,
-        issues: report.estimateLines.flatMap((line) => line.issues),
+        plan: report.plan,
+        issues: report.plan?.diagnostics ?? report.issues,
       });
       setEstimateState('idle');
       setEstimateError(null);

@@ -54,6 +54,16 @@ export type MediaGenerationPurpose =
   | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
   | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
 
+export type MediaGenerationDependencyKind =
+  | 'first-frame'
+  | 'last-frame'
+  | 'shot-reference-sheet'
+  | 'multi-shot-storyboard-sheet'
+  | 'cast-character-sheet'
+  | 'location-environment-sheet'
+  | 'lookbook-reference-image'
+  | 'manual-attachment';
+
 export type LookbookImageModelChoice =
   | 'fal-ai/openai/gpt-image-2'
   | 'fal-ai/nano-banana-2'
@@ -156,12 +166,28 @@ export interface SceneShotMediaGenerationTarget {
   shotIds: string[];
 }
 
+export interface SceneShotMediaGenerationRequestTarget {
+  kind: 'sceneShotGroup';
+  id?: string;
+  sceneId: string;
+  shotListId: string;
+  productionGroupId?: string;
+  shotIds: string[];
+}
+
 export type MediaGenerationTarget =
   | LookbookImageGenerationTarget
   | CastMediaGenerationTarget
   | LocationMediaGenerationTarget
   | SceneMediaGenerationTarget
   | SceneShotMediaGenerationTarget;
+
+export type MediaGenerationRequestTarget =
+  | LookbookImageGenerationTarget
+  | CastMediaGenerationTarget
+  | LocationMediaGenerationTarget
+  | SceneMediaGenerationTarget
+  | SceneShotMediaGenerationRequestTarget;
 
 export interface CastGenerationProjectContext {
   id?: string;
@@ -760,14 +786,32 @@ export interface ShotVideoTakeModelListReport {
   models: ShotVideoTakeModelChoiceReport[];
 }
 
+export interface ShotVideoTakeInputModelChoiceReport {
+  modelChoice: ShotVideoTakeInputModelChoice;
+  label: string;
+  available: boolean;
+  unavailableReason?: string;
+  mediaKind: 'image';
+  defaultParameterValues: ShotVideoTakeParameterValues;
+  parameters: ShotVideoTakeParameterReport[];
+}
+
+export interface ShotVideoTakeInputModelListReport {
+  purpose: ShotVideoTakeInputGenerationPurpose;
+  target: SceneShotMediaGenerationTarget;
+  defaultModelChoice: ShotVideoTakeInputModelChoice;
+  models: ShotVideoTakeInputModelChoiceReport[];
+}
+
 export interface ShotVideoTakePreflightInput extends ShotVideoTakeGenerationInput {
   subjectKind: ShotVideoTakeInputSubjectKind;
   subjectId: string;
 }
 
 export interface ShotVideoTakePreflightDependency {
-  dependencyKind?: ShotVideoTakeDependencyKind;
-  purpose?: ShotVideoTakeInputGenerationPurpose;
+  dependencyId: string;
+  dependencyKind: MediaGenerationDependencyKind;
+  purpose?: MediaGenerationPurpose;
   outputInputKind: ShotVideoTakeInputKind;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
@@ -780,15 +824,6 @@ export interface ShotVideoTakePreflightPrompt {
   prompt: string;
   negativePrompt?: string;
   title?: string;
-}
-
-export interface ShotVideoTakeEstimateLine {
-  purpose: ShotVideoTakeInputGenerationPurpose | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
-  dependencyKind?: ShotVideoTakeDependencyKind;
-  label: string;
-  specId?: string;
-  estimate: GenerationEstimate | null;
-  issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
 export type ShotVideoTakePreflightInputItemStatus =
@@ -817,8 +852,10 @@ export interface ShotVideoTakePreflightInputItem {
   assetFileId?: string;
   projectRelativePath?: ProjectRelativePath;
   url?: string;
-  billable?: boolean;
-  cost?: number | null;
+  planLineId?: string;
+  dependencyNodeId?: string;
+  purpose?: MediaGenerationPurpose | null;
+  pricing?: MediaGenerationDependencyPricing;
   slot?: ShotVideoTakePreflightInputSlot;
   candidates?: ShotVideoTakePreflightInputCandidate[];
   selectedInputId?: string | null;
@@ -843,7 +880,6 @@ export interface ShotVideoTakePreflightReport {
   inputsToCreate: ShotVideoTakePreflightDependency[];
   inputPlanItems: ShotVideoTakePreflightInputItem[];
   prompts: ShotVideoTakePreflightPrompt[];
-  estimateLines: ShotVideoTakeEstimateLine[];
   finalTake: ShotVideoTakePreflightFinalTake;
   agentBrief: string;
   estimate: GenerationEstimate | null;
@@ -903,9 +939,9 @@ export interface MediaGenerationDependencyNode {
   label: string;
   state: MediaGenerationDependencyNodeState;
   pricing: MediaGenerationDependencyPricing;
-  slotId?: string;
-  routeInputKind?: ShotVideoTakeInputKind;
-  generationTarget?: MediaGenerationTarget;
+  dependencyId?: string;
+  dependencyKind?: MediaGenerationDependencyKind;
+  dependencyTarget?: MediaGenerationTarget;
   assetId?: string;
   assetFileId?: string;
   draftGenerationSpec?: DraftMediaGenerationSpec;
@@ -915,7 +951,7 @@ export interface MediaGenerationDependencyNode {
 export interface MediaGenerationDependencyEdge {
   fromNodeId: string;
   toNodeId: string;
-  slotId: string;
+  dependencyId: string;
 }
 
 export interface MediaGenerationDependencyEstimate {
@@ -955,7 +991,8 @@ export interface MediaGenerationPlanLine {
   label: string;
   purpose: MediaGenerationPurpose | null;
   mediaKind: MediaKind;
-  slotId?: string;
+  dependencyId?: string;
+  dependencyKind?: MediaGenerationDependencyKind;
   depth: number;
   state: MediaGenerationDependencyNodeState;
   pricing: MediaGenerationDependencyPricing;
@@ -1094,6 +1131,7 @@ export interface PreparedMediaGeneration {
         asArray?: boolean;
         required?: boolean;
       }>;
+      pricingInputCounts?: Partial<Record<'image' | 'audio' | 'video', number>>;
       parameters: Record<string, unknown>;
       outputNames: string[];
     };

@@ -6,6 +6,7 @@ import { createMediaGenerationServiceWiring } from './project-data-service-wirin
 import { createNavigationServiceWiring } from './project-data-service-wiring/navigation.js';
 import { createProjectAdministrationServiceWiring } from './project-data-service-wiring/project-administration.js';
 import { createScreenplayServiceWiring } from './project-data-service-wiring/screenplay.js';
+import { createSharedMediaGenerationServiceWiring } from './project-data-service-wiring/shared-media-generation.js';
 import { createShotVideoTakeServiceWiring } from './project-data-service-wiring/shot-video-take.js';
 import type { ProjectDataService } from './project-data-service-contracts.js';
 
@@ -18,6 +19,7 @@ export function createProjectDataService(): ProjectDataService {
     ...createScreenplayServiceWiring(),
     ...createInspirationServiceWiring(),
     ...createLookbookServiceWiring(),
+    ...createSharedMediaGenerationServiceWiring(),
     ...createMediaGenerationServiceWiring(),
     ...createShotVideoTakeServiceWiring(),
   } satisfies ProjectDataService;

@@ -182,6 +182,33 @@ describe('generation estimates', () => {
     });
   });
 
+  it('estimates video input image cost from typed pricing input counts', async () => {
+    const catalog = createCatalog();
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: 'image-to-video-model',
+          mediaKind: 'video',
+        },
+        request: {
+          prompt: 'A test camera move',
+          parameters: { duration: 5, resolution: '720p' },
+          pricingInputCounts: { image: 1 },
+        },
+      })
+    ).resolves.toMatchObject({
+      estimatedCostUsd: 0.7100000000000001,
+      billableUnits: {
+        duration: 5,
+        resolution: '720p',
+        inputImageCount: 1,
+      },
+    });
+  });
+
   it('estimates bundled Grok Imagine Video v1.5 image-to-video pricing', async () => {
     const catalog = await loadBundledGenerationCatalog();
 

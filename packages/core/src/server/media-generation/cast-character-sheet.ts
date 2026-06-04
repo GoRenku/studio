@@ -27,6 +27,7 @@ import {
 } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import {
   buildScreenplayContext,
   buildTimePeriodContext,
@@ -244,6 +245,25 @@ export async function prepareCastCharacterSheetSpec(
     spec: specRecord,
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, specRecord.spec, 'Cast character sheet'),
+  };
+}
+
+export async function prepareCastCharacterSheetDraftSpec(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: CastCharacterSheetGenerationSpec;
+}): Promise<PreparedMediaGeneration> {
+  const normalized = await normalizeSpec(input);
+  const context = await buildCastCharacterSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    castMemberId: normalized.target.id,
+  });
+  const plan = buildCastCharacterSheetProviderPayload(normalized, context);
+  return {
+    spec: draftMediaGenerationSpecRecord(normalized),
+    providerPayload: plan.payload,
+    generation: toGenerationRequest(plan, normalized, 'Cast character sheet'),
   };
 }
 

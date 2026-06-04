@@ -181,7 +181,6 @@ function preflight(): ShotVideoTakePreflightReport {
     inputsToCreate: [],
     inputPlanItems: [],
     prompts: [],
-    estimateLines: [],
     finalTake: {
       purpose: 'shot.video-take',
       canCreateSpec: true,
@@ -297,11 +296,12 @@ describe('AI Production tab', () => {
       productionGroup: lookbookContext.productionGroup,
       inputPlanItems: [
         {
-          key: 'lookbook-lookbook_imperial_wound',
+          key: 'line:planned:reference-image:lookbook:lookbook_imperial_wound',
           title: 'Imperial Wound',
           caption: 'Lookbook reference',
           mediaKind: 'image',
           status: 'needed',
+          pricing: { state: 'priced', estimatedUsd: 0.04 },
         },
       ],
     });
@@ -318,6 +318,7 @@ describe('AI Production tab', () => {
     expect(within(dialog).getByText('Imperial Wound')).not.toBeNull();
     expect(within(dialog).getByText('Lookbook reference')).not.toBeNull();
     expect(within(dialog).getByText('Needed')).not.toBeNull();
+    expect(within(dialog).getByText('$0.04')).not.toBeNull();
     expect(within(dialog).queryByText('Available')).toBeNull();
     expect(within(dialog).queryByText('Ready')).toBeNull();
   });

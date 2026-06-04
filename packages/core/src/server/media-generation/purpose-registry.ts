@@ -1,0 +1,681 @@
+import type {
+  CastCharacterSheetGenerationContext,
+  CastCharacterSheetGenerationSpec,
+  CastCharacterSheetModelListReport,
+  CastMediaImportReport,
+  CastProfileGenerationContext,
+  CastProfileGenerationSpec,
+  CastProfileModelListReport,
+  LocationEnvironmentSheetGenerationContext,
+  LocationEnvironmentSheetGenerationSpec,
+  LocationEnvironmentSheetMediaImportReport,
+  LocationEnvironmentSheetModelListReport,
+  LookbookImageGenerationContext,
+  LookbookImageGenerationSpec,
+  LookbookImageMediaImportReport,
+  LookbookImageModelListReport,
+  MediaGenerationPurpose,
+  MediaGenerationSpec,
+  MediaGenerationSpecRecord,
+  MediaGenerationRequestTarget,
+  MediaKind,
+  PreparedMediaGeneration,
+  SceneStoryboardSheetGenerationContext,
+  SceneStoryboardSheetGenerationSpec,
+  SceneStoryboardSheetImportReport,
+  SceneStoryboardSheetModelListReport,
+  ShotVideoTakeGenerationContext,
+  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeInputGenerationSpec,
+  ShotVideoTakeInputMediaImportReport,
+  ShotVideoTakeMediaImportReport,
+  ShotVideoTakeInputModelListReport,
+  ShotVideoTakeModelListReport,
+} from '../../client/index.js';
+import {
+  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  CAST_PROFILE_GENERATION_PURPOSE,
+  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+  SHOT_LAST_FRAME_GENERATION_PURPOSE,
+  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+} from '../../client/index.js';
+import { ProjectDataError } from '../project-data-error.js';
+import type {
+  CastMediaGenerationContextInput,
+  CreateCastCharacterSheetGenerationSpecInput,
+  CreateCastProfileGenerationSpecInput,
+  CreateLocationEnvironmentSheetGenerationSpecInput,
+  CreateLookbookImageGenerationSpecInput,
+  CreateSceneStoryboardSheetGenerationSpecInput,
+  CreateShotVideoTakeGenerationSpecInput,
+  CreateShotVideoTakeInputGenerationSpecInput,
+  ImportCastMediaInput,
+  ImportLocationEnvironmentSheetMediaInput,
+  ImportLookbookImageMediaInput,
+  ImportSceneStoryboardSheetMediaInput,
+  ImportShotVideoTakeInputMediaInput,
+  ImportShotVideoTakeMediaInput,
+  LocationMediaGenerationContextInput,
+  ReadLookbookImageGenerationContextInput,
+  ReadMediaGenerationSpecInput,
+  ReadSceneStoryboardSheetGenerationContextInput,
+  RunMediaGenerationSpecInput,
+  ShotVideoTakeContextInput,
+  ShotVideoTakeModelListInput,
+  UpdateCastCharacterSheetGenerationSpecInput,
+  UpdateCastProfileGenerationSpecInput,
+  UpdateLocationEnvironmentSheetGenerationSpecInput,
+  UpdateLookbookImageGenerationSpecInput,
+  UpdateSceneStoryboardSheetGenerationSpecInput,
+  UpdateShotVideoTakeGenerationSpecInput,
+  UpdateShotVideoTakeInputGenerationSpecInput,
+  ValidateCastCharacterSheetGenerationSpecInput,
+  ValidateCastProfileGenerationSpecInput,
+  ValidateLocationEnvironmentSheetGenerationSpecInput,
+  ValidateSceneStoryboardSheetGenerationSpecInput,
+  ValidateShotVideoTakeGenerationSpecInput,
+  ValidateShotVideoTakeInputGenerationSpecInput,
+} from '../project-data-service-contracts.js';
+import * as characterSheet from './cast-character-sheet.js';
+import * as castProfile from './cast-profile.js';
+import * as locationSheet from './location-environment-sheet.js';
+import * as lookbookImage from './lookbook-image.js';
+import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
+import * as shotVideoTake from './shot-video-take.js';
+
+export type MediaGenerationContextReport =
+  | LookbookImageGenerationContext
+  | CastCharacterSheetGenerationContext
+  | CastProfileGenerationContext
+  | LocationEnvironmentSheetGenerationContext
+  | SceneStoryboardSheetGenerationContext
+  | ShotVideoTakeGenerationContext;
+
+export type MediaGenerationModelListReport =
+  | LookbookImageModelListReport
+  | CastCharacterSheetModelListReport
+  | CastProfileModelListReport
+  | LocationEnvironmentSheetModelListReport
+  | SceneStoryboardSheetModelListReport
+  | ShotVideoTakeInputModelListReport
+  | ShotVideoTakeModelListReport;
+
+export type MediaGenerationImportReport =
+  | LookbookImageMediaImportReport
+  | CastMediaImportReport
+  | LocationEnvironmentSheetMediaImportReport
+  | SceneStoryboardSheetImportReport
+  | ShotVideoTakeInputMediaImportReport
+  | ShotVideoTakeMediaImportReport;
+
+export interface MediaGenerationPurposeContextInput {
+  projectName?: string;
+  homeDir?: string;
+  purpose: MediaGenerationPurpose;
+  target: MediaGenerationRequestTarget;
+  shotListId?: string;
+  shotIds?: string[];
+  intentId?: string;
+}
+
+export interface ListMediaGenerationSpecsInput {
+  projectName?: string;
+  homeDir?: string;
+  purpose: MediaGenerationPurpose;
+  target: MediaGenerationRequestTarget;
+  shotListId?: string;
+  shotIds?: string[];
+}
+
+export interface ValidateMediaGenerationSpecInput {
+  projectName?: string;
+  homeDir?: string;
+  spec: MediaGenerationSpec;
+}
+
+export interface PrepareDraftMediaGenerationSpecInput extends ValidateMediaGenerationSpecInput {}
+
+export interface CreateMediaGenerationSpecInput extends ValidateMediaGenerationSpecInput {
+  idGenerator?: Parameters<typeof lookbookImage.createLookbookImageSpec>[0]['idGenerator'];
+}
+
+export interface UpdateMediaGenerationSpecInput extends ValidateMediaGenerationSpecInput {
+  specId: string;
+}
+
+export interface MediaGenerationPurposeDefinition {
+  purpose: MediaGenerationPurpose;
+  mediaKind: MediaKind;
+  targetKind: MediaGenerationRequestTarget['kind'];
+  buildContext(input: MediaGenerationPurposeContextInput): Promise<MediaGenerationContextReport>;
+  listModels(input: MediaGenerationPurposeContextInput): Promise<MediaGenerationModelListReport>;
+  validateSpec(
+    input: ValidateMediaGenerationSpecInput
+  ): Promise<{ valid: true; spec: MediaGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createSpec(input: CreateMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateSpec(input: UpdateMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  prepareDraftSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  runSpec(input: RunMediaGenerationSpecInput): Promise<unknown>;
+}
+
+const DEFINITIONS = [
+  {
+    purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'lookbook',
+    buildContext: (input) =>
+      lookbookImage.buildLookbookImageContext(toLookbookInput(input)),
+    listModels: (input) => lookbookImage.listLookbookImageModels(toLookbookInput(input)),
+    validateSpec: (input) =>
+      lookbookImage.validateLookbookImageSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LookbookImageGenerationSpec,
+      }),
+    createSpec: (input) =>
+      lookbookImage.createLookbookImageSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LookbookImageGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateLookbookImageGenerationSpecInput),
+    updateSpec: (input) =>
+      lookbookImage.updateLookbookImageSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as LookbookImageGenerationSpec,
+      } satisfies UpdateLookbookImageGenerationSpecInput),
+    listSpecs: (input) => lookbookImage.listLookbookImageSpecs(toLookbookInput(input)),
+    prepareSpec: lookbookImage.prepareLookbookImageSpec,
+    prepareDraftSpec: (input) =>
+      lookbookImage.prepareLookbookImageDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LookbookImageGenerationSpec,
+      }),
+    runSpec: lookbookImage.runLookbookImageSpec,
+  },
+  {
+    purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'castMember',
+    buildContext: (input) =>
+      characterSheet.buildCastCharacterSheetContext(toCastInput(input)),
+    listModels: (input) => characterSheet.listCastCharacterSheetModels(toCastInput(input)),
+    validateSpec: (input) =>
+      characterSheet.validateCastCharacterSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastCharacterSheetGenerationSpec,
+      } satisfies ValidateCastCharacterSheetGenerationSpecInput),
+    createSpec: (input) =>
+      characterSheet.createCastCharacterSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastCharacterSheetGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateCastCharacterSheetGenerationSpecInput),
+    updateSpec: (input) =>
+      characterSheet.updateCastCharacterSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as CastCharacterSheetGenerationSpec,
+      } satisfies UpdateCastCharacterSheetGenerationSpecInput),
+    listSpecs: (input) => characterSheet.listCastCharacterSheetSpecs(toCastInput(input)),
+    prepareSpec: characterSheet.prepareCastCharacterSheetSpec,
+    prepareDraftSpec: (input) =>
+      characterSheet.prepareCastCharacterSheetDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastCharacterSheetGenerationSpec,
+      }),
+    runSpec: characterSheet.runCastCharacterSheetSpec,
+  },
+  {
+    purpose: CAST_PROFILE_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'castMember',
+    buildContext: (input) => castProfile.buildCastProfileContext(toCastInput(input)),
+    listModels: (input) => castProfile.listCastProfileModels(toCastInput(input)),
+    validateSpec: (input) =>
+      castProfile.validateCastProfileSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastProfileGenerationSpec,
+      } satisfies ValidateCastProfileGenerationSpecInput),
+    createSpec: (input) =>
+      castProfile.createCastProfileSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastProfileGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateCastProfileGenerationSpecInput),
+    updateSpec: (input) =>
+      castProfile.updateCastProfileSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as CastProfileGenerationSpec,
+      } satisfies UpdateCastProfileGenerationSpecInput),
+    listSpecs: (input) => castProfile.listCastProfileSpecs(toCastInput(input)),
+    prepareSpec: castProfile.prepareCastProfileSpec,
+    prepareDraftSpec: (input) =>
+      castProfile.prepareCastProfileDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastProfileGenerationSpec,
+      }),
+    runSpec: castProfile.runCastProfileSpec,
+  },
+  {
+    purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'location',
+    buildContext: (input) =>
+      locationSheet.buildLocationEnvironmentSheetContext(toLocationInput(input)),
+    listModels: (input) =>
+      locationSheet.listLocationEnvironmentSheetModels(toLocationInput(input)),
+    validateSpec: (input) =>
+      locationSheet.validateLocationEnvironmentSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LocationEnvironmentSheetGenerationSpec,
+      } satisfies ValidateLocationEnvironmentSheetGenerationSpecInput),
+    createSpec: (input) =>
+      locationSheet.createLocationEnvironmentSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LocationEnvironmentSheetGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateLocationEnvironmentSheetGenerationSpecInput),
+    updateSpec: (input) =>
+      locationSheet.updateLocationEnvironmentSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as LocationEnvironmentSheetGenerationSpec,
+      } satisfies UpdateLocationEnvironmentSheetGenerationSpecInput),
+    listSpecs: (input) => locationSheet.listLocationEnvironmentSheetSpecs(toLocationInput(input)),
+    prepareSpec: locationSheet.prepareLocationEnvironmentSheetSpec,
+    prepareDraftSpec: (input) =>
+      locationSheet.prepareLocationEnvironmentSheetDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LocationEnvironmentSheetGenerationSpec,
+      }),
+    runSpec: locationSheet.runLocationEnvironmentSheetSpec,
+  },
+  {
+    purpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'scene',
+    buildContext: (input) =>
+      sceneStoryboardSheet.buildSceneStoryboardSheetContext(toSceneInput(input)),
+    listModels: (input) =>
+      sceneStoryboardSheet.listSceneStoryboardSheetModels(toSceneInput(input)),
+    validateSpec: (input) =>
+      sceneStoryboardSheet.validateSceneStoryboardSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as SceneStoryboardSheetGenerationSpec,
+      } satisfies ValidateSceneStoryboardSheetGenerationSpecInput),
+    createSpec: (input) =>
+      sceneStoryboardSheet.createSceneStoryboardSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as SceneStoryboardSheetGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateSceneStoryboardSheetGenerationSpecInput),
+    updateSpec: (input) =>
+      sceneStoryboardSheet.updateSceneStoryboardSheetSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as SceneStoryboardSheetGenerationSpec,
+      } satisfies UpdateSceneStoryboardSheetGenerationSpecInput),
+    listSpecs: (input) => sceneStoryboardSheet.listSceneStoryboardSheetSpecs(toSceneInput(input)),
+    prepareSpec: sceneStoryboardSheet.prepareSceneStoryboardSheetSpec,
+    prepareDraftSpec: (input) =>
+      sceneStoryboardSheet.prepareSceneStoryboardSheetDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as SceneStoryboardSheetGenerationSpec,
+      }),
+    runSpec: sceneStoryboardSheet.runSceneStoryboardSheetSpec,
+  },
+  {
+    purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'sceneShotGroup',
+    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    listModels: (input) =>
+      shotVideoTake.listShotInputModels(
+        toShotInput(input),
+        SHOT_FIRST_FRAME_GENERATION_PURPOSE
+      ),
+    validateSpec: (input) =>
+      shotVideoTake.validateShotFirstFrameSpec(toShotInputSpecValidation(input)),
+    createSpec: (input) =>
+      shotVideoTake.createShotFirstFrameSpec(toShotInputSpecCreation(input)),
+    updateSpec: (input) =>
+      shotVideoTake.updateShotFirstFrameSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) => shotVideoTake.listShotFirstFrameSpecs(toShotInput(input)),
+    prepareSpec: shotVideoTake.prepareShotFirstFrameSpec,
+    prepareDraftSpec: (input) =>
+      shotVideoTake.prepareShotInputDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ShotVideoTakeInputGenerationSpec,
+      }),
+    runSpec: shotVideoTake.runShotFirstFrameSpec,
+  },
+  {
+    purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'sceneShotGroup',
+    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    listModels: (input) =>
+      shotVideoTake.listShotInputModels(
+        toShotInput(input),
+        SHOT_LAST_FRAME_GENERATION_PURPOSE
+      ),
+    validateSpec: (input) =>
+      shotVideoTake.validateShotLastFrameSpec(toShotInputSpecValidation(input)),
+    createSpec: (input) =>
+      shotVideoTake.createShotLastFrameSpec(toShotInputSpecCreation(input)),
+    updateSpec: (input) =>
+      shotVideoTake.updateShotLastFrameSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) => shotVideoTake.listShotLastFrameSpecs(toShotInput(input)),
+    prepareSpec: shotVideoTake.prepareShotLastFrameSpec,
+    prepareDraftSpec: (input) =>
+      shotVideoTake.prepareShotInputDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ShotVideoTakeInputGenerationSpec,
+      }),
+    runSpec: shotVideoTake.runShotLastFrameSpec,
+  },
+  {
+    purpose: SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'sceneShotGroup',
+    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    listModels: (input) =>
+      shotVideoTake.listShotInputModels(
+        toShotInput(input),
+        SHOT_REFERENCE_SHEET_GENERATION_PURPOSE
+      ),
+    validateSpec: (input) =>
+      shotVideoTake.validateShotReferenceSheetSpec(toShotInputSpecValidation(input)),
+    createSpec: (input) =>
+      shotVideoTake.createShotReferenceSheetSpec(toShotInputSpecCreation(input)),
+    updateSpec: (input) =>
+      shotVideoTake.updateShotReferenceSheetSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) => shotVideoTake.listShotReferenceSheetSpecs(toShotInput(input)),
+    prepareSpec: shotVideoTake.prepareShotReferenceSheetSpec,
+    prepareDraftSpec: (input) =>
+      shotVideoTake.prepareShotInputDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ShotVideoTakeInputGenerationSpec,
+      }),
+    runSpec: shotVideoTake.runShotReferenceSheetSpec,
+  },
+  {
+    purpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'sceneShotGroup',
+    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    listModels: (input) =>
+      shotVideoTake.listShotInputModels(
+        toShotInput(input),
+        SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
+      ),
+    validateSpec: (input) =>
+      shotVideoTake.validateShotMultiShotStoryboardSheetSpec(toShotInputSpecValidation(input)),
+    createSpec: (input) =>
+      shotVideoTake.createShotMultiShotStoryboardSheetSpec(toShotInputSpecCreation(input)),
+    updateSpec: (input) =>
+      shotVideoTake.updateShotMultiShotStoryboardSheetSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) =>
+      shotVideoTake.listShotMultiShotStoryboardSheetSpecs(toShotInput(input)),
+    prepareSpec: shotVideoTake.prepareShotMultiShotStoryboardSheetSpec,
+    prepareDraftSpec: (input) =>
+      shotVideoTake.prepareShotInputDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ShotVideoTakeInputGenerationSpec,
+      }),
+    runSpec: shotVideoTake.runShotMultiShotStoryboardSheetSpec,
+  },
+  {
+    purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+    mediaKind: 'video',
+    targetKind: 'sceneShotGroup',
+    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    listModels: (input) => shotVideoTake.listShotVideoTakeModels(toShotModelInput(input)),
+    validateSpec: (input) =>
+      shotVideoTake.validateShotVideoTakeSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ShotVideoTakeGenerationSpec,
+      } satisfies ValidateShotVideoTakeGenerationSpecInput),
+    createSpec: (input) =>
+      shotVideoTake.createShotVideoTakeSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ShotVideoTakeGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateShotVideoTakeGenerationSpecInput),
+    updateSpec: (input) =>
+      shotVideoTake.updateShotVideoTakeSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as ShotVideoTakeGenerationSpec,
+      } satisfies UpdateShotVideoTakeGenerationSpecInput),
+    listSpecs: (input) => shotVideoTake.listShotVideoTakeSpecs(toShotInput(input)),
+    prepareSpec: shotVideoTake.prepareShotVideoTakeSpec,
+    prepareDraftSpec: (input) =>
+      shotVideoTake.prepareShotVideoTakeDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ShotVideoTakeGenerationSpec,
+      }),
+    runSpec: shotVideoTake.runShotVideoTakeSpec,
+  },
+] satisfies MediaGenerationPurposeDefinition[];
+
+const DEFINITIONS_BY_PURPOSE = new Map<MediaGenerationPurpose, MediaGenerationPurposeDefinition>(
+  DEFINITIONS.map((definition) => [definition.purpose, definition])
+);
+
+export function listMediaGenerationPurposeDefinitions(): MediaGenerationPurposeDefinition[] {
+  return [...DEFINITIONS];
+}
+
+export function requireMediaGenerationPurposeDefinition(
+  purpose: string
+): MediaGenerationPurposeDefinition {
+  const definition = DEFINITIONS_BY_PURPOSE.get(purpose as MediaGenerationPurpose);
+  if (!definition) {
+    throw new ProjectDataError(
+      'PROJECT_DATA387',
+      `Unsupported media generation purpose: ${purpose}.`,
+      {
+        suggestion:
+          'Use one of the registered media generation purposes from the core purpose registry.',
+      }
+    );
+  }
+  return definition;
+}
+
+export function assertRegisteredMediaGenerationPurpose(
+  purpose: string
+): asserts purpose is MediaGenerationPurpose {
+  requireMediaGenerationPurposeDefinition(purpose);
+}
+
+function requireTargetKind<T extends MediaGenerationRequestTarget['kind']>(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput,
+  kind: T
+): Extract<MediaGenerationRequestTarget, { kind: T }> {
+  if (input.target.kind !== kind) {
+    throw new ProjectDataError(
+      'PROJECT_DATA388',
+      `Media generation purpose ${input.purpose} requires target.kind "${kind}". Received: ${input.target.kind}.`
+    );
+  }
+  return input.target as Extract<MediaGenerationRequestTarget, { kind: T }>;
+}
+
+function toLookbookInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): ReadLookbookImageGenerationContextInput {
+  const target = requireTargetKind(input, 'lookbook');
+  return { projectName: input.projectName, homeDir: input.homeDir, lookbookId: target.id };
+}
+
+function toCastInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): CastMediaGenerationContextInput {
+  const target = requireTargetKind(input, 'castMember');
+  return { projectName: input.projectName, homeDir: input.homeDir, castMemberId: target.id };
+}
+
+function toLocationInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): LocationMediaGenerationContextInput {
+  const target = requireTargetKind(input, 'location');
+  return { projectName: input.projectName, homeDir: input.homeDir, locationId: target.id };
+}
+
+function toSceneInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): ReadSceneStoryboardSheetGenerationContextInput {
+  const target = requireTargetKind(input, 'scene');
+  return {
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: target.id,
+    shotListId: requireShotListId(input),
+  };
+}
+
+function toShotInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): ShotVideoTakeContextInput {
+  const target = requireTargetKind(input, 'sceneShotGroup');
+  return {
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: target.sceneId,
+    shotListId: input.shotListId ?? target.shotListId,
+    shotIds: input.shotIds ?? target.shotIds,
+    ...(target.productionGroupId
+      ? { productionGroupId: target.productionGroupId }
+      : {}),
+  };
+}
+
+function toShotModelInput(input: MediaGenerationPurposeContextInput): ShotVideoTakeModelListInput {
+  return {
+    ...toShotInput(input),
+    ...(input.intentId ? { intentId: input.intentId as never } : {}),
+  };
+}
+
+function toShotInputSpecValidation(
+  input: ValidateMediaGenerationSpecInput
+): ValidateShotVideoTakeInputGenerationSpecInput {
+  return {
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    spec: input.spec as ShotVideoTakeInputGenerationSpec,
+  };
+}
+
+function toShotInputSpecCreation(
+  input: CreateMediaGenerationSpecInput
+): CreateShotVideoTakeInputGenerationSpecInput {
+  return {
+    ...toShotInputSpecValidation(input),
+    idGenerator: input.idGenerator,
+  };
+}
+
+function toShotInputSpecUpdate(
+  input: UpdateMediaGenerationSpecInput
+): UpdateShotVideoTakeInputGenerationSpecInput {
+  return {
+    ...toShotInputSpecValidation(input),
+    specId: input.specId,
+  };
+}
+
+function requireShotListId(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): string {
+  if (!input.shotListId) {
+    throw new ProjectDataError(
+      'PROJECT_DATA389',
+      `Media generation purpose ${input.purpose} requires shotListId.`
+    );
+  }
+  return input.shotListId;
+}
+
+export async function importMediaGenerationByPurpose(input:
+  | ({ purpose: typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE } & ImportLookbookImageMediaInput)
+  | ({ purpose: typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE } & ImportCastMediaInput)
+  | ({ purpose: typeof CAST_PROFILE_GENERATION_PURPOSE } & ImportCastMediaInput)
+  | ({ purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE } & ImportLocationEnvironmentSheetMediaInput)
+  | ({ purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportSceneStoryboardSheetMediaInput)
+  | ({ purpose: typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
+  | ({ purpose: typeof SHOT_LAST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
+  | ({ purpose: typeof SHOT_REFERENCE_SHEET_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
+  | ({ purpose: typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
+  | ({ purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE } & ImportShotVideoTakeMediaInput)
+): Promise<MediaGenerationImportReport> {
+  switch (input.purpose) {
+    case LOOKBOOK_IMAGE_GENERATION_PURPOSE:
+      return lookbookImage.importLookbookImageMedia(input);
+    case CAST_CHARACTER_SHEET_GENERATION_PURPOSE:
+      return characterSheet.importCastCharacterSheetMedia(input);
+    case CAST_PROFILE_GENERATION_PURPOSE:
+      return castProfile.importCastProfileMedia(input);
+    case LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE:
+      return locationSheet.importLocationEnvironmentSheetMedia(input);
+    case SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE:
+      return sceneStoryboardSheet.importSceneStoryboardSheetMedia(input);
+    case SHOT_FIRST_FRAME_GENERATION_PURPOSE:
+      return shotVideoTake.importShotFirstFrame(input);
+    case SHOT_LAST_FRAME_GENERATION_PURPOSE:
+      return shotVideoTake.importShotLastFrame(input);
+    case SHOT_REFERENCE_SHEET_GENERATION_PURPOSE:
+      return shotVideoTake.importShotReferenceSheet(input);
+    case SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE:
+      return shotVideoTake.importShotMultiShotStoryboardSheet(input);
+    case SHOT_VIDEO_TAKE_GENERATION_PURPOSE:
+      return shotVideoTake.importShotVideoTake(input);
+    default:
+      return assertNever(input);
+  }
+}
+
+function assertNever(value: never): never {
+  throw new ProjectDataError(
+    'PROJECT_DATA387',
+    `Unsupported media generation purpose: ${(value as { purpose: string }).purpose}.`
+  );
+}

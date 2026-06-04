@@ -16,6 +16,7 @@ Decision history:
 - `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `../../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
+- `../../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 
 ## Current Purposes
 
@@ -27,6 +28,11 @@ cast.character-sheet
 cast.profile
 location.environment-sheet
 scene.storyboard-sheet
+shot.first-frame
+shot.last-frame
+shot.reference-sheet
+shot.multi-shot-storyboard-sheet
+shot.video-take
 ```
 
 Target formats:
@@ -36,6 +42,7 @@ lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
 scene:<scene-id>
+scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]>
 ```
 
 Core contract target shapes:
@@ -59,6 +66,15 @@ Core contract target shapes:
 {
   kind: "scene";
   id: string;
+}
+
+{
+  kind: "sceneShotGroup";
+  id: string;
+  sceneId: string;
+  shotListId: string;
+  productionGroupId: string;
+  shotIds: string[];
 }
 ```
 
@@ -95,8 +111,14 @@ renku generation run --spec <spec-id> --approval-token <token> --json
 renku generation run --spec <spec-id> --simulate --json
 ```
 
-The CLI command names are generic. The implementation uses direct purpose
-switching rather than a generic purpose registry.
+The CLI command names are generic, and the spec lifecycle now routes through
+the core shared generation service. The shared service resolves the purpose
+definition from the media generation purpose registry, then runs the common
+validate, create, update, read, list, prepare, estimate, run, and run-recording
+operations.
+
+Purpose definitions keep purpose-specific behavior such as context building,
+model options, provider payloads, output names, and media import behavior.
 
 ## Lookbook Image Context
 

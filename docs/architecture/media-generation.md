@@ -13,7 +13,8 @@ context while preserving user choices, cost approval, and project metadata
 boundaries.
 
 The implemented purposes are `lookbook.image`, `cast.character-sheet`,
-`cast.profile`, and `location.environment-sheet`. Precise contracts live in
+`cast.profile`, `location.environment-sheet`, `scene.storyboard-sheet`, the
+shot-video input purposes, and `shot.video-take`. Precise contracts live in
 `reference/media-generation.md`.
 
 ## Current Shape
@@ -41,8 +42,15 @@ renku generation run --spec <spec-id> --approval-token <token> --json
 renku media import --purpose lookbook.image --target lookbook:<id> --source <path> --json
 ```
 
-Internally, this is a direct vertical slice rather than a generic media-purpose
-framework.
+Internally, the common lifecycle is registry-backed. Core owns a media
+generation purpose registry and shared generation service for purpose lookup,
+spec persistence, prepare, estimate, run, and run recording. Purpose definitions
+still own context construction, spec validation, provider payloads, output
+names, dependency declarations, and import behavior.
+
+Shot-video take planning reuses the shared dependency-map, dependency-pricing,
+and plan-line contracts. A generated file still does not become project
+metadata until an explicit media import succeeds.
 
 Location environment sheets add an agent-owned post-processing step after
 generation. Core asks the selected text-to-image model for a four-azimuth
@@ -60,3 +68,4 @@ diagnostics.
 - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
+- `../decisions/0025-use-shared-media-generation-purpose-architecture.md`

@@ -53,6 +53,7 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import { readLookbookResource } from '../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import { assertLookbookSections } from '../visual-language-json/validator.js';
 import {
   allocateProjectRelativeFilePath,
@@ -263,6 +264,25 @@ export async function prepareLookbookImageSpec(
     spec: specRecord,
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, specRecord.spec),
+  };
+}
+
+export async function prepareLookbookImageDraftSpec(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: LookbookImageGenerationSpec;
+}): Promise<PreparedMediaGeneration> {
+  const normalized = normalizeSpec(input.spec);
+  const context = await buildLookbookImageContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    lookbookId: normalized.target.id,
+  });
+  const plan = buildLookbookImageProviderPayload(normalized, context);
+  return {
+    spec: draftMediaGenerationSpecRecord(normalized),
+    providerPayload: plan.payload,
+    generation: toGenerationRequest(plan, normalized),
   };
 }
 

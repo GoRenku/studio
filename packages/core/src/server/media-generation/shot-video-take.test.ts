@@ -156,17 +156,27 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    expect(estimate.issues).toEqual([]);
-    expect(estimate.estimate).toMatchObject({
-      model: 'bytedance/seedance-2.0/image-to-video',
-      estimatedCostUsd: 3.402,
-      billableUnits: {
-        duration: '9',
-        resolution: '720p',
-        aspect_ratio: '16:9',
-      },
-      warnings: [],
-    });
+    expect(estimate.plan?.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'dependency-generation',
+          dependencyKind: 'first-frame',
+          pricing: { state: 'priced', estimatedUsd: 0.005 },
+        }),
+        expect.objectContaining({
+          kind: 'final-video-generation',
+          pricing: expect.objectContaining({ state: 'unpriced' }),
+        }),
+      ])
+    );
+    expect(estimate.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_PLAN_UNPRICED_LINE',
+          message: expect.stringContaining('missing required input: first-frame'),
+        }),
+      ])
+    );
   });
 
   it('drops stale settings that are unsupported by the selected route before estimating', async () => {
@@ -334,7 +344,7 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       production: {
-        intentId: 'first-frame',
+        intentId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         parameterValues: { duration: 6 },
       },
@@ -343,11 +353,12 @@ describe('shot video take preflight and validation', () => {
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          key: `lookbook-${lookbook.lookbook.id}`,
-          title: 'Imperial Wound',
-          caption: 'Lookbook reference',
+          dependencyNodeId: `planned:reference-image:lookbook:${lookbook.lookbook.id}`,
+          title: `reference-image (lookbook ${lookbook.lookbook.id})`,
+          caption: 'Planned generation',
           mediaKind: 'image',
-          status: 'needed',
+          status: 'planned',
+          pricing: expect.objectContaining({ state: 'priced' }),
         }),
       ])
     );

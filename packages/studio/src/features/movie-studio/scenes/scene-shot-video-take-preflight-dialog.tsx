@@ -20,16 +20,7 @@ import { SceneShotAiProductionInputPicker } from './scene-shot-ai-production-inp
 import { formatEstimateUsd } from './shot-video-take-production-projection';
 import type { ShotVideoTakeInputSlot } from '@/services/studio-shot-video-takes-api';
 
-type ReferenceStatus = 'ready' | 'available' | 'needed';
-
-const DEPENDENCY_KIND_LABELS: Record<string, string> = {
-  'first-frame': 'First frame',
-  'last-frame': 'Last frame',
-  'shot-reference-sheet': 'Reference sheet',
-  'multi-shot-storyboard-sheet': 'Storyboard sheet',
-  'reference-audio': 'Audio',
-  'source-video-extract': 'Source video',
-};
+type ReferenceStatus = ShotVideoTakePreflightInputItem['status'];
 
 interface SceneShotVideoTakePreflightDialogProps {
   open: boolean;
@@ -58,14 +49,13 @@ export function SceneShotVideoTakePreflightDialog({
     return preflight.inputPlanItems
       .map((item, index) => ({ item, index }))
       .sort((a, b) => {
-        const rank = (status: ReferenceStatus) => (status === 'needed' ? 1 : 0);
+        const rank = (status: ReferenceStatus) =>
+          status === 'ready' ? 0 : status === 'available' ? 1 : 2;
         return rank(a.item.status) - rank(b.item.status) || a.index - b.index;
       })
       .map((entry) => entry.item);
   }, [preflight]);
-  const total = preflight?.plan?.estimate.estimatedTotalUsd ??
-    preflight?.estimate?.estimatedCostUsd ??
-    null;
+  const total = preflight?.plan?.estimate.estimatedTotalUsd ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,7 +136,11 @@ function SectionHeading({ children }: { children: ReactNode }) {
 
 function StatusBadge({ status }: { status: ReferenceStatus }) {
   const label =
-    status === 'ready' ? 'Ready' : status === 'available' ? 'Available' : 'Needed';
+    status === 'ready'
+      ? 'Ready'
+      : status === 'available'
+        ? 'Available'
+        : 'Needed';
   return (
     <span
       className={cn(
@@ -201,7 +195,7 @@ function InputCard({
         </div>
         {item.status === 'needed' ? (
           <span className='shrink-0 font-mono text-[11px] text-foreground/80'>
-            {formatEstimateUsd(item.cost ?? null)}
+            {formatItemPricing(item)}
           </span>
         ) : null}
       </div>
@@ -289,13 +283,6 @@ function ParametersSection({
   );
 }
 
-function costLabel(line: ShotVideoTakePreflightReport['estimateLines'][number]): string {
-  if (line.dependencyKind) {
-    return DEPENDENCY_KIND_LABELS[line.dependencyKind] ?? 'Dependency';
-  }
-  return 'Final video take';
-}
-
 function CostSummary({
   preflight,
   total,
@@ -304,70 +291,34 @@ function CostSummary({
   total: number | null;
 }) {
   const plan = preflight.plan;
-  const planBreakdown = plan?.lines.filter((line) => line.kind !== 'reused-asset') ?? [];
-  const legacyBreakdown = preflight.estimateLines.filter(
-    (line) => line.estimate?.estimatedCostUsd != null
-  );
-  const breakdownCount = plan ? planBreakdown.length : legacyBreakdown.length;
-  const stateLabel = plan ? estimateStateLabel(plan.estimate.state) : null;
   return (
     <div className='flex min-w-0 items-baseline gap-3'>
       <span className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
         Estimated total
       </span>
       <span className='font-mono text-lg font-semibold leading-none text-foreground'>
-        {plan ? formatPlanEstimate(plan.estimate.estimatedTotalUsd, plan.estimate.state) : formatEstimateUsd(total)}
+        {formatPlanEstimate(total, plan?.estimate.state ?? 'unavailable')}
       </span>
-      {stateLabel ? (
-        <span className='text-[11px] text-muted-foreground'>{stateLabel}</span>
-      ) : null}
-      {breakdownCount > 1 ? (
-        <span className='truncate text-[11px] text-muted-foreground'>
-          {plan
-            ? planBreakdown.map(planLineCostLabel).join('  ·  ')
-            : legacyBreakdown
-                .map(
-                  (line) =>
-                    `${costLabel(line)} ${formatEstimateUsd(line.estimate?.estimatedCostUsd ?? null)}`
-                )
-                .join('  ·  ')}
-        </span>
-      ) : null}
     </div>
   );
 }
 
 function formatPlanEstimate(
   value: number | null,
-  state: 'complete' | 'partial' | 'unavailable'
+  _state: 'complete' | 'partial' | 'unavailable'
 ): string {
-  if (state === 'unavailable') {
-    return 'Needs plan';
-  }
-  if (state === 'partial') {
-    return `${formatEstimateUsd(value)} + unpriced`;
-  }
   return formatEstimateUsd(value);
 }
 
-function estimateStateLabel(state: 'complete' | 'partial' | 'unavailable'): string {
-  if (state === 'partial') {
-    return 'Some lines need override';
+function formatItemPricing(item: ShotVideoTakePreflightInputItem): string {
+  if (!item.pricing) {
+    return formatEstimateUsd(null);
   }
-  if (state === 'unavailable') {
-    return 'Attachment needed';
+  if (item.pricing.state === 'priced') {
+    return formatEstimateUsd(item.pricing.estimatedUsd);
   }
-  return 'Complete';
-}
-
-function planLineCostLabel(
-  line: NonNullable<ShotVideoTakePreflightReport['plan']>['lines'][number]
-): string {
-  if (line.pricing.state === 'priced') {
-    return `${line.label} ${formatEstimateUsd(line.pricing.estimatedUsd)}`;
+  if (item.pricing.state === 'unpriced') {
+    return 'Unpriced';
   }
-  if (line.pricing.state === 'unpriced') {
-    return `${line.label} unpriced`;
-  }
-  return `${line.label} attach needed`;
+  return '—';
 }

@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
   SceneShot,
+  ShotVideoTakePreflightReport,
   ShotVideoTakeProductionGroup,
+  ShotVideoTakeProductionEstimateReport,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { SceneShotAiProductionIntentList } from './scene-shot-ai-production-intent-list';
@@ -118,13 +120,7 @@ export function SceneShotAiProductionTab({
           parameters={enabledParameters(selectedModelReport)}
           values={productionGroup.videoTakeProduction.parameterValues ?? {}}
           onParameterChange={setParameter}
-          estimate={
-            estimate?.plan?.estimate.estimatedTotalUsd ??
-            preflight?.plan?.estimate.estimatedTotalUsd ??
-            estimate?.estimate?.estimatedCostUsd ??
-            preflight?.estimate?.estimatedCostUsd ??
-            null
-          }
+          estimate={displayEstimateTotal(estimate, preflight)}
           estimatePending={estimateState === 'loading' || previewState === 'loading'}
           onPreview={handleOpenPreview}
           previewLoading={previewState === 'loading'}
@@ -144,4 +140,15 @@ export function SceneShotAiProductionTab({
       />
     </div>
   );
+}
+
+function displayEstimateTotal(
+  estimate: ShotVideoTakeProductionEstimateReport | null,
+  preflight: ShotVideoTakePreflightReport | null
+): number | null {
+  const graphEstimate = estimate?.plan?.estimate ?? preflight?.plan?.estimate ?? null;
+  if (graphEstimate) {
+    return graphEstimate.estimatedTotalUsd;
+  }
+  return estimate?.estimate?.estimatedCostUsd ?? preflight?.estimate?.estimatedCostUsd ?? null;
 }

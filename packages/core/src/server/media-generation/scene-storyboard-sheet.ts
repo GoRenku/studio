@@ -80,6 +80,7 @@ import {
   resolveCastImageFrame,
   CAST_IMAGE_FRAMES,
 } from './cast-image-common.js';
+import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 
 const STORYBOARD_SHEET_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2',
@@ -295,6 +296,26 @@ export async function prepareSceneStoryboardSheetSpec(
     spec: specRecord,
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, specRecord.spec),
+  };
+}
+
+export async function prepareSceneStoryboardSheetDraftSpec(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: SceneStoryboardSheetGenerationSpec;
+}): Promise<PreparedMediaGeneration> {
+  const normalized = await normalizeSpec(input);
+  const context = await buildSceneStoryboardSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: normalized.target.id,
+    shotListId: normalized.shotListId,
+  });
+  const plan = buildSceneStoryboardSheetProviderPayload(normalized, context);
+  return {
+    spec: draftMediaGenerationSpecRecord(normalized),
+    providerPayload: plan.payload,
+    generation: toGenerationRequest(plan, normalized),
   };
 }
 

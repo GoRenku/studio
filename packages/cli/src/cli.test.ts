@@ -1671,6 +1671,157 @@ describe('renku CLI', () => {
       ]),
     });
 
+    const shotProductionPath = path.join(homeDir, 'shot-video-production.json');
+    await fs.writeFile(
+      shotProductionPath,
+      JSON.stringify(
+        {
+          intentId: 'text-only',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: {},
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const productionUpdateExitCode = await runRenkuCli(
+      [
+        'generation',
+        'production',
+        'update',
+        '--purpose',
+        'shot.video-take',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--shots',
+        'shot_001',
+        '--production-group',
+        'scene_shot_video_take_group_manual',
+        '--file',
+        shotProductionPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(productionUpdateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      target: {
+        productionGroupId: 'scene_shot_video_take_group_manual',
+        shotIds: ['shot_001'],
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const shotContextExitCode = await runRenkuCli(
+      [
+        'generation',
+        'context',
+        '--purpose',
+        'shot.video-take',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--shots',
+        'shot_001',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(shotContextExitCode).toBe(0);
+    const shotContext = JSON.parse(stdout.join('\n'));
+    expect(shotContext).toMatchObject({
+      target: {
+        productionGroupId: 'scene_shot_video_take_group_manual',
+        shotIds: ['shot_001'],
+      },
+      productionGroup: {
+        productionGroupId: 'scene_shot_video_take_group_manual',
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const shotInputModelListExitCode = await runRenkuCli(
+      [
+        'generation',
+        'model',
+        'list',
+        '--purpose',
+        'shot.first-frame',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--shots',
+        'shot_001',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(shotInputModelListExitCode).toBe(0);
+    const shotInputModels = JSON.parse(stdout.join('\n'));
+    expect(shotInputModels).toMatchObject({
+      purpose: 'shot.first-frame',
+      defaultModelChoice: 'fal-ai/openai/gpt-image-2',
+      target: {
+        productionGroupId: 'scene_shot_video_take_group_manual',
+      },
+      models: expect.arrayContaining([
+        expect.objectContaining({ modelChoice: 'fal-ai/openai/gpt-image-2' }),
+        expect.objectContaining({ modelChoice: 'fal-ai/nano-banana-2' }),
+        expect.objectContaining({ modelChoice: 'fal-ai/xai/grok-imagine-image' }),
+      ]),
+    });
+    expect(
+      shotInputModels.models.some(
+        (model: { modelChoice: string }) =>
+          model.modelChoice === 'fal-ai/bytedance/seedance-2.0'
+      )
+    ).toBe(false);
+
+    const shotFirstFrameSpecPath = path.join(homeDir, 'shot-first-frame-spec.json');
+    await fs.writeFile(
+      shotFirstFrameSpecPath,
+      JSON.stringify(
+        {
+          purpose: 'shot.first-frame',
+          target: shotInputModels.target,
+          dependencyKind: 'first-frame',
+          outputInputKind: 'first-frame',
+          modelChoice: shotInputModels.defaultModelChoice,
+          prompt: 'A still first frame for Urban studying the bronze.',
+          parameterValues: shotInputModels.models[0].defaultParameterValues,
+          title: 'Foundry first frame',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const shotFirstFrameValidateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'validate', '--file', shotFirstFrameSpecPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(shotFirstFrameValidateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      spec: {
+        purpose: 'shot.first-frame',
+        modelChoice: 'fal-ai/openai/gpt-image-2',
+      },
+    });
+
     const specPath = path.join(homeDir, 'scene-storyboard-spec.json');
     await fs.writeFile(
       specPath,
