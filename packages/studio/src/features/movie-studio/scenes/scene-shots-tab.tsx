@@ -1,23 +1,54 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
-import { updateShotVideoTakeProduction } from '@/services/studio-shot-video-takes-api';
+import { updateShotVideoTakeRailGroups } from '@/services/studio-shot-video-takes-api';
+import { Button } from '@/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/ui/dialog';
 import { SceneShotRail } from './scene-shot-rail';
 import { SceneShotDetail } from './scene-shot-detail';
 import { SceneShotListEmpty } from './scene-shot-list-empty';
 import { shotLabel } from './scene-shot-labels';
-import { cycleShotGroupMembership } from './shot-video-take-grouping';
+import {
+  createShotRailGroupDraftsFromRailGroups,
+  cycleShotRailGroupMembership,
+  shotRailDraftsEqual,
+  shotRailGroupsForSave,
+  summarizeShotRailGroupChanges,
+  type ShotRailGroupDraft,
+} from './shot-video-take-grouping';
 
 interface SceneShotsTabProps {
   projectName: string;
   sceneId: string;
   shotId?: string;
+  onHeaderActionChange?: (action: ReactNode | null) => void;
 }
 
-export function SceneShotsTab({ projectName, sceneId, shotId }: SceneShotsTabProps) {
+export function SceneShotsTab({
+  projectName,
+  sceneId,
+  shotId,
+  onHeaderActionChange,
+}: SceneShotsTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingGroups, setIsEditingGroups] = useState(false);
+  const [draftRailGroups, setDraftRailGroups] = useState<ShotRailGroupDraft[]>(
+    []
+  );
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [applyState, setApplyState] = useState<'idle' | 'saving'>('idle');
+  const [groupingApplyError, setGroupingApplyError] = useState<string | null>(
+    null
+  );
   // User's explicit rail selection. When unset, selection falls back to the
   // deep-link shotId or the first shot (derived during render).
   const [userSelectedShotId, setUserSelectedShotId] = useState<string | null>(
@@ -89,6 +120,28 @@ export function SceneShotsTab({ projectName, sceneId, shotId }: SceneShotsTabPro
     () => resource?.activeShotList?.videoTakeProductionGroups ?? [],
     [resource]
   );
+  const persistedRailGroups = useMemo(
+    () =>
+      createShotRailGroupDraftsFromRailGroups(
+        resource?.activeShotList?.videoTakeRailGroups
+      ),
+    [resource?.activeShotList?.videoTakeRailGroups]
+  );
+  const visibleRailGroups = isEditingGroups
+    ? draftRailGroups
+    : persistedRailGroups;
+  const groupingDraftChanged =
+    isEditingGroups &&
+    !shotRailDraftsEqual(persistedRailGroups, draftRailGroups);
+  const groupingSummary = useMemo(
+    () =>
+      summarizeShotRailGroupChanges({
+        shots,
+        persistedDraftGroups: persistedRailGroups,
+        draftGroups: draftRailGroups,
+      }),
+    [draftRailGroups, persistedRailGroups, shots]
+  );
 
   const selectedShotId = useMemo(() => {
     if (
@@ -105,56 +158,94 @@ export function SceneShotsTab({ projectName, sceneId, shotId }: SceneShotsTabPro
 
   const handleCycleShotGroup = useCallback(
     (clickedShotId: string) => {
-      const desired = cycleShotGroupMembership(
-        shots,
-        productionGroups,
-        clickedShotId
+      setUserSelectedShotId(clickedShotId);
+      setGroupingApplyError(null);
+      setIsEditingGroups(true);
+      setDraftRailGroups((currentDraftGroups) =>
+        cycleShotRailGroupMembership({
+          shots,
+          draftGroups: isEditingGroups ? currentDraftGroups : persistedRailGroups,
+          clickedShotId,
+        })
       );
-      const desiredById = new Map(
-        desired.map((group) => [group.productionGroupId, group])
-      );
-      const sameShots = (left: string[], right: string[]) =>
-        left.length === right.length &&
-        left.every((shotId, index) => shotId === right[index]);
-      const operations = [
-        ...desired.filter((group) => {
-          const existing = productionGroups.find(
-            (candidate) => candidate.productionGroupId === group.productionGroupId
-          );
-          return !existing || !sameShots(existing.shotIds, group.shotIds);
-        }),
-        ...productionGroups
-          .filter((group) => !desiredById.has(group.productionGroupId))
-          .map((group) => ({ ...group, shotIds: [] })),
-      ];
-      if (operations.length === 0) {
-        return;
-      }
-      void (async () => {
-        try {
-          let latest: SceneShotListResourceResponse | null = null;
-          for (const operation of operations) {
-            const result = await updateShotVideoTakeProduction(
-              projectName,
-              sceneId,
-              operation
-            );
-            latest = result.resource;
-          }
-          if (latest) {
-            setResource(latest);
-          }
-        } catch (cycleError) {
-          setError(
-            cycleError instanceof Error
-              ? cycleError.message
-              : 'Unable to update shot grouping.'
-          );
-        }
-      })();
     },
-    [productionGroups, projectName, sceneId, shots]
+    [isEditingGroups, persistedRailGroups, shots]
   );
+
+  const handleOpenReview = useCallback(() => {
+    setReviewOpen(true);
+  }, []);
+
+  const handleCancelReview = useCallback(() => {
+    setReviewOpen(false);
+  }, []);
+
+  const handleDiscardGroups = useCallback(() => {
+    setDraftRailGroups(persistedRailGroups);
+    setIsEditingGroups(false);
+    setReviewOpen(false);
+    setGroupingApplyError(null);
+  }, [persistedRailGroups]);
+
+  const handleApplyGroups = useCallback(async () => {
+    if (!resource?.activeShotList || !groupingDraftChanged) {
+      setReviewOpen(false);
+      return;
+    }
+    setApplyState('saving');
+    setGroupingApplyError(null);
+    try {
+      const result = await updateShotVideoTakeRailGroups(
+        projectName,
+        sceneId,
+        shotRailGroupsForSave(draftRailGroups)
+      );
+      setResource(result.resource);
+      setDraftRailGroups(
+        createShotRailGroupDraftsFromRailGroups(
+          result.resource.activeShotList?.videoTakeRailGroups
+        )
+      );
+      setIsEditingGroups(false);
+      setReviewOpen(false);
+    } catch (applyError) {
+      setGroupingApplyError(
+        applyError instanceof Error
+          ? applyError.message
+          : 'Unable to apply shot grouping.'
+      );
+    } finally {
+      setApplyState('idle');
+    }
+  }, [
+    draftRailGroups,
+    groupingDraftChanged,
+    projectName,
+    resource?.activeShotList,
+    sceneId,
+  ]);
+
+  useEffect(() => {
+    if (!onHeaderActionChange) {
+      return;
+    }
+    if (!isEditingGroups) {
+      onHeaderActionChange(null);
+      return;
+    }
+    onHeaderActionChange(
+      <Button
+        type='button'
+        variant='outline'
+        size='sm'
+        onClick={handleOpenReview}
+        className='h-7 rounded-full border-amber-500/45 bg-amber-500/12 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700 hover:bg-amber-500/18 dark:text-amber-300'
+      >
+        Editing Groups
+      </Button>
+    );
+    return () => onHeaderActionChange(null);
+  }, [handleOpenReview, isEditingGroups, onHeaderActionChange]);
 
   if (error) {
     return (
@@ -186,7 +277,7 @@ export function SceneShotsTab({ projectName, sceneId, shotId }: SceneShotsTabPro
         shots={shots}
         imagesByShotId={resource.storyboardImagesByShotId}
         selectedShotId={selectedShot.shotId}
-        productionGroups={productionGroups}
+        railGroups={visibleRailGroups}
         onSelectShot={setUserSelectedShotId}
         onCycleShotGroup={handleCycleShotGroup}
       />
@@ -195,13 +286,101 @@ export function SceneShotsTab({ projectName, sceneId, shotId }: SceneShotsTabPro
         sceneId={sceneId}
         shot={selectedShot}
         shots={shots}
+        railGroups={visibleRailGroups}
         productionGroups={productionGroups}
         label={selectedShotLabel}
         castMemberLabels={resource.castMemberLabels}
         locationLabels={resource.locationLabels}
         onShotSpecsSaved={setResource}
       />
+      <ShotGroupingReviewDialog
+        open={reviewOpen}
+        applyState={applyState}
+        applyError={groupingApplyError}
+        changed={groupingDraftChanged}
+        summary={groupingSummary}
+        onApply={handleApplyGroups}
+        onDiscard={handleDiscardGroups}
+        onCancel={handleCancelReview}
+      />
     </div>
+  );
+}
+
+interface ShotGroupingReviewDialogProps {
+  open: boolean;
+  applyState: 'idle' | 'saving';
+  applyError: string | null;
+  changed: boolean;
+  summary: ReturnType<typeof summarizeShotRailGroupChanges>;
+  onApply: () => void;
+  onDiscard: () => void;
+  onCancel: () => void;
+}
+
+function ShotGroupingReviewDialog({
+  open,
+  applyState,
+  applyError,
+  changed,
+  summary,
+  onApply,
+  onDiscard,
+  onCancel,
+}: ShotGroupingReviewDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
+      <DialogContent className='max-w-xl overflow-hidden p-0'>
+        <DialogHeader>
+          <DialogTitle>Review Changes</DialogTitle>
+          <DialogDescription>
+            Apply the current shot rail grouping draft or discard it.
+          </DialogDescription>
+        </DialogHeader>
+        <div className='space-y-4 px-6 py-4'>
+          <div className='rounded-lg border border-border/50 bg-card/35 p-3'>
+            <h3 className='mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
+              Group changes
+            </h3>
+            <ul className='space-y-1.5 text-sm text-foreground'>
+              {summary.messages.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          </div>
+          <div className='space-y-2 text-sm text-muted-foreground'>
+            <p>AI Production settings are preserved for resulting groups.</p>
+            <p>
+              Merged groups keep the upper group&apos;s active AI Production
+              settings.
+            </p>
+            <p>
+              {summary.changedPromptCount === 0
+                ? 'No generated prompts need regeneration.'
+                : `${summary.changedPromptCount} generated prompt ${summary.changedPromptCount === 1 ? 'plan needs' : 'plans need'} regeneration after apply.`}
+            </p>
+            {applyError ? (
+              <p className='text-destructive'>{applyError}</p>
+            ) : null}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type='button' variant='ghost' onClick={onDiscard}>
+            Discard
+          </Button>
+          <Button type='button' variant='outline' onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            type='button'
+            onClick={onApply}
+            disabled={!changed || applyState === 'saving'}
+          >
+            {applyState === 'saving' ? 'Applying...' : 'Apply Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -397,7 +397,7 @@ describe('scene shot list commands', () => {
             {
               ...valid.videoTakeProductionGroups[0]!,
               videoTakeProduction: {
-                inputModeId: 'multi-shot',
+                inputModeId: 'multi-shot' as never,
               },
             },
           ],

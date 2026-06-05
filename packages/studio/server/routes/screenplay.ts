@@ -23,6 +23,7 @@ import {
   readShotLocationReferenceRequest,
   readShotLookbookReferenceRequest,
   readShotVideoTakeProductionGroupRequest,
+  readShotVideoTakeRailGroupsRequest,
   readShotVideoTakeProductionPlanRequest,
 } from '../http/scene-shot-video-take-production-request.js';
 import {
@@ -258,6 +259,38 @@ export function createScreenplayRoute({
           return c.json({
             resource: toSceneShotListResourceResponse(projectName, resource),
             resourceKeys: context.resourceKeys,
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/video-take-production/rail-groups',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const request = readShotVideoTakeRailGroupsRequest(await c.req.json());
+          const shotListId = await requireActiveShotListId(
+            projectData,
+            projectName,
+            sceneId
+          );
+          const report = await projectData.updateShotVideoTakeRailGroups({
+            projectName,
+            sceneId,
+            shotListId,
+            railGroups: request.railGroups,
+          });
+          const resource = await projectData.readSceneShotListResource({
+            projectName,
+            sceneId,
+          });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: report.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);

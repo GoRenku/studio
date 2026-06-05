@@ -33,6 +33,11 @@ export interface UseShotVideoTakeProductionInput {
   sceneId: string;
   /** Ordered shot ids of the group to plan (the selected shot's group). */
   shotIds: string[];
+  /**
+   * Reloads production state when a local draft is persisted and receives a
+   * durable group id, even if the selected shot ids did not change.
+   */
+  productionGroupId?: string | null;
   onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
 }
 
@@ -75,6 +80,7 @@ export function useShotVideoTakeProduction(
 ): UseShotVideoTakeProductionResult {
   const { projectName, sceneId, onResourceRefreshed } = input;
   const shotIdsKey = input.shotIds.join(',');
+  const productionGroupIdKey = input.productionGroupId ?? '';
 
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
     'loading'
@@ -146,7 +152,7 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, shotIdsKey]);
+  }, [projectName, productionGroupIdKey, sceneId, shotIdsKey]);
 
   const save = useCallback(
     (group: ShotVideoTakeProductionGroup) =>

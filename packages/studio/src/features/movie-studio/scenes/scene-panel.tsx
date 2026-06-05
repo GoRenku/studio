@@ -30,6 +30,7 @@ interface ScenePanelProps {
   sceneId: string;
   shotId?: string;
   onSelect: (selection: StudioSelection) => void;
+  onHeaderActionChange?: (action: ReactNode | null) => void;
   previousScene?: SceneNeighbor | null;
   nextScene?: SceneNeighbor | null;
 }
@@ -42,6 +43,7 @@ export function ScenePanel({
   sceneId,
   shotId,
   onSelect,
+  onHeaderActionChange,
   previousScene,
   nextScene,
 }: ScenePanelProps) {
@@ -121,6 +123,7 @@ export function ScenePanel({
           projectName={projectName}
           sceneId={sceneId}
           shotId={shotId}
+          onHeaderActionChange={onHeaderActionChange}
         />
       </TabsContent>
     </Tabs>

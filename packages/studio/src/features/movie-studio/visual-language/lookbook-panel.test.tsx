@@ -110,6 +110,7 @@ function lookbookResource(name: string, includeImage = true): LookbookResource {
     sourceInspirationFolders: [],
     cardImage: null,
     isActive: false,
+    sheets: [],
     images: includeImage ? [paletteImage] : [],
     imagesBySection: {
       thesis: [],

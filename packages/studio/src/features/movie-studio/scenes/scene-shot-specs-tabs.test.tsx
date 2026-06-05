@@ -215,6 +215,7 @@ describe('SceneShotDetail', () => {
         sceneId='scene_hook'
         shot={SHOT}
         shots={[SHOT]}
+        railGroups={[]}
         productionGroups={[]}
         label='Shot 1'
         castMemberLabels={{}}

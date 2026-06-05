@@ -943,6 +943,21 @@ export function fakeProjectDataService(): NonNullable<
     async updateShotVideoTakeProductionGroup(input) {
       return makeShotVideoTakeContext(input, input.production);
     },
+    async updateShotVideoTakeRailGroups(input) {
+      return {
+        railGroups: input.railGroups.map((group, index) => ({
+          productionGroupId:
+            group.productionGroupId ??
+            `scene_shot_video_take_group_fake_${index + 1}`,
+          shotIds: group.shotIds,
+        })),
+        resourceKeys: [
+          `scene:${input.sceneId}`,
+          `surface:scene:${input.sceneId}:shots`,
+          `scene-shot-list:${input.shotListId}:video-take-rail-groups`,
+        ],
+      };
+    },
     async planShotVideoTakeProduction(input) {
       return makeShotVideoTakePlan(input);
     },

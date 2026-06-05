@@ -3,6 +3,7 @@ import type {
   ShotVideoTakeInputPolicy,
   ShotVideoTakeProductionGroup,
 } from '@gorenku/studio-core/client';
+import type { ShotVideoTakeRailGroupInput } from '@gorenku/studio-core/server';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -43,6 +44,45 @@ export function readShotVideoTakeProductionGroupRequest(
 
   finishOrThrow(issues);
   return productionGroup;
+}
+
+export interface ShotVideoTakeRailGroupsRequest {
+  railGroups: ShotVideoTakeRailGroupInput[];
+}
+
+export function readShotVideoTakeRailGroupsRequest(
+  input: unknown
+): ShotVideoTakeRailGroupsRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['railGroups'],
+    issues,
+    CONTEXT,
+    'Send only the railGroups field.'
+  );
+  if (!Array.isArray(record.railGroups)) {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER350',
+        'railGroups must be an array.',
+        { path: ['railGroups'], context: CONTEXT },
+        'Send an array of rail group membership objects.'
+      )
+    );
+    finishOrThrow(issues);
+    return { railGroups: [] };
+  }
+  const railGroups = record.railGroups.map((value, index) =>
+    readRailGroupValue(value, ['railGroups', String(index)], issues)
+  );
+  finishOrThrow(issues);
+  return { railGroups };
 }
 
 export interface ShotVideoTakeProductionPlanRequest {
@@ -211,6 +251,71 @@ function readProductionGroupValue(
     throwRequestError(issues);
   }
   return value as ShotVideoTakeProductionGroup;
+}
+
+function readRailGroupValue(
+  value: unknown,
+  path: string[],
+  issues: DiagnosticIssue[]
+): ShotVideoTakeRailGroupInput {
+  const record = readHttpRequestRecord(value, path, issues, CONTEXT);
+  if (!record) {
+    return { shotIds: [] };
+  }
+  assertHttpRequestFields(
+    record,
+    path,
+    [
+      'productionGroupId',
+      'sourceProductionGroupId',
+      'mergePartnerProductionGroupId',
+      'shotIds',
+    ],
+    issues,
+    CONTEXT,
+    'Send only productionGroupId, sourceProductionGroupId, mergePartnerProductionGroupId, and shotIds.'
+  );
+  const shotIds = readStringArray(record.shotIds, [...path, 'shotIds'], issues);
+  if (Array.isArray(record.shotIds) && shotIds.length === 0) {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER343',
+        `${[...path, 'shotIds'].join('.')} must contain at least one shot id.`,
+        { path: [...path, 'shotIds'], context: CONTEXT },
+        'Send at least one shot id for each rail group.'
+      )
+    );
+  }
+  return {
+    ...(record.productionGroupId === undefined
+      ? {}
+      : {
+          productionGroupId: readStringValue(
+            record.productionGroupId,
+            [...path, 'productionGroupId'],
+            issues
+          ),
+        }),
+    ...(record.sourceProductionGroupId === undefined
+      ? {}
+      : {
+          sourceProductionGroupId: readStringValue(
+            record.sourceProductionGroupId,
+            [...path, 'sourceProductionGroupId'],
+            issues
+          ),
+        }),
+    ...(record.mergePartnerProductionGroupId === undefined
+      ? {}
+      : {
+          mergePartnerProductionGroupId: readStringValue(
+            record.mergePartnerProductionGroupId,
+            [...path, 'mergePartnerProductionGroupId'],
+            issues
+          ),
+        }),
+    shotIds,
+  };
 }
 
 function readStringArray(

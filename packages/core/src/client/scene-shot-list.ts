@@ -9,6 +9,7 @@ export interface SceneShotListDocument {
   coverageStrategy: string;
   lookbookInfluence?: string;
   shots: SceneShot[];
+  videoTakeRailGroups?: ShotVideoTakeRailGroup[];
   videoTakeProductionGroups?: ShotVideoTakeProductionGroup[];
   openQuestions?: string[];
 }
@@ -95,6 +96,11 @@ export interface ShotVideoTakeProductionGroup {
   videoTakeProduction: ShotVideoTakeProductionPlan;
 }
 
+export interface ShotVideoTakeRailGroup {
+  productionGroupId: string;
+  shotIds: string[];
+}
+
 export interface ShotVideoTakeProductionPlan {
   inputModeId?: ShotVideoTakeInputModeId;
   modelChoice?: ShotVideoTakeModelChoice;
@@ -108,6 +114,7 @@ export interface ShotVideoTakeProductionPlan {
 export interface ShotVideoTakeAgentProposal {
   basedOnInputModeId: ShotVideoTakeInputModeId;
   basedOnModelChoice: ShotVideoTakeModelChoice;
+  basedOnShotIds?: string[];
   dependencyDrafts: ShotVideoTakeDependencyDraft[];
   finalPromptDraft?: ShotVideoTakePromptDraft;
 }

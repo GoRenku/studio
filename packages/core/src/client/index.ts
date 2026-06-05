@@ -289,6 +289,7 @@ export type {
   ShotVideoTakeProductionGroup,
   ShotVideoTakeProductionPlan,
   ShotVideoTakePromptDraft,
+  ShotVideoTakeRailGroup,
   ShotVideoTakeRequestedInput,
   ShotCustomSpecs,
   ShotLensSpecs,

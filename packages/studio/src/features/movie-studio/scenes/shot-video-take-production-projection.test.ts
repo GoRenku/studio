@@ -15,6 +15,7 @@ const MODELS: ShotVideoTakeModelListReport = {
     productionGroupId: 'g1',
     shotIds: ['s1'],
   },
+  shotGroupMode: 'single-shot',
   defaultModelChoice: 'fal-ai/veo3.1',
   models: [
     {

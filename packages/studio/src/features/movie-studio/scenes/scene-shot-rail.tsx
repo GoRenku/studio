@@ -1,30 +1,29 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Link2 } from 'lucide-react';
 import type {
   SceneShot,
   ScreenplayImageReferenceWithHttp,
-  ShotVideoTakeProductionGroup,
 } from '@gorenku/studio-core/client';
-import { Button } from '@/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
 import { SceneShotRailRow } from './scene-shot-rail-row';
 import { shotLabel } from './scene-shot-labels';
-import { buildShotGroupingProjection } from './shot-video-take-grouping';
+import {
+  buildShotGroupingProjection,
+  type ShotRailGroupDraft,
+} from './shot-video-take-grouping';
 
 interface SceneShotRailProps {
   shots: SceneShot[];
   imagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
   selectedShotId: string | null;
-  productionGroups: ShotVideoTakeProductionGroup[];
+  railGroups: ShotRailGroupDraft[];
   onSelectShot: (shotId: string) => void;
   onCycleShotGroup: (shotId: string) => void;
 }
 
 const GROUP_VARIANT_CLASS: Record<0 | 1, string> = {
-  0: 'bg-primary/5',
-  1: 'bg-muted/50',
+  0: 'bg-primary/10',
+  1: 'bg-accent/35',
 };
 
 interface RailSegment {
@@ -38,7 +37,7 @@ export function SceneShotRail({
   shots,
   imagesByShotId,
   selectedShotId,
-  productionGroups,
+  railGroups,
   onSelectShot,
   onCycleShotGroup,
 }: SceneShotRailProps) {
@@ -54,7 +53,7 @@ export function SceneShotRail({
   // background; ungrouped shots are standalone segments. Adjacent segments are
   // separated by the list gap.
   const segments = useMemo<RailSegment[]>(() => {
-    const projection = buildShotGroupingProjection(shots, productionGroups);
+    const projection = buildShotGroupingProjection(shots, railGroups);
     const result: RailSegment[] = [];
     shots.forEach((shot, index) => {
       const entry = projection.entries[index];
@@ -72,7 +71,7 @@ export function SceneShotRail({
       });
     });
     return result;
-  }, [productionGroups, shots]);
+  }, [railGroups, shots]);
 
   return (
     <aside
@@ -95,7 +94,6 @@ export function SceneShotRail({
               {segment.rows.map(({ shot, index }) => (
                 <div
                   key={shot.shotId}
-                  className='group/card relative'
                   ref={(node) => {
                     if (node) {
                       rowRefs.current.set(shot.shotId, node);
@@ -110,25 +108,8 @@ export function SceneShotRail({
                     image={imagesByShotId[shot.shotId]}
                     selected={shot.shotId === selectedShotId}
                     onSelect={() => onSelectShot(shot.shotId)}
+                    onCycleGroup={() => onCycleShotGroup(shot.shotId)}
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type='button'
-                        variant='secondary'
-                        size='icon'
-                        aria-label={`Toggle grouping for ${shotLabel(index)}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onCycleShotGroup(shot.shotId);
-                        }}
-                        className='absolute bottom-2 right-2 h-7 w-7 opacity-0 shadow-sm transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100'
-                      >
-                        <Link2 className='h-3.5 w-3.5' />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Cycle shot grouping</TooltipContent>
-                  </Tooltip>
                 </div>
               ))}
             </div>

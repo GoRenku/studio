@@ -57,6 +57,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'buildShotVideoTakeContext'
   | 'listShotVideoTakeModels'
   | 'updateShotVideoTakeProductionGroup'
+  | 'updateShotVideoTakeRailGroups'
   | 'estimateShotVideoTakeProduction'
   | 'planShotVideoTakeProduction'
   | 'readShotVideoTakeProductionPlan'

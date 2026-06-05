@@ -13,6 +13,7 @@ import type {
   ShotVideoTakeDependencyKind,
   ShotVideoTakeInputKind,
   ShotVideoTakeProductionGroup,
+  ShotVideoTakeRailGroup,
 } from '../../client/scene-shot-list.js';
 import type { ShotVideoTakeInputGenerationPurpose } from '../../client/media-generation.js';
 import { sceneShotListDocumentSchema } from '../../client/scene-shot-list-json-schemas.js';
@@ -327,8 +328,112 @@ function validateSceneShotListSemantics(input: {
     }
   });
   validateShotVideoTakeProductionGroups(document, issues, filePath);
+  validateShotVideoTakeRailGroups(document, issues, filePath);
 
   return issues;
+}
+
+function validateShotVideoTakeRailGroups(
+  document: SceneShotListDocument,
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const groups = document.videoTakeRailGroups ?? [];
+  const shotOrder = new Map(
+    document.shots.map((shot, index) => [shot.shotId, index])
+  );
+  const productionGroupsById = new Map(
+    (document.videoTakeProductionGroups ?? []).map((group) => [
+      group.productionGroupId,
+      group,
+    ])
+  );
+  const assignedShotIds = new Map<string, string>();
+  const productionGroupIds = new Set<string>();
+  groups.forEach((group, groupIndex) => {
+    const groupPath = ['videoTakeRailGroups', String(groupIndex)];
+    if (productionGroupIds.has(group.productionGroupId)) {
+      issues.push(
+        error(
+          'Duplicate shot video take rail productionGroupId.',
+          [...groupPath, 'productionGroupId'],
+          filePath,
+          'Use each rail productionGroupId only once.'
+        )
+      );
+    }
+    productionGroupIds.add(group.productionGroupId);
+
+    const productionGroup = productionGroupsById.get(group.productionGroupId);
+    if (!productionGroup) {
+      issues.push(
+        error(
+          'Shot video take rail group references an unknown production group.',
+          [...groupPath, 'productionGroupId'],
+          filePath,
+          'Use a productionGroupId from videoTakeProductionGroups.'
+        )
+      );
+    } else if (!sameShotIds(group.shotIds, productionGroup.shotIds)) {
+      issues.push(
+        error(
+          'Shot video take rail group shotIds must match its production group.',
+          [...groupPath, 'shotIds'],
+          filePath,
+          'Save matching shot ids in videoTakeRailGroups and videoTakeProductionGroups.'
+        )
+      );
+    }
+
+    const sortedShotIds = [...group.shotIds].sort(
+      (left, right) =>
+        (shotOrder.get(left) ?? Infinity) - (shotOrder.get(right) ?? Infinity)
+    );
+    group.shotIds.forEach((shotId, shotIndex) => {
+      if (!shotOrder.has(shotId)) {
+        issues.push(
+          error(
+            'Shot video take rail group references an unknown shot.',
+            [...groupPath, 'shotIds', String(shotIndex)],
+            filePath,
+            'Use shot ids from this Scene Shot List.'
+          )
+        );
+      }
+      const existingGroupId = assignedShotIds.get(shotId);
+      if (existingGroupId) {
+        issues.push(
+          error(
+            'Shot belongs to more than one video take rail group.',
+            [...groupPath, 'shotIds', String(shotIndex)],
+            filePath,
+            `Remove this shot from either ${existingGroupId} or ${group.productionGroupId}.`
+          )
+        );
+      }
+      assignedShotIds.set(shotId, group.productionGroupId);
+      if (sortedShotIds[shotIndex] !== shotId) {
+        issues.push(
+          error(
+            'Shot video take rail group shotIds must be stored in shot-list order.',
+            [...groupPath, 'shotIds'],
+            filePath,
+            'Save the rail group with shot ids ordered exactly as they appear in the active Scene Shot List.'
+          )
+        );
+      }
+    });
+    if (group.shotIds.length > 1 && !isContiguousRailGroup(group, shotOrder)) {
+      issues.push(
+        error(
+          'Multi-shot video take rail groups must be contiguous.',
+          [...groupPath, 'shotIds'],
+          filePath,
+          'Select adjacent shots or split the rail group into separate groups.'
+        )
+      );
+    }
+  });
 }
 
 function validateShotVideoTakeProductionGroups(
@@ -420,6 +525,29 @@ function isContiguousShotGroup(
     }
     return index === (indexes[position - 1] as number) + 1;
   });
+}
+
+function isContiguousRailGroup(
+  group: ShotVideoTakeRailGroup,
+  shotOrder: Map<string, number>
+): boolean {
+  const indexes = group.shotIds.map((shotId) => shotOrder.get(shotId));
+  if (indexes.some((index) => index === undefined)) {
+    return false;
+  }
+  return indexes.every((index, position) => {
+    if (position === 0) {
+      return true;
+    }
+    return index === (indexes[position - 1] as number) + 1;
+  });
+}
+
+function sameShotIds(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((shotId, index) => shotId === right[index])
+  );
 }
 
 function validateShotVideoTakeAgentProposal(

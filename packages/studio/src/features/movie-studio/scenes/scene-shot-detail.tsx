@@ -22,7 +22,11 @@ import { SceneShotCastTab } from './scene-shot-cast-tab';
 import { SceneShotLookbookTab } from './scene-shot-lookbook-tab';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 import { ShotSpecsProvider } from './shot-specs-context';
-import { findGroupForShot, groupTagLabel } from './shot-video-take-grouping';
+import {
+  findRailGroupForShot,
+  groupTagLabel,
+  type ShotRailGroupDraft,
+} from './shot-video-take-grouping';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
 
 interface SceneShotDetailProps {
@@ -30,6 +34,7 @@ interface SceneShotDetailProps {
   sceneId: string;
   shot: SceneShot;
   shots: SceneShot[];
+  railGroups: ShotRailGroupDraft[];
   productionGroups: ShotVideoTakeProductionGroup[];
   label: string;
   castMemberLabels: Record<string, string>;
@@ -53,6 +58,7 @@ export function SceneShotDetail({
   sceneId,
   shot,
   shots,
+  railGroups,
   productionGroups,
   label,
   castMemberLabels,
@@ -60,18 +66,35 @@ export function SceneShotDetail({
   onShotSpecsSaved,
 }: SceneShotDetailProps) {
   const groupTag = useMemo(() => {
-    const group = findGroupForShot(productionGroups, shot.shotId);
+    const group = findRailGroupForShot(railGroups, shot.shotId);
     return groupTagLabel(shots, group);
-  }, [productionGroups, shot.shotId, shots]);
-  const durableGroup = useMemo(
-    () => findGroupForShot(productionGroups, shot.shotId),
+  }, [railGroups, shot.shotId, shots]);
+  const visibleRailGroup = useMemo(
+    () => findRailGroupForShot(railGroups, shot.shotId),
+    [railGroups, shot.shotId]
+  );
+  const singleShotProductionGroup = useMemo(
+    () =>
+      productionGroups.find(
+        (group) =>
+          group.shotIds.length === 1 && group.shotIds[0] === shot.shotId
+      ) ?? null,
     [productionGroups, shot.shotId]
   );
-  const shotIdsKey = (durableGroup?.shotIds ?? [shot.shotId]).join(',');
+  const shotIdsKey = (
+    visibleRailGroup?.shotIds ??
+    singleShotProductionGroup?.shotIds ??
+    [shot.shotId]
+  ).join(',');
+  const productionGroupIdKey =
+    visibleRailGroup?.productionGroupId ??
+    singleShotProductionGroup?.productionGroupId ??
+    null;
   const production = useShotVideoTakeProduction({
     projectName,
     sceneId,
     shotIds: shotIdsKey.split(','),
+    productionGroupId: productionGroupIdKey,
     onResourceRefreshed: onShotSpecsSaved,
   });
 

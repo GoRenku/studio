@@ -8,6 +8,7 @@ import {
   readShotVideoTakeProduction,
   selectShotVideoTakeInput,
   updateShotVideoTakeProduction,
+  updateShotVideoTakeRailGroups,
 } from './studio-shot-video-takes-api';
 
 const PRODUCTION_GROUP: ShotVideoTakeProductionGroup = {
@@ -72,6 +73,39 @@ describe('studio-shot-video-takes-api', () => {
     expect(String(url)).toContain('/video-take-production');
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({ productionGroup: PRODUCTION_GROUP });
+  });
+
+  it('applies rail groups atomically', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resource: {}, resourceKeys: [] })
+    );
+    await updateShotVideoTakeRailGroups('constantinople', 'scene_hook', [
+      {
+        productionGroupId: 'group_upper',
+        mergePartnerProductionGroupId: 'group_lower',
+        shotIds: ['shot_001', 'shot_002', 'shot_003'],
+      },
+      {
+        sourceProductionGroupId: 'group_source',
+        shotIds: ['shot_004'],
+      },
+    ]);
+    const [url, init] = lastCall();
+    expect(String(url)).toContain('/video-take-production/rail-groups');
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      railGroups: [
+        {
+          productionGroupId: 'group_upper',
+          mergePartnerProductionGroupId: 'group_lower',
+          shotIds: ['shot_001', 'shot_002', 'shot_003'],
+        },
+        {
+          sourceProductionGroupId: 'group_source',
+          shotIds: ['shot_004'],
+        },
+      ],
+    });
   });
 
   it('reads the inline production plan report with the production group', async () => {

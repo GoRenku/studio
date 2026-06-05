@@ -91,6 +91,92 @@ describe('shot video take production routes', () => {
     );
   });
 
+  it('rail-groups PATCH rejects unknown top-level fields', async () => {
+    const app = mount();
+    const response = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/video-take-production/rail-groups',
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ railGroups: [], extra: true }),
+      }
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error.code).toBe('STUDIO_SERVER341');
+  });
+
+  it('rail-groups PATCH rejects empty rail group shot ids', async () => {
+    const app = mount();
+    const response = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/video-take-production/rail-groups',
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ railGroups: [{ shotIds: [] }] }),
+      }
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error.code).toBe('STUDIO_SERVER341');
+    expect(body.error.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'STUDIO_SERVER343' }),
+      ])
+    );
+  });
+
+  it('rail-groups PATCH delegates the replacement draft to core', async () => {
+    const updateShotVideoTakeRailGroups = vi.fn(
+      fakeProjectDataService().updateShotVideoTakeRailGroups
+    );
+    const app = mount({ updateShotVideoTakeRailGroups });
+    const response = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/video-take-production/rail-groups',
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          railGroups: [
+            {
+              productionGroupId: 'group_upper',
+              mergePartnerProductionGroupId: 'group_lower',
+              shotIds: ['shot_001', 'shot_002'],
+            },
+            {
+              sourceProductionGroupId: 'group_source',
+              shotIds: ['shot_003'],
+            },
+          ],
+        }),
+      }
+    );
+    expect(response.status).toBe(200);
+    expect(updateShotVideoTakeRailGroups).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
+        shotListId: 'shot_list_opening',
+        railGroups: [
+          {
+            productionGroupId: 'group_upper',
+            mergePartnerProductionGroupId: 'group_lower',
+            shotIds: ['shot_001', 'shot_002'],
+          },
+          {
+            sourceProductionGroupId: 'group_source',
+            shotIds: ['shot_003'],
+          },
+        ],
+      })
+    );
+    const body = await response.json();
+    expect(body.resource.activeShotListId).toBe('shot_list_opening');
+    expect(body.resourceKeys).toContain(
+      'scene-shot-list:shot_list_opening:video-take-rail-groups'
+    );
+  });
+
   it('plan accepts inputPolicy and delegates to core', async () => {
     const readShotVideoTakeProductionPlan = vi.fn(
       fakeProjectDataService().readShotVideoTakeProductionPlan

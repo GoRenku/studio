@@ -18,6 +18,7 @@ interface SceneShotAiProductionRunSetupProps {
   estimate: number | null;
   estimatePending: boolean;
   finalPrompt: ShotVideoTakePromptDraft | null;
+  promptStale: boolean;
   autosave: DebouncedAutosaveStatus;
   isMultiShotGroup: boolean;
 }
@@ -29,6 +30,7 @@ export function SceneShotAiProductionRunSetup({
   estimate,
   estimatePending,
   finalPrompt,
+  promptStale,
   autosave,
   isMultiShotGroup,
 }: SceneShotAiProductionRunSetupProps) {
@@ -42,9 +44,16 @@ export function SceneShotAiProductionRunSetup({
       </div>
       <div className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-lg border border-border/50 bg-card/40 px-3 py-3'>
         <section className='border-b border-border/40 pb-3'>
-          <h5 className='mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-            Final Prompt
-          </h5>
+          <div className='mb-2 flex items-center justify-between gap-2'>
+            <h5 className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
+              Final Prompt
+            </h5>
+            {promptStale ? (
+              <Badge variant='outline' className='shrink-0'>
+                needs refresh
+              </Badge>
+            ) : null}
+          </div>
           <p className='text-xs leading-5 text-foreground'>
             {finalPrompt?.prompt?.trim() || 'No prompt drafted yet.'}
           </p>

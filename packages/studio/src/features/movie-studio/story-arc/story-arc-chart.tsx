@@ -15,7 +15,7 @@ import type {
   ScreenplaySceneAnalysis,
 } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
-import { TooltipContent } from '@/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { StoryArcResourceResponse } from '@/services/studio-project-contracts';
 import {
@@ -503,25 +503,27 @@ function BeatMarkers({
                 {label}
               </span>
               {interactive ? (
-                <div className='group/tooltip pointer-events-auto relative'>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='sm'
-                    aria-label={`Open analysis for beat: ${label}`}
-                    onClick={() => scene && onSelectScene(scene)}
-                    className={cn(
-                      markerClass,
-                      shared ? 'px-2 py-0' : 'p-0',
-                      'transition-colors',
-                      'hover:bg-transparent',
-                      flagged
-                        ? 'hover:border-amber-500'
-                        : 'hover:border-primary/60 hover:text-primary'
-                    )}
-                  >
-                    {icons}
-                  </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      aria-label={`Open analysis for beat: ${label}`}
+                      onClick={() => scene && onSelectScene(scene)}
+                      className={cn(
+                        markerClass,
+                        shared ? 'px-2 py-0' : 'p-0',
+                        'transition-colors',
+                        'hover:bg-transparent',
+                        flagged
+                          ? 'hover:border-amber-500'
+                          : 'hover:border-primary/60 hover:text-primary'
+                      )}
+                    >
+                      {icons}
+                    </Button>
+                  </TooltipTrigger>
                   <TooltipContent side='bottom' className={TOOLTIP_SURFACE}>
                     <BeatTooltipContent
                       group={group}
@@ -531,7 +533,7 @@ function BeatMarkers({
                       shared={shared}
                     />
                   </TooltipContent>
-                </div>
+                </Tooltip>
               ) : (
                 <span className={markerClass}>
                   {icons}
@@ -634,21 +636,24 @@ function SceneRail({
               return (
                 <div
                   key={scene.id}
-                  className='group/tooltip relative min-w-0 flex-1'
+                  className='relative min-w-0 flex-1'
                 >
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='sm'
-                    aria-label={`Open analysis for scene: ${scene.title}`}
-                    className={cn(
-                      'block h-full w-full rounded-[3px] border border-border/40 bg-foreground/[0.07] px-0 py-0 transition-colors',
-                      'hover:border-primary/60 hover:bg-primary/20',
-                      selected &&
-                        'border-primary bg-primary/30 ring-1 ring-primary/40'
-                    )}
-                    onClick={() => onSelectScene(scene)}
-                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        aria-label={`Open analysis for scene: ${scene.title}`}
+                        className={cn(
+                          'block h-full w-full rounded-[3px] border border-border/40 bg-foreground/[0.07] px-0 py-0 transition-colors',
+                          'hover:border-primary/60 hover:bg-primary/20',
+                          selected &&
+                            'border-primary bg-primary/30 ring-1 ring-primary/40'
+                        )}
+                        onClick={() => onSelectScene(scene)}
+                      />
+                    </TooltipTrigger>
                   <TooltipContent side='bottom' className={TOOLTIP_SURFACE}>
                     <SceneTooltipContent
                       scene={scene}
@@ -656,6 +661,7 @@ function SceneRail({
                       hasActiveAnalysis={Boolean(resource.activeAnalysis)}
                     />
                   </TooltipContent>
+                  </Tooltip>
                 </div>
               );
             })}

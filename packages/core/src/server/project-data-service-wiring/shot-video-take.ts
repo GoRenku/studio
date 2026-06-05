@@ -8,6 +8,7 @@ export function createShotVideoTakeServiceWiring() {
     listShotVideoTakeInputs: shotVideoTake.listShotVideoTakeInputs,
     updateShotVideoTakeProductionGroup:
       shotVideoTake.updateShotVideoTakeProductionGroup,
+    updateShotVideoTakeRailGroups: shotVideoTake.updateShotVideoTakeRailGroups,
     estimateShotVideoTakeProduction:
       shotVideoTake.estimateShotVideoTakeProduction,
     planShotVideoTakeProduction:

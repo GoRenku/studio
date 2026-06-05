@@ -64,6 +64,7 @@ import type {
   ShotVideoTakeReferenceChoiceState,
   ShotVideoTakeReferenceImagePreview,
   ShotVideoTakeRequestedInput,
+  ShotVideoTakeRailGroup,
 } from '../../client/index.js';
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
@@ -147,6 +148,8 @@ import type {
   UpdateShotVideoTakeGenerationSpecInput,
   UpdateShotVideoTakeInputGenerationSpecInput,
   UpdateShotVideoTakeProductionGroupInput,
+  UpdateShotVideoTakeRailGroupsInput,
+  UpdateShotVideoTakeRailGroupsReport,
   ValidateShotVideoTakeGenerationSpecInput,
   ValidateShotVideoTakeInputGenerationSpecInput,
 } from '../project-data-service-contracts.js';
@@ -226,7 +229,12 @@ export async function buildShotVideoTakeContext(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareShotGroupInSession({ session, input, now });
+    const prepared = prepareShotGroupInSession({
+      session,
+      input,
+      now,
+      persist: false,
+    });
     return buildContextFromPrepared({
       session,
       projectFolder,
@@ -334,6 +342,115 @@ export async function updateShotVideoTakeProductionGroup(
       project,
       prepared,
     });
+  });
+}
+
+export async function updateShotVideoTakeRailGroups(
+  input: UpdateShotVideoTakeRailGroupsInput
+): Promise<UpdateShotVideoTakeRailGroupsReport> {
+  return withShotProjectSession(input, ({ session }) => {
+    const now = new Date().toISOString();
+    const screenplay = requireScreenplayDocument(session);
+    const shotListRow = requireSceneShotListForScene({
+      session,
+      sceneId: input.sceneId,
+      shotListId: input.shotListId,
+    });
+    const shotList = readSceneShotListDocument({ row: shotListRow, screenplay });
+    const ids = createUniqueIdAllocator(
+      input.idGenerator ?? createRandomIdGenerator()
+    );
+    const normalizedRailInputs = normalizeRailGroupInputs({
+      shots: shotList.shots,
+      railGroups: input.railGroups,
+    });
+    const productionGroups = (shotList.videoTakeProductionGroups ?? []).filter(
+      (group) => group.shotIds.length > 0
+    );
+    const productionGroupsById = new Map(
+      productionGroups.map((group) => [group.productionGroupId, group])
+    );
+    const nextProductionGroupsById = new Map<
+      string,
+      ShotVideoTakeProductionGroup
+    >();
+    const nextRailGroups: ShotVideoTakeRailGroup[] = [];
+    const requestedRailShotIds = new Set<string>();
+
+    normalizedRailInputs.forEach((railGroup) => {
+      railGroup.shotIds.forEach((shotId) => requestedRailShotIds.add(shotId));
+      const existingGroup = railGroup.productionGroupId
+        ? productionGroupsById.get(railGroup.productionGroupId)
+        : undefined;
+      if (railGroup.productionGroupId && !existingGroup) {
+        throw new ProjectDataError(
+          'PROJECT_DATA413',
+          `Shot video take rail group references an unknown production group: ${railGroup.productionGroupId}.`
+        );
+      }
+      const sourceGroup = resolveRailGroupSource({
+        railGroup,
+        existingGroup,
+        productionGroupsById,
+      });
+      const productionGroupId =
+        existingGroup?.productionGroupId ?? ids('scene_shot_video_take_group');
+      const videoTakeProduction = sourceGroup
+        ? carryProductionPlanForShotMembership({
+            plan: sourceGroup.videoTakeProduction,
+            previousShotIds: sourceGroup.shotIds,
+            nextShotIds: railGroup.shotIds,
+          })
+        : {};
+      const productionGroup = {
+        productionGroupId,
+        shotIds: railGroup.shotIds,
+        videoTakeProduction,
+      };
+      nextProductionGroupsById.set(productionGroupId, productionGroup);
+      nextRailGroups.push({
+        productionGroupId,
+        shotIds: railGroup.shotIds,
+      });
+    });
+
+    addSingleShotProductionGroupsForClearedRailShots({
+      oldRailGroups: shotList.videoTakeRailGroups ?? [],
+      productionGroupsById,
+      requestedRailShotIds,
+      nextProductionGroupsById,
+      allocateProductionGroupId: () => ids('scene_shot_video_take_group'),
+    });
+    keepUnchangedSingleShotProductionGroups({
+      productionGroups,
+      requestedRailShotIds,
+      nextProductionGroupsById,
+    });
+
+    const updatedShotList = {
+      ...shotList,
+      videoTakeRailGroups: nextRailGroups,
+      videoTakeProductionGroups: orderProductionGroupsForShotList(
+        shotList.shots,
+        [...nextProductionGroupsById.values()]
+      ),
+    };
+    updateSceneShotListRecordDocument({
+      session,
+      id: input.shotListId,
+      document: updatedShotList,
+      screenplay,
+      now,
+    });
+    return {
+      railGroups: nextRailGroups,
+      resourceKeys: [
+        `scene:${input.sceneId}`,
+        `surface:scene:${input.sceneId}:shots`,
+        `scene-shot-list:${input.shotListId}:video-take-rail-groups`,
+        `scene-shot-list:${input.shotListId}:video-take-production`,
+      ],
+    };
   });
 }
 
@@ -3072,6 +3189,19 @@ function validatePreflight(context: ShotVideoTakeGenerationContext): DiagnosticI
         )
       );
     }
+    if (
+      plan.agentProposal.basedOnShotIds &&
+      !sameShotIds(plan.agentProposal.basedOnShotIds, context.productionGroup.shotIds)
+    ) {
+      issues.push(
+        issue(
+          'PROJECT_DATA378',
+          'Shot video take agent proposal is stale for the current shot group.',
+          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'basedOnShotIds'],
+          'Refresh the proposal before creating specs.'
+        )
+      );
+    }
   }
   return issues;
 }
@@ -3481,6 +3611,232 @@ interface PreparedShotGroup {
   productionGroup: ShotVideoTakeProductionGroup;
   orderedShotIds: string[];
   target: SceneShotMediaGenerationTarget;
+}
+
+type NormalizedShotVideoTakeRailGroupInput =
+  UpdateShotVideoTakeRailGroupsInput['railGroups'][number] & {
+    shotIds: string[];
+  };
+
+function normalizeRailGroupInputs(input: {
+  shots: SceneShot[];
+  railGroups: UpdateShotVideoTakeRailGroupsInput['railGroups'];
+}): NormalizedShotVideoTakeRailGroupInput[] {
+  const assignedShotIds = new Map<string, number>();
+  return input.railGroups.map((railGroup, railGroupIndex) => {
+    const shotIds = normalizeShotIds(input.shots, railGroup.shotIds);
+    shotIds.forEach((shotId) => {
+      const existingRailGroupIndex = assignedShotIds.get(shotId);
+      if (existingRailGroupIndex !== undefined) {
+        throw new ProjectDataError(
+          'PROJECT_DATA414',
+          `Shot belongs to more than one video take rail group: ${shotId}.`,
+          {
+            suggestion: `Remove the shot from rail group ${existingRailGroupIndex + 1} or ${railGroupIndex + 1}.`,
+          }
+        );
+      }
+      assignedShotIds.set(shotId, railGroupIndex);
+    });
+    return {
+      ...railGroup,
+      shotIds,
+    };
+  });
+}
+
+function resolveRailGroupSource(input: {
+  railGroup: NormalizedShotVideoTakeRailGroupInput;
+  existingGroup?: ShotVideoTakeProductionGroup;
+  productionGroupsById: Map<string, ShotVideoTakeProductionGroup>;
+}): ShotVideoTakeProductionGroup | undefined {
+  if (input.railGroup.mergePartnerProductionGroupId) {
+    requireProductionGroupId(
+      input.productionGroupsById,
+      input.railGroup.mergePartnerProductionGroupId,
+      'merge partner'
+    );
+  }
+  if (input.existingGroup) {
+    return input.existingGroup;
+  }
+  if (input.railGroup.sourceProductionGroupId) {
+    return requireProductionGroupId(
+      input.productionGroupsById,
+      input.railGroup.sourceProductionGroupId,
+      'source'
+    );
+  }
+  return undefined;
+}
+
+function requireProductionGroupId(
+  productionGroupsById: Map<string, ShotVideoTakeProductionGroup>,
+  productionGroupId: string,
+  role: 'source' | 'merge partner'
+): ShotVideoTakeProductionGroup {
+  const productionGroup = productionGroupsById.get(productionGroupId);
+  if (!productionGroup) {
+    throw new ProjectDataError(
+      'PROJECT_DATA415',
+      `Shot video take rail group references an unknown ${role} production group: ${productionGroupId}.`
+    );
+  }
+  return productionGroup;
+}
+
+function addSingleShotProductionGroupsForClearedRailShots(input: {
+  oldRailGroups: ShotVideoTakeRailGroup[];
+  productionGroupsById: Map<string, ShotVideoTakeProductionGroup>;
+  requestedRailShotIds: Set<string>;
+  nextProductionGroupsById: Map<string, ShotVideoTakeProductionGroup>;
+  allocateProductionGroupId: () => string;
+}): void {
+  input.oldRailGroups.forEach((oldRailGroup) => {
+    const sourceGroup = input.productionGroupsById.get(
+      oldRailGroup.productionGroupId
+    );
+    if (!sourceGroup) {
+      throw new ProjectDataError(
+        'PROJECT_DATA416',
+        `Stored rail group references an unknown production group: ${oldRailGroup.productionGroupId}.`
+      );
+    }
+    oldRailGroup.shotIds.forEach((shotId) => {
+      if (input.requestedRailShotIds.has(shotId)) {
+        return;
+      }
+      const existingSingleShotGroup = findSingleShotProductionGroup(
+        input.productionGroupsById,
+        shotId
+      );
+      const productionGroupId =
+        existingSingleShotGroup?.productionGroupId ??
+        (oldRailGroup.shotIds.length === 1
+          ? oldRailGroup.productionGroupId
+          : input.allocateProductionGroupId());
+      input.nextProductionGroupsById.set(productionGroupId, {
+        productionGroupId,
+        shotIds: [shotId],
+        videoTakeProduction: carryProductionPlanForShotMembership({
+          plan:
+            existingSingleShotGroup?.videoTakeProduction ??
+            sourceGroup.videoTakeProduction,
+          previousShotIds:
+            existingSingleShotGroup?.shotIds ?? sourceGroup.shotIds,
+          nextShotIds: [shotId],
+        }),
+      });
+    });
+  });
+}
+
+function keepUnchangedSingleShotProductionGroups(input: {
+  productionGroups: ShotVideoTakeProductionGroup[];
+  requestedRailShotIds: Set<string>;
+  nextProductionGroupsById: Map<string, ShotVideoTakeProductionGroup>;
+}): void {
+  input.productionGroups.forEach((productionGroup) => {
+    if (productionGroup.shotIds.length !== 1) {
+      return;
+    }
+    const shotId = productionGroup.shotIds[0];
+    if (
+      !shotId ||
+      input.requestedRailShotIds.has(shotId) ||
+      input.nextProductionGroupsById.has(productionGroup.productionGroupId)
+    ) {
+      return;
+    }
+    input.nextProductionGroupsById.set(
+      productionGroup.productionGroupId,
+      productionGroup
+    );
+  });
+}
+
+function findSingleShotProductionGroup(
+  productionGroupsById: Map<string, ShotVideoTakeProductionGroup>,
+  shotId: string
+): ShotVideoTakeProductionGroup | undefined {
+  return [...productionGroupsById.values()].find((group) =>
+    sameShotIds(group.shotIds, [shotId])
+  );
+}
+
+function carryProductionPlanForShotMembership(input: {
+  plan: ShotVideoTakeProductionPlan;
+  previousShotIds: string[];
+  nextShotIds: string[];
+}): ShotVideoTakeProductionPlan {
+  const membershipChanged = !sameShotIds(
+    input.previousShotIds,
+    input.nextShotIds
+  );
+  const requestedInputs = input.plan.requestedInputs
+    ?.filter(
+      (requestedInput) =>
+        requestedInput.subjectKind !== 'shot' ||
+        !requestedInput.subjectId ||
+        input.nextShotIds.includes(requestedInput.subjectId)
+    )
+    .map((requestedInput) => ({ ...requestedInput }));
+  const agentProposal = input.plan.agentProposal
+    ? {
+        ...input.plan.agentProposal,
+        ...(membershipChanged
+          ? {
+              basedOnShotIds:
+                input.plan.agentProposal.basedOnShotIds ??
+                [...input.previousShotIds],
+            }
+          : {}),
+        dependencyDrafts: input.plan.agentProposal.dependencyDrafts.map(
+          (draft) => ({ ...draft })
+        ),
+        ...(input.plan.agentProposal.finalPromptDraft
+          ? {
+              finalPromptDraft: {
+                ...input.plan.agentProposal.finalPromptDraft,
+              },
+            }
+          : {}),
+      }
+    : undefined;
+  return {
+    ...(input.plan.inputModeId ? { inputModeId: input.plan.inputModeId } : {}),
+    ...(input.plan.modelChoice ? { modelChoice: input.plan.modelChoice } : {}),
+    ...(input.plan.parameterValues
+      ? { parameterValues: { ...input.plan.parameterValues } }
+      : {}),
+    ...(requestedInputs && requestedInputs.length > 0 ? { requestedInputs } : {}),
+    ...(!membershipChanged && input.plan.preparedInputs
+      ? {
+          preparedInputs: input.plan.preparedInputs.map((preparedInput) => ({
+            ...preparedInput,
+          })),
+        }
+      : {}),
+    ...(agentProposal ? { agentProposal } : {}),
+    ...(input.plan.customPromptNote
+      ? { customPromptNote: input.plan.customPromptNote }
+      : {}),
+  };
+}
+
+function orderProductionGroupsForShotList(
+  shots: SceneShot[],
+  groups: ShotVideoTakeProductionGroup[]
+): ShotVideoTakeProductionGroup[] {
+  const shotOrder = new Map(shots.map((shot, index) => [shot.shotId, index]));
+  return [...groups].sort((left, right) => {
+    const leftIndex = shotOrder.get(left.shotIds[0] ?? '') ?? Infinity;
+    const rightIndex = shotOrder.get(right.shotIds[0] ?? '') ?? Infinity;
+    if (leftIndex !== rightIndex) {
+      return leftIndex - rightIndex;
+    }
+    return left.productionGroupId.localeCompare(right.productionGroupId);
+  });
 }
 
 function prepareShotGroupInSession(input: {

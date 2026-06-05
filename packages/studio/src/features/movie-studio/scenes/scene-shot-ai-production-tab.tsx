@@ -50,6 +50,13 @@ export function SceneShotAiProductionTab({
     () => (models ? findModelReport(models, selectedModel) : null),
     [models, selectedModel]
   );
+  const promptStale = useMemo(
+    () =>
+      productionPlan?.diagnostics.some(
+        (diagnostic) => diagnostic.code === 'PROJECT_DATA378'
+      ) ?? false,
+    [productionPlan?.diagnostics]
+  );
 
   if (loadState === 'error') {
     return (
@@ -87,6 +94,7 @@ export function SceneShotAiProductionTab({
           estimate={displayEstimateTotal(estimate, productionPlan)}
           estimatePending={estimateState === 'loading' || planState === 'loading'}
           finalPrompt={productionPlan?.finalPrompt ?? null}
+          promptStale={promptStale}
           autosave={autosave}
           isMultiShotGroup={isMultiShotGroup}
         />

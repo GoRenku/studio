@@ -1,60 +1,54 @@
-import * as React from "react"
+import * as React from 'react';
+import { Tooltip as TooltipPrimitive } from 'radix-ui';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
-
-function TooltipProvider({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+function TooltipProvider({
+  delayDuration = 200,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+  return (
+    <TooltipPrimitive.Provider
+      data-slot='tooltip-provider'
+      delayDuration={delayDuration}
+      {...props}
+    />
+  );
 }
 
 function Tooltip({
-  children,
   ...props
-}: React.HTMLAttributes<HTMLSpanElement>) {
+}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
   return (
-    <span data-slot="tooltip" className="group/tooltip relative inline-flex" {...props}>
-      {children}
-    </span>
-  )
+    <TooltipPrimitive.Provider delayDuration={200}>
+      <TooltipPrimitive.Root data-slot='tooltip' {...props} />
+    </TooltipPrimitive.Provider>
+  );
 }
 
 function TooltipTrigger({
-  asChild,
-  children,
   ...props
-}: React.HTMLAttributes<HTMLSpanElement> & { asChild?: boolean }) {
-  if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, {
-      ...props,
-      "data-slot": "tooltip-trigger",
-    } as React.HTMLAttributes<HTMLElement>)
-  }
-
-  return (
-    <span data-slot="tooltip-trigger" {...props}>
-      {children}
-    </span>
-  )
+}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  return <TooltipPrimitive.Trigger data-slot='tooltip-trigger' {...props} />;
 }
 
 function TooltipContent({
   className,
-  children,
-  side = "top",
+  sideOffset = 6,
   ...props
-}: React.HTMLAttributes<HTMLSpanElement> & { sideOffset?: number; side?: string }) {
+}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
-    <span
-      data-slot="tooltip-content"
-      className={cn(
-        "pointer-events-none absolute left-1/2 z-50 hidden w-max max-w-64 -translate-x-1/2 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-lg group-hover/tooltip:block group-focus-within/tooltip:block",
-        side === "bottom" ? "top-full mt-2" : "bottom-full mb-2",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </span>
-  )
+    <TooltipPrimitive.Portal>
+      <TooltipPrimitive.Content
+        data-slot='tooltip-content'
+        sideOffset={sideOffset}
+        className={cn(
+          'z-50 max-w-64 rounded-md bg-foreground px-3 py-1.5 text-xs leading-4 text-background shadow-lg',
+          className
+        )}
+        {...props}
+      />
+    </TooltipPrimitive.Portal>
+  );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };

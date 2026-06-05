@@ -73,6 +73,23 @@ export async function updateShotVideoTakeProduction(
   });
 }
 
+export interface ShotVideoTakeRailGroupUpdate {
+  productionGroupId?: string;
+  sourceProductionGroupId?: string;
+  mergePartnerProductionGroupId?: string;
+  shotIds: string[];
+}
+
+export async function updateShotVideoTakeRailGroups(
+  projectName: string,
+  sceneId: string,
+  railGroups: ShotVideoTakeRailGroupUpdate[]
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(`${productionPath(projectName, sceneId)}/rail-groups`, 'PATCH', {
+    railGroups,
+  });
+}
+
 /** Estimate the current production setup without opening the preflight plan. */
 export async function estimateShotVideoTakeProduction(
   projectName: string,

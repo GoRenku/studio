@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
@@ -55,6 +55,9 @@ export function MovieStudioScreen({
   const [isProductionExportRunning, setIsProductionExportRunning] = useState(false);
   const [lookbooksRevision, setLookbooksRevision] = useState(0);
   const [inspirationFoldersRevision, setInspirationFoldersRevision] = useState(0);
+  const [sceneHeaderAction, setSceneHeaderAction] = useState<ReactNode | null>(
+    null
+  );
   const handleProjectInformationAutosaveStatusChange = useCallback(
     (status: DebouncedAutosaveStatus) => {
       setProjectInformationAutosave(status);
@@ -208,6 +211,8 @@ export function MovieStudioScreen({
                 trigger='icon'
                 onCreate={handleCreateInspirationFolder}
               />
+            ) : selection.type === 'scene' ? (
+              sceneHeaderAction
             ) : null
           }
         >
@@ -273,6 +278,7 @@ export function MovieStudioScreen({
               sceneId={selection.id}
               shotId={selection.shotId}
               onSelect={selectMovieStudioSurface}
+              onHeaderActionChange={setSceneHeaderAction}
               previousScene={sceneNeighbors.previousScene}
               nextScene={sceneNeighbors.nextScene}
             />

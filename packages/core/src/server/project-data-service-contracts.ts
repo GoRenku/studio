@@ -84,6 +84,7 @@ import type {
   ShotVideoTakeInputSubjectKind,
   ShotVideoTakeInputModeId,
   ShotVideoTakeProductionPlan,
+  ShotVideoTakeRailGroup,
   SceneStoryboardSheetImportDocument,
   SceneStoryboardSheetImportReport,
   StudioSelection,
@@ -364,6 +365,7 @@ export interface ProjectDataService {
   listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
   listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: ShotVideoTakeAvailableInput[]; resourceKeys: string[] }>;
   updateShotVideoTakeProductionGroup(input: UpdateShotVideoTakeProductionGroupInput): Promise<ShotVideoTakeGenerationContext>;
+  updateShotVideoTakeRailGroups(input: UpdateShotVideoTakeRailGroupsInput): Promise<UpdateShotVideoTakeRailGroupsReport>;
   estimateShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionEstimateReport>;
   planShotVideoTakeProduction(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeGenerationPlan>;
   readShotVideoTakeProductionPlan(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionPlanReport>;
@@ -978,6 +980,27 @@ export interface ShotVideoTakeModelListInput extends ShotVideoTakeContextInput {
 export interface UpdateShotVideoTakeProductionGroupInput
   extends ShotVideoTakeContextInput {
   production: ShotVideoTakeProductionPlan;
+}
+
+export interface ShotVideoTakeRailGroupInput {
+  productionGroupId?: string;
+  sourceProductionGroupId?: string;
+  mergePartnerProductionGroupId?: string;
+  shotIds: string[];
+}
+
+export interface UpdateShotVideoTakeRailGroupsInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  shotListId: string;
+  railGroups: ShotVideoTakeRailGroupInput[];
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateShotVideoTakeRailGroupsReport {
+  railGroups: ShotVideoTakeRailGroup[];
+  resourceKeys: string[];
 }
 
 export interface PreviewShotVideoTakeProductionInput

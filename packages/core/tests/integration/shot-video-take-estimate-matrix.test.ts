@@ -6,12 +6,12 @@ import {
   listShotVideoModelFamilies,
   type ShotVideoTakeInputMode,
   type ShotVideoTakeModelChoice,
-  type ShotVideoTakeShotGroupMode,
 } from '@gorenku/studio-engines';
 import type {
   SceneShotListDocument,
   ShotVideoTakeParameterValues,
   ShotVideoTakePreparedInput,
+  ShotVideoTakeShotGroupMode,
   ShotVideoTakeRequestedInput,
 } from '../../src/client/scene-shot-list.js';
 import type { ShotVideoTakeAvailableInput } from '../../src/client/media-generation.js';

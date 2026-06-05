@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
@@ -17,6 +17,7 @@ import {
   estimateShotVideoTakeProduction,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
+  updateShotVideoTakeRailGroups,
 } from '@/services/studio-shot-video-takes-api';
 import { SceneShotsTab } from './scene-shots-tab';
 
@@ -43,6 +44,7 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
   updateShotVideoTakeProduction: vi.fn(),
   estimateShotVideoTakeProduction: vi.fn(),
   planShotVideoTakeProduction: vi.fn(),
+  updateShotVideoTakeRailGroups: vi.fn(),
   selectShotVideoTakeInput: vi.fn(),
   clearShotVideoTakeInput: vi.fn(),
   updateShotLocationReference: vi.fn(),
@@ -70,6 +72,18 @@ describe('SceneShotsTab', () => {
     vi.mocked(planShotVideoTakeProduction)
       .mockReset()
       .mockResolvedValue(productionPlan());
+    vi.mocked(updateShotVideoTakeRailGroups)
+      .mockReset()
+      .mockResolvedValue({
+        resource: resource(
+          shotList({
+            videoTakeRailGroups: [
+              { productionGroupId: 'production_group_hook', shotIds: ['shot_001'] },
+            ],
+          })
+        ),
+        resourceKeys: [],
+      });
   });
 
   it('renders the empty state when there is no active shot list', async () => {
@@ -99,7 +113,8 @@ describe('SceneShotsTab', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Shot 2 — Council reaction' })
     );
-    expect(screen.getByText('Beat two.')).not.toBeNull();
+    expect(await screen.findByText('Beat two.')).not.toBeNull();
+    await waitFor(() => expect(readShotVideoTakeProduction).toHaveBeenCalled());
   });
 
   it('pre-selects the rail row from a shotId deep link', async () => {
@@ -166,7 +181,193 @@ describe('SceneShotsTab', () => {
     const playButton = screen.getByRole('button', { name: 'Play shot' });
     expect(playButton.hasAttribute('disabled')).toBe(true);
   });
+
+  it('enters group edit mode on first group click without saving immediately', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
+
+    render(<SceneShotsTabHarness />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+
+    expect(updateShotVideoTakeRailGroups).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Editing Groups' })).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
+    expect(await screen.findByText('Review Changes')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Apply Changes' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Discard' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeNull();
+  });
+
+  it('selects the shot row when the grouping button is clicked', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
+
+    render(<SceneShotsTabHarness />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Shot 2 — Council reaction' })
+    );
+    expect(await screen.findByText('Beat two.')).not.toBeNull();
+    await waitFor(() =>
+      expect(readShotVideoTakeProduction).toHaveBeenCalledTimes(2)
+    );
+    expect(
+      screen
+        .getByRole('button', { name: 'Shot 2 — Council reaction' })
+        .getAttribute('aria-current')
+    ).toBe('true');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+
+    expect(await screen.findByText('Beat one.')).not.toBeNull();
+    expect(
+      screen
+        .getByRole('button', { name: 'Shot 1 — Map study' })
+        .getAttribute('aria-current')
+    ).toBe('true');
+  });
+
+  it('keeps a dirty local grouping draft through a background resource refresh', async () => {
+    vi.mocked(readSceneShotListResource)
+      .mockResolvedValueOnce(resource(shotList()))
+      .mockResolvedValueOnce(
+        resource(
+          shotList({
+            videoTakeRailGroups: [
+              { productionGroupId: 'server_group', shotIds: ['shot_002'] },
+            ],
+          })
+        )
+      );
+
+    render(<SceneShotsTabHarness />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+
+    window.dispatchEvent(
+      new CustomEvent('renku:studio-resource-changed', {
+        detail: {
+          projectName: 'constantinople',
+          resourceKeys: ['scene-shot-list:shot_list_hook:video-take-rail-groups'],
+        },
+      })
+    );
+
+    await waitFor(() =>
+      expect(readSceneShotListResource).toHaveBeenCalledTimes(2)
+    );
+    expect(
+      document.querySelector('[data-group-id^="shot_rail_group_draft_"]')
+    ).not.toBeNull();
+    expect(document.querySelector('[data-group-id="server_group"]')).toBeNull();
+  });
+
+  it('discards local group edits without sending a save request', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
+
+    render(<SceneShotsTabHarness />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Discard' }));
+
+    expect(updateShotVideoTakeRailGroups).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Editing Groups' })).toBeNull()
+    );
+  });
+
+  it('applies local group edits through one rail-groups request', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
+
+    render(<SceneShotsTabHarness />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Apply Changes' }));
+
+    await waitFor(() =>
+      expect(updateShotVideoTakeRailGroups).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        [{ shotIds: ['shot_001'] }]
+      )
+    );
+  });
+
+  it('keeps the review dialog and local draft visible when apply fails', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
+    vi.mocked(updateShotVideoTakeRailGroups).mockRejectedValueOnce(
+      new Error('Validation failed.')
+    );
+
+    render(<SceneShotsTabHarness />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Apply Changes' }));
+
+    expect(await screen.findByText('Validation failed.')).not.toBeNull();
+    expect(screen.getByText('Review Changes')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Discard' })).not.toBeNull();
+    expect(
+      document.querySelector('[aria-label="Cycle grouping for Shot 1"]')
+    ).not.toBeNull();
+    expect(
+      document.querySelector('[data-group-id^="shot_rail_group_draft_"]')
+    ).not.toBeNull();
+  });
+
+  it('reloads AI Production when an applied draft receives a durable group id', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
+
+    render(<SceneShotsTabHarness />);
+
+    await waitFor(() =>
+      expect(readShotVideoTakeProduction).toHaveBeenCalledTimes(1)
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Apply Changes' }));
+
+    await waitFor(() =>
+      expect(readShotVideoTakeProduction).toHaveBeenCalledTimes(2)
+    );
+    expect(readShotVideoTakeProduction).toHaveBeenLastCalledWith(
+      'constantinople',
+      'scene_hook',
+      ['shot_001']
+    );
+  });
 });
+
+function SceneShotsTabHarness() {
+  const [action, setAction] = React.useState<React.ReactNode | null>(null);
+  return (
+    <>
+      <div>{action}</div>
+      <SceneShotsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        onHeaderActionChange={setAction}
+      />
+    </>
+  );
+}
 
 function shot(id: string, title: string, storyBeat: string): SceneShot {
   return {
@@ -185,7 +386,9 @@ function shot(id: string, title: string, storyBeat: string): SceneShot {
   };
 }
 
-function shotList(): SceneShotListDocument {
+function shotList(
+  overrides: Partial<SceneShotListDocument> = {}
+): SceneShotListDocument {
   return {
     kind: 'sceneShotList',
     sceneId: 'scene_hook',
@@ -196,6 +399,7 @@ function shotList(): SceneShotListDocument {
       shot('shot_001', 'Map study', 'Beat one.'),
       shot('shot_002', 'Council reaction', 'Beat two.'),
     ],
+    ...overrides,
   };
 }
 
@@ -370,7 +574,7 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
         selected: true,
         defaultSelected: true,
         environmentSheet: {
-          state: 'needed',
+          state: 'selected-planned',
           mediaKind: 'image',
           pricing: { state: 'not-applicable', estimatedUsd: null },
           previews: [],

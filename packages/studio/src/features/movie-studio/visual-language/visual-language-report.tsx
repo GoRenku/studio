@@ -713,21 +713,23 @@ function EvidenceImage({
         </figcaption>
       ) : null}
       {onRequestDelete ? (
-        <Tooltip className='absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
-          <TooltipTrigger asChild>
-            <Button
-              type='button'
-              size='icon'
-              variant='ghost'
-              className='h-7 w-7 bg-black/50 text-white shadow-sm hover:bg-destructive hover:text-destructive-foreground'
-              aria-label={`Delete ${readableImageTitle(image)}`}
-              onClick={onRequestDelete}
-            >
-              <Trash2 className='h-3.5 w-3.5' />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Delete image</TooltipContent>
-        </Tooltip>
+        <span className='absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type='button'
+                size='icon'
+                variant='ghost'
+                className='h-7 w-7 bg-black/50 text-white shadow-sm hover:bg-destructive hover:text-destructive-foreground'
+                aria-label={`Delete ${readableImageTitle(image)}`}
+                onClick={onRequestDelete}
+              >
+                <Trash2 className='h-3.5 w-3.5' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete image</TooltipContent>
+          </Tooltip>
+        </span>
       ) : null}
     </figure>
   );

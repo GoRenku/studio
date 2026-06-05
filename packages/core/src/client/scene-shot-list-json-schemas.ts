@@ -223,6 +223,17 @@ export const sceneShotListDocumentSchema = {
         }
       ),
     },
+    videoTakeRailGroups: {
+      type: 'array',
+      items: objectWith(['productionGroupId', 'shotIds'], {
+        productionGroupId: nonEmptyString(),
+        shotIds: {
+          type: 'array',
+          minItems: 1,
+          items: nonEmptyString(),
+        },
+      }),
+    },
     videoTakeProductionGroups: {
       type: 'array',
       items: objectWith(['productionGroupId', 'shotIds', 'videoTakeProduction'], {
@@ -373,6 +384,11 @@ function shotVideoTakeProductionPlanSchema(): Record<string, unknown> {
         properties: {
           basedOnInputModeId: enumValue(SHOT_VIDEO_TAKE_INPUT_MODE_IDS),
           basedOnModelChoice: enumValue(SHOT_VIDEO_TAKE_MODELS),
+          basedOnShotIds: {
+            type: 'array',
+            minItems: 1,
+            items: nonEmptyString(),
+          },
           dependencyDrafts: {
             type: 'array',
             items: objectWith(

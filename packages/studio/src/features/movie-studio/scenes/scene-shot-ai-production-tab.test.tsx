@@ -73,6 +73,9 @@ function shotList(): SceneShotListDocument {
     summary: '',
     coverageStrategy: '',
     shots: SHOTS,
+    videoTakeRailGroups: [
+      { productionGroupId: 'group_1', shotIds: ['shot_001', 'shot_002'] },
+    ],
     videoTakeProductionGroups: [
       {
         productionGroupId: 'group_1',
@@ -134,6 +137,7 @@ function context(): ShotVideoTakeGenerationContext {
     storyboardImages: [],
     availableInputs: [],
     existingTakes: [],
+    shotGroupMode: 'multi-shot',
     defaults: {
       inputModeId: 'reference',
       imageDependencyModelChoice: 'fal-ai/nano-banana-2',
@@ -147,6 +151,7 @@ function models(): ShotVideoTakeModelListReport {
   return {
     purpose: 'shot.video-take',
     target: context().target,
+    shotGroupMode: 'multi-shot',
     defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
     models: [
       {
@@ -170,6 +175,7 @@ function productionPlan(
   input: {
     finalPrompt?: string;
     lookbook?: boolean;
+    promptStale?: boolean;
   } = {}
 ): ShotVideoTakeProductionPlanReport {
   return {
@@ -251,7 +257,16 @@ function productionPlan(
         ]
       : [],
     imageReferences: [],
-    diagnostics: [],
+    diagnostics: input.promptStale
+      ? [
+          {
+            code: 'PROJECT_DATA378',
+            message: 'The saved prompt was authored for a previous shot grouping.',
+            severity: 'error',
+            location: { path: ['videoTakeProductionGroups', '0', 'agentProposal'] },
+          },
+        ]
+      : [],
   };
 }
 
@@ -260,6 +275,7 @@ function estimate(): ShotVideoTakeProductionEstimateReport {
     target: context().target,
     productionGroup: context().productionGroup,
     inputModeId: 'reference',
+    shotGroupMode: 'multi-shot',
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
     estimate: {
       provider: 'fal-ai',
@@ -308,7 +324,7 @@ describe('AI Production tab', () => {
   it('renders a group button on each rail card using local controls', async () => {
     render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
     const groupButton = await screen.findByRole('button', {
-      name: 'Toggle grouping for Shot 1',
+      name: 'Cycle grouping for Shot 1',
     });
     expect(groupButton.tagName).toBe('BUTTON');
   });
@@ -334,6 +350,18 @@ describe('AI Production tab', () => {
     expect(await screen.findByText('Final siege prompt.')).not.toBeNull();
     expect(screen.getAllByText('Estimated total').length).toBeGreaterThan(0);
     expect(await screen.findByText('multi-shot')).not.toBeNull();
+  });
+
+  it('marks the final prompt as needing refresh when the production plan is stale', async () => {
+    vi.mocked(planShotVideoTakeProduction).mockResolvedValue(
+      productionPlan({ finalPrompt: 'Final siege prompt.', promptStale: true })
+    );
+
+    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    await openAiProductionTab();
+
+    expect(await screen.findByText('needs refresh')).not.toBeNull();
+    expect(await screen.findByText('Final siege prompt.')).not.toBeNull();
   });
 
   it('does not mark an active Lookbook as ready without a reference image', async () => {
