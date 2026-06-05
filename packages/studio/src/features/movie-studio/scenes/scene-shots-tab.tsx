@@ -11,8 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/ui/dialog';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/ui/resizable';
 import { SceneShotRail } from './scene-shot-rail';
 import { SceneShotDetail } from './scene-shot-detail';
+import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
 import { SceneShotListEmpty } from './scene-shot-list-empty';
 import { shotLabel } from './scene-shot-labels';
 import {
@@ -272,27 +278,50 @@ export function SceneShotsTab({
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
 
   return (
-    <div className='flex min-h-0 flex-1 gap-4 bg-panel-bg p-4'>
-      <SceneShotRail
-        shots={shots}
-        imagesByShotId={resource.storyboardImagesByShotId}
-        selectedShotId={selectedShot.shotId}
-        railGroups={visibleRailGroups}
-        onSelectShot={setUserSelectedShotId}
-        onCycleShotGroup={handleCycleShotGroup}
-      />
-      <SceneShotDetail
-        projectName={projectName}
-        sceneId={sceneId}
-        shot={selectedShot}
-        shots={shots}
-        railGroups={visibleRailGroups}
-        productionGroups={productionGroups}
-        label={selectedShotLabel}
-        castMemberLabels={resource.castMemberLabels}
-        locationLabels={resource.locationLabels}
-        onShotSpecsSaved={setResource}
-      />
+    <div className='flex min-h-0 min-w-0 flex-1 overflow-hidden bg-panel-bg p-3'>
+      <ResizablePanelGroup
+        id='scene-shots-layout'
+        autoSaveId='renku-studio.scene-shots.layout'
+        direction='horizontal'
+        className={`min-w-0 ${SCENE_SHOT_LAYOUT.railDetailGapClass}`}
+      >
+        <ResizablePanel
+          id='scene-shots-rail'
+          defaultSize={SCENE_SHOT_LAYOUT.railDefaultSizePercent}
+          minSize={SCENE_SHOT_LAYOUT.railMinSizePercent}
+          maxSize={SCENE_SHOT_LAYOUT.railMaxSizePercent}
+          className='min-w-0'
+        >
+          <SceneShotRail
+            shots={shots}
+            imagesByShotId={resource.storyboardImagesByShotId}
+            selectedShotId={selectedShot.shotId}
+            railGroups={visibleRailGroups}
+            onSelectShot={setUserSelectedShotId}
+            onCycleShotGroup={handleCycleShotGroup}
+          />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel
+          id='scene-shots-detail'
+          defaultSize={SCENE_SHOT_LAYOUT.detailDefaultSizePercent}
+          minSize={SCENE_SHOT_LAYOUT.detailMinSizePercent}
+          className='min-w-0'
+        >
+          <SceneShotDetail
+            projectName={projectName}
+            sceneId={sceneId}
+            shot={selectedShot}
+            shots={shots}
+            railGroups={visibleRailGroups}
+            productionGroups={productionGroups}
+            label={selectedShotLabel}
+            castMemberLabels={resource.castMemberLabels}
+            locationLabels={resource.locationLabels}
+            onShotSpecsSaved={setResource}
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
       <ShotGroupingReviewDialog
         open={reviewOpen}
         applyState={applyState}

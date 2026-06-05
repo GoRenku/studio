@@ -118,7 +118,7 @@ export function ScenePanel({
           />
         </article>
       </TabsContent>
-      <TabsContent value='shots' className='flex min-h-0'>
+      <TabsContent value='shots' className='flex min-h-0 min-w-0 overflow-hidden'>
         <SceneShotsTab
           projectName={projectName}
           sceneId={sceneId}

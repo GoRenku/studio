@@ -5,11 +5,17 @@ import { exportProductionAssets } from '@/services/studio-projects-api';
 import { createInspirationFolder } from '@/services/studio-visual-language-api';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { AutosaveStatus } from '@/ui/autosave-status';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/ui/resizable';
 import { CastOverviewPanel } from './cast/cast-overview-panel';
 import { CastMemberPanel } from './cast/cast-member-panel';
 import { GenerationActivityFooter } from './generation-activity/generation-activity-footer';
 import { LocationOverviewPanel } from './locations/location-overview-panel';
 import { LocationPanel } from './locations/location-panel';
+import { MOVIE_STUDIO_LAYOUT } from './movie-studio-layout';
 import { PanelShell } from './panel-shell';
 import { ProjectInformationPanel } from './project-information/project-information-panel';
 import { ActStoryboardPanel } from './acts/act-storyboard-panel';
@@ -184,106 +190,135 @@ export function MovieStudioScreen({
 
   return (
     <div className='h-screen w-screen bg-background text-foreground p-3 flex flex-col gap-3'>
-      <main className='flex-1 min-h-0 grid grid-cols-1 gap-3 lg:grid-cols-[300px_minmax(0,1fr)]'>
-        <StudioSidebar
-          project={project}
-          screenplayNavigation={screenplayNavigation}
-          selection={selection}
-          onSelect={selectMovieStudioSurface}
-          onHome={onHome}
-          isProductionExportRunning={isProductionExportRunning}
-          onProductionExport={handleProductionExport}
-          lookbooksRevision={lookbooksRevision}
-          inspirationFoldersRevision={inspirationFoldersRevision}
-          onInspirationFoldersChange={handleInspirationFoldersChange}
-        />
-        <PanelShell
-          title={resolvedSelection.kicker}
-          contentClassName={selection.type === 'inspiration' ? 'p-0' : undefined}
-          action={
-            selection.type === 'projectInformation' ? (
-              <AutosaveStatus
-                status={projectInformationAutosave}
-                className='shrink-0'
-              />
-            ) : selection.type === 'inspiration' ? (
-              <InspirationFolderCreateDialog
-                trigger='icon'
-                onCreate={handleCreateInspirationFolder}
-              />
-            ) : selection.type === 'scene' ? (
-              sceneHeaderAction
-            ) : null
-          }
+      <main className='flex-1 min-h-0'>
+        <ResizablePanelGroup
+          id='movie-studio-shell-layout'
+          autoSaveId='renku-studio.movie-studio.shell'
+          direction='horizontal'
+          className='min-h-0'
         >
-          {selection.type === 'projectInformation' ? (
-            <ProjectInformationPanel
+          <ResizablePanel
+            id='movie-studio-sidebar'
+            defaultSize={MOVIE_STUDIO_LAYOUT.sidebarDefaultSizePercent}
+            minSize={MOVIE_STUDIO_LAYOUT.sidebarMinSizePercent}
+            maxSize={MOVIE_STUDIO_LAYOUT.sidebarMaxSizePercent}
+            className='min-w-0'
+          >
+            <StudioSidebar
               project={project}
-              onProjectChange={onProjectChange}
-              onAutosaveStatusChange={handleProjectInformationAutosaveStatusChange}
-            />
-          ) : selection.type === 'inspiration' ||
-            selection.type === 'lookbooks' ||
-            selection.type === 'lookbook' ? (
-            <VisualLanguagePanel
-              project={project}
+              screenplayNavigation={screenplayNavigation}
               selection={selection}
               onSelect={selectMovieStudioSurface}
-              onLookbooksChange={handleLookbooksChange}
-              onInspirationFoldersChange={handleInspirationFoldersChange}
+              onHome={onHome}
+              isProductionExportRunning={isProductionExportRunning}
+              onProductionExport={handleProductionExport}
+              lookbooksRevision={lookbooksRevision}
               inspirationFoldersRevision={inspirationFoldersRevision}
+              onInspirationFoldersChange={handleInspirationFoldersChange}
             />
-          ) : selection.type === 'cast' ? (
-            <CastOverviewPanel
-              projectName={project.identity.name}
-              onSelect={selectMovieStudioSurface}
-            />
-          ) : selection.type === 'castMember' ? (
-            <CastMemberPanel
-              key={selection.id}
-              projectName={project.identity.name}
-              castMemberId={selection.id}
-            />
-          ) : selection.type === 'locations' ? (
-            <LocationOverviewPanel
-              projectName={project.identity.name}
-              onSelect={selectMovieStudioSurface}
-            />
-          ) : selection.type === 'location' ? (
-            <LocationPanel
-              key={selection.id}
-              projectName={project.identity.name}
-              locationId={selection.id}
-            />
-          ) : selection.type === 'storyArc' ? (
-            <StoryArcPanel projectName={project.identity.name} />
-          ) : selection.type === 'sequence' ? (
-            <SequencePanel
-              key={selection.id}
-              projectName={project.identity.name}
-              sequenceId={selection.id}
-              onSelect={selectMovieStudioSurface}
-            />
-          ) : selection.type === 'act' ? (
-            <ActStoryboardPanel
-              key={selection.id}
-              projectName={project.identity.name}
-              actId={selection.id}
-              onSelect={selectMovieStudioSurface}
-            />
-          ) : (
-            <ScenePanel
-              key={selection.id}
-              projectName={project.identity.name}
-              sceneId={selection.id}
-              shotId={selection.shotId}
-              onSelect={selectMovieStudioSurface}
-              onHeaderActionChange={setSceneHeaderAction}
-              previousScene={sceneNeighbors.previousScene}
-              nextScene={sceneNeighbors.nextScene}
-            />
-          )}
-        </PanelShell>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel
+            id='movie-studio-details'
+            defaultSize={MOVIE_STUDIO_LAYOUT.detailsDefaultSizePercent}
+            minSize={MOVIE_STUDIO_LAYOUT.detailsMinSizePercent}
+            className='min-w-0 pl-3'
+          >
+            <PanelShell
+              title={resolvedSelection.kicker}
+              contentClassName={
+                selection.type === 'inspiration' || selection.type === 'scene'
+                  ? 'p-0'
+                  : undefined
+              }
+              action={
+                selection.type === 'projectInformation' ? (
+                  <AutosaveStatus
+                    status={projectInformationAutosave}
+                    className='shrink-0'
+                  />
+                ) : selection.type === 'inspiration' ? (
+                  <InspirationFolderCreateDialog
+                    trigger='icon'
+                    onCreate={handleCreateInspirationFolder}
+                  />
+                ) : selection.type === 'scene' ? (
+                  sceneHeaderAction
+                ) : null
+              }
+            >
+              {selection.type === 'projectInformation' ? (
+                <ProjectInformationPanel
+                  project={project}
+                  onProjectChange={onProjectChange}
+                  onAutosaveStatusChange={
+                    handleProjectInformationAutosaveStatusChange
+                  }
+                />
+              ) : selection.type === 'inspiration' ||
+                selection.type === 'lookbooks' ||
+                selection.type === 'lookbook' ? (
+                <VisualLanguagePanel
+                  project={project}
+                  selection={selection}
+                  onSelect={selectMovieStudioSurface}
+                  onLookbooksChange={handleLookbooksChange}
+                  onInspirationFoldersChange={handleInspirationFoldersChange}
+                  inspirationFoldersRevision={inspirationFoldersRevision}
+                />
+              ) : selection.type === 'cast' ? (
+                <CastOverviewPanel
+                  projectName={project.identity.name}
+                  onSelect={selectMovieStudioSurface}
+                />
+              ) : selection.type === 'castMember' ? (
+                <CastMemberPanel
+                  key={selection.id}
+                  projectName={project.identity.name}
+                  castMemberId={selection.id}
+                />
+              ) : selection.type === 'locations' ? (
+                <LocationOverviewPanel
+                  projectName={project.identity.name}
+                  onSelect={selectMovieStudioSurface}
+                />
+              ) : selection.type === 'location' ? (
+                <LocationPanel
+                  key={selection.id}
+                  projectName={project.identity.name}
+                  locationId={selection.id}
+                />
+              ) : selection.type === 'storyArc' ? (
+                <StoryArcPanel projectName={project.identity.name} />
+              ) : selection.type === 'sequence' ? (
+                <SequencePanel
+                  key={selection.id}
+                  projectName={project.identity.name}
+                  sequenceId={selection.id}
+                  onSelect={selectMovieStudioSurface}
+                />
+              ) : selection.type === 'act' ? (
+                <ActStoryboardPanel
+                  key={selection.id}
+                  projectName={project.identity.name}
+                  actId={selection.id}
+                  onSelect={selectMovieStudioSurface}
+                />
+              ) : (
+                <ScenePanel
+                  key={selection.id}
+                  projectName={project.identity.name}
+                  sceneId={selection.id}
+                  shotId={selection.shotId}
+                  onSelect={selectMovieStudioSurface}
+                  onHeaderActionChange={setSceneHeaderAction}
+                  previousScene={sceneNeighbors.previousScene}
+                  nextScene={sceneNeighbors.nextScene}
+                />
+              )}
+            </PanelShell>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </main>
 
       <GenerationActivityFooter project={project} />

@@ -99,13 +99,28 @@ export function SceneShotDetail({
   });
 
   return (
-    <section className='flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
-      <ResizablePanelGroup direction='vertical' className='min-h-0 flex-1'>
-        <ResizablePanel defaultSize={42} minSize={20} className='p-4'>
+    <section className='flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
+      <ResizablePanelGroup
+        id='scene-shot-detail-layout'
+        autoSaveId='renku-studio.scene-shot-detail.layout'
+        direction='vertical'
+        className='min-h-0 flex-1'
+      >
+        <ResizablePanel
+          id='scene-shot-video-stage'
+          defaultSize={42}
+          minSize={20}
+          className='p-4'
+        >
           <SceneShotVideoStage />
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={58} minSize={25} className='min-h-0'>
+        <ResizablePanel
+          id='scene-shot-design-tabs'
+          defaultSize={58}
+          minSize={25}
+          className='min-h-0'
+        >
           <ShotSpecsProvider
             key={shot.shotId}
             projectName={projectName}
@@ -115,7 +130,7 @@ export function SceneShotDetail({
           >
             <Tabs
               defaultValue='description'
-              className='flex h-full min-h-0 flex-col gap-0'
+              className='flex h-full min-h-0 min-w-0 flex-col gap-0'
             >
               <LineTabBar
                 items={DESIGN_TABS.map((tab) => ({ ...tab }))}
@@ -125,7 +140,7 @@ export function SceneShotDetail({
                   ) : null
                 }
               />
-              <div className='min-h-0 flex-1 overflow-y-auto bg-panel-bg px-4'>
+              <div className='min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel-bg px-4'>
                 <TabsContent value='description'>
                   <SceneShotDescriptionTab
                     shot={shot}

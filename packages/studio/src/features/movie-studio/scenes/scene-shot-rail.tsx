@@ -75,8 +75,7 @@ export function SceneShotRail({
 
   return (
     <aside
-      className='shrink-0 overflow-y-auto rounded-xl border border-border/40 bg-muted/40 p-2'
-      style={{ width: `${SCENE_SHOT_LAYOUT.railWidthPx}px` }}
+      className='h-full overflow-y-auto rounded-xl border border-border/40 bg-muted/40 p-2'
       aria-label='Shots'
     >
       <ul className={cn('flex flex-col', SCENE_SHOT_LAYOUT.railRowGapClass)}>

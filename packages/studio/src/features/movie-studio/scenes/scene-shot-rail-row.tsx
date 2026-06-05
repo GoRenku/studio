@@ -30,7 +30,7 @@ export function SceneShotRailRow({
         aria-current={selected ? 'true' : undefined}
         aria-label={`${label} — ${title}`}
         className={cn(
-          'h-auto w-full min-w-0 flex-col items-stretch gap-2 rounded-lg border p-2 pr-10 text-left',
+          'h-auto w-full min-w-0 flex-col items-stretch gap-2 rounded-lg border p-2 text-left',
           selected
             ? 'border-item-active-border bg-item-active-bg'
             : 'border-transparent bg-transparent hover:border-border/50 hover:bg-item-hover-bg'

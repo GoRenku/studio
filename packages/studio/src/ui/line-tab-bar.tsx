@@ -19,13 +19,13 @@ export function LineTabBar<Value extends string>({
   return (
     <TabsList
       variant='line'
-      className='h-[45px] w-full justify-start rounded-none border-b border-border/40 bg-sidebar-header-bg p-0'
+      className='h-[45px] w-full justify-start gap-0 rounded-none border-b border-border/40 bg-sidebar-header-bg p-0'
     >
       {items.map((item) => (
         <TabsTrigger
           key={item.value}
           value={item.value}
-          className='h-full flex-none rounded-none border-0 px-3 text-[11px] uppercase tracking-[0.12em] font-semibold data-[state=active]:bg-item-active-bg data-[state=active]:text-foreground data-[state=active]:after:bg-primary sm:px-5'
+          className='h-full flex-none rounded-none border-0 px-2 text-[11px] uppercase tracking-[0.12em] font-semibold data-[state=active]:bg-item-active-bg data-[state=active]:text-foreground data-[state=active]:after:bg-primary'
         >
           {item.label}
         </TabsTrigger>
