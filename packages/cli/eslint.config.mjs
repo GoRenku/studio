@@ -90,6 +90,25 @@ const eslintConfig = [
       }],
     },
   },
+  {
+    files: [
+      'src/commands/generation-command.ts',
+      'src/commands/generation-command-handlers.ts',
+      'src/commands/generation-plan-command.ts',
+      'src/commands/generation-purpose-command-registry.ts',
+      'src/commands/media-command.ts',
+      'src/commands/media-import-command-handlers.ts',
+      'src/commands/media-import-documents.ts',
+      'src/commands/structured-command.ts',
+      'src/commands/studio-resource-event-command.ts',
+      'src/commands/studio-target-parsing.ts',
+    ],
+    rules: {
+      complexity: ['error', { max: 8 }],
+      'max-depth': ['error', 2],
+      'no-nested-ternary': 'error',
+    },
+  },
 ];
 
 export default eslintConfig;

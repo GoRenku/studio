@@ -96,7 +96,7 @@ Options
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for shot video take generation
   --production-group   Shot video take production group id
-  --intent             Shot video take intent id
+  --intent             Shot video take input mode id
   --input              Shot video take reusable input id
   --kind               Shot video take input kind
   --subject-kind       Shot video take input subject kind

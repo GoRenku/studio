@@ -910,14 +910,20 @@ Behavior:
 
 Create, estimate, and run persisted media generation specs.
 
-Current implemented purpose:
+Current implemented purposes:
 
 ```text
 lookbook.image
+lookbook.sheet
 cast.character-sheet
 cast.profile
 location.environment-sheet
 scene.storyboard-sheet
+shot.first-frame
+shot.last-frame
+shot.reference-sheet
+shot.multi-shot-storyboard-sheet
+shot.video-take
 ```
 
 Current target formats:
@@ -927,6 +933,7 @@ lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
 scene:<scene-id>
+scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]>
 ```
 
 Read context and available model choices:
@@ -934,6 +941,8 @@ Read context and available model choices:
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<lookbook-id> --json
 renku generation model list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation context --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
+renku generation model list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json
 renku generation model list --purpose cast.character-sheet --target cast:<cast-member-id> --json
 renku generation context --purpose cast.profile --target cast:<cast-member-id> --json
@@ -942,6 +951,8 @@ renku generation context --purpose location.environment-sheet --target location:
 renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
+renku generation context --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --intent <input-mode-id> --json
 ```
 
 Manage persisted specs:
@@ -952,8 +963,10 @@ renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
 renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation spec list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
+renku generation spec list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 ```
 
 Estimate and run:
@@ -962,6 +975,7 @@ Estimate and run:
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <approval-token> --json
 renku generation run --spec <spec-id> --simulate --json
+renku generation plan --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --intent <input-mode-id> --model <model-choice> --json
 ```
 
 Lookbook Image spec shape:
@@ -1046,14 +1060,20 @@ Behavior:
 
 Attach an existing media file to a project domain purpose.
 
-Current implemented purpose:
+Current implemented purposes:
 
 ```text
 lookbook.image
+lookbook.sheet
 cast.character-sheet
 cast.profile
 location.environment-sheet
 scene.storyboard-sheet
+shot.first-frame
+shot.last-frame
+shot.reference-sheet
+shot.multi-shot-storyboard-sheet
+shot.video-take
 ```
 
 ```bash
@@ -1062,6 +1082,19 @@ renku media import \
   --target lookbook:<lookbook-id> \
   --source <project-relative-path> \
   --sections palette,lighting \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
+```
+
+Lookbook Sheet import:
+
+```bash
+renku media import \
+  --purpose lookbook.sheet \
+  --target lookbook:<lookbook-id> \
+  --source <project-relative-path> \
   --title <title> \
   --summary <one-line-summary> \
   --receipt <generation-run-json> \
@@ -1106,6 +1139,29 @@ renku media import \
   --json
 ```
 
+Shot media import:
+
+```bash
+renku media import \
+  --purpose shot.first-frame \
+  --target scene:<scene-id> \
+  --shot-list <shot-list-id> \
+  --shots <shot-id[,shot-id...]> \
+  --source <project-relative-path> \
+  --selection select \
+  --receipt <generation-run-json> \
+  --json
+
+renku media import \
+  --purpose shot.video-take \
+  --target scene:<scene-id> \
+  --shot-list <shot-list-id> \
+  --shots <shot-id[,shot-id...]> \
+  --source <project-relative-path> \
+  --receipt <generation-run-json> \
+  --json
+```
+
 The import JSON lists one or more generated sheets in one semantic storyboard
 package, with one sliced file for every imported shot in each sheet:
 
@@ -1143,17 +1199,23 @@ package, with one sliced file for every imported shot in each sheet:
 Options:
 
 - `--purpose`: required media purpose. Current supported values are
-  `lookbook.image`, `cast.character-sheet`, `cast.profile`, and
-  `location.environment-sheet`, and `scene.storyboard-sheet`.
+  `lookbook.image`, `lookbook.sheet`, `cast.character-sheet`, `cast.profile`,
+  `location.environment-sheet`, `scene.storyboard-sheet`, `shot.first-frame`,
+  `shot.last-frame`, `shot.reference-sheet`,
+  `shot.multi-shot-storyboard-sheet`, and `shot.video-take`.
 - `--target`: required target. Current supported shapes are
-  `lookbook:<lookbook-id>`, `cast:<cast-member-id>`, and
+  `lookbook:<lookbook-id>`, `cast:<cast-member-id>`,
   `location:<location-id>`, and `scene:<scene-id>`.
 - `--source`: required project-relative media source path for single-file
   imports. Location environment sheet and scene storyboard sheet imports use
   `--file` instead.
 - `--file`: grouped import JSON for `location.environment-sheet` and
   `scene.storyboard-sheet`.
-- `--shot-list`: required when importing `scene.storyboard-sheet`.
+- `--shot-list`: required when importing `scene.storyboard-sheet` and shot
+  media purposes.
+- `--shots`: comma-separated shot ids for shot media purposes.
+- `--selection`: optional shot image import selection, either `select` or
+  `take`.
 - `--sections`: optional comma-separated Lookbook section keys.
 - `--title`: optional title for the imported media.
 - `--summary`: optional one-line summary.
@@ -1169,6 +1231,8 @@ Behavior:
 - For Lookbook Images, import registers an asset, creates the Lookbook image
   relationship, stores section placement, and appends Studio resource refresh
   events.
+- For Lookbook Sheets, import registers a Lookbook sheet asset, stores it under
+  `visual-language/lookbook/`, and appends Studio resource refresh events.
 - For Location Environment Sheets, import registers one grouped asset, copies
   the composite plus `view_front`, `view_right`, `view_back`, and `view_left`
   files under `locations/<handle>/environment-sheets/<sheet-slug>/`, and stores

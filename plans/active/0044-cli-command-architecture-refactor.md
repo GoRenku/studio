@@ -2,7 +2,11 @@
 
 Date: 2026-06-03
 
-Status: proposed
+Last reviewed against code: 2026-06-05
+
+Status: implemented
+
+Implemented: 2026-06-05
 
 ## Goal
 
@@ -18,6 +22,11 @@ The first implementation scope is:
 - adjacent command parser, command handler, dispatch-table, registry, JSON-file,
   target-parsing, and Studio coordination-event modules needed to make those two
   commands small and reviewable.
+
+The already-implemented `generation plan` command is adjacent scope. It should
+reuse shared parsing and structured command primitives where that reduces
+duplication, but it must remain a focused shot-video planning adapter rather
+than becoming another branch inside `runGenerationCommand`.
 
 The CLI is how Studio Skills and external agents communicate with core-owned
 project behavior. It is not optional plumbing. It is part of the architecture.
@@ -38,12 +47,18 @@ asset-selection rules, or provider behavior.
 
 - `packages/cli/src/commands/media-command.ts`
 - `packages/cli/src/commands/generation-command.ts`
+- `packages/cli/src/commands/generation-plan-command.ts`
 - `packages/cli/src/cli.ts`
 - `packages/cli/src/cli.test.ts`
 - `packages/cli/src/commands/info.test.ts`
 - `packages/cli/eslint.config.mjs`
+- `packages/core/src/client/media-generation.ts`
+- `packages/core/src/server/media-generation/purpose-registry.ts`
+- `packages/core/src/server/project-data-service-contracts.ts`
 - `docs/architecture/layers-of-responsibility.md`
+- `docs/architecture/reference/media-generation.md`
 - `docs/architecture/reference/structured-diagnostics.md`
+- `docs/cli/commands.md`
 - `docs/decisions/0004-use-human-first-cli-guidelines.md`
 - `docs/decisions/0009-use-structured-diagnostics-at-package-boundaries.md`
 - `docs/decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
@@ -72,10 +87,24 @@ This plan rejects that pattern. Future CLI work must not add more command
 behavior through giant nested `if` blocks, nested ternary dispatch chains, or
 single functions that route many unrelated command shapes.
 
-## Current Status After 0043
+Since the plan was first drafted, the command surface has grown. `lookbook.sheet`
+is now a first-class media-generation purpose in core, CLI parsing, CLI tests,
+and media import. The shot-video input purposes and final video purpose are also
+present in the CLI generation and media import paths:
 
-Plan `0043` is now partially implemented in the codebase, and this CLI plan must
-start from that newer state.
+- `shot.first-frame`;
+- `shot.last-frame`;
+- `shot.reference-sheet`;
+- `shot.multi-shot-storyboard-sheet`;
+- `shot.video-take`.
+
+That growth confirms the reason for this refactor: every new purpose currently
+adds pressure to extend the same large command functions.
+
+## Current Status After 0043 And June 5 Code Review
+
+The relevant generic lifecycle portion of plan `0043` is implemented in the
+codebase, and this CLI plan must start from that newer state.
 
 The `generation` command is already hooked into the shared media-generation
 architecture for the core lifecycle commands:
@@ -96,6 +125,20 @@ registry. The CLI must not reintroduce lifecycle dispatch by mapping every
 purpose to purpose-specific create, read, update, estimate, or run service
 methods.
 
+The current registered media-generation purpose set is:
+
+- `lookbook.image`;
+- `lookbook.sheet`;
+- `cast.character-sheet`;
+- `cast.profile`;
+- `location.environment-sheet`;
+- `scene.storyboard-sheet`;
+- `shot.first-frame`;
+- `shot.last-frame`;
+- `shot.reference-sheet`;
+- `shot.multi-shot-storyboard-sheet`;
+- `shot.video-take`.
+
 The remaining `generation` command work is structural:
 
 - move command-path routing into handlers;
@@ -113,10 +156,33 @@ selection rather than the generic persisted-spec lifecycle:
 - `generation input select`;
 - `generation input clear`.
 
+The `generation plan` command now exists in
+`packages/cli/src/commands/generation-plan-command.ts` and is dispatched from
+`packages/cli/src/cli.ts` before `runGenerationCommand`. It is intentionally a
+shot-video-only planning surface. This refactor may move its duplicated
+`scene:<id>`, `--shots`, and required-flag parsing into shared command modules,
+but it should not be folded into the generic lifecycle dispatch unless the
+implementation creates a root generation command-path dispatcher where `plan`
+has its own obvious handler.
+
 The `media import` command has not yet been structurally migrated. It still uses
-CLI-side purpose branching and nested ternary dispatch, even though core now has
-a purpose registry helper for importing media by generation purpose. The CLI
-refactor should address media import directly.
+CLI-side purpose branching, grouped import-document branches, and a large switch
+for single-file imports.
+
+Core now contains an internal `importMediaGenerationByPurpose` helper in
+`packages/core/src/server/media-generation/purpose-registry.ts`, but that helper
+is not part of the public `@gorenku/studio-core/server` entry point and is not a
+`ProjectDataService` method. The CLI refactor must not deep-import that internal
+module across the package boundary. If implementation chooses to delegate media
+import purpose dispatch to core, first expose a deliberate core-owned service
+contract. Otherwise keep a focused CLI media-import purpose registry that calls
+the current `ProjectDataService` import methods directly.
+
+Some current documentation references lag behind the implemented purpose set.
+For example, `docs/architecture/reference/media-generation.md` and
+`docs/cli/commands.md` should be checked during implementation so their command
+examples include `lookbook.sheet` and the shot-video input purposes where
+appropriate, plus the final `shot.video-take` purpose.
 
 ## Non-Goals
 
@@ -125,11 +191,14 @@ This plan does not:
 - change the public command names or flag shapes except for intentional cleanup
   called out during implementation;
 - redesign media generation business logic;
-- implement the new shot-video dependency planner;
+- redesign the shot-video dependency planner or change `generation plan`
+  semantics;
 - redo the existing media-generation purpose architecture refactor from plan
   `0043`;
 - add CLI-side lifecycle dispatch that duplicates the core media-generation
   purpose registry;
+- deep-import core internal modules to avoid adding a deliberate core service
+  contract;
 - change provider integrations;
 - change Studio Skill behavior except where tests prove the CLI output contract
   is preserved;
@@ -140,8 +209,9 @@ implementation notes and covered by tests.
 
 ## Architecture Decision
 
-Write a new ADR under `docs/decisions/` before or during the refactor. Use the
-next available decision number at implementation time. Suggested title:
+Write a new ADR under `docs/decisions/` before or during the refactor. As of
+2026-06-05 the next available decision number is `0026`; still verify the next
+available number at implementation time. Suggested title:
 
 ```text
 Use Thin Structured CLI Command Handlers
@@ -182,6 +252,12 @@ After the refactor, each exported function should do only three things:
 The body of each exported function should be small enough that a reviewer can see
 the whole routing shape without scrolling through purpose-specific behavior.
 
+`runGenerationPlanCommand` may remain as its own exported adapter, because plan
+generation is a separate shot-video planning command rather than a generic
+persisted-spec lifecycle action. If implementation revisits generation routing
+in `packages/cli/src/cli.ts`, route `generation plan` by command path to its own
+handler instead of adding an inline branch to `runGenerationCommand`.
+
 Preferred implementation modules:
 
 - `packages/cli/src/commands/structured-command.ts`
@@ -203,6 +279,10 @@ Preferred implementation modules:
     `production update`, `preflight`, `input list`, `input select`,
     `input clear`, `spec validate`, `spec create`, `spec update`,
     `spec show`, `spec list`, `estimate`, and `run`;
+- `packages/cli/src/commands/generation-plan-command.ts`
+  - may either remain a small focused command adapter or be reduced to a thin
+    wrapper over a `generation plan` handler; either way, it should consume the
+    shared required-flag, scene-target, and shot-id parsers when those exist;
 - `packages/cli/src/commands/generation-purpose-command-registry.ts`
   - owns CLI-level generation purpose parsing and target-parser selection only.
     It must not map lifecycle commands to purpose-specific core service methods,
@@ -253,6 +333,7 @@ context, but these names and responsibilities are the planned shape:
 Media import purpose handlers should cover the current purpose set:
 
 - `lookbook.image`;
+- `lookbook.sheet`;
 - `cast.character-sheet`;
 - `cast.profile`;
 - `location.environment-sheet`;
@@ -271,6 +352,23 @@ Each purpose handler should own only the CLI adapter work for that purpose:
 - import-document parsing when that purpose needs a document;
 - calling the matching core service method;
 - returning the import report.
+
+Current purpose-specific import shapes:
+
+- `lookbook.image` and `lookbook.sheet` use `lookbook:<id>` targets and
+  single-file `--source` imports;
+- `cast.character-sheet` and `cast.profile` use `cast:<id>` targets and
+  single-file `--source` imports;
+- `location.environment-sheet` uses `location:<id>` targets and grouped
+  `--file` import documents, and must continue to reject `--source` and
+  `--receipt`;
+- `scene.storyboard-sheet` uses `scene:<id>` targets plus `--shot-list` and a
+  grouped `--file` import document, and must continue to reject `--source` and
+  `--receipt`;
+- shot input purposes use `scene:<id>`, `--shot-list`, `--shots`, single-file
+  `--source`, optional `--receipt`, and optional `--selection`;
+- `shot.video-take` uses `scene:<id>`, `--shot-list`, `--shots`, single-file
+  `--source`, and optional `--receipt`.
 
 The shared `media import` command handler should:
 
@@ -320,12 +418,13 @@ by purpose after parsing the purpose and target:
 
 Purpose-aware CLI code should only parse and validate CLI input shapes, such as
 converting `--purpose shot.video-take --target scene:<id> --shot-list <id>
---shots <ids>` into a `MediaGenerationTarget`. Core remains responsible for
-purpose-specific lifecycle behavior.
+--shots <ids>` into a `MediaGenerationRequestTarget`. Core remains responsible
+for purpose-specific lifecycle behavior.
 
 The current supported generation purposes are:
 
 - `lookbook.image`;
+- `lookbook.sheet`;
 - `cast.character-sheet`;
 - `cast.profile`;
 - `location.environment-sheet`;
@@ -339,6 +438,11 @@ The current supported generation purposes are:
 Shot-video-only commands such as production update, preflight, and input
 selection may remain explicit command handlers. They should not appear as inline
 branches inside `runGenerationCommand`.
+
+`generation plan` is also shot-video-only, but it is already implemented as a
+separate command adapter. This plan does not require changing its user-facing
+behavior. It does require any touched parsing or diagnostics to follow the same
+shared command primitives as the rest of the generation command family.
 
 ## Complexity Rules
 
@@ -420,6 +524,8 @@ Required tests:
 - `media import` routes each supported purpose through the correct core service
   method;
 - `media import` rejects unsupported purposes with a structured diagnostic;
+- `media import --purpose lookbook.sheet` preserves the current single-file
+  import behavior and Studio resource-changed event behavior;
 - Location environment sheet imports still reject `--source` and `--receipt`;
 - Scene storyboard sheet imports still reject `--source` and `--receipt`;
 - media imports append Studio resource-changed events when reports include
@@ -428,6 +534,9 @@ Required tests:
   method and sends the parsed purpose/target to core;
 - `generation model list` routes each supported purpose to the correct core
   method and sends the parsed purpose/target to core;
+- `generation context`, `generation model list`, and `generation spec list`
+  include `lookbook.sheet` and shot-video input/final video purposes in parser
+  coverage;
 - `generation spec validate/create/update/show/list` call the shared generic
   media-generation service methods;
 - `generation estimate` and `generation run` call the shared generic
@@ -436,6 +545,8 @@ Required tests:
   create, read, update, estimate, or run core service method;
 - shot-video-only commands reject non-`shot.video-take` purposes with structured
   diagnostics;
+- `generation plan` remains routed to one focused shot-video planning adapter or
+  handler and rejects non-`shot.video-take` purposes with structured diagnostics;
 - unknown command paths return structured diagnostics with helpful suggestions;
 - JSON output still writes primary machine-readable results to `stdout`.
 
@@ -448,6 +559,13 @@ service. Keep end-to-end CLI tests for the command surface and output behavior.
 
 - Inventory the current `media` and `generation` command paths, flags, JSON
   outputs, and structured diagnostics.
+- Inventory the adjacent `generation plan` path, flags, human output, JSON
+  output, and structured diagnostics so shared parser extraction does not break
+  it.
+- Compare the implemented purpose set in `packages/core/src/client/media-generation.ts`
+  and `packages/core/src/server/media-generation/purpose-registry.ts` with
+  `docs/architecture/reference/media-generation.md` and `docs/cli/commands.md`;
+  record documentation drift before implementation.
 - Add or expand tests for the current intended behavior before changing routing.
 - Note any intentional cleanup candidates discovered during inventory.
 
@@ -466,6 +584,8 @@ service. Keep end-to-end CLI tests for the command surface and output behavior.
 - Add command-path lookup that reports structured unknown-command diagnostics.
 - Move shared required-flag, JSON output, JSON-file reading, target parsing,
   shot parsing, and selection parsing into deliberately named CLI modules.
+- Reuse the shared required-flag, `scene:<id>`, and shot-id parsers from
+  `generation-plan-command.ts` if that file is touched.
 - Keep modules specific to CLI command behavior. Do not move domain validation
   out of core.
 
@@ -473,10 +593,14 @@ service. Keep end-to-end CLI tests for the command surface and output behavior.
 
 - Create the media import command handler.
 - Create the media import purpose registry.
+- Include `lookbook.sheet` in the media import purpose registry.
 - Move Location environment sheet and Scene storyboard sheet import document
   parsing into `media-import-documents.ts`.
 - Move Studio resource-changed event append behavior into
   `studio-resource-event-command.ts`.
+- If delegating import dispatch to core, add a deliberate `ProjectDataService`
+  or public server entry-point contract instead of importing
+  `media-generation/purpose-registry.ts` directly from the CLI.
 - Reduce `runMediaCommand` to runtime creation and dispatch.
 
 ### Phase 5: Refactor Generation
@@ -487,6 +611,8 @@ service. Keep end-to-end CLI tests for the command surface and output behavior.
 - Keep lifecycle handlers wired to the generic media-generation core service
   methods added by plan `0043`.
 - Keep shot-video-only action handlers explicit and small.
+- Keep `generation plan` as a separate focused adapter/handler and share parser
+  modules where useful.
 - Reduce `runGenerationCommand` to runtime creation and dispatch.
 
 ### Phase 6: Complexity Enforcement
@@ -496,7 +622,18 @@ service. Keep end-to-end CLI tests for the command surface and output behavior.
 - Confirm the new command files satisfy the limits in this plan.
 - Update tests if an intentional cleanup changed behavior.
 
-### Phase 7: Verification
+### Phase 7: Documentation Sync
+
+- Update `docs/architecture/reference/media-generation.md` if its current
+  purpose list, command examples, or target examples lag behind the implemented
+  core registry.
+- Update `docs/cli/commands.md` if its `generation` or `media import` sections
+  omit implemented purposes such as `lookbook.sheet`, shot-video input purposes,
+  or the final `shot.video-take` purpose.
+- Keep documentation focused on the current command contract. Do not document
+  compatibility aliases, old command paths, or staged coexistence.
+
+### Phase 8: Verification
 
 Run focused and package-level checks:
 
@@ -529,6 +666,8 @@ focused CLI tests first and document what remains unrun.
 - A new CLI command architecture ADR exists in `docs/decisions/`.
 - `docs/architecture/layers-of-responsibility.md` links the new ADR and names
   the thin handler/dispatch-table rule.
+- `docs/architecture/reference/media-generation.md` and `docs/cli/commands.md`
+  match the implemented purpose set after the refactor.
 
 ## Review Checklist
 
@@ -537,6 +676,10 @@ focused CLI tests first and document what remains unrun.
 - Can a reviewer find every supported media import purpose in one registry?
 - Can a reviewer confirm generation lifecycle commands call generic core methods
   rather than purpose-specific service methods?
+- Can a reviewer confirm `lookbook.sheet` is present everywhere the supported
+  purpose set is enumerated?
+- Can a reviewer confirm `generation plan` remains a focused shot-video planning
+  adapter/handler?
 - Are command entry points small enough to read without scrolling through
   purpose behavior?
 - Are structured error codes stable and intentional?
@@ -551,6 +694,10 @@ focused CLI tests first and document what remains unrun.
 Use this checklist to track when the CLI command architecture refactor is
 complete enough to support future media-generation and shot-video work without
 returning to giant nested command functions.
+
+Implementation note: this plan was implemented on 2026-06-05. Verification
+completed with `pnpm --dir packages/cli check:all`, root `pnpm check`, and root
+`pnpm test`.
 
 ### Design Review
 
@@ -567,6 +714,8 @@ returning to giant nested command functions.
   `if` / `else if` chains or nested ternaries.
 - [ ] Confirm generation lifecycle purpose routing remains in core and is not
   duplicated in `packages/cli`.
+- [ ] Confirm `generation plan` remains a focused shot-video planning adapter or
+  handler and does not add branches inside `runGenerationCommand`.
 - [ ] Confirm no public command names or flag shapes change unless explicitly
   named and tested.
 
@@ -591,6 +740,8 @@ returning to giant nested command functions.
 
 - [ ] Inventory every current `media` command path.
 - [ ] Inventory every current `generation` command path.
+- [ ] Inventory the adjacent `generation plan` command path and its output
+  contracts.
 - [ ] Inventory current required flags, optional flags, and target formats.
 - [ ] Inventory current JSON output shapes used by agents.
 - [ ] Inventory current structured error codes and suggestions.
@@ -609,6 +760,8 @@ returning to giant nested command functions.
 - [ ] Move target parsing into a named CLI parser module.
 - [ ] Move shot id parsing into a named CLI parser module.
 - [ ] Move selection parsing into a named CLI parser module.
+- [ ] Reuse shared scene-target and shot-id parsing from `generation plan` if
+  that file is touched.
 - [ ] Ensure new modules contain real command adapter behavior and are not
   pass-through re-export files.
 
@@ -617,6 +770,7 @@ returning to giant nested command functions.
 - [ ] Create the `media import` command handler.
 - [ ] Create the media import purpose handler registry.
 - [ ] Add handlers for `lookbook.image`.
+- [ ] Add handlers for `lookbook.sheet`.
 - [ ] Add handlers for `cast.character-sheet`.
 - [ ] Add handlers for `cast.profile`.
 - [ ] Add handlers for `location.environment-sheet`.
@@ -649,6 +803,8 @@ returning to giant nested command functions.
   `spec update`, `spec show`, and `spec list`.
 - [ ] Add a handler for `generation estimate`.
 - [ ] Add a handler for `generation run`.
+- [ ] Keep `generation plan` in one focused adapter or handler and share parser
+  modules where useful.
 - [ ] Ensure `generation context` and `generation model list` call the generic
   core media-generation methods with parsed purpose and target values.
 - [ ] Ensure `generation spec validate`, `spec create`, `spec update`,
@@ -690,6 +846,8 @@ returning to giant nested command functions.
 ### Behavior Preservation Tests
 
 - [ ] Test `media import` routing for every supported purpose.
+- [ ] Test `media import --purpose lookbook.sheet` preserves current single-file
+  import behavior.
 - [ ] Test unsupported media import purpose diagnostics.
 - [ ] Test Location environment sheet import flag rejection for `--source` and
   `--receipt`.
@@ -699,6 +857,8 @@ returning to giant nested command functions.
   resource keys.
 - [ ] Test `generation context` calls the generic core service with every
   supported purpose's expected parsed target shape.
+- [ ] Test `generation context`, `generation model list`, and
+  `generation spec list` parser coverage for `lookbook.sheet`.
 - [ ] Test `generation model list` calls the generic core service with every
   supported purpose's expected parsed target shape.
 - [ ] Test `generation spec validate/create/update/show/list` call the generic
@@ -707,8 +867,18 @@ returning to giant nested command functions.
 - [ ] Test `generation run` calls the generic core service method.
 - [ ] Test approval-token and simulation flag preservation.
 - [ ] Test shot-video-only commands reject non-`shot.video-take` purposes.
+- [ ] Test `generation plan` keeps its current shot-video-only behavior.
 - [ ] Test unknown command paths return structured diagnostics.
 - [ ] Test JSON output writes machine-readable results to `stdout`.
+
+### Documentation Sync
+
+- [ ] Update `docs/architecture/reference/media-generation.md` so its current
+  purposes and command examples include the implemented purpose set.
+- [ ] Update `docs/cli/commands.md` so the `generation` and `media import`
+  sections include the implemented purpose set.
+- [ ] Confirm documentation avoids compatibility aliases, old command paths, and
+  stale purpose lists.
 
 ### Integration With Other Plans
 
@@ -720,6 +890,8 @@ returning to giant nested command functions.
   behavior into core.
 - [ ] Confirm media import either uses a focused CLI purpose registry or delegates
   to a core import-purpose helper without duplicating nested command dispatch.
+- [ ] Confirm the CLI does not deep-import core internal media-generation modules
+  when delegating import dispatch.
 - [ ] Confirm Studio Skill workflows continue to use CLI commands for metadata
   mutation.
 
@@ -731,6 +903,8 @@ returning to giant nested command functions.
   through purpose behavior.
 - [ ] Verify every command path has one obvious handler.
 - [ ] Verify every supported purpose appears in one relevant registry.
+- [ ] Verify `lookbook.sheet` appears in supported-purpose lists, parser
+  coverage, tests, and docs.
 - [ ] Verify no pass-through re-export files or compatibility aliases were
   added.
 - [ ] Run `pnpm test:cli`.

@@ -1805,7 +1805,7 @@ describe('renku CLI', () => {
       shotProductionPath,
       JSON.stringify(
         {
-          intentId: 'text-only',
+          inputModeId: 'text-only',
           modelChoice: 'fal-ai/bytedance/seedance-2.0',
           parameterValues: {},
         },

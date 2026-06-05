@@ -24,6 +24,7 @@ Decision history:
 - `../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
+- `../decisions/0026-use-thin-structured-cli-command-handlers.md`
 
 ## Architecture Center
 
@@ -219,6 +220,11 @@ It should not own business logic.
 The key rule:
 
 > CLI behavior is separate. CLI business logic is not.
+
+Command entry points must stay small. They should build a command runtime,
+dispatch to a focused handler by command path, and write the handler result.
+Purpose routing belongs in typed handler registries or core purpose registries,
+not in long nested `if` chains inside exported command functions.
 
 For example:
 

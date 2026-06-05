@@ -17,6 +17,7 @@ Decision history:
 - `../../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `../../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 - `../../decisions/0025-use-shared-media-generation-purpose-architecture.md`
+- `../../decisions/0026-use-thin-structured-cli-command-handlers.md`
 
 ## Current Purposes
 
@@ -24,6 +25,7 @@ The implemented media generation purposes are:
 
 ```text
 lookbook.image
+lookbook.sheet
 cast.character-sheet
 cast.profile
 location.environment-sheet
@@ -84,16 +86,21 @@ Current CLI surface:
 
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<id> --json
+renku generation context --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation context --purpose cast.character-sheet --target cast:<id> --json
 renku generation context --purpose cast.profile --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
+renku generation context --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
+renku generation model list --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation model list --purpose cast.character-sheet --target cast:<id> --json
 renku generation model list --purpose cast.profile --target cast:<id> --json
 renku generation model list --purpose location.environment-sheet --target location:<id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
+renku generation model list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --intent <input-mode-id> --json
 
 renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
@@ -101,14 +108,17 @@ renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
 
 renku generation spec list --purpose lookbook.image --target lookbook:<id> --json
+renku generation spec list --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation spec list --purpose cast.character-sheet --target cast:<id> --json
 renku generation spec list --purpose cast.profile --target cast:<id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
+renku generation spec list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
 renku generation run --spec <spec-id> --simulate --json
+renku generation plan --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --intent <input-mode-id> --model <model-choice> --json
 ```
 
 The CLI command names are generic, and the spec lifecycle now routes through
@@ -549,6 +559,10 @@ renku media import \
 For Lookbook Images, import registers an asset, creates the Lookbook image
 relationship, stores section placement, and emits Lookbook resource keys.
 
+For Lookbook Sheets, import registers an asset with type `lookbook_sheet`,
+attaches it to the Lookbook, and stores the file under
+`visual-language/lookbook/`.
+
 For Cast Character Sheets, import registers an image asset with type
 `character_sheet`, attaches it to the cast member with role `character_sheet`,
 and stores the file under `cast/<handle>/character-sheets/`.
@@ -613,18 +627,19 @@ renku media import \
 ```
 
 Single-file imports expect a project-relative source path. Location Environment
-Sheet import expects a JSON file whose `files` entries are project-relative
-paths.
+Sheet and Scene Storyboard Sheet imports expect JSON files whose entries are
+project-relative paths.
 
 For generated Lookbook images, agents must inspect the generated image before
 import and choose section tags based on what the image visibly demonstrates.
 `focusSections` is generation intent, not placement truth.
 
-## Future Purpose Rule
+## Adding Purpose Rule
 
-When adding the next purpose, add another concrete implementation file and
-direct switch cases. Do not introduce a registry or adapter framework until
-multiple concrete purposes prove that shared code would remove real complexity.
+When adding the next purpose, add a concrete core purpose definition and wire it
+through the shared media-generation purpose registry. Keep purpose-specific
+behavior in the owning core module, and keep CLI code to command parsing,
+target parsing, output, and structured diagnostics.
 
 Do not add model capability YAML, schema overlays, or inferred model support.
 Provider model JSON Schemas validate final payloads only.
