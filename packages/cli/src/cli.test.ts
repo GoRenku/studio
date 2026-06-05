@@ -689,6 +689,78 @@ describe('renku CLI', () => {
       ]),
     });
 
+    stdout = [];
+    stderr = [];
+    const sheetContextExitCode = await runRenkuCli(
+      [
+        'generation',
+        'context',
+        '--purpose',
+        'lookbook.sheet',
+        '--target',
+        `lookbook:${report.lookbook.id}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(sheetContextExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'lookbook.sheet',
+      target: { kind: 'lookbook', id: report.lookbook.id },
+      lookbook: { id: report.lookbook.id },
+      defaults: {
+        takeCount: 1,
+        sheetFrame: 'project',
+        detail: 'standard',
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const sheetModelListExitCode = await runRenkuCli(
+      [
+        'generation',
+        'model',
+        'list',
+        '--purpose',
+        'lookbook.sheet',
+        '--target',
+        `lookbook:${report.lookbook.id}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(sheetModelListExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      purpose: 'lookbook.sheet',
+      models: expect.arrayContaining([
+        expect.objectContaining({
+          modelChoice: 'fal-ai/nano-banana-2',
+          available: true,
+        }),
+      ]),
+    });
+
+    stdout = [];
+    stderr = [];
+    const sheetSpecListExitCode = await runRenkuCli(
+      [
+        'generation',
+        'spec',
+        'list',
+        '--purpose',
+        'lookbook.sheet',
+        '--target',
+        `lookbook:${report.lookbook.id}`,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(sheetSpecListExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      specs: [],
+    });
+
     const generatedPath = 'generated/media/lookbook-palette.png';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', generatedPath)), {
       recursive: true,
@@ -738,6 +810,63 @@ describe('renku CLI', () => {
         expect.objectContaining({
           type: 'studio.projectResourcesChanged',
           resourceKeys: mediaImportReport.resourceKeys,
+          source: { kind: 'cli', command: 'media import' },
+        }),
+      ]),
+    });
+
+    const generatedSheetPath = 'generated/media/imperial-wound-lookbook-sheet.png';
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', generatedSheetPath),
+      'sheet image bytes'
+    );
+
+    stdout = [];
+    stderr = [];
+    const sheetImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'lookbook.sheet',
+        '--target',
+        `lookbook:${report.lookbook.id}`,
+        '--source',
+        generatedSheetPath,
+        '--title',
+        'Imperial Wound lookbook sheet',
+        '--summary',
+        'Model-facing visual language guide.',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(sheetImportExitCode).toBe(0);
+    const sheetImportReport = JSON.parse(stdout.join('\n'));
+    expect(sheetImportReport).toMatchObject({
+      purpose: 'lookbook.sheet',
+      imported: {
+        asset: {
+          type: 'lookbook_sheet',
+          title: 'Imperial Wound lookbook sheet',
+          oneLineSummary: 'Model-facing visual language guide.',
+          files: [
+            {
+              role: 'source',
+              projectRelativePath:
+                'visual-language/lookbook/imperial-wound-lookbook-sheet.png',
+            },
+          ],
+        },
+      },
+    });
+    await expect(
+      createStudioCoordinationService({ homeDir }).readStudioEvents()
+    ).resolves.toMatchObject({
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'studio.projectResourcesChanged',
+          resourceKeys: sheetImportReport.resourceKeys,
           source: { kind: 'cli', command: 'media import' },
         }),
       ]),

@@ -381,6 +381,7 @@ function parseShots(value: string): string[] {
 function parseGenerationPurpose(purpose: string): MediaGenerationPurpose {
   switch (purpose) {
     case 'lookbook.image':
+    case 'lookbook.sheet':
     case 'cast.character-sheet':
     case 'cast.profile':
     case 'location.environment-sheet':
@@ -405,6 +406,7 @@ function parseGenerationTarget(input: {
 }): MediaGenerationRequestTarget {
   switch (parseGenerationPurpose(input.purpose)) {
     case 'lookbook.image':
+    case 'lookbook.sheet':
       return { kind: 'lookbook', id: parseLookbookTarget(input.target) };
     case 'cast.character-sheet':
     case 'cast.profile':
@@ -442,7 +444,7 @@ function unsupportedGenerationPurpose(purpose: string): never {
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-sheet, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-sheet, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
   });
 }
 
