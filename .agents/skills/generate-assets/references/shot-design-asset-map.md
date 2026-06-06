@@ -267,6 +267,7 @@ Expected provider cost estimate:
 
 - consistency reference: about `$0.15`;
 - each image sheet: about `$0.15`;
+- each dedicated still image: about `$0.15`;
 - each dedicated motion start frame: about `$0.15`;
 - each 4-second 480p motion preview with one input image: `$0.33`.
 
@@ -292,6 +293,13 @@ with exactly four 16:9 stills in a 2x2 arrangement.
 | 12 | `lens-field` | `sheet --name lens-field --yes` or `sheet --number 12 --yes` | `sheets/sheet-012.png` | `lens-wide`, `lens-normal`, `lens-short-tele`, `lens-tele` |
 | 13 | `focus-depth` | `sheet --name focus-depth --yes` or `sheet --number 13 --yes` | `sheets/sheet-013.png` | `lens-macro`, `focus-deep-focus`, `focus-shallow-focus`, `focus-rack-focus` |
 | 14 | `focus-special` | `sheet --name focus-special --yes` or `sheet --number 14 --yes` | `sheets/sheet-014.png` | `focus-tilt-shift`, filler ignored, filler ignored, filler ignored |
+
+Additional shot-size tiles can be generated as dedicated 16:9 stills when they
+do not fit the original four-cell sheet grouping:
+
+| Asset | Command | Output | Reference |
+|-------|---------|--------|-----------|
+| `shot-size-establishing-shot` | `still --asset shot-size-establishing-shot --yes` | `images/shot-size-establishing-shot.png` | Uses `images/movement-pan.png` as the exterior hotel/garden location anchor. |
 
 ## Motion Calls
 

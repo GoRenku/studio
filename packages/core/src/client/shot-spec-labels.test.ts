@@ -48,4 +48,12 @@ describe('deriveShotSpecPromptStrings', () => {
     });
     expect(derived.cameraMovement).toBe('handheld drift');
   });
+
+  it('derives the establishing shot label from structured shot size specs', () => {
+    const derived = deriveShotSpecPromptStrings({
+      shotSize: 'establishing-shot',
+    });
+
+    expect(derived.shotType).toBe('Establishing Shot');
+  });
 });

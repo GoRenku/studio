@@ -10,6 +10,7 @@ const SHOT_SIZE_IDS = [
   'full-shot',
   'wide-shot',
   'extreme-wide-shot',
+  'establishing-shot',
 ] as const;
 
 const SUBJECT_FRAMING_IDS = [

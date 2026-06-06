@@ -83,6 +83,10 @@ const ASSETS = [
   asset('focus-tilt-shift', 'Focus / DOF', 'Tilt-Shift', 'still', 'A miniature-like plane of focus across the symmetrical room.'),
 ];
 
+const EXTRA_STILL_ASSETS = [
+  asset('shot-size-establishing-shot', 'Shot Size', 'Establishing Shot', 'still', 'No person. A drone-top establishing view over the same pastel garden hotel exterior: hotel facade, garden paths, hedges, fountain or terrace, roofline, and surrounding grounds clearly show where the scene takes place. It builds tone and context without becoming only an extreme-wide scale demonstration.'),
+];
+
 const sheetCells = chunkWithFillers(ASSETS, 4);
 const SHEETS = [
   sheet(1, 'shot-size-close', 'Close Shot Sizes'),
@@ -110,6 +114,9 @@ if (command === 'reference') {
 } else if (command === 'motion-frame') {
   await requireYes(options, 'motion start-frame generation');
   await generateMotionFrame(options);
+} else if (command === 'still') {
+  await requireYes(options, 'still image generation');
+  await generateStill(options);
 } else if (command === 'motion') {
   await requireYes(options, 'motion generation');
   await generateMotion(options);
@@ -270,6 +277,49 @@ async function generateMotionFrame(options) {
   console.log(relativeOutputPath(imagePath));
 }
 
+async function generateStill(options) {
+  const source = EXTRA_STILL_ASSETS.find((entry) => entry.id === options.asset);
+  if (!source) {
+    throw new Error(`Unknown still asset. Use one of: ${extraStillIds().join(', ')}`);
+  }
+  await prepareFolders();
+  if (!await fileExists(consistencyPath)) {
+    throw new Error('reference/consistency-sheet.png is required before still image generation.');
+  }
+  const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+  if (!options.force && await fileExists(imagePath)) {
+    throw new Error(`${relativeOutputPath(imagePath)} already exists. Pass --force to replace it.`);
+  }
+  const locationAnchorPath = await resolveStillLocationAnchorPath(source);
+  const fal = await loadFal();
+  const referenceUrl = await uploadPng(fal, consistencyPath);
+  const imageUrls = [referenceUrl];
+  if (locationAnchorPath) {
+    imageUrls.push(await uploadPng(fal, locationAnchorPath));
+  }
+  const prompt = buildStillPrompt(source, { hasLocationAnchor: Boolean(locationAnchorPath) });
+  const result = await fal.subscribe(sheetModel, {
+    input: {
+      ...commonImageInput(prompt, '16:9'),
+      image_urls: imageUrls,
+    },
+  });
+  await downloadToFile(firstImageUrl(result.data), imagePath);
+  const manifest = await readManifestOrCreate();
+  upsertByKey(manifest.images, 'id', {
+    id: source.id,
+    path: relativeOutputPath(imagePath),
+    sourceSheet: null,
+    locationReferencePath: locationAnchorPath ? relativeOutputPath(locationAnchorPath) : null,
+    model: sheetModel,
+    requestId: result.requestId ?? null,
+    prompt,
+    status: 'review_required',
+  });
+  await writeManifest(manifest);
+  console.log(relativeOutputPath(imagePath));
+}
+
 async function generateMotion(options) {
   const source = ASSETS.find((entry) => entry.id === options.asset);
   if (!source || source.kind !== 'motion') {
@@ -380,6 +430,12 @@ function printPlan() {
   }
   console.log('Movement motion ids:');
   console.log(movementMotionIds().join(', '));
+  if (EXTRA_STILL_ASSETS.length) {
+    console.log('Extra still image commands:');
+    for (const id of extraStillIds()) {
+      console.log(`still --asset ${id} --yes`);
+    }
+  }
 }
 
 async function printStatus() {
@@ -395,6 +451,10 @@ async function printStatus() {
     const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
     const motionPath = path.join(outputRoot, 'motion', `${source.id}.mp4`);
     console.log(`motion ${source.id}: still ${await fileExists(imagePath) ? 'exists' : 'missing'}, video ${await fileExists(motionPath) ? 'exists' : 'missing'}`);
+  }
+  for (const source of EXTRA_STILL_ASSETS) {
+    const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+    console.log(`still ${source.id}: ${await fileExists(imagePath) ? 'exists' : 'missing'} (${relativeOutputPath(imagePath)})`);
   }
 }
 
@@ -491,6 +551,30 @@ function buildMotionFramePrompt(source, options = {}) {
   ].join('\n');
 }
 
+function buildStillPrompt(source, options = {}) {
+  const locationAnchorGuidance = options.hasLocationAnchor
+    ? [
+      'Use the second reference image as the binding source for the exterior hotel location: same facade family, garden, fountain or terrace, paths, hedges, color, and time of day.',
+      'Change only the viewpoint to a high drone-top establishing view; do not invent a different hotel, season, street, or architectural style.',
+    ]
+    : [];
+  return [
+    `Create one 16:9 still image for the "${source.label}" Shot Design tile.`,
+    'This tile demonstrates the cinematography concept, not a production scene. It must be a polished, standalone UI tile image.',
+    'An establishing shot appears at the head of a scene and clearly shows the location of the action. It builds tone and context. It does not have to be a generic wide shot, but this asset should use the requested drone-top hotel-and-garden example.',
+    ...locationAnchorGuidance,
+    'Use the Pastel Garden Hotel Exterior direction: elegant European hotel, manor, or villa facade, garden paths, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, roofline, and planted foreground or courtyard layers.',
+    'No person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.',
+    'Use the provided reference image only for palette, lighting, architectural language, materials, and refined production design.',
+    'Make the frame feel like a clear scene-opening context shot from above: hotel, garden layout, paths, and surrounding grounds are readable at a glance.',
+    'Keep the palette consistent with the generated motion tiles: parchment cream, pastel ochre, antique gold, pale mint-sage planting, muted terracotta stone, warm ink shadows, soft daylight, and gentle contrast.',
+    'Do not show lobby interiors, reception desks, luggage, guests, tourism signage, streets, vehicles, film sets, visible crew, cameras, lights, or behind-the-scenes production language.',
+    'Do not add arrows, labels, captions, text, numbers, UI controls, crop marks, logos, or watermarks.',
+    'Concept intent:',
+    `${source.label}: ${source.description}`,
+  ].join('\n');
+}
+
 function buildMotionPrompt(source) {
   return [
     source.motionPrompt,
@@ -533,6 +617,10 @@ function movementMotionIds() {
   return motionIds().filter((id) => id.startsWith('movement-'));
 }
 
+function extraStillIds() {
+  return EXTRA_STILL_ASSETS.map((entry) => entry.id);
+}
+
 async function resolveMovementLocationAnchorPath(source) {
   if (!source.id.startsWith('movement-') || source.id === 'movement-pan') {
     return null;
@@ -540,6 +628,17 @@ async function resolveMovementLocationAnchorPath(source) {
   const anchorPath = path.join(outputRoot, 'images', 'movement-pan.png');
   if (!await fileExists(anchorPath)) {
     throw new Error(`${relativeOutputPath(anchorPath)} is required as the movement location anchor before generating ${source.id}. Generate and approve movement-pan first.`);
+  }
+  return anchorPath;
+}
+
+async function resolveStillLocationAnchorPath(source) {
+  if (source.id !== 'shot-size-establishing-shot') {
+    return null;
+  }
+  const anchorPath = path.join(outputRoot, 'images', 'movement-pan.png');
+  if (!await fileExists(anchorPath)) {
+    throw new Error(`${relativeOutputPath(anchorPath)} is required as the hotel garden location anchor before generating ${source.id}. Generate and approve movement-pan first.`);
   }
   return anchorPath;
 }

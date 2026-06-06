@@ -123,7 +123,7 @@ describe('scene shot list commands', () => {
         {
           ...valid.shots[0]!,
           shotSpecs: {
-            shotSize: 'wide-shot',
+            shotSize: 'establishing-shot',
             subjectFraming: ['single'],
             lens: {
               type: 'wide',

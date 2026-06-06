@@ -25,6 +25,7 @@ export const SHOT_SIZE_LABELS: Record<ShotSizeId, string> = {
   'full-shot': 'Full Shot',
   'wide-shot': 'Wide Shot',
   'extreme-wide-shot': 'Extreme Wide',
+  'establishing-shot': 'Establishing Shot',
 };
 
 export const SUBJECT_FRAMING_LABELS: Record<SubjectFramingId, string> = {

@@ -244,11 +244,38 @@ describe('SceneShotCompositionTab', () => {
   it('treats shot size as a single-select ladder', () => {
     renderWithProvider(<SceneShotCompositionTab />);
 
+    const shotSizeButtons = screen
+      .getAllByRole('button')
+      .filter((button) =>
+        [
+          'Extreme Close-Up',
+          'Close-Up',
+          'Medium Close-Up',
+          'Medium Shot',
+          'Medium Full',
+          'Full Shot',
+          'Wide Shot',
+          'Extreme Wide',
+          'Establishing Shot',
+        ].includes(button.textContent ?? '')
+      );
+    expect(shotSizeButtons.map((button) => button.textContent)).toEqual([
+      'Extreme Close-Up',
+      'Close-Up',
+      'Medium Close-Up',
+      'Medium Shot',
+      'Medium Full',
+      'Full Shot',
+      'Wide Shot',
+      'Extreme Wide',
+      'Establishing Shot',
+    ]);
+
     fireEvent.click(screen.getByRole('button', { name: 'Close-Up' }));
     expect(pressed('Close-Up')).toBe(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Medium Shot' }));
-    expect(pressed('Medium Shot')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Establishing Shot' }));
+    expect(pressed('Establishing Shot')).toBe(true);
     expect(pressed('Close-Up')).toBe(false);
   });
 
@@ -282,7 +309,7 @@ describe('SceneShotCompositionTab', () => {
   it('persists the structured composition selection via autosave', async () => {
     renderWithProvider(<SceneShotCompositionTab />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Medium Close-Up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Establishing Shot' }));
 
     await waitFor(
       () => {
@@ -290,7 +317,7 @@ describe('SceneShotCompositionTab', () => {
           'constantinople',
           'scene_hook',
           'shot_001',
-          expect.objectContaining({ shotSize: 'medium-close-up' })
+          expect.objectContaining({ shotSize: 'establishing-shot' })
         );
       },
       { timeout: 2000 }

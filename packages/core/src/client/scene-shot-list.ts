@@ -175,7 +175,8 @@ export type ShotSizeId =
   | 'medium-full-shot'
   | 'full-shot'
   | 'wide-shot'
-  | 'extreme-wide-shot';
+  | 'extreme-wide-shot'
+  | 'establishing-shot';
 
 /** Who/what is in frame and their relationship. Multi-select (see 0036). */
 export type SubjectFramingId =
