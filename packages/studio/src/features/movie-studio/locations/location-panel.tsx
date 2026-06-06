@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { LineTabBar } from '@/ui/line-tab-bar';
-import { Tabs, TabsContent } from '@/ui/tabs';
+import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type {
   LocationResourceResponse,
   StudioAssetResponse,
@@ -121,22 +120,22 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
   }
 
   return (
-    <Tabs defaultValue='details' className='h-full gap-0'>
-      <LineTabBar
-        items={[
-          { value: 'details', label: 'Details' },
-          { value: 'visual', label: 'Visual Content' },
-        ]}
-      />
-      <TabsContent value='details' className='min-h-0 overflow-y-auto p-0'>
+    <LineTabs
+      defaultValue='details'
+      items={[
+        { value: 'details', label: 'Details' },
+        { value: 'visual', label: 'Visual Content' },
+      ]}
+    >
+      <LineTabsContent value='details'>
         <LocationDetailsTab
           projectName={projectName}
           locationId={locationId}
           resource={resource}
           assets={assets}
         />
-      </TabsContent>
-      <TabsContent value='visual' className='min-h-0 overflow-y-auto p-0'>
+      </LineTabsContent>
+      <LineTabsContent value='visual'>
         <LocationVisualContentTab
           projectName={projectName}
           locationId={locationId}
@@ -144,8 +143,8 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
           onToggleActive={toggleActive}
           onDeleteAsset={removeAsset}
         />
-      </TabsContent>
-    </Tabs>
+      </LineTabsContent>
+    </LineTabs>
   );
 }
 

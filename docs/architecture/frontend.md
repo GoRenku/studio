@@ -44,6 +44,22 @@ implementation to `src/ui`, update callers directly, and remove the old
 feature-owned implementation. Do not add re-export stubs, compatibility aliases,
 or thin wrappers whose only job is to rename the same component.
 
+## Detail Panel Structure
+
+Movie Studio detail pages share a single visual rule for header and tabs:
+
+- the detail panel title header is one band;
+- the line-tab bar is the next band, directly below it;
+- there is no margin between the header and the tab bar;
+- the tab bar starts at the panel content's left edge;
+- tabbed surfaces render inside a flush `PanelShell` content area, not inside a
+  padded wrapper.
+
+Feature code should use the shared line-tab primitives from `src/ui` for these
+surfaces. If a detail page needs interior spacing, apply that spacing inside the
+selected tab content, below the tab bar. Do not wrap the entire tab system in a
+card, centered `max-w-*` container, or general-purpose padded `div`.
+
 ## Media Surfaces
 
 Studio has several media-heavy surfaces: Inspiration grabs, Lookbooks, Cast

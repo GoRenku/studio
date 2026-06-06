@@ -12,8 +12,7 @@ import {
   Trees,
 } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { LineTabBar } from '@/ui/line-tab-bar';
-import { Tabs, TabsContent } from '@/ui/tabs';
+import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneNarrativeResource } from '@/services/studio-screenplay-api';
@@ -80,18 +79,15 @@ export function ScenePanel({
   }
 
   return (
-    <Tabs
+    <LineTabs
       value={activeTab}
       onValueChange={(value) => setUserActiveTab(value as ScenePanelTab)}
-      className='h-full gap-0'
+      items={[
+        { value: 'narrative', label: 'Narrative' },
+        { value: 'shots', label: 'Shots' },
+      ]}
     >
-      <LineTabBar
-        items={[
-          { value: 'narrative', label: 'Narrative' },
-          { value: 'shots', label: 'Shots' },
-        ]}
-      />
-      <TabsContent value='narrative' className='overflow-y-auto px-6 py-10 sm:px-10'>
+      <LineTabsContent value='narrative' className='px-6 py-10 sm:px-10'>
         <article className='mx-auto max-w-2xl text-foreground'>
           <SceneNav
             previousScene={previousScene}
@@ -117,16 +113,19 @@ export function ScenePanel({
             placement='bottom'
           />
         </article>
-      </TabsContent>
-      <TabsContent value='shots' className='flex min-h-0 min-w-0 overflow-hidden'>
+      </LineTabsContent>
+      <LineTabsContent
+        value='shots'
+        className='flex min-h-0 min-w-0 overflow-hidden'
+      >
         <SceneShotsTab
           projectName={projectName}
           sceneId={sceneId}
           shotId={shotId}
           onHeaderActionChange={onHeaderActionChange}
         />
-      </TabsContent>
-    </Tabs>
+      </LineTabsContent>
+    </LineTabs>
   );
 }
 

@@ -227,9 +227,7 @@ export function MovieStudioScreen({
             <PanelShell
               title={resolvedSelection.kicker}
               contentClassName={
-                selection.type === 'inspiration' || selection.type === 'scene'
-                  ? 'p-0'
-                  : undefined
+                usesFlushPanelContent(selection.type) ? 'p-0' : undefined
               }
               action={
                 selection.type === 'projectInformation' ? (
@@ -329,4 +327,14 @@ export function MovieStudioScreen({
 interface StudioResourceChangedDetail {
   projectName: string;
   resourceKeys: string[];
+}
+
+function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean {
+  return (
+    selectionType === 'castMember' ||
+    selectionType === 'inspiration' ||
+    selectionType === 'location' ||
+    selectionType === 'lookbook' ||
+    selectionType === 'scene'
+  );
 }

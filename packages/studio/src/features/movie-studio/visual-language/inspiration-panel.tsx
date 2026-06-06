@@ -11,7 +11,7 @@ import {
   readInspirationResource,
   uploadInspirationImages,
 } from '@/services/studio-visual-language-api';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { EmptyState } from './empty-state';
 import { GrabsTab } from './grabs-tab';
 import { InspirationAnalysisTab } from './inspiration-analysis-tab';
@@ -131,49 +131,32 @@ export function InspirationPanel({
       ) : !selectedFolder ? (
         <EmptyState title='No Inspiration folder selected.' />
       ) : resource && resource.folder.id === selectedFolderId ? (
-        <Tabs
+        <LineTabs
           key={`${selectedFolderId}:${resource.analysis ? 'analysis' : 'grabs'}`}
           defaultValue={resource.analysis ? 'analysis' : 'grabs'}
-          className='h-full gap-0 bg-panel-bg'
+          className='bg-panel-bg'
+          items={[
+            { value: 'grabs', label: 'Grabs' },
+            { value: 'analysis', label: 'Analysis' },
+          ]}
+          trailing={
+            <h2 className='truncate text-sm font-black text-foreground'>
+              {resource.folder.name}
+            </h2>
+          }
         >
-          <div className='shrink-0 border-b border-border/40 bg-sidebar-header-bg px-5 py-3 sm:px-8'>
-            <div className='mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3'>
-              <div className='min-w-0'>
-                <h2 className='truncate text-lg font-black text-foreground'>
-                  {resource.folder.name}
-                </h2>
-              </div>
-              <TabsList
-                variant='line'
-                className='h-10 rounded-none bg-transparent p-0 text-muted-foreground'
-              >
-                <TabsTrigger
-                  value='grabs'
-                  className='h-10 rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground data-[state=active]:bg-item-active-bg data-[state=active]:text-foreground data-[state=active]:after:bg-primary'
-                >
-                  Grabs
-                </TabsTrigger>
-                <TabsTrigger
-                  value='analysis'
-                  className='h-10 rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground data-[state=active]:bg-item-active-bg data-[state=active]:text-foreground data-[state=active]:after:bg-primary'
-                >
-                  Analysis
-                </TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
-          <TabsContent value='grabs' className='min-h-0 overflow-y-auto p-0'>
+          <LineTabsContent value='grabs'>
             <GrabsTab
               projectName={projectName}
               resource={resource}
               onUpload={uploadImages}
               onDeleteImage={removeImage}
             />
-          </TabsContent>
-          <TabsContent value='analysis' className='min-h-0 overflow-y-auto p-0'>
+          </LineTabsContent>
+          <LineTabsContent value='analysis'>
             <InspirationAnalysisTab projectName={projectName} resource={resource} />
-          </TabsContent>
-        </Tabs>
+          </LineTabsContent>
+        </LineTabs>
       ) : (
         <EmptyState title='Loading Inspiration folder.' />
       )}

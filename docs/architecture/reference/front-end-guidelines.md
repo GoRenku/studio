@@ -196,6 +196,61 @@ The desired reading experience is that a feature file explains the shape of the
 surface at a glance, while focused child components own the details of each
 area.
 
+### Detail Panel Tabs And Insets
+
+Movie Studio detail panels use a shared shell with a fixed title header. When a
+surface places a tab bar directly under that title header, the tab bar must be
+flush with the detail panel content edge.
+
+Required structure:
+
+- the `PanelShell` title/header owns the top label, such as `BOMBARDMENT`,
+  `LOOKBOOK`, `URBAN`, or a location name;
+- tabbed detail surfaces must pass `p-0` to the `PanelShell` content area;
+- the first child of that flush content area should be the shared line-tab
+  primitive from `src/ui`;
+- the tab bar must have no extra left inset, top margin, wrapping card, centered
+  max-width container, or decorative inner panel around it;
+- tab content may add its own padding after the tab bar when the content needs
+  breathing room, but that padding must not move the tab bar itself.
+
+Use the Bombardment scene detail as the reference pattern: the title header and
+line-tab row are adjacent bands in the same panel, and the tab row begins at the
+same left edge as the panel content.
+
+Avoid this pattern:
+
+```tsx
+<PanelShell>
+  <div className="p-4">
+    <Tabs>
+      <LineTabBar />
+      ...
+    </Tabs>
+  </div>
+</PanelShell>
+```
+
+That creates an accidental box-within-box effect and makes the tab bar drift
+away from the panel edge.
+
+Prefer this pattern:
+
+```tsx
+<PanelShell contentClassName="p-0">
+  <LineTabs items={tabs}>
+    <LineTabsContent value="details">
+      <DetailsTab />
+    </LineTabsContent>
+  </LineTabs>
+</PanelShell>
+```
+
+Inset containers, centered `max-w-*` wrappers, cards inside cards, and large
+outer padding are allowed only when the surface is intentionally presenting a
+document, form, grid, or repeated card collection that needs that interior
+structure. Do not add them as a default page-building habit.
+
 ### `services/`
 
 Owns browser-side adapters to external systems. In this app, that currently

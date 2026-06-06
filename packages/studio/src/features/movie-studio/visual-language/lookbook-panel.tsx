@@ -12,8 +12,7 @@ import {
   setActiveLookbook,
 } from '@/services/studio-visual-language-api';
 import { Button } from '@/ui/button';
-import { LineTabBar } from '@/ui/line-tab-bar';
-import { Tabs, TabsContent } from '@/ui/tabs';
+import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { EmptyState } from './empty-state';
 import { LookbookVisualContentTab } from './lookbook-visual-content-tab';
 import { VisualLanguageReport } from './visual-language-report';
@@ -111,14 +110,14 @@ export function LookbookPanel({
   }
 
   return (
-    <Tabs defaultValue='definition' className='h-full gap-0'>
-      <LineTabBar
-        items={[
-          { value: 'definition', label: 'Definition' },
-          { value: 'visual', label: 'Visual Content' },
-        ]}
-      />
-      <TabsContent value='definition' className='min-h-0 overflow-y-auto p-0'>
+    <LineTabs
+      defaultValue='definition'
+      items={[
+        { value: 'definition', label: 'Definition' },
+        { value: 'visual', label: 'Visual Content' },
+      ]}
+    >
+      <LineTabsContent value='definition'>
         <VisualLanguageReport
           projectName={projectName}
           title={resource.lookbook.name}
@@ -150,8 +149,8 @@ export function LookbookPanel({
             camera: resource.lookbook.camera,
           }}
         />
-      </TabsContent>
-      <TabsContent value='visual' className='min-h-0 overflow-y-auto p-0'>
+      </LineTabsContent>
+      <LineTabsContent value='visual'>
         <LookbookVisualContentTab
           projectName={projectName}
           resource={resource}
@@ -159,8 +158,8 @@ export function LookbookPanel({
           onDeleteSheet={removeSheet}
           onSetDefaultSheet={setDefaultSheet}
         />
-      </TabsContent>
-    </Tabs>
+      </LineTabsContent>
+    </LineTabs>
   );
 }
 

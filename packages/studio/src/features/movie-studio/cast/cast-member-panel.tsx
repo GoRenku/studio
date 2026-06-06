@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { LineTabBar } from '@/ui/line-tab-bar';
-import { Tabs, TabsContent } from '@/ui/tabs';
+import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type {
   CastMemberResourceResponse,
   StudioAssetResponse,
@@ -120,23 +119,23 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
   }
 
   return (
-    <Tabs defaultValue='details' className='h-full gap-0'>
-      <LineTabBar
-        items={[
-          { value: 'details', label: 'Details' },
-          { value: 'visual', label: 'Visual Content' },
-          { value: 'voice', label: 'Voice Design' },
-        ]}
-      />
-      <TabsContent value='details' className='min-h-0 overflow-y-auto p-0'>
+    <LineTabs
+      defaultValue='details'
+      items={[
+        { value: 'details', label: 'Details' },
+        { value: 'visual', label: 'Visual Content' },
+        { value: 'voice', label: 'Voice Design' },
+      ]}
+    >
+      <LineTabsContent value='details'>
         <CastMemberDetailsTab
           projectName={projectName}
           castMemberId={castMemberId}
           resource={resource}
           assets={assets}
         />
-      </TabsContent>
-      <TabsContent value='visual' className='min-h-0 overflow-y-auto p-0'>
+      </LineTabsContent>
+      <LineTabsContent value='visual'>
         <CastMemberVisualContentTab
           projectName={projectName}
           castMemberId={castMemberId}
@@ -144,11 +143,11 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
           onTogglePick={togglePick}
           onDeleteAsset={removeAsset}
         />
-      </TabsContent>
-      <TabsContent value='voice' className='p-4 text-sm text-muted-foreground'>
+      </LineTabsContent>
+      <LineTabsContent value='voice' className='p-4 text-sm text-muted-foreground'>
         Voice design will appear here when project assets are attached.
-      </TabsContent>
-    </Tabs>
+      </LineTabsContent>
+    </LineTabs>
   );
 }
 

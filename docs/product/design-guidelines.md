@@ -396,7 +396,7 @@ Status/plan dialogs use raw `<button>` elements with custom styling including `a
 
 ### Tabs
 
-Custom tab implementation (not Shadcn Tabs):
+Line tabs use the shared Studio tab primitives:
 ```
 Container: flex items-center h-[45px] border-b border-border/40 bg-sidebar-header-bg shrink-0
 Tab (active):   text-foreground bg-item-active-bg + 2px bg-primary bottom indicator
@@ -405,6 +405,24 @@ Tab label:      text-[11px] uppercase tracking-[0.12em] font-semibold
 ```
 
 The active tab has a 2px primary-colored bottom bar indicator.
+
+On detail panels, the line-tab row is a structural band directly below the panel
+title/header band. It must be flush with the panel content edge:
+
+- no margin between the title/header band and the tab band;
+- no left padding before the first tab;
+- no wrapping card, centered content wrapper, or padded container around the tab
+  row;
+- padding may be added inside the selected tab content, below the tab row.
+
+The Bombardment scene detail screen is the reference pattern: `BOMBARDMENT` is
+the header band, `NARRATIVE / SHOTS` is the immediately adjacent tab band, and
+both bands align to the same left edge. Cast, Locations, Lookbooks, and future
+detail pages should follow that same structure.
+
+Avoid adding nested panels by default. Borders, cards, inset wrappers, and
+centered `max-w-*` content are useful when they describe a real object or
+document surface, but they should not be used as automatic page scaffolding.
 
 ### CollapsibleSections
 

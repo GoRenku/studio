@@ -19,7 +19,7 @@ export function LineTabBar<Value extends string>({
   return (
     <TabsList
       variant='line'
-      className='h-[45px] w-full justify-start gap-0 rounded-none border-b border-border/40 bg-sidebar-header-bg p-0'
+      className='!h-[45px] w-full justify-start gap-0 rounded-none border-b border-border/40 bg-sidebar-header-bg p-0'
     >
       {items.map((item) => (
         <TabsTrigger
