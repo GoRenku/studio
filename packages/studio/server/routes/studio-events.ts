@@ -2,6 +2,8 @@ import {
   createProjectDataService,
   createStudioCoordinationService,
   validateStudioFocusRequestForProject,
+  type ScenePanelTab,
+  type SceneShotDetailTab,
   type StudioSelection,
   type ProjectDataService,
   type StudioCoordinationService,
@@ -17,6 +19,18 @@ import { toStudioCurrentResponse, toStudioEventReadResponse } from '../http/stud
 import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
+const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
+  'description',
+  'lookbook',
+  'composition',
+  'motion',
+  'cast',
+  'location',
+  'references',
+  'ai-production',
+];
+
 export interface CreateStudioEventsRouteOptions {
   coordination?: StudioCoordinationService;
   projectData?: StudioEventsRouteProjectData;
@@ -24,7 +38,10 @@ export interface CreateStudioEventsRouteOptions {
   serverInstanceId?: string;
 }
 
-type StudioEventsRouteProjectData = Pick<ProjectDataService, 'readProject'>;
+type StudioEventsRouteProjectData = Pick<
+  ProjectDataService,
+  'readProject' | 'readSceneShotListResource'
+>;
 
 export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions) {
   const coordination = options.coordination ?? createStudioCoordinationService();
@@ -125,6 +142,14 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
             diagnostics: validation.diagnostics,
           });
         }
+        const shotValidation = await validateSceneShotSelection({
+          projectData,
+          projectName: body.projectName ?? '',
+          focus: focus.focus,
+        });
+        if (!shotValidation.valid) {
+          return c.json(shotValidation);
+        }
         return c.json({ valid: true });
       } catch (error) {
         return projectErrorResponse(c, error);
@@ -147,6 +172,49 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
         return projectErrorResponse(c, error);
       }
     });
+}
+
+async function validateSceneShotSelection(input: {
+  projectData: StudioEventsRouteProjectData;
+  projectName: string;
+  focus: StudioFocusRequest;
+}): Promise<
+  | { valid: true }
+  | {
+      valid: false;
+      reason: 'selectionNotFound';
+      diagnostics: DiagnosticIssue[];
+    }
+> {
+  if (input.focus.screen !== 'movieStudio') {
+    return { valid: true };
+  }
+  const selection = input.focus.selection;
+  if (selection.type !== 'scene' || !selection.shotId) {
+    return { valid: true };
+  }
+  const resource = await input.projectData.readSceneShotListResource({
+    projectName: input.projectName,
+    sceneId: selection.id,
+  });
+  const shot = resource.activeShotList?.shots.find(
+    (entry) => entry.shotId === selection.shotId
+  );
+  if (shot) {
+    return { valid: true };
+  }
+  return {
+    valid: false,
+    reason: 'selectionNotFound',
+    diagnostics: [
+      createDiagnosticError(
+        'STUDIO_COORDINATION038',
+        `Requested shot '${selection.shotId}' was not found in the active shot list.`,
+        { path: ['focus', 'selection', 'shotId'], context: 'studio.focusRequested' },
+        'Request a shot id from the scene active shot list.'
+      ),
+    ],
+  };
 }
 
 type StudioFocusRequestReadResult =
@@ -220,9 +288,30 @@ function readStudioSelection(value: unknown): StudioSelection | null {
     return { type: selection.type, lookbookId: selection.lookbookId };
   }
 
+  if (selection.type === 'scene' && typeof selection.id === 'string' && selection.id.trim()) {
+    const sceneTab = readScenePanelTab(selection.sceneTab);
+    const shotId =
+      typeof selection.shotId === 'string' && selection.shotId.trim()
+        ? selection.shotId
+        : undefined;
+    const shotTab = readSceneShotDetailTab(selection.shotTab);
+    if (selection.sceneTab !== undefined && !sceneTab) {
+      return null;
+    }
+    if (selection.shotTab !== undefined && !shotTab) {
+      return null;
+    }
+    return {
+      type: selection.type,
+      id: selection.id,
+      ...(sceneTab ? { sceneTab } : {}),
+      ...(shotId ? { shotId } : {}),
+      ...(shotTab ? { shotTab } : {}),
+    };
+  }
+
   if (
     (selection.type === 'sequence' ||
-      selection.type === 'scene' ||
       selection.type === 'castMember' ||
       selection.type === 'location') &&
     typeof selection.id === 'string' &&
@@ -232,6 +321,22 @@ function readStudioSelection(value: unknown): StudioSelection | null {
   }
 
   return null;
+}
+
+function readScenePanelTab(value: unknown): ScenePanelTab | undefined {
+  return typeof value === 'string' &&
+    SCENE_PANEL_TABS.includes(value as ScenePanelTab)
+    ? (value as ScenePanelTab)
+    : undefined;
+}
+
+function readSceneShotDetailTab(
+  value: unknown
+): SceneShotDetailTab | undefined {
+  return typeof value === 'string' &&
+    SCENE_SHOT_DETAIL_TABS.includes(value as SceneShotDetailTab)
+    ? (value as SceneShotDetailTab)
+    : undefined;
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {

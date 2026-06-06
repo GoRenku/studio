@@ -1,6 +1,22 @@
 import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../renku-config.js';
 import { createProjectDataService } from '../project-data-service.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import type {
+  ScenePanelTab,
+  SceneShot,
+  SceneShotDetailTab,
+} from '../../client/index.js';
+import {
+  CAMERA_ANGLE_LABELS,
+  FOCUS_LABELS,
+  LENS_LABELS,
+  MOVE_DIRECTION_LABELS,
+  MOVE_TRACK_LABELS,
+  MOVEMENT_LABELS,
+  RIG_LABELS,
+  SHOT_SIZE_LABELS,
+  SUBJECT_FRAMING_LABELS,
+} from '../../client/shot-spec-labels.js';
 import { studioCoordinationWarning } from './errors.js';
 import { isStudioRuntimeDescriptorStale, readStudioRuntimeDescriptor } from './runtime-descriptor.js';
 import { resolveStudioSelectionForProject } from './focus-validation.js';
@@ -8,6 +24,8 @@ import type {
   StudioSelection,
   StudioBrowserSessionActiveEvent,
   StudioCurrent,
+  StudioCurrentContext,
+  StudioCurrentShotTabSelections,
   StudioEvent,
   StudioFocusChangedEvent,
   StudioFocusRequestedEvent,
@@ -174,7 +192,8 @@ async function enrichMovieStudioFocus(
     );
     return { project: null, context: null, warnings };
   }
-  const project = await createProjectDataService().readProject({
+  const projectData = createProjectDataService();
+  const project = await projectData.readProject({
     projectName: projectRef.name,
     homeDir: options.homeDir,
   });
@@ -191,13 +210,302 @@ async function enrichMovieStudioFocus(
   }
 
   const resolution = resolveStudioSelectionForProject(project, selection);
+  let context: StudioCurrentContext | null = resolution.ok ? resolution.context : null;
+  if (resolution.ok && context?.kind === 'scene') {
+    const enriched = await enrichSceneShotFocusContext({
+      projectData,
+      projectName: project.identity.name,
+      selection,
+      context,
+      options,
+    });
+    context = enriched.context;
+    warnings.push(...enriched.warnings);
+  }
   return {
     project: {
       name: project.identity.name,
       id: project.identity.id,
       title: project.identity.title,
     },
-    context: resolution.ok ? resolution.context : null,
+    context,
     warnings: resolution.ok ? warnings : [...warnings, ...resolution.diagnostics],
+  };
+}
+
+async function enrichSceneShotFocusContext(input: {
+  projectData: ReturnType<typeof createProjectDataService>;
+  projectName: string;
+  selection: StudioSelection;
+  context: Extract<StudioCurrentContext, { kind: 'scene' }>;
+  options: RenkuConfigPathOptions;
+}): Promise<{
+  context: Extract<StudioCurrentContext, { kind: 'scene' }>;
+  warnings: DiagnosticIssue[];
+}> {
+  if (input.selection.type !== 'scene') {
+    return { context: input.context, warnings: [] };
+  }
+  const selection = input.selection;
+  const sceneTab = effectiveSceneTab(selection);
+  const baseContext = {
+    ...input.context,
+    sceneTab: sceneTabLabel(sceneTab),
+  };
+  if (sceneTab !== 'shots') {
+    return { context: baseContext, warnings: [] };
+  }
+  try {
+    const resource = await input.projectData.readSceneShotListResource({
+      projectName: input.projectName,
+      sceneId: selection.id,
+      homeDir: input.options.homeDir,
+    });
+    const shots = resource.activeShotList?.shots ?? [];
+    const shotIndex = selection.shotId
+      ? shots.findIndex((shot) => shot.shotId === selection.shotId)
+      : shots.length > 0
+        ? 0
+        : -1;
+    if (shotIndex < 0) {
+      return {
+        context: baseContext,
+        warnings: selection.shotId
+          ? [
+              studioCoordinationWarning(
+                'STUDIO_COORDINATION038',
+                'Current Studio shot focus no longer exists in the active shot list.',
+                ['selection', 'shotId'],
+                'Select a shot that exists in the scene active shot list.'
+              ),
+            ]
+          : [],
+      };
+    }
+    const shot = shots[shotIndex]!;
+    const shotTab = selection.shotTab ?? 'description';
+    const railGroup =
+      resource.activeShotList?.videoTakeRailGroups?.find((group) =>
+        group.shotIds.includes(shot.shotId)
+      ) ?? null;
+    const productionGroup =
+      resource.activeShotList?.videoTakeProductionGroups?.find((group) =>
+        group.shotIds.includes(shot.shotId)
+      ) ?? null;
+    return {
+      context: {
+        ...baseContext,
+        shot: {
+          id: shot.shotId,
+          index: shotIndex,
+          label: `Shot ${shotIndex + 1}`,
+          title: shot.title,
+          activeTab: shotTabLabel(shotTab),
+          currentTabSelections: shotTabSelections({
+            shot,
+            shotTab,
+            castMemberLabels: resource.castMemberLabels,
+            locationLabels: resource.locationLabels,
+            productionGroupId:
+              railGroup?.productionGroupId ?? productionGroup?.productionGroupId,
+            productionShotIds:
+              railGroup?.shotIds ?? productionGroup?.shotIds ?? [shot.shotId],
+          }),
+        },
+      },
+      warnings: [],
+    };
+  } catch {
+    return {
+      context: baseContext,
+      warnings: [
+        studioCoordinationWarning(
+          'STUDIO_COORDINATION039',
+          'Current Studio shot focus could not load the active shot list.',
+          ['context', 'shot'],
+          'Refresh Studio and try reading current focus again.'
+        ),
+      ],
+    };
+  }
+}
+
+function effectiveSceneTab(selection: Extract<StudioSelection, { type: 'scene' }>): ScenePanelTab {
+  return selection.sceneTab ?? (selection.shotId || selection.shotTab ? 'shots' : 'narrative');
+}
+
+function sceneTabLabel(tab: ScenePanelTab) {
+  return {
+    id: tab,
+    label: tab === 'shots' ? 'Shots' : 'Narrative',
+  };
+}
+
+function shotTabLabel(tab: SceneShotDetailTab) {
+  switch (tab) {
+    case 'description':
+      return { id: tab, label: 'Description' };
+    case 'lookbook':
+      return { id: tab, label: 'Lookbook' };
+    case 'composition':
+      return { id: tab, label: 'Composition' };
+    case 'motion':
+      return { id: tab, label: 'Motion' };
+    case 'cast':
+      return { id: tab, label: 'Cast' };
+    case 'location':
+      return { id: tab, label: 'Location' };
+    case 'references':
+      return { id: tab, label: 'References' };
+    case 'ai-production':
+      return { id: tab, label: 'AI Production' };
+  }
+}
+
+function shotTabSelections(input: {
+  shot: SceneShot;
+  shotTab: SceneShotDetailTab;
+  castMemberLabels: Record<string, string>;
+  locationLabels: Record<string, string>;
+  productionGroupId?: string;
+  productionShotIds: string[];
+}): StudioCurrentShotTabSelections {
+  const shotSpecs = input.shot.shotSpecs;
+  switch (input.shotTab) {
+    case 'composition':
+      return {
+        kind: 'composition',
+        ...(shotSpecs?.shotSize
+          ? {
+              shotSize: {
+                id: shotSpecs.shotSize,
+                label: SHOT_SIZE_LABELS[shotSpecs.shotSize],
+              },
+            }
+          : {}),
+        subjectFraming: (shotSpecs?.subjectFraming ?? []).map((id) => ({
+          id,
+          label: SUBJECT_FRAMING_LABELS[id],
+        })),
+        ...(shotSpecs?.cameraAngle
+          ? {
+              cameraAngle: {
+                id: shotSpecs.cameraAngle,
+                label: CAMERA_ANGLE_LABELS[shotSpecs.cameraAngle],
+              },
+            }
+          : {}),
+        ...(shotSpecs?.dutch ? { dutch: shotSpecs.dutch } : {}),
+        ...compositionLens(shotSpecs),
+        ...(shotSpecs?.custom?.composition?.trim()
+          ? { customComposition: shotSpecs.custom.composition.trim() }
+          : {}),
+      };
+    case 'motion':
+      return {
+        kind: 'motion',
+        ...(shotSpecs?.movement?.movement
+          ? {
+              movement: {
+                id: shotSpecs.movement.movement,
+                label: MOVEMENT_LABELS[shotSpecs.movement.movement],
+              },
+            }
+          : {}),
+        ...(shotSpecs?.movement?.secondary
+          ? {
+              secondary: {
+                id: shotSpecs.movement.secondary,
+                label: MOVEMENT_LABELS[shotSpecs.movement.secondary],
+              },
+            }
+          : {}),
+        directions: (shotSpecs?.movement?.directions ?? []).map((id) => ({
+          id,
+          label: MOVE_DIRECTION_LABELS[id],
+        })),
+        ...(shotSpecs?.movement?.track
+          ? {
+              track: {
+                id: shotSpecs.movement.track,
+                label: MOVE_TRACK_LABELS[shotSpecs.movement.track],
+              },
+            }
+          : {}),
+        ...(shotSpecs?.movement?.rig
+          ? {
+              rig: {
+                id: shotSpecs.movement.rig,
+                label: RIG_LABELS[shotSpecs.movement.rig],
+              },
+            }
+          : {}),
+        ...(shotSpecs?.custom?.movement?.trim()
+          ? { customMotion: shotSpecs.custom.movement.trim() }
+          : {}),
+      };
+    case 'cast': {
+      const castMemberIds =
+        shotSpecs?.castReferences?.castMemberIds ?? input.shot.castMemberIds;
+      return {
+        kind: 'cast',
+        cast: castMemberIds.map((id) => ({
+          id,
+          name: input.castMemberLabels[id] ?? id,
+        })),
+      };
+    }
+    case 'location': {
+      const locationIds = shotSpecs?.location?.locationId
+        ? [shotSpecs.location.locationId]
+        : input.shot.locationIds;
+      return {
+        kind: 'location',
+        locations: locationIds.map((id) => ({
+          id,
+          name: input.locationLabels[id] ?? id,
+        })),
+      };
+    }
+    case 'ai-production':
+      return {
+        kind: 'production-group',
+        ...(input.productionGroupId
+          ? { productionGroupId: input.productionGroupId }
+          : {}),
+        shotIds: input.productionShotIds,
+      };
+    case 'description':
+    case 'lookbook':
+    case 'references':
+      return { kind: input.shotTab };
+  }
+}
+
+function compositionLens(shotSpecs: SceneShot['shotSpecs']) {
+  const lens = shotSpecs?.lens;
+  if (!lens?.type && !lens?.focus && lens?.millimeters === undefined) {
+    return {};
+  }
+  return {
+    lens: {
+      ...(lens.type
+        ? {
+            type: {
+              id: lens.type,
+              label: LENS_LABELS[lens.type],
+            },
+          }
+        : {}),
+      ...(lens.millimeters !== undefined ? { millimeters: lens.millimeters } : {}),
+      ...(lens.focus
+        ? {
+            focus: {
+              id: lens.focus,
+              label: FOCUS_LABELS[lens.focus],
+            },
+          }
+        : {}),
+    },
   };
 }

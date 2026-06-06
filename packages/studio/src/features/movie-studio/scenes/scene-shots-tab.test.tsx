@@ -19,6 +19,10 @@ import {
   readShotVideoTakeProduction,
   updateShotVideoTakeRailGroups,
 } from '@/services/studio-shot-video-takes-api';
+import type {
+  SceneShotDetailTab,
+  StudioSelection,
+} from '../movie-studio-selection';
 import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -89,7 +93,7 @@ describe('SceneShotsTab', () => {
   it('renders the empty state when there is no active shot list', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(resource(null));
 
-    render(<SceneShotsTab projectName='constantinople' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
 
     expect(await screen.findByText('No shot list yet.')).not.toBeNull();
   });
@@ -99,7 +103,7 @@ describe('SceneShotsTab', () => {
       resource(shotList())
     );
 
-    render(<SceneShotsTab projectName='constantinople' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
 
     const railRows = await screen.findAllByRole('button', { name: /^Shot \d+ —/ });
     expect(railRows.map((row) => row.getAttribute('aria-label'))).toEqual([
@@ -137,12 +141,40 @@ describe('SceneShotsTab', () => {
     expect(screen.getByText('Beat two.')).not.toBeNull();
   });
 
+  it('preserves the active shot-detail tab when selecting another shot', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(
+      resource(shotList())
+    );
+
+    render(<SceneShotsTabHarness initialShotTab='composition' />);
+
+    const compositionTab = await screen.findByRole('tab', {
+      name: 'Composition',
+    });
+    expect(compositionTab.getAttribute('aria-selected')).toBe('true');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Shot 2 — Council reaction' })
+    );
+
+    expect(
+      (await screen.findByRole('tab', { name: 'Composition' })).getAttribute(
+        'aria-selected'
+      )
+    ).toBe('true');
+    expect(
+      screen
+        .getByRole('button', { name: 'Shot 2 — Council reaction' })
+        .getAttribute('aria-current')
+    ).toBe('true');
+  });
+
   it('renders narrative description fields and not raw ids', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
       resource(shotList())
     );
 
-    render(<SceneShotsTab projectName='constantinople' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
 
     expect(await screen.findByText('Establish the obsession.')).not.toBeNull();
     expect(screen.getByText('Mehmed studies the map.')).not.toBeNull();
@@ -157,7 +189,7 @@ describe('SceneShotsTab', () => {
       resource(shotList())
     );
 
-    render(<SceneShotsTab projectName='constantinople' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
 
     const locationTab = await screen.findByRole('tab', {
       name: 'Location',
@@ -355,14 +387,36 @@ describe('SceneShotsTab', () => {
   });
 });
 
-function SceneShotsTabHarness() {
+function SceneShotsTabHarness({
+  initialShotId,
+  initialShotTab,
+}: {
+  initialShotId?: string;
+  initialShotTab?: SceneShotDetailTab;
+} = {}) {
   const [action, setAction] = React.useState<React.ReactNode | null>(null);
+  const [selection, setSelection] = React.useState<
+    Extract<StudioSelection, { type: 'scene' }>
+  >({
+    type: 'scene',
+    id: 'scene_hook',
+    sceneTab: 'shots',
+    ...(initialShotId ? { shotId: initialShotId } : {}),
+    ...(initialShotTab ? { shotTab: initialShotTab } : {}),
+  });
   return (
     <>
       <div>{action}</div>
       <SceneShotsTab
         projectName='constantinople'
         sceneId='scene_hook'
+        shotId={selection.shotId}
+        shotTab={selection.shotTab}
+        onSelect={(nextSelection) => {
+          if (nextSelection.type === 'scene') {
+            setSelection(nextSelection);
+          }
+        }}
         onHeaderActionChange={setAction}
       />
     </>

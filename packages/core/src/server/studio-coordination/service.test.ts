@@ -2,10 +2,12 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { SceneShotListDocument } from '../../client/index.js';
 import {
   createProjectDataService,
 } from '../project-data-service.js';
 import { createDeterministicIdGenerator } from '../entity-ids.js';
+import { createSampleMovieProject } from '../testing/project-data-fixtures.js';
 import { createStudioCoordinationService } from './service.js';
 import { resolveStudioEventStorePath } from './event-store.js';
 import { claimStudioRuntimeDescriptor } from './runtime-descriptor.js';
@@ -219,6 +221,120 @@ describe('StudioCoordinationService', () => {
     expect(current.context).toMatchObject({
       kind: 'projectInformation',
       title: 'Preparation of the Siege',
+    });
+  });
+
+  it('enriches current scene shot focus with the active shot tab selections', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+    const projectData = createProjectDataService();
+    await createSampleMovieProject({
+      homeDir,
+      projectData,
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const castMember = screenplay.screenplay!.cast[1]!;
+    const location = screenplay.screenplay!.locations[0]!;
+    const sceneId = scene.id as string;
+    await projectData.writeSceneShotList({
+      homeDir,
+      document: {
+        kind: 'sceneShotList',
+        sceneId,
+        title: 'Council chamber coverage',
+        summary: 'A restrained coverage plan.',
+        coverageStrategy: 'Hold the table in one composed frame.',
+        shots: [
+          {
+            shotId: 'shot_001',
+            title: 'Map study',
+            storyBeat: 'Mehmed studies the map.',
+            narrativePurpose: 'Establish the obsession.',
+            description: 'Wide static shot of Mehmed at the table.',
+            shotType: 'Medium Close-Up',
+            subject: 'Mehmed and the city map',
+            action: 'Mehmed studies the map in silence.',
+            dialogue: [],
+            coveredBlockIndexes: [0],
+            castMemberIds: [castMember.id as string],
+            locationIds: [location.id as string],
+            shotSpecs: {
+              shotSize: 'medium-close-up',
+              subjectFraming: ['single'],
+              cameraAngle: 'low-angle',
+            },
+          },
+        ],
+      } satisfies SceneShotListDocument,
+    });
+    const coordination = createStudioCoordinationService({ homeDir });
+    const now = new Date();
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: '127.0.0.1',
+      port: 5173,
+      serverUrl: 'http://127.0.0.1:5173',
+      now,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_one',
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+      createdAt: now.toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'scene',
+          id: sceneId,
+          sceneTab: 'shots',
+          shotId: 'shot_001',
+          shotTab: 'composition',
+        },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+      createdAt: now.toISOString(),
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.selection).toMatchObject({
+      type: 'scene',
+      sceneTab: 'shots',
+      shotId: 'shot_001',
+      shotTab: 'composition',
+    });
+    expect(current.context).toMatchObject({
+      kind: 'scene',
+      sceneTab: { id: 'shots', label: 'Shots' },
+      shot: {
+        id: 'shot_001',
+        label: 'Shot 1',
+        activeTab: { id: 'composition', label: 'Composition' },
+        currentTabSelections: {
+          kind: 'composition',
+          shotSize: {
+            id: 'medium-close-up',
+            label: 'Medium Close-Up',
+          },
+          subjectFraming: [{ id: 'single', label: 'Single' }],
+          cameraAngle: { id: 'low-angle', label: 'Low Angle' },
+        },
+      },
     });
   });
 

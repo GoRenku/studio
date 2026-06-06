@@ -16,7 +16,11 @@ import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneNarrativeResource } from '@/services/studio-screenplay-api';
-import type { StudioSelection } from '../movie-studio-selection';
+import type {
+  ScenePanelTab,
+  SceneShotDetailTab,
+  StudioSelection,
+} from '../movie-studio-selection';
 import { SceneShotsTab } from './scene-shots-tab';
 
 interface SceneNeighbor {
@@ -27,7 +31,9 @@ interface SceneNeighbor {
 interface ScenePanelProps {
   projectName: string;
   sceneId: string;
+  sceneTab?: ScenePanelTab;
   shotId?: string;
+  shotTab?: SceneShotDetailTab;
   onSelect: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
   previousScene?: SceneNeighbor | null;
@@ -35,12 +41,13 @@ interface ScenePanelProps {
 }
 
 type ReferenceKind = 'castMember' | 'location';
-type ScenePanelTab = 'narrative' | 'shots';
 
 export function ScenePanel({
   projectName,
   sceneId,
+  sceneTab,
   shotId,
+  shotTab,
   onSelect,
   onHeaderActionChange,
   previousScene,
@@ -48,10 +55,8 @@ export function ScenePanel({
 }: ScenePanelProps) {
   const [resource, setResource] = useState<SceneNarrativeResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [userActiveTab, setUserActiveTab] = useState<ScenePanelTab>(
-    shotId ? 'shots' : 'narrative'
-  );
-  const activeTab: ScenePanelTab = shotId ? 'shots' : userActiveTab;
+  const activeTab: ScenePanelTab =
+    sceneTab ?? (shotId || shotTab ? 'shots' : 'narrative');
 
   useEffect(() => {
     let cancelled = false;
@@ -81,7 +86,13 @@ export function ScenePanel({
   return (
     <LineTabs
       value={activeTab}
-      onValueChange={(value) => setUserActiveTab(value as ScenePanelTab)}
+      onValueChange={(value) =>
+        onSelect(
+          value === 'shots'
+            ? { type: 'scene', id: sceneId, sceneTab: 'shots', shotId, shotTab }
+            : { type: 'scene', id: sceneId }
+        )
+      }
       items={[
         { value: 'narrative', label: 'Narrative' },
         { value: 'shots', label: 'Shots' },
@@ -122,6 +133,8 @@ export function ScenePanel({
           projectName={projectName}
           sceneId={sceneId}
           shotId={shotId}
+          shotTab={shotTab}
+          onSelect={onSelect}
           onHeaderActionChange={onHeaderActionChange}
         />
       </LineTabsContent>

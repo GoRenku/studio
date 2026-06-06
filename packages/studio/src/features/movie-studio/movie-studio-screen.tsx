@@ -307,7 +307,9 @@ export function MovieStudioScreen({
                   key={selection.id}
                   projectName={project.identity.name}
                   sceneId={selection.id}
+                  sceneTab={selection.sceneTab}
                   shotId={selection.shotId}
+                  shotTab={selection.shotTab}
                   onSelect={selectMovieStudioSurface}
                   onHeaderActionChange={setSceneHeaderAction}
                   previousScene={sceneNeighbors.previousScene}

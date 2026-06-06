@@ -21,6 +21,10 @@ import { SceneShotDetail } from './scene-shot-detail';
 import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
 import { SceneShotListEmpty } from './scene-shot-list-empty';
 import { shotLabel } from './scene-shot-labels';
+import type {
+  SceneShotDetailTab,
+  StudioSelection,
+} from '../movie-studio-selection';
 import {
   createShotRailGroupDraftsFromRailGroups,
   cycleShotRailGroupMembership,
@@ -34,6 +38,8 @@ interface SceneShotsTabProps {
   projectName: string;
   sceneId: string;
   shotId?: string;
+  shotTab?: SceneShotDetailTab;
+  onSelect?: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
 }
 
@@ -41,6 +47,8 @@ export function SceneShotsTab({
   projectName,
   sceneId,
   shotId,
+  shotTab,
+  onSelect = () => {},
   onHeaderActionChange,
 }: SceneShotsTabProps) {
   const [resource, setResource] =
@@ -55,11 +63,7 @@ export function SceneShotsTab({
   const [groupingApplyError, setGroupingApplyError] = useState<string | null>(
     null
   );
-  // User's explicit rail selection. When unset, selection falls back to the
-  // deep-link shotId or the first shot (derived during render).
-  const [userSelectedShotId, setUserSelectedShotId] = useState<string | null>(
-    null
-  );
+  const activeShotTab = shotTab ?? 'description';
 
   const loadResource = useCallback(() => {
     let cancelled = false;
@@ -150,21 +154,41 @@ export function SceneShotsTab({
   );
 
   const selectedShotId = useMemo(() => {
-    if (
-      userSelectedShotId &&
-      shots.some((shot) => shot.shotId === userSelectedShotId)
-    ) {
-      return userSelectedShotId;
-    }
     if (shotId && shots.some((shot) => shot.shotId === shotId)) {
       return shotId;
     }
     return shots[0]?.shotId ?? null;
-  }, [shots, shotId, userSelectedShotId]);
+  }, [shots, shotId]);
+
+  const handleSelectShot = useCallback(
+    (nextShotId: string) => {
+      onSelect({
+        type: 'scene',
+        id: sceneId,
+        sceneTab: 'shots',
+        shotId: nextShotId,
+        shotTab: activeShotTab,
+      });
+    },
+    [activeShotTab, onSelect, sceneId]
+  );
+
+  const handleSelectShotTab = useCallback(
+    (nextShotTab: SceneShotDetailTab) => {
+      onSelect({
+        type: 'scene',
+        id: sceneId,
+        sceneTab: 'shots',
+        shotId: selectedShotId ?? undefined,
+        shotTab: nextShotTab,
+      });
+    },
+    [onSelect, sceneId, selectedShotId]
+  );
 
   const handleCycleShotGroup = useCallback(
     (clickedShotId: string) => {
-      setUserSelectedShotId(clickedShotId);
+      handleSelectShot(clickedShotId);
       setGroupingApplyError(null);
       setIsEditingGroups(true);
       setDraftRailGroups((currentDraftGroups) =>
@@ -175,7 +199,7 @@ export function SceneShotsTab({
         })
       );
     },
-    [isEditingGroups, persistedRailGroups, shots]
+    [handleSelectShot, isEditingGroups, persistedRailGroups, shots]
   );
 
   const handleOpenReview = useCallback(() => {
@@ -297,7 +321,7 @@ export function SceneShotsTab({
             imagesByShotId={resource.storyboardImagesByShotId}
             selectedShotId={selectedShot.shotId}
             railGroups={visibleRailGroups}
-            onSelectShot={setUserSelectedShotId}
+            onSelectShot={handleSelectShot}
             onCycleShotGroup={handleCycleShotGroup}
           />
         </ResizablePanel>
@@ -316,8 +340,10 @@ export function SceneShotsTab({
             railGroups={visibleRailGroups}
             productionGroups={productionGroups}
             label={selectedShotLabel}
+            activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}
             locationLabels={resource.locationLabels}
+            onTabChange={handleSelectShotTab}
             onShotSpecsSaved={setResource}
           />
         </ResizablePanel>

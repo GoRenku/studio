@@ -17,6 +17,10 @@ import {
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
 } from '@/services/studio-shot-video-takes-api';
+import type {
+  SceneShotDetailTab,
+  StudioSelection,
+} from '../movie-studio-selection';
 import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -312,17 +316,17 @@ describe('AI Production tab', () => {
   });
 
   it('shows AI Production inside the lower shot tab region', async () => {
-    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
     expect(await screen.findByRole('tab', { name: 'AI Production' })).not.toBeNull();
   });
 
   it('shows the group tag for a multi-shot group at the tab bar', async () => {
-    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
     expect(await screen.findByText('Shot 1-2')).not.toBeNull();
   });
 
   it('renders a group button on each rail card using local controls', async () => {
-    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
     const groupButton = await screen.findByRole('button', {
       name: 'Cycle grouping for Shot 1',
     });
@@ -330,7 +334,7 @@ describe('AI Production tab', () => {
   });
 
   it('renders input modes, the model table, and inline run setup with a multi-shot group tag', async () => {
-    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
     await openAiProductionTab();
 
     expect(screen.queryByRole('button', { name: 'Multi-shot' })).toBeNull();
@@ -357,7 +361,7 @@ describe('AI Production tab', () => {
       productionPlan({ finalPrompt: 'Final siege prompt.', promptStale: true })
     );
 
-    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
     await openAiProductionTab();
 
     expect(await screen.findByText('needs refresh')).not.toBeNull();
@@ -381,7 +385,7 @@ describe('AI Production tab', () => {
       productionPlan({ lookbook: true })
     );
 
-    render(<SceneShotsTab projectName='c' sceneId='scene_hook' />);
+    render(<SceneShotsTabHarness />);
     const tab = await screen.findByRole('tab', { name: 'Lookbook' });
     fireEvent.focus(tab);
     fireEvent.click(tab);
@@ -392,3 +396,31 @@ describe('AI Production tab', () => {
     expect(screen.queryByText('Ready')).toBeNull();
   });
 });
+
+function SceneShotsTabHarness({
+  initialShotTab,
+}: {
+  initialShotTab?: SceneShotDetailTab;
+} = {}) {
+  const [selection, setSelection] = React.useState<
+    Extract<StudioSelection, { type: 'scene' }>
+  >({
+    type: 'scene',
+    id: 'scene_hook',
+    sceneTab: 'shots',
+    ...(initialShotTab ? { shotTab: initialShotTab } : {}),
+  });
+  return (
+    <SceneShotsTab
+      projectName='c'
+      sceneId='scene_hook'
+      shotId={selection.shotId}
+      shotTab={selection.shotTab}
+      onSelect={(nextSelection) => {
+        if (nextSelection.type === 'scene') {
+          setSelection(nextSelection);
+        }
+      }}
+    />
+  );
+}

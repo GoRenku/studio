@@ -1,4 +1,8 @@
-import type { StudioSelection } from '@gorenku/studio-core/server';
+import type {
+  ScenePanelTab,
+  SceneShotDetailTab,
+  StudioSelection,
+} from '@gorenku/studio-core/server';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -9,6 +13,18 @@ import {
   readHttpRequestRecord,
   readRequiredHttpString,
 } from './request-validation.js';
+
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
+const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
+  'description',
+  'lookbook',
+  'composition',
+  'motion',
+  'cast',
+  'location',
+  'references',
+  'ai-production',
+];
 
 export function readMovieStudioSelectionRequest(input: unknown): {
   selection: StudioSelection;
@@ -49,6 +65,14 @@ export function readMovieStudioSelectionRequest(input: unknown): {
   const shotId =
     typeof selection.shotId === 'string' && selection.shotId.trim()
       ? selection.shotId.trim()
+      : undefined;
+  const sceneTab =
+    typeof selection.sceneTab === 'string' && selection.sceneTab.trim()
+      ? selection.sceneTab.trim()
+      : undefined;
+  const shotTab =
+    typeof selection.shotTab === 'string' && selection.shotTab.trim()
+      ? selection.shotTab.trim()
       : undefined;
   const result = buildDiagnosticResult(issues);
   if (!result.valid || type === null) {
@@ -91,12 +115,34 @@ export function readMovieStudioSelectionRequest(input: unknown): {
       ),
     ]);
   }
+  if (type === 'scene' && sceneTab && !SCENE_PANEL_TABS.includes(sceneTab as ScenePanelTab)) {
+    throwMovieStudioSelectionRequestError([
+      createDiagnosticError(
+        'STUDIO_SERVER034',
+        `Unsupported scene tab: ${sceneTab}.`,
+        { path: ['selection', 'sceneTab'] },
+        'Send a supported scene tab.'
+      ),
+    ]);
+  }
+  if (type === 'scene' && shotTab && !SCENE_SHOT_DETAIL_TABS.includes(shotTab as SceneShotDetailTab)) {
+    throwMovieStudioSelectionRequestError([
+      createDiagnosticError(
+        'STUDIO_SERVER034',
+        `Unsupported shot tab: ${shotTab}.`,
+        { path: ['selection', 'shotTab'] },
+        'Send a supported shot tab.'
+      ),
+    ]);
+  }
   return {
     selection: studioSelectionFromRequest(type, {
       id,
       folderId,
       lookbookId,
       shotId,
+      sceneTab: sceneTab as ScenePanelTab | undefined,
+      shotTab: shotTab as SceneShotDetailTab | undefined,
     }),
   };
 }
@@ -122,13 +168,24 @@ function isStudioSelectionType(
 
 function studioSelectionFromRequest(
   type: StudioSelection['type'],
-  ids: { id?: string; folderId?: string; lookbookId?: string; shotId?: string }
+  ids: {
+    id?: string;
+    folderId?: string;
+    lookbookId?: string;
+    shotId?: string;
+    sceneTab?: ScenePanelTab;
+    shotTab?: SceneShotDetailTab;
+  }
 ): StudioSelection {
   switch (type) {
     case 'scene':
-      return ids.shotId
-        ? { type, id: ids.id as string, shotId: ids.shotId }
-        : { type, id: ids.id as string };
+      return {
+        type,
+        id: ids.id as string,
+        ...(ids.sceneTab ? { sceneTab: ids.sceneTab } : {}),
+        ...(ids.shotId ? { shotId: ids.shotId } : {}),
+        ...(ids.shotTab ? { shotTab: ids.shotTab } : {}),
+      };
     case 'act':
     case 'sequence':
     case 'castMember':

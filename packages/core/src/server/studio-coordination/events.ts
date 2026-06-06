@@ -1,5 +1,18 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { ProjectLanguage } from '../../client/index.js';
+import type {
+  ProjectLanguage,
+  ScenePanelTab,
+  SceneShotDetailTab,
+  CameraAngleId,
+  FocusId,
+  LensId,
+  MoveDirectionId,
+  MoveTrackId,
+  RigId,
+  ShotMovementId,
+  ShotSizeId,
+  SubjectFramingId,
+} from '../../client/index.js';
 
 export const STUDIO_COORDINATION_EVENT_VERSION = '0.1.0' as const;
 
@@ -47,7 +60,13 @@ export type StudioSelection =
   | { type: 'storyArc' }
   | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string; shotId?: string };
+  | {
+      type: 'scene';
+      id: string;
+      sceneTab?: ScenePanelTab;
+      shotId?: string;
+      shotTab?: SceneShotDetailTab;
+    };
 
 export type StudioFocusRequest =
   | { screen: 'projectLibrary' }
@@ -185,6 +204,8 @@ export type StudioCurrentContext =
       title: string;
       summary?: string;
       parentSequence: { id: string; number: number; title: string; summary?: string };
+      sceneTab: StudioCurrentSceneTab;
+      shot?: StudioCurrentShotContext;
     }
   | {
       kind: 'sequence';
@@ -217,6 +238,86 @@ export type StudioCurrentContext =
       kind: 'locations';
       locations: { id: string; name: string; timePeriod?: string; description?: string }[];
     };
+
+export interface StudioCurrentSceneTab {
+  id: ScenePanelTab;
+  label: string;
+}
+
+export interface StudioCurrentShotContext {
+  id: string;
+  index: number;
+  label: string;
+  title: string;
+  activeTab: StudioCurrentShotTab;
+  currentTabSelections: StudioCurrentShotTabSelections;
+}
+
+export interface StudioCurrentShotTab {
+  id: SceneShotDetailTab;
+  label: string;
+}
+
+export type StudioCurrentShotTabSelections =
+  | StudioCurrentCompositionSelections
+  | StudioCurrentMotionSelections
+  | StudioCurrentCastSelections
+  | StudioCurrentLocationSelections
+  | StudioCurrentProductionGroupSelections
+  | StudioCurrentEmptyShotTabSelections;
+
+export interface StudioCurrentSelectionLabel<Id extends string> {
+  id: Id;
+  label: string;
+}
+
+export interface StudioCurrentCompositionSelections {
+  kind: 'composition';
+  shotSize?: StudioCurrentSelectionLabel<ShotSizeId>;
+  subjectFraming: StudioCurrentSelectionLabel<SubjectFramingId>[];
+  cameraAngle?: StudioCurrentSelectionLabel<CameraAngleId>;
+  dutch?: 'left' | 'right';
+  lens?: {
+    type?: StudioCurrentSelectionLabel<LensId>;
+    millimeters?: number;
+    focus?: StudioCurrentSelectionLabel<FocusId>;
+  };
+  customComposition?: string;
+}
+
+export interface StudioCurrentMotionSelections {
+  kind: 'motion';
+  movement?: StudioCurrentSelectionLabel<ShotMovementId>;
+  secondary?: StudioCurrentSelectionLabel<ShotMovementId>;
+  directions: StudioCurrentSelectionLabel<MoveDirectionId>[];
+  track?: StudioCurrentSelectionLabel<MoveTrackId>;
+  rig?: StudioCurrentSelectionLabel<RigId>;
+  customMotion?: string;
+}
+
+export interface StudioCurrentCastSelections {
+  kind: 'cast';
+  cast: { id: string; name: string }[];
+}
+
+export interface StudioCurrentLocationSelections {
+  kind: 'location';
+  locations: { id: string; name: string }[];
+}
+
+export interface StudioCurrentProductionGroupSelections {
+  kind: 'production-group';
+  productionGroupId?: string;
+  shotIds: string[];
+}
+
+export interface StudioCurrentEmptyShotTabSelections {
+  kind:
+    | 'description'
+    | 'lookbook'
+    | 'references'
+    | 'ai-production';
+}
 
 export interface StudioPendingRequest {
   eventId: string;

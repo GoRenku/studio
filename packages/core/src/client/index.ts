@@ -220,6 +220,8 @@ export type {
   ProjectInformationResource,
   ProjectShell,
   ProjectShellNavigation,
+  ScenePanelTab,
+  SceneShotDetailTab,
   SceneNavigationRow,
   SequenceNavigationRow,
   SequenceResource,

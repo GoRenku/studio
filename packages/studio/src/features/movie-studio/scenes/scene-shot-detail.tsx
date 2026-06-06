@@ -5,6 +5,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
+import type { SceneShotDetailTab } from '../movie-studio-selection';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -36,8 +37,10 @@ interface SceneShotDetailProps {
   railGroups: ShotRailGroupDraft[];
   productionGroups: ShotVideoTakeProductionGroup[];
   label: string;
+  activeTab?: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
   locationLabels: Record<string, string>;
+  onTabChange?: (tab: SceneShotDetailTab) => void;
   onShotSpecsSaved?: (resource: SceneShotListResourceResponse) => void;
 }
 
@@ -60,8 +63,10 @@ export function SceneShotDetail({
   railGroups,
   productionGroups,
   label,
+  activeTab = 'description',
   castMemberLabels,
   locationLabels,
+  onTabChange = () => {},
   onShotSpecsSaved,
 }: SceneShotDetailProps) {
   const groupTag = useMemo(() => {
@@ -128,7 +133,8 @@ export function SceneShotDetail({
             onSaved={onShotSpecsSaved}
           >
             <LineTabs
-              defaultValue='description'
+              value={activeTab}
+              onValueChange={(value) => onTabChange(value as SceneShotDetailTab)}
               className='flex h-full min-h-0 min-w-0 flex-col gap-0'
               items={DESIGN_TABS.map((tab) => ({ ...tab }))}
               trailing={

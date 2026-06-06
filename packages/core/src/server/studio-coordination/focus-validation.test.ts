@@ -68,12 +68,16 @@ describe('Studio focus validation', () => {
       resolveStudioSelectionForProject(project, {
         type: 'scene',
         id: 'scene_1_1',
+        sceneTab: 'shots',
+        shotId: 'shot_001',
+        shotTab: 'composition',
       })
     ).toMatchObject({
       ok: true,
       context: {
         kind: 'scene',
         id: 'scene_1_1',
+        sceneTab: { id: 'shots', label: 'Shots' },
         parentSequence: { id: 'seq_opening' },
       },
     });
@@ -169,6 +173,46 @@ describe('Studio focus validation', () => {
     ).toMatchObject({
       ok: false,
       reason: 'selectionNotFound',
+    });
+  });
+
+  it('rejects unsupported scene and shot tab focus values with structured diagnostics', () => {
+    const project = makeProject();
+
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'script' as never,
+      })
+    ).toMatchObject({
+      ok: false,
+      reason: 'unsupportedSelection',
+      diagnostics: [{ code: 'STUDIO_COORDINATION036', severity: 'error' }],
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'shots',
+        shotTab: 'camera' as never,
+      })
+    ).toMatchObject({
+      ok: false,
+      reason: 'unsupportedSelection',
+      diagnostics: [{ code: 'STUDIO_COORDINATION037', severity: 'error' }],
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'narrative',
+        shotId: 'shot_001',
+      })
+    ).toMatchObject({
+      ok: false,
+      reason: 'unsupportedSelection',
+      diagnostics: [{ code: 'STUDIO_COORDINATION036', severity: 'error' }],
     });
   });
 });

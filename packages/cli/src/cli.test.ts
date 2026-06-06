@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  claimStudioRuntimeDescriptor,
   createProjectDataService,
   createStudioCoordinationService,
 } from '@gorenku/studio-core/server';
@@ -2141,6 +2142,135 @@ describe('renku CLI', () => {
         ]),
       },
     });
+  });
+
+  it('reports current scene shot tab focus through studio current', async () => {
+    await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    await openProjectAndCreateScreenplay();
+
+    const projectData = createProjectDataService();
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const castMember = screenplay.screenplay!.cast[0]!;
+    const location = screenplay.screenplay!.locations[0]!;
+    await projectData.writeSceneShotList({
+      homeDir,
+      document: {
+        kind: 'sceneShotList',
+        sceneId: scene.id as string,
+        title: 'Opening coverage',
+        summary: 'A focused first shot.',
+        coverageStrategy: 'Hold one readable setup.',
+        shots: [
+          {
+            shotId: 'shot_001',
+            title: 'Urban studies the bronze',
+            storyBeat: 'Urban reads the cannon before anyone else does.',
+            narrativePurpose: 'Show expertise before consequence.',
+            description: 'Urban leans close to the bronze seam.',
+            shotType: 'Medium Close-Up',
+            subject: 'Urban and the bronze cannon',
+            action: 'Urban studies the metal in silence.',
+            dialogue: [],
+            coveredBlockIndexes: [0],
+            castMemberIds: [castMember.id as string],
+            locationIds: [location.id as string],
+            shotSpecs: {
+              shotSize: 'medium-close-up',
+              subjectFraming: ['single'],
+              cameraAngle: 'low-angle',
+            },
+          },
+        ],
+      },
+    });
+    const project = await projectData.readProject({
+      homeDir,
+      projectName: 'constantinople',
+    });
+    const coordination = createStudioCoordinationService({ homeDir });
+    const now = new Date();
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: '127.0.0.1',
+      port: 5173,
+      serverUrl: 'http://127.0.0.1:5173',
+      now,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_test',
+      source: { kind: 'studio', browserSessionId: 'studio_browser_test' },
+      createdAt: now.toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      projectRef: {
+        name: project.identity.name,
+        id: project.identity.id,
+        storageRoot: path.join(homeDir, 'movies'),
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'scene',
+          id: scene.id as string,
+          sceneTab: 'shots',
+          shotId: 'shot_001',
+          shotTab: 'composition',
+        },
+      },
+      source: { kind: 'studio', browserSessionId: 'studio_browser_test' },
+      createdAt: now.toISOString(),
+    });
+
+    stdout = [];
+    stderr = [];
+    const jsonExitCode = await runRenkuCli(['studio', 'current', '--json'], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+
+    expect(jsonExitCode).toBe(0);
+    const current = JSON.parse(stdout.join('\n'));
+    expect(current.selection).toMatchObject({
+      type: 'scene',
+      sceneTab: 'shots',
+      shotId: 'shot_001',
+      shotTab: 'composition',
+    });
+    expect(current.context).toMatchObject({
+      kind: 'scene',
+      sceneTab: { id: 'shots', label: 'Shots' },
+      shot: {
+        id: 'shot_001',
+        activeTab: { id: 'composition', label: 'Composition' },
+        currentTabSelections: {
+          kind: 'composition',
+          shotSize: { id: 'medium-close-up', label: 'Medium Close-Up' },
+          subjectFraming: [{ id: 'single', label: 'Single' }],
+          cameraAngle: { id: 'low-angle', label: 'Low Angle' },
+        },
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const textExitCode = await runRenkuCli(['studio', 'current'], {
+      homeDir,
+      io: captureIo(stdout, stderr),
+    });
+
+    expect(textExitCode).toBe(0);
+    expect(stdout).toContain('Current Studio project: constantinople');
+    expect(stdout).toContain(
+      `Focus: Scene ${scene.title} > Shots > Shot 1 > Composition`
+    );
+    expect(stderr).toEqual([]);
   });
 
   async function initializeStorageRoot(): Promise<string> {

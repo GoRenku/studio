@@ -281,7 +281,19 @@ export type StudioSelectionContextResult =
       valid: false;
       reason: 'selectionNotFound' | 'unsupportedSelection';
       diagnostics: DiagnosticIssue[];
-    };
+};
+
+export type ScenePanelTab = 'narrative' | 'shots';
+
+export type SceneShotDetailTab =
+  | 'description'
+  | 'lookbook'
+  | 'composition'
+  | 'motion'
+  | 'cast'
+  | 'location'
+  | 'references'
+  | 'ai-production';
 
 export type StudioSelection =
   | { type: 'projectInformation' }
@@ -295,7 +307,13 @@ export type StudioSelection =
   | { type: 'storyArc' }
   | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string; shotId?: string };
+  | {
+      type: 'scene';
+      id: string;
+      sceneTab?: ScenePanelTab;
+      shotId?: string;
+      shotTab?: SceneShotDetailTab;
+    };
 
 export type StudioSelectionContext =
   | { surface: 'project-information' }

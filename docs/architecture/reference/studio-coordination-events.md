@@ -46,6 +46,75 @@ renku studio current --json
 That command should return the current Studio focus and enough domain context
 for the agent to act on the same subject as the user.
 
+## Scene And Shot Tab Focus
+
+Scene focus may include route-owned tab state. The scene selection shape is:
+
+```ts
+{
+  type: 'scene';
+  id: string;
+  sceneTab?: 'narrative' | 'shots';
+  shotId?: string;
+  shotTab?:
+    | 'description'
+    | 'lookbook'
+    | 'composition'
+    | 'motion'
+    | 'cast'
+    | 'location'
+    | 'references'
+    | 'ai-production';
+}
+```
+
+Rules:
+
+- absent `sceneTab` means `narrative` unless `shotId` or `shotTab` is present;
+- `shotId` or `shotTab` implies the `shots` scene tab;
+- `sceneTab: 'narrative'` must not be combined with shot-level state;
+- `shotTab` controls only the active shot-detail tab and defaults to
+  `description`;
+- selected values inside a tab, such as shot size, subject framing, camera
+  angle, selected cast, selected location, references, or AI Production
+  settings, remain project data and are not stored in route or coordination
+  events.
+
+`renku studio current --json` enriches scene focus with the active scene tab and,
+when the focus is on `Shots`, the current shot and active shot-detail tab. For
+tabs backed by structured shot specs, the current context reports selected
+values with stable ids and human-readable labels derived from core label maps.
+
+Example:
+
+```json
+{
+  "selection": {
+    "type": "scene",
+    "id": "scene_djkfgf9p",
+    "sceneTab": "shots",
+    "shotId": "shot_003",
+    "shotTab": "composition"
+  },
+  "context": {
+    "kind": "scene",
+    "sceneTab": { "id": "shots", "label": "Shots" },
+    "shot": {
+      "id": "shot_003",
+      "label": "Shot 3",
+      "activeTab": { "id": "composition", "label": "Composition" },
+      "currentTabSelections": {
+        "kind": "composition",
+        "shotSize": {
+          "id": "medium-close-up",
+          "label": "Medium Close-Up"
+        }
+      }
+    }
+  }
+}
+```
+
 ## Current Contract
 
 Use a local append-only Studio coordination event store as the source of truth

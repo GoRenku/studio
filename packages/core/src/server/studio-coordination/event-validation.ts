@@ -8,6 +8,18 @@ import {
   type StudioProjectRef,
 } from './events.js';
 
+const SCENE_PANEL_TABS = ['narrative', 'shots'];
+const SCENE_SHOT_DETAIL_TABS = [
+  'description',
+  'lookbook',
+  'composition',
+  'motion',
+  'cast',
+  'location',
+  'references',
+  'ai-production',
+];
+
 export function validateStudioEvent(value: unknown): StudioEvent {
   const issues = collectStudioEventIssues(value);
   if (issues.length > 0) {
@@ -143,10 +155,24 @@ function validateSelection(value: unknown, path: string[], issues: ReturnType<ty
   ) {
     return;
   }
+  if (selection.type === 'scene' && typeof selection.id === 'string' && selection.id.trim()) {
+    if (
+      selection.sceneTab !== undefined &&
+      !SCENE_PANEL_TABS.includes(selection.sceneTab)
+    ) {
+      issues.push(issue('STUDIO_COORDINATION036', 'Unsupported scene tab.', [...path, 'sceneTab']));
+    }
+    if (
+      selection.shotTab !== undefined &&
+      !SCENE_SHOT_DETAIL_TABS.includes(selection.shotTab)
+    ) {
+      issues.push(issue('STUDIO_COORDINATION037', 'Unsupported shot-detail tab.', [...path, 'shotTab']));
+    }
+    return;
+  }
   if (
     (selection.type === 'act' ||
       selection.type === 'sequence' ||
-      selection.type === 'scene' ||
       selection.type === 'castMember' ||
       selection.type === 'location') &&
     typeof selection.id === 'string' &&

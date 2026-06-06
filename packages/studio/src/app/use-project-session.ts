@@ -10,6 +10,12 @@ import type {
   ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
+import {
+  SCENE_PANEL_TABS,
+  SCENE_SHOT_DETAIL_TABS,
+  type ScenePanelTab,
+  type SceneShotDetailTab,
+} from '@/features/movie-studio/movie-studio-selection';
 
 type StudioRoute =
   | { screen: 'projectLibrary' }
@@ -346,14 +352,54 @@ function readStudioRoute(): StudioRoute {
     window.location.pathname
   );
   if (sceneRoute?.[1] && sceneRoute[2]) {
-    const shotParam = new URLSearchParams(window.location.search).get('shot');
+    const search = new URLSearchParams(window.location.search);
+    const sceneTabParam = search.get('sceneTab');
+    const shotParam = search.get('shot');
+    const shotTabParam = search.get('shotTab');
+    const sceneTab = sceneTabParam
+      ? readScenePanelTab(sceneTabParam)
+      : shotParam || shotTabParam
+        ? 'shots'
+        : undefined;
+    const shotTab = shotTabParam
+      ? readSceneShotDetailTab(shotTabParam)
+      : undefined;
+    if (sceneTabParam && !sceneTab) {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: `Unknown scene tab: ${sceneTabParam}`,
+      };
+    }
+    if (shotTabParam && !shotTab) {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: `Unknown shot tab: ${shotTabParam}`,
+      };
+    }
+    if (sceneTab === 'narrative' && (shotParam || shotTabParam)) {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: 'Shot route state requires sceneTab=shots.',
+      };
+    }
     const shotId = shotParam || undefined;
+    const selection: StudioSelection = {
+      type: 'scene',
+      id: decodeURIComponent(sceneRoute[2]),
+      ...(sceneTab ? { sceneTab } : {}),
+      ...(shotId ? { shotId } : {}),
+      ...(shotTab ? { shotTab } : {}),
+    };
     return {
       screen: 'movieStudio',
       projectName: decodeURIComponent(sceneRoute[1]),
-      selection: shotId
-        ? { type: 'scene', id: decodeURIComponent(sceneRoute[2]), shotId }
-        : { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+      selection,
     };
   }
 
@@ -578,9 +624,21 @@ function studioSelectionRoutePath(
   }
   if (selection.type === 'scene') {
     const base = `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;
-    return selection.shotId
-      ? `${base}?shot=${encodeURIComponent(selection.shotId)}`
-      : base;
+    const params = new URLSearchParams();
+    const effectiveSceneTab =
+      selection.sceneTab ??
+      (selection.shotId || selection.shotTab ? 'shots' : 'narrative');
+    if (effectiveSceneTab === 'shots') {
+      params.set('sceneTab', 'shots');
+    }
+    if (selection.shotId) {
+      params.set('shot', selection.shotId);
+    }
+    if (selection.shotTab && selection.shotTab !== 'description') {
+      params.set('shotTab', selection.shotTab);
+    }
+    const query = params.toString();
+    return query ? `${base}?${query}` : base;
   }
   return projectRoutePath(projectName);
 }
@@ -598,4 +656,16 @@ function pushRoutePath(path: string): void {
 
 function currentRoutePath(): string {
   return `${window.location.pathname}${window.location.search}`;
+}
+
+function readScenePanelTab(value: string): ScenePanelTab | null {
+  return SCENE_PANEL_TABS.includes(value as ScenePanelTab)
+    ? (value as ScenePanelTab)
+    : null;
+}
+
+function readSceneShotDetailTab(value: string): SceneShotDetailTab | null {
+  return SCENE_SHOT_DETAIL_TABS.includes(value as SceneShotDetailTab)
+    ? (value as SceneShotDetailTab)
+    : null;
 }

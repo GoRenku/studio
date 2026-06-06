@@ -21,6 +21,11 @@ import {
 } from '../database/access/navigation.js';
 import { readLookbookRecordById } from '../database/access/lookbook.js';
 import { readInspirationFolderRecord } from '../database/access/inspiration-folders.js';
+import {
+  readActiveSceneShotListRecord,
+  readSceneShotListDocument,
+} from '../database/access/scene-shot-lists.js';
+import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 
 export async function readStudioSelectionContext(input: {
   projectName: string;
@@ -164,8 +169,19 @@ export function readStudioSelectionContextProjection(
           : selectionNotFound(input.selection);
       }
       case 'scene': {
+        const sceneTabValidation = validateSceneSelectionTabs(input.selection);
+        if (sceneTabValidation) {
+          return sceneTabValidation;
+        }
         const chain = readSceneNavigationContext(session, input.selection.id);
         const act = chain ? readActNavigationRow(session, chain.sequence.actId) : null;
+        if (
+          chain &&
+          input.selection.shotId &&
+          !sceneShotExists(session, input.selection.id, input.selection.shotId)
+        ) {
+          return selectionNotFound(input.selection);
+        }
         return chain && act
           ? {
               valid: true,
@@ -189,6 +205,39 @@ export function readStudioSelectionContextProjection(
   }
 }
 
+function validateSceneSelectionTabs(
+  selection: Extract<StudioSelection, { type: 'scene' }>
+): StudioSelectionContextResult | null {
+  if (selection.sceneTab === 'narrative' && (selection.shotId || selection.shotTab)) {
+    return unsupportedSelection(
+      createDiagnosticError(
+        'STUDIO_COORDINATION036',
+        'Shot focus requires the Shots scene tab.',
+        { path: ['selection', 'sceneTab'], context: 'movie studio selection' },
+        'Use sceneTab: "shots" when requesting a shot or shot-detail tab.'
+      )
+    );
+  }
+  return null;
+}
+
+function sceneShotExists(
+  session: DatabaseSession,
+  sceneId: string,
+  shotId: string
+): boolean {
+  const activeShotList = readActiveSceneShotListRecord(session, sceneId);
+  const screenplay = readScreenplayDocumentFromSession(session);
+  if (!activeShotList || !screenplay) {
+    return false;
+  }
+  const document = readSceneShotListDocument({
+    row: activeShotList,
+    screenplay,
+  });
+  return document.shots.some((shot) => shot.shotId === shotId);
+}
+
 function selectionNotFound(selection: StudioSelection): StudioSelectionContextResult {
   return {
     valid: false,
@@ -201,5 +250,15 @@ function selectionNotFound(selection: StudioSelection): StudioSelectionContextRe
         'Refresh Studio or choose an existing project item.'
       ),
     ]).issues,
+  };
+}
+
+function unsupportedSelection(
+  diagnostic: ReturnType<typeof createDiagnosticError>
+): StudioSelectionContextResult {
+  return {
+    valid: false,
+    reason: 'unsupportedSelection',
+    diagnostics: buildDiagnosticResult([diagnostic]).issues,
   };
 }
