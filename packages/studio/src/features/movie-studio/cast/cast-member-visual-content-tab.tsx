@@ -1,14 +1,10 @@
 import { useState } from 'react';
-import { ImageOff, Trash2 } from 'lucide-react';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { Button } from '@/ui/button';
-import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
+import { ImageCollectionSection } from '@/ui/image-collection-section';
 import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
-import { ImageCardGrid } from '@/ui/image-card-grid';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
 import {
   CAST_CHARACTER_SHEET_ROLE,
@@ -43,8 +39,8 @@ export function CastMemberVisualContentTab({
 
   return (
     <>
-      <div className='min-h-full overflow-y-auto bg-panel-bg p-5 sm:p-8 lg:p-10'>
-        <div className='mx-auto max-w-[1240px] space-y-10'>
+      <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
+        <div className='space-y-8'>
           <CastAssetSection
             title='Profile Images'
             roleLabel='profile image'
@@ -124,84 +120,47 @@ function CastAssetSection({
   onTogglePick: (asset: StudioAssetResponse) => Promise<void>;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
 }) {
-  return (
-    <section className='space-y-4'>
-      <div className='flex flex-wrap items-end justify-between gap-3 border-b border-border/40 pb-4'>
-        <div className='min-w-0'>
-          <h2 className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-            {title}
-          </h2>
-        </div>
-        <span className='rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground/70'>
-          {assets.length === 1 ? '1 image' : `${assets.length} images`}
-        </span>
-      </div>
-      {assets.length ? (
-        <ImageCardGrid className={gridClassName}>
-          {assets.map((asset) => {
-            const previewImage = castPreviewImageForAsset(
-              projectName,
-              castMemberId,
-              asset
-            );
-            const selected = asset.selection.kind === 'select';
-            const imageUrl = castImageAssetUrl(projectName, castMemberId, asset);
-            return (
-              <ImageOverlayCard
-                key={asset.assetId}
-                imageUrl={imageUrl}
-                imageAlt={selected ? `Current ${roleLabel} pick` : roleLabel}
-                aspectClassName={aspectClassName}
-                aspectRatio={castImageAssetAspectRatio(
-                  asset,
-                  fallbackAspectRatio
-                )}
-                detectImageAspectRatio
-                imageClassName={imageClassName}
-                selected={selected}
-                onOpen={() => previewImage && onOpenImage(previewImage)}
-                bottomRightControl={
-                  <ImageSelectionControl
-                    selected={selected}
-                    selectedLabel={`Clear ${roleLabel} pick`}
-                    unselectedLabel={`Set ${roleLabel} pick`}
-                    onToggleSelected={() => onTogglePick(asset)}
-                  />
-                }
-                topRightAction={
-                  <DeleteConfirmDialog
-                    title='Delete Image?'
-                    message='Remove this image from this cast member. This cannot be undone.'
-                    onDelete={() => onDeleteAsset(asset)}
-                    trigger={
-                      <Button
-                        type='button'
-                        size='icon'
-                        variant='ghost'
-                        className='h-7 w-7 text-white/75 hover:bg-destructive/80 hover:text-white'
-                        aria-label='Delete image'
-                      >
-                        <Trash2 className='h-4 w-4' />
-                      </Button>
-                    }
-                  />
-                }
-              />
-            );
-          })}
-        </ImageCardGrid>
-      ) : (
-        <CastAssetEmptyState title={emptyTitle} />
-      )}
-    </section>
-  );
-}
+  const items = assets.map((asset) => {
+    const previewImage = castPreviewImageForAsset(
+      projectName,
+      castMemberId,
+      asset
+    );
+    const selected = asset.selection.kind === 'select';
+    const imageUrl = castImageAssetUrl(projectName, castMemberId, asset);
+    return {
+      id: asset.assetId,
+      imageUrl,
+      imageAlt: selected ? `Current ${roleLabel} pick` : roleLabel,
+      aspectClassName,
+      aspectRatio: castImageAssetAspectRatio(asset, fallbackAspectRatio),
+      detectImageAspectRatio: true,
+      imageClassName,
+      selected,
+      onOpen: () => previewImage && onOpenImage(previewImage),
+      bottomRightControl: (
+        <ImageSelectionControl
+          selected={selected}
+          selectedLabel={`Clear ${roleLabel} pick`}
+          unselectedLabel={`Set ${roleLabel} pick`}
+          onToggleSelected={() => onTogglePick(asset)}
+        />
+      ),
+      deleteAction: {
+        label: 'Delete image',
+        title: 'Delete Image?',
+        message: 'Remove this image from this cast member. This cannot be undone.',
+        onDelete: () => onDeleteAsset(asset),
+      },
+    };
+  });
 
-function CastAssetEmptyState({ title }: { title: string }) {
   return (
-    <div className='flex min-h-40 flex-col items-center justify-center rounded-md border border-dashed border-border/50 bg-muted/15 p-6 text-center'>
-      <ImageOff className='mb-3 h-5 w-5 text-muted-foreground' />
-      <p className='text-sm font-medium text-foreground'>{title}</p>
-    </div>
+    <ImageCollectionSection
+      title={title}
+      emptyTitle={emptyTitle}
+      items={items}
+      gridClassName={gridClassName}
+    />
   );
 }

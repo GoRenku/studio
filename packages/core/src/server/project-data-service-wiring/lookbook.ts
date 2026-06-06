@@ -4,9 +4,11 @@ import {
   createLookbook,
   deleteLookbook,
   deleteLookbookImage,
+  deleteLookbookSheet,
   listLookbookSourceInspirations,
   renameLookbook,
   setActiveLookbook,
+  setDefaultLookbookSheet,
   setLookbookCardImage,
   setLookbookImageSections,
   setLookbookSourceInspirations,
@@ -35,6 +37,8 @@ export function createLookbookServiceWiring(): Pick<
   | 'clearLookbookCardImage'
   | 'setLookbookCardImage'
   | 'deleteLookbookImage'
+  | 'deleteLookbookSheet'
+  | 'setDefaultLookbookSheet'
   | 'setLookbookImageSections'
 > {
   return {
@@ -52,6 +56,8 @@ export function createLookbookServiceWiring(): Pick<
     clearLookbookCardImage,
     setLookbookCardImage,
     deleteLookbookImage,
+    deleteLookbookSheet,
+    setDefaultLookbookSheet,
     setLookbookImageSections,
   };
 }

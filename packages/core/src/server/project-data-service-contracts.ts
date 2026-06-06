@@ -22,6 +22,7 @@ import type {
   LookbookSheetGenerationContext,
   LookbookSheetGenerationSpec,
   LookbookSheetMediaImportReport,
+  LookbookSheetMutationReport,
   LookbookSheetModelListReport,
   LookbookResource,
   LookbookSourceInspirationsReport,
@@ -276,6 +277,8 @@ export interface ProjectDataService {
   setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImageMutationReport>;
   clearLookbookCardImage(input: ClearLookbookCardImageInput): Promise<LookbookImageMutationReport>;
   deleteLookbookImage(input: DeleteLookbookImageInput): Promise<LookbookImageMutationReport>;
+  deleteLookbookSheet(input: DeleteLookbookSheetInput): Promise<LookbookSheetMutationReport>;
+  setDefaultLookbookSheet(input: SetDefaultLookbookSheetInput): Promise<LookbookSheetMutationReport>;
   setLookbookImageSections(input: SetLookbookImageSectionsInput): Promise<LookbookImageMutationReport>;
   buildLookbookImageContext(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageGenerationContext>;
   listLookbookImageModels(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageModelListReport>;
@@ -665,6 +668,14 @@ export interface ClearLookbookCardImageInput extends VisualLanguageProjectInput 
 
 export interface DeleteLookbookImageInput extends VisualLanguageProjectInput {
   imageId: string;
+}
+
+export interface DeleteLookbookSheetInput extends VisualLanguageProjectInput {
+  sheetId: string;
+}
+
+export interface SetDefaultLookbookSheetInput extends VisualLanguageProjectInput {
+  sheetId: string;
 }
 
 export interface SetLookbookImageSectionsInput extends VisualLanguageProjectInput {

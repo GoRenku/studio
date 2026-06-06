@@ -4,6 +4,7 @@ import type {
   InspirationResourceResponse,
   LookbookImageResponse,
   LookbookResourceResponse,
+  LookbookSheetResponse,
   LookbooksResourceResponse,
 } from './studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
@@ -30,6 +31,10 @@ interface LookbookResourceApiResponse {
 
 interface LookbookImageApiResponse {
   image: LookbookImageResponse;
+}
+
+interface LookbookSheetApiResponse {
+  sheet: LookbookSheetResponse;
 }
 
 export async function readInspirationResource(
@@ -172,6 +177,29 @@ export async function deleteLookbookImage(
     'DELETE',
     {}
   );
+}
+
+export async function deleteLookbookSheet(
+  projectName: string,
+  sheetId: string
+): Promise<void> {
+  await writeJson(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/sheets/${encodeURIComponent(sheetId)}`,
+    'DELETE',
+    {}
+  );
+}
+
+export async function setDefaultLookbookSheet(
+  projectName: string,
+  sheetId: string
+): Promise<LookbookSheetResponse> {
+  const body = await writeJson<LookbookSheetApiResponse>(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/sheets/${encodeURIComponent(sheetId)}/default`,
+    'PUT',
+    {}
+  );
+  return body.sheet;
 }
 
 export async function setLookbookCardImage(

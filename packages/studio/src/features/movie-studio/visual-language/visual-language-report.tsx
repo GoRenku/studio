@@ -79,6 +79,8 @@ export function VisualLanguageReport({
     null
   );
   const [deleteImage, setDeleteImage] = useState<ReportImage | null>(null);
+  const canDeleteLookbookImages =
+    source.kind === 'lookbook' && Boolean(onDeleteLookbookImage);
   const hasHeader = Boolean(title || headerMeta || action);
   const themeColors = sections.palette.colors.map((color) => color.hex);
   const thesisImages = imagesForSection(
@@ -95,29 +97,27 @@ export function VisualLanguageReport({
   );
 
   return (
-    <article className='min-h-full bg-panel-bg text-foreground'>
-      <div className='bg-[linear-gradient(180deg,var(--panel-bg)_0%,var(--background)_360px,var(--panel-bg)_100%)]'>
-        <div
-          className={cn(
-            'mx-auto max-w-[1240px] px-5 sm:px-8 lg:px-12',
-            hasHeader ? 'py-8' : 'py-0'
-          )}
-        >
-          {hasHeader ? (
-            <header className='flex flex-col gap-5 pb-8'>
-              <div className='flex flex-wrap items-end justify-between gap-5'>
-                <div className='min-w-0'>
-                  {title ? (
-                    <h1 className='max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
-                      {title}
-                    </h1>
-                  ) : null}
-                </div>
-                {action ? <div className='shrink-0'>{action}</div> : null}
-              </div>
-              {headerMeta ? <div>{headerMeta}</div> : null}
-            </header>
-          ) : null}
+    <article
+      className={cn(
+        'min-h-full bg-panel-bg px-4 text-foreground',
+        hasHeader ? 'py-5' : 'py-0'
+      )}
+    >
+      {hasHeader ? (
+        <header className='flex flex-col gap-5 pb-8'>
+          <div className='flex flex-wrap items-end justify-between gap-5'>
+            <div className='min-w-0'>
+              {title ? (
+                <h1 className='max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
+                  {title}
+                </h1>
+              ) : null}
+            </div>
+            {action ? <div className='shrink-0'>{action}</div> : null}
+          </div>
+          {headerMeta ? <div>{headerMeta}</div> : null}
+        </header>
+      ) : null}
 
           <ReportSection number='01' kicker='Core Idea' title='The thesis'>
             <p className='max-w-[820px] text-lg font-semibold leading-8 text-foreground lg:text-xl lg:leading-9'>
@@ -131,7 +131,7 @@ export function VisualLanguageReport({
                 size='feature'
                 onOpenImage={setPreviewImage}
                 onRequestDeleteImage={
-                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                  canDeleteLookbookImages ? setDeleteImage : undefined
                 }
               />
               {sections.thesis.principles.length ? (
@@ -154,7 +154,7 @@ export function VisualLanguageReport({
                 source={source}
                 onOpenImage={setPreviewImage}
                 onRequestDeleteImage={
-                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                  canDeleteLookbookImages ? setDeleteImage : undefined
                 }
               />
               <EvidenceGrid
@@ -162,7 +162,7 @@ export function VisualLanguageReport({
                 size='feature'
                 onOpenImage={setPreviewImage}
                 onRequestDeleteImage={
-                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                  canDeleteLookbookImages ? setDeleteImage : undefined
                 }
               />
             </div>
@@ -198,7 +198,7 @@ export function VisualLanguageReport({
                 size='feature'
                 onOpenImage={setPreviewImage}
                 onRequestDeleteImage={
-                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                  canDeleteLookbookImages ? setDeleteImage : undefined
                 }
               />
             </div>
@@ -214,7 +214,7 @@ export function VisualLanguageReport({
             source={source}
             onOpenImage={setPreviewImage}
             onRequestDeleteImage={
-              source.kind === 'lookbook' ? setDeleteImage : undefined
+              canDeleteLookbookImages ? setDeleteImage : undefined
             }
           />
 
@@ -228,7 +228,7 @@ export function VisualLanguageReport({
             source={source}
             onOpenImage={setPreviewImage}
             onRequestDeleteImage={
-              source.kind === 'lookbook' ? setDeleteImage : undefined
+              canDeleteLookbookImages ? setDeleteImage : undefined
             }
           />
 
@@ -245,7 +245,7 @@ export function VisualLanguageReport({
                 source={source}
                 onOpenImage={setPreviewImage}
                 onRequestDeleteImage={
-                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                  canDeleteLookbookImages ? setDeleteImage : undefined
                 }
               />
               <EvidenceGrid
@@ -253,7 +253,7 @@ export function VisualLanguageReport({
                 size='feature'
                 onOpenImage={setPreviewImage}
                 onRequestDeleteImage={
-                  source.kind === 'lookbook' ? setDeleteImage : undefined
+                  canDeleteLookbookImages ? setDeleteImage : undefined
                 }
               />
             </div>
@@ -276,7 +276,7 @@ export function VisualLanguageReport({
                   source={source}
                   onOpenImage={setPreviewImage}
                   onRequestDeleteImage={
-                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                    canDeleteLookbookImages ? setDeleteImage : undefined
                   }
                 />
                 <PatternDeck
@@ -286,7 +286,7 @@ export function VisualLanguageReport({
                   source={source}
                   onOpenImage={setPreviewImage}
                   onRequestDeleteImage={
-                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                    canDeleteLookbookImages ? setDeleteImage : undefined
                   }
                 />
                 <PatternDeck
@@ -296,7 +296,7 @@ export function VisualLanguageReport({
                   source={source}
                   onOpenImage={setPreviewImage}
                   onRequestDeleteImage={
-                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                    canDeleteLookbookImages ? setDeleteImage : undefined
                   }
                 />
                 <EvidenceGrid
@@ -304,7 +304,7 @@ export function VisualLanguageReport({
                   size='feature'
                   onOpenImage={setPreviewImage}
                   onRequestDeleteImage={
-                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                    canDeleteLookbookImages ? setDeleteImage : undefined
                   }
                 />
               </div>
@@ -331,14 +331,12 @@ export function VisualLanguageReport({
                   source={source}
                   onOpenImage={setPreviewImage}
                   onRequestDeleteImage={
-                    source.kind === 'lookbook' ? setDeleteImage : undefined
+                    canDeleteLookbookImages ? setDeleteImage : undefined
                   }
                 />
               </div>
             </SectionWideContent>
           ) : null}
-        </div>
-      </div>
       <ImagePreviewDialog
         images={previewImage ? [previewImage] : []}
         currentIndex={0}
@@ -374,7 +372,7 @@ function ReportSection({
   children: ReactNode;
 }) {
   return (
-    <section className='grid gap-8 border-t border-border/40 py-10 sm:py-12 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)] lg:gap-12'>
+    <section className='grid gap-6 border-t border-border/40 py-8 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)] lg:gap-8'>
       <div>
         <p className='font-mono text-xs uppercase text-muted-foreground'>
           {number} - {kicker}

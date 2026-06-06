@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type {
   InspirationFolderWithResolvedPath,
@@ -6,11 +6,16 @@ import type {
 } from '@gorenku/studio-core/client';
 import {
   deleteLookbookImage,
+  deleteLookbookSheet,
   readLookbook,
+  setDefaultLookbookSheet,
   setActiveLookbook,
 } from '@/services/studio-visual-language-api';
 import { Button } from '@/ui/button';
+import { LineTabBar } from '@/ui/line-tab-bar';
+import { Tabs, TabsContent } from '@/ui/tabs';
 import { EmptyState } from './empty-state';
+import { LookbookVisualContentTab } from './lookbook-visual-content-tab';
 import { VisualLanguageReport } from './visual-language-report';
 
 interface LookbookPanelProps {
@@ -26,6 +31,10 @@ export function LookbookPanel({
 }: LookbookPanelProps) {
   const [resource, setResource] = useState<LookbookResource | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
+
+  const refreshLookbook = useCallback(async () => {
+    setResource(await readLookbook(projectName, lookbookId));
+  }, [lookbookId, projectName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,14 +72,34 @@ export function LookbookPanel({
 
   const makeActive = async () => {
     await setActiveLookbook(projectName, lookbookId);
-    setResource(await readLookbook(projectName, lookbookId));
+    await refreshLookbook();
     onLookbooksChange();
   };
 
   const removeImage = async (imageId: string) => {
     try {
       await deleteLookbookImage(projectName, imageId);
-      setResource(await readLookbook(projectName, lookbookId));
+      await refreshLookbook();
+      onLookbooksChange();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
+  };
+
+  const removeSheet = async (sheetId: string) => {
+    try {
+      await deleteLookbookSheet(projectName, sheetId);
+      await refreshLookbook();
+      onLookbooksChange();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
+  };
+
+  const setDefaultSheet = async (sheetId: string) => {
+    try {
+      await setDefaultLookbookSheet(projectName, sheetId);
+      await refreshLookbook();
       onLookbooksChange();
     } catch (error) {
       toast.error(errorMessage(error));
@@ -82,35 +111,56 @@ export function LookbookPanel({
   }
 
   return (
-    <div className='min-h-full'>
-      <VisualLanguageReport
-        projectName={projectName}
-        title={resource.lookbook.name}
-        headerMeta={
-          <SourceInspirationList
-            sourceInspirationFolders={resource.sourceInspirationFolders}
-          />
-        }
-        action={
-          !resource.isActive ? (
-            <Button type='button' variant='outline' size='sm' onClick={() => void makeActive()}>
-              Set active
-            </Button>
-          ) : null
-        }
-        source={{ kind: 'lookbook', imagesBySection: resource.imagesBySection }}
-        sections={{
-          thesis: resource.lookbook.thesis,
-          palette: resource.lookbook.palette,
-          toneMood: resource.lookbook.toneMood,
-          composition: resource.lookbook.composition,
-          lighting: resource.lookbook.lighting,
-          texture: resource.lookbook.texture,
-          camera: resource.lookbook.camera,
-        }}
-        onDeleteLookbookImage={removeImage}
+    <Tabs defaultValue='definition' className='h-full gap-0'>
+      <LineTabBar
+        items={[
+          { value: 'definition', label: 'Definition' },
+          { value: 'visual', label: 'Visual Content' },
+        ]}
       />
-    </div>
+      <TabsContent value='definition' className='min-h-0 overflow-y-auto p-0'>
+        <VisualLanguageReport
+          projectName={projectName}
+          title={resource.lookbook.name}
+          headerMeta={
+            <SourceInspirationList
+              sourceInspirationFolders={resource.sourceInspirationFolders}
+            />
+          }
+          action={
+            !resource.isActive ? (
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={() => void makeActive()}
+              >
+                Set active
+              </Button>
+            ) : null
+          }
+          source={{ kind: 'lookbook', imagesBySection: resource.imagesBySection }}
+          sections={{
+            thesis: resource.lookbook.thesis,
+            palette: resource.lookbook.palette,
+            toneMood: resource.lookbook.toneMood,
+            composition: resource.lookbook.composition,
+            lighting: resource.lookbook.lighting,
+            texture: resource.lookbook.texture,
+            camera: resource.lookbook.camera,
+          }}
+        />
+      </TabsContent>
+      <TabsContent value='visual' className='min-h-0 overflow-y-auto p-0'>
+        <LookbookVisualContentTab
+          projectName={projectName}
+          resource={resource}
+          onDeleteImage={removeImage}
+          onDeleteSheet={removeSheet}
+          onSetDefaultSheet={setDefaultSheet}
+        />
+      </TabsContent>
+    </Tabs>
   );
 }
 

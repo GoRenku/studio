@@ -122,6 +122,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'recordLookbookSheetRun'
   | 'importLookbookSheetMedia'
   | 'deleteLookbookImage'
+  | 'deleteLookbookSheet'
+  | 'setDefaultLookbookSheet'
   | 'setLookbookImageSections'
 > & {
   resolveProjectAssetFile(input: {

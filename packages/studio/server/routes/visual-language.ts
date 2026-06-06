@@ -295,6 +295,19 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .put('/visual-language/lookbooks/sheets/:sheetId/default', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sheetId = c.req.param('sheetId') as string;
+        const report = await projectData.setDefaultLookbookSheet({
+          projectName,
+          sheetId,
+        });
+        return c.json({ sheet: report.sheet });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/visual-language/lookbooks/images/:imageId/files/:assetFileId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
@@ -401,6 +414,16 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const imageId = c.req.param('imageId') as string;
         await projectData.deleteLookbookImage({ projectName, imageId });
+        return c.json({ ok: true });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/visual-language/lookbooks/sheets/:sheetId', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sheetId = c.req.param('sheetId') as string;
+        await projectData.deleteLookbookSheet({ projectName, sheetId });
         return c.json({ ok: true });
       } catch (error) {
         return projectErrorResponse(c, error);

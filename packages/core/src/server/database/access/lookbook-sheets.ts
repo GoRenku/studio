@@ -113,6 +113,21 @@ export function deleteLookbookSheetRecord(
   session.db.delete(lookbookSheets).where(eq(lookbookSheets.id, sheetId)).run();
 }
 
+export function setLookbookSheetRecordOrder(
+  session: DatabaseSession,
+  input: {
+    sheetId: string;
+    sortOrder: number;
+    now: string;
+  }
+): void {
+  session.db
+    .update(lookbookSheets)
+    .set({ sortOrder: input.sortOrder, updatedAt: input.now })
+    .where(eq(lookbookSheets.id, input.sheetId))
+    .run();
+}
+
 export function listLookbookSheets(
   session: DatabaseSession,
   lookbookId: string

@@ -907,6 +907,15 @@ export function fakeProjectDataService(): NonNullable<
     async deleteLookbookImage() {
       return makeLookbookImageMutationReport('lookbook_test0001');
     },
+    async deleteLookbookSheet() {
+      return makeLookbookSheetMutationReport('lookbook_test0001');
+    },
+    async setDefaultLookbookSheet(input) {
+      return makeLookbookSheetMutationReport(
+        'lookbook_test0001',
+        makeLookbookSheet(input.sheetId)
+      );
+    },
     async setLookbookImageSections(input) {
       return makeLookbookImageMutationReport('lookbook_test0001', {
         ...makeLookbookImage(input.imageId),
@@ -1358,5 +1367,16 @@ function makeLookbookImageMutationReport(
     ...makeVisualLanguageCommandReport('lookbook.imageChanged'),
     lookbookId,
     ...(image ? { image } : {}),
+  };
+}
+
+function makeLookbookSheetMutationReport(
+  lookbookId: string,
+  sheet?: ReturnType<typeof makeLookbookSheet>
+) {
+  return {
+    ...makeVisualLanguageCommandReport('lookbook.sheetChanged'),
+    lookbookId,
+    ...(sheet ? { sheet } : {}),
   };
 }

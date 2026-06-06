@@ -49,48 +49,44 @@ export function LocationDetailsTab({
 
   return (
     <>
-      <article className='min-h-full bg-panel-bg text-foreground'>
-        <div className='bg-[linear-gradient(180deg,var(--panel-bg)_0%,var(--background)_360px,var(--panel-bg)_100%)]'>
-          <div className='mx-auto max-w-[1240px] px-5 py-8 sm:px-8 lg:px-12'>
-            <header className='grid gap-8 pb-10 lg:grid-cols-[minmax(360px,520px)_minmax(0,1fr)] lg:gap-12'>
-              <LocationFeatureImage
-                image={sheetPreview}
-                aspectRatio={sheetAspectRatio}
-                emptyLabel='No location sheet yet'
-                onOpenImage={setPreviewImage}
-              />
-              <div className='flex min-w-0 flex-col justify-end'>
-                <div className='flex flex-wrap items-center gap-2'>
-                  {location.timePeriod ? (
-                    <span className='rounded-full border border-border/50 bg-muted/45 px-3 py-1 text-xs font-semibold text-foreground/75'>
-                      {location.timePeriod}
-                    </span>
-                  ) : null}
-                </div>
-                <h1 className='mt-4 max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
-                  {location.name}
-                </h1>
-                {location.description ? (
-                  <p className='mt-6 max-w-[780px] whitespace-pre-wrap text-base font-semibold leading-8 text-foreground/82 lg:text-lg'>
-                    {location.description}
-                  </p>
-                ) : null}
-              </div>
-            </header>
-
-            {location.visualNotes ? (
-              <LocationReportSection
-                number='01'
-                kicker='Location Direction'
-                title='Visual Notes'
-              >
-                <p className='max-w-[820px] whitespace-pre-wrap text-sm leading-7 text-foreground/78'>
-                  {location.visualNotes}
-                </p>
-              </LocationReportSection>
+      <article className='min-h-full bg-panel-bg px-4 py-5 text-foreground'>
+        <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(360px,520px)_minmax(0,1fr)] lg:gap-8'>
+          <LocationFeatureImage
+            image={sheetPreview}
+            aspectRatio={sheetAspectRatio}
+            emptyLabel='No location sheet yet'
+            onOpenImage={setPreviewImage}
+          />
+          <div className='flex min-w-0 flex-col justify-end'>
+            <div className='flex flex-wrap items-center gap-2'>
+              {location.timePeriod ? (
+                <span className='rounded-full border border-border/50 bg-muted/45 px-3 py-1 text-xs font-semibold text-foreground/75'>
+                  {location.timePeriod}
+                </span>
+              ) : null}
+            </div>
+            <h1 className='mt-4 max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
+              {location.name}
+            </h1>
+            {location.description ? (
+              <p className='mt-6 max-w-[780px] whitespace-pre-wrap text-base font-semibold leading-8 text-foreground/82 lg:text-lg'>
+                {location.description}
+              </p>
             ) : null}
           </div>
-        </div>
+        </header>
+
+        {location.visualNotes ? (
+          <LocationReportSection
+            number='01'
+            kicker='Location Direction'
+            title='Visual Notes'
+          >
+            <p className='max-w-[820px] whitespace-pre-wrap text-sm leading-7 text-foreground/78'>
+              {location.visualNotes}
+            </p>
+          </LocationReportSection>
+        ) : null}
       </article>
       <ImagePreviewDialog
         images={previewImage ? [previewImage] : []}
@@ -113,7 +109,7 @@ function LocationReportSection({
   children: ReactNode;
 }) {
   return (
-    <section className='grid gap-8 border-t border-border/40 py-10 sm:py-12 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)] lg:gap-12'>
+    <section className='grid gap-6 border-t border-border/40 py-8 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)] lg:gap-8'>
       <div>
         <p className='font-mono text-xs uppercase text-muted-foreground'>
           {number} - {kicker}

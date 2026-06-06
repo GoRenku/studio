@@ -6,10 +6,13 @@ import type {
   Lookbook,
   LookbookImage,
   LookbookResource,
+  LookbookSheet,
 } from '@gorenku/studio-core/client';
 import {
   deleteLookbookImage,
+  deleteLookbookSheet,
   readLookbook,
+  setDefaultLookbookSheet,
   setActiveLookbook,
 } from '@/services/studio-visual-language-api';
 import { LookbookPanel } from './lookbook-panel';
@@ -22,14 +25,18 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/services/studio-visual-language-api', () => ({
   deleteLookbookImage: vi.fn(),
+  deleteLookbookSheet: vi.fn(),
   readLookbook: vi.fn(),
+  setDefaultLookbookSheet: vi.fn(),
   setActiveLookbook: vi.fn(),
 }));
 
 describe('LookbookPanel', () => {
   beforeEach(() => {
     vi.mocked(deleteLookbookImage).mockReset();
+    vi.mocked(deleteLookbookSheet).mockReset();
     vi.mocked(readLookbook).mockReset();
+    vi.mocked(setDefaultLookbookSheet).mockReset();
     vi.mocked(setActiveLookbook).mockReset();
   });
 
@@ -80,8 +87,9 @@ describe('LookbookPanel', () => {
       />
     );
 
+    await openVisualContentTab();
     expect(await screen.findByAltText('Palette frame')).not.toBeNull();
-    fireEvent.click(screen.getByLabelText('Delete Palette frame'));
+    fireEvent.click(screen.getByLabelText('Delete image'));
     expect(screen.getByText('Delete Image?')).not.toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
@@ -97,9 +105,101 @@ describe('LookbookPanel', () => {
     });
     expect(screen.queryByAltText('Palette frame')).toBeNull();
   });
+
+  it('deletes a Lookbook sheet after confirmation', async () => {
+    const onLookbooksChange = vi.fn();
+    vi.mocked(deleteLookbookSheet).mockResolvedValue();
+    vi.mocked(readLookbook)
+      .mockResolvedValueOnce(lookbookResource('Original lookbook', true, true))
+      .mockResolvedValueOnce(lookbookResource('Original lookbook', true, false));
+
+    render(
+      <LookbookPanel
+        projectName='constantinople'
+        lookbookId='lookbook_test0001'
+        onLookbooksChange={onLookbooksChange}
+      />
+    );
+
+    await openVisualContentTab();
+    expect(await screen.findByAltText('Default lookbook sheet')).not.toBeNull();
+    fireEvent.click(screen.getByLabelText('Delete lookbook sheet'));
+    expect(screen.getByText('Delete Lookbook Sheet?')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => {
+      expect(deleteLookbookSheet).toHaveBeenCalledWith(
+        'constantinople',
+        'lookbook_sheet_test0001'
+      );
+    });
+    await waitFor(() => {
+      expect(onLookbooksChange).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByAltText('Default lookbook sheet')).toBeNull();
+  });
+
+  it('sets a different Lookbook sheet as the default sheet', async () => {
+    const onLookbooksChange = vi.fn();
+    vi.mocked(setDefaultLookbookSheet).mockResolvedValue(
+      lookbookSheet('lookbook_sheet_test0002')
+    );
+    vi.mocked(readLookbook)
+      .mockResolvedValueOnce(
+        lookbookResource('Original lookbook', true, true, [
+          lookbookSheet('lookbook_sheet_test0001'),
+          lookbookSheet('lookbook_sheet_test0002'),
+        ])
+      )
+      .mockResolvedValueOnce(
+        lookbookResource('Original lookbook', true, true, [
+          lookbookSheet('lookbook_sheet_test0002'),
+          lookbookSheet('lookbook_sheet_test0001'),
+        ])
+      );
+
+    render(
+      <LookbookPanel
+        projectName='constantinople'
+        lookbookId='lookbook_test0001'
+        onLookbooksChange={onLookbooksChange}
+      />
+    );
+
+    await openVisualContentTab();
+    const setDefaultButtons = await screen.findAllByRole('button', {
+      name: 'Set default lookbook sheet',
+    });
+    fireEvent.click(setDefaultButtons[0]!);
+
+    await waitFor(() => {
+      expect(setDefaultLookbookSheet).toHaveBeenCalledWith(
+        'constantinople',
+        'lookbook_sheet_test0002'
+      );
+    });
+    expect(onLookbooksChange).toHaveBeenCalledTimes(1);
+  });
 });
 
-function lookbookResource(name: string, includeImage = true): LookbookResource {
+async function openVisualContentTab() {
+  const visualContentTab = await screen.findByRole('tab', {
+    name: 'Visual Content',
+  });
+  fireEvent.pointerDown(visualContentTab, { button: 0, ctrlKey: false });
+  fireEvent.pointerUp(visualContentTab);
+  fireEvent.mouseDown(visualContentTab, { button: 0, ctrlKey: false });
+  fireEvent.mouseUp(visualContentTab);
+  fireEvent.click(visualContentTab);
+}
+
+function lookbookResource(
+  name: string,
+  includeImage = true,
+  includeSheets = false,
+  sheets = includeSheets ? [lookbookSheet('lookbook_sheet_test0001')] : []
+): LookbookResource {
   const paletteImage = lookbookImage();
   return {
     valid: true,
@@ -110,7 +210,7 @@ function lookbookResource(name: string, includeImage = true): LookbookResource {
     sourceInspirationFolders: [],
     cardImage: null,
     isActive: false,
-    sheets: [],
+    sheets,
     images: includeImage ? [paletteImage] : [],
     imagesBySection: {
       thesis: [],
@@ -149,6 +249,37 @@ function lookbookImage(): LookbookImage {
           contentHash: null,
           width: 1280,
           height: 720,
+          durationSeconds: null,
+        },
+      ],
+    },
+  };
+}
+
+function lookbookSheet(id: string): LookbookSheet {
+  return {
+    id,
+    asset: {
+      assetId: `asset_${id}`,
+      type: 'lookbook_sheet',
+      mediaKind: 'image',
+      title: 'Lookbook sheet',
+      oneLineSummary: 'A generated lookbook sheet.',
+      origin: 'generated',
+      availability: 'available',
+      createdAt: '2026-05-25T00:00:00.000Z',
+      updatedAt: '2026-05-25T00:00:00.000Z',
+      files: [
+        {
+          id: `asset_file_${id}`,
+          role: 'primary',
+          mediaKind: 'image',
+          projectRelativePath: 'visual-language/lookbook/lookbook-sheet.png' as never,
+          mimeType: 'image/png',
+          sizeBytes: 123,
+          contentHash: null,
+          width: 1024,
+          height: 768,
           durationSeconds: null,
         },
       ],

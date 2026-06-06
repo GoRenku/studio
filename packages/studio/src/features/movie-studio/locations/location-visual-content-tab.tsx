@@ -1,10 +1,6 @@
 import { useState } from 'react';
-import { ImageOff, Trash2 } from 'lucide-react';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { Button } from '@/ui/button';
-import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
-import { ImageCardGrid } from '@/ui/image-card-grid';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { ImageCollectionSection } from '@/ui/image-collection-section';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
 import {
   ImagePreviewDialog,
@@ -47,90 +43,55 @@ export function LocationVisualContentTab({
     setPreviewIndex(0);
   };
 
+  const items = sheetAssets.map((asset) => {
+    const selected = asset.selection.kind === 'select';
+    return {
+      id: asset.assetId,
+      imageUrl: locationEnvironmentSheetCompositeUrl(projectName, locationId, asset),
+      imageAlt: selected ? 'Active location sheet' : 'Location sheet',
+      aspectClassName: 'aspect-[4/3]',
+      aspectRatio: locationEnvironmentSheetAspectRatio(asset, 4 / 3),
+      detectImageAspectRatio: true,
+      imageClassName: 'object-contain',
+      selected,
+      onOpen: () => openSheetPreview(asset),
+      bottomRightControl: (
+        <ImageSelectionControl
+          selected={selected}
+          selectedLabel='Clear active location sheet'
+          unselectedLabel='Set active location sheet'
+          onToggleSelected={() => onToggleActive(asset)}
+        />
+      ),
+      deleteAction: {
+        label: 'Delete location sheet',
+        title: 'Delete Location Sheet?',
+        message:
+          'Remove this location sheet from this location. This cannot be undone.',
+        onDelete: async () => {
+          await onDeleteAsset(asset);
+          setPreviewImages((current) =>
+            current.some((image) =>
+              image.src.includes(encodeURIComponent(asset.assetId))
+            )
+              ? []
+              : current
+          );
+        },
+      },
+    };
+  });
+
   return (
     <>
-      <div className='min-h-full overflow-y-auto bg-panel-bg p-5 sm:p-8 lg:p-10'>
-        <div className='mx-auto max-w-[1240px] space-y-10'>
-          <section className='space-y-4'>
-            <div className='flex flex-wrap items-end justify-between gap-3 border-b border-border/40 pb-4'>
-              <div className='min-w-0'>
-                <h2 className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-                  Location Sheets
-                </h2>
-              </div>
-              <span className='rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground/70'>
-                {sheetAssets.length === 1
-                  ? '1 image'
-                  : `${sheetAssets.length} images`}
-              </span>
-            </div>
-            {sheetAssets.length ? (
-              <ImageCardGrid className='grid-cols-[repeat(auto-fill,minmax(480px,1fr))]'>
-                {sheetAssets.map((asset) => {
-                  const selected = asset.selection.kind === 'select';
-                  return (
-                    <ImageOverlayCard
-                      key={asset.assetId}
-                      imageUrl={locationEnvironmentSheetCompositeUrl(
-                        projectName,
-                        locationId,
-                        asset
-                      )}
-                      imageAlt={selected ? 'Active location sheet' : 'Location sheet'}
-                      aspectClassName='aspect-[4/3]'
-                      aspectRatio={locationEnvironmentSheetAspectRatio(
-                        asset,
-                        4 / 3
-                      )}
-                      detectImageAspectRatio
-                      imageClassName='object-contain'
-                      selected={selected}
-                      onOpen={() => openSheetPreview(asset)}
-                      bottomRightControl={
-                        <ImageSelectionControl
-                          selected={selected}
-                          selectedLabel='Clear active location sheet'
-                          unselectedLabel='Set active location sheet'
-                          onToggleSelected={() => onToggleActive(asset)}
-                        />
-                      }
-                      topRightAction={
-                        <DeleteConfirmDialog
-                          title='Delete Location Sheet?'
-                          message='Remove this location sheet from this location. This cannot be undone.'
-                          onDelete={async () => {
-                            await onDeleteAsset(asset);
-                            setPreviewImages((current) =>
-                              current.some((image) =>
-                                image.src.includes(
-                                  encodeURIComponent(asset.assetId)
-                                )
-                              )
-                                ? []
-                                : current
-                            );
-                          }}
-                          trigger={
-                            <Button
-                              type='button'
-                              size='icon'
-                              variant='ghost'
-                              className='h-7 w-7 text-white/75 hover:bg-destructive/80 hover:text-white'
-                              aria-label='Delete location sheet'
-                            >
-                              <Trash2 className='h-4 w-4' />
-                            </Button>
-                          }
-                        />
-                      }
-                    />
-                  );
-                })}
-              </ImageCardGrid>
-            ) : (
-              <LocationSheetEmptyState />
-            )}
-          </section>
+      <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
+        <div className='space-y-8'>
+          <ImageCollectionSection
+            title='Location Sheets'
+            emptyTitle='No location sheets yet.'
+            items={items}
+            gridClassName='grid-cols-[repeat(auto-fill,minmax(480px,1fr))]'
+          />
         </div>
       </div>
       <ImagePreviewDialog
@@ -145,16 +106,5 @@ export function LocationVisualContentTab({
         }}
       />
     </>
-  );
-}
-
-function LocationSheetEmptyState() {
-  return (
-    <div className='flex min-h-40 flex-col items-center justify-center rounded-md border border-dashed border-border/50 bg-muted/15 p-6 text-center'>
-      <ImageOff className='mb-3 h-5 w-5 text-muted-foreground' />
-      <p className='text-sm font-medium text-foreground'>
-        No location sheets yet.
-      </p>
-    </div>
   );
 }
