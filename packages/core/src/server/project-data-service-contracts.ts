@@ -375,6 +375,7 @@ export interface ProjectDataService {
   previewShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakePreflightReport>;
   selectShotVideoTakeInput(input: SelectShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
   clearShotVideoTakeInputSelection(input: ClearShotVideoTakeInputSelectionInput): Promise<ShotVideoTakeGenerationContext>;
+  deleteShotVideoTakeInput(input: DeleteShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
   validateShotFirstFrameSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
   createShotFirstFrameSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
   updateShotFirstFrameSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
@@ -391,14 +392,14 @@ export interface ProjectDataService {
   prepareShotLastFrameSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   estimateShotLastFrameSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   runShotLastFrameSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
-  validateShotReferenceSheetSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
-  createShotReferenceSheetSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
-  updateShotReferenceSheetSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
-  readShotReferenceSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
-  listShotReferenceSheetSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
-  prepareShotReferenceSheetSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
-  estimateShotReferenceSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
-  runShotReferenceSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  validateShotReferenceImageSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createShotReferenceImageSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateShotReferenceImageSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readShotReferenceImageSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listShotReferenceImageSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareShotReferenceImageSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateShotReferenceImageSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runShotReferenceImageSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   validateShotMultiShotStoryboardSheetSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
   createShotMultiShotStoryboardSheetSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
   updateShotMultiShotStoryboardSheetSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
@@ -417,7 +418,7 @@ export interface ProjectDataService {
   runShotVideoTakeSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   importShotFirstFrame(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
   importShotLastFrame(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
-  importShotReferenceSheet(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
+  importShotReferenceImage(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
   importShotMultiShotStoryboardSheet(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
   importShotVideoTake(input: ImportShotVideoTakeMediaInput): Promise<ShotVideoTakeMediaImportReport>;
 }
@@ -1035,6 +1036,11 @@ export interface ClearShotVideoTakeInputSelectionInput
   kind: ShotVideoTakeInputKind;
   subjectKind: ShotVideoTakeInputSubjectKind;
   subjectId: string;
+}
+
+export interface DeleteShotVideoTakeInputInput
+  extends ShotVideoTakeContextInput {
+  inputId: string;
 }
 
 export interface ValidateShotVideoTakeInputGenerationSpecInput

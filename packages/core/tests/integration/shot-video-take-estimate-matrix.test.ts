@@ -9,8 +9,10 @@ import {
 } from '@gorenku/studio-engines';
 import type {
   SceneShotListDocument,
+  ShotVideoTakeDependencyDraft,
   ShotVideoTakeParameterValues,
   ShotVideoTakePreparedInput,
+  ShotVideoTakeProductionPlan,
   ShotVideoTakeShotGroupMode,
   ShotVideoTakeRequestedInput,
 } from '../../src/client/scene-shot-list.js';
@@ -193,13 +195,7 @@ describe('shot video take estimate integration matrix', () => {
       sceneId: setup.ids.sceneId,
       shotListId: shotListIdForCase(entry, setup),
       shotIds: shotIdsForCase(entry),
-      production: {
-        inputModeId: entry.inputModeId,
-        modelChoice: entry.modelChoice,
-        parameterValues: entry.parameterValues,
-        preparedInputs: preparedInputsForCase(entry, setup),
-        requestedInputs: requestedInputsForCase(entry, setup),
-      },
+      production: productionForCase(entry, setup, { includePreparedInputs: true }),
     });
 
     expect(estimate.issues).toEqual([]);
@@ -239,11 +235,7 @@ describe('shot video take estimate integration matrix', () => {
       sceneId: setup.ids.sceneId,
       shotListId: shotListIdForCase(entry, setup),
       shotIds: shotIdsForCase(entry),
-      production: {
-        inputModeId: entry.inputModeId,
-        modelChoice: entry.modelChoice,
-        parameterValues: entry.parameterValues,
-      },
+      production: productionForCase(entry, setup, { includePreparedInputs: false }),
     });
 
     expect(estimate.issues).toEqual([]);
@@ -274,11 +266,7 @@ describe('shot video take estimate integration matrix', () => {
         sceneId: setup.ids.sceneId,
         shotListId: shotListIdForCase(entry, setup),
         shotIds: shotIdsForCase(entry),
-        production: {
-          inputModeId: entry.inputModeId,
-          modelChoice: entry.modelChoice,
-          parameterValues: entry.parameterValues,
-        },
+        production: productionForCase(entry, setup, { includePreparedInputs: false }),
       });
 
       expect(estimate.issues).toEqual([]);
@@ -1101,6 +1089,69 @@ async function writeProjectFile(
   const absolutePath = path.join(project.projectFolder, projectRelativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, contents);
+}
+
+function productionForCase(
+  input: EstimateMatrixCase | RunSetupPricingPermutationCase,
+  setup: MatrixProjectSetup,
+  options: { includePreparedInputs: boolean }
+): ShotVideoTakeProductionPlan {
+  return {
+    inputModeId: input.inputModeId,
+    modelChoice: input.modelChoice,
+    parameterValues: input.parameterValues,
+    ...(options.includePreparedInputs
+      ? { preparedInputs: preparedInputsForCase(input, setup) }
+      : {}),
+    requestedInputs: requestedInputsForCase(input, setup),
+    agentProposal: {
+      basedOnInputModeId: input.inputModeId,
+      basedOnModelChoice: input.modelChoice,
+      basedOnShotIds: shotIdsForCase(input),
+      dependencyDrafts: dependencyDraftsForCase(input),
+      finalPromptDraft: {
+        prompt: `Author final video generation for ${input.label} using the selected shot design and prepared references.`,
+        title: `${input.label} final video take`,
+      },
+    },
+  };
+}
+
+function dependencyDraftsForCase(
+  input: EstimateMatrixCase | RunSetupPricingPermutationCase
+): ShotVideoTakeDependencyDraft[] {
+  const drafts: ShotVideoTakeDependencyDraft[] = [];
+  if (
+    input.inputModeId === 'first-frame' ||
+    input.inputModeId === 'first-last-frame'
+  ) {
+    drafts.push({
+      purpose: 'shot.first-frame',
+      dependencyKind: 'first-frame',
+      outputInputKind: 'first-frame',
+      prompt: `Author the exact first frame for ${input.label} from the selected composition, motion, cast, location, and lookbook references.`,
+      title: `${input.label} first frame`,
+    });
+  }
+  if (input.inputModeId === 'first-last-frame') {
+    drafts.push({
+      purpose: 'shot.last-frame',
+      dependencyKind: 'last-frame',
+      outputInputKind: 'last-frame',
+      prompt: `Author the exact last frame for ${input.label}, preserving continuity from the first frame while showing the final action state.`,
+      title: `${input.label} last frame`,
+    });
+  }
+  if (requiresMultiShotStoryboard(input)) {
+    drafts.push({
+      purpose: 'shot.multi-shot-storyboard-sheet',
+      dependencyKind: 'multi-shot-storyboard-sheet',
+      outputInputKind: 'multi-shot-storyboard-sheet',
+      prompt: `Author one ordered multi-shot storyboard planning sheet for ${input.label}, with one readable panel per selected shot and compact camera/action metadata.`,
+      title: `${input.label} storyboard sheet`,
+    });
+  }
+  return drafts;
 }
 
 function preparedInputFromImported(

@@ -73,7 +73,7 @@ import {
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../client/index.js';
 import { insertAssetFileRecord, readAssetFileRecord } from '../database/access/asset-files.js';
@@ -106,6 +106,7 @@ import {
 } from '../database/access/scene-shot-lists.js';
 import {
   clearShotVideoTakeInputRecordSelection,
+  deleteShotVideoTakeInputRecord,
   insertShotVideoTakeInputRecord,
   insertShotVideoTakeRecord,
   listShotVideoTakeInputs as listShotVideoTakeInputRecords,
@@ -134,6 +135,7 @@ import type {
   ClearShotVideoTakeInputSelectionInput,
   CreateShotVideoTakeGenerationSpecInput,
   CreateShotVideoTakeInputGenerationSpecInput,
+  DeleteShotVideoTakeInputInput,
   ImportShotVideoTakeInputMediaInput,
   ImportShotVideoTakeMediaInput,
   PreviewShotVideoTakeProductionInput,
@@ -192,12 +194,12 @@ const PURPOSE_CONFIG: Record<
     dependencyKind:
       | 'first-frame'
       | 'last-frame'
-      | 'shot-reference-sheet'
+      | 'reference-image'
       | 'multi-shot-storyboard-sheet';
     outputInputKind:
       | 'first-frame'
       | 'last-frame'
-      | 'shot-reference-sheet'
+      | 'reference-image'
       | 'multi-shot-storyboard-sheet';
     title: string;
   }
@@ -212,10 +214,10 @@ const PURPOSE_CONFIG: Record<
     outputInputKind: 'last-frame',
     title: 'Shot last frame',
   },
-  [SHOT_REFERENCE_SHEET_GENERATION_PURPOSE]: {
-    dependencyKind: 'shot-reference-sheet',
-    outputInputKind: 'shot-reference-sheet',
-    title: 'Shot reference sheet',
+  [SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE]: {
+    dependencyKind: 'reference-image',
+    outputInputKind: 'reference-image',
+    title: 'Shot reference image',
   },
   [SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE]: {
     dependencyKind: 'multi-shot-storyboard-sheet',
@@ -911,75 +913,155 @@ function buildImageReferenceChoices(input: {
   context: ShotVideoTakeGenerationContext;
   plan: ShotVideoTakeGenerationPlan;
 }): ShotVideoTakeImageReferenceChoice[] {
-  const plannedKinds: Array<{
-    referenceKind: Exclude<
-      ShotVideoTakeImageReferenceChoice['referenceKind'],
-      'custom-reference-image'
-    >;
-    title: string;
-    dependencyId: string;
-  }> = [
-    {
-      referenceKind: 'first-frame',
-      title: 'First frame',
-      dependencyId: dependencyIdForInput('first-frame'),
-    },
-    {
-      referenceKind: 'last-frame',
-      title: 'Last frame',
-      dependencyId: dependencyIdForInput('last-frame'),
-    },
-    {
-      referenceKind: 'shot-reference-sheet',
-      title: 'Shot reference sheet',
-      dependencyId: dependencyIdForInput('shot-reference-sheet'),
-    },
-  ];
-  const plannedChoices = plannedKinds.flatMap((entry) => {
-    const node = dependencyNodeById(input.plan, entry.dependencyId);
-    if (!node) {
-      return [];
+  const choicesByKey = new Map<string, ShotVideoTakeImageReferenceChoice>();
+  const plannedInputIds = new Set<string>();
+  input.plan.dependencyMap.nodes.forEach((node) => {
+    const parsed = parseDependencyId(node.dependencyId);
+    const referenceInputKind = parsed
+      ? shotReferenceTabInputKind(parsed.kind)
+      : null;
+    if (!referenceInputKind || !node.dependencyId) {
+      return;
     }
-    return [
-      {
-        referenceKind: entry.referenceKind,
-        title: entry.title,
-        selected: true,
-        image: referenceCardPlan({
-          selected: true,
-          mediaKind: 'image',
-          dependencyId: entry.dependencyId,
-          node,
-          line: planLineForNode(input.plan, node),
-          previews: previewImagesForDependencyNode(input.context, node),
-        }),
-      },
-    ];
-  });
-  const selectedCustomIds = selectedCustomReferenceInputIdsForShots(
-    input.context.shots
-  );
-  const customChoices = input.context.availableInputs
-    .filter((availableInput) => selectedCustomIds.has(availableInput.inputId))
-    .map((availableInput) => ({
-      referenceKind: 'custom-reference-image' as const,
-      title: 'Custom reference image',
+    const referenceKind = imageReferenceKindForInputKind(referenceInputKind);
+    const title = titleForPlannedImageReference(
+      input.context,
+      referenceInputKind,
+      node
+    );
+    const previews = previewImagesForDependencyNode(input.context, node);
+    previews.forEach((preview) => {
+      if (preview.inputId) {
+        plannedInputIds.add(preview.inputId);
+      }
+    });
+    const choice = {
+      referenceKind,
+      title,
       selected: true,
       image: referenceCardPlan({
         selected: true,
+        mediaKind: 'image',
+        dependencyId: node.dependencyId,
+        node,
+        line: planLineForNode(input.plan, node),
+        previews,
+      }),
+    };
+    choicesByKey.set(`planned:${node.dependencyId}`, choice);
+  });
+  input.context.availableInputs.forEach((availableInput) => {
+    const referenceInputKind = shotReferenceTabInputKind(availableInput.kind);
+    if (!referenceInputKind) {
+      return;
+    }
+    if (plannedInputIds.has(availableInput.inputId)) {
+      return;
+    }
+    const dependencyId = dependencyIdForInput(
+      referenceInputKind,
+      availableInput.subjectKind,
+      availableInput.subjectId
+    );
+    const plannedNode = dependencyNodeById(input.plan, dependencyId);
+    const node =
+      plannedNode?.assetId === availableInput.assetId &&
+      plannedNode.assetFileId === availableInput.assetFileId
+        ? plannedNode
+        : null;
+    const referenceKind = imageReferenceKindForInputKind(referenceInputKind);
+    const title = titleForAvailableImageReference(input.context, availableInput);
+    choicesByKey.set(`input:${availableInput.inputId}`, {
+      referenceKind,
+      title,
+      selected: availableInput.selected,
+      image: referenceCardPlan({
+        selected: availableInput.selected,
         mediaKind: availableInput.mediaKind,
+        dependencyId,
+        node,
+        line: planLineForNode(input.plan, node),
         previews: [
           {
+            inputId: availableInput.inputId,
             assetId: availableInput.assetId,
             assetFileId: availableInput.assetFileId,
             projectRelativePath: availableInput.projectRelativePath,
-            title: 'Custom reference image',
-            alt: 'Custom reference image',
+            title,
+            alt: title,
           },
         ],
       }),
-    }));
-  return [...plannedChoices, ...customChoices];
+    });
+  });
+  return [...choicesByKey.values()];
+}
+
+function shotReferenceTabInputKind(
+  kind: ShotVideoTakeInputKind
+): 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet' | null {
+  if (
+    kind === 'first-frame' ||
+    kind === 'last-frame' ||
+    kind === 'reference-image' ||
+    kind === 'multi-shot-storyboard-sheet'
+  ) {
+    return kind;
+  }
+  return null;
+}
+
+function imageReferenceKindForInputKind(
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
+): ShotVideoTakeImageReferenceChoice['referenceKind'] {
+  return kind;
+}
+
+function titleForAvailableImageReference(
+  context: ShotVideoTakeGenerationContext,
+  input: ShotVideoTakeAvailableInput
+): string {
+  if (input.kind === 'first-frame') {
+    return 'First frame';
+  }
+  if (input.kind === 'last-frame') {
+    return 'Last frame';
+  }
+  if (input.kind === 'multi-shot-storyboard-sheet') {
+    return multiShotStoryboardSheetTitle(context);
+  }
+  const title = input.title.trim();
+  return title.length > 0 ? title : 'Reference image';
+}
+
+function titleForPlannedImageReference(
+  context: ShotVideoTakeGenerationContext,
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet',
+  node: MediaGenerationDependencyNode
+): string {
+  if (kind === 'first-frame') {
+    return 'First frame';
+  }
+  if (kind === 'last-frame') {
+    return 'Last frame';
+  }
+  if (kind === 'multi-shot-storyboard-sheet') {
+    return multiShotStoryboardSheetTitle(context);
+  }
+  const specTitle =
+    node.draftGenerationSpec?.spec && 'title' in node.draftGenerationSpec.spec
+      ? String(node.draftGenerationSpec.spec.title ?? '').trim()
+      : '';
+  return specTitle || node.label || 'Reference image';
+}
+
+function multiShotStoryboardSheetTitle(
+  context: ShotVideoTakeGenerationContext
+): string {
+  if (context.target.shotIds.length <= 1) {
+    return 'Storyboard sheet';
+  }
+  return `Storyboard sheet (${context.target.shotIds.length} shots)`;
 }
 
 function selectedCastIdsForShots(shots: SceneShot[]): Set<string> {
@@ -1017,14 +1099,6 @@ function selectedLookbookSheetIdsForShots(shots: SceneShot[]): Set<string> {
     }
   }
   return selected;
-}
-
-function selectedCustomReferenceInputIdsForShots(shots: SceneShot[]): Set<string> {
-  return new Set(
-    shots.flatMap(
-      (shot) => shot.shotSpecs?.referenceImages?.customReferenceInputIds ?? []
-    )
-  );
 }
 
 function selectedLocationAzimuthViewForShots(
@@ -1343,6 +1417,35 @@ async function buildShotVideoTakeDependencyMap(input: {
         context: input.context,
         slot,
       });
+      if (!draftGenerationSpec) {
+        const missingDraftIssue = issue(
+          'CORE_SHOT_VIDEO_DEPENDENCY_DRAFT_MISSING',
+          `A required shot video dependency needs an authored generation spec before it can be generated: ${requiredInputLabel(slot)}.`,
+          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'dependencyDrafts'],
+          'Author a dependency draft with a concrete prompt, title, purpose, dependency kind, and output input kind.'
+        );
+        diagnostics.push(missingDraftIssue);
+        nodes.push({
+          id: nodeId,
+          kind: 'planned-generation',
+          purpose: slot.purpose,
+          mediaKind: slot.mediaKind,
+          label: requiredInputLabel(slot),
+          state: 'missing',
+          pricing: { state: 'not-applicable', estimatedUsd: null },
+          dependencyId: slot.dependencyId,
+          dependencyKind: slot.dependencyKind,
+          dependencyTarget: slot.dependencyTarget,
+          diagnostics: [missingDraftIssue],
+        });
+        edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
+        if (isShotInputPurpose(slot.purpose)) {
+          for (const referenceSlot of referenceBundleSlots(input.context)) {
+            await addRequiredSlotNode(referenceSlot, nodeId);
+          }
+        }
+        return nodeId;
+      }
       const pricing = await estimateDraftDependency(
         {
           projectName: input.projectName,
@@ -1425,7 +1528,7 @@ async function buildShotVideoTakeDependencyMap(input: {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     mediaKind: 'video',
     label: 'Final video take',
-    state: nodes.some((node) => node.kind === 'external-input-required') ? 'missing' : 'planned',
+    state: nodes.some((node) => node.state === 'missing') ? 'missing' : 'planned',
     pricing: finalPricing.pricing,
     dependencyTarget: input.context.target,
     diagnostics: finalPricing.diagnostics,
@@ -1435,7 +1538,7 @@ async function buildShotVideoTakeDependencyMap(input: {
   const dependencyLevels = plannedGenerationLevels(nodes, edges);
   const levels = [
     ...dependencyLevels,
-    ...(nodes.some((node) => node.kind === 'external-input-required') ? [] : [[finalNodeId]]),
+    ...(nodes.some((node) => node.state === 'missing') ? [] : [[finalNodeId]]),
   ];
   const dependencyMap: MediaGenerationDependencyMap & {
     finalEstimate?: ShotVideoTakePreflightReport['estimate'];
@@ -1481,7 +1584,9 @@ function plannedGenerationLevels(
   edges: MediaGenerationDependencyMap['edges']
 ): string[][] {
   const plannedNodeIds = new Set(
-    nodes.filter((node) => node.kind === 'planned-generation').map((node) => node.id)
+    nodes
+      .filter((node) => node.kind === 'planned-generation' && node.state === 'planned')
+      .map((node) => node.id)
   );
   const unresolved = new Set(plannedNodeIds);
   const levels: string[][] = [];
@@ -1650,6 +1755,21 @@ async function estimateFinalPlanLine(input: {
   diagnostics: DiagnosticIssue[];
   estimate: ShotVideoTakePreflightReport['estimate'];
 }> {
+  const finalDraft = input.context.productionGroup.videoTakeProduction.agentProposal?.finalPromptDraft;
+  if (!finalDraft?.prompt.trim()) {
+    const diagnostic = issue(
+      'CORE_SHOT_VIDEO_FINAL_PROMPT_DRAFT_MISSING',
+      'The final shot video take needs an authored generation prompt before it can be estimated or generated.',
+      ['productionGroup', 'videoTakeProduction', 'agentProposal', 'finalPromptDraft'],
+      'Author a final prompt draft from the selected shots, references, input mode, model, and route settings.'
+    );
+    input.diagnostics.push(diagnostic);
+    return {
+      pricing: { state: 'not-applicable', estimatedUsd: null },
+      diagnostics: [diagnostic],
+      estimate: null,
+    };
+  }
   try {
     const spec = finalTakeSpecForPreflight({
       context: input.context,
@@ -1716,7 +1836,7 @@ async function estimateFinalPlanLine(input: {
 function draftSpecForDependency(input: {
   context: ShotVideoTakeGenerationContext;
   slot: RequiredShotVideoTakeInputSlot;
-}): NonNullable<MediaGenerationDependencyNode['draftGenerationSpec']> {
+}): NonNullable<MediaGenerationDependencyNode['draftGenerationSpec']> | null {
   if (!input.slot.purpose) {
     throw new ProjectDataError(
       'PROJECT_DATA387',
@@ -1780,17 +1900,35 @@ function draftSpecForDependency(input: {
       candidate.purpose === input.slot.purpose &&
       candidate.outputInputKind === input.slot.outputInputKind
   );
+  if (!isAuthoredShotDependencyDraft(draft)) {
+    return null;
+  }
   const spec: ShotVideoTakeInputGenerationSpec = {
     purpose: input.slot.purpose,
     target: input.context.target,
     dependencyKind: dependencyKindForPurpose(input.slot.purpose),
     outputInputKind: input.slot.outputInputKind,
-    modelChoice: draft?.modelChoice ?? input.context.defaults.imageDependencyModelChoice,
-    prompt: draft?.prompt ?? dependencyPrompt(input.context, input.slot),
-    parameterValues: draft?.parameterValues ?? defaultShotInputParameterValues(),
-    title: draft?.title ?? requiredInputLabel(input.slot),
+    modelChoice: draft.modelChoice ?? input.context.defaults.imageDependencyModelChoice,
+    prompt: draft.prompt,
+    parameterValues: draft.parameterValues ?? defaultShotInputParameterValues(),
+    title: draft.title ?? requiredInputLabel(input.slot),
   };
   return { purpose: input.slot.purpose, spec };
+}
+
+function isAuthoredShotDependencyDraft(
+  draft: NonNullable<ShotVideoTakeProductionPlan['agentProposal']>['dependencyDrafts'][number] | undefined
+): draft is NonNullable<ShotVideoTakeProductionPlan['agentProposal']>['dependencyDrafts'][number] {
+  if (!draft?.prompt.trim()) {
+    return false;
+  }
+  if (
+    draft.purpose === SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE &&
+    !draft.title?.trim()
+  ) {
+    return false;
+  }
+  return true;
 }
 
 type DependencyTarget = NonNullable<MediaGenerationDependencyNode['dependencyTarget']>;
@@ -1928,7 +2066,6 @@ const SHOT_VIDEO_TAKE_INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, string> 
   'first-frame': 'First frame',
   'last-frame': 'Last frame',
   'reference-image': 'Reference image',
-  'shot-reference-sheet': 'Reference sheet',
   'character-sheet': 'Character sheet',
   'location-sheet': 'Location sheet',
   'lookbook-sheet': 'Lookbook sheet',
@@ -2117,13 +2254,19 @@ function finalTakeSpecForPreflight(input: {
 }): ShotVideoTakeGenerationSpec {
   const plan = input.context.productionGroup.videoTakeProduction;
   const finalDraft = plan.agentProposal?.finalPromptDraft;
+  if (!finalDraft?.prompt.trim()) {
+    throw new ProjectDataError(
+      'PROJECT_DATA415',
+      'Shot video take final spec requires an authored final prompt draft.'
+    );
+  }
   return {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     target: input.context.target,
     inputModeId: input.inputModeId,
     modelChoice: input.modelChoice,
-    prompt: finalDraft?.prompt ?? agentBrief(input.context),
-    ...(finalDraft?.negativePrompt ? { negativePrompt: finalDraft.negativePrompt } : {}),
+    prompt: finalDraft.prompt,
+    ...(finalDraft.negativePrompt ? { negativePrompt: finalDraft.negativePrompt } : {}),
     parameterValues:
       input.parameterValues ??
       parameterValuesForFinalTake(input.context, input.inputModeId, input.modelChoice),
@@ -2137,7 +2280,7 @@ function finalTakeSpecForPreflight(input: {
       ...(preparedInput.subjectKind ? { subjectKind: preparedInput.subjectKind } : {}),
       ...(preparedInput.subjectId ? { subjectId: preparedInput.subjectId } : {}),
     })),
-    title: finalDraft?.title ?? `${input.context.scene.title} video take`,
+    title: finalDraft.title ?? `${input.context.scene.title} video take`,
   };
 }
 
@@ -2260,6 +2403,65 @@ export async function clearShotVideoTakeInputSelection(
   });
 }
 
+export async function deleteShotVideoTakeInput(
+  input: DeleteShotVideoTakeInputInput
+): Promise<ShotVideoTakeGenerationContext> {
+  return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
+    const now = new Date().toISOString();
+    const prepared = prepareShotGroupInSession({ session, input, now });
+    const deleting = requireShotVideoTakeInput(session, input.inputId);
+    if (
+      deleting.productionGroupId !== prepared.productionGroup.productionGroupId ||
+      !sameShotIds(deleting.shotIds, prepared.orderedShotIds)
+    ) {
+      throw new ProjectDataError(
+        'PROJECT_DATA362',
+        'Shot video take input belongs to a different production group.'
+      );
+    }
+
+    await deleteProjectRelativeFile(projectFolder, deleting.projectRelativePath);
+    deleteShotVideoTakeInputRecord(session, input.inputId);
+
+    if (deleting.selected) {
+      const replacement = listShotVideoTakeInputRecords(session, {
+        sceneId: input.sceneId,
+        shotListId: input.shotListId,
+        productionGroupId: prepared.productionGroup.productionGroupId,
+        shotIds: prepared.orderedShotIds,
+      }).find(
+        (candidate) =>
+          candidate.kind === deleting.kind &&
+          candidate.subjectKind === deleting.subjectKind &&
+          candidate.subjectId === deleting.subjectId
+      );
+      if (replacement) {
+        const selected = selectShotVideoTakeInputRecord(session, {
+          inputId: replacement.inputId,
+          now,
+        });
+        updatePreparedInputSelection({
+          session,
+          prepared,
+          now,
+          input: selected,
+          selected: true,
+        });
+      } else {
+        updatePreparedInputSelection({
+          session,
+          prepared,
+          now,
+          input: deleting,
+          selected: false,
+        });
+      }
+    }
+
+    return buildContextFromPrepared({ session, projectFolder, project, prepared });
+  });
+}
+
 export async function validateShotInputSpec(input: ValidateShotVideoTakeInputGenerationSpecInput) {
   const normalized = normalizeInputSpec(input.spec);
   const context = await buildShotVideoTakeContext({
@@ -2277,7 +2479,7 @@ export async function validateShotInputSpec(input: ValidateShotVideoTakeInputGen
 
 export const validateShotFirstFrameSpec = validateShotInputSpec;
 export const validateShotLastFrameSpec = validateShotInputSpec;
-export const validateShotReferenceSheetSpec = validateShotInputSpec;
+export const validateShotReferenceImageSpec = validateShotInputSpec;
 export const validateShotMultiShotStoryboardSheetSpec = validateShotInputSpec;
 
 export async function createShotInputSpec(
@@ -2298,7 +2500,7 @@ export async function createShotInputSpec(
 
 export const createShotFirstFrameSpec = createShotInputSpec;
 export const createShotLastFrameSpec = createShotInputSpec;
-export const createShotReferenceSheetSpec = createShotInputSpec;
+export const createShotReferenceImageSpec = createShotInputSpec;
 export const createShotMultiShotStoryboardSheetSpec = createShotInputSpec;
 
 export async function updateShotInputSpec(
@@ -2318,7 +2520,7 @@ export async function updateShotInputSpec(
 
 export const updateShotFirstFrameSpec = updateShotInputSpec;
 export const updateShotLastFrameSpec = updateShotInputSpec;
-export const updateShotReferenceSheetSpec = updateShotInputSpec;
+export const updateShotReferenceImageSpec = updateShotInputSpec;
 export const updateShotMultiShotStoryboardSheetSpec = updateShotInputSpec;
 
 export async function readShotSpec(
@@ -2331,7 +2533,7 @@ export async function readShotSpec(
 
 export const readShotFirstFrameSpec = readShotSpec;
 export const readShotLastFrameSpec = readShotSpec;
-export const readShotReferenceSheetSpec = readShotSpec;
+export const readShotReferenceImageSpec = readShotSpec;
 export const readShotMultiShotStoryboardSheetSpec = readShotSpec;
 export const readShotVideoTakeSpec = readShotSpec;
 
@@ -2353,8 +2555,8 @@ export const listShotFirstFrameSpecs = (input: ShotVideoTakeContextInput) =>
   listShotInputSpecs(input, SHOT_FIRST_FRAME_GENERATION_PURPOSE);
 export const listShotLastFrameSpecs = (input: ShotVideoTakeContextInput) =>
   listShotInputSpecs(input, SHOT_LAST_FRAME_GENERATION_PURPOSE);
-export const listShotReferenceSheetSpecs = (input: ShotVideoTakeContextInput) =>
-  listShotInputSpecs(input, SHOT_REFERENCE_SHEET_GENERATION_PURPOSE);
+export const listShotReferenceImageSpecs = (input: ShotVideoTakeContextInput) =>
+  listShotInputSpecs(input, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE);
 export const listShotMultiShotStoryboardSheetSpecs = (input: ShotVideoTakeContextInput) =>
   listShotInputSpecs(input, SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE);
 
@@ -2396,7 +2598,7 @@ export async function prepareShotInputDraftSpec(input: {
 
 export const prepareShotFirstFrameSpec = prepareShotInputSpec;
 export const prepareShotLastFrameSpec = prepareShotInputSpec;
-export const prepareShotReferenceSheetSpec = prepareShotInputSpec;
+export const prepareShotReferenceImageSpec = prepareShotInputSpec;
 export const prepareShotMultiShotStoryboardSheetSpec = prepareShotInputSpec;
 
 export async function estimateShotInputSpec(
@@ -2410,7 +2612,7 @@ export async function estimateShotInputSpec(
 
 export const estimateShotFirstFrameSpec = estimateShotInputSpec;
 export const estimateShotLastFrameSpec = estimateShotInputSpec;
-export const estimateShotReferenceSheetSpec = estimateShotInputSpec;
+export const estimateShotReferenceImageSpec = estimateShotInputSpec;
 export const estimateShotMultiShotStoryboardSheetSpec = estimateShotInputSpec;
 
 export async function runShotInputSpec(
@@ -2443,7 +2645,7 @@ export async function runShotInputSpec(
 
 export const runShotFirstFrameSpec = runShotInputSpec;
 export const runShotLastFrameSpec = runShotInputSpec;
-export const runShotReferenceSheetSpec = runShotInputSpec;
+export const runShotReferenceImageSpec = runShotInputSpec;
 export const runShotMultiShotStoryboardSheetSpec = runShotInputSpec;
 
 export async function validateShotVideoTakeSpec(
@@ -2663,8 +2865,8 @@ export const importShotFirstFrame = (input: ImportShotVideoTakeInputMediaInput) 
   importShotInputMedia(input, SHOT_FIRST_FRAME_GENERATION_PURPOSE);
 export const importShotLastFrame = (input: ImportShotVideoTakeInputMediaInput) =>
   importShotInputMedia(input, SHOT_LAST_FRAME_GENERATION_PURPOSE);
-export const importShotReferenceSheet = (input: ImportShotVideoTakeInputMediaInput) =>
-  importShotInputMedia(input, SHOT_REFERENCE_SHEET_GENERATION_PURPOSE);
+export const importShotReferenceImage = (input: ImportShotVideoTakeInputMediaInput) =>
+  importShotInputMedia(input, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE);
 export const importShotMultiShotStoryboardSheet = (input: ImportShotVideoTakeInputMediaInput) =>
   importShotInputMedia(input, SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE);
 
@@ -2913,7 +3115,6 @@ function finalInputMatchesRouteSlot(
       'character-sheet',
       'location-sheet',
       'lookbook-sheet',
-      'shot-reference-sheet',
       'multi-shot-storyboard-sheet',
     ].includes(input.kind)
   );
@@ -2961,6 +3162,21 @@ function validateInputSpecAgainstContext(
   spec: ShotVideoTakeInputGenerationSpec,
   context: ShotVideoTakeGenerationContext
 ): void {
+  if (!spec.prompt.trim()) {
+    throw new ProjectDataError(
+      'PROJECT_DATA416',
+      'Shot video take input spec requires an authored prompt.'
+    );
+  }
+  if (
+    spec.purpose === SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE &&
+    !spec.title?.trim()
+  ) {
+    throw new ProjectDataError(
+      'PROJECT_DATA417',
+      'shot.reference-image requires a title that names the reference intent.'
+    );
+  }
   if (!sameShotIds(spec.target.shotIds, context.target.shotIds)) {
     throw new ProjectDataError(
       'PROJECT_DATA368',
@@ -3492,11 +3708,11 @@ function dependencyForInputKind(
       purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
     };
   }
-  if (kind === 'shot-reference-sheet') {
+  if (kind === 'reference-image') {
     return {
       dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
-      dependencyKind: 'shot-reference-sheet',
-      purpose: SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+      dependencyKind: 'reference-image',
+      purpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
     };
   }
   if (kind === 'multi-shot-storyboard-sheet') {
@@ -4132,6 +4348,16 @@ async function importGeneratedFile(input: {
   };
 }
 
+async function deleteProjectRelativeFile(
+  projectFolder: string,
+  projectRelativePath: ProjectRelativePath
+): Promise<void> {
+  const normalizedPath = normalizeProjectRelativePath(projectRelativePath);
+  const absolutePath = resolveProjectRelativePath(projectFolder, normalizedPath);
+  assertResolvedPathInsideProject(projectFolder, absolutePath);
+  await fs.rm(absolutePath, { force: true });
+}
+
 async function withShotProjectSession<T>(
   input: RenkuConfigPathOptions & { projectName?: string },
   fn: (handle: {
@@ -4323,7 +4549,7 @@ function isShotInputPurpose(value: unknown): value is ShotVideoTakeInputGenerati
   return (
     value === SHOT_FIRST_FRAME_GENERATION_PURPOSE ||
     value === SHOT_LAST_FRAME_GENERATION_PURPOSE ||
-    value === SHOT_REFERENCE_SHEET_GENERATION_PURPOSE ||
+    value === SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE ||
     value === SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
   );
 }

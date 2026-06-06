@@ -37,8 +37,8 @@ export const SHOT_FIRST_FRAME_GENERATION_PURPOSE =
   'shot.first-frame' as const;
 export const SHOT_LAST_FRAME_GENERATION_PURPOSE =
   'shot.last-frame' as const;
-export const SHOT_REFERENCE_SHEET_GENERATION_PURPOSE =
-  'shot.reference-sheet' as const;
+export const SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE =
+  'shot.reference-image' as const;
 export const SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE =
   'shot.multi-shot-storyboard-sheet' as const;
 export const SHOT_VIDEO_TAKE_GENERATION_PURPOSE =
@@ -55,14 +55,14 @@ export type MediaGenerationPurpose =
   | typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE
   | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
-  | typeof SHOT_REFERENCE_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
   | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
   | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
 
 export type MediaGenerationDependencyKind =
   | 'first-frame'
   | 'last-frame'
-  | 'shot-reference-sheet'
+  | 'reference-image'
   | 'multi-shot-storyboard-sheet'
   | 'cast-character-sheet'
   | 'location-environment-sheet'
@@ -139,7 +139,7 @@ export type ShotVideoTakeInputModelChoice =
 export type ShotVideoTakeInputGenerationPurpose =
   | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
-  | typeof SHOT_REFERENCE_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
   | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE;
 
 export type SceneStoryboardSheetFrame = '4:3';
@@ -471,6 +471,7 @@ export interface ShotVideoTakeStoryboardImageReference {
 export interface ShotVideoTakeAvailableInput {
   inputId: string;
   kind: ShotVideoTakeInputKind;
+  title: string;
   assetId: string;
   assetFileId: string;
   projectRelativePath: ProjectRelativePath;
@@ -1028,8 +1029,8 @@ export interface ShotVideoTakeLookbookReferenceChoice {
 export type ShotVideoTakeImageReferenceKind =
   | 'first-frame'
   | 'last-frame'
-  | 'shot-reference-sheet'
-  | 'custom-reference-image';
+  | 'reference-image'
+  | 'multi-shot-storyboard-sheet';
 
 export interface ShotVideoTakeImageReferenceChoice {
   referenceKind: ShotVideoTakeImageReferenceKind;

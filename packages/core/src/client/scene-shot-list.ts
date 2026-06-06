@@ -49,7 +49,6 @@ export type ShotVideoTakeInputKind =
   | 'first-frame'
   | 'last-frame'
   | 'reference-image'
-  | 'shot-reference-sheet'
   | 'character-sheet'
   | 'location-sheet'
   | 'lookbook-sheet'
@@ -68,7 +67,7 @@ export type ShotVideoTakeInputSubjectKind =
 export type ShotVideoTakeDependencyKind =
   | 'first-frame'
   | 'last-frame'
-  | 'shot-reference-sheet'
+  | 'reference-image'
   | 'lookbook-sheet'
   | 'multi-shot-storyboard-sheet'
   | 'reference-audio'

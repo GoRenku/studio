@@ -21,7 +21,7 @@ export const SUPPORTED_GENERATION_PURPOSES = [
   'scene.storyboard-sheet',
   'shot.first-frame',
   'shot.last-frame',
-  'shot.reference-sheet',
+  'shot.reference-image',
   'shot.multi-shot-storyboard-sheet',
   'shot.video-take',
 ] as const satisfies readonly MediaGenerationPurpose[];
@@ -81,7 +81,7 @@ export function unsupportedGenerationPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-sheet, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
   });
 }
 

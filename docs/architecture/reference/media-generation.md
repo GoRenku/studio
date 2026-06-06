@@ -32,7 +32,7 @@ location.environment-sheet
 scene.storyboard-sheet
 shot.first-frame
 shot.last-frame
-shot.reference-sheet
+shot.reference-image
 shot.multi-shot-storyboard-sheet
 shot.video-take
 ```
@@ -92,6 +92,9 @@ renku generation context --purpose cast.profile --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation context --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.reference-image --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation context --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
@@ -100,7 +103,17 @@ renku generation model list --purpose cast.character-sheet --target cast:<id> --
 renku generation model list --purpose cast.profile --target cast:<id> --json
 renku generation model list --purpose location.environment-sheet --target location:<id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
+renku generation model list --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.reference-image --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation model list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --intent <input-mode-id> --json
+
+renku generation production update --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
+renku generation preflight --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
+renku generation input list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --json
+renku generation input select --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --input <input-id> --json
+renku generation input clear --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
 
 renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
@@ -113,13 +126,32 @@ renku generation spec list --purpose cast.character-sheet --target cast:<id> --j
 renku generation spec list --purpose cast.profile --target cast:<id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
+renku generation spec list --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.reference-image --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation spec list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
 renku generation run --spec <spec-id> --simulate --json
-renku generation plan --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --intent <input-mode-id> --model <model-choice> --json
 ```
+
+For `shot.video-take`, `generation preflight` is the authoritative dependency
+check before final generation. Agents should read `inputsToCreate`,
+`inputPlanItems`, `plan.dependencyMap`, `prompts`, and
+`finalTake.canCreateSpec`.
+
+Core never synthesizes generic shot-video dependency prompts. First-frame,
+last-frame, ad hoc reference-image, and multi-shot storyboard sheet dependency
+nodes require authored `agentProposal.dependencyDrafts[]` entries before they
+can include a draft generation spec. Missing authored drafts are structured
+diagnostics. `shot.reference-image` specs also require a title that names the
+reference intent shown in Studio.
+
+The Studio shot References tab displays imported/generated `first-frame`,
+`last-frame`, `reference-image`, and `multi-shot-storyboard-sheet` inputs that
+belong to the selected shot or ordered production group.
 
 The CLI command names are generic, and the spec lifecycle now routes through
 the core shared generation service. The shared service resolves the purpose

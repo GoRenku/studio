@@ -17,6 +17,7 @@ import {
 
 const SELECT_CONTEXT = 'scene shot video take input select request';
 const CLEAR_CONTEXT = 'scene shot video take input clear request';
+const DELETE_CONTEXT = 'scene shot video take input delete request';
 
 export interface ShotVideoTakeInputSelectRequest {
   shotIds: string[];
@@ -28,6 +29,10 @@ export interface ShotVideoTakeInputClearRequest {
   kind: ShotVideoTakeInputKind;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
+}
+
+export interface ShotVideoTakeInputDeleteRequest {
+  shotIds: string[];
 }
 
 /**
@@ -98,6 +103,29 @@ export function readShotVideoTakeInputClearRequest(
       : {}),
     ...(subjectId ? { subjectId } : {}),
   };
+}
+
+export function readShotVideoTakeInputDeleteRequest(
+  input: unknown
+): ShotVideoTakeInputDeleteRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, DELETE_CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['shotIds'],
+    issues,
+    DELETE_CONTEXT,
+    'Send only the shotIds field.'
+  );
+
+  const shotIds = readShotIds(record, issues, DELETE_CONTEXT);
+
+  finishOrThrow(issues);
+  return { shotIds: shotIds ?? [] };
 }
 
 function readShotIds(

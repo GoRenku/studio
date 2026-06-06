@@ -191,6 +191,9 @@ export function SceneShotDetail({
                     projectName={projectName}
                     sceneId={sceneId}
                     productionPlan={production.productionPlan}
+                    onSelectInput={production.reuseInput}
+                    onClearInput={production.regenerateInput}
+                    onDeleteInput={production.deleteInput}
                   />
                 </LineTabsContent>
                 <LineTabsContent value='ai-production' className='h-full'>

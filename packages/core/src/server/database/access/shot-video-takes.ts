@@ -7,6 +7,7 @@ import type {
   ShotVideoTakeInputSubjectKind,
 } from '../../../client/index.js';
 import {
+  assets,
   assetFiles,
   sceneShotVideoTakeInputShots,
   sceneShotVideoTakeInputs,
@@ -95,11 +96,13 @@ export function listShotVideoTakeInputs(
   const rows = session.db
     .select({
       input: sceneShotVideoTakeInputs,
+      title: assets.title,
       mediaKind: assetFiles.mediaKind,
       projectRelativePath: assetFiles.projectRelativePath,
     })
     .from(sceneShotVideoTakeInputs)
     .innerJoin(assetFiles, eq(sceneShotVideoTakeInputs.assetFileId, assetFiles.id))
+    .innerJoin(assets, eq(sceneShotVideoTakeInputs.assetId, assets.id))
     .where(
       and(
         eq(sceneShotVideoTakeInputs.sceneId, input.sceneId),
@@ -113,7 +116,13 @@ export function listShotVideoTakeInputs(
     )
     .all()
     .map((row) =>
-      toAvailableInput(session, row.input, row.mediaKind, row.projectRelativePath)
+      toAvailableInput(
+        session,
+        row.input,
+        row.title,
+        row.mediaKind,
+        row.projectRelativePath
+      )
     );
   if (!input.shotIds) {
     return rows;
@@ -128,11 +137,13 @@ export function requireShotVideoTakeInput(
   const row = session.db
     .select({
       input: sceneShotVideoTakeInputs,
+      title: assets.title,
       mediaKind: assetFiles.mediaKind,
       projectRelativePath: assetFiles.projectRelativePath,
     })
     .from(sceneShotVideoTakeInputs)
     .innerJoin(assetFiles, eq(sceneShotVideoTakeInputs.assetFileId, assetFiles.id))
+    .innerJoin(assets, eq(sceneShotVideoTakeInputs.assetId, assets.id))
     .where(eq(sceneShotVideoTakeInputs.id, inputId))
     .get();
   if (!row) {
@@ -141,7 +152,13 @@ export function requireShotVideoTakeInput(
       `Shot video take input was not found: ${inputId}.`
     );
   }
-  return toAvailableInput(session, row.input, row.mediaKind, row.projectRelativePath);
+  return toAvailableInput(
+    session,
+    row.input,
+    row.title,
+    row.mediaKind,
+    row.projectRelativePath
+  );
 }
 
 export function selectShotVideoTakeInputRecord(
@@ -191,6 +208,23 @@ export function clearShotVideoTakeInputRecordSelection(
       )
     )
     .run();
+}
+
+export function deleteShotVideoTakeInputRecord(
+  session: DatabaseSession,
+  inputId: string
+): void {
+  const row = requireShotVideoTakeInputRecord(session, inputId);
+  session.db
+    .delete(sceneShotVideoTakeInputShots)
+    .where(eq(sceneShotVideoTakeInputShots.inputId, inputId))
+    .run();
+  session.db
+    .delete(sceneShotVideoTakeInputs)
+    .where(eq(sceneShotVideoTakeInputs.id, inputId))
+    .run();
+  session.db.delete(assetFiles).where(eq(assetFiles.assetId, row.assetId)).run();
+  session.db.delete(assets).where(eq(assets.id, row.assetId)).run();
 }
 
 export function insertShotVideoTakeRecord(
@@ -328,12 +362,14 @@ function clearSelectedTakesForGroup(
 function toAvailableInput(
   session: DatabaseSession,
   row: SceneShotVideoTakeInputRecord,
+  title: string,
   mediaKind: string,
   projectRelativePath: string
 ): ShotVideoTakeAvailableInput {
   return {
     inputId: row.id,
     kind: row.inputKind as ShotVideoTakeInputKind,
+    title,
     assetId: row.assetId,
     assetFileId: row.assetFileId,
     projectRelativePath: projectRelativePath as ProjectRelativePath,

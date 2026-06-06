@@ -921,7 +921,7 @@ location.environment-sheet
 scene.storyboard-sheet
 shot.first-frame
 shot.last-frame
-shot.reference-sheet
+shot.reference-image
 shot.multi-shot-storyboard-sheet
 shot.video-take
 ```
@@ -951,9 +951,37 @@ renku generation context --purpose location.environment-sheet --target location:
 renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
+renku generation context --purpose shot.first-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.first-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.last-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.last-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.reference-image --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.reference-image --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation context --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation model list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --intent <input-mode-id> --json
 ```
+
+Shot video take production planning:
+
+```bash
+renku generation production update --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
+renku generation preflight --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
+renku generation input list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --json
+renku generation input select --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --input <input-id> --json
+renku generation input clear --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
+```
+
+`generation preflight` is the agent-facing dependency checklist before final
+video generation. Read `inputsToCreate`, `inputPlanItems`,
+`plan.dependencyMap`, `prompts`, and `finalTake.canCreateSpec`.
+
+Generated shot dependency drafts must be authored by the agent in
+`videoTakeProduction.agentProposal.dependencyDrafts[]`. The preflight report
+blocks missing authored dependency drafts with structured diagnostics and does
+not synthesize generic image prompts for first frames, last frames, ad hoc
+reference images, or multi-shot storyboard sheets.
 
 Manage persisted specs:
 
@@ -966,6 +994,10 @@ renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-
 renku generation spec list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
+renku generation spec list --purpose shot.first-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.last-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.reference-image --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation spec list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 ```
 
@@ -975,7 +1007,6 @@ Estimate and run:
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <approval-token> --json
 renku generation run --spec <spec-id> --simulate --json
-renku generation plan --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --intent <input-mode-id> --model <model-choice> --json
 ```
 
 Lookbook Image spec shape:
@@ -1055,6 +1086,13 @@ Behavior:
   selected `shotIds`. The scene-shot-designer agent inspects that composite,
   slices one image per selected shot, and imports the original sheet plus all
   slices together.
+- Shot first frames, last frames, ad hoc reference images, and multi-shot
+  storyboard sheets are generated as shot video take inputs. Their specs must
+  use authored prompts; `shot.reference-image` also requires a title that names
+  the reference intent.
+- The Studio shot References tab displays imported/generated `first-frame`,
+  `last-frame`, `reference-image`, and `multi-shot-storyboard-sheet` inputs
+  relevant to the selected shot or production group.
 
 ## `renku media import`
 
@@ -1071,7 +1109,7 @@ location.environment-sheet
 scene.storyboard-sheet
 shot.first-frame
 shot.last-frame
-shot.reference-sheet
+shot.reference-image
 shot.multi-shot-storyboard-sheet
 shot.video-take
 ```
@@ -1153,6 +1191,28 @@ renku media import \
   --json
 
 renku media import \
+  --purpose shot.reference-image \
+  --target scene:<scene-id> \
+  --shot-list <shot-list-id> \
+  --shots <shot-id[,shot-id...]> \
+  --source <project-relative-path> \
+  --title <reference-intent-title> \
+  --selection select \
+  --receipt <generation-run-json> \
+  --json
+
+renku media import \
+  --purpose shot.multi-shot-storyboard-sheet \
+  --target scene:<scene-id> \
+  --shot-list <shot-list-id> \
+  --shots <shot-id[,shot-id...]> \
+  --source <project-relative-path> \
+  --title <group-sheet-title> \
+  --selection select \
+  --receipt <generation-run-json> \
+  --json
+
+renku media import \
   --purpose shot.video-take \
   --target scene:<scene-id> \
   --shot-list <shot-list-id> \
@@ -1201,7 +1261,7 @@ Options:
 - `--purpose`: required media purpose. Current supported values are
   `lookbook.image`, `lookbook.sheet`, `cast.character-sheet`, `cast.profile`,
   `location.environment-sheet`, `scene.storyboard-sheet`, `shot.first-frame`,
-  `shot.last-frame`, `shot.reference-sheet`,
+  `shot.last-frame`, `shot.reference-image`,
   `shot.multi-shot-storyboard-sheet`, and `shot.video-take`.
 - `--target`: required target. Current supported shapes are
   `lookbook:<lookbook-id>`, `cast:<cast-member-id>`,

@@ -20,7 +20,6 @@ export type ShotVideoTakeInputKind =
   | 'first-frame'
   | 'last-frame'
   | 'reference-image'
-  | 'shot-reference-sheet'
   | 'character-sheet'
   | 'location-sheet'
   | 'lookbook-sheet'

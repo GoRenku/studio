@@ -65,6 +65,17 @@ describe('media generation dependency graph estimates integration', () => {
         inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         parameterValues: { duration: 6 },
+        agentProposal: {
+          basedOnInputModeId: 'reference',
+          basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+          basedOnShotIds: ['shot_001'],
+          dependencyDrafts: [],
+          finalPromptDraft: {
+            prompt:
+              'Generate the final reference-guided video take of Mehmed studying the map in restrained lamplight.',
+            title: 'Map study video take',
+          },
+        },
       },
     });
 
@@ -156,6 +167,26 @@ describe('media generation dependency graph estimates integration', () => {
           resolution: '720p',
           generate_audio: true,
         },
+        agentProposal: {
+          basedOnInputModeId: 'first-frame',
+          basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+          basedOnShotIds: ['shot_001'],
+          dependencyDrafts: [
+            {
+              purpose: 'shot.first-frame',
+              dependencyKind: 'first-frame',
+              outputInputKind: 'first-frame',
+              prompt:
+                'Author the exact first frame: Mehmed at the map table in a wide, eye-level, centered composition with restrained warm lamplight and the selected cast, location, and lookbook continuity.',
+              title: 'Map study first frame',
+            },
+          ],
+          finalPromptDraft: {
+            prompt:
+              'Generate the shot video take beginning from the authored map-study first frame, holding a restrained strategic mood and a quiet room tone.',
+            title: 'Map study first-frame take',
+          },
+        },
       },
     });
 
@@ -229,6 +260,66 @@ describe('media generation dependency graph estimates integration', () => {
       requiresPriceOverride: false,
     });
     expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(4.658, 6);
+  });
+
+  it('blocks generated shot dependencies when the agent has not authored a dependency draft', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: sampleShotList(ids),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'first-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: {
+          duration: 12,
+          aspect_ratio: '16:9',
+          resolution: '720p',
+          generate_audio: true,
+        },
+        agentProposal: {
+          basedOnInputModeId: 'first-frame',
+          basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+          basedOnShotIds: ['shot_001'],
+          dependencyDrafts: [],
+          finalPromptDraft: {
+            prompt:
+              'Generate the shot video take only after all authored image dependencies are prepared.',
+            title: 'Blocked first-frame take',
+          },
+        },
+      },
+    });
+
+    const firstFrameNode = preflight.plan!.dependencyMap.nodes.find(
+      (node) => node.id === 'planned:first-frame:production-group:'
+    );
+
+    expect(firstFrameNode).toMatchObject({
+      kind: 'planned-generation',
+      state: 'missing',
+      purpose: 'shot.first-frame',
+      pricing: { state: 'not-applicable', estimatedUsd: null },
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_DEPENDENCY_DRAFT_MISSING',
+        }),
+      ],
+    });
+    expect(firstFrameNode).not.toHaveProperty('draftGenerationSpec');
+    expect(preflight.finalTake.canCreateSpec).toBe(false);
+    expect(preflight.plan?.estimate).toMatchObject({
+      state: 'unavailable',
+      missingLineCount: expect.any(Number),
+    });
   });
 });
 

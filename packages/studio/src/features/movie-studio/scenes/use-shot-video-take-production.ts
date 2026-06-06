@@ -20,6 +20,7 @@ import {
 } from './shot-video-take-production-projection';
 import {
   clearShotVideoTakeInput,
+  deleteShotVideoTakeInput,
   estimateShotVideoTakeProduction,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
@@ -62,6 +63,7 @@ export interface UseShotVideoTakeProductionResult {
   refreshProductionPlan: () => Promise<void>;
   reuseInput: (inputId: string) => Promise<void>;
   regenerateInput: (slot: ShotVideoTakeInputSlot) => Promise<void>;
+  deleteInput: (inputId: string) => Promise<void>;
 }
 
 function findGroupInResource(
@@ -465,6 +467,21 @@ export function useShotVideoTakeProduction(
     [applyMutationResult, productionGroup, projectName, refreshProductionPlan, sceneId]
   );
 
+  const deleteInput = useCallback(
+    async (inputId: string) => {
+      if (!productionGroup) return;
+      const result = await deleteShotVideoTakeInput(
+        projectName,
+        sceneId,
+        productionGroup.shotIds,
+        inputId
+      );
+      applyMutationResult(result.resource, productionGroup.productionGroupId);
+      await refreshProductionPlan();
+    },
+    [applyMutationResult, productionGroup, projectName, refreshProductionPlan, sceneId]
+  );
+
   const selectedModel =
     storedModelChoice ??
     (models && selectedInputMode
@@ -492,5 +509,6 @@ export function useShotVideoTakeProduction(
     refreshProductionPlan,
     reuseInput,
     regenerateInput,
+    deleteInput,
   };
 }

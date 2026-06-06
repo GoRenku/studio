@@ -165,6 +165,26 @@ describe('shot video take preflight and validation', () => {
         parameterValues: {
           duration: 9,
         },
+        agentProposal: {
+          basedOnInputModeId: 'first-frame',
+          basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+          basedOnShotIds: ['shot_001'],
+          dependencyDrafts: [
+            {
+              purpose: 'shot.first-frame',
+              dependencyKind: 'first-frame',
+              outputInputKind: 'first-frame',
+              prompt:
+                'Author the first frame from the selected shot composition, cast, location, and Lookbook continuity.',
+              title: 'Authored first frame',
+            },
+          ],
+          finalPromptDraft: {
+            prompt:
+              'Generate the video take from the authored first frame with the saved duration setting.',
+            title: 'Authored first-frame take',
+          },
+        },
       },
     });
 
@@ -763,6 +783,143 @@ describe('shot video take preflight and validation', () => {
       .toMatchObject({ selected: false });
   });
 
+  it('shows shot-scoped planned reference image dependencies in the production plan', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'reference-image',
+            subjectKind: 'shot',
+            subjectId: 'shot_001',
+          },
+        ],
+      },
+    });
+
+    expect(report.imageReferences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          referenceKind: 'reference-image',
+          selected: true,
+          image: expect.objectContaining({
+            dependencyId: 'reference-image:shot:shot_001',
+            state: 'unavailable',
+          }),
+        }),
+      ])
+    );
+  });
+
+  it('shows multiple imported image input takes once with one selected', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+    await writeProjectFile('generated/media/first-frame-a.png', 'first frame a');
+    await writeProjectFile('generated/media/first-frame-b.png', 'first frame b');
+    const selected = await projectData.importShotFirstFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/first-frame-a.png',
+      selection: 'select',
+    });
+    await projectData.importShotFirstFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/first-frame-b.png',
+      selection: 'take',
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      productionGroupId: selected.target.productionGroupId,
+      production: {
+        inputModeId: 'first-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        preparedInputs: [
+          {
+            kind: selected.input.kind,
+            assetId: selected.input.assetId,
+            assetFileId: selected.input.assetFileId,
+            subjectKind: selected.input.subjectKind,
+            subjectId: selected.input.subjectId,
+          },
+        ],
+      },
+    });
+
+    const firstFrameChoices = report.imageReferences.filter(
+      (choice) => choice.referenceKind === 'first-frame'
+    );
+    expect(firstFrameChoices).toHaveLength(2);
+    expect(firstFrameChoices.filter((choice) => choice.selected)).toHaveLength(1);
+    expect(
+      firstFrameChoices.flatMap((choice) =>
+        choice.image.previews.map((preview) => preview.inputId)
+      )
+    ).toHaveLength(2);
+  });
+
+  it('deletes an input take and promotes another matching take when selected', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+    await writeProjectFile('generated/media/reference-a.png', 'reference a');
+    await writeProjectFile('generated/media/reference-b.png', 'reference b');
+    const selected = await projectData.importShotReferenceImage({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/reference-a.png',
+      selection: 'select',
+    });
+    const unselected = await projectData.importShotReferenceImage({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/reference-b.png',
+      selection: 'take',
+    });
+
+    await projectData.deleteShotVideoTakeInput({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      inputId: selected.input.inputId,
+    });
+
+    const inputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+    });
+    expect(inputs.inputs).toHaveLength(1);
+    expect(inputs.inputs[0]).toMatchObject({
+      inputId: unselected.input.inputId,
+      selected: true,
+    });
+    await expect(projectFileExists('generated/media/reference-a.png')).resolves.toBe(
+      false
+    );
+  });
+
   async function sampleIds() {
     const screenplay = await projectData.readScreenplay({ homeDir });
     const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
@@ -795,6 +952,19 @@ describe('shot video take preflight and validation', () => {
     const absolutePath = path.join(project.projectFolder, projectRelativePath);
     await fs.mkdir(path.dirname(absolutePath), { recursive: true });
     await fs.writeFile(absolutePath, contents);
+  }
+
+  async function projectFileExists(projectRelativePath: string): Promise<boolean> {
+    const project = await projectData.readCurrentProject({ homeDir });
+    if (!project) {
+      throw new Error('Expected current project to exist.');
+    }
+    try {
+      await fs.access(path.join(project.projectFolder, projectRelativePath));
+      return true;
+    } catch {
+      return false;
+    }
   }
 });
 

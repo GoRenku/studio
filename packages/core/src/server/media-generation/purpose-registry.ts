@@ -46,7 +46,7 @@ import {
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -455,30 +455,30 @@ const DEFINITIONS = [
     runSpec: shotVideoTake.runShotLastFrameSpec,
   },
   {
-    purpose: SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+    purpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotGroup',
     buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       shotVideoTake.listShotInputModels(
         toShotInput(input),
-        SHOT_REFERENCE_SHEET_GENERATION_PURPOSE
+        SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
       ),
     validateSpec: (input) =>
-      shotVideoTake.validateShotReferenceSheetSpec(toShotInputSpecValidation(input)),
+      shotVideoTake.validateShotReferenceImageSpec(toShotInputSpecValidation(input)),
     createSpec: (input) =>
-      shotVideoTake.createShotReferenceSheetSpec(toShotInputSpecCreation(input)),
+      shotVideoTake.createShotReferenceImageSpec(toShotInputSpecCreation(input)),
     updateSpec: (input) =>
-      shotVideoTake.updateShotReferenceSheetSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) => shotVideoTake.listShotReferenceSheetSpecs(toShotInput(input)),
-    prepareSpec: shotVideoTake.prepareShotReferenceSheetSpec,
+      shotVideoTake.updateShotReferenceImageSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) => shotVideoTake.listShotReferenceImageSpecs(toShotInput(input)),
+    prepareSpec: shotVideoTake.prepareShotReferenceImageSpec,
     prepareDraftSpec: (input) =>
       shotVideoTake.prepareShotInputDraftSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    runSpec: shotVideoTake.runShotReferenceSheetSpec,
+    runSpec: shotVideoTake.runShotReferenceImageSpec,
   },
   {
     purpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -694,7 +694,7 @@ export async function importMediaGenerationByPurpose(input:
   | ({ purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportSceneStoryboardSheetMediaInput)
   | ({ purpose: typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_LAST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
-  | ({ purpose: typeof SHOT_REFERENCE_SHEET_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
+  | ({ purpose: typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE } & ImportShotVideoTakeMediaInput)
 ): Promise<MediaGenerationImportReport> {
@@ -715,8 +715,8 @@ export async function importMediaGenerationByPurpose(input:
       return shotVideoTake.importShotFirstFrame(input);
     case SHOT_LAST_FRAME_GENERATION_PURPOSE:
       return shotVideoTake.importShotLastFrame(input);
-    case SHOT_REFERENCE_SHEET_GENERATION_PURPOSE:
-      return shotVideoTake.importShotReferenceSheet(input);
+    case SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE:
+      return shotVideoTake.importShotReferenceImage(input);
     case SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE:
       return shotVideoTake.importShotMultiShotStoryboardSheet(input);
     case SHOT_VIDEO_TAKE_GENERATION_PURPOSE:

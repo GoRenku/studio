@@ -614,8 +614,8 @@ function dependencyPurposeMapping(
   if (kind === 'last-frame') {
     return { purpose: 'shot.last-frame', outputInputKind: 'last-frame' };
   }
-  if (kind === 'shot-reference-sheet') {
-    return { purpose: 'shot.reference-sheet', outputInputKind: 'shot-reference-sheet' };
+  if (kind === 'reference-image') {
+    return { purpose: 'shot.reference-image', outputInputKind: 'reference-image' };
   }
   if (kind === 'multi-shot-storyboard-sheet') {
     return {

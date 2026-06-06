@@ -312,6 +312,32 @@ describe('shot video take production routes', () => {
     expect(body.error.code).toBe('STUDIO_SERVER343');
   });
 
+  it('input delete delegates to core and returns resource keys', async () => {
+    const deleteShotVideoTakeInput = vi.fn(
+      fakeProjectDataService().deleteShotVideoTakeInput
+    );
+    const app = mount({ deleteShotVideoTakeInput });
+    const response = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/video-take-production/inputs/input_001',
+      {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shotIds: ['shot_001'] }),
+      }
+    );
+    expect(response.status).toBe(200);
+    expect(deleteShotVideoTakeInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sceneId: 'scene_opening',
+        shotListId: 'shot_list_opening',
+        shotIds: ['shot_001'],
+        inputId: 'input_001',
+      })
+    );
+    const body = await response.json();
+    expect(body.resourceKeys.length).toBeGreaterThan(0);
+  });
+
   it('serializes structured errors from core', async () => {
     const app = mount({
       buildShotVideoTakeContext: async () => {

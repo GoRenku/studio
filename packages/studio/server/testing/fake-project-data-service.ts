@@ -73,6 +73,7 @@ export function fakeProjectDataService(): NonNullable<
         input: {
           inputId: input.inputId,
           kind: 'first-frame',
+          title: 'First frame',
           assetId: asset.assetId,
           assetFileId: input.assetFileId,
           mediaKind: 'image',
@@ -1022,6 +1023,9 @@ export function fakeProjectDataService(): NonNullable<
       return makeShotVideoTakeContext(input);
     },
     async clearShotVideoTakeInputSelection(input) {
+      return makeShotVideoTakeContext(input);
+    },
+    async deleteShotVideoTakeInput(input) {
       return makeShotVideoTakeContext(input);
     },
   };

@@ -120,8 +120,8 @@ const MEDIA_IMPORT_PURPOSE_HANDLERS = [
     run: importShotLastFrame,
   },
   {
-    purpose: 'shot.reference-sheet',
-    run: importShotReferenceSheet,
+    purpose: 'shot.reference-image',
+    run: importShotReferenceImage,
   },
   {
     purpose: 'shot.multi-shot-storyboard-sheet',
@@ -272,11 +272,11 @@ async function importShotLastFrame(
   );
 }
 
-async function importShotReferenceSheet(
+async function importShotReferenceImage(
   input: MediaImportPurposeHandlerInput
 ): Promise<ShotVideoTakeInputMediaImportReport> {
   return importShotInputMedia(input, (shotInput) =>
-    input.runtime.projectDataService.importShotReferenceSheet(shotInput)
+    input.runtime.projectDataService.importShotReferenceImage(shotInput)
   );
 }
 
@@ -374,6 +374,6 @@ function unsupportedMediaPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-sheet, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
   });
 }

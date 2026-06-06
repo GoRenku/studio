@@ -214,9 +214,23 @@ export async function clearShotVideoTakeInput(
   );
 }
 
+/** Delete one imported/generated dependency input take from the group. */
+export async function deleteShotVideoTakeInput(
+  projectName: string,
+  sceneId: string,
+  shotIds: string[],
+  inputId: string
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    `${productionPath(projectName, sceneId)}/inputs/${encodeURIComponent(inputId)}`,
+    'DELETE',
+    { shotIds }
+  );
+}
+
 async function sendMutation(
   path: string,
-  method: 'PATCH' | 'POST',
+  method: 'DELETE' | 'PATCH' | 'POST',
   body: unknown
 ): Promise<MutationResponse> {
   const response = await fetch(path, {

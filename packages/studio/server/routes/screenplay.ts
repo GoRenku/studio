@@ -28,6 +28,7 @@ import {
 } from '../http/scene-shot-video-take-production-request.js';
 import {
   readShotVideoTakeInputClearRequest,
+  readShotVideoTakeInputDeleteRequest,
   readShotVideoTakeInputSelectRequest,
 } from '../http/scene-shot-video-take-input-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
@@ -430,6 +431,40 @@ export function createScreenplayRoute({
             // forwards what the client sent (0040/0041).
             subjectKind: request.subjectKind!,
             subjectId: request.subjectId!,
+          });
+          const resource = await projectData.readSceneShotListResource({
+            projectName,
+            sceneId,
+          });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: context.resourceKeys,
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .delete(
+      '/screenplay/scenes/:sceneId/video-take-production/inputs/:inputId',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const inputId = c.req.param('inputId') as string;
+          const request = readShotVideoTakeInputDeleteRequest(await c.req.json());
+          const shotListId = await requireActiveShotListId(
+            projectData,
+            projectName,
+            sceneId
+          );
+          const context = await projectData.deleteShotVideoTakeInput({
+            projectName,
+            sceneId,
+            shotListId,
+            shotIds: request.shotIds,
+            inputId,
           });
           const resource = await projectData.readSceneShotListResource({
             projectName,

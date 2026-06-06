@@ -9,7 +9,7 @@ import {
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type MediaGenerationPurpose,
 } from '../../src/client/index.js';
@@ -27,7 +27,7 @@ const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_REFERENCE_SHEET_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 ];
@@ -57,7 +57,7 @@ describe('media generation purpose registry contract', () => {
       { purpose: 'scene.storyboard-sheet', mediaKind: 'image', targetKind: 'scene' },
       { purpose: 'shot.first-frame', mediaKind: 'image', targetKind: 'sceneShotGroup' },
       { purpose: 'shot.last-frame', mediaKind: 'image', targetKind: 'sceneShotGroup' },
-      { purpose: 'shot.reference-sheet', mediaKind: 'image', targetKind: 'sceneShotGroup' },
+      { purpose: 'shot.reference-image', mediaKind: 'image', targetKind: 'sceneShotGroup' },
       {
         purpose: 'shot.multi-shot-storyboard-sheet',
         mediaKind: 'image',

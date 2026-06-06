@@ -64,6 +64,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'resolveShotVideoTakeInputFile'
   | 'selectShotVideoTakeInput'
   | 'clearShotVideoTakeInputSelection'
+  | 'deleteShotVideoTakeInput'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
   | 'updateProjectInformation'
