@@ -9,6 +9,7 @@ import {
   openCurrentProject,
   readCurrentProject,
 } from '../database/lifecycle/current-project.js';
+import { readDirectorContext } from '../resources/director-context.js';
 import { readProject } from '../resources/full-project.js';
 import { readProjectInformationResourceForProject } from '../resources/project-information.js';
 import { listLibrary, resolveCoverImage } from '../resources/project-library.js';
@@ -22,6 +23,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'listLibrary'
   | 'readProject'
   | 'readProjectShell'
+  | 'readDirectorContext'
   | 'readProjectInformationResource'
   | 'updateProjectInformation'
   | 'patchProjectInformation'
@@ -36,6 +38,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
     listLibrary,
     readProject,
     readProjectShell,
+    readDirectorContext,
     readProjectInformationResource: readProjectInformationResourceForProject,
     updateProjectInformation,
     patchProjectInformation,

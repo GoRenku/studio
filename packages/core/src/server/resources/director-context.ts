@@ -1,0 +1,597 @@
+import {
+  createDiagnosticWarning,
+  type DiagnosticIssue,
+} from '@gorenku/studio-diagnostics';
+import type {
+  DirectorCastReadiness,
+  DirectorContextReport,
+  DirectorNextStep,
+  DirectorProductionDesignReadiness,
+  DirectorSceneReadiness,
+  DirectorScreenplayReadiness,
+  DirectorVisualLanguageReadiness,
+  StudioSelection,
+  StudioSelectionContextResult,
+} from '../../client/index.js';
+import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
+import {
+  listAssetRelationshipPage,
+  MAX_RESOURCE_PAGE_LIMIT,
+} from '../database/access/asset-relationships/index.js';
+import { listCastMemberRecords } from '../database/access/cast-members.js';
+import { listInspirationFolderRecords } from '../database/access/inspiration-folders.js';
+import {
+  listLookbookRecords,
+  readActiveLookbookId,
+} from '../database/access/lookbook.js';
+import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
+import {
+  readActiveScreenplayAnalysisId,
+  listScreenplayAnalysisRecords,
+} from '../database/access/screenplay-analysis.js';
+import {
+  hasScreenplayRecord,
+  readScreenplayStatusCounts,
+} from '../database/access/screenplay-status.js';
+import {
+  listScreenplayLocationsFromSession,
+  readScreenplayDocumentFromSession,
+} from '../database/access/screenplay-resource.js';
+import {
+  listSceneShotStoryboardImageRecords,
+  readActiveSceneShotListRecord,
+  readSceneShotListDocument,
+} from '../database/access/scene-shot-lists.js';
+import {
+  listShotVideoTakeInputs,
+  listShotVideoTakes,
+} from '../database/access/shot-video-takes.js';
+import {
+  withCurrentProjectSession,
+  type CurrentProject,
+} from '../database/lifecycle/current-project.js';
+import type { DatabaseSession } from '../database/lifecycle/store.js';
+import type { ReadDirectorContextInput } from '../project-data-service-contracts.js';
+import { readStudioSelectionContextProjection } from './selection-context.js';
+
+export async function readDirectorContext(
+  input: ReadDirectorContextInput = {}
+): Promise<DirectorContextReport> {
+  return await withCurrentProjectSession(input, ({ currentProject, session }) => {
+    const diagnostics: DiagnosticIssue[] = [...(input.studioCurrent?.warnings ?? [])];
+    const projectInformation = readProjectInformationResourceFromDatabase(session);
+    const screenplay = readScreenplayReadiness(session);
+    const visualLanguage = readVisualLanguageReadiness(session);
+    const cast = readCastReadiness(session);
+    const productionDesign = readProductionDesignReadiness(session);
+    const currentSelection = readDirectorSelection({
+      session,
+      currentProject,
+      selection: input.selection,
+      studioCurrent: input.studioCurrent,
+      diagnostics,
+    });
+    const selectedScene = currentSelection?.valid
+      ? readSelectedSceneReadiness(session, currentSelection.selection, diagnostics)
+      : null;
+
+    diagnostics.push(
+      ...readinessDiagnostics({
+        screenplay,
+        visualLanguage,
+        cast,
+        productionDesign,
+        selectedScene,
+      })
+    );
+
+    const nextSteps = buildNextSteps({
+      screenplay,
+      visualLanguage,
+      cast,
+      productionDesign,
+      selectedScene,
+    });
+
+    return {
+      valid: true,
+      project: {
+        name: currentProject.projectName,
+        id: currentProject.projectId,
+        title: projectInformation.title,
+        aspectRatio: projectInformation.aspectRatio,
+      },
+      currentSelection,
+      screenplay,
+      visualLanguage,
+      cast,
+      productionDesign,
+      selectedScene,
+      nextSteps,
+      resourceKeys: directorResourceKeys(currentSelection, selectedScene),
+      diagnostics,
+      warnings: diagnostics.filter((issue) => issue.severity === 'warning'),
+    };
+  });
+}
+
+function readScreenplayReadiness(
+  session: DatabaseSession
+): DirectorScreenplayReadiness {
+  const exists = hasScreenplayRecord(session);
+  const screenplay = readScreenplayDocumentFromSession(session);
+  return {
+    exists,
+    activeAnalysisId: exists ? readActiveScreenplayAnalysisId(session) : null,
+    analysisCount:
+      exists && screenplay
+        ? listScreenplayAnalysisRecords({ session, screenplay }).length
+        : 0,
+    counts: readScreenplayStatusCounts(session),
+  };
+}
+
+function readVisualLanguageReadiness(
+  session: DatabaseSession
+): DirectorVisualLanguageReadiness {
+  const activeLookbookId = readActiveLookbookId(session);
+  return {
+    inspirationFolderCount: listInspirationFolderRecords(session, {
+      limit: MAX_RESOURCE_PAGE_LIMIT,
+    }).items.length,
+    lookbookCount: listLookbookRecords(session).length,
+    activeLookbookId,
+    readyForGeneration: activeLookbookId !== null,
+  };
+}
+
+function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
+  const castMembers = listCastMemberRecords(session);
+  const missingSelectedVisualReferenceCastMemberIds: string[] = [];
+  let selectedVisualReferenceCount = 0;
+
+  for (const castMember of castMembers) {
+    const selectedAssets = listAssetRelationshipPage(session, {
+      target: { kind: 'castMember', castMemberId: castMember.id },
+      selection: 'select',
+      limit: MAX_RESOURCE_PAGE_LIMIT,
+    }).items.filter(
+      (asset) => asset.role === 'character_sheet' || asset.role === 'profile'
+    );
+    selectedVisualReferenceCount += selectedAssets.length;
+    if (selectedAssets.length === 0) {
+      missingSelectedVisualReferenceCastMemberIds.push(castMember.id);
+    }
+  }
+
+  return {
+    castMemberCount: castMembers.length,
+    selectedVisualReferenceCount,
+    missingSelectedVisualReferenceCastMemberIds,
+    everyCastMemberHasSelectedVisualReference:
+      castMembers.length > 0 &&
+      missingSelectedVisualReferenceCastMemberIds.length === 0,
+  };
+}
+
+function readProductionDesignReadiness(
+  session: DatabaseSession
+): DirectorProductionDesignReadiness {
+  const locations = listScreenplayLocationsFromSession(session);
+  const missingSelectedEnvironmentSheetLocationIds: string[] = [];
+  let selectedEnvironmentSheetCount = 0;
+
+  for (const location of locations) {
+    if (!location.id) {
+      continue;
+    }
+    const selectedAssets = listAssetRelationshipPage(session, {
+      target: { kind: 'location', locationId: location.id },
+      selection: 'select',
+      role: 'environment_sheet',
+      limit: MAX_RESOURCE_PAGE_LIMIT,
+    }).items;
+    selectedEnvironmentSheetCount += selectedAssets.length;
+    if (selectedAssets.length === 0) {
+      missingSelectedEnvironmentSheetLocationIds.push(location.id);
+    }
+  }
+
+  return {
+    locationCount: locations.length,
+    selectedEnvironmentSheetCount,
+    missingSelectedEnvironmentSheetLocationIds,
+    everyLocationHasSelectedEnvironmentSheet:
+      locations.length > 0 &&
+      missingSelectedEnvironmentSheetLocationIds.length === 0,
+  };
+}
+
+function readDirectorSelection(input: {
+  session: DatabaseSession;
+  currentProject: CurrentProject;
+  selection?: StudioSelection;
+  studioCurrent?: ReadDirectorContextInput['studioCurrent'];
+  diagnostics: DiagnosticIssue[];
+}): StudioSelectionContextResult | null {
+  const selection = input.selection ?? selectionFromStudioCurrent(input);
+  if (!selection) {
+    return null;
+  }
+  const result = readStudioSelectionContextProjection(input.session, {
+    selection,
+  });
+  if (!result.valid) {
+    input.diagnostics.push(...result.diagnostics);
+  }
+  return result;
+}
+
+function selectionFromStudioCurrent(input: {
+  currentProject: CurrentProject;
+  studioCurrent?: ReadDirectorContextInput['studioCurrent'];
+  diagnostics: DiagnosticIssue[];
+}): StudioSelection | null {
+  const current = input.studioCurrent;
+  if (!current?.selection || !current.project) {
+    return null;
+  }
+  if (
+    current.project.id !== input.currentProject.projectId ||
+    current.project.name !== input.currentProject.projectName
+  ) {
+    input.diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT001',
+        'Current Studio focus belongs to a different project than the open authoring project.',
+        ['currentSelection'],
+        'Open or select the same project in Studio before acting on the focused item.'
+      )
+    );
+    return null;
+  }
+  return current.selection;
+}
+
+function readSelectedSceneReadiness(
+  session: DatabaseSession,
+  selection: StudioSelection,
+  diagnostics: DiagnosticIssue[]
+): DirectorSceneReadiness | null {
+  if (selection.type !== 'scene') {
+    return null;
+  }
+
+  const activeShotList = readActiveSceneShotListRecord(session, selection.id);
+  if (!activeShotList) {
+    return {
+      sceneId: selection.id,
+      shotId: selection.shotId ?? null,
+      activeShotListId: null,
+      shotCount: 0,
+      storyboardStatus: { available: false, missingShotIds: [] },
+      shotVideo: {
+        preflightAvailable: false,
+        selectedProductionGroupId: null,
+        selectedShotIds: [],
+        selectedInputCount: 0,
+        selectedTakeCount: 0,
+      },
+    };
+  }
+
+  const screenplay = readScreenplayDocumentFromSession(session);
+  if (!screenplay) {
+    return null;
+  }
+  const document = readSceneShotListDocument({
+    row: activeShotList,
+    screenplay,
+  });
+  const storyboardImages = listSceneShotStoryboardImageRecords(session, {
+    shotListId: activeShotList.id,
+  });
+  const storyboardShotIds = new Set(storyboardImages.map((image) => image.shotId));
+  const missingShotIds = document.shots
+    .filter((shot) => !storyboardShotIds.has(shot.shotId))
+    .map((shot) => shot.shotId);
+  const selectedShotIds = selectedShotIdsForScene(selection, document);
+  const selectedProductionGroupId = productionGroupIdForShotIds(
+    document,
+    selectedShotIds
+  );
+  const selectedInputCount = selectedProductionGroupId
+    ? listShotVideoTakeInputs(session, {
+        sceneId: selection.id,
+        shotListId: activeShotList.id,
+        productionGroupId: selectedProductionGroupId,
+        shotIds: selectedShotIds,
+      }).filter((input) => input.selected).length
+    : 0;
+  const selectedTakeCount = selectedProductionGroupId
+    ? listShotVideoTakes(session, {
+        sceneId: selection.id,
+        shotListId: activeShotList.id,
+        productionGroupId: selectedProductionGroupId,
+      }).filter((take) => take.selected).length
+    : 0;
+
+  if (selection.shotId && !selectedShotIds.includes(selection.shotId)) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT009',
+        'Selected shot is not in the active Scene Shot List.',
+        ['selectedScene', 'shotId'],
+        'Select a shot from the active Scene Shot List before generating shot media.'
+      )
+    );
+  }
+
+  return {
+    sceneId: selection.id,
+    shotId: selection.shotId ?? null,
+    activeShotListId: activeShotList.id,
+    shotCount: document.shots.length,
+    storyboardStatus: {
+      available: true,
+      missingShotIds,
+    },
+    shotVideo: {
+      preflightAvailable: selectedShotIds.length > 0,
+      selectedProductionGroupId,
+      selectedShotIds,
+      selectedInputCount,
+      selectedTakeCount,
+    },
+  };
+}
+
+function selectedShotIdsForScene(
+  selection: Extract<StudioSelection, { type: 'scene' }>,
+  document: SceneShotListDocument
+): string[] {
+  if (selection.shotId) {
+    return document.shots.some((shot) => shot.shotId === selection.shotId)
+      ? [selection.shotId]
+      : [];
+  }
+  return document.shots.map((shot) => shot.shotId);
+}
+
+function productionGroupIdForShotIds(
+  document: SceneShotListDocument,
+  shotIds: string[]
+): string | null {
+  if (shotIds.length === 0) {
+    return null;
+  }
+  const exactProductionGroup = document.videoTakeProductionGroups?.find((group) =>
+    sameShotIds(group.shotIds, shotIds)
+  );
+  if (exactProductionGroup) {
+    return exactProductionGroup.productionGroupId;
+  }
+  const exactRailGroup = document.videoTakeRailGroups?.find((group) =>
+    sameShotIds(group.shotIds, shotIds)
+  );
+  if (exactRailGroup) {
+    return exactRailGroup.productionGroupId;
+  }
+  return null;
+}
+
+function sameShotIds(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((shotId, index) => shotId === right[index]);
+}
+
+function readinessDiagnostics(input: {
+  screenplay: DirectorScreenplayReadiness;
+  visualLanguage: DirectorVisualLanguageReadiness;
+  cast: DirectorCastReadiness;
+  productionDesign: DirectorProductionDesignReadiness;
+  selectedScene: DirectorSceneReadiness | null;
+}): DiagnosticIssue[] {
+  const diagnostics: DiagnosticIssue[] = [];
+  if (!input.screenplay.exists) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT002',
+        'The current project does not have screenplay data yet.',
+        ['screenplay'],
+        'Draft or import the screenplay before designing departments or generating media.'
+      )
+    );
+    return diagnostics;
+  }
+  if (!input.screenplay.activeAnalysisId) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT003',
+        'The current project does not have an active Screenplay Analysis.',
+        ['screenplay', 'activeAnalysisId'],
+        'Run screenplay analysis before using critique as production guidance.'
+      )
+    );
+  }
+  if (!input.visualLanguage.activeLookbookId) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT004',
+        'The current project does not have an active Lookbook.',
+        ['visualLanguage', 'activeLookbookId'],
+        'Create or activate a Lookbook before visual generation.'
+      )
+    );
+  }
+  if (!input.cast.everyCastMemberHasSelectedVisualReference) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT005',
+        'One or more cast members do not have selected character-sheet or profile media.',
+        ['cast', 'missingSelectedVisualReferenceCastMemberIds'],
+        'Generate or select cast character sheets or profiles before relying on cast visuals.'
+      )
+    );
+  }
+  if (!input.productionDesign.everyLocationHasSelectedEnvironmentSheet) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT006',
+        'One or more locations do not have selected environment-sheet media.',
+        ['productionDesign', 'missingSelectedEnvironmentSheetLocationIds'],
+        'Generate or select location environment sheets before relying on location visuals.'
+      )
+    );
+  }
+  if (input.selectedScene && !input.selectedScene.activeShotListId) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT007',
+        'The selected scene does not have an active Scene Shot List.',
+        ['selectedScene', 'activeShotListId'],
+        'Create a Scene Shot List before generating storyboard images or video takes.'
+      )
+    );
+  }
+  if (
+    input.selectedScene?.storyboardStatus.available &&
+    input.selectedScene.storyboardStatus.missingShotIds.length > 0
+  ) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT008',
+        'The selected scene is missing one or more storyboard images.',
+        ['selectedScene', 'storyboardStatus', 'missingShotIds'],
+        'Generate and import storyboard images before final shot-video work.'
+      )
+    );
+  }
+  return diagnostics;
+}
+
+function buildNextSteps(input: {
+  screenplay: DirectorScreenplayReadiness;
+  visualLanguage: DirectorVisualLanguageReadiness;
+  cast: DirectorCastReadiness;
+  productionDesign: DirectorProductionDesignReadiness;
+  selectedScene: DirectorSceneReadiness | null;
+}): DirectorNextStep[] {
+  const steps: DirectorNextStep[] = [];
+  if (!input.screenplay.exists) {
+    steps.push({
+      id: 'draft-screenplay',
+      title: 'Draft the screenplay',
+      specialistSkill: 'screenplay-drafter',
+      reason: 'The project needs screenplay data before department work can be grounded.',
+      command: 'renku screenplay create --file <screenplay-json> --json',
+    });
+    return steps;
+  }
+  if (!input.screenplay.activeAnalysisId) {
+    steps.push({
+      id: 'analyze-screenplay',
+      title: 'Analyze the screenplay',
+      specialistSkill: 'screenplay-analyst',
+      reason: 'An active analysis gives the director workflow critique and revision guidance.',
+      command: 'renku screenplay analyze context --json',
+    });
+  }
+  if (!input.visualLanguage.activeLookbookId) {
+    steps.push({
+      id: 'create-lookbook',
+      title: 'Create or activate a Lookbook',
+      specialistSkill: 'lookbook-designer',
+      reason: 'Visual generation should use an explicit visual language source.',
+      command: 'renku lookbook list --json',
+    });
+  }
+  if (!input.cast.everyCastMemberHasSelectedVisualReference) {
+    steps.push({
+      id: 'design-cast',
+      title: 'Establish cast visuals',
+      specialistSkill: 'media-producer',
+      reason: 'Cast members need selected character-sheet or profile media for visual continuity.',
+      command: 'renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json',
+    });
+  }
+  if (!input.productionDesign.everyLocationHasSelectedEnvironmentSheet) {
+    steps.push({
+      id: 'design-production',
+      title: 'Establish location visuals',
+      specialistSkill: 'media-producer',
+      reason: 'Locations need selected environment sheets before shots rely on location visuals.',
+      command: 'renku generation context --purpose location.environment-sheet --target location:<location-id> --json',
+    });
+  }
+  if (input.selectedScene && !input.selectedScene.activeShotListId) {
+    steps.push({
+      id: 'design-shot-list',
+      title: 'Design the selected scene shot list',
+      specialistSkill: 'scene-shot-designer',
+      reason: 'The selected scene needs an active Scene Shot List before storyboard or video work.',
+      command: `renku screenplay shot-list context --scene ${input.selectedScene.sceneId} --json`,
+    });
+  } else if (
+    input.selectedScene?.storyboardStatus.available &&
+    input.selectedScene.storyboardStatus.missingShotIds.length > 0
+  ) {
+    steps.push({
+      id: 'generate-storyboards',
+      title: 'Generate missing storyboard images',
+      specialistSkill: 'media-producer',
+      reason: 'The active shot list has shots without durable storyboard images.',
+      command: `renku generation context --purpose scene.storyboard-sheet --target scene:${input.selectedScene.sceneId} --json`,
+    });
+  } else if (input.selectedScene?.shotVideo.preflightAvailable) {
+    steps.push({
+      id: 'generate-shot-video',
+      title: 'Preflight selected shot video',
+      specialistSkill: 'media-producer',
+      reason: 'The selected scene has an active shot list and can move into shot-video preflight.',
+      command: `renku generation preflight --purpose shot.video-take --target scene:${input.selectedScene.sceneId} --shot-list ${input.selectedScene.activeShotListId} --shots ${input.selectedScene.shotVideo.selectedShotIds.join(',')} --json`,
+    });
+  }
+  return steps;
+}
+
+function directorResourceKeys(
+  currentSelection: StudioSelectionContextResult | null,
+  selectedScene: DirectorSceneReadiness | null
+): string[] {
+  return [
+    'project-information',
+    'screenplay',
+    'screenplay-analysis',
+    'surface:visual-language:inspiration',
+    'surface:visual-language:lookbooks',
+    'navigation:cast',
+    'navigation:locations',
+    ...(selectedScene
+      ? [
+          `surface:scene:${selectedScene.sceneId}:shots`,
+          ...(selectedScene.activeShotListId
+            ? [`scene-shot-list:${selectedScene.activeShotListId}`]
+            : []),
+        ]
+      : []),
+    ...(currentSelection?.valid ? currentSelection.resourceKeys : []),
+  ].filter(unique);
+}
+
+function unique(value: string, index: number, values: string[]): boolean {
+  return values.indexOf(value) === index;
+}
+
+function directorWarning(
+  code: string,
+  message: string,
+  path: string[],
+  suggestion: string
+): DiagnosticIssue {
+  return createDiagnosticWarning(
+    code,
+    message,
+    { path, context: 'director context' },
+    suggestion
+  );
+}

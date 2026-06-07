@@ -2370,6 +2370,35 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
+  it('prints JSON for director context on the current authoring project', async () => {
+    await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    const directorExitCode = await runRenkuCli(
+      ['director', 'context', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(directorExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      project: {
+        name: 'constantinople',
+        title: 'Preparation of the Siege',
+      },
+      screenplay: { exists: false },
+      nextSteps: [expect.objectContaining({ id: 'draft-screenplay' })],
+      diagnostics: [expect.objectContaining({ code: 'DIRECTOR_CONTEXT002' })],
+    });
+    expect(stderr).toEqual([]);
+  });
+
   async function initializeStorageRoot(): Promise<string> {
     const storageRoot = path.join(homeDir, 'movies');
     const exitCode = await runRenkuCli(['init', storageRoot], {

@@ -1,6 +1,6 @@
 # 0052 Movie Director Skill And Department Workflows
 
-Status: proposed
+Status: implemented
 Date: 2026-06-07
 
 ## Summary
@@ -96,6 +96,25 @@ takeaways for this plan are:
 - The skill should be validated with `quick_validate.py`.
 - Because this skill is an orchestrator, it should be forward-tested with
   realistic user prompts after implementation.
+
+## Accepted Review Decisions
+
+The first review pass resolved these choices:
+
+- The top-level skill name is `movie-director`.
+- The top-level skill should follow the same naming convention as the existing
+  external Studio Skills.
+- `renku director context --json` is part of this plan, not a deferred open
+  question.
+- `casting-director` and `production-designer` should be planned as follow-up
+  specialist skills with their own CLI and core backing.
+- The detailed plan for `casting-director`, `production-designer`, and their
+  backing commands lives in
+  `plans/active/0053-casting-director-and-production-designer.md`.
+- The production-design skill name is `production-designer`, not
+  `location-staging-designer`.
+- Future voice casting, voice notes, voice samples, and voice variants stay
+  under `casting-director` until a later architecture decision separates them.
 
 ## Production Role Framing
 
@@ -224,10 +243,12 @@ Existing Renku coverage is partial:
 
 Main gap:
 
-There is no dedicated `location-staging-designer` or `production-designer`
-skill, and no first-class location/staging authoring CLI. Location mutations
-currently go through `renku screenplay apply` using `location.add`,
-`location.update`, `location.delete`, or `location.move`.
+There is no dedicated `production-designer` skill, and no first-class
+production-design authoring CLI. Location mutations currently go through
+`renku screenplay apply` using `location.add`, `location.update`,
+`location.delete`, or `location.move`. Scene-specific staging, set dressing,
+prop continuity, and blocking constraints are not durable first-class project
+data yet.
 
 ### Directing
 
@@ -451,7 +472,7 @@ Then it should dispatch to the missing next specialist.
 | Generate Lookbook media | `media-producer` | Strong | Uses `lookbook.image` and `lookbook.sheet`. |
 | Create or revise cast facts | Planned `casting-director`; fallback `screenplay-drafter` | Partial | Current mutation path is `screenplay apply` with `castMember.*` operations. |
 | Generate cast visuals | `media-producer` | Strong after cast exists | Uses `cast.character-sheet` and `cast.profile`. |
-| Create or revise locations | Planned `location-staging-designer`; fallback `screenplay-drafter` | Partial | Current mutation path is `screenplay apply` with `location.*` operations. |
+| Create or revise locations, staging, set dressing, props, or production design | Planned `production-designer`; fallback `screenplay-drafter` for location facts only | Partial | Current durable mutation path is `screenplay apply` with `location.*` operations. Broader production design needs 0053. |
 | Generate location visuals | `media-producer` | Strong after location exists | Uses `location.environment-sheet`. |
 | Create scene shot list | `scene-shot-designer` | Strong | Uses `renku screenplay shot-list`. |
 | Iterate shot list | `scene-shot-designer` | Planned/active in 0051 | Operation support exists in current code, but skills/docs need alignment. |
@@ -524,7 +545,7 @@ Media Import:
 - `renku media import --purpose shot.multi-shot-storyboard-sheet`
 - `renku media import --purpose shot.video-take`
 
-### Gap 1: No Top-Level Director Context Command
+### Required: Top-Level Director Context Command
 
 The director skill can read many separate surfaces, but there is no single
 agent-facing command that answers:
@@ -539,7 +560,7 @@ agent-facing command that answers:
 - Which shots are missing storyboard images or required shot-video inputs?
 - What is the next best supported step?
 
-Proposed future command:
+Add this command in the `movie-director` implementation slice:
 
 ```bash
 renku director context --json
@@ -548,6 +569,74 @@ renku director context --json
 This should be read-only and core-owned. It should not be a compatibility alias
 or a thin re-export of several commands. It should produce one deliberate
 director-readiness projection.
+
+Proposed CLI surface:
+
+```bash
+renku director context --json
+renku director context --selection <studio-selection-json> --json
+```
+
+The base command reads the current authoring project and current Studio focus
+when available. The `--selection` form is optional and useful for tests,
+automation, and future agent workflows that need deterministic target discovery.
+It should accept the same selection shape used by Studio selection context.
+
+Proposed core report shape:
+
+```ts
+export interface DirectorContextReport {
+  project: {
+    name: string;
+    id: string;
+    title: string;
+    aspectRatio: string;
+  };
+  currentSelection: StudioSelectionContextResult | null;
+  screenplay: DirectorScreenplayReadiness;
+  visualLanguage: DirectorVisualLanguageReadiness;
+  cast: DirectorCastReadiness;
+  productionDesign: DirectorProductionDesignReadiness;
+  selectedScene: DirectorSceneReadiness | null;
+  nextSteps: DirectorNextStep[];
+  resourceKeys: string[];
+}
+```
+
+Readiness sections should summarize state without duplicating full resources:
+
+- `screenplay`: whether a screenplay exists, active Screenplay Analysis id, and
+  open critique status when available.
+- `visualLanguage`: Inspiration folder count, Lookbook count, active Lookbook
+  id, and whether visual direction is ready for generation.
+- `cast`: cast count and whether every cast member has selected character-sheet
+  or profile media.
+- `productionDesign`: location count and whether every location has selected
+  environment-sheet media.
+- `selectedScene`: selected scene id, active shot-list id, storyboard status,
+  missing storyboard shots, and shot-video preflight availability when the
+  selected surface is a scene or shot.
+- `nextSteps`: ordered agent-readable recommendations such as
+  `draft-screenplay`, `analyze-screenplay`, `create-lookbook`,
+  `design-cast`, `design-production`, `design-shot-list`,
+  `generate-storyboards`, or `generate-shot-video`.
+
+Package responsibilities:
+
+- `packages/core` owns the projection, readiness rules, and structured
+  diagnostics.
+- `packages/cli` exposes `renku director context` as a thin command handler.
+- `packages/studio` does not need to call the command in this slice, but the
+  report should use existing resource keys so Studio refresh behavior remains
+  consistent if the projection is later exposed in the UI.
+- The `movie-director` skill uses this command as its first preflight when the
+  user asks "what next?", "make this scene", "continue", or anything that
+  spans more than one department.
+
+The command must fail fast when there is no current project. It should return
+structured diagnostics for stale Studio focus, missing screenplay state, missing
+active Lookbook, missing active shot list, or missing selected media. It should
+not infer old project shapes or silently fall back to obsolete names.
 
 ### Gap 2: No First-Class Cast Authoring Command
 
@@ -568,7 +657,8 @@ This is valid but awkward for a casting workflow. It also pushes casting agents
 to read the full screenplay operation contract even when they only need to
 refine one cast member.
 
-Proposed future command family:
+Planned command family in
+`plans/active/0053-casting-director-and-production-designer.md`:
 
 ```bash
 renku cast list --json
@@ -583,7 +673,7 @@ that exists only to avoid `screenplay apply`. It should own cast-specific
 diagnostics, resource keys, and context. It may share persistence internals with
 screenplay operations as long as the public command shape is deliberate.
 
-This enables a future `casting-director` skill to own:
+This enables `casting-director` to own:
 
 - cast member interpretation;
 - cast sheet readiness;
@@ -591,7 +681,7 @@ This enables a future `casting-director` skill to own:
 - visual continuity;
 - future voice notes and voice variants.
 
-### Gap 3: No First-Class Location Or Staging Authoring Command
+### Gap 3: No First-Class Production Design Authoring Command
 
 Current route:
 
@@ -610,7 +700,8 @@ This is valid but too narrow for production design. It cannot yet represent
 scene-specific staging, set dressing, props, or blocking constraints as durable
 department work.
 
-Proposed future command family:
+Planned location fact command family in
+`plans/active/0053-casting-director-and-production-designer.md`:
 
 ```bash
 renku location list --json
@@ -620,16 +711,22 @@ renku location validate --file <location-operations-json> --json
 renku location apply --file <location-operations-json> --json
 ```
 
-Potential later staging contract:
+Planned production-design command families in
+`plans/active/0053-casting-director-and-production-designer.md`:
 
 ```bash
-renku staging context --scene <scene-id> --json
-renku staging validate --file <staging-json> --json
-renku staging write --file <staging-json> --json
+renku production-design location context --location <location-id> --json
+renku production-design location validate --file <location-design-json> --json
+renku production-design location write --file <location-design-json> --json
+
+renku production-design staging context --scene <scene-id> --json
+renku production-design staging validate --file <scene-staging-json> --json
+renku production-design staging write --file <scene-staging-json> --json
 ```
 
-Do not add staging until the domain contract is real. A command that only wraps
-location notes would violate the goal of explicit, reviewable contracts.
+Do not add production-design commands until the domain contracts are real. A
+command that only wraps location notes would violate the goal of explicit,
+reviewable contracts.
 
 ### Gap 4: No Dedicated Casting Skill
 
@@ -647,17 +744,20 @@ It should handle:
 - costume and appearance direction;
 - continuity across scenes and sequences;
 - handoff to `media-producer` for `cast.character-sheet` and `cast.profile`;
-- future voice-casting handoff.
+- future voice casting, voice samples, and locale-specific voice variants.
 
 Until the CLI gap is closed, the skill can use `screenplay-drafter` for durable
 cast mutations and `media-producer` for generated cast media.
 
-### Gap 5: No Dedicated Location/Staging Skill
+Detailed implementation planning for this skill and its backing CLI/core work
+lives in `plans/active/0053-casting-director-and-production-designer.md`.
+
+### Gap 5: No Dedicated Production Designer Skill
 
 Create a future external skill:
 
 ```text
-location-staging-designer
+production-designer
 ```
 
 It should handle:
@@ -671,6 +771,9 @@ It should handle:
 
 Until the CLI gap is closed, the skill can use `screenplay-drafter` for durable
 location mutations and `media-producer` for generated location media.
+
+Detailed implementation planning for this skill and its backing CLI/core work
+lives in `plans/active/0053-casting-director-and-production-designer.md`.
 
 ### Gap 6: Costume And Voice Are Not First-Class Yet
 
@@ -693,9 +796,11 @@ That is enough for basic cast facts, but not enough for:
 - locale-specific voice variants;
 - casting comparison options.
 
-The director skill should treat these as future department gaps. It can capture
-lightweight notes in current cast descriptions or voice notes only when that is
-useful and honest.
+The director skill should keep these under the casting department. It can
+capture lightweight notes in current cast descriptions or voice notes only when
+that is useful and honest. It should not propose a separate `voice-director`
+skill unless a future audio/localization plan deliberately splits that work out
+of casting.
 
 ### Gap 7: Post, Sound, And Editorial Are Not Covered
 
@@ -707,8 +812,7 @@ The director skill should:
 
 - avoid promising final edit behavior that does not exist;
 - use production export only when the user asks for handoff-ready assets;
-- identify future skill needs such as `editor`, `sound-director`, or
-  `voice-director`.
+- identify future skill needs such as `editor` or `sound-director`.
 
 ### Gap 8: Skill Ownership Needs Alignment Around Storyboard Sheets
 
@@ -763,52 +867,31 @@ agree on:
 Update `docs/architecture/reference/studio-skills.md` if the accepted ownership
 language is stale.
 
-### Slice 3: Add Casting Director Skill
+### Slice 3: Add Director Readiness Projection
 
-Create `casting-director` after reviewing the cast authoring command direction.
-
-Initial version may use the screenplay fallback, but its `SKILL.md` should make
-the limitation explicit. It should not pretend there is a cast-specific CLI
-until one exists.
-
-### Slice 4: Add Location/Staging Designer Skill
-
-Create `location-staging-designer` after reviewing the location and staging
-contract direction.
-
-Initial version may use the screenplay fallback for location facts and
-`media-producer` for location sheets. It should not invent durable staging
-state until core owns a real staging contract.
-
-### Slice 5: Add Director Readiness Projection
-
-Consider a core-owned read-only projection:
+Add the core-owned read-only projection:
 
 ```bash
 renku director context --json
 ```
 
-This should be added only when the director skill's repeated preflight reads
-become noisy or inconsistent.
+The projection should summarize readiness, not mutate data. It should become
+the preferred first read for the `movie-director` skill.
 
-The projection should summarize readiness, not mutate data.
+### Slice 4: Plan Casting And Production Design Separately
 
-### Slice 6: Add First-Class Cast And Location Authoring Commands
+Use `plans/active/0053-casting-director-and-production-designer.md` for:
 
-If casting and location/staging workflows become frequent, add real commands:
+- `casting-director`;
+- `production-designer`;
+- cast-specific CLI/core authoring;
+- production-design CLI/core authoring;
+- durable staging and prop/set-dressing contract questions;
+- voice casting under the casting department.
 
-```bash
-renku cast context --cast <cast-member-id> --json
-renku cast validate --file <json> --json
-renku cast apply --file <json> --json
-
-renku location context --location <location-id> --json
-renku location validate --file <json> --json
-renku location apply --file <json> --json
-```
-
-These must be designed as domain contracts. Do not add convenience wrappers that
-only preserve an old path or hide `screenplay apply`.
+Do not implement cast or production-design commands inside the first
+`movie-director` slice except where the director context projection needs a
+read-only readiness summary.
 
 ## Example Director Skill Behaviors
 
@@ -950,127 +1033,123 @@ Mitigation:
 - Use shot lists as source of scene coverage.
 - Use media generation only after the source artifact exists.
 
-## Review Questions
+## Resolved Review Questions
 
-1. Should the top-level skill be named `movie-director`, or should it use a more
-   Renku-specific name such as `renku-director`?
-2. Should `casting-director` and `location-staging-designer` be planned as
-   immediate follow-up skills, or should the first director skill only document
-   those gaps?
-3. Should the first CLI gap to close be `renku director context`, or
-   cast/location authoring commands?
-4. Should production design be named `location-staging-designer`,
-   `production-designer`, or split into separate skills?
-5. Should future voice work live under `casting-director`, or should it become a
-   separate `voice-director` skill once audio generation/localization matures?
+1. The top-level skill is named `movie-director`.
+2. `casting-director` and `production-designer` are planned as follow-up
+   specialist skills in plan `0053`.
+3. `renku director context --json` belongs in this plan.
+4. The location/staging department skill is named `production-designer`.
+5. Future voice work remains under `casting-director`.
 
 ## Completion Checklist
 
 ### Review Area
 
-- [ ] Confirm the skill name: `movie-director` or a renamed alternative.
-- [ ] Confirm that the skill belongs in
+- [x] Confirm the skill name: `movie-director`.
+- [x] Confirm that the skill belongs in
   `/Users/keremk/Projects/aitinkerbox/studio-skills/skills`.
-- [ ] Confirm that the first implementation creates only the director skill and
-  references, not the cast/location CLI gaps.
-- [ ] Confirm the department vocabulary: Screenwriting, Cinematography, Casting,
+- [x] Confirm that the first implementation creates the director skill,
+  references, and director context planning, not cast/production-design mutation
+  commands.
+- [x] Confirm the department vocabulary: Screenwriting, Cinematography, Casting,
   Production Design, Directing, Production Coordination, Voice/Sound, Editorial.
-- [ ] Decide whether "Location/Staging" should be named "Production Design" in
+- [x] Decide that location/staging work is named Production Design in
   user-facing skill language.
 
 ### Existing Skill Alignment
 
-- [ ] Re-read `screenplay-drafter/SKILL.md` and confirm cast/location fallback
+- [x] Re-read `screenplay-drafter/SKILL.md` and confirm cast/location fallback
   wording matches the current screenplay operation contract.
-- [ ] Re-read `scene-shot-designer/SKILL.md` and `media-producer/SKILL.md` and
+- [x] Re-read `scene-shot-designer/SKILL.md` and `media-producer/SKILL.md` and
   settle storyboard sheet handoff ownership.
-- [ ] Update `docs/architecture/reference/studio-skills.md` if its storyboard
+- [x] Update `docs/architecture/reference/studio-skills.md` if its storyboard
   ownership language is stale.
-- [ ] Confirm every existing specialist skill still validates after any wording
+- [x] Confirm every existing specialist skill still validates after any wording
   update.
-- [ ] Avoid duplicating specialist JSON contracts inside the director skill.
+- [x] Avoid duplicating specialist JSON contracts inside the director skill.
 
 ### Movie Director Skill Implementation
 
-- [ ] Run `skill-creator/scripts/init_skill.py` for `movie-director` with
+- [x] Run `skill-creator/scripts/init_skill.py` for `movie-director` with
   `--resources references`.
-- [ ] Write `movie-director/SKILL.md` with frontmatter that clearly triggers for
+- [x] Write `movie-director/SKILL.md` with frontmatter that clearly triggers for
   top-level movie-making coordination.
-- [ ] Add `references/department-map.md`.
-- [ ] Add `references/workflow-playbooks.md`.
-- [ ] Add `references/cli-coverage-and-gaps.md`.
-- [ ] Add `references/specialist-handoff-checklists.md`.
-- [ ] Generate or refresh `agents/openai.yaml` from the final skill content.
-- [ ] Keep `SKILL.md` lean enough for progressive disclosure.
-- [ ] Do not create scripts unless a deterministic repeated operation appears
+- [x] Add `references/department-map.md`.
+- [x] Add `references/workflow-playbooks.md`.
+- [x] Add `references/cli-coverage-and-gaps.md`.
+- [x] Add `references/specialist-handoff-checklists.md`.
+- [x] Generate or refresh `agents/openai.yaml` from the final skill content.
+- [x] Keep `SKILL.md` lean enough for progressive disclosure.
+- [x] Do not create scripts unless a deterministic repeated operation appears
   during implementation.
 
 ### Director Routing Behavior
 
-- [ ] Document how the director skill resolves the current project.
-- [ ] Document how the director skill uses `renku studio current --json` or
+- [x] Document how the director skill resolves the current project.
+- [x] Document how the director skill uses `renku studio current --json` or
   Studio selection context when the user says "selected" or "current".
-- [ ] Document how it chooses `screenplay-drafter`.
-- [ ] Document how it chooses `screenplay-analyst`.
-- [ ] Document how it chooses `inspiration-analyzer`.
-- [ ] Document how it chooses `lookbook-designer`.
-- [ ] Document how it chooses `scene-shot-designer`.
-- [ ] Document how it chooses `media-producer`.
-- [ ] Document the current fallback for cast authoring.
-- [ ] Document the current fallback for location authoring.
-- [ ] Document unsupported voice, sound, music, editing, and final assembly
+- [x] Document how it chooses `screenplay-drafter`.
+- [x] Document how it chooses `screenplay-analyst`.
+- [x] Document how it chooses `inspiration-analyzer`.
+- [x] Document how it chooses `lookbook-designer`.
+- [x] Document how it chooses `scene-shot-designer`.
+- [x] Document how it chooses `media-producer`.
+- [x] Document the current fallback for cast authoring.
+- [x] Document the current fallback for location authoring.
+- [x] Document unsupported voice, sound, music, editing, and final assembly
   work.
 
 ### CLI Gap Planning
 
-- [ ] Decide whether to plan `renku director context --json`.
-- [ ] If planned, define the read-only director readiness report shape.
-- [ ] Decide whether to plan `renku cast context/validate/apply`.
-- [ ] If planned, define the cast operation document shape.
-- [ ] Decide whether to plan `renku location context/validate/apply`.
-- [ ] If planned, define the location operation document shape.
-- [ ] Decide whether durable staging requires a new `renku staging` contract.
-- [ ] Ensure any new CLI command is a real domain contract, not a wrapper or
+- [x] Decide to plan `renku director context --json` in this plan.
+- [x] Define the read-only director readiness report shape in enough detail for
+  implementation.
+- [x] Add the core-owned director context projection.
+- [x] Add the CLI `director context` command handler.
+- [x] Add structured diagnostics for missing current project, stale focus, and
+  missing department prerequisites.
+- [x] Move `renku cast context/validate/apply` planning to plan `0053`.
+- [x] Move production-design authoring command planning to plan `0053`.
+- [x] Ensure any new CLI command is a real domain contract, not a wrapper or
   compatibility alias.
-- [ ] Use structured diagnostics for missing prerequisites and invalid
+- [x] Use structured diagnostics for missing prerequisites and invalid
   department state.
 
 ### Future Specialist Skills
 
-- [ ] Decide whether to create `casting-director`.
-- [ ] If creating it, define its relationship to `screenplay-drafter` and
+- [x] Decide to create `casting-director` in a follow-up plan.
+- [x] If creating it, define its relationship to `screenplay-drafter` and
   `media-producer`.
-- [ ] Decide whether to create `location-staging-designer` or
-  `production-designer`.
-- [ ] If creating it, define how location facts, set dressing, props, blocking,
+- [x] Decide to create `production-designer` in a follow-up plan.
+- [x] If creating it, define how location facts, set dressing, props, blocking,
   and environment sheets are separated.
-- [ ] Decide whether voice casting remains under casting or becomes a future
-  `voice-director` skill.
-- [ ] Decide whether editorial/post should become a future `editor` or
-  `post-producer` skill after final assembly exists.
+- [x] Decide that voice casting remains under casting.
+- [x] Decide not to name editorial/post yet; revisit `editor` versus
+  `post-producer` after final assembly exists.
 
 ### Validation And Forward Testing
 
-- [ ] Run `quick_validate.py` on `movie-director`.
-- [ ] Run `quick_validate.py` on any specialist skills touched during alignment.
-- [ ] Forward-test the director skill with an "idea to movie" prompt.
-- [ ] Forward-test the director skill with a "selected scene to shot video"
+- [x] Run `quick_validate.py` on `movie-director`.
+- [x] Run `quick_validate.py` on any specialist skills touched during alignment.
+- [x] Forward-test the director skill with an "idea to movie" prompt.
+- [x] Forward-test the director skill with a "selected scene to shot video"
   prompt.
-- [ ] Forward-test the director skill with a cast refinement prompt.
-- [ ] Forward-test the director skill with a location/staging refinement prompt.
-- [ ] Confirm the skill does not trigger paid generation without an estimate and
+- [x] Forward-test the director skill with a cast refinement prompt.
+- [x] Forward-test the director skill with a location/staging refinement prompt.
+- [x] Confirm the skill does not trigger paid generation without an estimate and
   approval token.
-- [ ] Confirm the skill does not directly write department JSON when a
+- [x] Confirm the skill does not directly write department JSON when a
   specialist skill owns that artifact.
 
 ### Documentation And Final Verification
 
-- [ ] Update this plan status when implementation begins.
-- [ ] If implementation changes accepted architecture, summarize the decision in
+- [x] Update this plan status when implementation begins.
+- [x] If implementation changes accepted architecture, summarize the decision in
   `docs/` rather than leaving only this active plan.
-- [ ] Run focused tests for any CLI/core code touched by later gap work.
-- [ ] Run focused skill validation after external skill edits.
-- [ ] Confirm no package-management commands were needed.
-- [ ] Confirm no obsolete compatibility aliases or re-export stubs were added.
-- [ ] Confirm all final commands and file paths in skill docs match current CLI
+- [x] Run focused tests for any CLI/core code touched by later gap work.
+- [x] Run focused skill validation after external skill edits.
+- [x] Confirm no package-management commands were needed.
+- [x] Confirm no obsolete compatibility aliases or re-export stubs were added.
+- [x] Confirm all final commands and file paths in skill docs match current CLI
   behavior.

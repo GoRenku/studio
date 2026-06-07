@@ -8,6 +8,7 @@ import type {
   CastOverviewResource,
   CastDesignResource,
   CastNavigationRow,
+  DirectorContextReport,
   InspirationAnalysisValidationReport,
   InspirationAnalysisWriteReport,
   InspirationFolder,
@@ -133,6 +134,7 @@ import type {
   Sequence as ScreenplaySequence,
 } from '../client/screenplay.js';
 import type { CurrentProjectReport } from './database/lifecycle/current-project.js';
+import type { StudioCurrent } from './studio-coordination/events.js';
 import type { RenkuConfigPathOptions } from './renku-config.js';
 import type { ProjectIdGenerator } from './entity-ids.js';
 
@@ -144,6 +146,7 @@ export interface ProjectDataService {
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
   readProjectShell(input: ReadProjectInput): Promise<ProjectShell>;
+  readDirectorContext(input?: ReadDirectorContextInput): Promise<DirectorContextReport>;
   readProjectInformationResource(
     input: ReadProjectInput
   ): Promise<ProjectInformationResource>;
@@ -461,6 +464,11 @@ export interface ProjectDatabaseMigrationReport {
 
 export interface ReadProjectInput extends RenkuConfigPathOptions {
   projectName: string;
+}
+
+export interface ReadDirectorContextInput extends RenkuConfigPathOptions {
+  selection?: StudioSelection;
+  studioCurrent?: StudioCurrent;
 }
 
 export interface ReadScreenplayCastMemberInput extends RenkuConfigPathOptions {

@@ -9,6 +9,7 @@ import meow from 'meow';
 import { runAboutCommand } from './commands/about-command.js';
 import { runAssetCommand } from './commands/asset-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
+import { runDirectorCommand } from './commands/director-command.js';
 import { runGenerationCommand } from './commands/generation-command.js';
 import { runGenerationPlanCommand } from './commands/generation-plan-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
@@ -53,6 +54,7 @@ Commands
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
   asset                Register, list, and select assets
+  director context     Show director readiness for the current movie project
   production export    Export selected production assets
   info show            Show project information
   info set             Update project information
@@ -103,6 +105,7 @@ Options
   --subject-kind       Shot video take input subject kind
   --subject-id         Shot video take input subject id
   --selection          Media import selection: select or take
+                       Director context selection: Studio selection JSON
   --include-visual-references
                        Include selected visual references in shot-list context
   --sequence           Sequence id for screenplay scene list
@@ -393,6 +396,16 @@ export async function runRenkuCli(
             summary: cli.flags.summary,
             locale: cli.flags.locale,
             order: cli.flags.order,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'director':
+        return await runDirectorCommand({
+          input,
+          flags: {
+            selection: cli.flags.selection,
           },
           json: cli.flags.json,
           io,

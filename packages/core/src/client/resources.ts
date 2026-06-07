@@ -271,6 +271,102 @@ export interface ProjectInformationResource {
   languages: ProjectLanguage[];
 }
 
+export interface DirectorContextReport {
+  valid: true;
+  project: {
+    name: string;
+    id: string;
+    title: string;
+    aspectRatio: string;
+  };
+  currentSelection: StudioSelectionContextResult | null;
+  screenplay: DirectorScreenplayReadiness;
+  visualLanguage: DirectorVisualLanguageReadiness;
+  cast: DirectorCastReadiness;
+  productionDesign: DirectorProductionDesignReadiness;
+  selectedScene: DirectorSceneReadiness | null;
+  nextSteps: DirectorNextStep[];
+  resourceKeys: string[];
+  diagnostics: DiagnosticIssue[];
+  warnings: DiagnosticIssue[];
+}
+
+export interface DirectorScreenplayReadiness {
+  exists: boolean;
+  activeAnalysisId: string | null;
+  analysisCount: number;
+  counts: {
+    castMembers: number;
+    locations: number;
+    acts: number;
+    sequences: number;
+    scenes: number;
+    blocks: number;
+  };
+}
+
+export interface DirectorVisualLanguageReadiness {
+  inspirationFolderCount: number;
+  lookbookCount: number;
+  activeLookbookId: string | null;
+  readyForGeneration: boolean;
+}
+
+export interface DirectorCastReadiness {
+  castMemberCount: number;
+  selectedVisualReferenceCount: number;
+  missingSelectedVisualReferenceCastMemberIds: string[];
+  everyCastMemberHasSelectedVisualReference: boolean;
+}
+
+export interface DirectorProductionDesignReadiness {
+  locationCount: number;
+  selectedEnvironmentSheetCount: number;
+  missingSelectedEnvironmentSheetLocationIds: string[];
+  everyLocationHasSelectedEnvironmentSheet: boolean;
+}
+
+export interface DirectorSceneReadiness {
+  sceneId: string;
+  shotId: string | null;
+  activeShotListId: string | null;
+  shotCount: number;
+  storyboardStatus:
+    | {
+        available: false;
+        missingShotIds: [];
+      }
+    | {
+        available: true;
+        missingShotIds: string[];
+      };
+  shotVideo: {
+    preflightAvailable: boolean;
+    selectedProductionGroupId: string | null;
+    selectedShotIds: string[];
+    selectedInputCount: number;
+    selectedTakeCount: number;
+  };
+}
+
+export type DirectorNextStepId =
+  | 'draft-screenplay'
+  | 'analyze-screenplay'
+  | 'create-lookbook'
+  | 'design-cast'
+  | 'design-production'
+  | 'design-shot-list'
+  | 'generate-storyboards'
+  | 'generate-shot-video';
+
+export interface DirectorNextStep {
+  id: DirectorNextStepId;
+  title: string;
+  specialistSkill: string;
+  reason: string;
+  command: string | null;
+}
+
 export type StudioSelectionContextResult =
   | {
       valid: true;

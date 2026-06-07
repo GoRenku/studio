@@ -4,7 +4,7 @@ Status: current
 
 Role: CLI reference
 
-Last reviewed: 2026-05-22
+Last reviewed: 2026-06-07
 
 This file is the living reference for the `renku` command-line surface. Keep it
 updated whenever a command, flag, output shape, or expected error changes.
@@ -192,6 +192,36 @@ Behavior:
 
 - Opens the named project database and applies pending migrations.
 - Reports the project path and database path.
+
+## `renku director context`
+
+Show a director-readiness projection for the current authoring project.
+
+```bash
+renku director context --json
+renku director context --selection '{"type":"scene","id":"<scene-id>"}' --json
+```
+
+Options:
+
+- `--selection`: optional Studio selection JSON. When omitted, the command reads
+  current Studio focus when a live focus is available.
+- `--json`: print the full machine-readable projection.
+
+Behavior:
+
+- Requires a current authoring project and fails with `PROJECT_DATA202` when
+  none is open.
+- Summarizes screenplay, active Screenplay Analysis, Inspiration folders,
+  Lookbooks, selected cast visuals, selected location environment sheets, and
+  selected-scene shot readiness.
+- Reports structured director diagnostics for missing screenplay state, missing
+  active Lookbook, missing selected visual media, missing active shot lists, and
+  missing storyboard images.
+- Returns ordered `nextSteps` such as `draft-screenplay`, `analyze-screenplay`,
+  `create-lookbook`, `design-cast`, `design-production`, `design-shot-list`,
+  `generate-storyboards`, and `generate-shot-video`.
+- Does not mutate project state and does not run paid generation.
 
 ## `renku screenplay status`
 
@@ -1178,8 +1208,9 @@ Behavior:
   sliced scenic views locally, and imports the grouped files only when the
   generated sheet is clean enough to slice.
 - Scene storyboard sheet runs create one composite storyboard grid for the
-  selected `shotIds`. The scene-shot-designer agent inspects that composite,
-  slices one image per selected shot, and imports only the cropped shot images.
+  selected `shotIds`. The media-producer agent inspects that composite, slices
+  one image per selected shot, and imports only the cropped shot images after
+  scene-shot-designer has supplied the Scene Shot List.
 - Shot first frames, last frames, ad hoc reference images, and multi-shot
   storyboard sheets are generated as shot video take inputs. Their specs must
   use authored prompts; `shot.reference-image` also requires a title that names

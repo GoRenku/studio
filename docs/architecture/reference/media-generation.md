@@ -278,10 +278,11 @@ The context includes:
 
 The generated provider image is one temporary composite storyboard sheet for
 one to four selected shots, not one provider call per shot. The
-scene-shot-designer skill owns the grid prompt, visual inspection, slicing, and
-per-shot import mapping. Core does not store the temporary sheet as an Asset and
-does not store crop boxes, grid cells, extraction confidence, extraction
-methods, or slicing diagnostics.
+media-producer skill owns the grid generation spec, visual inspection, slicing,
+and per-shot import mapping after scene-shot-designer has supplied a valid Scene
+Shot List. Core does not store the temporary sheet as an Asset and does not
+store crop boxes, grid cells, extraction confidence, extraction methods, or
+slicing diagnostics.
 
 ## Lookbook Image Spec
 

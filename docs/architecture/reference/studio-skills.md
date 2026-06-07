@@ -59,6 +59,16 @@ operational companions that teach agents how to use those contracts.
 - Estimates cost and runs only approved specs.
 - Imports finished files separately with `renku media import`.
 
+`movie-director`
+
+- Coordinates screenplay, analysis, visual language, cast, production design,
+  shot design, media generation, and production readiness workflows.
+- Starts broad or cross-department requests with `renku director context`.
+- Dispatches durable artifact work to specialist skills instead of writing
+  department documents directly.
+- Names unsupported casting, production design, voice, sound, and editorial gaps
+  honestly and routes to supported fallback steps.
+
 `scene-shot-designer`
 
 - Designs and persists Scene Shot Lists for individual screenplay scenes.
@@ -66,9 +76,9 @@ operational companions that teach agents how to use those contracts.
   referenced cast, referenced locations, active Lookbook text, and active shot
   list history.
 - Writes validated `kind: "sceneShotList"` JSON through the CLI.
-- Optionally creates one `scene.storyboard-sheet` generation spec for the full
-  shot list, slices the generated sheet into per-shot files, and imports only
-  the cropped storyboard images as durable per-shot scene assets.
+- Hands storyboard image requests to `media-producer` after a valid Scene Shot
+  List exists. The media-producer skill owns `scene.storyboard-sheet` generation
+  specs, visual inspection, slicing, and per-shot storyboard image import.
 
 ## Skill Rules
 
