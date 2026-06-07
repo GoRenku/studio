@@ -90,6 +90,36 @@ describe('useDebouncedAutosave', () => {
 
     expect(save).not.toHaveBeenCalled();
   });
+
+  it('uses the caller fallback when a save rejects with a non-Error value', async () => {
+    vi.useFakeTimers();
+    const save = vi.fn(async () => {
+      throw 'network failed';
+    });
+
+    const { result, rerender } = renderHook(
+      ({ value }) =>
+        useDebouncedAutosave({
+          value,
+          delayMs: 10,
+          failureMessage: 'Shot settings could not be saved.',
+          save,
+        }),
+      { initialProps: { value: 'Initial' } }
+    );
+
+    rerender({ value: 'Changed' });
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current).toEqual({
+      state: 'error',
+      message: 'Shot settings could not be saved.',
+    });
+  });
 });
 
 function StrictModeWrapper({ children }: { children: ReactNode }) {

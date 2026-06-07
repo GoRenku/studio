@@ -4,8 +4,6 @@ import type {
   ShotVideoTakeParameterValues,
   ShotVideoTakePromptDraft,
 } from '@gorenku/studio-core/client';
-import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
-import { AutosaveStatus } from '@/ui/autosave-status';
 import { Badge } from '@/ui/badge';
 import { RunSetupParameter } from './run-setup-controls';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
@@ -19,7 +17,6 @@ interface SceneShotAiProductionRunSetupProps {
   estimatePending: boolean;
   finalPrompt: ShotVideoTakePromptDraft | null;
   promptStale: boolean;
-  autosave: DebouncedAutosaveStatus;
   isMultiShotGroup: boolean;
 }
 
@@ -31,16 +28,14 @@ export function SceneShotAiProductionRunSetup({
   estimatePending,
   finalPrompt,
   promptStale,
-  autosave,
   isMultiShotGroup,
 }: SceneShotAiProductionRunSetupProps) {
   return (
     <div className='flex min-h-0 flex-col'>
-      <div className='flex items-center justify-between gap-3 px-1 pb-2'>
+      <div className='flex items-center px-1 pb-2'>
         <h4 className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
           Run Setup
         </h4>
-        <AutosaveStatus status={autosave} className='shrink-0' />
       </div>
       <div className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-lg border border-border/50 bg-card/40 px-3 py-3'>
         <section className='border-b border-border/40 pb-3'>

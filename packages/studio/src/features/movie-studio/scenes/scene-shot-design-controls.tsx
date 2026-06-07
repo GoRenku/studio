@@ -1,6 +1,4 @@
 import type { ReactNode } from 'react';
-import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
-import { AutosaveStatus } from '@/ui/autosave-status';
 import { Button } from '@/ui/button';
 import { Textarea } from '@/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -60,22 +58,17 @@ export function CustomFieldRow({
   placeholder,
   value,
   onChange,
-  status,
 }: {
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
-  status: DebouncedAutosaveStatus;
 }) {
   return (
-    <div className='flex items-start gap-3'>
-      <Textarea
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className='min-h-20 flex-1 resize-y'
-      />
-      <AutosaveStatus status={status} />
-    </div>
+    <Textarea
+      value={value}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      className='min-h-20 resize-y'
+    />
   );
 }

@@ -98,6 +98,9 @@ Use this page as the map:
     `studio.projectResourcesChanged` behavior.
   - `../decisions/0023-use-domain-neutral-ui-primitives-for-shared-frontend-patterns.md`
     for shared UI primitive ownership and reusable image-card behavior.
+  - `../decisions/0027-use-details-header-for-save-notifications.md`
+    for the details-header placement and shared UI primitive requirement for
+    save notifications.
 
 ## Diagnostics, Naming, CLI, And Contracts
 

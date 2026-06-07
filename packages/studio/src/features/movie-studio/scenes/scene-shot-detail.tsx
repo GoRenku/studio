@@ -1,11 +1,19 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   SceneShot,
   ShotVideoTakeProductionGroup,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { SceneShotDetailTab } from '../movie-studio-selection';
+import {
+  chooseDetailSaveNotification,
+  idleSaveNotification,
+  idleSaveNotificationSlot,
+  saveNotificationStatusesEqual,
+  type DetailSaveNotificationSlot,
+} from '../detail-save-notification';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -42,6 +50,7 @@ interface SceneShotDetailProps {
   locationLabels: Record<string, string>;
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onShotSpecsSaved?: (resource: SceneShotListResourceResponse) => void;
+  onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
 const DESIGN_TABS = [
@@ -68,7 +77,13 @@ export function SceneShotDetail({
   locationLabels,
   onTabChange = () => {},
   onShotSpecsSaved,
+  onSaveNotificationChange,
 }: SceneShotDetailProps) {
+  const saveNotificationSequenceRef = useRef(0);
+  const [shotSpecsSaveNotification, setShotSpecsSaveNotification] =
+    useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
+  const [productionSaveNotification, setProductionSaveNotification] =
+    useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
   const groupTag = useMemo(() => {
     const group = findRailGroupForShot(railGroups, shot.shotId);
     return groupTagLabel(shots, group);
@@ -101,6 +116,46 @@ export function SceneShotDetail({
     productionGroupId: productionGroupIdKey,
     onResourceRefreshed: onShotSpecsSaved,
   });
+  const handleShotSpecsSaveNotificationChange = useCallback(
+    (status: SaveNotificationStatus) => {
+      setShotSpecsSaveNotification((current) => {
+        if (saveNotificationStatusesEqual(current.status, status)) {
+          return current;
+        }
+        return {
+          status,
+          sequence: ++saveNotificationSequenceRef.current,
+        };
+      });
+    },
+    []
+  );
+
+  useEffect(() => {
+    setProductionSaveNotification((current) => {
+      if (saveNotificationStatusesEqual(current.status, production.autosave)) {
+        return current;
+      }
+      return {
+        status: production.autosave,
+        sequence: ++saveNotificationSequenceRef.current,
+      };
+    });
+  }, [production.autosave]);
+
+  const saveNotification = useMemo(
+    () =>
+      chooseDetailSaveNotification([
+        shotSpecsSaveNotification,
+        productionSaveNotification,
+      ]),
+    [productionSaveNotification, shotSpecsSaveNotification]
+  );
+
+  useEffect(() => {
+    onSaveNotificationChange?.(saveNotification);
+    return () => onSaveNotificationChange?.(idleSaveNotification);
+  }, [onSaveNotificationChange, saveNotification]);
 
   return (
     <section className='flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
@@ -131,6 +186,7 @@ export function SceneShotDetail({
             sceneId={sceneId}
             shot={shot}
             onSaved={onShotSpecsSaved}
+            onSaveNotificationChange={handleShotSpecsSaveNotificationChange}
           >
             <LineTabs
               value={activeTab}

@@ -11,7 +11,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import {
   useDebouncedAutosave,
-  type DebouncedAutosaveStatus,
+  type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import {
@@ -53,7 +53,7 @@ export interface UseShotVideoTakeProductionResult {
   setInputMode: (inputMode: ShotVideoTakeInputModeId) => void;
   setModel: (model: ShotVideoTakeModelChoice) => void;
   setParameter: (name: string, value: ShotVideoTakeParameterValue) => void;
-  autosave: DebouncedAutosaveStatus;
+  autosave: DebouncedSaveStatus;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
   estimate: ShotVideoTakeProductionEstimateReport | null;
   estimateState: 'idle' | 'loading' | 'error';
@@ -170,6 +170,7 @@ export function useShotVideoTakeProduction(
       }
       return save(group);
     },
+    failureMessage: 'AI Production settings could not be saved.',
     isReady: () => hasUserEditedRef.current && productionGroup !== null,
     onSaved: (result) => {
       onResourceRefreshed?.(result.resource);

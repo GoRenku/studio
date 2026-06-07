@@ -20,7 +20,7 @@ import {
 } from '@/services/studio-projects-api';
 import {
   useDebouncedAutosave,
-  type DebouncedAutosaveStatus,
+  type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
 import { Button } from '@/ui/button';
 import {
@@ -70,7 +70,7 @@ const LANGUAGE_CATALOG = [
 interface ProjectInformationPanelProps {
   project: ProjectShellWithHttp;
   onProjectChange: (project: ProjectShellWithHttp) => void;
-  onAutosaveStatusChange: (status: DebouncedAutosaveStatus) => void;
+  onSaveStatusChange: (status: DebouncedSaveStatus) => void;
 }
 
 interface ProjectInformationForm {
@@ -84,7 +84,7 @@ interface ProjectInformationForm {
 export function ProjectInformationPanel({
   project,
   onProjectChange,
-  onAutosaveStatusChange,
+  onSaveStatusChange,
 }: ProjectInformationPanelProps) {
   const projectForm = useMemo(
     () => toProjectInformationForm(project),
@@ -131,6 +131,7 @@ export function ProjectInformationPanel({
   const autosave = useDebouncedAutosave({
     value: form,
     save,
+    failureMessage: 'Project information could not be saved.',
     onSaved: () => {
       void readProject(project.identity.name).then(onProjectChange);
     },
@@ -168,8 +169,8 @@ export function ProjectInformationPanel({
   }, [project.identity.name, projectForm]);
 
   useEffect(() => {
-    onAutosaveStatusChange(autosave);
-  }, [autosave, onAutosaveStatusChange]);
+    onSaveStatusChange(autosave);
+  }, [autosave, onSaveStatusChange]);
 
   useEffect(() => {
     const previousProjectForm = lastProjectFormRef.current;

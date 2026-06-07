@@ -50,7 +50,7 @@ const TRACK_OPTIONS: Array<{
 ];
 
 export function SceneShotCameraMotionTab() {
-  const { shotSpecs, update, status } = useShotSpecsContext();
+  const { shotSpecs, update } = useShotSpecsContext();
   const movement = shotSpecs.movement ?? {};
 
   const toggleMovement = (id: string) =>
@@ -163,7 +163,6 @@ export function SceneShotCameraMotionTab() {
           placeholder='Custom motion…'
           value={shotSpecs.custom?.movement ?? ''}
           onChange={setCustomMotion}
-          status={status}
         />
       </DesignSection>
     </div>

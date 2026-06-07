@@ -24,7 +24,7 @@ import {
 } from './scene-shot-design-vocabulary';
 
 export function SceneShotCompositionTab() {
-  const { shotSpecs, update, status } = useShotSpecsContext();
+  const { shotSpecs, update } = useShotSpecsContext();
   const lens = shotSpecs.lens ?? {};
 
   const toggleShotSize = (id: string) =>
@@ -212,7 +212,6 @@ export function SceneShotCompositionTab() {
           placeholder='Custom composition...'
           value={shotSpecs.custom?.composition ?? ''}
           onChange={setCustomComposition}
-          status={status}
         />
       </DesignSection>
     </div>

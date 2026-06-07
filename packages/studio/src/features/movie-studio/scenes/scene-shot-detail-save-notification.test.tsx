@@ -1,0 +1,139 @@
+// @vitest-environment jsdom
+import React from 'react';
+import { render, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import type { SceneShot } from '@gorenku/studio-core/client';
+import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-production';
+import { useShotVideoTakeProduction } from './use-shot-video-take-production';
+import { SceneShotDetail } from './scene-shot-detail';
+
+vi.mock('./use-shot-video-take-production', () => ({
+  useShotVideoTakeProduction: vi.fn(),
+}));
+
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= ResizeObserverStub;
+
+const SHOT: SceneShot = {
+  shotId: 'shot_001',
+  title: 'Map study',
+  storyBeat: '',
+  narrativePurpose: '',
+  description: '',
+  shotType: 'wide',
+  subject: '',
+  action: '',
+  dialogue: [],
+  coveredBlockIndexes: [],
+  castMemberIds: [],
+  locationIds: [],
+};
+
+function productionResult(
+  autosave: UseShotVideoTakeProductionResult['autosave']
+): UseShotVideoTakeProductionResult {
+  return {
+    loadState: 'ready',
+    loadError: null,
+    context: null,
+    models: null,
+    productionGroup: null,
+    selectedInputMode: null,
+    selectedModel: undefined,
+    setInputMode: vi.fn(),
+    setModel: vi.fn(),
+    setParameter: vi.fn(),
+    autosave,
+    productionPlan: null,
+    estimate: null,
+    estimateState: 'idle',
+    estimateError: null,
+    planState: 'idle',
+    planError: null,
+    refreshProductionPlan: vi.fn(async () => {}),
+    reuseInput: vi.fn(async () => {}),
+    regenerateInput: vi.fn(async () => {}),
+    deleteInput: vi.fn(async () => {}),
+  };
+}
+
+describe('SceneShotDetail save notifications', () => {
+  it('routes AI Production autosave status to the details header path', async () => {
+    vi.mocked(useShotVideoTakeProduction).mockReturnValue(
+      productionResult({ state: 'saved', message: 'Saved' })
+    );
+    const onSaveNotificationChange = vi.fn();
+
+    render(
+      <SceneShotDetail
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        shots={[SHOT]}
+        railGroups={[]}
+        productionGroups={[]}
+        label='Shot 1'
+        activeTab='ai-production'
+        castMemberLabels={{}}
+        locationLabels={{}}
+        onSaveNotificationChange={onSaveNotificationChange}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledWith({
+        state: 'saved',
+        message: 'Saved',
+      });
+    });
+  });
+
+  it('does not report unchanged autosave status again after a rerender', async () => {
+    vi.mocked(useShotVideoTakeProduction).mockImplementation(() =>
+      productionResult({ state: 'idle', message: null })
+    );
+    const onSaveNotificationChange = vi.fn();
+
+    const { rerender } = render(
+      <SceneShotDetail
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        shots={[SHOT]}
+        railGroups={[]}
+        productionGroups={[]}
+        label='Shot 1'
+        activeTab='ai-production'
+        castMemberLabels={{}}
+        locationLabels={{}}
+        onSaveNotificationChange={onSaveNotificationChange}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(
+      <SceneShotDetail
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        shots={[SHOT]}
+        railGroups={[]}
+        productionGroups={[]}
+        label='Shot 1'
+        activeTab='ai-production'
+        castMemberLabels={{}}
+        locationLabels={{}}
+        onSaveNotificationChange={onSaveNotificationChange}
+      />
+    );
+
+    expect(onSaveNotificationChange).toHaveBeenCalledTimes(1);
+  });
+});

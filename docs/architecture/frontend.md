@@ -136,3 +136,5 @@ For media surfaces, verification should check:
   project shells, lazy resource loading, pagination, and scoped invalidation.
 - `../decisions/0023-use-domain-neutral-ui-primitives-for-shared-frontend-patterns.md`
   defines shared UI primitive ownership and reusable media-card behavior.
+- `../decisions/0027-use-details-header-for-save-notifications.md` defines the
+  details header as the single placement for save notifications.

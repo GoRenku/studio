@@ -1,11 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import type { SceneShot } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
   useShotSpecs,
   type UseShotSpecsResult,
 } from './use-shot-specs';
+import { idleSaveNotification } from '../detail-save-notification';
 
 const ShotSpecsContext = createContext<UseShotSpecsResult | null>(
   null
@@ -16,6 +18,7 @@ interface ShotSpecsProviderProps {
   sceneId: string;
   shot: SceneShot;
   onSaved?: (resource: SceneShotListResourceResponse) => void;
+  onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   children: ReactNode;
 }
 
@@ -31,6 +34,7 @@ export function ShotSpecsProvider({
   sceneId,
   shot,
   onSaved,
+  onSaveNotificationChange,
   children,
 }: ShotSpecsProviderProps) {
   const value = useShotSpecs({
@@ -40,6 +44,12 @@ export function ShotSpecsProvider({
     initial: shot.shotSpecs,
     onSaved,
   });
+
+  useEffect(() => {
+    onSaveNotificationChange?.(value.status);
+    return () => onSaveNotificationChange?.(idleSaveNotification);
+  }, [onSaveNotificationChange, value.status]);
+
   return (
     <ShotSpecsContext.Provider value={value}>
       {children}

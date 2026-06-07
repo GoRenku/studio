@@ -31,7 +31,6 @@ export function SceneShotAiProductionTab({
     setInputMode,
     setModel,
     setParameter,
-    autosave,
     productionPlan,
     estimate,
     estimateState,
@@ -95,7 +94,6 @@ export function SceneShotAiProductionTab({
           estimatePending={estimateState === 'loading' || planState === 'loading'}
           finalPrompt={productionPlan?.finalPrompt ?? null}
           promptStale={promptStale}
-          autosave={autosave}
           isMultiShotGroup={isMultiShotGroup}
         />
       </div>

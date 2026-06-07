@@ -88,7 +88,7 @@ function renderPanel(project: ProjectShellWithHttp) {
     <ProjectInformationPanel
       project={project}
       onProjectChange={() => undefined}
-      onAutosaveStatusChange={() => undefined}
+      onSaveStatusChange={() => undefined}
     />
   );
 }
@@ -101,7 +101,7 @@ function rerenderPanel(
     <ProjectInformationPanel
       project={project}
       onProjectChange={() => undefined}
-      onAutosaveStatusChange={() => undefined}
+      onSaveStatusChange={() => undefined}
     />
   );
 }

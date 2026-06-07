@@ -11,6 +11,7 @@ import type {
 } from '@/services/studio-project-contracts';
 import { updateSceneShotSpecs } from '@/services/studio-screenplay-api';
 import { updateShotLocationReference } from '@/services/studio-shot-video-takes-api';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotDetail } from './scene-shot-detail';
@@ -67,6 +68,7 @@ function renderWithProvider(
   options: {
     shot?: SceneShot;
     onSaved?: (resource: SceneShotListResourceResponse) => void;
+    onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   } = {}
 ) {
   return render(
@@ -75,6 +77,7 @@ function renderWithProvider(
       sceneId='scene_hook'
       shot={options.shot ?? SHOT}
       onSaved={options.onSaved}
+      onSaveNotificationChange={options.onSaveNotificationChange}
     >
       {children}
     </ShotSpecsProvider>
@@ -341,6 +344,26 @@ describe('SceneShotCompositionTab', () => {
       },
       { timeout: 2000 }
     );
+  });
+
+  it('reports shot specs save status to the details header path', async () => {
+    const onSaveNotificationChange = vi.fn();
+    renderWithProvider(<SceneShotCompositionTab />, {
+      onSaveNotificationChange,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Medium Close-Up' }));
+
+    await waitFor(
+      () => {
+        expect(onSaveNotificationChange).toHaveBeenCalledWith({
+          state: 'saved',
+          message: 'Saved',
+        });
+      },
+      { timeout: 2000 }
+    );
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('persists lens and focus selections via autosave', async () => {

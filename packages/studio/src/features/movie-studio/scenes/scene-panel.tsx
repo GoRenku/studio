@@ -16,6 +16,7 @@ import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneNarrativeResource } from '@/services/studio-screenplay-api';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type {
   ScenePanelTab,
   SceneShotDetailTab,
@@ -36,6 +37,7 @@ interface ScenePanelProps {
   shotTab?: SceneShotDetailTab;
   onSelect: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
+  onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   previousScene?: SceneNeighbor | null;
   nextScene?: SceneNeighbor | null;
 }
@@ -50,6 +52,7 @@ export function ScenePanel({
   shotTab,
   onSelect,
   onHeaderActionChange,
+  onSaveNotificationChange,
   previousScene,
   nextScene,
 }: ScenePanelProps) {
@@ -136,6 +139,7 @@ export function ScenePanel({
           shotTab={shotTab}
           onSelect={onSelect}
           onHeaderActionChange={onHeaderActionChange}
+          onSaveNotificationChange={onSaveNotificationChange}
         />
       </LineTabsContent>
     </LineTabs>

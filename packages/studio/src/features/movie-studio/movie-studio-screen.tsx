@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import type { DebouncedAutosaveStatus } from '@/hooks/use-debounced-autosave';
+import type { DebouncedSaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
 import { createInspirationFolder } from '@/services/studio-visual-language-api';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
-import { AutosaveStatus } from '@/ui/autosave-status';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -28,6 +28,10 @@ import { useStudioSelectionResolution } from './use-movie-studio-selection-resol
 import type { StudioSelection } from './movie-studio-selection';
 import { InspirationFolderCreateDialog } from './visual-language/inspiration-folder-create-dialog';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
+import {
+  idleSaveNotification,
+  saveNotificationStatusesEqual,
+} from './detail-save-notification';
 
 interface MovieStudioScreenProps {
   project: ProjectShellWithHttp;
@@ -57,15 +61,20 @@ export function MovieStudioScreen({
   );
   const { selection, resolvedSelection } = studioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
-    useState<DebouncedAutosaveStatus>({ state: 'idle', message: null });
+    useState<DebouncedSaveStatus>({ state: 'idle', message: null });
   const [isProductionExportRunning, setIsProductionExportRunning] = useState(false);
   const [lookbooksRevision, setLookbooksRevision] = useState(0);
   const [inspirationFoldersRevision, setInspirationFoldersRevision] = useState(0);
-  const [sceneHeaderAction, setSceneHeaderAction] = useState<ReactNode | null>(
-    null
-  );
-  const handleProjectInformationAutosaveStatusChange = useCallback(
-    (status: DebouncedAutosaveStatus) => {
+  const [sceneHeaderAction, setSceneHeaderAction] = useState<{
+    sceneId: string;
+    action: ReactNode | null;
+  } | null>(null);
+  const [sceneSaveNotification, setSceneSaveNotification] = useState<{
+    sceneId: string;
+    status: SaveNotificationStatus;
+  } | null>(null);
+  const handleProjectInformationSaveStatusChange = useCallback(
+    (status: DebouncedSaveStatus) => {
       setProjectInformationAutosave(status);
     },
     []
@@ -155,6 +164,68 @@ export function MovieStudioScreen({
     screenplayNavigation.sequencesByActId,
   ]);
 
+  const activeSaveNotification =
+    selection.type === 'projectInformation'
+      ? projectInformationAutosave
+      : selection.type === 'scene'
+        ? sceneSaveNotification?.sceneId === selection.id
+          ? sceneSaveNotification.status
+          : idleSaveNotification
+        : undefined;
+  const activeSceneHeaderAction =
+    selection.type === 'scene' && sceneHeaderAction?.sceneId === selection.id
+      ? sceneHeaderAction.action
+      : null;
+  const activeSceneId = selection.type === 'scene' ? selection.id : null;
+  const handleSceneHeaderActionChange = useCallback(
+    (sceneId: string, action: ReactNode | null) => {
+      setSceneHeaderAction((current) => {
+        if (
+          current &&
+          current.sceneId === sceneId &&
+          current.action === action
+        ) {
+          return current;
+        }
+        return { sceneId, action };
+      });
+    },
+    []
+  );
+  const handleSceneSaveNotificationChange = useCallback(
+    (sceneId: string, status: SaveNotificationStatus) => {
+      setSceneSaveNotification((current) => {
+        if (
+          current &&
+          current.sceneId === sceneId &&
+          saveNotificationStatusesEqual(current.status, status)
+        ) {
+          return current;
+        }
+        return { sceneId, status };
+      });
+    },
+    []
+  );
+  const handleActiveSceneHeaderActionChange = useCallback(
+    (action: ReactNode | null) => {
+      if (!activeSceneId) {
+        return;
+      }
+      handleSceneHeaderActionChange(activeSceneId, action);
+    },
+    [activeSceneId, handleSceneHeaderActionChange]
+  );
+  const handleActiveSceneSaveNotificationChange = useCallback(
+    (status: SaveNotificationStatus) => {
+      if (!activeSceneId) {
+        return;
+      }
+      handleSceneSaveNotificationChange(activeSceneId, status);
+    },
+    [activeSceneId, handleSceneSaveNotificationChange]
+  );
+
   const handleProductionExport = useCallback(async () => {
     setIsProductionExportRunning(true);
     toast.loading('Exporting production assets', {
@@ -230,28 +301,22 @@ export function MovieStudioScreen({
                 usesFlushPanelContent(selection.type) ? 'p-0' : undefined
               }
               action={
-                selection.type === 'projectInformation' ? (
-                  <AutosaveStatus
-                    status={projectInformationAutosave}
-                    className='shrink-0'
-                  />
-                ) : selection.type === 'inspiration' ? (
+                selection.type === 'inspiration' ? (
                   <InspirationFolderCreateDialog
                     trigger='icon'
                     onCreate={handleCreateInspirationFolder}
                   />
                 ) : selection.type === 'scene' ? (
-                  sceneHeaderAction
+                  activeSceneHeaderAction
                 ) : null
               }
+              saveNotification={activeSaveNotification}
             >
               {selection.type === 'projectInformation' ? (
                 <ProjectInformationPanel
                   project={project}
                   onProjectChange={onProjectChange}
-                  onAutosaveStatusChange={
-                    handleProjectInformationAutosaveStatusChange
-                  }
+                  onSaveStatusChange={handleProjectInformationSaveStatusChange}
                 />
               ) : selection.type === 'inspiration' ||
                 selection.type === 'lookbooks' ||
@@ -311,7 +376,8 @@ export function MovieStudioScreen({
                   shotId={selection.shotId}
                   shotTab={selection.shotTab}
                   onSelect={selectMovieStudioSurface}
-                  onHeaderActionChange={setSceneHeaderAction}
+                  onHeaderActionChange={handleActiveSceneHeaderActionChange}
+                  onSaveNotificationChange={handleActiveSceneSaveNotificationChange}
                   previousScene={sceneNeighbors.previousScene}
                   nextScene={sceneNeighbors.nextScene}
                 />

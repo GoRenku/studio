@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import { updateShotVideoTakeRailGroups } from '@/services/studio-shot-video-takes-api';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { Button } from '@/ui/button';
 import {
   Dialog,
@@ -26,6 +34,13 @@ import type {
   StudioSelection,
 } from '../movie-studio-selection';
 import {
+  chooseDetailSaveNotification,
+  idleSaveNotification,
+  idleSaveNotificationSlot,
+  saveNotificationStatusesEqual,
+  type DetailSaveNotificationSlot,
+} from '../detail-save-notification';
+import {
   createShotRailGroupDraftsFromRailGroups,
   cycleShotRailGroupMembership,
   shotRailDraftsEqual,
@@ -41,6 +56,7 @@ interface SceneShotsTabProps {
   shotTab?: SceneShotDetailTab;
   onSelect?: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
+  onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
 export function SceneShotsTab({
@@ -50,6 +66,7 @@ export function SceneShotsTab({
   shotTab,
   onSelect = () => {},
   onHeaderActionChange,
+  onSaveNotificationChange,
 }: SceneShotsTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
@@ -63,6 +80,12 @@ export function SceneShotsTab({
   const [groupingApplyError, setGroupingApplyError] = useState<string | null>(
     null
   );
+  const saveNotificationSequenceRef = useRef(0);
+  const groupingSavedTimeoutRef = useRef<number | null>(null);
+  const [detailSaveNotification, setDetailSaveNotification] =
+    useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
+  const [groupingSaveNotification, setGroupingSaveNotification] =
+    useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
   const activeShotTab = shotTab ?? 'description';
 
   const loadResource = useCallback(() => {
@@ -210,12 +233,55 @@ export function SceneShotsTab({
     setReviewOpen(false);
   }, []);
 
+  const clearGroupingSavedTimeout = useCallback(() => {
+    if (groupingSavedTimeoutRef.current !== null) {
+      window.clearTimeout(groupingSavedTimeoutRef.current);
+      groupingSavedTimeoutRef.current = null;
+    }
+  }, []);
+
+  const reportGroupingSaveNotification = useCallback(
+    (status: SaveNotificationStatus) => {
+      setGroupingSaveNotification((current) => {
+        if (saveNotificationStatusesEqual(current.status, status)) {
+          return current;
+        }
+        return {
+          status,
+          sequence: ++saveNotificationSequenceRef.current,
+        };
+      });
+    },
+    []
+  );
+
+  const reportDetailSaveNotification = useCallback(
+    (status: SaveNotificationStatus) => {
+      setDetailSaveNotification((current) => {
+        if (saveNotificationStatusesEqual(current.status, status)) {
+          return current;
+        }
+        return {
+          status,
+          sequence: ++saveNotificationSequenceRef.current,
+        };
+      });
+    },
+    []
+  );
+
   const handleDiscardGroups = useCallback(() => {
     setDraftRailGroups(persistedRailGroups);
     setIsEditingGroups(false);
     setReviewOpen(false);
     setGroupingApplyError(null);
-  }, [persistedRailGroups]);
+    clearGroupingSavedTimeout();
+    reportGroupingSaveNotification(idleSaveNotification);
+  }, [
+    clearGroupingSavedTimeout,
+    persistedRailGroups,
+    reportGroupingSaveNotification,
+  ]);
 
   const handleApplyGroups = useCallback(async () => {
     if (!resource?.activeShotList || !groupingDraftChanged) {
@@ -224,6 +290,8 @@ export function SceneShotsTab({
     }
     setApplyState('saving');
     setGroupingApplyError(null);
+    clearGroupingSavedTimeout();
+    reportGroupingSaveNotification({ state: 'saving', message: 'Saving' });
     try {
       const result = await updateShotVideoTakeRailGroups(
         projectName,
@@ -238,22 +306,51 @@ export function SceneShotsTab({
       );
       setIsEditingGroups(false);
       setReviewOpen(false);
+      reportGroupingSaveNotification({ state: 'saved', message: 'Saved' });
+      groupingSavedTimeoutRef.current = window.setTimeout(() => {
+        reportGroupingSaveNotification(idleSaveNotification);
+        groupingSavedTimeoutRef.current = null;
+      }, 1800);
     } catch (applyError) {
-      setGroupingApplyError(
+      const message =
         applyError instanceof Error
           ? applyError.message
-          : 'Unable to apply shot grouping.'
-      );
+          : 'Unable to apply shot grouping.';
+      setGroupingApplyError(message);
+      reportGroupingSaveNotification({ state: 'error', message });
     } finally {
       setApplyState('idle');
     }
   }, [
+    clearGroupingSavedTimeout,
     draftRailGroups,
     groupingDraftChanged,
     projectName,
+    reportGroupingSaveNotification,
     resource?.activeShotList,
     sceneId,
   ]);
+
+  const saveNotification = useMemo(
+    () =>
+      chooseDetailSaveNotification([
+        detailSaveNotification,
+        groupingSaveNotification,
+      ]),
+    [detailSaveNotification, groupingSaveNotification]
+  );
+
+  useEffect(() => {
+    onSaveNotificationChange?.(saveNotification);
+    return () => onSaveNotificationChange?.(idleSaveNotification);
+  }, [onSaveNotificationChange, saveNotification]);
+
+  useEffect(
+    () => () => {
+      clearGroupingSavedTimeout();
+    },
+    [clearGroupingSavedTimeout]
+  );
 
   useEffect(() => {
     if (!onHeaderActionChange) {
@@ -345,6 +442,7 @@ export function SceneShotsTab({
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
             onShotSpecsSaved={setResource}
+            onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>
       </ResizablePanelGroup>

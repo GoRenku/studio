@@ -6,7 +6,7 @@ import {
 
 export type AutosaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-export interface DebouncedAutosaveStatus {
+export interface DebouncedSaveStatus {
   state: AutosaveState;
   message: string | null;
 }
@@ -15,25 +15,36 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
   value: TValue;
   delayMs?: number;
   savedVisibleMs?: number;
+  failureMessage?: string;
   save: (value: TValue) => Promise<TResult>;
   onSaved?: (result: TResult, value: TValue) => void;
   isReady?: (value: TValue) => boolean;
-}): DebouncedAutosaveStatus {
+}): DebouncedSaveStatus {
   const { value, save, onSaved, isReady } = input;
   const delayMs = input.delayMs ?? 700;
   const savedVisibleMs = input.savedVisibleMs ?? 1800;
-  const [status, setStatus] = useState<DebouncedAutosaveStatus>({
+  const [status, setStatus] = useState<DebouncedSaveStatus>({
     state: 'idle',
     message: null,
   });
   const lastQueuedValue = useRef(value);
   const savedVisibleTimeout = useRef<number | null>(null);
-  const inputRef = useRef({ save, onSaved, savedVisibleMs });
+  const inputRef = useRef({
+    save,
+    onSaved,
+    savedVisibleMs,
+    failureMessage: input.failureMessage ?? 'Changes could not be saved.',
+  });
   const queueRef = useRef<LatestOnlySaveQueue<TValue> | null>(null);
 
   useEffect(() => {
-    inputRef.current = { save, onSaved, savedVisibleMs };
-  }, [onSaved, save, savedVisibleMs]);
+    inputRef.current = {
+      save,
+      onSaved,
+      savedVisibleMs,
+      failureMessage: input.failureMessage ?? 'Changes could not be saved.',
+    };
+  }, [input.failureMessage, onSaved, save, savedVisibleMs]);
 
   useEffect(() => {
     const clearSavedVisibleTimeout = () => {
@@ -73,7 +84,7 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
           message:
             error instanceof Error
               ? error.message
-              : 'Project information could not be saved.',
+              : inputRef.current.failureMessage,
         });
       },
     });

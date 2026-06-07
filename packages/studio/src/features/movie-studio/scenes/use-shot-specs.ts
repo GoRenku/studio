@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import type { ShotSpecs } from '@gorenku/studio-core/client';
 import {
   useDebouncedAutosave,
-  type DebouncedAutosaveStatus,
+  type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { updateSceneShotSpecs } from '@/services/studio-screenplay-api';
@@ -18,7 +18,7 @@ export interface UseShotSpecsInput {
 export interface UseShotSpecsResult {
   shotSpecs: ShotSpecs;
   update: (next: ShotSpecs) => void;
-  status: DebouncedAutosaveStatus;
+  status: DebouncedSaveStatus;
 }
 
 /**
@@ -46,6 +46,7 @@ export function useShotSpecs(
   const status = useDebouncedAutosave({
     value: shotSpecs,
     save,
+    failureMessage: 'Shot settings could not be saved.',
     onSaved: (resource) => onSaved?.(resource),
   });
 

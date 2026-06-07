@@ -32,7 +32,6 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
   readShotVideoTakeProduction: vi.fn(),
-  updateShotVideoTakeProduction: vi.fn(),
   estimateShotVideoTakeProduction: vi.fn(),
   planShotVideoTakeProduction: vi.fn(),
   selectShotVideoTakeInput: vi.fn(),

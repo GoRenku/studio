@@ -19,10 +19,12 @@ import {
   readShotVideoTakeProduction,
   updateShotVideoTakeRailGroups,
 } from '@/services/studio-shot-video-takes-api';
+import { SaveNotification } from '@/ui/save-notification';
 import type {
   SceneShotDetailTab,
   StudioSelection,
 } from '../movie-studio-selection';
+import { idleSaveNotification } from '../detail-save-notification';
 import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -334,6 +336,7 @@ describe('SceneShotsTab', () => {
         [{ shotIds: ['shot_001'] }]
       )
     );
+    expect((await screen.findByRole('status')).textContent).toContain('Saved');
   });
 
   it('keeps the review dialog and local draft visible when apply fails', async () => {
@@ -350,7 +353,10 @@ describe('SceneShotsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Apply Changes' }));
 
-    expect(await screen.findByText('Validation failed.')).not.toBeNull();
+    expect(await screen.findAllByText('Validation failed.')).toHaveLength(2);
+    expect((await screen.findByRole('alert', { hidden: true })).textContent).toContain(
+      'Validation failed.'
+    );
     expect(screen.getByText('Review Changes')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Discard' })).not.toBeNull();
     expect(
@@ -395,6 +401,9 @@ function SceneShotsTabHarness({
   initialShotTab?: SceneShotDetailTab;
 } = {}) {
   const [action, setAction] = React.useState<React.ReactNode | null>(null);
+  const [saveNotification, setSaveNotification] = React.useState(
+    idleSaveNotification
+  );
   const [selection, setSelection] = React.useState<
     Extract<StudioSelection, { type: 'scene' }>
   >({
@@ -407,6 +416,7 @@ function SceneShotsTabHarness({
   return (
     <>
       <div>{action}</div>
+      <SaveNotification status={saveNotification} />
       <SceneShotsTab
         projectName='constantinople'
         sceneId='scene_hook'
@@ -418,6 +428,7 @@ function SceneShotsTabHarness({
           }
         }}
         onHeaderActionChange={setAction}
+        onSaveNotificationChange={setSaveNotification}
       />
     </>
   );
