@@ -75,10 +75,13 @@ import type {
   ScreenplayAnalysisReadReport,
   ScreenplayAnalysisValidationReport,
   ScreenplayAnalysisWriteReport,
+  SceneShotListApplyReport,
   SceneShotListContextReport,
   SceneShotListDocument,
   SceneShotListListReport,
+  SceneShotListOperationDocument,
   SceneShotListReadReport,
+  SceneShotListStoryboardStatus,
   SceneShotListValidationReport,
   SceneShotListWriteReport,
   ShotVideoTakeInputKind,
@@ -86,8 +89,8 @@ import type {
   ShotVideoTakeInputModeId,
   ShotVideoTakeProductionPlan,
   ShotVideoTakeRailGroup,
-  SceneStoryboardSheetImportDocument,
-  SceneStoryboardSheetImportReport,
+  SceneStoryboardImagesImportDocument,
+  SceneStoryboardImagesImportReport,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -123,6 +126,9 @@ import type {
   ScreenplayDocument,
   ScreenplayOperationDocument,
   ScreenplayReadReport,
+  ScreenplayRevisionListReport,
+  ScreenplayRevisionReadReport,
+  ScreenplaySceneRevisionDocument,
   ScreenplayStatusReport,
   Sequence as ScreenplaySequence,
 } from '../client/screenplay.js';
@@ -239,6 +245,10 @@ export interface ProjectDataService {
   validateScreenplayJson(input: ValidateScreenplayJsonInput): Promise<ScreenplayCommandReport>;
   createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayCommandReport>;
   applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayCommandReport>;
+  reviseScreenplayScene(input: ReviseScreenplaySceneInput): Promise<ScreenplayCommandReport>;
+  listScreenplayRevisions(input?: RenkuConfigPathOptions): Promise<ScreenplayRevisionListReport>;
+  readScreenplayRevision(input: ReadScreenplayRevisionInput): Promise<ScreenplayRevisionReadReport>;
+  restoreScreenplayRevision(input: RestoreScreenplayRevisionInput): Promise<ScreenplayCommandReport>;
   readScreenplayAnalysisContext(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisContextReport>;
   listScreenplayAnalyses(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisListReport>;
   readScreenplayAnalysis(input: ReadScreenplayAnalysisInput): Promise<ScreenplayAnalysisReadReport>;
@@ -251,6 +261,9 @@ export interface ProjectDataService {
   validateSceneShotList(input: ValidateSceneShotListInput): Promise<SceneShotListValidationReport>;
   writeSceneShotList(input: WriteSceneShotListInput): Promise<SceneShotListWriteReport>;
   setActiveSceneShotList(input: SetActiveSceneShotListInput): Promise<SceneShotListWriteReport>;
+  validateSceneShotListOperations(input: ApplySceneShotListOperationsInput): Promise<SceneShotListApplyReport>;
+  applySceneShotListOperations(input: ApplySceneShotListOperationsInput): Promise<SceneShotListApplyReport>;
+  readSceneShotListStoryboardStatus(input: ReadSceneShotListStoryboardStatusInput): Promise<SceneShotListStoryboardStatus>;
   listInspirationFolders(input: ListInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
   readInspirationResource(input: ListInspirationFoldersInput): Promise<InspirationResource>;
   readInspirationFolder(input: ReadInspirationFolderInput): Promise<InspirationFolderResource>;
@@ -351,7 +364,7 @@ export interface ProjectDataService {
   estimateSceneStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   runSceneStoryboardSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordSceneStoryboardSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
-  importSceneStoryboardSheetMedia(input: ImportSceneStoryboardSheetMediaInput): Promise<SceneStoryboardSheetImportReport>;
+  importSceneStoryboardImagesMedia(input: ImportSceneStoryboardImagesMediaInput): Promise<SceneStoryboardImagesImportReport>;
   buildMediaGenerationContext(input: MediaGenerationPurposeContextInput): Promise<unknown>;
   listMediaGenerationModels(input: MediaGenerationPurposeContextInput): Promise<unknown>;
   validateMediaGenerationSpec(input: ValidateMediaGenerationSpecInput): Promise<{ valid: true; spec: MediaGenerationSpec; providerPayload: Record<string, unknown> }>;
@@ -479,7 +492,11 @@ export interface ReadScreenplaySceneInput extends RenkuConfigPathOptions {
 }
 
 export interface ValidateScreenplayJsonInput extends RenkuConfigPathOptions {
-  document?: ScreenplayDocument | ScreenplayCreateDocument | ScreenplayOperationDocument;
+  document?:
+    | ScreenplayDocument
+    | ScreenplayCreateDocument
+    | ScreenplayOperationDocument
+    | ScreenplaySceneRevisionDocument;
   filePath?: string;
 }
 
@@ -494,6 +511,23 @@ export interface ApplyScreenplayOperationsInput extends RenkuConfigPathOptions {
   document: ScreenplayOperationDocument;
   filePath?: string;
   dryRun?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ReviseScreenplaySceneInput extends RenkuConfigPathOptions {
+  sceneId: string;
+  document: ScreenplaySceneRevisionDocument;
+  filePath?: string;
+  dryRun?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ReadScreenplayRevisionInput extends RenkuConfigPathOptions {
+  revisionId: string;
+}
+
+export interface RestoreScreenplayRevisionInput extends RenkuConfigPathOptions {
+  revisionId: string;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -544,6 +578,20 @@ export interface WriteSceneShotListInput extends ValidateSceneShotListInput {
 }
 
 export interface SetActiveSceneShotListInput extends SceneShotListProjectInput {
+  sceneId: string;
+  shotListId: string;
+}
+
+export interface ApplySceneShotListOperationsInput
+  extends SceneShotListProjectInput {
+  document: SceneShotListOperationDocument;
+  filePath?: string;
+  dryRun?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ReadSceneShotListStoryboardStatusInput
+  extends SceneShotListProjectInput {
   sceneId: string;
   shotListId: string;
 }
@@ -966,12 +1014,12 @@ export interface UpdateSceneStoryboardSheetGenerationSpecInput
   specId: string;
 }
 
-export interface ImportSceneStoryboardSheetMediaInput
+export interface ImportSceneStoryboardImagesMediaInput
   extends RenkuConfigPathOptions {
   projectName?: string;
   sceneId: string;
   shotListId: string;
-  document: SceneStoryboardSheetImportDocument;
+  document: SceneStoryboardImagesImportDocument;
   title?: string;
   idGenerator?: ProjectIdGenerator;
 }

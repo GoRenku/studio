@@ -92,6 +92,7 @@ Options
   --locale             Project locale id
   --act                Act id for screenplay sequence list
   --analysis           Screenplay Analysis id
+  --revision           Screenplay revision id
   --scene              Scene id for scene-owned commands
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for shot video take generation
@@ -200,6 +201,9 @@ function createCliFlags() {
       type: 'string',
     },
     analysis: {
+      type: 'string',
+    },
+    revision: {
       type: 'string',
     },
     scene: {
@@ -539,6 +543,7 @@ export async function runRenkuCli(
             act: cli.flags.act,
             active: cli.flags.active,
             analysis: cli.flags.analysis,
+            revision: cli.flags.revision,
             scene: cli.flags.scene,
             shotList: cli.flags.shotList,
             includeVisualReferences: cli.flags.includeVisualReferences,

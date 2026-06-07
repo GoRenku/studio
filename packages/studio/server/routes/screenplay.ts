@@ -500,7 +500,7 @@ export function createScreenplayRoute({
             resource: toSceneShotListResourceResponse(projectName, resource),
             resourceKeys: sceneShotListResourceKeys({
               sceneId,
-              shotListId: resource.storyboardSheet?.shotListId ?? null,
+              shotListId: resource.activeShotListId,
               shotIds: [shotId],
             }),
           });
@@ -528,7 +528,7 @@ export function createScreenplayRoute({
             resource: toSceneShotListResourceResponse(projectName, resource),
             resourceKeys: sceneShotListResourceKeys({
               sceneId,
-              shotListId: resource.storyboardSheet?.shotListId ?? null,
+              shotListId: resource.activeShotListId,
               shotIds: [shotId],
             }),
           });
@@ -557,7 +557,7 @@ export function createScreenplayRoute({
             resource: toSceneShotListResourceResponse(projectName, resource),
             resourceKeys: sceneShotListResourceKeys({
               sceneId,
-              shotListId: resource.storyboardSheet?.shotListId ?? null,
+              shotListId: resource.activeShotListId,
               shotIds: [shotId],
             }),
           });
@@ -585,7 +585,7 @@ export function createScreenplayRoute({
             resource: toSceneShotListResourceResponse(projectName, resource),
             resourceKeys: sceneShotListResourceKeys({
               sceneId,
-              shotListId: resource.storyboardSheet?.shotListId ?? null,
+              shotListId: resource.activeShotListId,
               shotIds: [shotId],
             }),
           });
@@ -613,7 +613,7 @@ export function createScreenplayRoute({
             resource: toSceneShotListResourceResponse(projectName, resource),
             resourceKeys: sceneShotListResourceKeys({
               sceneId,
-              shotListId: resource.storyboardSheet?.shotListId ?? null,
+              shotListId: resource.activeShotListId,
               shotIds: [shotId],
             }),
           });

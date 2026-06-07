@@ -164,6 +164,11 @@ export interface ScreenplayOperationDocument {
   operations: ScreenplayOperation[];
 }
 
+export interface ScreenplaySceneRevisionDocument {
+  kind: 'screenplaySceneRevision';
+  scene: Scene;
+}
+
 export interface GeneratedId {
   kind: string;
   path: string[];
@@ -188,6 +193,35 @@ export interface ScreenplayCommandReport {
   changes?: ScreenplayCommandChange[];
   generatedIds?: GeneratedId[];
   resourceKeys?: string[];
+  shotListImpacts?: ScreenplayShotListImpact[];
+}
+
+export interface ScreenplayShotListImpact {
+  sceneId: string;
+  activeShotListId: string | null;
+  changedBlockIndexes: number[];
+  deletedBlockIndexes: number[];
+  insertedBlockIndexes: number[];
+  uncoveredBlockIndexes: number[];
+  shotsReferencingChangedBlocks: string[];
+  shotsReferencingDeletedBlocks: string[];
+  suggestedNextCommand: string | null;
+}
+
+export interface ScreenplayRevisionSummary {
+  id: string;
+  sourceCommand: string;
+  summary: string | null;
+  createdAt: string;
+}
+
+export interface ScreenplayRevisionListReport extends ScreenplayCommandReport {
+  revisions: ScreenplayRevisionSummary[];
+}
+
+export interface ScreenplayRevisionReadReport extends ScreenplayCommandReport {
+  revision: ScreenplayRevisionSummary;
+  screenplay: ScreenplayDocument;
 }
 
 export interface ScreenplayReadReport extends ScreenplayCommandReport {

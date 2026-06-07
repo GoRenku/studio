@@ -292,6 +292,57 @@ Behavior:
 - Requires a current authoring project.
 - Applies operation documents such as screenplay, act, sequence, scene, cast, or
   location revisions.
+- Writes a screenplay revision history row when the operation succeeds.
+- Reports shot-list impact details for changed scenes that have active shot
+  lists.
+
+## `renku screenplay scene revise`
+
+Replace one screenplay scene with a focused scene revision document.
+
+```bash
+renku screenplay scene revise --scene <scene-id> --file <scene-revision-json> --json
+renku screenplay scene revise --scene <scene-id> --file <scene-revision-json> --dry-run --json
+```
+
+Options:
+
+- `--scene`: required durable scene id to revise.
+- `--file`: required `kind: "screenplaySceneRevision"` JSON file.
+- `--dry-run`: validate and report planned changes without writing.
+- `--json`: print the revision report as JSON.
+
+Behavior:
+
+- Requires a current authoring project and existing screenplay data.
+- The JSON document must contain a full replacement scene whose `id` matches
+  `--scene`.
+- Writes a screenplay revision history row when the command succeeds.
+- Reports shot-list impact details for the revised scene when an active shot
+  list exists.
+
+## `renku screenplay revision`
+
+List, read, and restore durable screenplay revision history.
+
+```bash
+renku screenplay revision list --json
+renku screenplay revision show --revision <revision-id> --json
+renku screenplay revision restore --revision <revision-id> --json
+```
+
+Options:
+
+- `--revision`: required for `show` and `restore`.
+- `--json`: print machine-readable JSON.
+
+Behavior:
+
+- `list` returns revision summaries ordered newest first.
+- `show` returns one stored screenplay revision document.
+- `restore` replaces the current screenplay with the stored revision, records a
+  new revision history row for the restore operation, and reports shot-list
+  impact details for scenes whose narrative changed.
 
 ## `renku screenplay analyze`
 
@@ -391,15 +442,23 @@ renku screenplay shot-list validate --file <shot-list-json> --json
 renku screenplay shot-list validate --file - --json
 renku screenplay shot-list write --file <shot-list-json> --json
 renku screenplay shot-list write --file - --json
+renku screenplay shot-list validate-operations --file <operations-json> --json
+renku screenplay shot-list apply --file <operations-json> --json
+renku screenplay shot-list apply --file <operations-json> --dry-run --json
+renku screenplay shot-list storyboard status --scene <scene-id> --shot-list <shot-list-id> --json
 renku screenplay shot-list set-active --scene <scene-id> --shot-list <shot-list-id> --json
 ```
 
 Options:
 
-- `--scene`: required for `context`, `list`, `show --active`, and
+- `--scene`: required for `context`, `list`, `show --active`,
+  `storyboard status`, and `set-active`.
+- `--shot-list`: required for `show --shot-list`, `storyboard status`, and
   `set-active`.
-- `--shot-list`: required for `show --shot-list` and `set-active`.
-- `--file`: required for `validate` and `write`. Use `-` to read stdin.
+- `--file`: required for `validate`, `write`, `validate-operations`, and
+  `apply`. Use `-` to read stdin.
+- `--dry-run`: for `apply`, validates and reports planned changes without
+  writing a derived shot-list version.
 - `--include-visual-references`: opt-in context flag for user-requested visual
   inspection. Default context stays text-only.
 - `--active`: shows the active shot list for a scene. Returns
@@ -414,10 +473,17 @@ Behavior:
   list summary.
 - `validate` checks a tagged `kind: "sceneShotList"` document without writing.
 - `write` creates a new scene-owned shot-list history row and makes it active.
+- `validate-operations` checks a tagged `kind: "sceneShotListOperations"`
+  document without writing.
+- `apply` creates a new scene-owned shot-list history row derived from the
+  explicit `baseShotListId` in the operations document. It activates the new
+  row only when `activate: true`.
+- `storyboard status` reports which shots in a specific shot-list version have
+  current storyboard images, missing images, or stale images.
 - `set-active` changes only the active shot-list pointer for the scene.
-- `write` and `set-active` append Studio resource-change events for the scene
-  Shots surface, the shot-list collection, the specific shot list, and the
-  scene.
+- `write`, `apply`, and `set-active` append Studio resource-change events for
+  the scene Shots surface, the shot-list collection, the specific shot list,
+  changed shot keys, and the scene.
 - Shot-level `aspectRatio` is optional. When omitted, the shot inherits the
   project aspect ratio.
 - Unknown fields are rejected. Shot-list JSON must not store absolute paths,
@@ -457,6 +523,35 @@ Input JSON shape:
     }
   ],
   "openQuestions": []
+}
+```
+
+Operation JSON shape:
+
+```json
+{
+  "kind": "sceneShotListOperations",
+  "sceneId": "scene_control_room",
+  "baseShotListId": "scene_shot_list_control_room_v1",
+  "activate": true,
+  "title": "Control room coverage, revised",
+  "operations": [
+    {
+      "operation": "shots.replace",
+      "shotIds": ["shot_003"],
+      "shots": [
+        {
+          "shotId": "shot_003a",
+          "title": "Ada enters the dark room",
+          "summary": "A wider reveal that re-establishes the space.",
+          "coveredBlockIndexes": [2],
+          "castMemberIds": ["cast_ada"],
+          "locationIds": ["location_control_room"],
+          "dialogue": []
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -1084,8 +1179,7 @@ Behavior:
   generated sheet is clean enough to slice.
 - Scene storyboard sheet runs create one composite storyboard grid for the
   selected `shotIds`. The scene-shot-designer agent inspects that composite,
-  slices one image per selected shot, and imports the original sheet plus all
-  slices together.
+  slices one image per selected shot, and imports only the cropped shot images.
 - Shot first frames, last frames, ad hoc reference images, and multi-shot
   storyboard sheets are generated as shot video take inputs. Their specs must
   use authored prompts; `shot.reference-image` also requires a title that names
@@ -1166,14 +1260,22 @@ The import JSON must explicitly list the composite and four sliced view files:
 }
 ```
 
-Scene Storyboard Sheet import:
+Scene Storyboard Sheet image import:
 
 ```bash
 renku media import \
   --purpose scene.storyboard-sheet \
   --target scene:<scene-id> \
   --shot-list <shot-list-id> \
-  --file scene-storyboard-sheet-import.json \
+  --file scene-storyboard-images-import.json \
+  --json
+
+renku media import \
+  --purpose scene.storyboard-sheet \
+  --target scene:<scene-id> \
+  --shot-list <shot-list-id> \
+  --shots <shot-id> \
+  --source <cropped-shot-image-path> \
   --json
 ```
 
@@ -1222,35 +1324,24 @@ renku media import \
   --json
 ```
 
-The import JSON lists one or more generated sheets in one semantic storyboard
-package, with one sliced file for every imported shot in each sheet:
+The import JSON lists cropped shot image files from a temporary generated
+storyboard sheet. It does not include the composite sheet file:
 
 ```json
 {
-  "kind": "sceneStoryboardSheetImport",
-  "title": "Control room storyboard package",
-  "sheets": [
+  "kind": "sceneStoryboardImagesImport",
+  "shotListId": "scene_shot_list_control_room_v1",
+  "title": "Control room storyboard images",
+  "shots": [
     {
-      "source": "generated/media/storyboards/control-room-sheet-1.png",
-      "title": "Control room shots 1-4",
-      "shots": [
-        {
-          "shotId": "shot_001",
-          "source": "generated/media/storyboards/control-room-shot-001.png",
-          "title": "Shot 1"
-        }
-      ]
+      "shotId": "shot_001",
+      "source": "generated/media/storyboards/control-room-shot-001.png",
+      "title": "Shot 1",
+      "sourcePurpose": "scene.storyboard-sheet"
     },
     {
-      "source": "generated/media/storyboards/control-room-sheet-2.png",
-      "title": "Control room shots 5-8",
-      "shots": [
-        {
-          "shotId": "shot_005",
-          "source": "generated/media/storyboards/control-room-shot-005.png",
-          "title": "Shot 5"
-        }
-      ]
+      "shotId": "shot_002",
+      "source": "generated/media/storyboards/control-room-shot-002.png"
     }
   ]
 }
@@ -1267,13 +1358,14 @@ Options:
   `lookbook:<lookbook-id>`, `cast:<cast-member-id>`,
   `location:<location-id>`, and `scene:<scene-id>`.
 - `--source`: required project-relative media source path for single-file
-  imports. Location environment sheet and scene storyboard sheet imports use
-  `--file` instead.
+  imports. For `scene.storyboard-sheet`, this imports one cropped shot image
+  and must be paired with exactly one `--shots` id.
 - `--file`: grouped import JSON for `location.environment-sheet` and
-  `scene.storyboard-sheet`.
+  multi-shot `scene.storyboard-sheet` image imports.
 - `--shot-list`: required when importing `scene.storyboard-sheet` and shot
   media purposes.
-- `--shots`: comma-separated shot ids for shot media purposes.
+- `--shots`: comma-separated shot ids for shot media purposes. For single-file
+  `scene.storyboard-sheet` imports, it must contain exactly one shot id.
 - `--selection`: optional shot image import selection, either `select` or
   `take`.
 - `--sections`: optional comma-separated Lookbook section keys.
@@ -1299,13 +1391,12 @@ Behavior:
   only the grouped asset and azimuth relationships. It does not accept or store
   crop coordinates, extraction methods, extraction confidence, or extraction
   diagnostics.
-- For Scene Storyboard Sheets, import registers one compound asset, copies the
-  original sheet plus one sliced file per shot under
-  `screenplay/storyboards/<scene-label>/<sheet-slug>/`, attaches the asset to
-  the Scene with role `storyboard_sheet`, and stores only the sheet and
-  per-shot image relationships. It does not accept or store crop coordinates,
-  grid cell metadata, extraction methods, extraction confidence, or extraction
-  diagnostics.
+- For Scene Storyboard Sheets, import registers one `scene_storyboard_image`
+  asset per shot, copies only cropped shot images under
+  `screenplay/storyboards/<scene-label>/<import-title>/`, attaches each image to
+  the Scene with role `storyboard_image`, and writes direct
+  `scene_shot_storyboard_image` rows keyed by scene, shot list, and shot id. The
+  temporary composite sheet is not copied into the project asset graph.
 - Agents should inspect generated images before import and tag only the
   sections the image visibly demonstrates. Do not blindly copy
   `focusSections` into `--sections`.

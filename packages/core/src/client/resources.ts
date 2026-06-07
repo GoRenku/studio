@@ -156,19 +156,21 @@ export interface StoryArcSceneResource extends SceneNavigationRow {
 }
 
 export interface SequenceSceneRow extends SceneNavigationRow {
-  // Active storyboard sheet ('sheet' file) for the scene, if any.
-  storyboardSheet?: ScreenplayImageReference;
+  storyboardPreview?: SequenceSceneStoryboardPreview;
+}
+
+export interface SequenceSceneStoryboardPreview {
+  shotListId: string;
+  images: Array<{
+    shotId: string;
+    image: ScreenplayImageReference | null;
+  }>;
 }
 
 export interface SequenceResource {
   act: ActNavigationRow;
   sequence: SequenceNavigationRow & Pick<Sequence, 'purpose'>;
   scenes: PageResponse<SequenceSceneRow>;
-}
-
-export interface SceneStoryboardSheetReference {
-  shotListId: string;
-  sheet: ScreenplayImageReference; // original sheet file (role 'sheet')
 }
 
 export interface SceneShotListResource {
@@ -178,7 +180,6 @@ export interface SceneShotListResource {
   projectAspectRatio: string | null;
   activeShotListId: string | null;
   activeShotList: SceneShotListDocument | null;
-  storyboardSheet: SceneStoryboardSheetReference | null;
   storyboardImagesByShotId: Record<string, ScreenplayImageReference>;
   castMemberLabels: Record<string, string>;
   locationLabels: Record<string, string>;

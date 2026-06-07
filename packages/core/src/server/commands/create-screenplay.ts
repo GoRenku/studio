@@ -10,6 +10,11 @@ import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { validateScreenplayJsonDocument } from '../screenplay-json/validator.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { replaceScreenplayDocument, resolveScreenplayDocumentIds } from '../database/access/screenplay-persistence.js';
+import { insertScreenplayRevisionRecord } from '../database/access/screenplay-revisions.js';
+import {
+  createRandomIdGenerator,
+  createUniqueIdAllocator,
+} from '../entity-ids.js';
 
 export async function createScreenplay(
   input: RenkuConfigPathOptions & {
@@ -46,7 +51,22 @@ export async function createScreenplay(
       mode: 'create',
     });
     if (!input.dryRun) {
-      replaceScreenplayDocument(session, resolved.document);
+      const now = new Date().toISOString();
+      const ids = createUniqueIdAllocator(
+        input.idGenerator ?? createRandomIdGenerator()
+      );
+      session.db.transaction((tx) => {
+        const txSession = { ...session, db: tx };
+        replaceScreenplayDocument(txSession, resolved.document);
+        insertScreenplayRevisionRecord({
+          session: txSession,
+          id: ids('screenplay_revision'),
+          document: resolved.document,
+          sourceCommand: 'screenplay.create',
+          summary: resolved.document.screenplay.title,
+          now,
+        });
+      });
     }
 
     return {

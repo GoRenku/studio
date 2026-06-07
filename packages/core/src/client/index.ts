@@ -208,7 +208,7 @@ export type {
   SceneDesignResource,
   SceneNarrativeResource,
   SceneShotListResource,
-  SceneStoryboardSheetReference,
+  SequenceSceneStoryboardPreview,
   ActStoryboardResource,
   ActStoryboardSequence,
   ActStoryboardScene,
@@ -311,17 +311,24 @@ export type {
   SceneShotListContextScene,
   SceneShotListContextScreenplay,
   SceneShotListDocument,
+  SceneShotListApplyChange,
+  SceneShotListApplyReport,
   SceneShotListListReport,
+  SceneShotListOperation,
+  SceneShotListOperationDocument,
   SceneShotListProjectReport,
   SceneShotListReadReport,
+  SceneShotListStoryboardPolicy,
+  SceneShotListStoryboardShotStatus,
+  SceneShotListStoryboardStatus,
   SceneShotListSummary,
   SceneShotListValidationReport,
   SceneShotListVisualReferences,
   SceneShotListWriteReport,
-  SceneStoryboardSheetImportDocument,
-  SceneStoryboardSheetImportReport,
-  SceneStoryboardSheetImportShot,
-  SceneStoryboardSheetImportedFile,
+  SceneStoryboardImagesImportDocument,
+  SceneStoryboardImagesImportReport,
+  SceneStoryboardImagesImportShot,
+  SceneStoryboardImagesImportedFile,
 } from './scene-shot-list.js';
 export {
   CAMERA_ANGLE_LABELS,
@@ -399,12 +406,15 @@ export {
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,
+  screenplaySceneRevisionDocumentSchema,
 } from './screenplay-json-schemas.js';
 export {
   screenplayAnalysisDocumentSchema,
 } from './screenplay-analysis-json-schemas.js';
 export {
   sceneShotListDocumentSchema,
+  sceneShotListOperationDocumentSchema,
+  sceneStoryboardImagesImportDocumentSchema,
 } from './scene-shot-list-json-schemas.js';
 export {
   cameraSectionSchema as visualLanguageCameraSectionSchema,

@@ -13,6 +13,7 @@ import {
   screenplayDocumentSchema,
   screenplayOperationsSchema,
   screenplayReferenceSchema,
+  screenplaySceneRevisionDocumentSchema,
   screenplayStringArraySchema,
 } from '../../client/screenplay-json-schemas.js';
 
@@ -22,6 +23,8 @@ const SCREENPLAY_OPERATIONS_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-operations.schema.json';
 const SCREENPLAY_CREATE_DOCUMENT_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-create-document.schema.json';
+const SCREENPLAY_SCENE_REVISION_SCHEMA_ID =
+  'https://schemas.gorenku.com/studio/screenplay-scene-revision.schema.json';
 const SCREENPLAY_BLOCK_ARRAY_SCHEMA_ID =
   'https://schemas.gorenku.com/studio/screenplay-block-array.schema.json';
 const SCREENPLAY_STRING_ARRAY_SCHEMA_ID =
@@ -43,8 +46,13 @@ ajv.addSchema(screenplayStringArraySchema);
 ajv.addSchema(screenplayDocumentSchema);
 ajv.addSchema(screenplayCreateDocumentSchema);
 ajv.addSchema(screenplayOperationsSchema);
+ajv.addSchema(screenplaySceneRevisionDocumentSchema);
 
-export type ScreenplayJsonKind = 'screenplay' | 'screenplayCreate' | 'screenplayOperations';
+export type ScreenplayJsonKind =
+  | 'screenplay'
+  | 'screenplayCreate'
+  | 'screenplayOperations'
+  | 'screenplaySceneRevision';
 
 export function parseScreenplayJson(input: {
   contents: string;
@@ -75,7 +83,9 @@ export function validateScreenplayJsonDocument(input: {
       ? SCREENPLAY_DOCUMENT_SCHEMA_ID
       : kind === 'screenplayCreate'
         ? SCREENPLAY_CREATE_DOCUMENT_SCHEMA_ID
-        : SCREENPLAY_OPERATIONS_SCHEMA_ID
+        : kind === 'screenplaySceneRevision'
+          ? SCREENPLAY_SCENE_REVISION_SCHEMA_ID
+          : SCREENPLAY_OPERATIONS_SCHEMA_ID
   );
   if (!validator) {
     throw new Error(`Screenplay JSON schema was not registered for ${kind}.`);
@@ -83,7 +93,7 @@ export function validateScreenplayJsonDocument(input: {
   const valid = validator(input.value);
   const issues = [
     ...mapAjvErrors(validator.errors ?? [], input.filePath),
-    ...collectUnknownFieldWarnings(input.value, input.filePath),
+    ...collectUnknownFieldWarnings(input.value, kind, input.filePath),
   ];
   if (!valid) {
     throwIfDiagnosticResultInvalid(buildDiagnosticResult(issues), {
@@ -132,6 +142,8 @@ function inferKind(value: unknown): ScreenplayJsonKind {
   const kind = (value as { kind?: unknown }).kind;
   return kind === 'screenplayOperations'
     ? 'screenplayOperations'
+    : kind === 'screenplaySceneRevision'
+      ? 'screenplaySceneRevision'
     : kind === 'screenplayCreate'
       ? 'screenplayCreate'
       : 'screenplay';
@@ -200,7 +212,9 @@ function mapAjvErrors(
 }
 
 const allowedFields: Record<string, Set<string>> = {
-  root: new Set(['kind', 'screenplay', 'cast', 'locations', 'acts', 'operations']),
+  screenplayDocumentRoot: new Set(['kind', 'screenplay', 'cast', 'locations', 'acts']),
+  screenplayOperationsRoot: new Set(['kind', 'operations']),
+  screenplaySceneRevisionRoot: new Set(['kind', 'scene']),
   screenplay: new Set([
     'title',
     'intendedAudience',
@@ -235,16 +249,30 @@ const allowedFields: Record<string, Set<string>> = {
   placement: new Set(['beforeId', 'afterId', 'position']),
 };
 
-function collectUnknownFieldWarnings(value: unknown, filePath?: string): DiagnosticIssue[] {
+type ScreenplayJsonShape = keyof typeof allowedFields;
+
+function collectUnknownFieldWarnings(
+  value: unknown,
+  kind: ScreenplayJsonKind,
+  filePath?: string
+): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
-  visitObject(value, [], 'root', issues, filePath);
+  visitObject(value, [], rootShapeForKind(kind), issues, filePath);
   return issues;
+}
+
+function rootShapeForKind(kind: ScreenplayJsonKind): ScreenplayJsonShape {
+  return kind === 'screenplayOperations'
+    ? 'screenplayOperationsRoot'
+    : kind === 'screenplaySceneRevision'
+      ? 'screenplaySceneRevisionRoot'
+      : 'screenplayDocumentRoot';
 }
 
 function visitObject(
   value: unknown,
   path: string[],
-  shape: keyof typeof allowedFields,
+  shape: ScreenplayJsonShape,
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
@@ -264,12 +292,17 @@ function visitObject(
     }
   }
   const record = value as Record<string, unknown>;
-  if (shape === 'root') {
+  if (shape === 'screenplayDocumentRoot') {
     visitObject(record.screenplay, [...path, 'screenplay'], 'screenplay', issues, filePath);
     visitArray(record.cast, [...path, 'cast'], 'castMember', issues, filePath);
     visitArray(record.locations, [...path, 'locations'], 'location', issues, filePath);
     visitArray(record.acts, [...path, 'acts'], 'act', issues, filePath);
+  }
+  if (shape === 'screenplayOperationsRoot') {
     visitArray(record.operations, [...path, 'operations'], 'operation', issues, filePath);
+  }
+  if (shape === 'screenplaySceneRevisionRoot') {
+    visitObject(record.scene, [...path, 'scene'], 'scene', issues, filePath);
   }
   if (shape === 'act') {
     visitArray(record.sequences, [...path, 'sequences'], 'sequence', issues, filePath);
@@ -303,7 +336,7 @@ function visitObject(
 function visitArray(
   value: unknown,
   path: string[],
-  shape: keyof typeof allowedFields,
+  shape: ScreenplayJsonShape,
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {

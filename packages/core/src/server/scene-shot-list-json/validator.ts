@@ -9,14 +9,20 @@ import {
 } from '@gorenku/studio-diagnostics';
 import type {
   SceneShot,
+  SceneShotListOperationDocument,
   SceneShotListDocument,
+  SceneStoryboardImagesImportDocument,
   ShotVideoTakeDependencyKind,
   ShotVideoTakeInputKind,
   ShotVideoTakeProductionGroup,
   ShotVideoTakeRailGroup,
 } from '../../client/scene-shot-list.js';
 import type { ShotVideoTakeInputGenerationPurpose } from '../../client/media-generation.js';
-import { sceneShotListDocumentSchema } from '../../client/scene-shot-list-json-schemas.js';
+import {
+  sceneShotListDocumentSchema,
+  sceneShotListOperationDocumentSchema,
+  sceneStoryboardImagesImportDocumentSchema,
+} from '../../client/scene-shot-list-json-schemas.js';
 import type { ScreenplayDocument } from '../../client/screenplay.js';
 
 const SHOT_LIST_DIAGNOSTIC_CODE = 'PROJECT_DATA320';
@@ -31,21 +37,87 @@ const ajv = new Ajv2020({
 });
 
 ajv.addSchema(sceneShotListDocumentSchema);
+ajv.addSchema(sceneShotListOperationDocumentSchema);
+ajv.addSchema(sceneStoryboardImagesImportDocumentSchema);
 
 export function parseSceneShotListDocument(input: {
   contents: string;
   filePath?: string;
 }): SceneShotListDocument {
+  return parseJsonObject(
+    input.contents,
+    input.filePath
+  ) as unknown as SceneShotListDocument;
+}
+
+function parseJsonObject(contents: string, filePath?: string): Record<string, unknown> {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(input.contents);
+    parsed = JSON.parse(contents);
   } catch {
-    throwInvalidShotListJson(input.filePath);
+    throwInvalidShotListJson(filePath);
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throwInvalidShotListJson(input.filePath);
+    throwInvalidShotListJson(filePath);
   }
-  return parsed as SceneShotListDocument;
+  return parsed as Record<string, unknown>;
+}
+
+export function parseSceneShotListOperationDocument(input: {
+  contents: string;
+  filePath?: string;
+}): SceneShotListOperationDocument {
+  const parsed = parseJsonObject(input.contents, input.filePath);
+  return parsed as unknown as SceneShotListOperationDocument;
+}
+
+export function assertSceneShotListOperationDocument(input: {
+  document: SceneShotListOperationDocument;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  const shapeIssues = validateShape({
+    document: input.document,
+    schemaId: sceneShotListOperationDocumentSchema.$id,
+    filePath: input.filePath,
+  });
+  const issues =
+    shapeIssues.length > 0
+      ? shapeIssues
+      : [...shapeIssues, ...validateSceneShotListOperationSemantics(input)];
+  const result = buildDiagnosticResult(issues);
+  throwIfDiagnosticResultInvalid(result, {
+    code: SHOT_LIST_DIAGNOSTIC_CODE,
+    message: 'Scene Shot List operations JSON failed validation.',
+    suggestion:
+      'Fix the reported Scene Shot List operation issues and run the command again.',
+  });
+  return result.warnings;
+}
+
+export function assertSceneStoryboardImagesImportDocument(input: {
+  document: SceneStoryboardImagesImportDocument;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  const shapeIssues = validateShape({
+    document: input.document,
+    schemaId: sceneStoryboardImagesImportDocumentSchema.$id,
+    filePath: input.filePath,
+  });
+  const issues =
+    shapeIssues.length > 0
+      ? shapeIssues
+      : [
+          ...shapeIssues,
+          ...validateSceneStoryboardImagesImportSemantics(input),
+        ];
+  const result = buildDiagnosticResult(issues);
+  throwIfDiagnosticResultInvalid(result, {
+    code: SHOT_LIST_DIAGNOSTIC_CODE,
+    message: 'Scene storyboard images import JSON failed validation.',
+    suggestion:
+      'Fix the reported Scene storyboard image import issues and run the command again.',
+  });
+  return result.warnings;
 }
 
 export function validateSceneShotListDocument(input: {
@@ -126,12 +198,24 @@ function validateSceneShotListShape(
   document: unknown,
   filePath?: string
 ): DiagnosticIssue[] {
-  const validator = ajv.getSchema(sceneShotListDocumentSchema.$id);
+  return validateShape({
+    document,
+    schemaId: sceneShotListDocumentSchema.$id,
+    filePath,
+  });
+}
+
+function validateShape(input: {
+  document: unknown;
+  schemaId: string;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  const validator = ajv.getSchema(input.schemaId);
   if (!validator) {
-    throw new Error('Scene Shot List JSON schema was not registered.');
+    throw new Error(`JSON schema was not registered: ${input.schemaId}.`);
   }
-  const valid = validator(document);
-  return valid ? [] : mapAjvErrors(validator.errors ?? [], filePath);
+  const valid = validator(input.document);
+  return valid ? [] : mapAjvErrors(validator.errors ?? [], input.filePath);
 }
 
 function validateSceneShotListSemantics(input: {
@@ -331,6 +415,85 @@ function validateSceneShotListSemantics(input: {
   validateShotVideoTakeRailGroups(document, issues, filePath);
 
   return issues;
+}
+
+function validateSceneShotListOperationSemantics(input: {
+  document: SceneShotListOperationDocument;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  const issues: DiagnosticIssue[] = [];
+  input.document.operations.forEach((operation, operationIndex) => {
+    const path = ['operations', String(operationIndex)];
+    if ('shots' in operation) {
+      validateUniqueShotIds(operation.shots, [...path, 'shots'], issues, input.filePath);
+    }
+    if ('shotIds' in operation) {
+      validateUniqueStringValues(operation.shotIds, [...path, 'shotIds'], issues, input.filePath);
+    }
+  });
+  return issues;
+}
+
+function validateSceneStoryboardImagesImportSemantics(input: {
+  document: SceneStoryboardImagesImportDocument;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  const issues: DiagnosticIssue[] = [];
+  validateUniqueStringValues(
+    input.document.shots.map((shot) => shot.shotId),
+    ['shots'],
+    issues,
+    input.filePath
+  );
+  input.document.shots.forEach((shot, index) => {
+    if ('sheet' in (shot as unknown as Record<string, unknown>)) {
+      issues.push(
+        error(
+          'Scene storyboard images import must not include sheet sources.',
+          ['shots', String(index), 'sheet'],
+          input.filePath,
+          'Import only cropped per-shot image files.'
+        )
+      );
+    }
+  });
+  return issues;
+}
+
+function validateUniqueShotIds(
+  shots: SceneShot[],
+  path: string[],
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  validateUniqueStringValues(
+    shots.map((shot) => shot.shotId),
+    path,
+    issues,
+    filePath
+  );
+}
+
+function validateUniqueStringValues(
+  values: string[],
+  path: string[],
+  issues: DiagnosticIssue[],
+  filePath?: string
+): void {
+  const seen = new Set<string>();
+  values.forEach((value, index) => {
+    if (seen.has(value)) {
+      issues.push(
+        error(
+          'Duplicate shot id.',
+          [...path, String(index)],
+          filePath,
+          'Use each shot id only once in this document.'
+        )
+      );
+    }
+    seen.add(value);
+  });
 }
 
 function validateShotVideoTakeRailGroups(

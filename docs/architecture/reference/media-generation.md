@@ -276,9 +276,10 @@ The context includes:
 - defaults for visualization style, take count, seed, image frame, detail, and
   output format.
 
-The generated provider image is one composite storyboard sheet for the full
-shot list, not one provider call per shot. The scene-shot-designer skill owns
-the grid prompt, visual inspection, slicing, and per-shot import mapping. Core
+The generated provider image is one temporary composite storyboard sheet for
+one to four selected shots, not one provider call per shot. The
+scene-shot-designer skill owns the grid prompt, visual inspection, slicing, and
+per-shot import mapping. Core does not store the temporary sheet as an Asset and
 does not store crop boxes, grid cells, extraction confidence, extraction
 methods, or slicing diagnostics.
 
@@ -659,8 +660,47 @@ renku media import \
 ```
 
 Single-file imports expect a project-relative source path. Location Environment
-Sheet and Scene Storyboard Sheet imports expect JSON files whose entries are
-project-relative paths.
+Sheet imports expect JSON files whose entries are project-relative paths.
+Scene Storyboard Sheet imports expect a JSON file that lists cropped per-shot
+image files from the temporary sheet.
+
+```bash
+renku media import \
+  --purpose scene.storyboard-sheet \
+  --target scene:<scene-id> \
+  --shot-list <shot-list-id> \
+  --file scene-storyboard-images-import.json \
+  --json
+```
+
+Scene Storyboard Sheet import file:
+
+```json
+{
+  "kind": "sceneStoryboardImagesImport",
+  "shotListId": "scene_shot_list_control_room_v1",
+  "title": "Control room storyboard images",
+  "shots": [
+    {
+      "shotId": "shot_001",
+      "source": "generated/media/storyboards/control-room-shot-001.png",
+      "title": "Shot 1",
+      "sourcePurpose": "scene.storyboard-sheet"
+    },
+    {
+      "shotId": "shot_002",
+      "source": "generated/media/storyboards/control-room-shot-002.png"
+    }
+  ]
+}
+```
+
+For Scene Storyboard Sheets, import registers one `scene_storyboard_image` asset
+per shot, attaches each image to the Scene with role `storyboard_image`, stores
+the files under `screenplay/storyboards/<scene-label>/<import-title>/`, and
+writes direct `scene_shot_storyboard_image` rows keyed by `scene_id`,
+`shot_list_id`, and `shot_id`. The temporary composite sheet is not imported as
+an asset.
 
 For generated Lookbook images, agents must inspect the generated image before
 import and choose section tags based on what the image visibly demonstrates.

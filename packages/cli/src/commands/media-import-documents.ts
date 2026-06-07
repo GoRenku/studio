@@ -1,5 +1,5 @@
 import {
-  type SceneStoryboardSheetImportDocument,
+  type SceneStoryboardImagesImportDocument,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import { readJsonFile } from './structured-command.js';
@@ -67,61 +67,49 @@ export async function readLocationEnvironmentSheetImportDocument(
   };
 }
 
-export async function readSceneStoryboardSheetImportDocument(
+export async function readSceneStoryboardImagesImportDocument(
   filePath: string
-): Promise<SceneStoryboardSheetImportDocument> {
+): Promise<SceneStoryboardImagesImportDocument> {
   const parsed = await readJsonFile(filePath);
-  if (!isRecord(parsed) || parsed.kind !== 'sceneStoryboardSheetImport') {
-    throw invalidSceneStoryboardSheetImportFile(filePath);
+  if (!isRecord(parsed) || parsed.kind !== 'sceneStoryboardImagesImport') {
+    throw invalidSceneStoryboardImagesImportFile(filePath);
   }
-  const sheets = parsed.sheets;
-  if (!Array.isArray(sheets)) {
-    throw invalidSceneStoryboardSheetImportFile(filePath);
+  const shots = parsed.shots;
+  if (!Array.isArray(shots) || typeof parsed.shotListId !== 'string') {
+    throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   return {
-    kind: 'sceneStoryboardSheetImport',
+    kind: 'sceneStoryboardImagesImport',
     ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
-    sheets: sheets.map((sheet) =>
-      readSceneStoryboardSheetImportSheet(sheet, filePath)
-    ),
+    shotListId: parsed.shotListId,
+    shots: shots.map((shot) => readSceneStoryboardImagesImportShot(shot, filePath)),
   };
 }
 
-function readSceneStoryboardSheetImportSheet(
+function readSceneStoryboardImagesImportShot(
   value: unknown,
   filePath: string
-): SceneStoryboardSheetImportDocument['sheets'][number] {
-  if (!isRecord(value) || typeof value.source !== 'string') {
-    throw invalidSceneStoryboardSheetImportFile(filePath);
-  }
-  const shots = value.shots;
-  if (!Array.isArray(shots)) {
-    throw invalidSceneStoryboardSheetImportFile(filePath);
-  }
-  return {
-    source: value.source,
-    ...(typeof value.title === 'string' ? { title: value.title } : {}),
-    shots: shots.map((shot) =>
-      readSceneStoryboardSheetImportShot(shot, filePath)
-    ),
-  };
-}
-
-function readSceneStoryboardSheetImportShot(
-  value: unknown,
-  filePath: string
-): SceneStoryboardSheetImportDocument['sheets'][number]['shots'][number] {
+): SceneStoryboardImagesImportDocument['shots'][number] {
   if (
     !isRecord(value) ||
     typeof value.shotId !== 'string' ||
     typeof value.source !== 'string'
   ) {
-    throw invalidSceneStoryboardSheetImportFile(filePath);
+    throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   return {
     shotId: value.shotId,
     source: value.source,
     ...(typeof value.title === 'string' ? { title: value.title } : {}),
+    ...(value.sourcePurpose === 'scene.storyboard-sheet'
+      ? { sourcePurpose: value.sourcePurpose }
+      : {}),
+    ...(typeof value.sourceSpecId === 'string'
+      ? { sourceSpecId: value.sourceSpecId }
+      : {}),
+    ...(typeof value.sourceRunId === 'string'
+      ? { sourceRunId: value.sourceRunId }
+      : {}),
   };
 }
 
@@ -148,14 +136,14 @@ function invalidLocationEnvironmentSheetImportFile(
   });
 }
 
-function invalidSceneStoryboardSheetImportFile(
+function invalidSceneStoryboardImagesImportFile(
   filePath: string
 ): StructuredError {
   return new StructuredError({
     code: 'CLI029',
-    message: `Invalid Scene storyboard sheet import file: ${filePath}.`,
+    message: `Invalid Scene storyboard image import file: ${filePath}.`,
     suggestion:
-      'Provide JSON with kind and sheets[] entries containing source plus shots[] with shotId and source.',
+      'Provide JSON with kind "sceneStoryboardImagesImport", shotListId, and shots[] entries containing shotId and source.',
   });
 }
 

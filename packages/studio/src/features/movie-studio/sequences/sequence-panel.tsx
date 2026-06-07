@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import type { ScreenplayImageReferenceWithHttp } from '@gorenku/studio-core/client';
 import type { SequenceResourceResponse } from '@/services/studio-project-contracts';
 import { readSequenceResource } from '@/services/studio-screenplay-api';
+import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
-import { ScreenplayImageCard } from '../screenplay-media/screenplay-image-card';
 import type { StudioSelection } from '../movie-studio-selection';
 import { SEQUENCE_STORYBOARD_LAYOUT } from './sequence-storyboard-layout';
 
@@ -64,7 +65,7 @@ export function SequencePanel({ projectName, sequenceId, onSelect }: SequencePan
   }
 
   return (
-    <div className='space-y-5'>
+    <div className='flex flex-col gap-5'>
       {resource.sequence.purpose ? (
         <p className='max-w-3xl text-sm leading-6 text-muted-foreground'>
           {resource.sequence.purpose}
@@ -77,20 +78,70 @@ export function SequencePanel({ projectName, sequenceId, onSelect }: SequencePan
         }}
       >
         {resource.scenes.items.map((scene) => (
-          <ScreenplayImageCard
+          <SequenceStoryboardPreviewCard
             key={scene.id}
             title={scene.title}
             metadata={[scene.setting?.interiorExterior, scene.setting?.timeOfDay]
               .filter(Boolean)
               .join(' / ')}
-            image={scene.storyboardSheet}
-            imageFit='contain'
-            placeholder='Storyboard image pending'
+            images={scene.storyboardPreview?.images ?? []}
             onClick={() => onSelect({ type: 'scene', id: scene.id })}
           />
         ))}
       </div>
     </div>
+  );
+}
+
+interface SequenceStoryboardPreviewCardProps {
+  title: string;
+  metadata?: string;
+  images: Array<{
+    shotId: string;
+    image: ScreenplayImageReferenceWithHttp | null;
+  }>;
+  onClick: () => void;
+}
+
+function SequenceStoryboardPreviewCard({
+  title,
+  metadata,
+  images,
+  onClick,
+}: SequenceStoryboardPreviewCardProps) {
+  const cells = Array.from({ length: 4 }, (_, index) => images[index] ?? null);
+  return (
+    <Button
+      type='button'
+      variant='ghost'
+      onClick={onClick}
+      className='group h-auto min-w-0 flex-col overflow-hidden rounded-md border border-border/40 bg-card p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-item-active-border hover:bg-card'
+    >
+      <span className='grid aspect-[4/3] w-full grid-cols-2 grid-rows-2 gap-px overflow-hidden bg-border/50'>
+        {cells.map((cell, index) => (
+          <span
+            key={cell?.shotId ?? `empty-${index}`}
+            className='block min-h-0 bg-muted'
+          >
+            {cell?.image ? (
+              <img
+                src={cell.image.url}
+                alt={title}
+                className='h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]'
+              />
+            ) : null}
+          </span>
+        ))}
+      </span>
+      <span className='flex w-full flex-col gap-1 px-3 py-3'>
+        <span className='truncate text-sm font-semibold text-foreground'>
+          {title}
+        </span>
+        {metadata ? (
+          <span className='truncate text-xs text-muted-foreground'>{metadata}</span>
+        ) : null}
+      </span>
+    </Button>
   );
 }
 

@@ -125,7 +125,6 @@ function sceneShotList(): SceneShotListResourceResponse {
     projectAspectRatio: '16:9',
     activeShotListId: null,
     activeShotList: null,
-    storyboardSheet: null,
     storyboardImagesByShotId: {},
     castMemberLabels: {},
     locationLabels: {},

@@ -365,6 +365,20 @@ export const screenplayOperationsSchema = {
   },
 } as const;
 
+export const screenplaySceneRevisionDocumentSchema = {
+  $id: 'https://schemas.gorenku.com/studio/screenplay-scene-revision.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['kind', 'scene'],
+  properties: {
+    kind: { const: 'screenplaySceneRevision' },
+    scene: {
+      $ref: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json#/$defs/scene',
+    },
+  },
+  additionalProperties: false,
+} as const;
+
 function ref() {
   return {
     $ref: 'https://schemas.gorenku.com/studio/screenplay-reference.schema.json',

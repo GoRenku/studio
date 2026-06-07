@@ -1,7 +1,15 @@
 import type {
+  SceneShot,
+  SceneShotListApplyChange,
+  SceneShotListApplyReport,
   SceneShotListContextReport,
+  SceneShotListDocument,
   SceneShotListListReport,
+  SceneShotListOperation,
+  SceneShotListOperationDocument,
   SceneShotListReadReport,
+  SceneShotListStoryboardShotStatus,
+  SceneShotListStoryboardStatus,
   SceneShotListValidationReport,
   SceneShotListWriteReport,
 } from '../../client/scene-shot-list.js';
@@ -15,9 +23,14 @@ import {
   listSceneShotListRecords,
   readActiveSceneShotListId,
   readActiveSceneShotListRecord,
+  insertSceneShotStoryboardImageRecord,
+  readLatestSceneShotStoryboardImage,
+  type SceneShotStoryboardImageRecord,
   readSceneShotListDocument,
   requireSceneShotListRecord,
+  requireSceneShotListForScene,
   setActiveSceneShotListRecord,
+  shotContentFingerprint,
   toSceneShotListSummary,
   writeSceneShotListRecord,
 } from '../database/access/scene-shot-lists.js';
@@ -39,10 +52,15 @@ import type {
   ReadSceneShotListInput,
   SceneShotListProjectInput,
   SetActiveSceneShotListInput,
+  ApplySceneShotListOperationsInput,
+  ReadSceneShotListStoryboardStatusInput,
   ValidateSceneShotListInput,
   WriteSceneShotListInput,
 } from '../project-data-service-contracts.js';
-import { assertSceneShotListDocument } from '../scene-shot-list-json/validator.js';
+import {
+  assertSceneShotListDocument,
+  assertSceneShotListOperationDocument,
+} from '../scene-shot-list-json/validator.js';
 
 export const SCENE_SHOT_LIST_RESOURCE_KEY = 'scene-shot-list';
 
@@ -352,27 +370,557 @@ export async function setActiveSceneShotList(
   });
 }
 
+export async function validateSceneShotListOperations(
+  input: ApplySceneShotListOperationsInput
+): Promise<SceneShotListApplyReport> {
+  return applySceneShotListOperations({ ...input, dryRun: true });
+}
+
+export async function applySceneShotListOperations(
+  input: ApplySceneShotListOperationsInput
+): Promise<SceneShotListApplyReport> {
+  return await withCurrentProjectSession(input, ({ currentProject, session }) => {
+    const screenplay = requireScreenplayDocument(session);
+    const warnings = assertSceneShotListOperationDocument({
+      document: input.document,
+      filePath: input.filePath,
+    });
+    requireSceneHierarchy(screenplay, input.document.sceneId);
+    const baseRow = requireSceneShotListForScene({
+      session,
+      sceneId: input.document.sceneId,
+      shotListId: input.document.baseShotListId,
+    });
+    const baseDocument = readSceneShotListDocument({
+      row: baseRow,
+      screenplay,
+    });
+    const operationResult = buildShotListDocumentFromOperations({
+      base: baseDocument,
+      operationsDocument: input.document,
+    });
+    const nextDocument = operationResult.document;
+    const documentWarnings = assertSceneShotListDocument({
+      document: nextDocument,
+      screenplay,
+      filePath: input.filePath,
+    });
+    const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
+    const createdShotListId = input.dryRun
+      ? `${input.document.baseShotListId}_dry_run`
+      : ids('scene_shot_list');
+    const now = new Date().toISOString();
+
+    if (!input.dryRun) {
+      session.db.transaction((tx) => {
+        const txSession = { ...session, db: tx };
+        writeSceneShotListRecord({
+          session: txSession,
+          id: createdShotListId,
+          document: nextDocument,
+          screenplay,
+          now,
+          filePath: input.filePath,
+        });
+        carryForwardStoryboardImages({
+          session: txSession,
+          baseShotListId: input.document.baseShotListId,
+          createdShotListId,
+          sceneId: input.document.sceneId,
+          shots: nextDocument.shots,
+          preservedShotIds: operationResult.preservedShotIds,
+          ids,
+          now,
+        });
+        if (input.document.activate) {
+          setActiveSceneShotListRecord(txSession, {
+            sceneId: input.document.sceneId,
+            shotListId: createdShotListId,
+            now,
+          });
+        }
+      });
+    }
+
+    const summaryRow = input.dryRun
+      ? {
+          id: createdShotListId,
+          sceneId: input.document.sceneId,
+          title: nextDocument.title,
+          document: JSON.stringify(nextDocument),
+          createdAt: now,
+          updatedAt: now,
+        }
+      : requireSceneShotListRecord(session, createdShotListId);
+    const storyboard = input.dryRun
+      ? readDryRunSceneShotListStoryboardStatusFromSession({
+          session,
+          currentProject,
+          sceneId: input.document.sceneId,
+          baseShotListId: input.document.baseShotListId,
+          shotListId: createdShotListId,
+          document: nextDocument,
+          preservedShotIds: operationResult.preservedShotIds,
+        })
+      : readSceneShotListStoryboardStatusFromSession({
+          session,
+          currentProject,
+          sceneId: input.document.sceneId,
+          shotListId: createdShotListId,
+          document: nextDocument,
+        });
+    const changedShotIds = [
+      ...operationResult.insertedShotIds,
+      ...operationResult.removedShotIds,
+      ...operationResult.updatedShotIds,
+      ...storyboard.missingShotIds,
+      ...storyboard.staleShotIds,
+    ].filter((shotId, index, ids) => ids.indexOf(shotId) === index);
+    return {
+      valid: true,
+      warnings: [...warnings, ...documentWarnings],
+      project: {
+        name: currentProject.projectName,
+        id: currentProject.projectId,
+        projectFolder: currentProject.projectFolder,
+      },
+      resourceKeys: sceneShotListResourceKeys({
+        sceneId: input.document.sceneId,
+        shotListId: createdShotListId,
+        shotIds: changedShotIds,
+      }),
+      sceneId: input.document.sceneId,
+      baseShotListId: input.document.baseShotListId,
+      createdShotListId,
+      activatedShotListId:
+        !input.dryRun && input.document.activate ? createdShotListId : null,
+      shotList: toSceneShotListSummary({
+        row: summaryRow,
+        screenplay,
+        activeShotListId:
+          !input.dryRun && input.document.activate
+            ? createdShotListId
+            : readActiveSceneShotListId(session, input.document.sceneId),
+      }),
+      changes: operationResult.changes,
+      storyboard,
+      prunedVideoTakeRailGroupIds: operationResult.prunedVideoTakeRailGroupIds,
+      prunedVideoTakeProductionGroupIds:
+        operationResult.prunedVideoTakeProductionGroupIds,
+    };
+  });
+}
+
+export async function readSceneShotListStoryboardStatus(
+  input: ReadSceneShotListStoryboardStatusInput
+): Promise<SceneShotListStoryboardStatus> {
+  return await withCurrentProjectSession(input, ({ currentProject, session }) => {
+    const screenplay = requireScreenplayDocument(session);
+    requireSceneHierarchy(screenplay, input.sceneId);
+    const row = requireSceneShotListForScene({
+      session,
+      sceneId: input.sceneId,
+      shotListId: input.shotListId,
+    });
+    return readSceneShotListStoryboardStatusFromSession({
+      session,
+      currentProject,
+      sceneId: input.sceneId,
+      shotListId: input.shotListId,
+      document: readSceneShotListDocument({ row, screenplay }),
+    });
+  });
+}
+
+function buildShotListDocumentFromOperations(input: {
+  base: SceneShotListDocument;
+  operationsDocument: SceneShotListOperationDocument;
+}): {
+  document: SceneShotListDocument;
+  changes: SceneShotListApplyChange[];
+  insertedShotIds: string[];
+  removedShotIds: string[];
+  updatedShotIds: string[];
+  preservedShotIds: string[];
+  prunedVideoTakeRailGroupIds: string[];
+  prunedVideoTakeProductionGroupIds: string[];
+} {
+  const draft: SceneShotListDocument = {
+    ...structuredClone(input.base),
+    sceneId: input.operationsDocument.sceneId,
+    baseShotListId: input.operationsDocument.baseShotListId,
+    ...(input.operationsDocument.title ? { title: input.operationsDocument.title } : {}),
+    ...(input.operationsDocument.summary
+      ? { summary: input.operationsDocument.summary }
+      : {}),
+    ...(input.operationsDocument.coverageStrategy
+      ? { coverageStrategy: input.operationsDocument.coverageStrategy }
+      : {}),
+    ...(input.operationsDocument.lookbookInfluence
+      ? { lookbookInfluence: input.operationsDocument.lookbookInfluence }
+      : {}),
+    ...(input.operationsDocument.openQuestions
+      ? { openQuestions: input.operationsDocument.openQuestions }
+      : {}),
+  };
+  const originalShotIds = new Set(input.base.shots.map((shot) => shot.shotId));
+  const touchedShotIds = new Set<string>();
+  for (const operation of input.operationsDocument.operations) {
+    applyShotListOperation(draft, operation, touchedShotIds);
+  }
+  const nextShotIds = new Set(draft.shots.map((shot) => shot.shotId));
+  const insertedShotIds = draft.shots
+    .filter((shot) => !originalShotIds.has(shot.shotId))
+    .map((shot) => shot.shotId);
+  const removedShotIds = input.base.shots
+    .filter((shot) => !nextShotIds.has(shot.shotId))
+    .map((shot) => shot.shotId);
+  const updatedShotIds = [...touchedShotIds].filter(
+    (shotId) => originalShotIds.has(shotId) && nextShotIds.has(shotId)
+  );
+  const preservedShotIds = draft.shots
+    .filter(
+      (shot) =>
+        originalShotIds.has(shot.shotId) && !touchedShotIds.has(shot.shotId)
+    )
+    .map((shot) => shot.shotId);
+  const pruned = pruneInvalidVideoTakeGroups(draft, nextShotIds);
+  const changes: SceneShotListApplyChange[] = [
+    { type: 'inserted', shotIds: insertedShotIds },
+    { type: 'removed', shotIds: removedShotIds },
+    { type: 'updated', shotIds: updatedShotIds },
+    { type: 'preserved', shotIds: preservedShotIds },
+  ];
+  return {
+    document: draft,
+    changes,
+    insertedShotIds,
+    removedShotIds,
+    updatedShotIds,
+    preservedShotIds,
+    ...pruned,
+  };
+}
+
+function applyShotListOperation(
+  draft: SceneShotListDocument,
+  operation: SceneShotListOperation,
+  touchedShotIds: Set<string>
+): void {
+  switch (operation.operation) {
+    case 'shots.insert':
+      insertShotsByPlacement(draft.shots, operation.placement, operation.shots);
+      operation.shots.forEach((shot) => touchedShotIds.add(shot.shotId));
+      return;
+    case 'shots.replace': {
+      const firstIndex = firstShotIndex(draft.shots, operation.shotIds);
+      removeShotIds(draft.shots, operation.shotIds);
+      draft.shots.splice(firstIndex, 0, ...operation.shots);
+      operation.shotIds.forEach((shotId) => touchedShotIds.add(shotId));
+      operation.shots.forEach((shot) => touchedShotIds.add(shot.shotId));
+      return;
+    }
+    case 'shot.update': {
+      const index = draft.shots.findIndex(
+        (shot) => shot.shotId === operation.shot.shotId
+      );
+      if (index === -1) {
+        throw new ProjectDataError(
+          'PROJECT_DATA326',
+          `Shot update references a shot id that is not in the base Scene Shot List: ${operation.shot.shotId}.`,
+          { suggestion: 'Use a shot id from the explicit base shot list.' }
+        );
+      }
+      draft.shots[index] = operation.shot;
+      touchedShotIds.add(operation.shot.shotId);
+      return;
+    }
+    case 'shots.delete':
+      removeShotIds(draft.shots, operation.shotIds);
+      operation.shotIds.forEach((shotId) => touchedShotIds.add(shotId));
+      return;
+    case 'shotList.replace':
+      draft.shots = [...operation.shots];
+      [...new Set([...draft.shots.map((shot) => shot.shotId)])].forEach((shotId) =>
+        touchedShotIds.add(shotId)
+      );
+      return;
+  }
+}
+
+function insertShotsByPlacement(
+  shots: SceneShot[],
+  placement: Extract<
+    SceneShotListOperation,
+    { operation: 'shots.insert' }
+  >['placement'],
+  inserted: SceneShot[]
+): void {
+  if (placement.position === 'start') {
+    shots.splice(0, 0, ...inserted);
+    return;
+  }
+  if (placement.position === 'end') {
+    shots.push(...inserted);
+    return;
+  }
+  const index = shots.findIndex((shot) => shot.shotId === placement.shotId);
+  if (index === -1) {
+    throw new ProjectDataError(
+      'PROJECT_DATA326',
+      `Shot insertion placement was not found: ${placement.shotId}.`,
+      { suggestion: 'Use a placement shot id from the explicit base shot list.' }
+    );
+  }
+  shots.splice(placement.position === 'before' ? index : index + 1, 0, ...inserted);
+}
+
+function firstShotIndex(shots: SceneShot[], shotIds: string[]): number {
+  const targetIds = new Set(shotIds);
+  const index = shots.findIndex((shot) => targetIds.has(shot.shotId));
+  if (index === -1) {
+    throw new ProjectDataError(
+      'PROJECT_DATA326',
+      'Shot replacement references no shot ids in the base Scene Shot List.',
+      { suggestion: 'Use shot ids from the explicit base shot list.' }
+    );
+  }
+  return index;
+}
+
+function removeShotIds(shots: SceneShot[], shotIds: string[]): void {
+  for (const shotId of shotIds) {
+    const index = shots.findIndex((shot) => shot.shotId === shotId);
+    if (index === -1) {
+      throw new ProjectDataError(
+        'PROJECT_DATA326',
+        `Shot operation references a shot id that is not in the base Scene Shot List: ${shotId}.`,
+        { suggestion: 'Use shot ids from the explicit base shot list.' }
+      );
+    }
+    shots.splice(index, 1);
+  }
+}
+
+function pruneInvalidVideoTakeGroups(
+  document: SceneShotListDocument,
+  validShotIds: Set<string>
+): {
+  prunedVideoTakeRailGroupIds: string[];
+  prunedVideoTakeProductionGroupIds: string[];
+} {
+  const prunedVideoTakeRailGroupIds: string[] = [];
+  const prunedVideoTakeProductionGroupIds: string[] = [];
+  document.videoTakeRailGroups = (document.videoTakeRailGroups ?? [])
+    .map((group) => ({
+      ...group,
+      shotIds: group.shotIds.filter((shotId) => validShotIds.has(shotId)),
+    }))
+    .filter((group) => {
+      const keep = group.shotIds.length > 0;
+      if (!keep) {
+        prunedVideoTakeRailGroupIds.push(group.productionGroupId);
+      }
+      return keep;
+    });
+  document.videoTakeProductionGroups = (document.videoTakeProductionGroups ?? [])
+    .map((group) => ({
+      ...group,
+      shotIds: group.shotIds.filter((shotId) => validShotIds.has(shotId)),
+    }))
+    .filter((group) => {
+      const keep = group.shotIds.length > 0;
+      if (!keep) {
+        prunedVideoTakeProductionGroupIds.push(group.productionGroupId);
+      }
+      return keep;
+    });
+  if (document.videoTakeRailGroups.length === 0) {
+    delete document.videoTakeRailGroups;
+  }
+  if (document.videoTakeProductionGroups.length === 0) {
+    delete document.videoTakeProductionGroups;
+  }
+  return { prunedVideoTakeRailGroupIds, prunedVideoTakeProductionGroupIds };
+}
+
+function carryForwardStoryboardImages(input: {
+  session: Parameters<typeof readActiveSceneShotListId>[0];
+  baseShotListId: string;
+  createdShotListId: string;
+  sceneId: string;
+  shots: SceneShot[];
+  preservedShotIds: string[];
+  ids: ReturnType<typeof createUniqueIdAllocator>;
+  now: string;
+}): void {
+  const preserved = new Set(input.preservedShotIds);
+  for (const shot of input.shots) {
+    if (!preserved.has(shot.shotId)) {
+      continue;
+    }
+    const image = readCurrentBaseStoryboardImageForShot({
+      session: input.session,
+      baseShotListId: input.baseShotListId,
+      shot,
+    });
+    if (!image) {
+      continue;
+    }
+    insertSceneShotStoryboardImageRecord(input.session, {
+      id: input.ids('scene_shot_storyboard_image'),
+      sceneId: input.sceneId,
+      shotListId: input.createdShotListId,
+      shotId: shot.shotId,
+      assetId: image.assetId,
+      assetFileId: image.assetFileId,
+      sourcePurpose: image.sourcePurpose,
+      shotContentFingerprint: image.shotContentFingerprint,
+      now: input.now,
+    });
+  }
+}
+
+function readCurrentBaseStoryboardImageForShot(input: {
+  session: Parameters<typeof readActiveSceneShotListId>[0];
+  baseShotListId: string;
+  shot: SceneShot;
+}): SceneShotStoryboardImageRecord | null {
+  const image = readLatestSceneShotStoryboardImage({
+    session: input.session,
+    shotListId: input.baseShotListId,
+    shotId: input.shot.shotId,
+  });
+  if (!image || image.shotContentFingerprint !== shotContentFingerprint(input.shot)) {
+    return null;
+  }
+  return image;
+}
+
+function readDryRunSceneShotListStoryboardStatusFromSession(input: {
+  session: Parameters<typeof readActiveSceneShotListId>[0];
+  currentProject: { projectName: string; projectId?: string; projectFolder?: string };
+  sceneId: string;
+  baseShotListId: string;
+  shotListId: string;
+  document: SceneShotListDocument;
+  preservedShotIds: string[];
+}): SceneShotListStoryboardStatus {
+  const preserved = new Set(input.preservedShotIds);
+  return buildSceneShotListStoryboardStatus({
+    currentProject: input.currentProject,
+    sceneId: input.sceneId,
+    shotListId: input.shotListId,
+    document: input.document,
+    readImageForShot: (shot) => {
+      if (!preserved.has(shot.shotId)) {
+        return { image: null };
+      }
+      const image = readCurrentBaseStoryboardImageForShot({
+        session: input.session,
+        baseShotListId: input.baseShotListId,
+        shot,
+      });
+      return image ? { image, simulated: true } : { image: null };
+    },
+  });
+}
+
+function readSceneShotListStoryboardStatusFromSession(input: {
+  session: Parameters<typeof readActiveSceneShotListId>[0];
+  currentProject: { projectName: string; projectId?: string; projectFolder?: string };
+  sceneId: string;
+  shotListId: string;
+  document: SceneShotListDocument;
+}): SceneShotListStoryboardStatus {
+  return buildSceneShotListStoryboardStatus({
+    currentProject: input.currentProject,
+    sceneId: input.sceneId,
+    shotListId: input.shotListId,
+    document: input.document,
+    readImageForShot: (shot) => ({
+      image: readLatestSceneShotStoryboardImage({
+        session: input.session,
+        shotListId: input.shotListId,
+        shotId: shot.shotId,
+      }),
+    }),
+  });
+}
+
+function buildSceneShotListStoryboardStatus(input: {
+  currentProject: { projectName: string; projectId?: string; projectFolder?: string };
+  sceneId: string;
+  shotListId: string;
+  document: SceneShotListDocument;
+  readImageForShot: (shot: SceneShot) => {
+    image: SceneShotStoryboardImageRecord | null;
+    simulated?: boolean;
+  };
+}): SceneShotListStoryboardStatus {
+  const shots: SceneShotListStoryboardShotStatus[] = input.document.shots.map((shot) => {
+    const { image, simulated } = input.readImageForShot(shot);
+    const currentFingerprint = shotContentFingerprint(shot);
+    const isCurrentForShot =
+      image?.shotContentFingerprint === currentFingerprint;
+    const status: SceneShotListStoryboardShotStatus = {
+      shotId: shot.shotId,
+      image: image
+        ? {
+            storyboardImageId: image.id,
+            assetId: image.assetId,
+            assetFileId: image.assetFileId,
+            sourcePurpose: image.sourcePurpose,
+            isCurrentForShot,
+            ...(simulated ? { simulated } : {}),
+          }
+        : null,
+      needsStoryboardImage: !image || !isCurrentForShot,
+      ...(!image
+        ? { reason: 'missing' as const }
+        : !isCurrentForShot
+          ? { reason: 'shot-changed' as const }
+          : {}),
+    };
+    return status;
+  });
+  return {
+    valid: true,
+    warnings: [],
+    project: {
+      name: input.currentProject.projectName,
+      id: input.currentProject.projectId,
+      projectFolder: input.currentProject.projectFolder,
+    },
+    resourceKeys: sceneShotListResourceKeys({
+      sceneId: input.sceneId,
+      shotListId: input.shotListId,
+      shotIds: shots.map((shot) => shot.shotId),
+    }),
+    sceneId: input.sceneId,
+    shotListId: input.shotListId,
+    shots,
+    missingShotIds: shots
+      .filter((shot) => shot.reason === 'missing')
+      .map((shot) => shot.shotId),
+    staleShotIds: shots
+      .filter((shot) => shot.reason === 'shot-changed')
+      .map((shot) => shot.shotId),
+    readyShotIds: shots
+      .filter((shot) => !shot.needsStoryboardImage)
+      .map((shot) => shot.shotId),
+  };
+}
+
 export function sceneShotListResourceKeys(input: {
   sceneId: string;
   shotListId?: string | null;
-  storyboardSheetId?: string;
-  storyboardSheetIds?: string[];
   shotIds?: string[];
 }): string[] {
-  const storyboardSheetIds = [
-    ...(input.storyboardSheetId ? [input.storyboardSheetId] : []),
-    ...(input.storyboardSheetIds ?? []),
-  ].filter((id, index, ids) => ids.indexOf(id) === index);
   return [
     `surface:scene:${input.sceneId}:shots`,
     SCENE_SHOT_LIST_RESOURCE_KEY,
     ...(input.shotListId ? [`scene-shot-list:${input.shotListId}`] : []),
-    ...(input.shotListId
-      ? storyboardSheetIds.map(
-          (storyboardSheetId) =>
-            `scene-shot-list:${input.shotListId}:storyboard-sheet:${storyboardSheetId}`
-        )
-      : []),
     ...(input.shotListId
       ? (input.shotIds ?? []).map(
           (shotId) => `scene-shot-list:${input.shotListId}:shot:${shotId}`

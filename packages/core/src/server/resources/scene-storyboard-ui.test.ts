@@ -31,7 +31,6 @@ describe('scene storyboard UI resources', () => {
     });
 
     expect(resource.activeShotList).toBeNull();
-    expect(resource.storyboardSheet).toBeNull();
     expect(resource.storyboardImagesByShotId).toEqual({});
   });
 
@@ -47,7 +46,6 @@ describe('scene storyboard UI resources', () => {
     });
 
     expect(resource.activeShotList?.shots[0]?.shotId).toBe('shot_001');
-    expect(resource.storyboardSheet?.shotListId).toBe(written.shotList.id);
     expect(Object.keys(resource.storyboardImagesByShotId)).toEqual(['shot_001']);
     expect(resource.castMemberLabels[ids.castMemberId]).toBeTruthy();
     expect(resource.locationLabels[ids.locationId]).toBeTruthy();
@@ -67,20 +65,24 @@ describe('scene storyboard UI resources', () => {
     });
 
     expect(resource.activeShotList?.title).toBe('Second pass');
-    expect(resource.storyboardSheet).toBeNull();
     expect(resource.storyboardImagesByShotId).toEqual({});
     expect(second.shotList.id).not.toBe(first.shotList.id);
   });
 
-  it('aggregates images across every sheet of a multi-sheet import', async () => {
+  it('aggregates imported storyboard images by shot id', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 'Grouped coverage', 7);
-    // One import, shots split across two sheets — the bug case from
-    // urban-basilica's "The First Patron" scene.
-    await importMultiSheetStoryboard(ids.sceneId, written.shotList.id, [
-      ['shot_001', 'shot_002', 'shot_003', 'shot_004'],
-      ['shot_005', 'shot_006', 'shot_007'],
-    ]);
+    await importStoryboard(
+      ids.sceneId,
+      written.shotList.id,
+      'shot_001',
+      'shot_002',
+      'shot_003',
+      'shot_004',
+      'shot_005',
+      'shot_006',
+      'shot_007'
+    );
 
     const resource = await projectData.readSceneShotListResource({
       homeDir,
@@ -120,7 +122,7 @@ describe('scene storyboard UI resources', () => {
     expect(sceneEntry?.shots[0]?.shotId).toBe('shot_001');
   });
 
-  it('attaches storyboardSheet to sequence scenes only when an active sheet exists', async () => {
+  it('attaches storyboard previews to sequence scenes only when images exist', async () => {
     const ids = await sampleIds();
     const before = await projectData.readSequenceResource({
       homeDir,
@@ -128,7 +130,7 @@ describe('scene storyboard UI resources', () => {
       sequenceId: ids.sequenceId,
     });
     expect(
-      before.scenes.items.find((scene) => scene.id === ids.sceneId)?.storyboardSheet
+      before.scenes.items.find((scene) => scene.id === ids.sceneId)?.storyboardPreview
     ).toBeUndefined();
 
     const written = await writeShotList(ids);
@@ -140,7 +142,7 @@ describe('scene storyboard UI resources', () => {
       sequenceId: ids.sequenceId,
     });
     expect(
-      after.scenes.items.find((scene) => scene.id === ids.sceneId)?.storyboardSheet
+      after.scenes.items.find((scene) => scene.id === ids.sceneId)?.storyboardPreview
     ).toBeTruthy();
   });
 
@@ -155,37 +157,6 @@ describe('scene storyboard UI resources', () => {
     });
   }
 
-  async function importMultiSheetStoryboard(
-    sceneId: string,
-    shotListId: string,
-    sheets: string[][]
-  ) {
-    const project = await projectData.readCurrentProject({ homeDir });
-    const mediaFolder = path.join(project!.projectFolder, 'generated', 'media');
-    await fs.mkdir(mediaFolder, { recursive: true });
-    for (let index = 0; index < sheets.length; index += 1) {
-      await fs.writeFile(path.join(mediaFolder, `sheet-${index + 1}.png`), 'sheet');
-      for (const shotId of sheets[index]!) {
-        await fs.writeFile(path.join(mediaFolder, `${shotId}.png`), shotId);
-      }
-    }
-    return projectData.importSceneStoryboardSheetMedia({
-      homeDir,
-      sceneId,
-      shotListId,
-      document: {
-        kind: 'sceneStoryboardSheetImport',
-        sheets: sheets.map((shotIds, index) => ({
-          source: `generated/media/sheet-${index + 1}.png`,
-          shots: shotIds.map((shotId) => ({
-            shotId,
-            source: `generated/media/${shotId}.png`,
-          })),
-        })),
-      },
-    });
-  }
-
   async function importStoryboard(
     sceneId: string,
     shotListId: string,
@@ -194,25 +165,20 @@ describe('scene storyboard UI resources', () => {
     const project = await projectData.readCurrentProject({ homeDir });
     const mediaFolder = path.join(project!.projectFolder, 'generated', 'media');
     await fs.mkdir(mediaFolder, { recursive: true });
-    await fs.writeFile(path.join(mediaFolder, 'sheet.png'), 'sheet');
     for (const shotId of shotIds) {
       await fs.writeFile(path.join(mediaFolder, `${shotId}.png`), shotId);
     }
-    return projectData.importSceneStoryboardSheetMedia({
+    return projectData.importSceneStoryboardImagesMedia({
       homeDir,
       sceneId,
       shotListId,
       document: {
-        kind: 'sceneStoryboardSheetImport',
-        sheets: [
-          {
-            source: 'generated/media/sheet.png',
-            shots: shotIds.map((shotId) => ({
-              shotId,
-              source: `generated/media/${shotId}.png`,
-            })),
-          },
-        ],
+        kind: 'sceneStoryboardImagesImport',
+        shotListId,
+        shots: shotIds.map((shotId) => ({
+          shotId,
+          source: `generated/media/${shotId}.png`,
+        })),
       },
     });
   }

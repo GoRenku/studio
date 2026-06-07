@@ -8,7 +8,6 @@ import type {
   LocationResource,
   SceneNarrativeResource,
   SceneShotListResource,
-  SceneStoryboardSheetReference,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
   SequenceResource,
@@ -52,8 +51,14 @@ export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
 export type StoryArcResourceResponse = StoryArcResource;
 export type SceneNarrativeResourceResponse = SceneNarrativeResource;
 
-export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardSheet'> & {
-  storyboardSheet?: ScreenplayImageReferenceWithHttp;
+export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardPreview'> & {
+  storyboardPreview?: {
+    shotListId: string;
+    images: Array<{
+      shotId: string;
+      image: ScreenplayImageReferenceWithHttp | null;
+    }>;
+  };
 };
 
 export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
@@ -63,18 +68,10 @@ export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
   };
 };
 
-export type SceneStoryboardSheetReferenceResponse = Omit<
-  SceneStoryboardSheetReference,
-  'sheet'
-> & {
-  sheet: ScreenplayImageReferenceWithHttp;
-};
-
 export type SceneShotListResourceResponse = Omit<
   SceneShotListResource,
-  'storyboardSheet' | 'storyboardImagesByShotId'
+  'storyboardImagesByShotId'
 > & {
-  storyboardSheet: SceneStoryboardSheetReferenceResponse | null;
   storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
@@ -167,8 +164,16 @@ export function toSequenceResourceResponse(
       ...resource.scenes,
       items: resource.scenes.items.map((scene) => ({
         ...scene,
-        storyboardSheet: scene.storyboardSheet
-          ? withSceneImageUrl(projectName, scene.id, scene.storyboardSheet)
+        storyboardPreview: scene.storyboardPreview
+          ? {
+              shotListId: scene.storyboardPreview.shotListId,
+              images: scene.storyboardPreview.images.map((entry) => ({
+                shotId: entry.shotId,
+                image: entry.image
+                  ? withSceneImageUrl(projectName, scene.id, entry.image)
+                  : null,
+              })),
+            }
           : undefined,
       })),
     },
@@ -182,16 +187,6 @@ export function toSceneShotListResourceResponse(
   const sceneId = resource.scene.id;
   return {
     ...resource,
-    storyboardSheet: resource.storyboardSheet
-      ? {
-          ...resource.storyboardSheet,
-          sheet: withSceneImageUrl(
-            projectName,
-            sceneId,
-            resource.storyboardSheet.sheet
-          ),
-        }
-      : null,
     storyboardImagesByShotId: Object.fromEntries(
       Object.entries(resource.storyboardImagesByShotId).map(([shotId, image]) => [
         shotId,

@@ -50,12 +50,12 @@ Use the focused documents below for current direction.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
   attaches them as assets.
-- Scene storyboard sheets are compound Assets. The original generated sheet and
-  sliced per-shot storyboard images are Asset Files under one Asset, while
-  `scene_shot_storyboard_sheet` and `scene_shot_storyboard_image` store the
-  relationship to the Scene Shot List and its scoped `shotId` values. Core does
-  not store crop boxes, grid cells, or extraction metadata for storyboard
-  slicing.
+- Scene storyboard images are durable per-shot Assets. The
+  `scene.storyboard-sheet` generation purpose may create a temporary composite
+  sheet for batch prompting, but import stores only the cropped shot images as
+  `scene_storyboard_image` assets and records direct ownership in
+  `scene_shot_storyboard_image`. Core does not store crop boxes, grid cells, or
+  extraction metadata for storyboard slicing.
 - The canonical project database path is:
 
 ```text

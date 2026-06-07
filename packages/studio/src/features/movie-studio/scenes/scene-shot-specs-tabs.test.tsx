@@ -586,7 +586,6 @@ function sceneShotListResource(
       coverageStrategy: 'Hold the table in one composed frame.',
       shots: [shot],
     },
-    storyboardSheet: null,
     storyboardImagesByShotId: {},
     castMemberLabels: {},
     locationLabels: {},

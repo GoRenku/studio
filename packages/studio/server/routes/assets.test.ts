@@ -264,13 +264,13 @@ describe('assets Hono route', () => {
     const sceneAsset = {
       ...makeAsset('asset_scene_storyboard'),
       target: { kind: 'scene' as const, sceneId: 'scene_hook' },
-      type: 'scene_storyboard_sheet',
-      role: 'storyboard_sheet',
+      type: 'scene_storyboard_image',
+      role: 'storyboard_image',
       files: [
         {
           ...makeAsset('asset_scene_storyboard').files[0]!,
           id: 'asset_file_shot_001',
-          role: 'shot',
+          role: 'storyboard_image',
           projectRelativePath:
             'generated/storyboards/scene_hook/shot-001.png' as Asset['files'][number]['projectRelativePath'],
         },

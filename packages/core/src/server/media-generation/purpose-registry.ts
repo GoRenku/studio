@@ -26,7 +26,7 @@ import type {
   PreparedMediaGeneration,
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
-  SceneStoryboardSheetImportReport,
+  SceneStoryboardImagesImportReport,
   SceneStoryboardSheetModelListReport,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationSpec,
@@ -64,7 +64,7 @@ import type {
   ImportLocationEnvironmentSheetMediaInput,
   ImportLookbookImageMediaInput,
   ImportLookbookSheetMediaInput,
-  ImportSceneStoryboardSheetMediaInput,
+  ImportSceneStoryboardImagesMediaInput,
   ImportShotVideoTakeInputMediaInput,
   ImportShotVideoTakeMediaInput,
   LocationMediaGenerationContextInput,
@@ -122,7 +122,7 @@ export type MediaGenerationImportReport =
   | LookbookSheetMediaImportReport
   | CastMediaImportReport
   | LocationEnvironmentSheetMediaImportReport
-  | SceneStoryboardSheetImportReport
+  | SceneStoryboardImagesImportReport
   | ShotVideoTakeInputMediaImportReport
   | ShotVideoTakeMediaImportReport;
 
@@ -691,7 +691,7 @@ export async function importMediaGenerationByPurpose(input:
   | ({ purpose: typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE } & ImportCastMediaInput)
   | ({ purpose: typeof CAST_PROFILE_GENERATION_PURPOSE } & ImportCastMediaInput)
   | ({ purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE } & ImportLocationEnvironmentSheetMediaInput)
-  | ({ purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportSceneStoryboardSheetMediaInput)
+  | ({ purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportSceneStoryboardImagesMediaInput)
   | ({ purpose: typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_LAST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
@@ -710,7 +710,7 @@ export async function importMediaGenerationByPurpose(input:
     case LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE:
       return locationSheet.importLocationEnvironmentSheetMedia(input);
     case SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE:
-      return sceneStoryboardSheet.importSceneStoryboardSheetMedia(input);
+      return sceneStoryboardSheet.importSceneStoryboardImagesMedia(input);
     case SHOT_FIRST_FRAME_GENERATION_PURPOSE:
       return shotVideoTake.importShotFirstFrame(input);
     case SHOT_LAST_FRAME_GENERATION_PURPOSE:

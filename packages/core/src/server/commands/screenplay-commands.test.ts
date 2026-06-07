@@ -221,6 +221,94 @@ describe('screenplay JSON commands', () => {
     );
   });
 
+  it('records screenplay revisions and restores a previous narrative version', async () => {
+    await createBlankProject();
+    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
+    const initialRevisions = await projectData.listScreenplayRevisions({ homeDir });
+    expect(initialRevisions.revisions).toHaveLength(1);
+
+    const current = await projectData.readScreenplay({ homeDir });
+    const scene = current.screenplay?.acts[0]?.sequences[0]?.scenes[0];
+    if (!scene?.id) {
+      throw new Error('Expected seeded scene id.');
+    }
+
+    const revisedScene = {
+      ...scene,
+      title: 'Opening Scene Revised',
+      blocks: [
+        ...scene.blocks,
+        {
+          type: 'action' as const,
+          text: 'Urban notices the metal has changed color overnight.',
+          castMemberIds: [],
+          locationIds: [],
+        },
+      ],
+    };
+
+    const dryRun = await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: scene.id as string,
+      document: { kind: 'screenplaySceneRevision', scene: revisedScene },
+      dryRun: true,
+    });
+    expect(dryRun.warnings).toEqual([]);
+    expect(dryRun.changes).toEqual([
+      expect.objectContaining({ operation: 'scene.update' }),
+    ]);
+    await expect(projectData.readScreenplay({ homeDir })).resolves.toMatchObject({
+      screenplay: {
+        acts: [
+          {
+            sequences: [
+              {
+                scenes: [expect.objectContaining({ title: scene.title })],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const reviseReport = await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: scene.id as string,
+      document: { kind: 'screenplaySceneRevision', scene: revisedScene },
+    });
+    expect(reviseReport.resourceKeys).toEqual(
+      expect.arrayContaining(['screenplay', `scene:${String(scene.id)}`])
+    );
+
+    const afterRevise = await projectData.listScreenplayRevisions({ homeDir });
+    expect(afterRevise.revisions).toHaveLength(2);
+    const shown = await projectData.readScreenplayRevision({
+      homeDir,
+      revisionId: afterRevise.revisions[0]!.id,
+    });
+    expect(shown.screenplay.acts[0]?.sequences[0]?.scenes[0]?.title).toBe(
+      'Opening Scene Revised'
+    );
+
+    const restore = await projectData.restoreScreenplayRevision({
+      homeDir,
+      revisionId: initialRevisions.revisions[0]!.id,
+    });
+    expect(restore.resourceKeys).toEqual(
+      expect.arrayContaining(['screenplay', `scene:${String(scene.id)}`])
+    );
+    const restored = await projectData.readScreenplay({ homeDir });
+    expect(restored.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.title).toBe(
+      scene.title
+    );
+    await expect(projectData.listScreenplayRevisions({ homeDir })).resolves.toMatchObject({
+      revisions: expect.arrayContaining([
+        expect.objectContaining({ sourceCommand: 'screenplay.revision.restore' }),
+      ]),
+    });
+  });
+
   it('honors placement and warns when duplicate relationship refs are normalized', async () => {
     await createBlankProject();
     await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });

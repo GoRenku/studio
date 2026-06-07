@@ -67,8 +67,8 @@ operational companions that teach agents how to use those contracts.
   list history.
 - Writes validated `kind: "sceneShotList"` JSON through the CLI.
 - Optionally creates one `scene.storyboard-sheet` generation spec for the full
-  shot list, slices the generated sheet into per-shot files, and imports the
-  original sheet plus slices as one compound Asset.
+  shot list, slices the generated sheet into per-shot files, and imports only
+  the cropped storyboard images as durable per-shot scene assets.
 
 ## Skill Rules
 

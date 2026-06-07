@@ -3,6 +3,7 @@ import type {
   ScreenplayCreateDocument,
   ScreenplayDocument,
   ScreenplayOperationDocument,
+  ScreenplaySceneRevisionDocument,
 } from '../../client/screenplay.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { resolveScreenplayDocumentIds } from '../database/access/screenplay-persistence.js';
@@ -14,7 +15,11 @@ import { buildScreenplayDraftForOperations } from './apply-screenplay-operations
 
 export async function validateScreenplayJson(
   input: RenkuConfigPathOptions & {
-    document?: ScreenplayDocument | ScreenplayCreateDocument | ScreenplayOperationDocument;
+    document?:
+      | ScreenplayDocument
+      | ScreenplayCreateDocument
+      | ScreenplayOperationDocument
+      | ScreenplaySceneRevisionDocument;
     filePath?: string;
   } = {}
 ): Promise<ScreenplayCommandReport> {

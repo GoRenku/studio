@@ -5,8 +5,8 @@ import type {
   ActStoryboardShot,
   Asset,
   SceneShotListResource,
-  SceneStoryboardSheetReference,
   ScreenplayImageReference,
+  SequenceSceneStoryboardPreview,
 } from '../../client/index.js';
 import type {
   SceneShot,
@@ -25,7 +25,6 @@ import {
 import { readProjectRecord } from '../database/access/project.js';
 import {
   listSceneShotStoryboardImageRecords,
-  listSceneShotStoryboardSheetRecords,
   readActiveSceneShotListRecord,
   readSceneShotListDocument,
   updateSceneShotListRecordDocument,
@@ -70,7 +69,6 @@ export async function readSceneShotListResource(
       activeShotListId:
         readActiveSceneShotListRecord(session, input.sceneId)?.id ?? null,
       activeShotList: projection.document,
-      storyboardSheet: projection.sheetReference,
       storyboardImagesByShotId: projection.imagesByShotId,
       castMemberLabels: screenplay
         ? Object.fromEntries(
@@ -539,9 +537,7 @@ function toActStoryboardScene(
   scene: ActStoryboardScene['scene']
 ): ActStoryboardScene {
   const projection = readSceneStoryboardProjection(session, scene.id);
-  // An empty `shots` array signals a single scene placeholder slot: render
-  // shots only when the scene has an active shot list with imported images.
-  if (!projection.document || !projection.sheetReference) {
+  if (!projection.document) {
     return { scene, shots: [] };
   }
   const shots: ActStoryboardShot[] = projection.document.shots.map(
@@ -555,16 +551,39 @@ function toActStoryboardScene(
   return { scene, shots };
 }
 
-export function readActiveSceneStoryboardSheetImage(
+export function readActiveSceneStoryboardPreviewImage(
   session: DatabaseSession,
   sceneId: string
 ): ScreenplayImageReference | null {
-  return readSceneStoryboardProjection(session, sceneId).sheetReference?.sheet ?? null;
+  const projection = readSceneStoryboardProjection(session, sceneId);
+  const firstShotWithImage = projection.document?.shots.find(
+    (shot) => projection.imagesByShotId[shot.shotId]
+  );
+  return firstShotWithImage
+    ? projection.imagesByShotId[firstShotWithImage.shotId] ?? null
+    : null;
+}
+
+export function readSceneStoryboardPreview(
+  session: DatabaseSession,
+  sceneId: string
+): SequenceSceneStoryboardPreview | null {
+  const projection = readSceneStoryboardProjection(session, sceneId);
+  if (!projection.document || !projection.shotListId) {
+    return null;
+  }
+  const selected = selectStoryboardPreviewShots(
+    projection.document.shots,
+    projection.imagesByShotId
+  );
+  return selected.length
+    ? { shotListId: projection.shotListId, images: selected }
+    : null;
 }
 
 interface SceneStoryboardProjection {
   document: SceneShotListDocument | null;
-  sheetReference: SceneStoryboardSheetReference | null;
+  shotListId: string | null;
   imagesByShotId: Record<string, ScreenplayImageReference>;
 }
 
@@ -574,59 +593,97 @@ function readSceneStoryboardProjection(
 ): SceneStoryboardProjection {
   const shotListRow = readActiveSceneShotListRecord(session, sceneId);
   if (!shotListRow) {
-    return { document: null, sheetReference: null, imagesByShotId: {} };
+    return { document: null, shotListId: null, imagesByShotId: {} };
   }
   const screenplay = requireScreenplayDocument(session);
   const document = readSceneShotListDocument({ row: shotListRow, screenplay });
 
-  // Records are returned newest-first. A single import can produce several sheet
-  // records (one compound asset, shots split across sheets), so resolve every
-  // sheet that belongs to the most recent import — keyed by its asset id — not
-  // just the first sheet record. Otherwise shots living on the other sheets of
-  // the same import render as empty placeholders.
-  const sheetRecords = listSceneShotStoryboardSheetRecords(
-    session,
-    shotListRow.id
-  );
-  const latestSheet = sheetRecords[0];
-  if (!latestSheet) {
-    return { document, sheetReference: null, imagesByShotId: {} };
-  }
-  const importSheets = sheetRecords.filter(
-    (record) => record.assetId === latestSheet.assetId
-  );
-
-  const asset = readAssetRelationship(session, {
-    target: { kind: 'scene', sceneId },
-    assetId: latestSheet.assetId,
-  });
-  if (!asset) {
-    return { document, sheetReference: null, imagesByShotId: {} };
-  }
-
-  const sheet = toImageReferenceForFile(asset, latestSheet.sheetFileId);
-  if (!sheet) {
-    return { document, sheetReference: null, imagesByShotId: {} };
-  }
-
   const imagesByShotId: Record<string, ScreenplayImageReference> = {};
-  for (const sheetRecord of importSheets) {
-    for (const image of listSceneShotStoryboardImageRecords(
-      session,
-      sheetRecord.id
-    )) {
-      const reference = toImageReferenceForFile(asset, image.assetFileId);
-      if (reference) {
-        imagesByShotId[image.shotId] = reference;
-      }
+  for (const image of listSceneShotStoryboardImageRecords(session, {
+    shotListId: shotListRow.id,
+  })) {
+    if (imagesByShotId[image.shotId]) {
+      continue;
+    }
+    const asset = readAssetRelationship(session, {
+      target: { kind: 'scene', sceneId },
+      assetId: image.assetId,
+    });
+    if (!asset) {
+      continue;
+    }
+    const reference = toImageReferenceForFile(asset, image.assetFileId);
+    if (reference) {
+      imagesByShotId[image.shotId] = reference;
     }
   }
 
   return {
     document,
-    sheetReference: { shotListId: shotListRow.id, sheet },
+    shotListId: shotListRow.id,
     imagesByShotId,
   };
+}
+
+function selectStoryboardPreviewShots(
+  shots: SceneShot[],
+  imagesByShotId: Record<string, ScreenplayImageReference>
+): SequenceSceneStoryboardPreview['images'] {
+  const preferredIndexes = preferredPreviewIndexes(shots.length);
+  const selectedIndexes: number[] = [];
+  for (const index of preferredIndexes) {
+    const nearest = nearestAvailablePreviewIndex({
+      shots,
+      imagesByShotId,
+      preferredIndex: index,
+      selectedIndexes,
+    });
+    if (nearest !== null) {
+      selectedIndexes.push(nearest);
+    }
+  }
+  return selectedIndexes
+    .sort((left, right) => left - right)
+    .map((index) => {
+      const shot = shots[index]!;
+      return { shotId: shot.shotId, image: imagesByShotId[shot.shotId] ?? null };
+    });
+}
+
+function preferredPreviewIndexes(length: number): number[] {
+  if (length <= 0) {
+    return [];
+  }
+  if (length <= 4) {
+    return Array.from({ length }, (_, index) => index);
+  }
+  return [0, 1, length - 2, length - 1];
+}
+
+function nearestAvailablePreviewIndex(input: {
+  shots: SceneShot[];
+  imagesByShotId: Record<string, ScreenplayImageReference>;
+  preferredIndex: number;
+  selectedIndexes: number[];
+}): number | null {
+  const selected = new Set(input.selectedIndexes);
+  for (let distance = 0; distance < input.shots.length; distance += 1) {
+    const candidates =
+      distance === 0
+        ? [input.preferredIndex]
+        : [input.preferredIndex - distance, input.preferredIndex + distance];
+    for (const index of candidates) {
+      const shot = input.shots[index];
+      if (
+        shot &&
+        !selected.has(index) &&
+        input.imagesByShotId[shot.shotId]
+      ) {
+        return index;
+      }
+    }
+  }
+  return null;
 }
 
 function toImageReferenceForFile(

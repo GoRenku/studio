@@ -12,7 +12,9 @@ import {
   type ScreenplayCreateDocument,
   type ScreenplayDocument,
   type ScreenplayOperationDocument,
+  type ScreenplaySceneRevisionDocument,
   type SceneShotListDocument,
+  type SceneShotListOperationDocument,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
@@ -24,6 +26,7 @@ export async function runScreenplayCommand(options: {
     act?: string;
     active?: boolean;
     analysis?: string;
+    revision?: string;
     scene?: string;
     shotList?: string;
     includeVisualReferences?: boolean;
@@ -156,6 +159,53 @@ export async function runScreenplayCommand(options: {
       );
       return 0;
     }
+    if (nested === 'validate-operations') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readJsonInput(filePath);
+      writeJson(
+        options.io,
+        await service.validateSceneShotListOperations({
+          homeDir: options.homeDir,
+          document: document as SceneShotListOperationDocument,
+          filePath: filePath !== '-' ? filePath : undefined,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'apply') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readJsonInput(filePath);
+      const report = await service.applySceneShotListOperations({
+        homeDir: options.homeDir,
+        document: document as SceneShotListOperationDocument,
+        filePath: filePath !== '-' ? filePath : undefined,
+        dryRun: options.flags.dryRun,
+      });
+      if (!options.flags.dryRun) {
+        await appendScreenplayResourceChangedEvent({
+          options,
+          projectName: report.project.name,
+          projectId: report.project.id,
+          resourceKeys: report.resourceKeys,
+          command: 'screenplay shot-list apply',
+          warningMessage:
+            'Scene Shot List mutation succeeded, but Studio refresh coordination failed.',
+        });
+      }
+      writeJson(options.io, report);
+      return 0;
+    }
+    if (nested === 'storyboard' && id === 'status') {
+      writeJson(
+        options.io,
+        await service.readSceneShotListStoryboardStatus({
+          homeDir: options.homeDir,
+          sceneId: requiredFlag(options.flags.scene, '--scene'),
+          shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+        })
+      );
+      return 0;
+    }
     if (nested === 'write') {
       const filePath = requiredFlag(options.flags.file, '--file');
       const document = await readJsonInput(filePath);
@@ -196,6 +246,69 @@ export async function runScreenplayCommand(options: {
     }
   }
 
+  if (subcommand === 'scene' && nested === 'revise') {
+    const filePath = requiredFlag(options.flags.file, '--file');
+    const document = await readJsonInput(filePath);
+    const sceneId = requiredFlag(options.flags.scene, '--scene');
+    const report = await service.reviseScreenplayScene({
+      homeDir: options.homeDir,
+      sceneId,
+      document: document as ScreenplaySceneRevisionDocument,
+      filePath: filePath !== '-' ? filePath : undefined,
+      dryRun: options.flags.dryRun,
+    });
+    if (!options.flags.dryRun) {
+      await appendScreenplayResourceChangedEvent({
+        options,
+        projectName: report.project.name,
+        projectId: report.project.id,
+        resourceKeys: report.resourceKeys ?? [],
+        command: 'screenplay scene revise',
+        warningMessage:
+          'Screenplay scene revision succeeded, but Studio refresh coordination failed.',
+      });
+    }
+    writeJson(options.io, report);
+    return 0;
+  }
+
+  if (subcommand === 'revision') {
+    if (nested === 'list') {
+      writeJson(
+        options.io,
+        await service.listScreenplayRevisions({ homeDir: options.homeDir })
+      );
+      return 0;
+    }
+    if (nested === 'show') {
+      writeJson(
+        options.io,
+        await service.readScreenplayRevision({
+          homeDir: options.homeDir,
+          revisionId: requiredFlag(options.flags.revision, '--revision'),
+        })
+      );
+      return 0;
+    }
+    if (nested === 'restore') {
+      const report = await service.restoreScreenplayRevision({
+        homeDir: options.homeDir,
+        revisionId: requiredFlag(options.flags.revision, '--revision'),
+      });
+      await appendScreenplayResourceChangedEvent({
+        options,
+        projectName: report.project.name,
+        projectId: report.project.id,
+        resourceKeys: report.resourceKeys ?? [],
+        command: 'screenplay revision restore',
+        warningMessage:
+          'Screenplay revision restore succeeded, but Studio refresh coordination failed.',
+      });
+      writeJson(options.io, report);
+      return 0;
+    }
+  }
+
   if (subcommand === 'status') {
     writeJson(options.io, await service.readScreenplayStatus({ homeDir: options.homeDir }));
     return 0;
@@ -213,7 +326,11 @@ export async function runScreenplayCommand(options: {
       options.io,
       await service.validateScreenplayJson({
         homeDir: options.homeDir,
-        document: document as ScreenplayDocument | ScreenplayOperationDocument | undefined,
+        document: document as
+          | ScreenplayDocument
+          | ScreenplayOperationDocument
+          | ScreenplaySceneRevisionDocument
+          | undefined,
         filePath: options.flags.file && options.flags.file !== '-' ? options.flags.file : undefined,
       })
     );

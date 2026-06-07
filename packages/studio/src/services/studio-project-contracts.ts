@@ -30,7 +30,6 @@ import type {
   SequenceResource,
   SequenceSceneRow,
   SceneShotListResource,
-  SceneStoryboardSheetReference,
   ActStoryboardResource,
   ActStoryboardSequence,
   ActStoryboardShot,
@@ -111,8 +110,14 @@ export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
 export type StoryArcResourceResponse = StoryArcResource;
 export type SceneNarrativeResourceResponse = SceneNarrativeResource;
 
-export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardSheet'> & {
-  storyboardSheet?: ScreenplayImageReferenceWithHttp;
+export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardPreview'> & {
+  storyboardPreview?: {
+    shotListId: string;
+    images: Array<{
+      shotId: string;
+      image: ScreenplayImageReferenceWithHttp | null;
+    }>;
+  };
 };
 
 export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
@@ -122,18 +127,10 @@ export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
   };
 };
 
-export type SceneStoryboardSheetReferenceResponse = Omit<
-  SceneStoryboardSheetReference,
-  'sheet'
-> & {
-  sheet: ScreenplayImageReferenceWithHttp;
-};
-
 export type SceneShotListResourceResponse = Omit<
   SceneShotListResource,
-  'storyboardSheet' | 'storyboardImagesByShotId'
+  'storyboardImagesByShotId'
 > & {
-  storyboardSheet: SceneStoryboardSheetReferenceResponse | null;
   storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 

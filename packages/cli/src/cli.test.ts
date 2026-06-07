@@ -1570,7 +1570,7 @@ describe('renku CLI', () => {
     });
   });
 
-  it('writes a scene shot list and imports a storyboard sheet through the CLI', async () => {
+  it('writes a scene shot list and imports storyboard images through the CLI', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -1675,6 +1675,116 @@ describe('renku CLI', () => {
     expect(validateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({ valid: true });
 
+    const operationPath = path.join(homeDir, 'shot-list-operations.json');
+    await fs.writeFile(
+      operationPath,
+      JSON.stringify(
+        {
+          kind: 'sceneShotListOperations',
+          sceneId,
+          baseShotListId: writeReport.activeShotListId,
+          activate: false,
+          title: 'Foundry coverage with insert',
+          operations: [
+            {
+              operation: 'shots.insert',
+              placement: { position: 'end' },
+              shots: [
+                {
+                  shotId: 'shot_003',
+                  title: 'The crack as evidence',
+                  storyBeat: 'The material damage becomes undeniable.',
+                  narrativePurpose: 'Add an insert that clarifies the object.',
+                  description: 'Insert of the crack crossing the bronze surface.',
+                  shotType: 'insert',
+                  subject: 'The cracked bronze',
+                  action: 'Light catches the crack.',
+                  dialogue: [],
+                  coveredBlockIndexes: [0],
+                  castMemberIds: [castMemberId],
+                  locationIds: [locationId],
+                },
+              ],
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const validateOperationsExitCode = await runRenkuCli(
+      [
+        'screenplay',
+        'shot-list',
+        'validate-operations',
+        '--file',
+        operationPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(validateOperationsExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({ valid: true });
+
+    stdout = [];
+    stderr = [];
+    const dryRunApplyExitCode = await runRenkuCli(
+      [
+        'screenplay',
+        'shot-list',
+        'apply',
+        '--file',
+        operationPath,
+        '--dry-run',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(dryRunApplyExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      baseShotListId: writeReport.activeShotListId,
+      createdShotListId: `${writeReport.activeShotListId}_dry_run`,
+    });
+
+    stdout = [];
+    stderr = [];
+    const applyExitCode = await runRenkuCli(
+      ['screenplay', 'shot-list', 'apply', '--file', operationPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(applyExitCode).toBe(0);
+    const applyReport = JSON.parse(stdout.join('\n'));
+    expect(applyReport).toMatchObject({
+      baseShotListId: writeReport.activeShotListId,
+      createdShotListId: expect.any(String),
+    });
+
+    stdout = [];
+    stderr = [];
+    const storyboardStatusExitCode = await runRenkuCli(
+      [
+        'screenplay',
+        'shot-list',
+        'storyboard',
+        'status',
+        '--scene',
+        sceneId,
+        '--shot-list',
+        applyReport.createdShotListId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(storyboardStatusExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      shotListId: applyReport.createdShotListId,
+      missingShotIds: expect.arrayContaining(['shot_003']),
+    });
+
     stdout = [];
     stderr = [];
     const listExitCode = await runRenkuCli(
@@ -1683,12 +1793,12 @@ describe('renku CLI', () => {
     );
     expect(listExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      shotLists: [
+      shotLists: expect.arrayContaining([
         expect.objectContaining({
           id: writeReport.activeShotListId,
           isActive: true,
         }),
-      ],
+      ]),
     });
 
     stdout = [];
@@ -2025,10 +2135,6 @@ describe('renku CLI', () => {
       recursive: true,
     });
     await fs.writeFile(
-      path.join(storageRoot, 'constantinople', 'generated/media/sheet.png'),
-      'sheet'
-    );
-    await fs.writeFile(
       path.join(storageRoot, 'constantinople', 'generated/media/shot.png'),
       'shot'
     );
@@ -2036,15 +2142,9 @@ describe('renku CLI', () => {
       importPath,
       JSON.stringify(
         {
-          kind: 'sceneStoryboardSheetImport',
-          sheets: [
-            {
-              source: 'generated/media/sheet.png',
-              shots: [
-                { shotId: 'shot_001', source: 'generated/media/shot.png' },
-              ],
-            },
-          ],
+          kind: 'sceneStoryboardImagesImport',
+          shotListId: writeReport.activeShotListId,
+          shots: [{ shotId: 'shot_001', source: 'generated/media/shot.png' }],
         },
         null,
         2
@@ -2073,17 +2173,18 @@ describe('renku CLI', () => {
     expect(importExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
-      imported: {
-        type: 'scene_storyboard_sheet',
-        files: expect.arrayContaining([
-          expect.objectContaining({ role: 'sheet' }),
-          expect.objectContaining({ role: 'shot' }),
-        ]),
-      },
+      storyboardImageIds: [expect.any(String)],
+      imported: [expect.objectContaining({ type: 'scene_storyboard_image' })],
+      files: [
+        expect.objectContaining({
+          role: 'storyboard_image',
+          shotId: 'shot_001',
+        }),
+      ],
     });
 
     const multiImportPath = path.join(homeDir, 'scene-storyboard-multi-import.json');
-    for (const filename of ['sheet-1.png', 'sheet-2.png', 'shot-1.png', 'shot-2.png']) {
+    for (const filename of ['shot-1.png', 'shot-2.png']) {
       await fs.writeFile(
         path.join(storageRoot, 'constantinople', `generated/media/${filename}`),
         filename
@@ -2093,17 +2194,12 @@ describe('renku CLI', () => {
       multiImportPath,
       JSON.stringify(
         {
-          kind: 'sceneStoryboardSheetImport',
+          kind: 'sceneStoryboardImagesImport',
+          shotListId: writeReport.activeShotListId,
           title: 'Foundry grouped storyboard',
-          sheets: [
-            {
-              source: 'generated/media/sheet-1.png',
-              shots: [{ shotId: 'shot_001', source: 'generated/media/shot-1.png' }],
-            },
-            {
-              source: 'generated/media/sheet-2.png',
-              shots: [{ shotId: 'shot_002', source: 'generated/media/shot-2.png' }],
-            },
+          shots: [
+            { shotId: 'shot_001', source: 'generated/media/shot-1.png' },
+            { shotId: 'shot_002', source: 'generated/media/shot-2.png' },
           ],
         },
         null,
@@ -2133,14 +2229,15 @@ describe('renku CLI', () => {
     expect(multiImportExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
-      storyboardSheetIds: [expect.any(String), expect.any(String)],
-      imported: {
-        type: 'scene_storyboard_sheet',
-        files: expect.arrayContaining([
-          expect.objectContaining({ role: 'sheet' }),
-          expect.objectContaining({ role: 'shot' }),
-        ]),
-      },
+      storyboardImageIds: [expect.any(String), expect.any(String)],
+      imported: [
+        expect.objectContaining({ type: 'scene_storyboard_image' }),
+        expect.objectContaining({ type: 'scene_storyboard_image' }),
+      ],
+      files: expect.arrayContaining([
+        expect.objectContaining({ role: 'storyboard_image', shotId: 'shot_001' }),
+        expect.objectContaining({ role: 'storyboard_image', shotId: 'shot_002' }),
+      ]),
     });
   });
 

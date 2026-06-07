@@ -1788,7 +1788,6 @@ function makeSceneShotListResource() {
     },
     projectAspectRatio: '16:9',
     activeShotList: null,
-    storyboardSheet: null,
     storyboardImagesByShotId: {},
     castMemberLabels: {},
     locationLabels: {},

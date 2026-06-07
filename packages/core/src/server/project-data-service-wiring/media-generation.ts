@@ -72,6 +72,7 @@ export function createMediaGenerationServiceWiring() {
     estimateSceneStoryboardSheetSpec: sharedGeneration.estimateMediaGenerationSpec,
     runSceneStoryboardSheetSpec: sharedGeneration.runMediaGenerationSpec,
     recordSceneStoryboardSheetRun: sceneStoryboardSheet.recordSceneStoryboardSheetRun,
-    importSceneStoryboardSheetMedia: sceneStoryboardSheet.importSceneStoryboardSheetMedia,
+    importSceneStoryboardImagesMedia:
+      sceneStoryboardSheet.importSceneStoryboardImagesMedia,
   };
 }

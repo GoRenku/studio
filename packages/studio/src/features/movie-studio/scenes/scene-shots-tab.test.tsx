@@ -493,7 +493,6 @@ function resource(
     projectAspectRatio: '16:9',
     activeShotListId: activeShotList ? 'shot_list_hook' : null,
     activeShotList,
-    storyboardSheet: null,
     storyboardImagesByShotId: {},
     castMemberLabels: { cast_mehmed: 'Mehmed' },
     locationLabels: { loc_chamber: 'Council Chamber' },

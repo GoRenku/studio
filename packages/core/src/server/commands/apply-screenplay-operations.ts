@@ -3,6 +3,7 @@ import type {
   Act,
   Placement,
   Scene,
+  ScreenplayShotListImpact,
   ScreenplayCommandChange,
   ScreenplayDocument,
   ScreenplayCommandReport,
@@ -16,6 +17,16 @@ import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { validateScreenplayJsonDocument } from '../screenplay-json/validator.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { replaceScreenplayDocument, resolveScreenplayDocumentIds } from '../database/access/screenplay-persistence.js';
+import { insertScreenplayRevisionRecord } from '../database/access/screenplay-revisions.js';
+import {
+  readActiveSceneShotListRecord,
+  readSceneShotListDocument,
+} from '../database/access/scene-shot-lists.js';
+import {
+  createRandomIdGenerator,
+  createUniqueIdAllocator,
+} from '../entity-ids.js';
+import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export async function applyScreenplayOperations(
   input: RenkuConfigPathOptions & {
@@ -50,8 +61,29 @@ export async function applyScreenplayOperations(
       idGenerator: input.idGenerator,
       mode: 'mutation',
     });
+    const shotListImpacts = calculateScreenplayShotListImpacts({
+      session,
+      before: base,
+      after: resolved.document,
+      sceneIds: sceneIdsFromChanges(changes),
+    });
     if (!input.dryRun) {
-      replaceScreenplayDocument(session, resolved.document);
+      const now = new Date().toISOString();
+      const ids = createUniqueIdAllocator(
+        input.idGenerator ?? createRandomIdGenerator()
+      );
+      session.db.transaction((tx) => {
+        const txSession = { ...session, db: tx };
+        replaceScreenplayDocument(txSession, resolved.document);
+        insertScreenplayRevisionRecord({
+          session: txSession,
+          id: ids('screenplay_revision'),
+          document: resolved.document,
+          sourceCommand: 'screenplay.apply',
+          summary: resolved.document.screenplay.title,
+          now,
+        });
+      });
     }
 
     return {
@@ -61,8 +93,137 @@ export async function applyScreenplayOperations(
       changes,
       generatedIds: resolved.generatedIds,
       resourceKeys: ['screenplay'],
+      shotListImpacts,
     };
   });
+}
+
+export function calculateScreenplayShotListImpacts(input: {
+  session: DatabaseSession;
+  before: ScreenplayDocument;
+  after: ScreenplayDocument;
+  sceneIds: string[];
+}): ScreenplayShotListImpact[] {
+  const uniqueSceneIds = [...new Set(input.sceneIds)];
+  return uniqueSceneIds
+    .map((sceneId) => {
+      const beforeScene = findSceneById(input.before, sceneId);
+      const afterScene = findSceneById(input.after, sceneId);
+      if (!beforeScene || !afterScene) {
+        return null;
+      }
+      return calculateSceneShotListImpact({
+        session: input.session,
+        screenplay: input.after,
+        sceneId,
+        beforeScene,
+        afterScene,
+      });
+    })
+    .filter((impact): impact is ScreenplayShotListImpact => impact !== null);
+}
+
+function calculateSceneShotListImpact(input: {
+  session: DatabaseSession;
+  screenplay: ScreenplayDocument;
+  sceneId: string;
+  beforeScene: Scene;
+  afterScene: Scene;
+}): ScreenplayShotListImpact {
+  const blockDiff = diffSceneBlocks(input.beforeScene, input.afterScene);
+  const activeShotList = readActiveSceneShotListRecord(
+    input.session,
+    input.sceneId
+  );
+  const document = activeShotList
+    ? readSceneShotListDocument({
+        row: activeShotList,
+        screenplay: input.screenplay,
+      })
+    : null;
+  const changedOrInserted = new Set([
+    ...blockDiff.changedBlockIndexes,
+    ...blockDiff.insertedBlockIndexes,
+  ]);
+  const deleted = new Set(blockDiff.deletedBlockIndexes);
+  const coveredBlocks = new Set<number>();
+  const shotsReferencingChangedBlocks: string[] = [];
+  const shotsReferencingDeletedBlocks: string[] = [];
+  for (const shot of document?.shots ?? []) {
+    for (const blockIndex of shot.coveredBlockIndexes) {
+      coveredBlocks.add(blockIndex);
+      if (changedOrInserted.has(blockIndex)) {
+        shotsReferencingChangedBlocks.push(shot.shotId);
+      }
+      if (deleted.has(blockIndex)) {
+        shotsReferencingDeletedBlocks.push(shot.shotId);
+      }
+    }
+  }
+  const uncoveredBlockIndexes = [...changedOrInserted].filter(
+    (blockIndex) => !coveredBlocks.has(blockIndex)
+  );
+  return {
+    sceneId: input.sceneId,
+    activeShotListId: activeShotList?.id ?? null,
+    changedBlockIndexes: blockDiff.changedBlockIndexes,
+    deletedBlockIndexes: blockDiff.deletedBlockIndexes,
+    insertedBlockIndexes: blockDiff.insertedBlockIndexes,
+    uncoveredBlockIndexes,
+    shotsReferencingChangedBlocks: [...new Set(shotsReferencingChangedBlocks)],
+    shotsReferencingDeletedBlocks: [...new Set(shotsReferencingDeletedBlocks)],
+    suggestedNextCommand: activeShotList
+      ? `renku screenplay shot-list storyboard status --scene ${input.sceneId} --shot-list ${activeShotList.id} --json`
+      : null,
+  };
+}
+
+function diffSceneBlocks(beforeScene: Scene, afterScene: Scene): {
+  changedBlockIndexes: number[];
+  deletedBlockIndexes: number[];
+  insertedBlockIndexes: number[];
+} {
+  const changedBlockIndexes: number[] = [];
+  const deletedBlockIndexes: number[] = [];
+  const insertedBlockIndexes: number[] = [];
+  const maxLength = Math.max(beforeScene.blocks.length, afterScene.blocks.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const beforeBlock = beforeScene.blocks[index];
+    const afterBlock = afterScene.blocks[index];
+    if (!beforeBlock && afterBlock) {
+      insertedBlockIndexes.push(index);
+    } else if (beforeBlock && !afterBlock) {
+      deletedBlockIndexes.push(index);
+    } else if (
+      beforeBlock &&
+      afterBlock &&
+      JSON.stringify(beforeBlock) !== JSON.stringify(afterBlock)
+    ) {
+      changedBlockIndexes.push(index);
+    }
+  }
+  return { changedBlockIndexes, deletedBlockIndexes, insertedBlockIndexes };
+}
+
+function sceneIdsFromChanges(changes: ScreenplayCommandChange[]): string[] {
+  return changes
+    .filter((change) => change.sceneId)
+    .map((change) => change.sceneId as string);
+}
+
+function findSceneById(
+  document: ScreenplayDocument,
+  sceneId: string
+): Scene | null {
+  for (const act of document.acts) {
+    for (const sequence of act.sequences) {
+      const scene = sequence.scenes.find((candidate) => candidate.id === sceneId);
+      if (scene) {
+        return scene;
+      }
+    }
+  }
+  return null;
 }
 
 export function buildScreenplayDraftForOperations(

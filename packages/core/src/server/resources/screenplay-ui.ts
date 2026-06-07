@@ -34,7 +34,7 @@ import {
   readScreenplaySequenceFromSession,
 } from '../database/access/screenplay-resource.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
-import { readActiveSceneStoryboardSheetImage } from './scene-storyboard-ui.js';
+import { readSceneStoryboardPreview } from './scene-storyboard-ui.js';
 import type {
   ListNavigationInput,
   ReadCastMemberResourceInput,
@@ -192,11 +192,11 @@ export async function readSequenceResource(
       scenes: {
         ...scenes,
         items: scenes.items.map((scene) => {
-          const storyboardSheet = readActiveSceneStoryboardSheetImage(
+          const storyboardPreview = readSceneStoryboardPreview(
             session,
             scene.id
           );
-          return storyboardSheet ? { ...scene, storyboardSheet } : scene;
+          return storyboardPreview ? { ...scene, storyboardPreview } : scene;
         }),
       },
     };

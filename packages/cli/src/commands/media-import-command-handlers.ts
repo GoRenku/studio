@@ -3,7 +3,7 @@ import {
   type LocationEnvironmentSheetMediaImportReport,
   type LookbookImageMediaImportReport,
   type LookbookSheetMediaImportReport,
-  type SceneStoryboardSheetImportReport,
+  type SceneStoryboardImagesImportReport,
   type ShotVideoTakeInputMediaImportReport,
   type ShotVideoTakeMediaImportReport,
 } from '@gorenku/studio-core/server';
@@ -11,7 +11,7 @@ import { StructuredError } from '@gorenku/studio-diagnostics';
 import {
   readLocationEnvironmentSheetImportDocument,
   readReceipt,
-  readSceneStoryboardSheetImportDocument,
+  readSceneStoryboardImagesImportDocument,
 } from './media-import-documents.js';
 import {
   appendStudioResourceChangedEvent,
@@ -52,7 +52,7 @@ type MediaImportReport =
   | LookbookSheetMediaImportReport
   | CastMediaImportReport
   | LocationEnvironmentSheetMediaImportReport
-  | SceneStoryboardSheetImportReport
+  | SceneStoryboardImagesImportReport
   | ShotVideoTakeInputMediaImportReport
   | ShotVideoTakeMediaImportReport;
 
@@ -235,25 +235,56 @@ async function importLocationEnvironmentSheet(
 
 async function importSceneStoryboardSheet(
   input: MediaImportPurposeHandlerInput
-): Promise<SceneStoryboardSheetImportReport> {
-  rejectGroupedImportSourceAndReceipt(input.flags, {
-    sourceMessage: 'Scene storyboard sheet import does not accept --source.',
-    sourceSuggestion:
-      'Use --file with a JSON document that lists the original sheet and one sliced image per shot.',
-    receiptMessage: 'Scene storyboard sheet import does not accept --receipt.',
+): Promise<SceneStoryboardImagesImportReport> {
+  rejectReceipt(input.flags, {
+    receiptMessage: 'Scene storyboard image import does not accept --receipt.',
     receiptSuggestion:
-      'The generation receipt stays with the storyboard sheet generation run; import only the grouped image files.',
+      'The generation receipt stays with the temporary storyboard sheet run; import only cropped shot image files.',
   });
-  const document = await readSceneStoryboardSheetImportDocument(
-    requiredFlag(input.flags.file, '--file')
-  );
-  return input.runtime.projectDataService.importSceneStoryboardSheetMedia({
+  const sceneId = parseSceneTarget(input.target, 'Scene storyboard image import');
+  const shotListId = requiredFlag(input.flags.shotList, '--shot-list');
+  if (input.flags.file && input.flags.source) {
+    throw new StructuredError({
+      code: 'CLI030',
+      message: 'Scene storyboard image import cannot combine --file and --source.',
+      suggestion:
+        'Use --source plus --shots for one cropped image, or --file for multiple cropped images.',
+    });
+  }
+  const document = input.flags.file
+    ? await readSceneStoryboardImagesImportDocument(input.flags.file)
+    : {
+        kind: 'sceneStoryboardImagesImport' as const,
+        shotListId,
+        shots: [
+          {
+            shotId: parseSingleShot(input.flags.shots),
+            source: requiredFlag(input.flags.source, '--source'),
+            ...(input.flags.title ? { title: input.flags.title } : {}),
+            sourcePurpose: 'scene.storyboard-sheet' as const,
+          },
+        ],
+      };
+  return input.runtime.projectDataService.importSceneStoryboardImagesMedia({
     ...mediaImportProjectInput(input.runtime),
-    sceneId: parseSceneTarget(input.target, 'Scene storyboard sheet import'),
-    shotListId: requiredFlag(input.flags.shotList, '--shot-list'),
+    sceneId,
+    shotListId,
     document,
-    title: input.flags.title ?? document.title ?? document.sheets?.[0]?.title,
+    title: input.flags.title ?? document.title,
   });
+}
+
+function parseSingleShot(value: string | undefined): string {
+  const shots = parseShots(requiredFlag(value, '--shots'));
+  if (shots.length !== 1) {
+    throw new StructuredError({
+      code: 'CLI031',
+      message: 'Single-source storyboard image import requires exactly one shot id.',
+      suggestion:
+        'Use --shots <shot-id> with --source, or use --file for multiple cropped images.',
+    });
+  }
+  return shots[0]!;
 }
 
 async function importShotFirstFrame(
@@ -350,6 +381,22 @@ function rejectGroupedImportSourceAndReceipt(
       suggestion: messages.sourceSuggestion,
     });
   }
+  if (flags.receipt) {
+    throw new StructuredError({
+      code: 'CLI028',
+      message: messages.receiptMessage,
+      suggestion: messages.receiptSuggestion,
+    });
+  }
+}
+
+function rejectReceipt(
+  flags: MediaCommandFlags,
+  messages: {
+    receiptMessage: string;
+    receiptSuggestion: string;
+  }
+): void {
   if (flags.receipt) {
     throw new StructuredError({
       code: 'CLI028',

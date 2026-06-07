@@ -1,5 +1,6 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import type {
+  SceneShot,
   SceneShotListDocument,
   SceneShotListSummary,
 } from '../../../client/scene-shot-list.js';
@@ -9,7 +10,6 @@ import {
   sceneShotLists,
   sceneShotListState,
   sceneShotStoryboardImages,
-  sceneShotStoryboardSheets,
 } from '../../schema/index.js';
 import {
   parseStoredSceneShotListDocument,
@@ -19,8 +19,6 @@ import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type SceneShotListRecord = typeof sceneShotLists.$inferSelect;
 export type SceneShotListStateRecord = typeof sceneShotListState.$inferSelect;
-export type SceneShotStoryboardSheetRecord =
-  typeof sceneShotStoryboardSheets.$inferSelect;
 export type SceneShotStoryboardImageRecord =
   typeof sceneShotStoryboardImages.$inferSelect;
 
@@ -86,6 +84,7 @@ export function writeSceneShotListRecord(input: {
   screenplay: ScreenplayDocument;
   now: string;
   filePath?: string;
+  baseShotListId?: string | null;
 }): SceneShotListRecord {
   const document = serializeSceneShotListDocument({
     document: input.document,
@@ -216,45 +215,17 @@ export function setActiveSceneShotListRecord(
     .run();
 }
 
-export function insertSceneShotStoryboardSheetRecord(
-  session: DatabaseSession,
-  input: {
-    id: string;
-    shotListId: string;
-    assetId: string;
-    sheetFileId: string;
-    now: string;
-  }
-): SceneShotStoryboardSheetRecord {
-  session.db
-    .insert(sceneShotStoryboardSheets)
-    .values({
-      id: input.id,
-      shotListId: input.shotListId,
-      assetId: input.assetId,
-      sheetFileId: input.sheetFileId,
-      createdAt: input.now,
-      updatedAt: input.now,
-    })
-    .run();
-  const sheet = readSceneShotStoryboardSheetRecord(session, input.id);
-  if (!sheet) {
-    throw new ProjectDataError(
-      'PROJECT_DATA323',
-      `Scene storyboard sheet was not found after insert: ${input.id}.`
-    );
-  }
-  return sheet;
-}
-
 export function insertSceneShotStoryboardImageRecord(
   session: DatabaseSession,
   input: {
     id: string;
-    storyboardSheetId: string;
+    sceneId: string;
+    shotListId: string;
     shotId: string;
+    assetId: string;
     assetFileId: string;
-    position: number;
+    sourcePurpose: string;
+    shotContentFingerprint: string;
     now: string;
   }
 ): SceneShotStoryboardImageRecord {
@@ -262,10 +233,13 @@ export function insertSceneShotStoryboardImageRecord(
     .insert(sceneShotStoryboardImages)
     .values({
       id: input.id,
-      storyboardSheetId: input.storyboardSheetId,
+      sceneId: input.sceneId,
+      shotListId: input.shotListId,
       shotId: input.shotId,
+      assetId: input.assetId,
       assetFileId: input.assetFileId,
-      position: input.position,
+      sourcePurpose: input.sourcePurpose,
+      shotContentFingerprint: input.shotContentFingerprint,
       createdAt: input.now,
       updatedAt: input.now,
     })
@@ -278,19 +252,6 @@ export function insertSceneShotStoryboardImageRecord(
     );
   }
   return image;
-}
-
-export function readSceneShotStoryboardSheetRecord(
-  session: DatabaseSession,
-  id: string
-): SceneShotStoryboardSheetRecord | null {
-  return (
-    session.db
-      .select()
-      .from(sceneShotStoryboardSheets)
-      .where(eq(sceneShotStoryboardSheets.id, id))
-      .get() ?? null
-  );
 }
 
 export function readSceneShotStoryboardImageRecord(
@@ -306,62 +267,89 @@ export function readSceneShotStoryboardImageRecord(
   );
 }
 
-export function listSceneShotStoryboardSheetRecords(
-  session: DatabaseSession,
-  shotListId: string
-): SceneShotStoryboardSheetRecord[] {
-  return session.db
-    .select()
-    .from(sceneShotStoryboardSheets)
-    .where(eq(sceneShotStoryboardSheets.shotListId, shotListId))
-    .orderBy(
-      desc(sceneShotStoryboardSheets.createdAt),
-      desc(sceneShotStoryboardSheets.id)
-    )
-    .all();
-}
-
 export function listSceneShotStoryboardImageRecords(
   session: DatabaseSession,
-  storyboardSheetId: string
+  input: { shotListId: string }
 ): SceneShotStoryboardImageRecord[] {
   return session.db
     .select()
     .from(sceneShotStoryboardImages)
-    .where(eq(sceneShotStoryboardImages.storyboardSheetId, storyboardSheetId))
-    .orderBy(asc(sceneShotStoryboardImages.position), asc(sceneShotStoryboardImages.id))
+    .where(eq(sceneShotStoryboardImages.shotListId, input.shotListId))
+    .orderBy(
+      desc(sceneShotStoryboardImages.createdAt),
+      desc(sceneShotStoryboardImages.id)
+    )
     .all();
 }
 
-export function readSceneShotStoryboardSheetByAssetId(
+export function readSceneShotStoryboardImageByAssetId(
   session: DatabaseSession,
   assetId: string
-): SceneShotStoryboardSheetRecord | null {
+): SceneShotStoryboardImageRecord | null {
   return (
     session.db
       .select()
-      .from(sceneShotStoryboardSheets)
-      .where(eq(sceneShotStoryboardSheets.assetId, assetId))
+      .from(sceneShotStoryboardImages)
+      .where(eq(sceneShotStoryboardImages.assetId, assetId))
       .get() ?? null
   );
 }
 
-export function deleteSceneShotStoryboardSheetByAssetId(
+export function deleteSceneShotStoryboardImageByAssetId(
   session: DatabaseSession,
   assetId: string
 ): void {
-  const sheet = readSceneShotStoryboardSheetByAssetId(session, assetId);
-  if (!sheet) {
-    return;
-  }
   session.db
     .delete(sceneShotStoryboardImages)
-    .where(eq(sceneShotStoryboardImages.storyboardSheetId, sheet.id))
+    .where(eq(sceneShotStoryboardImages.assetId, assetId))
     .run();
-  session.db
-    .delete(sceneShotStoryboardSheets)
-    .where(eq(sceneShotStoryboardSheets.id, sheet.id))
-    .run();
+}
+
+export function readLatestSceneShotStoryboardImage(input: {
+  session: DatabaseSession;
+  shotListId: string;
+  shotId: string;
+}): SceneShotStoryboardImageRecord | null {
+  return (
+    input.session.db
+      .select()
+      .from(sceneShotStoryboardImages)
+      .where(
+        and(
+          eq(sceneShotStoryboardImages.shotListId, input.shotListId),
+          eq(sceneShotStoryboardImages.shotId, input.shotId)
+        )
+      )
+      .orderBy(
+        desc(sceneShotStoryboardImages.createdAt),
+        desc(sceneShotStoryboardImages.id)
+      )
+      .get() ?? null
+  );
+}
+
+export function shotContentFingerprint(shot: SceneShot): string {
+  return JSON.stringify({
+    title: shot.title,
+    storyBeat: shot.storyBeat,
+    narrativePurpose: shot.narrativePurpose,
+    description: shot.description,
+    shotType: shot.shotType,
+    cameraAngle: shot.cameraAngle ?? null,
+    cameraMovement: shot.cameraMovement ?? null,
+    framing: shot.framing ?? null,
+    lensIntent: shot.lensIntent ?? null,
+    aspectRatio: shot.aspectRatio ?? null,
+    subject: shot.subject,
+    action: shot.action,
+    dialogue: shot.dialogue,
+    coveredBlockIndexes: shot.coveredBlockIndexes,
+    castMemberIds: shot.castMemberIds,
+    locationIds: shot.locationIds,
+    audioNotes: shot.audioNotes ?? null,
+    productionNotes: shot.productionNotes ?? null,
+    shotSpecs: shot.shotSpecs ?? null,
+  });
 }
 
 export function assertShotIdsExistInShotList(input: {
@@ -399,7 +387,16 @@ export function toSceneShotListSummary(input: {
     createdAt: input.row.createdAt,
     updatedAt: input.row.updatedAt,
     isActive: input.activeShotListId === input.row.id,
+    baseShotListId: readBaseShotListId(document),
   };
+}
+
+function readBaseShotListId(
+  document: SceneShotListDocument
+): string | null | undefined {
+  const value = (document as unknown as { baseShotListId?: unknown })
+    .baseShotListId;
+  return typeof value === 'string' ? value : null;
 }
 
 export function requireSceneShotListForScene(input: {

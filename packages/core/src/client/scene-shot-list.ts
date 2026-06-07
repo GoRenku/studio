@@ -7,12 +7,73 @@ export interface SceneShotListDocument {
   title: string;
   summary: string;
   coverageStrategy: string;
+  baseShotListId?: string | null;
   lookbookInfluence?: string;
   shots: SceneShot[];
   videoTakeRailGroups?: ShotVideoTakeRailGroup[];
   videoTakeProductionGroups?: ShotVideoTakeProductionGroup[];
   openQuestions?: string[];
 }
+
+export interface SceneShotListOperationDocument {
+  kind: 'sceneShotListOperations';
+  sceneId: string;
+  baseShotListId: string;
+  activate: boolean;
+  title?: string;
+  summary?: string;
+  coverageStrategy?: string;
+  lookbookInfluence?: string;
+  operations: SceneShotListOperation[];
+  openQuestions?: string[];
+}
+
+export type SceneShotListOperation =
+  | SceneShotListInsertShotsOperation
+  | SceneShotListReplaceShotsOperation
+  | SceneShotListUpdateShotOperation
+  | SceneShotListDeleteShotsOperation
+  | SceneShotListReplaceAllShotsOperation;
+
+export interface SceneShotListInsertShotsOperation {
+  operation: 'shots.insert';
+  placement:
+    | { position: 'start' }
+    | { position: 'end' }
+    | { position: 'before'; shotId: string }
+    | { position: 'after'; shotId: string };
+  shots: SceneShot[];
+  storyboardPolicy?: SceneShotListStoryboardPolicy;
+}
+
+export interface SceneShotListReplaceShotsOperation {
+  operation: 'shots.replace';
+  shotIds: string[];
+  shots: SceneShot[];
+  storyboardPolicy?: SceneShotListStoryboardPolicy;
+}
+
+export interface SceneShotListUpdateShotOperation {
+  operation: 'shot.update';
+  shot: SceneShot;
+  storyboardPolicy?: SceneShotListStoryboardPolicy;
+}
+
+export interface SceneShotListDeleteShotsOperation {
+  operation: 'shots.delete';
+  shotIds: string[];
+}
+
+export interface SceneShotListReplaceAllShotsOperation {
+  operation: 'shotList.replace';
+  shots: SceneShot[];
+  storyboardPolicy?: SceneShotListStoryboardPolicy;
+}
+
+export type SceneShotListStoryboardPolicy =
+  | 'generate'
+  | 'reuse-if-unchanged'
+  | 'missing-only';
 
 export type ShotVideoTakeInputModeId =
   | 'text-only'
@@ -329,6 +390,7 @@ export interface SceneShotListSummary {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
+  baseShotListId?: string | null;
 }
 
 export interface SceneShotListCommandReport {
@@ -445,39 +507,76 @@ export interface SceneShotListWriteReport extends SceneShotListCommandReport {
   changes: SceneShotListChange[];
 }
 
-export interface SceneStoryboardSheetImportDocument {
-  kind: 'sceneStoryboardSheetImport';
-  title?: string;
-  sheets: SceneStoryboardSheetImportSheet[];
+export interface SceneShotListApplyReport extends SceneShotListCommandReport {
+  sceneId: string;
+  baseShotListId: string;
+  createdShotListId: string;
+  activatedShotListId: string | null;
+  shotList: SceneShotListSummary;
+  changes: SceneShotListApplyChange[];
+  storyboard: SceneShotListStoryboardStatus;
+  prunedVideoTakeRailGroupIds: string[];
+  prunedVideoTakeProductionGroupIds: string[];
 }
 
-export interface SceneStoryboardSheetImportSheet {
-  source: string;
-  title?: string;
-  shots: SceneStoryboardSheetImportShot[];
+export interface SceneShotListApplyChange {
+  type: 'inserted' | 'removed' | 'updated' | 'preserved';
+  shotIds: string[];
 }
 
-export interface SceneStoryboardSheetImportShot {
+export interface SceneShotListStoryboardStatus
+  extends SceneShotListCommandReport {
+  sceneId: string;
+  shotListId: string;
+  shots: SceneShotListStoryboardShotStatus[];
+  missingShotIds: string[];
+  staleShotIds: string[];
+  readyShotIds: string[];
+}
+
+export interface SceneShotListStoryboardShotStatus {
+  shotId: string;
+  image: null | {
+    storyboardImageId: string;
+    assetId: string;
+    assetFileId: string;
+    sourcePurpose: string;
+    isCurrentForShot: boolean;
+    simulated?: boolean;
+  };
+  needsStoryboardImage: boolean;
+  reason?: 'missing' | 'shot-changed' | 'narrative-changed';
+}
+
+export interface SceneStoryboardImagesImportDocument {
+  kind: 'sceneStoryboardImagesImport';
+  title?: string;
+  shotListId: string;
+  shots: SceneStoryboardImagesImportShot[];
+}
+
+export interface SceneStoryboardImagesImportShot {
   shotId: string;
   source: string;
   title?: string;
+  sourcePurpose?: 'scene.storyboard-sheet';
+  sourceSpecId?: string;
+  sourceRunId?: string;
 }
 
-export interface SceneStoryboardSheetImportedFile {
-  role: 'sheet' | 'shot';
-  sheetIndex?: number;
+export interface SceneStoryboardImagesImportedFile {
+  role: 'storyboard_image';
   shotId?: string;
   projectRelativePath: string;
 }
 
-export interface SceneStoryboardSheetImportReport
+export interface SceneStoryboardImagesImportReport
   extends SceneShotListCommandReport {
   changes: Array<{ type: string; [key: string]: string }>;
   purpose: 'scene.storyboard-sheet';
   target: { kind: 'scene'; id: string };
   shotListId: string;
-  storyboardSheetId: string;
-  storyboardSheetIds: string[];
-  imported: import('./assets.js').Asset;
-  files: SceneStoryboardSheetImportedFile[];
+  storyboardImageIds: string[];
+  imported: import('./assets.js').Asset[];
+  files: SceneStoryboardImagesImportedFile[];
 }

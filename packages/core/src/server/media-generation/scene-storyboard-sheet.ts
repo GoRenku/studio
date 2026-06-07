@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
+  Asset,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -9,7 +10,7 @@ import type {
   ProjectRelativePath,
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
-  SceneStoryboardSheetImportReport,
+  SceneStoryboardImagesImportReport,
   SceneStoryboardSheetModelChoice,
   SceneStoryboardSheetModelChoiceReport,
   SceneStoryboardSheetModelListReport,
@@ -23,14 +24,13 @@ import { insertAssetRecord } from '../database/access/assets.js';
 import {
   insertAssetRelationshipRecord,
   nextAssetRelationshipSortOrder,
-  readAssetRelationship,
 } from '../database/access/asset-relationships/index.js';
 import {
   assertShotIdsExistInShotList,
   insertSceneShotStoryboardImageRecord,
-  insertSceneShotStoryboardSheetRecord,
   readSceneShotListDocument,
   requireSceneShotListForScene,
+  shotContentFingerprint,
 } from '../database/access/scene-shot-lists.js';
 import {
   insertMediaGenerationRun,
@@ -62,7 +62,7 @@ import {
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
-  ImportSceneStoryboardSheetMediaInput,
+  ImportSceneStoryboardImagesMediaInput,
   ReadSceneStoryboardSheetGenerationContextInput,
   ReadMediaGenerationSpecInput,
   RecordMediaGenerationRunInput,
@@ -400,9 +400,9 @@ export async function recordSceneStoryboardSheetRun(
   return { run };
 }
 
-export async function importSceneStoryboardSheetMedia(
-  input: ImportSceneStoryboardSheetMediaInput
-): Promise<SceneStoryboardSheetImportReport> {
+export async function importSceneStoryboardImagesMedia(
+  input: ImportSceneStoryboardImagesMediaInput
+): Promise<SceneStoryboardImagesImportReport> {
   return withSceneProjectSession(input, async ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
     const shotListRow = requireSceneShotListForScene({
@@ -412,18 +412,22 @@ export async function importSceneStoryboardSheetMedia(
     });
     const shotList = readSceneShotListDocument({ row: shotListRow, screenplay });
     const normalized = normalizeImportDocument(input.document);
-    const normalizedShots = normalized.sheets.flatMap((sheet) => sheet.shots);
+    if (normalized.shotListId !== input.shotListId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA337',
+        'Storyboard image import document shotListId does not match --shot-list.',
+        { suggestion: 'Use the same shot-list id in the command and import document.' }
+      );
+    }
     assertShotIdsExistInShotList({
       shotList,
-      shotIds: normalizedShots.map((shot) => shot.shotId),
+      shotIds: normalized.shots.map((shot) => shot.shotId),
     });
-    validateImportSelectedShots(normalized.sheets);
-    await validateImportSourceFiles(projectFolder, [
-      ...normalized.sheets.flatMap((sheet) => [
-        sheet.source,
-        ...sheet.shots.map((shot) => shot.source),
-      ]),
-    ]);
+    validateImportSelectedShots(normalized.shots);
+    await validateImportSourceFiles(
+      projectFolder,
+      normalized.shots.map((shot) => shot.source)
+    );
     const now = new Date().toISOString();
     const destinationFolder = await allocateSceneStoryboardFolder({
       projectFolder,
@@ -431,42 +435,27 @@ export async function importSceneStoryboardSheetMedia(
       title:
         input.title ??
         normalized.title ??
-        normalized.sheets[0]?.title ??
-        'Scene storyboard sheet',
+        normalized.shots[0]?.title ??
+        'Scene storyboard images',
     });
-    const copied = await copySceneStoryboardFiles({
+    const copied = await copySceneStoryboardImageFiles({
       projectFolder,
       document: normalized,
       destinationFolder,
       shotList,
     });
-    const imported = await insertImportedSceneStoryboardSheet({
+    const imported = await insertImportedSceneStoryboardImages({
       session,
       sceneId: input.sceneId,
       shotListId: input.shotListId,
       destinationFolder,
+      shotList,
       files: copied,
-      title: input.title ?? normalized.title ?? normalized.sheets[0]?.title,
-      origin: inferImportOrigin([
-        ...normalized.sheets.flatMap((sheet) => [
-          sheet.source,
-          ...sheet.shots.map((shot) => shot.source),
-        ]),
-      ]),
+      title: input.title ?? normalized.title,
+      origin: inferImportOrigin(normalized.shots.map((shot) => shot.source)),
       idGenerator: input.idGenerator,
       now,
     });
-    const target = { kind: 'scene' as const, sceneId: input.sceneId };
-    const asset = readAssetRelationship(session, {
-      target,
-      assetId: imported.assetId,
-    });
-    if (!asset) {
-      throw new ProjectDataError(
-        'PROJECT_DATA334',
-        `Asset ${imported.assetId} is not attached to the requested scene.`
-      );
-    }
     return {
       valid: true,
       warnings: [],
@@ -477,7 +466,7 @@ export async function importSceneStoryboardSheetMedia(
       },
       changes: [
         {
-          type: 'scene.storyboardSheetImported',
+          type: 'scene.storyboardImagesImported',
           sceneId: input.sceneId,
           shotListId: input.shotListId,
         },
@@ -485,20 +474,17 @@ export async function importSceneStoryboardSheetMedia(
       purpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
       target: { kind: 'scene', id: input.sceneId },
       shotListId: input.shotListId,
-      storyboardSheetId: imported.storyboardSheetIds[0] ?? '',
-      storyboardSheetIds: imported.storyboardSheetIds,
-      imported: asset,
+      storyboardImageIds: imported.storyboardImageIds,
+      imported: imported.assets,
       files: copied.map((file) => ({
         role: file.role,
         ...(file.shotId ? { shotId: file.shotId } : {}),
-        ...(file.sheetIndex ? { sheetIndex: file.sheetIndex } : {}),
         projectRelativePath: file.projectRelativePath,
       })),
       resourceKeys: sceneShotListResourceKeys({
         sceneId: input.sceneId,
         shotListId: input.shotListId,
-        storyboardSheetIds: imported.storyboardSheetIds,
-        shotIds: normalizedShots.map((shot) => shot.shotId),
+        shotIds: normalized.shots.map((shot) => shot.shotId),
       }),
     };
   });
@@ -987,6 +973,9 @@ function buildProviderPrompt(
     '',
     `Create one ${resolvedSheetFrame(spec)} storyboard sheet as a single finished image.`,
     `Arrange ${selectedShots.length} clean ${shotFrame} ${orientationForFrame(shotFrame)} storyboard panel${selectedShots.length === 1 ? '' : 's'} in shot-list order.`,
+    selectedShots.length < 4
+      ? `Leave the remaining ${4 - selectedShots.length} unused panel slot${4 - selectedShots.length === 1 ? '' : 's'} empty; do not invent filler shots.`
+      : 'Fill all four panel slots with the selected shots.',
     `Each panel is a clean ${shotFrame} ${orientationForFrame(shotFrame)} storyboard frame.`,
     'Use hand-drawn graphite pencil and light ink on warm off-white paper, with subtle gray/beige washes, visible sketch construction, readable staging, and production-board clarity.',
     'Use rounded white panel cards with dark gutters or a considered dark presentation surround.',
@@ -1100,65 +1089,52 @@ async function resolveSceneGenerationOutputPaths(
 }
 
 function normalizeImportDocument(
-  document: ImportSceneStoryboardSheetMediaInput['document']
+  document: ImportSceneStoryboardImagesMediaInput['document']
 ) {
-  if (document.kind !== 'sceneStoryboardSheetImport') {
+  if (document.kind !== 'sceneStoryboardImagesImport') {
     throw new ProjectDataError(
       'PROJECT_DATA335',
-      'Storyboard sheet import document kind must be sceneStoryboardSheetImport.'
+      'Storyboard image import document kind must be sceneStoryboardImagesImport.'
     );
   }
-  const sheets = (document as unknown as { sheets?: typeof document.sheets })
-    .sheets;
-  if (!Array.isArray(sheets)) {
+  if (!Array.isArray(document.shots)) {
     throw new ProjectDataError(
       'PROJECT_DATA335',
-      'Storyboard sheet import document must include sheets[].'
+      'Storyboard image import document must include shots[].'
     );
   }
   return {
     title: document.title,
-    sheets: sheets.map((sheet) => ({
-      source: normalizeProjectRelativePath(sheet.source),
-      title: sheet.title,
-      shots: sheet.shots.map((shot) => ({
-        shotId: shot.shotId,
-        source: normalizeProjectRelativePath(shot.source),
-        title: shot.title,
-      })),
+    shotListId: document.shotListId,
+    shots: document.shots.map((shot) => ({
+      shotId: shot.shotId,
+      source: normalizeProjectRelativePath(shot.source),
+      title: shot.title,
+      sourcePurpose: shot.sourcePurpose ?? SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+      sourceSpecId: shot.sourceSpecId,
+      sourceRunId: shot.sourceRunId,
     })),
   };
 }
 
 function validateImportSelectedShots(
-  sheets: Array<{
-    source: ProjectRelativePath;
-    shots: Array<{ shotId: string; source: ProjectRelativePath }>;
-  }>
+  shots: Array<{ shotId: string; source: ProjectRelativePath }>
 ): void {
-  if (sheets.length === 0) {
+  if (shots.length === 0) {
     throw new ProjectDataError(
       'PROJECT_DATA337',
-      'Storyboard sheet import requires at least one sheet.'
+      'Storyboard image import requires at least one cropped shot image.'
     );
   }
   const sourcesByShotId = new Map<string, ProjectRelativePath>();
-  for (const [sheetIndex, sheet] of sheets.entries()) {
-    if (sheet.shots.length === 0) {
+  for (const shot of shots) {
+    if (sourcesByShotId.has(shot.shotId)) {
       throw new ProjectDataError(
-        'PROJECT_DATA337',
-        `Storyboard sheet import sheet ${sheetIndex + 1} requires at least one cropped shot image.`
+        'PROJECT_DATA336',
+        `Storyboard image import repeats shot id: ${shot.shotId}.`
       );
     }
-    for (const shot of sheet.shots) {
-      if (sourcesByShotId.has(shot.shotId)) {
-        throw new ProjectDataError(
-          'PROJECT_DATA336',
-          `Storyboard sheet import repeats shot id: ${shot.shotId}.`
-        );
-      }
-      sourcesByShotId.set(shot.shotId, shot.source);
-    }
+    sourcesByShotId.set(shot.shotId, shot.source);
   }
 }
 
@@ -1171,7 +1147,7 @@ async function validateImportSourceFiles(
     if (seen.has(file)) {
       throw new ProjectDataError(
         'PROJECT_DATA338',
-        `Storyboard sheet import reuses a source file: ${file}.`
+        `Storyboard image import reuses a source file: ${file}.`
       );
     }
     seen.add(file);
@@ -1181,21 +1157,20 @@ async function validateImportSourceFiles(
     if (!isImagePath(file)) {
       throw new ProjectDataError(
         'PROJECT_DATA339',
-        `Storyboard sheet import file must be an image: ${file}.`
+        `Storyboard image import file must be an image: ${file}.`
       );
     }
   }
 }
 
-async function copySceneStoryboardFiles(input: {
+async function copySceneStoryboardImageFiles(input: {
   projectFolder: string;
   document: ReturnType<typeof normalizeImportDocument>;
   destinationFolder: ProjectRelativePath;
   shotList: ReturnType<typeof readSceneShotListDocument>;
 }): Promise<
   Array<{
-    role: 'sheet' | 'shot';
-    sheetIndex?: number;
+    role: 'storyboard_image';
     shotId?: string;
     projectRelativePath: ProjectRelativePath;
     mimeType: string;
@@ -1204,72 +1179,38 @@ async function copySceneStoryboardFiles(input: {
   }>
 > {
   const copied = [];
-  const selectedShotIds = new Set(
-    input.document.sheets.flatMap((sheet) =>
-      sheet.shots.map((shot) => shot.shotId)
-    )
-  );
   const shotPositions = new Map(
-    input.shotList.shots
-      .filter((shot) => selectedShotIds.has(shot.shotId))
-      .map((shot, index) => [shot.shotId, index + 1])
+    input.shotList.shots.map((shot, index) => [shot.shotId, index + 1])
   );
-  for (const [sheetIndex, sheet] of input.document.sheets.entries()) {
+  for (const shot of input.document.shots) {
+    const position = shotPositions.get(shot.shotId);
+    if (!position) {
+      throw new ProjectDataError(
+        'PROJECT_DATA337',
+        `Storyboard image import is missing a shot-list position for shot id: ${shot.shotId}.`
+      );
+    }
     copied.push(
       await copyStoryboardFile({
         projectFolder: input.projectFolder,
-        source: sheet.source,
+        source: shot.source,
         destination: joinProjectRelativePath(
           input.destinationFolder,
-          sheetFileName(sheet.source, sheetIndex, input.document.sheets.length)
+          `shot-${String(position).padStart(2, '0')}${extensionForSource(shot.source)}`
         ),
-        role: 'sheet',
-        sheetIndex: sheetIndex + 1,
+        role: 'storyboard_image',
+        shotId: shot.shotId,
       })
     );
-    for (const shot of sheet.shots) {
-      const position = shotPositions.get(shot.shotId);
-      if (!position) {
-        throw new ProjectDataError(
-          'PROJECT_DATA337',
-          `Storyboard sheet import is missing a shot-list position for shot id: ${shot.shotId}.`
-        );
-      }
-      copied.push(
-        await copyStoryboardFile({
-          projectFolder: input.projectFolder,
-          source: shot.source,
-          destination: joinProjectRelativePath(
-            input.destinationFolder,
-            `shot-${String(position).padStart(2, '0')}${extensionForSource(shot.source)}`
-          ),
-          role: 'shot',
-          sheetIndex: sheetIndex + 1,
-          shotId: shot.shotId,
-        })
-      );
-    }
   }
   return copied;
-}
-
-function sheetFileName(
-  source: ProjectRelativePath,
-  sheetIndex: number,
-  sheetCount: number
-): string {
-  const extension = extensionForSource(source);
-  return sheetCount === 1
-    ? `sheet${extension}`
-    : `sheet-${String(sheetIndex + 1).padStart(2, '0')}${extension}`;
 }
 
 async function copyStoryboardFile(input: {
   projectFolder: string;
   source: ProjectRelativePath;
   destination: ProjectRelativePath;
-  role: 'sheet' | 'shot';
-  sheetIndex?: number;
+  role: 'storyboard_image';
   shotId?: string;
 }) {
   const sourcePath = resolveProjectRelativePath(input.projectFolder, input.source);
@@ -1285,7 +1226,6 @@ async function copyStoryboardFile(input: {
   const stats = await statExistingFile(destinationPath);
   return {
     role: input.role,
-    ...(input.sheetIndex ? { sheetIndex: input.sheetIndex } : {}),
     ...(input.shotId ? { shotId: input.shotId } : {}),
     projectRelativePath: input.destination,
     mimeType: mimeTypeForPath(input.destination),
@@ -1294,40 +1234,58 @@ async function copyStoryboardFile(input: {
   };
 }
 
-async function insertImportedSceneStoryboardSheet(input: {
+async function insertImportedSceneStoryboardImages(input: {
   session: DatabaseSession;
   sceneId: string;
   shotListId: string;
   destinationFolder: ProjectRelativePath;
-  files: Awaited<ReturnType<typeof copySceneStoryboardFiles>>;
+  shotList: ReturnType<typeof readSceneShotListDocument>;
+  files: Awaited<ReturnType<typeof copySceneStoryboardImageFiles>>;
   title?: string;
   origin: string;
   idGenerator?: ProjectIdGenerator;
   now: string;
-}) {
+}): Promise<{ storyboardImageIds: string[]; assets: Asset[] }> {
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-  const assetId = ids('asset');
-  const storyboardSheetIds: string[] = [];
+  const storyboardImageIds: string[] = [];
+  const assets: Asset[] = [];
   input.session.db.transaction((tx) => {
     const txSession = { ...input.session, db: tx };
-    insertAssetRecord(txSession, {
-      id: assetId,
-      type: 'scene_storyboard_sheet',
-      mediaKind: 'image',
-      title: input.title?.trim() || path.basename(input.destinationFolder),
-      origin: input.origin,
-      availability: 'ready',
-      createdAt: input.now,
-      updatedAt: input.now,
-    });
-    const assetFileIds = new Map<string, string>();
     for (const file of input.files) {
+      if (!file.shotId) {
+        throw new ProjectDataError(
+          'PROJECT_DATA340',
+          'Storyboard image file is missing its shot id.'
+        );
+      }
+      const shot = input.shotList.shots.find(
+        (candidate) => candidate.shotId === file.shotId
+      );
+      if (!shot) {
+        throw new ProjectDataError(
+          'PROJECT_DATA337',
+          `Storyboard image import references a missing shot id: ${file.shotId}.`
+        );
+      }
+      const assetId = ids('asset');
       const assetFileId = ids('asset_file');
-      assetFileIds.set(importedFileKey(file), assetFileId);
+      const relationshipId = ids('scene_asset');
+      const title =
+        input.title?.trim() || shot.title || path.basename(file.projectRelativePath);
+      insertAssetRecord(txSession, {
+        id: assetId,
+        type: 'scene_storyboard_image',
+        mediaKind: 'image',
+        title,
+        origin: input.origin,
+        availability: 'ready',
+        createdAt: input.now,
+        updatedAt: input.now,
+      });
       insertAssetFileRecord(txSession, {
         id: assetFileId,
         assetId,
-        role: file.role,
+        role: 'storyboard_image',
         projectRelativePath: file.projectRelativePath,
         mediaKind: 'image',
         mimeType: file.mimeType,
@@ -1336,86 +1294,66 @@ async function insertImportedSceneStoryboardSheet(input: {
         createdAt: input.now,
         updatedAt: input.now,
       });
-    }
-    const sheetFiles = input.files.filter((file) => file.role === 'sheet');
-    for (const sheetFile of sheetFiles) {
-      if (!sheetFile.sheetIndex) {
-        throw new ProjectDataError(
-          'PROJECT_DATA340',
-          'Storyboard sheet file is missing its sheet index.'
-        );
-      }
-      const sheet = insertSceneShotStoryboardSheetRecord(txSession, {
-        id: ids('scene_shot_storyboard_sheet'),
+      const storyboardImage = insertSceneShotStoryboardImageRecord(txSession, {
+        id: ids('scene_shot_storyboard_image'),
+        sceneId: input.sceneId,
         shotListId: input.shotListId,
         assetId,
-        sheetFileId: requireImportedFileId(
-          assetFileIds,
-          importedFileKey(sheetFile)
-        ),
+        shotId: file.shotId,
+        assetFileId,
+        sourcePurpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+        shotContentFingerprint: shotContentFingerprint(shot),
         now: input.now,
       });
-      storyboardSheetIds.push(sheet.id);
-      const shotFiles = input.files.filter(
-        (file) => file.role === 'shot' && file.sheetIndex === sheetFile.sheetIndex
-      );
-      shotFiles.forEach((file, index) => {
-        if (!file.shotId) {
-          throw new ProjectDataError(
-            'PROJECT_DATA340',
-            'Storyboard shot file is missing its shot id.'
-          );
-        }
-        insertSceneShotStoryboardImageRecord(txSession, {
-          id: ids('scene_shot_storyboard_image'),
-          storyboardSheetId: sheet.id,
-          shotId: file.shotId,
-          assetFileId: requireImportedFileId(assetFileIds, importedFileKey(file)),
-          position: index + 1,
-          now: input.now,
-        });
+      storyboardImageIds.push(storyboardImage.id);
+      const target = { kind: 'scene' as const, sceneId: input.sceneId };
+      const sortOrder = nextAssetRelationshipSortOrder(txSession, {
+        target,
+        role: 'storyboard_image',
+        localeId: null,
+      });
+      insertAssetRelationshipRecord(txSession, target, {
+        relationshipId,
+        assetId,
+        localeId: null,
+        role: 'storyboard_image',
+        sortOrder,
+        now: input.now,
+      });
+      assets.push({
+        assetId,
+        relationshipId,
+        target,
+        localeId: null,
+        type: 'scene_storyboard_image',
+        selection: { kind: 'take' },
+        availability: 'ready',
+        mediaKind: 'image',
+        title,
+        oneLineSummary: null,
+        origin: input.origin,
+        role: 'storyboard_image',
+        sortOrder,
+        files: [
+          {
+            id: assetFileId,
+            role: 'storyboard_image',
+            projectRelativePath: file.projectRelativePath,
+            mediaKind: 'image',
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            contentHash: file.contentHash,
+            width: null,
+            height: null,
+            durationSeconds: null,
+          },
+        ],
+        createdAt: input.now,
+        updatedAt: input.now,
       });
     }
-    const target = { kind: 'scene' as const, sceneId: input.sceneId };
-    insertAssetRelationshipRecord(txSession, target, {
-      relationshipId: ids('scene_asset'),
-      assetId,
-      localeId: null,
-      role: 'storyboard_sheet',
-      sortOrder: nextAssetRelationshipSortOrder(txSession, {
-        target,
-        role: 'storyboard_sheet',
-        localeId: null,
-      }),
-      now: input.now,
-    });
   });
-  return { assetId, storyboardSheetIds };
-}
-
-function requireImportedFileId(
-  fileIdsByRole: Map<string, string>,
-  key: string
-): string {
-  const assetFileId = fileIdsByRole.get(key);
-  if (!assetFileId) {
-    throw new ProjectDataError(
-      'PROJECT_DATA340',
-      `Storyboard sheet import did not create a file for ${key}.`
-    );
-  }
-  return assetFileId;
-}
-
-function importedFileKey(input: {
-  role: 'sheet' | 'shot';
-  sheetIndex?: number;
-  shotId?: string;
-}): string {
-  if (input.role === 'sheet') {
-    return `sheet:${input.sheetIndex ?? 1}`;
-  }
-  return `shot:${input.shotId ?? ''}`;
+  return { storyboardImageIds, assets };
 }
 
 async function allocateSceneStoryboardFolder(input: {

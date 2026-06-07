@@ -97,7 +97,6 @@ function resource(): SceneShotListResourceResponse {
     projectAspectRatio: '16:9',
     activeShotListId: 'shot_list_hook',
     activeShotList: shotList(),
-    storyboardSheet: null,
     storyboardImagesByShotId: {},
     castMemberLabels: {},
     locationLabels: {},
