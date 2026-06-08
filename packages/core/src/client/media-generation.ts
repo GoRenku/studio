@@ -2,6 +2,10 @@ import type { GenerationEstimate } from '@gorenku/studio-engines';
 import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { Location } from './locations.js';
+import type {
+  CastDesignSummary,
+  LocationDesignSummary,
+} from './department-design.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type { ProjectRelativePath } from './project.js';
 import type {
@@ -309,6 +313,7 @@ export interface CastCharacterSheetGenerationContext {
   project: CastGenerationProjectContext;
   screenplay: CastGenerationScreenplayContext | null;
   castMember: CastMember;
+  activeCastDesign: CastDesignSummary | null;
   timePeriod: CastGenerationTimePeriodContext;
   activeLookbook: CastGenerationLookbookContext;
   selectedAssets: Asset[];
@@ -332,6 +337,7 @@ export interface CastProfileGenerationContext {
   project: CastGenerationProjectContext;
   screenplay: CastGenerationScreenplayContext | null;
   castMember: CastMember;
+  activeCastDesign: CastDesignSummary | null;
   timePeriod: CastGenerationTimePeriodContext;
   activeLookbook: CastGenerationLookbookContext | null;
   selectedAssets: Asset[];
@@ -357,6 +363,7 @@ export interface LocationEnvironmentSheetGenerationContext {
   project: LocationGenerationProjectContext;
   screenplay: LocationGenerationScreenplayContext | null;
   location: Location;
+  activeLocationDesign: LocationDesignSummary | null;
   usage: LocationGenerationUsageContext;
   activeLookbook: LocationGenerationLookbookContext;
   selectedAssets: Asset[];

@@ -1019,10 +1019,10 @@ describe('scene shot list commands', () => {
   }
 
   async function addFlashbackLocation() {
-    await projectData.applyScreenplayOperations({
+    await projectData.applyLocationOperations({
       homeDir,
       document: {
-        kind: 'screenplayOperations',
+        kind: 'locationOperations',
         operations: [
           {
             operation: 'location.add',

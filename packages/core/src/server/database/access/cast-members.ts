@@ -1,5 +1,10 @@
-import { asc, eq } from 'drizzle-orm';
-import { castMembers } from '../../schema/index.js';
+import { asc, eq, notInArray } from 'drizzle-orm';
+import {
+  castAssets,
+  castDesigns,
+  castDesignState,
+  castMembers,
+} from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export interface CastMemberRecord {
@@ -77,4 +82,95 @@ export function readCastMemberRecord(
       .where(eq(castMembers.id, castMemberId))
       .get() ?? null;
   return row ? { ...row, kind: row.role ?? 'character', shortDescription: row.description } : null;
+}
+
+export interface CastMemberAuthoringRecord {
+  id: string;
+  handle: string;
+  name: string;
+  role?: string;
+  age?: number;
+  want?: string;
+  need?: string;
+  arc?: string;
+  voiceNotes?: string;
+  description?: string;
+}
+
+export interface CastMemberDeleteDependencySummary {
+  assetCount: number;
+  designCount: number;
+  activeDesignStateCount: number;
+}
+
+export function replaceCastMemberAuthoringRecords(
+  session: DatabaseSession,
+  records: CastMemberAuthoringRecord[]
+): void {
+  records.forEach((record, position) => {
+    const values = {
+      id: record.id,
+      handle: record.handle,
+      name: record.name,
+      role: record.role ?? null,
+      age: record.age ?? null,
+      want: record.want ?? null,
+      need: record.need ?? null,
+      arc: record.arc ?? null,
+      voiceNotes: record.voiceNotes ?? null,
+      description: record.description ?? null,
+      position,
+    };
+    const existing = session.db
+      .select({ id: castMembers.id })
+      .from(castMembers)
+      .where(eq(castMembers.id, record.id))
+      .get();
+    if (existing) {
+      session.db.update(castMembers).set(values).where(eq(castMembers.id, record.id)).run();
+    } else {
+      session.db.insert(castMembers).values(values).run();
+    }
+  });
+
+  const ids = records.map((record) => record.id);
+  if (ids.length === 0) {
+    session.db.delete(castMembers).run();
+    return;
+  }
+  session.db.delete(castMembers).where(notInArray(castMembers.id, ids)).run();
+}
+
+export function listCastAssetRoleSelectionRecords(
+  session: DatabaseSession,
+  castMemberId: string
+): Array<{ role: string; selection: string }> {
+  return session.db
+    .select({ role: castAssets.role, selection: castAssets.selection })
+    .from(castAssets)
+    .where(eq(castAssets.castMemberId, castMemberId))
+    .all();
+}
+
+export function readCastMemberDeleteDependencySummary(
+  session: DatabaseSession,
+  castMemberId: string
+): CastMemberDeleteDependencySummary {
+  return {
+    assetCount: session.db
+      .select({ id: castAssets.id })
+      .from(castAssets)
+      .where(eq(castAssets.castMemberId, castMemberId))
+      .all().length,
+    designCount: session.db
+      .select({ id: castDesigns.id })
+      .from(castDesigns)
+      .where(eq(castDesigns.castMemberId, castMemberId))
+      .all().length,
+    activeDesignStateCount: session.db
+      .select({ castMemberId: castDesignState.castMemberId })
+      .from(castDesignState)
+      .where(eq(castDesignState.castMemberId, castMemberId))
+      .all().length,
+  };
 }

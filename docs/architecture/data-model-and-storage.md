@@ -44,6 +44,14 @@ Use the focused documents below for current direction.
 - Scene Shot Lists are SQLite-owned project data. They store validated,
   agent-authored scene coverage history as tagged JSON in `scene_shot_list`,
   with one active shot list per scene tracked in `scene_shot_list_state`.
+- Cast Design and Location Design are SQLite-owned project data. They store
+  validated, agent-authored department design history as tagged JSON in
+  `cast_design` and `location_design`, with one active document per owner
+  tracked in `cast_design_state` and `location_design_state`.
+- Cast Members and Locations have one canonical authoring path each:
+  `renku cast` and `renku location`. Screenplay JSON references existing Cast
+  Members and Locations by durable ids; it does not create or update those fact
+  records.
 - Lookbooks are durable SQLite-owned project direction. Source Inspiration
   folders and Lookbook image placement are relationships, not embedded section
   JSON.
@@ -85,6 +93,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `docs/decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `docs/decisions/0025-use-shared-media-generation-purpose-architecture.md`
+- `docs/decisions/0028-use-durable-department-design-documents.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

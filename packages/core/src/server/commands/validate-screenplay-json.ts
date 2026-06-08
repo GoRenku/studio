@@ -5,7 +5,11 @@ import type {
   ScreenplayOperationDocument,
   ScreenplaySceneRevisionDocument,
 } from '../../client/screenplay.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import {
+  listScreenplayCastMembersFromSession,
+  listScreenplayLocationsFromSession,
+  readScreenplayDocumentFromSession,
+} from '../database/access/screenplay-resource.js';
 import { resolveScreenplayDocumentIds } from '../database/access/screenplay-persistence.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -34,14 +38,29 @@ export async function validateScreenplayJson(
     if (input.document?.kind === 'screenplay') {
       warnings.push(...resolveScreenplayDocumentIds({ document: input.document, mode: 'canonical' }).warnings);
     } else if (input.document?.kind === 'screenplayCreate') {
+      if (input.document.cast.length > 0 || input.document.locations.length > 0) {
+        throw new ProjectDataError('PROJECT_DATA200', 'Screenplay create failed validation.', {
+          suggestion:
+            'Create cast and location records through their department commands before creating screenplay scenes.',
+        });
+      }
+      const cast = listScreenplayCastMembersFromSession(session);
+      const locations = listScreenplayLocationsFromSession(session);
       warnings.push(
         ...resolveScreenplayDocumentIds({
           document: {
             kind: 'screenplay',
             screenplay: input.document.screenplay,
-            cast: input.document.cast,
-            locations: input.document.locations,
+            cast,
+            locations,
             acts: input.document.acts,
+          },
+          existing: {
+            kind: 'screenplay',
+            screenplay: input.document.screenplay,
+            cast,
+            locations,
+            acts: [],
           },
           mode: 'create',
         }).warnings

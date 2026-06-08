@@ -484,6 +484,7 @@ function characterSheetContext(): CastCharacterSheetGenerationContext {
       cardImage: null,
       isActive: true,
     },
+    activeCastDesign: null,
     selectedAssets: [],
     characterSheetTakes: [],
     profileTakes: [],

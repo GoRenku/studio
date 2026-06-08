@@ -8,6 +8,7 @@ import {
 import meow from 'meow';
 import { runAboutCommand } from './commands/about-command.js';
 import { runAssetCommand } from './commands/asset-command.js';
+import { runCastCommand } from './commands/cast-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runDirectorCommand } from './commands/director-command.js';
 import { runGenerationCommand } from './commands/generation-command.js';
@@ -15,10 +16,12 @@ import { runGenerationPlanCommand } from './commands/generation-plan-command.js'
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
 import { runLookbookCommand } from './commands/lookbook-command.js';
+import { runLocationCommand } from './commands/location-command.js';
 import { runMediaCommand } from './commands/media-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionCommand } from './commands/production-command.js';
+import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCurrentCommand } from './commands/studio-current-command.js';
 
@@ -54,7 +57,10 @@ Commands
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
   asset                Register, list, and select assets
+  cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
+  location             Author location facts
+  production-design    Author Location Design documents
   production export    Export selected production assets
   info show            Show project information
   info set             Update project information
@@ -92,6 +98,9 @@ Options
   --file-role          Asset file role
   --order              Selection order
   --locale             Project locale id
+  --cast               Cast member id for cast commands
+  --location           Location id for location and production-design commands
+  --design             Cast Design or Location Design id
   --act                Act id for screenplay sequence list
   --analysis           Screenplay Analysis id
   --revision           Screenplay revision id
@@ -198,6 +207,15 @@ function createCliFlags() {
       type: 'number',
     },
     locale: {
+      type: 'string',
+    },
+    cast: {
+      type: 'string',
+    },
+    location: {
+      type: 'string',
+    },
+    design: {
       type: 'string',
     },
     act: {
@@ -401,6 +419,20 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
+      case 'cast':
+        return await runCastCommand({
+          input,
+          flags: {
+            file: cli.flags.file,
+            cast: cli.flags.cast,
+            design: cli.flags.design,
+            active: cli.flags.active,
+            dryRun: cli.flags.dryRun,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
       case 'director':
         return await runDirectorCommand({
           input,
@@ -440,6 +472,19 @@ export async function runRenkuCli(
             allLocales: cli.flags.allLocales,
             dryRun: cli.flags.dryRun,
             fresh: cli.flags.fresh,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'production-design':
+        return await runProductionDesignCommand({
+          input,
+          flags: {
+            file: cli.flags.file,
+            location: cli.flags.location,
+            design: cli.flags.design,
+            active: cli.flags.active,
           },
           json: cli.flags.json,
           io,
@@ -535,6 +580,18 @@ export async function runRenkuCli(
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
             selection: cli.flags.selection,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'location':
+        return await runLocationCommand({
+          input,
+          flags: {
+            file: cli.flags.file,
+            location: cli.flags.location,
+            dryRun: cli.flags.dryRun,
           },
           json: cli.flags.json,
           io,

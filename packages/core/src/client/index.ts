@@ -20,6 +20,25 @@ export type {
   CastMember,
 } from './cast-members.js';
 export type {
+  CastDesignContextReport,
+  CastDesignDocument,
+  CastDesignListReport,
+  CastDesignReadReport,
+  CastDesignScope,
+  CastDesignSummary,
+  CastDesignWriteReport,
+  CastOperationDocument,
+  DepartmentCommandReport,
+  DepartmentDocumentSummary,
+  LocationDesignDocument,
+  LocationDesignListReport,
+  LocationDesignReadReport,
+  LocationDesignSummary,
+  LocationDesignWriteReport,
+  LocationOperationDocument,
+  ProductionDesignLocationContextReport,
+} from './department-design.js';
+export type {
   Location,
 } from './locations.js';
 export type {

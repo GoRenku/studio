@@ -13,10 +13,6 @@ import type {
 } from '../../../client/screenplay.js';
 import {
   acts,
-  castAssets,
-  castMembers,
-  locationAssets,
-  locations,
   sceneLocations,
   sceneAssets,
   scenes,
@@ -315,34 +311,6 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
         ]),
       }).run();
 
-    document.cast.forEach((castMember, index) => {
-      session.db.insert(castMembers).values({
-        id: requiredId(castMember),
-        handle: castMember.handle,
-        name: castMember.name,
-        role: castMember.role ?? null,
-        age: castMember.age ?? null,
-        want: castMember.want ?? null,
-        need: castMember.need ?? null,
-        arc: castMember.arc ?? null,
-        voiceNotes: castMember.voiceNotes ?? null,
-        description: castMember.description ?? null,
-        position: index,
-      }).run();
-    });
-
-    document.locations.forEach((location, index) => {
-      session.db.insert(locations).values({
-        id: requiredId(location),
-        handle: location.handle,
-        name: location.name,
-        timePeriod: location.timePeriod ?? null,
-        description: location.description ?? null,
-        visualNotes: location.visualNotes ?? null,
-        position: index,
-      }).run();
-    });
-
     document.acts.forEach((act, actIndex) => {
       session.db.insert(acts).values({
         id: requiredId(act),
@@ -380,8 +348,6 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
 
 function assertNoScreenplayAssetRelationships(session: DatabaseSession): void {
   const relationship = [
-    session.db.select({ id: castAssets.id }).from(castAssets).get(),
-    session.db.select({ id: locationAssets.id }).from(locationAssets).get(),
     session.db.select({ id: sequenceAssets.id }).from(sequenceAssets).get(),
     session.db.select({ id: sceneAssets.id }).from(sceneAssets).get(),
   ].find(Boolean);
@@ -439,8 +405,6 @@ function deleteScreenplayTables(session: DatabaseSession): void {
   session.db.delete(scenes).run();
   session.db.delete(sequences).run();
   session.db.delete(acts).run();
-  session.db.delete(castMembers).run();
-  session.db.delete(locations).run();
   session.db.delete(screenplay).run();
 }
 
@@ -499,7 +463,7 @@ function assignObjectId<T extends { id?: string; key?: string }>(
     return;
   }
   if (value.id) {
-    if (mode === 'create' || !existingIds.has(value.id)) {
+    if ((mode === 'create' && !existingIds.has(value.id)) || (mode !== 'create' && !existingIds.has(value.id))) {
       issues.push(
         createDiagnosticError(
           'PROJECT_DATA211',

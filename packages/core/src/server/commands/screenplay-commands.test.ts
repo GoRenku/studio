@@ -8,6 +8,7 @@ import type {
   ScreenplayOperationDocument,
 } from '../../client/screenplay.js';
 import {
+  createDeterministicIdGenerator,
   createProjectDataService,
 } from '../index.js';
 import {
@@ -51,7 +52,7 @@ describe('screenplay JSON commands', () => {
       resourceKeys: expect.arrayContaining(['screenplay']),
     });
     expect(report.generatedIds?.map((id) => id.kind)).toEqual(
-      expect.arrayContaining(['cast', 'location', 'act', 'sequence', 'scene'])
+      expect.arrayContaining(['act', 'sequence', 'scene'])
     );
 
     await expect(projectData.readScreenplayStatus({ homeDir })).resolves.toMatchObject({
@@ -329,7 +330,7 @@ describe('screenplay JSON commands', () => {
                     key: 'opening',
                     title: 'Opening Scene',
                     setting: {
-                      locationReferences: [{ key: 'foundry' }, { key: 'foundry' }],
+                      locationIds: ['location_test0001', 'location_test0001'],
                     },
                     blocks: [],
                   },
@@ -382,30 +383,42 @@ describe('screenplay JSON commands', () => {
     await createBlankProject();
     await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
 
-    const report = await projectData.createScreenplay({
+    const castReport = await projectData.applyCastOperations({
       homeDir,
       document: {
-        ...minimalScreenplayDocument(),
-        cast: [
-          { key: 'urban', handle: 'urban', name: 'Urban' },
-          { key: 'urban-voice', handle: 'urban-voice', name: 'Urban' },
+        kind: 'castOperations',
+        operations: [
+          {
+            operation: 'castMember.add',
+            castMember: { key: 'urban-voice', handle: 'urban-voice', name: 'Urban' },
+          },
         ],
-        locations: [
-          { key: 'foundry', handle: 'foundry', name: 'Foundry' },
-          { key: 'foundry-night', handle: 'foundry-night', name: 'Foundry' },
+      },
+    });
+    const locationReport = await projectData.applyLocationOperations({
+      homeDir,
+      document: {
+        kind: 'locationOperations',
+        operations: [
+          {
+            operation: 'location.add',
+            location: { key: 'foundry-night', handle: 'foundry-night', name: 'Foundry' },
+          },
         ],
       },
     });
 
-    expect(report.warnings).toEqual(
+    expect(castReport.warnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: 'PROJECT_DATA215',
-          location: expect.objectContaining({ path: ['cast', '1', 'name'] }),
         }),
+      ])
+    );
+    expect(locationReport.warnings).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           code: 'PROJECT_DATA215',
-          location: expect.objectContaining({ path: ['locations', '1', 'name'] }),
         }),
       ])
     );
@@ -538,6 +551,42 @@ describe('screenplay JSON commands', () => {
     if (!created) {
       return;
     }
+    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await projectData.applyCastOperations({
+      homeDir,
+      document: {
+        kind: 'castOperations',
+        operations: [
+          {
+            operation: 'castMember.add',
+            castMember: {
+              key: 'urban',
+              handle: 'urban',
+              name: 'Urban',
+              role: 'cannon founder',
+            },
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.applyLocationOperations({
+      homeDir,
+      document: {
+        kind: 'locationOperations',
+        operations: [
+          {
+            operation: 'location.add',
+            location: {
+              key: 'foundry',
+              handle: 'foundry',
+              name: 'Foundry',
+            },
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
   }
 });
 
@@ -548,21 +597,8 @@ function minimalScreenplayDocument(): ScreenplayCreateDocument {
       title: 'Urban Basilica',
       logline: 'A founder builds a weapon and a conscience.',
     },
-    cast: [
-      {
-        key: 'urban',
-        handle: 'urban',
-        name: 'Urban',
-        role: 'cannon founder',
-      },
-    ],
-    locations: [
-      {
-        key: 'foundry',
-        handle: 'foundry',
-        name: 'Foundry',
-      },
-    ],
+    cast: [],
+    locations: [],
     acts: [
       {
         key: 'act-one',
@@ -578,19 +614,19 @@ function minimalScreenplayDocument(): ScreenplayCreateDocument {
                 setting: {
                   interiorExterior: 'INT',
                   timeOfDay: 'NIGHT',
-                  locationReferences: [{ key: 'foundry' }],
+                  locationIds: ['location_test0001'],
                 },
                 storyFunction: ['Introduce Urban'],
                 blocks: [
                   {
                     type: 'action',
                     text: 'Urban studies the cracked bronze.',
-                    castMemberReferences: [{ key: 'urban' }],
-                    locationReferences: [{ key: 'foundry' }],
+                    castMemberIds: ['cast_test0001'],
+                    locationIds: ['location_test0001'],
                   },
                   {
                     type: 'dialogue',
-                    castMemberReference: { key: 'urban' },
+                    castMemberId: 'cast_test0001',
                     lines: ['No furnace is innocent.'],
                   },
                 ],

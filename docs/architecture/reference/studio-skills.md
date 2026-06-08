@@ -52,6 +52,24 @@ operational companions that teach agents how to use those contracts.
 - Suggests scene additions or revisions as critique only; it does not mutate the
   screenplay graph.
 
+`casting-director`
+
+- Creates and revises Cast Member facts through `renku cast`.
+- Writes validated `kind: "castDesign"` JSON through `renku cast design`.
+- Owns casting interpretation, appearance, performance, costume continuity,
+  voice casting notes, and cast media readiness.
+- Hands `cast.character-sheet` and `cast.profile` generation to
+  `media-producer`.
+
+`production-designer`
+
+- Creates and revises Location facts through `renku location`.
+- Writes validated `kind: "locationDesign"` JSON through
+  `renku production-design`.
+- Owns spatial design, architecture, set dressing, materials, props,
+  atmosphere, and continuity risks.
+- Hands `location.environment-sheet` generation to `media-producer`.
+
 `media-producer`
 
 - Generates purpose-specific media from Renku context.
@@ -66,8 +84,9 @@ operational companions that teach agents how to use those contracts.
 - Starts broad or cross-department requests with `renku director context`.
 - Dispatches durable artifact work to specialist skills instead of writing
   department documents directly.
-- Names unsupported casting, production design, voice, sound, and editorial gaps
-  honestly and routes to supported fallback steps.
+- Routes cast work to `casting-director`, production-design/location work to
+  `production-designer`, shot coverage to `scene-shot-designer`, and media
+  generation to `media-producer`.
 
 `scene-shot-designer`
 
@@ -97,6 +116,10 @@ Skills must not:
 - store generated storyboard image paths inside Scene Shot List JSON;
 - add analog shooting logistics such as setup minutes, crew assignments, or
   call-sheet timing to Scene Shot List documents.
+- mutate Cast Members or Locations through screenplay operation documents;
+- store generated media paths inside Cast Design or Location Design JSON;
+- treat costume variants, voice samples, props, or set dressing as media targets
+  until those concepts have explicit durable media contracts.
 
 ## Reference Structure
 

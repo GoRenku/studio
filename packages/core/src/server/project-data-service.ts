@@ -1,4 +1,5 @@
 import { createAssetServiceWiring } from './project-data-service-wiring/assets.js';
+import { createDepartmentDesignServiceWiring } from './project-data-service-wiring/department-design.js';
 import { createDesignResourceServiceWiring } from './project-data-service-wiring/design-resources.js';
 import { createInspirationServiceWiring } from './project-data-service-wiring/inspiration.js';
 import { createLookbookServiceWiring } from './project-data-service-wiring/lookbook.js';
@@ -15,6 +16,7 @@ export function createProjectDataService(): ProjectDataService {
     ...createProjectAdministrationServiceWiring(),
     ...createNavigationServiceWiring(),
     ...createAssetServiceWiring(),
+    ...createDepartmentDesignServiceWiring(),
     ...createDesignResourceServiceWiring(),
     ...createScreenplayServiceWiring(),
     ...createInspirationServiceWiring(),

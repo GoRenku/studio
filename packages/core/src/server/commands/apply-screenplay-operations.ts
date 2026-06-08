@@ -238,38 +238,6 @@ export function buildScreenplayDraftForOperations(
         draft.screenplay = operation.screenplay;
         changes.push({ operation: operation.operation });
         break;
-      case 'castMember.add':
-        insertByPlacement(draft.cast, operation.castMember, operation.placement);
-        changes.push({ operation: operation.operation });
-        break;
-      case 'castMember.update':
-        replaceById(draft.cast, operation.castMember, 'cast member');
-        changes.push({ operation: operation.operation, castMemberId: requiredId(operation.castMember) });
-        break;
-      case 'castMember.delete':
-        removeById(draft.cast, operation.castMemberId, 'cast member');
-        changes.push({ operation: operation.operation, castMemberId: operation.castMemberId });
-        break;
-      case 'castMember.move':
-        moveById(draft.cast, operation.castMemberId, 'cast member', operation.placement);
-        changes.push({ operation: operation.operation, castMemberId: operation.castMemberId });
-        break;
-      case 'location.add':
-        insertByPlacement(draft.locations, operation.location, operation.placement);
-        changes.push({ operation: operation.operation });
-        break;
-      case 'location.update':
-        replaceById(draft.locations, operation.location, 'location');
-        changes.push({ operation: operation.operation, locationId: requiredId(operation.location) });
-        break;
-      case 'location.delete':
-        removeById(draft.locations, operation.locationId, 'location');
-        changes.push({ operation: operation.operation, locationId: operation.locationId });
-        break;
-      case 'location.move':
-        moveById(draft.locations, operation.locationId, 'location', operation.placement);
-        changes.push({ operation: operation.operation, locationId: operation.locationId });
-        break;
       case 'act.add':
         insertByPlacement(draft.acts, operation.act, operation.placement);
         changes.push({ operation: operation.operation });

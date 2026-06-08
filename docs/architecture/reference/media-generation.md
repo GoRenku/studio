@@ -191,6 +191,9 @@ active Lookbook. The context includes:
 - screenplay summary and major story signals when a screenplay exists;
 - cast member facts such as handle, role, want, need, arc, voice notes, and
   description;
+- active Cast Design summary when one is selected, including interpretation,
+  appearance, costume, voice casting, continuity, and generation-guidance
+  signals suitable for prompt authoring;
 - time-period signals from screenplay history, cast-referenced scene settings,
   and referenced locations;
 - the active Lookbook and its card image;
@@ -211,8 +214,9 @@ the active visual language. The best current model choices are:
 `cast.profile` context is built for one cast member. It can run text-to-image
 without a source sheet, but edit models require `sourceAssetId`.
 
-The profile context includes the same project, screenplay, cast member,
-time-period, Lookbook, and asset signals as character sheets. It also returns:
+The profile context includes the same project, screenplay, cast member, active
+Cast Design, time-period, Lookbook, and asset signals as character sheets. It
+also returns:
 
 - selected character sheets;
 - character sheet takes;
@@ -228,11 +232,11 @@ provider execution.
 
 ## Location Environment Sheet Context
 
-`location.environment-sheet` context is built for one screenplay location and
-requires an active Lookbook. The target location must already exist in the
-screenplay location list. When a requested historical location is missing, core
-returns a structured error with a suggestion to add the Location first instead
-of generating against free text.
+`location.environment-sheet` context is built for one Location and requires an
+active Lookbook. The target Location must already exist in project facts. When
+a requested historical location is missing, core returns a structured error
+with a suggestion to add the Location first instead of generating against free
+text.
 
 The context includes:
 
@@ -240,6 +244,10 @@ The context includes:
 - screenplay overview, dramatic signals, historical basis, dramatized elements,
   research sources, and assumptions when available;
 - target location name, handle, description, time period, and visual notes;
+- active Location Design summary when one is selected, including spatial
+  thesis, architecture, set dressing, materials, atmosphere, props, continuity,
+  environment-sheet guidance, and generation-guidance signals suitable for
+  prompt authoring;
 - scene usage and compact setting/action signals for scenes that use the
   location;
 - the active Lookbook and its card image when available;
@@ -272,6 +280,8 @@ The context includes:
   blocks;
 - the selected Scene Shot List and its ordered shots;
 - referenced cast and locations for the scene and shot list;
+- active Cast Design summaries for referenced Cast Members;
+- active Location Design summaries for referenced Locations;
 - active Lookbook text guidance when available;
 - defaults for visualization style, take count, seed, image frame, detail, and
   output format.

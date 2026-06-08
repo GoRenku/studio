@@ -314,6 +314,8 @@ export interface DirectorVisualLanguageReadiness {
 
 export interface DirectorCastReadiness {
   castMemberCount: number;
+  activeCastDesignCount: number;
+  missingActiveCastDesignCastMemberIds: string[];
   selectedVisualReferenceCount: number;
   missingSelectedVisualReferenceCastMemberIds: string[];
   everyCastMemberHasSelectedVisualReference: boolean;
@@ -321,6 +323,8 @@ export interface DirectorCastReadiness {
 
 export interface DirectorProductionDesignReadiness {
   locationCount: number;
+  activeLocationDesignCount: number;
+  missingActiveLocationDesignLocationIds: string[];
   selectedEnvironmentSheetCount: number;
   missingSelectedEnvironmentSheetLocationIds: string[];
   everyLocationHasSelectedEnvironmentSheet: boolean;

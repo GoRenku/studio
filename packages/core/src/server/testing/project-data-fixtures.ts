@@ -79,6 +79,51 @@ export async function createSampleMovieProject(input: {
     projectName: 'constantinople',
     homeDir: input.homeDir,
   });
+  await projectData.applyCastOperations({
+    homeDir: input.homeDir,
+    document: {
+      kind: 'castOperations',
+      operations: [
+        {
+          operation: 'castMember.add',
+          castMember: {
+            key: 'narrator',
+            handle: 'narrator',
+            name: 'Narrator',
+            role: 'voiceover',
+          },
+        },
+        {
+          operation: 'castMember.add',
+          castMember: {
+            key: 'mehmed-ii',
+            handle: 'mehmed-ii',
+            name: 'Mehmed II',
+            role: 'protagonist',
+          },
+        },
+      ],
+    },
+    idGenerator: createDeterministicIdGenerator(),
+  });
+  await projectData.applyLocationOperations({
+    homeDir: input.homeDir,
+    document: {
+      kind: 'locationOperations',
+      operations: [
+        {
+          operation: 'location.add',
+          location: {
+            key: 'council-chamber',
+            handle: 'council-chamber',
+            name: "Mehmed's council chamber",
+            description: 'Formal Ottoman planning room with maps and oil lamps.',
+          },
+        },
+      ],
+    },
+    idGenerator: createDeterministicIdGenerator(),
+  });
   await projectData.createScreenplay({
     homeDir: input.homeDir,
     document: sampleScreenplayCreateDocument(),
@@ -95,28 +140,8 @@ export function sampleScreenplayCreateDocument(): ScreenplayCreateDocument {
       logline: 'A documentary about preparation before 1453.',
       summary: 'Mehmed turns an inherited ambition into a concrete plan.',
     },
-    cast: [
-      {
-        key: 'narrator',
-        handle: 'narrator',
-        name: 'Narrator',
-        role: 'voiceover',
-      },
-      {
-        key: 'mehmed-ii',
-        handle: 'mehmed-ii',
-        name: 'Mehmed II',
-        role: 'protagonist',
-      },
-    ],
-    locations: [
-      {
-        key: 'council-chamber',
-        handle: 'council-chamber',
-        name: "Mehmed's council chamber",
-        description: 'Formal Ottoman planning room with maps and oil lamps.',
-      },
-    ],
+    cast: [],
+    locations: [],
     acts: [
       {
         key: 'act-one',
@@ -133,7 +158,7 @@ export function sampleScreenplayCreateDocument(): ScreenplayCreateDocument {
                 setting: {
                   interiorExterior: 'INT',
                   timeOfDay: 'NIGHT',
-                  locationReferences: [{ key: 'council-chamber' }],
+                  locationIds: ['location_test0001'],
                 },
                 storyFunction: [
                   "Mehmed's accession is framed against Constantinople.",
@@ -142,8 +167,8 @@ export function sampleScreenplayCreateDocument(): ScreenplayCreateDocument {
                   {
                     type: 'action',
                     text: 'Mehmed studies the city map.',
-                    castMemberReferences: [{ key: 'mehmed-ii' }],
-                    locationReferences: [{ key: 'council-chamber' }],
+                    castMemberIds: ['cast_test0002'],
+                    locationIds: ['location_test0001'],
                   },
                 ],
               },

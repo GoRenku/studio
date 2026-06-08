@@ -7,7 +7,10 @@ import type {
   ScreenplayAnalysisWriteReport,
 } from '../../client/screenplay-analysis.js';
 import type { ScreenplayCreateDocument } from '../../client/screenplay.js';
-import { createProjectDataService } from '../index.js';
+import {
+  createDeterministicIdGenerator,
+  createProjectDataService,
+} from '../index.js';
 import {
   createBlankMovieProject,
   writeConfig,
@@ -23,6 +26,41 @@ describe('screenplay analysis commands', () => {
     projectData = createProjectDataService();
     await createBlankMovieProject({ projectData, homeDir });
     await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await projectData.applyCastOperations({
+      homeDir,
+      document: {
+        kind: 'castOperations',
+        operations: [
+          {
+            operation: 'castMember.add',
+            castMember: {
+              key: 'urban',
+              handle: 'urban',
+              name: 'Urban',
+              role: 'cannon founder',
+            },
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.applyLocationOperations({
+      homeDir,
+      document: {
+        kind: 'locationOperations',
+        operations: [
+          {
+            operation: 'location.add',
+            location: {
+              key: 'foundry',
+              handle: 'foundry',
+              name: 'Foundry',
+            },
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
     await projectData.createScreenplay({
       homeDir,
       document: threeActScreenplayDocument(),
@@ -512,21 +550,8 @@ function threeActScreenplayDocument(): ScreenplayCreateDocument {
       tone: ['grave', 'precise'],
       genrePrimary: 'historical drama',
     },
-    cast: [
-      {
-        key: 'urban',
-        handle: 'urban',
-        name: 'Urban',
-        role: 'cannon founder',
-      },
-    ],
-    locations: [
-      {
-        key: 'foundry',
-        handle: 'foundry',
-        name: 'Foundry',
-      },
-    ],
+    cast: [],
+    locations: [],
     acts: [
       screenplayAct('act-one', 'The Offer', 'commission', 'The Refusal'),
       screenplayAct('act-two', 'The Patron', 'casting', 'The Bargain'),
@@ -557,15 +582,15 @@ function screenplayAct(
             setting: {
               interiorExterior: 'INT',
               timeOfDay: 'NIGHT',
-              locationReferences: [{ key: 'foundry' }],
+              locationIds: ['location_test0001'],
             },
             storyFunction: ['Pressure Urban'],
             blocks: [
               {
                 type: 'action',
                 text: 'Urban studies the cracked bronze and hears the city waiting.',
-                castMemberReferences: [{ key: 'urban' }],
-                locationReferences: [{ key: 'foundry' }],
+                castMemberIds: ['cast_test0001'],
+                locationIds: ['location_test0001'],
               },
             ],
           },

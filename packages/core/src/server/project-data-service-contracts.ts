@@ -9,6 +9,13 @@ import type {
   CastDesignResource,
   CastNavigationRow,
   DirectorContextReport,
+  CastDesignContextReport,
+  CastDesignDocument,
+  CastDesignListReport,
+  CastDesignReadReport,
+  CastDesignWriteReport,
+  CastOperationDocument,
+  DepartmentCommandReport,
   InspirationAnalysisValidationReport,
   InspirationAnalysisWriteReport,
   InspirationFolder,
@@ -34,6 +41,11 @@ import type {
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
+  LocationDesignDocument,
+  LocationDesignListReport,
+  LocationDesignReadReport,
+  LocationDesignWriteReport,
+  LocationOperationDocument,
   CastCharacterSheetGenerationContext,
   CastCharacterSheetGenerationSpec,
   CastCharacterSheetModelListReport,
@@ -69,6 +81,7 @@ import type {
   MediaGenerationRequestTarget,
   PreparedMediaGeneration,
   SceneDesignResource,
+  ProductionDesignLocationContextReport,
   SceneNarrativeResource,
   ScreenplayAnalysisContextReport,
   ScreenplayAnalysisDocument,
@@ -233,6 +246,26 @@ export interface ProjectDataService {
   openCurrentProject(input: OpenCurrentProjectInput): Promise<CurrentProjectReport>;
   readCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
   closeCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
+  listCastMembers(input?: RenkuConfigPathOptions): Promise<import('../client/cast-members.js').CastMember[]>;
+  readCastMember(input: ReadCastMemberInput): Promise<import('../client/cast-members.js').CastMember>;
+  readCastContext(input: ReadCastContextInput): Promise<CastDesignContextReport>;
+  validateCastOperations(input: ValidateCastOperationsInput): Promise<DepartmentCommandReport>;
+  applyCastOperations(input: ApplyCastOperationsInput): Promise<DepartmentCommandReport>;
+  listCastDesigns(input: ListCastDesignsInput): Promise<CastDesignListReport>;
+  readCastDesign(input: ReadCastDesignInput): Promise<CastDesignReadReport>;
+  validateCastDesign(input: ValidateCastDesignInput): Promise<DepartmentCommandReport>;
+  writeCastDesign(input: WriteCastDesignInput): Promise<CastDesignWriteReport>;
+  setActiveCastDesign(input: SetActiveCastDesignInput): Promise<CastDesignWriteReport>;
+  listLocations(input?: RenkuConfigPathOptions): Promise<import('../client/locations.js').Location[]>;
+  readLocation(input: ReadLocationInput): Promise<import('../client/locations.js').Location>;
+  readLocationContext(input: ReadLocationContextInput): Promise<ProductionDesignLocationContextReport>;
+  validateLocationOperations(input: ValidateLocationOperationsInput): Promise<DepartmentCommandReport>;
+  applyLocationOperations(input: ApplyLocationOperationsInput): Promise<DepartmentCommandReport>;
+  listLocationDesigns(input: ListLocationDesignsInput): Promise<LocationDesignListReport>;
+  readLocationDesign(input: ReadLocationDesignInput): Promise<LocationDesignReadReport>;
+  validateLocationDesign(input: ValidateLocationDesignInput): Promise<DepartmentCommandReport>;
+  writeLocationDesign(input: WriteLocationDesignInput): Promise<LocationDesignWriteReport>;
+  setActiveLocationDesign(input: SetActiveLocationDesignInput): Promise<LocationDesignWriteReport>;
   readScreenplayStatus(input?: RenkuConfigPathOptions): Promise<ScreenplayStatusReport>;
   readScreenplay(input?: RenkuConfigPathOptions): Promise<ScreenplayReadReport>;
   listScreenplayCastMembers(input?: RenkuConfigPathOptions): Promise<ScreenplayCastMember[]>;
@@ -469,6 +502,90 @@ export interface ReadProjectInput extends RenkuConfigPathOptions {
 export interface ReadDirectorContextInput extends RenkuConfigPathOptions {
   selection?: StudioSelection;
   studioCurrent?: StudioCurrent;
+}
+
+export interface ReadCastMemberInput extends RenkuConfigPathOptions {
+  castMemberId: string;
+}
+
+export interface ReadCastContextInput extends RenkuConfigPathOptions {
+  castMemberId: string;
+}
+
+export interface ValidateCastOperationsInput extends RenkuConfigPathOptions {
+  document: CastOperationDocument;
+  filePath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ApplyCastOperationsInput extends ValidateCastOperationsInput {
+  dryRun?: boolean;
+}
+
+export interface ListCastDesignsInput extends RenkuConfigPathOptions {
+  castMemberId: string;
+}
+
+export interface ReadCastDesignInput extends RenkuConfigPathOptions {
+  castMemberId?: string;
+  designId?: string;
+  active?: boolean;
+}
+
+export interface ValidateCastDesignInput extends RenkuConfigPathOptions {
+  document: CastDesignDocument;
+  filePath?: string;
+}
+
+export interface WriteCastDesignInput extends ValidateCastDesignInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface SetActiveCastDesignInput extends RenkuConfigPathOptions {
+  castMemberId: string;
+  designId: string;
+}
+
+export interface ReadLocationInput extends RenkuConfigPathOptions {
+  locationId: string;
+}
+
+export interface ReadLocationContextInput extends RenkuConfigPathOptions {
+  locationId: string;
+}
+
+export interface ValidateLocationOperationsInput extends RenkuConfigPathOptions {
+  document: LocationOperationDocument;
+  filePath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ApplyLocationOperationsInput extends ValidateLocationOperationsInput {
+  dryRun?: boolean;
+}
+
+export interface ListLocationDesignsInput extends RenkuConfigPathOptions {
+  locationId: string;
+}
+
+export interface ReadLocationDesignInput extends RenkuConfigPathOptions {
+  locationId?: string;
+  designId?: string;
+  active?: boolean;
+}
+
+export interface ValidateLocationDesignInput extends RenkuConfigPathOptions {
+  document: LocationDesignDocument;
+  filePath?: string;
+}
+
+export interface WriteLocationDesignInput extends ValidateLocationDesignInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface SetActiveLocationDesignInput extends RenkuConfigPathOptions {
+  locationId: string;
+  designId: string;
 }
 
 export interface ReadScreenplayCastMemberInput extends RenkuConfigPathOptions {

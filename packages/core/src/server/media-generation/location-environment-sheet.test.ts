@@ -467,6 +467,7 @@ function context(): LocationEnvironmentSheetGenerationContext {
       cardImage: null,
       isActive: true,
     },
+    activeLocationDesign: null,
     selectedAssets: [],
     environmentSheetTakes: [],
     referenceAssets: [],

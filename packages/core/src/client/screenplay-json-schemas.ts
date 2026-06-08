@@ -207,8 +207,6 @@ export const screenplayCreateDocumentSchema = {
 } as const;
 
 const entityDefs = {
-  castMember: { field: 'castMember', id: 'castMemberId', parent: null },
-  location: { field: 'location', id: 'locationId', parent: null },
   act: { field: 'act', id: 'actId', parent: null },
   sequence: { field: 'sequence', id: 'sequenceId', parent: 'actId' },
   scene: { field: 'scene', id: 'sceneId', parent: 'sequenceId' },
@@ -265,42 +263,6 @@ export const screenplayOperationsSchema = {
     screenplayUpdate: operationObject(['operation', 'screenplay'], {
       operation: { const: 'screenplay.update' },
       screenplay: { $ref: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json#/$defs/screenplay' },
-    }),
-    castMemberAdd: operationObject(['operation', 'castMember'], {
-      operation: { const: 'castMember.add' },
-      placement: { $ref: '#/$defs/placement' },
-      castMember: { $ref: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json#/$defs/castMember' },
-    }),
-    castMemberUpdate: operationObject(['operation', 'castMember'], {
-      operation: { const: 'castMember.update' },
-      castMember: { $ref: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json#/$defs/castMember' },
-    }),
-    castMemberDelete: operationObject(['operation', 'castMemberId'], {
-      operation: { const: 'castMember.delete' },
-      castMemberId: stringId(),
-    }),
-    castMemberMove: operationObject(['operation', 'castMemberId', 'placement'], {
-      operation: { const: 'castMember.move' },
-      castMemberId: stringId(),
-      placement: { $ref: '#/$defs/placement' },
-    }),
-    locationAdd: operationObject(['operation', 'location'], {
-      operation: { const: 'location.add' },
-      placement: { $ref: '#/$defs/placement' },
-      location: { $ref: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json#/$defs/location' },
-    }),
-    locationUpdate: operationObject(['operation', 'location'], {
-      operation: { const: 'location.update' },
-      location: { $ref: 'https://schemas.gorenku.com/studio/screenplay-document.schema.json#/$defs/location' },
-    }),
-    locationDelete: operationObject(['operation', 'locationId'], {
-      operation: { const: 'location.delete' },
-      locationId: stringId(),
-    }),
-    locationMove: operationObject(['operation', 'locationId', 'placement'], {
-      operation: { const: 'location.move' },
-      locationId: stringId(),
-      placement: { $ref: '#/$defs/placement' },
     }),
     actAdd: operationObject(['operation', 'act'], {
       operation: { const: 'act.add' },

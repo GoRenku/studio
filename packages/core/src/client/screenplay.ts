@@ -138,14 +138,6 @@ export interface Placement {
 
 export type ScreenplayOperation =
   | { operation: 'screenplay.update'; screenplay: Screenplay }
-  | { operation: 'castMember.add'; castMember: CastMember; placement?: Placement }
-  | { operation: 'castMember.update'; castMember: CastMember }
-  | { operation: 'castMember.delete'; castMemberId: string }
-  | { operation: 'castMember.move'; castMemberId: string; placement: Placement }
-  | { operation: 'location.add'; location: Location; placement?: Placement }
-  | { operation: 'location.update'; location: Location }
-  | { operation: 'location.delete'; locationId: string }
-  | { operation: 'location.move'; locationId: string; placement: Placement }
   | { operation: 'act.add'; act: Act; placement?: Placement }
   | { operation: 'act.update'; act: Act }
   | { operation: 'act.delete'; actId: string }

@@ -223,6 +223,193 @@ Behavior:
   `generate-storyboards`, and `generate-shot-video`.
 - Does not mutate project state and does not run paid generation.
 
+## `renku cast`
+
+List, inspect, validate, and mutate Cast Member facts for the current
+authoring project.
+
+```bash
+renku cast list --json
+renku cast show <cast-member-id> --json
+renku cast context --cast <cast-member-id> --json
+renku cast validate --file <cast-operations-json> --json
+renku cast validate --file - --json
+renku cast apply --file <cast-operations-json> --json
+renku cast apply --file <cast-operations-json> --dry-run --json
+```
+
+Options:
+
+- `--cast`: required for `context` and accepted by `show` when the id is not
+  passed positionally.
+- `--file`: required for `validate` and `apply`. Use `-` to read stdin.
+- `--dry-run`: for `apply`, validates and reports planned changes without
+  writing.
+- `--json`: print machine-readable JSON.
+
+Behavior:
+
+- Requires a current authoring project.
+- `list` and `show` read the canonical Cast Member facts.
+- `context` returns the Cast Member, scenes where the Cast Member appears,
+  active Cast Design summary, selected cast media, asset role counts, active
+  Lookbook summary, and generation readiness signals for `cast.character-sheet`
+  and `cast.profile`.
+- `validate` checks a tagged `kind: "castOperations"` document without
+  writing.
+- `apply` creates, updates, deletes, or moves Cast Member facts through the
+  canonical cast authoring path.
+- Cast handles must stay unique across Cast Members and Locations.
+- Delete operations fail when the Cast Member is still referenced by the
+  screenplay.
+- Successful mutations emit Studio resource keys for cast navigation and the
+  affected Cast Member surfaces.
+
+Input JSON shape:
+
+```json
+{
+  "kind": "castOperations",
+  "operations": [
+    {
+      "operation": "castMember.add",
+      "castMember": {
+        "key": "ada",
+        "handle": "ada",
+        "name": "Ada",
+        "role": "protagonist"
+      }
+    },
+    {
+      "operation": "castMember.update",
+      "castMember": {
+        "id": "cast_ada",
+        "handle": "ada",
+        "name": "Ada",
+        "role": "protagonist",
+        "voiceNotes": "Dry, controlled, and low."
+      }
+    }
+  ]
+}
+```
+
+New Cast Members use `key`, not `id`. Existing Cast Members use durable `id`.
+
+## `renku cast design`
+
+Read, validate, write, and activate durable Cast Design documents for one Cast
+Member.
+
+```bash
+renku cast design context --cast <cast-member-id> --json
+renku cast design list --cast <cast-member-id> --json
+renku cast design show --active --cast <cast-member-id> --json
+renku cast design show --design <cast-design-id> --json
+renku cast design validate --file <cast-design-json> --json
+renku cast design validate --file - --json
+renku cast design write --file <cast-design-json> --json
+renku cast design write --file - --json
+renku cast design set-active --cast <cast-member-id> --design <cast-design-id> --json
+```
+
+Behavior:
+
+- Requires a current authoring project and an existing Cast Member.
+- `context` returns the Cast Member facts, screenplay appearances, active Cast
+  Design when present, selected cast media, active Lookbook summary, and media
+  generation readiness.
+- `validate` checks a tagged `kind: "castDesign"` document without writing.
+- `write` creates a Cast Member-owned design history row and makes it active.
+- `set-active` changes only the active Cast Design pointer.
+- Unknown fields are rejected.
+- Costume variants can be scoped to the project, a sequence, or a scene. They
+  are authored design content, not standalone media targets.
+- Voice casting notes live under Cast Design. Voice media generation is not a
+  first-class media purpose yet.
+
+## `renku location`
+
+List, inspect, validate, and mutate Location facts for the current authoring
+project.
+
+```bash
+renku location list --json
+renku location show <location-id> --json
+renku location context --location <location-id> --json
+renku location validate --file <location-operations-json> --json
+renku location validate --file - --json
+renku location apply --file <location-operations-json> --json
+renku location apply --file <location-operations-json> --dry-run --json
+```
+
+Behavior:
+
+- Requires a current authoring project.
+- `context` returns the Location, scenes that use it, active Location Design
+  summary, selected environment-sheet media, asset role counts, active Lookbook
+  summary, and generation readiness for `location.environment-sheet`.
+- `validate` checks a tagged `kind: "locationOperations"` document without
+  writing.
+- `apply` creates, updates, deletes, or moves Location facts through the
+  canonical location authoring path.
+- Location handles must stay unique across Cast Members and Locations.
+- Delete operations fail when the Location is still referenced by the
+  screenplay.
+- Successful mutations emit Studio resource keys for location navigation and
+  affected Location surfaces.
+
+Input JSON shape:
+
+```json
+{
+  "kind": "locationOperations",
+  "operations": [
+    {
+      "operation": "location.add",
+      "location": {
+        "key": "control-room",
+        "handle": "control-room",
+        "name": "Control Room",
+        "timePeriod": "Late 1970s",
+        "description": "A cramped civic control room under budget pressure."
+      }
+    }
+  ]
+}
+```
+
+New Locations use `key`, not `id`. Existing Locations use durable `id`.
+
+## `renku production-design`
+
+Read, validate, write, and activate durable production-design documents for
+Locations.
+
+```bash
+renku production-design location context --location <location-id> --json
+renku production-design location list --location <location-id> --json
+renku production-design location show --active --location <location-id> --json
+renku production-design location show --design <location-design-id> --json
+renku production-design location validate --file <location-design-json> --json
+renku production-design location write --file <location-design-json> --json
+renku production-design location set-active --location <location-id> --design <location-design-id> --json
+
+```
+
+Behavior:
+
+- Location Design is location-level production design: spatial thesis,
+  architecture, set dressing, materials, atmosphere, props, continuity, and
+  environment-sheet guidance.
+- `context` commands return the relevant screenplay hierarchy, active Lookbook
+  summary, active design summary when present, selected media, and
+  downstream readiness signals.
+- `validate` checks tagged `kind: "locationDesign"` documents without writing.
+- `write` creates a history row and makes it active.
+- `set-active` changes only the active pointer.
+- Unknown fields are rejected.
+
 ## `renku screenplay status`
 
 Inspect whether the current authoring project has screenplay data.
@@ -299,6 +486,10 @@ Behavior:
 
 - Requires a current authoring project.
 - Creates the initial screenplay graph.
+- References existing Cast Members and Locations by durable ids in scene
+  settings and dialogue blocks.
+- Rejects non-empty `cast` or `locations` arrays. Create or update those facts
+  first with `renku cast` and `renku location`.
 - Fails when screenplay data already exists and points callers to
   `renku screenplay apply`.
 
@@ -320,8 +511,10 @@ Options:
 Behavior:
 
 - Requires a current authoring project.
-- Applies operation documents such as screenplay, act, sequence, scene, cast, or
-  location revisions.
+- Applies operation documents for screenplay metadata, acts, sequences, scenes,
+  and scene blocks.
+- Does not create, update, delete, or move Cast Members or Locations. Use
+  `renku cast` and `renku location` for those facts.
 - Writes a screenplay revision history row when the operation succeeds.
 - Reports shot-list impact details for changed scenes that have active shot
   lists.
@@ -587,7 +780,7 @@ Operation JSON shape:
 
 ## `renku screenplay cast`
 
-List or show cast members from the current authoring project's screenplay.
+Read-only screenplay-oriented Cast Member helpers.
 
 ```bash
 renku screenplay cast list --json
@@ -597,10 +790,11 @@ renku screenplay cast show <cast-member-id> --json
 Behavior:
 
 - Requires a current authoring project.
+- For canonical cast authoring and department context, use `renku cast`.
 
 ## `renku screenplay location`
 
-List or show locations from the current authoring project's screenplay.
+Read-only screenplay-oriented Location helpers.
 
 ```bash
 renku screenplay location list --json
@@ -610,6 +804,8 @@ renku screenplay location show <location-id> --json
 Behavior:
 
 - Requires a current authoring project.
+- For canonical location authoring and production-design context, use
+  `renku location` and `renku production-design`.
 
 ## `renku screenplay act`
 

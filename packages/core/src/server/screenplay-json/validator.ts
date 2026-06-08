@@ -245,7 +245,7 @@ const allowedFields: Record<string, Set<string>> = {
   setting: new Set(['interiorExterior', 'timeOfDay', 'locationReferences', 'locationIds']),
   block: new Set(['type', 'text', 'render', 'castMemberReference', 'castMemberId', 'extension', 'parenthetical', 'lines', 'castMemberReferences', 'locationReferences', 'castMemberIds', 'locationIds']),
   ref: new Set(['id', 'key']),
-  operation: new Set(['operation', 'screenplay', 'castMember', 'castMemberId', 'location', 'locationId', 'act', 'actId', 'sequence', 'sequenceId', 'fromActId', 'toActId', 'scene', 'sceneId', 'fromSequenceId', 'toSequenceId', 'placement']),
+  operation: new Set(['operation', 'screenplay', 'act', 'actId', 'sequence', 'sequenceId', 'fromActId', 'toActId', 'scene', 'sceneId', 'fromSequenceId', 'toSequenceId', 'placement']),
   placement: new Set(['beforeId', 'afterId', 'position']),
 };
 
@@ -324,8 +324,6 @@ function visitObject(
   }
   if (shape === 'operation') {
     visitObject(record.screenplay, [...path, 'screenplay'], 'screenplay', issues, filePath);
-    visitObject(record.castMember, [...path, 'castMember'], 'castMember', issues, filePath);
-    visitObject(record.location, [...path, 'location'], 'location', issues, filePath);
     visitObject(record.act, [...path, 'act'], 'act', issues, filePath);
     visitObject(record.sequence, [...path, 'sequence'], 'sequence', issues, filePath);
     visitObject(record.scene, [...path, 'scene'], 'scene', issues, filePath);

@@ -43,6 +43,10 @@ import {
   updateMediaGenerationSpec,
 } from '../database/access/media-generation.js';
 import {
+  readActiveLocationDesignDocument,
+  toLocationDesignSummary,
+} from '../database/access/department-design.js';
+import {
   listLookbookCardImageIds,
   readActiveLookbookId,
   requireLookbookRecordById,
@@ -193,6 +197,7 @@ export async function buildLocationEnvironmentSheetContext(
   return withLocationProjectSession(input, ({ session, projectFolder }) => {
     const location = requireLocationForContext(session, input.locationId);
     const activeLookbook = requireActiveLookbookContext(session);
+    const activeLocationDesign = readActiveLocationDesignDocument(session, input.locationId);
     const assets = readLocationAssetsByRole(session, input.locationId);
     return {
       purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
@@ -200,6 +205,12 @@ export async function buildLocationEnvironmentSheetContext(
       project: projectContext,
       screenplay: buildLocationScreenplayContext(session),
       location,
+      activeLocationDesign: activeLocationDesign
+        ? toLocationDesignSummary({
+            id: activeLocationDesign.id,
+            document: activeLocationDesign.document,
+          })
+        : null,
       usage: buildLocationUsageContext(session, input.locationId),
       activeLookbook,
       selectedAssets: assets.selectedAssets,

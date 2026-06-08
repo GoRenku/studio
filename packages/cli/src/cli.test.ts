@@ -234,10 +234,11 @@ describe('renku CLI', () => {
     });
     expect(stderr).toEqual([]);
 
+    const facts = await seedCliFacts();
     const screenplayPath = path.join(homeDir, 'screenplay.json');
     await fs.writeFile(
       screenplayPath,
-      JSON.stringify(minimalScreenplayJson(), null, 2),
+      JSON.stringify(minimalScreenplayJson(facts), null, 2),
       'utf8'
     );
 
@@ -254,8 +255,9 @@ describe('renku CLI', () => {
       project: { name: 'constantinople' },
       changes: [{ operation: 'screenplay.create' }],
       generatedIds: expect.arrayContaining([
-        expect.objectContaining({ key: 'urban' }),
-        expect.objectContaining({ key: 'foundry' }),
+        expect.objectContaining({ key: 'act-one' }),
+        expect.objectContaining({ key: 'commission' }),
+        expect.objectContaining({ key: 'first-scene' }),
       ]),
     });
     expect(stderr).toEqual([]);
@@ -281,6 +283,32 @@ describe('renku CLI', () => {
     });
   });
 
+  it('shows a cast member from the documented positional id', async () => {
+    await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    const facts = await seedCliFacts();
+
+    stdout = [];
+    stderr = [];
+    const showExitCode = await runRenkuCli(
+      ['cast', 'show', facts.castMemberId, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(showExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      id: facts.castMemberId,
+      handle: 'urban',
+      name: 'Urban',
+    });
+    expect(stderr).toEqual([]);
+  });
+
   it('validates, writes, lists, and activates Screenplay Analysis through the CLI', async () => {
     await initializeStorageRoot();
     const createExitCode = await createProject();
@@ -298,10 +326,11 @@ describe('renku CLI', () => {
       })
     ).toBe(0);
 
+    const facts = await seedCliFacts();
     const screenplayPath = path.join(homeDir, 'screenplay-three-act.json');
     await fs.writeFile(
       screenplayPath,
-      JSON.stringify(threeActScreenplayJson(), null, 2),
+      JSON.stringify(threeActScreenplayJson(facts), null, 2),
       'utf8'
     );
     stdout = [];
@@ -1498,7 +1527,7 @@ describe('renku CLI', () => {
     const screenplayPath = path.join(homeDir, 'screenplay.json');
     await fs.writeFile(
       screenplayPath,
-      JSON.stringify(minimalScreenplayJson(), null, 2),
+      JSON.stringify(minimalScreenplayJson({ castMemberId: 'cast_missing', locationId: 'location_missing' }), null, 2),
       'utf8'
     );
 
@@ -2418,6 +2447,72 @@ describe('renku CLI', () => {
     );
   }
 
+  async function seedCliFacts(): Promise<{ castMemberId: string; locationId: string }> {
+    const castPath = path.join(homeDir, 'cast-operations.json');
+    await fs.writeFile(
+      castPath,
+      JSON.stringify(
+        {
+          kind: 'castOperations',
+          operations: [
+            {
+              operation: 'castMember.add',
+              castMember: {
+                key: 'urban',
+                handle: 'urban',
+                name: 'Urban',
+              },
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    stdout = [];
+    stderr = [];
+    const castExitCode = await runRenkuCli(
+      ['cast', 'apply', '--file', castPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(castExitCode).toBe(0);
+    const castMemberId = JSON.parse(stdout.join('\n')).generatedIds[0].id as string;
+
+    const locationPath = path.join(homeDir, 'location-operations.json');
+    await fs.writeFile(
+      locationPath,
+      JSON.stringify(
+        {
+          kind: 'locationOperations',
+          operations: [
+            {
+              operation: 'location.add',
+              location: {
+                key: 'foundry',
+                handle: 'foundry',
+                name: 'Foundry',
+              },
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    stdout = [];
+    stderr = [];
+    const locationExitCode = await runRenkuCli(
+      ['location', 'apply', '--file', locationPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationExitCode).toBe(0);
+    const locationId = JSON.parse(stdout.join('\n')).generatedIds[0].id as string;
+
+    return { castMemberId, locationId };
+  }
+
   async function openProjectAndCreateScreenplay(): Promise<void> {
     stdout = [];
     stderr = [];
@@ -2427,10 +2522,11 @@ describe('renku CLI', () => {
     );
     expect(openExitCode).toBe(0);
 
+    const facts = await seedCliFacts();
     const screenplayPath = path.join(homeDir, 'screenplay.json');
     await fs.writeFile(
       screenplayPath,
-      JSON.stringify(minimalScreenplayJson(), null, 2),
+      JSON.stringify(minimalScreenplayJson(facts), null, 2),
       'utf8'
     );
     stdout = [];
@@ -2458,26 +2554,14 @@ function captureIo(stdout: string[], stderr: string[]) {
   };
 }
 
-function minimalScreenplayJson() {
+function minimalScreenplayJson(input: { castMemberId: string; locationId: string }) {
   return {
     kind: 'screenplayCreate',
     screenplay: {
       title: 'Urban Basilica',
     },
-    cast: [
-      {
-        key: 'urban',
-        handle: 'urban',
-        name: 'Urban',
-      },
-    ],
-    locations: [
-      {
-        key: 'foundry',
-        handle: 'foundry',
-        name: 'Foundry',
-      },
-    ],
+    cast: [],
+    locations: [],
     acts: [
       {
         key: 'act-one',
@@ -2491,14 +2575,14 @@ function minimalScreenplayJson() {
                 key: 'first-scene',
                 title: 'Urban Enters The Foundry',
                 setting: {
-                  locationReferences: [{ key: 'foundry' }],
+                  locationIds: [input.locationId],
                 },
                 blocks: [
                   {
                     type: 'action',
                     text: 'Urban studies the cracked bronze.',
-                    castMemberReferences: [{ key: 'urban' }],
-                    locationReferences: [{ key: 'foundry' }],
+                    castMemberIds: [input.castMemberId],
+                    locationIds: [input.locationId],
                   },
                 ],
               },
@@ -2510,7 +2594,7 @@ function minimalScreenplayJson() {
   };
 }
 
-function threeActScreenplayJson() {
+function threeActScreenplayJson(input: { castMemberId: string; locationId: string }) {
   return {
     kind: 'screenplayCreate',
     screenplay: {
@@ -2522,29 +2606,18 @@ function threeActScreenplayJson() {
       tone: ['grave', 'precise'],
       genrePrimary: 'historical drama',
     },
-    cast: [
-      {
-        key: 'urban',
-        handle: 'urban',
-        name: 'Urban',
-      },
-    ],
-    locations: [
-      {
-        key: 'foundry',
-        handle: 'foundry',
-        name: 'Foundry',
-      },
-    ],
+    cast: [],
+    locations: [],
     acts: [
-      cliScreenplayAct('act-one', 'The Offer', 'commission', 'The Refusal'),
-      cliScreenplayAct('act-two', 'The Patron', 'casting', 'The Bargain'),
-      cliScreenplayAct('act-three', 'The Sound', 'siege', 'The Wall Answers'),
+      cliScreenplayAct(input, 'act-one', 'The Offer', 'commission', 'The Refusal'),
+      cliScreenplayAct(input, 'act-two', 'The Patron', 'casting', 'The Bargain'),
+      cliScreenplayAct(input, 'act-three', 'The Sound', 'siege', 'The Wall Answers'),
     ],
   };
 }
 
 function cliScreenplayAct(
+  input: { castMemberId: string; locationId: string },
   actKey: string,
   actTitle: string,
   sequenceKey: string,
@@ -2566,15 +2639,15 @@ function cliScreenplayAct(
             setting: {
               interiorExterior: 'INT',
               timeOfDay: 'NIGHT',
-              locationReferences: [{ key: 'foundry' }],
+              locationIds: [input.locationId],
             },
             storyFunction: ['Pressure Urban'],
             blocks: [
               {
                 type: 'action',
                 text: 'Urban studies the cracked bronze and hears the city waiting.',
-                castMemberReferences: [{ key: 'urban' }],
-                locationReferences: [{ key: 'foundry' }],
+                castMemberIds: [input.castMemberId],
+                locationIds: [input.locationId],
               },
             ],
           },

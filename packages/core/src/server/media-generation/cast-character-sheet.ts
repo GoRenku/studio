@@ -21,6 +21,10 @@ import {
   updateMediaGenerationSpec,
 } from '../database/access/media-generation.js';
 import {
+  readActiveCastDesignDocument,
+  toCastDesignSummary,
+} from '../database/access/department-design.js';
+import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
   type ProjectIdGenerator,
@@ -112,6 +116,7 @@ export async function buildCastCharacterSheetContext(
   return withCastProjectSession(input, ({ session, projectFolder }) => {
     const castMember = requireCastMemberForContext(session, input.castMemberId);
     const activeLookbook = requireActiveLookbookContext(session);
+    const activeCastDesign = readActiveCastDesignDocument(session, input.castMemberId);
     const assets = readCastAssetsByRole(session, input.castMemberId);
     return {
       purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
@@ -119,6 +124,12 @@ export async function buildCastCharacterSheetContext(
       project: projectContext,
       screenplay: buildScreenplayContext(session),
       castMember,
+      activeCastDesign: activeCastDesign
+        ? toCastDesignSummary({
+            id: activeCastDesign.id,
+            document: activeCastDesign.document,
+          })
+        : null,
       timePeriod: buildTimePeriodContext(session, input.castMemberId),
       activeLookbook,
       selectedAssets: assets.selectedAssets,

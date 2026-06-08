@@ -111,8 +111,7 @@ The first review pass resolved these choices:
 - The detailed plan for `casting-director`, `production-designer`, and their
   backing commands lives in
   `plans/active/0053-casting-director-and-production-designer.md`.
-- The production-design skill name is `production-designer`, not
-  `location-staging-designer`.
+- The production-design skill name is `production-designer`.
 - Future voice casting, voice notes, voice samples, and voice variants stay
   under `casting-director` until a later architecture decision separates them.
 
@@ -217,10 +216,10 @@ CLI. Cast mutations currently go through `renku screenplay apply` using
 `castMember.move`. That works, but it makes casting feel like a screenplay
 side-effect instead of a department workflow.
 
-### Location, Staging, And Production Design
+### Location And Production Design
 
-The user's "Location/Staging" category should be treated as a production design
-department, with location work as one major part of it.
+The user's location category should be treated as a production design
+department.
 
 It should own:
 
@@ -228,8 +227,6 @@ It should own:
 - location visual notes, time period, and practical constraints;
 - environment sheets and selected location views;
 - set dressing, props, surfaces, signage, furniture, vehicles, and atmosphere;
-- scene-specific staging configurations;
-- blocking constraints that affect shots;
 - continuity references for objects, costumes, symbols, and recurring spaces.
 
 Existing Renku coverage is partial:
@@ -246,9 +243,8 @@ Main gap:
 There is no dedicated `production-designer` skill, and no first-class
 production-design authoring CLI. Location mutations currently go through
 `renku screenplay apply` using `location.add`, `location.update`,
-`location.delete`, or `location.move`. Scene-specific staging, set dressing,
-prop continuity, and blocking constraints are not durable first-class project
-data yet.
+`location.delete`, or `location.move`. Set dressing, prop continuity, and
+atmosphere are not durable first-class project data yet.
 
 ### Directing
 
@@ -340,7 +336,7 @@ Proposed `SKILL.md` frontmatter:
 ```yaml
 ---
 name: movie-director
-description: Coordinate Renku Studio movie-making workflows across screenplay, analysis, visual language, casting, locations/staging, scene shot design, media generation, and production readiness. Use when the user wants a top-level filmmaking sidekick, asks what to do next, wants to make or revise a movie across multiple departments, needs help choosing which Renku Studio skill to use, or asks for director-like guidance that dispatches to specialist skills such as screenplay-drafter, screenplay-analyst, inspiration-analyzer, lookbook-designer, scene-shot-designer, and media-producer.
+description: Coordinate Renku Studio movie-making workflows across screenplay, analysis, visual language, casting, locations, scene shot design, media generation, and production readiness. Use when the user wants a top-level filmmaking sidekick, asks what to do next, wants to make or revise a movie across multiple departments, needs help choosing which Renku Studio skill to use, or asks for director-like guidance that dispatches to specialist skills such as screenplay-drafter, screenplay-analyst, inspiration-analyzer, lookbook-designer, scene-shot-designer, and media-producer.
 ---
 ```
 
@@ -405,7 +401,7 @@ The director skill should follow this loop:
 
 2. **Diagnose**
    - Decide whether the user is asking for story, analysis, visual language,
-     casting, location/staging, shot design, media generation, or production
+     casting, location, shot design, media generation, or production
      readiness.
    - Identify prerequisites.
    - Identify unsupported or partially supported department surfaces.
@@ -414,7 +410,7 @@ The director skill should follow this loop:
    - Use the specialist skill that owns the artifact.
    - Do not directly write screenplay, analysis, Lookbook, shot-list, or media
      generation JSON when a specialist skill owns that work.
-   - For casting and location/staging, use the current fallback only when it is
+   - For casting and location, use the current fallback only when it is
      the best available path and explain the limitation.
 
 4. **Verify**
@@ -472,7 +468,7 @@ Then it should dispatch to the missing next specialist.
 | Generate Lookbook media | `media-producer` | Strong | Uses `lookbook.image` and `lookbook.sheet`. |
 | Create or revise cast facts | Planned `casting-director`; fallback `screenplay-drafter` | Partial | Current mutation path is `screenplay apply` with `castMember.*` operations. |
 | Generate cast visuals | `media-producer` | Strong after cast exists | Uses `cast.character-sheet` and `cast.profile`. |
-| Create or revise locations, staging, set dressing, props, or production design | Planned `production-designer`; fallback `screenplay-drafter` for location facts only | Partial | Current durable mutation path is `screenplay apply` with `location.*` operations. Broader production design needs 0053. |
+| Create or revise locations, set dressing, props, or production design | Planned `production-designer`; fallback `screenplay-drafter` for location facts only | Partial | Current durable mutation path is `screenplay apply` with `location.*` operations. Broader production design needs 0053. |
 | Generate location visuals | `media-producer` | Strong after location exists | Uses `location.environment-sheet`. |
 | Create scene shot list | `scene-shot-designer` | Strong | Uses `renku screenplay shot-list`. |
 | Iterate shot list | `scene-shot-designer` | Planned/active in 0051 | Operation support exists in current code, but skills/docs need alignment. |
@@ -697,8 +693,8 @@ with operations such as:
 - `location.move`
 
 This is valid but too narrow for production design. It cannot yet represent
-scene-specific staging, set dressing, props, or blocking constraints as durable
-department work.
+set dressing, props, atmosphere, or continuity guidance as durable department
+work.
 
 Planned location fact command family in
 `plans/active/0053-casting-director-and-production-designer.md`:
@@ -718,10 +714,6 @@ Planned production-design command families in
 renku production-design location context --location <location-id> --json
 renku production-design location validate --file <location-design-json> --json
 renku production-design location write --file <location-design-json> --json
-
-renku production-design staging context --scene <scene-id> --json
-renku production-design staging validate --file <scene-staging-json> --json
-renku production-design staging write --file <scene-staging-json> --json
 ```
 
 Do not add production-design commands until the domain contracts are real. A
@@ -765,9 +757,7 @@ It should handle:
 - location creation and revision;
 - production design treatment for spaces;
 - set dressing, prop, and atmosphere notes;
-- scene-specific stage configuration;
 - handoff to `media-producer` for `location.environment-sheet`;
-- handoff to `scene-shot-designer` when staging changes affect coverage.
 
 Until the CLI gap is closed, the skill can use `screenplay-drafter` for durable
 location mutations and `media-producer` for generated location media.
@@ -851,7 +841,7 @@ The first version should:
 - know the current CLI-backed workflow ladder;
 - ask only for missing choices that materially change the next action;
 - dispatch to existing skills;
-- report cast/location/staging/voice/post gaps clearly.
+- report cast/location/voice/post gaps clearly.
 
 ### Slice 2: Add CLI Coverage Reference And Update Existing Skill Docs
 
@@ -886,7 +876,7 @@ Use `plans/active/0053-casting-director-and-production-designer.md` for:
 - `production-designer`;
 - cast-specific CLI/core authoring;
 - production-design CLI/core authoring;
-- durable staging and prop/set-dressing contract questions;
+- durable prop/set-dressing contract questions;
 - voice casting under the casting department.
 
 Do not implement cast or production-design commands inside the first
@@ -954,23 +944,20 @@ Expected behavior after future gap closure:
 2. Use cast-specific CLI context and validation.
 3. Dispatch visual media to `media-producer`.
 
-### Location And Staging Refinement
+### Location Production Design Refinement
 
 User:
 
 ```text
-The control room should feel cramped and ceremonial. Stage it for a tense
-two-person confrontation.
+The control room should feel cramped and ceremonial.
 ```
 
 Expected director behavior today:
 
-1. Separate location description from scene staging.
-2. Use `screenplay-drafter` only for durable location or scene text changes.
-3. Use `media-producer` for `location.environment-sheet` if a location exists
+1. Use `screenplay-drafter` only for durable location or scene text changes.
+2. Use `media-producer` for `location.environment-sheet` if a location exists
    and an active Lookbook exists.
-4. Use `scene-shot-designer` for coverage and blocking implied by the staging.
-5. Explain that durable staging documents are not first-class yet.
+3. Use `scene-shot-designer` for coverage changes.
 
 ## Risks
 
@@ -1039,7 +1026,7 @@ Mitigation:
 2. `casting-director` and `production-designer` are planned as follow-up
    specialist skills in plan `0053`.
 3. `renku director context --json` belongs in this plan.
-4. The location/staging department skill is named `production-designer`.
+4. The production-design department skill is named `production-designer`.
 5. Future voice work remains under `casting-director`.
 
 ## Completion Checklist
@@ -1054,7 +1041,7 @@ Mitigation:
   commands.
 - [x] Confirm the department vocabulary: Screenwriting, Cinematography, Casting,
   Production Design, Directing, Production Coordination, Voice/Sound, Editorial.
-- [x] Decide that location/staging work is named Production Design in
+- [x] Decide that location work is named Production Design in
   user-facing skill language.
 
 ### Existing Skill Alignment
@@ -1136,7 +1123,7 @@ Mitigation:
 - [x] Forward-test the director skill with a "selected scene to shot video"
   prompt.
 - [x] Forward-test the director skill with a cast refinement prompt.
-- [x] Forward-test the director skill with a location/staging refinement prompt.
+- [x] Forward-test the director skill with a location refinement prompt.
 - [x] Confirm the skill does not trigger paid generation without an estimate and
   approval token.
 - [x] Confirm the skill does not directly write department JSON when a

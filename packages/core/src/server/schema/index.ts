@@ -1,6 +1,7 @@
 export * from './acts.js';
 export * from './assets.js';
 export * from './cast-members.js';
+export * from './department-design.js';
 export * from './locations.js';
 export * from './media-generation.js';
 export * from './project.js';

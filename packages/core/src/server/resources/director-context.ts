@@ -43,6 +43,10 @@ import {
   readSceneShotListDocument,
 } from '../database/access/scene-shot-lists.js';
 import {
+  readActiveCastDesignId,
+  readActiveLocationDesignId,
+} from '../database/access/department-design.js';
+import {
   listShotVideoTakeInputs,
   listShotVideoTakes,
 } from '../database/access/shot-video-takes.js';
@@ -148,9 +152,16 @@ function readVisualLanguageReadiness(
 function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
   const castMembers = listCastMemberRecords(session);
   const missingSelectedVisualReferenceCastMemberIds: string[] = [];
+  const missingActiveCastDesignCastMemberIds: string[] = [];
   let selectedVisualReferenceCount = 0;
+  let activeCastDesignCount = 0;
 
   for (const castMember of castMembers) {
+    if (readActiveCastDesignId(session, castMember.id)) {
+      activeCastDesignCount += 1;
+    } else {
+      missingActiveCastDesignCastMemberIds.push(castMember.id);
+    }
     const selectedAssets = listAssetRelationshipPage(session, {
       target: { kind: 'castMember', castMemberId: castMember.id },
       selection: 'select',
@@ -166,6 +177,8 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
 
   return {
     castMemberCount: castMembers.length,
+    activeCastDesignCount,
+    missingActiveCastDesignCastMemberIds,
     selectedVisualReferenceCount,
     missingSelectedVisualReferenceCastMemberIds,
     everyCastMemberHasSelectedVisualReference:
@@ -179,11 +192,18 @@ function readProductionDesignReadiness(
 ): DirectorProductionDesignReadiness {
   const locations = listScreenplayLocationsFromSession(session);
   const missingSelectedEnvironmentSheetLocationIds: string[] = [];
+  const missingActiveLocationDesignLocationIds: string[] = [];
   let selectedEnvironmentSheetCount = 0;
+  let activeLocationDesignCount = 0;
 
   for (const location of locations) {
     if (!location.id) {
       continue;
+    }
+    if (readActiveLocationDesignId(session, location.id)) {
+      activeLocationDesignCount += 1;
+    } else {
+      missingActiveLocationDesignLocationIds.push(location.id);
     }
     const selectedAssets = listAssetRelationshipPage(session, {
       target: { kind: 'location', locationId: location.id },
@@ -199,6 +219,8 @@ function readProductionDesignReadiness(
 
   return {
     locationCount: locations.length,
+    activeLocationDesignCount,
+    missingActiveLocationDesignLocationIds,
     selectedEnvironmentSheetCount,
     missingSelectedEnvironmentSheetLocationIds,
     everyLocationHasSelectedEnvironmentSheet:
