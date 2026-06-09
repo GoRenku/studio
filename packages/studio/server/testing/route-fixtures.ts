@@ -18,6 +18,8 @@ export function makeAsset(assetId: string): Asset {
     oneLineSummary: null,
     origin: 'imported',
     role: 'reference',
+    referenceName: null,
+    purpose: null,
     sortOrder: 1,
     files: [
       {

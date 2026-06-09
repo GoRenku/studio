@@ -1,4 +1,5 @@
 import type {
+  Asset,
   ActStoryboardResource,
   ActStoryboardSequence,
   ActStoryboardShot,
@@ -26,8 +27,20 @@ export type CastOverviewResourceResponse = Omit<CastOverviewResource, 'cast'> & 
   };
 };
 
-export type CastMemberResourceResponse = Omit<CastMemberResource, 'firstImage'> & {
+export type CastMemberResourceResponse = Omit<
+  CastMemberResource,
+  'firstImage' | 'voices'
+> & {
   firstImage?: ScreenplayImageReferenceWithHttp;
+  voices: Array<
+    Omit<CastMemberResource['voices'][number], 'sample'> & {
+      sample: AssetWithHttpFiles;
+    }
+  >;
+};
+
+type AssetWithHttpFiles = Omit<Asset, 'files'> & {
+  files: Array<Asset['files'][number] & { url: string }>;
 };
 
 export type LocationOverviewResourceResponse = Omit<
@@ -122,6 +135,15 @@ export function toCastMemberResourceResponse(
     firstImage: resource.firstImage
       ? withImageUrl(projectName, 'cast', resource.castMember.id, resource.firstImage)
       : undefined,
+    voices: resource.voices.map((voice) => ({
+      ...voice,
+      sample: withAssetFileUrls(
+        projectName,
+        'cast',
+        resource.castMember.id,
+        voice.sample
+      ),
+    })),
   };
 }
 
@@ -226,6 +248,21 @@ function withImageUrl(
   return {
     ...image,
     url: `/studio-api/projects/${encodeURIComponent(projectName)}/${ownerPath}/${encodeURIComponent(ownerId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
+  };
+}
+
+function withAssetFileUrls(
+  projectName: string,
+  ownerPath: 'cast' | 'locations',
+  ownerId: string,
+  asset: Asset
+): AssetWithHttpFiles {
+  return {
+    ...asset,
+    files: asset.files.map((file) => ({
+      ...file,
+      url: `/studio-api/projects/${encodeURIComponent(projectName)}/${ownerPath}/${encodeURIComponent(ownerId)}/assets/${encodeURIComponent(asset.assetId)}/files/${encodeURIComponent(file.id)}`,
+    })),
   };
 }
 

@@ -23,6 +23,15 @@ interface StudioAssetDeleteResponse {
   resourceKeys?: string[];
 }
 
+interface StudioCastVoiceDeleteResponse {
+  removed: {
+    castMemberId: string;
+    voiceId: string;
+    sampleAssetId: string;
+  };
+  resourceKeys?: string[];
+}
+
 interface CastDesignResourceApiResponse {
   resource: CastDesignResourceResponse | null;
 }
@@ -194,6 +203,25 @@ export async function deleteCastAsset(
   return body.assetId;
 }
 
+export async function deleteCastVoice(
+  projectName: string,
+  castMemberId: string,
+  voiceId: string
+): Promise<StudioCastVoiceDeleteResponse['removed']> {
+  const response = await fetch(castVoiceUrl(projectName, castMemberId, voiceId), {
+    method: 'DELETE',
+    headers: {
+      'X-Renku-Studio-Token': readStudioApiToken(),
+    },
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+
+  const body = (await response.json()) as StudioCastVoiceDeleteResponse;
+  return body.removed;
+}
+
 export async function selectLocationAsset(
   projectName: string,
   locationId: string,
@@ -322,6 +350,14 @@ function castAssetUrl(
   assetId: string
 ): string {
   return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}`;
+}
+
+function castVoiceUrl(
+  projectName: string,
+  castMemberId: string,
+  voiceId: string
+): string {
+  return `${castAssetsUrl(projectName, castMemberId).replace(/\/assets$/, '/voices')}/${encodeURIComponent(voiceId)}`;
 }
 
 function locationAssetUrl(

@@ -76,6 +76,8 @@ export async function registerAsset(
         assetId,
         localeId,
         role: normalizedInput.role,
+        referenceName: normalizedInput.referenceName,
+        purpose: normalizedInput.purpose,
         sortOrder,
         now,
       });
@@ -111,6 +113,8 @@ function normalizeRegisterAssetInput(
     projectRelativePath: normalizeProjectRelativePath(input.projectRelativePath),
     fileRole: requiredTrimmed(input.fileRole, 'fileRole'),
     role: requiredTrimmed(input.role, 'role'),
+    referenceName: optionalTrimmed(input.referenceName),
+    purpose: optionalTrimmed(input.purpose),
   };
 }
 

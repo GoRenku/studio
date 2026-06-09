@@ -78,6 +78,8 @@ export interface ImportCastImageMediaInput extends CastImageTargetInput {
   sourceProjectRelativePath: string;
   title?: string;
   oneLineSummary?: string;
+  referenceName?: string;
+  referencePurpose?: string;
   receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
 }
@@ -484,7 +486,8 @@ export function outputNames(
 }
 
 export function titleForSpec(spec: MediaGenerationSpec, fallback: string): string {
-  return spec.title?.trim() || spec.prompt.trim().slice(0, 80) || fallback;
+  const prompt = 'prompt' in spec ? spec.prompt : '';
+  return spec.title?.trim() || prompt.trim().slice(0, 80) || fallback;
 }
 
 export function toGenerationRequest(
@@ -502,7 +505,12 @@ export function toGenerationRequest(
       outputCount: plan.outputCount,
     },
     request: {
-      prompt: typeof prompt === 'string' ? prompt : spec.prompt,
+      prompt:
+        typeof prompt === 'string'
+          ? prompt
+          : 'prompt' in spec
+            ? spec.prompt
+            : fallbackTitle,
       ...(plan.inputFiles ? { inputFiles: plan.inputFiles } : {}),
       parameters,
       outputNames: outputNames(spec, plan.outputCount, fallbackTitle),
@@ -547,6 +555,8 @@ export async function importCastImageMedia(
       assetId: imported.assetId,
       localeId: null,
       role: config.assetRole,
+      referenceName: input.referenceName?.trim() || null,
+      purpose: input.referencePurpose?.trim() || null,
       sortOrder: nextAssetRelationshipSortOrder(session, {
         target,
         role: config.assetRole,

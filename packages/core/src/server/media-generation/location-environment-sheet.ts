@@ -129,7 +129,7 @@ type LocationEnvironmentSheetImportFiles = Record<
 >;
 
 interface LocationProviderPlan {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   mode: 'text-to-image';
   payload: Record<string, unknown>;
@@ -170,7 +170,7 @@ export interface RunLocationEnvironmentSheetSpecInput
 
 export interface RecordLocationEnvironmentSheetRunInput
   extends LocationEnvironmentSheetSpecIdInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;

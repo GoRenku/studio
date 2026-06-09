@@ -14,6 +14,12 @@ import type {
   CastDesignListReport,
   CastDesignReadReport,
   CastDesignWriteReport,
+  CastVoiceAttachmentDocument,
+  CastVoiceAttachmentReport,
+  CastVoiceListReport,
+  CastVoiceReadReport,
+  CastVoiceRemoveReport,
+  CastVoiceValidationReport,
   CastOperationDocument,
   DepartmentCommandReport,
   InspirationAnalysisValidationReport,
@@ -53,6 +59,9 @@ import type {
   CastProfileGenerationContext,
   CastProfileGenerationSpec,
   CastProfileModelListReport,
+  CastVoiceSampleGenerationContext,
+  CastVoiceSampleGenerationSpec,
+  CastVoiceSampleModelListReport,
   LocationEnvironmentSheetGenerationContext,
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
@@ -248,6 +257,11 @@ export interface ProjectDataService {
   closeCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
   listCastMembers(input?: RenkuConfigPathOptions): Promise<import('../client/cast-members.js').CastMember[]>;
   readCastMember(input: ReadCastMemberInput): Promise<import('../client/cast-members.js').CastMember>;
+  listCastVoices(input: ListCastVoicesInput): Promise<CastVoiceListReport>;
+  readCastVoice(input: ReadCastVoiceInput): Promise<CastVoiceReadReport>;
+  validateCastVoiceAttachment(input: ValidateCastVoiceAttachmentInput): Promise<CastVoiceValidationReport>;
+  attachCastVoice(input: AttachCastVoiceInput): Promise<CastVoiceAttachmentReport>;
+  removeCastVoice(input: RemoveCastVoiceInput): Promise<CastVoiceRemoveReport>;
   readCastContext(input: ReadCastContextInput): Promise<CastDesignContextReport>;
   validateCastOperations(input: ValidateCastOperationsInput): Promise<DepartmentCommandReport>;
   applyCastOperations(input: ApplyCastOperationsInput): Promise<DepartmentCommandReport>;
@@ -377,6 +391,16 @@ export interface ProjectDataService {
   runCastProfileSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordCastProfileRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
   importCastProfileMedia(input: ImportCastMediaInput): Promise<CastMediaImportReport>;
+  buildCastVoiceSampleContext(input: CastMediaGenerationContextInput): Promise<CastVoiceSampleGenerationContext>;
+  listCastVoiceSampleModels(input: CastMediaGenerationContextInput): Promise<CastVoiceSampleModelListReport>;
+  validateCastVoiceSampleSpec(input: ValidateCastVoiceSampleGenerationSpecInput): Promise<{ valid: true; spec: CastVoiceSampleGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createCastVoiceSampleSpec(input: CreateCastVoiceSampleGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateCastVoiceSampleSpec(input: UpdateCastVoiceSampleGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readCastVoiceSampleSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listCastVoiceSampleSpecs(input: CastMediaGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareCastVoiceSampleSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateCastVoiceSampleSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runCastVoiceSampleSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   buildLocationEnvironmentSheetContext(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetGenerationContext>;
   listLocationEnvironmentSheetModels(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetModelListReport>;
   validateLocationEnvironmentSheetSpec(input: ValidateLocationEnvironmentSheetGenerationSpecInput): Promise<{ valid: true; spec: LocationEnvironmentSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
@@ -507,6 +531,26 @@ export interface ReadDirectorContextInput extends RenkuConfigPathOptions {
 export interface ReadCastMemberInput extends RenkuConfigPathOptions {
   castMemberId: string;
 }
+
+export interface ListCastVoicesInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  castMemberId: string;
+}
+
+export interface ReadCastVoiceInput extends ListCastVoicesInput {
+  voiceIdOrName: string;
+}
+
+export interface ValidateCastVoiceAttachmentInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  document: CastVoiceAttachmentDocument;
+}
+
+export interface AttachCastVoiceInput extends ValidateCastVoiceAttachmentInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface RemoveCastVoiceInput extends ReadCastVoiceInput {}
 
 export interface ReadCastContextInput extends RenkuConfigPathOptions {
   castMemberId: string;
@@ -892,7 +936,7 @@ export interface RunLookbookImageGenerationSpecInput
 
 export interface RecordLookbookImageGenerationRunInput
   extends ReadLookbookImageGenerationSpecInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
@@ -949,7 +993,7 @@ export interface RunLookbookSheetGenerationSpecInput
 
 export interface RecordLookbookSheetGenerationRunInput
   extends ReadLookbookSheetGenerationSpecInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
@@ -967,6 +1011,8 @@ export interface ImportLookbookSheetMediaInput extends RenkuConfigPathOptions {
   sourceProjectRelativePath: string;
   title?: string;
   oneLineSummary?: string;
+  referenceName?: string;
+  referencePurpose?: string;
   receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
 }
@@ -1005,6 +1051,22 @@ export interface CreateCastProfileGenerationSpecInput
 
 export interface UpdateCastProfileGenerationSpecInput
   extends ValidateCastProfileGenerationSpecInput {
+  specId: string;
+}
+
+export interface ValidateCastVoiceSampleGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: CastVoiceSampleGenerationSpec;
+}
+
+export interface CreateCastVoiceSampleGenerationSpecInput
+  extends ValidateCastVoiceSampleGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateCastVoiceSampleGenerationSpecInput
+  extends ValidateCastVoiceSampleGenerationSpecInput {
   specId: string;
 }
 
@@ -1057,7 +1119,7 @@ export interface UpdateMediaGenerationSpecInput
 
 export interface RecordMediaGenerationRunInput
   extends ReadMediaGenerationSpecInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
@@ -1075,6 +1137,8 @@ export interface ImportCastMediaInput extends RenkuConfigPathOptions {
   sourceProjectRelativePath: string;
   title?: string;
   oneLineSummary?: string;
+  referenceName?: string;
+  referencePurpose?: string;
   receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
 }

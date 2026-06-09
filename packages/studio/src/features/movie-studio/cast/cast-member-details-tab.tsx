@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { ImageOff } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ImageOff, Pause, Volume2 } from 'lucide-react';
 import type {
   CastMemberResourceResponse,
   StudioAssetResponse,
@@ -10,14 +10,17 @@ import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
-  CAST_CHARACTER_SHEET_ROLE,
   CAST_PROFILE_ROLE,
   castImageAssetAspectRatio,
   castPreviewImageForAsset,
   preferredCastImageAssetForRole,
-  selectedCastImageAssetForRole,
 } from './cast-member-assets';
 
 interface CastMemberDetailsTabProps {
@@ -36,28 +39,53 @@ export function CastMemberDetailsTab({
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const castMember = resource.castMember;
   const profileAsset = preferredCastImageAssetForRole(assets, CAST_PROFILE_ROLE);
-  const characterSheetAsset = selectedCastImageAssetForRole(
-    assets,
-    CAST_CHARACTER_SHEET_ROLE
-  );
+  const firstVoice = resource.voices[0] ?? null;
+  const firstVoiceFile = firstVoice?.sample.files[0] ?? null;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [voicePlaying, setVoicePlaying] = useState(false);
   const profilePreview = profileAsset
     ? castPreviewImageForAsset(projectName, castMemberId, profileAsset)
     : null;
   const profileAspectRatio = profileAsset
     ? castImageAssetAspectRatio(profileAsset, 1)
     : 1;
-  const characterSheetPreview = characterSheetAsset
-    ? castPreviewImageForAsset(projectName, castMemberId, characterSheetAsset)
-    : null;
-  const characterSheetAspectRatio = characterSheetAsset
-    ? castImageAssetAspectRatio(characterSheetAsset, 4 / 3)
-    : 4 / 3;
   const facts = [
     ['Role', castMember.role],
     ['Age', castMember.age?.toString()],
     ['Want', castMember.want],
     ['Need', castMember.need],
+    ['Arc', castMember.arc],
+    ['Voice Notes', castMember.voiceNotes],
   ].filter((fact): fact is [string, string] => Boolean(fact[1]));
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return undefined;
+    }
+    const stop = () => setVoicePlaying(false);
+    audio.addEventListener('pause', stop);
+    audio.addEventListener('ended', stop);
+    return () => {
+      audio.pause();
+      audio.removeEventListener('pause', stop);
+      audio.removeEventListener('ended', stop);
+    };
+  }, [firstVoiceFile?.url]);
+
+  const toggleVoicePreview = async () => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+    if (voicePlaying) {
+      audio.pause();
+      setVoicePlaying(false);
+      return;
+    }
+    await audio.play();
+    setVoicePlaying(true);
+  };
 
   return (
     <>
@@ -78,9 +106,37 @@ export function CastMemberDetailsTab({
                 </span>
               ) : null}
             </div>
-            <h1 className='mt-4 max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
-              {castMember.name}
-            </h1>
+            <div className='mt-4 flex max-w-[920px] flex-wrap items-center gap-3'>
+              <h1 className='min-w-0 text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
+                {castMember.name}
+              </h1>
+              {firstVoiceFile ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type='button'
+                      size='icon'
+                      variant='secondary'
+                      className='mt-1 h-9 w-9 shrink-0 rounded-full'
+                      onClick={toggleVoicePreview}
+                      aria-label={`${voicePlaying ? 'Pause' : 'Play'} ${castMember.name} voice sample`}
+                    >
+                      {voicePlaying ? (
+                        <Pause className='h-4 w-4' />
+                      ) : (
+                        <Volume2 className='h-4 w-4' />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {voicePlaying ? 'Pause voice sample' : `Play ${castMember.name} voice sample`}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+            </div>
+            {firstVoiceFile ? (
+              <audio ref={audioRef} src={firstVoiceFile.url} preload='metadata' />
+            ) : null}
             {castMember.description ? (
               <p className='mt-6 max-w-[780px] text-base font-semibold leading-8 text-foreground/82 lg:text-lg'>
                 {castMember.description}
@@ -103,22 +159,6 @@ export function CastMemberDetailsTab({
           </div>
         </header>
 
-        <CastReportSection number='01' kicker='Visual Anchor' title='Character Sheet'>
-          <div className='grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(260px,0.65fr)]'>
-            <CastFeatureImage
-              image={characterSheetPreview}
-              aspectClassName='aspect-[4/3]'
-              aspectRatio={characterSheetAspectRatio}
-              imageClassName='object-contain'
-              emptyLabel='No character sheet pick yet'
-              onOpenImage={setPreviewImage}
-            />
-            <div className='space-y-5'>
-              <TextSection title='Arc' text={castMember.arc} />
-              <TextSection title='Voice Notes' text={castMember.voiceNotes} />
-            </div>
-          </div>
-        </CastReportSection>
       </article>
       <ImagePreviewDialog
         images={previewImage ? [previewImage] : []}
@@ -126,32 +166,6 @@ export function CastMemberDetailsTab({
         onOpenChange={(open) => !open && setPreviewImage(null)}
       />
     </>
-  );
-}
-
-function CastReportSection({
-  number,
-  kicker,
-  title,
-  children,
-}: {
-  number: string;
-  kicker: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className='grid gap-6 border-t border-border/40 py-8 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)] lg:gap-8'>
-      <div>
-        <p className='font-mono text-xs uppercase text-muted-foreground'>
-          {number} - {kicker}
-        </p>
-        <h2 className='mt-4 text-4xl font-black leading-none text-foreground sm:text-5xl xl:text-6xl'>
-          {title}
-        </h2>
-      </div>
-      <div className='min-w-0'>{children}</div>
-    </section>
   );
 }
 
@@ -203,21 +217,5 @@ function CastFeatureImage({
         </div>
       )}
     </div>
-  );
-}
-
-function TextSection({ title, text }: { title: string; text?: string }) {
-  if (!text) {
-    return null;
-  }
-  return (
-    <section className='space-y-2 border-t border-border/40 pt-4'>
-      <h3 className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-        {title}
-      </h3>
-      <p className='whitespace-pre-wrap text-sm leading-7 text-foreground/78'>
-        {text}
-      </p>
-    </section>
   );
 }

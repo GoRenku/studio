@@ -58,8 +58,14 @@ operational companions that teach agents how to use those contracts.
 - Writes validated `kind: "castDesign"` JSON through `renku cast design`.
 - Owns casting interpretation, appearance, performance, costume continuity,
   voice casting notes, and cast media readiness.
+- Owns Cast Voice attachment guidance through `renku cast voice attach` when a
+  provider voice id and sample audio are ready.
+- Keeps provider voice ids and sample assets in Cast Voice records, not Cast
+  Design JSON.
 - Hands `cast.character-sheet` and `cast.profile` generation to
   `media-producer`.
+- Hands `cast.voice-sample` generation to `media-producer` when the user wants
+  Renku to create the sample audio.
 
 `production-designer`
 
@@ -76,6 +82,8 @@ operational companions that teach agents how to use those contracts.
 - Creates or updates persisted generation specs.
 - Estimates cost and runs only approved specs.
 - Imports finished files separately with `renku media import`.
+- Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
+  the output to `casting-director` for `renku cast voice attach`.
 
 `movie-director`
 
@@ -118,8 +126,10 @@ Skills must not:
   call-sheet timing to Scene Shot List documents.
 - mutate Cast Members or Locations through screenplay operation documents;
 - store generated media paths inside Cast Design or Location Design JSON;
-- treat costume variants, voice samples, props, or set dressing as media targets
-  until those concepts have explicit durable media contracts.
+- treat costume variants, props, or set dressing as media targets until those
+  concepts have explicit durable media contracts.
+- store generated Cast Voice sample paths inside Cast Design JSON. Cast Voice
+  samples are attached through `renku cast voice attach`.
 
 ## Reference Structure
 

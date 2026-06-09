@@ -31,6 +31,10 @@ export async function createSimulatedFallbackArtifacts(
 ): Promise<ProducedArtifact[]> {
   const extras = request.context.extras as Record<string, unknown> | undefined;
   const resolvedInputs = extras?.resolvedInputs as Record<string, unknown> | undefined;
+  const expectedOutputMimeType =
+    typeof extras?.expectedOutputMimeType === 'string'
+      ? extras.expectedOutputMimeType
+      : undefined;
   const jobContext = extras?.jobContext as
     | {
         inputBindings?: Record<string, string>;
@@ -40,7 +44,8 @@ export async function createSimulatedFallbackArtifacts(
   return Promise.all(request.produces.map(async (artifactId, index) => {
     const kind = parseArtifactKind(artifactId);
     const baseKind = kind?.split('.').pop();
-    const expectedMimeType = baseKind ? expectedMimeTypes[baseKind] : undefined;
+    const expectedMimeType =
+      expectedOutputMimeType ?? (baseKind ? expectedMimeTypes[baseKind] : undefined);
     const simulatedResponse = createSimulatedFallbackResponse({
       provider: request.provider,
       model: request.model,
@@ -184,10 +189,15 @@ async function buildSimulatedFallbackBlob(args: {
 
   const durationSeconds = expectedMimeType.startsWith('image/')
     ? 0
-    : resolveDurationForSimulatedMedia({
-        durationInputId,
-        resolvedInputs,
-      });
+    : expectedMimeType.startsWith('audio/')
+      ? resolveAudioDurationForSimulatedMedia({
+          durationInputId,
+          resolvedInputs,
+        })
+      : resolveDurationForSimulatedMedia({
+          durationInputId,
+          resolvedInputs,
+        });
 
   return {
     data: await generateSimulatedDataForMimeType({
@@ -196,6 +206,20 @@ async function buildSimulatedFallbackBlob(args: {
     }),
     mimeType: expectedMimeType,
   };
+}
+
+function resolveAudioDurationForSimulatedMedia(args: {
+  durationInputId?: string;
+  resolvedInputs: Record<string, unknown> | undefined;
+}): number {
+  if (args.durationInputId) {
+    return resolveDurationForSimulatedMedia(args);
+  }
+  const text = args.resolvedInputs?.['Input:text'];
+  if (typeof text === 'string' && text.trim().length > 0) {
+    return Math.max(1, Math.ceil(text.length / 14));
+  }
+  return resolveDurationForSimulatedMedia(args);
 }
 
 function parseArtifactKind(artifactId: string): ArtifactKind | undefined {

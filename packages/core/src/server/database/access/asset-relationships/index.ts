@@ -45,6 +45,8 @@ export interface AssetRelationshipRecord {
   targetId: string | null;
   localeId: string | null;
   role: string;
+  referenceName: string | null;
+  purpose: string | null;
   sortOrder: number;
   selection: string;
   selectionOrder: number | null;
@@ -77,6 +79,8 @@ export interface InsertAssetRelationshipRecord {
   assetId: string;
   localeId: string | null;
   role: string;
+  referenceName?: string | null;
+  purpose?: string | null;
   sortOrder: number;
   now: string;
 }
@@ -121,6 +125,8 @@ export function insertAssetRelationshipRecord(
     assetId: record.assetId,
     localeId: record.localeId,
     role: record.role,
+    referenceName: record.referenceName ?? null,
+    purpose: record.purpose ?? null,
     sortOrder: record.sortOrder,
     createdAt: record.now,
     updatedAt: record.now,
@@ -396,6 +402,8 @@ function selectAssetRelationshipRows(
       targetId: config.targetColumn ?? sql<string | null>`null`,
       localeId: table.localeId,
       role: table.role,
+      referenceName: table.referenceName,
+      purpose: table.purpose,
       sortOrder: table.sortOrder,
       selection: table.selection,
       selectionOrder: table.selectionOrder,
@@ -504,6 +512,8 @@ function toAsset(
     oneLineSummary: row.oneLineSummary,
     origin: row.origin,
     role: row.role,
+    referenceName: row.referenceName,
+    purpose: row.purpose,
     sortOrder: row.sortOrder,
     files: (filesByAssetId.get(row.assetId) ?? []).map(toAssetFile),
     createdAt: row.createdAt,

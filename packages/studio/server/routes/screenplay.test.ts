@@ -48,6 +48,7 @@ describe('screenplay Hono route', () => {
                 name: 'Narrator',
               },
               firstImage,
+              voices: [],
             };
           },
           async readLocationResource(input) {

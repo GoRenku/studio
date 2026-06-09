@@ -42,6 +42,49 @@ export function createAssetsRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .get('/cast/:castMemberId/voices', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const castMemberId = c.req.param('castMemberId') as string;
+        const report = await projectData.listCastVoices({
+          projectName,
+          castMemberId,
+        });
+        return c.json({ voices: report.voices });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .get('/cast/:castMemberId/voices/:voiceId', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const castMemberId = c.req.param('castMemberId') as string;
+        const voiceIdOrName = c.req.param('voiceId') as string;
+        const report = await projectData.readCastVoice({
+          projectName,
+          castMemberId,
+          voiceIdOrName,
+        });
+        return c.json({ voice: report.voice });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/cast/:castMemberId/voices/:voiceId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const castMemberId = c.req.param('castMemberId') as string;
+        const voiceIdOrName = c.req.param('voiceId') as string;
+        const report = await projectData.removeCastVoice({
+          projectName,
+          castMemberId,
+          voiceIdOrName,
+        });
+        return c.json(report);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .post(
       '/cast/:castMemberId/assets/:assetId/select',
       requireToken,

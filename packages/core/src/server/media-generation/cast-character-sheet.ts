@@ -89,7 +89,7 @@ export interface RunCastCharacterSheetSpecInput extends CastCharacterSheetSpecId
 }
 
 export interface RecordCastCharacterSheetRunInput extends CastCharacterSheetSpecIdInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;

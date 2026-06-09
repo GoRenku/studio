@@ -1,6 +1,7 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
+import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
 import type {
   Block,
@@ -118,6 +119,7 @@ export interface CastOverviewResource {
 export interface CastMemberResource {
   castMember: CastMember;
   firstImage?: ScreenplayImageReference;
+  voices: CastVoice[];
 }
 
 export interface LocationOverviewResource {

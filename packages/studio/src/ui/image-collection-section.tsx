@@ -9,6 +9,8 @@ export interface ImageCollectionItem {
   id: string;
   imageUrl: string | null;
   imageAlt: string;
+  title?: string;
+  description?: string;
   aspectClassName: string;
   aspectRatio: number;
   detectImageAspectRatio?: boolean;
@@ -56,6 +58,8 @@ export function ImageCollectionSection({
               key={item.id}
               imageUrl={item.imageUrl}
               imageAlt={item.imageAlt}
+              title={item.title}
+              description={item.description}
               aspectClassName={item.aspectClassName}
               aspectRatio={item.aspectRatio}
               detectImageAspectRatio={item.detectImageAspectRatio}

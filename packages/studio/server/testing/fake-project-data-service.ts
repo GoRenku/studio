@@ -97,6 +97,29 @@ export function fakeProjectDataService(): NonNullable<
     async listAssets() {
       return [makeAsset('asset_cast_reference')];
     },
+    async listCastVoices() {
+      return { voices: [] };
+    },
+    async readCastVoice() {
+      throw new Error('Cast Voice fixture was not configured.');
+    },
+    async removeCastVoice(input) {
+      return {
+        removed: {
+          castMemberId: input.castMemberId,
+          voiceId: input.voiceIdOrName,
+          sampleAssetId: 'asset_voice_sample',
+        },
+        changes: [
+          {
+            type: 'castVoice.removed' as const,
+            castMemberId: input.castMemberId,
+            voiceId: input.voiceIdOrName,
+          },
+        ],
+        resourceKeys: [`assets:castMember:${input.castMemberId}`],
+      };
+    },
     async listAssetPage() {
       return {
         items: [makeAsset('asset_cast_reference')],
@@ -180,7 +203,7 @@ export function fakeProjectDataService(): NonNullable<
       return { cast: makeProjectShell(project).navigation.cast };
     },
     async readCastMemberResource() {
-      return { castMember: project.cast[0] };
+      return { castMember: project.cast[0], voices: [] };
     },
     async readLocationOverviewResource() {
       return { locations: makeProjectShell(project).navigation.locations };

@@ -33,6 +33,8 @@ export interface AssetCommandFlags {
   file?: string;
   title?: string;
   summary?: string;
+  referenceName?: string;
+  referencePurpose?: string;
   locale?: string;
   order?: number;
 }
@@ -87,6 +89,8 @@ async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
     mediaKind: requiredFlag(options, 'mediaKind'),
     title: requiredFlag(options, 'title'),
     oneLineSummary: options.flags.summary,
+    referenceName: options.flags.referenceName,
+    purpose: options.flags.referencePurpose,
     projectRelativePath: requiredFlag(options, 'file') as ProjectRelativePath,
     fileRole: requiredFlag(options, 'fileRole'),
     role: requiredFlag(options, 'role'),

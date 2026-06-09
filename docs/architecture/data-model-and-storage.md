@@ -64,6 +64,14 @@ Use the focused documents below for current direction.
   `scene_storyboard_image` assets and records direct ownership in
   `scene_shot_storyboard_image`. Core does not store crop boxes, grid cells, or
   extraction metadata for storyboard slicing.
+- Cast Voices are durable Cast Member-owned records in `cast_voice`. A Cast
+  Voice stores the provider, model, provider voice id, Renku reference name, and
+  purpose. Its playable sample is still a normal audio Asset related to the
+  cast member with role `voice_sample`; generic asset deletion must reject that
+  sample while the Cast Voice points at it.
+- Asset relationship tables can store relationship-scoped `reference_name` and
+  `purpose`. Use these fields when the same Asset needs different local meaning
+  in different relationships, such as named Character Sheets or Voice Samples.
 - The canonical project database path is:
 
 ```text
@@ -94,6 +102,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `docs/decisions/0025-use-shared-media-generation-purpose-architecture.md`
 - `docs/decisions/0028-use-durable-department-design-documents.md`
+- `docs/decisions/0029-use-cast-voice-as-durable-project-data.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

@@ -7,13 +7,14 @@ import type {
 } from '@/services/studio-project-contracts';
 import {
   deleteCastAsset,
+  deleteCastVoice,
   readCastAssets,
   selectCastAsset,
   unselectCastAsset,
 } from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-screenplay-api';
+import { CastMemberAssetsTab } from './cast-member-assets-tab';
 import { CastMemberDetailsTab } from './cast-member-details-tab';
-import { CastMemberVisualContentTab } from './cast-member-visual-content-tab';
 
 interface CastMemberPanelProps {
   projectName: string;
@@ -111,6 +112,17 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
     }
   };
 
+  const removeVoice = async (
+    voice: CastMemberResourceResponse['voices'][number]
+  ) => {
+    try {
+      await deleteCastVoice(projectName, castMemberId, voice.id);
+      await refreshCastMember();
+    } catch (deleteError) {
+      toast.error(errorMessage(deleteError));
+    }
+  };
+
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
   }
@@ -123,8 +135,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
       defaultValue='details'
       items={[
         { value: 'details', label: 'Details' },
-        { value: 'visual', label: 'Visual Content' },
-        { value: 'voice', label: 'Voice Design' },
+        { value: 'assets', label: 'Assets' },
       ]}
     >
       <LineTabsContent value='details'>
@@ -135,17 +146,16 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
           assets={assets}
         />
       </LineTabsContent>
-      <LineTabsContent value='visual'>
-        <CastMemberVisualContentTab
+      <LineTabsContent value='assets'>
+        <CastMemberAssetsTab
           projectName={projectName}
           castMemberId={castMemberId}
+          resource={resource}
           assets={assets}
           onTogglePick={togglePick}
           onDeleteAsset={removeAsset}
+          onDeleteVoice={removeVoice}
         />
-      </LineTabsContent>
-      <LineTabsContent value='voice' className='p-4 text-sm text-muted-foreground'>
-        Voice design will appear here when project assets are attached.
       </LineTabsContent>
     </LineTabs>
   );

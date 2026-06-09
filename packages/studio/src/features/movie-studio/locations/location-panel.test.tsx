@@ -267,6 +267,8 @@ function locationSheetAsset({
     oneLineSummary: null,
     origin: 'generated',
     role: 'environment_sheet',
+    referenceName: null,
+    purpose: null,
     sortOrder: selected ? 0 : 1,
     files: [
       imageFile('composite', `${assetId}_composite`, 1536, 1152),

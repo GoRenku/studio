@@ -85,8 +85,18 @@ export type CastOverviewResourceResponse = Omit<CastOverviewResource, 'cast'> & 
   };
 };
 
-export type CastMemberResourceResponse = Omit<CastMemberResource, 'firstImage'> & {
+export type CastMemberResourceResponse = Omit<
+  CastMemberResource,
+  'firstImage' | 'voices'
+> & {
   firstImage?: ScreenplayImageReferenceWithHttp;
+  voices: Array<
+    Omit<CastMemberResource['voices'][number], 'sample'> & {
+      sample: Omit<Asset, 'files'> & {
+        files: Array<Asset['files'][number] & { url: string }>;
+      };
+    }
+  >;
 };
 
 export type LocationOverviewResourceResponse = Omit<

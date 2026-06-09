@@ -10,8 +10,11 @@ const commandDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('CLI command architecture', () => {
   it('keeps media import purpose handlers aligned with generation purposes', () => {
+    const attachmentOnlyPurposes = new Set(['cast.voice-sample']);
     expect(listMediaImportPurposeHandlers().map((handler) => handler.purpose)).toEqual([
-      ...SUPPORTED_GENERATION_PURPOSES,
+      ...SUPPORTED_GENERATION_PURPOSES.filter(
+        (purpose) => !attachmentOnlyPurposes.has(purpose)
+      ),
     ]);
   });
 

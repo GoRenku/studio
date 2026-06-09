@@ -8,6 +8,7 @@ import type {
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
+  CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
@@ -133,7 +134,7 @@ export function insertMediaGenerationRun(
     id: string;
     specId: string;
     spec: MediaGenerationSpec;
-    provider: 'fal-ai';
+    provider: 'fal-ai' | 'elevenlabs';
     model: string;
     providerPayload: Record<string, unknown>;
     estimate: unknown;
@@ -215,7 +216,7 @@ function toRunRecord(row: MediaGenerationRunRow): MediaGenerationRun {
     purpose: spec.purpose,
     target: spec.target,
     modelChoice: spec.modelChoice,
-    provider: 'fal-ai',
+    provider: row.provider as MediaGenerationRun['provider'],
     model: row.model,
     specSnapshot: spec,
     providerPayload: JSON.parse(row.providerPayloadJson) as Record<string, unknown>,
@@ -238,6 +239,7 @@ function assertMediaGenerationPurpose(
     purpose !== LOOKBOOK_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_PROFILE_GENERATION_PURPOSE &&
+    purpose !== CAST_VOICE_SAMPLE_GENERATION_PURPOSE &&
     purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE &&
     purpose !== SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE &&
     purpose !== SHOT_FIRST_FRAME_GENERATION_PURPOSE &&

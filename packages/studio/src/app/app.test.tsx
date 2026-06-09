@@ -95,7 +95,7 @@ describe('App', () => {
       },
       {
         path: '/projects/constantinople/cast/cast_narrator',
-        expectedText: 'Voice Design',
+        expectedText: 'Details',
       },
     ];
 
@@ -126,7 +126,7 @@ describe('App', () => {
 
     renderApp();
 
-    await screen.findByText('Voice Design');
+    await screen.findByText('Details');
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
@@ -339,7 +339,7 @@ describe('App', () => {
     fireEvent.click(screen.getByLabelText('Expand Cast'));
     fireEvent.click(screen.getByText('Narrator'));
 
-    await screen.findByText('Voice Design');
+    await screen.findByText('Details');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
     );
@@ -376,7 +376,7 @@ describe('App', () => {
     await screen.findByText('Project Name');
     fireEvent.click(screen.getByLabelText('Expand Cast'));
     fireEvent.click(screen.getByText('Narrator'));
-    await screen.findByText('Voice Design');
+    await screen.findByText('Details');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
     );
@@ -388,7 +388,7 @@ describe('App', () => {
 
     window.history.forward();
     fireEvent.popState(window);
-    await screen.findByText('Voice Design');
+    await screen.findByText('Details');
     expect(window.location.pathname).toBe(
       '/projects/constantinople/cast/cast_narrator'
     );
@@ -498,7 +498,7 @@ describe('App', () => {
 
     renderApp();
 
-    await screen.findByText('Voice Design');
+    await screen.findByText('Details');
     fireEvent.click(await screen.findByText('Mehmed'));
 
     expect(window.location.pathname).toBe(
@@ -1616,6 +1616,7 @@ function makeCastMemberResource(options: {
       assetId: `asset_${castMemberId}_reference`,
       title: options.firstImageTitle ?? options.title ?? 'Narrator reference',
     }),
+    voices: [],
   };
 }
 
@@ -1837,6 +1838,8 @@ function makeStudioAsset(options: {
     oneLineSummary: null,
     origin: 'imported',
     role: options.role,
+    referenceName: null,
+    purpose: null,
     sortOrder: 1,
     files: [
       {

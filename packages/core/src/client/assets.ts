@@ -22,6 +22,8 @@ export interface RegisterAssetInput {
   projectRelativePath: ProjectRelativePath;
   fileRole: string;
   role: string;
+  referenceName?: string | null;
+  purpose?: string | null;
 }
 
 export interface AssetReference {
@@ -40,6 +42,8 @@ export type Asset = AssetReference & {
   oneLineSummary: string | null;
   origin: string;
   role: string;
+  referenceName: string | null;
+  purpose: string | null;
   sortOrder: number;
   files: AssetFile[];
   createdAt: string;

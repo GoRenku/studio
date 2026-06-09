@@ -91,7 +91,7 @@ export interface RunCastProfileSpecInput extends CastProfileSpecIdInput {
 }
 
 export interface RecordCastProfileRunInput extends CastProfileSpecIdInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;

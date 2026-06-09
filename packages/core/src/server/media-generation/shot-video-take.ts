@@ -161,7 +161,7 @@ import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 type GenerationMode = PreparedMediaGeneration['generation']['policy']['mode'];
 
 interface ShotVideoTakeProviderPlan {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   mode: GenerationMode;
   outputCount: 1;
@@ -2918,7 +2918,7 @@ export async function importShotVideoTake(
 
 async function recordShotGenerationRun(
   input: RunMediaGenerationSpecInput & {
-    provider: 'fal-ai';
+    provider: 'fal-ai' | 'elevenlabs';
     model: string;
     providerPayload: Record<string, unknown>;
     estimate: unknown;
@@ -4325,6 +4325,8 @@ async function importGeneratedFile(input: {
       selection: { kind: 'take' as const },
       availability: 'ready' as const,
       role: 'shot-video-take',
+      referenceName: null,
+      purpose: null,
       sortOrder: 0,
       createdAt: input.now,
       updatedAt: input.now,

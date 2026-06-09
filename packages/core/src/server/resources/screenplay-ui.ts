@@ -25,7 +25,11 @@ import {
   readActiveScreenplayAnalysisRecord,
   readScreenplayAnalysisDocument,
 } from '../database/access/screenplay-analysis.js';
-import { listAssetRelationshipPage } from '../database/access/asset-relationships/index.js';
+import {
+  listAssetRelationshipPage,
+  readAssetRelationship,
+} from '../database/access/asset-relationships/index.js';
+import { listCastVoiceRecords } from '../database/access/cast-voices.js';
 import {
   readScreenplayCastMemberFromSession,
   readScreenplayDocumentFromSession,
@@ -73,6 +77,33 @@ export async function readCastMemberResource(
       firstImage: firstImageForTarget(session, {
         kind: 'castMember',
         castMemberId: input.castMemberId,
+      }),
+      voices: listCastVoiceRecords(session, input.castMemberId).map((voice) => {
+        const sample = readAssetRelationship(session, {
+          target: { kind: 'castMember', castMemberId: input.castMemberId },
+          assetId: voice.sampleAssetId,
+        });
+        if (!sample) {
+          throw new ProjectDataError(
+            'PROJECT_DATA352',
+            `Cast Voice sample asset is missing: ${voice.sampleAssetId}.`
+          );
+        }
+        return {
+          id: voice.id,
+          castMemberId: voice.castMemberId,
+          name: voice.name,
+          provider: voice.provider,
+          model: voice.model,
+          voiceId: voice.voiceId,
+          purpose: voice.purpose,
+          sample: {
+            ...sample,
+            files: sample.files.filter((file) => file.mediaKind === 'audio'),
+          },
+          createdAt: voice.createdAt,
+          updatedAt: voice.updatedAt,
+        };
       }),
     };
   } finally {

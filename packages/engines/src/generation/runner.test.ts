@@ -141,6 +141,40 @@ describe('runGeneration', () => {
     expect(simulatedReport).toContain('"mimeType": "image/webp"');
     expect(simulatedReport).not.toContain('renku-input://');
   });
+
+  it('uses the catalog MIME for simulated audio fallback outputs', async () => {
+    const outputRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'renku-generation-output-')
+    );
+
+    const result = await runGeneration({
+      mode: 'simulated',
+      catalog: createCatalog(),
+      outputRoot,
+      outputProjectRelativeRoot: 'generated/media',
+      policy: {
+        provider: 'test-provider',
+        model: 'text-to-speech',
+        mediaKind: 'audio',
+        mode: 'text-to-speech',
+        outputCount: 1,
+      },
+      request: {
+        parameters: {
+          text: 'A simulated text-to-speech sample.',
+          voice: 'voice_urban_normal',
+        },
+        outputNames: ['voice-sample.mp3'],
+      },
+    });
+
+    expect(result.outputs).toMatchObject([
+      {
+        mimeType: 'audio/mp3',
+        projectRelativePath: 'generated/media/voice-sample.mp3',
+      },
+    ]);
+  });
 });
 
 function createCatalog(): LoadedModelCatalog {
@@ -155,6 +189,14 @@ function createCatalog(): LoadedModelCatalog {
               name: 'image-edit',
               type: 'image',
               mime: ['image/png'],
+            },
+          ],
+          [
+            'text-to-speech',
+            {
+              name: 'text-to-speech',
+              type: 'audio',
+              mime: ['audio/mp3'],
             },
           ],
         ]),

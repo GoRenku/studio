@@ -84,6 +84,8 @@ Options
   --project            Project name for project information commands
   --target             Asset attachment target
   --purpose            Media purpose key
+  --reference-name     Relationship-scoped Renku reference name
+  --reference-purpose  Relationship-scoped asset purpose text
   --source             Project-relative source file for media import
   --type               Asset type
   --media-kind         Asset media kind
@@ -99,6 +101,7 @@ Options
   --order              Selection order
   --locale             Project locale id
   --cast               Cast member id for cast commands
+  --voice              Cast Voice id or reference name
   --location           Location id for location and production-design commands
   --design             Cast Design or Location Design id
   --act                Act id for screenplay sequence list
@@ -169,6 +172,12 @@ function createCliFlags() {
     purpose: {
       type: 'string',
     },
+    referenceName: {
+      type: 'string',
+    },
+    referencePurpose: {
+      type: 'string',
+    },
     source: {
       type: 'string',
     },
@@ -210,6 +219,9 @@ function createCliFlags() {
       type: 'string',
     },
     cast: {
+      type: 'string',
+    },
+    voice: {
       type: 'string',
     },
     location: {
@@ -412,6 +424,8 @@ export async function runRenkuCli(
             file: cli.flags.file,
             title: cli.flags.title,
             summary: cli.flags.summary,
+            referenceName: cli.flags.referenceName,
+            referencePurpose: cli.flags.referencePurpose,
             locale: cli.flags.locale,
             order: cli.flags.order,
           },
@@ -424,7 +438,9 @@ export async function runRenkuCli(
           input,
           flags: {
             file: cli.flags.file,
+            project: cli.flags.project,
             cast: cli.flags.cast,
+            voice: cli.flags.voice,
             design: cli.flags.design,
             active: cli.flags.active,
             dryRun: cli.flags.dryRun,
@@ -575,6 +591,8 @@ export async function runRenkuCli(
             source: cli.flags.source,
             title: cli.flags.title,
             summary: cli.flags.summary,
+            referenceName: cli.flags.referenceName,
+            referencePurpose: cli.flags.referencePurpose,
             sections: cli.flags.sections,
             receipt: cli.flags.receipt,
             shotList: cli.flags.shotList,

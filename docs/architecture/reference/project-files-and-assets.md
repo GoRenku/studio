@@ -66,6 +66,12 @@ A **Cast Profile** is an image asset attached to a cast member with the
 `profile` role. Imported/generated profile images are stored under
 `cast/<handle>/profiles/`.
 
+A **Cast Voice Sample** is an audio asset attached to a cast member with the
+`voice_sample` role and linked from exactly one Cast Voice record. Imported or
+attached voice samples are stored under `cast/<handle>/voice-samples/`. The
+Cast Voice record, not the filename, supplies the provider voice identity,
+reference name, and purpose.
+
 A **Location Environment Sheet** is a grouped image asset attached to a
 location with the `environment_sheet` role. It contains one composite sheet and
 four derived azimuth view files for 0, 90, 180, and 270 degrees. SQLite stores
@@ -114,6 +120,10 @@ at the project root. There is no `working-assets/` root and no
     acts/
 
   cast/
+    <cast-handle>/
+      character-sheets/
+      profiles/
+      voice-samples/
 
   locations/
 

@@ -16,6 +16,7 @@ export type EntityIdPrefix =
   | 'screenplay_revision'
   | 'cast'
   | 'cast_design'
+  | 'cast_voice'
   | 'location'
   | 'location_design'
   | 'act'

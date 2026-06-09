@@ -20,6 +20,15 @@ export type {
   CastMember,
 } from './cast-members.js';
 export type {
+  CastVoice,
+  CastVoiceAttachmentDocument,
+  CastVoiceAttachmentReport,
+  CastVoiceListReport,
+  CastVoiceReadReport,
+  CastVoiceRemoveReport,
+  CastVoiceValidationReport,
+} from './cast-voices.js';
+export type {
   CastDesignContextReport,
   CastDesignDocument,
   CastDesignListReport,
@@ -90,6 +99,11 @@ export type {
   CastProfileGenerationSpec,
   CastProfileModelChoice,
   CastProfileModelListReport,
+  CastVoiceSampleGenerationContext,
+  CastVoiceSampleGenerationSpec,
+  CastVoiceSampleModelChoice,
+  CastVoiceSampleModelChoiceReport,
+  CastVoiceSampleModelListReport,
   LocationEnvironmentSheetDetail,
   LocationEnvironmentSheetFileRole,
   LocationEnvironmentSheetFrame,
@@ -197,6 +211,7 @@ export type {
 export {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
+  CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,

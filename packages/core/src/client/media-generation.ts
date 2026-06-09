@@ -1,6 +1,7 @@
 import type { GenerationEstimate } from '@gorenku/studio-engines';
 import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
+import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
 import type {
   CastDesignSummary,
@@ -33,6 +34,8 @@ export const LOOKBOOK_SHEET_GENERATION_PURPOSE = 'lookbook.sheet' as const;
 export const CAST_CHARACTER_SHEET_GENERATION_PURPOSE =
   'cast.character-sheet' as const;
 export const CAST_PROFILE_GENERATION_PURPOSE = 'cast.profile' as const;
+export const CAST_VOICE_SAMPLE_GENERATION_PURPOSE =
+  'cast.voice-sample' as const;
 export const LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE =
   'location.environment-sheet' as const;
 export const SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE =
@@ -55,6 +58,7 @@ export type MediaGenerationPurpose =
   | typeof LOOKBOOK_SHEET_GENERATION_PURPOSE
   | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE
   | typeof CAST_PROFILE_GENERATION_PURPOSE
+  | typeof CAST_VOICE_SAMPLE_GENERATION_PURPOSE
   | typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE
   | typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE
   | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
@@ -124,6 +128,11 @@ export type CastProfileModelChoice =
   | 'fal-ai/openai/gpt-image-2/edit'
   | 'fal-ai/nano-banana-2/edit'
   | 'fal-ai/xai/grok-imagine-image/edit';
+
+export type CastVoiceSampleModelChoice =
+  | 'elevenlabs/eleven_v3'
+  | 'elevenlabs/eleven_multilingual_v2'
+  | 'elevenlabs/eleven_turbo_v2_5';
 
 export type LocationEnvironmentSheetModelChoice =
   | 'fal-ai/openai/gpt-image-2'
@@ -353,6 +362,23 @@ export interface CastProfileGenerationContext {
     resolvedAspectRatio: '1:1';
     detail: 'standard';
     outputFormat: 'png';
+  };
+  resourceKeys: string[];
+}
+
+export interface CastVoiceSampleGenerationContext {
+  purpose: typeof CAST_VOICE_SAMPLE_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  project: CastGenerationProjectContext;
+  screenplay: CastGenerationScreenplayContext | null;
+  castMember: CastMember;
+  activeCastDesign: CastDesignSummary | null;
+  voices: CastVoice[];
+  voiceSampleAssets: Asset[];
+  defaults: {
+    modelChoice: 'elevenlabs/eleven_v3';
+    outputFormat: 'mp3_44100_128';
+    languageCode: string | null;
   };
   resourceKeys: string[];
 }
@@ -630,6 +656,26 @@ export interface CastProfileGenerationSpec {
   title?: string;
 }
 
+export interface CastVoiceSampleGenerationSpec {
+  purpose: typeof CAST_VOICE_SAMPLE_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  modelChoice: CastVoiceSampleModelChoice;
+  voiceId: string;
+  text: string;
+  referenceName: string;
+  referencePurpose: string;
+  voiceSettings?: {
+    stability?: number;
+    similarityBoost?: number;
+    style?: number;
+    speed?: number;
+    useSpeakerBoost?: boolean;
+  };
+  outputFormat?: string;
+  languageCode?: string | null;
+  title?: string;
+}
+
 export interface LocationEnvironmentSheetGenerationSpec {
   purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE;
   target: LocationMediaGenerationTarget;
@@ -701,6 +747,7 @@ export type MediaGenerationSpec =
   | LookbookSheetGenerationSpec
   | CastCharacterSheetGenerationSpec
   | CastProfileGenerationSpec
+  | CastVoiceSampleGenerationSpec
   | LocationEnvironmentSheetGenerationSpec
   | SceneStoryboardSheetGenerationSpec
   | ShotVideoTakeInputGenerationSpec
@@ -765,6 +812,22 @@ export interface CastProfileModelListReport {
   purpose: typeof CAST_PROFILE_GENERATION_PURPOSE;
   target: CastMediaGenerationTarget;
   models: CastImageModelChoiceReport[];
+}
+
+export interface CastVoiceSampleModelChoiceReport {
+  modelChoice: CastVoiceSampleModelChoice;
+  label: string;
+  available: true;
+  provider: 'elevenlabs';
+  model: 'eleven_v3' | 'eleven_multilingual_v2' | 'eleven_turbo_v2_5';
+  mediaKind: 'audio';
+  mode: 'text-to-speech';
+}
+
+export interface CastVoiceSampleModelListReport {
+  purpose: typeof CAST_VOICE_SAMPLE_GENERATION_PURPOSE;
+  target: CastMediaGenerationTarget;
+  models: CastVoiceSampleModelChoiceReport[];
 }
 
 export interface LocationEnvironmentSheetModelChoiceReport {
@@ -1240,6 +1303,7 @@ export interface MediaGenerationSpecRecord {
     | LookbookSheetModelChoice
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
+    | CastVoiceSampleModelChoice
     | LocationEnvironmentSheetModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice
@@ -1260,11 +1324,12 @@ export interface MediaGenerationRun {
     | LookbookSheetModelChoice
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
+    | CastVoiceSampleModelChoice
     | LocationEnvironmentSheetModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice
     | ShotVideoTakeModelChoice;
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   specSnapshot: MediaGenerationSpec;
   providerPayload: Record<string, unknown>;
@@ -1289,14 +1354,19 @@ export interface PreparedMediaGeneration {
   providerPayload: Record<string, unknown>;
   generation: {
     policy: {
-      provider: 'fal-ai';
+      provider: 'fal-ai' | 'elevenlabs';
       model: string;
-      mediaKind: 'image' | 'video';
-      mode: 'text-to-image' | 'image-edit' | 'text-to-video' | 'image-to-video';
+      mediaKind: 'image' | 'audio' | 'video';
+      mode:
+        | 'text-to-image'
+        | 'image-edit'
+        | 'text-to-speech'
+        | 'text-to-video'
+        | 'image-to-video';
       outputCount: number;
     };
     request: {
-      prompt: string;
+      prompt?: string;
       inputFiles?: Array<{
         field: string;
         projectRelativePath: string;

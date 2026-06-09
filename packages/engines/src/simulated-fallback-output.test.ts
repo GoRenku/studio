@@ -94,4 +94,25 @@ describe('createSimulatedFallbackArtifacts', () => {
     );
     expect(duration).toBeCloseTo(4, 1);
   });
+
+  it('estimates generated audio duration from text when no Duration binding exists', async () => {
+    const artifacts = await createSimulatedFallbackArtifacts(
+      createRequest({
+        inputs: ['Input:text'],
+        produces: ['Artifact:GeneratedAudio'],
+        resolvedInputs: {
+          'Input:text': 'A short text-to-speech sample for a cast voice.',
+        },
+      })
+    );
+
+    expect(artifacts).toHaveLength(1);
+    expect(artifacts[0]?.blob?.mimeType).toBe('audio/wav');
+    expect(artifacts[0]?.blob?.data).toBeInstanceOf(Buffer);
+
+    const duration = await computeDurationSeconds(
+      artifacts[0]?.blob?.data as Buffer
+    );
+    expect(duration).toBeGreaterThan(1);
+  });
 });

@@ -90,7 +90,7 @@ export interface UpdateLookbookSheetSpecInput extends LookbookSheetSpecIdInput {
 }
 
 export interface RecordLookbookSheetRunInput extends LookbookSheetSpecIdInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
@@ -117,7 +117,7 @@ export interface ImportLookbookSheetMediaInput extends LookbookSheetTargetInput 
 }
 
 interface ProviderPlan {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   payload: Record<string, unknown>;
   outputCount: number;

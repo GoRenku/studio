@@ -1,5 +1,6 @@
 import * as characterSheet from '../media-generation/cast-character-sheet.js';
 import * as castProfile from '../media-generation/cast-profile.js';
+import * as castVoiceSample from '../media-generation/cast-voice-sample.js';
 import * as locationSheet from '../media-generation/location-environment-sheet.js';
 import * as lookbookImage from '../media-generation/lookbook-image.js';
 import * as lookbookSheet from '../media-generation/lookbook-sheet.js';
@@ -49,6 +50,16 @@ export function createMediaGenerationServiceWiring() {
     runCastProfileSpec: sharedGeneration.runMediaGenerationSpec,
     recordCastProfileRun: castProfile.recordCastProfileRun,
     importCastProfileMedia: castProfile.importCastProfileMedia,
+    buildCastVoiceSampleContext: castVoiceSample.buildCastVoiceSampleContext,
+    listCastVoiceSampleModels: castVoiceSample.listCastVoiceSampleModels,
+    validateCastVoiceSampleSpec: castVoiceSample.validateCastVoiceSampleSpec,
+    createCastVoiceSampleSpec: sharedGeneration.createMediaGenerationSpec,
+    updateCastVoiceSampleSpec: sharedGeneration.updateMediaGenerationSpec,
+    readCastVoiceSampleSpec: sharedGeneration.readMediaGenerationSpec,
+    listCastVoiceSampleSpecs: castVoiceSample.listCastVoiceSampleSpecs,
+    prepareCastVoiceSampleSpec: sharedGeneration.prepareMediaGenerationSpec,
+    estimateCastVoiceSampleSpec: sharedGeneration.estimateMediaGenerationSpec,
+    runCastVoiceSampleSpec: sharedGeneration.runMediaGenerationSpec,
     buildLocationEnvironmentSheetContext: locationSheet.buildLocationEnvironmentSheetContext,
     listLocationEnvironmentSheetModels: locationSheet.listLocationEnvironmentSheetModels,
     validateLocationEnvironmentSheetSpec: locationSheet.validateLocationEnvironmentSheetSpec,

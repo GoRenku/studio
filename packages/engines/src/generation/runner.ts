@@ -102,6 +102,7 @@ export async function runGeneration(
     rawSchema,
     mediaKind: options.policy.mediaKind,
     outputCount,
+    expectedOutputMimeType: model.mime?.[0],
   });
   const result =
     options.mode === 'simulated'
@@ -157,6 +158,7 @@ function createProviderJobContext(input: {
   rawSchema: string | null;
   mediaKind: string;
   outputCount: number;
+  expectedOutputMimeType?: string;
 }): ProviderJobContext {
   const inputBindings = Object.fromEntries(
     Object.keys(input.payload).map((key) => [key, `Input:${key}`])
@@ -190,6 +192,7 @@ function createProviderJobContext(input: {
           inputBindings,
           sdkMapping,
         },
+        expectedOutputMimeType: input.expectedOutputMimeType,
       },
     },
   };
@@ -373,6 +376,12 @@ function extensionForMime(mimeType?: string): string {
   }
   if (mimeType === 'audio/mpeg') {
     return '.mp3';
+  }
+  if (mimeType === 'audio/mp3') {
+    return '.mp3';
+  }
+  if (mimeType === 'audio/wav' || mimeType === 'audio/x-wav') {
+    return '.wav';
   }
   if (mimeType === 'application/json') {
     return '.json';

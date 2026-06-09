@@ -33,6 +33,8 @@ export type AssetRelationshipTable = SQLiteTable & {
   assetId: RelationshipTextColumn;
   localeId: NullableRelationshipTextColumn;
   role: RelationshipTextColumn;
+  referenceName: NullableRelationshipTextColumn;
+  purpose: NullableRelationshipTextColumn;
   sortOrder: RelationshipNumberColumn;
   selection: RelationshipTextColumn;
   selectionOrder: NullableRelationshipNumberColumn;

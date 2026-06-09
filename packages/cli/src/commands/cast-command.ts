@@ -4,6 +4,7 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
+  type CastVoiceAttachmentDocument,
   type CastDesignDocument,
   type CastOperationDocument,
 } from '@gorenku/studio-core/server';
@@ -18,7 +19,9 @@ export async function runCastCommand(options: {
   input: string[];
   flags: {
     file?: string;
+    project?: string;
     cast?: string;
+    voice?: string;
     design?: string;
     active?: boolean;
     dryRun?: boolean;
@@ -152,6 +155,69 @@ export async function runCastCommand(options: {
       return 0;
     }
   }
+  if (subcommand === 'voice') {
+    if (nested === 'list') {
+      writeJson(
+        options.io,
+        await service.listCastVoices({
+          homeDir: options.homeDir,
+          projectName: options.flags.project,
+          castMemberId: requiredFlag(options.flags.cast, '--cast'),
+        })
+      );
+      return 0;
+    }
+    if (nested === 'show') {
+      writeJson(
+        options.io,
+        await service.readCastVoice({
+          homeDir: options.homeDir,
+          projectName: options.flags.project,
+          castMemberId: requiredFlag(options.flags.cast, '--cast'),
+          voiceIdOrName: requiredFlag(options.flags.voice, '--voice'),
+        })
+      );
+      return 0;
+    }
+    if (nested === 'validate') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readRequiredJsonInput(filePath, 'cast voice validate');
+      writeJson(
+        options.io,
+        await service.validateCastVoiceAttachment({
+          homeDir: options.homeDir,
+          projectName: options.flags.project,
+          document: document as CastVoiceAttachmentDocument,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'attach') {
+      const filePath = requiredFlag(options.flags.file, '--file');
+      const document = await readRequiredJsonInput(filePath, 'cast voice attach');
+      writeJson(
+        options.io,
+        await service.attachCastVoice({
+          homeDir: options.homeDir,
+          projectName: options.flags.project,
+          document: document as CastVoiceAttachmentDocument,
+        })
+      );
+      return 0;
+    }
+    if (nested === 'remove') {
+      writeJson(
+        options.io,
+        await service.removeCastVoice({
+          homeDir: options.homeDir,
+          projectName: options.flags.project,
+          castMemberId: requiredFlag(options.flags.cast, '--cast'),
+          voiceIdOrName: requiredFlag(options.flags.voice, '--voice'),
+        })
+      );
+      return 0;
+    }
+  }
 
   throw new StructuredError({
     code: 'CLI101',
@@ -161,7 +227,7 @@ export async function runCastCommand(options: {
         'CLI101',
         'Unknown cast command.',
         { path: ['cast', subcommand ?? ''] },
-        'Use list, show, context, validate, apply, or design.'
+        'Use list, show, context, validate, apply, design, or voice.'
       ),
     ],
     suggestion: 'Use a supported cast command.',

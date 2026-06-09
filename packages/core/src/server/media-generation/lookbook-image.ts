@@ -92,7 +92,7 @@ export interface UpdateLookbookImageSpecInput extends LookbookImageSpecIdInput {
 }
 
 export interface RecordLookbookImageRunInput extends LookbookImageSpecIdInput {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
@@ -120,7 +120,7 @@ export interface ImportLookbookImageMediaInput extends LookbookImageTargetInput 
 }
 
 interface ProviderPlan {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   payload: Record<string, unknown>;
   outputCount: number;

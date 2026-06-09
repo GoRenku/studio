@@ -296,6 +296,68 @@ Input JSON shape:
 
 New Cast Members use `key`, not `id`. Existing Cast Members use durable `id`.
 
+## `renku cast voice`
+
+List, inspect, validate, attach, and remove durable Cast Voice references for a
+Cast Member.
+
+```bash
+renku cast voice list --cast <cast-member-id> --json
+renku cast voice show --cast <cast-member-id> --voice <cast-voice-id-or-name> --json
+renku cast voice validate --file <cast-voice-attachment-json> --json
+renku cast voice validate --file - --json
+renku cast voice attach --file <cast-voice-attachment-json> --json
+renku cast voice attach --file - --json
+renku cast voice remove --cast <cast-member-id> --voice <cast-voice-id-or-name> --json
+```
+
+Options:
+
+- `--cast`: required for `list`, `show`, and `remove`.
+- `--voice`: required for `show` and `remove`; accepts either the durable Cast
+  Voice id or the Cast Voice reference name.
+- `--file`: required for `validate` and `attach`. Use `-` to read stdin.
+- `--json`: print machine-readable JSON.
+
+Behavior:
+
+- Requires a current authoring project.
+- Cast Voices are Cast Member-owned provider voice references, not Cast Design
+  JSON fields.
+- `attach` copies the sample audio file into the Cast Member voice sample asset
+  folder, registers a `cast_voice_sample` audio asset, and creates the Cast
+  Voice record.
+- `remove` deletes the Cast Voice, the linked sample asset record, its asset
+  file records, and the copied audio file.
+- Generic asset deletion fails for Cast Voice sample assets. Remove the Cast
+  Voice instead.
+- The current direct ElevenLabs models are `eleven_v3`,
+  `eleven_multilingual_v2`, and `eleven_turbo_v2_5`.
+- Successful mutations emit Studio resource keys for the affected Cast Member
+  asset rail and surface.
+
+Input JSON shape:
+
+```json
+{
+  "kind": "castVoiceAttachment",
+  "castMemberId": "cast_ada",
+  "name": "urban-normal",
+  "purpose": "Normal speaking voice for dialogue and testing",
+  "provider": "elevenlabs",
+  "model": "eleven_v3",
+  "voiceId": "21m00Tcm4TlvDq8ikWAM",
+  "sample": {
+    "sourceProjectRelativePath": "generated/ada-urban-normal.mp3",
+    "title": "Ada urban normal voice sample",
+    "receipt": {
+      "provider": "elevenlabs",
+      "model": "eleven_v3"
+    }
+  }
+}
+```
+
 ## `renku cast design`
 
 Read, validate, write, and activate durable Cast Design documents for one Cast
@@ -325,8 +387,9 @@ Behavior:
 - Unknown fields are rejected.
 - Costume variants can be scoped to the project, a sequence, or a scene. They
   are authored design content, not standalone media targets.
-- Voice casting notes live under Cast Design. Voice media generation is not a
-  first-class media purpose yet.
+- Voice casting notes live under Cast Design. Provider voice ids and generated
+  audio samples live in Cast Voice records and are managed with
+  `renku cast voice`.
 
 ## `renku location`
 
@@ -1238,6 +1301,7 @@ lookbook.image
 lookbook.sheet
 cast.character-sheet
 cast.profile
+cast.voice-sample
 location.environment-sheet
 scene.storyboard-sheet
 shot.first-frame
@@ -1268,6 +1332,8 @@ renku generation context --purpose cast.character-sheet --target cast:<cast-memb
 renku generation model list --purpose cast.character-sheet --target cast:<cast-member-id> --json
 renku generation context --purpose cast.profile --target cast:<cast-member-id> --json
 renku generation model list --purpose cast.profile --target cast:<cast-member-id> --json
+renku generation context --purpose cast.voice-sample --target cast:<cast-member-id> --json
+renku generation model list --purpose cast.voice-sample --target cast:<cast-member-id> --json
 renku generation context --purpose location.environment-sheet --target location:<location-id> --json
 renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
@@ -1460,6 +1526,38 @@ renku media import \
   --json
 ```
 
+Cast Character Sheet import:
+
+```bash
+renku media import \
+  --purpose cast.character-sheet \
+  --target cast:<cast-member-id> \
+  --source <project-relative-path> \
+  --reference-name <renku-reference-name> \
+  --reference-purpose <purpose> \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
+```
+
+Cast Profile import:
+
+```bash
+renku media import \
+  --purpose cast.profile \
+  --target cast:<cast-member-id> \
+  --source <project-relative-path> \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
+```
+
+Cast Voice samples are attached with `renku cast voice attach`, not
+`renku media import`, because the durable Cast Voice record stores provider,
+model, provider voice id, reference name, and purpose.
+
 Location Environment Sheet import:
 
 ```bash
@@ -1596,6 +1694,10 @@ Options:
 - `--selection`: optional shot image import selection, either `select` or
   `take`.
 - `--sections`: optional comma-separated Lookbook section keys.
+- `--reference-name`: required for `cast.character-sheet`; a stable
+  relationship-scoped Renku reference name such as `standard-sheet`.
+- `--reference-purpose`: required for `cast.character-sheet`; the purpose for
+  the reference, such as `default costume and face reference`.
 - `--title`: optional title for the imported media.
 - `--summary`: optional one-line summary.
 - `--receipt`: optional generation run or receipt JSON for single-file imports.

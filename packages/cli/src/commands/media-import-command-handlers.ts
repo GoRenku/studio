@@ -40,6 +40,8 @@ export interface MediaCommandFlags {
   source?: string;
   title?: string;
   summary?: string;
+  referenceName?: string;
+  referencePurpose?: string;
   sections?: string;
   receipt?: string;
   shotList?: string;
@@ -182,12 +184,19 @@ async function importCastCharacterSheet(
   input: MediaImportPurposeHandlerInput
 ): Promise<CastMediaImportReport> {
   const singleFile = await readSingleFileImport(input.flags);
+  const referenceName = requiredFlag(input.flags.referenceName, '--reference-name');
+  const referencePurpose = requiredFlag(
+    input.flags.referencePurpose,
+    '--reference-purpose'
+  );
   return input.runtime.projectDataService.importCastCharacterSheetMedia({
     ...mediaImportProjectInput(input.runtime),
     castMemberId: parseCastTarget(input.target, 'Cast image import'),
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
     oneLineSummary: input.flags.summary,
+    referenceName,
+    referencePurpose,
     receipt: singleFile.receipt,
   });
 }

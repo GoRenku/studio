@@ -6,6 +6,9 @@ import type {
   CastProfileGenerationContext,
   CastProfileGenerationSpec,
   CastProfileModelListReport,
+  CastVoiceSampleGenerationContext,
+  CastVoiceSampleGenerationSpec,
+  CastVoiceSampleModelListReport,
   LocationEnvironmentSheetGenerationContext,
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
@@ -39,6 +42,7 @@ import type {
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
+  CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
@@ -84,6 +88,7 @@ import type {
   UpdateShotVideoTakeInputGenerationSpecInput,
   ValidateCastCharacterSheetGenerationSpecInput,
   ValidateCastProfileGenerationSpecInput,
+  ValidateCastVoiceSampleGenerationSpecInput,
   ValidateLocationEnvironmentSheetGenerationSpecInput,
   ValidateLookbookSheetGenerationSpecInput,
   ValidateSceneStoryboardSheetGenerationSpecInput,
@@ -92,6 +97,7 @@ import type {
 } from '../project-data-service-contracts.js';
 import * as characterSheet from './cast-character-sheet.js';
 import * as castProfile from './cast-profile.js';
+import * as castVoiceSample from './cast-voice-sample.js';
 import * as locationSheet from './location-environment-sheet.js';
 import * as lookbookImage from './lookbook-image.js';
 import * as lookbookSheet from './lookbook-sheet.js';
@@ -103,6 +109,7 @@ export type MediaGenerationContextReport =
   | LookbookSheetGenerationContext
   | CastCharacterSheetGenerationContext
   | CastProfileGenerationContext
+  | CastVoiceSampleGenerationContext
   | LocationEnvironmentSheetGenerationContext
   | SceneStoryboardSheetGenerationContext
   | ShotVideoTakeGenerationContext;
@@ -112,6 +119,7 @@ export type MediaGenerationModelListReport =
   | LookbookSheetModelListReport
   | CastCharacterSheetModelListReport
   | CastProfileModelListReport
+  | CastVoiceSampleModelListReport
   | LocationEnvironmentSheetModelListReport
   | SceneStoryboardSheetModelListReport
   | ShotVideoTakeInputModelListReport
@@ -325,6 +333,44 @@ const DEFINITIONS = [
         spec: input.spec as CastProfileGenerationSpec,
       }),
     runSpec: castProfile.runCastProfileSpec,
+  },
+  {
+    purpose: CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
+    mediaKind: 'audio',
+    targetKind: 'castMember',
+    buildContext: (input) =>
+      castVoiceSample.buildCastVoiceSampleContext(toCastInput(input)),
+    listModels: (input) =>
+      castVoiceSample.listCastVoiceSampleModels(toCastInput(input)),
+    validateSpec: (input) =>
+      castVoiceSample.validateCastVoiceSampleSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastVoiceSampleGenerationSpec,
+      } satisfies ValidateCastVoiceSampleGenerationSpecInput),
+    createSpec: (input) =>
+      castVoiceSample.createCastVoiceSampleSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastVoiceSampleGenerationSpec,
+        idGenerator: input.idGenerator,
+      }),
+    updateSpec: (input) =>
+      castVoiceSample.updateCastVoiceSampleSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as CastVoiceSampleGenerationSpec,
+      }),
+    listSpecs: (input) => castVoiceSample.listCastVoiceSampleSpecs(toCastInput(input)),
+    prepareSpec: castVoiceSample.prepareCastVoiceSampleSpec,
+    prepareDraftSpec: (input) =>
+      castVoiceSample.prepareCastVoiceSampleDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as CastVoiceSampleGenerationSpec,
+      }),
+    runSpec: castVoiceSample.runCastVoiceSampleSpec,
   },
   {
     purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,

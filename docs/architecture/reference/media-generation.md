@@ -28,6 +28,7 @@ lookbook.image
 lookbook.sheet
 cast.character-sheet
 cast.profile
+cast.voice-sample
 location.environment-sheet
 scene.storyboard-sheet
 shot.first-frame
@@ -89,6 +90,7 @@ renku generation context --purpose lookbook.image --target lookbook:<id> --json
 renku generation context --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation context --purpose cast.character-sheet --target cast:<id> --json
 renku generation context --purpose cast.profile --target cast:<id> --json
+renku generation context --purpose cast.voice-sample --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation context --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
@@ -101,6 +103,7 @@ renku generation model list --purpose lookbook.image --target lookbook:<id> --js
 renku generation model list --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation model list --purpose cast.character-sheet --target cast:<id> --json
 renku generation model list --purpose cast.profile --target cast:<id> --json
+renku generation model list --purpose cast.voice-sample --target cast:<id> --json
 renku generation model list --purpose location.environment-sheet --target location:<id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation model list --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
@@ -224,6 +227,33 @@ also returns:
 - `recommendedSourceAssetId`, which is the selected character sheet when one is
   available;
 - a square `1:1` default image frame.
+
+## Cast Voice Sample Context
+
+`cast.voice-sample` context is built for one cast member. It generates an audio
+sample for a Cast Voice, but it does not attach that voice to the Cast Member.
+The durable mutation is a separate `renku cast voice attach` command using a
+`kind: "castVoiceAttachment"` document.
+
+The Cast Voice sample context includes:
+
+- project title, summary, aspect ratio, and languages;
+- screenplay summary and major story signals when a screenplay exists;
+- cast member facts and active Cast Design voice-casting guidance;
+- existing Cast Voices and their playable sample assets;
+- existing cast audio assets with role `voice_sample`;
+- defaults for direct ElevenLabs model choice, output format, and language code.
+
+The only model choices for this purpose are direct ElevenLabs TTS models:
+
+- `elevenlabs/eleven_v3`
+- `elevenlabs/eleven_multilingual_v2`
+- `elevenlabs/eleven_turbo_v2_5`
+
+Do not use fal.ai or Wavespeed ElevenLabs wrapper models for Cast Voice
+samples. The provider payload maps `voiceId` to ElevenLabs `voice`,
+`voiceSettings.similarityBoost` to `voice_settings.similarity_boost`, and
+`languageCode` to `language_code`.
 
 Profile images should usually be generated after a character sheet exists. When
 using an edit model, the generated request carries a logical `image_urls` file
@@ -609,7 +639,8 @@ attaches it to the Lookbook, and stores the file under
 
 For Cast Character Sheets, import registers an image asset with type
 `character_sheet`, attaches it to the cast member with role `character_sheet`,
-and stores the file under `cast/<handle>/character-sheets/`.
+stores the file under `cast/<handle>/character-sheets/`, and requires
+relationship-scoped `--reference-name` and `--reference-purpose`.
 
 For Cast Profiles, import registers an image asset with type `cast_profile`,
 attaches it to the cast member with role `profile`, and stores the file under
@@ -655,6 +686,8 @@ renku media import \
   --purpose cast.character-sheet \
   --target cast:<cast-member-id> \
   --source <project-relative-path> \
+  --reference-name <renku-reference-name> \
+  --reference-purpose <purpose> \
   --title <title> \
   --summary <one-line-summary> \
   --receipt <generation-run-json> \
@@ -669,6 +702,17 @@ renku media import \
   --receipt <generation-run-json> \
   --json
 ```
+
+Cast Voice sample generation output is attached with the Cast Voice command,
+not `renku media import`:
+
+```bash
+renku cast voice attach --file <cast-voice-attachment-json> --json
+```
+
+The attachment document names the cast member, reference name, purpose,
+provider, model, voice id, and sample source path. Generated attachments may
+include a generation receipt; imported external samples may omit it.
 
 Single-file imports expect a project-relative source path. Location Environment
 Sheet imports expect JSON files whose entries are project-relative paths.

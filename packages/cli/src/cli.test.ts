@@ -1064,6 +1064,10 @@ describe('renku CLI', () => {
         `cast:${castMemberId}`,
         '--source',
         characterSheetRun.run.outputs[0]!.projectRelativePath,
+        '--reference-name',
+        'standard-sheet',
+        '--reference-purpose',
+        'default costume and face reference',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -1470,6 +1474,198 @@ describe('renku CLI', () => {
       )
     ).resolves.toBe('audio bytes');
     expect(stderr).toEqual([]);
+  });
+
+  it('attaches, lists, shows, and removes a Cast Voice through the CLI', async () => {
+    const storageRoot = await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    await openProjectAndCreateScreenplay();
+
+    const project = await createProjectDataService().readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const castMemberId = project.cast[0]!.id;
+    const samplePath = 'generated/audio/urban-normal.mp3';
+    await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', samplePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', samplePath),
+      'voice bytes'
+    );
+
+    const attachmentPath = path.join(homeDir, 'cast-voice-attachment.json');
+    await fs.writeFile(
+      attachmentPath,
+      JSON.stringify(
+        {
+          kind: 'castVoiceAttachment',
+          castMemberId,
+          name: 'normal-voice',
+          provider: 'elevenlabs',
+          model: 'eleven_v3',
+          voiceId: 'voice_urban_normal',
+          purpose: 'calm strategic baseline',
+          sample: {
+            sourceProjectRelativePath: samplePath,
+            title: 'Urban normal voice sample',
+            receipt: {
+              run: {
+                provider: 'elevenlabs',
+                model: 'eleven_v3',
+              },
+            },
+          },
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const validateExitCode = await runRenkuCli(
+      ['cast', 'voice', 'validate', '--project', 'constantinople', '--file', attachmentPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(validateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toEqual({ valid: true, warnings: [] });
+
+    stdout = [];
+    stderr = [];
+    const attachExitCode = await runRenkuCli(
+      ['cast', 'voice', 'attach', '--project', 'constantinople', '--file', attachmentPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(attachExitCode).toBe(0);
+    const attached = JSON.parse(stdout.join('\n')) as {
+      voice: { id: string; name: string; sample: { assetId: string } };
+    };
+    expect(attached).toMatchObject({
+      voice: {
+        name: 'normal-voice',
+        provider: 'elevenlabs',
+        model: 'eleven_v3',
+        sample: {
+          role: 'voice_sample',
+          files: [
+            {
+              projectRelativePath: 'cast/urban/voice-samples/urban-normal.mp3',
+            },
+          ],
+        },
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const listExitCode = await runRenkuCli(
+      ['cast', 'voice', 'list', '--project', 'constantinople', '--cast', castMemberId, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(listExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      voices: [expect.objectContaining({ id: attached.voice.id })],
+    });
+
+    stdout = [];
+    stderr = [];
+    const showExitCode = await runRenkuCli(
+      [
+        'cast',
+        'voice',
+        'show',
+        '--project',
+        'constantinople',
+        '--cast',
+        castMemberId,
+        '--voice',
+        'normal-voice',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(showExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      voice: { id: attached.voice.id },
+    });
+
+    stdout = [];
+    stderr = [];
+    const removeExitCode = await runRenkuCli(
+      [
+        'cast',
+        'voice',
+        'remove',
+        '--project',
+        'constantinople',
+        '--cast',
+        castMemberId,
+        '--voice',
+        attached.voice.id,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(removeExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      removed: {
+        voiceId: attached.voice.id,
+        sampleAssetId: attached.voice.sample.assetId,
+      },
+    });
+  });
+
+  it('requires reference metadata for character sheet media imports', async () => {
+    const storageRoot = await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    await openProjectAndCreateScreenplay();
+
+    const project = await createProjectDataService().readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const castMemberId = project.cast[0]!.id;
+    const sourcePath = 'generated/media/urban-sheet.png';
+    await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', sourcePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', sourcePath),
+      'sheet bytes'
+    );
+
+    stdout = [];
+    stderr = [];
+    const missingMetadataExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--project',
+        'constantinople',
+        '--purpose',
+        'cast.character-sheet',
+        '--target',
+        `cast:${castMemberId}`,
+        '--source',
+        sourcePath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(missingMetadataExitCode).toBe(1);
+    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
+      valid: false,
+      error: { code: 'CLI001' },
+    });
   });
 
   it('fails clearly when create is missing the project name or title', async () => {

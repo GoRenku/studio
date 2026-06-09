@@ -11,6 +11,7 @@ import {
 import { deleteLocationEnvironmentSheetByAssetId } from '../database/access/location-environment-sheets.js';
 import { deleteSceneShotStoryboardImageByAssetId } from '../database/access/scene-shot-lists.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
+import { assertAssetIsNotCastVoiceSample } from './cast-voice-commands.js';
 import {
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
@@ -34,6 +35,7 @@ export async function deleteAsset(
     if (!asset) {
       throw assetNotAttached(input.assetId);
     }
+    assertAssetIsNotCastVoiceSample(session, input.assetId);
 
     const otherOwners = readAssetOwnerTargets(session, input.assetId).filter(
       (owner) => !assetTargetsMatch(owner, input.target)

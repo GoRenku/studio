@@ -95,7 +95,7 @@ const OUTPUT_FORMATS = new Set<SceneStoryboardSheetOutputFormat>([
 ]);
 
 interface SceneStoryboardSheetProviderPlan {
-  provider: 'fal-ai';
+  provider: 'fal-ai' | 'elevenlabs';
   model: string;
   mode: 'text-to-image';
   payload: Record<string, unknown>;
@@ -1333,6 +1333,8 @@ async function insertImportedSceneStoryboardImages(input: {
         oneLineSummary: null,
         origin: input.origin,
         role: 'storyboard_image',
+        referenceName: null,
+        purpose: null,
         sortOrder,
         files: [
           {
