@@ -1463,6 +1463,32 @@ describe('renku CLI', () => {
       },
       resourceKeys: [`assets:scene:${sceneId}`],
     });
+    await expect(
+      createStudioCoordinationService({ homeDir }).readStudioEvents()
+    ).resolves.toMatchObject({
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'studio.projectResourcesChanged',
+          projectRef: {
+            name: project.identity.name,
+            id: project.identity.id,
+            storageRoot,
+          },
+          resourceKeys: [`assets:scene:${sceneId}`],
+          source: { kind: 'cli', command: 'asset register' },
+        }),
+        expect.objectContaining({
+          type: 'studio.projectResourcesChanged',
+          projectRef: {
+            name: project.identity.name,
+            id: project.identity.id,
+            storageRoot,
+          },
+          resourceKeys: [`assets:scene:${sceneId}`],
+          source: { kind: 'cli', command: 'asset select' },
+        }),
+      ]),
+    });
 
     stdout = [];
     stderr = [];

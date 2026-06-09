@@ -12,7 +12,10 @@ import {
   type ProjectRelativePath,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
-import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
+import {
+  appendStudioResourceChangedEvent,
+  type StudioResourceChangedReport,
+} from './studio-resource-event-command.js';
 
 export interface RunAssetCommandOptions {
   input: string[];
@@ -83,6 +86,11 @@ async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
   const projectData = createProjectDataService();
+  const eventProject = await readAssetEventProject(
+    projectData,
+    projectName,
+    options.homeDir
+  );
   const asset = await projectData.registerAsset({
     projectName,
     target,
@@ -101,7 +109,7 @@ async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
   const resourceKeys = studioResourceKeysForAssetTarget(target);
   await appendStudioResourceChangedEvent({
     runtime: cliRuntime(options, projectData),
-    report: { project: { name: projectName }, resourceKeys },
+    report: { project: eventProject, resourceKeys },
     command: 'asset register',
   });
   writeAssetResult(options, asset, `Registered asset: ${asset.assetId}`, resourceKeys);
@@ -117,6 +125,11 @@ async function updateAssetReference(
   const referenceName = requiredFlag(options, 'referenceName');
   const referencePurpose = optionalTrimmed(options.flags.referencePurpose);
   const projectData = createProjectDataService();
+  const eventProject = await readAssetEventProject(
+    projectData,
+    projectName,
+    options.homeDir
+  );
   const asset = await projectData.updateAssetReference({
     projectName,
     target,
@@ -130,7 +143,7 @@ async function updateAssetReference(
   const resourceKeys = studioResourceKeysForAssetTarget(target);
   await appendStudioResourceChangedEvent({
     runtime: cliRuntime(options, projectData),
-    report: { project: { name: projectName }, resourceKeys },
+    report: { project: eventProject, resourceKeys },
     command: 'asset reference-update',
   });
   const warnings: DiagnosticIssue[] = [];
@@ -172,6 +185,11 @@ async function createAssetSelect(
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
   const projectData = createProjectDataService();
+  const eventProject = await readAssetEventProject(
+    projectData,
+    projectName,
+    options.homeDir
+  );
   const asset = await projectData.createAssetSelect({
     projectName,
     target,
@@ -182,7 +200,7 @@ async function createAssetSelect(
   const resourceKeys = studioResourceKeysForAssetTarget(target);
   await appendStudioResourceChangedEvent({
     runtime: cliRuntime(options, projectData),
-    report: { project: { name: projectName }, resourceKeys },
+    report: { project: eventProject, resourceKeys },
     command: 'asset select',
   });
   writeAssetResult(options, asset, `Selected asset: ${asset.assetId}`, resourceKeys);
@@ -196,6 +214,11 @@ async function updateAssetSelect(
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
   const projectData = createProjectDataService();
+  const eventProject = await readAssetEventProject(
+    projectData,
+    projectName,
+    options.homeDir
+  );
   const asset = await projectData.updateAssetSelect({
     projectName,
     target,
@@ -206,7 +229,7 @@ async function updateAssetSelect(
   const resourceKeys = studioResourceKeysForAssetTarget(target);
   await appendStudioResourceChangedEvent({
     runtime: cliRuntime(options, projectData),
-    report: { project: { name: projectName }, resourceKeys },
+    report: { project: eventProject, resourceKeys },
     command: 'asset select-update',
   });
   writeAssetResult(
@@ -225,6 +248,11 @@ async function removeAssetSelect(
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
   const projectData = createProjectDataService();
+  const eventProject = await readAssetEventProject(
+    projectData,
+    projectName,
+    options.homeDir
+  );
   const asset = await projectData.removeAssetSelect({
     projectName,
     target,
@@ -234,7 +262,7 @@ async function removeAssetSelect(
   const resourceKeys = studioResourceKeysForAssetTarget(target);
   await appendStudioResourceChangedEvent({
     runtime: cliRuntime(options, projectData),
-    report: { project: { name: projectName }, resourceKeys },
+    report: { project: eventProject, resourceKeys },
     command: 'asset select-remove',
   });
   writeAssetResult(
@@ -304,6 +332,18 @@ function cliRuntime(
     json: options.json,
     io: options.io,
     projectDataService,
+  };
+}
+
+async function readAssetEventProject(
+  projectDataService: ReturnType<typeof createProjectDataService>,
+  projectName: string,
+  homeDir?: string
+): Promise<StudioResourceChangedReport['project']> {
+  const project = await projectDataService.readProjectShell({ projectName, homeDir });
+  return {
+    name: project.identity.name,
+    id: project.identity.id,
   };
 }
 
