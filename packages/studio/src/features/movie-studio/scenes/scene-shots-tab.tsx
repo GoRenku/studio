@@ -24,6 +24,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/ui/resizable';
+import {
+  matchesSceneShotsResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { SceneShotRail } from './scene-shot-rail';
 import { SceneShotDetail } from './scene-shot-detail';
 import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
@@ -110,39 +114,18 @@ export function SceneShotsTab({
 
   useEffect(() => loadResource(), [loadResource]);
 
-  // Scoped resource refresh: reload when this scene's shots, storyboard, or
-  // video-take production groups/inputs change (ADR 0017 — kept local to the
-  // owning container).
-  useEffect(() => {
-    const shotListId = resource?.activeShotListId;
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      const matches = detail.resourceKeys.some(
-        (key) =>
-          key === `scene:${sceneId}` ||
-          key === `surface:scene:${sceneId}:shots` ||
-          key.startsWith('scene-shot-video-take-group:') ||
-          key.startsWith('scene-shot-video-take-input:') ||
-          (shotListId ? key.startsWith(`scene-shot-list:${shotListId}:`) : false)
-      );
-      if (matches) {
-        loadResource();
-      }
-    };
-    window.addEventListener(
-      'renku:studio-resource-changed',
-      handleResourceChanged
-    );
-    return () => {
-      window.removeEventListener(
-        'renku:studio-resource-changed',
-        handleResourceChanged
-      );
-    };
-  }, [loadResource, projectName, sceneId, resource?.activeShotListId]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: (resourceKeys) =>
+      matchesSceneShotsResource({
+        resourceKeys,
+        sceneId,
+        shotListId: resource?.activeShotListId,
+      }),
+    onRefresh: () => {
+      loadResource();
+    },
+  });
 
   const shots = useMemo(
     () => resource?.activeShotList?.shots ?? [],
@@ -535,9 +518,4 @@ function ShotGroupingReviewDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
 }

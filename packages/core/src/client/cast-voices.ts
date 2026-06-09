@@ -45,6 +45,10 @@ export interface CastVoiceValidationReport {
 export interface CastVoiceAttachmentReport {
   valid: true;
   warnings: unknown[];
+  project: {
+    id?: string;
+    name: string;
+  };
   castMember: {
     id: string;
     handle: string;
@@ -56,6 +60,10 @@ export interface CastVoiceAttachmentReport {
 }
 
 export interface CastVoiceRemoveReport {
+  project: {
+    id?: string;
+    name: string;
+  };
   removed: {
     castMemberId: string;
     voiceId: string;

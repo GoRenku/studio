@@ -22,6 +22,7 @@ import {
   useDebouncedAutosave,
   type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
+import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import {
   DropdownMenu,
@@ -93,6 +94,7 @@ export function ProjectInformationPanel({
   const [form, setForm] = useState<ProjectInformationForm>(() =>
     projectForm
   );
+  const [resourceRevision, setResourceRevision] = useState(0);
   const formRef = useRef(form);
   const lastProjectFormRef = useRef(projectForm);
   const lastProjectFormSignatureRef = useRef(
@@ -166,7 +168,15 @@ export function ProjectInformationPanel({
     return () => {
       cancelled = true;
     };
-  }, [project.identity.name, projectForm]);
+  }, [project.identity.name, projectForm, resourceRevision]);
+
+  useStudioResourceRefresh({
+    projectName: project.identity.name,
+    matches: (resourceKeys) =>
+      resourceKeys.includes('project-information') ||
+      resourceKeys.includes('project-shell'),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   useEffect(() => {
     onSaveStatusChange(autosave);

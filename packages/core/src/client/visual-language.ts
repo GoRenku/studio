@@ -219,6 +219,33 @@ export interface InspirationFolderReport extends VisualLanguageCommandReport {
   analysis: InspirationAnalysis | null;
 }
 
+export interface InspirationFolderMutationReport
+  extends VisualLanguageCommandReport {
+  folder: InspirationFolder;
+}
+
+export interface InspirationFolderReorderReport
+  extends VisualLanguageCommandReport {
+  folders: {
+    items: InspirationFolder[];
+    nextCursor?: string | null;
+  };
+}
+
+export interface InspirationFolderDeleteReport
+  extends VisualLanguageCommandReport {
+  folderId: string;
+}
+
+export interface InspirationFolderResourceMutationReport
+  extends VisualLanguageCommandReport {
+  resource: {
+    folder: InspirationFolder;
+    images: InspirationImage[];
+    analysis: InspirationAnalysis | null;
+  };
+}
+
 export interface InspirationAnalysisValidationReport
   extends VisualLanguageCommandReport {
   folder: InspirationFolderWithResolvedPath;

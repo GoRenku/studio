@@ -66,7 +66,7 @@ function writeStudioResourceChangedWarning(
             {
               code: 'CLI026',
               message:
-                'Media import succeeded, but Studio refresh coordination failed.',
+                'Project mutation succeeded, but Studio refresh coordination failed.',
               detail,
             },
           ],
@@ -78,6 +78,6 @@ function writeStudioResourceChangedWarning(
     return;
   }
   runtime.io.stderr.error(
-    `[CLI026] WARNING Media import succeeded, but Studio refresh coordination failed: ${detail}`
+    `[CLI026] WARNING Project mutation succeeded, but Studio refresh coordination failed: ${detail}`
   );
 }

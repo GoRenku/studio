@@ -56,6 +56,16 @@ import {
 } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ReadDirectorContextInput } from '../project-data-service-contracts.js';
+import {
+  studioCastNavigationResourceKey,
+  studioLocationNavigationResourceKey,
+  studioProjectInformationResourceKey,
+  studioSceneShotListResourceKey,
+  studioSceneShotsResourceKey,
+  studioScreenplayResourceKey,
+  studioVisualLanguageInspirationResourceKey,
+  studioVisualLanguageLookbooksResourceKey,
+} from '../studio-coordination/resource-keys.js';
 import { readStudioSelectionContextProjection } from './selection-context.js';
 
 export async function readDirectorContext(
@@ -581,18 +591,18 @@ function directorResourceKeys(
   selectedScene: DirectorSceneReadiness | null
 ): string[] {
   return [
-    'project-information',
-    'screenplay',
+    studioProjectInformationResourceKey(),
+    studioScreenplayResourceKey(),
     'screenplay-analysis',
-    'surface:visual-language:inspiration',
-    'surface:visual-language:lookbooks',
-    'navigation:cast',
-    'navigation:locations',
+    studioVisualLanguageInspirationResourceKey(),
+    studioVisualLanguageLookbooksResourceKey(),
+    studioCastNavigationResourceKey(),
+    studioLocationNavigationResourceKey(),
     ...(selectedScene
       ? [
-          `surface:scene:${selectedScene.sceneId}:shots`,
+          studioSceneShotsResourceKey(selectedScene.sceneId),
           ...(selectedScene.activeShotListId
-            ? [`scene-shot-list:${selectedScene.activeShotListId}`]
+            ? [studioSceneShotListResourceKey(selectedScene.activeShotListId)]
             : []),
         ]
       : []),

@@ -12,6 +12,10 @@ import {
   unselectLocationAsset,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
+import {
+  matchesLocationResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { LOCATION_ENVIRONMENT_SHEET_ROLE } from './location-assets';
 import { LocationDetailsTab } from './location-details-tab';
 import { LocationVisualContentTab } from './location-visual-content-tab';
@@ -60,22 +64,11 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
     };
   }, [locationId, projectName, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      if (hasLocationResourceChange(detail.resourceKeys, locationId)) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [locationId, projectName]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: (resourceKeys) => matchesLocationResource(resourceKeys, locationId),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   const toggleActive = async (asset: StudioAssetResponse) => {
     try {
@@ -145,22 +138,6 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
         />
       </LineTabsContent>
     </LineTabs>
-  );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
-}
-
-function hasLocationResourceChange(
-  resourceKeys: string[],
-  locationId: string
-): boolean {
-  return resourceKeys.some(
-    (resourceKey) =>
-      resourceKey === `assets:location:${locationId}` ||
-      resourceKey === `surface:location:${locationId}`
   );
 }
 

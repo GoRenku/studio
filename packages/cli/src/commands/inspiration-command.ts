@@ -5,13 +5,10 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
-  createStudioCoordinationService,
-  createStudioOperationId,
-  resolveRenkuStorageRoot,
   type InspirationAnalysisDocument,
-  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runInspirationCommand(options: {
   input: string[];
@@ -41,14 +38,17 @@ export async function runInspirationCommand(options: {
   }
 
   if (action === 'create') {
-    writeJson(
-      options.io,
-      await service.createInspirationFolder({
-        projectName,
-        homeDir: options.homeDir,
-        name: requiredFlag(options.flags.name, '--name'),
-      })
-    );
+    const report = await service.createInspirationFolder({
+      projectName,
+      homeDir: options.homeDir,
+      name: requiredFlag(options.flags.name, '--name'),
+    });
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
+      command: 'inspiration create',
+    });
+    writeJson(options.io, report);
     return 0;
   }
 
@@ -65,39 +65,50 @@ export async function runInspirationCommand(options: {
   }
 
   if (action === 'rename') {
-    writeJson(
-      options.io,
-      await service.renameInspirationFolder({
-        projectName,
-        homeDir: options.homeDir,
-        folderId: requiredFlag(options.flags.folder, '--folder'),
-        name: requiredFlag(options.flags.name, '--name'),
-      })
-    );
+    const report = await service.renameInspirationFolder({
+      projectName,
+      homeDir: options.homeDir,
+      folderId: requiredFlag(options.flags.folder, '--folder'),
+      name: requiredFlag(options.flags.name, '--name'),
+    });
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
+      command: 'inspiration rename',
+    });
+    writeJson(options.io, report);
     return 0;
   }
 
   if (action === 'reorder') {
     const input = await readJsonInput(requiredFlag(options.flags.file, '--file'));
     const folderIds = readFolderIds(input);
-    writeJson(
-      options.io,
-      await service.reorderInspirationFolders({
-        projectName,
-        homeDir: options.homeDir,
-        folderIds,
-      })
-    );
+    const report = await service.reorderInspirationFolders({
+      projectName,
+      homeDir: options.homeDir,
+      folderIds,
+    });
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
+      command: 'inspiration reorder',
+    });
+    writeJson(options.io, report);
     return 0;
   }
 
   if (action === 'delete') {
-    await service.deleteInspirationFolder({
+    const report = await service.deleteInspirationFolder({
       projectName,
       homeDir: options.homeDir,
       folderId: requiredFlag(options.flags.folder, '--folder'),
     });
-    writeJson(options.io, { ok: true });
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
+      command: 'inspiration delete',
+    });
+    writeJson(options.io, report);
     return 0;
   }
 
@@ -139,11 +150,9 @@ export async function runInspirationCommand(options: {
       document: document as InspirationAnalysisDocument,
       filePath: filePath !== '-' ? filePath : undefined,
     });
-    await appendInspirationResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'inspiration analysis write',
     });
     writeJson(options.io, report);
@@ -163,6 +172,22 @@ export async function runInspirationCommand(options: {
     ],
     suggestion: 'Use a supported inspiration command.',
   });
+}
+
+function cliRuntime(
+  options: {
+    json: boolean;
+    io: RenkuCliIo;
+    homeDir?: string;
+  },
+  projectDataService: ReturnType<typeof createProjectDataService>
+) {
+  return {
+    homeDir: options.homeDir,
+    json: options.json,
+    io: options.io,
+    projectDataService,
+  };
 }
 
 async function readJsonInput(file: string): Promise<unknown> {
@@ -255,73 +280,6 @@ function readFolderIds(input: unknown): string[] {
     });
   }
   return folderIds;
-}
-
-async function appendInspirationResourceChangedEvent(input: {
-  options: {
-    json: boolean;
-    io: RenkuCliIo;
-    homeDir?: string;
-  };
-  projectName: string;
-  projectId?: string;
-  resourceKeys: string[];
-  command: string;
-}): Promise<void> {
-  if (input.resourceKeys.length === 0) {
-    return;
-  }
-
-  try {
-    const coordination = createStudioCoordinationService({
-      homeDir: input.options.homeDir,
-    });
-    await coordination.appendStudioEvent({
-      type: 'studio.projectResourcesChanged',
-      projectRef: await toProjectRef(input, input.options.homeDir),
-      resourceKeys: input.resourceKeys,
-      source: { kind: 'cli', command: input.command },
-      operationId: createStudioOperationId(),
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Studio coordination event could not be appended.';
-    if (input.options.json) {
-      input.options.io.stderr.error(
-        JSON.stringify(
-          {
-            warnings: [
-              {
-                code: 'CLI093',
-                message:
-                  'Inspiration mutation succeeded, but Studio refresh coordination failed.',
-                detail: message,
-              },
-            ],
-          },
-          null,
-          2
-        )
-      );
-      return;
-    }
-    input.options.io.stderr.error(
-      `[CLI093] WARNING Inspiration mutation succeeded, but Studio refresh coordination failed: ${message}`
-    );
-  }
-}
-
-async function toProjectRef(
-  input: { projectName: string; projectId?: string },
-  homeDir?: string
-): Promise<StudioProjectRef> {
-  return {
-    name: input.projectName,
-    id: input.projectId ?? input.projectName,
-    storageRoot: await resolveRenkuStorageRoot({ homeDir }),
-  };
 }
 
 function requiredFlag(value: string | undefined, flag: string): string {

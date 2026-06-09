@@ -21,6 +21,7 @@ Decision history:
 - `../../decisions/0008-use-url-owned-studio-routes.md`
 - `../../decisions/0015-use-feature-service-ui-layering-for-the-studio-frontend.md`
 - `../../decisions/0023-use-domain-neutral-ui-primitives-for-shared-frontend-patterns.md`
+- `../../decisions/0030-use-unified-studio-resource-refresh-components.md`
 
 Current implementation steps belong in `plans/active/`. This document should
 remain useful after the first refactor is complete.
@@ -195,6 +196,35 @@ Rules:
 The desired reading experience is that a feature file explains the shape of the
 surface at a glance, while focused child components own the details of each
 area.
+
+## Resource Refresh
+
+Feature surfaces that display project data must refresh through the shared
+Studio resource-refresh hook or module under `src/hooks`.
+
+Use the shared refresh system for:
+
+- subscribing to `renku:studio-resource-changed`;
+- filtering events to the active project;
+- interpreting resource-key matchers;
+- cleaning up browser event listeners.
+
+Feature surfaces still own the data they display. They should pass the shared
+refresh system a domain-named matcher and a reload callback for the resource
+they own.
+
+Do not:
+
+- attach direct
+  `window.addEventListener('renku:studio-resource-changed', ...)` listeners in
+  feature code;
+- define feature-local copies of `StudioResourceChangedDetail`;
+- assemble resource-key strings that should come from the core catalog;
+- add local revision counters as a substitute for resource-key refresh.
+
+Project shell, project library, navigation hooks, and detail panels all follow
+the same rule. They may reload different resources, but they should not create
+separate notification systems.
 
 ### Detail Panel Tabs And Insets
 

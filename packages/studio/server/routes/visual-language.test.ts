@@ -135,6 +135,95 @@ describe('visual language Hono route', () => {
     });
   });
 
+  it('returns Inspiration folder mutation resource keys', async () => {
+    const app = createMountedVisualLanguageRoute({
+      ...fakeProjectDataService(),
+      async createInspirationFolder(input) {
+        return {
+          valid: true,
+          warnings: [],
+          project: { name: 'constantinople' },
+          changes: [{ type: 'inspirationFolder.created' as const }],
+          folder: {
+            id: 'inspiration_folder_test0001',
+            name: input.name,
+            projectRelativePath:
+              'visual-language/inspiration/reference' as never,
+          },
+          resourceKeys: [
+            'surface:visual-language:inspiration',
+            'surface:visual-language:inspiration:inspiration_folder_test0001',
+          ],
+        };
+      },
+    });
+
+    const response = await app.request(
+      '/constantinople/visual-language/inspiration/folders',
+      {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Reference' }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      folder: { id: 'inspiration_folder_test0001', name: 'Reference' },
+      resourceKeys: [
+        'surface:visual-language:inspiration',
+        'surface:visual-language:inspiration:inspiration_folder_test0001',
+      ],
+    });
+  });
+
+  it('returns Lookbook mutation resource keys', async () => {
+    const document = makeLookbookDocument();
+    const app = createMountedVisualLanguageRoute({
+      ...fakeProjectDataService(),
+      async createLookbook(input) {
+        return {
+          valid: true,
+          warnings: [],
+          project: { name: 'constantinople' },
+          changes: [{ type: 'lookbook.created' as const }],
+          lookbook: {
+            id: 'lookbook_test0001',
+            ...input.document.lookbook,
+            name: input.name,
+          },
+          sourceInspirationFolders: [],
+          resourceKeys: [
+            'surface:visual-language:lookbooks',
+            'surface:visual-language:lookbook:lookbook_test0001',
+          ],
+        };
+      },
+    });
+
+    const response = await app.request(
+      '/constantinople/visual-language/lookbooks',
+      {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Noir', document }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      lookbook: { id: 'lookbook_test0001', name: 'Noir' },
+      resourceKeys: [
+        'surface:visual-language:lookbooks',
+        'surface:visual-language:lookbook:lookbook_test0001',
+      ],
+    });
+  });
+
   it('updates Lookbooks from a tagged document body', async () => {
     const document = makeLookbookDocument();
     let receivedDocument: unknown = null;

@@ -42,6 +42,11 @@ import {
   type LocationDeleteDependencySummary,
   replaceLocationAuthoringRecords,
 } from '../database/access/locations.js';
+import {
+  studioLocationDesignResourceKey,
+  studioLocationNavigationResourceKey,
+  studioLocationSurfaceResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export async function listLocations(
   input: RenkuConfigPathOptions = {}
@@ -254,9 +259,12 @@ export async function applyLocationOperations(
 
 export function locationResourceKeys(locationId?: string): string[] {
   return [
-    'navigation:locations',
+    studioLocationNavigationResourceKey(),
     ...(locationId
-      ? [`surface:location:${locationId}`, `surface:locationDesign:${locationId}`]
+      ? [
+          studioLocationSurfaceResourceKey(locationId),
+          studioLocationDesignResourceKey(locationId),
+        ]
       : []),
   ];
 }

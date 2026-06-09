@@ -13,6 +13,10 @@ import {
   unselectCastAsset,
 } from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-screenplay-api';
+import {
+  matchesCastMemberResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { CastMemberAssetsTab } from './cast-member-assets-tab';
 import { CastMemberDetailsTab } from './cast-member-details-tab';
 
@@ -60,22 +64,12 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
     };
   }, [castMemberId, projectName, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      if (hasCastMemberResourceChange(detail.resourceKeys, castMemberId)) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [castMemberId, projectName]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: (resourceKeys) =>
+      matchesCastMemberResource(resourceKeys, castMemberId),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   const togglePick = async (asset: StudioAssetResponse) => {
     try {
@@ -158,22 +152,6 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
         />
       </LineTabsContent>
     </LineTabs>
-  );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
-}
-
-function hasCastMemberResourceChange(
-  resourceKeys: string[],
-  castMemberId: string
-): boolean {
-  return resourceKeys.some(
-    (resourceKey) =>
-      resourceKey === `assets:castMember:${castMemberId}` ||
-      resourceKey === `surface:castMember:${castMemberId}`
   );
 }
 

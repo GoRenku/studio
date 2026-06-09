@@ -100,18 +100,25 @@ Do not rely on a Tailwind aspect class alone if the component also applies an
 inline aspect-ratio style. The class and the numeric aspect ratio must describe
 the same intended shape.
 
-## Generated Asset Refresh
+## Resource Refresh
 
-Surfaces that show generated or imported media must update without requiring a
-browser refresh.
+Surfaces that show project data changed by Studio, the Renku CLI, or agent
+workflows must update without requiring a browser refresh.
 
-Frontend containers should listen for the scoped Studio resource-change events
-defined by the selected surface and reload only the affected resource or asset
-page. The app shell should stay bounded; it should not eagerly load every
-possible asset collection just to keep media tabs fresh.
+Frontend containers should subscribe through the shared Studio resource-refresh
+hook or module, listen for the scoped Studio resource-change events defined by
+the selected surface, and reload only the affected resource or asset page. The
+app shell should stay bounded; it should not eagerly load every possible asset
+collection just to keep media tabs fresh.
 
-This follows ADR 0017: project shells remain bounded, selected resources are
-loaded lazily, and resource keys drive invalidation.
+Feature code should not attach direct
+`window.addEventListener('renku:studio-resource-changed', ...)` listeners, define
+local copies of the resource-change event detail type, or assemble resource-key
+strings that should come from the core catalog.
+
+This follows ADR 0017 and ADR 0030: project shells remain bounded, selected
+resources are loaded lazily, resource keys drive invalidation, and all browser
+surfaces use the shared refresh system.
 
 ## Verification
 
@@ -138,3 +145,5 @@ For media surfaces, verification should check:
   defines shared UI primitive ownership and reusable media-card behavior.
 - `../decisions/0027-use-details-header-for-save-notifications.md` defines the
   details header as the single placement for save notifications.
+- `../decisions/0030-use-unified-studio-resource-refresh-components.md` defines
+  the shared resource-refresh system used by browser surfaces.

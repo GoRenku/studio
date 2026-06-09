@@ -12,6 +12,7 @@ import {
   requiredFlag,
   writeJson,
 } from './department-command-io.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runLocationCommand(options: {
   input: string[];
@@ -67,15 +68,25 @@ export async function runLocationCommand(options: {
   if (subcommand === 'apply') {
     const filePath = requiredFlag(options.flags.file, '--file');
     const document = await readRequiredJsonInput(filePath, 'location apply');
-    writeJson(
-      options.io,
-      await service.applyLocationOperations({
-        homeDir: options.homeDir,
-        document: document as LocationOperationDocument,
-        filePath: filePath !== '-' ? filePath : undefined,
-        dryRun: options.flags.dryRun,
-      })
-    );
+    const report = await service.applyLocationOperations({
+      homeDir: options.homeDir,
+      document: document as LocationOperationDocument,
+      filePath: filePath !== '-' ? filePath : undefined,
+      dryRun: options.flags.dryRun,
+    });
+    if (!options.flags.dryRun) {
+      await appendStudioResourceChangedEvent({
+        runtime: {
+          homeDir: options.homeDir,
+          json: options.json,
+          io: options.io,
+          projectDataService: service,
+        },
+        report,
+        command: 'location apply',
+      });
+    }
+    writeJson(options.io, report);
     return 0;
   }
 

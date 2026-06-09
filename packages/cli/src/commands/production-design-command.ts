@@ -12,6 +12,7 @@ import {
   requiredFlag,
   writeJson,
 } from './department-command-io.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runProductionDesignCommand(options: {
   input: string[];
@@ -77,25 +78,41 @@ export async function runProductionDesignCommand(options: {
     if (subcommand === 'write') {
       const filePath = requiredFlag(options.flags.file, '--file');
       const document = await readRequiredJsonInput(filePath, 'production-design location write');
-      writeJson(
-        options.io,
-        await service.writeLocationDesign({
+      const report = await service.writeLocationDesign({
+        homeDir: options.homeDir,
+        document: document as LocationDesignDocument,
+        filePath: filePath !== '-' ? filePath : undefined,
+      });
+      await appendStudioResourceChangedEvent({
+        runtime: {
           homeDir: options.homeDir,
-          document: document as LocationDesignDocument,
-          filePath: filePath !== '-' ? filePath : undefined,
-        })
-      );
+          json: options.json,
+          io: options.io,
+          projectDataService: service,
+        },
+        report,
+        command: 'production-design location write',
+      });
+      writeJson(options.io, report);
       return 0;
     }
     if (subcommand === 'set-active') {
-      writeJson(
-        options.io,
-        await service.setActiveLocationDesign({
+      const report = await service.setActiveLocationDesign({
+        homeDir: options.homeDir,
+        locationId: requiredFlag(options.flags.location, '--location'),
+        designId: requiredFlag(options.flags.design, '--design'),
+      });
+      await appendStudioResourceChangedEvent({
+        runtime: {
           homeDir: options.homeDir,
-          locationId: requiredFlag(options.flags.location, '--location'),
-          designId: requiredFlag(options.flags.design, '--design'),
-        })
-      );
+          json: options.json,
+          io: options.io,
+          projectDataService: service,
+        },
+        report,
+        command: 'production-design location set-active',
+      });
+      writeJson(options.io, report);
       return 0;
     }
   }

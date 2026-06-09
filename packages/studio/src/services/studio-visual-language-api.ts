@@ -15,10 +15,12 @@ interface InspirationResourceApiResponse {
 
 interface InspirationFolderResourceApiResponse {
   resource: InspirationFolderResourceResponse;
+  resourceKeys?: string[];
 }
 
 interface InspirationFolderApiResponse {
   folder: InspirationFolderResponse;
+  resourceKeys?: string[];
 }
 
 interface LookbooksResourceApiResponse {
@@ -31,10 +33,12 @@ interface LookbookResourceApiResponse {
 
 interface LookbookImageApiResponse {
   image: LookbookImageResponse;
+  resourceKeys?: string[];
 }
 
 interface LookbookSheetApiResponse {
   sheet: LookbookSheetResponse;
+  resourceKeys?: string[];
 }
 
 export async function readInspirationResource(

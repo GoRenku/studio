@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { StoryArcResourceResponse } from '@/services/studio-project-contracts';
 import { readStoryArcResource } from '@/services/studio-screenplay-api';
+import {
+  matchesStoryArcResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { StoryArcChart } from './story-arc-chart';
 
 interface StoryArcPanelProps {
@@ -31,28 +35,11 @@ export function StoryArcPanel({ projectName }: StoryArcPanelProps) {
     };
   }, [projectName, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      const hasStoryArcChange = detail.resourceKeys.some(
-        (resourceKey) =>
-          resourceKey === 'surface:story-arc' ||
-          resourceKey === 'screenplay-analysis' ||
-          resourceKey.startsWith('screenplay-analysis:')
-      );
-      if (hasStoryArcChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [projectName]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: matchesStoryArcResource,
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
@@ -82,9 +69,4 @@ export function StoryArcPanel({ projectName }: StoryArcPanelProps) {
       <StoryArcChart resource={resource} />
     </div>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
 }

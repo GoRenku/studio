@@ -27,6 +27,7 @@ import {
   createUniqueIdAllocator,
 } from '../entity-ids.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
+import { studioScreenplayResourceKey } from '../studio-coordination/resource-keys.js';
 
 export async function applyScreenplayOperations(
   input: RenkuConfigPathOptions & {
@@ -92,7 +93,7 @@ export async function applyScreenplayOperations(
       project: { name: currentProject.projectName, id: currentProject.projectId },
       changes,
       generatedIds: resolved.generatedIds,
-      resourceKeys: ['screenplay'],
+      resourceKeys: [studioScreenplayResourceKey()],
       shotListImpacts,
     };
   });

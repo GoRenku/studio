@@ -5,9 +5,6 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
-  createStudioCoordinationService,
-  createStudioOperationId,
-  resolveRenkuStorageRoot,
   type ScreenplayAnalysisDocument,
   type ScreenplayCreateDocument,
   type ScreenplayDocument,
@@ -15,9 +12,9 @@ import {
   type ScreenplaySceneRevisionDocument,
   type SceneShotListDocument,
   type SceneShotListOperationDocument,
-  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runScreenplayCommand(options: {
   input: string[];
@@ -81,14 +78,10 @@ export async function runScreenplayCommand(options: {
         document: document as ScreenplayAnalysisDocument,
         filePath: filePath !== '-' ? filePath : undefined,
       });
-      await appendScreenplayResourceChangedEvent({
-        options,
-        projectName: report.project.name,
-        projectId: report.project.id,
-        resourceKeys: report.resourceKeys,
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
         command: 'screenplay analyze write',
-        warningMessage:
-          'Screenplay Analysis mutation succeeded, but Studio refresh coordination failed.',
       });
       writeJson(options.io, report);
       return 0;
@@ -98,14 +91,10 @@ export async function runScreenplayCommand(options: {
         homeDir: options.homeDir,
         analysisId: requiredFlag(options.flags.analysis, '--analysis'),
       });
-      await appendScreenplayResourceChangedEvent({
-        options,
-        projectName: report.project.name,
-        projectId: report.project.id,
-        resourceKeys: report.resourceKeys,
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
         command: 'screenplay analyze set-active',
-        warningMessage:
-          'Screenplay Analysis mutation succeeded, but Studio refresh coordination failed.',
       });
       writeJson(options.io, report);
       return 0;
@@ -182,14 +171,10 @@ export async function runScreenplayCommand(options: {
         dryRun: options.flags.dryRun,
       });
       if (!options.flags.dryRun) {
-        await appendScreenplayResourceChangedEvent({
-          options,
-          projectName: report.project.name,
-          projectId: report.project.id,
-          resourceKeys: report.resourceKeys,
+        await appendStudioResourceChangedEvent({
+          runtime: cliRuntime(options, service),
+          report: { ...report, resourceKeys: report.resourceKeys ?? [] },
           command: 'screenplay shot-list apply',
-          warningMessage:
-            'Scene Shot List mutation succeeded, but Studio refresh coordination failed.',
         });
       }
       writeJson(options.io, report);
@@ -214,14 +199,10 @@ export async function runScreenplayCommand(options: {
         document: document as SceneShotListDocument,
         filePath: filePath !== '-' ? filePath : undefined,
       });
-      await appendScreenplayResourceChangedEvent({
-        options,
-        projectName: report.project.name,
-        projectId: report.project.id,
-        resourceKeys: report.resourceKeys,
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
         command: 'screenplay shot-list write',
-        warningMessage:
-          'Scene Shot List mutation succeeded, but Studio refresh coordination failed.',
       });
       writeJson(options.io, report);
       return 0;
@@ -232,14 +213,10 @@ export async function runScreenplayCommand(options: {
         sceneId: requiredFlag(options.flags.scene, '--scene'),
         shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
       });
-      await appendScreenplayResourceChangedEvent({
-        options,
-        projectName: report.project.name,
-        projectId: report.project.id,
-        resourceKeys: report.resourceKeys,
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
         command: 'screenplay shot-list set-active',
-        warningMessage:
-          'Scene Shot List mutation succeeded, but Studio refresh coordination failed.',
       });
       writeJson(options.io, report);
       return 0;
@@ -258,14 +235,10 @@ export async function runScreenplayCommand(options: {
       dryRun: options.flags.dryRun,
     });
     if (!options.flags.dryRun) {
-      await appendScreenplayResourceChangedEvent({
-        options,
-        projectName: report.project.name,
-        projectId: report.project.id,
-        resourceKeys: report.resourceKeys ?? [],
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
         command: 'screenplay scene revise',
-        warningMessage:
-          'Screenplay scene revision succeeded, but Studio refresh coordination failed.',
       });
     }
     writeJson(options.io, report);
@@ -295,14 +268,10 @@ export async function runScreenplayCommand(options: {
         homeDir: options.homeDir,
         revisionId: requiredFlag(options.flags.revision, '--revision'),
       });
-      await appendScreenplayResourceChangedEvent({
-        options,
-        projectName: report.project.name,
-        projectId: report.project.id,
-        resourceKeys: report.resourceKeys ?? [],
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
         command: 'screenplay revision restore',
-        warningMessage:
-          'Screenplay revision restore succeeded, but Studio refresh coordination failed.',
       });
       writeJson(options.io, report);
       return 0;
@@ -338,28 +307,38 @@ export async function runScreenplayCommand(options: {
   }
   if (subcommand === 'create') {
     const document = await readRequiredJsonInput(options.flags.file, 'create');
-    writeJson(
-      options.io,
-      await service.createScreenplay({
-        homeDir: options.homeDir,
-        document: document as ScreenplayCreateDocument,
-        filePath: options.flags.file !== '-' ? options.flags.file : undefined,
-        dryRun: options.flags.dryRun,
-      })
-    );
+    const report = await service.createScreenplay({
+      homeDir: options.homeDir,
+      document: document as ScreenplayCreateDocument,
+      filePath: options.flags.file !== '-' ? options.flags.file : undefined,
+      dryRun: options.flags.dryRun,
+    });
+    if (!options.flags.dryRun) {
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
+        command: 'screenplay create',
+      });
+    }
+    writeJson(options.io, report);
     return 0;
   }
   if (subcommand === 'apply') {
     const document = await readRequiredJsonInput(options.flags.file, 'apply');
-    writeJson(
-      options.io,
-      await service.applyScreenplayOperations({
-        homeDir: options.homeDir,
-        document: document as ScreenplayOperationDocument,
-        filePath: options.flags.file !== '-' ? options.flags.file : undefined,
-        dryRun: options.flags.dryRun,
-      })
-    );
+    const report = await service.applyScreenplayOperations({
+      homeDir: options.homeDir,
+      document: document as ScreenplayOperationDocument,
+      filePath: options.flags.file !== '-' ? options.flags.file : undefined,
+      dryRun: options.flags.dryRun,
+    });
+    if (!options.flags.dryRun) {
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report: { ...report, resourceKeys: report.resourceKeys ?? [] },
+        command: 'screenplay apply',
+      });
+    }
+    writeJson(options.io, report);
     return 0;
   }
   if (subcommand === 'cast' && nested === 'list') {
@@ -520,69 +499,18 @@ function writeJson(io: RenkuCliIo, value: unknown): void {
   io.stdout.log(JSON.stringify(value, null, 2));
 }
 
-async function appendScreenplayResourceChangedEvent(input: {
+function cliRuntime(
   options: {
     json: boolean;
     io: RenkuCliIo;
     homeDir?: string;
-  };
-  projectName: string;
-  projectId?: string;
-  resourceKeys: string[];
-  command: string;
-  warningMessage: string;
-}): Promise<void> {
-  if (input.resourceKeys.length === 0) {
-    return;
-  }
-
-  try {
-    const coordination = createStudioCoordinationService({
-      homeDir: input.options.homeDir,
-    });
-    await coordination.appendStudioEvent({
-      type: 'studio.projectResourcesChanged',
-      projectRef: await toProjectRef(input, input.options.homeDir),
-      resourceKeys: input.resourceKeys,
-      source: { kind: 'cli', command: input.command },
-      operationId: createStudioOperationId(),
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Studio coordination event could not be appended.';
-    if (input.options.json) {
-      input.options.io.stderr.error(
-        JSON.stringify(
-          {
-            warnings: [
-              {
-                code: 'CLI084',
-                message: input.warningMessage,
-                detail: message,
-              },
-            ],
-          },
-          null,
-          2
-        )
-      );
-      return;
-    }
-    input.options.io.stderr.error(
-      `[CLI084] WARNING ${input.warningMessage}: ${message}`
-    );
-  }
-}
-
-async function toProjectRef(
-  input: { projectName: string; projectId?: string },
-  homeDir?: string
-): Promise<StudioProjectRef> {
+  },
+  projectDataService: ReturnType<typeof createProjectDataService>
+) {
   return {
-    name: input.projectName,
-    id: input.projectId ?? input.projectName,
-    storageRoot: await resolveRenkuStorageRoot({ homeDir }),
+    homeDir: options.homeDir,
+    json: options.json,
+    io: options.io,
+    projectDataService,
   };
 }

@@ -47,6 +47,11 @@ import {
   replaceCastMemberAuthoringRecords,
 } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
+import {
+  studioCastDesignResourceKey,
+  studioCastMemberSurfaceResourceKey,
+  studioCastNavigationResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export async function listCastMembers(
   input: RenkuConfigPathOptions = {}
@@ -286,9 +291,12 @@ export async function applyCastOperations(
 
 export function castResourceKeys(castMemberId?: string): string[] {
   return [
-    'navigation:cast',
+    studioCastNavigationResourceKey(),
     ...(castMemberId
-      ? [`surface:castMember:${castMemberId}`, `surface:castDesign:${castMemberId}`]
+      ? [
+          studioCastMemberSurfaceResourceKey(castMemberId),
+          studioCastDesignResourceKey(castMemberId),
+        ]
       : []),
   ];
 }

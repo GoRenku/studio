@@ -18,6 +18,10 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { validateScreenplayJsonDocument } from '../screenplay-json/validator.js';
+import {
+  studioSceneNarrativeResourceKey,
+  studioScreenplayResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export async function reviseScreenplayScene(
   input: RenkuConfigPathOptions & {
@@ -93,7 +97,10 @@ export async function reviseScreenplayScene(
       project: { name: currentProject.projectName, id: currentProject.projectId },
       changes,
       generatedIds: resolved.generatedIds,
-      resourceKeys: ['screenplay', `scene:${input.sceneId}`],
+      resourceKeys: [
+        studioScreenplayResourceKey(),
+        studioSceneNarrativeResourceKey(input.sceneId),
+      ],
       shotListImpacts,
     };
   });

@@ -2,7 +2,12 @@ import {
   StructuredError,
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
-import { createProjectDataService } from '@gorenku/studio-core/server';
+import {
+  createProjectDataService,
+  createStudioCoordinationService,
+  createStudioOperationId,
+  resolveRenkuStorageRoot,
+} from '@gorenku/studio-core/server';
 import { formatDiagnosticIssue, type RenkuCliIo } from '../cli.js';
 
 export interface RunCreateCommandOptions {
@@ -97,6 +102,11 @@ export async function runCreateCommand(
     homeDir: options.homeDir,
     storageRoot: options.storageRoot,
   });
+  await appendProjectLibraryRefreshEvent({
+    options,
+    projectName: result.projectName,
+    projectId: currentProject.projectId,
+  });
 
   if (options.json) {
     options.io.stdout.log(JSON.stringify({ ...result, currentProject }, null, 2));
@@ -116,4 +126,57 @@ export async function runCreateCommand(
   );
 
   return 0;
+}
+
+async function appendProjectLibraryRefreshEvent(input: {
+  options: Pick<RunCreateCommandOptions, 'homeDir' | 'storageRoot' | 'io' | 'json'>;
+  projectName: string;
+  projectId?: string;
+}): Promise<void> {
+  try {
+    const coordination = createStudioCoordinationService({
+      homeDir: input.options.homeDir,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.projectRefreshRequested',
+      projectRef: {
+        name: input.projectName,
+        id: input.projectId ?? input.projectName,
+        storageRoot: await resolveRenkuStorageRoot({
+          homeDir: input.options.homeDir,
+          storageRoot: input.options.storageRoot,
+        }),
+      },
+      surface: 'projectLibrary',
+      source: { kind: 'cli', command: 'create' },
+      operationId: createStudioOperationId(),
+    });
+  } catch (error) {
+    const detail =
+      error instanceof Error
+        ? error.message
+        : 'Studio coordination event could not be appended.';
+    if (input.options.json) {
+      input.options.io.stderr.error(
+        JSON.stringify(
+          {
+            warnings: [
+              {
+                code: 'CLI027',
+                message:
+                  'Project was created, but Studio project library refresh coordination failed.',
+                detail,
+              },
+            ],
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    input.options.io.stderr.error(
+      `[CLI027] WARNING Project was created, but Studio project library refresh coordination failed: ${detail}`
+    );
+  }
 }

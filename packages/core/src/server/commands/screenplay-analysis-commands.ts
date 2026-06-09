@@ -32,9 +32,10 @@ import type {
   WriteScreenplayAnalysisInput,
 } from '../project-data-service-contracts.js';
 import { assertScreenplayAnalysisDocument } from '../screenplay-analysis-json/validator.js';
+import { studioStoryArcSurfaceResourceKey } from '../studio-coordination/resource-keys.js';
 
 export const SCREENPLAY_ANALYSIS_RESOURCE_KEYS = [
-  'surface:story-arc',
+  studioStoryArcSurfaceResourceKey(),
   'screenplay-analysis',
 ] as const;
 

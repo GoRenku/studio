@@ -20,6 +20,7 @@ import {
   readAssetRelationship,
 } from '../database/access/asset-relationships/index.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
+import { readProjectRecord } from '../database/access/project.js';
 import {
   castVoiceNameExists,
   deleteCastVoiceRecord,
@@ -105,7 +106,7 @@ export async function readCastVoice(
 export async function validateCastVoiceAttachment(
   input: CastVoiceAttachmentInput
 ): Promise<CastVoiceValidationReport> {
-  return withCastVoiceProjectSession(input, async ({ projectFolder, session }) => {
+  return withCastVoiceProjectSession(input, async ({ currentProject, projectFolder, session }) => {
     await validateAttachmentDocument({
       projectFolder,
       session,
@@ -118,7 +119,9 @@ export async function validateCastVoiceAttachment(
 export async function attachCastVoice(
   input: CastVoiceAttachmentInput
 ): Promise<CastVoiceAttachmentReport> {
-  return withCastVoiceProjectSession(input, async ({ projectFolder, session }) => {
+  return withCastVoiceProjectSession(
+    input,
+    async ({ currentProject, projectFolder, session }) => {
     const validated = await validateAttachmentDocument({
       projectFolder,
       session,
@@ -215,6 +218,10 @@ export async function attachCastVoice(
     return {
       valid: true,
       warnings: [],
+      project: {
+        id: currentProject.projectId,
+        name: currentProject.projectName,
+      },
       castMember: {
         id: validated.castMember.id,
         handle: validated.castMember.handle,
@@ -230,13 +237,14 @@ export async function attachCastVoice(
       ],
       resourceKeys,
     };
-  });
+    }
+  );
 }
 
 export async function removeCastVoice(
   input: CastVoiceLookupInput
 ): Promise<CastVoiceRemoveReport> {
-  return withCastVoiceProjectSession(input, async ({ projectFolder, session }) => {
+  return withCastVoiceProjectSession(input, async ({ currentProject, projectFolder, session }) => {
     requireCastMember(session, input.castMemberId);
     const record = requireCastVoiceRecord(session, input);
     const target = { kind: 'castMember' as const, castMemberId: input.castMemberId };
@@ -265,6 +273,10 @@ export async function removeCastVoice(
       deleteAssetRecord(txSession, record.sampleAssetId);
     });
     return {
+      project: {
+        id: currentProject.projectId,
+        name: currentProject.projectName,
+      },
       removed: {
         castMemberId: input.castMemberId,
         voiceId: record.id,
@@ -584,7 +596,11 @@ async function deleteAssetFiles(projectFolder: string, asset: Asset): Promise<vo
 
 async function withCastVoiceProjectSession<T>(
   input: CastVoiceProjectInput,
-  fn: (handle: { projectFolder: string; session: DatabaseSession }) => T | Promise<T>
+  fn: (handle: {
+    currentProject: CastVoiceCurrentProject;
+    projectFolder: string;
+    session: DatabaseSession;
+  }) => T | Promise<T>
 ): Promise<T> {
   if (input.projectName) {
     const handle = await openProjectSession({
@@ -592,12 +608,37 @@ async function withCastVoiceProjectSession<T>(
       homeDir: input.homeDir,
     });
     try {
-      return await fn({ projectFolder: handle.projectFolder, session: handle.session });
+      const project = readProjectRecord(handle.session);
+      if (!project) {
+        throw new ProjectDataError(
+          'PROJECT_DATA353',
+          `Project database has no project row: ${handle.session.databasePath}.`
+        );
+      }
+      return await fn({
+        currentProject: {
+          projectName: project.name,
+          projectId: project.id,
+          projectFolder: handle.projectFolder,
+        },
+        projectFolder: handle.projectFolder,
+        session: handle.session,
+      });
     } finally {
       handle.session.close();
     }
   }
   return withCurrentProjectSession(input, ({ currentProject, session }) =>
-    fn({ projectFolder: currentProject.projectFolder, session })
+    fn({
+      currentProject,
+      projectFolder: currentProject.projectFolder,
+      session,
+    })
   );
+}
+
+interface CastVoiceCurrentProject {
+  projectName: string;
+  projectId: string;
+  projectFolder: string;
 }

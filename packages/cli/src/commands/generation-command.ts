@@ -10,6 +10,7 @@ import {
   writeJson,
   type CliCommandRuntime,
 } from './structured-command.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runGenerationCommand(options: {
   input: string[];
@@ -32,8 +33,39 @@ export async function runGenerationCommand(options: {
     handlers: generationCommandHandlers,
     unknownCommand: unknownGenerationCommand,
   });
+  if (shouldAppendGenerationResourceChangedEvent(options.input, result)) {
+    await appendStudioResourceChangedEvent({
+      runtime,
+      report: result,
+      command: `generation ${options.input.join(' ')}`,
+    });
+  }
   writeJson(options.io, result);
   return 0;
+}
+
+function shouldAppendGenerationResourceChangedEvent(
+  commandPath: readonly string[],
+  result: unknown
+): result is {
+  project: { name: string; id?: string };
+  resourceKeys: string[];
+} {
+  const mutationPath = commandPath.join(' ');
+  if (
+    mutationPath !== 'production update' &&
+    mutationPath !== 'input select' &&
+    mutationPath !== 'input clear'
+  ) {
+    return false;
+  }
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    'project' in result &&
+    'resourceKeys' in result &&
+    Array.isArray((result as { resourceKeys?: unknown }).resourceKeys)
+  );
 }
 
 function unknownGenerationCommand(commandPath: readonly string[]): StructuredError {

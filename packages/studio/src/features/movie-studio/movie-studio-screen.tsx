@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { DebouncedSaveStatus } from '@/hooks/use-debounced-autosave';
 import { exportProductionAssets } from '@/services/studio-projects-api';
 import { createInspirationFolder } from '@/services/studio-visual-language-api';
+import {
+  matchesVisualLanguageInspirationResource,
+  matchesVisualLanguageLookbooksResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
@@ -86,22 +91,17 @@ export function MovieStudioScreen({
     setInspirationFoldersRevision((current) => current + 1);
   }, []);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== project.identity.name) {
-        return;
-      }
-      if (detail.resourceKeys.includes('surface:visual-language:lookbooks')) {
-        handleLookbooksChange();
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [handleLookbooksChange, project.identity.name]);
+  useStudioResourceRefresh({
+    projectName: project.identity.name,
+    matches: matchesVisualLanguageLookbooksResource,
+    onRefresh: handleLookbooksChange,
+  });
+  useStudioResourceRefresh({
+    projectName: project.identity.name,
+    matches: (resourceKeys) =>
+      matchesVisualLanguageInspirationResource(resourceKeys),
+    onRefresh: handleInspirationFoldersChange,
+  });
   const selectMovieStudioSurface = useCallback(
     (nextSelection: StudioSelection) => {
       void onNavigateSelection(nextSelection);
@@ -392,10 +392,6 @@ export function MovieStudioScreen({
   );
 }
 
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
-}
 
 function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean {
   return (

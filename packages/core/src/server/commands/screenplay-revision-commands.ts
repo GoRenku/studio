@@ -22,6 +22,10 @@ import {
 } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import {
+  studioSceneNarrativeResourceKey,
+  studioScreenplayResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export async function listScreenplayRevisions(
   input: RenkuConfigPathOptions = {}
@@ -30,7 +34,7 @@ export async function listScreenplayRevisions(
     valid: true,
     warnings: [],
     project: { name: currentProject.projectName, id: currentProject.projectId },
-    resourceKeys: ['screenplay'],
+    resourceKeys: [studioScreenplayResourceKey()],
     revisions: listScreenplayRevisionRecords(session),
   }));
 }
@@ -44,7 +48,7 @@ export async function readScreenplayRevision(
       valid: true,
       warnings: [],
       project: { name: currentProject.projectName, id: currentProject.projectId },
-      resourceKeys: ['screenplay'],
+      resourceKeys: [studioScreenplayResourceKey()],
       revision: toScreenplayRevisionSummary(row),
       screenplay: readScreenplayRevisionDocument(row),
     };
@@ -97,8 +101,8 @@ export async function restoreScreenplayRevision(
         { operation: 'screenplay.revision.restore', revisionId: row.id },
       ],
       resourceKeys: [
-        'screenplay',
-        ...sceneIds.map((sceneId) => `scene:${sceneId}`),
+        studioScreenplayResourceKey(),
+        ...sceneIds.map((sceneId) => studioSceneNarrativeResourceKey(sceneId)),
       ],
       shotListImpacts,
     };

@@ -23,6 +23,10 @@ import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
 } from '../entity-ids.js';
+import {
+  studioScreenplayActsResourceKey,
+  studioScreenplayResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export async function createScreenplay(
   input: RenkuConfigPathOptions & {
@@ -91,7 +95,10 @@ export async function createScreenplay(
       project: { name: currentProject.projectName, id: currentProject.projectId },
       changes: [{ operation: 'screenplay.create' }],
       generatedIds: resolved.generatedIds,
-      resourceKeys: ['screenplay', 'screenplay:acts'],
+      resourceKeys: [
+        studioScreenplayResourceKey(),
+        studioScreenplayActsResourceKey(),
+      ],
     };
   });
 }

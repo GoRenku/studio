@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { LocationOverviewResourceResponse } from '@/services/studio-project-contracts';
 import { readLocationOverviewResource } from '@/services/studio-screenplay-api';
+import {
+  matchesLocationOverviewResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import type { StudioSelection } from '../movie-studio-selection';
 
@@ -35,28 +39,11 @@ export function LocationOverviewPanel({
     };
   }, [projectName, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      const hasLocationChange = detail.resourceKeys.some(
-        (resourceKey) =>
-          resourceKey === 'navigation:locations' ||
-          resourceKey.startsWith('assets:location:') ||
-          resourceKey.startsWith('surface:location:')
-      );
-      if (hasLocationChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [projectName]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: matchesLocationOverviewResource,
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
@@ -82,9 +69,4 @@ export function LocationOverviewPanel({
       ))}
     </div>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
 }

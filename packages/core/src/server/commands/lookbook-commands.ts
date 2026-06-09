@@ -87,12 +87,16 @@ import {
   assertProjectRelativeChildPath,
   LOOKBOOK_ROOT,
 } from '../visual-language-paths.js';
+import {
+  studioVisualLanguageLookbookResourceKey,
+  studioVisualLanguageLookbooksResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
-const lookbookIndexResourceKey = 'surface:visual-language:lookbooks';
+const lookbookIndexResourceKey = studioVisualLanguageLookbooksResourceKey();
 
 const lookbookResourceKeys = (lookbookId: string): string[] => [
   lookbookIndexResourceKey,
-  `surface:visual-language:lookbook:${lookbookId}`,
+  studioVisualLanguageLookbookResourceKey(lookbookId),
 ];
 
 export async function validateLookbook(

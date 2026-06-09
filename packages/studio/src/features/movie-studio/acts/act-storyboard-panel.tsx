@@ -6,6 +6,10 @@ import type {
   ActStoryboardShotResponse,
 } from '@/services/studio-project-contracts';
 import { readActStoryboardResource } from '@/services/studio-screenplay-api';
+import {
+  matchesActStoryboardResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import type { StudioSelection } from '../movie-studio-selection';
@@ -45,30 +49,24 @@ export function ActStoryboardPanel({
     };
   }, [projectName, actId, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName || !resource) {
-        return;
-      }
-      const sceneIds = new Set(
-        resource.sequences.flatMap((sequence) =>
-          sequence.scenes.map((scene) => scene.scene.id)
-        )
-      );
-      const hasStoryboardChange = detail.resourceKeys.some((resourceKey) =>
-        actStoryboardResourceKeyMatches(resourceKey, sceneIds)
-      );
-      if (hasStoryboardChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [projectName, resource]);
+  useStudioResourceRefresh({
+    projectName,
+    enabled: Boolean(resource),
+    matches: (resourceKeys) =>
+      matchesActStoryboardResource({
+        resourceKeys,
+        actId,
+        sequenceIds: new Set(
+          resource?.sequences.map((sequence) => sequence.sequence.id) ?? []
+        ),
+        sceneIds: new Set(
+          resource?.sequences.flatMap((sequence) =>
+            sequence.scenes.map((scene) => scene.scene.id)
+          ) ?? []
+        ),
+      }),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   if (error) {
     return (
@@ -103,29 +101,6 @@ export function ActStoryboardPanel({
       </div>
     </div>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
-}
-
-function actStoryboardResourceKeyMatches(
-  resourceKey: string,
-  sceneIds: Set<string>
-): boolean {
-  if (resourceKey.startsWith('scene-shot-list:')) {
-    return true;
-  }
-  for (const sceneId of sceneIds) {
-    if (
-      resourceKey === `scene:${sceneId}` ||
-      resourceKey === `surface:scene:${sceneId}:shots`
-    ) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function SequenceSection({

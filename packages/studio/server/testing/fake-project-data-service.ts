@@ -105,6 +105,10 @@ export function fakeProjectDataService(): NonNullable<
     },
     async removeCastVoice(input) {
       return {
+        project: {
+          id: project.identity.id,
+          name: project.identity.name,
+        },
         removed: {
           castMemberId: input.castMemberId,
           voiceId: input.voiceIdOrName,
@@ -423,42 +427,62 @@ export function fakeProjectDataService(): NonNullable<
     },
     async createInspirationFolder(input) {
       return {
-        id: 'inspiration_folder_test0001',
-        name: input.name,
-        projectRelativePath: 'visual-language/inspiration/reference' as never,
+        ...makeVisualLanguageCommandReport('inspirationFolder.created'),
+        folder: {
+          id: 'inspiration_folder_test0001',
+          name: input.name,
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+        },
       };
     },
     async renameInspirationFolder(input) {
       return {
-        id: input.folderId,
-        name: input.name,
-        projectRelativePath: 'visual-language/inspiration/reference' as never,
+        ...makeVisualLanguageCommandReport('inspirationFolder.renamed'),
+        folder: {
+          id: input.folderId,
+          name: input.name,
+          projectRelativePath: 'visual-language/inspiration/reference' as never,
+        },
       };
     },
     async reorderInspirationFolders() {
-      return { items: [], nextCursor: null };
+      return {
+        ...makeVisualLanguageCommandReport('inspirationFolder.reordered'),
+        folders: { items: [], nextCursor: null },
+      };
     },
-    async deleteInspirationFolder() {},
+    async deleteInspirationFolder(input) {
+      return {
+        ...makeVisualLanguageCommandReport('inspirationFolder.deleted'),
+        folderId: input.folderId,
+      };
+    },
     async writeInspirationImage() {
       return {
-        folder: {
-          id: 'inspiration_folder_test0001',
-          name: 'Reference',
-          projectRelativePath: 'visual-language/inspiration/reference' as never,
+        ...makeVisualLanguageCommandReport('inspirationImage.written'),
+        resource: {
+          folder: {
+            id: 'inspiration_folder_test0001',
+            name: 'Reference',
+            projectRelativePath: 'visual-language/inspiration/reference' as never,
+          },
+          images: [],
+          analysis: null,
         },
-        images: [],
-        analysis: null,
       };
     },
     async deleteInspirationImage() {
       return {
-        folder: {
-          id: 'inspiration_folder_test0001',
-          name: 'Reference',
-          projectRelativePath: 'visual-language/inspiration/reference' as never,
+        ...makeVisualLanguageCommandReport('inspirationImage.deleted'),
+        resource: {
+          folder: {
+            id: 'inspiration_folder_test0001',
+            name: 'Reference',
+            projectRelativePath: 'visual-language/inspiration/reference' as never,
+          },
+          images: [],
+          analysis: null,
         },
-        images: [],
-        analysis: null,
       };
     },
     async readInspirationAnalysis(input) {

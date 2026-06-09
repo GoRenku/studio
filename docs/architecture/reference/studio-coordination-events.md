@@ -493,10 +493,11 @@ The first event set should stay small and focused.
 
 ### `studio.projectRefreshRequested`
 
-ADR 0017 adds scoped resource invalidation for Studio UI resource caches. New
-resource-aware project mutations should prefer
-`studio.projectResourcesChanged` with deterministic resource keys. Keep
-`studio.projectRefreshRequested` for the narrower project information and
+ADR 0017 adds scoped resource invalidation for Studio UI resource caches. ADR
+0030 requires one unified resource-refresh implementation across core, CLI,
+Studio server routes, and browser surfaces. New resource-aware project mutations
+should prefer `studio.projectResourcesChanged` with deterministic resource keys.
+Keep `studio.projectRefreshRequested` for the narrower project information and
 project library refresh behavior that already exists.
 
 Written after a successful project mutation when Studio should refresh its
@@ -569,8 +570,10 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
 }
 ```
 
-Resource keys are owned by the Studio coordination boundary, not assembled ad
-hoc in feature components. Current examples include:
+Resource keys are owned by the Studio coordination boundary and cataloged in
+core, not assembled ad hoc in feature components. Browser surfaces should consume
+these events through the shared Studio resource-refresh hook or module rather
+than direct `window` listeners. Current examples include:
 
 - `project-shell`;
 - `project-information`;
@@ -582,7 +585,9 @@ hoc in feature components. Current examples include:
 - `markdown:<assetId>:<assetFileId>`.
 
 Use ADR 0017 for the authoritative project shell, lazy resource loading,
-pagination, and scoped invalidation rules.
+pagination, and scoped invalidation rules. Use ADR 0030 for the required
+unified resource-refresh components and the rule against feature-local refresh
+systems.
 
 ### `studio.focusRequested`
 

@@ -28,19 +28,32 @@ describe('visual language commands', () => {
     }
 
     const ids = createDeterministicIdGenerator();
-    const first = await projectData.createInspirationFolder({
+    const firstReport = await projectData.createInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       name: 'Avatar',
       idGenerator: ids,
     });
-    const second = await projectData.createInspirationFolder({
+    const secondReport = await projectData.createInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       name: 'Avatar',
       idGenerator: ids,
     });
+    const first = firstReport.folder;
+    const second = secondReport.folder;
 
+    expect(firstReport).toMatchObject({
+      valid: true,
+      folder: {
+        name: 'Avatar',
+        projectRelativePath: 'visual-language/inspiration/avatar',
+      },
+      resourceKeys: expect.arrayContaining([
+        'surface:visual-language:inspiration',
+        `surface:visual-language:inspiration:${first.id}`,
+      ]),
+    });
     expect(first).toMatchObject({
       name: 'Avatar',
       projectRelativePath: 'visual-language/inspiration/avatar',
@@ -51,22 +64,24 @@ describe('visual language commands', () => {
       projectData.listInspirationFolders({ projectName: 'constantinople', homeDir })
     ).resolves.toMatchObject({ items: [{ id: first.id }, { id: second.id }] });
 
-    const renamed = await projectData.renameInspirationFolder({
+    const renameReport = await projectData.renameInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       folderId: second.id,
       name: 'Blade Runner 2049',
     });
+    const renamed = renameReport.folder;
     expect(renamed.projectRelativePath).toBe(
       'visual-language/inspiration/blade-runner-2049'
     );
 
-    const savedAgain = await projectData.renameInspirationFolder({
+    const savedAgainReport = await projectData.renameInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       folderId: renamed.id,
       name: 'Blade Runner 2049',
     });
+    const savedAgain = savedAgainReport.folder;
     expect(savedAgain.projectRelativePath).toBe(renamed.projectRelativePath);
 
     await expect(
@@ -103,12 +118,13 @@ describe('visual language commands', () => {
       return;
     }
 
-    const folder = await projectData.createInspirationFolder({
+    const folderReport = await projectData.createInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       name: 'Roger Deakins',
       idGenerator: createDeterministicIdGenerator(),
     });
+    const folder = folderReport.folder;
     await projectData.writeInspirationImage({
       projectName: 'constantinople',
       homeDir,
@@ -238,16 +254,18 @@ describe('visual language commands', () => {
     if (!created) {
       return;
     }
-    const firstSource = await projectData.createInspirationFolder({
+    const firstSourceReport = await projectData.createInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       name: 'The Substance',
     });
-    const secondSource = await projectData.createInspirationFolder({
+    const secondSourceReport = await projectData.createInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       name: 'Body Double',
     });
+    const firstSource = firstSourceReport.folder;
+    const secondSource = secondSourceReport.folder;
 
     const lookbookIds = createDeterministicIdGenerator();
     const lookbook = await projectData.createLookbook({
@@ -401,11 +419,12 @@ describe('visual language commands', () => {
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA230' });
 
-    const source = await projectData.createInspirationFolder({
+    const sourceReport = await projectData.createInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       name: 'The Substance',
     });
+    const source = sourceReport.folder;
     await expect(
       projectData.createLookbook({
         projectName: 'constantinople',

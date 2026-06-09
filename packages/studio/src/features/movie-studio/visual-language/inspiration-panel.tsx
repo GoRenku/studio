@@ -11,6 +11,10 @@ import {
   readInspirationResource,
   uploadInspirationImages,
 } from '@/services/studio-visual-language-api';
+import {
+  matchesVisualLanguageInspirationResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { EmptyState } from './empty-state';
 import { GrabsTab } from './grabs-tab';
@@ -51,27 +55,12 @@ export function InspirationPanel({
     };
   }, [foldersRevision, projectName, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      const hasInspirationChange = detail.resourceKeys.some(
-        (resourceKey) =>
-          resourceKey === 'surface:visual-language:inspiration' ||
-          resourceKey === `surface:visual-language:inspiration:${selectedFolderId}`
-      );
-      if (hasInspirationChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [projectName, selectedFolderId]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: (resourceKeys) =>
+      matchesVisualLanguageInspirationResource(resourceKeys, selectedFolderId),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   useEffect(() => {
     if (!selectedFolderId) {
@@ -162,11 +151,6 @@ export function InspirationPanel({
       )}
     </div>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
 }
 
 function errorMessage(error: unknown): string {

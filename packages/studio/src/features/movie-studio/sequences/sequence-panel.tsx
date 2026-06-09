@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import type { ScreenplayImageReferenceWithHttp } from '@gorenku/studio-core/client';
 import type { SequenceResourceResponse } from '@/services/studio-project-contracts';
 import { readSequenceResource } from '@/services/studio-screenplay-api';
+import {
+  matchesSequenceResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import type { StudioSelection } from '../movie-studio-selection';
@@ -36,26 +40,17 @@ export function SequencePanel({ projectName, sequenceId, onSelect }: SequencePan
     };
   }, [projectName, sequenceId, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName || !resource) {
-        return;
-      }
-      const sceneIds = new Set(resource.scenes.items.map((scene) => scene.id));
-      const hasStoryboardChange = detail.resourceKeys.some((resourceKey) =>
-        sequenceStoryboardResourceKeyMatches(resourceKey, sceneIds)
-      );
-      if (hasStoryboardChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [projectName, resource]);
+  useStudioResourceRefresh({
+    projectName,
+    enabled: Boolean(resource),
+    matches: (resourceKeys) =>
+      matchesSequenceResource({
+        resourceKeys,
+        sequenceId,
+        sceneIds: new Set(resource?.scenes.items.map((scene) => scene.id) ?? []),
+      }),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
@@ -143,24 +138,4 @@ function SequenceStoryboardPreviewCard({
       </span>
     </Button>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
-}
-
-function sequenceStoryboardResourceKeyMatches(
-  resourceKey: string,
-  sceneIds: Set<string>
-): boolean {
-  for (const sceneId of sceneIds) {
-    if (
-      resourceKey === `scene:${sceneId}` ||
-      resourceKey === `surface:scene:${sceneId}:shots`
-    ) {
-      return true;
-    }
-  }
-  return false;
 }

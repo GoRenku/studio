@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { CastOverviewResourceResponse } from '@/services/studio-project-contracts';
 import { readCastOverviewResource } from '@/services/studio-screenplay-api';
+import {
+  matchesCastOverviewResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import type { StudioSelection } from '../movie-studio-selection';
 
@@ -32,28 +36,11 @@ export function CastOverviewPanel({ projectName, onSelect }: CastOverviewPanelPr
     };
   }, [projectName, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      const hasCastChange = detail.resourceKeys.some(
-        (resourceKey) =>
-          resourceKey === 'navigation:cast' ||
-          resourceKey.startsWith('assets:castMember:') ||
-          resourceKey.startsWith('surface:castMember:')
-      );
-      if (hasCastChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [projectName]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: matchesCastOverviewResource,
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
@@ -78,9 +65,4 @@ export function CastOverviewPanel({ projectName, onSelect }: CastOverviewPanelPr
       ))}
     </div>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
 }

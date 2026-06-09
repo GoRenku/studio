@@ -3,17 +3,14 @@ import {
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
 import {
-  createStudioCoordinationService,
-  createStudioOperationId,
   createProjectDataService,
-  resolveRenkuStorageRoot,
   studioResourceKeysForAssetTarget,
   type Asset,
   type AssetTarget,
   type ProjectRelativePath,
-  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export interface RunAssetCommandOptions {
   input: string[];
@@ -97,10 +94,9 @@ async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
     homeDir: options.homeDir,
   });
   const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendAssetResourceChangedEvent({
-    options,
-    projectName,
-    resourceKeys,
+  await appendStudioResourceChangedEvent({
+    runtime: cliRuntime(options, projectData),
+    report: { project: { name: projectName }, resourceKeys },
     command: 'asset register',
   });
   writeAssetResult(options, asset, `Registered asset: ${asset.assetId}`, resourceKeys);
@@ -124,7 +120,8 @@ async function createAssetSelect(
 ): Promise<number> {
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
-  const asset = await createProjectDataService().createAssetSelect({
+  const projectData = createProjectDataService();
+  const asset = await projectData.createAssetSelect({
     projectName,
     target,
     assetId: requiredAssetId(assetId),
@@ -132,10 +129,9 @@ async function createAssetSelect(
     homeDir: options.homeDir,
   });
   const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendAssetResourceChangedEvent({
-    options,
-    projectName,
-    resourceKeys,
+  await appendStudioResourceChangedEvent({
+    runtime: cliRuntime(options, projectData),
+    report: { project: { name: projectName }, resourceKeys },
     command: 'asset select',
   });
   writeAssetResult(options, asset, `Selected asset: ${asset.assetId}`, resourceKeys);
@@ -148,7 +144,8 @@ async function updateAssetSelect(
 ): Promise<number> {
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
-  const asset = await createProjectDataService().updateAssetSelect({
+  const projectData = createProjectDataService();
+  const asset = await projectData.updateAssetSelect({
     projectName,
     target,
     assetId: requiredAssetId(assetId),
@@ -156,10 +153,9 @@ async function updateAssetSelect(
     homeDir: options.homeDir,
   });
   const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendAssetResourceChangedEvent({
-    options,
-    projectName,
-    resourceKeys,
+  await appendStudioResourceChangedEvent({
+    runtime: cliRuntime(options, projectData),
+    report: { project: { name: projectName }, resourceKeys },
     command: 'asset select-update',
   });
   writeAssetResult(
@@ -177,17 +173,17 @@ async function removeAssetSelect(
 ): Promise<number> {
   const projectName = requiredFlag(options, 'project');
   const target = readTarget(options);
-  const asset = await createProjectDataService().removeAssetSelect({
+  const projectData = createProjectDataService();
+  const asset = await projectData.removeAssetSelect({
     projectName,
     target,
     assetId: requiredAssetId(assetId),
     homeDir: options.homeDir,
   });
   const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendAssetResourceChangedEvent({
-    options,
-    projectName,
-    resourceKeys,
+  await appendStudioResourceChangedEvent({
+    runtime: cliRuntime(options, projectData),
+    report: { project: { name: projectName }, resourceKeys },
     command: 'asset select-remove',
   });
   writeAssetResult(
@@ -244,69 +240,15 @@ function writeAssetList(options: RunAssetCommandOptions, assets: Asset[]): void 
   }
 }
 
-async function appendAssetResourceChangedEvent(input: {
-  options: RunAssetCommandOptions;
-  projectName: string;
-  resourceKeys: string[];
-  command: string;
-}): Promise<void> {
-  if (input.resourceKeys.length === 0) {
-    return;
-  }
-
-  try {
-    const project = await createProjectDataService().readProjectShell({
-      projectName: input.projectName,
-      homeDir: input.options.homeDir,
-    });
-    const coordination = createStudioCoordinationService({
-      homeDir: input.options.homeDir,
-    });
-    await coordination.appendStudioEvent({
-      type: 'studio.projectResourcesChanged',
-      projectRef: await toProjectRef(project, input.options.homeDir),
-      resourceKeys: input.resourceKeys,
-      source: { kind: 'cli', command: input.command },
-      operationId: createStudioOperationId(),
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Studio coordination event could not be appended.';
-    if (input.options.json) {
-      input.options.io.stderr.error(
-        JSON.stringify(
-          {
-            warnings: [
-              {
-                code: 'CLI043',
-                message:
-                  'Asset mutation succeeded, but Studio refresh coordination failed.',
-                detail: message,
-              },
-            ],
-          },
-          null,
-          2
-        )
-      );
-      return;
-    }
-    input.options.io.stderr.error(
-      `[CLI043] WARNING Asset mutation succeeded, but Studio refresh coordination failed: ${message}`
-    );
-  }
-}
-
-async function toProjectRef(
-  project: { identity: { name: string; id: string } },
-  homeDir?: string
-): Promise<StudioProjectRef> {
+function cliRuntime(
+  options: RunAssetCommandOptions,
+  projectDataService: ReturnType<typeof createProjectDataService>
+) {
   return {
-    name: project.identity.name,
-    id: project.identity.id,
-    storageRoot: await resolveRenkuStorageRoot({ homeDir }),
+    homeDir: options.homeDir,
+    json: options.json,
+    io: options.io,
+    projectDataService,
   };
 }
 

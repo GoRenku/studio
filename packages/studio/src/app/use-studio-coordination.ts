@@ -18,6 +18,7 @@ import type {
   StudioProjectRef,
 } from '@/services/studio-current-contracts';
 import { invalidateCastDesignResource } from '@/services/studio-project-assets-api';
+import { matchesProjectShellResource } from '@/hooks/use-studio-resource-refresh';
 
 const BROWSER_SESSION_KEY = 'renku.studio.browserSessionId';
 const POLLING_INTERVAL_MS = 2_000;
@@ -233,7 +234,11 @@ async function applyStudioEventBatch(input: {
     if (event.type === 'studio.projectRefreshRequested') {
       const refreshEvent = event as {
         projectRef: StudioProjectRef;
+        surface?: string;
       };
+      if (refreshEvent.surface === 'projectLibrary') {
+        await input.projectSessionRef.current.refreshProjectLibrary();
+      }
       if (
         input.currentProjectRef.current?.identity.id ===
         refreshEvent.projectRef.id
@@ -257,7 +262,7 @@ async function applyStudioEventBatch(input: {
       ) {
         invalidateChangedResources(resourceEvent);
         publishChangedResources(resourceEvent);
-        if (resourceEvent.resourceKeys.includes('project-shell')) {
+        if (matchesProjectShellResource(resourceEvent.resourceKeys)) {
           const project = await input.projectSessionRef.current.refreshProject(
             resourceEvent.projectRef.name
           );

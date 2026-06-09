@@ -23,6 +23,7 @@ import {
 } from '../database/access/screenplay-resource.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { studioScreenplayResourceKey } from '../studio-coordination/resource-keys.js';
 
 export async function readScreenplay(
   input: RenkuConfigPathOptions = {}
@@ -34,7 +35,7 @@ export async function readScreenplay(
       warnings: [],
       project: { name: currentProject.projectName, id: currentProject.projectId },
       screenplay: document,
-      resourceKeys: ['screenplay'],
+      resourceKeys: [studioScreenplayResourceKey()],
     };
   });
 }

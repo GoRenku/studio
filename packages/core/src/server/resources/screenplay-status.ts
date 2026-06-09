@@ -7,6 +7,7 @@ import {
   withCurrentProjectSession,
 } from '../database/lifecycle/current-project.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { studioScreenplayResourceKey } from '../studio-coordination/resource-keys.js';
 
 export async function readScreenplayStatus(
   input: RenkuConfigPathOptions = {}
@@ -17,6 +18,6 @@ export async function readScreenplayStatus(
     project: { name: currentProject.projectName, id: currentProject.projectId },
     exists: hasScreenplayRecord(session),
     counts: readScreenplayStatusCounts(session),
-    resourceKeys: ['screenplay'],
+    resourceKeys: [studioScreenplayResourceKey()],
   }));
 }

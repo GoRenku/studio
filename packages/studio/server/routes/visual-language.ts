@@ -34,11 +34,11 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const body = await c.req.json<{ name?: string }>();
-        const folder = await projectData.createInspirationFolder({
+        const report = await projectData.createInspirationFolder({
           projectName,
           name: body.name ?? '',
         });
-        return c.json({ folder }, 201);
+        return c.json({ folder: report.folder, resourceKeys: report.resourceKeys }, 201);
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -62,18 +62,21 @@ export function createVisualLanguageRoute({
         const folderId = c.req.param('folderId') as string;
         const body = await c.req.json<{ name?: string; folderIds?: string[] }>();
         if (body.folderIds) {
-          const folders = await projectData.reorderInspirationFolders({
+          const report = await projectData.reorderInspirationFolders({
             projectName,
             folderIds: body.folderIds,
           });
-          return c.json({ folders });
+          return c.json({
+            folders: report.folders,
+            resourceKeys: report.resourceKeys,
+          });
         }
-        const folder = await projectData.renameInspirationFolder({
+        const report = await projectData.renameInspirationFolder({
           projectName,
           folderId,
           name: body.name ?? '',
         });
-        return c.json({ folder });
+        return c.json({ folder: report.folder, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -82,8 +85,8 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const folderId = c.req.param('folderId') as string;
-        await projectData.deleteInspirationFolder({ projectName, folderId });
-        return c.json({ ok: true });
+        const report = await projectData.deleteInspirationFolder({ projectName, folderId });
+        return c.json({ ok: true, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -93,13 +96,16 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const folderId = c.req.param('folderId') as string;
         const fileName = c.req.query('fileName') ?? '';
-        const resource = await projectData.writeInspirationImage({
+        const report = await projectData.writeInspirationImage({
           projectName,
           folderId,
           fileName,
           contents: await c.req.arrayBuffer(),
         });
-        return c.json({ resource }, 201);
+        return c.json(
+          { resource: report.resource, resourceKeys: report.resourceKeys },
+          201
+        );
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -148,12 +154,15 @@ export function createVisualLanguageRoute({
           const projectName = c.req.param('projectName') as string;
           const folderId = c.req.param('folderId') as string;
           const fileName = c.req.param('fileName') as string;
-          const resource = await projectData.deleteInspirationImage({
+          const report = await projectData.deleteInspirationImage({
             projectName,
             folderId,
             fileName,
           });
-          return c.json({ resource });
+          return c.json({
+            resource: report.resource,
+            resourceKeys: report.resourceKeys,
+          });
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -172,7 +181,10 @@ export function createVisualLanguageRoute({
             analysis: sections as never,
           },
         });
-        return c.json({ analysis: report.analysis });
+        return c.json({
+          analysis: report.analysis,
+          resourceKeys: report.resourceKeys,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -196,7 +208,7 @@ export function createVisualLanguageRoute({
           name: readLookbookName(body) ?? '',
           document: readRequiredLookbookDocument(body),
         });
-        return c.json({ lookbook: report.lookbook });
+        return c.json({ lookbook: report.lookbook, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -223,7 +235,7 @@ export function createVisualLanguageRoute({
           name: readLookbookName(body),
           document: readOptionalLookbookDocument(body),
         });
-        return c.json({ lookbook: report.lookbook });
+        return c.json({ lookbook: report.lookbook, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -231,8 +243,8 @@ export function createVisualLanguageRoute({
     .delete('/visual-language/lookbooks/active-selection', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        await projectData.clearActiveLookbook({ projectName });
-        return c.json({ ok: true });
+        const report = await projectData.clearActiveLookbook({ projectName });
+        return c.json({ ok: true, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -241,8 +253,8 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
-        await projectData.deleteLookbook({ projectName, lookbookId });
-        return c.json({ ok: true });
+        const report = await projectData.deleteLookbook({ projectName, lookbookId });
+        return c.json({ ok: true, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -251,8 +263,8 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
-        await projectData.setActiveLookbook({ projectName, lookbookId });
-        return c.json({ ok: true });
+        const report = await projectData.setActiveLookbook({ projectName, lookbookId });
+        return c.json({ ok: true, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -275,7 +287,10 @@ export function createVisualLanguageRoute({
           title: body.title,
           oneLineSummary: body.oneLineSummary,
         });
-        return c.json({ image: report.imported }, 201);
+        return c.json(
+          { image: report.imported, resourceKeys: report.resourceKeys },
+          201
+        );
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -290,7 +305,7 @@ export function createVisualLanguageRoute({
           lookbookId,
           imageId: body.imageId ?? '',
         });
-        return c.json({ image: report.image });
+        return c.json({ image: report.image, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -303,7 +318,7 @@ export function createVisualLanguageRoute({
           projectName,
           sheetId,
         });
-        return c.json({ sheet: report.sheet });
+        return c.json({ sheet: report.sheet, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -404,7 +419,7 @@ export function createVisualLanguageRoute({
           imageId,
           sections: sections as never,
         });
-        return c.json({ image: report.image });
+        return c.json({ image: report.image, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -413,8 +428,8 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const imageId = c.req.param('imageId') as string;
-        await projectData.deleteLookbookImage({ projectName, imageId });
-        return c.json({ ok: true });
+        const report = await projectData.deleteLookbookImage({ projectName, imageId });
+        return c.json({ ok: true, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -423,8 +438,8 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const sheetId = c.req.param('sheetId') as string;
-        await projectData.deleteLookbookSheet({ projectName, sheetId });
-        return c.json({ ok: true });
+        const report = await projectData.deleteLookbookSheet({ projectName, sheetId });
+        return c.json({ ok: true, resourceKeys: report.resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

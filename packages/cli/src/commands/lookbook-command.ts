@@ -5,15 +5,12 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
-  createStudioCoordinationService,
-  createStudioOperationId,
-  resolveRenkuStorageRoot,
   type LookbookDocument,
   type LookbookSection,
   type LookbookSourceInspirationsDocument,
-  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runLookbookCommand(options: {
   input: string[];
@@ -78,11 +75,9 @@ export async function runLookbookCommand(options: {
       document: document as LookbookDocument,
       filePath: filePath !== '-' ? filePath : undefined,
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook create',
     });
     writeJson(options.io, report);
@@ -102,11 +97,9 @@ export async function runLookbookCommand(options: {
       document,
       filePath: filePath && filePath !== '-' ? filePath : undefined,
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook update',
     });
     writeJson(options.io, report);
@@ -120,11 +113,9 @@ export async function runLookbookCommand(options: {
       lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
       name: requiredFlag(options.flags.name, '--name'),
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook rename',
     });
     writeJson(options.io, report);
@@ -137,11 +128,9 @@ export async function runLookbookCommand(options: {
       homeDir: options.homeDir,
       lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook delete',
     });
     writeJson(options.io, report);
@@ -154,11 +143,9 @@ export async function runLookbookCommand(options: {
       homeDir: options.homeDir,
       lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook set-active',
     });
     writeJson(options.io, report);
@@ -170,11 +157,9 @@ export async function runLookbookCommand(options: {
       projectName,
       homeDir: options.homeDir,
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook clear-active',
     });
     writeJson(options.io, report);
@@ -188,11 +173,9 @@ export async function runLookbookCommand(options: {
       imageId: requiredFlag(options.flags.image, '--image'),
       sections: parseSections(options.flags.sections),
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook image set-sections',
     });
     writeJson(options.io, report);
@@ -205,11 +188,9 @@ export async function runLookbookCommand(options: {
       homeDir: options.homeDir,
       imageId: requiredFlag(options.flags.image, '--image'),
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook image delete',
     });
     writeJson(options.io, report);
@@ -223,11 +204,9 @@ export async function runLookbookCommand(options: {
       lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
       imageId: requiredFlag(options.flags.image, '--image'),
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook card-image set',
     });
     writeJson(options.io, report);
@@ -240,11 +219,9 @@ export async function runLookbookCommand(options: {
       homeDir: options.homeDir,
       lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook card-image clear',
     });
     writeJson(options.io, report);
@@ -273,11 +250,9 @@ export async function runLookbookCommand(options: {
       document: document as LookbookSourceInspirationsDocument,
       filePath: filePath !== '-' ? filePath : undefined,
     });
-    await appendLookbookResourceChangedEvent({
-      options,
-      projectName: report.project.name,
-      projectId: report.project.id,
-      resourceKeys: report.resourceKeys,
+    await appendStudioResourceChangedEvent({
+      runtime: cliRuntime(options, service),
+      report,
       command: 'lookbook inspiration set',
     });
     writeJson(options.io, report);
@@ -375,70 +350,19 @@ function parseSections(input?: string): LookbookSection[] {
     .filter(Boolean) as LookbookSection[];
 }
 
-async function appendLookbookResourceChangedEvent(input: {
+function cliRuntime(
   options: {
     json: boolean;
     io: RenkuCliIo;
     homeDir?: string;
-  };
-  projectName: string;
-  projectId?: string;
-  resourceKeys: string[];
-  command: string;
-}): Promise<void> {
-  if (input.resourceKeys.length === 0) {
-    return;
-  }
-
-  try {
-    const coordination = createStudioCoordinationService({
-      homeDir: input.options.homeDir,
-    });
-    await coordination.appendStudioEvent({
-      type: 'studio.projectResourcesChanged',
-      projectRef: await toProjectRef(input, input.options.homeDir),
-      resourceKeys: input.resourceKeys,
-      source: { kind: 'cli', command: input.command },
-      operationId: createStudioOperationId(),
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Studio coordination event could not be appended.';
-    if (input.options.json) {
-      input.options.io.stderr.error(
-        JSON.stringify(
-          {
-            warnings: [
-              {
-                code: 'CLI096',
-                message:
-                  'Lookbook mutation succeeded, but Studio refresh coordination failed.',
-                detail: message,
-              },
-            ],
-          },
-          null,
-          2
-        )
-      );
-      return;
-    }
-    input.options.io.stderr.error(
-      `[CLI096] WARNING Lookbook mutation succeeded, but Studio refresh coordination failed: ${message}`
-    );
-  }
-}
-
-async function toProjectRef(
-  input: { projectName: string; projectId?: string },
-  homeDir?: string
-): Promise<StudioProjectRef> {
+  },
+  projectDataService: ReturnType<typeof createProjectDataService>
+) {
   return {
-    name: input.projectName,
-    id: input.projectId ?? input.projectName,
-    storageRoot: await resolveRenkuStorageRoot({ homeDir }),
+    homeDir: options.homeDir,
+    json: options.json,
+    io: options.io,
+    projectDataService,
   };
 }
 

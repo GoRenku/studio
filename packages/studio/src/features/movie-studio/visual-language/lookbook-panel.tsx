@@ -11,6 +11,10 @@ import {
   setDefaultLookbookSheet,
   setActiveLookbook,
 } from '@/services/studio-visual-language-api';
+import {
+  matchesVisualLanguageLookbookResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { EmptyState } from './empty-state';
@@ -47,27 +51,12 @@ export function LookbookPanel({
     };
   }, [projectName, lookbookId, resourceRevision]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      const hasLookbookChange = detail.resourceKeys.some(
-        (resourceKey) =>
-          resourceKey === 'surface:visual-language:lookbooks' ||
-          resourceKey === `surface:visual-language:lookbook:${lookbookId}`
-      );
-      if (hasLookbookChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [lookbookId, projectName]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: (resourceKeys) =>
+      matchesVisualLanguageLookbookResource(resourceKeys, lookbookId),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   const makeActive = async () => {
     await setActiveLookbook(projectName, lookbookId);
@@ -161,11 +150,6 @@ export function LookbookPanel({
       </LineTabsContent>
     </LineTabs>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
 }
 
 function SourceInspirationList({

@@ -25,6 +25,7 @@ import {
 import { createRandomIdGenerator, createUniqueIdAllocator, type ProjectIdGenerator } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import {
   buildScreenplayContext,
@@ -118,10 +119,10 @@ export async function buildCastVoiceSampleContext(
         outputFormat: 'mp3_44100_128',
         languageCode: defaultLanguageCode(projectContext.languages),
       },
-      resourceKeys: [
-        `assets:castMember:${input.castMemberId}`,
-        `surface:castMember:${input.castMemberId}`,
-      ],
+      resourceKeys: studioResourceKeysForAssetTarget({
+        kind: 'castMember',
+        castMemberId: input.castMemberId,
+      }),
     };
   });
 }

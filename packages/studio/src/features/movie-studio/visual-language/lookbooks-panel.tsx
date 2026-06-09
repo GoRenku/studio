@@ -7,6 +7,10 @@ import {
   listLookbooks,
   setActiveLookbook,
 } from '@/services/studio-visual-language-api';
+import {
+  matchesVisualLanguageLookbooksResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { EmptyState } from './empty-state';
 import { LookbookCard } from './lookbook-card';
 import { LookbookCardGrid } from './lookbook-card-grid';
@@ -29,25 +33,11 @@ export function LookbooksPanel({
     setResource(await listLookbooks(projectName));
   }, [projectName]);
 
-  useEffect(() => {
-    const handleResourceChanged = (event: Event) => {
-      const detail = (event as CustomEvent<StudioResourceChangedDetail>).detail;
-      if (!detail || detail.projectName !== projectName) {
-        return;
-      }
-      const hasLookbooksChange = detail.resourceKeys.includes(
-        'surface:visual-language:lookbooks'
-      );
-      if (hasLookbooksChange) {
-        setResourceRevision((current) => current + 1);
-      }
-    };
-
-    window.addEventListener('renku:studio-resource-changed', handleResourceChanged);
-    return () => {
-      window.removeEventListener('renku:studio-resource-changed', handleResourceChanged);
-    };
-  }, [projectName]);
+  useStudioResourceRefresh({
+    projectName,
+    matches: matchesVisualLanguageLookbooksResource,
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   useEffect(() => {
     void listLookbooks(projectName)
@@ -101,11 +91,6 @@ export function LookbooksPanel({
       </LookbookCardGrid>
     </div>
   );
-}
-
-interface StudioResourceChangedDetail {
-  projectName: string;
-  resourceKeys: string[];
 }
 
 function errorMessage(error: unknown): string {

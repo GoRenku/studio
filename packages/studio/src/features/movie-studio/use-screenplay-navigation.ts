@@ -26,6 +26,7 @@ import {
   readScenesForSequence,
   readSequencesForAct,
 } from '@/services/studio-screenplay-api';
+import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
 import type { StudioSelection } from './movie-studio-selection';
 
 export interface ScreenplayNavigationState {
@@ -167,6 +168,59 @@ export function useScreenplayNavigation(
     if (index < sequencesInAct.length - 1)
       void loadSequenceScenes(sequencesInAct[index + 1].id);
   }, [selectionContext, sequencePages, loadSequenceScenes]);
+
+  useStudioResourceRefresh({
+    projectName,
+    matches: matchesScreenplayNavigationResource,
+    onRefresh: (detail) => {
+      const resourceKeys = detail.resourceKeys;
+      if (
+        resourceKeys.includes('screenplay') ||
+        resourceKeys.includes('screenplay:acts')
+      ) {
+        setLoadedActPage(null);
+        setSequencePages(new Map());
+        setScenePages(new Map());
+        setSelectionContext(null);
+        if (
+          selection.type === 'scene' ||
+          selection.type === 'sequence' ||
+          selection.type === 'act'
+        ) {
+          void loadActs();
+        }
+      }
+
+      for (const resourceKey of resourceKeys) {
+        const sequenceId = readSequenceScenesNavigationKey(resourceKey);
+        if (!sequenceId) {
+          continue;
+        }
+        setScenePages((current) => mapWithoutValue(current, sequenceId));
+        if (
+          selectionContext &&
+          'sequence' in selectionContext &&
+          selectionContext.sequence.id === sequenceId
+        ) {
+          void loadNavigationPage({
+            key: `sequence-scenes:${sequenceId}`,
+            setLoadingKeys,
+            setError,
+            read: () => readScenesForSequence(projectName, sequenceId),
+            write: (page) =>
+              setScenePages((current) => withMapEntry(current, sequenceId, page)),
+          });
+        }
+      }
+
+      if (
+        resourceKeys.includes('navigation:cast') ||
+        resourceKeys.includes('navigation:locations')
+      ) {
+        setSelectionContext(null);
+      }
+    },
+  });
 
   return useMemo(() => {
     const contextRows = rowsFromSelectionContext(selectionContext);
@@ -320,6 +374,12 @@ function withMapEntry<K, V>(current: Map<K, V>, key: K, value: V): Map<K, V> {
   return next;
 }
 
+function mapWithoutValue<K, V>(current: Map<K, V>, key: K): Map<K, V> {
+  const next = new Map(current);
+  next.delete(key);
+  return next;
+}
+
 function setWithValue<T>(current: Set<T>, value: T): Set<T> {
   const next = new Set(current);
   next.add(value);
@@ -334,4 +394,25 @@ function setWithoutValue<T>(current: Set<T>, value: T): Set<T> {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Screenplay navigation failed to load.';
+}
+
+function matchesScreenplayNavigationResource(resourceKeys: string[]): boolean {
+  return resourceKeys.some(
+    (resourceKey) =>
+      resourceKey === 'screenplay' ||
+      resourceKey === 'screenplay:acts' ||
+      resourceKey === 'navigation:cast' ||
+      resourceKey === 'navigation:locations' ||
+      resourceKey.startsWith('surface:act:') ||
+      resourceKey.startsWith('surface:sequence:') ||
+      resourceKey.startsWith('navigation:sequence-scenes:')
+  );
+}
+
+function readSequenceScenesNavigationKey(resourceKey: string): string | null {
+  const prefix = 'navigation:sequence-scenes:';
+  if (!resourceKey.startsWith(prefix)) {
+    return null;
+  }
+  return resourceKey.slice(prefix.length);
 }

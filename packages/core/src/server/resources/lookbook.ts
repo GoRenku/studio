@@ -33,6 +33,10 @@ import type {
   ListLookbooksInput,
   ReadLookbookInput,
 } from '../project-data-service-contracts.js';
+import {
+  studioVisualLanguageLookbookResourceKey,
+  studioVisualLanguageLookbooksResourceKey,
+} from '../studio-coordination/resource-keys.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export async function listLookbooksResource(
@@ -61,7 +65,7 @@ export async function listLookbooksResource(
       project: toProjectReport(project, projectFolder),
       activeLookbookId,
       lookbooks,
-      resourceKeys: ['surface:visual-language:lookbooks'],
+      resourceKeys: [studioVisualLanguageLookbooksResourceKey()],
     };
   });
 }
@@ -89,8 +93,8 @@ export async function readLookbookResource(
       sheets,
       imagesBySection: buildImagesBySection(images),
       resourceKeys: [
-        'surface:visual-language:lookbooks',
-        `surface:visual-language:lookbook:${row.id}`,
+        studioVisualLanguageLookbooksResourceKey(),
+        studioVisualLanguageLookbookResourceKey(row.id),
       ],
     };
   });

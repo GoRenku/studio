@@ -15,6 +15,7 @@ import { withCurrentProjectSession } from '../database/lifecycle/current-project
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { validateScreenplayJsonDocument } from '../screenplay-json/validator.js';
+import { studioScreenplayResourceKey } from '../studio-coordination/resource-keys.js';
 import { buildScreenplayDraftForOperations } from './apply-screenplay-operations.js';
 
 export async function validateScreenplayJson(
@@ -90,7 +91,7 @@ export async function validateScreenplayJson(
       project: { name: currentProject.projectName, id: currentProject.projectId },
       changes: [],
       generatedIds: [],
-      resourceKeys: ['screenplay'],
+      resourceKeys: [studioScreenplayResourceKey()],
     };
   });
 }

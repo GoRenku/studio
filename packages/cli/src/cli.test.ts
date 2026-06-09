@@ -461,10 +461,20 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(createFolderExitCode).toBe(0);
-    const folder = JSON.parse(stdout.join('\n')) as {
-      id: string;
-      projectRelativePath: string;
+    const createFolderReport = JSON.parse(stdout.join('\n')) as {
+      folder: {
+        id: string;
+        projectRelativePath: string;
+      };
+      resourceKeys: string[];
     };
+    const folder = createFolderReport.folder;
+    expect(createFolderReport.resourceKeys).toEqual(
+      expect.arrayContaining([
+        'surface:visual-language:inspiration',
+        `surface:visual-language:inspiration:${folder.id}`,
+      ])
+    );
 
     const inspirationFolderPath = path.join(
       storageRoot,
@@ -583,10 +593,20 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(createFolderExitCode).toBe(0);
-    const folder = JSON.parse(stdout.join('\n')) as {
-      id: string;
-      projectRelativePath: string;
+    const createFolderReport = JSON.parse(stdout.join('\n')) as {
+      folder: {
+        id: string;
+        projectRelativePath: string;
+      };
+      resourceKeys: string[];
     };
+    const folder = createFolderReport.folder;
+    expect(createFolderReport.resourceKeys).toEqual(
+      expect.arrayContaining([
+        'surface:visual-language:inspiration',
+        `surface:visual-language:inspiration:${folder.id}`,
+      ])
+    );
     const inspirationFolderPath = path.join(
       storageRoot,
       'constantinople',

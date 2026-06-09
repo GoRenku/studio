@@ -14,6 +14,7 @@ import {
   requiredFlag,
   writeJson,
 } from './department-command-io.js';
+import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runCastCommand(options: {
   input: string[];
@@ -73,15 +74,20 @@ export async function runCastCommand(options: {
   if (subcommand === 'apply') {
     const filePath = requiredFlag(options.flags.file, '--file');
     const document = await readRequiredJsonInput(filePath, 'cast apply');
-    writeJson(
-      options.io,
-      await service.applyCastOperations({
-        homeDir: options.homeDir,
-        document: document as CastOperationDocument,
-        filePath: filePath !== '-' ? filePath : undefined,
-        dryRun: options.flags.dryRun,
-      })
-    );
+    const report = await service.applyCastOperations({
+      homeDir: options.homeDir,
+      document: document as CastOperationDocument,
+      filePath: filePath !== '-' ? filePath : undefined,
+      dryRun: options.flags.dryRun,
+    });
+    if (!options.flags.dryRun) {
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report,
+        command: 'cast apply',
+      });
+    }
+    writeJson(options.io, report);
     return 0;
   }
   if (subcommand === 'design') {
@@ -133,25 +139,31 @@ export async function runCastCommand(options: {
     if (nested === 'write') {
       const filePath = requiredFlag(options.flags.file, '--file');
       const document = await readRequiredJsonInput(filePath, 'cast design write');
-      writeJson(
-        options.io,
-        await service.writeCastDesign({
-          homeDir: options.homeDir,
-          document: document as CastDesignDocument,
-          filePath: filePath !== '-' ? filePath : undefined,
-        })
-      );
+      const report = await service.writeCastDesign({
+        homeDir: options.homeDir,
+        document: document as CastDesignDocument,
+        filePath: filePath !== '-' ? filePath : undefined,
+      });
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report,
+        command: 'cast design write',
+      });
+      writeJson(options.io, report);
       return 0;
     }
     if (nested === 'set-active') {
-      writeJson(
-        options.io,
-        await service.setActiveCastDesign({
-          homeDir: options.homeDir,
-          castMemberId: requiredFlag(options.flags.cast, '--cast'),
-          designId: requiredFlag(options.flags.design, '--design'),
-        })
-      );
+      const report = await service.setActiveCastDesign({
+        homeDir: options.homeDir,
+        castMemberId: requiredFlag(options.flags.cast, '--cast'),
+        designId: requiredFlag(options.flags.design, '--design'),
+      });
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report,
+        command: 'cast design set-active',
+      });
+      writeJson(options.io, report);
       return 0;
     }
   }
@@ -195,26 +207,32 @@ export async function runCastCommand(options: {
     if (nested === 'attach') {
       const filePath = requiredFlag(options.flags.file, '--file');
       const document = await readRequiredJsonInput(filePath, 'cast voice attach');
-      writeJson(
-        options.io,
-        await service.attachCastVoice({
-          homeDir: options.homeDir,
-          projectName: options.flags.project,
-          document: document as CastVoiceAttachmentDocument,
-        })
-      );
+      const report = await service.attachCastVoice({
+        homeDir: options.homeDir,
+        projectName: options.flags.project,
+        document: document as CastVoiceAttachmentDocument,
+      });
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report,
+        command: 'cast voice attach',
+      });
+      writeJson(options.io, report);
       return 0;
     }
     if (nested === 'remove') {
-      writeJson(
-        options.io,
-        await service.removeCastVoice({
-          homeDir: options.homeDir,
-          projectName: options.flags.project,
-          castMemberId: requiredFlag(options.flags.cast, '--cast'),
-          voiceIdOrName: requiredFlag(options.flags.voice, '--voice'),
-        })
-      );
+      const report = await service.removeCastVoice({
+        homeDir: options.homeDir,
+        projectName: options.flags.project,
+        castMemberId: requiredFlag(options.flags.cast, '--cast'),
+        voiceIdOrName: requiredFlag(options.flags.voice, '--voice'),
+      });
+      await appendStudioResourceChangedEvent({
+        runtime: cliRuntime(options, service),
+        report,
+        command: 'cast voice remove',
+      });
+      writeJson(options.io, report);
       return 0;
     }
   }
@@ -232,4 +250,20 @@ export async function runCastCommand(options: {
     ],
     suggestion: 'Use a supported cast command.',
   });
+}
+
+function cliRuntime(
+  options: {
+    json: boolean;
+    io: RenkuCliIo;
+    homeDir?: string;
+  },
+  projectDataService: ReturnType<typeof createProjectDataService>
+) {
+  return {
+    homeDir: options.homeDir,
+    json: options.json,
+    io: options.io,
+    projectDataService,
+  };
 }

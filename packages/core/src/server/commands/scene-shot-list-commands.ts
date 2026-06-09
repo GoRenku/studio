@@ -61,6 +61,12 @@ import {
   assertSceneShotListDocument,
   assertSceneShotListOperationDocument,
 } from '../scene-shot-list-json/validator.js';
+import {
+  studioSceneNarrativeResourceKey,
+  studioSceneShotListResourceKey,
+  studioSceneShotResourceKey,
+  studioSceneShotsResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export const SCENE_SHOT_LIST_RESOURCE_KEY = 'scene-shot-list';
 
@@ -918,15 +924,15 @@ export function sceneShotListResourceKeys(input: {
   shotIds?: string[];
 }): string[] {
   return [
-    `surface:scene:${input.sceneId}:shots`,
+    studioSceneShotsResourceKey(input.sceneId),
     SCENE_SHOT_LIST_RESOURCE_KEY,
-    ...(input.shotListId ? [`scene-shot-list:${input.shotListId}`] : []),
+    ...(input.shotListId ? [studioSceneShotListResourceKey(input.shotListId)] : []),
     ...(input.shotListId
       ? (input.shotIds ?? []).map(
-          (shotId) => `scene-shot-list:${input.shotListId}:shot:${shotId}`
+          (shotId) => studioSceneShotResourceKey(input.shotListId as string, shotId)
         )
       : []),
-    `scene:${input.sceneId}`,
+    studioSceneNarrativeResourceKey(input.sceneId),
   ];
 }
 

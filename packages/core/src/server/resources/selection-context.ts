@@ -26,6 +26,20 @@ import {
   readSceneShotListDocument,
 } from '../database/access/scene-shot-lists.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import {
+  studioActSurfaceResourceKey,
+  studioCastMemberSurfaceResourceKey,
+  studioCastNavigationResourceKey,
+  studioLocationNavigationResourceKey,
+  studioLocationSurfaceResourceKey,
+  studioProjectInformationResourceKey,
+  studioSequenceScenesNavigationResourceKey,
+  studioSequenceSurfaceResourceKey,
+  studioStoryArcSurfaceResourceKey,
+  studioVisualLanguageInspirationResourceKey,
+  studioVisualLanguageLookbookResourceKey,
+  studioVisualLanguageLookbooksResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export async function readStudioSelectionContext(input: {
   projectName: string;
@@ -53,7 +67,7 @@ export function readStudioSelectionContextProjection(
           valid: true,
           selection: input.selection,
           context: { surface: 'project-information' },
-          resourceKeys: ['project-information'],
+          resourceKeys: [studioProjectInformationResourceKey()],
         };
       case 'inspiration':
         if (
@@ -66,14 +80,14 @@ export function readStudioSelectionContextProjection(
           valid: true,
           selection: input.selection,
           context: { surface: 'visual-language-inspiration' },
-          resourceKeys: ['surface:visual-language:inspiration'],
+          resourceKeys: [studioVisualLanguageInspirationResourceKey()],
         };
       case 'lookbooks':
         return {
           valid: true,
           selection: input.selection,
           context: { surface: 'visual-language-lookbooks' },
-          resourceKeys: ['surface:visual-language:lookbooks'],
+          resourceKeys: [studioVisualLanguageLookbooksResourceKey()],
         };
       case 'lookbook': {
         const lookbook = readLookbookRecordById(session, input.selection.lookbookId);
@@ -82,7 +96,7 @@ export function readStudioSelectionContextProjection(
               valid: true,
               selection: input.selection,
               context: { surface: 'visual-language-lookbook' },
-              resourceKeys: [`surface:visual-language:lookbook:${lookbook.id}`],
+              resourceKeys: [studioVisualLanguageLookbookResourceKey(lookbook.id)],
             }
           : selectionNotFound(input.selection);
       }
@@ -94,7 +108,7 @@ export function readStudioSelectionContextProjection(
             surface: 'cast',
             cast: listCastNavigationPage(session, {}),
           },
-          resourceKeys: ['navigation:cast'],
+          resourceKeys: [studioCastNavigationResourceKey()],
         };
       case 'castMember': {
         const castMember = readCastNavigationRow(session, input.selection.id);
@@ -106,7 +120,7 @@ export function readStudioSelectionContextProjection(
                 surface: 'cast-member',
                 castMember,
               },
-              resourceKeys: [`surface:castMember:${castMember.id}`],
+              resourceKeys: [studioCastMemberSurfaceResourceKey(castMember.id)],
             }
           : selectionNotFound(input.selection);
       }
@@ -118,7 +132,7 @@ export function readStudioSelectionContextProjection(
             surface: 'locations',
             locations: listLocationNavigationPage(session, {}),
           },
-          resourceKeys: ['navigation:locations'],
+          resourceKeys: [studioLocationNavigationResourceKey()],
         };
       case 'location': {
         const location = readLocationNavigationRow(session, input.selection.id);
@@ -127,7 +141,7 @@ export function readStudioSelectionContextProjection(
               valid: true,
               selection: input.selection,
               context: { surface: 'location', location },
-              resourceKeys: [`surface:location:${location.id}`],
+              resourceKeys: [studioLocationSurfaceResourceKey(location.id)],
             }
           : selectionNotFound(input.selection);
       }
@@ -139,7 +153,7 @@ export function readStudioSelectionContextProjection(
             surface: 'story-arc',
             acts: listActNavigationPage(session, {}),
           },
-          resourceKeys: ['surface:story-arc'],
+          resourceKeys: [studioStoryArcSurfaceResourceKey()],
         };
       case 'act': {
         const act = readActNavigationRow(session, input.selection.id);
@@ -148,7 +162,7 @@ export function readStudioSelectionContextProjection(
               valid: true,
               selection: input.selection,
               context: { surface: 'act', act },
-              resourceKeys: [`surface:act:${act.id}`],
+              resourceKeys: [studioActSurfaceResourceKey(act.id)],
             }
           : selectionNotFound(input.selection);
       }
@@ -164,7 +178,7 @@ export function readStudioSelectionContextProjection(
                 act,
                 sequence: chain.sequence,
               },
-              resourceKeys: [`surface:sequence:${chain.sequence.id}`],
+              resourceKeys: [studioSequenceSurfaceResourceKey(chain.sequence.id)],
             }
           : selectionNotFound(input.selection);
       }
@@ -192,7 +206,9 @@ export function readStudioSelectionContextProjection(
                 scene: chain.scene,
                 sequence: chain.sequence,
               },
-              resourceKeys: [`navigation:sequence-scenes:${chain.sequence.id}`],
+              resourceKeys: [
+                studioSequenceScenesNavigationResourceKey(chain.sequence.id),
+              ],
             }
           : selectionNotFound(input.selection);
       }

@@ -53,6 +53,10 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import { readLookbookResource } from '../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import {
+  studioVisualLanguageLookbookResourceKey,
+  studioVisualLanguageLookbooksResourceKey,
+} from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import { assertLookbookSections } from '../visual-language-json/validator.js';
 import {
@@ -418,8 +422,8 @@ export async function importLookbookImageMedia(
       imported: image,
       ...(input.receipt ? { receipt: input.receipt } : {}),
       resourceKeys: [
-        'surface:visual-language:lookbooks',
-        `surface:visual-language:lookbook:${input.lookbookId}`,
+        studioVisualLanguageLookbooksResourceKey(),
+        studioVisualLanguageLookbookResourceKey(input.lookbookId),
       ],
     };
   });

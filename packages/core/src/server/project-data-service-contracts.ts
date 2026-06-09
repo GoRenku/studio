@@ -26,6 +26,10 @@ import type {
   InspirationAnalysisWriteReport,
   InspirationFolder,
   InspirationFolderReport,
+  InspirationFolderDeleteReport,
+  InspirationFolderMutationReport,
+  InspirationFolderReorderReport,
+  InspirationFolderResourceMutationReport,
   InspirationFolderResource,
   InspirationResource,
   LookbookImageMutationReport,
@@ -317,12 +321,12 @@ export interface ProjectDataService {
   listInspirationFolders(input: ListInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
   readInspirationResource(input: ListInspirationFoldersInput): Promise<InspirationResource>;
   readInspirationFolder(input: ReadInspirationFolderInput): Promise<InspirationFolderResource>;
-  createInspirationFolder(input: CreateInspirationFolderInput): Promise<InspirationFolder>;
-  renameInspirationFolder(input: RenameInspirationFolderInput): Promise<InspirationFolder>;
-  reorderInspirationFolders(input: ReorderInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
-  deleteInspirationFolder(input: DeleteInspirationFolderInput): Promise<void>;
-  writeInspirationImage(input: WriteInspirationImageInput): Promise<InspirationFolderResource>;
-  deleteInspirationImage(input: DeleteInspirationImageInput): Promise<InspirationFolderResource>;
+  createInspirationFolder(input: CreateInspirationFolderInput): Promise<InspirationFolderMutationReport>;
+  renameInspirationFolder(input: RenameInspirationFolderInput): Promise<InspirationFolderMutationReport>;
+  reorderInspirationFolders(input: ReorderInspirationFoldersInput): Promise<InspirationFolderReorderReport>;
+  deleteInspirationFolder(input: DeleteInspirationFolderInput): Promise<InspirationFolderDeleteReport>;
+  writeInspirationImage(input: WriteInspirationImageInput): Promise<InspirationFolderResourceMutationReport>;
+  deleteInspirationImage(input: DeleteInspirationImageInput): Promise<InspirationFolderResourceMutationReport>;
   readInspirationAnalysis(input: ReadInspirationAnalysisInput): Promise<InspirationFolderReport>;
   validateInspirationAnalysis(input: ValidateInspirationAnalysisInput): Promise<InspirationAnalysisValidationReport>;
   writeInspirationAnalysis(input: WriteInspirationAnalysisInput): Promise<InspirationAnalysisWriteReport>;

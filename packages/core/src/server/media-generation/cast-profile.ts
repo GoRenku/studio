@@ -29,6 +29,7 @@ import {
 } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import {
   buildScreenplayContext,
@@ -154,10 +155,10 @@ export async function buildCastProfileContext(
         detail: 'standard',
         outputFormat: 'png',
       },
-      resourceKeys: [
-        `assets:castMember:${input.castMemberId}`,
-        `surface:castMember:${input.castMemberId}`,
-      ],
+      resourceKeys: studioResourceKeysForAssetTarget({
+        kind: 'castMember',
+        castMemberId: input.castMemberId,
+      }),
     };
   });
 }

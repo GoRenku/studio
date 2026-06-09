@@ -2,9 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   InspirationFolder,
+  InspirationFolderDeleteReport,
+  InspirationFolderMutationReport,
+  InspirationFolderReorderReport,
   InspirationAnalysisValidationReport,
   InspirationAnalysisWriteReport,
   InspirationFolderReport,
+  InspirationFolderResourceMutationReport,
   InspirationFolderWithResolvedPath,
   InspirationFolderResource,
   PageResponse,
@@ -69,10 +73,14 @@ import {
   validateInspirationAnalysisDocument,
   type InspirationAnalysisSections,
 } from '../visual-language-json/validator.js';
+import {
+  studioVisualLanguageInspirationFolderResourceKey,
+  studioVisualLanguageInspirationResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 const inspirationResourceKeys = (folderId: string): string[] => [
-  'surface:visual-language:inspiration',
-  `surface:visual-language:inspiration:${folderId}`,
+  studioVisualLanguageInspirationResourceKey(),
+  studioVisualLanguageInspirationFolderResourceKey(folderId),
 ];
 
 export async function listInspirationFolders(
@@ -103,8 +111,8 @@ export async function readInspirationFolder(
 
 export async function createInspirationFolder(
   input: CreateInspirationFolderInput
-): Promise<InspirationFolder> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+): Promise<InspirationFolderMutationReport> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
     const name = requireTrimmed(input.name, 'name');
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     const projectRelativePath = await allocateProjectRelativeFolderPath({
@@ -125,14 +133,22 @@ export async function createInspirationFolder(
       updatedAt: now,
     };
     insertInspirationFolderRecord(session, record);
-    return toInspirationFolder(record);
+    const folder = toInspirationFolder(record);
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      changes: [{ type: 'inspirationFolder.created', folderId: folder.id }],
+      folder,
+      resourceKeys: inspirationResourceKeys(folder.id),
+    };
   });
 }
 
 export async function renameInspirationFolder(
   input: RenameInspirationFolderInput
-): Promise<InspirationFolder> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+): Promise<InspirationFolderMutationReport> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const name = requireTrimmed(input.name, 'name');
     const currentPath = resolveProjectRelativePath(
@@ -166,25 +182,40 @@ export async function renameInspirationFolder(
       projectRelativePath: nextProjectRelativePath,
       updatedAt: now,
     });
-    return {
+    const folderResource = {
       id: folder.id,
       name,
       projectRelativePath: nextProjectRelativePath,
+    };
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      changes: [{ type: 'inspirationFolder.renamed', folderId: folder.id }],
+      folder: folderResource,
+      resourceKeys: inspirationResourceKeys(folder.id),
     };
   });
 }
 
 export async function reorderInspirationFolders(
   input: ReorderInspirationFoldersInput
-): Promise<PageResponse<InspirationFolder>> {
-  return withVisualLanguageSession(input, ({ session }) => {
+): Promise<InspirationFolderReorderReport> {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     assertCompleteInspirationFolderReorder(session, input.folderIds);
     updateInspirationFolderPositions(session, {
       folderIds: input.folderIds,
       updatedAt: new Date().toISOString(),
     });
     const page = listInspirationFolderRecords(session, {});
-    return { items: page.items.map(toInspirationFolder), nextCursor: page.nextCursor };
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      changes: [{ type: 'inspirationFolder.reordered' }],
+      folders: { items: page.items.map(toInspirationFolder), nextCursor: page.nextCursor },
+      resourceKeys: [studioVisualLanguageInspirationResourceKey()],
+    };
   });
 }
 
@@ -223,8 +254,8 @@ function assertCompleteInspirationFolderReorder(
 
 export async function deleteInspirationFolder(
   input: DeleteInspirationFolderInput
-): Promise<void> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+): Promise<InspirationFolderDeleteReport> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const projectRelativePath = normalizeProjectRelativePath(folder.projectRelativePath);
     assertProjectRelativeChildPath({ parent: INSPIRATION_ROOT, child: projectRelativePath });
@@ -233,13 +264,21 @@ export async function deleteInspirationFolder(
       force: true,
     });
     deleteInspirationFolderRecord(session, input.folderId);
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      changes: [{ type: 'inspirationFolder.deleted', folderId: input.folderId }],
+      folderId: input.folderId,
+      resourceKeys: inspirationResourceKeys(input.folderId),
+    };
   });
 }
 
 export async function writeInspirationImage(
   input: WriteInspirationImageInput
-): Promise<InspirationFolderResource> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+): Promise<InspirationFolderResourceMutationReport> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const fileName = normalizeFolderFileName(input.fileName);
     const folderPath = normalizeProjectRelativePath(folder.projectRelativePath);
@@ -252,29 +291,55 @@ export async function writeInspirationImage(
         ? input.contents
         : new Uint8Array(input.contents);
     await fs.writeFile(absolutePath, bytes);
-    return readInspirationFolder({
-      projectName: input.projectName,
-      homeDir: input.homeDir,
-      folderId: input.folderId,
-    });
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      changes: [
+        {
+          type: 'inspirationImage.written',
+          folderId: input.folderId,
+          fileName,
+        },
+      ],
+      resource: await readInspirationFolder({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        folderId: input.folderId,
+      }),
+      resourceKeys: inspirationResourceKeys(input.folderId),
+    };
   });
 }
 
 export async function deleteInspirationImage(
   input: DeleteInspirationImageInput
-): Promise<InspirationFolderResource> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+): Promise<InspirationFolderResourceMutationReport> {
+  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const fileName = normalizeFolderFileName(input.fileName);
     const folderPath = normalizeProjectRelativePath(folder.projectRelativePath);
     const imagePath = joinProjectRelativePath(folderPath, fileName);
     assertProjectRelativeChildPath({ parent: folderPath, child: imagePath });
     await fs.rm(resolveProjectRelativePath(projectFolder, imagePath), { force: true });
-    return readInspirationFolder({
-      projectName: input.projectName,
-      homeDir: input.homeDir,
-      folderId: input.folderId,
-    });
+    return {
+      valid: true,
+      warnings: [],
+      project: toProjectReport(project, projectFolder),
+      changes: [
+        {
+          type: 'inspirationImage.deleted',
+          folderId: input.folderId,
+          fileName,
+        },
+      ],
+      resource: await readInspirationFolder({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        folderId: input.folderId,
+      }),
+      resourceKeys: inspirationResourceKeys(input.folderId),
+    };
   });
 }
 

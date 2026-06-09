@@ -17,6 +17,10 @@ import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneNarrativeResource } from '@/services/studio-screenplay-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
+import {
+  matchesSceneNarrativeResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import type {
   ScenePanelTab,
   SceneShotDetailTab,
@@ -58,6 +62,7 @@ export function ScenePanel({
 }: ScenePanelProps) {
   const [resource, setResource] = useState<SceneNarrativeResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resourceRevision, setResourceRevision] = useState(0);
   const activeTab: ScenePanelTab =
     sceneTab ?? (shotId || shotTab ? 'shots' : 'narrative');
 
@@ -77,7 +82,14 @@ export function ScenePanel({
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId]);
+  }, [projectName, resourceRevision, sceneId]);
+
+  useStudioResourceRefresh({
+    projectName,
+    matches: (resourceKeys) =>
+      matchesSceneNarrativeResource(resourceKeys, sceneId),
+    onRefresh: () => setResourceRevision((current) => current + 1),
+  });
 
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;

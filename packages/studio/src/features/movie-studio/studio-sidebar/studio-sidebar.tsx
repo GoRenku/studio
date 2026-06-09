@@ -27,6 +27,11 @@ import {
   listLookbooks,
   readInspirationResource,
 } from '@/services/studio-visual-language-api';
+import {
+  matchesVisualLanguageInspirationResource,
+  matchesVisualLanguageLookbooksResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import type { StudioSelection } from '../movie-studio-selection';
@@ -81,6 +86,8 @@ export function StudioSidebar({
     useState<LookbooksResource | null>(null);
   const [inspirationResource, setInspirationResource] =
     useState<InspirationResource | null>(null);
+  const [lookbooksResourceRevision, setLookbooksResourceRevision] = useState(0);
+  const [inspirationResourceRevision, setInspirationResourceRevision] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +101,7 @@ export function StudioSidebar({
     return () => {
       cancelled = true;
     };
-  }, [project.identity.name, lookbooksRevision]);
+  }, [project.identity.name, lookbooksResourceRevision, lookbooksRevision]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,7 +115,23 @@ export function StudioSidebar({
     return () => {
       cancelled = true;
     };
-  }, [project.identity.name, inspirationFoldersRevision]);
+  }, [
+    project.identity.name,
+    inspirationFoldersRevision,
+    inspirationResourceRevision,
+  ]);
+
+  useStudioResourceRefresh({
+    projectName: project.identity.name,
+    matches: matchesVisualLanguageLookbooksResource,
+    onRefresh: () => setLookbooksResourceRevision((current) => current + 1),
+  });
+  useStudioResourceRefresh({
+    projectName: project.identity.name,
+    matches: (resourceKeys) =>
+      matchesVisualLanguageInspirationResource(resourceKeys),
+    onRefresh: () => setInspirationResourceRevision((current) => current + 1),
+  });
 
   const inspirationFolders =
     inspirationResource?.folders.items.map((item) => item.folder) ?? [];
