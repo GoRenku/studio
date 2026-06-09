@@ -282,6 +282,33 @@ export function updateAssetRelationshipSelection(
     .run();
 }
 
+export function updateAssetRelationshipReferenceMetadata(
+  session: DatabaseSession,
+  input: {
+    target: AssetTarget;
+    assetId: string;
+    referenceName: string;
+    purpose: string | null;
+    updatedAt: string;
+  }
+): void {
+  const config = assetRelationshipTableConfig(input.target);
+  const table = config.table;
+  const conditions = [eq(table.assetId, input.assetId)];
+  if (config.targetColumn && config.targetId) {
+    conditions.push(eq(config.targetColumn, config.targetId));
+  }
+  session.db
+    .update(table)
+    .set({
+      referenceName: input.referenceName,
+      purpose: input.purpose,
+      updatedAt: input.updatedAt,
+    })
+    .where(and(...conditions))
+    .run();
+}
+
 export function deleteAssetRelationshipRecord(
   session: DatabaseSession,
   input: { target: AssetTarget; assetId: string }

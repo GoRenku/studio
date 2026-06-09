@@ -1,6 +1,8 @@
 import {
   StructuredError,
   createDiagnosticError,
+  createDiagnosticWarning,
+  type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
@@ -43,6 +45,9 @@ export async function runAssetCommand(
   if (subcommand === 'register') {
     return await registerAsset(options);
   }
+  if (subcommand === 'reference-update') {
+    return await updateAssetReference(options, assetId);
+  }
   if (subcommand === 'list') {
     return await listAssets(options);
   }
@@ -62,13 +67,13 @@ export async function runAssetCommand(
   throw new StructuredError({
     code: 'CLI040',
     message:
-      'Unknown asset command. Usage: renku asset register|list|select|select-update|select-remove|selects ...',
+      'Unknown asset command. Usage: renku asset register|reference-update|list|select|select-update|select-remove|selects ...',
     issues: [
       createDiagnosticError(
         'CLI040',
         'Unknown asset command.',
         { path: ['asset'], context: 'renku CLI arguments' },
-        'Use renku asset register, list, select, select-update, select-remove, or selects.'
+        'Use renku asset register, reference-update, list, select, select-update, select-remove, or selects.'
       ),
     ],
   });
@@ -100,6 +105,52 @@ async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
     command: 'asset register',
   });
   writeAssetResult(options, asset, `Registered asset: ${asset.assetId}`, resourceKeys);
+  return 0;
+}
+
+async function updateAssetReference(
+  options: RunAssetCommandOptions,
+  assetId?: string
+): Promise<number> {
+  const projectName = requiredFlag(options, 'project');
+  const target = readTarget(options);
+  const referenceName = requiredFlag(options, 'referenceName');
+  const referencePurpose = optionalTrimmed(options.flags.referencePurpose);
+  const projectData = createProjectDataService();
+  const asset = await projectData.updateAssetReference({
+    projectName,
+    target,
+    assetId: requiredAssetId(assetId),
+    title: options.flags.title,
+    oneLineSummary: options.flags.summary,
+    referenceName,
+    purpose: referencePurpose,
+    homeDir: options.homeDir,
+  });
+  const resourceKeys = studioResourceKeysForAssetTarget(target);
+  await appendStudioResourceChangedEvent({
+    runtime: cliRuntime(options, projectData),
+    report: { project: { name: projectName }, resourceKeys },
+    command: 'asset reference-update',
+  });
+  const warnings: DiagnosticIssue[] = [];
+  if (!referencePurpose) {
+    warnings.push(
+      createDiagnosticWarning(
+        'CLI045',
+        'Missing optional --reference-purpose for asset reference update.',
+        { path: ['--reference-purpose'], context: 'renku CLI arguments' },
+        'Pass --reference-purpose when the asset has a known production use, or omit it to leave the purpose empty.'
+      )
+    );
+  }
+  writeAssetResult(
+    options,
+    asset,
+    `Updated asset reference: ${asset.assetId}`,
+    resourceKeys,
+    warnings
+  );
   return 0;
 }
 
@@ -210,11 +261,15 @@ function writeAssetResult(
   options: RunAssetCommandOptions,
   asset: Asset,
   message: string,
-  resourceKeys: string[] = []
+  resourceKeys: string[] = [],
+  warnings: DiagnosticIssue[] = []
 ): void {
   if (options.json) {
-    options.io.stdout.log(JSON.stringify({ asset, resourceKeys }, null, 2));
+    options.io.stdout.log(JSON.stringify({ asset, resourceKeys, warnings }, null, 2));
     return;
+  }
+  for (const warning of warnings) {
+    options.io.stderr.error(warning.message);
   }
   options.io.stdout.log(message);
   options.io.stdout.log(`Attached to: ${formatTarget(asset.target)}`);
@@ -279,6 +334,11 @@ function readTarget(options: RunAssetCommandOptions): AssetTarget {
 
 function readLocale(options: RunAssetCommandOptions): { localeId?: string } {
   return options.flags.locale ? { localeId: options.flags.locale } : {};
+}
+
+function optionalTrimmed(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function requiredFlag(

@@ -26,6 +26,16 @@ export interface RegisterAssetInput {
   purpose?: string | null;
 }
 
+export interface UpdateAssetReferenceInput {
+  projectName: string;
+  target: AssetTarget;
+  assetId: string;
+  title?: string | null;
+  oneLineSummary?: string | null;
+  referenceName: string;
+  purpose?: string | null;
+}
+
 export interface AssetReference {
   assetId: string;
   relationshipId: string;

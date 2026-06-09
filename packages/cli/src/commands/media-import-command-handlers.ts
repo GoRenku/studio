@@ -7,7 +7,10 @@ import {
   type ShotVideoTakeInputMediaImportReport,
   type ShotVideoTakeMediaImportReport,
 } from '@gorenku/studio-core/server';
-import { StructuredError } from '@gorenku/studio-diagnostics';
+import {
+  StructuredError,
+  createDiagnosticWarning,
+} from '@gorenku/studio-diagnostics';
 import {
   readLocationEnvironmentSheetImportDocument,
   readReceipt,
@@ -185,20 +188,28 @@ async function importCastCharacterSheet(
 ): Promise<CastMediaImportReport> {
   const singleFile = await readSingleFileImport(input.flags);
   const referenceName = requiredFlag(input.flags.referenceName, '--reference-name');
-  const referencePurpose = requiredFlag(
-    input.flags.referencePurpose,
-    '--reference-purpose'
-  );
-  return input.runtime.projectDataService.importCastCharacterSheetMedia({
+  const referencePurpose = optionalTrimmed(input.flags.referencePurpose);
+  const report = await input.runtime.projectDataService.importCastCharacterSheetMedia({
     ...mediaImportProjectInput(input.runtime),
     castMemberId: parseCastTarget(input.target, 'Cast image import'),
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
     oneLineSummary: input.flags.summary,
     referenceName,
-    referencePurpose,
+    ...(referencePurpose ? { referencePurpose } : {}),
     receipt: singleFile.receipt,
   });
+  if (!referencePurpose) {
+    report.warnings.push(
+      createDiagnosticWarning(
+        'CLI045',
+        'Missing optional --reference-purpose for cast character sheet import.',
+        { path: ['--reference-purpose'], context: 'renku CLI arguments' },
+        'Add a short purpose such as "main palace character sheet" when the usage context is known.'
+      )
+    );
+  }
+  return report;
 }
 
 async function importCastProfile(
@@ -423,6 +434,11 @@ function mediaImportProjectInput(runtime: CliCommandRuntime): {
     projectName: runtime.projectName,
     homeDir: runtime.homeDir,
   };
+}
+
+function optionalTrimmed(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function unsupportedMediaPurpose(purpose: string): StructuredError {

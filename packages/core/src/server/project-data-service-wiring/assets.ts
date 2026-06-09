@@ -5,6 +5,7 @@ import {
 } from '../commands/change-asset-selection.js';
 import { deleteAsset } from '../commands/delete-asset.js';
 import { registerAsset } from '../commands/register-asset.js';
+import { updateAssetReference } from '../commands/update-asset-reference.js';
 import { exportProductionAssets } from '../production-export/export-production-assets.js';
 import {
   listAssetPage,
@@ -19,6 +20,7 @@ export function createAssetServiceWiring(): Pick<
   | 'listAssetPage'
   | 'resolveProjectAssetFile'
   | 'registerAsset'
+  | 'updateAssetReference'
   | 'listAssets'
   | 'createAssetSelect'
   | 'updateAssetSelect'
@@ -31,6 +33,7 @@ export function createAssetServiceWiring(): Pick<
     listAssetPage,
     resolveProjectAssetFile,
     registerAsset,
+    updateAssetReference,
     listAssets,
     createAssetSelect,
     updateAssetSelect,

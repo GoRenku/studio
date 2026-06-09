@@ -1641,7 +1641,7 @@ describe('renku CLI', () => {
     });
   });
 
-  it('requires reference metadata for character sheet media imports', async () => {
+  it('requires a reference name but only warns for a missing character sheet purpose', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -1665,7 +1665,7 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const missingMetadataExitCode = await runRenkuCli(
+    const missingNameExitCode = await runRenkuCli(
       [
         'media',
         'import',
@@ -1681,10 +1681,82 @@ describe('renku CLI', () => {
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(missingMetadataExitCode).toBe(1);
+    expect(missingNameExitCode).toBe(1);
     expect(JSON.parse(stderr.join('\n'))).toMatchObject({
       valid: false,
       error: { code: 'CLI001' },
+    });
+
+    stdout = [];
+    stderr = [];
+    const missingPurposeExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--project',
+        'constantinople',
+        '--purpose',
+        'cast.character-sheet',
+        '--target',
+        `cast:${castMemberId}`,
+        '--source',
+        sourcePath,
+        '--reference-name',
+        'urban-palace-main',
+        '--title',
+        'Urban Palace Main Character Sheet',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(missingPurposeExitCode).toBe(0);
+    const imported = JSON.parse(stdout.join('\n'));
+    expect(imported).toMatchObject({
+      valid: true,
+      imported: {
+        referenceName: 'urban-palace-main',
+        purpose: null,
+        title: 'Urban Palace Main Character Sheet',
+      },
+      warnings: [
+        {
+          code: 'CLI045',
+          severity: 'warning',
+        },
+      ],
+    });
+
+    stdout = [];
+    stderr = [];
+    const updateExitCode = await runRenkuCli(
+      [
+        'asset',
+        'reference-update',
+        imported.imported.assetId,
+        '--project',
+        'constantinople',
+        '--target',
+        `cast:${castMemberId}`,
+        '--reference-name',
+        'urban-siege-workshop-main',
+        '--reference-purpose',
+        'main workshop character sheet',
+        '--title',
+        'Urban Workshop Main Character Sheet',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(updateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      asset: {
+        assetId: imported.imported.assetId,
+        relationshipId: imported.imported.relationshipId,
+        referenceName: 'urban-siege-workshop-main',
+        purpose: 'main workshop character sheet',
+        title: 'Urban Workshop Main Character Sheet',
+      },
+      warnings: [],
     });
   });
 

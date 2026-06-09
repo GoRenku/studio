@@ -15,6 +15,7 @@ export type {
   AssetSelection,
   AssetTarget,
   RegisterAssetInput,
+  UpdateAssetReferenceInput,
 } from './assets.js';
 export type {
   CastMember,

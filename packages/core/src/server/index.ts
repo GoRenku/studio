@@ -445,6 +445,7 @@ export type {
   ProjectShell,
   ProjectShellNavigation,
   RegisterAssetInput,
+  UpdateAssetReferenceInput,
   Scene,
   SceneDesignResource,
   ScenePanelTab,

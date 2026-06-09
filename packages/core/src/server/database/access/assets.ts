@@ -47,6 +47,27 @@ export function updateAssetRecordUpdatedAt(
     .run();
 }
 
+export function updateAssetRecordMetadata(
+  session: DatabaseSession,
+  input: {
+    assetId: string;
+    title?: string;
+    oneLineSummary?: string | null;
+    updatedAt: string;
+  }
+): void {
+  const values: Partial<typeof assets.$inferInsert> = {
+    updatedAt: input.updatedAt,
+  };
+  if (input.title !== undefined) {
+    values.title = input.title;
+  }
+  if (input.oneLineSummary !== undefined) {
+    values.oneLineSummary = input.oneLineSummary ?? null;
+  }
+  session.db.update(assets).set(values).where(eq(assets.id, input.assetId)).run();
+}
+
 export function deleteAssetRecord(session: DatabaseSession, assetId: string): void {
   session.db.delete(assets).where(eq(assets.id, assetId)).run();
 }
