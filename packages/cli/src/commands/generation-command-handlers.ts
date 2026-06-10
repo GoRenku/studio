@@ -1,15 +1,11 @@
-import {
-  type MediaGenerationSpec,
-} from '@gorenku/studio-core/server';
+import { type MediaGenerationSpec } from '@gorenku/studio-core/server';
+import { StructuredError } from '@gorenku/studio-diagnostics';
 import {
   assertShotVideoTakePurpose,
   parseGenerationPurpose,
   parseGenerationTarget,
 } from './generation-purpose-command-registry.js';
-import {
-  parseSceneTarget,
-  parseShots,
-} from './studio-target-parsing.js';
+import { parseSceneTarget, parseShots } from './studio-target-parsing.js';
 import {
   readJsonFile,
   requiredFlag,
@@ -116,7 +112,7 @@ export const generationCommandHandlers = [
 
 async function runContext(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.buildMediaGenerationContext(
-    readGenerationContextInput(input)
+    readGenerationContextInput(input),
   );
 }
 
@@ -128,10 +124,12 @@ async function runModelList(input: GenerationCommandInput): Promise<unknown> {
 }
 
 async function runProductionUpdate(
-  input: GenerationCommandInput
+  input: GenerationCommandInput,
 ): Promise<unknown> {
   assertShotVideoPurpose(input.flags);
-  const production = await readJsonFile(requiredFlag(input.flags.file, '--file'));
+  const production = await readJsonFile(
+    requiredFlag(input.flags.file, '--file'),
+  );
   return input.runtime.projectDataService.updateShotVideoTakeProductionGroup({
     ...readShotVideoContextInput(input),
     production: production as never,
@@ -152,7 +150,7 @@ async function runPreflight(input: GenerationCommandInput): Promise<unknown> {
 async function runInputList(input: GenerationCommandInput): Promise<unknown> {
   assertShotVideoPurpose(input.flags);
   return input.runtime.projectDataService.listShotVideoTakeInputs(
-    readShotVideoContextInput(input)
+    readShotVideoContextInput(input),
   );
 }
 
@@ -169,12 +167,17 @@ async function runInputClear(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.clearShotVideoTakeInputSelection({
     ...readShotVideoContextInput(input),
     kind: requiredFlag(input.flags.kind, '--kind') as never,
-    subjectKind: requiredFlag(input.flags.subjectKind, '--subject-kind') as never,
+    subjectKind: requiredFlag(
+      input.flags.subjectKind,
+      '--subject-kind',
+    ) as never,
     subjectId: requiredFlag(input.flags.subjectId, '--subject-id'),
   });
 }
 
-async function runSpecValidate(input: GenerationCommandInput): Promise<unknown> {
+async function runSpecValidate(
+  input: GenerationCommandInput,
+): Promise<unknown> {
   return input.runtime.projectDataService.validateMediaGenerationSpec({
     ...generationProjectInput(input.runtime),
     spec: await readSpec(requiredFlag(input.flags.file, '--file')),
@@ -205,7 +208,7 @@ async function runSpecShow(input: GenerationCommandInput): Promise<unknown> {
 
 async function runSpecList(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.listMediaGenerationSpecs(
-    readGenerationContextInput(input)
+    readGenerationContextInput(input),
   );
 }
 
@@ -226,18 +229,21 @@ async function runGeneration(input: GenerationCommandInput): Promise<unknown> {
   });
 }
 
-async function runDialogueAudioPlan(input: GenerationCommandInput): Promise<unknown> {
+async function runDialogueAudioPlan(
+  input: GenerationCommandInput,
+): Promise<unknown> {
   const sceneId = requiredFlag(input.flags.scene, '--scene');
-  const context = await input.runtime.projectDataService.readSceneDialogueAudioContext({
-    ...generationProjectInput(input.runtime),
-    sceneId,
-  });
+  const context =
+    await input.runtime.projectDataService.readSceneDialogueAudioContext({
+      ...generationProjectInput(input.runtime),
+      sceneId,
+    });
   return {
     scene: context.scene,
     dialogues: context.dialogues.map((dialogue) => {
       const audio = context.audioByDialogueId[dialogue.dialogueId];
       const voices = dialogue.castMemberId
-        ? context.castVoicesByCastMemberId[dialogue.castMemberId] ?? []
+        ? (context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [])
         : [];
       const selectedVoice =
         voices.find((voice) => voice.id === audio?.castVoiceId) ??
@@ -247,7 +253,8 @@ async function runDialogueAudioPlan(input: GenerationCommandInput): Promise<unkn
       return {
         dialogueId: dialogue.dialogueId,
         speaker: dialogue.castMemberId
-          ? context.castMemberLabels[dialogue.castMemberId] ?? dialogue.castMemberId
+          ? (context.castMemberLabels[dialogue.castMemberId] ??
+            dialogue.castMemberId)
           : null,
         selectedCastVoiceId: selectedVoice?.id ?? null,
         selectedCastVoiceName: selectedVoice?.name ?? null,
@@ -281,20 +288,32 @@ async function runDialogueAudioPlan(input: GenerationCommandInput): Promise<unkn
   };
 }
 
-async function runDialogueAudioGenerate(input: GenerationCommandInput): Promise<unknown> {
+async function runDialogueAudioGenerate(
+  input: GenerationCommandInput,
+): Promise<unknown> {
   const sceneId = requiredFlag(input.flags.scene, '--scene');
-  const approvalToken = requiredFlag(input.flags.approvalToken, '--approval-token');
   if (input.flags.all) {
-    const context = await input.runtime.projectDataService.readSceneDialogueAudioContext({
-      ...generationProjectInput(input.runtime),
-      sceneId,
-    });
+    if (!input.flags.simulate) {
+      throw new StructuredError({
+        code: 'CLI141',
+        message:
+          'generation dialogue-audio generate --all cannot use one approval token for multiple live dialogue generations.',
+        suggestion:
+          'Run generation dialogue-audio plan, then generate each dialogue separately with the approval token for that exact dialogue request, or add --simulate for a bulk dry run.',
+      });
+    }
+    const context =
+      await input.runtime.projectDataService.readSceneDialogueAudioContext({
+        ...generationProjectInput(input.runtime),
+        sceneId,
+      });
     const generated = [];
     for (const dialogue of context.dialogues) {
       if (!dialogue.castMemberId) {
         continue;
       }
-      const voices = context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [];
+      const voices =
+        context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [];
       if (!voices.some((voice) => voice.usable)) {
         continue;
       }
@@ -304,14 +323,17 @@ async function runDialogueAudioGenerate(input: GenerationCommandInput): Promise<
           sceneId,
           dialogueId: dialogue.dialogueId,
           setup: {},
-          approvalToken,
+          approvalToken: input.flags.approvalToken,
           allowUnpricedCost: input.flags.allowUnpricedCost,
           simulate: input.flags.simulate,
-        })
+        }),
       );
     }
     return { generatedCount: generated.length, generated };
   }
+  const approvalToken = input.flags.simulate
+    ? input.flags.approvalToken
+    : requiredFlag(input.flags.approvalToken, '--approval-token');
   return input.runtime.projectDataService.generateSceneDialogueAudioTake({
     ...generationProjectInput(input.runtime),
     sceneId,
@@ -323,7 +345,9 @@ async function runDialogueAudioGenerate(input: GenerationCommandInput): Promise<
   });
 }
 
-async function runDialogueAudioPick(input: GenerationCommandInput): Promise<unknown> {
+async function runDialogueAudioPick(
+  input: GenerationCommandInput,
+): Promise<unknown> {
   return input.runtime.projectDataService.pickSceneDialogueAudioTake({
     ...generationProjectInput(input.runtime),
     sceneId: requiredFlag(input.flags.scene, '--scene'),

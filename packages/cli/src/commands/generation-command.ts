@@ -10,7 +10,10 @@ import {
   writeJson,
   type CliCommandRuntime,
 } from './structured-command.js';
-import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
+import {
+  appendStudioResourceChangedEvent,
+  type StudioResourceChangedReport,
+} from './studio-resource-event-command.js';
 
 export async function runGenerationCommand(options: {
   input: string[];
@@ -33,10 +36,14 @@ export async function runGenerationCommand(options: {
     handlers: generationCommandHandlers,
     unknownCommand: unknownGenerationCommand,
   });
-  if (shouldAppendGenerationResourceChangedEvent(options.input, result)) {
+  const resourceChangedReport = generationResourceChangedReport(
+    options.input,
+    result,
+  );
+  if (resourceChangedReport) {
     await appendStudioResourceChangedEvent({
       runtime,
-      report: result,
+      report: resourceChangedReport,
       command: `generation ${options.input.join(' ')}`,
     });
   }
@@ -44,13 +51,10 @@ export async function runGenerationCommand(options: {
   return 0;
 }
 
-function shouldAppendGenerationResourceChangedEvent(
+export function generationResourceChangedReport(
   commandPath: readonly string[],
-  result: unknown
-): result is {
-  project: { name: string; id?: string };
-  resourceKeys: string[];
-} {
+  result: unknown,
+): StudioResourceChangedReport | null {
   const mutationPath = commandPath.join(' ');
   if (
     mutationPath !== 'production update' &&
@@ -59,18 +63,77 @@ function shouldAppendGenerationResourceChangedEvent(
     mutationPath !== 'dialogue-audio generate' &&
     mutationPath !== 'dialogue-audio pick'
   ) {
-    return false;
+    return null;
   }
-  return (
-    typeof result === 'object' &&
-    result !== null &&
-    'project' in result &&
-    'resourceKeys' in result &&
-    Array.isArray((result as { resourceKeys?: unknown }).resourceKeys)
-  );
+  return resourceChangedReportFromResult(result);
 }
 
-function unknownGenerationCommand(commandPath: readonly string[]): StructuredError {
+function resourceChangedReportFromResult(
+  result: unknown,
+): StudioResourceChangedReport | null {
+  const directReport = directResourceChangedReport(result);
+  if (directReport) {
+    return directReport;
+  }
+
+  if (!isObject(result) || !Array.isArray(result.generated)) {
+    return null;
+  }
+
+  const generatedReports = result.generated
+    .map((report) => directResourceChangedReport(report))
+    .filter((report): report is StudioResourceChangedReport => Boolean(report));
+  const project = generatedReports[0]?.project;
+  if (!project) {
+    return null;
+  }
+  return {
+    project,
+    resourceKeys: [
+      ...new Set(generatedReports.flatMap((report) => report.resourceKeys)),
+    ],
+  };
+}
+
+function directResourceChangedReport(
+  result: unknown,
+): StudioResourceChangedReport | null {
+  if (!isObject(result) || !Array.isArray(result.resourceKeys)) {
+    return null;
+  }
+
+  if ('project' in result && isProjectRef(result.project)) {
+    return { project: result.project, resourceKeys: result.resourceKeys };
+  }
+
+  if (
+    'context' in result &&
+    isObject(result.context) &&
+    'project' in result.context &&
+    isProjectRef(result.context.project)
+  ) {
+    return {
+      project: result.context.project,
+      resourceKeys: result.resourceKeys,
+    };
+  }
+
+  return null;
+}
+
+function isProjectRef(
+  value: unknown,
+): value is StudioResourceChangedReport['project'] {
+  return isObject(value) && typeof value.name === 'string';
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function unknownGenerationCommand(
+  commandPath: readonly string[],
+): StructuredError {
   return new StructuredError({
     code: 'CLI019',
     message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,

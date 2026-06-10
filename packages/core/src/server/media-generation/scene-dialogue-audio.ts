@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import { asc } from 'drizzle-orm';
 import type {
@@ -64,7 +65,8 @@ const MODEL_CHOICES = new Set<SceneDialogueAudioModelChoice>([
   'elevenlabs/eleven_turbo_v2_5',
 ]);
 
-const DEFAULT_MODEL_CHOICE: SceneDialogueAudioModelChoice = 'elevenlabs/eleven_v3';
+const DEFAULT_MODEL_CHOICE: SceneDialogueAudioModelChoice =
+  'elevenlabs/eleven_v3';
 const DEFAULT_OUTPUT_FORMAT = 'mp3_44100_128';
 const DEFAULT_VOICE_SETTINGS: SceneDialogueAudioVoiceSettings = {
   stability: 0.5,
@@ -121,19 +123,18 @@ export interface PickSceneDialogueAudioTakeInput extends RenkuConfigPathOptions 
   takeId: string;
 }
 
-export interface DeleteSceneDialogueAudioTakeInput
-  extends PickSceneDialogueAudioTakeInput {}
+export interface DeleteSceneDialogueAudioTakeInput extends PickSceneDialogueAudioTakeInput {}
 
 export async function readSceneDialogueAudioContext(
-  input: SceneDialogueAudioTargetInput
+  input: SceneDialogueAudioTargetInput,
 ): Promise<SceneDialogueAudioContext> {
   return withSceneDialogueAudioProjectSession(input, ({ session }) =>
-    buildContextFromSession(session, input.sceneId)
+    buildContextFromSession(session, input.sceneId),
   );
 }
 
 export async function listSceneDialogueAudioModels(
-  input: SceneDialogueAudioTargetInput
+  input: SceneDialogueAudioTargetInput,
 ): Promise<SceneDialogueAudioModelListReport> {
   return {
     purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
@@ -164,11 +165,13 @@ export async function validateSceneDialogueAudioSpec(input: {
 }
 
 export async function createSceneDialogueAudioSpec(
-  input: SceneDialogueAudioSpecInput
+  input: SceneDialogueAudioSpecInput,
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = await normalizeSpec(input);
   return withSceneDialogueAudioProjectSession(input, ({ session }) => {
-    const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
+    const ids = createUniqueIdAllocator(
+      input.idGenerator ?? createRandomIdGenerator(),
+    );
     return insertMediaGenerationSpec(session, {
       id: ids('media_generation_spec'),
       spec: normalized.spec,
@@ -179,7 +182,7 @@ export async function createSceneDialogueAudioSpec(
 }
 
 export async function updateSceneDialogueAudioSpec(
-  input: UpdateSceneDialogueAudioSpecInput
+  input: UpdateSceneDialogueAudioSpecInput,
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = await normalizeSpec(input);
   return withSceneDialogueAudioProjectSession(input, ({ session }) =>
@@ -188,12 +191,12 @@ export async function updateSceneDialogueAudioSpec(
       spec: normalized.spec,
       title: titleForSpec(normalized.spec),
       now: new Date().toISOString(),
-    })
+    }),
   );
 }
 
 export async function listSceneDialogueAudioSpecs(
-  input: SceneDialogueAudioTargetInput
+  input: SceneDialogueAudioTargetInput,
 ): Promise<{ specs: MediaGenerationSpecRecord[] }> {
   return withSceneDialogueAudioProjectSession(input, ({ session }) => ({
     specs: listMediaGenerationSpecs(session, {
@@ -205,10 +208,11 @@ export async function listSceneDialogueAudioSpecs(
 }
 
 export async function prepareSceneDialogueAudioSpec(
-  input: SceneDialogueAudioSpecIdInput
+  input: SceneDialogueAudioSpecIdInput,
 ): Promise<PreparedMediaGeneration> {
-  const specRecord = await withSceneDialogueAudioProjectSession(input, ({ session }) =>
-    requireMediaGenerationSpec(session, input.specId)
+  const specRecord = await withSceneDialogueAudioProjectSession(
+    input,
+    ({ session }) => requireMediaGenerationSpec(session, input.specId),
   );
   assertSceneDialogueAudioSpec(specRecord.spec);
   const normalized = await normalizeSpec({ ...input, spec: specRecord.spec });
@@ -225,7 +229,7 @@ export async function prepareSceneDialogueAudioDraftSpec(input: {
 }
 
 export async function estimateSceneDialogueAudioDraft(
-  input: SceneDialogueAudioSpecInput
+  input: SceneDialogueAudioSpecInput,
 ): Promise<MediaGenerationEstimateReport> {
   return estimateDraftMediaGenerationSpec({
     projectName: input.projectName,
@@ -235,7 +239,7 @@ export async function estimateSceneDialogueAudioDraft(
 }
 
 export async function updateSceneDialogueAudioSetup(
-  input: UpdateSceneDialogueAudioSetupInput
+  input: UpdateSceneDialogueAudioSetupInput,
 ): Promise<SceneDialogueAudioMutationReport> {
   await withSceneDialogueAudioProjectSession(input, ({ session }) => {
     const dialogue = requireDialogue(session, input.sceneId, input.dialogueId);
@@ -243,14 +247,19 @@ export async function updateSceneDialogueAudioSetup(
       throw new ProjectDataError(
         'PROJECT_DATA386',
         'Dialogue has no Cast Member.',
-        { suggestion: 'Assign a Cast Member to the dialogue before saving audio setup.' }
+        {
+          suggestion:
+            'Assign a Cast Member to the dialogue before saving audio setup.',
+        },
       );
     }
     const existing = readSceneDialogueAudioRecord(session, {
       sceneId: input.sceneId,
       dialogueId: input.dialogueId,
     });
-    const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
+    const ids = createUniqueIdAllocator(
+      input.idGenerator ?? createRandomIdGenerator(),
+    );
     const plainText =
       input.setup.plainText ?? existing?.plainText ?? dialogue.lines.join('\n');
     const castVoiceId = normalizeOptionalCastVoiceId(session, {
@@ -270,10 +279,13 @@ export async function updateSceneDialogueAudioSetup(
       plainText,
       v3Text: input.setup.v3Text ?? existing?.v3Text ?? plainText,
       voiceSettings: normalizeVoiceSettings(
-        input.setup.voiceSettings ?? parseVoiceSettings(existing?.voiceSettingsJson)
+        input.setup.voiceSettings ??
+          parseVoiceSettings(existing?.voiceSettingsJson),
       ),
       outputFormat:
-        input.setup.outputFormat ?? existing?.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
+        input.setup.outputFormat ??
+        existing?.outputFormat ??
+        DEFAULT_OUTPUT_FORMAT,
       languageCode: input.setup.languageCode ?? existing?.languageCode ?? null,
       now: new Date().toISOString(),
     });
@@ -282,7 +294,7 @@ export async function updateSceneDialogueAudioSetup(
 }
 
 export async function generateSceneDialogueAudioTake(
-  input: GenerateSceneDialogueAudioTakeInput
+  input: GenerateSceneDialogueAudioTakeInput,
 ): Promise<SceneDialogueAudioMutationReport> {
   const draft = await specForDialogueInput(input);
   const normalized = await normalizeSpec({ ...input, spec: draft });
@@ -298,95 +310,116 @@ export async function generateSceneDialogueAudioTake(
   });
   const output = firstAudioOutput(runReport.run.outputs);
   const now = new Date().toISOString();
-  await withSceneDialogueAudioProjectSession(input, async ({ projectFolder, session }) => {
-    const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-    const fileStats = await fs.stat(path.join(projectFolder, output.projectRelativePath));
-    const audioRecord = upsertSceneDialogueAudioRecord(session, {
-      id: ids('scene_dialogue_audio'),
-      sceneId: input.sceneId,
-      dialogueId: input.dialogueId,
-      castMemberId: normalized.castMemberId,
-      castVoiceId: normalized.castVoice.id,
-      modelChoice: normalized.spec.modelChoice,
-      plainText: normalized.spec.plainText,
-      v3Text: normalized.spec.v3Text,
-      voiceSettings: normalized.voiceSettings,
-      outputFormat: normalized.spec.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
-      languageCode: normalized.spec.languageCode ?? null,
-      now,
-    });
-    const assetId = ids('asset');
-    const assetFileId = ids('asset_file');
-    const target = { kind: 'scene' as const, sceneId: input.sceneId };
-    insertAssetRecord(session, {
-      id: assetId,
-      type: 'audio',
-      mediaKind: 'audio',
-      title: 'Dialogue audio take',
-      origin: 'generated',
-      availability: 'ready',
-      createdAt: now,
-      updatedAt: now,
-    });
-    insertAssetFileRecord(session, {
-      id: assetFileId,
-      assetId,
-      role: 'audio',
-      projectRelativePath: output.projectRelativePath,
-      mimeType: output.mimeType ?? mimeTypeForOutputFormat(normalized.spec.outputFormat),
-      mediaKind: 'audio',
-      sizeBytes: fileStats.size,
-      createdAt: now,
-      updatedAt: now,
-    });
-    insertAssetRelationshipRecord(session, target, {
-      relationshipId: ids(assetRelationshipIdPrefix(target)),
-      assetId,
-      localeId: null,
-      role: 'dialogue_audio',
-      referenceName: null,
-      purpose: null,
-      sortOrder: nextAssetRelationshipSortOrder(session, {
-        target,
-        role: 'dialogue_audio',
+  await withSceneDialogueAudioProjectSession(
+    input,
+    async ({ projectFolder, session }) => {
+      const ids = createUniqueIdAllocator(
+        input.idGenerator ?? createRandomIdGenerator(),
+      );
+      const takeId = ids('scene_dialogue_audio_take');
+      const persistedAudioPath = await persistDialogueAudioTakeFile({
+        projectFolder,
+        sourceProjectRelativePath: output.projectRelativePath,
+        dialogueId: input.dialogueId,
+        takeId,
+        outputFormat: normalized.spec.outputFormat,
+      });
+      const fileStats = await fs.stat(
+        path.join(projectFolder, persistedAudioPath),
+      );
+      const audioRecord = upsertSceneDialogueAudioRecord(session, {
+        id: ids('scene_dialogue_audio'),
+        sceneId: input.sceneId,
+        dialogueId: input.dialogueId,
+        castMemberId: normalized.castMemberId,
+        castVoiceId: normalized.castVoice.id,
+        modelChoice: normalized.spec.modelChoice,
+        plainText: normalized.spec.plainText,
+        v3Text: normalized.spec.v3Text,
+        voiceSettings: normalized.voiceSettings,
+        outputFormat: normalized.spec.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
+        languageCode: normalized.spec.languageCode ?? null,
+        now,
+      });
+      const assetId = ids('asset');
+      const assetFileId = ids('asset_file');
+      const target = { kind: 'scene' as const, sceneId: input.sceneId };
+      insertAssetRecord(session, {
+        id: assetId,
+        type: 'audio',
+        mediaKind: 'audio',
+        title: 'Dialogue audio take',
+        origin: 'generated',
+        availability: 'ready',
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertAssetFileRecord(session, {
+        id: assetFileId,
+        assetId,
+        role: 'audio',
+        projectRelativePath: persistedAudioPath,
+        mimeType:
+          output.mimeType ??
+          mimeTypeForOutputFormat(normalized.spec.outputFormat),
+        mediaKind: 'audio',
+        sizeBytes: fileStats.size,
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertAssetRelationshipRecord(session, target, {
+        relationshipId: ids(assetRelationshipIdPrefix(target)),
+        assetId,
         localeId: null,
-      }),
-      now,
-    });
-    const take = insertSceneDialogueAudioTakeRecord(session, {
-      id: ids('scene_dialogue_audio_take'),
-      sceneDialogueAudioId: audioRecord.id,
-      assetId,
-      assetFileId,
-      mediaGenerationRunId: runReport.run.id,
-      modelChoice: normalized.spec.modelChoice,
-      castVoiceId: normalized.castVoice.id,
-      castVoiceName: normalized.castVoice.name,
-      provider: 'elevenlabs',
-      providerVoiceId: normalized.castVoice.voiceId.trim(),
-      providerTextSnapshot: normalized.providerText,
-      plainTextSnapshot: normalized.spec.plainText,
-      v3TextSnapshot: normalized.spec.v3Text,
-      textTreatment: normalized.textTreatment,
-      voiceSettingsSnapshot: normalized.voiceSettings,
-      outputFormat: normalized.spec.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
-      languageCode: normalized.spec.languageCode ?? null,
-      now,
-    });
-    pickSceneDialogueAudioTakeRecord(session, {
-      sceneDialogueAudioId: audioRecord.id,
-      takeId: take.id,
-      updatedAt: now,
-    });
-  });
+        role: 'dialogue_audio',
+        referenceName: null,
+        purpose: null,
+        sortOrder: nextAssetRelationshipSortOrder(session, {
+          target,
+          role: 'dialogue_audio',
+          localeId: null,
+        }),
+        now,
+      });
+      const take = insertSceneDialogueAudioTakeRecord(session, {
+        id: takeId,
+        sceneDialogueAudioId: audioRecord.id,
+        assetId,
+        assetFileId,
+        mediaGenerationRunId: runReport.run.id,
+        modelChoice: normalized.spec.modelChoice,
+        castVoiceId: normalized.castVoice.id,
+        castVoiceName: normalized.castVoice.name,
+        provider: 'elevenlabs',
+        providerVoiceId: normalized.castVoice.voiceId.trim(),
+        providerTextSnapshot: normalized.providerText,
+        plainTextSnapshot: normalized.spec.plainText,
+        v3TextSnapshot: normalized.spec.v3Text,
+        textTreatment: normalized.textTreatment,
+        voiceSettingsSnapshot: normalized.voiceSettings,
+        outputFormat: normalized.spec.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
+        languageCode: normalized.spec.languageCode ?? null,
+        now,
+      });
+      pickSceneDialogueAudioTakeRecord(session, {
+        sceneDialogueAudioId: audioRecord.id,
+        takeId: take.id,
+        updatedAt: now,
+      });
+    },
+  );
   return mutationReport(input);
 }
 
 export async function pickSceneDialogueAudioTake(
-  input: PickSceneDialogueAudioTakeInput
+  input: PickSceneDialogueAudioTakeInput,
 ): Promise<SceneDialogueAudioMutationReport> {
   await withSceneDialogueAudioProjectSession(input, ({ session }) => {
-    const audio = requireAudioForDialogue(session, input.sceneId, input.dialogueId);
+    const audio = requireAudioForDialogue(
+      session,
+      input.sceneId,
+      input.dialogueId,
+    );
     pickSceneDialogueAudioTakeRecord(session, {
       sceneDialogueAudioId: audio.id,
       takeId: input.takeId,
@@ -397,10 +430,14 @@ export async function pickSceneDialogueAudioTake(
 }
 
 export async function deleteSceneDialogueAudioTake(
-  input: DeleteSceneDialogueAudioTakeInput
+  input: DeleteSceneDialogueAudioTakeInput,
 ): Promise<SceneDialogueAudioMutationReport> {
   await withSceneDialogueAudioProjectSession(input, ({ session }) => {
-    const audio = requireAudioForDialogue(session, input.sceneId, input.dialogueId);
+    const audio = requireAudioForDialogue(
+      session,
+      input.sceneId,
+      input.dialogueId,
+    );
     deleteSceneDialogueAudioTakeRecord(session, {
       sceneDialogueAudioId: audio.id,
       takeId: input.takeId,
@@ -413,12 +450,12 @@ export async function deleteSceneDialogueAudioTake(
 export async function runSceneDialogueAudioSpec(): Promise<never> {
   throw new ProjectDataError(
     'PROJECT_DATA383',
-    'Scene Dialogue Audio generation runs through generateSceneDialogueAudioTake.'
+    'Scene Dialogue Audio generation runs through generateSceneDialogueAudioTake.',
   );
 }
 
 async function specForDialogueInput(
-  input: GenerateSceneDialogueAudioTakeInput
+  input: GenerateSceneDialogueAudioTakeInput,
 ): Promise<SceneDialogueAudioGenerationSpec> {
   return withSceneDialogueAudioProjectSession(input, ({ session }) => {
     const existing = readSceneDialogueAudioRecord(session, {
@@ -445,9 +482,12 @@ async function specForDialogueInput(
       plainText: input.setup.plainText ?? existing?.plainText ?? plainText,
       v3Text: input.setup.v3Text ?? existing?.v3Text ?? plainText,
       voiceSettings:
-        input.setup.voiceSettings ?? parseVoiceSettings(existing?.voiceSettingsJson),
+        input.setup.voiceSettings ??
+        parseVoiceSettings(existing?.voiceSettingsJson),
       outputFormat:
-        input.setup.outputFormat ?? existing?.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
+        input.setup.outputFormat ??
+        existing?.outputFormat ??
+        DEFAULT_OUTPUT_FORMAT,
       languageCode: input.setup.languageCode ?? existing?.languageCode ?? null,
       title: input.setup.title,
     };
@@ -456,7 +496,7 @@ async function specForDialogueInput(
 
 async function upsertGenerationSpec(
   input: GenerateSceneDialogueAudioTakeInput,
-  spec: SceneDialogueAudioGenerationSpec
+  spec: SceneDialogueAudioGenerationSpec,
 ): Promise<MediaGenerationSpecRecord> {
   const existing = await listSceneDialogueAudioSpecs({
     projectName: input.projectName,
@@ -495,42 +535,52 @@ async function normalizeSpec(input: {
   if (input.spec.purpose !== SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE) {
     throw new ProjectDataError(
       'PROJECT_DATA384',
-      `Scene Dialogue Audio spec purpose must be ${SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE}.`
+      `Scene Dialogue Audio spec purpose must be ${SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE}.`,
     );
   }
   if (input.spec.target.kind !== 'sceneDialogue') {
     throw new ProjectDataError(
       'PROJECT_DATA384',
-      `Scene Dialogue Audio target.kind must be sceneDialogue. Received: ${input.spec.target.kind}.`
+      `Scene Dialogue Audio target.kind must be sceneDialogue. Received: ${input.spec.target.kind}.`,
     );
   }
   if (!MODEL_CHOICES.has(input.spec.modelChoice)) {
     throw new ProjectDataError(
       'PROJECT_DATA385',
-      `Unsupported Scene Dialogue Audio model: ${input.spec.modelChoice}.`
+      `Unsupported Scene Dialogue Audio model: ${input.spec.modelChoice}.`,
     );
   }
   return withSceneDialogueAudioProjectSession(input, ({ session }) => {
     const dialogue = requireDialogue(
       session,
       input.spec.target.sceneId,
-      input.spec.target.dialogueId
+      input.spec.target.dialogueId,
     );
     if (!dialogue.castMemberId) {
       throw new ProjectDataError(
         'PROJECT_DATA386',
         `Dialogue has no Cast Member: ${input.spec.target.dialogueId}.`,
-        { suggestion: 'Assign a Cast Member to the dialogue before generating audio.' }
+        {
+          suggestion:
+            'Assign a Cast Member to the dialogue before generating audio.',
+        },
       );
     }
     const castVoice = listCastVoiceRecords(session, dialogue.castMemberId).find(
-      (voice) => voice.id === input.spec.castVoiceId
+      (voice) => voice.id === input.spec.castVoiceId,
     );
-    if (!castVoice || castVoice.provider !== 'elevenlabs' || !castVoice.voiceId.trim()) {
+    if (
+      !castVoice ||
+      castVoice.provider !== 'elevenlabs' ||
+      !castVoice.voiceId.trim()
+    ) {
       throw new ProjectDataError(
         'PROJECT_DATA386',
         'This cast member is missing a usable ElevenLabs Cast Voice/provider voice id.',
-        { suggestion: 'Ask the agent to assign a voice id before generating dialogue audio.' }
+        {
+          suggestion:
+            'Ask the agent to assign a voice id before generating dialogue audio.',
+        },
       );
     }
     const plainText = requiredTrimmed(input.spec.plainText, 'plainText');
@@ -540,7 +590,8 @@ async function normalizeSpec(input: {
         : input.spec.v3Text.trim();
     const voiceSettings = normalizeVoiceSettings(input.spec.voiceSettings);
     const textTreatment = textTreatmentForModel(input.spec.modelChoice);
-    const providerText = textTreatment === 'elevenlabs-v3-audio-tags' ? v3Text : plainText;
+    const providerText =
+      textTreatment === 'elevenlabs-v3-audio-tags' ? v3Text : plainText;
     const spec: SceneDialogueAudioGenerationSpec = {
       ...input.spec,
       castVoiceId: castVoice.id,
@@ -564,7 +615,7 @@ async function normalizeSpec(input: {
 
 function prepared(
   specRecord: MediaGenerationSpecRecord,
-  normalized: Awaited<ReturnType<typeof normalizeSpec>>
+  normalized: Awaited<ReturnType<typeof normalizeSpec>>,
 ): PreparedMediaGeneration {
   const providerPayload = buildProviderPayload(normalized);
   return {
@@ -587,7 +638,7 @@ function prepared(
 }
 
 function buildProviderPayload(
-  normalized: Awaited<ReturnType<typeof normalizeSpec>>
+  normalized: Awaited<ReturnType<typeof normalizeSpec>>,
 ): Record<string, unknown> {
   return {
     text: normalized.providerText,
@@ -618,11 +669,14 @@ function buildProviderPayload(
 
 function buildContextFromSession(
   session: DatabaseSession,
-  sceneId: string
+  sceneId: string,
 ): SceneDialogueAudioContext {
   const project = readProjectRecord(session);
   if (!project) {
-    throw new ProjectDataError('PROJECT_DATA020', 'Project database has no project row.');
+    throw new ProjectDataError(
+      'PROJECT_DATA020',
+      'Project database has no project row.',
+    );
   }
   const scene = readScreenplaySceneFromSession(session, sceneId);
   const castMemberLabels: Record<string, string> = {};
@@ -632,7 +686,7 @@ function buildContextFromSession(
       if (!block.dialogueId) {
         throw new ProjectDataError(
           'PROJECT_DATA380',
-          'Dialogue block is missing a stable dialogueId.'
+          'Dialogue block is missing a stable dialogueId.',
         );
       }
       const castMemberId = block.castMemberId ?? null;
@@ -653,18 +707,22 @@ function buildContextFromSession(
       record.dialogueId,
       toSceneDialogueAudio(
         record,
-        listSceneDialogueAudioTakeRecords(session, record.id)
+        listSceneDialogueAudioTakeRecords(session, record.id),
       ),
-    ])
+    ]),
   );
-  const castVoicesByCastMemberId: SceneDialogueAudioContext['castVoicesByCastMemberId'] = {};
+  const castVoicesByCastMemberId: SceneDialogueAudioContext['castVoicesByCastMemberId'] =
+    {};
   for (const dialogue of dialogues) {
-    if (!dialogue.castMemberId || castVoicesByCastMemberId[dialogue.castMemberId]) {
+    if (
+      !dialogue.castMemberId ||
+      castVoicesByCastMemberId[dialogue.castMemberId]
+    ) {
       continue;
     }
     castVoicesByCastMemberId[dialogue.castMemberId] = listCastVoiceRecords(
       session,
-      dialogue.castMemberId
+      dialogue.castMemberId,
     )
       .filter((voice) => voice.provider === 'elevenlabs')
       .map((voice) => ({
@@ -689,10 +747,11 @@ function buildContextFromSession(
     scene: {
       id: sceneId,
       title: scene.title,
-      settingLabel: [scene.setting.interiorExterior, scene.setting.timeOfDay]
-        .filter(Boolean)
-        .join(' ')
-        .trim() || null,
+      settingLabel:
+        [scene.setting.interiorExterior, scene.setting.timeOfDay]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || null,
     },
     dialogues,
     castMemberLabels,
@@ -709,21 +768,27 @@ function buildContextFromSession(
       sceneId,
       records.map((record) => record.id),
       records.flatMap((record) =>
-        listSceneDialogueAudioTakeRecords(session, record.id).map((take) => take.id)
-      )
+        listSceneDialogueAudioTakeRecords(session, record.id).map(
+          (take) => take.id,
+        ),
+      ),
     ),
   };
 }
 
-function requireDialogue(session: DatabaseSession, sceneId: string, dialogueId: string) {
+function requireDialogue(
+  session: DatabaseSession,
+  sceneId: string,
+  dialogueId: string,
+) {
   const scene = readScreenplaySceneFromSession(session, sceneId);
   const dialogue = scene.blocks.find(
-    (block) => block.type === 'dialogue' && block.dialogueId === dialogueId
+    (block) => block.type === 'dialogue' && block.dialogueId === dialogueId,
   );
   if (!dialogue || dialogue.type !== 'dialogue') {
     throw new ProjectDataError(
       'PROJECT_DATA380',
-      `Dialogue block was not found: ${dialogueId}.`
+      `Dialogue block was not found: ${dialogueId}.`,
     );
   }
   return dialogue;
@@ -732,13 +797,13 @@ function requireDialogue(session: DatabaseSession, sceneId: string, dialogueId: 
 function requireAudioForDialogue(
   session: DatabaseSession,
   sceneId: string,
-  dialogueId: string
+  dialogueId: string,
 ) {
   const audio = readSceneDialogueAudioRecord(session, { sceneId, dialogueId });
   if (!audio) {
     throw new ProjectDataError(
       'PROJECT_DATA380',
-      `Scene Dialogue Audio record was not found for dialogue: ${dialogueId}.`
+      `Scene Dialogue Audio record was not found for dialogue: ${dialogueId}.`,
     );
   }
   return audio;
@@ -746,23 +811,30 @@ function requireAudioForDialogue(
 
 function defaultCastVoiceId(
   session: DatabaseSession,
-  castMemberId: string | undefined
+  castMemberId: string | undefined,
 ): string {
   if (!castMemberId) {
     throw new ProjectDataError(
       'PROJECT_DATA386',
       'Dialogue has no Cast Member.',
-      { suggestion: 'Assign a Cast Member to the dialogue before generating audio.' }
+      {
+        suggestion:
+          'Assign a Cast Member to the dialogue before generating audio.',
+      },
     );
   }
   const voice = listCastVoiceRecords(session, castMemberId).find(
-    (candidate) => candidate.provider === 'elevenlabs' && candidate.voiceId.trim()
+    (candidate) =>
+      candidate.provider === 'elevenlabs' && candidate.voiceId.trim(),
   );
   if (!voice) {
     throw new ProjectDataError(
       'PROJECT_DATA386',
       'This cast member is missing a usable ElevenLabs Cast Voice/provider voice id.',
-      { suggestion: 'Ask the agent to assign a voice id before generating dialogue audio.' }
+      {
+        suggestion:
+          'Ask the agent to assign a voice id before generating dialogue audio.',
+      },
     );
   }
   return voice.id;
@@ -770,19 +842,19 @@ function defaultCastVoiceId(
 
 function normalizeOptionalCastVoiceId(
   session: DatabaseSession,
-  input: { castMemberId: string; castVoiceId: string | null }
+  input: { castMemberId: string; castVoiceId: string | null },
 ): string | null {
   if (!input.castVoiceId) {
     return null;
   }
   const voice = listCastVoiceRecords(session, input.castMemberId).find(
-    (candidate) => candidate.id === input.castVoiceId
+    (candidate) => candidate.id === input.castVoiceId,
   );
   if (!voice) {
     throw new ProjectDataError(
       'PROJECT_DATA386',
       'Selected Cast Voice belongs to another Cast Member.',
-      { suggestion: 'Choose one of the speaker Cast Voices.' }
+      { suggestion: 'Choose one of the speaker Cast Voices.' },
     );
   }
   return voice.id;
@@ -791,7 +863,11 @@ function normalizeOptionalCastVoiceId(
 function modelReports(): SceneDialogueAudioModelListReport['models'] {
   return [
     modelReport('elevenlabs/eleven_v3', 'Eleven v3', true),
-    modelReport('elevenlabs/eleven_multilingual_v2', 'Eleven Multilingual v2', false),
+    modelReport(
+      'elevenlabs/eleven_multilingual_v2',
+      'Eleven Multilingual v2',
+      false,
+    ),
     modelReport('elevenlabs/eleven_turbo_v2_5', 'Eleven Turbo v2.5', false),
   ];
 }
@@ -799,7 +875,7 @@ function modelReports(): SceneDialogueAudioModelListReport['models'] {
 function modelReport(
   modelChoice: SceneDialogueAudioModelChoice,
   label: string,
-  supportsAudioTags: boolean
+  supportsAudioTags: boolean,
 ) {
   return {
     modelChoice,
@@ -817,7 +893,7 @@ function modelReport(
 }
 
 function parseModel(
-  modelChoice: SceneDialogueAudioModelChoice
+  modelChoice: SceneDialogueAudioModelChoice,
 ): 'eleven_v3' | 'eleven_multilingual_v2' | 'eleven_turbo_v2_5' {
   if (modelChoice === 'elevenlabs/eleven_v3') {
     return 'eleven_v3';
@@ -829,7 +905,7 @@ function parseModel(
 }
 
 function textTreatmentForModel(
-  modelChoice: SceneDialogueAudioModelChoice
+  modelChoice: SceneDialogueAudioModelChoice,
 ): SceneDialogueAudioTextTreatment {
   return modelChoice === 'elevenlabs/eleven_v3'
     ? 'elevenlabs-v3-audio-tags'
@@ -837,7 +913,7 @@ function textTreatmentForModel(
 }
 
 function normalizeVoiceSettings(
-  input: SceneDialogueAudioVoiceSettings | undefined
+  input: SceneDialogueAudioVoiceSettings | undefined,
 ): SceneDialogueAudioVoiceSettings {
   const settings = { ...DEFAULT_VOICE_SETTINGS, ...input };
   for (const key of ['stability', 'similarityBoost', 'style'] as const) {
@@ -845,26 +921,31 @@ function normalizeVoiceSettings(
     if (value !== undefined && (value < 0 || value > 1)) {
       throw new ProjectDataError(
         'PROJECT_DATA386',
-        `Voice setting ${key} must be between 0 and 1.`
+        `Voice setting ${key} must be between 0 and 1.`,
       );
     }
   }
-  if (settings.speed !== undefined && (settings.speed < 0.7 || settings.speed > 1.2)) {
+  if (
+    settings.speed !== undefined &&
+    (settings.speed < 0.7 || settings.speed > 1.2)
+  ) {
     throw new ProjectDataError(
       'PROJECT_DATA386',
-      'Voice setting speed must be between 0.7 and 1.2.'
+      'Voice setting speed must be between 0.7 and 1.2.',
     );
   }
   return settings;
 }
 
 function parseVoiceSettings(
-  input: string | null | undefined
+  input: string | null | undefined,
 ): SceneDialogueAudioVoiceSettings {
   if (!input) {
     return DEFAULT_VOICE_SETTINGS;
   }
-  return normalizeVoiceSettings(JSON.parse(input) as SceneDialogueAudioVoiceSettings);
+  return normalizeVoiceSettings(
+    JSON.parse(input) as SceneDialogueAudioVoiceSettings,
+  );
 }
 
 function requiredTrimmed(input: string, fieldName: string): string {
@@ -872,7 +953,7 @@ function requiredTrimmed(input: string, fieldName: string): string {
   if (!value) {
     throw new ProjectDataError(
       'PROJECT_DATA386',
-      `Scene Dialogue Audio ${fieldName} cannot be empty.`
+      `Scene Dialogue Audio ${fieldName} cannot be empty.`,
     );
   }
   return value;
@@ -884,8 +965,50 @@ function titleForSpec(spec: SceneDialogueAudioGenerationSpec): string {
 
 function outputName(spec: SceneDialogueAudioGenerationSpec): string {
   return `${spec.target.dialogueId}.${extensionForOutputFormat(
-    spec.outputFormat ?? DEFAULT_OUTPUT_FORMAT
+    spec.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
   )}`;
+}
+
+async function persistDialogueAudioTakeFile(input: {
+  projectFolder: string;
+  sourceProjectRelativePath: ProjectRelativePath;
+  dialogueId: string;
+  takeId: string;
+  outputFormat: string | undefined;
+}): Promise<ProjectRelativePath> {
+  const extension = extensionForOutputFormat(
+    input.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
+  );
+  const fileName = `${slugify(input.dialogueId)}-${input.takeId}.${extension}`;
+  const projectRelativePath =
+    `generated/media/scene-dialogue-audio/${fileName}` as ProjectRelativePath;
+  const sourcePath = path.join(
+    input.projectFolder,
+    input.sourceProjectRelativePath,
+  );
+  const targetPath = path.join(input.projectFolder, projectRelativePath);
+  try {
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    await fs.copyFile(sourcePath, targetPath, fsConstants.COPYFILE_EXCL);
+    await fs.unlink(sourcePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      throw new ProjectDataError(
+        'PROJECT_DATA386',
+        `Scene Dialogue Audio take file already exists: ${projectRelativePath}.`,
+      );
+    }
+    throw error;
+  }
+  return projectRelativePath;
+}
+
+function slugify(input: string): string {
+  const slug = input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'dialogue';
 }
 
 function extensionForOutputFormat(outputFormat: string): string {
@@ -899,7 +1022,9 @@ function extensionForOutputFormat(outputFormat: string): string {
 }
 
 function mimeTypeForOutputFormat(outputFormat: string | undefined): string {
-  const extension = extensionForOutputFormat(outputFormat ?? DEFAULT_OUTPUT_FORMAT);
+  const extension = extensionForOutputFormat(
+    outputFormat ?? DEFAULT_OUTPUT_FORMAT,
+  );
   return extension === 'wav' ? 'audio/wav' : 'audio/mpeg';
 }
 
@@ -908,18 +1033,26 @@ function firstAudioOutput(outputs: unknown): {
   mimeType?: string | null;
 } {
   if (!Array.isArray(outputs)) {
-    throw new ProjectDataError('PROJECT_DATA386', 'Generation run has no audio output.');
+    throw new ProjectDataError(
+      'PROJECT_DATA386',
+      'Generation run has no audio output.',
+    );
   }
   const output = outputs.find(
     (candidate) =>
       candidate &&
       typeof candidate === 'object' &&
-      typeof (candidate as { projectRelativePath?: unknown }).projectRelativePath ===
-        'string' &&
-      isPersistedAudioOutput(candidate)
-  ) as { projectRelativePath: ProjectRelativePath; mimeType?: string | null } | undefined;
+      typeof (candidate as { projectRelativePath?: unknown })
+        .projectRelativePath === 'string' &&
+      isPersistedAudioOutput(candidate),
+  ) as
+    | { projectRelativePath: ProjectRelativePath; mimeType?: string | null }
+    | undefined;
   if (!output) {
-    throw new ProjectDataError('PROJECT_DATA386', 'Generation run has no audio output.');
+    throw new ProjectDataError(
+      'PROJECT_DATA386',
+      'Generation run has no audio output.',
+    );
   }
   return output;
 }
@@ -949,16 +1082,17 @@ function defaultLanguageCode(session: DatabaseSession): string | null {
 }
 
 function assertSceneDialogueAudioSpec(
-  spec: unknown
+  spec: unknown,
 ): asserts spec is SceneDialogueAudioGenerationSpec {
   if (
     !spec ||
     typeof spec !== 'object' ||
-    (spec as { purpose?: unknown }).purpose !== SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE
+    (spec as { purpose?: unknown }).purpose !==
+      SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE
   ) {
     throw new ProjectDataError(
       'PROJECT_DATA384',
-      'Media Generation Spec is not a Scene Dialogue Audio spec.'
+      'Media Generation Spec is not a Scene Dialogue Audio spec.',
     );
   }
 }
@@ -978,7 +1112,7 @@ async function mutationReport(input: {
 function sceneDialogueAudioResourceKeys(
   sceneId: string,
   audioIds: string[],
-  takeIds: string[]
+  takeIds: string[],
 ): string[] {
   return [
     `scene:${sceneId}`,
@@ -990,7 +1124,10 @@ function sceneDialogueAudioResourceKeys(
 
 async function withSceneDialogueAudioProjectSession<T>(
   input: RenkuConfigPathOptions & { projectName?: string },
-  fn: (handle: { projectFolder: string; session: DatabaseSession }) => T | Promise<T>
+  fn: (handle: {
+    projectFolder: string;
+    session: DatabaseSession;
+  }) => T | Promise<T>,
 ): Promise<T> {
   if (input.projectName) {
     const handle = await openProjectSession({
@@ -998,12 +1135,15 @@ async function withSceneDialogueAudioProjectSession<T>(
       homeDir: input.homeDir,
     });
     try {
-      return await fn({ projectFolder: handle.projectFolder, session: handle.session });
+      return await fn({
+        projectFolder: handle.projectFolder,
+        session: handle.session,
+      });
     } finally {
       handle.session.close();
     }
   }
   return withCurrentProjectSession(input, ({ currentProject, session }) =>
-    fn({ projectFolder: currentProject.projectFolder, session })
+    fn({ projectFolder: currentProject.projectFolder, session }),
   );
 }

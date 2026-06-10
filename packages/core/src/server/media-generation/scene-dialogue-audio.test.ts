@@ -23,7 +23,9 @@ describe('Scene Dialogue Audio generation', () => {
   let projectPath: string;
 
   beforeEach(async () => {
-    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-scene-dialogue-audio-test-'));
+    homeDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'renku-scene-dialogue-audio-test-'),
+    );
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
 
     projectData = createProjectDataService();
@@ -67,7 +69,10 @@ describe('Scene Dialogue Audio generation', () => {
   });
 
   it('creates and picks a simulated audio take from the shared generation runner output', async () => {
-    await writeProjectFile('generated/audio/urban-sample.mp3', 'voice sample bytes');
+    await writeProjectFile(
+      'generated/audio/urban-sample.mp3',
+      'voice sample bytes',
+    );
     const attached = await projectData.attachCastVoice({
       projectName: 'dialogue-audio-test',
       homeDir,
@@ -76,9 +81,7 @@ describe('Scene Dialogue Audio generation', () => {
     });
     const screenplay = await projectData.readScreenplay({ homeDir });
     const scene = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-    const dialogue = scene?.blocks.find(
-      (block) => block.type === 'dialogue'
-    );
+    const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
     if (
       !scene?.id ||
       !dialogue ||
@@ -121,16 +124,74 @@ describe('Scene Dialogue Audio generation', () => {
         expect.objectContaining({
           picked: true,
           modelChoice: 'elevenlabs/eleven_v3',
-          providerTextSnapshot: 'Bronze has no temper. [shouts] Men give it one.',
+          providerTextSnapshot:
+            'Bronze has no temper. [shouts] Men give it one.',
         }),
       ],
     });
     expect(audio?.takes[0]?.assetFileId).toEqual(expect.any(String));
+    await expect(
+      fs.readdir(
+        path.join(projectPath, 'generated/media/scene-dialogue-audio'),
+      ),
+    ).resolves.toHaveLength(1);
+  });
+
+  it('keeps repeated dialogue takes in separate generated audio files', async () => {
+    await writeProjectFile(
+      'generated/audio/urban-sample.mp3',
+      'voice sample bytes',
+    );
+    const attached = await projectData.attachCastVoice({
+      projectName: 'dialogue-audio-test',
+      homeDir,
+      document: castVoiceAttachment(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0];
+    const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
+    if (
+      !scene?.id ||
+      !dialogue ||
+      dialogue.type !== 'dialogue' ||
+      !dialogue.dialogueId
+    ) {
+      throw new Error('Expected seeded scene dialogue.');
+    }
+
+    const generateInput = {
+      projectName: 'dialogue-audio-test',
+      homeDir,
+      sceneId: scene.id,
+      dialogueId: dialogue.dialogueId,
+      setup: {
+        modelChoice: 'elevenlabs/eleven_v3' as const,
+        castVoiceId: attached.voice.id,
+        plainText: dialogue.lines.join('\n'),
+        v3Text: 'Bronze has no temper. [shouts] Men give it one.',
+        outputFormat: 'mp3_44100_128',
+      },
+      simulate: true,
+    };
+
+    await projectData.generateSceneDialogueAudioTake(generateInput);
+    const secondReport =
+      await projectData.generateSceneDialogueAudioTake(generateInput);
+
+    const audio = secondReport.context.audioByDialogueId[dialogue.dialogueId];
+    expect(audio?.takes).toHaveLength(2);
+    const generatedFiles = await fs.readdir(
+      path.join(projectPath, 'generated/media/scene-dialogue-audio'),
+    );
+    expect(generatedFiles).toHaveLength(2);
+    expect(new Set(generatedFiles).size).toBe(2);
+    expect(generatedFiles.every((file) => file.endsWith('.mp3'))).toBe(true);
   });
 
   async function writeProjectFile(
     projectRelativePath: string,
-    content: string
+    content: string,
   ): Promise<void> {
     const absolutePath = path.join(projectPath, projectRelativePath);
     await fs.mkdir(path.dirname(absolutePath), { recursive: true });

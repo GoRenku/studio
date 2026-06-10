@@ -50,7 +50,13 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
       savedVisibleMs,
       failureMessage: input.failureMessage ?? 'Changes could not be saved.',
     };
-  }, [input.failureMessage, input.flushOnUnmount, onSaved, save, savedVisibleMs]);
+  }, [
+    input.failureMessage,
+    input.flushOnUnmount,
+    onSaved,
+    save,
+    savedVisibleMs,
+  ]);
 
   useEffect(() => {
     const clearSavedVisibleTimeout = () => {
@@ -103,18 +109,29 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
 
     const queue = queueRef.current;
     return () => {
-      const shouldFlushPending =
-        inputRef.current.flushOnUnmount && hasPendingDebouncedValue.current;
+      const shouldFlushPending = inputRef.current.flushOnUnmount;
+      const hadPendingDebouncedValue = hasPendingDebouncedValue.current;
       const pendingValue = pendingDebouncedValue.current;
       clearSavedVisibleTimeout();
       clearPendingDebounceTimeout();
       hasPendingDebouncedValue.current = false;
       pendingDebouncedValue.current = undefined;
       queueRef.current = null;
-      queue?.dispose();
-      if (shouldFlushPending) {
-        void inputRef.current.save(pendingValue as TValue).catch(() => undefined);
+      if (!queue) {
+        return;
       }
+
+      if (!shouldFlushPending) {
+        queue.dispose();
+        return;
+      }
+
+      if (hadPendingDebouncedValue) {
+        queue.requestSave(pendingValue as TValue);
+      }
+      void queue.flush().finally(() => {
+        queue.dispose();
+      });
     };
   }, []);
 

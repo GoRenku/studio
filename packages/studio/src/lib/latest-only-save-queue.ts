@@ -20,15 +20,17 @@ export interface LatestOnlySaveQueueOptions<TValue, TResult> {
 
 export interface LatestOnlySaveQueue<TValue> {
   requestSave: (value: TValue) => void;
+  flush: () => Promise<void>;
   dispose: () => void;
 }
 
 export function createLatestOnlySaveQueue<TValue, TResult = void>(
-  options: LatestOnlySaveQueueOptions<TValue, TResult>
+  options: LatestOnlySaveQueueOptions<TValue, TResult>,
 ): LatestOnlySaveQueue<TValue> {
   let pendingSave: { value: TValue } | null = null;
   let saving = false;
   let disposed = false;
+  let drainPromise: Promise<void> | null = null;
 
   const drain = async () => {
     if (saving) {
@@ -79,13 +81,27 @@ export function createLatestOnlySaveQueue<TValue, TResult = void>(
     options.onIdle?.();
   };
 
+  const startDrain = () => {
+    if (!drainPromise) {
+      drainPromise = drain().finally(() => {
+        drainPromise = null;
+      });
+    }
+    return drainPromise;
+  };
+
   return {
     requestSave: (value) => {
       if (disposed) {
         return;
       }
       pendingSave = { value };
-      void drain();
+      void startDrain();
+    },
+    flush: async () => {
+      while (!disposed && (pendingSave || saving || drainPromise)) {
+        await startDrain();
+      }
     },
     dispose: () => {
       disposed = true;

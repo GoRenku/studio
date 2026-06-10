@@ -7,7 +7,8 @@ describe('createLatestOnlySaveQueue', () => {
       value: string;
       resolve: (result: string) => void;
     }> = [];
-    const successes: Array<{ value: string; result: string; latest: boolean }> = [];
+    const successes: Array<{ value: string; result: string; latest: boolean }> =
+      [];
     const queue = createLatestOnlySaveQueue<string, string>({
       save: (value) =>
         new Promise((resolve) => {
@@ -85,5 +86,38 @@ describe('createLatestOnlySaveQueue', () => {
     await Promise.resolve();
 
     expect(successes).toEqual([{ value: 'Draft B', latest: true }]);
+  });
+
+  it('flushes the newest pending value before disposal', async () => {
+    const deferredSaves: Array<{
+      value: string;
+      resolve: (result: string) => void;
+    }> = [];
+    const successes: Array<{ value: string; latest: boolean }> = [];
+    const queue = createLatestOnlySaveQueue<string, string>({
+      save: (value) =>
+        new Promise((resolve) => {
+          deferredSaves.push({ value, resolve });
+        }),
+      onSaveSuccess: (success) =>
+        successes.push({ value: success.value, latest: success.latest }),
+    });
+
+    queue.requestSave('Draft A');
+    await Promise.resolve();
+    queue.requestSave('Draft B');
+
+    const flushed = queue.flush();
+    await Promise.resolve();
+    deferredSaves[0]?.resolve('Saved A');
+    await Promise.resolve();
+    await Promise.resolve();
+    deferredSaves[1]?.resolve('Saved B');
+    await flushed;
+
+    expect(successes).toEqual([
+      { value: 'Draft A', latest: false },
+      { value: 'Draft B', latest: true },
+    ]);
   });
 });

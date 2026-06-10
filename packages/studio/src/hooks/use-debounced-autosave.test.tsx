@@ -20,7 +20,7 @@ describe('useDebouncedAutosave', () => {
       (value: string) =>
         new Promise<string>((resolve) => {
           deferredSaves.push({ value, resolve });
-        })
+        }),
     );
 
     const { rerender } = renderHook(
@@ -31,7 +31,7 @@ describe('useDebouncedAutosave', () => {
           save,
           onSaved,
         }),
-      { initialProps: { value: '' } }
+      { initialProps: { value: '' } },
     );
 
     rerender({ value: 'Draft A' });
@@ -80,7 +80,7 @@ describe('useDebouncedAutosave', () => {
           delayMs: 10,
           save,
         }),
-      { wrapper: StrictModeWrapper }
+      { wrapper: StrictModeWrapper },
     );
 
     await act(async () => {
@@ -105,7 +105,7 @@ describe('useDebouncedAutosave', () => {
           failureMessage: 'Shot settings could not be saved.',
           save,
         }),
-      { initialProps: { value: 'Initial' } }
+      { initialProps: { value: 'Initial' } },
     );
 
     rerender({ value: 'Changed' });
@@ -133,7 +133,7 @@ describe('useDebouncedAutosave', () => {
           flushOnUnmount: true,
           save,
         }),
-      { initialProps: { value: 'Initial' } }
+      { initialProps: { value: 'Initial' } },
     );
 
     rerender({ value: 'Changed' });
@@ -145,6 +145,63 @@ describe('useDebouncedAutosave', () => {
 
     expect(save).toHaveBeenCalledWith('Changed');
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('flushes a queued value on unmount after its debounce has fired', async () => {
+    vi.useFakeTimers();
+    const deferredSaves: Array<{
+      value: string;
+      resolve: (result: string) => void;
+    }> = [];
+    const save = vi.fn(
+      (value: string) =>
+        new Promise<string>((resolve) => {
+          deferredSaves.push({ value, resolve });
+        }),
+    );
+
+    const { rerender, unmount } = renderHook(
+      ({ value }) =>
+        useDebouncedAutosave({
+          value,
+          delayMs: 10,
+          flushOnUnmount: true,
+          save,
+        }),
+      { initialProps: { value: 'Initial' } },
+    );
+
+    rerender({ value: 'Draft A' });
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+      await Promise.resolve();
+    });
+    rerender({ value: 'Draft B' });
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+      await Promise.resolve();
+    });
+
+    expect(deferredSaves.map((request) => request.value)).toEqual(['Draft A']);
+    unmount();
+
+    await act(async () => {
+      deferredSaves[0]?.resolve('Saved A');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(deferredSaves.map((request) => request.value)).toEqual([
+      'Draft A',
+      'Draft B',
+    ]);
+
+    await act(async () => {
+      deferredSaves[1]?.resolve('Saved B');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(save).toHaveBeenCalledTimes(2);
   });
 });
 
