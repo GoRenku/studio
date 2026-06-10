@@ -51,6 +51,9 @@
   /* Dialog anatomy */
   --dialog-footer-bg: hsl(48 40% 89% / 0.5);
 
+  /* Dialogue audio tags */
+  --dialogue-audio-tag: hsl(202 70% 36%);
+
   /* Models pane mapped-input grouping */
   --models-pane-mapped-bg: hsl(44 60% 84% / 0.38);
   --models-pane-mapped-border: hsl(42 50% 58% / 0.45);
@@ -161,6 +164,9 @@
   /* Dialog anatomy */
   --dialog-footer-bg: hsl(0 0% 18% / 0.6);
 
+  /* Dialogue audio tags */
+  --dialogue-audio-tag: hsl(199 88% 78%);
+
   /* Models pane mapped-input grouping */
   --models-pane-mapped-bg: hsl(42 44% 38% / 0.18);
   --models-pane-mapped-border: hsl(42 58% 52% / 0.45);
@@ -256,6 +262,7 @@
   --color-editor-bg: var(--editor-bg);
   --color-editor-fg: var(--editor-fg);
   --color-dialog-footer-bg: var(--dialog-footer-bg);
+  --color-dialogue-audio-tag: var(--dialogue-audio-tag);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);

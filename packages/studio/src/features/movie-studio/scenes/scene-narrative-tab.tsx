@@ -18,6 +18,10 @@ import type { SceneNarrativeResourceResponse } from '@/services/studio-project-c
 import type { SceneDialogueAudioContextWithUrls } from '@/services/studio-scene-dialogue-audio-api';
 import type { StudioSelection } from '../movie-studio-selection';
 import { SceneDialogueAudioPanel } from './scene-dialogue-audio-panel';
+import {
+  isSceneDialogueAudioTag,
+  SCENE_DIALOGUE_AUDIO_TAG_CLASS_NAME,
+} from './scene-dialogue-audio-tags';
 import { SceneDialogueCard } from './scene-dialogue-card';
 import { useSceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
 
@@ -420,44 +424,52 @@ function InlineText({
 }) {
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
-  const handlePattern = /@([a-zA-Z0-9][a-zA-Z0-9_-]*)/g;
+  const inlineTokenPattern = /@([a-zA-Z0-9][a-zA-Z0-9_-]*)|\[[^\]\n]{1,48}\]/g;
   let match: RegExpExecArray | null;
   let key = 0;
-  while ((match = handlePattern.exec(text)) !== null) {
+  while ((match = inlineTokenPattern.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
     if (start > lastIndex) {
       nodes.push(<span key={`t${key++}`}>{text.slice(lastIndex, start)}</span>);
     }
-    const handle = match[1].toLowerCase();
-    const entity = resolveHandle(handle, resource);
-    if (entity) {
+    if (isSceneDialogueAudioTag(match[0])) {
       nodes.push(
-        interactive ? (
-          <Button
-            key={`l${key++}`}
-            type='button'
-            variant='link'
-            onClick={() => onSelect({ type: entity.kind, id: entity.id })}
-            className='h-auto p-0 align-baseline font-[inherit] text-[inherit] font-semibold leading-[inherit] text-primary underline decoration-primary/40 decoration-1 underline-offset-[3px] hover:decoration-primary'
-          >
-            {entity.label}
-          </Button>
-        ) : (
-          <span
-            key={`l${key++}`}
-            className='font-semibold text-primary underline decoration-primary/40 decoration-1 underline-offset-[3px]'
-          >
-            {entity.label}
-          </span>
-        )
-      );
-    } else {
-      nodes.push(
-        <span key={`u${key++}`} className='text-muted-foreground'>
+        <span key={`a${key++}`} className={SCENE_DIALOGUE_AUDIO_TAG_CLASS_NAME}>
           {match[0]}
         </span>
       );
+    } else {
+      const handle = match[1].toLowerCase();
+      const entity = resolveHandle(handle, resource);
+      if (entity) {
+        nodes.push(
+          interactive ? (
+            <Button
+              key={`l${key++}`}
+              type='button'
+              variant='link'
+              onClick={() => onSelect({ type: entity.kind, id: entity.id })}
+              className='h-auto p-0 align-baseline font-[inherit] text-[inherit] font-semibold leading-[inherit] text-primary underline decoration-primary/40 decoration-1 underline-offset-[3px] hover:decoration-primary'
+            >
+              {entity.label}
+            </Button>
+          ) : (
+            <span
+              key={`l${key++}`}
+              className='font-semibold text-primary underline decoration-primary/40 decoration-1 underline-offset-[3px]'
+            >
+              {entity.label}
+            </span>
+          )
+        );
+      } else {
+        nodes.push(
+          <span key={`u${key++}`} className='text-muted-foreground'>
+            {match[0]}
+          </span>
+        );
+      }
     }
     lastIndex = end;
   }

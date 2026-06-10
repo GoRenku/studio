@@ -1,6 +1,7 @@
-import type { ChangeEvent, ReactNode } from 'react';
+import type { ChangeEvent } from 'react';
 import { Textarea } from '@/ui/textarea';
 import { cn } from '@/lib/utils';
+import { renderSceneDialogueAudioTaggedText } from './scene-dialogue-audio-tags';
 
 interface SceneDialogueTaggedTextEditorProps {
   value: string;
@@ -9,8 +10,6 @@ interface SceneDialogueTaggedTextEditorProps {
   label: string;
   onChange: (value: string) => void;
 }
-
-const AUDIO_TAG_PATTERN = /\[[^\]\n]{1,48}\]/g;
 
 export function SceneDialogueTaggedTextEditor({
   value,
@@ -24,9 +23,9 @@ export function SceneDialogueTaggedTextEditor({
       {highlightTags ? (
         <div
           aria-hidden
-          className='pointer-events-none absolute inset-0 z-10 min-h-36 whitespace-pre-wrap break-words px-3 py-2 text-sm leading-6 text-transparent'
+          className='pointer-events-none absolute inset-0 z-10 min-h-36 whitespace-pre-wrap break-words px-3 py-2 text-sm leading-6 text-foreground'
         >
-          {renderHighlightedTags(value)}
+          {renderSceneDialogueAudioTaggedText(value)}
         </div>
       ) : null}
       <Textarea
@@ -38,36 +37,9 @@ export function SceneDialogueTaggedTextEditor({
         }
         className={cn(
           'min-h-36 resize-none bg-transparent leading-6',
-          highlightTags && 'relative z-0'
+          highlightTags && 'relative z-0 text-transparent caret-foreground'
         )}
       />
     </div>
   );
-}
-
-function renderHighlightedTags(value: string): ReactNode[] {
-  const parts: ReactNode[] = [];
-  let lastIndex = 0;
-  let key = 0;
-  for (const match of value.matchAll(AUDIO_TAG_PATTERN)) {
-    const index = match.index ?? 0;
-    if (index > lastIndex) {
-      parts.push(
-        <span key={`text-${key++}`}>{value.slice(lastIndex, index)}</span>
-      );
-    }
-    parts.push(
-      <span
-        key={`tag-${key++}`}
-        className='rounded-sm bg-primary/18 px-0.5 text-primary'
-      >
-        {match[0]}
-      </span>
-    );
-    lastIndex = index + match[0].length;
-  }
-  if (lastIndex < value.length) {
-    parts.push(<span key={`text-${key++}`}>{value.slice(lastIndex)}</span>);
-  }
-  return parts;
 }
