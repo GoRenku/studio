@@ -22,6 +22,7 @@ export type EntityIdPrefix =
   | 'act'
   | 'sequence'
   | 'scene'
+  | 'scene_dialogue'
   | 'asset'
   | 'asset_file'
   | 'project_asset'
@@ -37,7 +38,9 @@ export type EntityIdPrefix =
   | 'scene_shot_storyboard_image'
   | 'scene_shot_video_take_group'
   | 'scene_shot_video_take_input'
-  | 'scene_shot_video_take';
+  | 'scene_shot_video_take'
+  | 'scene_dialogue_audio'
+  | 'scene_dialogue_audio_take';
 
 export interface ProjectIdGenerator {
   next(prefix: EntityIdPrefix): string;

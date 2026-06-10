@@ -50,6 +50,8 @@ export const SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE =
   'shot.multi-shot-storyboard-sheet' as const;
 export const SHOT_VIDEO_TAKE_GENERATION_PURPOSE =
   'shot.video-take' as const;
+export const SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE =
+  'scene.dialogue-audio' as const;
 
 export type MediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
@@ -65,7 +67,8 @@ export type MediaGenerationPurpose =
   | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
   | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
-  | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE
+  | typeof SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE;
 
 export type MediaGenerationDependencyKind =
   | 'first-frame'
@@ -134,6 +137,23 @@ export type CastVoiceSampleModelChoice =
   | 'elevenlabs/eleven_multilingual_v2'
   | 'elevenlabs/eleven_turbo_v2_5';
 
+export type SceneDialogueAudioModelChoice =
+  | 'elevenlabs/eleven_v3'
+  | 'elevenlabs/eleven_multilingual_v2'
+  | 'elevenlabs/eleven_turbo_v2_5';
+
+export type SceneDialogueAudioTextTreatment =
+  | 'elevenlabs-v3-audio-tags'
+  | 'plain-tts';
+
+export interface SceneDialogueAudioVoiceSettings {
+  stability?: number;
+  similarityBoost?: number;
+  style?: number;
+  speed?: number;
+  useSpeakerBoost?: boolean;
+}
+
 export type LocationEnvironmentSheetModelChoice =
   | 'fal-ai/openai/gpt-image-2'
   | 'fal-ai/nano-banana-2'
@@ -180,6 +200,12 @@ export interface SceneMediaGenerationTarget {
   id: string;
 }
 
+export interface SceneDialogueMediaGenerationTarget {
+  kind: 'sceneDialogue';
+  sceneId: string;
+  dialogueId: string;
+}
+
 export interface SceneShotMediaGenerationTarget {
   kind: 'sceneShotGroup';
   id: string;
@@ -203,6 +229,7 @@ export type MediaGenerationTarget =
   | CastMediaGenerationTarget
   | LocationMediaGenerationTarget
   | SceneMediaGenerationTarget
+  | SceneDialogueMediaGenerationTarget
   | SceneShotMediaGenerationTarget;
 
 export type MediaGenerationRequestTarget =
@@ -210,6 +237,7 @@ export type MediaGenerationRequestTarget =
   | CastMediaGenerationTarget
   | LocationMediaGenerationTarget
   | SceneMediaGenerationTarget
+  | SceneDialogueMediaGenerationTarget
   | SceneShotMediaGenerationRequestTarget;
 
 export interface CastGenerationProjectContext {
@@ -676,6 +704,109 @@ export interface CastVoiceSampleGenerationSpec {
   title?: string;
 }
 
+export interface SceneDialogueAudioGenerationSpec {
+  purpose: typeof SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE;
+  target: SceneDialogueMediaGenerationTarget;
+  modelChoice: SceneDialogueAudioModelChoice;
+  castVoiceId: string;
+  plainText: string;
+  v3Text: string;
+  voiceSettings?: SceneDialogueAudioVoiceSettings;
+  outputFormat?: string;
+  languageCode?: string | null;
+  title?: string;
+}
+
+export interface SceneDialogueAudio {
+  id: string;
+  sceneId: string;
+  dialogueId: string;
+  castMemberId: string;
+  castVoiceId: string | null;
+  modelChoice: SceneDialogueAudioModelChoice;
+  plainText: string;
+  v3Text: string;
+  voiceSettings: SceneDialogueAudioVoiceSettings;
+  outputFormat: string;
+  languageCode: string | null;
+  pickedTakeId: string | null;
+  takes: SceneDialogueAudioTake[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SceneDialogueAudioTake {
+  takeId: string;
+  sceneDialogueAudioId: string;
+  assetId: string;
+  assetFileId: string;
+  mediaGenerationRunId: string;
+  modelChoice: SceneDialogueAudioModelChoice;
+  castVoiceId: string;
+  castVoiceName: string;
+  provider: 'elevenlabs';
+  providerVoiceId: string;
+  providerTextSnapshot: string;
+  plainTextSnapshot: string;
+  v3TextSnapshot: string;
+  textTreatment: SceneDialogueAudioTextTreatment;
+  voiceSettingsSnapshot: SceneDialogueAudioVoiceSettings;
+  outputFormat: string;
+  languageCode: string | null;
+  picked: boolean;
+  createdAt: string;
+}
+
+export interface SceneDialogueAudioDialogueContext {
+  dialogueId: string;
+  castMemberId: string | null;
+  speakerName: string;
+  plainText: string;
+}
+
+export interface SceneDialogueAudioCastVoiceOption {
+  id: string;
+  castMemberId: string;
+  name: string;
+  provider: 'elevenlabs';
+  model: string;
+  voiceId: string;
+  purpose: string;
+  usable: boolean;
+}
+
+export interface SceneDialogueAudioContext {
+  purpose: typeof SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE;
+  target: { kind: 'scene'; sceneId: string };
+  project: {
+    name: string;
+    title: string;
+    baseLanguageCode: string | null;
+  };
+  scene: {
+    id: string;
+    title: string;
+    settingLabel: string | null;
+  };
+  dialogues: SceneDialogueAudioDialogueContext[];
+  castMemberLabels: Record<string, string>;
+  castVoicesByCastMemberId: Record<string, SceneDialogueAudioCastVoiceOption[]>;
+  audioByDialogueId: Record<string, SceneDialogueAudio>;
+  models: SceneDialogueAudioModelChoiceReport[];
+  defaults: {
+    modelChoice: SceneDialogueAudioModelChoice;
+    outputFormat: string;
+    languageCode: string | null;
+    voiceSettings: SceneDialogueAudioVoiceSettings;
+  };
+  resourceKeys: string[];
+}
+
+export interface SceneDialogueAudioMutationReport {
+  context: SceneDialogueAudioContext;
+  resourceKeys: string[];
+}
+
 export interface LocationEnvironmentSheetGenerationSpec {
   purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE;
   target: LocationMediaGenerationTarget;
@@ -748,6 +879,7 @@ export type MediaGenerationSpec =
   | CastCharacterSheetGenerationSpec
   | CastProfileGenerationSpec
   | CastVoiceSampleGenerationSpec
+  | SceneDialogueAudioGenerationSpec
   | LocationEnvironmentSheetGenerationSpec
   | SceneStoryboardSheetGenerationSpec
   | ShotVideoTakeInputGenerationSpec
@@ -828,6 +960,26 @@ export interface CastVoiceSampleModelListReport {
   purpose: typeof CAST_VOICE_SAMPLE_GENERATION_PURPOSE;
   target: CastMediaGenerationTarget;
   models: CastVoiceSampleModelChoiceReport[];
+}
+
+export interface SceneDialogueAudioModelChoiceReport {
+  modelChoice: SceneDialogueAudioModelChoice;
+  label: string;
+  available: true;
+  provider: 'elevenlabs';
+  model: 'eleven_v3' | 'eleven_multilingual_v2' | 'eleven_turbo_v2_5';
+  mediaKind: 'audio';
+  mode: 'text-to-speech';
+  supportsAudioTags: boolean;
+  textTreatment: SceneDialogueAudioTextTreatment;
+  defaultVoiceSettings: SceneDialogueAudioVoiceSettings;
+  outputFormats: string[];
+}
+
+export interface SceneDialogueAudioModelListReport {
+  purpose: typeof SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE;
+  target: SceneDialogueMediaGenerationTarget;
+  models: SceneDialogueAudioModelChoiceReport[];
 }
 
 export interface LocationEnvironmentSheetModelChoiceReport {
@@ -1304,6 +1456,7 @@ export interface MediaGenerationSpecRecord {
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
     | CastVoiceSampleModelChoice
+    | SceneDialogueAudioModelChoice
     | LocationEnvironmentSheetModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice
@@ -1325,6 +1478,7 @@ export interface MediaGenerationRun {
     | CastCharacterSheetModelChoice
     | CastProfileModelChoice
     | CastVoiceSampleModelChoice
+    | SceneDialogueAudioModelChoice
     | LocationEnvironmentSheetModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice

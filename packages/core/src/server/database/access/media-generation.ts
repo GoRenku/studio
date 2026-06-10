@@ -13,6 +13,7 @@ import {
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -41,7 +42,7 @@ export function insertMediaGenerationSpec(
       id: input.id,
       purpose: input.spec.purpose,
       targetKind: input.spec.target.kind,
-      targetId: input.spec.target.id,
+      targetId: mediaGenerationTargetId(input.spec.target),
       modelChoice: input.spec.modelChoice,
       title: input.title,
       specJson: JSON.stringify(input.spec),
@@ -67,7 +68,7 @@ export function updateMediaGenerationSpec(
     .set({
       purpose: input.spec.purpose,
       targetKind: input.spec.target.kind,
-      targetId: input.spec.target.id,
+      targetId: mediaGenerationTargetId(input.spec.target),
       modelChoice: input.spec.modelChoice,
       title: input.title,
       specJson: JSON.stringify(input.spec),
@@ -109,7 +110,7 @@ export function listMediaGenerationSpecs(
   session: DatabaseSession,
   input: {
     purpose: MediaGenerationPurpose;
-    targetKind: 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneShotGroup';
+    targetKind: 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotGroup';
     targetId: string;
   }
 ): MediaGenerationSpecRecord[] {
@@ -154,7 +155,7 @@ export function insertMediaGenerationRun(
       specId: input.specId,
       purpose: input.spec.purpose,
       targetKind: input.spec.target.kind,
-      targetId: input.spec.target.id,
+      targetId: mediaGenerationTargetId(input.spec.target),
       modelChoice: input.spec.modelChoice,
       specSnapshotJson: JSON.stringify(input.spec),
       provider: input.provider,
@@ -240,6 +241,7 @@ function assertMediaGenerationPurpose(
     purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_PROFILE_GENERATION_PURPOSE &&
     purpose !== CAST_VOICE_SAMPLE_GENERATION_PURPOSE &&
+    purpose !== SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE &&
     purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE &&
     purpose !== SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE &&
     purpose !== SHOT_FIRST_FRAME_GENERATION_PURPOSE &&
@@ -253,4 +255,11 @@ function assertMediaGenerationPurpose(
       `Unsupported media generation spec purpose: ${purpose}.`
     );
   }
+}
+
+function mediaGenerationTargetId(target: MediaGenerationSpec['target']): string {
+  if (target.kind === 'sceneDialogue') {
+    return `${target.sceneId}:${target.dialogueId}`;
+  }
+  return target.id;
 }

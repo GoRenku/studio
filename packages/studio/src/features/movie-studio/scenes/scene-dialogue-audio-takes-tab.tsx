@@ -1,0 +1,184 @@
+import { Pause, Play, Trash2 } from 'lucide-react';
+import type { SceneDialogueAudioTakeWithUrl } from '@/services/studio-scene-dialogue-audio-api';
+import { Button } from '@/ui/button';
+import { Slider } from '@/ui/slider';
+import { cn } from '@/lib/utils';
+import type { SceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
+
+interface SceneDialogueAudioTakesTabProps {
+  actionDisabled: boolean;
+  player: SceneDialogueAudioPlayer;
+  takes: SceneDialogueAudioTakeWithUrl[];
+  onDeleteTake: (takeId: string) => void;
+  onPickTake: (takeId: string) => void;
+}
+
+export function SceneDialogueAudioTakesTab({
+  actionDisabled,
+  player,
+  takes,
+  onDeleteTake,
+  onPickTake,
+}: SceneDialogueAudioTakesTabProps) {
+  if (!takes.length) {
+    return (
+      <div className='rounded-md border border-dashed border-border/45 bg-muted/15 px-3 py-4 text-sm text-muted-foreground'>
+        No takes yet.
+      </div>
+    );
+  }
+
+  const labels = takeLabels(takes);
+  const orderedTakes = [...takes].sort(
+    (left, right) =>
+      Date.parse(right.createdAt) - Date.parse(left.createdAt) ||
+      right.takeId.localeCompare(left.takeId)
+  );
+
+  return (
+    <div className='flex flex-col gap-3'>
+      {orderedTakes.map((take) => (
+        <TakeRow
+          key={take.takeId}
+          actionDisabled={actionDisabled}
+          label={labels.get(take.takeId) ?? 'Take'}
+          player={player}
+          take={take}
+          onDeleteTake={onDeleteTake}
+          onPickTake={onPickTake}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TakeRow({
+  actionDisabled,
+  label,
+  player,
+  take,
+  onDeleteTake,
+  onPickTake,
+}: {
+  actionDisabled: boolean;
+  label: string;
+  player: SceneDialogueAudioPlayer;
+  take: SceneDialogueAudioTakeWithUrl;
+  onDeleteTake: (takeId: string) => void;
+  onPickTake: (takeId: string) => void;
+}) {
+  const progress = player.progressByUrl[take.url] ?? 0;
+  const duration = player.durationByUrl[take.url] ?? 0;
+  const isPlaying = player.playingUrl === take.url;
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-3 rounded-md border bg-muted/15 px-3 py-3',
+        take.picked
+          ? 'border-item-active-border bg-item-active-bg/70'
+          : 'border-border/45'
+      )}
+    >
+      <div className='flex items-start justify-between gap-3'>
+        <div className='flex min-w-0 flex-col gap-1'>
+          <div className='flex items-center gap-2'>
+            <span className='text-sm font-semibold text-foreground'>{label}</span>
+            {take.picked ? (
+              <span className='rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary'>
+                Picked
+              </span>
+            ) : null}
+          </div>
+          <span className='text-xs text-muted-foreground'>
+            {formatTimestamp(take.createdAt)}
+          </span>
+        </div>
+        <div className='flex shrink-0 items-center gap-1'>
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon'
+            onClick={() => player.toggle(take.url)}
+            aria-label={isPlaying ? `Pause ${label}` : `Play ${label}`}
+          >
+            {isPlaying ? (
+              <Pause className='h-4 w-4' aria-hidden />
+            ) : (
+              <Play className='h-4 w-4' aria-hidden />
+            )}
+          </Button>
+          <Button
+            type='button'
+            variant={take.picked ? 'secondary' : 'outline'}
+            size='sm'
+            disabled={actionDisabled || take.picked}
+            onClick={() => onPickTake(take.takeId)}
+          >
+            Pick
+          </Button>
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon'
+            disabled={actionDisabled}
+            onClick={() => onDeleteTake(take.takeId)}
+            aria-label={`Delete ${label}`}
+          >
+            <Trash2 className='h-4 w-4' aria-hidden />
+          </Button>
+        </div>
+      </div>
+
+      <div className='flex items-center gap-3'>
+        <Slider
+          min={0}
+          max={duration || 100}
+          step={0.1}
+          value={[duration ? Math.min(progress, duration) : 0]}
+          disabled={!duration}
+          sliderSize='sm'
+          aria-label={`${label} playback position`}
+          onValueChange={([seconds]) => {
+            if (seconds !== undefined) {
+              player.seek(take.url, seconds);
+            }
+          }}
+        />
+        <span className='w-12 shrink-0 text-right text-xs text-muted-foreground'>
+          {duration ? formatDuration(duration) : '--:--'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function takeLabels(takes: SceneDialogueAudioTakeWithUrl[]): Map<string, string> {
+  const sorted = [...takes].sort(
+    (left, right) =>
+      Date.parse(left.createdAt) - Date.parse(right.createdAt) ||
+      left.takeId.localeCompare(right.takeId)
+  );
+  return new Map(
+    sorted.map((take, index) => [take.takeId, `Take ${index + 1}`])
+  );
+}
+
+function formatTimestamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Generated';
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}

@@ -10,7 +10,7 @@ export function draftMediaGenerationSpecRecord(
   const now = new Date(0).toISOString();
   const prompt = 'prompt' in spec ? spec.prompt : '';
   return {
-    id: `draft:${spec.purpose}:${spec.target.kind}:${spec.target.id}`,
+    id: `draft:${spec.purpose}:${spec.target.kind}:${targetId(spec.target)}`,
     purpose: spec.purpose,
     target: spec.target,
     modelChoice: spec.modelChoice,
@@ -19,6 +19,13 @@ export function draftMediaGenerationSpecRecord(
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function targetId(target: MediaGenerationSpec['target']): string {
+  if (target.kind === 'sceneDialogue') {
+    return `${target.sceneId}:${target.dialogueId}`;
+  }
+  return target.id;
 }
 
 export async function estimatePreparedGeneration(

@@ -31,6 +31,9 @@ import type {
   SceneStoryboardSheetGenerationSpec,
   SceneStoryboardImagesImportReport,
   SceneStoryboardSheetModelListReport,
+  SceneDialogueAudioContext,
+  SceneDialogueAudioGenerationSpec,
+  SceneDialogueAudioModelListReport,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationSpec,
   ShotVideoTakeInputGenerationSpec,
@@ -47,6 +50,7 @@ import {
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -92,6 +96,7 @@ import type {
   ValidateLocationEnvironmentSheetGenerationSpecInput,
   ValidateLookbookSheetGenerationSpecInput,
   ValidateSceneStoryboardSheetGenerationSpecInput,
+  ValidateSceneDialogueAudioGenerationSpecInput,
   ValidateShotVideoTakeGenerationSpecInput,
   ValidateShotVideoTakeInputGenerationSpecInput,
 } from '../project-data-service-contracts.js';
@@ -102,6 +107,7 @@ import * as locationSheet from './location-environment-sheet.js';
 import * as lookbookImage from './lookbook-image.js';
 import * as lookbookSheet from './lookbook-sheet.js';
 import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
+import * as sceneDialogueAudio from './scene-dialogue-audio.js';
 import * as shotVideoTake from './shot-video-take.js';
 
 export type MediaGenerationContextReport =
@@ -110,6 +116,7 @@ export type MediaGenerationContextReport =
   | CastCharacterSheetGenerationContext
   | CastProfileGenerationContext
   | CastVoiceSampleGenerationContext
+  | SceneDialogueAudioContext
   | LocationEnvironmentSheetGenerationContext
   | SceneStoryboardSheetGenerationContext
   | ShotVideoTakeGenerationContext;
@@ -120,6 +127,7 @@ export type MediaGenerationModelListReport =
   | CastCharacterSheetModelListReport
   | CastProfileModelListReport
   | CastVoiceSampleModelListReport
+  | SceneDialogueAudioModelListReport
   | LocationEnvironmentSheetModelListReport
   | SceneStoryboardSheetModelListReport
   | ShotVideoTakeInputModelListReport
@@ -371,6 +379,60 @@ const DEFINITIONS = [
         spec: input.spec as CastVoiceSampleGenerationSpec,
       }),
     runSpec: castVoiceSample.runCastVoiceSampleSpec,
+  },
+  {
+    purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
+    mediaKind: 'audio',
+    targetKind: 'sceneDialogue',
+    buildContext: (input) =>
+      sceneDialogueAudio.readSceneDialogueAudioContext({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        sceneId: requireTargetKind(input, 'sceneDialogue').sceneId,
+        dialogueId: requireTargetKind(input, 'sceneDialogue').dialogueId,
+      }),
+    listModels: (input) =>
+      sceneDialogueAudio.listSceneDialogueAudioModels({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        sceneId: requireTargetKind(input, 'sceneDialogue').sceneId,
+        dialogueId: requireTargetKind(input, 'sceneDialogue').dialogueId,
+      }),
+    validateSpec: (input) =>
+      sceneDialogueAudio.validateSceneDialogueAudioSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as SceneDialogueAudioGenerationSpec,
+      } satisfies ValidateSceneDialogueAudioGenerationSpecInput),
+    createSpec: (input) =>
+      sceneDialogueAudio.createSceneDialogueAudioSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as SceneDialogueAudioGenerationSpec,
+        idGenerator: input.idGenerator,
+      }),
+    updateSpec: (input) =>
+      sceneDialogueAudio.updateSceneDialogueAudioSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as SceneDialogueAudioGenerationSpec,
+      }),
+    listSpecs: (input) =>
+      sceneDialogueAudio.listSceneDialogueAudioSpecs({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        sceneId: requireTargetKind(input, 'sceneDialogue').sceneId,
+        dialogueId: requireTargetKind(input, 'sceneDialogue').dialogueId,
+      }),
+    prepareSpec: sceneDialogueAudio.prepareSceneDialogueAudioSpec,
+    prepareDraftSpec: (input) =>
+      sceneDialogueAudio.prepareSceneDialogueAudioDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as SceneDialogueAudioGenerationSpec,
+      }),
+    runSpec: sceneDialogueAudio.runSceneDialogueAudioSpec,
   },
   {
     purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,

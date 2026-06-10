@@ -120,6 +120,32 @@ describe('useDebouncedAutosave', () => {
       message: 'Shot settings could not be saved.',
     });
   });
+
+  it('flushes a pending debounced value on unmount when requested', async () => {
+    vi.useFakeTimers();
+    const save = vi.fn(async (value: string) => `Saved ${value}`);
+
+    const { rerender, unmount } = renderHook(
+      ({ value }) =>
+        useDebouncedAutosave({
+          value,
+          delayMs: 700,
+          flushOnUnmount: true,
+          save,
+        }),
+      { initialProps: { value: 'Initial' } }
+    );
+
+    rerender({ value: 'Changed' });
+    unmount();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(save).toHaveBeenCalledWith('Changed');
+    expect(save).toHaveBeenCalledTimes(1);
+  });
 });
 
 function StrictModeWrapper({ children }: { children: ReactNode }) {

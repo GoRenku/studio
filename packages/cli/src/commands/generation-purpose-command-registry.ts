@@ -7,6 +7,7 @@ import {
   parseCastTarget,
   parseLocationTarget,
   parseLookbookTarget,
+  parseSceneDialogueTarget,
   parseSceneTarget,
   parseShots,
 } from './studio-target-parsing.js';
@@ -20,6 +21,7 @@ export const SUPPORTED_GENERATION_PURPOSES = [
   'cast.voice-sample',
   'location.environment-sheet',
   'scene.storyboard-sheet',
+  'scene.dialogue-audio',
   'shot.first-frame',
   'shot.last-frame',
   'shot.reference-image',
@@ -72,6 +74,15 @@ export function parseGenerationTarget(input: {
       id: parseSceneTarget(input.target, 'Scene storyboard sheet generation'),
     };
   }
+  if (purpose === 'scene.dialogue-audio') {
+    return {
+      kind: 'sceneDialogue',
+      ...parseSceneDialogueTarget(
+        input.target,
+        'Scene dialogue audio generation'
+      ),
+    };
+  }
   return parseSceneShotGroupTarget(input);
 }
 
@@ -86,7 +97,7 @@ export function unsupportedGenerationPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose scene.dialogue-audio, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
   });
 }
 

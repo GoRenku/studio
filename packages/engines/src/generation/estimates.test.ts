@@ -317,6 +317,45 @@ describe('generation estimates', () => {
     });
   });
 
+  it('estimates bundled ElevenLabs text-to-speech pricing by character for every TTS model', async () => {
+    const catalog = await loadBundledGenerationCatalog();
+    const text = 'A thousand years of stone remembered the sound.';
+
+    for (const model of [
+      'eleven_v3',
+      'eleven_multilingual_v2',
+      'eleven_turbo_v2_5',
+    ]) {
+      await expect(
+        estimateGeneration({
+          catalog,
+          policy: {
+            provider: 'elevenlabs',
+            model,
+            mediaKind: 'audio',
+            mode: 'text-to-speech',
+          },
+          request: {
+            parameters: {
+              text,
+              voice: 'voice_urban',
+            },
+          },
+        })
+      ).resolves.toMatchObject({
+        estimatedCostUsd: text.length * 0.0001,
+        pricing: {
+          function: 'costByCharacters',
+          pricePerCharacter: 0.0001,
+        },
+        warnings: [],
+        billableUnits: {
+          text,
+        },
+      });
+    }
+  });
+
   it('keeps unknown image size pricing unknown', async () => {
     const catalog = createCatalog();
 

@@ -10,6 +10,7 @@ import type {
   SequenceResource,
   StoryArcResource,
 } from '../../client/index.js';
+import { readSceneDialogueAudioContext } from '../media-generation/scene-dialogue-audio.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   listActNavigationPage,
@@ -280,6 +281,18 @@ export async function readSceneNarrativeResource(
       castMemberLabels: Object.fromEntries(
         document.cast.map((castMember) => [castMember.id, castMember.name])
       ),
+      castMemberImages: Object.fromEntries(
+        document.cast.flatMap((castMember) => {
+          if (!castMember.id) {
+            return [];
+          }
+          const image = firstImageForTarget(session, {
+            kind: 'castMember',
+            castMemberId: castMember.id,
+          });
+          return image ? [[castMember.id, image]] : [];
+        })
+      ),
       locationLabels: Object.fromEntries(
         document.locations.map((location) => [location.id, location.name])
       ),
@@ -293,6 +306,7 @@ export async function readSceneNarrativeResource(
           .filter((location) => location.handle && location.id)
           .map((location) => [location.handle.toLowerCase(), location.id as string])
       ),
+      dialogueAudio: await readSceneDialogueAudioContext(input),
     };
   } finally {
     session.close();

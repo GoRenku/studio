@@ -74,6 +74,10 @@ export function MovieStudioScreen({
     sceneId: string;
     action: ReactNode | null;
   } | null>(null);
+  const [sceneHeaderTitle, setSceneHeaderTitle] = useState<{
+    sceneId: string;
+    title: string | null;
+  } | null>(null);
   const [sceneSaveNotification, setSceneSaveNotification] = useState<{
     sceneId: string;
     status: SaveNotificationStatus;
@@ -176,6 +180,12 @@ export function MovieStudioScreen({
     selection.type === 'scene' && sceneHeaderAction?.sceneId === selection.id
       ? sceneHeaderAction.action
       : null;
+  const activeHeaderTitle =
+    selection.type === 'scene' &&
+    sceneHeaderTitle?.sceneId === selection.id &&
+    sceneHeaderTitle.title
+      ? sceneHeaderTitle.title
+      : resolvedSelection.kicker;
   const activeSceneId = selection.type === 'scene' ? selection.id : null;
   const handleSceneHeaderActionChange = useCallback(
     (sceneId: string, action: ReactNode | null) => {
@@ -207,6 +217,21 @@ export function MovieStudioScreen({
     },
     []
   );
+  const handleSceneHeaderTitleChange = useCallback(
+    (sceneId: string, title: string | null) => {
+      setSceneHeaderTitle((current) => {
+        if (
+          current &&
+          current.sceneId === sceneId &&
+          current.title === title
+        ) {
+          return current;
+        }
+        return { sceneId, title };
+      });
+    },
+    []
+  );
   const handleActiveSceneHeaderActionChange = useCallback(
     (action: ReactNode | null) => {
       if (!activeSceneId) {
@@ -224,6 +249,15 @@ export function MovieStudioScreen({
       handleSceneSaveNotificationChange(activeSceneId, status);
     },
     [activeSceneId, handleSceneSaveNotificationChange]
+  );
+  const handleActiveSceneHeaderTitleChange = useCallback(
+    (title: string | null) => {
+      if (!activeSceneId) {
+        return;
+      }
+      handleSceneHeaderTitleChange(activeSceneId, title);
+    },
+    [activeSceneId, handleSceneHeaderTitleChange]
   );
 
   const handleProductionExport = useCallback(async () => {
@@ -296,7 +330,7 @@ export function MovieStudioScreen({
             className='min-w-0 pl-3'
           >
             <PanelShell
-              title={resolvedSelection.kicker}
+              title={activeHeaderTitle}
               contentClassName={
                 usesFlushPanelContent(selection.type) ? 'p-0' : undefined
               }
@@ -377,6 +411,7 @@ export function MovieStudioScreen({
                   shotTab={selection.shotTab}
                   onSelect={selectMovieStudioSurface}
                   onHeaderActionChange={handleActiveSceneHeaderActionChange}
+                  onHeaderTitleChange={handleActiveSceneHeaderTitleChange}
                   onSaveNotificationChange={handleActiveSceneSaveNotificationChange}
                   previousScene={sceneNeighbors.previousScene}
                   nextScene={sceneNeighbors.nextScene}

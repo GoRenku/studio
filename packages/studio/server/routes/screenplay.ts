@@ -5,7 +5,10 @@ import {
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
-import { readShotVideoTakeInputFileResponse } from '../http/asset-file-response.js';
+import {
+  readAssetFileResponse,
+  readShotVideoTakeInputFileResponse,
+} from '../http/asset-file-response.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import {
   toActStoryboardResourceResponse,
@@ -13,6 +16,7 @@ import {
   toCastOverviewResourceResponse,
   toLocationOverviewResourceResponse,
   toLocationResourceResponse,
+  toSceneNarrativeResourceResponse,
   toSceneShotListResourceResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
@@ -31,6 +35,11 @@ import {
   readShotVideoTakeInputDeleteRequest,
   readShotVideoTakeInputSelectRequest,
 } from '../http/scene-shot-video-take-input-request.js';
+import {
+  readSceneDialogueAudioEstimateRequest,
+  readSceneDialogueAudioGenerateRequest,
+  readSceneDialogueAudioSetupRequest,
+} from '../http/scene-dialogue-audio-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
 export interface CreateScreenplayRouteOptions {
@@ -196,6 +205,153 @@ export function createScreenplayRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .get('/screenplay/scenes/:sceneId/dialogue-audio', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sceneId = c.req.param('sceneId') as string;
+        const context = await projectData.readSceneDialogueAudioContext({
+          projectName,
+          sceneId,
+        });
+        return c.json({ context });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .patch(
+      '/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/setup',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const dialogueId = c.req.param('dialogueId') as string;
+          const setup = readSceneDialogueAudioSetupRequest(await c.req.json());
+          const report = await projectData.updateSceneDialogueAudioSetup({
+            projectName,
+            sceneId,
+            dialogueId,
+            setup,
+          });
+          return c.json(report);
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .post('/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/estimate', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const spec = readSceneDialogueAudioEstimateRequest(await c.req.json());
+        const estimate = await projectData.estimateSceneDialogueAudioDraft({
+          projectName,
+          spec,
+        });
+        return c.json({ estimate });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .post(
+      '/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/generate',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const dialogueId = c.req.param('dialogueId') as string;
+          const request = readSceneDialogueAudioGenerateRequest(await c.req.json());
+          const report = await projectData.generateSceneDialogueAudioTake({
+            projectName,
+            sceneId,
+            dialogueId,
+            ...request,
+          });
+          return c.json(report);
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .post(
+      '/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/takes/:takeId/pick',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const dialogueId = c.req.param('dialogueId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const report = await projectData.pickSceneDialogueAudioTake({
+            projectName,
+            sceneId,
+            dialogueId,
+            takeId,
+          });
+          return c.json(report);
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .delete(
+      '/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/takes/:takeId',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const dialogueId = c.req.param('dialogueId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const report = await projectData.deleteSceneDialogueAudioTake({
+            projectName,
+            sceneId,
+            dialogueId,
+            takeId,
+          });
+          return c.json(report);
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .get(
+      '/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/takes/:takeId/files/:assetFileId',
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const dialogueId = c.req.param('dialogueId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const assetFileId = c.req.param('assetFileId') as string;
+          const context = await projectData.readSceneDialogueAudioContext({
+            projectName,
+            sceneId,
+            dialogueId,
+          });
+          const take = context.audioByDialogueId[dialogueId]?.takes.find(
+            (candidate) =>
+              candidate.takeId === takeId && candidate.assetFileId === assetFileId
+          );
+          if (!take) {
+            throw createStructuredError({
+              code: 'STUDIO_SERVER121',
+              message: 'Scene Dialogue Audio take file was not found.',
+              issues: [],
+              suggestion: 'Request a file that belongs to the dialogue audio take.',
+            });
+          }
+          return readAssetFileResponse(projectData, {
+            projectName,
+            target: { kind: 'scene', sceneId },
+            assetId: take.assetId,
+            assetFileId,
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .get('/screenplay/scenes/:sceneId/video-take-production', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
@@ -630,7 +786,9 @@ export function createScreenplayRoute({
           projectName,
           sceneId,
         });
-        return c.json({ resource });
+        return c.json({
+          resource: toSceneNarrativeResourceResponse(projectName, resource),
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

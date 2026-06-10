@@ -106,6 +106,7 @@ export interface ActionBlock {
 }
 
 export interface DialogueBlock {
+  dialogueId: string;
   type: 'dialogue';
   castMemberReference?: Reference;
   castMemberId?: string;

@@ -17,7 +17,7 @@ interface SqliteDatabaseSession extends DatabaseSession {
 
 type DatabaseSessionLifetime = 'operation' | 'project';
 
-const PROJECT_STORE_SCHEMA_GENERATION = 16;
+const PROJECT_STORE_SCHEMA_GENERATION = 17;
 const DRIZZLE_MIGRATIONS_TABLE = '__drizzle_migrations';
 
 const projectSessions = new Map<string, SqliteDatabaseSession>();
@@ -39,7 +39,13 @@ export function openProjectStore(input: {
   if (input.lifetime === 'project') {
     const existing = projectSessions.get(databasePath);
     if (existing) {
-      return existing;
+      try {
+        assertProjectStoreSchema(existing.sqlite, databasePath);
+        return existing;
+      } catch {
+        projectSessions.delete(databasePath);
+        existing.sqlite.close();
+      }
     }
   }
 

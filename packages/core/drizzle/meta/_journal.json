@@ -176,6 +176,13 @@
       "when": 1781022198309,
       "tag": "0024_elevenlabs_voice_sample_source",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1781102378245,
+      "tag": "0025_hesitant_talon",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,7 @@ import type {
   ProjectInfo,
 } from './project.js';
 import type { ProjectLanguage } from './project-languages.js';
+import type { SceneDialogueAudioContext } from './media-generation.js';
 import type {
   InspirationAnalysis,
   InspirationFolder,
@@ -215,9 +216,11 @@ export interface SceneNarrativeResource {
   scene: Scene;
   blocks: Block[];
   castMemberLabels: Record<string, string>;
+  castMemberImages: Record<string, ScreenplayImageReference>;
   locationLabels: Record<string, string>;
   castMemberHandles: Record<string, string>;
   locationHandles: Record<string, string>;
+  dialogueAudio: SceneDialogueAudioContext;
 }
 
 export interface CastDesignResource {

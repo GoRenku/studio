@@ -20,6 +20,28 @@ export function parseSceneTarget(value: string, context: string): string {
   return id;
 }
 
+export function parseSceneDialogueTarget(
+  value: string,
+  context: string
+): { sceneId: string; dialogueId: string } {
+  const [sceneKind, sceneId, dialogueKind, dialogueId, extra] = value.split(':');
+  if (
+    sceneKind !== 'scene' ||
+    !sceneId ||
+    dialogueKind !== 'dialogue' ||
+    !dialogueId ||
+    extra !== undefined
+  ) {
+    throw new StructuredError({
+      code: 'CLI032',
+      message: `${context} target must use scene:<scene-id>:dialogue:<dialogue-id>. Received: ${value}.`,
+      suggestion:
+        'Use --target scene:<scene-id>:dialogue:<dialogue-id>.',
+    });
+  }
+  return { sceneId, dialogueId };
+}
+
 export function parseShots(value: string): string[] {
   const shots = value
     .split(',')

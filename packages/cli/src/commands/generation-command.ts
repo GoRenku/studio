@@ -55,7 +55,9 @@ function shouldAppendGenerationResourceChangedEvent(
   if (
     mutationPath !== 'production update' &&
     mutationPath !== 'input select' &&
-    mutationPath !== 'input clear'
+    mutationPath !== 'input clear' &&
+    mutationPath !== 'dialogue-audio generate' &&
+    mutationPath !== 'dialogue-audio pick'
   ) {
     return false;
   }

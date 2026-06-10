@@ -5,14 +5,9 @@ models:
     mime:
       - audio/mp3
     price:
-      function: costByCharactersAndPlan
+      function: costByCharacters
       inputs: [text]
-      pricePerCharByPlan:
-        Creator: 0.0003
-        Pro: 0.00024
-        Scale: 0.00018
-        Business: 0.00012
-      defaultPlan: Scale
+      pricePerCharacter: 0.0001
 
   - name: eleven_multilingual_v2
     schema: tts_schema
@@ -20,14 +15,9 @@ models:
     mime:
       - audio/mp3
     price:
-      function: costByCharactersAndPlan
+      function: costByCharacters
       inputs: [text]
-      pricePerCharByPlan:
-        Creator: 0.0003
-        Pro: 0.00024
-        Scale: 0.00018
-        Business: 0.00012
-      defaultPlan: Scale
+      pricePerCharacter: 0.0001
 
   - name: eleven_turbo_v2_5
     schema: tts_schema
@@ -35,15 +25,9 @@ models:
     mime:
       - audio/mp3
     price:
-      function: costByCharactersAndPlan
+      function: costByCharacters
       inputs: [text]
-      # Flash model uses 0.5 credit/char, so half the price
-      pricePerCharByPlan:
-        Creator: 0.00015
-        Pro: 0.00012
-        Scale: 0.00009
-        Business: 0.00006
-      defaultPlan: Scale
+      pricePerCharacter: 0.0001
 
   - name: music_v1
     schema: music_v1

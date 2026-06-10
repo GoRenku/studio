@@ -625,6 +625,7 @@ function minimalScreenplayDocument(): ScreenplayCreateDocument {
                     locationIds: ['location_test0001'],
                   },
                   {
+                    dialogueId: 'dialogue_urban_test',
                     type: 'dialogue',
                     castMemberId: 'cast_test0001',
                     lines: ['No furnace is innocent.'],

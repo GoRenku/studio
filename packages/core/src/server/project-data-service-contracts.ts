@@ -75,6 +75,10 @@ import type {
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
   SceneStoryboardSheetModelListReport,
+  SceneDialogueAudioContext,
+  SceneDialogueAudioGenerationSpec,
+  SceneDialogueAudioModelListReport,
+  SceneDialogueAudioMutationReport,
   ShotVideoTakeAvailableInput,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationPlan,
@@ -407,6 +411,18 @@ export interface ProjectDataService {
   prepareCastVoiceSampleSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   estimateCastVoiceSampleSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   runCastVoiceSampleSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  readSceneDialogueAudioContext(input: ReadSceneDialogueAudioContextInput): Promise<SceneDialogueAudioContext>;
+  listSceneDialogueAudioModels(input: ReadSceneDialogueAudioContextInput): Promise<SceneDialogueAudioModelListReport>;
+  validateSceneDialogueAudioSpec(input: ValidateSceneDialogueAudioGenerationSpecInput): Promise<{ valid: true; spec: SceneDialogueAudioGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createSceneDialogueAudioSpec(input: CreateSceneDialogueAudioGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateSceneDialogueAudioSpec(input: UpdateSceneDialogueAudioGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listSceneDialogueAudioSpecs(input: ReadSceneDialogueAudioContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareSceneDialogueAudioSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateSceneDialogueAudioDraft(input: CreateSceneDialogueAudioGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  updateSceneDialogueAudioSetup(input: UpdateSceneDialogueAudioSetupInput): Promise<SceneDialogueAudioMutationReport>;
+  generateSceneDialogueAudioTake(input: GenerateSceneDialogueAudioTakeInput): Promise<SceneDialogueAudioMutationReport>;
+  pickSceneDialogueAudioTake(input: PickSceneDialogueAudioTakeInput): Promise<SceneDialogueAudioMutationReport>;
+  deleteSceneDialogueAudioTake(input: DeleteSceneDialogueAudioTakeInput): Promise<SceneDialogueAudioMutationReport>;
   buildLocationEnvironmentSheetContext(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetGenerationContext>;
   listLocationEnvironmentSheetModels(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetModelListReport>;
   validateLocationEnvironmentSheetSpec(input: ValidateLocationEnvironmentSheetGenerationSpecInput): Promise<{ valid: true; spec: LocationEnvironmentSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
@@ -1093,6 +1109,58 @@ export interface UpdateCastVoiceSampleGenerationSpecInput
   extends ValidateCastVoiceSampleGenerationSpecInput {
   specId: string;
 }
+
+export interface ReadSceneDialogueAudioContextInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  dialogueId?: string;
+}
+
+export interface ValidateSceneDialogueAudioGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: SceneDialogueAudioGenerationSpec;
+}
+
+export interface CreateSceneDialogueAudioGenerationSpecInput
+  extends ValidateSceneDialogueAudioGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateSceneDialogueAudioGenerationSpecInput
+  extends ValidateSceneDialogueAudioGenerationSpecInput {
+  specId: string;
+}
+
+export interface GenerateSceneDialogueAudioTakeInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  dialogueId: string;
+  setup: Partial<SceneDialogueAudioGenerationSpec>;
+  approvalToken?: string;
+  simulate?: boolean;
+  allowUnpricedCost?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateSceneDialogueAudioSetupInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  dialogueId: string;
+  setup: Partial<SceneDialogueAudioGenerationSpec>;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface PickSceneDialogueAudioTakeInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId: string;
+  dialogueId: string;
+  takeId: string;
+}
+
+export interface DeleteSceneDialogueAudioTakeInput
+  extends PickSceneDialogueAudioTakeInput {}
 
 export interface ReadMediaGenerationSpecInput extends RenkuConfigPathOptions {
   projectName?: string;

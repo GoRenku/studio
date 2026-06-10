@@ -108,6 +108,8 @@ Options
   --analysis           Screenplay Analysis id
   --revision           Screenplay revision id
   --scene              Scene id for scene-owned commands
+  --dialogue           Scene dialogue id
+  --take               Scene Dialogue Audio take id
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for shot video take generation
   --production-group   Shot video take production group id
@@ -127,6 +129,7 @@ Options
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
   --all-locales        Export every locale with production selects
+  --all                Apply command to all eligible items
   --dry-run            Report production export operations without writing
   --simulate           Run generation without calling a paid provider
   --fresh              Rebuild production export manifest
@@ -242,6 +245,12 @@ function createCliFlags() {
     scene: {
       type: 'string',
     },
+    dialogue: {
+      type: 'string',
+    },
+    take: {
+      type: 'string',
+    },
     shotList: {
       type: 'string',
     },
@@ -296,6 +305,10 @@ function createCliFlags() {
       type: 'string',
     },
     allLocales: {
+      type: 'boolean',
+      default: false,
+    },
+    all: {
       type: 'boolean',
       default: false,
     },

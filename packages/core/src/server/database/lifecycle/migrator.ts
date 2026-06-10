@@ -10,6 +10,7 @@ const PROJECT_DATABASE_PATH_ENV = 'RENKU_PROJECT_DATABASE_PATH';
 export function migrateProjectDatabase(databasePath: string): void {
   const packageRoot = findCorePackageRoot(dirname(fileURLToPath(import.meta.url)));
   const configPath = join(packageRoot, 'drizzle.project-migrate.config.ts');
+  const drizzleKitPath = join(packageRoot, 'node_modules', 'drizzle-kit', 'bin.cjs');
 
   if (!existsSync(configPath)) {
     throw new ProjectDataError(
@@ -17,10 +18,16 @@ export function migrateProjectDatabase(databasePath: string): void {
       `Project database migration config was not found at ${configPath}.`
     );
   }
+  if (!existsSync(drizzleKitPath)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA040',
+      `Drizzle Kit executable was not found at ${drizzleKitPath}.`
+    );
+  }
 
   const result = spawnSync(
-    'pnpm',
-    ['exec', 'drizzle-kit', 'migrate', '--config', configPath],
+    process.execPath,
+    [drizzleKitPath, 'migrate', '--config', configPath],
     {
       cwd: packageRoot,
       encoding: 'utf8',

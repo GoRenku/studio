@@ -11,10 +11,13 @@ const commandDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('CLI command architecture', () => {
   it('keeps media import purpose handlers aligned with generation purposes', () => {
-    const attachmentOnlyPurposes = new Set(['cast.voice-sample']);
+    const nonImportPurposes = new Set([
+      'cast.voice-sample',
+      'scene.dialogue-audio',
+    ]);
     expect(listMediaImportPurposeHandlers().map((handler) => handler.purpose)).toEqual([
       ...SUPPORTED_GENERATION_PURPOSES.filter(
-        (purpose) => !attachmentOnlyPurposes.has(purpose)
+        (purpose) => !nonImportPurposes.has(purpose)
       ),
     ]);
   });
@@ -25,6 +28,9 @@ describe('CLI command architecture', () => {
       'model list',
       'production update',
       'preflight',
+      'dialogue-audio plan',
+      'dialogue-audio generate',
+      'dialogue-audio pick',
       'input list',
       'input select',
       'input clear',

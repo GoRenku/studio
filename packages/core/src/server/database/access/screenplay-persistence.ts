@@ -139,6 +139,14 @@ export function resolveScreenplayDocumentIds(input: {
           delete block.castMemberReferences;
           delete block.locationReferences;
           if (block.type === 'dialogue') {
+            assignDialogueId(
+              block,
+              [...blockPath, 'dialogueId'],
+              generatedIds,
+              allocator,
+              issues,
+              mode
+            );
             block.castMemberId = block.castMemberReference
               ? resolveRef(block.castMemberReference, castIds, keys.cast, [...blockPath, 'castMemberReference'], issues)
               : block.castMemberId;
@@ -234,7 +242,49 @@ function collectDuplicateIds(
         ['acts', String(actIndex), 'sequences', String(sequenceIndex), 'scenes'],
         issues
       );
+      sequence.scenes.forEach((scene, sceneIndex) =>
+        collectDuplicateDialogueIdsInScene(
+          scene.blocks,
+          [
+            'acts',
+            String(actIndex),
+            'sequences',
+            String(sequenceIndex),
+            'scenes',
+            String(sceneIndex),
+            'blocks',
+          ],
+          issues
+        )
+      );
     });
+  });
+}
+
+function collectDuplicateDialogueIdsInScene(
+  blocks: Block[],
+  path: string[],
+  issues: DiagnosticIssue[]
+): void {
+  const firstPathById = new Map<string, string[]>();
+  blocks.forEach((block, blockIndex) => {
+    if (block.type !== 'dialogue' || !block.dialogueId) {
+      return;
+    }
+    const idPath = [...path, String(blockIndex), 'dialogueId'];
+    const firstPath = firstPathById.get(block.dialogueId);
+    if (firstPath) {
+      issues.push(
+        createDiagnosticError(
+          'PROJECT_DATA209',
+          `Duplicate dialogue id: ${block.dialogueId}.`,
+          { path: idPath, context: `First seen at ${firstPath.join('.')}` },
+          'Use a unique dialogueId for each dialogue block in the scene.'
+        )
+      );
+      return;
+    }
+    firstPathById.set(block.dialogueId, idPath);
   });
 }
 
@@ -496,6 +546,33 @@ function assignObjectId<T extends { id?: string; key?: string }>(
   generatedIds.push({ kind, path: [...path, 'key'], key: value.key, id: value.id });
   keys.set(value.key, value.id);
   delete value.key;
+}
+
+function assignDialogueId(
+  block: Block,
+  path: string[],
+  generatedIds: GeneratedId[],
+  allocator: (prefix: EntityIdPrefix) => string,
+  issues: DiagnosticIssue[],
+  mode: ScreenplayResolveMode
+): void {
+  if (block.type !== 'dialogue') {
+    return;
+  }
+  if (block.dialogueId) {
+    return;
+  }
+  if (mode === 'canonical') {
+    issues.push(missingDurableIdError(path.slice(0, -1), 'scene dialogue'));
+    return;
+  }
+  block.dialogueId = allocator('scene_dialogue');
+  generatedIds.push({
+    kind: 'scene dialogue',
+    path,
+    key: '',
+    id: block.dialogueId,
+  });
 }
 
 function missingDurableIdError(path: string[], kind: string): DiagnosticIssue {

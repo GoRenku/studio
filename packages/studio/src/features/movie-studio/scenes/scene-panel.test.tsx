@@ -96,9 +96,36 @@ function sceneNarrative(): SceneNarrativeResourceResponse {
       },
     ],
     castMemberLabels: {},
+    castMemberImages: {},
     locationLabels: {},
     castMemberHandles: {},
     locationHandles: {},
+    dialogueAudio: {
+      purpose: 'scene.dialogue-audio',
+      target: { kind: 'scene', sceneId: 'scene_hook' },
+      project: {
+        name: 'constantinople',
+        title: 'Constantinople',
+        baseLanguageCode: null,
+      },
+      scene: {
+        id: 'scene_hook',
+        title: 'The Sound That Opens Stone',
+        settingLabel: 'EXT DAWN',
+      },
+      dialogues: [],
+      castMemberLabels: {},
+      castVoicesByCastMemberId: {},
+      audioByDialogueId: {},
+      models: [],
+      defaults: {
+        modelChoice: 'elevenlabs/eleven_v3',
+        outputFormat: 'mp3_44100_128',
+        languageCode: null,
+        voiceSettings: {},
+      },
+      resourceKeys: [],
+    },
   };
 }
 

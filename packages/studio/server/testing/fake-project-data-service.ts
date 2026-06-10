@@ -4,6 +4,7 @@ import type {
   MediaGenerationSpecRecord,
   ProjectRelativePath,
   ProjectLibrary,
+  SceneDialogueAudioContext,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationPlan,
   ShotVideoTakeProductionPlan,
@@ -304,9 +305,57 @@ export function fakeProjectDataService(): NonNullable<
         },
         blocks: [{ type: 'action', text: 'The siege begins.' }],
         castMemberLabels: {},
+        castMemberImages: {},
         locationLabels: {},
         castMemberHandles: {},
         locationHandles: {},
+        dialogueAudio: makeSceneDialogueAudioContext(project),
+      };
+    },
+    async readSceneDialogueAudioContext() {
+      return makeSceneDialogueAudioContext(project);
+    },
+    async estimateSceneDialogueAudioDraft(input) {
+      return {
+        spec: makeMediaGenerationSpecRecord(
+          'media_generation_spec_dialogue_audio',
+          input.spec
+        ),
+        providerPayload: {},
+        estimate: {
+          provider: 'elevenlabs',
+          model: 'eleven_v3',
+          mediaKind: 'audio',
+          pricing: null,
+          estimatedCostUsd: 0.01,
+          approvalToken: 'dialogue-audio-approval-token',
+          billableUnits: {},
+          warnings: [],
+        },
+      };
+    },
+    async updateSceneDialogueAudioSetup() {
+      return {
+        context: makeSceneDialogueAudioContext(project),
+        resourceKeys: [],
+      };
+    },
+    async generateSceneDialogueAudioTake() {
+      return {
+        context: makeSceneDialogueAudioContext(project),
+        resourceKeys: [],
+      };
+    },
+    async pickSceneDialogueAudioTake() {
+      return {
+        context: makeSceneDialogueAudioContext(project),
+        resourceKeys: [],
+      };
+    },
+    async deleteSceneDialogueAudioTake() {
+      return {
+        context: makeSceneDialogueAudioContext(project),
+        resourceKeys: [],
       };
     },
     async readSceneShotListResource() {
@@ -1283,6 +1332,37 @@ function makeLookbookSheetSpec() {
     sheetFrame: 'project' as const,
     detail: 'standard' as const,
     outputFormat: 'png' as const,
+  };
+}
+
+function makeSceneDialogueAudioContext(
+  project: ReturnType<typeof makeProject>
+): SceneDialogueAudioContext {
+  return {
+    purpose: 'scene.dialogue-audio',
+    target: { kind: 'scene', sceneId: 'scene_opening' },
+    project: {
+      name: project.identity.name,
+      title: project.identity.title,
+      baseLanguageCode: null,
+    },
+    scene: {
+      id: 'scene_opening',
+      title: 'Opening Scene',
+      settingLabel: null,
+    },
+    dialogues: [],
+    castMemberLabels: {},
+    castVoicesByCastMemberId: {},
+    audioByDialogueId: {},
+    models: [],
+    defaults: {
+      modelChoice: 'elevenlabs/eleven_v3',
+      outputFormat: 'mp3_44100_128',
+      languageCode: null,
+      voiceSettings: {},
+    },
+    resourceKeys: [],
   };
 }
 

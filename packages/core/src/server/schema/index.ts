@@ -9,6 +9,7 @@ export * from './project.js';
 export * from './project-locales.js';
 export * from './scene-locations.js';
 export * from './scene-shot-lists.js';
+export * from './scene-dialogue-audio.js';
 export * from './scenes.js';
 export * from './screenplay-analysis.js';
 export * from './screenplay.js';

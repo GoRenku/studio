@@ -15,6 +15,7 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
   value: TValue;
   delayMs?: number;
   savedVisibleMs?: number;
+  flushOnUnmount?: boolean;
   failureMessage?: string;
   save: (value: TValue) => Promise<TResult>;
   onSaved?: (result: TResult, value: TValue) => void;
@@ -29,9 +30,13 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
   });
   const lastQueuedValue = useRef(value);
   const savedVisibleTimeout = useRef<number | null>(null);
+  const pendingDebounceTimeout = useRef<number | null>(null);
+  const pendingDebouncedValue = useRef<TValue | undefined>(undefined);
+  const hasPendingDebouncedValue = useRef(false);
   const inputRef = useRef({
     save,
     onSaved,
+    flushOnUnmount: input.flushOnUnmount ?? false,
     savedVisibleMs,
     failureMessage: input.failureMessage ?? 'Changes could not be saved.',
   });
@@ -41,16 +46,23 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
     inputRef.current = {
       save,
       onSaved,
+      flushOnUnmount: input.flushOnUnmount ?? false,
       savedVisibleMs,
       failureMessage: input.failureMessage ?? 'Changes could not be saved.',
     };
-  }, [input.failureMessage, onSaved, save, savedVisibleMs]);
+  }, [input.failureMessage, input.flushOnUnmount, onSaved, save, savedVisibleMs]);
 
   useEffect(() => {
     const clearSavedVisibleTimeout = () => {
       if (savedVisibleTimeout.current !== null) {
         window.clearTimeout(savedVisibleTimeout.current);
         savedVisibleTimeout.current = null;
+      }
+    };
+    const clearPendingDebounceTimeout = () => {
+      if (pendingDebounceTimeout.current !== null) {
+        window.clearTimeout(pendingDebounceTimeout.current);
+        pendingDebounceTimeout.current = null;
       }
     };
 
@@ -91,14 +103,29 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
 
     const queue = queueRef.current;
     return () => {
+      const shouldFlushPending =
+        inputRef.current.flushOnUnmount && hasPendingDebouncedValue.current;
+      const pendingValue = pendingDebouncedValue.current;
       clearSavedVisibleTimeout();
+      clearPendingDebounceTimeout();
+      hasPendingDebouncedValue.current = false;
+      pendingDebouncedValue.current = undefined;
       queueRef.current = null;
       queue?.dispose();
+      if (shouldFlushPending) {
+        void inputRef.current.save(pendingValue as TValue).catch(() => undefined);
+      }
     };
   }, []);
 
   useEffect(() => {
     if (isReady && !isReady(value)) {
+      if (pendingDebounceTimeout.current !== null) {
+        window.clearTimeout(pendingDebounceTimeout.current);
+        pendingDebounceTimeout.current = null;
+      }
+      hasPendingDebouncedValue.current = false;
+      pendingDebouncedValue.current = undefined;
       return;
     }
 
@@ -107,13 +134,18 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
     }
     lastQueuedValue.current = value;
 
-    const timeout = window.setTimeout(() => {
-      queueRef.current?.requestSave(value);
+    if (pendingDebounceTimeout.current !== null) {
+      window.clearTimeout(pendingDebounceTimeout.current);
+    }
+    hasPendingDebouncedValue.current = true;
+    pendingDebouncedValue.current = value;
+    pendingDebounceTimeout.current = window.setTimeout(() => {
+      const nextValue = pendingDebouncedValue.current as TValue;
+      pendingDebounceTimeout.current = null;
+      hasPendingDebouncedValue.current = false;
+      pendingDebouncedValue.current = undefined;
+      queueRef.current?.requestSave(nextValue);
     }, delayMs);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
   }, [delayMs, isReady, value]);
 
   return status;

@@ -14,6 +14,7 @@ import type {
 } from './studio-project-contracts';
 import type { ShotSpecs } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
+import { decorateSceneDialogueAudioContext } from './studio-scene-dialogue-audio-api';
 
 interface ResourceResponse<T> {
   resource: T | null;
@@ -110,9 +111,17 @@ export async function readSceneNarrativeResource(
   projectName: string,
   sceneId: string
 ): Promise<SceneNarrativeResourceResponse> {
-  return readResource(
+  const resource = await readResource<SceneNarrativeResourceResponse>(
     screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}`)
   );
+  return {
+    ...resource,
+    dialogueAudio: decorateSceneDialogueAudioContext(
+      projectName,
+      sceneId,
+      resource.dialogueAudio
+    ),
+  };
 }
 
 export async function readSceneShotListResource(

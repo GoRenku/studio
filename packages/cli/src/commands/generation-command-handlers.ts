@@ -28,6 +28,9 @@ export interface GenerationCommandFlags {
   spec?: string;
   shotList?: string;
   shots?: string;
+  scene?: string;
+  dialogue?: string;
+  take?: string;
   productionGroup?: string;
   intent?: string;
   input?: string;
@@ -37,6 +40,7 @@ export interface GenerationCommandFlags {
   approvalToken?: string;
   allowUnpricedCost?: boolean;
   simulate?: boolean;
+  all?: boolean;
 }
 
 export const generationCommandHandlers = [
@@ -55,6 +59,18 @@ export const generationCommandHandlers = [
   {
     path: ['preflight'],
     run: runPreflight,
+  },
+  {
+    path: ['dialogue-audio', 'plan'],
+    run: runDialogueAudioPlan,
+  },
+  {
+    path: ['dialogue-audio', 'generate'],
+    run: runDialogueAudioGenerate,
+  },
+  {
+    path: ['dialogue-audio', 'pick'],
+    run: runDialogueAudioPick,
   },
   {
     path: ['input', 'list'],
@@ -207,6 +223,112 @@ async function runGeneration(input: GenerationCommandInput): Promise<unknown> {
     approvalToken: input.flags.approvalToken,
     allowUnpricedCost: input.flags.allowUnpricedCost,
     simulate: input.flags.simulate,
+  });
+}
+
+async function runDialogueAudioPlan(input: GenerationCommandInput): Promise<unknown> {
+  const sceneId = requiredFlag(input.flags.scene, '--scene');
+  const context = await input.runtime.projectDataService.readSceneDialogueAudioContext({
+    ...generationProjectInput(input.runtime),
+    sceneId,
+  });
+  return {
+    scene: context.scene,
+    dialogues: context.dialogues.map((dialogue) => {
+      const audio = context.audioByDialogueId[dialogue.dialogueId];
+      const voices = dialogue.castMemberId
+        ? context.castVoicesByCastMemberId[dialogue.castMemberId] ?? []
+        : [];
+      const selectedVoice =
+        voices.find((voice) => voice.id === audio?.castVoiceId) ??
+        voices.find((voice) => voice.usable) ??
+        null;
+      const modelChoice = audio?.modelChoice ?? context.defaults.modelChoice;
+      return {
+        dialogueId: dialogue.dialogueId,
+        speaker: dialogue.castMemberId
+          ? context.castMemberLabels[dialogue.castMemberId] ?? dialogue.castMemberId
+          : null,
+        selectedCastVoiceId: selectedVoice?.id ?? null,
+        selectedCastVoiceName: selectedVoice?.name ?? null,
+        modelChoice,
+        plainTextLength: (audio?.plainText ?? dialogue.plainText).length,
+        v3TextLength: (audio?.v3Text ?? dialogue.plainText).length,
+        hasV3AudioTags: /\[[^\]]+\]/.test(audio?.v3Text ?? dialogue.plainText),
+        textTreatment:
+          modelChoice === 'elevenlabs/eleven_v3'
+            ? 'elevenlabs-v3-audio-tags'
+            : 'plain-tts',
+        existingTakeCount: audio?.takes.length ?? 0,
+        pickedTakeId: audio?.pickedTakeId ?? null,
+        diagnostics:
+          dialogue.castMemberId && selectedVoice?.usable
+            ? []
+            : [
+                {
+                  code: 'CLI140',
+                  severity: 'error',
+                  message:
+                    'This dialogue is missing a usable ElevenLabs Cast Voice/provider voice id.',
+                  path: ['dialogues', dialogue.dialogueId],
+                  suggestion:
+                    'Ask the agent to assign a voice id before generating dialogue audio.',
+                },
+              ],
+      };
+    }),
+    resourceKeys: context.resourceKeys,
+  };
+}
+
+async function runDialogueAudioGenerate(input: GenerationCommandInput): Promise<unknown> {
+  const sceneId = requiredFlag(input.flags.scene, '--scene');
+  const approvalToken = requiredFlag(input.flags.approvalToken, '--approval-token');
+  if (input.flags.all) {
+    const context = await input.runtime.projectDataService.readSceneDialogueAudioContext({
+      ...generationProjectInput(input.runtime),
+      sceneId,
+    });
+    const generated = [];
+    for (const dialogue of context.dialogues) {
+      if (!dialogue.castMemberId) {
+        continue;
+      }
+      const voices = context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [];
+      if (!voices.some((voice) => voice.usable)) {
+        continue;
+      }
+      generated.push(
+        await input.runtime.projectDataService.generateSceneDialogueAudioTake({
+          ...generationProjectInput(input.runtime),
+          sceneId,
+          dialogueId: dialogue.dialogueId,
+          setup: {},
+          approvalToken,
+          allowUnpricedCost: input.flags.allowUnpricedCost,
+          simulate: input.flags.simulate,
+        })
+      );
+    }
+    return { generatedCount: generated.length, generated };
+  }
+  return input.runtime.projectDataService.generateSceneDialogueAudioTake({
+    ...generationProjectInput(input.runtime),
+    sceneId,
+    dialogueId: requiredFlag(input.flags.dialogue, '--dialogue'),
+    setup: {},
+    approvalToken,
+    allowUnpricedCost: input.flags.allowUnpricedCost,
+    simulate: input.flags.simulate,
+  });
+}
+
+async function runDialogueAudioPick(input: GenerationCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.pickSceneDialogueAudioTake({
+    ...generationProjectInput(input.runtime),
+    sceneId: requiredFlag(input.flags.scene, '--scene'),
+    dialogueId: requiredFlag(input.flags.dialogue, '--dialogue'),
+    takeId: requiredFlag(input.flags.take, '--take'),
   });
 }
 
