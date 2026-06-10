@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { castVoiceCommandHandlers } from './cast-voice-command-handlers.js';
 import { generationCommandHandlers } from './generation-command-handlers.js';
 import { SUPPORTED_GENERATION_PURPOSES } from './generation-purpose-command-registry.js';
 import { listMediaImportPurposeHandlers } from './media-import-command-handlers.js';
@@ -34,6 +35,16 @@ describe('CLI command architecture', () => {
       'spec list',
       'estimate',
       'run',
+    ]);
+  });
+
+  it('keeps Cast Voice command paths in one handler registry', () => {
+    expect(castVoiceCommandHandlers.map((handler) => handler.path.join(' '))).toEqual([
+      'list',
+      'show',
+      'validate',
+      'attach',
+      'remove',
     ]);
   });
 

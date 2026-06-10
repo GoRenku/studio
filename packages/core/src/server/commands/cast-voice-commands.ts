@@ -1,16 +1,19 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fetchElevenLabsVoiceSampleAudio } from '@gorenku/studio-engines';
 import type {
   Asset,
   CastVoice,
-  CastVoiceAttachmentDocument,
+  CastVoiceAttachmentCommandDocument,
   CastVoiceAttachmentReport,
   CastVoiceListReport,
   CastVoiceReadReport,
   CastVoiceRemoveReport,
+  CastVoiceSampleSource,
   CastVoiceValidationReport,
 } from '../../client/index.js';
+import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
@@ -76,8 +79,9 @@ export interface CastVoiceLookupInput extends CastVoiceTargetInput {
 }
 
 export interface CastVoiceAttachmentInput extends CastVoiceProjectInput {
-  document: CastVoiceAttachmentDocument;
+  document: CastVoiceAttachmentCommandDocument;
   idGenerator?: ProjectIdGenerator;
+  elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
 }
 
 export async function listCastVoices(
@@ -127,94 +131,26 @@ export async function attachCastVoice(
       session,
       document: input.document,
     });
-    const now = new Date().toISOString();
-    const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-    const target = {
-      kind: 'castMember' as const,
-      castMemberId: validated.castMember.id,
-    };
-    const destinationProjectRelativePath = await allocateCastVoiceSamplePath({
+    const prepared = await prepareCastVoiceSampleAttachment({
       projectFolder,
-      castMemberHandle: validated.castMember.handle,
-      sourceProjectRelativePath: validated.sample.sourceProjectRelativePath,
+      validated,
+      document: input.document,
+      elevenLabsVoiceSampleFetcher: input.elevenLabsVoiceSampleFetcher,
     });
-    const sourcePath = resolveProjectRelativePath(
+    const inserted = await insertCastVoiceWithSampleAsset({
       projectFolder,
-      validated.sample.sourceProjectRelativePath
-    );
-    const destinationPath = resolveProjectRelativePath(
-      projectFolder,
-      destinationProjectRelativePath
-    );
-    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-    if (sourcePath !== destinationPath) {
-      await fs.copyFile(sourcePath, destinationPath);
-    }
-    const contentHash = await hashFile(destinationPath);
-    const assetId = ids('asset');
-    const assetFileId = ids('asset_file');
-    const relationshipId = ids('cast_asset');
-    const voiceId = ids('cast_voice');
-
-    session.db.transaction((tx) => {
-      const txSession = { ...session, db: tx };
-      insertAssetRecord(txSession, {
-        id: assetId,
-        type: 'cast_voice_sample',
-        mediaKind: 'audio',
-        title: validated.sample.title,
-        origin: validated.sample.receipt ? 'generated' : 'imported',
-        availability: 'ready',
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertAssetFileRecord(txSession, {
-        id: assetFileId,
-        assetId,
-        role: 'primary',
-        projectRelativePath: destinationProjectRelativePath,
-        mimeType: validated.mimeType,
-        mediaKind: 'audio',
-        sizeBytes: validated.sizeBytes,
-        contentHash,
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertAssetRelationshipRecord(txSession, target, {
-        relationshipId,
-        assetId,
-        localeId: null,
-        role: 'voice_sample',
-        referenceName: validated.name,
-        purpose: validated.purpose,
-        sortOrder: nextAssetRelationshipSortOrder(txSession, {
-          target,
-          role: 'voice_sample',
-          localeId: null,
-        }),
-        now,
-      });
-      insertCastVoiceRecord(txSession, {
-        id: voiceId,
-        castMemberId: validated.castMember.id,
-        name: validated.name,
-        provider: validated.provider,
-        model: validated.model,
-        voiceId: validated.voiceId,
-        purpose: validated.purpose,
-        sampleAssetId: assetId,
-        sortOrder: nextCastVoiceSortOrder(txSession, validated.castMember.id),
-        createdAt: now,
-        updatedAt: now,
-      });
+      session,
+      validated,
+      prepared,
+      idGenerator: input.idGenerator,
     });
 
     const record = requireCastVoiceRecord(session, {
       castMemberId: validated.castMember.id,
-      voiceIdOrName: voiceId,
+      voiceIdOrName: inserted.voiceId,
     });
     const voice = toCastVoice(session, record);
-    const resourceKeys = studioResourceKeysForAssetTarget(target);
+    const resourceKeys = studioResourceKeysForAssetTarget(inserted.target);
     return {
       valid: true,
       warnings: [],
@@ -228,6 +164,7 @@ export async function attachCastVoice(
         name: validated.castMember.name,
       },
       voice,
+      sampleRetrieval: prepared.sampleRetrieval,
       changes: [
         {
           type: 'castVoice.attached',
@@ -328,6 +265,7 @@ function toCastVoice(session: Parameters<typeof readAssetRelationship>[0], recor
     model: record.model,
     voiceId: record.voiceId,
     purpose: record.purpose,
+    sampleSource: toCastVoiceSampleSource(record),
     sample: {
       ...sample,
       files: sample.files.filter((file) => file.mediaKind === 'audio'),
@@ -337,16 +275,45 @@ function toCastVoice(session: Parameters<typeof readAssetRelationship>[0], recor
   };
 }
 
+interface ValidatedCastVoiceAttachment {
+  castMember: ReturnType<typeof requireCastMember>;
+  name: string;
+  provider: string;
+  model: string;
+  voiceId: string;
+  purpose: string;
+  sampleTitle: string;
+  fileSample?: {
+    sourceProjectRelativePath: string;
+    receipt?: unknown;
+    mimeType: string;
+    sizeBytes: number;
+  };
+}
+
+interface PreparedCastVoiceSample {
+  destinationProjectRelativePath: string;
+  mimeType: string;
+  sizeBytes: number;
+  contentHash: string;
+  origin: 'imported' | 'generated' | 'elevenlabs_sample';
+  sampleSource: CastVoiceSampleSource;
+  sampleRetrieval?: CastVoiceAttachmentReport['sampleRetrieval'];
+}
+
 async function validateAttachmentDocument(input: {
   projectFolder: string;
   session: Parameters<typeof readCastMemberRecord>[0];
-  document: CastVoiceAttachmentDocument;
-}) {
+  document: CastVoiceAttachmentCommandDocument;
+}): Promise<ValidatedCastVoiceAttachment> {
   const document = input.document;
-  if (document.kind !== 'castVoiceAttachment') {
+  if (
+    document.kind !== 'castVoiceAttachment' &&
+    document.kind !== 'castVoiceElevenLabsSampleAttachment'
+  ) {
     throw new ProjectDataError(
       'PROJECT_DATA340',
-      'Cast Voice attachment kind must be castVoiceAttachment.'
+      'Cast Voice attachment kind must be castVoiceAttachment or castVoiceElevenLabsSampleAttachment.'
     );
   }
   const castMember = requireCastMember(input.session, document.castMemberId);
@@ -372,19 +339,32 @@ async function validateAttachmentDocument(input: {
     );
   }
   const voiceId = requiredTrimmed(document.voiceId, 'voiceId');
-  assertReceiptMatchesVoice({
-    receipt: document.sample?.receipt,
-    provider,
-    model,
-    voiceId,
-  });
   const purpose = requiredTrimmed(document.purpose, 'purpose');
   const sample = document.sample;
   if (!sample) {
     throw new ProjectDataError('PROJECT_DATA344', 'Cast Voice sample is required.');
   }
+  const sampleTitle = requiredTrimmed(sample.title, 'sample.title');
+  if (document.kind === 'castVoiceElevenLabsSampleAttachment') {
+    assertProviderSampleDocumentHasNoFileFields(sample);
+    return {
+      castMember,
+      name,
+      provider,
+      model,
+      voiceId,
+      purpose,
+      sampleTitle,
+    };
+  }
+  assertReceiptMatchesVoice({
+    receipt: document.sample.receipt,
+    provider,
+    model,
+    voiceId,
+  });
   const sourceProjectRelativePath = normalizeProjectRelativePath(
-    sample.sourceProjectRelativePath
+    document.sample.sourceProjectRelativePath
   );
   const sourcePath = resolveProjectRelativePath(
     input.projectFolder,
@@ -400,14 +380,202 @@ async function validateAttachmentDocument(input: {
     model,
     voiceId,
     purpose,
-    sample: {
+    sampleTitle,
+    fileSample: {
       sourceProjectRelativePath,
-      title: requiredTrimmed(sample.title, 'sample.title'),
-      receipt: sample.receipt,
+      receipt: document.sample.receipt,
+      mimeType,
+      sizeBytes: stats.size,
     },
-    mimeType,
-    sizeBytes: stats.size,
   };
+}
+
+async function prepareCastVoiceSampleAttachment(input: {
+  projectFolder: string;
+  validated: ValidatedCastVoiceAttachment;
+  document: CastVoiceAttachmentCommandDocument;
+  elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
+}): Promise<PreparedCastVoiceSample> {
+  if (input.document.kind === 'castVoiceElevenLabsSampleAttachment') {
+    return prepareElevenLabsVoiceSampleAttachment(input);
+  }
+  return prepareFileCastVoiceAttachment(input);
+}
+
+async function prepareFileCastVoiceAttachment(input: {
+  projectFolder: string;
+  validated: ValidatedCastVoiceAttachment;
+}): Promise<PreparedCastVoiceSample> {
+  const fileSample = input.validated.fileSample;
+  if (!fileSample) {
+    throw new ProjectDataError('PROJECT_DATA344', 'Cast Voice file sample is required.');
+  }
+  const destinationProjectRelativePath = await allocateCastVoiceSamplePath({
+    projectFolder: input.projectFolder,
+    castMemberHandle: input.validated.castMember.handle,
+    sourceProjectRelativePath: fileSample.sourceProjectRelativePath,
+  });
+  const sourcePath = resolveProjectRelativePath(
+    input.projectFolder,
+    fileSample.sourceProjectRelativePath as never
+  );
+  const destinationPath = resolveProjectRelativePath(
+    input.projectFolder,
+    destinationProjectRelativePath as never
+  );
+  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+  if (sourcePath !== destinationPath) {
+    await fs.copyFile(sourcePath, destinationPath);
+  }
+  return {
+    destinationProjectRelativePath,
+    mimeType: fileSample.mimeType,
+    sizeBytes: fileSample.sizeBytes,
+    contentHash: await hashFile(destinationPath),
+    origin: fileSample.receipt ? 'generated' : 'imported',
+    sampleSource: fileSample.receipt
+      ? { kind: 'generated_sample' }
+      : { kind: 'custom_file' },
+  };
+}
+
+async function prepareElevenLabsVoiceSampleAttachment(input: {
+  projectFolder: string;
+  validated: ValidatedCastVoiceAttachment;
+  elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
+}): Promise<PreparedCastVoiceSample> {
+  const fetcher = input.elevenLabsVoiceSampleFetcher ?? fetchElevenLabsVoiceSampleAudio;
+  const fetched = await fetcher({ voiceId: input.validated.voiceId });
+  const destinationProjectRelativePath = await allocateCastVoiceSamplePath({
+    projectFolder: input.projectFolder,
+    castMemberHandle: input.validated.castMember.handle,
+    sourceProjectRelativePath: `${input.validated.name}.mp3`,
+  });
+  const destinationPath = resolveProjectRelativePath(
+    input.projectFolder,
+    destinationProjectRelativePath
+  );
+  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+  await fs.writeFile(destinationPath, fetched.audioBytes);
+  const sampleRetrieval = {
+    provider: 'elevenlabs' as const,
+    voiceId: fetched.voiceId,
+    sampleId: fetched.sampleId,
+    mimeType: 'audio/mpeg' as const,
+    sizeBytes: fetched.audioBytes.length,
+    fetchedAt: fetched.fetchedAt,
+    apiBaseUrl: fetched.apiBaseUrl,
+  };
+  return {
+    destinationProjectRelativePath,
+    mimeType: 'audio/mpeg',
+    sizeBytes: fetched.audioBytes.length,
+    contentHash: hashBuffer(fetched.audioBytes),
+    origin: 'elevenlabs_sample',
+    sampleSource: {
+      kind: 'elevenlabs_voice_sample',
+      sampleId: fetched.sampleId,
+      fetchedAt: fetched.fetchedAt,
+      apiBaseUrl: fetched.apiBaseUrl,
+    },
+    sampleRetrieval,
+  };
+}
+
+async function insertCastVoiceWithSampleAsset(input: {
+  projectFolder: string;
+  session: DatabaseSession;
+  validated: ValidatedCastVoiceAttachment;
+  prepared: PreparedCastVoiceSample;
+  idGenerator?: ProjectIdGenerator;
+}): Promise<{
+  voiceId: string;
+  target: { kind: 'castMember'; castMemberId: string };
+}> {
+  const now = new Date().toISOString();
+  const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
+  const target = {
+    kind: 'castMember' as const,
+    castMemberId: input.validated.castMember.id,
+  };
+  const assetId = ids('asset');
+  const assetFileId = ids('asset_file');
+  const relationshipId = ids('cast_asset');
+  const voiceId = ids('cast_voice');
+  try {
+    input.session.db.transaction((tx) => {
+      const txSession = { ...input.session, db: tx };
+      insertAssetRecord(txSession, {
+        id: assetId,
+        type: 'cast_voice_sample',
+        mediaKind: 'audio',
+        title: input.validated.sampleTitle,
+        origin: input.prepared.origin,
+        availability: 'ready',
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertAssetFileRecord(txSession, {
+        id: assetFileId,
+        assetId,
+        role: 'primary',
+        projectRelativePath: input.prepared.destinationProjectRelativePath,
+        mimeType: input.prepared.mimeType,
+        mediaKind: 'audio',
+        sizeBytes: input.prepared.sizeBytes,
+        contentHash: input.prepared.contentHash,
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertAssetRelationshipRecord(txSession, target, {
+        relationshipId,
+        assetId,
+        localeId: null,
+        role: 'voice_sample',
+        referenceName: input.validated.name,
+        purpose: input.validated.purpose,
+        sortOrder: nextAssetRelationshipSortOrder(txSession, {
+          target,
+          role: 'voice_sample',
+          localeId: null,
+        }),
+        now,
+      });
+      insertCastVoiceRecord(txSession, {
+        id: voiceId,
+        castMemberId: input.validated.castMember.id,
+        name: input.validated.name,
+        provider: input.validated.provider,
+        model: input.validated.model,
+        voiceId: input.validated.voiceId,
+        purpose: input.validated.purpose,
+        sampleAssetId: assetId,
+        sampleSourceKind: input.prepared.sampleSource.kind,
+        sampleId: input.prepared.sampleSource.kind === 'elevenlabs_voice_sample'
+          ? input.prepared.sampleSource.sampleId
+          : null,
+        sampleFetchedAt: input.prepared.sampleSource.kind === 'elevenlabs_voice_sample'
+          ? input.prepared.sampleSource.fetchedAt
+          : null,
+        sampleApiBaseUrl: input.prepared.sampleSource.kind === 'elevenlabs_voice_sample'
+          ? input.prepared.sampleSource.apiBaseUrl
+          : null,
+        sortOrder: nextCastVoiceSortOrder(txSession, input.validated.castMember.id),
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+  } catch (error) {
+    await fs.rm(
+      resolveProjectRelativePath(
+        input.projectFolder,
+        input.prepared.destinationProjectRelativePath as never
+      ),
+      { force: true }
+    );
+    throw error;
+  }
+  return { voiceId, target };
 }
 
 function requireCastMember(session: Parameters<typeof readCastMemberRecord>[0], castMemberId: string) {
@@ -499,6 +667,48 @@ function unwrapReceiptRun(
   return receipt as { provider?: unknown; model?: unknown; providerPayload?: unknown };
 }
 
+function assertProviderSampleDocumentHasNoFileFields(sample: object): void {
+  if ('sourceProjectRelativePath' in sample) {
+    throw new ProjectDataError(
+      'PROJECT_DATA355',
+      'ElevenLabs provider sample attachments must not include sample.sourceProjectRelativePath.'
+    );
+  }
+  if ('receipt' in sample) {
+    throw new ProjectDataError(
+      'PROJECT_DATA356',
+      'ElevenLabs provider sample attachments must not include sample.receipt.'
+    );
+  }
+}
+
+function toCastVoiceSampleSource(record: CastVoiceRecord): CastVoiceSampleSource {
+  if (record.sampleSourceKind === 'custom_file') {
+    return { kind: 'custom_file' };
+  }
+  if (record.sampleSourceKind === 'generated_sample') {
+    return { kind: 'generated_sample' };
+  }
+  if (record.sampleSourceKind === 'elevenlabs_voice_sample') {
+    if (!record.sampleId || !record.sampleFetchedAt || !record.sampleApiBaseUrl) {
+      throw new ProjectDataError(
+        'PROJECT_DATA357',
+        `Cast Voice ${record.id} is missing ElevenLabs sample provenance.`
+      );
+    }
+    return {
+      kind: 'elevenlabs_voice_sample',
+      sampleId: record.sampleId,
+      fetchedAt: record.sampleFetchedAt,
+      apiBaseUrl: record.sampleApiBaseUrl,
+    };
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA358',
+    `Unsupported Cast Voice sample source kind: ${record.sampleSourceKind}.`
+  );
+}
+
 function requiredTrimmed(input: string, fieldName: string): string {
   const value = input?.trim();
   if (!value) {
@@ -582,6 +792,10 @@ function assertResolvedPathInsideProject(
 
 async function hashFile(absolutePath: string): Promise<string> {
   const buffer = await fs.readFile(absolutePath);
+  return hashBuffer(buffer);
+}
+
+function hashBuffer(buffer: Buffer): string {
   return `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
 }
 

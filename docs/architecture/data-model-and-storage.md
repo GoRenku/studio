@@ -66,9 +66,12 @@ Use the focused documents below for current direction.
   extraction metadata for storyboard slicing.
 - Cast Voices are durable Cast Member-owned records in `cast_voice`. A Cast
   Voice stores the provider, model, provider voice id, Renku reference name, and
-  purpose. Its playable sample is still a normal audio Asset related to the
-  cast member with role `voice_sample`; generic asset deletion must reject that
-  sample while the Cast Voice points at it.
+  purpose. It also stores `sampleSource` provenance so Renku can distinguish a
+  custom file, a generated Cast Voice sample, and an existing ElevenLabs
+  provider sample fetched by `voiceId + sampleId`. Its playable sample is still
+  a normal audio Asset related to the cast member with role `voice_sample`;
+  generic asset deletion must reject that sample while the Cast Voice points at
+  it.
 - Asset relationship tables can store relationship-scoped `reference_name` and
   `purpose`. Use these fields when the same Asset needs different local meaning
   in different relationships, such as named Character Sheets or Voice Samples.

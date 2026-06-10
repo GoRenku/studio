@@ -22,11 +22,14 @@ export type {
 } from './cast-members.js';
 export type {
   CastVoice,
+  CastVoiceAttachmentCommandDocument,
   CastVoiceAttachmentDocument,
   CastVoiceAttachmentReport,
+  CastVoiceElevenLabsSampleAttachmentDocument,
   CastVoiceListReport,
   CastVoiceReadReport,
   CastVoiceRemoveReport,
+  CastVoiceSampleSource,
   CastVoiceValidationReport,
 } from './cast-voices.js';
 export type {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
+  CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
@@ -23,6 +24,7 @@ const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
+  CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
@@ -53,6 +55,7 @@ describe('media generation purpose registry contract', () => {
       { purpose: 'lookbook.sheet', mediaKind: 'image', targetKind: 'lookbook' },
       { purpose: 'cast.character-sheet', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.profile', mediaKind: 'image', targetKind: 'castMember' },
+      { purpose: 'cast.voice-sample', mediaKind: 'audio', targetKind: 'castMember' },
       { purpose: 'location.environment-sheet', mediaKind: 'image', targetKind: 'location' },
       { purpose: 'scene.storyboard-sheet', mediaKind: 'image', targetKind: 'scene' },
       { purpose: 'shot.first-frame', mediaKind: 'image', targetKind: 'sceneShotGroup' },

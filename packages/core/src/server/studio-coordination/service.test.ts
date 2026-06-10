@@ -50,6 +50,56 @@ describe('StudioCoordinationService', () => {
     expect(secondRead.events.map((event) => event.id)).toEqual([second.id]);
   });
 
+  it('creates the Renku config directory before appending events', async () => {
+    const isolatedHomeDir = path.join(homeDir, 'fresh-home');
+    const coordination = createStudioCoordinationService({ homeDir: isolatedHomeDir });
+
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_one',
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+    });
+
+    await expect(
+      fs.stat(resolveStudioEventStorePath({ homeDir: isolatedHomeDir }))
+    ).resolves.toMatchObject({ size: expect.any(Number) });
+  });
+
+  it('reports the filesystem cause when Studio events cannot be appended', async () => {
+    const blockedHomeDir = path.join(homeDir, 'blocked-home');
+    await fs.mkdir(path.join(blockedHomeDir, '.config'), { recursive: true });
+    await fs.writeFile(
+      path.join(blockedHomeDir, '.config', 'renku'),
+      'not a directory',
+      'utf8'
+    );
+    const coordination = createStudioCoordinationService({ homeDir: blockedHomeDir });
+
+    let appendError: unknown;
+    try {
+      await coordination.appendStudioEvent({
+        type: 'studio.browserSessionActive',
+        browserSessionId: 'studio_browser_one',
+        source: {
+          kind: 'studio',
+          browserSessionId: 'studio_browser_one',
+        },
+      });
+    } catch (error) {
+      appendError = error;
+    }
+
+    expect(appendError).toMatchObject({
+      code: 'STUDIO_COORDINATION001',
+      suggestion: expect.stringContaining('writable'),
+    });
+    expect(appendError).toBeInstanceOf(Error);
+    expect((appendError as Error).message).toMatch(/EEXIST|ENOTDIR/);
+  });
+
   it('skips malformed historical lines with structured warnings', async () => {
     const eventStorePath = resolveStudioEventStorePath({ homeDir });
     await fs.mkdir(path.dirname(eventStorePath), { recursive: true });

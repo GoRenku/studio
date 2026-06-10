@@ -31,6 +31,14 @@ Import attaches an existing file to a project domain target. The file may come
 from a Renku generation run, an external tool, a manual upload, or a download.
 The domain target does not care how the file was produced.
 
+Existing ElevenLabs provider voice sample retrieval is not media generation.
+When a user supplies an ElevenLabs `voiceId` for a Cast Voice, `renku cast voice
+attach` can resolve a provider sample id, fetch the MP3 from ElevenLabs, store it
+under `cast/<handle>/voice-samples/`, and attach it as a normal Cast Voice
+Sample. That path does not create a media generation spec, estimate, approval
+token, or media generation run. New spoken samples generated from text still use
+the `cast.voice-sample` media generation purpose.
+
 For all current purposes, the CLI surface is generic:
 
 ```bash

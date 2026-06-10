@@ -1,13 +1,15 @@
-import { loadEnv } from './src/contracts/core.js';
+import { defineConfig } from 'vitest/config';
+import { loadProviderEnvFiles } from './src/provider-env-files.js';
 
-loadEnv(import.meta.url);
+loadProviderEnvFiles();
 
-export default {
+export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     include: ['tests/e2e/**/*.e2e.test.ts'],
     exclude: ['node_modules/**', 'dist/**'],
+    setupFiles: ['./tests/e2e/setup.ts'],
     testTimeout: 180000,
   },
-};
+});

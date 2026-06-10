@@ -60,3 +60,10 @@ export {
   type FalSubscribeResult,
   type FalSubscribeOptions,
 } from './fal/index.js';
+
+// ElevenLabs direct SDK exports
+export {
+  fetchElevenLabsVoiceSampleAudio,
+  type ElevenLabsVoiceSampleAudio,
+  type ElevenLabsVoiceSampleAudioRequest,
+} from './elevenlabs/index.js';

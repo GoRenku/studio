@@ -14,7 +14,7 @@ import type {
   CastDesignListReport,
   CastDesignReadReport,
   CastDesignWriteReport,
-  CastVoiceAttachmentDocument,
+  CastVoiceAttachmentCommandDocument,
   CastVoiceAttachmentReport,
   CastVoiceListReport,
   CastVoiceReadReport,
@@ -549,14 +549,32 @@ export interface ReadCastVoiceInput extends ListCastVoicesInput {
 
 export interface ValidateCastVoiceAttachmentInput extends RenkuConfigPathOptions {
   projectName?: string;
-  document: CastVoiceAttachmentDocument;
+  document: CastVoiceAttachmentCommandDocument;
 }
 
 export interface AttachCastVoiceInput extends ValidateCastVoiceAttachmentInput {
   idGenerator?: ProjectIdGenerator;
+  elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
 }
 
 export interface RemoveCastVoiceInput extends ReadCastVoiceInput {}
+
+export interface ElevenLabsVoiceSampleFetcher {
+  (input: {
+    voiceId: string;
+  }): Promise<{
+    provider: 'elevenlabs';
+    voiceId: string;
+    sampleId: string;
+    voiceName: string | null;
+    sampleFileName: string | null;
+    mimeType: 'audio/mpeg';
+    audioBytes: Buffer;
+    fetchedAt: string;
+    apiBaseUrl: string;
+    contentLength: number;
+  }>;
+}
 
 export interface ReadCastContextInput extends RenkuConfigPathOptions {
   castMemberId: string;

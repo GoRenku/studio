@@ -286,6 +286,7 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
     model: 'eleven_v3',
     voiceId: 'voice_urban_normal',
     purpose: 'calm strategic baseline',
+    sampleSource: { kind: 'generated_sample' },
     sample: {
       assetId: 'asset_voice_sample',
       relationshipId: 'asset_relationship_voice_sample',

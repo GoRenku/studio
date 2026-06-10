@@ -71,13 +71,13 @@ async function appendNow(
     await fs.mkdir(path.dirname(eventStorePath), { recursive: true });
     fileHandle = await fs.open(eventStorePath, 'a');
     await fileHandle.write(`${JSON.stringify(event)}\n`);
-  } catch {
+  } catch (error) {
     throw new StudioCoordinationError(
       'STUDIO_COORDINATION001',
-      `Unable to append Studio coordination event at ${eventStorePath}.`,
+      `Unable to append Studio coordination event at ${eventStorePath}: ${formatFileSystemCause(error)}.`,
       {
         suggestion:
-          'The project data may have been saved, but Studio may not refresh automatically.',
+          'Check that the Renku config directory exists, is a directory, and is writable by this process.',
       }
     );
   } finally {
@@ -127,4 +127,15 @@ interface NodeError extends Error {
 
 function isNodeError(error: unknown): error is NodeError {
   return error instanceof Error && 'code' in error;
+}
+
+function formatFileSystemCause(error: unknown): string {
+  if (isNodeError(error)) {
+    const code = typeof error.code === 'string' ? `${error.code}: ` : '';
+    return `${code}${error.message}`;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }

@@ -17,6 +17,10 @@ export const castVoices = sqliteTable(
     sampleAssetId: text('sample_asset_id')
       .notNull()
       .references(() => assets.id),
+    sampleSourceKind: text('sample_source_kind').notNull().default('custom_file'),
+    sampleId: text('sample_id'),
+    sampleFetchedAt: text('sample_fetched_at'),
+    sampleApiBaseUrl: text('sample_api_base_url'),
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

@@ -67,10 +67,11 @@ A **Cast Profile** is an image asset attached to a cast member with the
 `cast/<handle>/profiles/`.
 
 A **Cast Voice Sample** is an audio asset attached to a cast member with the
-`voice_sample` role and linked from exactly one Cast Voice record. Imported or
-attached voice samples are stored under `cast/<handle>/voice-samples/`. The
-Cast Voice record, not the filename, supplies the provider voice identity,
-reference name, and purpose.
+`voice_sample` role and linked from exactly one Cast Voice record. Custom audio
+files, generated `cast.voice-sample` outputs, and existing ElevenLabs provider
+samples are all stored under `cast/<handle>/voice-samples/` after attachment.
+The Cast Voice record, not the filename, supplies the provider voice identity,
+reference name, purpose, and structured `sampleSource` provenance.
 
 A **Location Environment Sheet** is a grouped image asset attached to a
 location with the `environment_sheet` role. It contains one composite sheet and
@@ -159,6 +160,10 @@ Folder responsibilities:
   character sheet image assets.
 - `cast/<handle>/profiles/` contains imported or generated cast profile image
   assets.
+- `cast/<handle>/voice-samples/` contains Cast Voice sample audio files. These
+  files may have entered the project as custom local files, generated voice
+  sample outputs, or existing ElevenLabs provider samples fetched during
+  `renku cast voice attach`.
 - `locations/<handle>/environment-sheets/<sheet-slug>/` contains imported or
   generated Location Environment Sheets: one composite file and four azimuth
   view files.

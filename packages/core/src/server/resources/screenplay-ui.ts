@@ -97,6 +97,7 @@ export async function readCastMemberResource(
           model: voice.model,
           voiceId: voice.voiceId,
           purpose: voice.purpose,
+          sampleSource: castVoiceSampleSource(voice),
           sample: {
             ...sample,
             files: sample.files.filter((file) => file.mediaKind === 'audio'),
@@ -109,6 +110,26 @@ export async function readCastMemberResource(
   } finally {
     session.close();
   }
+}
+
+function castVoiceSampleSource(voice: ReturnType<typeof listCastVoiceRecords>[number]) {
+  if (voice.sampleSourceKind === 'elevenlabs_voice_sample') {
+    if (!voice.sampleId || !voice.sampleFetchedAt || !voice.sampleApiBaseUrl) {
+      throw new ProjectDataError(
+        'PROJECT_DATA357',
+        `Cast Voice ${voice.id} is missing ElevenLabs sample provenance.`
+      );
+    }
+    return {
+      kind: 'elevenlabs_voice_sample' as const,
+      sampleId: voice.sampleId,
+      fetchedAt: voice.sampleFetchedAt,
+      apiBaseUrl: voice.sampleApiBaseUrl,
+    };
+  }
+  return voice.sampleSourceKind === 'generated_sample'
+    ? { kind: 'generated_sample' as const }
+    : { kind: 'custom_file' as const };
 }
 
 export async function readLocationOverviewResource(

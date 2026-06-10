@@ -169,6 +169,13 @@
       "when": 1780948787423,
       "tag": "0023_cast_voice_references_and_assets",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1781022198309,
+      "tag": "0024_elevenlabs_voice_sample_source",
+      "breakpoints": true
     }
   ]
 }

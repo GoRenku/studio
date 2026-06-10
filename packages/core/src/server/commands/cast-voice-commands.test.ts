@@ -2,7 +2,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { CastVoiceAttachmentDocument, ProjectRelativePath } from '../../client/index.js';
+import type {
+  CastVoiceAttachmentDocument,
+  CastVoiceElevenLabsSampleAttachmentDocument,
+  ProjectRelativePath,
+} from '../../client/index.js';
 import {
   createProjectDataService,
   type ProjectDataService,
@@ -59,6 +63,7 @@ describe('Cast Voice commands', () => {
       model: 'eleven_v3',
       voiceId: 'voice_urban_normal',
       purpose: 'calm strategic baseline',
+      sampleSource: { kind: 'custom_file' },
       sample: {
         role: 'voice_sample',
         referenceName: 'normal-voice',
@@ -208,6 +213,131 @@ describe('Cast Voice commands', () => {
     ).rejects.toMatchObject({ code: 'PROJECT_DATA354' });
   });
 
+  it('attaches an existing ElevenLabs provider voice sample without generation records', async () => {
+    const document = elevenLabsSampleAttachmentDocument();
+    await expect(
+      projectData.validateCastVoiceAttachment({
+        projectName: 'constantinople',
+        homeDir,
+        document,
+      })
+    ).resolves.toEqual({ valid: true, warnings: [] });
+
+    const fetchedAt = '2026-06-09T10:00:00.000Z';
+    const attached = await projectData.attachCastVoice({
+      projectName: 'constantinople',
+      homeDir,
+      document,
+      elevenLabsVoiceSampleFetcher: async ({ voiceId }) => ({
+        provider: 'elevenlabs',
+        voiceId,
+        sampleId: 'sample_01jz9br9f2m36md5s6v3q3r6n4',
+        voiceName: 'Urban',
+        sampleFileName: 'preview.mp3',
+        mimeType: 'audio/mpeg',
+        audioBytes: Buffer.from('mp3 bytes'),
+        fetchedAt,
+        apiBaseUrl: 'https://api.elevenlabs.io',
+        contentLength: 9,
+      }),
+    });
+
+    expect(attached.voice).toMatchObject({
+      name: 'provider-voice',
+      sampleSource: {
+        kind: 'elevenlabs_voice_sample',
+        sampleId: 'sample_01jz9br9f2m36md5s6v3q3r6n4',
+        fetchedAt,
+        apiBaseUrl: 'https://api.elevenlabs.io',
+      },
+      sample: {
+        origin: 'elevenlabs_sample',
+        files: [
+          expect.objectContaining({
+            projectRelativePath: 'cast/mehmed-ii/voice-samples/provider-voice.mp3',
+            mimeType: 'audio/mpeg',
+            sizeBytes: 9,
+          }),
+        ],
+      },
+    });
+    expect(attached.sampleRetrieval).toEqual({
+      provider: 'elevenlabs',
+      voiceId: 'voice_urban_normal',
+      sampleId: 'sample_01jz9br9f2m36md5s6v3q3r6n4',
+      mimeType: 'audio/mpeg',
+      sizeBytes: 9,
+      fetchedAt,
+      apiBaseUrl: 'https://api.elevenlabs.io',
+    });
+    await expect(
+      fs.readFile(
+        path.join(projectPath, 'cast/mehmed-ii/voice-samples/provider-voice.mp3'),
+        'utf8'
+      )
+    ).resolves.toBe('mp3 bytes');
+  });
+
+  it('rejects file fields in ElevenLabs provider sample attachment documents', async () => {
+    await expect(
+      projectData.validateCastVoiceAttachment({
+        projectName: 'constantinople',
+        homeDir,
+        document: {
+          ...elevenLabsSampleAttachmentDocument(),
+          sample: {
+            title: 'Mehmed provider voice sample',
+            sourceProjectRelativePath: 'generated/audio/normal.mp3',
+          },
+        } as never,
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA355' });
+
+    await expect(
+      projectData.validateCastVoiceAttachment({
+        projectName: 'constantinople',
+        homeDir,
+        document: {
+          ...elevenLabsSampleAttachmentDocument(),
+          sample: {
+            title: 'Mehmed provider voice sample',
+            receipt: { run: { provider: 'elevenlabs' } },
+          },
+        } as never,
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA356' });
+  });
+
+  it('persists generated sample source when a matching generation receipt is attached', async () => {
+    await writeSample('generated/audio/receipt.mp3', 'generated voice bytes');
+
+    const attached = await projectData.attachCastVoice({
+      projectName: 'constantinople',
+      homeDir,
+      document: attachmentDocument({
+        name: 'generated-voice',
+        sample: {
+          sourceProjectRelativePath: 'generated/audio/receipt.mp3' as ProjectRelativePath,
+          title: 'Mehmed generated voice sample',
+          receipt: {
+            run: {
+              provider: 'elevenlabs',
+              model: 'eleven_v3',
+              providerPayload: {
+                voice: 'voice_urban_normal',
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    expect(attached.voice).toMatchObject({
+      sampleSource: { kind: 'generated_sample' },
+      sample: { origin: 'generated' },
+    });
+  });
+
   function attachmentDocument(
     overrides: Partial<CastVoiceAttachmentDocument> = {}
   ): CastVoiceAttachmentDocument {
@@ -222,6 +352,24 @@ describe('Cast Voice commands', () => {
       sample: {
         sourceProjectRelativePath: 'generated/audio/normal.mp3' as ProjectRelativePath,
         title: 'Mehmed normal voice sample',
+      },
+      ...overrides,
+    };
+  }
+
+  function elevenLabsSampleAttachmentDocument(
+    overrides: Partial<CastVoiceElevenLabsSampleAttachmentDocument> = {}
+  ): CastVoiceElevenLabsSampleAttachmentDocument {
+    return {
+      kind: 'castVoiceElevenLabsSampleAttachment',
+      castMemberId,
+      name: 'provider-voice',
+      provider: 'elevenlabs',
+      model: 'eleven_v3',
+      voiceId: 'voice_urban_normal',
+      purpose: 'calm strategic baseline',
+      sample: {
+        title: 'Mehmed provider voice sample',
       },
       ...overrides,
     };

@@ -13,6 +13,10 @@ export interface InsertCastVoiceRecord {
   voiceId: string;
   purpose: string;
   sampleAssetId: string;
+  sampleSourceKind: string;
+  sampleId?: string | null;
+  sampleFetchedAt?: string | null;
+  sampleApiBaseUrl?: string | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

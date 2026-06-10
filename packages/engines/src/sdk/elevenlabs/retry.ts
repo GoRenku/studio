@@ -130,6 +130,9 @@ function parseErrorCode(error: unknown): ElevenlabsErrorCode {
   if (status === 403) {
     return 'only_for_creator+';
   }
+  if (status === 404 || status === 422) {
+    return 'voice_not_found';
+  }
   if (status === 400) {
     const message = String((error as any)?.message ?? '');
     if (/character/i.test(message)) {
@@ -304,6 +307,9 @@ export async function runWithRetries<T>(
       return await fn();
     } catch (error: unknown) {
       lastError = error;
+      if (isStructuredProviderError(error) && error.retryable === false) {
+        throw error;
+      }
       const parsed = parseElevenlabsError(error);
 
       // Log the error
@@ -376,6 +382,15 @@ export async function runWithRetries<T>(
   // Should not reach here, but handle gracefully
   const parsed = parseElevenlabsError(lastError);
   throw createElevenlabsProviderError(parsed, lastError);
+}
+
+function isStructuredProviderError(error: unknown): error is ProviderError {
+  return (
+    error instanceof Error &&
+    typeof (error as ProviderError).code === 'string' &&
+    typeof (error as ProviderError).kind === 'string' &&
+    typeof (error as ProviderError).retryable === 'boolean'
+  );
 }
 
 /**

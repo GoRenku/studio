@@ -1582,6 +1582,49 @@ describe('renku CLI', () => {
     expect(validateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toEqual({ valid: true, warnings: [] });
 
+    const providerAttachmentPath = path.join(
+      homeDir,
+      'cast-voice-elevenlabs-sample-attachment.json'
+    );
+    await fs.writeFile(
+      providerAttachmentPath,
+      JSON.stringify(
+        {
+          kind: 'castVoiceElevenLabsSampleAttachment',
+          castMemberId,
+          name: 'provider-voice',
+          provider: 'elevenlabs',
+          model: 'eleven_v3',
+          voiceId: 'voice_urban_provider',
+          purpose: 'calm strategic baseline',
+          sample: {
+            title: 'Urban provider voice sample',
+          },
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const providerValidateExitCode = await runRenkuCli(
+      [
+        'cast',
+        'voice',
+        'validate',
+        '--project',
+        'constantinople',
+        '--file',
+        providerAttachmentPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(providerValidateExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toEqual({ valid: true, warnings: [] });
+
     stdout = [];
     stderr = [];
     const attachExitCode = await runRenkuCli(
@@ -1597,6 +1640,7 @@ describe('renku CLI', () => {
         name: 'normal-voice',
         provider: 'elevenlabs',
         model: 'eleven_v3',
+        sampleSource: { kind: 'generated_sample' },
         sample: {
           role: 'voice_sample',
           files: [
