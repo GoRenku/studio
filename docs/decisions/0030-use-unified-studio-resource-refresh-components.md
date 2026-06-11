@@ -4,6 +4,10 @@ Date: 2026-06-09
 
 Status: accepted
 
+Updated by:
+
+- `0031-use-studio-server-owned-coordination-delivery.md`
+
 ## Context
 
 ADR 0006 established that project SQLite owns durable project data and Studio
@@ -44,7 +48,7 @@ The accepted components are:
   `packages/core/src/server/studio-coordination/resource-keys.ts`;
 - core mutation reports for visible durable mutations, carrying project
   identity and resource keys;
-- CLI resource-change appender:
+- CLI resource-change notifier:
   `packages/cli/src/commands/studio-resource-event-command.ts`;
 - Studio server mutation responses that preserve resource keys returned by
   core;
@@ -69,21 +73,24 @@ directly. Do not keep compatibility aliases.
 
 ### CLI
 
-After a successful durable mutation, CLI commands append
-`studio.projectResourcesChanged` through the single CLI appender.
+After a successful durable mutation, CLI commands notify the running Studio
+server through the single CLI resource-change notifier. The Studio server
+validates the notification and appends `studio.projectResourcesChanged` for
+browser polling.
 
-The CLI appender is the CLI boundary for local Studio refresh coordination. It
+The CLI notifier is the CLI boundary for local Studio refresh coordination. It
 does not own the resource-key vocabulary and does not infer feature-specific
 keys. It receives project identity and resource keys from the mutation result.
 
-The CLI appends resource-change events only after successful durable mutations.
-It does not append for read-only, validation-only, preflight, estimate, list,
-show, or dry-run commands.
+The CLI attempts resource-change notification only after successful durable
+mutations. It does not notify for read-only, validation-only, preflight,
+estimate, list, show, or dry-run commands. If no fresh Studio runtime is
+running, the notification is a quiet no-op.
 
-If appending the coordination event fails after the durable mutation succeeds,
-the command should keep the durable mutation successful and report a structured
-warning. The warning should tell the user that an open Studio browser may need
-manual refresh.
+If Studio appears to be running and notification fails after the durable
+mutation succeeds, the command should keep the durable mutation successful and
+report a structured warning. The warning should tell the user that the running
+Studio app could not be notified.
 
 ### Studio Server
 
@@ -141,7 +148,7 @@ resource change.
 - New visible resources must add their key builders to the core catalog.
 - New durable mutations for visible resources must return resource keys from
   core.
-- New CLI mutation handlers must use the shared CLI resource-change appender
+- New CLI mutation handlers must use the shared CLI resource-change notifier
   when their mutation result includes resource keys.
 - New Studio server mutation routes must preserve returned resource keys.
 - New browser surfaces must subscribe through the shared resource-refresh hook
@@ -167,8 +174,10 @@ decision enforceable:
   `StudioResourceChangedDetail`;
 - resource-key literals outside the accepted core catalog, tests, and focused
   matcher code are rejected or explicitly reviewed;
-- CLI mutations that return non-empty resource keys append exactly one
-  `studio.projectResourcesChanged` event after successful mutation;
+- CLI mutations that return non-empty resource keys notify a fresh running
+  Studio server exactly once after successful mutation;
+- missing or stale Studio runtimes do not create offline resource-refresh event
+  backlogs;
 - CLI dry-run, read-only, validation-only, estimate, preflight, list, and show
   commands do not append resource-change events;
 - Studio server routes that mutate visible resources return resource keys;
@@ -181,3 +190,4 @@ decision enforceable:
 - `0015-use-feature-service-ui-layering-for-the-studio-frontend.md`
 - `0017-use-scalable-studio-resource-loading.md`
 - `0026-use-thin-structured-cli-command-handlers.md`
+- `0031-use-studio-server-owned-coordination-delivery.md`

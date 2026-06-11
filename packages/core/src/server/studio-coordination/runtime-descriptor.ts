@@ -17,17 +17,23 @@ export interface StudioRuntimeDescriptor {
   serverUrl: string;
   startedAt: string;
   heartbeatAt: string;
+  cliNotificationToken?: string;
 }
 
 export interface ClaimStudioRuntimeDescriptorInput extends RenkuConfigPathOptions {
   host: string;
   port: number;
   serverUrl: string;
+  cliNotificationToken?: string;
   now?: Date;
 }
 
 export function createStudioServerInstanceId(): string {
   return `studio_server_${crypto.randomUUID()}`;
+}
+
+export function createStudioCliNotificationToken(): string {
+  return crypto.randomBytes(32).toString('base64url');
 }
 
 export function resolveStudioRuntimeDescriptorPath(
@@ -79,9 +85,11 @@ export async function claimStudioRuntimeDescriptor(
     serverUrl: input.serverUrl,
     startedAt: now.toISOString(),
     heartbeatAt: now.toISOString(),
+    cliNotificationToken:
+      input.cliNotificationToken ?? createStudioCliNotificationToken(),
   };
   await fs.mkdir(path.dirname(descriptorPath), { recursive: true });
-  await fs.writeFile(descriptorPath, JSON.stringify(descriptor, null, 2), 'utf8');
+  await writeStudioRuntimeDescriptor(descriptorPath, descriptor);
   return descriptor;
 }
 
@@ -94,11 +102,7 @@ export async function heartbeatStudioRuntimeDescriptor(
     return descriptor;
   }
   const next = { ...descriptor, heartbeatAt: new Date().toISOString() };
-  await fs.writeFile(
-    resolveStudioRuntimeDescriptorPath(options),
-    JSON.stringify(next, null, 2),
-    'utf8'
-  );
+  await writeStudioRuntimeDescriptor(resolveStudioRuntimeDescriptorPath(options), next);
   return next;
 }
 
@@ -117,6 +121,25 @@ export function isStudioRuntimeDescriptorStale(
   now = new Date()
 ): boolean {
   return now.getTime() - Date.parse(descriptor.heartbeatAt) > STUDIO_RUNTIME_STALE_AFTER_MS;
+}
+
+async function writeStudioRuntimeDescriptor(
+  descriptorPath: string,
+  descriptor: StudioRuntimeDescriptor
+): Promise<void> {
+  const descriptorMode = descriptor.cliNotificationToken ? 0o600 : 0o644;
+  const temporaryDescriptorPath = `${descriptorPath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(temporaryDescriptorPath, JSON.stringify(descriptor, null, 2), {
+      encoding: 'utf8',
+      mode: descriptorMode,
+    });
+    await fs.chmod(temporaryDescriptorPath, descriptorMode);
+    await fs.rename(temporaryDescriptorPath, descriptorPath);
+  } catch (error) {
+    await fs.unlink(temporaryDescriptorPath).catch(() => undefined);
+    throw error;
+  }
 }
 
 interface NodeError extends Error {

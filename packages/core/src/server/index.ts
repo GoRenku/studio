@@ -497,6 +497,7 @@ export {
   STUDIO_RUNTIME_STALE_AFTER_MS,
   StudioCoordinationError,
   claimStudioRuntimeDescriptor,
+  createStudioCliNotificationToken,
   createStudioCoordinationService,
   createStudioOperationId,
   createStudioServerInstanceId,

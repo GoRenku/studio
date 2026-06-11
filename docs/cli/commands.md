@@ -35,6 +35,19 @@ Open an existing project with `renku project open <project-name>`, or create a n
 There is no top-level `renku show` command. The current show commands are
 `renku screenplay show` and `renku info show`.
 
+## Studio Live Refresh Notifications
+
+Commands that mutate durable project data may return `resourceKeys` in their
+JSON output. When Studio is running, the CLI uses the fresh Studio runtime
+descriptor to notify the local Studio server about those changed resources. The
+server validates the notification, appends the local coordination event, and the
+browser polling path refreshes matching visible resources.
+
+If Studio is not running, resource-refresh notification is skipped. The durable
+mutation still succeeds, and the next Studio launch reads the latest project
+state from SQLite and project files. A `CLI026` warning means Studio appeared to
+be running, but the CLI could not deliver the live refresh notification.
+
 ## Global Usage
 
 ```bash

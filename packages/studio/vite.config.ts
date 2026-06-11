@@ -50,11 +50,13 @@ export default defineConfig(({ mode }) => {
           const {
             STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS,
             claimStudioRuntimeDescriptor,
+            createStudioCliNotificationToken,
             heartbeatStudioRuntimeDescriptor,
             releaseStudioRuntimeDescriptor,
           } = await import('@gorenku/studio-core/server');
           let descriptor: StudioRuntimeDescriptor | null = null;
           let heartbeat: ReturnType<typeof setInterval> | null = null;
+          const cliNotificationToken = createStudioCliNotificationToken();
 
           server.httpServer?.once('listening', () => {
             const address = server.httpServer?.address();
@@ -64,7 +66,12 @@ export default defineConfig(({ mode }) => {
             const host = resolveStudioDevHost(server.config.server.host);
             const port = (address as AddressInfo).port;
             const serverUrl = `http://${host}:${port}`;
-            void claimStudioRuntimeDescriptor({ host, port, serverUrl })
+            void claimStudioRuntimeDescriptor({
+              host,
+              port,
+              serverUrl,
+              cliNotificationToken,
+            })
               .then((nextDescriptor) => {
                 descriptor = nextDescriptor;
                 heartbeat = setInterval(() => {
@@ -95,7 +102,12 @@ export default defineConfig(({ mode }) => {
             }
           });
 
-          server.middlewares.use(createStudioApiMiddleware({ token: studioRuntimeToken }));
+          server.middlewares.use(
+            createStudioApiMiddleware({
+              token: studioRuntimeToken,
+              cliNotificationToken,
+            })
+          );
         },
         transformIndexHtml(html) {
           const script = createStudioBootstrapScript(studioRuntimeToken);

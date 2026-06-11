@@ -49,12 +49,14 @@ export {
   STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS,
   STUDIO_RUNTIME_STALE_AFTER_MS,
   claimStudioRuntimeDescriptor,
+  createStudioCliNotificationToken,
   createStudioServerInstanceId,
   heartbeatStudioRuntimeDescriptor,
   isStudioRuntimeDescriptorStale,
   readStudioRuntimeDescriptor,
   releaseStudioRuntimeDescriptor,
   resolveStudioRuntimeDescriptorPath,
+  type ClaimStudioRuntimeDescriptorInput,
   type StudioRuntimeDescriptor,
 } from './runtime-descriptor.js';
 export type {

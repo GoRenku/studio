@@ -11,6 +11,7 @@ import { createStudioServerApp } from './app.js';
 import {
   STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS,
   claimStudioRuntimeDescriptor,
+  createStudioCliNotificationToken,
   heartbeatStudioRuntimeDescriptor,
   releaseStudioRuntimeDescriptor,
   type StudioRuntimeDescriptor,
@@ -42,6 +43,7 @@ export async function startMovieStudioServer(
   const port = options.port ?? 0;
   const log = options.log ?? (() => {});
   const token = createStudioRuntimeToken();
+  const cliNotificationToken = createStudioCliNotificationToken();
 
   if (!existsSync(distDir)) {
     throw new Error(`Renku Studio assets not found at ${distDir}`);
@@ -49,7 +51,9 @@ export async function startMovieStudioServer(
 
   let runtimeDescriptor: StudioRuntimeDescriptor | null = null;
   let heartbeat: NodeJS.Timeout | null = null;
-  const apiHandler = getRequestListener(createStudioServerApp({ token }).fetch);
+  const apiHandler = getRequestListener(
+    createStudioServerApp({ token, cliNotificationToken }).fetch
+  );
 
   const server = createServer(async (req, res) => {
     if (!req.url) {
@@ -76,7 +80,12 @@ export async function startMovieStudioServer(
       }
       const actualPort = address.port;
       const url = `http://${host}:${actualPort}`;
-      void claimStudioRuntimeDescriptor({ host, port: actualPort, serverUrl: url })
+      void claimStudioRuntimeDescriptor({
+        host,
+        port: actualPort,
+        serverUrl: url,
+        cliNotificationToken,
+      })
         .then((descriptor) => {
           runtimeDescriptor = descriptor;
           heartbeat = setInterval(() => {

@@ -8,6 +8,7 @@ import { createStudioRuntimeToken, type StudioRuntimeToken } from './studio-runt
 
 export interface CreateStudioServerAppOptions {
   token?: StudioRuntimeToken;
+  cliNotificationToken?: string;
   serverInstanceId?: string;
 }
 
@@ -18,7 +19,11 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
     .route('/studio-api/projects', createProjectsRoute({ token }))
     .route(
       '/studio-api/studio/events',
-      createStudioEventsRoute({ token, serverInstanceId: options.serverInstanceId })
+      createStudioEventsRoute({
+        token,
+        cliNotificationToken: options.cliNotificationToken,
+        serverInstanceId: options.serverInstanceId,
+      })
     );
 }
 

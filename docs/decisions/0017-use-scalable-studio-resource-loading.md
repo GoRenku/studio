@@ -4,6 +4,10 @@ Date: 2026-05-13
 
 Status: accepted
 
+Updated by:
+
+- `0031-use-studio-server-owned-coordination-delivery.md`
+
 ## Context
 
 ADR 0016 accepted active project SQLite sessions and eager surface data for
@@ -34,10 +38,13 @@ Series and standalone movies stay distinct. Series projects use episode
 navigation and episode-owned sequence pages. Standalone movies use top-level
 sequence navigation and do not get a synthetic episode container.
 
-Studio, CLI, and agent-facing mutations should emit scoped
-`studio.projectResourcesChanged` coordination events after durable SQLite
-mutation succeeds. Resource keys identify the visible UI resources that should
-be invalidated, such as `project-shell`, `navigation:cast`, or
+Studio, CLI, and agent-facing mutations should produce scoped
+`studio.projectResourcesChanged` refresh signals after durable SQLite mutation
+succeeds. For CLI mutations, the CLI notifies the running Studio server and the
+server appends the coordination event for browser polling. If Studio is not
+running, the resource-refresh signal is skipped because the next Studio launch
+hydrates from SQLite. Resource keys identify the visible UI resources that
+should be invalidated, such as `project-shell`, `navigation:cast`, or
 `surface:cast-design:<castMemberId>`.
 
 No separate resource revision table or competing freshness hash model is part of

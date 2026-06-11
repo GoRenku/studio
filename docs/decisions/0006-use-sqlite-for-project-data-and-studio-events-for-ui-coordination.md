@@ -4,6 +4,10 @@ Date: 2026-05-07
 
 Status: accepted
 
+Updated by:
+
+- `0031-use-studio-server-owned-coordination-delivery.md`
+
 ## Context
 
 Renku Studio has two kinds of state that are easy to confuse:
@@ -69,11 +73,13 @@ Studio coordination event store
   bindings, costs, assets, or relationships from the coordination event store.
 - Project data services must not consume the coordination event store as an input
   to domain reads or writes.
-- CLI commands that mutate SQLite may append coordination events after success,
-  but the SQLite mutation remains authoritative.
-- If a SQLite mutation succeeds and the coordination event append fails, report
-  the partial coordination failure clearly; do not imply the durable mutation was
-  rolled back.
+- CLI commands that mutate SQLite may notify the running Studio server after
+  success so the server can append live coordination events. The SQLite mutation
+  remains authoritative.
+- If Studio appears to be running and live notification fails after a SQLite
+  mutation succeeds, report the partial coordination failure clearly; do not
+  imply the durable mutation was rolled back. Missing or stale Studio runtimes
+  are normal no-ops for resource-refresh hints.
 - Adding a new coordination event type must include a short explanation of why it
   is UI coordination state rather than durable project state.
 

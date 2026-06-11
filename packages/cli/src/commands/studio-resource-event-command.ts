@@ -1,9 +1,9 @@
 import {
-  createStudioCoordinationService,
   createStudioOperationId,
   resolveRenkuStorageRoot,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
+import { notifyStudioProjectResourcesChanged } from './studio-notification-client.js';
 import type { CliCommandRuntime } from './structured-command.js';
 
 export interface StudioResourceChangedReport {
@@ -23,19 +23,18 @@ export async function appendStudioResourceChangedEvent(input: {
     return;
   }
 
-  try {
-    const coordination = createStudioCoordinationService({
-      homeDir: input.runtime.homeDir,
-    });
-    await coordination.appendStudioEvent({
-      type: 'studio.projectResourcesChanged',
+  const result = await notifyStudioProjectResourcesChanged({
+    homeDir: input.runtime.homeDir,
+    notification: {
       projectRef: await toProjectRef(input.report.project, input.runtime.homeDir),
       resourceKeys: input.report.resourceKeys,
       source: { kind: 'cli', command: input.command },
       operationId: createStudioOperationId(),
-    });
-  } catch (error) {
-    writeStudioResourceChangedWarning(input.runtime, error);
+    },
+  });
+
+  if (result.status === 'deliveryFailed') {
+    writeStudioResourceChangedWarning(input.runtime, result);
   }
 }
 
@@ -52,12 +51,9 @@ async function toProjectRef(
 
 function writeStudioResourceChangedWarning(
   runtime: CliCommandRuntime,
-  error: unknown
+  failure: { serverUrl: string; detail: string }
 ): void {
-  const detail =
-    error instanceof Error
-      ? error.message
-      : 'Studio coordination event could not be appended.';
+  const detail = `${failure.serverUrl}: ${failure.detail}`;
   if (runtime.json) {
     runtime.io.stderr.error(
       JSON.stringify(
@@ -66,7 +62,7 @@ function writeStudioResourceChangedWarning(
             {
               code: 'CLI026',
               message:
-                'Project mutation succeeded, but Studio refresh coordination failed.',
+                'Project mutation succeeded, but the running Studio app could not be notified.',
               detail,
             },
           ],
@@ -78,6 +74,6 @@ function writeStudioResourceChangedWarning(
     return;
   }
   runtime.io.stderr.error(
-    `[CLI026] WARNING Project mutation succeeded, but Studio refresh coordination failed: ${detail}`
+    `[CLI026] WARNING Project mutation succeeded, but the running Studio app could not be notified: ${detail}`
   );
 }

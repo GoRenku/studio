@@ -24,9 +24,12 @@ application rules are documented in
 Resource-aware project mutations should use scoped
 `studio.projectResourcesChanged` events from ADR 0017 instead of broad project
 refreshes. ADR 0030 defines the uniform implementation shape: core owns the
-resource-key catalog, CLI commands emit through one resource-change appender,
-Studio server mutation routes preserve returned resource keys, and browser
-surfaces subscribe through one shared resource-refresh hook or module.
+resource-key catalog, CLI commands notify the running Studio server through one
+resource-change notifier, Studio server mutation routes preserve returned
+resource keys, and browser surfaces subscribe through one shared
+resource-refresh hook or module. ADR 0031 defines the delivery boundary: the
+Studio server appends live coordination events, and closed Studio sessions do
+not accumulate offline resource-refresh backlogs.
 `studio.projectRefreshRequested` remains available for the narrower project
 information and project library refresh cases.
 
@@ -37,3 +40,4 @@ Decision history:
 - `../decisions/0008-use-url-owned-studio-routes.md`
 - `../decisions/0017-use-scalable-studio-resource-loading.md`
 - `../decisions/0030-use-unified-studio-resource-refresh-components.md`
+- `../decisions/0031-use-studio-server-owned-coordination-delivery.md`

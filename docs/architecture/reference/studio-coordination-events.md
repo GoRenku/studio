@@ -19,6 +19,7 @@ Decision history:
 - `../../decisions/0006-use-sqlite-for-project-data-and-studio-events-for-ui-coordination.md`
 - `../../decisions/0007-use-core-owned-project-reference-validation-for-agent-coordination.md`
 - `../../decisions/0008-use-url-owned-studio-routes.md`
+- `../../decisions/0031-use-studio-server-owned-coordination-delivery.md`
 
 The main v1 workflow is agent-assisted editing. An agent should be able to run
 CLI commands that mutate project data, and a running Studio UI should react by
@@ -184,9 +185,9 @@ Tests should reinforce this boundary:
   as project records;
 - project data reads should still come from project SQLite;
 - malformed coordination events should not corrupt or modify project data;
-- CLI commands that mutate SQLite and append coordination events should have
-  tests for partial event-append failure so the durable mutation and UI refresh
-  request are not confused.
+- CLI commands that mutate SQLite and notify Studio should have tests for live
+  notification failure so the durable mutation and UI refresh request are not
+  confused.
 
 ## Why An Event Store
 
@@ -300,6 +301,7 @@ Allowed operational state:
 - server URL;
 - started timestamp;
 - heartbeat timestamp.
+- limited CLI notification token.
 
 Forbidden semantic state in runtime files:
 
@@ -309,7 +311,9 @@ Forbidden semantic state in runtime files:
 - pending focus request;
 - current project information.
 
-The meaningful state is derived from `studio-events.jsonl`.
+The meaningful Studio focus and session state is derived from
+`studio-events.jsonl`. The runtime descriptor only helps local tools discover a
+fresh running Studio server and authenticate limited notification requests.
 
 The singleton server rule does not imply one visible Studio UI. Multiple browser
 tabs or windows may connect to the same local server. Any browser instance that
@@ -343,8 +347,9 @@ The first implementation should use this layering:
 renku CLI
   -> @gorenku/studio-core/server project services
     -> project SQLite
-  -> @gorenku/studio-core/server coordination services
-    -> studio-events.jsonl
+  -> running Studio server notification endpoint
+    -> @gorenku/studio-core/server coordination services
+      -> studio-events.jsonl
 
 browser Studio UI
   -> Studio server HTTP adapter
@@ -356,6 +361,10 @@ browser Studio UI
 
 The CLI should mutate project data through core services directly. It should not
 call Studio server endpoints for domain mutations.
+
+After successful durable mutations, the CLI may call the running Studio server
+only for live UI notification. If no fresh Studio runtime is available,
+resource-refresh notification is skipped.
 
 The Studio server remains a thin adapter:
 
@@ -556,6 +565,9 @@ must not be treated as the durable audit record of the mutation.
 
 Written after a successful project SQLite mutation when Studio should invalidate
 specific browser-side UI resources and refresh visible matching resources.
+For CLI mutations, the CLI notifies the running Studio server and the server
+appends this event. If Studio is not running, no offline resource-refresh event
+is written.
 
 This event is a UI coordination signal only. It is not a durable domain event
 and must not store before/after project data. If the same operation should also
@@ -1167,6 +1179,12 @@ The local trust mechanism is:
 - reject unexpected `Origin` headers on mutating routes;
 - keep `GET` routes non-mutating.
 
+CLI notification uses a separate `cliNotificationToken` in the runtime
+descriptor. That token authorizes only local notification endpoints such as
+`POST /studio-api/studio/events/project-resources-changed`. It does not
+authorize project mutations. Runtime descriptors containing this token are
+written with user-only permissions.
+
 ## Applying Events In The Browser
 
 The browser Studio app should process `studio.focusRequested` events.
@@ -1199,8 +1217,9 @@ For `renku info set`, this produces:
 
 ```text
 CLI updates SQLite.
-CLI appends studio.projectRefreshRequested.
-CLI appends studio.focusRequested.
+CLI notifies the running Studio server.
+Studio server appends studio.projectRefreshRequested.
+Studio server appends studio.focusRequested.
 Browser receives focus request.
 Browser refreshes the project.
 Browser selects Project Information.
@@ -1270,19 +1289,22 @@ Rules:
 
 This is enough for local agent-assisted v1 workflows.
 
-SQLite mutations and coordination event appends are not one database
-transaction. The implementation must define partial failure behavior before
-shipping CLI mutations that also append events.
+SQLite mutations and live Studio notifications are not one database transaction.
+The implementation must define partial failure behavior before shipping CLI
+mutations that also request UI notification.
 
 Minimum v1 behavior:
 
 - if project validation fails, append no coordination event;
 - if the SQLite mutation fails, append no success event;
-- if the SQLite mutation succeeds but event append fails, report a structured
-  error or warning that says the SQLite mutation committed but Studio may not
-  refresh automatically;
-- if one event in a multi-event operation appends and the next append fails, the
-  command reports the partial coordination failure with the shared `operationId`.
+- if the SQLite mutation succeeds and no fresh Studio runtime exists, skip
+  resource-refresh notification without warning;
+- if the SQLite mutation succeeds, Studio appears to be running, and live
+  notification fails, report a structured warning that says the SQLite mutation
+  committed but the running Studio app could not be notified;
+- if one live event in a multi-event operation appends and the next append
+  fails, the command reports the partial coordination failure with the shared
+  `operationId`.
 
 If a later product requirement needs stricter conflict detection, add explicit
 version or compare-and-set behavior then. Do not add speculative locking around

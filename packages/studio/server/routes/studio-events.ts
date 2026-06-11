@@ -1,6 +1,7 @@
 import {
   createProjectDataService,
   createStudioCoordinationService,
+  createStudioOperationId,
   validateStudioFocusRequestForProject,
   type ScenePanelTab,
   type SceneShotDetailTab,
@@ -8,15 +9,20 @@ import {
   type ProjectDataService,
   type StudioCoordinationService,
   type StudioFocusRequest,
+  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import {
   createDiagnosticError,
+  createStructuredError,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { toStudioCurrentResponse, toStudioEventReadResponse } from '../http/studio-event-responses.js';
-import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
+import {
+  createStudioApiTokenMiddleware,
+  createStudioNotificationTokenMiddleware,
+} from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
 const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
@@ -35,6 +41,7 @@ export interface CreateStudioEventsRouteOptions {
   coordination?: StudioCoordinationService;
   projectData?: StudioEventsRouteProjectData;
   token: StudioRuntimeToken;
+  cliNotificationToken?: string;
   serverInstanceId?: string;
 }
 
@@ -47,6 +54,9 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
   const coordination = options.coordination ?? createStudioCoordinationService();
   const projectData = options.projectData ?? createProjectDataService();
   const requireToken = createStudioApiTokenMiddleware(options.token);
+  const requireNotificationToken = createStudioNotificationTokenMiddleware(
+    options.cliNotificationToken
+  );
 
   return new Hono()
     .get('/', async (c) => {
@@ -62,6 +72,22 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
     .get('/current', async (c) => {
       try {
         return c.json(toStudioCurrentResponse(await coordination.readStudioCurrent()));
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .post('/project-resources-changed', requireNotificationToken, async (c) => {
+      try {
+        const body = await c.req.json();
+        const request = readProjectResourcesChangedRequest(body);
+        const event = await coordination.appendStudioEvent({
+          type: 'studio.projectResourcesChanged',
+          projectRef: request.projectRef,
+          resourceKeys: request.resourceKeys,
+          source: request.source,
+          operationId: request.operationId ?? createStudioOperationId(),
+        });
+        return c.json({ event });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -323,6 +349,153 @@ function readStudioSelection(value: unknown): StudioSelection | null {
   return null;
 }
 
+interface ProjectResourcesChangedRequest {
+  projectRef: StudioProjectRef;
+  resourceKeys: string[];
+  source: { kind: 'cli'; command: string };
+  operationId?: string;
+}
+
+function readProjectResourcesChangedRequest(
+  value: unknown
+): ProjectResourcesChangedRequest {
+  const record = readRecord(value);
+  const issues: DiagnosticIssue[] = [];
+  if (!record) {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER030',
+        'Project resources changed notification must be an object.',
+        { path: [], context: 'studio.projectResourcesChanged notification' },
+        'Send a typed project resources changed notification request.'
+      )
+    );
+  }
+
+  const projectRef = readProjectRef(record?.projectRef, issues);
+  const resourceKeys = readResourceKeys(record?.resourceKeys, issues);
+  const source = readCliNotificationSource(record?.source, issues);
+  const operationId = record?.operationId;
+  if (operationId !== undefined && typeof operationId !== 'string') {
+    issues.push(
+      notificationIssue('operationId must be a string when provided.', [
+        'operationId',
+      ])
+    );
+  }
+
+  if (issues.length > 0 || !projectRef || !resourceKeys || !source) {
+    throw createStructuredError({
+      code: 'STUDIO_SERVER030',
+      message: 'Project resources changed notification failed validation.',
+      issues,
+      suggestion: 'Send projectRef, one or more resourceKeys, and a CLI source.',
+    });
+  }
+
+  return {
+    projectRef,
+    resourceKeys,
+    source,
+    ...(typeof operationId === 'string' ? { operationId } : {}),
+  };
+}
+
+function readProjectRef(
+  value: unknown,
+  issues: DiagnosticIssue[]
+): StudioProjectRef | null {
+  const record = readRecord(value);
+  if (!record) {
+    issues.push(notificationIssue('projectRef must be an object.', ['projectRef']));
+    return null;
+  }
+
+  const ref: Partial<StudioProjectRef> = {};
+  for (const key of ['name', 'id', 'storageRoot'] as const) {
+    const field = record[key];
+    if (typeof field !== 'string' || !field.trim()) {
+      issues.push(
+        notificationIssue(`projectRef.${key} must be a string.`, [
+          'projectRef',
+          key,
+        ])
+      );
+    } else {
+      ref[key] = field;
+    }
+  }
+
+  return ref.name && ref.id && ref.storageRoot ? (ref as StudioProjectRef) : null;
+}
+
+function readResourceKeys(
+  value: unknown,
+  issues: DiagnosticIssue[]
+): string[] | null {
+  const issueCountBefore = issues.length;
+  if (!Array.isArray(value)) {
+    issues.push(notificationIssue('resourceKeys must be an array.', ['resourceKeys']));
+    return null;
+  }
+  if (value.length === 0) {
+    issues.push(
+      notificationIssue('resourceKeys must include at least one key.', [
+        'resourceKeys',
+      ])
+    );
+    return null;
+  }
+
+  const resourceKeys: string[] = [];
+  for (const [index, resourceKey] of value.entries()) {
+    if (typeof resourceKey !== 'string' || !resourceKey.trim()) {
+      issues.push(
+        notificationIssue('resourceKeys entries must be non-empty strings.', [
+          'resourceKeys',
+          String(index),
+        ])
+      );
+    } else {
+      resourceKeys.push(resourceKey);
+    }
+  }
+
+  return issues.length === issueCountBefore ? resourceKeys : null;
+}
+
+function readCliNotificationSource(
+  value: unknown,
+  issues: DiagnosticIssue[]
+): { kind: 'cli'; command: string } | null {
+  const record = readRecord(value);
+  if (!record) {
+    issues.push(notificationIssue('source must be an object.', ['source']));
+    return null;
+  }
+  if (record.kind !== 'cli') {
+    issues.push(
+      notificationIssue('source.kind must be cli for this endpoint.', [
+        'source',
+        'kind',
+      ])
+    );
+  }
+  if (typeof record.command !== 'string' || !record.command.trim()) {
+    issues.push(
+      notificationIssue('source.command must be a string.', [
+        'source',
+        'command',
+      ])
+    );
+  }
+  return record.kind === 'cli' &&
+    typeof record.command === 'string' &&
+    record.command.trim()
+    ? { kind: 'cli', command: record.command }
+    : null;
+}
+
 function readScenePanelTab(value: unknown): ScenePanelTab | undefined {
   return typeof value === 'string' &&
     SCENE_PANEL_TABS.includes(value as ScenePanelTab)
@@ -344,6 +517,14 @@ function readRecord(value: unknown): Record<string, unknown> | null {
     return null;
   }
   return value as Record<string, unknown>;
+}
+
+function notificationIssue(message: string, path: string[]): DiagnosticIssue {
+  return createDiagnosticError(
+    'STUDIO_SERVER030',
+    message,
+    { path, context: 'studio.projectResourcesChanged notification' }
+  );
 }
 
 function unsupportedFocusRequest(

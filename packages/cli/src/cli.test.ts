@@ -428,21 +428,6 @@ describe('renku CLI', () => {
       analysis: { kind: 'screenplayAnalysis' },
     });
 
-    stdout = [];
-    stderr = [];
-    await expect(
-      createStudioCoordinationService({ homeDir }).readStudioEvents()
-    ).resolves.toMatchObject({
-      events: expect.arrayContaining([
-        expect.objectContaining({
-          type: 'studio.projectResourcesChanged',
-          resourceKeys: expect.arrayContaining([
-            'surface:story-arc',
-            `screenplay-analysis:${writeReport.analysis.id}`,
-          ]),
-        }),
-      ]),
-    });
   });
 
   it('validates and writes Inspiration analysis through the top-level command', async () => {
@@ -853,17 +838,6 @@ describe('renku CLI', () => {
         },
       },
     });
-    await expect(
-      createStudioCoordinationService({ homeDir }).readStudioEvents()
-    ).resolves.toMatchObject({
-      events: expect.arrayContaining([
-        expect.objectContaining({
-          type: 'studio.projectResourcesChanged',
-          resourceKeys: mediaImportReport.resourceKeys,
-          source: { kind: 'cli', command: 'media import' },
-        }),
-      ]),
-    });
 
     const generatedSheetPath = 'generated/media/imperial-wound-lookbook-sheet.png';
     await fs.writeFile(
@@ -909,17 +883,6 @@ describe('renku CLI', () => {
           ],
         },
       },
-    });
-    await expect(
-      createStudioCoordinationService({ homeDir }).readStudioEvents()
-    ).resolves.toMatchObject({
-      events: expect.arrayContaining([
-        expect.objectContaining({
-          type: 'studio.projectResourcesChanged',
-          resourceKeys: sheetImportReport.resourceKeys,
-          source: { kind: 'cli', command: 'media import' },
-        }),
-      ]),
     });
 
     const specPath = path.join(homeDir, 'lookbook-image-spec.json');
@@ -1462,32 +1425,6 @@ describe('renku CLI', () => {
         selection: { kind: 'select', order: 1 },
       },
       resourceKeys: [`assets:scene:${sceneId}`],
-    });
-    await expect(
-      createStudioCoordinationService({ homeDir }).readStudioEvents()
-    ).resolves.toMatchObject({
-      events: expect.arrayContaining([
-        expect.objectContaining({
-          type: 'studio.projectResourcesChanged',
-          projectRef: {
-            name: project.identity.name,
-            id: project.identity.id,
-            storageRoot,
-          },
-          resourceKeys: [`assets:scene:${sceneId}`],
-          source: { kind: 'cli', command: 'asset register' },
-        }),
-        expect.objectContaining({
-          type: 'studio.projectResourcesChanged',
-          projectRef: {
-            name: project.identity.name,
-            id: project.identity.id,
-            storageRoot,
-          },
-          resourceKeys: [`assets:scene:${sceneId}`],
-          source: { kind: 'cli', command: 'asset select' },
-        }),
-      ]),
     });
 
     stdout = [];
