@@ -419,7 +419,16 @@ export function fakeProjectDataService(): NonNullable<
     async updateSceneShotCastReferences() {
       return fakeProjectDataService().readSceneShotListResource({} as never);
     },
+    async updateSceneShotCastCharacterSheetReference() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
     async updateSceneShotLocationReference() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
+    async updateSceneShotLocationSheetReference() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
+    async updateSceneShotLocationViewReferences() {
       return fakeProjectDataService().readSceneShotListResource({} as never);
     },
     async updateSceneShotLookbookReference() {
@@ -1077,10 +1086,12 @@ export function fakeProjectDataService(): NonNullable<
         },
         finalPrompt: null,
         plan,
-        castReferences: [],
-        locationReferences: [],
-        lookbookReferences: [],
-        imageReferences: [],
+        references: {
+          general: [],
+          lookbook: [],
+          castMembers: [],
+          locations: [],
+        },
         diagnostics: plan.diagnostics,
       };
     },

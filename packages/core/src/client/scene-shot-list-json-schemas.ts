@@ -412,7 +412,11 @@ function shotSpecsSchema(): Record<string, unknown> {
         type: 'object',
         properties: {
           locationId: nonEmptyString(),
-          azimuthView: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
+          environmentSheetAssetId: nonEmptyString(),
+          viewIds: {
+            type: 'array',
+            items: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
+          },
         },
         additionalProperties: false,
       },
@@ -422,6 +426,10 @@ function shotSpecsSchema(): Record<string, unknown> {
           castMemberIds: {
             type: 'array',
             items: nonEmptyString(),
+          },
+          characterSheetAssetIds: {
+            type: 'object',
+            additionalProperties: nonEmptyString(),
           },
         },
         additionalProperties: false,

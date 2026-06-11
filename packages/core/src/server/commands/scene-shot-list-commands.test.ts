@@ -133,7 +133,7 @@ describe('scene shot list commands', () => {
             movement: { movement: 'rack-focus' },
             location: {
               locationId: ids.locationId,
-              azimuthView: 'front',
+              viewIds: ['front'],
             },
             custom: {
               composition: 'hold the map edge in the lower foreground',
@@ -324,7 +324,7 @@ describe('scene shot list commands', () => {
                 ...extended.shots[0]!.shotSpecs!,
                 location: {
                   locationId: ids.locationId,
-                  azimuthView: 'front',
+                  viewIds: ['front'],
                 },
               },
             },
@@ -883,7 +883,7 @@ describe('scene shot list commands', () => {
       shotSpecs: {
         location: {
           locationId: overrideLocationId,
-          azimuthView: 'right',
+          viewIds: ['right'],
         },
       },
     };
@@ -892,7 +892,7 @@ describe('scene shot list commands', () => {
       shotSpecs: {
         location: {
           locationId: ids.locationId,
-          azimuthView: 'left',
+          viewIds: ['left'],
         },
       },
     };

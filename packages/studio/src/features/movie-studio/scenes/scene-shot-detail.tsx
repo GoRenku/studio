@@ -23,11 +23,8 @@ import { SceneShotVideoStage } from './scene-shot-video-stage';
 import { SceneShotDescriptionTab } from './scene-shot-description-tab';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
-import { SceneShotLocationTab } from './scene-shot-location-tab';
 import { SceneShotAiProductionTab } from './scene-shot-ai-production-tab';
 import { SceneShotAiProductionGroupTag } from './scene-shot-ai-production-group-tag';
-import { SceneShotCastTab } from './scene-shot-cast-tab';
-import { SceneShotLookbookTab } from './scene-shot-lookbook-tab';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 import { ShotSpecsProvider } from './shot-specs-context';
 import {
@@ -55,11 +52,8 @@ interface SceneShotDetailProps {
 
 const DESIGN_TABS = [
   { value: 'description', label: 'Description' },
-  { value: 'lookbook', label: 'Lookbook' },
   { value: 'composition', label: 'Composition' },
   { value: 'motion', label: 'Motion' },
-  { value: 'cast', label: 'Cast' },
-  { value: 'location', label: 'Location' },
   { value: 'references', label: 'References' },
   { value: 'ai-production', label: 'AI Production' },
 ] as const;
@@ -206,50 +200,22 @@ export function SceneShotDetail({
                     locationLabels={locationLabels}
                   />
                 </LineTabsContent>
-                <LineTabsContent value='lookbook'>
-                  <SceneShotLookbookTab
-                    projectName={projectName}
-                    sceneId={sceneId}
-                    shot={shot}
-                    productionPlan={production.productionPlan}
-                    onResourceRefreshed={onShotSpecsSaved}
-                    onPlanRefresh={production.refreshProductionPlan}
-                  />
-                </LineTabsContent>
                 <LineTabsContent value='composition'>
                   <SceneShotCompositionTab />
                 </LineTabsContent>
                 <LineTabsContent value='motion'>
                   <SceneShotCameraMotionTab />
                 </LineTabsContent>
-                <LineTabsContent value='cast'>
-                  <SceneShotCastTab
-                    projectName={projectName}
-                    sceneId={sceneId}
-                    shot={shot}
-                    productionPlan={production.productionPlan}
-                    onResourceRefreshed={onShotSpecsSaved}
-                    onPlanRefresh={production.refreshProductionPlan}
-                  />
-                </LineTabsContent>
-                <LineTabsContent value='location'>
-                  <SceneShotLocationTab
-                    projectName={projectName}
-                    sceneId={sceneId}
-                    shot={shot}
-                    productionPlan={production.productionPlan}
-                    onResourceRefreshed={onShotSpecsSaved}
-                    onPlanRefresh={production.refreshProductionPlan}
-                  />
-                </LineTabsContent>
                 <LineTabsContent value='references'>
                   <SceneShotReferencesTab
                     projectName={projectName}
                     sceneId={sceneId}
+                    shot={shot}
                     productionPlan={production.productionPlan}
                     onSelectInput={production.reuseInput}
                     onClearInput={production.regenerateInput}
-                    onDeleteInput={production.deleteInput}
+                    onResourceRefreshed={onShotSpecsSaved}
+                    onPlanRefresh={production.refreshProductionPlan}
                   />
                 </LineTabsContent>
                 <LineTabsContent value='ai-production' className='h-full'>

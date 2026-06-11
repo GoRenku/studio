@@ -186,22 +186,21 @@ describe('SceneShotsTab', () => {
     expect(screen.queryByText('loc_chamber')).toBeNull();
   });
 
-  it('renders the Location design tab', async () => {
+  it('renders the consolidated shot detail tab bar', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
       resource(shotList())
     );
 
     render(<SceneShotsTabHarness />);
 
-    const locationTab = await screen.findByRole('tab', {
-      name: 'Location',
-    });
-    // Radix Tabs use automatic activation (select on focus); jsdom clicks do
-    // not move focus, so drive the focus directly.
-    fireEvent.focus(locationTab);
-    fireEvent.click(locationTab);
-    expect(await screen.findByText('Council Chamber')).not.toBeNull();
-    expect(screen.getByText('Environment Sheet Views')).not.toBeNull();
+    expect(await screen.findByRole('tab', { name: 'Description' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Composition' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Motion' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'References' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'AI Production' })).not.toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Lookbook' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Cast' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Location' })).toBeNull();
   });
 
   it('shows the empty video stage with a disabled transport', async () => {
@@ -630,25 +629,41 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
       diagnostics: [],
       finalEstimate: null,
     },
-    castReferences: [],
-    locationReferences: [
-      {
-        locationId: 'loc_chamber',
-        name: 'Council Chamber',
-        selected: true,
-        defaultSelected: true,
-        environmentSheet: {
-          state: 'selected-planned',
-          mediaKind: 'image',
-          pricing: { state: 'not-applicable', estimatedUsd: null },
-          previews: [],
+    references: {
+      general: [],
+      lookbook: [],
+      castMembers: [],
+      locations: [
+        {
+          locationId: 'loc_chamber',
+          name: 'Council Chamber',
+          selectedForShot: true,
+          defaultSelectedForShot: true,
+          selectedEnvironmentSheetAssetId: null,
+          defaultEnvironmentSheetAssetId: null,
+          selectedViewIds: [],
+          environmentSheets: [
+            {
+              id: 'loc_chamber:planned-environment-sheet',
+              locationId: 'loc_chamber',
+              assetId: null,
+              title: 'Council Chamber',
+              selected: true,
+              defaultSelected: true,
+              card: {
+                state: 'selected-planned',
+                mediaKind: 'image',
+                pricing: { state: 'not-applicable', estimatedUsd: null },
+                previews: [],
+                diagnostics: [],
+              },
+              views: [],
+            },
+          ],
           diagnostics: [],
         },
-        viewChoices: [],
-      },
-    ],
-    lookbookReferences: [],
-    imageReferences: [],
+      ],
+    },
     diagnostics: [],
   };
 }

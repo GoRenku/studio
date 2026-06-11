@@ -335,11 +335,13 @@ export interface ShotLensSpecs {
 
 export interface ShotLocationSpecs {
   locationId?: string;
-  azimuthView?: LocationAzimuthViewId;
+  environmentSheetAssetId?: string;
+  viewIds?: LocationAzimuthViewId[];
 }
 
 export interface ShotCastReferenceSpecs {
   castMemberIds?: string[];
+  characterSheetAssetIds?: Record<string, string>;
 }
 
 export interface ShotLookbookReferenceSpecs {

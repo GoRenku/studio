@@ -23,8 +23,11 @@ import {
 import { readSceneShotSpecsRequest } from '../http/scene-shot-specs-request.js';
 import {
   readShotCastReferencesRequest,
+  readShotCastCharacterSheetReferenceRequest,
   readShotCustomReferenceImagesRequest,
+  readShotLocationSheetReferenceRequest,
   readShotLocationReferenceRequest,
+  readShotLocationViewReferencesRequest,
   readShotLookbookReferenceRequest,
   readShotVideoTakeProductionGroupRequest,
   readShotVideoTakeRailGroupsRequest,
@@ -707,7 +710,97 @@ export function createScreenplayRoute({
             sceneId,
             shotId,
             locationId: request.locationId,
-            ...(request.azimuthView ? { azimuthView: request.azimuthView } : {}),
+          });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: sceneShotListResourceKeys({
+              sceneId,
+              shotListId: resource.activeShotListId,
+              shotIds: [shotId],
+            }),
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/shots/:shotId/cast-character-sheet-reference',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const shotId = c.req.param('shotId') as string;
+          const request = readShotCastCharacterSheetReferenceRequest(
+            await c.req.json()
+          );
+          const resource =
+            await projectData.updateSceneShotCastCharacterSheetReference({
+              projectName,
+              sceneId,
+              shotId,
+              castMemberId: request.castMemberId,
+              assetId: request.assetId,
+            });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: sceneShotListResourceKeys({
+              sceneId,
+              shotListId: resource.activeShotListId,
+              shotIds: [shotId],
+            }),
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/shots/:shotId/location-sheet-reference',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const shotId = c.req.param('shotId') as string;
+          const request = readShotLocationSheetReferenceRequest(await c.req.json());
+          const resource = await projectData.updateSceneShotLocationSheetReference({
+            projectName,
+            sceneId,
+            shotId,
+            locationId: request.locationId,
+            assetId: request.assetId,
+          });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: sceneShotListResourceKeys({
+              sceneId,
+              shotListId: resource.activeShotListId,
+              shotIds: [shotId],
+            }),
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/shots/:shotId/location-view-references',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const shotId = c.req.param('shotId') as string;
+          const request = readShotLocationViewReferencesRequest(await c.req.json());
+          const resource = await projectData.updateSceneShotLocationViewReferences({
+            projectName,
+            sceneId,
+            shotId,
+            locationId: request.locationId,
+            assetId: request.assetId,
+            viewIds: request.viewIds,
           });
           return c.json({
             resource: toSceneShotListResourceResponse(projectName, resource),
@@ -751,7 +844,7 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/custom-reference-images',
+      '/screenplay/scenes/:sceneId/shots/:shotId/reference-images',
       requireToken,
       async (c) => {
         try {

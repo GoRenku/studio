@@ -39,6 +39,8 @@ Use readable domain prefixes:
 - `CONFIG001...` for global config.
 - `PROJECT_SETUP001...` for setup YAML validation.
 - `PROJECT_DATA001...` for project database, filesystem, and data access.
+- `CORE_...` for core planning, validation, and resource diagnostics whose
+  domain-specific names are clearer than numeric project-data codes.
 - `CLI001...` for CLI argument and command errors.
 - `STUDIO_SERVER001...` for Studio HTTP adapter errors.
 

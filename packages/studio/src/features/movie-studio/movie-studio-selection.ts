@@ -32,11 +32,8 @@ export type ScenePanelTab = 'narrative' | 'shots';
 
 export type SceneShotDetailTab =
   | 'description'
-  | 'lookbook'
   | 'composition'
   | 'motion'
-  | 'cast'
-  | 'location'
   | 'references'
   | 'ai-production';
 
@@ -44,11 +41,8 @@ export const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
 
 export const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'description',
-  'lookbook',
   'composition',
   'motion',
-  'cast',
-  'location',
   'references',
   'ai-production',
 ];

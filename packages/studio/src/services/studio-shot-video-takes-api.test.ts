@@ -7,6 +7,11 @@ import {
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
   selectShotVideoTakeInput,
+  updateShotCastCharacterSheetReference,
+  updateShotCustomReferenceImages,
+  updateShotLocationReference,
+  updateShotLocationSheetReference,
+  updateShotLocationViewReferences,
   updateShotVideoTakeProduction,
   updateShotVideoTakeRailGroups,
 } from './studio-shot-video-takes-api';
@@ -168,6 +173,113 @@ describe('studio-shot-video-takes-api', () => {
       kind: 'first-frame',
       subjectKind: 'shot',
       subjectId: 'shot_001',
+    });
+  });
+
+  it('updates the shot location reference with only the scoped location id', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resource: {}, resourceKeys: [] })
+    );
+    await updateShotLocationReference(
+      'constantinople',
+      'scene_hook',
+      'shot_001',
+      'loc_chamber'
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      '/screenplay/scenes/scene_hook/shots/shot_001/location-reference'
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({ locationId: 'loc_chamber' });
+  });
+
+  it('updates the shot cast character sheet reference', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resource: {}, resourceKeys: [] })
+    );
+    await updateShotCastCharacterSheetReference(
+      'constantinople',
+      'scene_hook',
+      'shot_001',
+      { castMemberId: 'cast_theodora', assetId: 'asset_sheet_001' }
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      '/screenplay/scenes/scene_hook/shots/shot_001/cast-character-sheet-reference'
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      castMemberId: 'cast_theodora',
+      assetId: 'asset_sheet_001',
+    });
+  });
+
+  it('updates the shot location environment sheet reference', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resource: {}, resourceKeys: [] })
+    );
+    await updateShotLocationSheetReference(
+      'constantinople',
+      'scene_hook',
+      'shot_001',
+      { locationId: 'loc_chamber', assetId: 'asset_environment_001' }
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      '/screenplay/scenes/scene_hook/shots/shot_001/location-sheet-reference'
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      locationId: 'loc_chamber',
+      assetId: 'asset_environment_001',
+    });
+  });
+
+  it('updates the shot location view references', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resource: {}, resourceKeys: [] })
+    );
+    await updateShotLocationViewReferences(
+      'constantinople',
+      'scene_hook',
+      'shot_001',
+      {
+        locationId: 'loc_chamber',
+        assetId: 'asset_environment_001',
+        viewIds: ['front', 'right'],
+      }
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      '/screenplay/scenes/scene_hook/shots/shot_001/location-view-references'
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      locationId: 'loc_chamber',
+      assetId: 'asset_environment_001',
+      viewIds: ['front', 'right'],
+    });
+  });
+
+  it('updates the shot custom reference images on the current reference route', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resource: {}, resourceKeys: [] })
+    );
+    await updateShotCustomReferenceImages(
+      'constantinople',
+      'scene_hook',
+      'shot_001',
+      ['input_texture', 'input_blade']
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      '/screenplay/scenes/scene_hook/shots/shot_001/reference-images'
+    );
+    expect(String(url)).not.toContain('custom-reference-images');
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      customReferenceInputIds: ['input_texture', 'input_blade'],
     });
   });
 

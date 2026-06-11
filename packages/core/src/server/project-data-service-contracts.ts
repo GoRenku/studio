@@ -224,6 +224,15 @@ export interface ProjectDataService {
   updateSceneShotLocationReference(
     input: UpdateSceneShotLocationReferenceInput
   ): Promise<SceneShotListResource>;
+  updateSceneShotCastCharacterSheetReference(
+    input: UpdateSceneShotCastCharacterSheetReferenceInput
+  ): Promise<SceneShotListResource>;
+  updateSceneShotLocationSheetReference(
+    input: UpdateSceneShotLocationSheetReferenceInput
+  ): Promise<SceneShotListResource>;
+  updateSceneShotLocationViewReferences(
+    input: UpdateSceneShotLocationViewReferencesInput
+  ): Promise<SceneShotListResource>;
   updateSceneShotLookbookReference(
     input: UpdateSceneShotLookbookReferenceInput
   ): Promise<SceneShotListResource>;
@@ -1503,7 +1512,36 @@ export interface UpdateSceneShotLocationReferenceInput
   sceneId: string;
   shotId: string;
   locationId: string;
-  azimuthView?: LocationAzimuthViewId;
+  environmentSheetAssetId?: string | null;
+  viewIds?: LocationAzimuthViewId[];
+}
+
+export interface UpdateSceneShotCastCharacterSheetReferenceInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  castMemberId: string;
+  assetId: string | null;
+}
+
+export interface UpdateSceneShotLocationSheetReferenceInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  locationId: string;
+  assetId: string | null;
+}
+
+export interface UpdateSceneShotLocationViewReferencesInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  locationId: string;
+  assetId: string;
+  viewIds: LocationAzimuthViewId[];
 }
 
 export interface UpdateSceneShotLookbookReferenceInput

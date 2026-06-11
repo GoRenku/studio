@@ -4,6 +4,7 @@ import type {
   ActStoryboardSequence,
   ActStoryboardShot,
   Asset,
+  LocationAzimuthViewId,
   SceneShotListResource,
   ScreenplayImageReference,
   SequenceSceneStoryboardPreview,
@@ -13,9 +14,13 @@ import type {
   SceneShotListDocument,
   ShotSpecs,
 } from '../../client/scene-shot-list.js';
+import type { ScreenplayDocument } from '../../client/screenplay.js';
 import { deriveShotSpecPromptStrings } from '../../client/shot-spec-labels.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
+import {
+  readAssetRelationship,
+  readAssetRelationshipRecord,
+} from '../database/access/asset-relationships/index.js';
 import {
   listSceneNavigationPage,
   listSequenceNavigationPage,
@@ -33,15 +38,22 @@ import { readScreenplayDocumentFromSession } from '../database/access/screenplay
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readLocationRecord } from '../database/access/locations.js';
 import { readLookbookSheet } from '../database/access/lookbook-sheets.js';
+import {
+  listLocationEnvironmentSheetViews,
+  readLocationEnvironmentSheetByAssetId,
+} from '../database/access/location-environment-sheets.js';
 import { requireShotVideoTakeInput } from '../database/access/shot-video-takes.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type {
   ReadActStoryboardResourceInput,
   ReadSceneShotListResourceInput,
+  UpdateSceneShotCastCharacterSheetReferenceInput,
   UpdateSceneShotCastReferencesInput,
   UpdateSceneShotCustomReferenceImagesInput,
+  UpdateSceneShotLocationSheetReferenceInput,
   UpdateSceneShotLocationReferenceInput,
+  UpdateSceneShotLocationViewReferencesInput,
   UpdateSceneShotLookbookReferenceInput,
   UpdateSceneShotSpecsInput,
 } from '../project-data-service-contracts.js';
@@ -143,7 +155,8 @@ export async function updateSceneShotSpecs(
 export async function updateSceneShotCastReferences(
   input: UpdateSceneShotCastReferencesInput
 ): Promise<SceneShotListResource> {
-  await updateActiveShotSpecs(input, (session, shot) => {
+  await updateActiveShotSpecs(input, (session, shot, screenplay) => {
+    const sceneCastMemberIds = sceneNarrativeCastMemberIds(screenplay, input.sceneId);
     for (const castMemberId of input.castMemberIds) {
       if (!readCastMemberRecord(session, castMemberId)) {
         throw new ProjectDataError(
@@ -152,9 +165,19 @@ export async function updateSceneShotCastReferences(
           { suggestion: 'Choose a cast member from the current project.' }
         );
       }
+      if (!sceneCastMemberIds.has(castMemberId)) {
+        throw new ProjectDataError(
+          'CORE_SHOT_REFERENCE_CAST_OUTSIDE_NARRATIVE',
+          `Cast member is not available in this scene narrative: ${castMemberId}.`,
+          { suggestion: 'Add the cast member to the scene narrative before selecting them for this shot.' }
+        );
+      }
     }
     const next = { ...(shot.shotSpecs ?? {}) };
-    next.castReferences = { castMemberIds: [...new Set(input.castMemberIds)] };
+    next.castReferences = {
+      ...(next.castReferences ?? {}),
+      castMemberIds: [...new Set(input.castMemberIds)],
+    };
     applyShotSpecs(shot, next);
   });
   return readSceneShotListResource(input);
@@ -163,18 +186,116 @@ export async function updateSceneShotCastReferences(
 export async function updateSceneShotLocationReference(
   input: UpdateSceneShotLocationReferenceInput
 ): Promise<SceneShotListResource> {
-  await updateActiveShotSpecs(input, (session, shot) => {
-    if (!readLocationRecord(session, input.locationId)) {
+  await updateActiveShotSpecs(input, (session, shot, screenplay) => {
+    validateSceneLocationReference(session, screenplay, input.sceneId, input.locationId);
+    const next = { ...(shot.shotSpecs ?? {}) };
+    next.location = {
+      ...(next.location ?? {}),
+      locationId: input.locationId,
+      ...(input.environmentSheetAssetId
+        ? { environmentSheetAssetId: input.environmentSheetAssetId }
+        : {}),
+      ...(input.viewIds?.length ? { viewIds: [...new Set(input.viewIds)] } : {}),
+    };
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
+export async function updateSceneShotCastCharacterSheetReference(
+  input: UpdateSceneShotCastCharacterSheetReferenceInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (session, shot, screenplay) => {
+    const sceneCastMemberIds = sceneNarrativeCastMemberIds(screenplay, input.sceneId);
+    if (!sceneCastMemberIds.has(input.castMemberId)) {
       throw new ProjectDataError(
-        'CORE_SHOT_REFERENCE_UNKNOWN_LOCATION',
-        `Location was not found: ${input.locationId}.`,
-        { suggestion: 'Choose a location from the current project.' }
+        'CORE_SHOT_REFERENCE_CAST_OUTSIDE_NARRATIVE',
+        `Cast member is not available in this scene narrative: ${input.castMemberId}.`,
+        { suggestion: 'Add the cast member to the scene narrative before selecting a character sheet.' }
       );
+    }
+    if (input.assetId) {
+      const relationship = readAssetRelationshipRecord(session, {
+        target: { kind: 'castMember', castMemberId: input.castMemberId },
+        assetId: input.assetId,
+      });
+      if (!relationship || relationship.role !== 'character_sheet') {
+        throw new ProjectDataError(
+          'CORE_SHOT_REFERENCE_UNKNOWN_INPUT',
+          `Character sheet asset does not belong to cast member ${input.castMemberId}: ${input.assetId}.`,
+          { suggestion: 'Choose a character sheet asset for the selected cast member.' }
+        );
+      }
+    }
+    const next = { ...(shot.shotSpecs ?? {}) };
+    const characterSheetAssetIds = {
+      ...(next.castReferences?.characterSheetAssetIds ?? {}),
+    };
+    if (input.assetId) {
+      characterSheetAssetIds[input.castMemberId] = input.assetId;
+    } else {
+      delete characterSheetAssetIds[input.castMemberId];
+    }
+    next.castReferences = {
+      ...(next.castReferences ?? {}),
+      characterSheetAssetIds,
+    };
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
+export async function updateSceneShotLocationSheetReference(
+  input: UpdateSceneShotLocationSheetReferenceInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (session, shot, screenplay) => {
+    validateSceneLocationReference(session, screenplay, input.sceneId, input.locationId);
+    if (input.assetId) {
+      validateLocationSheetAsset(session, input.locationId, input.assetId);
     }
     const next = { ...(shot.shotSpecs ?? {}) };
     next.location = {
+      ...(next.location ?? {}),
       locationId: input.locationId,
-      ...(input.azimuthView ? { azimuthView: input.azimuthView } : {}),
+      ...(input.assetId ? { environmentSheetAssetId: input.assetId } : {}),
+    };
+    if (!input.assetId) {
+      delete next.location.environmentSheetAssetId;
+    }
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
+export async function updateSceneShotLocationViewReferences(
+  input: UpdateSceneShotLocationViewReferencesInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (session, shot, screenplay) => {
+    validateSceneLocationReference(session, screenplay, input.sceneId, input.locationId);
+    validateLocationSheetAsset(session, input.locationId, input.assetId);
+    const sheet = readLocationEnvironmentSheetByAssetId(session, input.assetId);
+    const availableViews = new Set(
+      sheet
+        ? listLocationEnvironmentSheetViews(session, sheet.id).map((view) =>
+            locationAzimuthViewId(view.azimuthDegrees as 0 | 90 | 180 | 270)
+          )
+        : []
+    );
+    for (const viewId of input.viewIds) {
+      if (!availableViews.has(viewId)) {
+        throw new ProjectDataError(
+          'CORE_SHOT_REFERENCE_UNKNOWN_INPUT',
+          `Location view is not available on the selected sheet: ${viewId}.`,
+          { suggestion: 'Choose views from the selected location sheet.' }
+        );
+      }
+    }
+    const next = { ...(shot.shotSpecs ?? {}) };
+    next.location = {
+      ...(next.location ?? {}),
+      locationId: input.locationId,
+      environmentSheetAssetId: input.assetId,
+      viewIds: [...new Set(input.viewIds)],
     };
     applyShotSpecs(shot, next);
   });
@@ -221,7 +342,11 @@ export async function updateSceneShotCustomReferenceImages(
 
 async function updateActiveShotSpecs(
   input: { projectName: string; sceneId: string; shotId: string; homeDir?: string },
-  mutate: (session: DatabaseSession, shot: SceneShot) => void
+  mutate: (
+    session: DatabaseSession,
+    shot: SceneShot,
+    screenplay: ScreenplayDocument
+  ) => void
 ): Promise<void> {
   const { session } = await openProjectSession(input);
   try {
@@ -249,7 +374,7 @@ async function updateActiveShotSpecs(
         { suggestion: 'Use a shot id from the active shot list.' }
       );
     }
-    mutate(session, shot);
+    mutate(session, shot, screenplay);
     updateSceneShotListRecordDocument({
       session,
       id: shotListRow.id,
@@ -260,6 +385,107 @@ async function updateActiveShotSpecs(
   } finally {
     session.close();
   }
+}
+
+function sceneNarrativeCastMemberIds(
+  screenplay: ScreenplayDocument,
+  sceneId: string
+): Set<string> {
+  const scene = findScreenplayScene(screenplay, sceneId);
+  const ids = new Set<string>();
+  scene.blocks.forEach((block) => {
+    if ('castMemberId' in block && block.castMemberId) {
+      ids.add(block.castMemberId);
+    }
+    block.castMemberIds?.forEach((castMemberId) => ids.add(castMemberId));
+  });
+  return ids;
+}
+
+function sceneNarrativeLocationIds(
+  screenplay: ScreenplayDocument,
+  sceneId: string
+): Set<string> {
+  const scene = findScreenplayScene(screenplay, sceneId);
+  const ids = new Set<string>(scene.setting.locationIds ?? []);
+  scene.blocks.forEach((block) => {
+    block.locationIds?.forEach((locationId) => ids.add(locationId));
+  });
+  return ids;
+}
+
+function findScreenplayScene(
+  screenplay: ScreenplayDocument,
+  sceneId: string
+): ScreenplayDocument['acts'][number]['sequences'][number]['scenes'][number] {
+  for (const act of screenplay.acts) {
+    for (const sequence of act.sequences) {
+      const scene = sequence.scenes.find((candidate) => candidate.id === sceneId);
+      if (scene) {
+        return scene;
+      }
+    }
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA322',
+    `Scene was not found: ${sceneId}.`,
+    { suggestion: 'Use a scene id from the current screenplay.' }
+  );
+}
+
+function validateSceneLocationReference(
+  session: DatabaseSession,
+  screenplay: ScreenplayDocument,
+  sceneId: string,
+  locationId: string
+): void {
+  if (!readLocationRecord(session, locationId)) {
+    throw new ProjectDataError(
+      'CORE_SHOT_REFERENCE_UNKNOWN_LOCATION',
+      `Location was not found: ${locationId}.`,
+      { suggestion: 'Choose a location from the current project.' }
+    );
+  }
+  if (!sceneNarrativeLocationIds(screenplay, sceneId).has(locationId)) {
+    throw new ProjectDataError(
+      'CORE_SHOT_REFERENCE_LOCATION_OUTSIDE_NARRATIVE',
+      `Location is not available in this scene narrative: ${locationId}.`,
+      { suggestion: 'Add the location to the scene narrative before selecting it for this shot.' }
+    );
+  }
+}
+
+function validateLocationSheetAsset(
+  session: DatabaseSession,
+  locationId: string,
+  assetId: string
+): void {
+  const relationship = readAssetRelationshipRecord(session, {
+    target: { kind: 'location', locationId },
+    assetId,
+  });
+  if (!relationship || relationship.role !== 'environment_sheet') {
+    throw new ProjectDataError(
+      'CORE_SHOT_REFERENCE_UNKNOWN_INPUT',
+      `Location sheet asset does not belong to location ${locationId}: ${assetId}.`,
+      { suggestion: 'Choose an environment sheet asset for the selected location.' }
+    );
+  }
+}
+
+function locationAzimuthViewId(
+  azimuthDegrees: 0 | 90 | 180 | 270
+): LocationAzimuthViewId {
+  if (azimuthDegrees === 90) {
+    return 'right';
+  }
+  if (azimuthDegrees === 180) {
+    return 'back';
+  }
+  if (azimuthDegrees === 270) {
+    return 'left';
+  }
+  return 'front';
 }
 
 function applyShotSpecs(
@@ -426,8 +652,12 @@ function normalizeLocation(
   if (locationId) {
     next.locationId = locationId;
   }
-  if (location.azimuthView) {
-    next.azimuthView = location.azimuthView;
+  const environmentSheetAssetId = location.environmentSheetAssetId?.trim();
+  if (environmentSheetAssetId) {
+    next.environmentSheetAssetId = environmentSheetAssetId;
+  }
+  if (location.viewIds?.length) {
+    next.viewIds = [...new Set(location.viewIds)];
   }
   return Object.keys(next).length ? next : undefined;
 }
@@ -439,9 +669,30 @@ function normalizeCastReferences(
     return undefined;
   }
   if (castReferences.castMemberIds) {
-    return {
+    const next: NonNullable<ShotSpecs['castReferences']> = {
       castMemberIds: [...new Set(castReferences.castMemberIds)],
     };
+    if (castReferences.characterSheetAssetIds) {
+      const characterSheetAssetIds = Object.fromEntries(
+        Object.entries(castReferences.characterSheetAssetIds).filter(
+          ([castMemberId, assetId]) => castMemberId.trim() && assetId.trim()
+        )
+      );
+      if (Object.keys(characterSheetAssetIds).length) {
+        next.characterSheetAssetIds = characterSheetAssetIds;
+      }
+    }
+    return next;
+  }
+  if (castReferences.characterSheetAssetIds) {
+    const characterSheetAssetIds = Object.fromEntries(
+      Object.entries(castReferences.characterSheetAssetIds).filter(
+        ([castMemberId, assetId]) => castMemberId.trim() && assetId.trim()
+      )
+    );
+    if (Object.keys(characterSheetAssetIds).length) {
+      return { characterSheetAssetIds };
+    }
   }
   return undefined;
 }

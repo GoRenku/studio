@@ -12,9 +12,12 @@ import {
 import {
   readActStoryboardResource,
   readSceneShotListResource,
+  updateSceneShotCastCharacterSheetReference,
   updateSceneShotCastReferences,
   updateSceneShotCustomReferenceImages,
+  updateSceneShotLocationSheetReference,
   updateSceneShotLocationReference,
+  updateSceneShotLocationViewReferences,
   updateSceneShotLookbookReference,
   updateSceneShotSpecs,
 } from '../resources/scene-storyboard-ui.js';
@@ -33,8 +36,11 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
   | 'readSceneShotListResource'
+  | 'updateSceneShotCastCharacterSheetReference'
   | 'updateSceneShotCastReferences'
+  | 'updateSceneShotLocationSheetReference'
   | 'updateSceneShotLocationReference'
+  | 'updateSceneShotLocationViewReferences'
   | 'updateSceneShotLookbookReference'
   | 'updateSceneShotCustomReferenceImages'
   | 'updateSceneShotSpecs'
@@ -52,8 +58,11 @@ export function createDesignResourceServiceWiring(): Pick<
     readSequenceResource,
     readSceneNarrativeResource,
     readSceneShotListResource,
+    updateSceneShotCastCharacterSheetReference,
     updateSceneShotCastReferences,
+    updateSceneShotLocationSheetReference,
     updateSceneShotLocationReference,
+    updateSceneShotLocationViewReferences,
     updateSceneShotLookbookReference,
     updateSceneShotCustomReferenceImages,
     updateSceneShotSpecs,

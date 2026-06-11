@@ -147,7 +147,6 @@ export function readShotCastReferencesRequest(
 
 export interface ShotLocationReferenceRequest {
   locationId: string;
-  azimuthView?: LocationAzimuthViewId;
 }
 
 export function readShotLocationReferenceRequest(
@@ -161,21 +160,103 @@ export function readShotLocationReferenceRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['locationId', 'azimuthView'],
+    ['locationId'],
     issues,
     CONTEXT,
-    'Send only the locationId and azimuthView fields.'
+    'Send only the locationId field.'
   );
   const locationId = readStringValue(record.locationId, ['locationId'], issues);
-  const azimuthView =
-    record.azimuthView === undefined
-      ? undefined
-      : readLocationAzimuthView(record.azimuthView, issues);
   finishOrThrow(issues);
-  return {
-    locationId,
-    ...(azimuthView ? { azimuthView } : {}),
-  };
+  return { locationId };
+}
+
+export interface ShotCastCharacterSheetReferenceRequest {
+  castMemberId: string;
+  assetId: string | null;
+}
+
+export function readShotCastCharacterSheetReferenceRequest(
+  input: unknown
+): ShotCastCharacterSheetReferenceRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['castMemberId', 'assetId'],
+    issues,
+    CONTEXT,
+    'Send only the castMemberId and assetId fields.'
+  );
+  const castMemberId = readStringValue(record.castMemberId, ['castMemberId'], issues);
+  const assetId =
+    record.assetId === null
+      ? null
+      : readStringValue(record.assetId, ['assetId'], issues);
+  finishOrThrow(issues);
+  return { castMemberId, assetId };
+}
+
+export interface ShotLocationSheetReferenceRequest {
+  locationId: string;
+  assetId: string | null;
+}
+
+export function readShotLocationSheetReferenceRequest(
+  input: unknown
+): ShotLocationSheetReferenceRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['locationId', 'assetId'],
+    issues,
+    CONTEXT,
+    'Send only the locationId and assetId fields.'
+  );
+  const locationId = readStringValue(record.locationId, ['locationId'], issues);
+  const assetId =
+    record.assetId === null
+      ? null
+      : readStringValue(record.assetId, ['assetId'], issues);
+  finishOrThrow(issues);
+  return { locationId, assetId };
+}
+
+export interface ShotLocationViewReferencesRequest {
+  locationId: string;
+  assetId: string;
+  viewIds: LocationAzimuthViewId[];
+}
+
+export function readShotLocationViewReferencesRequest(
+  input: unknown
+): ShotLocationViewReferencesRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['locationId', 'assetId', 'viewIds'],
+    issues,
+    CONTEXT,
+    'Send only the locationId, assetId, and viewIds fields.'
+  );
+  const locationId = readStringValue(record.locationId, ['locationId'], issues);
+  const assetId = readStringValue(record.assetId, ['assetId'], issues);
+  const viewIds = readLocationAzimuthViewArray(record.viewIds, ['viewIds'], issues);
+  finishOrThrow(issues);
+  return { locationId, assetId, viewIds };
 }
 
 export interface ShotLookbookReferenceRequest {
@@ -371,6 +452,7 @@ function readStringValue(
 
 function readLocationAzimuthView(
   value: unknown,
+  path: string[],
   issues: DiagnosticIssue[]
 ): LocationAzimuthViewId {
   if (
@@ -384,12 +466,33 @@ function readLocationAzimuthView(
   issues.push(
     createDiagnosticError(
       'STUDIO_SERVER348',
-      'azimuthView must be front, right, back, or left.',
-      { path: ['azimuthView'], context: CONTEXT },
-      'Send one supported location view id.'
+      `${path.join('.')} must be front, right, back, or left.`,
+      { path, context: CONTEXT },
+      'Send supported location view ids.'
     )
   );
   return 'front';
+}
+
+function readLocationAzimuthViewArray(
+  value: unknown,
+  path: string[],
+  issues: DiagnosticIssue[]
+): LocationAzimuthViewId[] {
+  if (!Array.isArray(value)) {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER342',
+        `${path.join('.')} must be an array.`,
+        { path, context: CONTEXT },
+        'Send an array of location view ids.'
+      )
+    );
+    return [];
+  }
+  return value.map((item, index) =>
+    readLocationAzimuthView(item, [...path, String(index)], issues)
+  );
 }
 
 function finishOrThrow(issues: DiagnosticIssue[]): void {

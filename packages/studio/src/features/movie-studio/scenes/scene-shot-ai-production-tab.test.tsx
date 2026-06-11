@@ -238,27 +238,30 @@ function productionPlan(
       diagnostics: [],
       finalEstimate: null,
     },
-    castReferences: [],
-    locationReferences: [],
-    lookbookReferences: input.lookbook
-      ? [
-          {
-            lookbookSheetId: null,
-            lookbookId: 'lookbook_imperial_wound',
-            title: 'Imperial Wound',
-            selected: true,
-            defaultSelected: true,
-            image: {
-              state: 'selected-planned',
-              mediaKind: 'image',
-              pricing: { state: 'priced', estimatedUsd: 0.04 },
-              previews: [],
-              diagnostics: [],
+    references: {
+      general: [],
+      lookbook: input.lookbook
+        ? [
+            {
+              id: 'lookbook_imperial_wound:planned-lookbook-sheet',
+              lookbookSheetId: null,
+              lookbookId: 'lookbook_imperial_wound',
+              title: 'Imperial Wound',
+              selected: true,
+              defaultSelected: true,
+              card: {
+                state: 'selected-planned',
+                mediaKind: 'image',
+                pricing: { state: 'priced', estimatedUsd: 0.04 },
+                previews: [],
+                diagnostics: [],
+              },
             },
-          },
-        ]
-      : [],
-    imageReferences: [],
+          ]
+        : [],
+      castMembers: [],
+      locations: [],
+    },
     diagnostics: input.promptStale
       ? [
           {
@@ -384,7 +387,7 @@ describe('AI Production tab', () => {
     );
 
     render(<SceneShotsTabHarness />);
-    const tab = await screen.findByRole('tab', { name: 'Lookbook' });
+    const tab = await screen.findByRole('tab', { name: 'References' });
     fireEvent.focus(tab);
     fireEvent.click(tab);
 

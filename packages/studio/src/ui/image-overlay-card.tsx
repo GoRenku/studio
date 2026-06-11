@@ -17,6 +17,7 @@ interface ImageOverlayCardProps {
   overlayClassName?: string;
   selected?: boolean;
   topRightAction?: ReactNode;
+  topRightActionPersistent?: boolean;
   bottomRightControl?: ReactNode;
   onOpen: () => void;
 }
@@ -33,6 +34,7 @@ export function ImageOverlayCard({
   overlayClassName,
   selected = false,
   topRightAction,
+  topRightActionPersistent = false,
   bottomRightControl,
   onOpen,
 }: ImageOverlayCardProps) {
@@ -104,7 +106,14 @@ export function ImageOverlayCard({
         </div>
       ) : null}
       {topRightAction ? (
-        <div className='absolute right-2 top-2 rounded-md bg-black/48 text-white opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'>
+        <div
+          className={cn(
+            'absolute right-2 top-2 rounded-md bg-black/48 text-white shadow-sm backdrop-blur-sm transition-opacity',
+            topRightActionPersistent
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+          )}
+        >
           {topRightAction}
         </div>
       ) : null}

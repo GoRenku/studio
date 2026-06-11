@@ -1060,9 +1060,9 @@ function shotLocationPromptText(
 }
 
 function shotLocationViewPromptText(shot: SceneShot): string | null {
-  const location = shot.shotSpecs?.location;
-  if (location?.azimuthView) {
-    return LOCATION_AZIMUTH_VIEW_LABELS[location.azimuthView];
+  const viewIds = shot.shotSpecs?.location?.viewIds;
+  if (viewIds?.length) {
+    return viewIds.map((viewId) => LOCATION_AZIMUTH_VIEW_LABELS[viewId]).join(', ');
   }
   return null;
 }

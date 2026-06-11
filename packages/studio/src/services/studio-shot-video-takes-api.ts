@@ -1,4 +1,5 @@
 import type {
+  LocationAzimuthViewId,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeInputPolicy,
   ShotVideoTakeInputKind,
@@ -146,10 +147,53 @@ export async function updateShotLocationReference(
   projectName: string,
   sceneId: string,
   shotId: string,
-  input: { locationId: string; azimuthView?: 'front' | 'right' | 'back' | 'left' }
+  locationId: string
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendMutation(
     shotReferencePath(projectName, sceneId, shotId, 'location-reference'),
+    'PATCH',
+    { locationId }
+  );
+}
+
+export async function updateShotCastCharacterSheetReference(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  input: { castMemberId: string; assetId: string | null }
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    shotReferencePath(projectName, sceneId, shotId, 'cast-character-sheet-reference'),
+    'PATCH',
+    input
+  );
+}
+
+export async function updateShotLocationSheetReference(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  input: { locationId: string; assetId: string | null }
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    shotReferencePath(projectName, sceneId, shotId, 'location-sheet-reference'),
+    'PATCH',
+    input
+  );
+}
+
+export async function updateShotLocationViewReferences(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  input: {
+    locationId: string;
+    assetId: string;
+    viewIds: LocationAzimuthViewId[];
+  }
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    shotReferencePath(projectName, sceneId, shotId, 'location-view-references'),
     'PATCH',
     input
   );
@@ -175,7 +219,7 @@ export async function updateShotCustomReferenceImages(
   customReferenceInputIds: string[]
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'custom-reference-images'),
+    shotReferencePath(projectName, sceneId, shotId, 'reference-images'),
     'PATCH',
     { customReferenceInputIds }
   );

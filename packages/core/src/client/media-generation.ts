@@ -1215,50 +1215,88 @@ export interface ShotVideoTakeReferenceCardPlan {
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
-export interface ShotVideoTakeCastReferenceChoice {
-  castMemberId: string;
-  name: string;
-  selected: boolean;
-  defaultSelected: boolean;
-  characterSheet: ShotVideoTakeReferenceCardPlan;
-}
-
-export interface ShotVideoTakeLocationViewChoice {
-  viewId: LocationAzimuthViewId;
-  label: string;
-  selected: boolean;
-  preview: ShotVideoTakeReferenceImagePreview | null;
-}
-
-export interface ShotVideoTakeLocationReferenceChoice {
-  locationId: string;
-  name: string;
-  selected: boolean;
-  defaultSelected: boolean;
-  environmentSheet: ShotVideoTakeReferenceCardPlan;
-  viewChoices: ShotVideoTakeLocationViewChoice[];
-}
-
-export interface ShotVideoTakeLookbookReferenceChoice {
-  lookbookSheetId: string | null;
-  lookbookId: string;
-  title: string;
-  selected: boolean;
-  defaultSelected: boolean;
-  image: ShotVideoTakeReferenceCardPlan;
-}
-
-export type ShotVideoTakeImageReferenceKind =
+export type ShotVideoTakeGeneralReferenceKind =
   | 'first-frame'
   | 'last-frame'
   | 'reference-image'
   | 'multi-shot-storyboard-sheet';
 
-export interface ShotVideoTakeImageReferenceChoice {
-  referenceKind: ShotVideoTakeImageReferenceKind;
+export interface ShotVideoTakeGeneralReferenceChoice {
+  id: string;
+  kind: ShotVideoTakeGeneralReferenceKind;
   title: string;
   selected: boolean;
-  image: ShotVideoTakeReferenceCardPlan;
+  card: ShotVideoTakeReferenceCardPlan;
+}
+
+export interface ShotVideoTakeLookbookReferenceChoice {
+  id: string;
+  lookbookId: string;
+  lookbookSheetId: string | null;
+  title: string;
+  selected: boolean;
+  defaultSelected: boolean;
+  card: ShotVideoTakeReferenceCardPlan;
+}
+
+export interface ShotVideoTakeCastMemberReferenceGroup {
+  castMemberId: string;
+  name: string;
+  role: string | null;
+  selectedForShot: boolean;
+  defaultSelectedForShot: boolean;
+  selectedCharacterSheetAssetId: string | null;
+  defaultCharacterSheetAssetId: string | null;
+  characterSheets: ShotVideoTakeCharacterSheetReferenceChoice[];
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface ShotVideoTakeCharacterSheetReferenceChoice {
+  id: string;
+  castMemberId: string;
+  assetId: string | null;
+  title: string;
+  selected: boolean;
+  defaultSelected: boolean;
+  card: ShotVideoTakeReferenceCardPlan;
+}
+
+export interface ShotVideoTakeLocationReferenceGroup {
+  locationId: string;
+  name: string;
+  selectedForShot: boolean;
+  defaultSelectedForShot: boolean;
+  selectedEnvironmentSheetAssetId: string | null;
+  defaultEnvironmentSheetAssetId: string | null;
+  selectedViewIds: LocationAzimuthViewId[];
+  environmentSheets: ShotVideoTakeEnvironmentSheetReferenceChoice[];
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface ShotVideoTakeEnvironmentSheetReferenceChoice {
+  id: string;
+  locationId: string;
+  assetId: string | null;
+  title: string;
+  selected: boolean;
+  defaultSelected: boolean;
+  card: ShotVideoTakeReferenceCardPlan;
+  views: ShotVideoTakeLocationViewReferenceChoice[];
+}
+
+export interface ShotVideoTakeLocationViewReferenceChoice {
+  id: string;
+  viewId: LocationAzimuthViewId;
+  label: string;
+  selected: boolean;
+  card: ShotVideoTakeReferenceCardPlan;
+}
+
+export interface ShotVideoTakeReferenceSectionsReport {
+  general: ShotVideoTakeGeneralReferenceChoice[];
+  lookbook: ShotVideoTakeLookbookReferenceChoice[];
+  castMembers: ShotVideoTakeCastMemberReferenceGroup[];
+  locations: ShotVideoTakeLocationReferenceGroup[];
 }
 
 export interface ShotVideoTakeProductionPlanReport {
@@ -1266,10 +1304,7 @@ export interface ShotVideoTakeProductionPlanReport {
   productionGroup: ShotVideoTakeProductionGroup;
   finalPrompt: ShotVideoTakePromptDraft | null;
   plan: ShotVideoTakeGenerationPlan;
-  castReferences: ShotVideoTakeCastReferenceChoice[];
-  locationReferences: ShotVideoTakeLocationReferenceChoice[];
-  lookbookReferences: ShotVideoTakeLookbookReferenceChoice[];
-  imageReferences: ShotVideoTakeImageReferenceChoice[];
+  references: ShotVideoTakeReferenceSectionsReport;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 

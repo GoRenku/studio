@@ -6,6 +6,14 @@ import type { ShotVideoTakeProductionPlanReport } from '@gorenku/studio-core/cli
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 
 vi.mock('@/services/studio-project-assets-api', () => ({
+  castAssetFileUrl: vi.fn(
+    (
+      projectName: string,
+      castMemberId: string,
+      assetId: string,
+      fileId: string
+    ) => `/cast-assets/${projectName}/${castMemberId}/${assetId}/${fileId}`
+  ),
   sceneAssetFileUrl: vi.fn(
     (
       projectName: string,
@@ -31,16 +39,25 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
+        shot={SHOT}
         productionPlan={productionPlanWithReferenceImages()}
         {...handlers}
       />
     );
 
+    expect(screen.getByRole('button', { name: 'Collapse General' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Expand Lookbook' })).not.toBeNull();
     expect(
-      screen.getByRole('img', { name: 'First frame' }).getAttribute('src')
+      screen.getByRole('button', { name: 'Expand Cast Character Sheets' })
+    ).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Expand Location Sheets And Views' })
+    ).not.toBeNull();
+    expect(
+      screen.getByRole('img', { name: 'First Frame' }).getAttribute('src')
     ).toBe('/shot-inputs/constantinople/scene_hook/input_first/file_first');
     expect(
-      screen.getByRole('img', { name: 'Last frame' }).getAttribute('src')
+      screen.getByRole('img', { name: 'Last Frame' }).getAttribute('src')
     ).toBe('/shot-inputs/constantinople/scene_hook/input_last/file_last');
     expect(
       screen.getByRole('img', { name: 'Storyboard sheet (3 shots)' })
@@ -54,12 +71,13 @@ describe('SceneShotReferencesTab', () => {
     ).toBe('/shot-inputs/constantinople/scene_hook/input_blade/file_blade');
   });
 
-  it('selects and deletes imported reference image takes from the shared card controls', async () => {
+  it('selects and clears imported reference image takes from the shared card controls', async () => {
     const handlers = referenceHandlers();
     render(
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
+        shot={SHOT}
         productionPlan={productionPlanWithReferenceImages()}
         {...handlers}
       />
@@ -70,52 +88,82 @@ describe('SceneShotReferencesTab', () => {
       expect(handlers.onSelectInput).toHaveBeenCalledWith('input_blade');
     });
 
-    fireEvent.click(screen.getAllByLabelText('Delete reference image')[0]!);
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear First Frame pick' }));
     await waitFor(() => {
-      expect(handlers.onDeleteInput).toHaveBeenCalledWith('input_first');
+      expect(handlers.onClearInput).toHaveBeenCalledWith({
+        kind: 'first-frame',
+        subjectKind: 'shot',
+        subjectId: 'shot_001',
+      });
     });
   });
 });
+
+const SHOT = {
+  shotId: 'shot_001',
+  title: 'Map study',
+  storyBeat: 'beat',
+  narrativePurpose: 'purpose',
+  description: 'description',
+  shotType: 'wide',
+  subject: 'subject',
+  action: 'action',
+  dialogue: [],
+  coveredBlockIndexes: [0],
+  castMemberIds: [],
+  locationIds: [],
+};
 
 function referenceHandlers() {
   return {
     onSelectInput: vi.fn(async () => undefined),
     onClearInput: vi.fn(async () => undefined),
-    onDeleteInput: vi.fn(async () => undefined),
   };
 }
 
 function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport {
   return {
-    imageReferences: [
-      referenceChoice('first-frame', 'First frame', 'input_first', 'file_first'),
-      referenceChoice('last-frame', 'Last frame', 'input_last', 'file_last'),
-      referenceChoice(
-        'multi-shot-storyboard-sheet',
-        'Storyboard sheet (3 shots)',
-        'input_storyboard',
-        'file_storyboard'
-      ),
-      referenceChoice(
-        'reference-image',
-        'Texture continuity',
-        'input_texture',
-        'file_texture'
-      ),
-      referenceChoice(
-        'reference-image',
-        'Blade glint insert',
-        'input_blade',
-        'file_blade',
-        false
-      ),
-    ],
-  } as ShotVideoTakeProductionPlanReport;
+    references: {
+      general: [
+        referenceChoice(
+          'first-frame',
+          'First Frame',
+          'input_first',
+          'file_first',
+          true,
+          'first-frame:shot:shot_001'
+        ),
+        referenceChoice('last-frame', 'Last Frame', 'input_last', 'file_last'),
+        referenceChoice(
+          'multi-shot-storyboard-sheet',
+          'Storyboard sheet (3 shots)',
+          'input_storyboard',
+          'file_storyboard'
+        ),
+        referenceChoice(
+          'reference-image',
+          'Texture continuity',
+          'input_texture',
+          'file_texture'
+        ),
+        referenceChoice(
+          'reference-image',
+          'Blade glint insert',
+          'input_blade',
+          'file_blade',
+          false
+        ),
+      ],
+      lookbook: [],
+      castMembers: [],
+      locations: [],
+    },
+    diagnostics: [],
+  } as unknown as ShotVideoTakeProductionPlanReport;
 }
 
 function referenceChoice(
-  referenceKind:
+  kind:
     | 'first-frame'
     | 'last-frame'
     | 'reference-image'
@@ -123,15 +171,18 @@ function referenceChoice(
   title: string,
   inputId: string,
   assetFileId: string,
-  selected = true
-): ShotVideoTakeProductionPlanReport['imageReferences'][number] {
+  selected = true,
+  dependencyId?: string
+): ShotVideoTakeProductionPlanReport['references']['general'][number] {
   return {
-    referenceKind,
+    id: inputId,
+    kind,
     title,
     selected,
-    image: {
+    card: {
       state: selected ? 'selected-ready' : 'available',
       mediaKind: 'image',
+      ...(dependencyId ? { dependencyId } : {}),
       pricing: { state: 'not-applicable', estimatedUsd: null },
       previews: [
         {

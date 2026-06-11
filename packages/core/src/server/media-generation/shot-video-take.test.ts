@@ -715,24 +715,24 @@ describe('shot video take preflight and validation', () => {
       shotIds: ['shot_001'],
       production,
     });
-    const sheetAChoice = report.lookbookReferences.find(
+    const sheetAChoice = report.references.lookbook.find(
       (choice) => choice.lookbookSheetId === sheetA.imported.id
     );
-    const sheetBChoice = report.lookbookReferences.find(
+    const sheetBChoice = report.references.lookbook.find(
       (choice) => choice.lookbookSheetId === sheetB.imported.id
     );
 
     expect(sheetAChoice).toMatchObject({
       selected: false,
-      image: {
+      card: {
         state: 'available',
       },
     });
-    expect(sheetAChoice?.image.dependencyNodeId).toBeUndefined();
-    expect(sheetAChoice?.image.planLineId).toBeUndefined();
+    expect(sheetAChoice?.card.dependencyNodeId).toBeUndefined();
+    expect(sheetAChoice?.card.planLineId).toBeUndefined();
     expect(sheetBChoice).toMatchObject({
       selected: true,
-      image: {
+      card: {
         state: 'selected-ready',
         dependencyNodeId: `asset:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
       },
@@ -805,12 +805,12 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    expect(report.imageReferences).toEqual(
+    expect(report.references.general).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          referenceKind: 'reference-image',
+          kind: 'reference-image',
           selected: true,
-          image: expect.objectContaining({
+          card: expect.objectContaining({
             dependencyId: 'reference-image:shot:shot_001',
             state: 'unavailable',
           }),
@@ -862,14 +862,14 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    const firstFrameChoices = report.imageReferences.filter(
-      (choice) => choice.referenceKind === 'first-frame'
+    const firstFrameChoices = report.references.general.filter(
+      (choice) => choice.kind === 'first-frame'
     );
     expect(firstFrameChoices).toHaveLength(2);
     expect(firstFrameChoices.filter((choice) => choice.selected)).toHaveLength(1);
     expect(
       firstFrameChoices.flatMap((choice) =>
-        choice.image.previews.map((preview) => preview.inputId)
+        choice.card.previews.map((preview) => preview.inputId)
       )
     ).toHaveLength(2);
   });

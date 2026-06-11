@@ -88,7 +88,11 @@ function hasLens(lens: ShotSpecs['lens']): boolean {
 
 function hasLocation(location: ShotSpecs['location']): boolean {
   if (!location) return false;
-  return Boolean(location.locationId?.trim() || location.azimuthView);
+  return Boolean(
+    location.locationId?.trim() ||
+      location.environmentSheetAssetId?.trim() ||
+      location.viewIds?.length
+  );
 }
 
 function hasCustom(custom: ShotSpecs['custom']): boolean {
