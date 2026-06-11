@@ -80,6 +80,36 @@ export type MediaGenerationDependencyKind =
   | 'lookbook-sheet'
   | 'manual-attachment';
 
+export type MediaGenerationAssetSelectorId =
+  | 'shot-video-input'
+  | 'cast-character-sheet'
+  | 'location-environment-sheet'
+  | 'lookbook-sheet'
+  | 'manual-attachment';
+
+export interface MediaGenerationDependencyKindDefinition {
+  dependencyKind: MediaGenerationDependencyKind;
+  mediaKind: MediaKind;
+  cardinality: 'one' | 'many';
+  assetSelector: MediaGenerationAssetSelectorId;
+  missingInputBehavior: 'plan-generation' | 'require-attachment';
+  generationPurpose?: MediaGenerationPurpose;
+}
+
+export interface MediaGenerationDependencySlot {
+  dependencyId: string;
+  dependencyKind: MediaGenerationDependencyKind;
+  label: string;
+  dependencyTarget?: MediaGenerationTarget;
+  required: boolean;
+  reason: string;
+}
+
+export interface MediaGenerationDependencyRequest {
+  kind: string;
+  [key: string]: unknown;
+}
+
 export type LookbookImageModelChoice =
   | 'fal-ai/openai/gpt-image-2'
   | 'fal-ai/nano-banana-2'
@@ -1395,6 +1425,7 @@ export type MediaGenerationPlanLineKind =
   | 'reused-asset'
   | 'dependency-generation'
   | 'required-attachment'
+  | 'final-generation'
   | 'final-video-generation';
 
 export interface MediaGenerationPlanLine {
@@ -1411,6 +1442,16 @@ export interface MediaGenerationPlanLine {
   pricing: MediaGenerationDependencyPricing;
   sourceAssetId?: string;
   draftGenerationSpec?: DraftMediaGenerationSpec;
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface MediaGenerationDependencyPlan {
+  rootPurpose: MediaGenerationPurpose;
+  target: MediaGenerationTarget;
+  dependencyMap: MediaGenerationDependencyMap;
+  lines: MediaGenerationPlanLine[];
+  estimate: MediaGenerationDependencyEstimate;
+  finalEstimate: GenerationEstimate | null;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 

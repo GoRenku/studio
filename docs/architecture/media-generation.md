@@ -52,13 +52,30 @@ renku media import --purpose lookbook.image --target lookbook:<id> --source <pat
 
 Internally, the common lifecycle is registry-backed. Core owns a media
 generation purpose registry and shared generation service for purpose lookup,
-spec persistence, prepare, estimate, run, and run recording. Purpose definitions
-still own context construction, spec validation, provider payloads, output
-names, dependency declarations, and import behavior.
+spec persistence, prepare, estimate, dependency planning, run, and run
+recording. Purpose definitions still own context construction, spec validation,
+provider payloads, output names, dependency declarations, draft dependency
+specs, and import behavior.
 
-Shot-video take planning reuses the shared dependency-map, dependency-pricing,
-and plan-line contracts. A generated file still does not become project
-metadata until an explicit media import succeeds.
+Dependency planning is shared media-generation architecture, not a shot-video
+special case. Core builds a read-only dependency graph from purpose-owned
+dependency declarations, resolves existing assets through deterministic asset
+selectors, estimates planned dependency specs through the same shared lifecycle
+used by persisted specs, and aggregates the graph total from graph nodes.
+
+There is one pricing meaning. Generated node prices come from provider
+estimates in `@gorenku/studio-engines`; reused existing assets contribute
+`$0.00`; manual external attachments are not generation work and are not
+priced. Studio and CLI surfaces render graph totals and line items, but they do
+not compute generation prices.
+
+Root spec creation and update refuse to persist a spec while required
+dependencies are still planned or missing. Callers generate or import the
+dependency outputs, refresh the graph, and then create the root spec once every
+required provider input resolves to a real project asset.
+
+A generated file still does not become project metadata until an explicit media
+import succeeds.
 
 Location environment sheets add an agent-owned post-processing step after
 generation. Core asks the selected text-to-image model for a four-azimuth
@@ -77,3 +94,4 @@ diagnostics.
 - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
 - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
+- `../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`

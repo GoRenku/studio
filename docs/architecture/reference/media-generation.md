@@ -18,6 +18,7 @@ Decision history:
 - `../../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 - `../../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 - `../../decisions/0026-use-thin-structured-cli-command-handlers.md`
+- `../../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
 
 ## Current Purposes
 
@@ -30,6 +31,7 @@ cast.character-sheet
 cast.profile
 cast.voice-sample
 location.environment-sheet
+scene.dialogue-audio
 scene.storyboard-sheet
 shot.first-frame
 shot.last-frame
@@ -92,6 +94,7 @@ renku generation context --purpose cast.character-sheet --target cast:<id> --jso
 renku generation context --purpose cast.profile --target cast:<id> --json
 renku generation context --purpose cast.voice-sample --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
+renku generation context --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation context --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation context --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
@@ -105,6 +108,7 @@ renku generation model list --purpose cast.character-sheet --target cast:<id> --
 renku generation model list --purpose cast.profile --target cast:<id> --json
 renku generation model list --purpose cast.voice-sample --target cast:<id> --json
 renku generation model list --purpose location.environment-sheet --target location:<id> --json
+renku generation model list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation model list --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation model list --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
@@ -128,6 +132,7 @@ renku generation spec list --purpose lookbook.sheet --target lookbook:<id> --jso
 renku generation spec list --purpose cast.character-sheet --target cast:<id> --json
 renku generation spec list --purpose cast.profile --target cast:<id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<id> --json
+renku generation spec list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation spec list --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation spec list --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
@@ -159,11 +164,55 @@ belong to the selected shot or ordered production group.
 The CLI command names are generic, and the spec lifecycle now routes through
 the core shared generation service. The shared service resolves the purpose
 definition from the media generation purpose registry, then runs the common
-validate, create, update, read, list, prepare, estimate, run, and run-recording
-operations.
+validate, dependency-plan, create, update, read, list, prepare, estimate, run,
+and run-recording operations.
 
 Purpose definitions keep purpose-specific behavior such as context building,
-model options, provider payloads, output names, and media import behavior.
+model options, provider payloads, output names, dependency declarations, draft
+dependency specs, and media import behavior.
+
+## Dependency Graphs And Estimates
+
+`planMediaGenerationDependencies` is the shared read-only dependency graph
+path. It accepts a root generation spec, validates it through the purpose
+registry, asks the root purpose for dependency slots, resolves existing assets,
+plans missing generated dependencies, estimates every generated node through
+engines pricing, estimates the root generation, and returns:
+
+- `dependencyMap.nodes`;
+- `dependencyMap.edges`;
+- `dependencyMap.execution.levels`;
+- `lines`;
+- `estimate`;
+- `diagnostics`.
+
+Generated dependency prices come only from engines estimates. Existing assets
+are represented as graph nodes priced at `$0.00`. Manual attachments are not
+generation work and use `not-applicable` pricing.
+
+Estimate states:
+
+- `complete`: every generated graph node is priced and no required dependency is
+  missing;
+- `partial`: at least one generated node is unpriced and requires explicit
+  unpriced-cost approval;
+- `unavailable`: at least one required dependency is missing, so no trustworthy
+  total is exposed.
+
+The total for a complete plan is the sum of graph nodes, including the root
+generation and generated dependencies. Studio must render this value from the
+core report and must not calculate a separate total.
+
+Root spec creation and update call the shared dependency planner when the root
+purpose declares dependencies. They fail with
+`CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCIES` while any required
+dependency is still a planned generation or external attachment. Generate or
+import dependencies first, refresh the graph, then create the root spec.
+
+The first shared non-shot proof is `cast.profile`. It declares a
+`cast-character-sheet:<castMemberId>` dependency, reuses an imported character
+sheet at `$0.00`, plans a missing `cast.character-sheet` dependency when no
+sheet exists, and includes that dependency in the profile graph estimate.
 
 ## Lookbook Image Context
 

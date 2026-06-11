@@ -33,6 +33,10 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import type {
+  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftSpecInput,
+} from './dependency-draft-specs.js';
 import {
   buildScreenplayContext,
   buildTimePeriodContext,
@@ -276,6 +280,41 @@ export async function prepareCastCharacterSheetDraftSpec(input: {
     spec: draftMediaGenerationSpecRecord(normalized),
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized, 'Cast character sheet'),
+  };
+}
+
+export async function buildCastCharacterSheetDependencyDraftSpec(
+  input: MediaGenerationDependencyDraftSpecInput
+): Promise<MediaGenerationDependencyDraftSpec> {
+  if (input.dependencyTarget.kind !== 'castMember') {
+    throw new ProjectDataError(
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `cast.character-sheet dependency requires a castMember target. Received: ${input.dependencyTarget.kind}.`
+    );
+  }
+  const context = await buildCastCharacterSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    castMemberId: input.dependencyTarget.id,
+  });
+  return {
+    purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+    spec: {
+      purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+      target: input.dependencyTarget,
+      modelChoice: 'fal-ai/openai/gpt-image-2',
+      prompt: [
+        `Create a production character sheet for ${context.castMember.name}.`,
+        input.reason,
+        'Use the active visual language and cast design context. Keep the sheet useful as a video reference image.',
+      ].join(' '),
+      takeCount: 1,
+      seed: null,
+      imageFrame: 'project',
+      detail: 'standard',
+      outputFormat: 'png',
+      title: input.label,
+    },
   };
 }
 

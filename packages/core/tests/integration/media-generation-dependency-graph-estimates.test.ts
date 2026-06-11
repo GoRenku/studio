@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
+  CastProfileGenerationSpec,
   LookbookSheetGenerationSpec,
   SceneShotListDocument,
 } from '../../src/client/index.js';
@@ -120,21 +121,21 @@ describe('media generation dependency graph estimates integration', () => {
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyNodeId: `planned:character-sheet:cast-member:${ids.castMemberId}`,
+          dependencyNodeId: `planned:cast-character-sheet:${ids.castMemberId}`,
           title: 'Mehmed II',
           caption: 'Character sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
-          dependencyNodeId: `planned:location-sheet:location:${ids.locationId}`,
+          dependencyNodeId: `planned:location-environment-sheet:${ids.locationId}`,
           title: "Mehmed's council chamber",
           caption: 'Location sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
-          dependencyNodeId: `planned:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
+          dependencyNodeId: `planned:lookbook-sheet:${lookbook.lookbook.id}`,
           title: 'Imperial Wound',
           caption: 'Lookbook sheet',
           status: 'needed',
@@ -191,9 +192,9 @@ describe('media generation dependency graph estimates integration', () => {
     });
 
     const firstFrameNodeId = 'planned:first-frame:production-group:';
-    const characterNodeId = `planned:character-sheet:cast-member:${ids.castMemberId}`;
-    const locationNodeId = `planned:location-sheet:location:${ids.locationId}`;
-    const lookbookNodeId = `planned:lookbook-sheet:lookbook:${lookbook.lookbook.id}`;
+    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
+    const locationNodeId = `planned:location-environment-sheet:${ids.locationId}`;
+    const lookbookNodeId = `planned:lookbook-sheet:${lookbook.lookbook.id}`;
 
     expect(preflight.plan?.dependencyMap.edges).toEqual(
       expect.arrayContaining([
@@ -321,6 +322,122 @@ describe('media generation dependency graph estimates integration', () => {
       missingLineCount: expect.any(Number),
     });
   });
+
+  it('uses the shared dependency graph to price cast profile character-sheet dependencies', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
+
+    const plan = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec: castProfileSpec(ids.castMemberId),
+    });
+
+    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
+    expect(plan.dependencyMap.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fromNodeId: characterNodeId,
+          toNodeId: 'final:cast.profile',
+        }),
+      ])
+    );
+    expect(plan.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          nodeId: characterNodeId,
+          kind: 'dependency-generation',
+          dependencyKind: 'cast-character-sheet',
+          purpose: 'cast.character-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+        expect.objectContaining({
+          nodeId: 'final:cast.profile',
+          kind: 'final-generation',
+          purpose: 'cast.profile',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+
+    const pricedTotal = plan.lines.reduce((sum, line) => {
+      return line.pricing.state === 'priced' ? sum + line.pricing.estimatedUsd : sum;
+    }, 0);
+    expect(plan.estimate).toMatchObject({
+      state: 'complete',
+      estimatedTotalUsd: pricedTotal,
+      missingNodeCount: 0,
+      requiresPriceOverride: false,
+    });
+  });
+
+  it('blocks cast profile spec creation until character-sheet dependencies are imported assets', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
+
+    await expect(
+      projectData.createMediaGenerationSpec({
+        projectName: 'constantinople',
+        homeDir,
+        spec: castProfileSpec(ids.castMemberId),
+        idGenerator: createDeterministicIdGenerator(),
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCIES',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCY',
+        }),
+      ]),
+    });
+  });
+
+  it('reuses an imported character sheet at zero cost before creating a cast profile spec', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/cast-profile-source-sheet.png',
+      'character sheet'
+    );
+    const imported = await projectData.importCastCharacterSheetMedia({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: 'generated/media/cast-profile-source-sheet.png',
+    });
+    const primaryFile = imported.imported.files[0]!;
+
+    const plan = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec: castProfileSpec(ids.castMemberId),
+    });
+
+    expect(plan.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `asset:cast-character-sheet:${ids.castMemberId}`,
+          kind: 'existing-asset',
+          assetId: imported.imported.assetId,
+          assetFileId: primaryFile.id,
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+      ])
+    );
+    const created = await projectData.createMediaGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      spec: castProfileSpec(ids.castMemberId),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    expect(created).toMatchObject({
+      purpose: 'cast.profile',
+      target: { kind: 'castMember', id: ids.castMemberId },
+    });
+  });
 });
 
 async function sampleIds(
@@ -351,6 +468,21 @@ function lookbookSheetSpec(lookbookId: string): LookbookSheetGenerationSpec {
   };
 }
 
+function castProfileSpec(castMemberId: string): CastProfileGenerationSpec {
+  return {
+    purpose: 'cast.profile',
+    target: { kind: 'castMember', id: castMemberId },
+    modelChoice: 'fal-ai/openai/gpt-image-2',
+    prompt: 'Create a restrained cast profile portrait for the production bible.',
+    takeCount: 1,
+    seed: null,
+    imageFrame: '1:1',
+    detail: 'standard',
+    outputFormat: 'png',
+    title: 'Production cast profile',
+  };
+}
+
 async function createActiveLookbook(
   projectData: ReturnType<typeof createProjectDataService>,
   homeDir: string
@@ -368,6 +500,21 @@ async function createActiveLookbook(
     lookbookId: lookbook.lookbook.id,
   });
   return lookbook;
+}
+
+async function writeProjectFile(
+  projectData: ReturnType<typeof createProjectDataService>,
+  homeDir: string,
+  projectRelativePath: string,
+  contents: string
+): Promise<void> {
+  const project = await projectData.readCurrentProject({ homeDir });
+  if (!project) {
+    throw new Error('Expected current project to exist.');
+  }
+  const absolutePath = path.join(project.projectFolder, projectRelativePath);
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  await fs.writeFile(absolutePath, contents);
 }
 
 function sampleShotList(

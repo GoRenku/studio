@@ -1,8 +1,11 @@
 import { estimateGeneration, runGeneration } from '@gorenku/studio-engines';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
+  MediaGenerationDependencyPlan,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
+  MediaGenerationSpec,
 } from '../../client/index.js';
 import {
   insertMediaGenerationRun,
@@ -25,11 +28,16 @@ import {
   type CreateMediaGenerationSpecInput,
   type ListMediaGenerationSpecsInput,
   type MediaGenerationPurposeContextInput,
+  type MediaGenerationDependencyDeclarationInput,
   type PrepareDraftMediaGenerationSpecInput,
   type UpdateMediaGenerationSpecInput,
   type ValidateMediaGenerationSpecInput,
   requireMediaGenerationPurposeDefinition,
 } from './purpose-registry.js';
+import type { PlanMediaGenerationDependenciesInput } from '../project-data-service-contracts.js';
+import { resolveMediaGenerationDependencyGraph } from './dependency-graph.js';
+import { resolveExistingDependencyAsset } from './dependency-asset-selectors.js';
+import { planLinesFromDependencyMap } from './dependency-plan-lines.js';
 
 export async function buildMediaGenerationContext(
   input: MediaGenerationPurposeContextInput
@@ -52,13 +60,21 @@ export async function validateMediaGenerationSpec(
 export async function createMediaGenerationSpec(
   input: CreateMediaGenerationSpecInput
 ) {
-  return requireMediaGenerationPurposeDefinition(input.spec.purpose).createSpec(input);
+  const definition = requireMediaGenerationPurposeDefinition(input.spec.purpose);
+  if (definition.declareDependencies) {
+    await assertRootDependenciesResolved(input);
+  }
+  return definition.createSpec(input);
 }
 
 export async function updateMediaGenerationSpec(
   input: UpdateMediaGenerationSpecInput
 ) {
-  return requireMediaGenerationPurposeDefinition(input.spec.purpose).updateSpec(input);
+  const definition = requireMediaGenerationPurposeDefinition(input.spec.purpose);
+  if (definition.declareDependencies) {
+    await assertRootDependenciesResolved(input);
+  }
+  return definition.updateSpec(input);
 }
 
 export async function readMediaGenerationSpec(
@@ -102,6 +118,155 @@ export async function estimateDraftMediaGenerationSpec(
   const prepared = await prepareDraftMediaGenerationSpec(input);
   const estimate = await estimateGeneration(prepared.generation);
   return { ...prepared, estimate };
+}
+
+export async function planMediaGenerationDependencies(
+  input: PlanMediaGenerationDependenciesInput
+): Promise<MediaGenerationDependencyPlan> {
+  const normalized = await validateMediaGenerationSpec(input);
+  const definition = requireMediaGenerationPurposeDefinition(normalized.spec.purpose);
+  const target = normalized.spec.target;
+  const request = {
+    kind: 'media-generation-spec',
+    spec: normalized.spec,
+  };
+  const declarationInput = {
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    rootPurpose: normalized.spec.purpose,
+    purpose: normalized.spec.purpose,
+    target,
+    request,
+  } satisfies MediaGenerationDependencyDeclarationInput;
+  const slots = definition.declareDependencies
+    ? await definition.declareDependencies(declarationInput)
+    : [];
+  const graph = await withMediaGenerationProjectSession(input, ({ session }) =>
+    resolveMediaGenerationDependencyGraph({
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+      rootPurpose: normalized.spec.purpose,
+      rootTarget: target,
+      rootNodeId: `final:${normalized.spec.purpose}`,
+      rootLabel: mediaGenerationPurposeLabel(normalized.spec.purpose),
+      rootMediaKind: definition.mediaKind,
+      request,
+      slots,
+      diagnostics: [],
+      resolveExistingAsset: async (slot) =>
+        resolveExistingDependencyAsset({ session, slot }),
+      declareDependencies: async ({ purpose, nodeId, slot }) => {
+        const childDefinition = requireMediaGenerationPurposeDefinition(purpose);
+        if (!childDefinition.declareDependencies || !slot.dependencyTarget) {
+          return [];
+        }
+        return childDefinition.declareDependencies({
+          projectName: input.projectName,
+          homeDir: input.homeDir,
+          rootPurpose: normalized.spec.purpose,
+          purpose,
+          target: slot.dependencyTarget,
+          request,
+          parentNodeId: nodeId,
+        });
+      },
+      estimateRoot: async () => {
+        try {
+          const estimate = await estimateDraftMediaGenerationSpec({
+            projectName: input.projectName,
+            homeDir: input.homeDir,
+            spec: normalized.spec,
+          });
+          if (estimate.estimate.estimatedCostUsd === null) {
+            return {
+              pricing: {
+                state: 'unpriced' as const,
+                estimatedUsd: null,
+                reason:
+                  estimate.estimate.warnings.join(' ') ||
+                  `No pricing is configured for ${normalized.spec.purpose}.`,
+                overrideRequired: true as const,
+              },
+              diagnostics: [],
+              estimate: estimate.estimate,
+            };
+          }
+          return {
+            pricing: {
+              state: 'priced' as const,
+              estimatedUsd: estimate.estimate.estimatedCostUsd,
+            },
+            diagnostics: [],
+            estimate: estimate.estimate,
+          };
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? `Root generation estimate failed: ${error.message}`
+              : 'Root generation estimate failed.';
+          return {
+            pricing: {
+              state: 'unpriced' as const,
+              estimatedUsd: null,
+              reason: message,
+              overrideRequired: true as const,
+            },
+            diagnostics: [],
+            estimate: null,
+          };
+        }
+      },
+    })
+  );
+  const lines = planLinesFromDependencyMap(graph.dependencyMap);
+  return {
+    rootPurpose: normalized.spec.purpose,
+    target,
+    dependencyMap: graph.dependencyMap,
+    lines,
+    estimate: graph.dependencyMap.estimate,
+    finalEstimate: graph.rootEstimate,
+    diagnostics: graph.dependencyMap.diagnostics,
+  };
+}
+
+async function assertRootDependenciesResolved(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: MediaGenerationSpec;
+}): Promise<void> {
+  const plan = await planMediaGenerationDependencies(input);
+  const unresolved = plan.dependencyMap.nodes.filter(
+    (node) =>
+      node.kind === 'planned-generation' ||
+      node.kind === 'external-input-required'
+  );
+  if (unresolved.length === 0) {
+    return;
+  }
+  const issues = unresolved.flatMap((node) =>
+    node.diagnostics.length > 0
+      ? node.diagnostics
+      : [
+          createDiagnosticError(
+            'CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCY',
+            `Required media generation dependency is not yet an imported asset: ${node.label}.`,
+            { path: ['dependencyMap', 'nodes', node.id] },
+            'Generate or import this dependency, then create the root generation spec.'
+          ),
+        ]
+  );
+  throw new ProjectDataError(
+    'CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCIES',
+    `Media generation spec has unresolved required dependencies: ${unresolved
+      .map((node) => node.label)
+      .join(', ')}.`,
+    {
+      issues,
+      suggestion:
+        'Generate or import the required dependencies, refresh the graph, then create the root generation spec.',
+    }
+  );
 }
 
 export async function runMediaGenerationSpec(
@@ -195,4 +360,11 @@ async function withMediaGenerationProjectSession<T>(
       session,
     })
   );
+}
+
+function mediaGenerationPurposeLabel(purpose: string): string {
+  return purpose
+    .split('.')
+    .map((part) => part.replace(/-/g, ' '))
+    .join(' ');
 }

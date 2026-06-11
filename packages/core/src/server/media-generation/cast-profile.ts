@@ -8,6 +8,8 @@ import type {
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
+  MediaGenerationDependencySlot,
+  MediaGenerationTarget,
   PreparedMediaGeneration,
 } from '../../client/index.js';
 import { CAST_PROFILE_GENERATION_PURPOSE } from '../../client/index.js';
@@ -31,6 +33,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import type { MediaGenerationDependencyDeclarationInput } from './purpose-registry.js';
 import {
   buildScreenplayContext,
   buildTimePeriodContext,
@@ -172,6 +175,27 @@ export async function listCastProfileModels(
     target: context.target,
     models: modelChoices(context),
   };
+}
+
+export async function declareCastProfileDependencies(
+  input: MediaGenerationDependencyDeclarationInput
+): Promise<MediaGenerationDependencySlot[]> {
+  const target = requireCastMemberDependencyTarget(input.target);
+  const context = await buildCastProfileContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    castMemberId: target.id,
+  });
+  return [
+    {
+      dependencyId: `cast-character-sheet:${target.id}`,
+      dependencyKind: 'cast-character-sheet',
+      dependencyTarget: target,
+      label: `${context.castMember.name} Character Sheet`,
+      required: true,
+      reason: `Cast profile generation requires a character sheet reference for ${context.castMember.name}.`,
+    },
+  ];
 }
 
 export async function validateCastProfileSpec(input: {
@@ -449,6 +473,18 @@ async function normalizeSpec(input: {
     }
   });
   return normalized;
+}
+
+function requireCastMemberDependencyTarget(
+  target: MediaGenerationTarget
+): Extract<MediaGenerationTarget, { kind: 'castMember' }> {
+  if (target.kind !== 'castMember') {
+    throw new ProjectDataError(
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `cast.profile dependency planning requires a castMember target. Received: ${target.kind}.`
+    );
+  }
+  return target;
 }
 
 function resolveSourcePathForEditModel(

@@ -92,6 +92,7 @@ import type {
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
   MediaGenerationEstimateReport,
+  MediaGenerationDependencyPlan,
   MediaGenerationRunReport,
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
@@ -467,6 +468,7 @@ export interface ProjectDataService {
   prepareDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   estimateMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
   runMediaGenerationSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   buildShotVideoTakeContext(input: ShotVideoTakeContextInput): Promise<ShotVideoTakeGenerationContext>;
   listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
@@ -1207,6 +1209,9 @@ export interface ValidateMediaGenerationSpecInput extends RenkuConfigPathOptions
 }
 
 export interface PrepareDraftMediaGenerationSpecInput extends ValidateMediaGenerationSpecInput {}
+
+export interface PlanMediaGenerationDependenciesInput
+  extends ValidateMediaGenerationSpecInput {}
 
 export interface CreateMediaGenerationSpecInput
   extends ValidateMediaGenerationSpecInput {

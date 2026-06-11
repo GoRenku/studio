@@ -13,6 +13,7 @@ export function createSharedMediaGenerationServiceWiring() {
     prepareDraftMediaGenerationSpec: sharedGeneration.prepareDraftMediaGenerationSpec,
     estimateMediaGenerationSpec: sharedGeneration.estimateMediaGenerationSpec,
     estimateDraftMediaGenerationSpec: sharedGeneration.estimateDraftMediaGenerationSpec,
+    planMediaGenerationDependencies: sharedGeneration.planMediaGenerationDependencies,
     runMediaGenerationSpec: sharedGeneration.runMediaGenerationSpec,
   };
 }

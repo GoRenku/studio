@@ -101,6 +101,37 @@ describe('scene storyboard UI resources', () => {
     ]);
   });
 
+  it('clears sheet and view selections when changing the shot location', async () => {
+    const ids = await sampleIds();
+    const secondLocationId = await addSecondSceneLocation(ids.sceneId);
+    await writeShotList(ids);
+
+    await projectData.updateSceneShotLocationReference({
+      homeDir,
+      projectName: PROJECT_NAME,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      locationId: ids.locationId,
+      environmentSheetAssetId: 'asset_original_location_sheet',
+      viewIds: ['front', 'left'],
+    });
+
+    const updated = await projectData.updateSceneShotLocationReference({
+      homeDir,
+      projectName: PROJECT_NAME,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      locationId: secondLocationId,
+    });
+
+    const shot = updated.activeShotList?.shots.find(
+      (entry) => entry.shotId === 'shot_001'
+    );
+    expect(shot?.shotSpecs?.location).toEqual({
+      locationId: secondLocationId,
+    });
+  });
+
   it('walks act → sequence → scene → shots and derives Shot N labels in order', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 'Coverage', 2);
@@ -181,6 +212,51 @@ describe('scene storyboard UI resources', () => {
         })),
       },
     });
+  }
+
+  async function addSecondSceneLocation(sceneId: string): Promise<string> {
+    await projectData.applyLocationOperations({
+      homeDir,
+      document: {
+        kind: 'locationOperations',
+        operations: [
+          {
+            operation: 'location.add',
+            location: {
+              key: 'harbor-chain',
+              handle: 'harbor-chain',
+              name: 'Harbor Chain',
+            },
+          },
+        ],
+      },
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const location = screenplay.screenplay!.locations.find(
+      (candidate) => candidate.handle === 'harbor-chain'
+    );
+    if (!location?.id) {
+      throw new Error('Expected second location to be created.');
+    }
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...scene,
+          setting: {
+            ...scene.setting,
+            locationIds: [
+              ...(scene.setting.locationIds ?? []),
+              location.id,
+            ],
+          },
+        },
+      },
+    });
+    return location.id;
   }
 
   async function sampleIds(): Promise<SampleIds> {

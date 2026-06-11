@@ -57,6 +57,10 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import type {
+  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftSpecInput,
+} from './dependency-draft-specs.js';
 import {
   allocateProjectRelativeFilePath,
   assertResolvedPathInsideProject,
@@ -283,6 +287,41 @@ export async function prepareLookbookSheetDraftSpec(input: {
     spec: draftMediaGenerationSpecRecord(normalized),
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized),
+  };
+}
+
+export async function buildLookbookSheetDependencyDraftSpec(
+  input: MediaGenerationDependencyDraftSpecInput
+): Promise<MediaGenerationDependencyDraftSpec> {
+  if (input.dependencyTarget.kind !== 'lookbook') {
+    throw new ProjectDataError(
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `lookbook.sheet dependency requires a lookbook target. Received: ${input.dependencyTarget.kind}.`
+    );
+  }
+  const context = await buildLookbookSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    lookbookId: input.dependencyTarget.id,
+  });
+  return {
+    purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
+    spec: {
+      purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
+      target: input.dependencyTarget,
+      modelChoice: 'fal-ai/openai/gpt-image-2',
+      prompt: [
+        `Create a production lookbook sheet for ${context.lookbook.name}.`,
+        input.reason,
+        'Summarize the active visual language as a direct reference image for downstream generation.',
+      ].join(' '),
+      takeCount: 1,
+      seed: null,
+      sheetFrame: 'project',
+      detail: 'standard',
+      outputFormat: 'png',
+      title: input.label,
+    },
   };
 }
 

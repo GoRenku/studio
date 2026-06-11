@@ -22,9 +22,12 @@ import type {
   LookbookSheetMediaImportReport,
   LookbookSheetModelListReport,
   MediaGenerationPurpose,
+  MediaGenerationDependencyRequest,
+  MediaGenerationDependencySlot,
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
   MediaGenerationRequestTarget,
+  MediaGenerationTarget,
   MediaKind,
   PreparedMediaGeneration,
   SceneStoryboardSheetGenerationContext,
@@ -109,6 +112,10 @@ import * as lookbookSheet from './lookbook-sheet.js';
 import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
 import * as sceneDialogueAudio from './scene-dialogue-audio.js';
 import * as shotVideoTake from './shot-video-take.js';
+import type {
+  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftSpecInput,
+} from './dependency-draft-specs.js';
 
 export type MediaGenerationContextReport =
   | LookbookImageGenerationContext
@@ -177,6 +184,16 @@ export interface UpdateMediaGenerationSpecInput extends ValidateMediaGenerationS
   specId: string;
 }
 
+export interface MediaGenerationDependencyDeclarationInput {
+  projectName?: string;
+  homeDir?: string;
+  rootPurpose: MediaGenerationPurpose;
+  purpose: MediaGenerationPurpose;
+  target: MediaGenerationTarget;
+  request: MediaGenerationDependencyRequest;
+  parentNodeId?: string;
+}
+
 export interface MediaGenerationPurposeDefinition {
   purpose: MediaGenerationPurpose;
   mediaKind: MediaKind;
@@ -191,6 +208,12 @@ export interface MediaGenerationPurposeDefinition {
   listSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  declareDependencies?(
+    input: MediaGenerationDependencyDeclarationInput
+  ): Promise<MediaGenerationDependencySlot[]>;
+  buildDependencyDraftSpec?(
+    input: MediaGenerationDependencyDraftSpecInput
+  ): Promise<MediaGenerationDependencyDraftSpec>;
   runSpec(input: RunMediaGenerationSpecInput): Promise<unknown>;
 }
 
@@ -267,6 +290,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as LookbookSheetGenerationSpec,
       }),
+    buildDependencyDraftSpec: lookbookSheet.buildLookbookSheetDependencyDraftSpec,
     runSpec: lookbookSheet.runLookbookSheetSpec,
   },
   {
@@ -304,6 +328,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as CastCharacterSheetGenerationSpec,
       }),
+    buildDependencyDraftSpec: characterSheet.buildCastCharacterSheetDependencyDraftSpec,
     runSpec: characterSheet.runCastCharacterSheetSpec,
   },
   {
@@ -340,6 +365,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as CastProfileGenerationSpec,
       }),
+    declareDependencies: castProfile.declareCastProfileDependencies,
     runSpec: castProfile.runCastProfileSpec,
   },
   {
@@ -470,6 +496,8 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as LocationEnvironmentSheetGenerationSpec,
       }),
+    buildDependencyDraftSpec:
+      locationSheet.buildLocationEnvironmentSheetDependencyDraftSpec,
     runSpec: locationSheet.runLocationEnvironmentSheetSpec,
   },
   {
@@ -534,6 +562,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
     runSpec: shotVideoTake.runShotFirstFrameSpec,
   },
   {
@@ -560,6 +589,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
     runSpec: shotVideoTake.runShotLastFrameSpec,
   },
   {
@@ -586,6 +616,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
     runSpec: shotVideoTake.runShotReferenceImageSpec,
   },
   {
@@ -613,6 +644,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
     runSpec: shotVideoTake.runShotMultiShotStoryboardSheetSpec,
   },
   {

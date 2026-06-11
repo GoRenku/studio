@@ -74,6 +74,10 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import type {
+  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftSpecInput,
+} from './dependency-draft-specs.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import {
   mapGptQuality,
@@ -371,6 +375,42 @@ export async function prepareLocationEnvironmentSheetDraftSpec(input: {
     spec: draftMediaGenerationSpecRecord(normalized),
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized),
+  };
+}
+
+export async function buildLocationEnvironmentSheetDependencyDraftSpec(
+  input: MediaGenerationDependencyDraftSpecInput
+): Promise<MediaGenerationDependencyDraftSpec> {
+  if (input.dependencyTarget.kind !== 'location') {
+    throw new ProjectDataError(
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `location.environment-sheet dependency requires a location target. Received: ${input.dependencyTarget.kind}.`
+    );
+  }
+  const context = await buildLocationEnvironmentSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    locationId: input.dependencyTarget.id,
+  });
+  return {
+    purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+    spec: {
+      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+      target: input.dependencyTarget,
+      modelChoice: 'fal-ai/openai/gpt-image-2',
+      prompt: [
+        `Create a production environment sheet for ${context.location.name}.`,
+        input.reason,
+        'Use the active visual language and location design context. Make the sheet useful as a video reference image.',
+      ].join(' '),
+      takeCount: 1,
+      seed: null,
+      sheetFrame: '4:3',
+      viewFrame: '16:9',
+      detail: 'standard',
+      outputFormat: 'png',
+      title: input.label,
+    },
   };
 }
 

@@ -19,6 +19,7 @@ import {
   listMediaGenerationPurposeDefinitions,
   requireMediaGenerationPurposeDefinition,
 } from '../../src/server/media-generation/purpose-registry.js';
+import { listMediaGenerationDependencyKindDefinitions } from '../../src/server/media-generation/dependency-kind-registry.js';
 
 const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
@@ -51,24 +52,24 @@ describe('media generation purpose registry contract', () => {
         purpose: definition.purpose,
         mediaKind: definition.mediaKind,
         targetKind: definition.targetKind,
-      }))
+      })).sort((left, right) => left.purpose.localeCompare(right.purpose))
     ).toEqual([
-      { purpose: 'lookbook.image', mediaKind: 'image', targetKind: 'lookbook' },
-      { purpose: 'lookbook.sheet', mediaKind: 'image', targetKind: 'lookbook' },
       { purpose: 'cast.character-sheet', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.profile', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.voice-sample', mediaKind: 'audio', targetKind: 'castMember' },
       { purpose: 'location.environment-sheet', mediaKind: 'image', targetKind: 'location' },
-      { purpose: 'scene.storyboard-sheet', mediaKind: 'image', targetKind: 'scene' },
+      { purpose: 'lookbook.image', mediaKind: 'image', targetKind: 'lookbook' },
+      { purpose: 'lookbook.sheet', mediaKind: 'image', targetKind: 'lookbook' },
       { purpose: 'scene.dialogue-audio', mediaKind: 'audio', targetKind: 'sceneDialogue' },
+      { purpose: 'scene.storyboard-sheet', mediaKind: 'image', targetKind: 'scene' },
       { purpose: 'shot.first-frame', mediaKind: 'image', targetKind: 'sceneShotGroup' },
       { purpose: 'shot.last-frame', mediaKind: 'image', targetKind: 'sceneShotGroup' },
-      { purpose: 'shot.reference-image', mediaKind: 'image', targetKind: 'sceneShotGroup' },
       {
         purpose: 'shot.multi-shot-storyboard-sheet',
         mediaKind: 'image',
         targetKind: 'sceneShotGroup',
       },
+      { purpose: 'shot.reference-image', mediaKind: 'image', targetKind: 'sceneShotGroup' },
       { purpose: 'shot.video-take', mediaKind: 'video', targetKind: 'sceneShotGroup' },
     ]);
   });
@@ -78,12 +79,12 @@ describe('media generation purpose registry contract', () => {
       listMediaGenerationPurposeDefinitions().map((definition) => ({
         purpose: definition.purpose,
         hasPrepareDraftSpec: typeof definition.prepareDraftSpec === 'function',
-      }))
+      })).sort((left, right) => left.purpose.localeCompare(right.purpose))
     ).toEqual(
       REGISTERED_PURPOSES.map((purpose) => ({
         purpose,
         hasPrepareDraftSpec: true,
-      }))
+      })).sort((left, right) => left.purpose.localeCompare(right.purpose))
     );
   });
 
@@ -96,5 +97,73 @@ describe('media generation purpose registry contract', () => {
         message: expect.stringContaining('Unsupported media generation purpose'),
       })
     );
+  });
+
+  it('maps dependency kinds to the purpose that owns generated media', () => {
+    expect(listMediaGenerationDependencyKindDefinitions()).toEqual([
+      {
+        dependencyKind: 'first-frame',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'shot-video-input',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'shot.first-frame',
+      },
+      {
+        dependencyKind: 'last-frame',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'shot-video-input',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'shot.last-frame',
+      },
+      {
+        dependencyKind: 'reference-image',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'shot-video-input',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'shot.reference-image',
+      },
+      {
+        dependencyKind: 'multi-shot-storyboard-sheet',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'shot-video-input',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'shot.multi-shot-storyboard-sheet',
+      },
+      {
+        dependencyKind: 'cast-character-sheet',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'cast-character-sheet',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'cast.character-sheet',
+      },
+      {
+        dependencyKind: 'location-environment-sheet',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'location-environment-sheet',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'location.environment-sheet',
+      },
+      {
+        dependencyKind: 'lookbook-sheet',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'lookbook-sheet',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'lookbook.sheet',
+      },
+      {
+        dependencyKind: 'manual-attachment',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'manual-attachment',
+        missingInputBehavior: 'require-attachment',
+      },
+    ]);
   });
 });

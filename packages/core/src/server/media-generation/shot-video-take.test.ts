@@ -245,6 +245,18 @@ describe('shot video take preflight and validation', () => {
   it('includes planned dependency costs in the plan total', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
@@ -615,12 +627,122 @@ describe('shot video take preflight and validation', () => {
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyNodeId: `planned:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
+          dependencyNodeId: `planned:lookbook-sheet:${lookbook.lookbook.id}`,
           title: 'Imperial Wound',
           caption: 'Lookbook sheet',
           mediaKind: 'image',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+  });
+
+  it('shows scene cast choices without planning unselected character-sheet dependencies', async () => {
+    const ids = await sampleIds();
+    await addExtraCastToSceneNarrative(ids);
+    const shotList = sampleShotList(ids, 1);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: shotList,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    expect(report.plan.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `planned:cast-character-sheet:${ids.castMemberId}`,
+          dependencyKind: 'cast-character-sheet',
+          purpose: 'cast.character-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+    expect(report.plan.dependencyMap.nodes).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `planned:cast-character-sheet:${ids.extraCastMemberId}`,
+        }),
+      ])
+    );
+    const unselectedExtraCast = report.references.castMembers.find(
+      (group) => group.castMemberId === ids.extraCastMemberId
+    );
+    expect(unselectedExtraCast).toMatchObject({
+      castMemberId: ids.extraCastMemberId,
+      selectedForShot: false,
+      defaultSelectedForShot: false,
+      characterSheets: [
+        expect.objectContaining({
+          assetId: null,
+          selected: false,
+          defaultSelected: false,
+          card: expect.objectContaining({
+            state: 'not-selected',
+          }),
+        }),
+      ],
+    });
+    expect(
+      unselectedExtraCast?.characterSheets[0]?.card.dependencyNodeId
+    ).toBeUndefined();
+
+    await projectData.updateSceneShotCastReferences({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      castMemberIds: [ids.extraCastMemberId],
+    });
+    const updatedReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+    expect(updatedReport.plan.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `planned:cast-character-sheet:${ids.extraCastMemberId}`,
+          dependencyKind: 'cast-character-sheet',
+          purpose: 'cast.character-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+    expect(updatedReport.plan.dependencyMap.nodes).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `planned:cast-character-sheet:${ids.castMemberId}`,
         }),
       ])
     );
@@ -699,7 +821,7 @@ describe('shot video take preflight and validation', () => {
     expect(preflight.plan?.dependencyMap.nodes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `asset:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
+          id: `asset:lookbook-sheet:${lookbook.lookbook.id}`,
           kind: 'existing-asset',
           dependencyKind: 'lookbook-sheet',
           assetId: sheetB.imported.asset.assetId,
@@ -734,7 +856,7 @@ describe('shot video take preflight and validation', () => {
       selected: true,
       card: {
         state: 'selected-ready',
-        dependencyNodeId: `asset:lookbook-sheet:lookbook:${lookbook.lookbook.id}`,
+        dependencyNodeId: `asset:lookbook-sheet:${lookbook.lookbook.id}`,
       },
     });
   });
@@ -926,8 +1048,37 @@ describe('shot video take preflight and validation', () => {
     return {
       sceneId: scene.id as string,
       castMemberId: screenplay.screenplay!.cast[1]!.id as string,
+      extraCastMemberId: screenplay.screenplay!.cast[0]!.id as string,
       locationId: screenplay.screenplay!.locations[0]!.id as string,
     };
+  }
+
+  async function addExtraCastToSceneNarrative(ids: {
+    sceneId: string;
+    extraCastMemberId: string;
+    locationId: string;
+  }): Promise<void> {
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: ids.sceneId,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...scene,
+          blocks: [
+            ...scene.blocks,
+            {
+              type: 'action',
+              text: 'The narrator frames the siege from historical distance.',
+              castMemberIds: [ids.extraCastMemberId],
+              locationIds: [ids.locationId],
+            },
+          ],
+        },
+      },
+    });
   }
 
   async function writeShotList(

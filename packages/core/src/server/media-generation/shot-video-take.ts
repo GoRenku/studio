@@ -18,11 +18,12 @@ import type {
   MediaGenerationEstimateReport,
   LocationAzimuthViewId,
   MediaGenerationPurpose,
+  MediaGenerationDependencyKind,
   MediaGenerationDependencyMap,
   MediaGenerationDependencyNode,
   MediaGenerationDependencyPricing,
+  MediaGenerationDependencySlot,
   MediaGenerationPlanLine,
-  MediaGenerationSpec,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   Asset,
@@ -161,6 +162,15 @@ import type {
   ValidateShotVideoTakeInputGenerationSpecInput,
 } from '../project-data-service-contracts.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type {
+  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftSpecInput,
+} from './dependency-draft-specs.js';
+import {
+  resolveMediaGenerationDependencyGraph,
+  type MediaGenerationDependencyRootEstimate,
+} from './dependency-graph.js';
+import { planLinesFromDependencyMap } from './dependency-plan-lines.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 
 type GenerationMode = PreparedMediaGeneration['generation']['policy']['mode'];
@@ -722,11 +732,30 @@ function buildShotVideoTakeProductionPlanReport(input: {
   plan: ShotVideoTakeGenerationPlan;
 }): ShotVideoTakeProductionPlanReport {
   const screenplay = requireScreenplayDocument(input.session);
-  const scope = sceneNarrativeReferenceScope({
+  const shotListRow = requireSceneShotListForScene({
+    session: input.session,
+    sceneId: input.context.scene.id,
+    shotListId: input.context.shotList.id,
+  });
+  const shotList = readSceneShotListDocument({ row: shotListRow, screenplay });
+  const narrativeScope = sceneNarrativeReferenceScope({
     session: input.session,
     screenplay,
     sceneId: input.context.scene.id,
   });
+  const scope = sceneShotReferenceScope({
+    screenplay,
+    narrativeScope,
+    shotList,
+  });
+  const narrativeCastMemberIds = new Set(
+    narrativeScope.castMembers.flatMap((castMember) =>
+      castMember.id ? [castMember.id] : []
+    )
+  );
+  const narrativeLocationIds = new Set(
+    narrativeScope.locations.flatMap((location) => (location.id ? [location.id] : []))
+  );
   const scopedLocationIds = new Set(
     scope.locations.flatMap((location) => (location.id ? [location.id] : []))
   );
@@ -734,16 +763,18 @@ function buildShotVideoTakeProductionPlanReport(input: {
     input.context.shots,
     scopedLocationIds
   );
-  const castMembers = scope.castMembers.map((castMember) =>
-    buildCastMemberReferenceGroup({
-      session: input.session,
-      context: input.context,
-      plan: input.plan,
-      castMemberId: castMember.id as string,
-      name: castMember.name,
-      role: castMember.role ?? null,
-    })
-  );
+  const castMembers = narrativeScope.castMembers
+    .map((castMember) =>
+      buildCastMemberReferenceGroup({
+        session: input.session,
+        context: input.context,
+        plan: input.plan,
+        castMemberId: castMember.id as string,
+        name: castMember.name,
+        role: castMember.role ?? null,
+      })
+    )
+    .filter((group) => group.characterSheets.length > 0);
   const locations = scope.locations.map((location) =>
     buildLocationReferenceGroup({
       session: input.session,
@@ -759,14 +790,8 @@ function buildShotVideoTakeProductionPlanReport(input: {
     ...input.plan.diagnostics,
     ...outOfScopeReferenceDiagnostics({
       context: input.context,
-      sceneCastMemberIds: new Set(
-        scope.castMembers.flatMap((castMember) =>
-          castMember.id ? [castMember.id] : []
-        )
-      ),
-      sceneLocationIds: new Set(
-        scope.locations.flatMap((location) => (location.id ? [location.id] : []))
-      ),
+      sceneCastMemberIds: narrativeCastMemberIds,
+      sceneLocationIds: narrativeLocationIds,
     }),
     ...castMembers.flatMap((group) => group.diagnostics),
     ...locations.flatMap((group) => group.diagnostics),
@@ -833,16 +858,16 @@ function buildCastMemberReferenceGroup(input: {
       index,
     })
   );
-  if (characterSheets.length === 0 && selected) {
+  if (characterSheets.length === 0) {
     characterSheets.push({
-      id: `${input.castMemberId}:planned-character-sheet`,
+      id: `${input.castMemberId}:character-sheet-placeholder`,
       castMemberId: input.castMemberId,
       assetId: null,
       title: `${input.name} Character Sheet`,
-      selected: true,
-      defaultSelected: true,
+      selected,
+      defaultSelected,
       card: referenceCardPlan({
-        selected: true,
+        selected,
         mediaKind: 'image',
         dependencyId,
         node,
@@ -1231,14 +1256,16 @@ function multiShotStoryboardSheetTitle(
   return `Storyboard sheet (${context.target.shotIds.length} shots)`;
 }
 
+type SceneReferenceScope = {
+  castMembers: NonNullable<ReturnType<typeof requireScreenplayDocument>['cast']>;
+  locations: NonNullable<ReturnType<typeof requireScreenplayDocument>['locations']>;
+};
+
 function sceneNarrativeReferenceScope(input: {
   session: DatabaseSession;
   screenplay: ReturnType<typeof requireScreenplayDocument>;
   sceneId: string;
-}): {
-  castMembers: NonNullable<ReturnType<typeof requireScreenplayDocument>['cast']>;
-  locations: NonNullable<ReturnType<typeof requireScreenplayDocument>['locations']>;
-} {
+}): SceneReferenceScope {
   const hierarchy = requireSceneHierarchy(input.screenplay, input.sceneId);
   const castMemberIds: string[] = [];
   const locationIds: string[] = [];
@@ -1250,6 +1277,39 @@ function sceneNarrativeReferenceScope(input: {
     }
     addOrderedIds(castMemberIds, block.castMemberIds ?? []);
     addOrderedIds(locationIds, block.locationIds ?? []);
+  });
+  return {
+    castMembers: orderedScreenplayItems(input.screenplay.cast, castMemberIds),
+    locations: orderedScreenplayItems(input.screenplay.locations, locationIds),
+  };
+}
+
+function sceneShotReferenceScope(input: {
+  screenplay: ReturnType<typeof requireScreenplayDocument>;
+  narrativeScope: SceneReferenceScope;
+  shotList: ReturnType<typeof readSceneShotListDocument>;
+}): SceneReferenceScope {
+  const castMemberIds: string[] = [];
+  const locationIds: string[] = [];
+  addOrderedIds(
+    castMemberIds,
+    input.narrativeScope.castMembers.flatMap((castMember) =>
+      castMember.id ? [castMember.id] : []
+    )
+  );
+  addOrderedIds(
+    locationIds,
+    input.narrativeScope.locations.flatMap((location) =>
+      location.id ? [location.id] : []
+    )
+  );
+  input.shotList.shots.forEach((shot) => {
+    addOrderedIds(castMemberIds, shot.castMemberIds);
+    addOrderedIds(castMemberIds, shot.shotSpecs?.castReferences?.castMemberIds ?? []);
+    addOrderedIds(locationIds, shot.locationIds);
+    if (shot.shotSpecs?.location?.locationId) {
+      addOrderedIds(locationIds, [shot.shotSpecs.location.locationId]);
+    }
   });
   return {
     castMembers: orderedScreenplayItems(input.screenplay.cast, castMemberIds),
@@ -1349,6 +1409,20 @@ function selectedCastIdsForShots(shots: SceneShot[]): Set<string> {
 
 function defaultCastIdsForShots(shots: SceneShot[]): Set<string> {
   return new Set(shots.flatMap((shot) => shot.castMemberIds));
+}
+
+function selectedNarrativeCastIdsForShots(input: {
+  shots: SceneShot[];
+  narrativeScope: SceneReferenceScope;
+}): string[] {
+  const narrativeCastMemberIds = new Set(
+    input.narrativeScope.castMembers.flatMap((castMember) =>
+      castMember.id ? [castMember.id] : []
+    )
+  );
+  return [...selectedCastIdsForShots(input.shots)].filter((castMemberId) =>
+    narrativeCastMemberIds.has(castMemberId)
+  );
 }
 
 function selectedLocationIdsForShots(shots: SceneShot[]): Set<string> {
@@ -1692,333 +1766,78 @@ async function buildShotVideoTakeDependencyMap(input: {
   inputPolicy: ShotVideoTakeInputPolicy;
   diagnostics: DiagnosticIssue[];
 }): Promise<MediaGenerationDependencyMap> {
-  const nodes: MediaGenerationDependencyNode[] = [];
-  const edges: MediaGenerationDependencyMap['edges'] = [];
   const requiredSlots = requiredInputSlots(input.context, input.inputModeId, input.modelChoice, {
     includeReferenceBundleForReferenceRoute: true,
   });
+  const requiredSlotsByDependencyId = new Map(
+    requiredSlots.map((slot) => [slot.dependencyId, slot])
+  );
   const finalNodeId = 'final:shot.video-take';
   const finalInputs: ShotVideoTakePreflightInput[] = [...input.preparedInputs];
-  const diagnostics = [...input.diagnostics];
-  const nodeIds = new Set<string>();
-
-  const addRequiredSlotNode = async (
-    slot: RequiredShotVideoTakeInputSlot,
-    parentNodeId: string
-  ) => {
-    const prepared = input.preparedInputs.find((candidate) =>
-      preparedInputMatchesSlot(candidate, slot)
-    );
-    const nodeId = prepared && inputPolicyMode(input.inputPolicy, slot.dependencyId) !== 'regenerate'
-      ? `asset:${slot.dependencyId}`
-      : slot.purpose
-        ? `planned:${slot.dependencyId}`
-        : `missing:${slot.dependencyId}`;
-
-    if (nodeIds.has(nodeId)) {
-      edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
-      return nodeId;
-    }
-
-    nodeIds.add(nodeId);
-
-    if (prepared && inputPolicyMode(input.inputPolicy, slot.dependencyId) !== 'regenerate') {
-      nodes.push({
-        id: nodeId,
-        kind: 'existing-asset',
-        purpose: slot.purpose ?? null,
-        mediaKind: slot.mediaKind,
-        label: requiredInputLabel(slot),
-        state: 'ready',
-        pricing: { state: 'priced', estimatedUsd: 0 },
-        dependencyId: slot.dependencyId,
-        dependencyKind: slot.dependencyKind,
-        dependencyTarget: slot.dependencyTarget,
-        assetId: prepared.assetId,
-        assetFileId: prepared.assetFileId,
-        diagnostics: [],
-      });
-      edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
-      return nodeId;
-    }
-
-    if (slot.purpose) {
-      const draftGenerationSpec = draftSpecForDependency({
-        context: input.context,
-        slot,
-      });
-      if (!draftGenerationSpec) {
-        const missingDraftIssue = issue(
-          'CORE_SHOT_VIDEO_DEPENDENCY_DRAFT_MISSING',
-          `A required shot video dependency needs an authored generation spec before it can be generated: ${requiredInputLabel(slot)}.`,
-          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'dependencyDrafts'],
-          'Author a dependency draft with a concrete prompt, title, purpose, dependency kind, and output input kind.'
-        );
-        diagnostics.push(missingDraftIssue);
-        nodes.push({
-          id: nodeId,
-          kind: 'planned-generation',
-          purpose: slot.purpose,
-          mediaKind: slot.mediaKind,
-          label: requiredInputLabel(slot),
-          state: 'missing',
-          pricing: { state: 'not-applicable', estimatedUsd: null },
-          dependencyId: slot.dependencyId,
-          dependencyKind: slot.dependencyKind,
-          dependencyTarget: slot.dependencyTarget,
-          diagnostics: [missingDraftIssue],
-        });
-        edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
-        if (isShotInputPurpose(slot.purpose)) {
-          for (const referenceSlot of referenceBundleSlots(input.context)) {
-            await addRequiredSlotNode(referenceSlot, nodeId);
-          }
-        }
-        return nodeId;
+  const result = await resolveMediaGenerationDependencyGraph({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    rootPurpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+    rootTarget: input.context.target,
+    rootNodeId: finalNodeId,
+    rootLabel: 'Final video take',
+    rootMediaKind: 'video',
+    request: {
+      kind: 'shot-video-take',
+      context: input.context,
+    } satisfies ShotVideoTakeDependencyRequest,
+    slots: requiredSlots.map(toMediaGenerationDependencySlot),
+    diagnostics: input.diagnostics,
+    inputPolicyMode: (dependencyId) => inputPolicyMode(input.inputPolicy, dependencyId),
+    resolveExistingAsset: async (slot) => {
+      const requiredSlot = requiredSlotsByDependencyId.get(slot.dependencyId);
+      if (!requiredSlot) {
+        return null;
       }
-      const pricing = await estimateDraftDependency(
-        {
-          projectName: input.projectName,
-          homeDir: input.homeDir,
-          draftGenerationSpec,
-        },
-        diagnostics
+      const prepared = input.preparedInputs.find((candidate) =>
+        preparedInputMatchesSlot(candidate, requiredSlot)
       );
-      nodes.push({
-        id: nodeId,
-        kind: 'planned-generation',
-        purpose: slot.purpose,
-        mediaKind: slot.mediaKind,
-        label: requiredInputLabel(slot),
-        state: 'planned',
-        pricing,
-        dependencyId: slot.dependencyId,
-        dependencyKind: slot.dependencyKind,
-        dependencyTarget: slot.dependencyTarget,
-        draftGenerationSpec,
-        diagnostics: pricing.state === 'unpriced'
-          ? [
-              issue(
-                'CORE_SHOT_VIDEO_PLAN_UNPRICED_LINE',
-                `Dependency generation is not priced: ${requiredInputLabel(slot)}.`,
-                ['dependencyMap', 'nodes', nodeId],
-                pricing.reason
-              ),
-            ]
-          : [],
+      return prepared
+        ? {
+            assetId: prepared.assetId,
+            assetFileId: prepared.assetFileId,
+          }
+        : null;
+    },
+    declareDependencies: async ({ purpose }) =>
+      isShotInputPurpose(purpose)
+        ? referenceBundleSlots(input.context).map(toMediaGenerationDependencySlot)
+        : [],
+    estimateRoot: async (): Promise<MediaGenerationDependencyRootEstimate> => {
+      const finalPricing = await estimateFinalPlanLine({
+        context: input.context,
+        inputModeId: input.inputModeId,
+        modelChoice: input.modelChoice,
+        normalizedSettings: input.normalizedSettings,
+        preparedInputs: finalInputs,
+        diagnostics: input.diagnostics,
       });
-      edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
-      if (isShotInputPurpose(slot.purpose)) {
-        for (const referenceSlot of referenceBundleSlots(input.context)) {
-          await addRequiredSlotNode(referenceSlot, nodeId);
-        }
-      }
-      return nodeId;
-    }
-
-    const missingIssue = issue(
-      'CORE_SHOT_VIDEO_PLAN_REQUIRED_ATTACHMENT_MISSING',
-      `Required shot video take input must be attached before final generation: ${requiredInputLabel(slot)}.`,
-      ['dependencyMap', 'nodes', nodeId],
-      'Attach or select a concrete project asset for this input.'
-    );
-    diagnostics.push(missingIssue);
-    nodes.push({
-      id: nodeId,
-      kind: 'external-input-required',
-      purpose: null,
-      mediaKind: slot.mediaKind,
-      label: requiredInputLabel(slot),
-      state: 'missing',
-      pricing: { state: 'not-applicable', estimatedUsd: null },
-      dependencyId: slot.dependencyId,
-      dependencyKind: slot.dependencyKind,
-      dependencyTarget: slot.dependencyTarget,
-      diagnostics: [missingIssue],
-    });
-    edges.push({ fromNodeId: nodeId, toNodeId: parentNodeId, dependencyId: slot.dependencyId });
-    return nodeId;
-  };
-
-  for (const slot of requiredSlots) {
-    await addRequiredSlotNode(slot, finalNodeId);
-  }
-
-  const finalPricing = await estimateFinalPlanLine({
-    context: input.context,
-    inputModeId: input.inputModeId,
-    modelChoice: input.modelChoice,
-    normalizedSettings: input.normalizedSettings,
-    preparedInputs: finalInputs,
-    diagnostics,
+      return finalPricing;
+    },
   });
-  nodes.push({
-    id: finalNodeId,
-    kind: 'final-generation',
-    purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-    mediaKind: 'video',
-    label: 'Final video take',
-    state: nodes.some((node) => node.state === 'missing') ? 'missing' : 'planned',
-    pricing: finalPricing.pricing,
-    dependencyTarget: input.context.target,
-    diagnostics: finalPricing.diagnostics,
-  });
-
-  const estimate = aggregateDependencyEstimate(nodes);
-  const dependencyLevels = plannedGenerationLevels(nodes, edges);
-  const levels = [
-    ...dependencyLevels,
-    ...(nodes.some((node) => node.state === 'missing') ? [] : [[finalNodeId]]),
-  ];
   const dependencyMap: MediaGenerationDependencyMap & {
     finalEstimate?: ShotVideoTakePreflightReport['estimate'];
-  } = {
-    rootPurpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-    nodes,
-    edges,
-    estimate,
-    execution: {
-      topologicalNodeIds: levels.flat(),
-      levels,
-      diagnostics: [],
-    },
-    diagnostics,
-  };
-  dependencyMap.finalEstimate = finalPricing.estimate;
+  } = result.dependencyMap;
+  dependencyMap.finalEstimate = result.rootEstimate;
   return dependencyMap;
 }
 
-function aggregateDependencyEstimate(
-  nodes: MediaGenerationDependencyNode[]
-): MediaGenerationDependencyMap['estimate'] {
-  const priced = nodes.filter(
-    (node): node is MediaGenerationDependencyNode & {
-      pricing: { state: 'priced'; estimatedUsd: number };
-    } => node.pricing.state === 'priced'
-  );
-  const unpriced = nodes.filter((node) => node.pricing.state === 'unpriced');
-  const missing = nodes.filter((node) => node.state === 'missing');
-  const total = priced.reduce((sum, node) => sum + node.pricing.estimatedUsd, 0);
+function toMediaGenerationDependencySlot(
+  slot: RequiredShotVideoTakeInputSlot
+): MediaGenerationDependencySlot {
   return {
-    state: missing.length > 0 ? 'unavailable' : unpriced.length > 0 ? 'partial' : 'complete',
-    estimatedTotalUsd: total,
-    pricedNodeCount: priced.length,
-    unpricedNodeCount: unpriced.length,
-    missingNodeCount: missing.length,
-    requiresPriceOverride: unpriced.length > 0,
+    dependencyId: slot.dependencyId,
+    dependencyKind: slot.dependencyKind,
+    label: requiredInputLabel(slot),
+    ...(slot.dependencyTarget ? { dependencyTarget: slot.dependencyTarget } : {}),
+    required: true,
+    reason: slot.reason,
   };
-}
-
-function plannedGenerationLevels(
-  nodes: MediaGenerationDependencyNode[],
-  edges: MediaGenerationDependencyMap['edges']
-): string[][] {
-  const plannedNodeIds = new Set(
-    nodes
-      .filter((node) => node.kind === 'planned-generation' && node.state === 'planned')
-      .map((node) => node.id)
-  );
-  const unresolved = new Set(plannedNodeIds);
-  const levels: string[][] = [];
-
-  while (unresolved.size > 0) {
-    const level = [...unresolved].filter((nodeId) =>
-      edges
-        .filter((edge) => edge.toNodeId === nodeId)
-        .every((edge) => !plannedNodeIds.has(edge.fromNodeId) || !unresolved.has(edge.fromNodeId))
-    );
-    if (level.length === 0) {
-      throw new ProjectDataError(
-        'PROJECT_DATA389',
-        'Shot video take dependency graph contains a cycle.'
-      );
-    }
-    levels.push(level);
-    level.forEach((nodeId) => unresolved.delete(nodeId));
-  }
-
-  return levels;
-}
-
-function dependencyDepths(
-  dependencyMap: MediaGenerationDependencyMap
-): Map<string, number> {
-  const depths = new Map<string, number>();
-  const nodeIds = new Set(dependencyMap.nodes.map((node) => node.id));
-
-  const depthFor = (nodeId: string, visiting: Set<string>): number => {
-    const existing = depths.get(nodeId);
-    if (existing !== undefined) {
-      return existing;
-    }
-    if (visiting.has(nodeId)) {
-      throw new ProjectDataError(
-        'PROJECT_DATA389',
-        'Shot video take dependency graph contains a cycle.'
-      );
-    }
-    visiting.add(nodeId);
-    const childDepths = dependencyMap.edges
-      .filter((edge) => edge.toNodeId === nodeId && nodeIds.has(edge.fromNodeId))
-      .map((edge) => depthFor(edge.fromNodeId, visiting));
-    visiting.delete(nodeId);
-    const depth = childDepths.length > 0 ? Math.max(...childDepths) + 1 : 0;
-    depths.set(nodeId, depth);
-    return depth;
-  };
-
-  dependencyMap.nodes.forEach((node) => depthFor(node.id, new Set()));
-  return depths;
-}
-
-function planLinesFromDependencyMap(
-  dependencyMap: MediaGenerationDependencyMap
-): MediaGenerationPlanLine[] {
-  const orderedNodeIds = [
-    ...dependencyMap.execution.topologicalNodeIds,
-    ...dependencyMap.nodes
-      .map((node) => node.id)
-      .filter((nodeId) => !dependencyMap.execution.topologicalNodeIds.includes(nodeId)),
-  ];
-  const nodesById = new Map(dependencyMap.nodes.map((node) => [node.id, node]));
-  const depths = dependencyDepths(dependencyMap);
-  return orderedNodeIds.flatMap((nodeId) => {
-    const node = nodesById.get(nodeId);
-    if (!node) {
-      return [];
-    }
-    return [
-      {
-        id: `line:${node.id}`,
-        nodeId: node.id,
-        kind: planLineKind(node),
-        label: node.label,
-        purpose: node.purpose,
-        mediaKind: node.mediaKind,
-        ...(node.dependencyId ? { dependencyId: node.dependencyId } : {}),
-        ...(node.dependencyKind ? { dependencyKind: node.dependencyKind } : {}),
-        depth: depths.get(node.id) ?? 0,
-        state: node.state,
-        pricing: node.pricing,
-        ...(node.assetId ? { sourceAssetId: node.assetId } : {}),
-        ...(node.draftGenerationSpec ? { draftGenerationSpec: node.draftGenerationSpec } : {}),
-        diagnostics: node.diagnostics,
-      },
-    ];
-  });
-}
-
-function planLineKind(node: MediaGenerationDependencyNode): MediaGenerationPlanLine['kind'] {
-  if (node.kind === 'existing-asset') {
-    return 'reused-asset';
-  }
-  if (node.kind === 'planned-generation') {
-    return 'dependency-generation';
-  }
-  if (node.kind === 'external-input-required') {
-    return 'required-attachment';
-  }
-  return 'final-video-generation';
 }
 
 function finalEstimateFromDependencyMap(
@@ -2027,50 +1846,6 @@ function finalEstimateFromDependencyMap(
   return (dependencyMap as MediaGenerationDependencyMap & {
     finalEstimate?: ShotVideoTakePreflightReport['estimate'];
   }).finalEstimate ?? null;
-}
-
-async function estimateDraftDependency(
-  input: {
-    projectName?: string;
-    homeDir?: string;
-    draftGenerationSpec: NonNullable<MediaGenerationDependencyNode['draftGenerationSpec']>;
-  },
-  diagnostics: DiagnosticIssue[]
-): Promise<MediaGenerationDependencyPricing> {
-  try {
-    const { estimateDraftMediaGenerationSpec } = await import('./shared-generation-service.js');
-    const estimateReport = await estimateDraftMediaGenerationSpec({
-      projectName: input.projectName,
-      homeDir: input.homeDir,
-      spec: input.draftGenerationSpec.spec,
-    });
-    const estimate = estimateReport.estimate;
-    if (estimate.estimatedCostUsd === null) {
-      return {
-        state: 'unpriced',
-        estimatedUsd: null,
-        reason: estimate.warnings.join(' ') || 'No pricing is configured for this dependency route.',
-        overrideRequired: true,
-      };
-    }
-    return { state: 'priced', estimatedUsd: estimate.estimatedCostUsd };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Dependency estimate failed.';
-    diagnostics.push(
-      issue(
-        'CORE_SHOT_VIDEO_PLAN_UNPRICED_LINE',
-        message,
-        ['dependencyMap', 'nodes'],
-        'Review the dependency draft spec and provider pricing support.'
-      )
-    );
-    return {
-      state: 'unpriced',
-      estimatedUsd: null,
-      reason: message,
-      overrideRequired: true,
-    };
-  }
 }
 
 async function estimateFinalPlanLine(input: {
@@ -2149,87 +1924,80 @@ async function estimateFinalPlanLine(input: {
   }
 }
 
-function draftSpecForDependency(input: {
-  context: ShotVideoTakeGenerationContext;
-  slot: RequiredShotVideoTakeInputSlot;
-}): NonNullable<MediaGenerationDependencyNode['draftGenerationSpec']> | null {
-  if (!input.slot.purpose) {
+export async function buildShotInputDependencyDraftSpec(
+  input: MediaGenerationDependencyDraftSpecInput
+): Promise<MediaGenerationDependencyDraftSpec> {
+  if (input.dependencyTarget.kind !== 'sceneShotGroup') {
     throw new ProjectDataError(
-      'PROJECT_DATA387',
-      `Shot video dependency has no generation purpose: ${input.slot.outputInputKind}.`
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `Shot input dependency requires a sceneShotGroup target. Received: ${input.dependencyTarget.kind}.`
     );
   }
-  if (input.slot.purpose === CAST_CHARACTER_SHEET_GENERATION_PURPOSE) {
-    const spec: MediaGenerationSpec = {
-      purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
-      target: requireDependencyTarget(input.slot, 'castMember'),
-      modelChoice: 'fal-ai/openai/gpt-image-2',
-      prompt: dependencyPrompt(input.context, input.slot),
-      takeCount: 1,
-      seed: null,
-      imageFrame: 'project',
-      detail: 'standard',
-      outputFormat: 'png',
-      title: requiredInputLabel(input.slot),
-    };
-    return { purpose: input.slot.purpose, spec };
-  }
-  if (input.slot.purpose === LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE) {
-    const spec: MediaGenerationSpec = {
-      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
-      target: requireDependencyTarget(input.slot, 'location'),
-      modelChoice: 'fal-ai/openai/gpt-image-2',
-      prompt: dependencyPrompt(input.context, input.slot),
-      takeCount: 1,
-      seed: null,
-      sheetFrame: '4:3',
-      viewFrame: '16:9',
-      detail: 'standard',
-      outputFormat: 'png',
-      title: requiredInputLabel(input.slot),
-    };
-    return { purpose: input.slot.purpose, spec };
-  }
-  if (input.slot.purpose === LOOKBOOK_SHEET_GENERATION_PURPOSE) {
-    const spec: MediaGenerationSpec = {
-      purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
-      target: requireDependencyTarget(input.slot, 'lookbook'),
-      modelChoice: 'fal-ai/openai/gpt-image-2',
-      prompt: dependencyPrompt(input.context, input.slot),
-      takeCount: 1,
-      seed: null,
-      sheetFrame: 'project',
-      detail: 'standard',
-      outputFormat: 'png',
-      title: requiredInputLabel(input.slot),
-    };
-    return { purpose: input.slot.purpose, spec };
-  }
-  if (!isShotInputPurpose(input.slot.purpose)) {
+  if (input.request.kind !== 'shot-video-take') {
     throw new ProjectDataError(
-      'PROJECT_DATA387',
-      `Unsupported generated shot video dependency purpose: ${input.slot.purpose}.`
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `Shot input dependency requires a shot-video-take request. Received: ${input.request.kind}.`
     );
   }
-  const draft = input.context.productionGroup.videoTakeProduction.agentProposal?.dependencyDrafts.find(
-    (candidate) =>
-      candidate.purpose === input.slot.purpose &&
-      candidate.outputInputKind === input.slot.outputInputKind
-  );
+  const request = input.request as unknown as ShotVideoTakeDependencyRequest;
+  const purpose = shotInputPurposeForDependencyKind(input.dependencyKind);
+  const outputInputKind = PURPOSE_CONFIG[purpose].outputInputKind;
+  const draft =
+    request.context.productionGroup.videoTakeProduction.agentProposal?.dependencyDrafts.find(
+      (candidate) =>
+        candidate.purpose === purpose &&
+        candidate.outputInputKind === outputInputKind
+    );
   if (!isAuthoredShotDependencyDraft(draft)) {
-    return null;
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_DEPENDENCY_DRAFT_MISSING',
+      `A required shot video dependency needs an authored generation spec before it can be generated: ${input.label}.`,
+      {
+        suggestion:
+          'Author a dependency draft with a concrete prompt, title, purpose, dependency kind, and output input kind.',
+      }
+    );
   }
-  const spec: ShotVideoTakeInputGenerationSpec = {
-    purpose: input.slot.purpose,
-    target: input.context.target,
-    dependencyKind: dependencyKindForPurpose(input.slot.purpose),
-    outputInputKind: input.slot.outputInputKind,
-    modelChoice: draft.modelChoice ?? input.context.defaults.imageDependencyModelChoice,
-    prompt: draft.prompt,
-    parameterValues: draft.parameterValues ?? defaultShotInputParameterValues(),
-    title: draft.title ?? requiredInputLabel(input.slot),
+  return {
+    purpose,
+    spec: {
+      purpose,
+      target: input.dependencyTarget,
+      dependencyKind: dependencyKindForPurpose(purpose),
+      outputInputKind,
+      modelChoice:
+        draft.modelChoice ?? request.context.defaults.imageDependencyModelChoice,
+      prompt: draft.prompt,
+      parameterValues: draft.parameterValues ?? defaultShotInputParameterValues(),
+      title: draft.title ?? input.label,
+    },
   };
-  return { purpose: input.slot.purpose, spec };
+}
+
+export interface ShotVideoTakeDependencyRequest {
+  kind: 'shot-video-take';
+  context: ShotVideoTakeGenerationContext;
+}
+
+function shotInputPurposeForDependencyKind(
+  dependencyKind: MediaGenerationDependencyKind
+): ShotVideoTakeInputGenerationPurpose {
+  if (dependencyKind === 'first-frame') {
+    return SHOT_FIRST_FRAME_GENERATION_PURPOSE;
+  }
+  if (dependencyKind === 'last-frame') {
+    return SHOT_LAST_FRAME_GENERATION_PURPOSE;
+  }
+  if (dependencyKind === 'reference-image') {
+    return SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE;
+  }
+  if (dependencyKind === 'multi-shot-storyboard-sheet') {
+    return SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE;
+  }
+  throw new ProjectDataError(
+    'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+    `Unsupported shot input dependency kind: ${dependencyKind}.`
+  );
 }
 
 function isAuthoredShotDependencyDraft(
@@ -2247,36 +2015,11 @@ function isAuthoredShotDependencyDraft(
   return true;
 }
 
-type DependencyTarget = NonNullable<MediaGenerationDependencyNode['dependencyTarget']>;
-
-function requireDependencyTarget<T extends DependencyTarget['kind']>(
-  slot: RequiredShotVideoTakeInputSlot,
-  kind: T
-): Extract<DependencyTarget, { kind: T }> {
-  if (!slot.dependencyTarget || slot.dependencyTarget.kind !== kind) {
-    throw new ProjectDataError(
-      'PROJECT_DATA387',
-      `Dependency ${slot.dependencyId} requires target.kind "${kind}".`
-    );
-  }
-  return slot.dependencyTarget as Extract<DependencyTarget, { kind: T }>;
-}
-
 function defaultShotInputParameterValues(): NonNullable<ShotVideoTakeProductionPlan['parameterValues']> {
   return {
     image_size: { width: 1024, height: 768 },
     quality: 'low',
   };
-}
-
-function dependencyPrompt(
-  context: ShotVideoTakeGenerationContext,
-  slot: RequiredShotVideoTakeInputSlot
-): string {
-  return [
-    agentBrief(context),
-    `Create the ${requiredInputLabel(slot)} image needed before the final shot video take.`,
-  ].join('\n');
 }
 
 function dependencyKindForPurpose(
@@ -2534,6 +2277,28 @@ function parseDependencyId(
 } | null {
   if (!dependencyId) {
     return null;
+  }
+  const [dependencyKind, dependencySubjectId] = dependencyId.split(':');
+  if (dependencyKind === 'cast-character-sheet' && dependencySubjectId) {
+    return {
+      kind: 'character-sheet',
+      subjectKind: 'cast-member',
+      subjectId: dependencySubjectId,
+    };
+  }
+  if (dependencyKind === 'location-environment-sheet' && dependencySubjectId) {
+    return {
+      kind: 'location-sheet',
+      subjectKind: 'location',
+      subjectId: dependencySubjectId,
+    };
+  }
+  if (dependencyKind === 'lookbook-sheet' && dependencySubjectId) {
+    return {
+      kind: 'lookbook-sheet',
+      subjectKind: 'lookbook',
+      subjectId: dependencySubjectId,
+    };
   }
   const [kind, subjectKind, subjectId] = dependencyId.split(':');
   if (!isShotVideoTakeInputKind(kind)) {
@@ -3897,6 +3662,7 @@ function requiredInputSlots(
           ? referenceBundleSlots(context)
           : [
               requiredSlotForInputKind(
+                context,
                 role.kind,
                 role.mediaKind,
                 `The selected ${report.label} model requires a ${role.kind} input.`
@@ -3904,7 +3670,7 @@ function requiredInputSlots(
             ]
       ) ?? [];
   const planSlots = (context.productionGroup.videoTakeProduction.requestedInputs ?? []).map(
-    requiredSlotForRequestedInput
+    (requestedInput) => requiredSlotForRequestedInput(context, requestedInput)
   );
   return uniqueRequiredInputSlots([...referenceSlots, ...modelSlots, ...planSlots]);
 }
@@ -3914,6 +3680,7 @@ function referenceBundleSlots(
 ): RequiredShotVideoTakeInputSlot[] {
   const castSlots = context.referencedCast.map((castMember) =>
     requiredSlotForInputKind(
+      context,
       'character-sheet',
       'image',
       `Character sheet reference is required for ${castMember.name}.`,
@@ -3923,6 +3690,7 @@ function referenceBundleSlots(
   );
   const locationSlots = context.referencedLocations.map((location) =>
     requiredSlotForInputKind(
+      context,
       'location-sheet',
       'image',
       `Location sheet reference is required for ${location.name}.`,
@@ -3945,6 +3713,7 @@ function lookbookSheetReferenceSlots(
   const selectedSheetIds = selectedLookbookSheetIdsForShots(context.shots);
   if (selectedSheetIds.size > 0) {
     const dependency = dependencyForInputKind(
+      context,
       'lookbook-sheet',
       'lookbook',
       context.activeLookbook.id
@@ -3966,6 +3735,7 @@ function lookbookSheetReferenceSlots(
   }
   return [
     requiredSlotForInputKind(
+      context,
       'lookbook-sheet',
       'image',
       `Lookbook sheet reference is required for ${context.activeLookbook.name}.`,
@@ -3976,11 +3746,13 @@ function lookbookSheetReferenceSlots(
 }
 
 function requiredSlotForRequestedInput(
+  context: ShotVideoTakeGenerationContext,
   input: ShotVideoTakeRequestedInput
 ): RequiredShotVideoTakeInputSlot {
   const subjectLabel =
     input.subjectKind && input.subjectId ? ` for ${input.subjectKind} ${input.subjectId}` : '';
   return requiredSlotForInputKind(
+    context,
     input.kind,
     mediaKindForInputKind(input.kind),
     input.note?.trim() ||
@@ -3991,13 +3763,14 @@ function requiredSlotForRequestedInput(
 }
 
 function requiredSlotForInputKind(
+  context: ShotVideoTakeGenerationContext,
   kind: ShotVideoTakeInputKind,
   mediaKind: 'image' | 'audio' | 'video',
   reason: string,
   subjectKind?: ShotVideoTakeInputSubjectKind,
   subjectId?: string
 ): RequiredShotVideoTakeInputSlot {
-  const dependency = dependencyForInputKind(kind, subjectKind, subjectId);
+  const dependency = dependencyForInputKind(context, kind, subjectKind, subjectId);
   return {
     outputInputKind: kind,
     ...dependency,
@@ -4009,6 +3782,7 @@ function requiredSlotForInputKind(
 }
 
 function dependencyForInputKind(
+  context: ShotVideoTakeGenerationContext,
   kind: ShotVideoTakeInputKind,
   subjectKind?: ShotVideoTakeInputSubjectKind,
   subjectId?: string
@@ -4020,6 +3794,7 @@ function dependencyForInputKind(
     return {
       dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
       dependencyKind: 'first-frame',
+      dependencyTarget: context.target,
       purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
     };
   }
@@ -4027,6 +3802,7 @@ function dependencyForInputKind(
     return {
       dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
       dependencyKind: 'last-frame',
+      dependencyTarget: context.target,
       purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
     };
   }
@@ -4034,6 +3810,7 @@ function dependencyForInputKind(
     return {
       dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
       dependencyKind: 'reference-image',
+      dependencyTarget: context.target,
       purpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
     };
   }
@@ -4041,6 +3818,7 @@ function dependencyForInputKind(
     return {
       dependencyId: dependencyIdForInput(kind, subjectKind, subjectId),
       dependencyKind: 'multi-shot-storyboard-sheet',
+      dependencyTarget: context.target,
       purpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
     };
   }
@@ -4079,6 +3857,15 @@ function dependencyIdForInput(
   subjectKind?: ShotVideoTakeInputSubjectKind,
   subjectId?: string
 ): string {
+  if (kind === 'character-sheet' && subjectKind === 'cast-member' && subjectId) {
+    return `cast-character-sheet:${subjectId}`;
+  }
+  if (kind === 'location-sheet' && subjectKind === 'location' && subjectId) {
+    return `location-environment-sheet:${subjectId}`;
+  }
+  if (kind === 'lookbook-sheet' && subjectKind === 'lookbook' && subjectId) {
+    return `lookbook-sheet:${subjectId}`;
+  }
   return [kind, subjectKind ?? 'production-group', subjectId ?? ''].join(':');
 }
 
@@ -4472,10 +4259,15 @@ function buildContextFromPrepared(input: {
   const shots = input.prepared.orderedShotIds.map((shotId) =>
     requireShot(input.prepared.shotList.shots, shotId)
   );
-  const scope = sceneNarrativeReferenceScope({
+  const narrativeScope = sceneNarrativeReferenceScope({
     session: input.session,
     screenplay,
     sceneId: input.prepared.sceneId,
+  });
+  const scope = sceneShotReferenceScope({
+    screenplay,
+    narrativeScope,
+    shotList: input.prepared.shotList,
   });
   const scopedLocationIds = new Set(
     scope.locations.flatMap((location) => (location.id ? [location.id] : []))
@@ -4484,7 +4276,10 @@ function buildContextFromPrepared(input: {
     shots,
     scopedLocationIds
   );
-  const castIds = selectedCastIdsForShots(shots);
+  const selectedCastMemberIds = selectedNarrativeCastIdsForShots({
+    shots,
+    narrativeScope,
+  });
   const activeLookbook = readActiveLookbookId(input.session);
   const activeShotListId = readActiveSceneShotListId(input.session, input.prepared.sceneId);
   return {
@@ -4512,8 +4307,7 @@ function buildContextFromPrepared(input: {
     },
     productionGroup: input.prepared.productionGroup,
     shots,
-    referencedCast: screenplay.cast
-      .filter((castMember) => castMember.id && castIds.has(castMember.id))
+    referencedCast: orderedScreenplayItems(screenplay.cast, selectedCastMemberIds)
       .map((castMember) => ({
         id: castMember.id as string,
         handle: castMember.handle,

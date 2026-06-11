@@ -190,7 +190,6 @@ export async function updateSceneShotLocationReference(
     validateSceneLocationReference(session, screenplay, input.sceneId, input.locationId);
     const next = { ...(shot.shotSpecs ?? {}) };
     next.location = {
-      ...(next.location ?? {}),
       locationId: input.locationId,
       ...(input.environmentSheetAssetId
         ? { environmentSheetAssetId: input.environmentSheetAssetId }
