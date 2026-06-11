@@ -5,6 +5,7 @@ import type {
 import { Badge } from '@/ui/badge';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
+import { SHOT_REFERENCE_COST_BADGE_OVERLAY_CLASS } from './scene-shot-reference-layout';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
 
 interface SceneShotReferenceCardProps {
@@ -51,6 +52,7 @@ export function SceneShotReferenceCard({
       topRightAction={
         needsGeneration ? <ReferenceCostBadge pricing={card.pricing} /> : null
       }
+      topRightActionClassName={SHOT_REFERENCE_COST_BADGE_OVERLAY_CLASS}
       topRightActionPersistent={needsGeneration}
       bottomRightControl={
         selectable && onToggleSelected ? (
@@ -73,10 +75,24 @@ function ReferenceCostBadge({
   pricing: MediaGenerationDependencyPricing;
 }) {
   if (pricing.state === 'priced' && pricing.estimatedUsd > 0) {
-    return <Badge variant='accent'>{formatEstimateUsd(pricing.estimatedUsd)}</Badge>;
+    return (
+      <Badge
+        variant='accent'
+        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal text-foreground tabular-nums'
+      >
+        {formatEstimateUsd(pricing.estimatedUsd)}
+      </Badge>
+    );
   }
   if (pricing.state === 'unpriced') {
-    return <Badge variant='outline'>Unpriced</Badge>;
+    return (
+      <Badge
+        variant='outline'
+        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal tabular-nums'
+      >
+        Unpriced
+      </Badge>
+    );
   }
   return null;
 }

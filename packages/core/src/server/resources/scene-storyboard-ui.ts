@@ -270,7 +270,9 @@ export async function updateSceneShotLocationViewReferences(
   input: UpdateSceneShotLocationViewReferencesInput
 ): Promise<SceneShotListResource> {
   await updateActiveShotSpecs(input, (session, shot, screenplay) => {
-    validateSceneLocationReference(session, screenplay, input.sceneId, input.locationId);
+    validateSceneLocationReference(session, screenplay, input.sceneId, input.locationId, {
+      shot,
+    });
     validateLocationSheetAsset(session, input.locationId, input.assetId);
     const sheet = readLocationEnvironmentSheetByAssetId(session, input.assetId);
     const availableViews = new Set(
@@ -436,7 +438,8 @@ function validateSceneLocationReference(
   session: DatabaseSession,
   screenplay: ScreenplayDocument,
   sceneId: string,
-  locationId: string
+  locationId: string,
+  options: { shot?: SceneShot } = {}
 ): void {
   if (!readLocationRecord(session, locationId)) {
     throw new ProjectDataError(
@@ -445,13 +448,24 @@ function validateSceneLocationReference(
       { suggestion: 'Choose a location from the current project.' }
     );
   }
-  if (!sceneNarrativeLocationIds(screenplay, sceneId).has(locationId)) {
-    throw new ProjectDataError(
-      'CORE_SHOT_REFERENCE_LOCATION_OUTSIDE_NARRATIVE',
-      `Location is not available in this scene narrative: ${locationId}.`,
-      { suggestion: 'Add the location to the scene narrative before selecting it for this shot.' }
-    );
+  if (sceneNarrativeLocationIds(screenplay, sceneId).has(locationId)) {
+    return;
   }
+  if (options.shot && shotReferencesLocation(options.shot, locationId)) {
+    return;
+  }
+  throw new ProjectDataError(
+    'CORE_SHOT_REFERENCE_LOCATION_OUTSIDE_NARRATIVE',
+    `Location is not available in this scene narrative: ${locationId}.`,
+    { suggestion: 'Add the location to the scene narrative before selecting it for this shot.' }
+  );
+}
+
+function shotReferencesLocation(shot: SceneShot, locationId: string): boolean {
+  if (shot.shotSpecs?.location?.locationId) {
+    return shot.shotSpecs.location.locationId === locationId;
+  }
+  return shot.locationIds.includes(locationId);
 }
 
 function validateLocationSheetAsset(

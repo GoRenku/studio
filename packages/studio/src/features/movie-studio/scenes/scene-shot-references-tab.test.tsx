@@ -1,9 +1,17 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ShotVideoTakeProductionPlanReport } from '@gorenku/studio-core/client';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
+
+const mutationMocks = vi.hoisted(() => ({
+  updateShotCastCharacterSheetReference: vi.fn(),
+  updateShotCastReferences: vi.fn(),
+  updateShotLocationReference: vi.fn(),
+  updateShotLocationViewReferences: vi.fn(),
+  updateShotLookbookReference: vi.fn(),
+}));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
   castAssetFileUrl: vi.fn(
@@ -30,9 +38,34 @@ vi.mock('@/services/studio-project-assets-api', () => ({
       fileId: string
     ) => `/shot-inputs/${projectName}/${sceneId}/${inputId}/${fileId}`
   ),
+  locationAssetFileUrl: vi.fn(
+    (
+      projectName: string,
+      locationId: string,
+      assetId: string,
+      fileId: string
+    ) => `/location-assets/${projectName}/${locationId}/${assetId}/${fileId}`
+  ),
+}));
+
+vi.mock('@/services/studio-shot-video-takes-api', () => ({
+  updateShotCastCharacterSheetReference:
+    mutationMocks.updateShotCastCharacterSheetReference,
+  updateShotCastReferences: mutationMocks.updateShotCastReferences,
+  updateShotLocationReference: mutationMocks.updateShotLocationReference,
+  updateShotLocationViewReferences:
+    mutationMocks.updateShotLocationViewReferences,
+  updateShotLookbookReference: mutationMocks.updateShotLookbookReference,
 }));
 
 describe('SceneShotReferencesTab', () => {
+  beforeEach(() => {
+    for (const mock of Object.values(mutationMocks)) {
+      mock.mockResolvedValue({ resource: SCENE_SHOT_LIST_RESOURCE });
+      mock.mockClear();
+    }
+  });
+
   it('renders generated shot dependency images as reference cards', () => {
     const handlers = referenceHandlers();
     render(
@@ -97,6 +130,77 @@ describe('SceneShotReferencesTab', () => {
       });
     });
   });
+
+  it('renders one cast card and selects alternate character sheets from a dialog', async () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        productionPlan={productionPlanWithCastReferences()}
+        {...handlers}
+      />
+    );
+
+    expect(screen.getAllByRole('heading', { name: 'Urban' }).length).toBe(1);
+    expect(screen.queryByRole('heading', { name: /^Urban Character/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Urban Character Sheet/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Urban' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Urban' })).toBeTruthy();
+    expect(within(dialog).getByRole('heading', { name: 'Sheet 1' })).toBeTruthy();
+    expect(within(dialog).getByRole('heading', { name: 'Sheet 2' })).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Set Sheet 2 pick' }));
+
+    await waitFor(() => {
+      expect(mutationMocks.updateShotCastCharacterSheetReference).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'shot_001',
+        {
+          castMemberId: 'cast_urban',
+          assetId: 'asset_urban-2',
+        }
+      );
+    });
+  });
+
+  it('selects location views from the location dialog using the shot persistence API', async () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        productionPlan={productionPlanWithLocationReferences()}
+        {...handlers}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Theodosian Walls' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Theodosian Walls' })).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Set Front pick' }));
+
+    await waitFor(() => {
+      expect(mutationMocks.updateShotLocationViewReferences).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'shot_001',
+        {
+          locationId: 'location_walls',
+          assetId: 'asset_walls_sheet',
+          viewIds: ['front'],
+        }
+      );
+    });
+  });
 });
 
 const SHOT = {
@@ -118,8 +222,16 @@ function referenceHandlers() {
   return {
     onSelectInput: vi.fn(async () => undefined),
     onClearInput: vi.fn(async () => undefined),
+    onResourceRefreshed: vi.fn(),
+    onPlanRefresh: vi.fn(async () => undefined),
   };
 }
+
+const SCENE_SHOT_LIST_RESOURCE = {
+  projectName: 'constantinople',
+  sceneId: 'scene_hook',
+  scenes: [],
+};
 
 function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport {
   return {
@@ -160,6 +272,132 @@ function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport 
     },
     diagnostics: [],
   } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
+function productionPlanWithCastReferences(): ShotVideoTakeProductionPlanReport {
+  return {
+    references: {
+      general: [],
+      lookbook: [],
+      castMembers: [
+        {
+          castMemberId: 'cast_urban',
+          name: 'Urban',
+          role: 'protagonist',
+          selectedForShot: true,
+          defaultSelectedForShot: true,
+          selectedCharacterSheetAssetId: 'asset_urban_1',
+          defaultCharacterSheetAssetId: 'asset_urban_1',
+          diagnostics: [],
+          characterSheets: [
+            characterSheetChoice('urban-1', 'Urban Character Sheet', 'file_urban_1', true),
+            characterSheetChoice('urban-2', 'Urban Character Sheet 2', 'file_urban_2', false),
+          ],
+        },
+      ],
+      locations: [],
+    },
+    diagnostics: [],
+  } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
+function productionPlanWithLocationReferences(): ShotVideoTakeProductionPlanReport {
+  return {
+    references: {
+      general: [],
+      lookbook: [],
+      castMembers: [],
+      locations: [
+        {
+          locationId: 'location_walls',
+          name: 'Theodosian Walls',
+          selectedForShot: true,
+          defaultSelectedForShot: true,
+          selectedEnvironmentSheetAssetId: 'asset_walls_sheet',
+          defaultEnvironmentSheetAssetId: 'asset_walls_sheet',
+          selectedViewIds: [],
+          diagnostics: [],
+          environmentSheets: [
+            {
+              id: 'asset_walls_sheet',
+              locationId: 'location_walls',
+              assetId: 'asset_walls_sheet',
+              title: 'Theodosian Walls Location Sheet',
+              selected: true,
+              defaultSelected: true,
+              card: referenceCard('walls-sheet', 'Theodosian Walls location sheet'),
+              views: [
+                {
+                  id: 'front',
+                  viewId: 'front',
+                  label: 'Front',
+                  selected: false,
+                  card: referenceCard('walls-front', 'Front'),
+                },
+                {
+                  id: 'right',
+                  viewId: 'right',
+                  label: 'Right',
+                  selected: false,
+                  card: referenceCard('walls-right', 'Right'),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    diagnostics: [],
+  } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
+function characterSheetChoice(
+  id: string,
+  title: string,
+  assetFileId: string,
+  selected: boolean
+) {
+  return {
+    id,
+    castMemberId: 'cast_urban',
+    assetId: `asset_${id}`,
+    title,
+    selected,
+    defaultSelected: selected,
+    card: {
+      state: selected ? 'selected-ready' : 'available',
+      mediaKind: 'image',
+      pricing: { state: 'not-applicable', estimatedUsd: null },
+      previews: [
+        {
+          assetId: `asset_${id}`,
+          assetFileId,
+          projectRelativePath: `generated/${assetFileId}.png` as never,
+          title,
+          alt: title,
+        },
+      ],
+      diagnostics: [],
+    },
+  };
+}
+
+function referenceCard(assetId: string, title: string) {
+  return {
+    state: 'selected-ready',
+    mediaKind: 'image',
+    pricing: { state: 'not-applicable', estimatedUsd: null },
+    previews: [
+      {
+        assetId,
+        assetFileId: `file_${assetId}`,
+        projectRelativePath: `generated/${assetId}.png` as never,
+        title,
+        alt: title,
+      },
+    ],
+    diagnostics: [],
+  };
 }
 
 function referenceChoice(

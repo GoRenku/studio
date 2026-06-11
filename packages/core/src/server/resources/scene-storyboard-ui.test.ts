@@ -132,6 +132,32 @@ describe('scene storyboard UI resources', () => {
     });
   });
 
+  it('updates views for a location that is already scoped on the active shot', async () => {
+    const ids = await sampleIds();
+    await removeSceneNarrativeLocation(ids.sceneId, ids.locationId);
+    await writeShotList(ids);
+    const assetId = await importLocationEnvironmentSheet(ids.locationId);
+
+    const updated = await projectData.updateSceneShotLocationViewReferences({
+      homeDir,
+      projectName: PROJECT_NAME,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      locationId: ids.locationId,
+      assetId,
+      viewIds: ['front', 'right'],
+    });
+
+    const shot = updated.activeShotList?.shots.find(
+      (entry) => entry.shotId === 'shot_001'
+    );
+    expect(shot?.shotSpecs?.location).toEqual({
+      locationId: ids.locationId,
+      environmentSheetAssetId: assetId,
+      viewIds: ['front', 'right'],
+    });
+  });
+
   it('walks act → sequence → scene → shots and derives Shot N labels in order', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 'Coverage', 2);
@@ -214,6 +240,31 @@ describe('scene storyboard UI resources', () => {
     });
   }
 
+  async function importLocationEnvironmentSheet(locationId: string): Promise<string> {
+    const project = await projectData.readCurrentProject({ homeDir });
+    const folder = 'generated/media/location-sheet-slices';
+    const mediaFolder = path.join(project!.projectFolder, folder);
+    await fs.mkdir(mediaFolder, { recursive: true });
+    const files = {
+      composite: `${folder}/composite.png`,
+      view_front: `${folder}/front.png`,
+      view_right: `${folder}/right.png`,
+      view_back: `${folder}/back.png`,
+      view_left: `${folder}/left.png`,
+    };
+    for (const [role, projectRelativePath] of Object.entries(files)) {
+      await fs.writeFile(path.join(project!.projectFolder, projectRelativePath), role);
+    }
+    const imported = await projectData.importLocationEnvironmentSheetMedia({
+      homeDir,
+      projectName: PROJECT_NAME,
+      locationId,
+      files,
+      title: 'Scoped location environment sheet',
+    });
+    return imported.imported.assetId;
+  }
+
   async function addSecondSceneLocation(sceneId: string): Promise<string> {
     await projectData.applyLocationOperations({
       homeDir,
@@ -257,6 +308,36 @@ describe('scene storyboard UI resources', () => {
       },
     });
     return location.id;
+  }
+
+  async function removeSceneNarrativeLocation(
+    sceneId: string,
+    locationId: string
+  ): Promise<void> {
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...scene,
+          setting: {
+            ...scene.setting,
+            locationIds: (scene.setting.locationIds ?? []).filter(
+              (candidate) => candidate !== locationId
+            ),
+          },
+          blocks: scene.blocks.map((block) => ({
+            ...block,
+            locationIds: block.locationIds?.filter(
+              (candidate) => candidate !== locationId
+            ),
+          })),
+        },
+      },
+    });
   }
 
   async function sampleIds(): Promise<SampleIds> {

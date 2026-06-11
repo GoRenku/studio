@@ -10,14 +10,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import {
   sceneAssetFileUrl,
   shotVideoTakeInputFileUrl,
-  castAssetFileUrl,
 } from '@/services/studio-project-assets-api';
 import type { ShotVideoTakeInputSlot } from '@/services/studio-shot-video-takes-api';
 import {
   updateShotCastCharacterSheetReference,
   updateShotCastReferences,
   updateShotLocationReference,
-  updateShotLocationSheetReference,
   updateShotLocationViewReferences,
   updateShotLookbookReference,
 } from '@/services/studio-shot-video-takes-api';
@@ -27,10 +25,15 @@ import {
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
 import { lookbookSheetFileUrl } from '../visual-language/visual-language-image-urls';
+import { SceneShotCastReferenceCard } from './scene-shot-cast-reference-card';
 import { previewImageUrl } from './scene-shot-reference-card-images';
 import { SceneShotLocationReferenceRow } from './scene-shot-location-reference-row';
 import { SceneShotReferenceCard } from './scene-shot-reference-card';
 import { SceneShotReferenceCardGrid } from './scene-shot-reference-card-grid';
+import {
+  SHOT_REFERENCE_CAST_CARD_MIN_WIDTH,
+  SHOT_REFERENCE_LOCATION_CARD_MIN_WIDTH,
+} from './scene-shot-reference-layout';
 import { SceneShotReferenceSection } from './scene-shot-reference-section';
 
 interface SceneShotReferencesTabProps {
@@ -139,77 +142,48 @@ export function SceneShotReferencesTab({
           defaultOpen={Boolean(references?.castMembers.length)}
         >
           {references?.castMembers.length ? (
-            <div className='flex flex-col gap-5'>
+            <SceneShotReferenceCardGrid
+              minCardWidth={SHOT_REFERENCE_CAST_CARD_MIN_WIDTH}
+            >
               {references.castMembers.map((group) => {
                 const selectedIds =
                   shot.shotSpecs?.castReferences?.castMemberIds ?? shot.castMemberIds;
                 const selectedIdSet = new Set(selectedIds);
                 return (
-                  <section key={group.castMemberId} className='flex flex-col gap-2.5'>
-                    <h5 className='text-sm font-medium'>{group.name}</h5>
-                    <SceneShotReferenceCardGrid minCardWidth='180px'>
-                      {group.characterSheets.map((choice) => {
-                        const preview = choice.card.previews[0];
-                        const imageUrl =
-                          preview && choice.assetId
-                            ? castAssetFileUrl(
-                                projectName,
-                                group.castMemberId,
-                                preview.assetId,
-                                preview.assetFileId
-                              )
-                            : null;
-                        const previewImages = previewImageUrl(preview, imageUrl);
-                        return (
-                          <SceneShotReferenceCard
-                            key={choice.id}
-                            title={choice.title}
-                            description={group.role ?? undefined}
-                            imageUrl={imageUrl}
-                            imageAlt={preview?.alt ?? choice.title}
-                            card={choice.card}
-                            selected={
-                              group.selectedForShot && choice.selected
-                            }
-                            aspectRatio={4 / 5}
-                            aspectClassName='aspect-[4/5]'
-                            detectImageAspectRatio
-                            onOpen={() =>
-                              setPreviewImage(previewImages[0] ?? null)
-                            }
-                            onToggleSelected={async () => {
-                              const nextCastIds = selectedIdSet.has(group.castMemberId)
-                                ? selectedIds
-                                : [...selectedIds, group.castMemberId];
-                              if (!selectedIdSet.has(group.castMemberId)) {
-                                const castResult = await updateShotCastReferences(
-                                  projectName,
-                                  sceneId,
-                                  shot.shotId,
-                                  nextCastIds
-                                );
-                                onResourceRefreshed?.(castResult.resource);
-                              }
-                              const sheetResult =
-                                await updateShotCastCharacterSheetReference(
-                                  projectName,
-                                  sceneId,
-                                  shot.shotId,
-                                  {
-                                    castMemberId: group.castMemberId,
-                                    assetId: choice.assetId,
-                                  }
-                                );
-                              await refreshAfterMutation(sheetResult);
-                            }}
-                          />
+                  <SceneShotCastReferenceCard
+                    key={group.castMemberId}
+                    projectName={projectName}
+                    group={group}
+                    onPreview={(images) => setPreviewImage(images[0] ?? null)}
+                    onSelectCast={async (castMemberId) => {
+                      if (selectedIdSet.has(castMemberId)) {
+                        return;
+                      }
+                      const castResult = await updateShotCastReferences(
+                        projectName,
+                        sceneId,
+                        shot.shotId,
+                        [...selectedIds, castMemberId]
+                      );
+                      onResourceRefreshed?.(castResult.resource);
+                    }}
+                    onSelectSheet={async (castMemberId, assetId) => {
+                      const sheetResult =
+                        await updateShotCastCharacterSheetReference(
+                          projectName,
+                          sceneId,
+                          shot.shotId,
+                          {
+                            castMemberId,
+                            assetId,
+                          }
                         );
-                      })}
-                    </SceneShotReferenceCardGrid>
-                  </section>
+                      await refreshAfterMutation(sheetResult);
+                    }}
+                  />
                 );
               })}
-            </div>
+            </SceneShotReferenceCardGrid>
           ) : (
             <p className='text-sm text-muted-foreground'>No scene cast available.</p>
           )}
@@ -220,7 +194,9 @@ export function SceneShotReferencesTab({
           defaultOpen={Boolean(references?.locations.length)}
         >
           {references?.locations.length ? (
-            <div className='flex flex-col gap-4'>
+            <SceneShotReferenceCardGrid
+              minCardWidth={SHOT_REFERENCE_LOCATION_CARD_MIN_WIDTH}
+            >
               {references.locations.map((group) => (
                 <SceneShotLocationReferenceRow
                   key={group.locationId}
@@ -233,15 +209,6 @@ export function SceneShotReferencesTab({
                       sceneId,
                       shot.shotId,
                       locationId
-                    );
-                    await refreshAfterMutation(result);
-                  }}
-                  onSelectSheet={async (locationId, assetId) => {
-                    const result = await updateShotLocationSheetReference(
-                      projectName,
-                      sceneId,
-                      shot.shotId,
-                      { locationId, assetId }
                     );
                     await refreshAfterMutation(result);
                   }}
@@ -261,7 +228,7 @@ export function SceneShotReferencesTab({
                   }}
                 />
               ))}
-            </div>
+            </SceneShotReferenceCardGrid>
           ) : (
             <p className='text-sm text-muted-foreground'>No scene location available.</p>
           )}
