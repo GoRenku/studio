@@ -91,6 +91,9 @@ const eslintConfig = [
     },
   },
   {
+    // Scope command-architecture linting to the refactored command-handler
+    // surface. Older command families still need focused refactor plans before
+    // this can become a package-wide command rule without noise.
     files: [
       'src/commands/generation-command.ts',
       'src/commands/generation-command-handlers.ts',

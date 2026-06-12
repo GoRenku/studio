@@ -47,8 +47,8 @@
     "catalog:update-fal": "pnpm --filter @gorenku/studio-engines catalog:update-fal",
     "catalog:update-replicate": "pnpm --filter @gorenku/studio-engines catalog:update-replicate",
     "catalog:validate-schemas": "pnpm --filter @gorenku/studio-engines catalog:validate-schemas",
-    "check:architecture": "node scripts/check-no-forbidden-reexports.mjs && pnpm --dir packages/core exec vitest run src/server/architecture.test.ts --no-file-parallelism",
-    "check": "pnpm type-check && pnpm test:typecheck && pnpm lint"
+    "check:architecture": "node scripts/check-no-forbidden-reexports.mjs && pnpm --dir packages/core exec vitest run src/server/architecture.test.ts --no-file-parallelism && pnpm --dir packages/cli exec vitest run src/commands/command-architecture.test.ts --no-file-parallelism && pnpm --dir packages/studio exec vitest run src/architecture.test.ts --no-file-parallelism",
+    "check": "pnpm type-check && pnpm test:typecheck && pnpm lint && pnpm check:architecture"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.46.2",

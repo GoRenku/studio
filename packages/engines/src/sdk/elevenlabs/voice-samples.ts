@@ -675,11 +675,6 @@ async function collectReadableStream(stream: ReadableStream<Uint8Array>): Promis
   return audioBytes;
 }
 
-async function readAudioBytes(response: globalThis.Response): Promise<Buffer> {
-  assertAudioContentType(response.headers);
-  return readNonEmptyAudioBytes(response);
-}
-
 async function readPreviewAudioBytes(response: globalThis.Response): Promise<Buffer> {
   assertPreviewContentType(response.headers);
   const audioBytes = await readNonEmptyAudioBytes(response);

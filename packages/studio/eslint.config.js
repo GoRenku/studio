@@ -35,7 +35,17 @@ export default defineConfig([
     },
     rules: {
       // Allow unused variables with underscore prefix (for intentionally unused parameters)
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      'prefer-const': 'error',
+      'no-var': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'eqeqeq': ['error', 'always'],
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
       // Tailwind CSS rules
       // The no-custom-classname rule produces false positives with Shadcn UI's custom theme classes
       // even with whitelist, so disable it until better Tailwind v4 support is available
@@ -48,6 +58,39 @@ export default defineConfig([
       'tailwindcss/classnames-order': 'off',
       'tailwindcss/no-contradicting-classname': 'off',
       'tailwindcss/no-unnecessary-arbitrary-value': 'off',
+    },
+  },
+  {
+    files: ['src/app/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='button']",
+          message:
+            'Use the local shadcn-style Button primitive from packages/studio/src/ui instead of a raw browser button in app or feature code.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='input']",
+          message:
+            'Use the local shadcn-style Input primitive from packages/studio/src/ui instead of a raw browser input in app or feature code.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='select']",
+          message:
+            'Use the local shadcn-style Select primitive from packages/studio/src/ui instead of a raw browser select in app or feature code.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='textarea']",
+          message:
+            'Use the local shadcn-style Textarea primitive from packages/studio/src/ui instead of a raw browser textarea in app or feature code.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='dialog']",
+          message:
+            'Use the local shadcn-style Dialog primitive from packages/studio/src/ui instead of a raw browser dialog in app or feature code.',
+        },
+      ],
     },
   },
 ])
