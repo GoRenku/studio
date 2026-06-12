@@ -28,6 +28,11 @@ describe('core server architecture', () => {
       path.join(projectSourceRoot, 'resources', 'project-read-operations.ts'),
       path.join(projectSourceRoot, 'resources', 'project-resource-operations.ts'),
       path.join(projectSourceRoot, 'resources', 'cursors.ts'),
+      path.join(clientSourceRoot, 'media-generation.ts'),
+      path.join(clientSourceRoot, 'media-generation', 'index.ts'),
+      path.join(projectSourceRoot, 'media-generation', 'shot-video-take.ts'),
+      path.join(projectSourceRoot, 'media-generation', 'shot-video-take', 'index.ts'),
+      path.join(projectSourceRoot, 'media-generation', 'shot-video-take', 'internal-runtime.ts'),
       path.join(projectSourceRoot, '..', 'node'),
       path.join(coreSourceRoot, 'index.ts'),
       path.join(coreSourceRoot, 'index.test.ts'),
@@ -98,6 +103,39 @@ describe('core server architecture', () => {
       const source = await fs.readFile(file, 'utf8');
       if (reExportPattern.test(source)) {
         offenders.push(path.relative(coreSourceRoot, file));
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('keeps callers away from deleted media generation module paths', async () => {
+    const files = await listTypeScriptFiles(coreSourceRoot);
+    const offenders: string[] = [];
+
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      const relativePath = path.relative(coreSourceRoot, file);
+      if (relativePath === path.join('server', 'architecture.test.ts')) {
+        continue;
+      }
+      const deletedClientPath = ['media-generation', 'js'].join('.');
+      const deletedShotVideoPath = ['shot-video-take', 'js'].join('.');
+      const importsDeletedClientPath =
+        source.includes(`from '../client/${deletedClientPath}'`) ||
+        source.includes(`from "../client/${deletedClientPath}"`) ||
+        source.includes(`from '../../client/${deletedClientPath}'`) ||
+        source.includes(`from "../../client/${deletedClientPath}"`) ||
+        source.includes(`import('./${deletedClientPath}')`) ||
+        source.includes(`import("./${deletedClientPath}")`);
+      const importsDeletedShotVideoPath =
+        source.includes(`from './${deletedShotVideoPath}'`) ||
+        source.includes(`from "./${deletedShotVideoPath}"`) ||
+        source.includes(`from '../media-generation/${deletedShotVideoPath}'`) ||
+        source.includes(`from "../media-generation/${deletedShotVideoPath}"`);
+
+      if (importsDeletedClientPath || importsDeletedShotVideoPath) {
+        offenders.push(relativePath);
       }
     }
 

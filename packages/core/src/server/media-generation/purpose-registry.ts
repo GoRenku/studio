@@ -111,7 +111,14 @@ import * as lookbookImage from './lookbook-image.js';
 import * as lookbookSheet from './lookbook-sheet.js';
 import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
 import * as sceneDialogueAudio from './scene-dialogue-audio.js';
-import * as shotVideoTake from './shot-video-take.js';
+import { buildShotVideoTakeContext } from './shot-video-take/context.js';
+import { listShotVideoTakeModels, listShotInputModels } from './shot-video-take/model-list.js';
+import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotMultiShotStoryboardSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotMultiShotStoryboardSheetSpec, prepareShotInputDraftSpec } from './shot-video-take/input-specs.js';
+import { buildShotInputDependencyDraftSpec } from './shot-video-take/dependency-draft-specs.js';
+import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec } from './shot-video-take/final-specs.js';
+import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotMultiShotStoryboardSheetSpec, runShotVideoTakeSpec } from './shot-video-take/generation-runs.js';
+import { declareShotVideoTakeDependencies } from './shot-video-take/dependency-inventory.js';
+import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from './shot-video-take/media-imports.js';
 import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
@@ -542,147 +549,147 @@ const DEFINITIONS = [
     purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotGroup',
-    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
-      shotVideoTake.listShotInputModels(
+      listShotInputModels(
         toShotInput(input),
         SHOT_FIRST_FRAME_GENERATION_PURPOSE
       ),
     validateSpec: (input) =>
-      shotVideoTake.validateShotFirstFrameSpec(toShotInputSpecValidation(input)),
+      validateShotFirstFrameSpec(toShotInputSpecValidation(input)),
     createSpec: (input) =>
-      shotVideoTake.createShotFirstFrameSpec(toShotInputSpecCreation(input)),
+      createShotFirstFrameSpec(toShotInputSpecCreation(input)),
     updateSpec: (input) =>
-      shotVideoTake.updateShotFirstFrameSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) => shotVideoTake.listShotFirstFrameSpecs(toShotInput(input)),
-    prepareSpec: shotVideoTake.prepareShotFirstFrameSpec,
+      updateShotFirstFrameSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) => listShotFirstFrameSpecs(toShotInput(input)),
+    prepareSpec: prepareShotFirstFrameSpec,
     prepareDraftSpec: (input) =>
-      shotVideoTake.prepareShotInputDraftSpec({
+      prepareShotInputDraftSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
-    runSpec: shotVideoTake.runShotFirstFrameSpec,
+    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    runSpec: runShotFirstFrameSpec,
   },
   {
     purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotGroup',
-    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
-      shotVideoTake.listShotInputModels(
+      listShotInputModels(
         toShotInput(input),
         SHOT_LAST_FRAME_GENERATION_PURPOSE
       ),
     validateSpec: (input) =>
-      shotVideoTake.validateShotLastFrameSpec(toShotInputSpecValidation(input)),
+      validateShotLastFrameSpec(toShotInputSpecValidation(input)),
     createSpec: (input) =>
-      shotVideoTake.createShotLastFrameSpec(toShotInputSpecCreation(input)),
+      createShotLastFrameSpec(toShotInputSpecCreation(input)),
     updateSpec: (input) =>
-      shotVideoTake.updateShotLastFrameSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) => shotVideoTake.listShotLastFrameSpecs(toShotInput(input)),
-    prepareSpec: shotVideoTake.prepareShotLastFrameSpec,
+      updateShotLastFrameSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) => listShotLastFrameSpecs(toShotInput(input)),
+    prepareSpec: prepareShotLastFrameSpec,
     prepareDraftSpec: (input) =>
-      shotVideoTake.prepareShotInputDraftSpec({
+      prepareShotInputDraftSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
-    runSpec: shotVideoTake.runShotLastFrameSpec,
+    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    runSpec: runShotLastFrameSpec,
   },
   {
     purpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotGroup',
-    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
-      shotVideoTake.listShotInputModels(
+      listShotInputModels(
         toShotInput(input),
         SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
       ),
     validateSpec: (input) =>
-      shotVideoTake.validateShotReferenceImageSpec(toShotInputSpecValidation(input)),
+      validateShotReferenceImageSpec(toShotInputSpecValidation(input)),
     createSpec: (input) =>
-      shotVideoTake.createShotReferenceImageSpec(toShotInputSpecCreation(input)),
+      createShotReferenceImageSpec(toShotInputSpecCreation(input)),
     updateSpec: (input) =>
-      shotVideoTake.updateShotReferenceImageSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) => shotVideoTake.listShotReferenceImageSpecs(toShotInput(input)),
-    prepareSpec: shotVideoTake.prepareShotReferenceImageSpec,
+      updateShotReferenceImageSpec(toShotInputSpecUpdate(input)),
+    listSpecs: (input) => listShotReferenceImageSpecs(toShotInput(input)),
+    prepareSpec: prepareShotReferenceImageSpec,
     prepareDraftSpec: (input) =>
-      shotVideoTake.prepareShotInputDraftSpec({
+      prepareShotInputDraftSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
-    runSpec: shotVideoTake.runShotReferenceImageSpec,
+    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    runSpec: runShotReferenceImageSpec,
   },
   {
     purpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotGroup',
-    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
+    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
-      shotVideoTake.listShotInputModels(
+      listShotInputModels(
         toShotInput(input),
         SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
       ),
     validateSpec: (input) =>
-      shotVideoTake.validateShotMultiShotStoryboardSheetSpec(toShotInputSpecValidation(input)),
+      validateShotMultiShotStoryboardSheetSpec(toShotInputSpecValidation(input)),
     createSpec: (input) =>
-      shotVideoTake.createShotMultiShotStoryboardSheetSpec(toShotInputSpecCreation(input)),
+      createShotMultiShotStoryboardSheetSpec(toShotInputSpecCreation(input)),
     updateSpec: (input) =>
-      shotVideoTake.updateShotMultiShotStoryboardSheetSpec(toShotInputSpecUpdate(input)),
+      updateShotMultiShotStoryboardSheetSpec(toShotInputSpecUpdate(input)),
     listSpecs: (input) =>
-      shotVideoTake.listShotMultiShotStoryboardSheetSpecs(toShotInput(input)),
-    prepareSpec: shotVideoTake.prepareShotMultiShotStoryboardSheetSpec,
+      listShotMultiShotStoryboardSheetSpecs(toShotInput(input)),
+    prepareSpec: prepareShotMultiShotStoryboardSheetSpec,
     prepareDraftSpec: (input) =>
-      shotVideoTake.prepareShotInputDraftSpec({
+      prepareShotInputDraftSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: shotVideoTake.buildShotInputDependencyDraftSpec,
-    runSpec: shotVideoTake.runShotMultiShotStoryboardSheetSpec,
+    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    runSpec: runShotMultiShotStoryboardSheetSpec,
   },
   {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     mediaKind: 'video',
     targetKind: 'sceneShotGroup',
-    buildContext: (input) => shotVideoTake.buildShotVideoTakeContext(toShotInput(input)),
-    listModels: (input) => shotVideoTake.listShotVideoTakeModels(toShotModelInput(input)),
+    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
+    listModels: (input) => listShotVideoTakeModels(toShotModelInput(input)),
     validateSpec: (input) =>
-      shotVideoTake.validateShotVideoTakeSpec({
+      validateShotVideoTakeSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeGenerationSpec,
       } satisfies ValidateShotVideoTakeGenerationSpecInput),
     createSpec: (input) =>
-      shotVideoTake.createShotVideoTakeSpec({
+      createShotVideoTakeSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeGenerationSpec,
         idGenerator: input.idGenerator,
       } satisfies CreateShotVideoTakeGenerationSpecInput),
     updateSpec: (input) =>
-      shotVideoTake.updateShotVideoTakeSpec({
+      updateShotVideoTakeSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         specId: input.specId,
         spec: input.spec as ShotVideoTakeGenerationSpec,
       } satisfies UpdateShotVideoTakeGenerationSpecInput),
-    listSpecs: (input) => shotVideoTake.listShotVideoTakeSpecs(toShotInput(input)),
-    prepareSpec: shotVideoTake.prepareShotVideoTakeSpec,
+    listSpecs: (input) => listShotVideoTakeSpecs(toShotInput(input)),
+    prepareSpec: prepareShotVideoTakeSpec,
     prepareDraftSpec: (input) =>
-      shotVideoTake.prepareShotVideoTakeDraftSpec({
+      prepareShotVideoTakeDraftSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeGenerationSpec,
       }),
-    declareDependencies: shotVideoTake.declareShotVideoTakeDependencies,
-    runSpec: shotVideoTake.runShotVideoTakeSpec,
+    declareDependencies: declareShotVideoTakeDependencies,
+    runSpec: runShotVideoTakeSpec,
   },
 ] satisfies MediaGenerationPurposeDefinition[];
 
@@ -853,15 +860,15 @@ export async function importMediaGenerationByPurpose(input:
     case SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE:
       return sceneStoryboardSheet.importSceneStoryboardImagesMedia(input);
     case SHOT_FIRST_FRAME_GENERATION_PURPOSE:
-      return shotVideoTake.importShotFirstFrame(input);
+      return importShotFirstFrame(input);
     case SHOT_LAST_FRAME_GENERATION_PURPOSE:
-      return shotVideoTake.importShotLastFrame(input);
+      return importShotLastFrame(input);
     case SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE:
-      return shotVideoTake.importShotReferenceImage(input);
+      return importShotReferenceImage(input);
     case SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE:
-      return shotVideoTake.importShotMultiShotStoryboardSheet(input);
+      return importShotMultiShotStoryboardSheet(input);
     case SHOT_VIDEO_TAKE_GENERATION_PURPOSE:
-      return shotVideoTake.importShotVideoTake(input);
+      return importShotVideoTake(input);
     default:
       return assertNever(input);
   }

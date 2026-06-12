@@ -57,6 +57,24 @@ recording. Purpose definitions still own context construction, spec validation,
 provider payloads, output names, dependency declarations, draft dependency
 specs, and import behavior.
 
+Browser-safe media generation contracts are split by ownership under
+`packages/core/src/client`. Shared purpose, target, dependency, and lifecycle
+contracts live in `media-generation-purpose.ts`,
+`media-generation-target.ts`, `media-generation-dependency.ts`, and
+`media-generation-lifecycle.ts`; each purpose keeps its context, spec, model
+report, and import report shapes in its own client contract file. The public
+browser entrypoint remains `packages/core/src/client/index.ts`.
+
+Shot-video server behavior is split under
+`packages/core/src/server/media-generation/shot-video-take`. Context loading,
+production group mutation, route settings, provider payloads, dependency
+inventory, dependency draft specs, preflight reports, production plan reports,
+reference projection, input selection, media import, spec lifecycle, run
+recording, and project-relative file safety each have a purpose-named owner
+module. There is no local `shot-video-take.ts` compatibility surface or
+shot-video index barrel; service wiring and the purpose registry import the
+operation owner modules directly.
+
 Dependency planning is shared media-generation architecture, not a shot-video
 special case. Core builds a read-only dependency inventory from purpose-owned
 dependency declarations, resolves existing assets through deterministic asset

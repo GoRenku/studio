@@ -9,9 +9,9 @@ const repoRoot = path.resolve(
 );
 
 describe('media generation dependency static contracts', () => {
-  it('keeps removed shot-video local slot types out of the production module', async () => {
-    const source = await readRepoFile(
-      'packages/core/src/server/media-generation/shot-video-take.ts'
+  it('keeps removed shot-video local slot types out of the production modules', async () => {
+    const source = await readTree(
+      'packages/core/src/server/media-generation/shot-video-take'
     );
 
     expect(source).not.toContain('Required' + 'ShotVideoTakeInputSlot');

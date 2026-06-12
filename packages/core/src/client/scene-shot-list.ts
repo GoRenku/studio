@@ -180,10 +180,10 @@ export interface ShotVideoTakeAgentProposal {
 }
 
 export interface ShotVideoTakeDependencyDraft {
-  purpose: import('./media-generation.js').ShotVideoTakeInputGenerationPurpose;
+  purpose: import('./shot-video-take-generation.js').ShotVideoTakeInputGenerationPurpose;
   dependencyKind: ShotVideoTakeDependencyKind;
   outputInputKind: ShotVideoTakeInputKind;
-  modelChoice?: import('./media-generation.js').ShotVideoTakeInputModelChoice;
+  modelChoice?: import('./shot-video-take-generation.js').ShotVideoTakeInputModelChoice;
   prompt: string;
   parameterValues?: ShotVideoTakeParameterValues;
   title?: string;

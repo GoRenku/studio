@@ -1,0 +1,525 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  createShotVideoTakeTestProject,
+  type ShotVideoTakeTestProject,
+} from '../../testing/shot-video-take-fixtures.js';
+import { createDeterministicIdGenerator } from '../../index.js';
+
+describe('shot video take preflight and validation', () => {
+  let shotVideoTakeProject: ShotVideoTakeTestProject;
+  let homeDir: string;
+  let projectData: ShotVideoTakeTestProject['projectData'];
+
+  beforeEach(async () => {
+    shotVideoTakeProject = await createShotVideoTakeTestProject();
+    homeDir = shotVideoTakeProject.homeDir;
+    projectData = shotVideoTakeProject.projectData;
+  });
+
+  it('keeps excluded default multi-shot storyboard references visible for restore', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    await projectData.updateShotVideoTakeProductionGroup({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      productionGroupId: 'group_multi_storyboard',
+      shotIds: ['shot_001', 'shot_002'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      },
+    });
+    await projectData.updateShotVideoTakeRailGroups({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      railGroups: [
+        {
+          productionGroupId: 'group_multi_storyboard',
+          shotIds: ['shot_001', 'shot_002'],
+        },
+      ],
+    });
+
+    const defaultReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001', 'shot_002'],
+      productionGroupId: 'group_multi_storyboard',
+    });
+    const storyboardChoice = defaultReport.references.general.find(
+      (choice) => choice.kind === 'multi-shot-storyboard-sheet'
+    );
+    expect(storyboardChoice?.card).toMatchObject({
+      included: true,
+      required: false,
+    });
+
+    await projectData.updateSceneShotReferenceInclusion({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      dependencyId: storyboardChoice!.card.dependencyId!,
+      inclusion: 'exclude',
+    });
+
+    const excludedReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001', 'shot_002'],
+      productionGroupId: 'group_multi_storyboard',
+    });
+
+    expect(excludedReport.references.general).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'multi-shot-storyboard-sheet',
+          selected: false,
+          card: expect.objectContaining({
+            dependencyId: storyboardChoice!.card.dependencyId,
+            included: false,
+            required: false,
+            inclusionOverride: 'exclude',
+          }),
+        }),
+      ])
+    );
+  });
+
+  it('reports an active Lookbook reference as needed when no reference image exists', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: shotVideoTakeProject.lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    expect(preflight.inputPlanItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+          title: 'Imperial Wound',
+          caption: 'Lookbook sheet',
+          mediaKind: 'image',
+          status: 'needed',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+  });
+
+  it('shows scene cast choices without planning unselected character-sheet dependencies', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const extraCastMemberId = await shotVideoTakeProject.addVisualExtraCastMember();
+    await shotVideoTakeProject.addCastToSceneNarrative({
+      sceneId: ids.sceneId,
+      extraCastMemberId,
+      locationId: ids.locationId,
+    });
+    const shotList = shotVideoTakeProject.sampleShotList(ids, 1);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: shotList,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: shotVideoTakeProject.lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    expect(report.plan.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:cast-character-sheet:${ids.castMemberId}`,
+          dependencyKind: 'cast-character-sheet',
+          purpose: 'cast.character-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+    expect(report.plan.dependencyInventory.dependencies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:cast-character-sheet:${extraCastMemberId}`,
+        }),
+      ])
+    );
+    const unselectedExtraCast = report.references.castMembers.find(
+      (group) => group.castMemberId === extraCastMemberId
+    );
+    expect(unselectedExtraCast).toMatchObject({
+      castMemberId: extraCastMemberId,
+      selectedForShot: false,
+      defaultSelectedForShot: false,
+      characterSheets: [
+        expect.objectContaining({
+          assetId: null,
+          selected: false,
+          defaultSelected: false,
+          card: expect.objectContaining({
+            state: 'not-selected',
+          }),
+        }),
+      ],
+    });
+    expect(
+      unselectedExtraCast?.characterSheets[0]?.card.dependencyLineId
+    ).toBeUndefined();
+
+    await projectData.updateSceneShotCastReferences({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      castMemberIds: [extraCastMemberId],
+    });
+    const updatedReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+    expect(updatedReport.plan.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:cast-character-sheet:${extraCastMemberId}`,
+          dependencyKind: 'cast-character-sheet',
+          purpose: 'cast.character-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+    expect(updatedReport.plan.dependencyInventory.dependencies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:cast-character-sheet:${ids.castMemberId}`,
+        }),
+      ])
+    );
+  });
+
+  it('excludes voice-over cast members from shot character-sheet references', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    await shotVideoTakeProject.addCastToSceneNarrative({
+      sceneId: ids.sceneId,
+      extraCastMemberId: ids.narratorCastMemberId,
+      locationId: ids.locationId,
+    });
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    expect(report.references.castMembers.map((group) => group.castMemberId)).not.toContain(
+      ids.narratorCastMemberId
+    );
+    expect(report.plan.dependencyInventory.dependencies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:cast-character-sheet:${ids.narratorCastMemberId}`,
+        }),
+      ])
+    );
+  });
+
+  it('uses the selected lookbook sheet as the concrete ready reference input', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: shotVideoTakeProject.lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+    await shotVideoTakeProject.writeProjectFile('generated/media/lookbook-sheet-a.png', 'sheet a');
+    await shotVideoTakeProject.writeProjectFile('generated/media/lookbook-sheet-b.png', 'sheet b');
+    const sheetA = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet-a.png',
+      title: 'Sheet A',
+    });
+    const sheetB = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet-b.png',
+      title: 'Sheet B',
+    });
+
+    await projectData.updateSceneShotLookbookReference({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      lookbookSheetId: sheetB.imported.id,
+    });
+
+    const production = {
+      inputModeId: 'reference' as const,
+      modelChoice: 'fal-ai/bytedance/seedance-2.0' as const,
+      parameterValues: { duration: 6 },
+    };
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production,
+    });
+    const selectedSheetFile = sheetB.imported.asset.files[0]!;
+    expect(preflight.preparedInputs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'lookbook-sheet',
+          assetId: sheetB.imported.asset.assetId,
+          assetFileId: selectedSheetFile.id,
+          subjectKind: 'lookbook',
+          subjectId: lookbook.lookbook.id,
+        }),
+      ])
+    );
+    expect(preflight.preparedInputs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'lookbook-sheet',
+          assetId: sheetA.imported.asset.assetId,
+        }),
+      ])
+    );
+    expect(preflight.plan?.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+          availability: { state: 'satisfied' },
+          dependencyKind: 'lookbook-sheet',
+          selectedAsset: expect.objectContaining({
+            assetId: sheetB.imported.asset.assetId,
+            assetFileId: selectedSheetFile.id,
+          }),
+        }),
+      ])
+    );
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production,
+    });
+    const sheetAChoice = report.references.lookbook.find(
+      (choice) => choice.lookbookSheetId === sheetA.imported.id
+    );
+    const sheetBChoice = report.references.lookbook.find(
+      (choice) => choice.lookbookSheetId === sheetB.imported.id
+    );
+
+    expect(sheetAChoice).toMatchObject({
+      selected: false,
+      card: {
+        state: 'available',
+      },
+    });
+    expect(sheetAChoice?.card.dependencyLineId).toBeUndefined();
+    expect(sheetAChoice?.card.planLineId).toBeUndefined();
+    expect(sheetBChoice).toMatchObject({
+      selected: true,
+      card: {
+        state: 'selected-ready',
+        dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+      },
+    });
+  });
+
+  it('shows shot-scoped planned reference image dependencies in the production plan', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'reference-image',
+            subjectKind: 'shot',
+            subjectId: 'shot_001',
+          },
+        ],
+      },
+    });
+
+    expect(report.references.general).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'reference-image',
+          selected: true,
+          card: expect.objectContaining({
+            dependencyId: 'reference-image:shot:shot_001',
+            state: 'selected-planned',
+            pricing: expect.objectContaining({
+              state: 'priced',
+              estimatedUsd: 0.005,
+            }),
+          }),
+        }),
+      ])
+    );
+  });
+
+  it('rejects excluding first-frame references required by the selected route', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await expect(
+      projectData.updateSceneShotReferenceInclusion({
+        projectName: 'constantinople',
+        homeDir,
+        sceneId: ids.sceneId,
+        shotId: 'shot_001',
+        dependencyId: 'first-frame:shot:shot_001',
+        inclusion: 'exclude',
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
+    });
+  });
+
+  it('shows multiple imported image input takes once with one selected', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    await shotVideoTakeProject.writeProjectFile('generated/media/first-frame-a.png', 'first frame a');
+    await shotVideoTakeProject.writeProjectFile('generated/media/first-frame-b.png', 'first frame b');
+    const selected = await projectData.importShotFirstFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/first-frame-a.png',
+      selection: 'select',
+    });
+    await projectData.importShotFirstFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/first-frame-b.png',
+      selection: 'take',
+    });
+    await projectData.updateShotVideoTakeProductionGroup({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      productionGroupId: selected.target.productionGroupId,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'first-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        preparedInputs: [
+          {
+            kind: selected.input.kind,
+            assetId: selected.input.assetId,
+            assetFileId: selected.input.assetFileId,
+            subjectKind: selected.input.subjectKind,
+            subjectId: selected.input.subjectId,
+          },
+        ],
+      },
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      productionGroupId: selected.target.productionGroupId,
+    });
+
+    const firstFrameChoices = report.references.general.filter(
+      (choice) => choice.kind === 'first-frame'
+    );
+    expect(firstFrameChoices).toHaveLength(2);
+    expect(firstFrameChoices.filter((choice) => choice.selected)).toHaveLength(1);
+    expect(firstFrameChoices.find((choice) => choice.selected)?.card).toMatchObject({
+      required: true,
+      included: true,
+    });
+    expect(firstFrameChoices.find((choice) => !choice.selected)?.card).toMatchObject({
+      required: false,
+      included: false,
+    });
+    expect(
+      firstFrameChoices.flatMap((choice) =>
+        choice.card.previews.map((preview) => preview.inputId)
+      )
+    ).toHaveLength(2);
+  });
+});

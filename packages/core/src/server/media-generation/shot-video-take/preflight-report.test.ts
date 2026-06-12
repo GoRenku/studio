@@ -1,0 +1,187 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  createShotVideoTakeTestProject,
+  type ShotVideoTakeTestProject,
+} from '../../testing/shot-video-take-fixtures.js';
+
+describe('shot video take preflight and validation', () => {
+  let shotVideoTakeProject: ShotVideoTakeTestProject;
+  let homeDir: string;
+  let projectData: ShotVideoTakeTestProject['projectData'];
+
+  beforeEach(async () => {
+    shotVideoTakeProject = await createShotVideoTakeTestProject();
+    homeDir = shotVideoTakeProject.homeDir;
+    projectData = shotVideoTakeProject.projectData;
+  });
+
+  it('reports requested input slots as non-blocking dependency suggestions', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'character-sheet',
+            subjectKind: 'cast-member',
+            subjectId: ids.castMemberId,
+          },
+          {
+            kind: 'location-sheet',
+            subjectKind: 'location',
+            subjectId: ids.locationId,
+          },
+          {
+            kind: 'lookbook-sheet',
+            subjectKind: 'lookbook',
+            subjectId: 'lookbook_test',
+          },
+        ],
+      },
+    });
+
+    expect(preflight.valid).toBe(true);
+    expect(preflight.inputsToCreate).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          outputInputKind: 'character-sheet',
+          subjectKind: 'cast-member',
+          subjectId: ids.castMemberId,
+          mediaKind: 'image',
+          required: false,
+        }),
+        expect.objectContaining({
+          outputInputKind: 'location-sheet',
+          subjectKind: 'location',
+          subjectId: ids.locationId,
+          mediaKind: 'image',
+          required: false,
+        }),
+        expect.objectContaining({
+          outputInputKind: 'lookbook-sheet',
+          subjectKind: 'lookbook',
+          subjectId: 'lookbook_test',
+          mediaKind: 'image',
+          required: false,
+        }),
+      ])
+    );
+    expect(preflight.finalTake.canCreateSpec).toBe(true);
+
+    const created = await projectData.createMediaGenerationSpec({
+      homeDir,
+      spec: {
+        purpose: 'shot.video-take',
+        target: preflight.target,
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        prompt: 'Generate the video take without optional visual references.',
+        parameterValues: { duration: 6 },
+        inputs: [],
+        title: 'Text-only take with optional references ignored',
+      },
+    });
+    expect(created).toMatchObject({
+      purpose: 'shot.video-take',
+      target: preflight.target,
+    });
+  });
+
+  it('preserves imported input file paths in preflight prepared inputs', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const sourceProjectRelativePath = 'generated/media/first-frame.png';
+    await shotVideoTakeProject.writeProjectFile(sourceProjectRelativePath, 'first frame');
+
+    await projectData.importShotFirstFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath,
+    });
+
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+    });
+
+    expect(preflight.preparedInputs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'first-frame',
+          projectRelativePath: sourceProjectRelativePath,
+        }),
+      ])
+    );
+  });
+
+  it('resolves prepared cast sheet inputs without a shot video take input row', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const sheetSource = 'generated/media/cast-sheet.png';
+    await shotVideoTakeProject.writeProjectFile(sheetSource, 'cast sheet');
+    const characterSheet = await projectData.importCastCharacterSheetMedia({
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: sheetSource,
+    });
+    const primaryFile = characterSheet.imported.files[0]!;
+
+    const preflight = await projectData.previewShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'character-sheet',
+            subjectKind: 'cast-member',
+            subjectId: ids.castMemberId,
+          },
+        ],
+        preparedInputs: [
+          {
+            kind: 'character-sheet',
+            assetId: characterSheet.imported.assetId,
+            assetFileId: primaryFile.id,
+            subjectKind: 'cast-member',
+            subjectId: ids.castMemberId,
+          },
+        ],
+      },
+    });
+
+    expect(preflight.inputsToCreate).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          outputInputKind: 'character-sheet',
+          subjectKind: 'cast-member',
+          subjectId: ids.castMemberId,
+        }),
+      ])
+    );
+    expect(preflight.preparedInputs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'character-sheet',
+          subjectKind: 'cast-member',
+          subjectId: ids.castMemberId,
+          projectRelativePath: primaryFile.projectRelativePath,
+        }),
+      ])
+    );
+  });
+});

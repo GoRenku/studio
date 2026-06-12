@@ -17,7 +17,7 @@ import type {
   ProjectInfo,
 } from './project.js';
 import type { ProjectLanguage } from './project-languages.js';
-import type { SceneDialogueAudioContext } from './media-generation.js';
+import type { SceneDialogueAudioContext } from './scene-audio-generation.js';
 import type {
   InspirationAnalysis,
   InspirationFolder,

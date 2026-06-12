@@ -1,52 +1,60 @@
-import * as shotVideoTake from '../media-generation/shot-video-take.js';
+import { buildShotVideoTakeContext } from '../media-generation/shot-video-take/context.js';
+import { listShotVideoTakeModels } from '../media-generation/shot-video-take/model-list.js';
+import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/shot-video-take/input-selection.js';
+import { updateShotVideoTakeProductionGroup, updateShotVideoTakeRailGroups } from '../media-generation/shot-video-take/production-groups.js';
+import { estimateShotVideoTakeProduction, planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
+import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
+import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
+import { validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
+import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
 
 export function createShotVideoTakeServiceWiring() {
   return {
-    buildShotVideoTakeContext: shotVideoTake.buildShotVideoTakeContext,
-    listShotVideoTakeModels: shotVideoTake.listShotVideoTakeModels,
-    listShotVideoTakeInputs: shotVideoTake.listShotVideoTakeInputs,
+    buildShotVideoTakeContext: buildShotVideoTakeContext,
+    listShotVideoTakeModels: listShotVideoTakeModels,
+    listShotVideoTakeInputs: listShotVideoTakeInputs,
     updateShotVideoTakeProductionGroup:
-      shotVideoTake.updateShotVideoTakeProductionGroup,
-    updateShotVideoTakeRailGroups: shotVideoTake.updateShotVideoTakeRailGroups,
+      updateShotVideoTakeProductionGroup,
+    updateShotVideoTakeRailGroups: updateShotVideoTakeRailGroups,
     estimateShotVideoTakeProduction:
-      shotVideoTake.estimateShotVideoTakeProduction,
+      estimateShotVideoTakeProduction,
     planShotVideoTakeProduction:
-      shotVideoTake.planShotVideoTakeProduction,
+      planShotVideoTakeProduction,
     readShotVideoTakeProductionPlan:
-      shotVideoTake.readShotVideoTakeProductionPlan,
-    previewShotVideoTakeProduction: shotVideoTake.previewShotVideoTakeProduction,
-    resolveShotVideoTakeInputFile: shotVideoTake.resolveShotVideoTakeInputFile,
-    selectShotVideoTakeInput: shotVideoTake.selectShotVideoTakeInput,
+      readShotVideoTakeProductionPlan,
+    previewShotVideoTakeProduction: previewShotVideoTakeProduction,
+    resolveShotVideoTakeInputFile: resolveShotVideoTakeInputFile,
+    selectShotVideoTakeInput: selectShotVideoTakeInput,
     clearShotVideoTakeInputSelection:
-      shotVideoTake.clearShotVideoTakeInputSelection,
-    deleteShotVideoTakeInput: shotVideoTake.deleteShotVideoTakeInput,
-    validateShotFirstFrameSpec: shotVideoTake.validateShotFirstFrameSpec,
+      clearShotVideoTakeInputSelection,
+    deleteShotVideoTakeInput: deleteShotVideoTakeInput,
+    validateShotFirstFrameSpec: validateShotFirstFrameSpec,
     createShotFirstFrameSpec: sharedGeneration.createMediaGenerationSpec,
     updateShotFirstFrameSpec: sharedGeneration.updateMediaGenerationSpec,
     readShotFirstFrameSpec: sharedGeneration.readMediaGenerationSpec,
-    listShotFirstFrameSpecs: shotVideoTake.listShotFirstFrameSpecs,
+    listShotFirstFrameSpecs: listShotFirstFrameSpecs,
     prepareShotFirstFrameSpec: sharedGeneration.prepareMediaGenerationSpec,
     estimateShotFirstFrameSpec: sharedGeneration.estimateMediaGenerationSpec,
     runShotFirstFrameSpec: sharedGeneration.runMediaGenerationSpec,
-    validateShotLastFrameSpec: shotVideoTake.validateShotLastFrameSpec,
+    validateShotLastFrameSpec: validateShotLastFrameSpec,
     createShotLastFrameSpec: sharedGeneration.createMediaGenerationSpec,
     updateShotLastFrameSpec: sharedGeneration.updateMediaGenerationSpec,
     readShotLastFrameSpec: sharedGeneration.readMediaGenerationSpec,
-    listShotLastFrameSpecs: shotVideoTake.listShotLastFrameSpecs,
+    listShotLastFrameSpecs: listShotLastFrameSpecs,
     prepareShotLastFrameSpec: sharedGeneration.prepareMediaGenerationSpec,
     estimateShotLastFrameSpec: sharedGeneration.estimateMediaGenerationSpec,
     runShotLastFrameSpec: sharedGeneration.runMediaGenerationSpec,
-    validateShotReferenceImageSpec: shotVideoTake.validateShotReferenceImageSpec,
+    validateShotReferenceImageSpec: validateShotReferenceImageSpec,
     createShotReferenceImageSpec: sharedGeneration.createMediaGenerationSpec,
     updateShotReferenceImageSpec: sharedGeneration.updateMediaGenerationSpec,
     readShotReferenceImageSpec: sharedGeneration.readMediaGenerationSpec,
-    listShotReferenceImageSpecs: shotVideoTake.listShotReferenceImageSpecs,
+    listShotReferenceImageSpecs: listShotReferenceImageSpecs,
     prepareShotReferenceImageSpec: sharedGeneration.prepareMediaGenerationSpec,
     estimateShotReferenceImageSpec: sharedGeneration.estimateMediaGenerationSpec,
     runShotReferenceImageSpec: sharedGeneration.runMediaGenerationSpec,
     validateShotMultiShotStoryboardSheetSpec:
-      shotVideoTake.validateShotMultiShotStoryboardSheetSpec,
+      validateShotMultiShotStoryboardSheetSpec,
     createShotMultiShotStoryboardSheetSpec:
       sharedGeneration.createMediaGenerationSpec,
     updateShotMultiShotStoryboardSheetSpec:
@@ -54,26 +62,26 @@ export function createShotVideoTakeServiceWiring() {
     readShotMultiShotStoryboardSheetSpec:
       sharedGeneration.readMediaGenerationSpec,
     listShotMultiShotStoryboardSheetSpecs:
-      shotVideoTake.listShotMultiShotStoryboardSheetSpecs,
+      listShotMultiShotStoryboardSheetSpecs,
     prepareShotMultiShotStoryboardSheetSpec:
       sharedGeneration.prepareMediaGenerationSpec,
     estimateShotMultiShotStoryboardSheetSpec:
       sharedGeneration.estimateMediaGenerationSpec,
     runShotMultiShotStoryboardSheetSpec:
       sharedGeneration.runMediaGenerationSpec,
-    validateShotVideoTakeSpec: shotVideoTake.validateShotVideoTakeSpec,
+    validateShotVideoTakeSpec: validateShotVideoTakeSpec,
     createShotVideoTakeSpec: sharedGeneration.createMediaGenerationSpec,
     updateShotVideoTakeSpec: sharedGeneration.updateMediaGenerationSpec,
     readShotVideoTakeSpec: sharedGeneration.readMediaGenerationSpec,
-    listShotVideoTakeSpecs: shotVideoTake.listShotVideoTakeSpecs,
+    listShotVideoTakeSpecs: listShotVideoTakeSpecs,
     prepareShotVideoTakeSpec: sharedGeneration.prepareMediaGenerationSpec,
     estimateShotVideoTakeSpec: sharedGeneration.estimateMediaGenerationSpec,
     runShotVideoTakeSpec: sharedGeneration.runMediaGenerationSpec,
-    importShotFirstFrame: shotVideoTake.importShotFirstFrame,
-    importShotLastFrame: shotVideoTake.importShotLastFrame,
-    importShotReferenceImage: shotVideoTake.importShotReferenceImage,
+    importShotFirstFrame: importShotFirstFrame,
+    importShotLastFrame: importShotLastFrame,
+    importShotReferenceImage: importShotReferenceImage,
     importShotMultiShotStoryboardSheet:
-      shotVideoTake.importShotMultiShotStoryboardSheet,
-    importShotVideoTake: shotVideoTake.importShotVideoTake,
+      importShotMultiShotStoryboardSheet,
+    importShotVideoTake: importShotVideoTake,
   };
 }

@@ -17,7 +17,7 @@ import type {
   ShotVideoTakeProductionGroup,
   ShotVideoTakeRailGroup,
 } from '../../client/scene-shot-list.js';
-import type { ShotVideoTakeInputGenerationPurpose } from '../../client/media-generation.js';
+import type { ShotVideoTakeInputGenerationPurpose } from '../../client/shot-video-take-generation.js';
 import {
   sceneShotListDocumentSchema,
   sceneShotListOperationDocumentSchema,
