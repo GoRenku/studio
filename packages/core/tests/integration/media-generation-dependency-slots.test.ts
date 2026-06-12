@@ -81,6 +81,41 @@ describe('media generation dependency slot declarations', () => {
     );
   });
 
+  it('preserves cast and location context when no Lookbook is active', () => {
+    const slots = declareShotVideoTakeDependencySlots({
+      target,
+      inputModeId: 'first-frame',
+      selectedCast,
+      selectedLocations,
+      activeLookbook: null,
+      customReferenceInputs: [],
+    });
+
+    expect(slots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyId: 'first-frame:production-group:production-group',
+          required: true,
+        }),
+        expect.objectContaining({
+          dependencyId: 'cast-character-sheet:cast-a',
+          required: false,
+        }),
+        expect.objectContaining({
+          dependencyId: 'location-environment-sheet:location-a',
+          required: false,
+        }),
+      ])
+    );
+    expect(slots).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyId: 'lookbook-sheet:lookbook-a',
+        }),
+      ])
+    );
+  });
+
   it('declares first and last frame as required for shot video first-last-frame mode', () => {
     const slots = declareShotVideoTakeDependencySlots({
       target,
@@ -127,6 +162,50 @@ describe('media generation dependency slot declarations', () => {
         }),
       ])
     );
+  });
+
+  it('does not copy an active Lookbook sheet onto a requested different Lookbook', () => {
+    const slots = declareShotVideoTakeDependencySlots({
+      target,
+      inputModeId: 'text-only',
+      selectedCast: [],
+      selectedLocations: [],
+      activeLookbook: {
+        id: 'lookbook-a',
+        name: 'Nocturne',
+        selectedSheetId: 'lookbook-a-sheet',
+      },
+      customReferenceInputs: [],
+      requestedInputs: [
+        {
+          kind: 'lookbook-sheet',
+          subjectKind: 'lookbook',
+          subjectId: 'lookbook-b',
+        },
+      ],
+    });
+
+    const requestedLookbookSlot = slots.find(
+      (slot) => slot.dependencyId === 'lookbook-sheet:lookbook-b'
+    );
+
+    expect(requestedLookbookSlot).toMatchObject({
+      dependencyId: 'lookbook-sheet:lookbook-b',
+      dependencyKind: 'lookbook-sheet',
+      selector: {
+        kind: 'lookbook-sheet',
+        lookbookId: 'lookbook-b',
+        selectionPolicy: 'selected-or-default',
+      },
+    });
+    expect(requestedLookbookSlot?.selector).not.toHaveProperty('lookbookSheetId');
+    expect(
+      slots.find((slot) => slot.dependencyId === 'lookbook-sheet:lookbook-a')
+    ).toMatchObject({
+      selector: expect.objectContaining({
+        lookbookSheetId: 'lookbook-a-sheet',
+      }),
+    });
   });
 
   it('declares cast profile character sheet as required', () => {

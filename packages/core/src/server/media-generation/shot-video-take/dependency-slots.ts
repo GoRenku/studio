@@ -194,14 +194,19 @@ function requestedShotVideoInputSlot(input: {
     input.requestedInput.subjectKind === 'lookbook' &&
     input.requestedInput.subjectId
   ) {
+    const activeLookbook = input.declarationInput.activeLookbook;
+    const requestedLookbookSheetId =
+      activeLookbook?.id === input.requestedInput.subjectId
+        ? activeLookbook.selectedSheetId
+        : undefined;
     return lookbookSheetDependencySlot({
       lookbookId: input.requestedInput.subjectId,
       lookbookName:
-        input.declarationInput.activeLookbook?.id === input.requestedInput.subjectId
-          ? input.declarationInput.activeLookbook.name
+        activeLookbook?.id === input.requestedInput.subjectId
+          ? activeLookbook.name
           : input.requestedInput.subjectId,
-      ...(input.declarationInput.activeLookbook?.selectedSheetId
-        ? { lookbookSheetId: input.declarationInput.activeLookbook.selectedSheetId }
+      ...(requestedLookbookSheetId
+        ? { lookbookSheetId: requestedLookbookSheetId }
         : {}),
       required: false,
       reason,
