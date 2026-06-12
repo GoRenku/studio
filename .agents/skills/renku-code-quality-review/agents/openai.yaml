@@ -1,0 +1,4 @@
+interface:
+  display_name: "Renku Code Quality Review"
+  short_description: "Review Renku architecture and code shape"
+  default_prompt: "Use $renku-code-quality-review to review the current changes for Renku Studio architecture and code quality issues."
