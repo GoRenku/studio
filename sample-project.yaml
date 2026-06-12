@@ -93,6 +93,7 @@ continuityReferences:
 cast:
   - name: Narrator
     kind: narrator
+    isVoiceOver: true
     role: Voiceover
     shortDescription: Grave, cinematic documentary voice guiding the viewer through the preparation phase.
     descriptionFile: sample-project/cast/narrator/description.md

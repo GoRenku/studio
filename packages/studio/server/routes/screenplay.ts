@@ -1,6 +1,8 @@
 import {
   sceneShotListResourceKeys,
   type ShotVideoTakeInputModeId,
+  studioCastMemberSurfaceResourceKey,
+  studioCastNavigationResourceKey,
 } from '@gorenku/studio-core/server';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
@@ -21,6 +23,7 @@ import {
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
 import { readSceneShotSpecsRequest } from '../http/scene-shot-specs-request.js';
+import { readCastMemberVoiceOverRequest } from '../http/cast-member-request.js';
 import {
   readShotCastReferencesRequest,
   readShotCastCharacterSheetReferenceRequest,
@@ -29,6 +32,7 @@ import {
   readShotLocationReferenceRequest,
   readShotLocationViewReferencesRequest,
   readShotLookbookReferenceRequest,
+  readShotReferenceInclusionRequest,
   readShotVideoTakeProductionGroupRequest,
   readShotVideoTakeRailGroupsRequest,
   readShotVideoTakeProductionPlanRequest,
@@ -84,6 +88,35 @@ export function createScreenplayRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .patch(
+      '/screenplay/cast/:castMemberId/voice-over',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const castMemberId = c.req.param('castMemberId') as string;
+          const request = readCastMemberVoiceOverRequest(await c.req.json());
+          await projectData.updateCastMemberVoiceOverStatus({
+            projectName,
+            castMemberId,
+            isVoiceOver: request.isVoiceOver,
+          });
+          const resource = await projectData.readCastMemberResource({
+            projectName,
+            castMemberId,
+          });
+          return c.json({
+            resource: toCastMemberResourceResponse(projectName, resource),
+            resourceKeys: [
+              studioCastNavigationResourceKey(),
+              studioCastMemberSurfaceResourceKey(castMemberId),
+            ],
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .get('/screenplay/locations', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
@@ -857,6 +890,35 @@ export function createScreenplayRoute({
             sceneId,
             shotId,
             customReferenceInputIds: request.customReferenceInputIds,
+          });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: sceneShotListResourceKeys({
+              sceneId,
+              shotListId: resource.activeShotListId,
+              shotIds: [shotId],
+            }),
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/shots/:shotId/reference-inclusions',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const shotId = c.req.param('shotId') as string;
+          const request = readShotReferenceInclusionRequest(await c.req.json());
+          const resource = await projectData.updateSceneShotReferenceInclusion({
+            projectName,
+            sceneId,
+            shotId,
+            dependencyId: request.dependencyId,
+            inclusion: request.inclusion,
           });
           return c.json({
             resource: toSceneShotListResourceResponse(projectName, resource),

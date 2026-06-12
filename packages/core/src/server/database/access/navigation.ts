@@ -44,6 +44,7 @@ export function listCastNavigationPage(
           handle: castMembers.handle,
           name: castMembers.name,
           role: castMembers.role,
+          isVoiceOver: castMembers.isVoiceOver,
           position: castMembers.position,
         })
         .from(castMembers)
@@ -58,6 +59,7 @@ export function listCastNavigationPage(
       handle: row.handle,
       name: row.name,
       role: nullable(row.role),
+      isVoiceOver: row.isVoiceOver,
     }),
   });
 }
@@ -210,6 +212,7 @@ export function readCastNavigationRow(
         handle: castMember.handle,
         name: castMember.name,
         role: nullable(castMember.role),
+        isVoiceOver: castMember.isVoiceOver,
       }
     : null;
 }
@@ -386,7 +389,10 @@ function countScenesForAct(session: DatabaseSession, actId: string): number {
   );
 }
 
-function listSceneLocationIds(session: DatabaseSession, sceneId: string): string[] {
+export function listSceneLocationIds(
+  session: DatabaseSession,
+  sceneId: string
+): string[] {
   return session.db
     .select({ locationId: sceneLocations.locationId })
     .from(sceneLocations)

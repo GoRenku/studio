@@ -45,6 +45,7 @@ import {
   readCastMemberDeleteDependencySummary,
   type CastMemberDeleteDependencySummary,
   replaceCastMemberAuthoringRecords,
+  updateCastMemberVoiceOverRecord,
 } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
 import {
@@ -115,15 +116,29 @@ export async function readCastContext(
       activeLookbook: null,
       selectedAssets: [],
       assetRoleCounts: roleCounts(selectedAssets),
-      generationReadiness: {
-        characterSheet: true,
-        profile: selectedAssets.some((asset) => asset.role === 'character-sheet'),
-        notes: [
-          'Use media-producer for cast.character-sheet and cast.profile generation.',
-          'Costume-variant media and voice media do not have first-class generation targets yet.',
-        ],
-      },
+      generationReadiness: castGenerationReadiness(castMember, selectedAssets),
     };
+  });
+}
+
+export async function updateCastMemberVoiceOverStatus(
+  input: RenkuConfigPathOptions & {
+    projectName: string;
+    castMemberId: string;
+    isVoiceOver: boolean;
+  }
+): Promise<CastMember> {
+  return await withCurrentProjectSession(input, ({ session }) => {
+    const updated = updateCastMemberVoiceOverRecord(session, {
+      castMemberId: input.castMemberId,
+      isVoiceOver: input.isVoiceOver,
+    });
+    if (!updated) {
+      throw new ProjectDataError('PROJECT_DATA205', 'Cast member was not found.', {
+        suggestion: 'Check the id from the current Cast list.',
+      });
+    }
+    return requireCastMember(session, input.castMemberId);
   });
 }
 
@@ -307,6 +322,7 @@ function listCastMembersFromSession(session: DatabaseSession): CastMember[] {
       handle: row.handle,
       name: row.name,
       role: row.role ?? undefined,
+      isVoiceOver: row.isVoiceOver,
       age: row.age ?? undefined,
       want: row.want ?? undefined,
       need: row.need ?? undefined,
@@ -342,12 +358,36 @@ function toCastMember(input: CastMemberInput): CastMember {
     handle: input.handle,
     name: input.name,
     role: input.role,
+    isVoiceOver: input.isVoiceOver ?? false,
     age: input.age,
     want: input.want,
     need: input.need,
     arc: input.arc,
     voiceNotes: input.voiceNotes,
     description: input.description,
+  };
+}
+
+function castGenerationReadiness(
+  castMember: CastMember,
+  selectedAssets: Array<{ role: string; selection: string }>
+): CastDesignContextReport['generationReadiness'] {
+  if (castMember.isVoiceOver) {
+    return {
+      characterSheet: false,
+      profile: false,
+      notes: [
+        'Voice-over Cast Members use Cast Voice records and do not require visual character sheets or profile images.',
+      ],
+    };
+  }
+  return {
+    characterSheet: true,
+    profile: selectedAssets.some((asset) => asset.role === 'character-sheet'),
+    notes: [
+      'Use media-producer for cast.character-sheet and cast.profile generation.',
+      'Costume-variant media and voice media do not have first-class generation targets yet.',
+    ],
   };
 }
 

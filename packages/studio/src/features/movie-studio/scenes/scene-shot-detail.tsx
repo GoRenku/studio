@@ -212,8 +212,6 @@ export function SceneShotDetail({
                     sceneId={sceneId}
                     shot={shot}
                     productionPlan={production.productionPlan}
-                    onSelectInput={production.reuseInput}
-                    onClearInput={production.regenerateInput}
                     onResourceRefreshed={onShotSpecsSaved}
                     onPlanRefresh={production.refreshProductionPlan}
                   />

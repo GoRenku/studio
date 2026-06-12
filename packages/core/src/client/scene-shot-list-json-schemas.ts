@@ -451,6 +451,10 @@ function shotSpecsSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
+      referenceInclusions: {
+        type: 'object',
+        additionalProperties: enumValue(['include', 'exclude'] as const),
+      },
       custom: {
         type: 'object',
         properties: {

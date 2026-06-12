@@ -529,12 +529,21 @@ cast:
     kind: character
     role: Young Ottoman sultan
     shortDescription: Young ruler preparing to take Constantinople.
+
+  - name: Narrator
+    kind: narrator
+    isVoiceOver: true
+    role: Voiceover
+    shortDescription: Grave, cinematic documentary narrator.
 ```
 
 Recommended cast fields:
 
 - `name`: display name.
 - `kind`: `character`, `narrator`, `location`, `object`, `group`, or `other`.
+- `isVoiceOver`: whether this Cast Member is audio-only or voice-over. This
+  must be explicit when true; it is not inferred from `kind`, `role`, name, or
+  handle text.
 - `role`: plain-language production or story role.
 - `shortDescription`: compact context for the project.
 - `description`: inline Markdown-capable cast description.
@@ -755,6 +764,7 @@ cast:
 
   - name: Narrator
     kind: narrator
+    isVoiceOver: true
     role: Voiceover
     shortDescription: Grave, cinematic documentary narrator.
 

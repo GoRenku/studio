@@ -227,6 +227,7 @@ export function requireCastMemberForContext(
     id: row.id,
     handle: row.handle,
     name: row.name,
+    isVoiceOver: row.isVoiceOver,
     role: row.role ?? undefined,
     age: row.age ?? undefined,
     want: row.want ?? undefined,

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
 import { createScreenplayRoute } from './screenplay.js';
 
@@ -46,6 +46,7 @@ describe('screenplay Hono route', () => {
                 id: 'cast_narrator',
                 handle: 'narrator',
                 name: 'Narrator',
+                isVoiceOver: true,
               },
               firstImage,
               voices: [],
@@ -156,6 +157,103 @@ describe('screenplay Hono route', () => {
       resource: {
         scene: { id: 'scene_opening', title: 'Opening Scene' },
         blocks: [{ type: 'action', text: 'The siege begins.' }],
+      },
+    });
+  });
+
+  it('updates Cast Member voice-over status through the core service contract', async () => {
+    const updateCastMemberVoiceOverStatus = vi.fn(async () => ({
+      id: 'cast_narrator',
+      handle: 'narrator',
+      name: 'Narrator',
+      isVoiceOver: true,
+    }));
+    const app = new Hono().route(
+      '/:projectName',
+      createScreenplayRoute({
+        requireToken: async (_c, next) => {
+          await next();
+        },
+        projectData: {
+          ...fakeProjectDataService(),
+          updateCastMemberVoiceOverStatus,
+          async readCastMemberResource() {
+            return {
+              castMember: {
+                id: 'cast_narrator',
+                handle: 'narrator',
+                name: 'Narrator',
+                isVoiceOver: true,
+              },
+              voices: [],
+            };
+          },
+        },
+      })
+    );
+
+    const response = await app.request(
+      '/constantinople/screenplay/cast/cast_narrator/voice-over',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ isVoiceOver: true }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateCastMemberVoiceOverStatus).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      castMemberId: 'cast_narrator',
+      isVoiceOver: true,
+    });
+    await expect(response.json()).resolves.toMatchObject({
+      resource: {
+        castMember: { id: 'cast_narrator', isVoiceOver: true },
+      },
+    });
+  });
+
+  it('updates shot reference inclusion overrides through the core service contract', async () => {
+    const updateSceneShotReferenceInclusion = vi.fn(async () =>
+      fakeProjectDataService().readSceneShotListResource({} as never)
+    );
+    const app = new Hono().route(
+      '/:projectName',
+      createScreenplayRoute({
+        requireToken: async (_c, next) => {
+          await next();
+        },
+        projectData: {
+          ...fakeProjectDataService(),
+          updateSceneShotReferenceInclusion,
+        },
+      })
+    );
+
+    const response = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/shots/shot_001/reference-inclusions',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          dependencyId: 'reference-image:shot:shot_001',
+          inclusion: 'exclude',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateSceneShotReferenceInclusion).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      sceneId: 'scene_opening',
+      shotId: 'shot_001',
+      dependencyId: 'reference-image:shot:shot_001',
+      inclusion: 'exclude',
+    });
+    await expect(response.json()).resolves.toMatchObject({
+      resource: {
+        scene: { id: 'scene_opening' },
       },
     });
   });

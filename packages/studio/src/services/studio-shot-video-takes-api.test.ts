@@ -12,6 +12,7 @@ import {
   updateShotLocationReference,
   updateShotLocationSheetReference,
   updateShotLocationViewReferences,
+  updateShotReferenceInclusion,
   updateShotVideoTakeProduction,
   updateShotVideoTakeRailGroups,
 } from './studio-shot-video-takes-api';
@@ -280,6 +281,30 @@ describe('studio-shot-video-takes-api', () => {
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
       customReferenceInputIds: ['input_texture', 'input_blade'],
+    });
+  });
+
+  it('updates a shot reference inclusion override', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resource: {}, resourceKeys: [] })
+    );
+    await updateShotReferenceInclusion(
+      'constantinople',
+      'scene_hook',
+      'shot_001',
+      {
+        dependencyId: 'reference-image:shot:shot_001',
+        inclusion: 'exclude',
+      }
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      '/screenplay/scenes/scene_hook/shots/shot_001/reference-inclusions'
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      dependencyId: 'reference-image:shot:shot_001',
+      inclusion: 'exclude',
     });
   });
 

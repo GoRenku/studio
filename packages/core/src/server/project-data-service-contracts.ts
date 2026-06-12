@@ -240,6 +240,9 @@ export interface ProjectDataService {
   updateSceneShotCustomReferenceImages(
     input: UpdateSceneShotCustomReferenceImagesInput
   ): Promise<SceneShotListResource>;
+  updateSceneShotReferenceInclusion(
+    input: UpdateSceneShotReferenceInclusionInput
+  ): Promise<SceneShotListResource>;
   readActStoryboardResource(
     input: ReadActStoryboardResourceInput
   ): Promise<ActStoryboardResource>;
@@ -283,6 +286,9 @@ export interface ProjectDataService {
   attachCastVoice(input: AttachCastVoiceInput): Promise<CastVoiceAttachmentReport>;
   removeCastVoice(input: RemoveCastVoiceInput): Promise<CastVoiceRemoveReport>;
   readCastContext(input: ReadCastContextInput): Promise<CastDesignContextReport>;
+  updateCastMemberVoiceOverStatus(
+    input: UpdateCastMemberVoiceOverStatusInput
+  ): Promise<import('../client/cast-members.js').CastMember>;
   validateCastOperations(input: ValidateCastOperationsInput): Promise<DepartmentCommandReport>;
   applyCastOperations(input: ApplyCastOperationsInput): Promise<DepartmentCommandReport>;
   listCastDesigns(input: ListCastDesignsInput): Promise<CastDesignListReport>;
@@ -615,6 +621,13 @@ export interface ValidateCastOperationsInput extends RenkuConfigPathOptions {
 
 export interface ApplyCastOperationsInput extends ValidateCastOperationsInput {
   dryRun?: boolean;
+}
+
+export interface UpdateCastMemberVoiceOverStatusInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  castMemberId: string;
+  isVoiceOver: boolean;
 }
 
 export interface ListCastDesignsInput extends RenkuConfigPathOptions {
@@ -1563,6 +1576,15 @@ export interface UpdateSceneShotCustomReferenceImagesInput
   sceneId: string;
   shotId: string;
   customReferenceInputIds: string[];
+}
+
+export interface UpdateSceneShotReferenceInclusionInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotId: string;
+  dependencyId: string;
+  inclusion: import('../client/scene-shot-list.js').ShotReferenceInclusion | null;
 }
 
 export interface ReadActStoryboardResourceInput extends RenkuConfigPathOptions {

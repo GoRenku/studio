@@ -187,13 +187,14 @@ function castMemberResource(
     voices?: CastMemberResourceResponse['voices'];
   } = {}
 ): CastMemberResourceResponse {
-  const { voices = [], ...castMemberOverrides } = overrides;
+  const { voices = [], isVoiceOver = false, ...castMemberOverrides } = overrides;
   return {
     castMember: {
       id: 'cast_urban',
       handle: 'urban',
       name: 'Urban',
       role: 'protagonist',
+      isVoiceOver,
       description: 'An engineer under pressure.',
       ...castMemberOverrides,
     },

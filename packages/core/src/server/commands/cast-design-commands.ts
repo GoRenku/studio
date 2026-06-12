@@ -234,6 +234,7 @@ function requireCastMember(castMemberId: string, session: DatabaseSession) {
     id: row.id,
     handle: row.handle,
     name: row.name,
+    isVoiceOver: row.isVoiceOver,
     role: row.role ?? undefined,
     age: row.age ?? undefined,
     want: row.want ?? undefined,

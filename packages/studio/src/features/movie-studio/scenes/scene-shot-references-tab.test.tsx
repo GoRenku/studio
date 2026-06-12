@@ -7,10 +7,8 @@ import { SceneShotReferencesTab } from './scene-shot-references-tab';
 
 const mutationMocks = vi.hoisted(() => ({
   updateShotCastCharacterSheetReference: vi.fn(),
-  updateShotCastReferences: vi.fn(),
-  updateShotLocationReference: vi.fn(),
   updateShotLocationViewReferences: vi.fn(),
-  updateShotLookbookReference: vi.fn(),
+  updateShotReferenceInclusion: vi.fn(),
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
@@ -51,11 +49,9 @@ vi.mock('@/services/studio-project-assets-api', () => ({
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
   updateShotCastCharacterSheetReference:
     mutationMocks.updateShotCastCharacterSheetReference,
-  updateShotCastReferences: mutationMocks.updateShotCastReferences,
-  updateShotLocationReference: mutationMocks.updateShotLocationReference,
   updateShotLocationViewReferences:
     mutationMocks.updateShotLocationViewReferences,
-  updateShotLookbookReference: mutationMocks.updateShotLookbookReference,
+  updateShotReferenceInclusion: mutationMocks.updateShotReferenceInclusion,
 }));
 
 describe('SceneShotReferencesTab', () => {
@@ -93,7 +89,7 @@ describe('SceneShotReferencesTab', () => {
       screen.getByRole('img', { name: 'Last Frame' }).getAttribute('src')
     ).toBe('/shot-inputs/constantinople/scene_hook/input_last/file_last');
     expect(
-      screen.getByRole('img', { name: 'Storyboard sheet (3 shots)' })
+      screen.getByRole('img', { name: 'Multi-Shot Storyboard Reference (3 shots)' })
         .getAttribute('src')
     ).toBe('/shot-inputs/constantinople/scene_hook/input_storyboard/file_storyboard');
     expect(
@@ -136,7 +132,7 @@ describe('SceneShotReferencesTab', () => {
     expect(screen.queryByText('$0.04')).toBeNull();
   });
 
-  it('selects and clears imported reference image takes from the shared card controls', async () => {
+  it('includes and excludes reference images from the shared card controls', async () => {
     const handlers = referenceHandlers();
     render(
       <SceneShotReferencesTab
@@ -148,18 +144,30 @@ describe('SceneShotReferencesTab', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Set Blade glint insert pick' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Include Blade glint insert' }));
     await waitFor(() => {
-      expect(handlers.onSelectInput).toHaveBeenCalledWith('input_blade');
+      expect(mutationMocks.updateShotReferenceInclusion).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'shot_001',
+        {
+          dependencyId: 'reference-image:input_blade',
+          inclusion: 'include',
+        }
+      );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear First Frame pick' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exclude Texture continuity' }));
     await waitFor(() => {
-      expect(handlers.onClearInput).toHaveBeenCalledWith({
-        kind: 'first-frame',
-        subjectKind: 'shot',
-        subjectId: 'shot_001',
-      });
+      expect(mutationMocks.updateShotReferenceInclusion).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'shot_001',
+        {
+          dependencyId: 'reference-image:input_texture',
+          inclusion: 'exclude',
+        }
+      );
     });
   });
 
@@ -279,8 +287,6 @@ const SHOT = {
 
 function referenceHandlers() {
   return {
-    onSelectInput: vi.fn(async () => undefined),
-    onClearInput: vi.fn(async () => undefined),
     onResourceRefreshed: vi.fn(),
     onPlanRefresh: vi.fn(async () => undefined),
   };
@@ -307,7 +313,7 @@ function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport 
         referenceChoice('last-frame', 'Last Frame', 'input_last', 'file_last'),
         referenceChoice(
           'multi-shot-storyboard-sheet',
-          'Storyboard sheet (3 shots)',
+          'Multi-Shot Storyboard Reference (3 shots)',
           'input_storyboard',
           'file_storyboard'
         ),
@@ -315,14 +321,17 @@ function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport 
           'reference-image',
           'Texture continuity',
           'input_texture',
-          'file_texture'
+          'file_texture',
+          true,
+          'reference-image:input_texture'
         ),
         referenceChoice(
           'reference-image',
           'Blade glint insert',
           'input_blade',
           'file_blade',
-          false
+          false,
+          'reference-image:input_blade'
         ),
       ],
       lookbook: [],
@@ -352,6 +361,10 @@ function productionPlanWithPlannedReferenceEstimate(): ShotVideoTakeProductionPl
             mediaKind: 'image',
             dependencyId: 'first-frame:shot:shot_001',
             dependencyLineId: 'dependency-line:first-frame:shot:shot_001',
+            defaultIncluded: true,
+            included: true,
+            required: true,
+            inclusionOverride: null,
             pricing: { state: 'priced', estimatedUsd: 0.04 },
             previews: [],
             diagnostics: [],
@@ -385,6 +398,10 @@ function productionPlanWithReadyReferenceEstimate(): ShotVideoTakeProductionPlan
             mediaKind: 'image',
             dependencyId: 'cast-character-sheet:cast_urban',
             dependencyLineId: 'dependency:cast-character-sheet:cast_urban',
+            defaultIncluded: true,
+            included: true,
+            required: false,
+            inclusionOverride: null,
             pricing: { state: 'priced', estimatedUsd: 0 },
             previews: [
               {
@@ -501,6 +518,12 @@ function characterSheetChoice(
     card: {
       state: selected ? 'selected-ready' : 'available',
       mediaKind: 'image',
+      dependencyId: 'cast-character-sheet:cast_urban',
+      dependencyLineId: 'dependency:cast-character-sheet:cast_urban',
+      defaultIncluded: true,
+      included: true,
+      required: false,
+      inclusionOverride: null,
       pricing: { state: 'not-applicable', estimatedUsd: null },
       previews: [
         {
@@ -520,6 +543,12 @@ function referenceCard(assetId: string, title: string) {
   return {
     state: 'selected-ready',
     mediaKind: 'image',
+    dependencyId: assetId,
+    dependencyLineId: `dependency:${assetId}`,
+    defaultIncluded: true,
+    included: true,
+    required: false,
+    inclusionOverride: null,
     pricing: { state: 'not-applicable', estimatedUsd: null },
     previews: [
       {
@@ -562,6 +591,10 @@ function referenceChoice(
       state: selected ? 'selected-ready' : 'available',
       mediaKind: 'image',
       ...(dependencyId ? { dependencyId } : {}),
+      defaultIncluded: selected,
+      included: selected,
+      required: kind === 'first-frame' || kind === 'last-frame',
+      inclusionOverride: null,
       pricing: { state: 'not-applicable', estimatedUsd: null },
       previews: [
         {

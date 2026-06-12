@@ -225,6 +225,19 @@ export async function updateShotCustomReferenceImages(
   );
 }
 
+export async function updateShotReferenceInclusion(
+  projectName: string,
+  sceneId: string,
+  shotId: string,
+  input: { dependencyId: string; inclusion: 'include' | 'exclude' | null }
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendMutation(
+    shotReferencePath(projectName, sceneId, shotId, 'reference-inclusions'),
+    'PATCH',
+    input
+  );
+}
+
 /** Reuse an existing dependency input for the group (0041). */
 export async function selectShotVideoTakeInput(
   projectName: string,

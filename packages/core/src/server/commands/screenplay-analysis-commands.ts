@@ -84,6 +84,7 @@ export async function readScreenplayAnalysisContext(
         id: requiredId(castMember.id, 'cast member'),
         handle: castMember.handle,
         name: castMember.name,
+        isVoiceOver: castMember.isVoiceOver,
         role: castMember.role,
       })),
       locations: screenplay.locations.map((location) => ({

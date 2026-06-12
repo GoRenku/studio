@@ -16,6 +16,7 @@ interface SceneShotReferenceCardProps {
   card: ShotVideoTakeReferenceCardPlan;
   selected?: boolean;
   selectable?: boolean;
+  controlMode?: 'selection' | 'inclusion';
   aspectRatio?: number;
   aspectClassName?: string;
   detectImageAspectRatio?: boolean;
@@ -31,6 +32,7 @@ export function SceneShotReferenceCard({
   card,
   selected = false,
   selectable = true,
+  controlMode = 'selection',
   aspectRatio = 16 / 10,
   aspectClassName = 'aspect-[16/10]',
   detectImageAspectRatio = false,
@@ -38,6 +40,14 @@ export function SceneShotReferenceCard({
   onToggleSelected,
 }: SceneShotReferenceCardProps) {
   const needsGeneration = card.state === 'selected-planned';
+  const selectedLabel =
+    controlMode === 'inclusion'
+      ? `Exclude ${title ?? 'reference'}`
+      : `Clear ${title ?? 'reference'} pick`;
+  const unselectedLabel =
+    controlMode === 'inclusion'
+      ? `Include ${title ?? 'reference'}`
+      : `Set ${title ?? 'reference'} pick`;
 
   return (
     <ImageOverlayCard
@@ -55,11 +65,11 @@ export function SceneShotReferenceCard({
       topRightActionClassName={SHOT_REFERENCE_COST_BADGE_OVERLAY_CLASS}
       topRightActionPersistent={needsGeneration}
       bottomRightControl={
-        selectable && onToggleSelected ? (
+        selectable && !card.required && onToggleSelected ? (
           <ImageSelectionControl
             selected={selected}
-            selectedLabel={`Clear ${title ?? 'reference'} pick`}
-            unselectedLabel={`Set ${title ?? 'reference'} pick`}
+            selectedLabel={selectedLabel}
+            unselectedLabel={unselectedLabel}
             onToggleSelected={onToggleSelected}
           />
         ) : null

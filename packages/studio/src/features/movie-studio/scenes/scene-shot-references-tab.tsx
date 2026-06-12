@@ -11,13 +11,10 @@ import {
   sceneAssetFileUrl,
   shotVideoTakeInputFileUrl,
 } from '@/services/studio-project-assets-api';
-import type { ShotVideoTakeInputSlot } from '@/services/studio-shot-video-takes-api';
 import {
   updateShotCastCharacterSheetReference,
-  updateShotCastReferences,
-  updateShotLocationReference,
   updateShotLocationViewReferences,
-  updateShotLookbookReference,
+  updateShotReferenceInclusion,
 } from '@/services/studio-shot-video-takes-api';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import {
@@ -41,8 +38,6 @@ interface SceneShotReferencesTabProps {
   sceneId: string;
   shot: SceneShot;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
-  onSelectInput: (inputId: string) => Promise<void>;
-  onClearInput: (slot: ShotVideoTakeInputSlot) => Promise<void>;
   onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
   onPlanRefresh?: () => Promise<void>;
 }
@@ -52,8 +47,6 @@ export function SceneShotReferencesTab({
   sceneId,
   shot,
   productionPlan,
-  onSelectInput,
-  onClearInput,
   onResourceRefreshed,
   onPlanRefresh,
 }: SceneShotReferencesTabProps) {
@@ -82,8 +75,15 @@ export function SceneShotReferencesTab({
                   sceneId={sceneId}
                   choice={choice}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
-                  onSelectInput={onSelectInput}
-                  onClearInput={onClearInput}
+                  onToggleInclusion={async (dependencyId, inclusion) => {
+                    const result = await updateShotReferenceInclusion(
+                      projectName,
+                      sceneId,
+                      shot.shotId,
+                      { dependencyId, inclusion }
+                    );
+                    await refreshAfterMutation(result);
+                  }}
                 />
               ))}
             </SceneShotReferenceCardGrid>
@@ -116,15 +116,22 @@ export function SceneShotReferencesTab({
                     imageUrl={imageUrl}
                     imageAlt={preview?.alt ?? choice.title}
                     card={choice.card}
-                    selected={choice.selected}
+                    selected={choice.card.included}
+                    controlMode='inclusion'
                     detectImageAspectRatio
                     onOpen={() => setPreviewImage(previewImages[0] ?? null)}
                     onToggleSelected={async () => {
-                      const result = await updateShotLookbookReference(
+                      if (!choice.card.dependencyId) {
+                        return;
+                      }
+                      const result = await updateShotReferenceInclusion(
                         projectName,
                         sceneId,
                         shot.shotId,
-                        choice.lookbookSheetId
+                        {
+                          dependencyId: choice.card.dependencyId,
+                          inclusion: nextReferenceInclusion(choice.card),
+                        }
                       );
                       await refreshAfterMutation(result);
                     }}
@@ -145,44 +152,36 @@ export function SceneShotReferencesTab({
             <SceneShotReferenceCardGrid
               minCardWidth={SHOT_REFERENCE_CAST_CARD_MIN_WIDTH}
             >
-              {references.castMembers.map((group) => {
-                const selectedIds =
-                  shot.shotSpecs?.castReferences?.castMemberIds ?? shot.castMemberIds;
-                const selectedIdSet = new Set(selectedIds);
-                return (
-                  <SceneShotCastReferenceCard
-                    key={group.castMemberId}
-                    projectName={projectName}
-                    group={group}
-                    onPreview={(images) => setPreviewImage(images[0] ?? null)}
-                    onSelectCast={async (castMemberId) => {
-                      if (selectedIdSet.has(castMemberId)) {
-                        return;
-                      }
-                      const castResult = await updateShotCastReferences(
+              {references.castMembers.map((group) => (
+                <SceneShotCastReferenceCard
+                  key={group.castMemberId}
+                  projectName={projectName}
+                  group={group}
+                  onPreview={(images) => setPreviewImage(images[0] ?? null)}
+                  onToggleInclusion={async (dependencyId, inclusion) => {
+                    const result = await updateShotReferenceInclusion(
+                      projectName,
+                      sceneId,
+                      shot.shotId,
+                      { dependencyId, inclusion }
+                    );
+                    await refreshAfterMutation(result);
+                  }}
+                  onSelectSheet={async (castMemberId, assetId) => {
+                    const sheetResult =
+                      await updateShotCastCharacterSheetReference(
                         projectName,
                         sceneId,
                         shot.shotId,
-                        [...selectedIds, castMemberId]
+                        {
+                          castMemberId,
+                          assetId,
+                        }
                       );
-                      onResourceRefreshed?.(castResult.resource);
-                    }}
-                    onSelectSheet={async (castMemberId, assetId) => {
-                      const sheetResult =
-                        await updateShotCastCharacterSheetReference(
-                          projectName,
-                          sceneId,
-                          shot.shotId,
-                          {
-                            castMemberId,
-                            assetId,
-                          }
-                        );
-                      await refreshAfterMutation(sheetResult);
-                    }}
-                  />
-                );
-              })}
+                    await refreshAfterMutation(sheetResult);
+                  }}
+                />
+              ))}
             </SceneShotReferenceCardGrid>
           ) : (
             <p className='text-sm text-muted-foreground'>No scene cast available.</p>
@@ -203,12 +202,12 @@ export function SceneShotReferencesTab({
                   projectName={projectName}
                   group={group}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
-                  onSelectLocation={async (locationId) => {
-                    const result = await updateShotLocationReference(
+                  onToggleInclusion={async (dependencyId, inclusion) => {
+                    const result = await updateShotReferenceInclusion(
                       projectName,
                       sceneId,
                       shot.shotId,
-                      locationId
+                      { dependencyId, inclusion }
                     );
                     await refreshAfterMutation(result);
                   }}
@@ -270,15 +269,16 @@ function GeneralReferenceCard({
   sceneId,
   choice,
   onPreview,
-  onSelectInput,
-  onClearInput,
+  onToggleInclusion,
 }: {
   projectName: string;
   sceneId: string;
   choice: ShotVideoTakeGeneralReferenceChoice;
   onPreview: (images: PreviewImage[]) => void;
-  onSelectInput: (inputId: string) => Promise<void>;
-  onClearInput: (slot: ShotVideoTakeInputSlot) => Promise<void>;
+  onToggleInclusion: (
+    dependencyId: string,
+    inclusion: 'include' | 'exclude' | null
+  ) => Promise<void>;
 }) {
   const preview = choice.card.previews[0];
   const imageUrl = preview ? generalReferenceImageUrl(projectName, sceneId, preview) : null;
@@ -290,22 +290,33 @@ function GeneralReferenceCard({
       imageUrl={imageUrl}
       imageAlt={preview?.alt ?? choice.title}
       card={choice.card}
-      selected={choice.selected}
+      selected={choice.card.included}
+      controlMode='inclusion'
       aspectRatio={16 / 9}
       aspectClassName='aspect-video'
       detectImageAspectRatio
       onOpen={() => onPreview(previewImages)}
       onToggleSelected={() => {
-        if (!choice.selected && preview?.inputId) {
-          return onSelectInput(preview.inputId);
-        }
-        if (choice.selected && choice.clearInputSlot) {
-          return onClearInput(choice.clearInputSlot);
+        if (choice.card.dependencyId) {
+          return onToggleInclusion(
+            choice.card.dependencyId,
+            nextReferenceInclusion(choice.card)
+          );
         }
         return Promise.resolve();
       }}
     />
   );
+}
+
+function nextReferenceInclusion(card: {
+  defaultIncluded: boolean;
+  included: boolean;
+}): 'include' | 'exclude' | null {
+  if (card.included) {
+    return card.defaultIncluded ? 'exclude' : null;
+  }
+  return card.defaultIncluded ? null : 'include';
 }
 
 function generalReferenceImageUrl(

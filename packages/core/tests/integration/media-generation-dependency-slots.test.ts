@@ -97,7 +97,7 @@ describe('media generation dependency slot declarations', () => {
     ]);
   });
 
-  it('declares selected reference bundle dependencies as required for reference mode', () => {
+  it('declares selected reference bundle dependencies as optional for reference mode', () => {
     const slots = declareShotVideoTakeDependencySlots({
       target,
       inputModeId: 'reference',
@@ -107,12 +107,26 @@ describe('media generation dependency slot declarations', () => {
       customReferenceInputs: [{ id: 'reference-a', title: 'Map table reference' }],
     });
 
-    expect(slots.filter((slot) => slot.required).map((slot) => slot.dependencyId)).toEqual([
-      'reference-image:asset:reference-a',
-      'lookbook-sheet:lookbook-a',
-      'cast-character-sheet:cast-a',
-      'location-environment-sheet:location-a',
-    ]);
+    expect(slots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyId: 'reference-image:asset:reference-a',
+          required: false,
+        }),
+        expect.objectContaining({
+          dependencyId: 'lookbook-sheet:lookbook-a',
+          required: false,
+        }),
+        expect.objectContaining({
+          dependencyId: 'cast-character-sheet:cast-a',
+          required: false,
+        }),
+        expect.objectContaining({
+          dependencyId: 'location-environment-sheet:location-a',
+          required: false,
+        }),
+      ])
+    );
   });
 
   it('declares cast profile character sheet as required', () => {

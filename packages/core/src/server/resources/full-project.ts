@@ -136,6 +136,7 @@ function toCastMember(row: CastMemberRecord): CastMember {
     handle: row.handle,
     name: row.name,
     role: nullable(row.role),
+    isVoiceOver: row.isVoiceOver,
     age: row.age ?? undefined,
     want: nullable(row.want),
     need: nullable(row.need),

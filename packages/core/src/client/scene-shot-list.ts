@@ -352,6 +352,13 @@ export interface ShotReferenceImageSpecs {
   customReferenceInputIds?: string[];
 }
 
+export type ShotReferenceInclusion = 'include' | 'exclude';
+
+export type ShotReferenceInclusionSpecs = Record<
+  string,
+  ShotReferenceInclusion
+>;
+
 export interface ShotCustomSpecs {
   composition?: string;
   movement?: string;
@@ -368,6 +375,7 @@ export interface ShotSpecs {
   castReferences?: ShotCastReferenceSpecs;
   lookbookReference?: ShotLookbookReferenceSpecs;
   referenceImages?: ShotReferenceImageSpecs;
+  referenceInclusions?: ShotReferenceInclusionSpecs;
   custom?: ShotCustomSpecs;
 }
 
@@ -453,6 +461,7 @@ export interface SceneShotListContextCastMember {
   id: string;
   handle: string;
   name: string;
+  isVoiceOver: boolean;
   role?: string;
   description?: string;
 }

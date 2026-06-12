@@ -41,6 +41,7 @@ const castMemberInputSchema = {
     handle: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' },
     name: stringValue,
     role: optionalStringValue,
+    isVoiceOver: { type: 'boolean' },
     age: { type: 'integer', minimum: 0 },
     want: optionalStringValue,
     need: optionalStringValue,

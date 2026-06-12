@@ -45,6 +45,35 @@ export async function readCastMemberResource(
   );
 }
 
+export async function updateCastMemberVoiceOverStatus(
+  projectName: string,
+  castMemberId: string,
+  isVoiceOver: boolean
+): Promise<CastMemberResourceResponse> {
+  const response = await fetch(
+    screenplayPath(
+      projectName,
+      `/cast/${encodeURIComponent(castMemberId)}/voice-over`
+    ),
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify({ isVoiceOver }),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ResourceResponse<CastMemberResourceResponse>;
+  if (!body.resource) {
+    throw new Error('Renku Studio API returned no screenplay resource.');
+  }
+  return body.resource;
+}
+
 export async function readLocationOverviewResource(
   projectName: string,
   query: PageQuery = {}

@@ -12,6 +12,7 @@ export interface CastMemberRecord {
   handle: string;
   name: string;
   role: string | null;
+  isVoiceOver: boolean;
   age: number | null;
   want: string | null;
   need: string | null;
@@ -28,6 +29,7 @@ export interface InsertCastMemberRecord {
   name: string;
   kind?: string;
   role?: string;
+  isVoiceOver?: boolean;
   shortDescription?: string;
   position: number;
   createdAt: string;
@@ -44,6 +46,7 @@ export function insertCastMemberRecords(
       handle: toHandle(record.name, record.id),
       name: record.name,
       role: record.role ?? null,
+      isVoiceOver: record.isVoiceOver ?? false,
       description: record.shortDescription ?? null,
       position: record.position,
     }).run();
@@ -89,6 +92,7 @@ export interface CastMemberAuthoringRecord {
   handle: string;
   name: string;
   role?: string;
+  isVoiceOver?: boolean;
   age?: number;
   want?: string;
   need?: string;
@@ -113,6 +117,7 @@ export function replaceCastMemberAuthoringRecords(
       handle: record.handle,
       name: record.name,
       role: record.role ?? null,
+      isVoiceOver: record.isVoiceOver ?? false,
       age: record.age ?? null,
       want: record.want ?? null,
       need: record.need ?? null,
@@ -139,6 +144,18 @@ export function replaceCastMemberAuthoringRecords(
     return;
   }
   session.db.delete(castMembers).where(notInArray(castMembers.id, ids)).run();
+}
+
+export function updateCastMemberVoiceOverRecord(
+  session: DatabaseSession,
+  input: { castMemberId: string; isVoiceOver: boolean }
+): boolean {
+  const result = session.db
+    .update(castMembers)
+    .set({ isVoiceOver: input.isVoiceOver })
+    .where(eq(castMembers.id, input.castMemberId))
+    .run();
+  return result.changes > 0;
 }
 
 export function listCastAssetRoleSelectionRecords(

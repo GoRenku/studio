@@ -208,6 +208,7 @@ export interface ScreenplayAnalysisContextCastMember {
   id: string;
   handle: string;
   name: string;
+  isVoiceOver: boolean;
   role?: string;
 }
 

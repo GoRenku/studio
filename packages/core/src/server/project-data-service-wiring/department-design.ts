@@ -3,6 +3,7 @@ import {
   listCastMembers,
   readCastContext,
   readCastMember,
+  updateCastMemberVoiceOverStatus,
   validateCastOperations,
 } from '../commands/cast-commands.js';
 import {
@@ -31,6 +32,7 @@ import type { ProjectDataService } from '../project-data-service-contracts.js';
 export function createDepartmentDesignServiceWiring(): Pick<
   ProjectDataService,
   | 'listCastMembers' | 'readCastMember' | 'readCastContext'
+  | 'updateCastMemberVoiceOverStatus'
   | 'validateCastOperations' | 'applyCastOperations'
   | 'listCastDesigns' | 'readCastDesign' | 'validateCastDesign'
   | 'writeCastDesign' | 'setActiveCastDesign'
@@ -43,6 +45,7 @@ export function createDepartmentDesignServiceWiring(): Pick<
     listCastMembers,
     readCastMember,
     readCastContext,
+    updateCastMemberVoiceOverStatus,
     validateCastOperations,
     applyCastOperations,
     listCastDesigns,

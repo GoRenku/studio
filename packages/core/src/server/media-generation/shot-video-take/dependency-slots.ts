@@ -14,7 +14,7 @@ import {
 export interface ShotVideoTakeDependencySlotInput {
   target: SceneShotMediaGenerationTarget;
   inputModeId: ShotVideoTakeInputModeId;
-  selectedCast: Array<{ id: string; name: string }>;
+  selectedCast: Array<{ id: string; name: string; isVoiceOver?: boolean }>;
   selectedLocations: Array<{ id: string; name: string }>;
   activeLookbook: { id: string; name: string; selectedSheetId?: string | null } | null;
   customReferenceInputs: Array<{ id: string; title: string }>;
@@ -28,15 +28,15 @@ export function declareShotVideoTakeDependencySlots(
   return [
     ...shotVideoInputModeSlots(input),
     ...(input.requiresMultiShotStoryboardSheet
-      ? [
-          shotVideoInputDependencySlot({
-            kind: 'multi-shot-storyboard-sheet',
-            target: input.target,
-            required: true,
-            reason:
-              'The selected multi-shot reference-video route requires a storyboard sheet input.',
-          }),
-        ]
+        ? [
+            shotVideoInputDependencySlot({
+              kind: 'multi-shot-storyboard-sheet',
+              target: input.target,
+              required: false,
+              reason:
+                'This generated multi-shot storyboard reference helps preserve continuity across the production group.',
+            }),
+          ]
       : []),
     ...(input.requestedInputs ?? []).map((requestedInput) =>
       requestedShotVideoInputSlot({
@@ -94,9 +94,9 @@ function shotVideoInputModeSlots(
         subjectKind: 'asset',
         subjectId: reference.id,
         label: reference.title,
-        required: true,
+        required: false,
         reason:
-          'The selected video model route requires selected reference images.',
+          'This selected reference image helps author and inspect planned shot inputs.',
       })
     );
   }
@@ -107,13 +107,11 @@ function shotVideoInputModeSlots(
 function shotVideoReferenceContextSlots(
   input: ShotVideoTakeDependencySlotInput
 ): MediaGenerationDependencySlot[] {
-  const requiredForReferenceRoute = input.inputModeId === 'reference';
-  if (!requiredForReferenceRoute && !input.activeLookbook) {
+  if (!input.activeLookbook && !input.selectedCast.length && !input.selectedLocations.length) {
     return [];
   }
-  const contextReason = requiredForReferenceRoute
-    ? 'The selected reference-video route uses this selected reference image.'
-    : 'This selected reference helps author and inspect planned shot inputs.';
+  const contextReason =
+    'This selected reference helps author and inspect planned shot inputs.';
 
   return [
     ...(input.activeLookbook
@@ -124,24 +122,26 @@ function shotVideoReferenceContextSlots(
             ...(input.activeLookbook.selectedSheetId
               ? { lookbookSheetId: input.activeLookbook.selectedSheetId }
               : {}),
-            required: requiredForReferenceRoute,
+            required: false,
             reason: contextReason,
           }),
         ]
       : []),
-    ...input.selectedCast.map((castMember) =>
-      castCharacterSheetDependencySlot({
-        castMemberId: castMember.id,
-        castMemberName: castMember.name,
-        required: requiredForReferenceRoute,
-        reason: contextReason,
-      })
-    ),
+    ...input.selectedCast
+      .filter((castMember) => !castMember.isVoiceOver)
+      .map((castMember) =>
+        castCharacterSheetDependencySlot({
+          castMemberId: castMember.id,
+          castMemberName: castMember.name,
+          required: false,
+          reason: contextReason,
+        })
+      ),
     ...input.selectedLocations.map((location) =>
       locationEnvironmentSheetDependencySlot({
         locationId: location.id,
         locationName: location.name,
-        required: requiredForReferenceRoute,
+        required: false,
         reason: contextReason,
       })
     ),

@@ -128,6 +128,80 @@ describe('shot video take preflight and validation', () => {
     });
   });
 
+  it('keeps excluded default multi-shot storyboard references visible for restore', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 2);
+    await projectData.updateShotVideoTakeProductionGroup({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      productionGroupId: 'group_multi_storyboard',
+      shotIds: ['shot_001', 'shot_002'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      },
+    });
+    await projectData.updateShotVideoTakeRailGroups({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      railGroups: [
+        {
+          productionGroupId: 'group_multi_storyboard',
+          shotIds: ['shot_001', 'shot_002'],
+        },
+      ],
+    });
+
+    const defaultReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001', 'shot_002'],
+      productionGroupId: 'group_multi_storyboard',
+    });
+    const storyboardChoice = defaultReport.references.general.find(
+      (choice) => choice.kind === 'multi-shot-storyboard-sheet'
+    );
+    expect(storyboardChoice?.card).toMatchObject({
+      included: true,
+      required: false,
+    });
+
+    await projectData.updateSceneShotReferenceInclusion({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      dependencyId: storyboardChoice!.card.dependencyId!,
+      inclusion: 'exclude',
+    });
+
+    const excludedReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001', 'shot_002'],
+      productionGroupId: 'group_multi_storyboard',
+    });
+
+    expect(excludedReport.references.general).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'multi-shot-storyboard-sheet',
+          selected: false,
+          card: expect.objectContaining({
+            dependencyId: storyboardChoice!.card.dependencyId,
+            included: false,
+            required: false,
+            inclusionOverride: 'exclude',
+          }),
+        }),
+      ])
+    );
+  });
+
   it('preserves imported input file paths in preflight prepared inputs', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 1);
@@ -604,7 +678,15 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    expect(preflight.inputsToCreate).toEqual([]);
+    expect(preflight.inputsToCreate).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          outputInputKind: 'character-sheet',
+          subjectKind: 'cast-member',
+          subjectId: ids.castMemberId,
+        }),
+      ])
+    );
     expect(preflight.preparedInputs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -661,7 +743,12 @@ describe('shot video take preflight and validation', () => {
 
   it('shows scene cast choices without planning unselected character-sheet dependencies', async () => {
     const ids = await sampleIds();
-    await addExtraCastToSceneNarrative(ids);
+    const extraCastMemberId = await addVisualExtraCastMember();
+    await addCastToSceneNarrative({
+      sceneId: ids.sceneId,
+      extraCastMemberId,
+      locationId: ids.locationId,
+    });
     const shotList = sampleShotList(ids, 1);
     const written = await projectData.writeSceneShotList({
       homeDir,
@@ -706,15 +793,15 @@ describe('shot video take preflight and validation', () => {
     expect(report.plan.dependencyInventory.dependencies).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `dependency:cast-character-sheet:${ids.extraCastMemberId}`,
+          id: `dependency:cast-character-sheet:${extraCastMemberId}`,
         }),
       ])
     );
     const unselectedExtraCast = report.references.castMembers.find(
-      (group) => group.castMemberId === ids.extraCastMemberId
+      (group) => group.castMemberId === extraCastMemberId
     );
     expect(unselectedExtraCast).toMatchObject({
-      castMemberId: ids.extraCastMemberId,
+      castMemberId: extraCastMemberId,
       selectedForShot: false,
       defaultSelectedForShot: false,
       characterSheets: [
@@ -737,7 +824,7 @@ describe('shot video take preflight and validation', () => {
       homeDir,
       sceneId: ids.sceneId,
       shotId: 'shot_001',
-      castMemberIds: [ids.extraCastMemberId],
+      castMemberIds: [extraCastMemberId],
     });
     const updatedReport = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
@@ -753,7 +840,7 @@ describe('shot video take preflight and validation', () => {
     expect(updatedReport.plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `dependency:cast-character-sheet:${ids.extraCastMemberId}`,
+          id: `dependency:cast-character-sheet:${extraCastMemberId}`,
           dependencyKind: 'cast-character-sheet',
           purpose: 'cast.character-sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
@@ -764,6 +851,39 @@ describe('shot video take preflight and validation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: `dependency:cast-character-sheet:${ids.castMemberId}`,
+        }),
+      ])
+    );
+  });
+
+  it('excludes voice-over cast members from shot character-sheet references', async () => {
+    const ids = await sampleIds();
+    await addCastToSceneNarrative({
+      sceneId: ids.sceneId,
+      extraCastMemberId: ids.narratorCastMemberId,
+      locationId: ids.locationId,
+    });
+    const written = await writeShotList(ids, 1);
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    expect(report.references.castMembers.map((group) => group.castMemberId)).not.toContain(
+      ids.narratorCastMemberId
+    );
+    expect(report.plan.dependencyInventory.dependencies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:cast-character-sheet:${ids.narratorCastMemberId}`,
         }),
       ])
     );
@@ -1131,6 +1251,76 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
+  it('excludes optional reference-image dependencies from shot video plans', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+    await projectData.updateSceneShotReferenceInclusion({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: ids.sceneId,
+      shotId: 'shot_001',
+      dependencyId: 'reference-image:shot:shot_001',
+      inclusion: 'exclude',
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'reference-image',
+            subjectKind: 'shot',
+            subjectId: 'shot_001',
+          },
+        ],
+      },
+    });
+
+    expect(report.plan.dependencyInventory.dependencies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'dependency:reference-image:shot:shot_001',
+        }),
+      ])
+    );
+    expect(report.references.general).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'reference-image',
+          selected: false,
+          card: expect.objectContaining({
+            dependencyId: 'reference-image:shot:shot_001',
+            included: false,
+            inclusionOverride: 'exclude',
+          }),
+        }),
+      ])
+    );
+  });
+
+  it('rejects excluding first-frame references required by the selected route', async () => {
+    const ids = await sampleIds();
+    await writeShotList(ids, 1);
+
+    await expect(
+      projectData.updateSceneShotReferenceInclusion({
+        projectName: 'constantinople',
+        homeDir,
+        sceneId: ids.sceneId,
+        shotId: 'shot_001',
+        dependencyId: 'first-frame:shot:shot_001',
+        inclusion: 'exclude',
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
+    });
+  });
+
   it('shows multiple imported image input takes once with one selected', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 1);
@@ -1152,13 +1342,12 @@ describe('shot video take preflight and validation', () => {
       sourceProjectRelativePath: 'generated/media/first-frame-b.png',
       selection: 'take',
     });
-
-    const report = await projectData.readShotVideoTakeProductionPlan({
+    await projectData.updateShotVideoTakeProductionGroup({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
       productionGroupId: selected.target.productionGroupId,
+      shotIds: ['shot_001'],
       production: {
         inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -1174,11 +1363,27 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      productionGroupId: selected.target.productionGroupId,
+    });
+
     const firstFrameChoices = report.references.general.filter(
       (choice) => choice.kind === 'first-frame'
     );
     expect(firstFrameChoices).toHaveLength(2);
     expect(firstFrameChoices.filter((choice) => choice.selected)).toHaveLength(1);
+    expect(firstFrameChoices.find((choice) => choice.selected)?.card).toMatchObject({
+      required: true,
+      included: true,
+    });
+    expect(firstFrameChoices.find((choice) => !choice.selected)?.card).toMatchObject({
+      required: false,
+      included: false,
+    });
     expect(
       firstFrameChoices.flatMap((choice) =>
         choice.card.previews.map((preview) => preview.inputId)
@@ -1238,12 +1443,34 @@ describe('shot video take preflight and validation', () => {
     return {
       sceneId: scene.id as string,
       castMemberId: screenplay.screenplay!.cast[1]!.id as string,
-      extraCastMemberId: screenplay.screenplay!.cast[0]!.id as string,
+      narratorCastMemberId: screenplay.screenplay!.cast[0]!.id as string,
       locationId: screenplay.screenplay!.locations[0]!.id as string,
     };
   }
 
-  async function addExtraCastToSceneNarrative(ids: {
+  async function addVisualExtraCastMember(): Promise<string> {
+    const report = await projectData.applyCastOperations({
+      homeDir,
+      document: {
+        kind: 'castOperations',
+        operations: [
+          {
+            operation: 'castMember.add',
+            castMember: {
+              key: 'urban',
+              handle: 'urban',
+              name: 'Urban',
+              role: 'cannon founder',
+            },
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    return report.generatedIds?.[0]?.id as string;
+  }
+
+  async function addCastToSceneNarrative(ids: {
     sceneId: string;
     extraCastMemberId: string;
     locationId: string;

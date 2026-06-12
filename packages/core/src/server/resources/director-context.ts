@@ -160,13 +160,15 @@ function readVisualLanguageReadiness(
 }
 
 function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
-  const castMembers = listCastMemberRecords(session);
+  const visualCastMembers = listCastMemberRecords(session).filter(
+    (castMember) => !castMember.isVoiceOver
+  );
   const missingSelectedVisualReferenceCastMemberIds: string[] = [];
   const missingActiveCastDesignCastMemberIds: string[] = [];
   let selectedVisualReferenceCount = 0;
   let activeCastDesignCount = 0;
 
-  for (const castMember of castMembers) {
+  for (const castMember of visualCastMembers) {
     if (readActiveCastDesignId(session, castMember.id)) {
       activeCastDesignCount += 1;
     } else {
@@ -186,13 +188,13 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
   }
 
   return {
-    castMemberCount: castMembers.length,
+    castMemberCount: visualCastMembers.length,
     activeCastDesignCount,
     missingActiveCastDesignCastMemberIds,
     selectedVisualReferenceCount,
     missingSelectedVisualReferenceCastMemberIds,
     everyCastMemberHasSelectedVisualReference:
-      castMembers.length > 0 &&
+      visualCastMembers.length > 0 &&
       missingSelectedVisualReferenceCastMemberIds.length === 0,
   };
 }

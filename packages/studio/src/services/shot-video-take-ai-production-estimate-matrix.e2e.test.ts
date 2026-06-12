@@ -1162,15 +1162,9 @@ function preparedDependencyLineCountForRoute(): number {
 }
 
 function requiresMultiShotStoryboard(input: {
-  inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
-  providerModel: string;
 }): boolean {
-  return (
-    input.inputModeId === 'reference' &&
-    input.shotGroupMode === 'multi-shot' &&
-    input.providerModel === 'bytedance/seedance-2.0/reference-to-video'
-  );
+  return input.shotGroupMode === 'multi-shot';
 }
 
 async function writeConfig(homeDir: string, storageRoot: string): Promise<void> {
@@ -1211,6 +1205,7 @@ async function createE2eMovieProject(input: {
             key: 'narrator',
             handle: 'narrator',
             name: 'Narrator',
+            isVoiceOver: true,
             role: 'voiceover',
           },
         },
@@ -1582,17 +1577,21 @@ function preparedInputsForCase(
       : setup.preparedInputs.lastFrame;
 
   if (input.inputModeId === 'first-frame') {
-    return [firstFrame];
+    return requiresMultiShotStoryboard(input)
+      ? [firstFrame, setup.preparedInputs.storyboard]
+      : [firstFrame];
   }
   if (input.inputModeId === 'first-last-frame') {
-    return [firstFrame, lastFrame];
+    return requiresMultiShotStoryboard(input)
+      ? [firstFrame, lastFrame, setup.preparedInputs.storyboard]
+      : [firstFrame, lastFrame];
   }
   if (input.inputModeId === 'reference') {
     return requiresMultiShotStoryboard(input)
       ? [...setup.preparedInputs.referenceBundle, setup.preparedInputs.storyboard]
       : setup.preparedInputs.referenceBundle;
   }
-  return [];
+  return requiresMultiShotStoryboard(input) ? [setup.preparedInputs.storyboard] : [];
 }
 
 function requestedInputsForCase(

@@ -12,8 +12,10 @@ import type {
 import type {
   SceneShot,
   SceneShotListDocument,
+  ShotReferenceInclusion,
   ShotSpecs,
 } from '../../client/scene-shot-list.js';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type { ScreenplayDocument } from '../../client/screenplay.js';
 import { deriveShotSpecPromptStrings } from '../../client/shot-spec-labels.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -55,6 +57,7 @@ import type {
   UpdateSceneShotLocationReferenceInput,
   UpdateSceneShotLocationViewReferencesInput,
   UpdateSceneShotLookbookReferenceInput,
+  UpdateSceneShotReferenceInclusionInput,
   UpdateSceneShotSpecsInput,
 } from '../project-data-service-contracts.js';
 
@@ -341,12 +344,40 @@ export async function updateSceneShotCustomReferenceImages(
   return readSceneShotListResource(input);
 }
 
+export async function updateSceneShotReferenceInclusion(
+  input: UpdateSceneShotReferenceInclusionInput
+): Promise<SceneShotListResource> {
+  await updateActiveShotSpecs(input, (_session, shot, _screenplay, document) => {
+    validateReferenceInclusionOverride({
+      document,
+      shotId: input.shotId,
+      dependencyId: input.dependencyId,
+      inclusion: input.inclusion,
+    });
+    const next = { ...(shot.shotSpecs ?? {}) };
+    const referenceInclusions = { ...(next.referenceInclusions ?? {}) };
+    if (input.inclusion) {
+      referenceInclusions[input.dependencyId] = input.inclusion;
+    } else {
+      delete referenceInclusions[input.dependencyId];
+    }
+    if (Object.keys(referenceInclusions).length) {
+      next.referenceInclusions = referenceInclusions;
+    } else {
+      delete next.referenceInclusions;
+    }
+    applyShotSpecs(shot, next);
+  });
+  return readSceneShotListResource(input);
+}
+
 async function updateActiveShotSpecs(
   input: { projectName: string; sceneId: string; shotId: string; homeDir?: string },
   mutate: (
     session: DatabaseSession,
     shot: SceneShot,
-    screenplay: ScreenplayDocument
+    screenplay: ScreenplayDocument,
+    document: SceneShotListDocument
   ) => void
 ): Promise<void> {
   const { session } = await openProjectSession(input);
@@ -375,7 +406,7 @@ async function updateActiveShotSpecs(
         { suggestion: 'Use a shot id from the active shot list.' }
       );
     }
-    mutate(session, shot, screenplay);
+    mutate(session, shot, screenplay, document);
     updateSceneShotListRecordDocument({
       session,
       id: shotListRow.id,
@@ -386,6 +417,50 @@ async function updateActiveShotSpecs(
   } finally {
     session.close();
   }
+}
+
+function validateReferenceInclusionOverride(input: {
+  document: SceneShotListDocument;
+  shotId: string;
+  dependencyId: string;
+  inclusion: ShotReferenceInclusion | null;
+}): void {
+  if (input.inclusion !== 'exclude') {
+    return;
+  }
+  const inputModeId =
+    productionGroupForShot(input.document, input.shotId)?.videoTakeProduction
+      .inputModeId ?? 'first-frame';
+  const excludesFirstFrame = input.dependencyId.startsWith('first-frame:');
+  const excludesLastFrame = input.dependencyId.startsWith('last-frame:');
+  const invalid =
+    (excludesFirstFrame &&
+      (inputModeId === 'first-frame' || inputModeId === 'first-last-frame')) ||
+    (excludesLastFrame && inputModeId === 'first-last-frame');
+  if (!invalid) {
+    return;
+  }
+  const issue = createDiagnosticError(
+    'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
+    `Required reference cannot be excluded: ${input.dependencyId}.`,
+    { path: ['shotSpecs', 'referenceInclusions', input.dependencyId] },
+    'Clear the exclusion or choose a generation route where this reference is optional.'
+  );
+  throw new ProjectDataError(issue.code, issue.message, {
+    issues: [issue],
+    suggestion: issue.suggestion,
+  });
+}
+
+function productionGroupForShot(
+  document: SceneShotListDocument,
+  shotId: string
+): NonNullable<SceneShotListDocument['videoTakeProductionGroups']>[number] | null {
+  return (
+    document.videoTakeProductionGroups?.find((group) =>
+      group.shotIds.includes(shotId)
+    ) ?? null
+  );
 }
 
 function sceneNarrativeCastMemberIds(
@@ -628,6 +703,12 @@ function normalizeShotSpecs(
   if (referenceImages) {
     next.referenceImages = referenceImages;
   }
+  const referenceInclusions = normalizeReferenceInclusions(
+    shotSpecs.referenceInclusions
+  );
+  if (referenceInclusions) {
+    next.referenceInclusions = referenceInclusions;
+  }
   const custom = normalizeCustom(shotSpecs.custom);
   if (custom) {
     next.custom = custom;
@@ -726,6 +807,22 @@ function normalizeReferenceImages(
   return {
     customReferenceInputIds: [...new Set(referenceImages.customReferenceInputIds)],
   };
+}
+
+function normalizeReferenceInclusions(
+  referenceInclusions: ShotSpecs['referenceInclusions']
+): ShotSpecs['referenceInclusions'] | undefined {
+  if (!referenceInclusions) {
+    return undefined;
+  }
+  const next = Object.fromEntries(
+    Object.entries(referenceInclusions).filter(
+      ([dependencyId, inclusion]) =>
+        dependencyId.trim() &&
+        (inclusion === 'include' || inclusion === 'exclude')
+    )
+  );
+  return Object.keys(next).length ? next : undefined;
 }
 
 function normalizeMovement(

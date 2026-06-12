@@ -24,7 +24,10 @@ interface SceneShotCastReferenceCardProps {
   projectName: string;
   group: ShotVideoTakeCastMemberReferenceGroup;
   onPreview: (images: PreviewImage[]) => void;
-  onSelectCast: (castMemberId: string) => Promise<void>;
+  onToggleInclusion: (
+    dependencyId: string,
+    inclusion: 'include' | 'exclude' | null
+  ) => Promise<void>;
   onSelectSheet: (castMemberId: string, assetId: string | null) => Promise<void>;
 }
 
@@ -32,7 +35,7 @@ export function SceneShotCastReferenceCard({
   projectName,
   group,
   onPreview,
-  onSelectCast,
+  onToggleInclusion,
   onSelectSheet,
 }: SceneShotCastReferenceCardProps) {
   const [sheetDialogOpen, setSheetDialogOpen] = useState(false);
@@ -63,7 +66,8 @@ export function SceneShotCastReferenceCard({
         imageUrl={imageUrl}
         imageAlt={group.name}
         card={selectedSheet.card}
-        selected={group.selectedForShot && selectedSheet.selected}
+        selected={selectedSheet.card.included}
+        controlMode='inclusion'
         aspectRatio={4 / 3}
         aspectClassName='aspect-[4/3]'
         onOpen={() => {
@@ -74,11 +78,12 @@ export function SceneShotCastReferenceCard({
           onPreview(previewImages);
         }}
         onToggleSelected={() =>
-          group.selectedForShot
-            ? onSelectSheet(group.castMemberId, selectedSheet.assetId)
-            : onSelectCast(group.castMemberId).then(() =>
-                onSelectSheet(group.castMemberId, selectedSheet.assetId)
+          selectedSheet.card.dependencyId
+            ? onToggleInclusion(
+                selectedSheet.card.dependencyId,
+                nextReferenceInclusion(selectedSheet.card)
               )
+            : Promise.resolve()
         }
       />
       {hasSheetAlternatives ? (
@@ -89,15 +94,22 @@ export function SceneShotCastReferenceCard({
           onOpenChange={setSheetDialogOpen}
           onPreview={onPreview}
           onSelectSheet={async (assetId) => {
-            if (!group.selectedForShot) {
-              await onSelectCast(group.castMemberId);
-            }
             await onSelectSheet(group.castMemberId, assetId);
           }}
         />
       ) : null}
     </>
   );
+}
+
+function nextReferenceInclusion(card: {
+  defaultIncluded: boolean;
+  included: boolean;
+}): 'include' | 'exclude' | null {
+  if (card.included) {
+    return card.defaultIncluded ? 'exclude' : null;
+  }
+  return card.defaultIncluded ? null : 'include';
 }
 
 function CastSheetDialog({

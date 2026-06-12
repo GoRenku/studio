@@ -7,6 +7,7 @@ export const castMembers = sqliteTable(
     handle: text('handle').notNull(),
     name: text('name').notNull(),
     role: text('role'),
+    isVoiceOver: integer('is_voice_over', { mode: 'boolean' }).notNull().default(false),
     age: integer('age'),
     want: text('want'),
     need: text('need'),

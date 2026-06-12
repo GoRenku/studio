@@ -12,7 +12,10 @@ import {
   selectCastAsset,
   unselectCastAsset,
 } from '@/services/studio-project-assets-api';
-import { readCastMemberResource } from '@/services/studio-screenplay-api';
+import {
+  readCastMemberResource,
+  updateCastMemberVoiceOverStatus,
+} from '@/services/studio-screenplay-api';
 import {
   matchesCastMemberResource,
   useStudioResourceRefresh,
@@ -117,6 +120,20 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
     }
   };
 
+  const updateVoiceOver = async (isVoiceOver: boolean) => {
+    try {
+      const nextResource = await updateCastMemberVoiceOverStatus(
+        projectName,
+        castMemberId,
+        isVoiceOver
+      );
+      setResource(nextResource);
+      await refreshCastMember();
+    } catch (updateError) {
+      toast.error(errorMessage(updateError));
+    }
+  };
+
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
   }
@@ -138,6 +155,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
           castMemberId={castMemberId}
           resource={resource}
           assets={assets}
+          onVoiceOverChange={updateVoiceOver}
         />
       </LineTabsContent>
       <LineTabsContent value='assets'>

@@ -472,6 +472,7 @@ function characterSheetContext(): CastCharacterSheetGenerationContext {
       id: 'cast_ada',
       handle: 'ada',
       name: 'Ada',
+      isVoiceOver: false,
       description: 'A determined investigator.',
     },
     timePeriod: {

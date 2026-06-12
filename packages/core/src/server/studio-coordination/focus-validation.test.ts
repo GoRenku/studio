@@ -234,6 +234,7 @@ function makeProject(): Project {
         id: 'cast_narrator',
         handle: 'narrator',
         name: 'Narrator',
+        isVoiceOver: true,
         role: 'voiceover',
       },
     ],

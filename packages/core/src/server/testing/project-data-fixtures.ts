@@ -90,6 +90,7 @@ export async function createSampleMovieProject(input: {
             key: 'narrator',
             handle: 'narrator',
             name: 'Narrator',
+            isVoiceOver: true,
             role: 'voiceover',
           },
         },

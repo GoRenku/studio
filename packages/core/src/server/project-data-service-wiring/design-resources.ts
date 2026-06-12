@@ -19,6 +19,7 @@ import {
   updateSceneShotLocationReference,
   updateSceneShotLocationViewReferences,
   updateSceneShotLookbookReference,
+  updateSceneShotReferenceInclusion,
   updateSceneShotSpecs,
 } from '../resources/scene-storyboard-ui.js';
 import { readStudioSelectionContext } from '../resources/selection-context.js';
@@ -43,6 +44,7 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'updateSceneShotLocationViewReferences'
   | 'updateSceneShotLookbookReference'
   | 'updateSceneShotCustomReferenceImages'
+  | 'updateSceneShotReferenceInclusion'
   | 'updateSceneShotSpecs'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
@@ -65,6 +67,7 @@ export function createDesignResourceServiceWiring(): Pick<
     updateSceneShotLocationViewReferences,
     updateSceneShotLookbookReference,
     updateSceneShotCustomReferenceImages,
+    updateSceneShotReferenceInclusion,
     updateSceneShotSpecs,
     readActStoryboardResource,
     readStudioSelectionContext,

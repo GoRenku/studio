@@ -264,6 +264,10 @@ function productionPlan(
               card: {
                 state: 'selected-planned',
                 mediaKind: 'image',
+                defaultIncluded: true,
+                included: true,
+                required: false,
+                inclusionOverride: null,
                 pricing: { state: 'priced', estimatedUsd: 0.04 },
                 previews: [],
                 diagnostics: [],

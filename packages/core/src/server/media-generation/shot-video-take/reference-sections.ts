@@ -51,6 +51,7 @@ type ShotVideoTakeReferenceSectionScope = {
     id?: string;
     name: string;
     role?: string | null;
+    isVoiceOver?: boolean;
   }>;
   locations: Array<{
     id?: string;
@@ -62,6 +63,14 @@ type ShotVideoTakeReferenceSections = {
   references: ShotVideoTakeProductionPlanReport['references'];
   diagnostics: DiagnosticIssue[];
 };
+
+interface ReferenceInclusionResolution {
+  defaultIncluded: boolean;
+  included: boolean;
+  required: boolean;
+  dependencyId: string;
+  inclusionOverride: 'include' | 'exclude' | null;
+}
 
 export function buildShotVideoTakeReferenceSections(input: {
   session: DatabaseSession;
@@ -88,6 +97,7 @@ export function buildShotVideoTakeReferenceSections(input: {
     scopedLocationIds
   );
   const castMembers = input.narrativeScope.castMembers
+    .filter((castMember) => !castMember.isVoiceOver)
     .flatMap((castMember) =>
       castMember.id
         ? [
@@ -162,6 +172,12 @@ function buildCastMemberReferenceGroup(input: {
   const selected = selectedCastIdsForShots(input.context.shots).has(
     input.castMemberId
   );
+  const inclusion = referenceInclusionForDependencyId(
+    input.context,
+    dependencyId,
+    selected,
+    line
+  );
   const defaultSelected = defaultCastIdsForShots(input.context.shots).has(
     input.castMemberId
   );
@@ -178,6 +194,7 @@ function buildCastMemberReferenceGroup(input: {
       defaultAssetId: defaultCharacterSheetAssetId,
       line,
       planLine: planLineForDependencyLine(input.plan, line),
+      inclusion,
       index,
     })
   );
@@ -190,11 +207,12 @@ function buildCastMemberReferenceGroup(input: {
       selected,
       defaultSelected,
       card: referenceCardPlan({
-        selected,
+        selected: selected && inclusion.included,
         mediaKind: 'image',
         dependencyId,
         line,
         planLine: planLineForDependencyLine(input.plan, line),
+        inclusion,
         previews: [],
       }),
     });
@@ -220,6 +238,7 @@ function buildCharacterSheetReferenceChoice(input: {
   defaultAssetId: string | null;
   line: MediaGenerationDependencyLine | null;
   planLine: MediaGenerationPlanLine | null;
+  inclusion: ReferenceInclusionResolution;
   index: number;
 }): ShotVideoTakeCharacterSheetReferenceChoice {
   const selected = input.asset.assetId === input.selectedAssetId;
@@ -234,13 +253,14 @@ function buildCharacterSheetReferenceChoice(input: {
     selected,
     defaultSelected: input.asset.assetId === input.defaultAssetId,
     card: referenceCardPlan({
-      selected,
+      selected: selected && input.inclusion.included,
       mediaKind: 'image',
       dependencyId: selected
         ? castCharacterSheetDependencyId(input.castMemberId)
         : undefined,
       line: selected ? input.line : undefined,
       planLine: selected ? input.planLine : undefined,
+      inclusion: input.inclusion,
       previews: previewImagesForAsset(
         input.asset,
         title,
@@ -272,6 +292,11 @@ function buildLocationReferenceGroup(input: {
   const selected =
     explicitSelected ||
     (input.useDefaultSelectionWhenNoScopedSelection && defaultSelected);
+  const inclusion = referenceInclusionForDependencyId(
+    input.context,
+    dependencyId,
+    selected
+  );
   const defaultEnvironmentSheetAssetId = assets[0]?.assetId ?? null;
   const selectedEnvironmentSheetAssetId =
     selectedEnvironmentSheetAssetIdForShots(input.context.shots, input.locationId) ??
@@ -291,6 +316,7 @@ function buildLocationReferenceGroup(input: {
       selectedViewIds,
       line,
       planLine: planLineForDependencyLine(input.plan, line),
+      inclusion,
       index,
     })
   );
@@ -303,11 +329,12 @@ function buildLocationReferenceGroup(input: {
       selected,
       defaultSelected,
       card: referenceCardPlan({
-        selected,
+        selected: selected && inclusion.included,
         mediaKind: 'image',
         dependencyId,
         line,
         planLine: planLineForDependencyLine(input.plan, line),
+        inclusion,
         previews: [],
       }),
       views: [],
@@ -336,6 +363,7 @@ function buildEnvironmentSheetReferenceChoice(input: {
   selectedViewIds: LocationAzimuthViewId[];
   line: MediaGenerationDependencyLine | null;
   planLine: MediaGenerationPlanLine | null;
+  inclusion: ReferenceInclusionResolution;
   index: number;
 }): ShotVideoTakeEnvironmentSheetReferenceChoice {
   const selected = input.asset.assetId === input.selectedAssetId;
@@ -350,13 +378,14 @@ function buildEnvironmentSheetReferenceChoice(input: {
     selected,
     defaultSelected: input.asset.assetId === input.defaultAssetId,
     card: referenceCardPlan({
-      selected,
+      selected: selected && input.inclusion.included,
       mediaKind: 'image',
       dependencyId: selected
         ? locationEnvironmentSheetDependencyId(input.locationId)
         : undefined,
       line: selected ? input.line : undefined,
       planLine: selected ? input.planLine : undefined,
+      inclusion: input.inclusion,
       previews: previewImagesForAsset(
         input.asset,
         title,
@@ -388,6 +417,11 @@ function buildLookbookReferenceChoices(input: {
   const dependencyId = lookbookSheetDependencyId(input.context.activeLookbook.id);
   const line = dependencyLineById(input.plan, dependencyId);
   const planLine = planLineForDependencyLine(input.plan, line);
+  const inclusion = referenceInclusionForDependencyId(
+    input.context,
+    dependencyId,
+    true
+  );
   if (lookbookSheets.length === 0) {
     return [
       {
@@ -403,6 +437,7 @@ function buildLookbookReferenceChoices(input: {
           dependencyId,
           line,
           planLine,
+          inclusion,
           previews: [],
         }),
       },
@@ -416,11 +451,12 @@ function buildLookbookReferenceChoices(input: {
     selected: lookbookSheet.id === selectedChoiceId,
     defaultSelected: lookbookSheet.id === defaultSheetId,
     card: referenceCardPlan({
-      selected: lookbookSheet.id === selectedChoiceId,
+      selected: lookbookSheet.id === selectedChoiceId && inclusion.included,
       mediaKind: 'image',
       dependencyId: lookbookSheet.id === selectedChoiceId ? dependencyId : undefined,
       line: lookbookSheet.id === selectedChoiceId ? line : undefined,
       planLine: lookbookSheet.id === selectedChoiceId ? planLine : undefined,
+      inclusion,
       previews: previewImagesForLookbookSheet(
         lookbookSheet,
         lookbookSheet.asset.title,
@@ -451,6 +487,17 @@ function buildGeneralReferenceChoices(input: {
       line
     );
     const previews = previewImagesForDependencyLine(input.context, line);
+    const inclusion = referenceInclusionForDependencyId(
+      input.context,
+      line.dependencyId,
+      true
+    );
+    const cardInclusion = requiredGeneralReferenceInclusion({
+      context: input.context,
+      kind: referenceInputKind,
+      selected: true,
+      inclusion,
+    });
     previews.forEach((preview) => {
       if (preview.inputId) {
         plannedInputIds.add(preview.inputId);
@@ -460,7 +507,7 @@ function buildGeneralReferenceChoices(input: {
       id: `planned:${line.dependencyId}`,
       kind: referenceKind,
       title,
-      selected: true,
+      selected: inclusion.included,
       clearInputSlot: parsed.ok
         ? {
             kind: parsed.value.kind,
@@ -471,15 +518,83 @@ function buildGeneralReferenceChoices(input: {
           }
         : null,
       card: referenceCardPlan({
-        selected: true,
+        selected: inclusion.included,
         mediaKind: 'image',
         dependencyId: line.dependencyId,
         line,
         planLine: planLineForDependencyLine(input.plan, line),
+        inclusion: cardInclusion,
         previews,
       }),
     };
     choicesByKey.set(`planned:${line.dependencyId}`, choice);
+  });
+  input.context.productionGroup.videoTakeProduction.requestedInputs?.forEach(
+    (requestedInput) => {
+      const referenceInputKind = shotReferenceTabInputKind(requestedInput.kind);
+      if (!referenceInputKind) {
+        return;
+      }
+      const dependencyId = shotVideoInputDependencyId({
+        kind: referenceInputKind,
+        subjectKind: requestedInput.subjectKind,
+        subjectId: requestedInput.subjectId,
+      });
+      if (choicesByKey.has(`planned:${dependencyId}`)) {
+        return;
+      }
+      const inclusion = referenceInclusionForDependencyId(
+        input.context,
+        dependencyId,
+        true
+      );
+      if (inclusion.included) {
+        return;
+      }
+      const referenceKind = generalReferenceKindForInputKind(referenceInputKind);
+      const title = titleForRequestedImageReference(
+        input.context,
+        referenceInputKind
+      );
+      choicesByKey.set(`requested:${dependencyId}`, {
+        id: `requested:${dependencyId}`,
+        kind: referenceKind,
+        title,
+        selected: false,
+        clearInputSlot: null,
+        card: referenceCardPlan({
+          selected: false,
+          mediaKind: 'image',
+          dependencyId,
+          inclusion: requiredGeneralReferenceInclusion({
+            context: input.context,
+            kind: referenceInputKind,
+            selected: false,
+            inclusion,
+          }),
+        }),
+      });
+    }
+  );
+  excludedDefaultGeneralReferenceChoices(input.context).forEach((excludedChoice) => {
+    const existingChoice = [...choicesByKey.values()].find(
+      (choice) => choice.card.dependencyId === excludedChoice.dependencyId
+    );
+    if (!existingChoice) {
+      choicesByKey.set(`excluded:${excludedChoice.dependencyId}`, {
+        id: `excluded:${excludedChoice.dependencyId}`,
+        kind: excludedChoice.kind,
+        title: excludedChoice.title,
+        selected: false,
+        clearInputSlot: null,
+        card: referenceCardPlan({
+          selected: false,
+          mediaKind: 'image',
+          dependencyId: excludedChoice.dependencyId,
+          inclusion: excludedChoice.inclusion,
+        }),
+      });
+    }
   });
   input.context.availableInputs.forEach((availableInput) => {
     const referenceInputKind = shotReferenceTabInputKind(availableInput.kind);
@@ -502,11 +617,23 @@ function buildGeneralReferenceChoices(input: {
         : null;
     const referenceKind = generalReferenceKindForInputKind(referenceInputKind);
     const title = titleForAvailableImageReference(input.context, availableInput);
+    const inclusion = referenceInclusionForDependencyId(
+      input.context,
+      dependencyId,
+      availableInput.selected,
+      line
+    );
+    const cardInclusion = requiredGeneralReferenceInclusion({
+      context: input.context,
+      kind: referenceInputKind,
+      selected: availableInput.selected,
+      inclusion,
+    });
     choicesByKey.set(`input:${availableInput.inputId}`, {
       id: `input:${availableInput.inputId}`,
       kind: referenceKind,
       title,
-      selected: availableInput.selected,
+      selected: inclusion.included,
       clearInputSlot: {
         kind: referenceInputKind,
         ...(availableInput.subjectKind
@@ -515,11 +642,12 @@ function buildGeneralReferenceChoices(input: {
         ...(availableInput.subjectId ? { subjectId: availableInput.subjectId } : {}),
       },
       card: referenceCardPlan({
-        selected: availableInput.selected,
+        selected: inclusion.included,
         mediaKind: availableInput.mediaKind,
         dependencyId,
         line,
         planLine: planLineForDependencyLine(input.plan, line),
+        inclusion: cardInclusion,
         previews: [
           {
             inputId: availableInput.inputId,
@@ -534,6 +662,35 @@ function buildGeneralReferenceChoices(input: {
     });
   });
   return [...choicesByKey.values()];
+}
+
+function excludedDefaultGeneralReferenceChoices(
+  context: ShotVideoTakeGenerationContext
+): Array<{
+  dependencyId: string;
+  kind: 'multi-shot-storyboard-sheet';
+  title: string;
+  inclusion: ReferenceInclusionResolution;
+}> {
+  if (context.shotGroupMode !== 'multi-shot') {
+    return [];
+  }
+  const dependencyId = shotVideoInputDependencyId({
+    kind: 'multi-shot-storyboard-sheet',
+    target: context.target,
+  });
+  const inclusion = referenceInclusionForDependencyId(context, dependencyId, true);
+  if (inclusion.included) {
+    return [];
+  }
+  return [
+    {
+      dependencyId,
+      kind: 'multi-shot-storyboard-sheet',
+      title: multiShotStoryboardSheetTitle(context),
+      inclusion,
+    },
+  ];
 }
 
 function shotReferenceTabInputKind(
@@ -597,13 +754,29 @@ function titleForPlannedImageReference(
   return humanReadableAssetTitle(specTitle || line.label, 'Reference Image');
 }
 
+function titleForRequestedImageReference(
+  context: ShotVideoTakeGenerationContext,
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
+): string {
+  if (kind === 'first-frame') {
+    return 'First Frame';
+  }
+  if (kind === 'last-frame') {
+    return 'Last Frame';
+  }
+  if (kind === 'multi-shot-storyboard-sheet') {
+    return multiShotStoryboardSheetTitle(context);
+  }
+  return 'Reference Image';
+}
+
 function multiShotStoryboardSheetTitle(
   context: ShotVideoTakeGenerationContext
 ): string {
   if (context.target.shotIds.length <= 1) {
-    return 'Storyboard sheet';
+    return 'Multi-Shot Storyboard Reference';
   }
-  return `Storyboard sheet (${context.target.shotIds.length} shots)`;
+  return `Multi-Shot Storyboard Reference (${context.target.shotIds.length} shots)`;
 }
 
 function outOfScopeReferenceDiagnostics(input: {
@@ -922,15 +1095,85 @@ function previewImagesForDependencyLine(
   ];
 }
 
+function referenceInclusionForDependencyId(
+  context: ShotVideoTakeGenerationContext,
+  dependencyId: string,
+  defaultIncluded: boolean,
+  line?: MediaGenerationDependencyLine | null
+): ReferenceInclusionResolution {
+  const required = line?.required ?? false;
+  const inclusionOverride =
+    context.shots
+      .map((shot) => shot.shotSpecs?.referenceInclusions?.[dependencyId] ?? null)
+      .find((inclusion) => inclusion !== null) ?? null;
+  return {
+    dependencyId,
+    defaultIncluded,
+    required,
+    inclusionOverride,
+    included: required
+      ? true
+      : inclusionOverride === 'include'
+        ? true
+        : inclusionOverride === 'exclude'
+          ? false
+          : defaultIncluded,
+  };
+}
+
+function requiredGeneralReferenceInclusion(input: {
+  context: ShotVideoTakeGenerationContext;
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet';
+  selected: boolean;
+  inclusion: ReferenceInclusionResolution;
+}): ReferenceInclusionResolution {
+  if (!input.selected || !routeRequiresGeneralReference(input.context, input.kind)) {
+    return input.inclusion;
+  }
+  return {
+    ...input.inclusion,
+    required: true,
+    included: true,
+  };
+}
+
+function routeRequiresGeneralReference(
+  context: ShotVideoTakeGenerationContext,
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
+): boolean {
+  const inputModeId =
+    context.productionGroup.videoTakeProduction.inputModeId ?? context.defaults.inputModeId;
+  if (kind === 'first-frame') {
+    return inputModeId === 'first-frame' || inputModeId === 'first-last-frame';
+  }
+  if (kind === 'last-frame') {
+    return inputModeId === 'first-last-frame';
+  }
+  return false;
+}
+
+function referenceInclusionForLine(
+  dependencyId: string,
+  line: MediaGenerationDependencyLine | null,
+  defaultIncluded: boolean
+): ReferenceInclusionResolution {
+  return {
+    dependencyId,
+    defaultIncluded,
+    included: line?.required ? true : defaultIncluded,
+    required: line?.required ?? false,
+    inclusionOverride: null,
+  };
+}
+
 function dependencyLineById(
   plan: ShotVideoTakeGenerationPlan,
   dependencyId: string
 ): MediaGenerationDependencyLine | null {
-  return (
-    plan.dependencyInventory.dependencies.find(
-      (line) => line.dependencyId === dependencyId
-    ) ?? null
+  const lines = plan.dependencyInventory.dependencies.filter(
+    (line) => line.dependencyId === dependencyId
   );
+  return lines.find((line) => line.required) ?? lines[0] ?? null;
 }
 
 function planLineForDependencyLine(
@@ -949,11 +1192,17 @@ function referenceCardPlan(input: {
   dependencyId?: string;
   line?: MediaGenerationDependencyLine | null;
   planLine?: MediaGenerationPlanLine | null;
+  inclusion?: ReferenceInclusionResolution;
   previews?: ShotVideoTakeReferenceImagePreview[];
 }): ShotVideoTakeReferenceCardPlan {
   const line = input.line ?? null;
   const planLine = input.planLine ?? null;
   const previews = input.previews ?? [];
+  const inclusion =
+    input.inclusion ??
+    (input.dependencyId
+      ? referenceInclusionForLine(input.dependencyId, line, input.selected)
+      : null);
   if (input.selected && input.dependencyId && !line) {
     const diagnostic = createDiagnosticError(
       'CORE_SHOT_REFERENCE_DEPENDENCY_LINE_MISSING',
@@ -965,6 +1214,10 @@ function referenceCardPlan(input: {
       state: 'unavailable',
       mediaKind: input.mediaKind,
       dependencyId: input.dependencyId,
+      defaultIncluded: inclusion?.defaultIncluded ?? input.selected,
+      included: inclusion?.included ?? input.selected,
+      required: inclusion?.required ?? false,
+      inclusionOverride: inclusion?.inclusionOverride ?? null,
       pricing: {
         state: 'unpriced',
         estimatedUsd: null,
@@ -993,6 +1246,10 @@ function referenceCardPlan(input: {
       dependencyId: input.dependencyId,
       dependencyLineId: line.id,
       ...(planLine ? { planLineId: planLine.id } : {}),
+      defaultIncluded: inclusion?.defaultIncluded ?? input.selected,
+      included: inclusion?.included ?? input.selected,
+      required: inclusion?.required ?? line.required,
+      inclusionOverride: inclusion?.inclusionOverride ?? null,
       purpose: line.purpose,
       pricing: {
         state: 'unpriced',
@@ -1014,6 +1271,10 @@ function referenceCardPlan(input: {
     ...(input.dependencyId ? { dependencyId: input.dependencyId } : {}),
     ...(line ? { dependencyLineId: line.id } : {}),
     ...(planLine ? { planLineId: planLine.id } : {}),
+    defaultIncluded: inclusion?.defaultIncluded ?? input.selected,
+    included: inclusion?.included ?? input.selected,
+    required: inclusion?.required ?? line?.required ?? false,
+    inclusionOverride: inclusion?.inclusionOverride ?? null,
     purpose: line?.purpose ?? null,
     pricing: line?.pricing ?? {
       state: 'not-applicable',

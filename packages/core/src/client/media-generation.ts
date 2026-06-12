@@ -569,6 +569,7 @@ export interface ShotVideoTakeCastReference {
   handle: string;
   name: string;
   role?: string;
+  isVoiceOver: boolean;
   description?: string;
 }
 
@@ -1273,6 +1274,10 @@ export interface ShotVideoTakeReferenceCardPlan {
   dependencyId?: string;
   dependencyLineId?: string;
   planLineId?: string;
+  defaultIncluded: boolean;
+  included: boolean;
+  required: boolean;
+  inclusionOverride: 'include' | 'exclude' | null;
   purpose?: MediaGenerationPurpose | null;
   pricing: MediaGenerationDependencyPricing;
   previews: ShotVideoTakeReferenceImagePreview[];

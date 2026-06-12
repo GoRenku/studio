@@ -61,6 +61,7 @@ export interface CastNavigationRow {
   handle: string;
   name: string;
   role?: string;
+  isVoiceOver: boolean;
   firstImage?: ScreenplayImageReference;
 }
 

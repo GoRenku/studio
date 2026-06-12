@@ -66,6 +66,7 @@ export function readProjectShellProjection(
       handle: row.handle,
       name: row.name,
       role: row.role,
+      isVoiceOver: row.isVoiceOver,
     })),
     counts,
     navigation: {

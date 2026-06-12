@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
-import { asc } from 'drizzle-orm';
 import type {
   MediaGenerationEstimateReport,
   MediaGenerationSpecRecord,
@@ -23,6 +22,7 @@ import {
 } from '../database/access/asset-relationships/index.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { listCastVoiceRecords } from '../database/access/cast-voices.js';
+import { listProjectLocaleRecords } from '../database/access/project-locales.js';
 import {
   insertMediaGenerationSpec,
   listMediaGenerationSpecs,
@@ -44,7 +44,6 @@ import { readScreenplaySceneFromSession } from '../database/access/screenplay-re
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { projectLocales } from '../schema/index.js';
 import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
@@ -1077,12 +1076,7 @@ function isPersistedAudioOutput(candidate: object): boolean {
 }
 
 function defaultLanguageCode(session: DatabaseSession): string | null {
-  const base = session.db
-    .select()
-    .from(projectLocales)
-    .orderBy(asc(projectLocales.position), asc(projectLocales.id))
-    .all()
-    .find((locale) => locale.isBase);
+  const base = listProjectLocaleRecords(session).find((locale) => locale.isBase);
   return base?.localeTag.split('-')[0]?.toLowerCase() ?? null;
 }
 

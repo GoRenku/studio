@@ -145,6 +145,7 @@ export const screenplayDocumentSchema = {
       key: stringId(),
       handle: handle(),
       name: { type: 'string' },
+      isVoiceOver: { type: 'boolean' },
       role: { type: 'string' },
       age: { type: 'integer', minimum: 0 },
       want: { type: 'string' },

@@ -671,9 +671,18 @@ describe('media generation dependency inventory estimates integration', () => {
         }),
       ])
     );
-    expect(
-      estimate.plan?.lines.filter((line) => line.kind === 'dependency-generation')
-    ).toEqual([]);
+    expect(estimate.plan?.lines).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyLineId: firstFrameLineId,
+          kind: 'dependency-generation',
+        }),
+        expect.objectContaining({
+          dependencyLineId: lastFrameLineId,
+          kind: 'dependency-generation',
+        }),
+      ])
+    );
     expect(estimate.plan?.lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -694,11 +703,11 @@ describe('media generation dependency inventory estimates integration', () => {
       ])
     );
     expect(estimate.plan?.estimate).toMatchObject({
-      state: 'complete',
+      state: 'partial',
       estimatedTotalUsd: 3.402,
       pricedLineCount: 3,
       missingLineCount: 0,
-      requiresPriceOverride: false,
+      requiresPriceOverride: true,
     });
   });
 

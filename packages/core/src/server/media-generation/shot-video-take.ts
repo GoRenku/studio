@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { asc, eq } from 'drizzle-orm';
 import {
   createDiagnosticError,
   createDiagnosticWarning,
@@ -94,13 +93,13 @@ import {
   selectShotVideoTakeInputRecord,
 } from '../database/access/shot-video-takes.js';
 import { readActiveLookbookId, requireLookbookRecordById, toLookbook } from '../database/access/lookbook.js';
+import { listSceneLocationIds } from '../database/access/navigation.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import { readProjectRecord, type ProjectRecord } from '../database/access/project.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { sceneLocations } from '../schema/index.js';
 import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
@@ -814,13 +813,7 @@ function sceneShotReferenceScope(input: {
 }
 
 function sceneLocationIds(session: DatabaseSession, sceneId: string): string[] {
-  return session.db
-    .select({ locationId: sceneLocations.locationId })
-    .from(sceneLocations)
-    .where(eq(sceneLocations.sceneId, sceneId))
-    .orderBy(asc(sceneLocations.position))
-    .all()
-    .map((row) => row.locationId);
+  return listSceneLocationIds(session, sceneId);
 }
 
 function orderedScreenplayItems<T extends { id?: string }>(
@@ -913,11 +906,21 @@ async function buildShotVideoTakeDependencyInventory(input: {
     route: input.route,
     includeReferenceContext: true,
   });
+  validateRequiredReferenceInclusions({
+    context: input.context,
+    slots: requiredSlots,
+  });
+  const activeSlots = requiredSlots.filter((slot) =>
+    referenceDependencySlotIncluded(input.context, slot)
+  );
   const requiredSlotsByDependencyId = new Map(
-    requiredSlots.map((slot) => [slot.dependencyId, slot])
+    activeSlots.map((slot) => [slot.dependencyId, slot])
   );
   const finalLineId = 'root:shot.video-take';
-  const finalInputs: ShotVideoTakePreflightInput[] = [...input.preparedInputs];
+  const finalInputs = filterPreparedInputsByReferenceInclusions(
+    input.context,
+    input.preparedInputs
+  );
   const result = await planMediaGenerationDependencyInventory({
     projectName: input.projectName,
     homeDir: input.homeDir,
@@ -930,7 +933,7 @@ async function buildShotVideoTakeDependencyInventory(input: {
       kind: 'shot-video-take',
       context: input.context,
     } satisfies ShotVideoTakeDependencyRequest,
-    slots: requiredSlots,
+    slots: activeSlots,
     diagnostics: input.diagnostics,
     inputPolicyMode: (dependencyId) => inputPolicyMode(input.inputPolicy, dependencyId),
     resolveSelection: async (slot) => {
@@ -965,7 +968,9 @@ async function buildShotVideoTakeDependencyInventory(input: {
     },
     declareDependencies: async ({ purpose }) =>
       isShotInputPurpose(purpose)
-        ? shotVideoTakeReferenceDependencySlotsForContext(input.context)
+        ? shotVideoTakeReferenceDependencySlotsForContext(input.context).filter((slot) =>
+            referenceDependencySlotIncluded(input.context, slot)
+          )
         : [],
     estimateRoot: async (): Promise<MediaGenerationDependencyRootEstimate> => {
       const finalPricing = await estimateFinalPlanLine({
@@ -998,6 +1003,7 @@ function shotVideoTakeDependencySlotsForContext(input: {
     selectedCast: input.context.referencedCast.map((castMember) => ({
       id: castMember.id,
       name: castMember.name,
+      isVoiceOver: castMember.isVoiceOver,
     })),
     selectedLocations: input.context.referencedLocations.map((location) => ({
       id: location.id,
@@ -1011,11 +1017,14 @@ function shotVideoTakeDependencySlotsForContext(input: {
             [...selectedLookbookSheetIdsForShots(input.context.shots)][0] ?? null,
         }
       : null,
-    customReferenceInputs: [],
+    customReferenceInputs: input.context.availableInputs
+      .filter((availableInput) => availableInput.kind === 'reference-image')
+      .map((availableInput) => ({
+        id: availableInput.subjectId || availableInput.assetId,
+        title: availableInput.title,
+      })),
     requestedInputs: input.context.productionGroup.videoTakeProduction.requestedInputs,
-    requiresMultiShotStoryboardSheet: input.route.inputSlots.some(
-      (slot) => slot.kind === 'multi-shot-storyboard-sheet'
-    ),
+    requiresMultiShotStoryboardSheet: input.context.shotGroupMode === 'multi-shot',
   });
   if (input.includeReferenceContext) {
     return slots;
@@ -1032,6 +1041,7 @@ function shotVideoTakeReferenceDependencySlotsForContext(
     selectedCast: context.referencedCast.map((castMember) => ({
       id: castMember.id,
       name: castMember.name,
+      isVoiceOver: castMember.isVoiceOver,
     })),
     selectedLocations: context.referencedLocations.map((location) => ({
       id: location.id,
@@ -1087,6 +1097,7 @@ export async function declareShotVideoTakeDependencies(
     selectedCast: context.referencedCast.map((castMember) => ({
       id: castMember.id,
       name: castMember.name,
+      isVoiceOver: castMember.isVoiceOver,
     })),
     selectedLocations: context.referencedLocations.map((location) => ({
       id: location.id,
@@ -1105,6 +1116,7 @@ export async function declareShotVideoTakeDependencies(
         id: generationInput.subjectId ?? generationInput.assetId,
         title: generationInput.role || 'Reference image',
       })),
+    requiresMultiShotStoryboardSheet: context.shotGroupMode === 'multi-shot',
   });
 }
 
@@ -1317,6 +1329,95 @@ function inputPolicyMode(
   slotKey: string
 ): 'reuse-selected' | 'regenerate' | 'auto' {
   return policy.slotModes?.[slotKey] ?? policy.defaultMode;
+}
+
+function validateRequiredReferenceInclusions(input: {
+  context: ShotVideoTakeGenerationContext;
+  slots: MediaGenerationDependencySlot[];
+}): void {
+  const issues = input.slots.flatMap((slot) => {
+    const override = referenceInclusionOverride(
+      input.context,
+      slot.dependencyId
+    );
+    if (slot.required && override === 'exclude') {
+      return [
+        createDiagnosticError(
+          'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
+          `Required reference cannot be excluded: ${slot.label}.`,
+          {
+            path: ['shotSpecs', 'referenceInclusions', slot.dependencyId],
+            context: `dependencyId=${slot.dependencyId}`,
+          },
+          'Clear the exclusion or choose a generation route where this reference is optional.'
+        ),
+      ];
+    }
+    return [];
+  });
+  if (issues.length > 0) {
+    throw new ProjectDataError(
+      'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
+      'Required shot reference inclusion overrides are invalid.',
+      {
+        issues,
+        suggestion:
+          'Clear required-reference exclusions before planning or generating the shot video take.',
+      }
+    );
+  }
+}
+
+function referenceDependencySlotIncluded(
+  context: ShotVideoTakeGenerationContext,
+  slot: MediaGenerationDependencySlot
+): boolean {
+  if (slot.required) {
+    return true;
+  }
+  const override = referenceInclusionOverride(context, slot.dependencyId);
+  return override === 'exclude' ? false : true;
+}
+
+function filterPreparedInputsByReferenceInclusions(
+  context: ShotVideoTakeGenerationContext,
+  preparedInputs: ShotVideoTakePreflightInput[]
+): ShotVideoTakePreflightInput[] {
+  return preparedInputs.filter((preparedInput) => {
+    if (!isReferencePreparedInput(preparedInput.kind)) {
+      return true;
+    }
+    const dependencyId = shotVideoInputDependencyId({
+      kind: preparedInput.kind,
+      target: context.target,
+      subjectKind: preparedInput.subjectKind,
+      subjectId: preparedInput.subjectId,
+    });
+    return referenceInclusionOverride(context, dependencyId) !== 'exclude';
+  });
+}
+
+function referenceInclusionOverride(
+  context: ShotVideoTakeGenerationContext,
+  dependencyId: string
+): 'include' | 'exclude' | null {
+  return (
+    context.shots
+      .map((shot) => shot.shotSpecs?.referenceInclusions?.[dependencyId] ?? null)
+      .find((inclusion) => inclusion !== null) ?? null
+  );
+}
+
+function isReferencePreparedInput(kind: ShotVideoTakeInputKind): boolean {
+  return (
+    kind === 'first-frame' ||
+    kind === 'last-frame' ||
+    kind === 'reference-image' ||
+    kind === 'character-sheet' ||
+    kind === 'location-sheet' ||
+    kind === 'lookbook-sheet' ||
+    kind === 'multi-shot-storyboard-sheet'
+  );
 }
 
 function normalizeRouteSettingsForContext(input: {
@@ -1600,6 +1701,10 @@ function finalTakeSpecForPreflight(input: {
       'Shot video take final spec requires an authored final prompt draft.'
     );
   }
+  const includedPreparedInputs = filterPreparedInputsByReferenceInclusions(
+    input.context,
+    input.preparedInputs
+  );
   return {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     target: input.context.target,
@@ -1610,7 +1715,7 @@ function finalTakeSpecForPreflight(input: {
     parameterValues:
       input.parameterValues ??
       parameterValuesForFinalTake(input.context, input.inputModeId, input.modelChoice),
-    inputs: input.preparedInputs.map((preparedInput) => ({
+    inputs: includedPreparedInputs.map((preparedInput) => ({
       kind: preparedInput.kind,
       assetId: preparedInput.assetId,
       assetFileId: preparedInput.assetFileId,
@@ -3393,6 +3498,7 @@ function buildContextFromPrepared(input: {
         handle: castMember.handle,
         name: castMember.name,
         role: castMember.role,
+        isVoiceOver: castMember.isVoiceOver,
         description: castMember.description,
       })),
     referencedLocations: scope.locations

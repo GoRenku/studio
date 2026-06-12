@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/ui/tooltip';
+import { Switch } from '@/ui/switch';
 import { cn } from '@/lib/utils';
 import {
   CAST_PROFILE_ROLE,
@@ -28,6 +29,7 @@ interface CastMemberDetailsTabProps {
   castMemberId: string;
   resource: CastMemberResourceResponse;
   assets: StudioAssetResponse[];
+  onVoiceOverChange: (isVoiceOver: boolean) => Promise<void>;
 }
 
 export function CastMemberDetailsTab({
@@ -35,6 +37,7 @@ export function CastMemberDetailsTab({
   castMemberId,
   resource,
   assets,
+  onVoiceOverChange,
 }: CastMemberDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const castMember = resource.castMember;
@@ -90,21 +93,38 @@ export function CastMemberDetailsTab({
   return (
     <>
       <article className='min-h-full bg-panel-bg px-4 py-5 text-foreground'>
-        <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(260px,390px)_minmax(0,1fr)] lg:gap-8'>
-          <CastFeatureImage
-            image={profilePreview}
-            aspectClassName='aspect-square'
-            aspectRatio={profileAspectRatio}
-            emptyLabel='No profile image yet'
-            onOpenImage={setPreviewImage}
-          />
+        <header
+          className={cn(
+            'grid gap-6 pb-8 lg:gap-8',
+            castMember.isVoiceOver
+              ? 'lg:grid-cols-1'
+              : 'lg:grid-cols-[minmax(260px,390px)_minmax(0,1fr)]'
+          )}
+        >
+          {castMember.isVoiceOver ? null : (
+            <CastFeatureImage
+              image={profilePreview}
+              aspectClassName='aspect-square'
+              aspectRatio={profileAspectRatio}
+              emptyLabel='No profile image yet'
+              onOpenImage={setPreviewImage}
+            />
+          )}
           <div className='flex min-w-0 flex-col justify-end'>
-            <div className='flex flex-wrap items-center gap-2'>
+            <div className='flex flex-wrap items-center justify-between gap-3'>
               {castMember.role ? (
                 <span className='rounded-full border border-border/50 bg-muted/45 px-3 py-1 text-xs font-semibold text-foreground/75'>
                   {castMember.role}
                 </span>
               ) : null}
+              <label className='ml-auto flex items-center gap-2 text-xs font-semibold text-muted-foreground'>
+                Voice-over
+                <Switch
+                  checked={castMember.isVoiceOver}
+                  onCheckedChange={onVoiceOverChange}
+                  aria-label='Voice-over'
+                />
+              </label>
             </div>
             <div className='mt-4 flex max-w-[920px] flex-wrap items-center gap-3'>
               <h1 className='min-w-0 text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>

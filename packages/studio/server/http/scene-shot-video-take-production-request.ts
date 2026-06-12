@@ -316,6 +316,37 @@ export function readShotCustomReferenceImagesRequest(
   return { customReferenceInputIds };
 }
 
+export interface ShotReferenceInclusionRequest {
+  dependencyId: string;
+  inclusion: 'include' | 'exclude' | null;
+}
+
+export function readShotReferenceInclusionRequest(
+  input: unknown
+): ShotReferenceInclusionRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['dependencyId', 'inclusion'],
+    issues,
+    CONTEXT,
+    'Send only the dependencyId and inclusion fields.'
+  );
+  const dependencyId = readStringValue(record.dependencyId, ['dependencyId'], issues);
+  const inclusion = readReferenceInclusionValue(
+    record.inclusion,
+    ['inclusion'],
+    issues
+  );
+  finishOrThrow(issues);
+  return { dependencyId, inclusion };
+}
+
 function readProductionGroupValue(
   value: unknown,
   issues: DiagnosticIssue[]
@@ -448,6 +479,25 @@ function readStringValue(
     )
   );
   return '';
+}
+
+function readReferenceInclusionValue(
+  value: unknown,
+  path: string[],
+  issues: DiagnosticIssue[]
+): 'include' | 'exclude' | null {
+  if (value === null || value === 'include' || value === 'exclude') {
+    return value;
+  }
+  issues.push(
+    createDiagnosticError(
+      'STUDIO_SERVER349',
+      `${path.join('.')} must be include, exclude, or null.`,
+      { path, context: CONTEXT },
+      'Send include, exclude, or null to clear the override.'
+    )
+  );
+  return null;
 }
 
 function readLocationAzimuthView(

@@ -34,6 +34,7 @@ export interface CastMember {
   handle: string;
   name: string;
   role?: string;
+  isVoiceOver: boolean;
   age?: number;
   want?: string;
   need?: string;

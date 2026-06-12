@@ -125,6 +125,7 @@ export async function readSceneShotListContext(
         id: castMember.id as string,
         handle: castMember.handle,
         name: castMember.name,
+        isVoiceOver: castMember.isVoiceOver,
         role: castMember.role,
         description: castMember.description,
       })),

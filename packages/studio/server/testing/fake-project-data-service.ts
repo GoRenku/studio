@@ -210,6 +210,9 @@ export function fakeProjectDataService(): NonNullable<
     async readCastMemberResource() {
       return { castMember: project.cast[0], voices: [] };
     },
+    async updateCastMemberVoiceOverStatus() {
+      return project.cast[0];
+    },
     async readLocationOverviewResource() {
       return { locations: makeProjectShell(project).navigation.locations };
     },
@@ -435,6 +438,9 @@ export function fakeProjectDataService(): NonNullable<
       return fakeProjectDataService().readSceneShotListResource({} as never);
     },
     async updateSceneShotCustomReferenceImages() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
+    async updateSceneShotReferenceInclusion() {
       return fakeProjectDataService().readSceneShotListResource({} as never);
     },
     async readActStoryboardResource() {

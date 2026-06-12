@@ -665,6 +665,10 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
               card: {
                 state: 'selected-planned',
                 mediaKind: 'image',
+                defaultIncluded: true,
+                included: true,
+                required: false,
+                inclusionOverride: null,
                 pricing: { state: 'not-applicable', estimatedUsd: null },
                 previews: [],
                 diagnostics: [],

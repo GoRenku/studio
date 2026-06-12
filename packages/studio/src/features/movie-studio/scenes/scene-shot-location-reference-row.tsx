@@ -25,7 +25,10 @@ interface SceneShotLocationReferenceRowProps {
   projectName: string;
   group: ShotVideoTakeLocationReferenceGroup;
   onPreview: (images: PreviewImage[]) => void;
-  onSelectLocation: (locationId: string) => Promise<void>;
+  onToggleInclusion: (
+    dependencyId: string,
+    inclusion: 'include' | 'exclude' | null
+  ) => Promise<void>;
   onToggleView: (
     locationId: string,
     assetId: string,
@@ -38,7 +41,7 @@ export function SceneShotLocationReferenceRow({
   projectName,
   group,
   onPreview,
-  onSelectLocation,
+  onToggleInclusion,
   onToggleView,
 }: SceneShotLocationReferenceRowProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -66,11 +69,19 @@ export function SceneShotLocationReferenceRow({
         imageUrl={sheetImageUrl}
         imageAlt={group.name}
         card={selectedSheet.card}
-        selected={group.selectedForShot}
+        selected={selectedSheet.card.included}
+        controlMode='inclusion'
         aspectRatio={4 / 3}
         aspectClassName='aspect-[4/3]'
         onOpen={() => setViewDialogOpen(true)}
-        onToggleSelected={() => onSelectLocation(group.locationId)}
+        onToggleSelected={() =>
+          selectedSheet.card.dependencyId
+            ? onToggleInclusion(
+                selectedSheet.card.dependencyId,
+                nextReferenceInclusion(selectedSheet.card)
+              )
+            : Promise.resolve()
+        }
       />
       <LocationViewDialog
         projectName={projectName}
@@ -83,6 +94,16 @@ export function SceneShotLocationReferenceRow({
       />
     </>
   );
+}
+
+function nextReferenceInclusion(card: {
+  defaultIncluded: boolean;
+  included: boolean;
+}): 'include' | 'exclude' | null {
+  if (card.included) {
+    return card.defaultIncluded ? 'exclude' : null;
+  }
+  return card.defaultIncluded ? null : 'include';
 }
 
 function LocationViewDialog({

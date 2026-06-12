@@ -46,6 +46,7 @@ export function readCastDesignResourceProjection(
       id: castMember.id,
       handle: castMember.handle,
       name: castMember.name,
+      isVoiceOver: castMember.isVoiceOver,
       role: castMember.role ?? undefined,
       age: castMember.age ?? undefined,
       want: castMember.want ?? undefined,
