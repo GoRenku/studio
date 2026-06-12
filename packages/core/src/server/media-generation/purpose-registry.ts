@@ -191,7 +191,7 @@ export interface MediaGenerationDependencyDeclarationInput {
   purpose: MediaGenerationPurpose;
   target: MediaGenerationTarget;
   request: MediaGenerationDependencyRequest;
-  parentNodeId?: string;
+  parentLineId?: string;
 }
 
 export interface MediaGenerationPurposeDefinition {

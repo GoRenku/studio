@@ -1,0 +1,123 @@
+import { describe, expect, it } from 'vitest';
+import { declareCastProfileDependencySlots } from '../../src/server/media-generation/cast-profile-dependency-slots.js';
+import { declareShotVideoTakeDependencySlots } from '../../src/server/media-generation/shot-video-take/dependency-slots.js';
+import type { SceneShotMediaGenerationTarget } from '../../src/client/index.js';
+
+const target: SceneShotMediaGenerationTarget = {
+  kind: 'sceneShotGroup',
+  id: 'scene:shot-list:production-group',
+  sceneId: 'scene',
+  shotListId: 'shot-list',
+  productionGroupId: 'production-group',
+  shotIds: ['shot-a'],
+};
+
+const selectedCast = [{ id: 'cast-a', name: 'Ada' }];
+const selectedLocations = [{ id: 'location-a', name: 'Archive' }];
+const activeLookbook = { id: 'lookbook-a', name: 'Nocturne' };
+
+describe('media generation dependency slot declarations', () => {
+  it('declares no required frame-input slots for shot video text-only mode', () => {
+    const slots = declareShotVideoTakeDependencySlots({
+      target,
+      inputModeId: 'text-only',
+      selectedCast,
+      selectedLocations,
+      activeLookbook,
+      customReferenceInputs: [],
+    });
+
+    expect(slots.filter((slot) => slot.required)).toEqual([]);
+    expect(slots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyId: 'cast-character-sheet:cast-a',
+          required: false,
+        }),
+        expect.objectContaining({
+          dependencyId: 'location-environment-sheet:location-a',
+          required: false,
+        }),
+        expect.objectContaining({
+          dependencyId: 'lookbook-sheet:lookbook-a',
+          required: false,
+        }),
+      ])
+    );
+  });
+
+  it('declares first frame as required for shot video first-frame mode', () => {
+    const slots = declareShotVideoTakeDependencySlots({
+      target,
+      inputModeId: 'first-frame',
+      selectedCast,
+      selectedLocations,
+      activeLookbook,
+      customReferenceInputs: [],
+    });
+
+    expect(slots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyId: 'first-frame:production-group:production-group',
+          dependencyKind: 'first-frame',
+          required: true,
+          selector: expect.objectContaining({ kind: 'shot-video-input' }),
+        }),
+      ])
+    );
+  });
+
+  it('declares first and last frame as required for shot video first-last-frame mode', () => {
+    const slots = declareShotVideoTakeDependencySlots({
+      target,
+      inputModeId: 'first-last-frame',
+      selectedCast,
+      selectedLocations,
+      activeLookbook,
+      customReferenceInputs: [],
+    });
+
+    expect(slots.filter((slot) => slot.required).map((slot) => slot.dependencyKind)).toEqual([
+      'first-frame',
+      'last-frame',
+    ]);
+  });
+
+  it('declares selected reference bundle dependencies as required for reference mode', () => {
+    const slots = declareShotVideoTakeDependencySlots({
+      target,
+      inputModeId: 'reference',
+      selectedCast,
+      selectedLocations,
+      activeLookbook,
+      customReferenceInputs: [{ id: 'reference-a', title: 'Map table reference' }],
+    });
+
+    expect(slots.filter((slot) => slot.required).map((slot) => slot.dependencyId)).toEqual([
+      'reference-image:asset:reference-a',
+      'lookbook-sheet:lookbook-a',
+      'cast-character-sheet:cast-a',
+      'location-environment-sheet:location-a',
+    ]);
+  });
+
+  it('declares cast profile character sheet as required', () => {
+    expect(
+      declareCastProfileDependencySlots({
+        castMemberId: 'cast-a',
+        castMemberName: 'Ada',
+      })
+    ).toEqual([
+      expect.objectContaining({
+        dependencyId: 'cast-character-sheet:cast-a',
+        dependencyKind: 'cast-character-sheet',
+        required: true,
+        selector: expect.objectContaining({
+          kind: 'asset-relationship',
+          role: 'character_sheet',
+        }),
+      }),
+    ]);
+  });
+});

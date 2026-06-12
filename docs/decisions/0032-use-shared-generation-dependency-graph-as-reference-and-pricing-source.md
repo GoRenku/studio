@@ -2,7 +2,13 @@
 
 Date: 2026-06-11
 
-Status: accepted
+Status: superseded
+
+Superseded by: `plans/active/0063-generation-dependency-inventory-rewrite.md`
+
+Note: the current architecture uses a dependency inventory/checklist/estimate
+contract instead of a dependency execution graph. This ADR remains historical
+context for why dependency pricing moved into shared core.
 
 ## Context
 

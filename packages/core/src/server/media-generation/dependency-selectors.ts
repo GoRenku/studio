@@ -1,66 +1,60 @@
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
   Asset,
   MediaGenerationDependencyRequest,
+  MediaGenerationDependencySelectedAsset,
   MediaGenerationDependencySlot,
   ShotVideoTakeGenerationSpec,
 } from '../../client/index.js';
-import {
-  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-} from '../../client/index.js';
+import { SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from '../../client/index.js';
 import {
   listAssetRelationshipPage,
   MAX_RESOURCE_PAGE_LIMIT,
 } from '../database/access/asset-relationships/index.js';
-import type { DatabaseSession } from '../database/lifecycle/store.js';
-import type {
-  MediaGenerationDependencyAssetResolution,
-  ResolvedMediaGenerationDependencyAsset,
-} from './dependency-graph.js';
 import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
 import { readLocationEnvironmentSheetByAssetId } from '../database/access/location-environment-sheets.js';
-import { createDiagnosticError } from '@gorenku/studio-diagnostics';
+import type { DatabaseSession } from '../database/lifecycle/store.js';
+import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 
-export function resolveExistingDependencyAsset(input: {
+export type MediaGenerationDependencySelectorResult =
+  | {
+      state: 'satisfied';
+      asset: MediaGenerationDependencySelectedAsset;
+      diagnostics: DiagnosticIssue[];
+    }
+  | {
+      state: 'missing';
+      asset: null;
+      diagnostics: DiagnosticIssue[];
+    }
+  | {
+      state: 'invalid-selection';
+      asset: null;
+      diagnostics: DiagnosticIssue[];
+    };
+
+export function resolveMediaGenerationDependencySelection(input: {
   request?: MediaGenerationDependencyRequest;
   session: DatabaseSession;
   slot: MediaGenerationDependencySlot;
-}): MediaGenerationDependencyAssetResolution {
-  const shotVideoInput = shotVideoInputAssetFromRequest(input.request, input.slot);
-  if (shotVideoInput) {
-    return shotVideoInput;
+}): MediaGenerationDependencySelectorResult {
+  if (input.slot.selector.kind === 'shot-video-input') {
+    return shotVideoInputAssetFromRequest(input.request, input.slot);
   }
-  if (input.slot.dependencyKind === 'cast-character-sheet') {
-    if (input.slot.dependencyTarget?.kind !== 'castMember') {
-      return noAsset();
-    }
+  if (input.slot.selector.kind === 'asset-relationship') {
     return selectedAssetForTarget(input.session, {
-      target: {
-        kind: 'castMember',
-        castMemberId: input.slot.dependencyTarget.id,
-      },
-      role: 'character_sheet',
+      target: input.slot.selector.target,
+      role: input.slot.selector.role,
+      mediaKind: input.slot.selector.mediaKind,
       slot: input.slot,
+      fileRole: input.slot.selector.fileRole,
     });
   }
-  if (input.slot.dependencyKind === 'location-environment-sheet') {
-    if (input.slot.dependencyTarget?.kind !== 'location') {
-      return noAsset();
-    }
-    return selectedAssetForTarget(input.session, {
-      target: {
-        kind: 'location',
-        locationId: input.slot.dependencyTarget.id,
-      },
-      role: 'environment_sheet',
-      slot: input.slot,
-      fileRole: 'composite',
-    });
-  }
-  if (input.slot.dependencyKind === 'lookbook-sheet') {
-    if (input.slot.dependencyTarget?.kind !== 'lookbook') {
-      return noAsset();
-    }
-    const sheet = listLookbookSheets(input.session, input.slot.dependencyTarget.id)[0];
+  if (input.slot.selector.kind === 'lookbook-sheet') {
+    const sheet = listLookbookSheets(
+      input.session,
+      input.slot.selector.lookbookId
+    )[0];
     const file = sheet?.asset.files.find((candidate) => candidate.mediaKind === 'image');
     if (sheet && !file) {
       return invalidSelection(
@@ -74,6 +68,7 @@ export function resolveExistingDependencyAsset(input: {
       ? withAsset({
           assetId: sheet.asset.assetId,
           assetFileId: file.id,
+          projectRelativePath: file.projectRelativePath,
         })
       : noAsset();
   }
@@ -83,24 +78,13 @@ export function resolveExistingDependencyAsset(input: {
 function shotVideoInputAssetFromRequest(
   request: MediaGenerationDependencyRequest | undefined,
   slot: MediaGenerationDependencySlot
-): MediaGenerationDependencyAssetResolution | null {
-  if (
-    slot.dependencyKind !== 'first-frame' &&
-    slot.dependencyKind !== 'last-frame' &&
-    slot.dependencyKind !== 'reference-image' &&
-    slot.dependencyKind !== 'multi-shot-storyboard-sheet' &&
-    slot.dependencyKind !== 'cast-character-sheet' &&
-    slot.dependencyKind !== 'location-environment-sheet' &&
-    slot.dependencyKind !== 'lookbook-sheet'
-  ) {
-    return null;
-  }
+): MediaGenerationDependencySelectorResult {
   if (request?.kind !== 'media-generation-spec') {
-    return null;
+    return noAsset();
   }
   const spec = request.spec as ShotVideoTakeGenerationSpec | undefined;
   if (spec?.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
-    return null;
+    return noAsset();
   }
   const selectedInputs = spec.inputs.filter((candidate) =>
     shotVideoInputMatchesDependencySlot(candidate, slot)
@@ -128,6 +112,7 @@ function shotVideoInputAssetFromRequest(
   return withAsset({
     assetId: input.assetId,
     assetFileId: input.assetFileId,
+    projectRelativePath: input.projectRelativePath,
   });
 }
 
@@ -135,65 +120,15 @@ function shotVideoInputMatchesDependencySlot(
   input: ShotVideoTakeGenerationSpec['inputs'][number],
   slot: MediaGenerationDependencySlot
 ): boolean {
-  if (
-    input.kind !== inputKindForDependencyKind(slot.dependencyKind) ||
-    input.mediaKind !== 'image'
-  ) {
+  if (slot.selector.kind !== 'shot-video-input') {
     return false;
   }
-  const target = slot.dependencyTarget;
-  if (!target) {
-    return true;
-  }
-  if (target.kind === 'castMember') {
-    return input.subjectKind === 'cast-member' && input.subjectId === target.id;
-  }
-  if (target.kind === 'location') {
-    return input.subjectKind === 'location' && input.subjectId === target.id;
-  }
-  if (target.kind === 'lookbook') {
-    return input.subjectKind === 'lookbook' && input.subjectId === target.id;
-  }
-  if (target.kind !== 'sceneShotGroup') {
-    return true;
-  }
-  if (!input.subjectKind) {
-    return true;
-  }
-  if (input.subjectKind === 'production-group') {
-    return (
-      input.subjectId === target.productionGroupId ||
-      input.subjectId === target.id
-    );
-  }
-  if (input.subjectKind === 'shot') {
-    return target.shotIds.includes(input.subjectId ?? '');
-  }
-  return false;
-}
-
-function inputKindForDependencyKind(
-  dependencyKind: MediaGenerationDependencySlot['dependencyKind']
-): ShotVideoTakeGenerationSpec['inputs'][number]['kind'] {
-  if (dependencyKind === 'first-frame') {
-    return 'first-frame';
-  }
-  if (dependencyKind === 'last-frame') {
-    return 'last-frame';
-  }
-  if (dependencyKind === 'multi-shot-storyboard-sheet') {
-    return 'multi-shot-storyboard-sheet';
-  }
-  if (dependencyKind === 'cast-character-sheet') {
-    return 'character-sheet';
-  }
-  if (dependencyKind === 'location-environment-sheet') {
-    return 'location-sheet';
-  }
-  if (dependencyKind === 'lookbook-sheet') {
-    return 'lookbook-sheet';
-  }
-  return 'reference-image';
+  return (
+    input.kind === slot.selector.inputKind &&
+    input.mediaKind === 'image' &&
+    (!slot.selector.subjectKind || input.subjectKind === slot.selector.subjectKind) &&
+    (!slot.selector.subjectId || input.subjectId === slot.selector.subjectId)
+  );
 }
 
 function selectedAssetForTarget(
@@ -201,14 +136,15 @@ function selectedAssetForTarget(
   input: {
     target: Parameters<typeof listAssetRelationshipPage>[1]['target'];
     role: string;
+    mediaKind: string;
     slot: MediaGenerationDependencySlot;
     fileRole?: string;
   }
-): MediaGenerationDependencyAssetResolution {
+): MediaGenerationDependencySelectorResult {
   const selectedAssets = listAssetRelationshipPage(session, {
     target: input.target,
     role: input.role,
-    mediaKind: 'image',
+    mediaKind: input.mediaKind,
     selection: 'select',
     limit: MAX_RESOURCE_PAGE_LIMIT,
   }).items;
@@ -223,30 +159,32 @@ function selectedAssetForTarget(
   const asset = selectedAssets[0] ?? listAssetRelationshipPage(session, {
     target: input.target,
     role: input.role,
-    mediaKind: 'image',
+    mediaKind: input.mediaKind,
     limit: MAX_RESOURCE_PAGE_LIMIT,
   }).items[0];
   if (!asset) {
     return noAsset();
   }
-  const file = dependencyImageFile(session, asset, input.fileRole);
+  const file = dependencyFile(session, asset, input.mediaKind, input.fileRole);
   if (!file) {
     return invalidSelection(
       input.slot,
       'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
-      `Selected asset has no required image file for ${input.slot.label}: ${asset.assetId}.`,
+      `Selected asset has no required ${input.mediaKind} file for ${input.slot.label}: ${asset.assetId}.`,
       'Import or regenerate the selected asset before using it as a dependency.'
     );
   }
   return withAsset({
     assetId: asset.assetId,
     assetFileId: file.id,
+    projectRelativePath: file.projectRelativePath,
   });
 }
 
-function dependencyImageFile(
+function dependencyFile(
   session: DatabaseSession,
   asset: Asset,
+  mediaKind: string,
   fileRole?: string
 ): Asset['files'][number] | undefined {
   if (fileRole === 'composite') {
@@ -256,20 +194,20 @@ function dependencyImageFile(
       (candidate) =>
         candidate.id === compositeFileId &&
         candidate.role === 'composite' &&
-        candidate.mediaKind === 'image'
+        candidate.mediaKind === mediaKind
     );
   }
-  return asset.files.find((candidate) => candidate.mediaKind === 'image');
+  return asset.files.find((candidate) => candidate.mediaKind === mediaKind);
 }
 
 function withAsset(
-  asset: ResolvedMediaGenerationDependencyAsset
-): MediaGenerationDependencyAssetResolution {
-  return { asset, diagnostics: [] };
+  asset: MediaGenerationDependencySelectedAsset
+): MediaGenerationDependencySelectorResult {
+  return { state: 'satisfied', asset, diagnostics: [] };
 }
 
-function noAsset(): MediaGenerationDependencyAssetResolution {
-  return { asset: null, diagnostics: [] };
+function noAsset(): MediaGenerationDependencySelectorResult {
+  return { state: 'missing', asset: null, diagnostics: [] };
 }
 
 function invalidSelection(
@@ -277,14 +215,15 @@ function invalidSelection(
   code: string,
   message: string,
   suggestion: string
-): MediaGenerationDependencyAssetResolution {
+): MediaGenerationDependencySelectorResult {
   return {
+    state: 'invalid-selection',
     asset: null,
     diagnostics: [
       createDiagnosticError(
         code,
         message,
-        { path: ['dependencyMap', 'selectors', slot.dependencyId] },
+        { path: ['dependencyInventory', 'dependencies', slot.dependencyId] },
         suggestion
       ),
     ],

@@ -33,6 +33,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { declareCastProfileDependencySlots } from './cast-profile-dependency-slots.js';
 import type { MediaGenerationDependencyDeclarationInput } from './purpose-registry.js';
 import {
   buildScreenplayContext,
@@ -186,16 +187,10 @@ export async function declareCastProfileDependencies(
     homeDir: input.homeDir,
     castMemberId: target.id,
   });
-  return [
-    {
-      dependencyId: `cast-character-sheet:${target.id}`,
-      dependencyKind: 'cast-character-sheet',
-      dependencyTarget: target,
-      label: `${context.castMember.name} Character Sheet`,
-      required: true,
-      reason: `Cast profile generation requires a character sheet reference for ${context.castMember.name}.`,
-    },
-  ];
+  return declareCastProfileDependencySlots({
+    castMemberId: target.id,
+    castMemberName: context.castMember.name,
+  });
 }
 
 export async function validateCastProfileSpec(input: {

@@ -37,7 +37,7 @@ export function SceneShotReferenceCard({
   onOpen,
   onToggleSelected,
 }: SceneShotReferenceCardProps) {
-  const needsGeneration = card.previews.length === 0;
+  const needsGeneration = card.state === 'selected-planned';
 
   return (
     <ImageOverlayCard

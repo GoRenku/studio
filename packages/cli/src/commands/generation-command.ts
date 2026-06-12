@@ -106,11 +106,18 @@ function directResourceChangedReport(
     return { project: result.project, resourceKeys: result.resourceKeys };
   }
 
+  return contextResourceChangedReport(result);
+}
+
+function contextResourceChangedReport(
+  result: Record<string, unknown>,
+): StudioResourceChangedReport | null {
   if (
     'context' in result &&
     isObject(result.context) &&
     'project' in result.context &&
-    isProjectRef(result.context.project)
+    isProjectRef(result.context.project) &&
+    isStringArray(result.resourceKeys)
   ) {
     return {
       project: result.context.project,
@@ -129,6 +136,10 @@ function isProjectRef(
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 function unknownGenerationCommand(

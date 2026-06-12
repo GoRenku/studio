@@ -58,21 +58,22 @@ provider payloads, output names, dependency declarations, draft dependency
 specs, and import behavior.
 
 Dependency planning is shared media-generation architecture, not a shot-video
-special case. Core builds a read-only dependency graph from purpose-owned
+special case. Core builds a read-only dependency inventory from purpose-owned
 dependency declarations, resolves existing assets through deterministic asset
 selectors, estimates planned dependency specs through the same shared lifecycle
-used by persisted specs, and aggregates the graph total from graph nodes.
+used by persisted specs, and aggregates the inventory total from dependency
+lines plus the root generation line.
 
 There is one pricing meaning. Generated node prices come from provider
 estimates in `@gorenku/studio-engines`; reused existing assets contribute
 `$0.00`; manual external attachments are not generation work and are not
-priced. Studio and CLI surfaces render graph totals and line items, but they do
-not compute generation prices.
+priced. Studio and CLI surfaces render inventory totals and line items, but
+they do not compute generation prices.
 
 Root spec creation and update refuse to persist a spec while required
 dependencies are still planned or missing. Callers generate or import the
-dependency outputs, refresh the graph, and then create the root spec once every
-required provider input resolves to a real project asset.
+dependency outputs, refresh the inventory, and then create the root spec once
+every required provider input resolves to a real project asset.
 
 A generated file still does not become project metadata until an explicit media
 import succeeds.

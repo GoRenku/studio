@@ -46,17 +46,13 @@ export function parseGenerationTarget(input: {
   productionGroupId?: string;
 }): MediaGenerationRequestTarget {
   const purpose = parseGenerationPurpose(input.purpose);
-  if (purpose === 'lookbook.image' || purpose === 'lookbook.sheet') {
+  if (isLookbookGenerationPurpose(purpose)) {
     return {
       kind: 'lookbook',
       id: parseLookbookTarget(input.target, 'Lookbook generation'),
     };
   }
-  if (
-    purpose === 'cast.character-sheet' ||
-    purpose === 'cast.profile' ||
-    purpose === 'cast.voice-sample'
-  ) {
+  if (isCastGenerationPurpose(purpose)) {
     return {
       kind: 'castMember',
       id: parseCastTarget(input.target, 'Cast image generation'),
@@ -129,5 +125,17 @@ function isSupportedGenerationPurpose(
 ): purpose is MediaGenerationPurpose {
   return SUPPORTED_GENERATION_PURPOSES.some(
     (supportedPurpose) => supportedPurpose === purpose
+  );
+}
+
+function isLookbookGenerationPurpose(purpose: MediaGenerationPurpose): boolean {
+  return purpose === 'lookbook.image' || purpose === 'lookbook.sheet';
+}
+
+function isCastGenerationPurpose(purpose: MediaGenerationPurpose): boolean {
+  return (
+    purpose === 'cast.character-sheet' ||
+    purpose === 'cast.profile' ||
+    purpose === 'cast.voice-sample'
   );
 }

@@ -240,52 +240,94 @@ async function runDialogueAudioPlan(
     });
   return {
     scene: context.scene,
-    dialogues: context.dialogues.map((dialogue) => {
-      const audio = context.audioByDialogueId[dialogue.dialogueId];
-      const voices = dialogue.castMemberId
-        ? (context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [])
-        : [];
-      const selectedVoice =
-        voices.find((voice) => voice.id === audio?.castVoiceId) ??
-        voices.find((voice) => voice.usable) ??
-        null;
-      const modelChoice = audio?.modelChoice ?? context.defaults.modelChoice;
-      return {
-        dialogueId: dialogue.dialogueId,
-        speaker: dialogue.castMemberId
-          ? (context.castMemberLabels[dialogue.castMemberId] ??
-            dialogue.castMemberId)
-          : null,
-        selectedCastVoiceId: selectedVoice?.id ?? null,
-        selectedCastVoiceName: selectedVoice?.name ?? null,
-        modelChoice,
-        plainTextLength: (audio?.plainText ?? dialogue.plainText).length,
-        v3TextLength: (audio?.v3Text ?? dialogue.plainText).length,
-        hasV3AudioTags: /\[[^\]]+\]/.test(audio?.v3Text ?? dialogue.plainText),
-        textTreatment:
-          modelChoice === 'elevenlabs/eleven_v3'
-            ? 'elevenlabs-v3-audio-tags'
-            : 'plain-tts',
-        existingTakeCount: audio?.takes.length ?? 0,
-        pickedTakeId: audio?.pickedTakeId ?? null,
-        diagnostics:
-          dialogue.castMemberId && selectedVoice?.usable
-            ? []
-            : [
-                {
-                  code: 'CLI140',
-                  severity: 'error',
-                  message:
-                    'This dialogue is missing a usable ElevenLabs Cast Voice/provider voice id.',
-                  path: ['dialogues', dialogue.dialogueId],
-                  suggestion:
-                    'Ask the agent to assign a voice id before generating dialogue audio.',
-                },
-              ],
-      };
-    }),
+    dialogues: context.dialogues.map((dialogue) =>
+      dialogueAudioPlanItem(context, dialogue)
+    ),
     resourceKeys: context.resourceKeys,
   };
+}
+
+type SceneDialogueAudioPlanContext = Awaited<
+  ReturnType<CliCommandRuntime['projectDataService']['readSceneDialogueAudioContext']>
+>;
+
+type SceneDialogueAudioPlanDialogue =
+  SceneDialogueAudioPlanContext['dialogues'][number];
+
+function dialogueAudioPlanItem(
+  context: SceneDialogueAudioPlanContext,
+  dialogue: SceneDialogueAudioPlanDialogue
+) {
+  const audio = context.audioByDialogueId[dialogue.dialogueId];
+  const selectedVoice = selectedDialogueVoice(context, dialogue, audio?.castVoiceId);
+  const modelChoice = audio?.modelChoice ?? context.defaults.modelChoice;
+  const plainText = audio?.plainText ?? dialogue.plainText;
+  const v3Text = audio?.v3Text ?? dialogue.plainText;
+  return {
+    dialogueId: dialogue.dialogueId,
+    speaker: dialogueSpeakerLabel(context, dialogue),
+    selectedCastVoiceId: selectedVoice?.id ?? null,
+    selectedCastVoiceName: selectedVoice?.name ?? null,
+    modelChoice,
+    plainTextLength: plainText.length,
+    v3TextLength: v3Text.length,
+    hasV3AudioTags: /\[[^\]]+\]/.test(v3Text),
+    textTreatment: dialogueTextTreatment(modelChoice),
+    existingTakeCount: audio?.takes.length ?? 0,
+    pickedTakeId: audio?.pickedTakeId ?? null,
+    diagnostics: dialogueAudioPlanDiagnostics(dialogue, selectedVoice?.usable),
+  };
+}
+
+function dialogueTextTreatment(modelChoice: string): string {
+  return modelChoice === 'elevenlabs/eleven_v3'
+    ? 'elevenlabs-v3-audio-tags'
+    : 'plain-tts';
+}
+
+function selectedDialogueVoice(
+  context: SceneDialogueAudioPlanContext,
+  dialogue: SceneDialogueAudioPlanDialogue,
+  castVoiceId: string | null | undefined
+) {
+  const voices = dialogue.castMemberId
+    ? (context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [])
+    : [];
+  return (
+    voices.find((voice) => voice.id === castVoiceId) ??
+    voices.find((voice) => voice.usable) ??
+    null
+  );
+}
+
+function dialogueSpeakerLabel(
+  context: SceneDialogueAudioPlanContext,
+  dialogue: SceneDialogueAudioPlanDialogue
+): string | null {
+  if (!dialogue.castMemberId) {
+    return null;
+  }
+  return context.castMemberLabels[dialogue.castMemberId] ?? dialogue.castMemberId;
+}
+
+function dialogueAudioPlanDiagnostics(
+  dialogue: SceneDialogueAudioPlanDialogue,
+  hasUsableVoice: boolean | undefined
+) {
+  if (dialogue.castMemberId && hasUsableVoice) {
+    return [];
+  }
+  return [
+    {
+      code: 'CLI140',
+      severity: 'error',
+      message:
+        'This dialogue is missing a usable ElevenLabs Cast Voice/provider voice id.',
+      path: ['dialogues', dialogue.dialogueId],
+      suggestion:
+        'Ask the agent to assign a voice id before generating dialogue audio.',
+    },
+  ];
 }
 
 async function runDialogueAudioGenerate(
@@ -293,43 +335,7 @@ async function runDialogueAudioGenerate(
 ): Promise<unknown> {
   const sceneId = requiredFlag(input.flags.scene, '--scene');
   if (input.flags.all) {
-    if (!input.flags.simulate) {
-      throw new StructuredError({
-        code: 'CLI141',
-        message:
-          'generation dialogue-audio generate --all cannot use one approval token for multiple live dialogue generations.',
-        suggestion:
-          'Run generation dialogue-audio plan, then generate each dialogue separately with the approval token for that exact dialogue request, or add --simulate for a bulk dry run.',
-      });
-    }
-    const context =
-      await input.runtime.projectDataService.readSceneDialogueAudioContext({
-        ...generationProjectInput(input.runtime),
-        sceneId,
-      });
-    const generated = [];
-    for (const dialogue of context.dialogues) {
-      if (!dialogue.castMemberId) {
-        continue;
-      }
-      const voices =
-        context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [];
-      if (!voices.some((voice) => voice.usable)) {
-        continue;
-      }
-      generated.push(
-        await input.runtime.projectDataService.generateSceneDialogueAudioTake({
-          ...generationProjectInput(input.runtime),
-          sceneId,
-          dialogueId: dialogue.dialogueId,
-          setup: {},
-          approvalToken: input.flags.approvalToken,
-          allowUnpricedCost: input.flags.allowUnpricedCost,
-          simulate: input.flags.simulate,
-        }),
-      );
-    }
-    return { generatedCount: generated.length, generated };
+    return runAllDialogueAudioGenerate(input, sceneId);
   }
   const approvalToken = input.flags.simulate
     ? input.flags.approvalToken
@@ -343,6 +349,62 @@ async function runDialogueAudioGenerate(
     allowUnpricedCost: input.flags.allowUnpricedCost,
     simulate: input.flags.simulate,
   });
+}
+
+async function runAllDialogueAudioGenerate(
+  input: GenerationCommandInput,
+  sceneId: string
+): Promise<unknown> {
+  assertDialogueAudioBulkGenerateIsSimulated(input);
+  const context =
+    await input.runtime.projectDataService.readSceneDialogueAudioContext({
+      ...generationProjectInput(input.runtime),
+      sceneId,
+    });
+  const generated = [];
+  for (const dialogue of context.dialogues) {
+    if (!canBulkGenerateDialogue(context, dialogue)) {
+      continue;
+    }
+    generated.push(
+      await input.runtime.projectDataService.generateSceneDialogueAudioTake({
+        ...generationProjectInput(input.runtime),
+        sceneId,
+        dialogueId: dialogue.dialogueId,
+        setup: {},
+        approvalToken: input.flags.approvalToken,
+        allowUnpricedCost: input.flags.allowUnpricedCost,
+        simulate: input.flags.simulate,
+      })
+    );
+  }
+  return { generatedCount: generated.length, generated };
+}
+
+function assertDialogueAudioBulkGenerateIsSimulated(
+  input: GenerationCommandInput
+): void {
+  if (input.flags.simulate) {
+    return;
+  }
+  throw new StructuredError({
+    code: 'CLI141',
+    message:
+      'generation dialogue-audio generate --all cannot use one approval token for multiple live dialogue generations.',
+    suggestion:
+      'Run generation dialogue-audio plan, then generate each dialogue separately with the approval token for that exact dialogue request, or add --simulate for a bulk dry run.',
+  });
+}
+
+function canBulkGenerateDialogue(
+  context: SceneDialogueAudioPlanContext,
+  dialogue: SceneDialogueAudioPlanDialogue
+): boolean {
+  if (!dialogue.castMemberId) {
+    return false;
+  }
+  const voices = context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [];
+  return voices.some((voice) => voice.usable);
 }
 
 async function runDialogueAudioPick(

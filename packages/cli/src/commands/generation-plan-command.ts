@@ -79,9 +79,9 @@ function formatShotVideoTakePlan(plan: ShotVideoTakeGenerationPlan): string {
     'Lines:',
     ...plan.lines.map(formatPlanLine),
     '',
-    'Planning levels:',
-    ...plan.dependencyMap.execution.levels.map(
-      (level, index) => `  ${index + 1}. ${level.join(', ')}`
+    'Dependency checklist:',
+    ...plan.dependencyInventory.agentChecklist.map(
+      (item) => `  - ${item.action}: ${item.label}`
     ),
   ];
   const missing = plan.lines.filter((line) => line.kind === 'required-attachment');

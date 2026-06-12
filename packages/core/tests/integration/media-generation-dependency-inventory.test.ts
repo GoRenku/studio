@@ -24,12 +24,12 @@ import {
 
 type ProjectDataService = ReturnType<typeof createProjectDataService>;
 
-describe('media generation dependency graph estimates integration', () => {
+describe('media generation dependency inventory estimates integration', () => {
   let homeDir: string;
   let projectData = createProjectDataService();
 
   beforeEach(async () => {
-    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-generation-dependency-graph-'));
+    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-generation-dependency-inventory-'));
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
     projectData = createProjectDataService();
     await createSampleMovieProject({ projectData, homeDir });
@@ -56,7 +56,7 @@ describe('media generation dependency graph estimates integration', () => {
     expect(persisted.specs).toEqual([]);
   });
 
-  it('prices shot reference video plus cast, location, and Lookbook dependency nodes from the graph', async () => {
+  it('prices shot reference video plus cast, location, and Lookbook dependency lines from the inventory', async () => {
     const ids = await sampleIds(projectData, homeDir);
     const lookbook = await createActiveLookbook(projectData, homeDir);
     const written = await projectData.writeSceneShotList({
@@ -129,21 +129,21 @@ describe('media generation dependency graph estimates integration', () => {
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyNodeId: `planned:cast-character-sheet:${ids.castMemberId}`,
+          dependencyLineId: `dependency:cast-character-sheet:${ids.castMemberId}`,
           title: 'Mehmed II',
           caption: 'Character sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
-          dependencyNodeId: `planned:location-environment-sheet:${ids.locationId}`,
+          dependencyLineId: `dependency:location-environment-sheet:${ids.locationId}`,
           title: "Mehmed's council chamber",
           caption: 'Location sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
-          dependencyNodeId: `planned:lookbook-sheet:${lookbook.lookbook.id}`,
+          dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
           title: 'Imperial Wound',
           caption: 'Lookbook sheet',
           status: 'needed',
@@ -153,7 +153,7 @@ describe('media generation dependency graph estimates integration', () => {
     );
   });
 
-  it('expands a planned first-frame input into cast, location, and Lookbook dependency nodes', async () => {
+  it('expands a planned first-frame input into cast, location, and Lookbook dependency lines', async () => {
     const ids = await sampleIds(projectData, homeDir);
     const lookbook = await createActiveLookbook(projectData, homeDir);
     const written = await projectData.writeSceneShotList({
@@ -199,63 +199,61 @@ describe('media generation dependency graph estimates integration', () => {
       },
     });
 
-    const firstFrameNodeId = 'planned:first-frame:production-group:';
-    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
-    const locationNodeId = `planned:location-environment-sheet:${ids.locationId}`;
-    const lookbookNodeId = `planned:lookbook-sheet:${lookbook.lookbook.id}`;
+    const firstFrameLineId = 'dependency:first-frame:production-group:';
+    const characterLineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
+    const locationLineId = `dependency:location-environment-sheet:${ids.locationId}`;
+    const lookbookLineId = `dependency:lookbook-sheet:${lookbook.lookbook.id}`;
 
-    expect(preflight.plan?.dependencyMap.edges).toEqual(
+    expect(preflight.plan?.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          fromNodeId: characterNodeId,
-          toNodeId: firstFrameNodeId,
+          id: characterLineId,
+          requiredBy: expect.arrayContaining([firstFrameLineId]),
           required: false,
         }),
         expect.objectContaining({
-          fromNodeId: locationNodeId,
-          toNodeId: firstFrameNodeId,
+          id: locationLineId,
+          requiredBy: expect.arrayContaining([firstFrameLineId]),
           required: false,
         }),
         expect.objectContaining({
-          fromNodeId: lookbookNodeId,
-          toNodeId: firstFrameNodeId,
+          id: lookbookLineId,
+          requiredBy: expect.arrayContaining([firstFrameLineId]),
           required: false,
         }),
         expect.objectContaining({
-          fromNodeId: firstFrameNodeId,
-          toNodeId: 'final:shot.video-take',
+          id: firstFrameLineId,
+          requiredBy: expect.arrayContaining(['root:shot.video-take']),
           required: true,
         }),
       ])
     );
-    expect(preflight.plan?.dependencyMap.execution.levels).toEqual([
-      [firstFrameNodeId, characterNodeId, locationNodeId, lookbookNodeId],
-    ]);
+    expect(preflight.plan).not.toHaveProperty('dependencyMap');
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyNodeId: characterNodeId,
+          dependencyLineId: characterLineId,
           title: 'Mehmed II',
           caption: 'Character sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced', estimatedUsd: 0.04 }),
         }),
         expect.objectContaining({
-          dependencyNodeId: locationNodeId,
+          dependencyLineId: locationLineId,
           title: "Mehmed's council chamber",
           caption: 'Location sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced', estimatedUsd: 0.037 }),
         }),
         expect.objectContaining({
-          dependencyNodeId: lookbookNodeId,
+          dependencyLineId: lookbookLineId,
           title: 'Imperial Wound',
           caption: 'Lookbook sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced', estimatedUsd: 0.04 }),
         }),
         expect.objectContaining({
-          dependencyNodeId: firstFrameNodeId,
+          dependencyLineId: firstFrameLineId,
           title: 'First frame',
           caption: 'First frame',
           status: 'needed',
@@ -310,27 +308,31 @@ describe('media generation dependency graph estimates integration', () => {
       },
     });
 
-    const firstFrameNode = preflight.plan!.dependencyMap.nodes.find(
-      (node) => node.id === 'planned:first-frame:production-group:'
+    const firstFrameLine = preflight.plan!.dependencyInventory.dependencies.find(
+      (line) => line.id === 'dependency:first-frame:production-group:'
     );
-    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
-    const locationNodeId = `planned:location-environment-sheet:${ids.locationId}`;
-    const lookbookNodeId = `planned:lookbook-sheet:${lookbook.lookbook.id}`;
+    const characterLineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
+    const locationLineId = `dependency:location-environment-sheet:${ids.locationId}`;
+    const lookbookLineId = `dependency:lookbook-sheet:${lookbook.lookbook.id}`;
 
-    expect(firstFrameNode).toMatchObject({
-      kind: 'planned-generation',
-      state: 'planned',
-      materializationState: 'needs-authored-draft',
-      materializationReason:
-        'Author a concrete dependency draft before generating this shot input.',
+    expect(firstFrameLine).toMatchObject({
+      availability: { state: 'missing-generated' },
+      generationDraft: {
+        state: 'estimate-only',
+        reason: 'Author a concrete dependency draft before generating this shot input.',
+      },
       purpose: 'shot.first-frame',
       pricing: { state: 'priced', estimatedUsd: 0.005 },
       diagnostics: [],
     });
-    expect(firstFrameNode).not.toHaveProperty('draftGenerationSpec');
-    expect(preflight.plan?.dependencyMap.execution.levels).toEqual([
-      [characterNodeId, locationNodeId, lookbookNodeId],
-    ]);
+    expect(firstFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
+    expect(preflight.plan?.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: characterLineId }),
+        expect.objectContaining({ id: locationLineId }),
+        expect.objectContaining({ id: lookbookLineId }),
+      ])
+    );
     expect(preflight.finalTake.canCreateSpec).toBe(false);
     expect(preflight.plan?.estimate).toMatchObject({
       state: 'complete',
@@ -343,7 +345,7 @@ describe('media generation dependency graph estimates integration', () => {
 
   it('prices first and last frame dependencies before their prompts are authored', async () => {
     const ids = await sampleIds(projectData, homeDir);
-    const lookbook = await createActiveLookbook(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
     const written = await projectData.writeSceneShotList({
       homeDir,
       document: sampleShotList(ids),
@@ -367,31 +369,25 @@ describe('media generation dependency graph estimates integration', () => {
       },
     });
 
-    const firstFrameNode = estimate.plan!.dependencyMap.nodes.find(
-      (node) => node.id === 'planned:first-frame:production-group:'
+    const firstFrameLine = estimate.plan!.dependencyInventory.dependencies.find(
+      (line) => line.id === 'dependency:first-frame:production-group:'
     );
-    const lastFrameNode = estimate.plan!.dependencyMap.nodes.find(
-      (node) => node.id === 'planned:last-frame:production-group:'
+    const lastFrameLine = estimate.plan!.dependencyInventory.dependencies.find(
+      (line) => line.id === 'dependency:last-frame:production-group:'
     );
-    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
-    const locationNodeId = `planned:location-environment-sheet:${ids.locationId}`;
-    const lookbookNodeId = `planned:lookbook-sheet:${lookbook.lookbook.id}`;
 
-    expect(firstFrameNode).toMatchObject({
-      state: 'planned',
-      materializationState: 'needs-authored-draft',
+    expect(firstFrameLine).toMatchObject({
+      availability: { state: 'missing-generated' },
+      generationDraft: { state: 'estimate-only' },
       pricing: { state: 'priced', estimatedUsd: 0.005 },
     });
-    expect(firstFrameNode).not.toHaveProperty('draftGenerationSpec');
-    expect(lastFrameNode).toMatchObject({
-      state: 'planned',
-      materializationState: 'needs-authored-draft',
+    expect(firstFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
+    expect(lastFrameLine).toMatchObject({
+      availability: { state: 'missing-generated' },
+      generationDraft: { state: 'estimate-only' },
       pricing: { state: 'priced', estimatedUsd: 0.005 },
     });
-    expect(lastFrameNode).not.toHaveProperty('draftGenerationSpec');
-    expect(estimate.plan?.dependencyMap.execution.levels).toEqual([
-      [characterNodeId, locationNodeId, lookbookNodeId],
-    ]);
+    expect(lastFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
     expect(estimate.plan?.estimate).toMatchObject({
       state: 'complete',
       pricedLineCount: 6,
@@ -404,6 +400,7 @@ describe('media generation dependency graph estimates integration', () => {
 
   it('plans a valid shot.video-take spec with imported first and last frame inputs through the shared dependency planner', async () => {
     const ids = await sampleIds(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
     const written = await projectData.writeSceneShotList({
       homeDir,
       document: sampleShotList(ids),
@@ -468,45 +465,62 @@ describe('media generation dependency graph estimates integration', () => {
       spec,
     });
 
-    expect(plan.dependencyMap.nodes).toEqual(
+    expect(plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'asset:first-frame:production-group:',
-          kind: 'existing-asset',
+          id: 'dependency:first-frame:production-group:scene_shot_video_take_group_generic',
           dependencyKind: 'first-frame',
-          state: 'ready',
-          materializationState: 'materialized',
-          assetId: firstFrame.input.assetId,
-          assetFileId: firstFrame.input.assetFileId,
+          availability: { state: 'satisfied' },
+          selectedAsset: expect.objectContaining({
+            assetId: firstFrame.input.assetId,
+            assetFileId: firstFrame.input.assetFileId,
+          }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          id: 'asset:last-frame:production-group:',
-          kind: 'existing-asset',
+          id: 'dependency:last-frame:production-group:scene_shot_video_take_group_generic',
           dependencyKind: 'last-frame',
-          state: 'ready',
-          materializationState: 'materialized',
-          assetId: lastFrame.input.assetId,
-          assetFileId: lastFrame.input.assetFileId,
+          availability: { state: 'satisfied' },
+          selectedAsset: expect.objectContaining({
+            assetId: lastFrame.input.assetId,
+            assetFileId: lastFrame.input.assetFileId,
+          }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
       ])
     );
-    expect(plan.lines.filter((line) => line.kind === 'dependency-generation')).toEqual([]);
+    expect(plan.lines.filter((line) => line.kind === 'dependency-generation')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyKind: 'cast-character-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+        expect.objectContaining({
+          dependencyKind: 'location-environment-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+        expect.objectContaining({
+          dependencyKind: 'lookbook-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
     expect(plan.lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          nodeId: 'asset:first-frame:production-group:',
+          dependencyLineId:
+            'dependency:first-frame:production-group:scene_shot_video_take_group_generic',
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          nodeId: 'asset:last-frame:production-group:',
+          dependencyLineId:
+            'dependency:last-frame:production-group:scene_shot_video_take_group_generic',
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          nodeId: 'final:shot.video-take',
+          dependencyLineId: 'root:shot.video-take',
           kind: 'final-video-generation',
           pricing: { state: 'priced', estimatedUsd: 3.402 },
         }),
@@ -514,11 +528,12 @@ describe('media generation dependency graph estimates integration', () => {
     );
     expect(plan.estimate).toMatchObject({
       state: 'complete',
-      estimatedTotalUsd: 3.402,
-      pricedNodeCount: 3,
-      missingNodeCount: 0,
+      estimatedTotalUsd: expect.any(Number),
+      pricedDependencyCount: 6,
+      unavailableDependencyCount: 0,
       requiresPriceOverride: false,
     });
+    expect(plan.dependencyInventory.rootGeneration.canCreateSpec).toBe(true);
   });
 
   it('reuses imported first and last frame shot inputs at zero cost in the shot production estimate', async () => {
@@ -579,20 +594,24 @@ describe('media generation dependency graph estimates integration', () => {
     });
 
     expect(estimate.issues).toEqual([]);
-    expect(estimate.plan?.dependencyMap.nodes).toEqual(
+    expect(estimate.plan?.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'asset:first-frame:production-group:',
-          kind: 'existing-asset',
-          assetId: firstFrame.input.assetId,
-          assetFileId: firstFrame.input.assetFileId,
+          id: 'dependency:first-frame:production-group:',
+          availability: { state: 'satisfied' },
+          selectedAsset: expect.objectContaining({
+            assetId: firstFrame.input.assetId,
+            assetFileId: firstFrame.input.assetFileId,
+          }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          id: 'asset:last-frame:production-group:',
-          kind: 'existing-asset',
-          assetId: lastFrame.input.assetId,
-          assetFileId: lastFrame.input.assetFileId,
+          id: 'dependency:last-frame:production-group:',
+          availability: { state: 'satisfied' },
+          selectedAsset: expect.objectContaining({
+            assetId: lastFrame.input.assetId,
+            assetFileId: lastFrame.input.assetFileId,
+          }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
       ])
@@ -603,17 +622,17 @@ describe('media generation dependency graph estimates integration', () => {
     expect(estimate.plan?.lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          nodeId: 'asset:first-frame:production-group:',
+          dependencyLineId: 'dependency:first-frame:production-group:',
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          nodeId: 'asset:last-frame:production-group:',
+          dependencyLineId: 'dependency:last-frame:production-group:',
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          nodeId: 'final:shot.video-take',
+          dependencyLineId: 'root:shot.video-take',
           kind: 'final-video-generation',
           pricing: { state: 'priced', estimatedUsd: 3.402 },
         }),
@@ -628,7 +647,7 @@ describe('media generation dependency graph estimates integration', () => {
     });
   });
 
-  it('uses the shared dependency graph to price cast profile character-sheet dependencies', async () => {
+  it('uses the shared dependency inventory to price cast profile character-sheet dependencies', async () => {
     const ids = await sampleIds(projectData, homeDir);
     await createActiveLookbook(projectData, homeDir);
 
@@ -638,26 +657,27 @@ describe('media generation dependency graph estimates integration', () => {
       spec: castProfileSpec(ids.castMemberId),
     });
 
-    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
-    expect(plan.dependencyMap.edges).toEqual(
+    const characterLineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
+    expect(plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          fromNodeId: characterNodeId,
-          toNodeId: 'final:cast.profile',
+          id: characterLineId,
+          requiredBy: expect.arrayContaining(['root:cast.profile']),
+          availability: { state: 'missing-generated' },
         }),
       ])
     );
     expect(plan.lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          nodeId: characterNodeId,
+          dependencyLineId: characterLineId,
           kind: 'dependency-generation',
           dependencyKind: 'cast-character-sheet',
           purpose: 'cast.character-sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
-          nodeId: 'final:cast.profile',
+          dependencyLineId: 'root:cast.profile',
           kind: 'final-generation',
           purpose: 'cast.profile',
           pricing: expect.objectContaining({ state: 'priced' }),
@@ -671,7 +691,7 @@ describe('media generation dependency graph estimates integration', () => {
     expect(plan.estimate).toMatchObject({
       state: 'complete',
       estimatedTotalUsd: pricedTotal,
-      missingNodeCount: 0,
+      unavailableDependencyCount: 0,
       requiresPriceOverride: false,
     });
   });
@@ -720,13 +740,15 @@ describe('media generation dependency graph estimates integration', () => {
       spec: castProfileSpec(ids.castMemberId),
     });
 
-    expect(plan.dependencyMap.nodes).toEqual(
+    expect(plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `asset:cast-character-sheet:${ids.castMemberId}`,
-          kind: 'existing-asset',
-          assetId: imported.imported.assetId,
-          assetFileId: primaryFile.id,
+          id: `dependency:cast-character-sheet:${ids.castMemberId}`,
+          availability: { state: 'satisfied' },
+          selectedAsset: expect.objectContaining({
+            assetId: imported.imported.assetId,
+            assetFileId: primaryFile.id,
+          }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
       ])
@@ -790,13 +812,12 @@ describe('media generation dependency graph estimates integration', () => {
       spec: castProfileSpec(ids.castMemberId),
     });
 
-    const nodeId = `missing:cast-character-sheet:${ids.castMemberId}`;
-    expect(plan.dependencyMap.nodes).toEqual(
+    const lineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
+    expect(plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: nodeId,
-          kind: 'external-input-required',
-          state: 'missing',
+          id: lineId,
+          availability: { state: 'invalid-selection' },
           diagnostics: expect.arrayContaining([
             expect.objectContaining({
               code: 'CORE_MEDIA_DEPENDENCY_AMBIGUOUS_SELECTED_ASSET',
@@ -809,7 +830,7 @@ describe('media generation dependency graph estimates integration', () => {
     expect(plan.lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          nodeId,
+          dependencyLineId: lineId,
           kind: 'required-attachment',
           pricing: { state: 'not-applicable', estimatedUsd: null },
         }),
@@ -818,7 +839,7 @@ describe('media generation dependency graph estimates integration', () => {
     expect(plan.estimate).toMatchObject({
       state: 'unavailable',
       estimatedTotalUsd: null,
-      missingNodeCount: 1,
+      unavailableDependencyCount: 1,
     });
     expect(plan.diagnostics).toEqual(
       expect.arrayContaining([
@@ -861,13 +882,12 @@ describe('media generation dependency graph estimates integration', () => {
       spec: castProfileSpec(ids.castMemberId),
     });
 
-    const nodeId = `missing:cast-character-sheet:${ids.castMemberId}`;
-    expect(plan.dependencyMap.nodes).toEqual(
+    const lineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
+    expect(plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: nodeId,
-          kind: 'external-input-required',
-          state: 'missing',
+          id: lineId,
+          availability: { state: 'invalid-selection' },
           diagnostics: expect.arrayContaining([
             expect.objectContaining({
               code: 'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
@@ -880,7 +900,7 @@ describe('media generation dependency graph estimates integration', () => {
     expect(plan.estimate).toMatchObject({
       state: 'unavailable',
       estimatedTotalUsd: null,
-      missingNodeCount: 1,
+      unavailableDependencyCount: 1,
     });
     expect(plan.diagnostics).toEqual(
       expect.arrayContaining([

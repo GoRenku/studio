@@ -92,7 +92,6 @@ describe('shot video take preflight and validation', () => {
         inputs: [],
         title: 'Text-only take with optional references ignored',
       },
-      idGenerator: createDeterministicIdGenerator(),
     });
     expect(created).toMatchObject({
       purpose: 'shot.video-take',
@@ -649,7 +648,7 @@ describe('shot video take preflight and validation', () => {
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyNodeId: `planned:lookbook-sheet:${lookbook.lookbook.id}`,
+          dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
           title: 'Imperial Wound',
           caption: 'Lookbook sheet',
           mediaKind: 'image',
@@ -694,20 +693,20 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    expect(report.plan.dependencyMap.nodes).toEqual(
+    expect(report.plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `planned:cast-character-sheet:${ids.castMemberId}`,
+          id: `dependency:cast-character-sheet:${ids.castMemberId}`,
           dependencyKind: 'cast-character-sheet',
           purpose: 'cast.character-sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
       ])
     );
-    expect(report.plan.dependencyMap.nodes).not.toEqual(
+    expect(report.plan.dependencyInventory.dependencies).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `planned:cast-character-sheet:${ids.extraCastMemberId}`,
+          id: `dependency:cast-character-sheet:${ids.extraCastMemberId}`,
         }),
       ])
     );
@@ -730,7 +729,7 @@ describe('shot video take preflight and validation', () => {
       ],
     });
     expect(
-      unselectedExtraCast?.characterSheets[0]?.card.dependencyNodeId
+      unselectedExtraCast?.characterSheets[0]?.card.dependencyLineId
     ).toBeUndefined();
 
     await projectData.updateSceneShotCastReferences({
@@ -751,20 +750,180 @@ describe('shot video take preflight and validation', () => {
         parameterValues: { duration: 6 },
       },
     });
-    expect(updatedReport.plan.dependencyMap.nodes).toEqual(
+    expect(updatedReport.plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `planned:cast-character-sheet:${ids.extraCastMemberId}`,
+          id: `dependency:cast-character-sheet:${ids.extraCastMemberId}`,
           dependencyKind: 'cast-character-sheet',
           purpose: 'cast.character-sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
       ])
     );
-    expect(updatedReport.plan.dependencyMap.nodes).not.toEqual(
+    expect(updatedReport.plan.dependencyInventory.dependencies).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `planned:cast-character-sheet:${ids.castMemberId}`,
+          id: `dependency:cast-character-sheet:${ids.castMemberId}`,
+        }),
+      ])
+    );
+  });
+
+  it('prices selected missing visual references for text-only shot video plans', async () => {
+    const ids = await sampleIds();
+    const written = await writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    expect(report.plan.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+          required: false,
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+        expect.objectContaining({
+          id: `dependency:cast-character-sheet:${ids.castMemberId}`,
+          required: false,
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      ])
+    );
+    expect(report.references.lookbook[0]?.card).toEqual(
+      expect.objectContaining({
+        state: 'selected-planned',
+        dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+        pricing: expect.objectContaining({ state: 'priced' }),
+      })
+    );
+    expect(report.references.castMembers[0]?.characterSheets[0]?.card).toEqual(
+      expect.objectContaining({
+        state: 'selected-planned',
+        dependencyLineId: `dependency:cast-character-sheet:${ids.castMemberId}`,
+        pricing: expect.objectContaining({ state: 'priced' }),
+      })
+    );
+  });
+
+  it('prices missing default locations while keeping scoped generated locations ready', async () => {
+    const ids = await sampleIds();
+    const scopedLocationId = await addExtraLocationToSceneNarrative(ids);
+    const project = await projectData.readCurrentProject({ homeDir });
+    if (!project) {
+      throw new Error('Expected current project to exist.');
+    }
+    const locationSheetFiles = await writeLocationSheetImportFiles(
+      project.projectFolder,
+      'scoped-location-sheet'
+    );
+    const scopedLocationSheet =
+      await projectData.importLocationEnvironmentSheetMedia({
+        projectName: 'constantinople',
+        homeDir,
+        locationId: scopedLocationId,
+        files: locationSheetFiles,
+        title: 'Scoped generated location sheet',
+      });
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: {
+        ...sampleShotList(ids, 1),
+        shots: [
+          {
+            ...sampleShotList(ids, 1).shots[0]!,
+            shotSpecs: {
+              location: {
+                locationId: scopedLocationId,
+                environmentSheetAssetId: scopedLocationSheet.imported.assetId,
+                viewIds: ['front'],
+              },
+            },
+          },
+        ],
+      },
+    });
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    const defaultLocation = report.references.locations.find(
+      (location) => location.locationId === ids.locationId
+    );
+    const scopedLocation = report.references.locations.find(
+      (location) => location.locationId === scopedLocationId
+    );
+
+    expect(defaultLocation?.environmentSheets[0]?.card).toEqual(
+      expect.objectContaining({
+        state: 'selected-planned',
+        dependencyLineId: `dependency:location-environment-sheet:${ids.locationId}`,
+        pricing: expect.objectContaining({ state: 'priced' }),
+      })
+    );
+    expect(scopedLocation?.environmentSheets[0]?.card).toEqual(
+      expect.objectContaining({
+        state: 'selected-ready',
+        dependencyLineId: `dependency:location-environment-sheet:${scopedLocationId}`,
+        pricing: { state: 'priced', estimatedUsd: 0 },
+      })
+    );
+    expect(report.plan.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:location-environment-sheet:${ids.locationId}`,
+          availability: { state: 'missing-generated' },
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+        expect.objectContaining({
+          id: `dependency:location-environment-sheet:${scopedLocationId}`,
+          availability: { state: 'satisfied' },
+          selectedAsset: expect.objectContaining({
+            assetId: scopedLocationSheet.imported.assetId,
+          }),
+          pricing: { state: 'priced', estimatedUsd: 0 },
         }),
       ])
     );
@@ -840,14 +999,16 @@ describe('shot video take preflight and validation', () => {
         }),
       ])
     );
-    expect(preflight.plan?.dependencyMap.nodes).toEqual(
+    expect(preflight.plan?.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `asset:lookbook-sheet:${lookbook.lookbook.id}`,
-          kind: 'existing-asset',
+          id: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+          availability: { state: 'satisfied' },
           dependencyKind: 'lookbook-sheet',
-          assetId: sheetB.imported.asset.assetId,
-          assetFileId: selectedSheetFile.id,
+          selectedAsset: expect.objectContaining({
+            assetId: sheetB.imported.asset.assetId,
+            assetFileId: selectedSheetFile.id,
+          }),
         }),
       ])
     );
@@ -872,13 +1033,13 @@ describe('shot video take preflight and validation', () => {
         state: 'available',
       },
     });
-    expect(sheetAChoice?.card.dependencyNodeId).toBeUndefined();
+    expect(sheetAChoice?.card.dependencyLineId).toBeUndefined();
     expect(sheetAChoice?.card.planLineId).toBeUndefined();
     expect(sheetBChoice).toMatchObject({
       selected: true,
       card: {
         state: 'selected-ready',
-        dependencyNodeId: `asset:lookbook-sheet:${lookbook.lookbook.id}`,
+        dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
       },
     });
   });
@@ -1107,6 +1268,58 @@ describe('shot video take preflight and validation', () => {
     });
   }
 
+  async function addExtraLocationToSceneNarrative(ids: {
+    sceneId: string;
+    locationId: string;
+  }): Promise<string> {
+    await projectData.applyLocationOperations({
+      homeDir,
+      document: {
+        kind: 'locationOperations',
+        operations: [
+          {
+            operation: 'location.add',
+            location: {
+              key: 'ottoman-siege-camp',
+              handle: 'ottoman-siege-camp',
+              name: 'Ottoman Siege Camp',
+              description: 'A smoky siege camp outside the city walls.',
+            },
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const location = screenplay.screenplay!.locations.find(
+      (entry) => entry.handle === 'ottoman-siege-camp'
+    );
+    if (!location?.id) {
+      throw new Error('Expected test location to be created.');
+    }
+    await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: ids.sceneId,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...scene,
+          blocks: [
+            ...scene.blocks,
+            {
+              type: 'action',
+              text: 'The siege camp answers the city walls across the field.',
+              castMemberIds: [],
+              locationIds: [ids.locationId, location.id],
+            },
+          ],
+        },
+      },
+    });
+    return location.id as string;
+  }
+
   async function writeShotList(
     ids: { sceneId: string; castMemberId: string; locationId: string },
     shotCount: number
@@ -1129,6 +1342,31 @@ describe('shot video take preflight and validation', () => {
     const absolutePath = path.join(project.projectFolder, projectRelativePath);
     await fs.mkdir(path.dirname(absolutePath), { recursive: true });
     await fs.writeFile(absolutePath, contents);
+  }
+
+  async function writeLocationSheetImportFiles(
+    projectPath: string,
+    folderName: string
+  ): Promise<{
+    composite: string;
+    view_front: string;
+    view_right: string;
+    view_back: string;
+    view_left: string;
+  }> {
+    const folder = `generated/media/${folderName}`;
+    await fs.mkdir(path.join(projectPath, folder), { recursive: true });
+    const files = {
+      composite: `${folder}/composite.png`,
+      view_front: `${folder}/front.png`,
+      view_right: `${folder}/right.png`,
+      view_back: `${folder}/back.png`,
+      view_left: `${folder}/left.png`,
+    };
+    for (const [role, projectRelativePath] of Object.entries(files)) {
+      await fs.writeFile(path.join(projectPath, projectRelativePath), role);
+    }
+    return files;
   }
 
   async function projectFileExists(projectRelativePath: string): Promise<boolean> {

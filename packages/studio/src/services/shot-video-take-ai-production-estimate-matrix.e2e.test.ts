@@ -85,6 +85,7 @@ const REFERENCE_BUNDLE_DEPENDENCY_COST_USD =
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD +
   GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD +
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
+const REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT = 3;
 const INPUT_MODES: ShotVideoTakeInputModeId[] = [
   'text-only',
   'first-frame',
@@ -318,7 +319,7 @@ describe('shot video take estimate integration matrix', () => {
     assertNoObsoleteEstimateFields(report);
   });
 
-  it.each(ESTIMATE_MATRIX)('$label estimates final video creation only', async (entry) => {
+  it.each(ESTIMATE_MATRIX)('$label estimates prepared video setup', async (entry) => {
     const estimate = await estimateFromBrowserClient({
       projectData,
       homeDir,
@@ -326,9 +327,12 @@ describe('shot video take estimate integration matrix', () => {
       entry,
       includePreparedInputs: true,
     });
+    const preparedDependencyCostUsd = preparedDependencyCostForRoute(entry);
 
     expect(estimate.issues).toEqual([]);
-    expect(estimate.plan?.lines.filter((line) => line.kind === 'dependency-generation')).toEqual([]);
+    expect(
+      estimate.plan?.lines.filter((line) => line.kind === 'dependency-generation')
+    ).toHaveLength(preparedDependencyLineCountForRoute(entry));
     expect(estimate.plan?.request.routeSettings).toEqual(entry.expectedRouteSettings);
     expect(estimate.estimate).toMatchObject({
       provider: 'fal-ai',
@@ -341,7 +345,7 @@ describe('shot video take estimate integration matrix', () => {
       6
     );
     expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(
-      entry.expectedCostUsd,
+      entry.expectedCostUsd + preparedDependencyCostUsd,
       6
     );
 
@@ -1119,18 +1123,12 @@ function missingDependencyCostForRoute(input: {
   shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
 }): number {
-  let cost = 0;
+  let cost = REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
   if (input.inputModeId === 'first-frame') {
-    cost += FIRST_FRAME_DEPENDENCY_COST_USD + REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
+    cost += FIRST_FRAME_DEPENDENCY_COST_USD;
   }
   if (input.inputModeId === 'first-last-frame') {
-    cost +=
-      FIRST_FRAME_DEPENDENCY_COST_USD +
-      LAST_FRAME_DEPENDENCY_COST_USD +
-      REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
-  }
-  if (input.inputModeId === 'reference') {
-    cost += REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
+    cost += FIRST_FRAME_DEPENDENCY_COST_USD + LAST_FRAME_DEPENDENCY_COST_USD;
   }
   if (requiresMultiShotStoryboard(input)) {
     cost += MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD;
@@ -1143,20 +1141,31 @@ function missingDependencyLineCountForRoute(input: {
   shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
 }): number {
-  let count = 0;
+  let count = REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT;
   if (input.inputModeId === 'first-last-frame') {
-    count += 5;
+    count += 2;
   }
   if (input.inputModeId === 'first-frame') {
-    count += 4;
-  }
-  if (input.inputModeId === 'reference') {
-    count += 3;
+    count += 1;
   }
   if (requiresMultiShotStoryboard(input)) {
     count += 1;
   }
   return count;
+}
+
+function preparedDependencyCostForRoute(input: {
+  inputModeId: ShotVideoTakeInputModeId;
+}): number {
+  return input.inputModeId === 'reference' ? 0 : REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
+}
+
+function preparedDependencyLineCountForRoute(input: {
+  inputModeId: ShotVideoTakeInputModeId;
+}): number {
+  return input.inputModeId === 'reference'
+    ? 0
+    : REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT;
 }
 
 function requiresMultiShotStoryboard(input: {

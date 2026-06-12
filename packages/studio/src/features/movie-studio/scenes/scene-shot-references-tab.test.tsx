@@ -104,6 +104,38 @@ describe('SceneShotReferencesTab', () => {
     ).toBe('/shot-inputs/constantinople/scene_hook/input_blade/file_blade');
   });
 
+  it('shows inventory estimates for selected planned dependency references', () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        productionPlan={productionPlanWithPlannedReferenceEstimate()}
+        {...handlers}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Missing First Frame' })).toBeTruthy();
+    expect(screen.getByText('$0.04')).toBeTruthy();
+  });
+
+  it('does not show generation estimates for selected ready dependency references', () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        productionPlan={productionPlanWithReadyReferenceEstimate()}
+        {...handlers}
+      />
+    );
+
+    expect(screen.getByRole('img', { name: 'Generated Character Sheet' })).toBeTruthy();
+    expect(screen.queryByText('$0.04')).toBeNull();
+  });
+
   it('selects and clears imported reference image takes from the shared card controls', async () => {
     const handlers = referenceHandlers();
     render(
@@ -265,6 +297,71 @@ function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport 
           'file_blade',
           false
         ),
+      ],
+      lookbook: [],
+      castMembers: [],
+      locations: [],
+    },
+    diagnostics: [],
+  } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
+function productionPlanWithPlannedReferenceEstimate(): ShotVideoTakeProductionPlanReport {
+  return {
+    references: {
+      general: [
+        {
+          id: 'first-frame:shot:shot_001',
+          kind: 'first-frame',
+          title: 'Missing First Frame',
+          selected: true,
+          card: {
+            state: 'selected-planned',
+            mediaKind: 'image',
+            dependencyId: 'first-frame:shot:shot_001',
+            dependencyLineId: 'dependency-line:first-frame:shot:shot_001',
+            pricing: { state: 'priced', estimatedUsd: 0.04 },
+            previews: [],
+            diagnostics: [],
+          },
+        },
+      ],
+      lookbook: [],
+      castMembers: [],
+      locations: [],
+    },
+    diagnostics: [],
+  } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
+function productionPlanWithReadyReferenceEstimate(): ShotVideoTakeProductionPlanReport {
+  return {
+    references: {
+      general: [
+        {
+          id: 'character-sheet:cast:urban',
+          kind: 'reference-image',
+          title: 'Generated Character Sheet',
+          selected: true,
+          card: {
+            state: 'selected-ready',
+            mediaKind: 'image',
+            dependencyId: 'cast-character-sheet:cast_urban',
+            dependencyLineId: 'dependency:cast-character-sheet:cast_urban',
+            pricing: { state: 'priced', estimatedUsd: 0 },
+            previews: [
+              {
+                inputId: 'input_character_sheet',
+                assetId: 'asset_character_sheet',
+                assetFileId: 'file_character_sheet',
+                projectRelativePath: 'generated/character-sheet.png' as never,
+                title: 'Generated Character Sheet',
+                alt: 'Generated Character Sheet',
+              },
+            ],
+            diagnostics: [],
+          },
+        },
       ],
       lookbook: [],
       castMembers: [],

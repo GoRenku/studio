@@ -94,7 +94,7 @@ export async function estimateDraftDependency(
       createDiagnosticError(
         'CORE_MEDIA_DEPENDENCY_ESTIMATE_FAILED',
         message,
-        { path: ['dependencyMap', 'nodes'] },
+        { path: ['dependencyInventory', 'dependencies'] },
         'Review the dependency draft spec and provider pricing support.'
       )
     );

@@ -147,15 +147,15 @@ renku generation run --spec <spec-id> --simulate --json
 
 For `shot.video-take`, `generation preflight` is the authoritative dependency
 check before final generation. Agents should read `inputsToCreate`,
-`inputPlanItems`, `plan.dependencyMap`, `prompts`, and
+`inputPlanItems`, `plan.dependencyInventory`, `prompts`, and
 `finalTake.canCreateSpec`.
 
 Core never synthesizes generic shot-video dependency prompts. First-frame,
 last-frame, ad hoc reference-image, and multi-shot storyboard sheet dependency
-nodes require authored `agentProposal.dependencyDrafts[]` entries before they
-can include a draft generation spec. Missing authored drafts are structured
-diagnostics. `shot.reference-image` specs also require a title that names the
-reference intent shown in Studio.
+lines may use estimate-only drafts before the user or agent authors concrete
+`agentProposal.dependencyDrafts[]` entries. Estimate-only drafts can price the
+dependency, but they are not runnable generation specs. `shot.reference-image`
+specs also require a title that names the reference intent shown in Studio.
 
 The Studio shot References tab displays imported/generated `first-frame`,
 `last-frame`, `reference-image`, and `multi-shot-storyboard-sheet` inputs that
@@ -171,48 +171,53 @@ Purpose definitions keep purpose-specific behavior such as context building,
 model options, provider payloads, output names, dependency declarations, draft
 dependency specs, and media import behavior.
 
-## Dependency Graphs And Estimates
+## Dependency Inventories And Estimates
 
-`planMediaGenerationDependencies` is the shared read-only dependency graph
+`planMediaGenerationDependencies` is the shared read-only dependency inventory
 path. It accepts a root generation spec, validates it through the purpose
 registry, asks the root purpose for dependency slots, resolves existing assets,
-plans missing generated dependencies, estimates every generated node through
-engines pricing, estimates the root generation, and returns:
+plans missing generated dependencies, estimates every generated dependency
+through engines pricing, estimates the root generation, and returns:
 
-- `dependencyMap.nodes`;
-- `dependencyMap.edges`;
-- `dependencyMap.execution.levels`;
+- `dependencyInventory.dependencies`;
+- `dependencyInventory.rootGeneration`;
+- `dependencyInventory.estimate`;
+- `dependencyInventory.agentChecklist`;
 - `lines`;
-- `estimate`;
 - `diagnostics`.
 
+Dependencies are an inventory, checklist, and estimate contract. They are not
+an automatic execution graph, and no dependency line is run automatically.
+
 Generated dependency prices come only from engines estimates. Existing assets
-are represented as graph nodes priced at `$0.00`. Manual attachments are not
-generation work and use `not-applicable` pricing.
+are represented as satisfied dependency lines priced at `$0.00`. Manual
+attachments are not generation work and use `not-applicable` pricing.
 
 Estimate states:
 
-- `complete`: every generated graph node is priced and no required dependency is
-  missing;
-- `partial`: at least one generated node is unpriced and requires explicit
+- `complete`: the root generation and every generated dependency line are
+  priced, with no required manual or invalid dependency blocking the total;
+- `partial`: at least one generated dependency or root line is unpriced and
+  requires explicit
   unpriced-cost approval;
-- `unavailable`: at least one required dependency is missing, so no trustworthy
-  total is exposed.
+- `unavailable`: at least one required manual dependency, invalid selected
+  asset, invalid target, or invalid selector result prevents a trustworthy
+  total.
 
-The total for a complete plan is the sum of graph nodes, including the root
-generation and generated dependencies. Studio must render this value from the
-core report and must not calculate a separate total.
+The total for a complete plan is the sum of dependency inventory pricing,
+including the root generation and generated dependencies. Studio must render
+this value from the core report and must not calculate a separate total.
 
 Root spec creation and update call the shared dependency planner when the root
 purpose declares dependencies. They fail with
 `CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCIES` while any required
 dependency is still a planned generation or external attachment. Generate or
-import dependencies first, refresh the graph, then create the root spec.
+import dependencies first, refresh the inventory, then create the root spec.
 
 The first shared non-shot proof is `cast.profile`. It declares a
 `cast-character-sheet:<castMemberId>` dependency, reuses an imported character
 sheet at `$0.00`, plans a missing `cast.character-sheet` dependency when no
-sheet exists, and includes that dependency in the profile graph estimate.
+sheet exists, and includes that dependency in the profile inventory estimate.
 
 ## Lookbook Image Context
 

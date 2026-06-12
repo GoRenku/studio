@@ -35,9 +35,9 @@ import {
   requireMediaGenerationPurposeDefinition,
 } from './purpose-registry.js';
 import type { PlanMediaGenerationDependenciesInput } from '../project-data-service-contracts.js';
-import { resolveMediaGenerationDependencyGraph } from './dependency-graph.js';
-import { resolveExistingDependencyAsset } from './dependency-asset-selectors.js';
-import { planLinesFromDependencyMap } from './dependency-plan-lines.js';
+import { planMediaGenerationDependencyInventory } from './dependency-inventory.js';
+import { resolveMediaGenerationDependencySelection } from './dependency-selectors.js';
+import { planLinesFromDependencyInventory } from './dependency-inventory-lines.js';
 
 export async function buildMediaGenerationContext(
   input: MediaGenerationPurposeContextInput
@@ -141,21 +141,21 @@ export async function planMediaGenerationDependencies(
   const slots = definition.declareDependencies
     ? await definition.declareDependencies(declarationInput)
     : [];
-  const graph = await withMediaGenerationProjectSession(input, ({ session }) =>
-    resolveMediaGenerationDependencyGraph({
+  const inventory = await withMediaGenerationProjectSession(input, ({ session }) =>
+    planMediaGenerationDependencyInventory({
       projectName: input.projectName,
       homeDir: input.homeDir,
       rootPurpose: normalized.spec.purpose,
       rootTarget: target,
-      rootNodeId: `final:${normalized.spec.purpose}`,
+      rootLineId: `root:${normalized.spec.purpose}`,
       rootLabel: mediaGenerationPurposeLabel(normalized.spec.purpose),
       rootMediaKind: definition.mediaKind,
       request,
       slots,
       diagnostics: [],
-      resolveExistingAsset: async (slot) =>
-        resolveExistingDependencyAsset({ request, session, slot }),
-      declareDependencies: async ({ purpose, nodeId, slot }) => {
+      resolveSelection: async (slot) =>
+        resolveMediaGenerationDependencySelection({ request, session, slot }),
+      declareDependencies: async ({ purpose, lineId, slot }) => {
         const childDefinition = requireMediaGenerationPurposeDefinition(purpose);
         if (!childDefinition.declareDependencies || !slot.dependencyTarget) {
           return [];
@@ -167,7 +167,7 @@ export async function planMediaGenerationDependencies(
           purpose,
           target: slot.dependencyTarget,
           request,
-          parentNodeId: nodeId,
+          parentLineId: lineId,
         });
       },
       estimateRoot: async () => {
@@ -218,15 +218,15 @@ export async function planMediaGenerationDependencies(
       },
     })
   );
-  const lines = planLinesFromDependencyMap(graph.dependencyMap);
+  const lines = planLinesFromDependencyInventory(inventory.dependencyInventory);
   return {
     rootPurpose: normalized.spec.purpose,
     target,
-    dependencyMap: graph.dependencyMap,
+    dependencyInventory: inventory.dependencyInventory,
     lines,
-    estimate: graph.dependencyMap.estimate,
-    finalEstimate: graph.rootEstimate,
-    diagnostics: graph.dependencyMap.diagnostics,
+    estimate: inventory.dependencyInventory.estimate,
+    finalEstimate: inventory.rootEstimate,
+    diagnostics: inventory.dependencyInventory.diagnostics,
   };
 }
 
@@ -236,23 +236,24 @@ async function assertRootDependenciesResolved(input: {
   spec: MediaGenerationSpec;
 }): Promise<void> {
   const plan = await planMediaGenerationDependencies(input);
-  const unresolved = plan.dependencyMap.nodes.filter(
-    (node) =>
-      node.required &&
-      (node.kind === 'planned-generation' ||
-        node.kind === 'external-input-required')
+  const unresolved = plan.dependencyInventory.dependencies.filter(
+    (line) =>
+      line.required &&
+      (line.availability.state === 'missing-generated' ||
+        line.availability.state === 'missing-manual' ||
+        line.availability.state === 'invalid-selection')
   );
   if (unresolved.length === 0) {
     return;
   }
-  const issues = unresolved.flatMap((node) =>
-    node.diagnostics.length > 0
-      ? node.diagnostics
+  const issues = unresolved.flatMap((line) =>
+    line.diagnostics.length > 0
+      ? line.diagnostics
       : [
           createDiagnosticError(
             'CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCY',
-            `Required media generation dependency is not yet an imported asset: ${node.label}.`,
-            { path: ['dependencyMap', 'nodes', node.id] },
+            `Required media generation dependency is not yet an imported asset: ${line.label}.`,
+            { path: ['dependencyInventory', 'dependencies', line.id] },
             'Generate or import this dependency, then create the root generation spec.'
           ),
         ]
@@ -260,12 +261,12 @@ async function assertRootDependenciesResolved(input: {
   throw new ProjectDataError(
     'CORE_MEDIA_DEPENDENCY_UNRESOLVED_REQUIRED_DEPENDENCIES',
     `Media generation spec has unresolved required dependencies: ${unresolved
-      .map((node) => node.label)
+      .map((line) => line.label)
       .join(', ')}.`,
     {
       issues,
       suggestion:
-        'Generate or import the required dependencies, refresh the graph, then create the root generation spec.',
+        'Generate or import the required dependencies, refresh the inventory, then create the root generation spec.',
     }
   );
 }
