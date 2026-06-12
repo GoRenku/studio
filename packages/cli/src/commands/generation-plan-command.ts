@@ -79,7 +79,7 @@ function formatShotVideoTakePlan(plan: ShotVideoTakeGenerationPlan): string {
     'Lines:',
     ...plan.lines.map(formatPlanLine),
     '',
-    'Execution levels:',
+    'Planning levels:',
     ...plan.dependencyMap.execution.levels.map(
       (level, index) => `  ${index + 1}. ${level.join(', ')}`
     ),

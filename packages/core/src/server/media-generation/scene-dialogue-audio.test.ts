@@ -112,7 +112,6 @@ describe('Scene Dialogue Audio generation', () => {
         languageCode: 'en',
       },
       simulate: true,
-      idGenerator: createDeterministicIdGenerator(),
     });
 
     const audio = report.context.audioByDialogueId[dialogueId];

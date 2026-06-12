@@ -14,7 +14,7 @@ export function aggregateDependencyEstimate(
     } => node.pricing.state === 'priced'
   );
   const unpriced = nodes.filter((node) => node.pricing.state === 'unpriced');
-  const missing = nodes.filter((node) => node.state === 'missing');
+  const missing = nodes.filter((node) => node.required && node.state === 'missing');
   const total = priced.reduce((sum, node) => sum + node.pricing.estimatedUsd, 0);
   return {
     state: missing.length > 0 ? 'unavailable' : unpriced.length > 0 ? 'partial' : 'complete',
@@ -32,7 +32,12 @@ export function plannedGenerationLevels(
 ): string[][] {
   const plannedNodeIds = new Set(
     nodes
-      .filter((node) => node.kind === 'planned-generation' && node.state === 'planned')
+      .filter(
+        (node) =>
+          node.kind === 'planned-generation' &&
+          node.state === 'planned' &&
+          node.materializationState === 'generatable'
+      )
       .map((node) => node.id)
   );
   const unresolved = new Set(plannedNodeIds);
@@ -44,7 +49,9 @@ export function plannedGenerationLevels(
         .filter((edge) => edge.toNodeId === nodeId)
         .every(
           (edge) =>
-            !plannedNodeIds.has(edge.fromNodeId) || !unresolved.has(edge.fromNodeId)
+            !edge.required ||
+            !plannedNodeIds.has(edge.fromNodeId) ||
+            !unresolved.has(edge.fromNodeId)
         )
     );
     if (level.length === 0) {
@@ -88,7 +95,12 @@ export function planLinesFromDependencyMap(
         ...(node.dependencyKind ? { dependencyKind: node.dependencyKind } : {}),
         depth: depths.get(node.id) ?? 0,
         state: node.state,
+        materializationState: node.materializationState,
+        ...(node.materializationReason
+          ? { materializationReason: node.materializationReason }
+          : {}),
         pricing: node.pricing,
+        required: node.required,
         ...(node.assetId ? { sourceAssetId: node.assetId } : {}),
         ...(node.draftGenerationSpec ? { draftGenerationSpec: node.draftGenerationSpec } : {}),
         diagnostics: node.diagnostics,

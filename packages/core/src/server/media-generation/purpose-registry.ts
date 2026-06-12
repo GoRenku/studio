@@ -681,6 +681,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeGenerationSpec,
       }),
+    declareDependencies: shotVideoTake.declareShotVideoTakeDependencies,
     runSpec: shotVideoTake.runShotVideoTakeSpec,
   },
 ] satisfies MediaGenerationPurposeDefinition[];

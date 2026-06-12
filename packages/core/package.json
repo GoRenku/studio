@@ -32,7 +32,6 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate:project": "drizzle-kit migrate --config drizzle.project-migrate.config.ts",
     "test": "vitest run",
-    "test:shot-video-estimates": "vitest run tests/integration/shot-video-take-estimate-matrix.test.ts",
     "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
     "check:all": "pnpm type-check && pnpm lint && pnpm test:typecheck",
     "test:ui": "vitest --ui",

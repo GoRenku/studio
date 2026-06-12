@@ -3,18 +3,26 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
+  AssetTarget,
   CastProfileGenerationSpec,
   LookbookSheetGenerationSpec,
   SceneShotListDocument,
+  ShotVideoTakeGenerationSpec,
+  ShotVideoTakePreparedInput,
 } from '../../src/client/index.js';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
 } from '../../src/server/index.js';
+import { updateAssetRelationshipSelection } from '../../src/server/database/access/asset-relationships/index.js';
+import { deleteAssetFileRecordsForAsset } from '../../src/server/database/access/asset-files.js';
+import { openProjectSession } from '../../src/server/database/lifecycle/active-session.js';
 import {
   createSampleMovieProject,
   writeConfig,
 } from '../../src/server/testing/project-data-fixtures.js';
+
+type ProjectDataService = ReturnType<typeof createProjectDataService>;
 
 describe('media generation dependency graph estimates integration', () => {
   let homeDir: string;
@@ -201,25 +209,27 @@ describe('media generation dependency graph estimates integration', () => {
         expect.objectContaining({
           fromNodeId: characterNodeId,
           toNodeId: firstFrameNodeId,
+          required: false,
         }),
         expect.objectContaining({
           fromNodeId: locationNodeId,
           toNodeId: firstFrameNodeId,
+          required: false,
         }),
         expect.objectContaining({
           fromNodeId: lookbookNodeId,
           toNodeId: firstFrameNodeId,
+          required: false,
         }),
         expect.objectContaining({
           fromNodeId: firstFrameNodeId,
           toNodeId: 'final:shot.video-take',
+          required: true,
         }),
       ])
     );
     expect(preflight.plan?.dependencyMap.execution.levels).toEqual([
-      [characterNodeId, locationNodeId, lookbookNodeId],
-      [firstFrameNodeId],
-      ['final:shot.video-take'],
+      [firstFrameNodeId, characterNodeId, locationNodeId, lookbookNodeId],
     ]);
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
@@ -265,7 +275,7 @@ describe('media generation dependency graph estimates integration', () => {
 
   it('blocks generated shot dependencies when the agent has not authored a dependency draft', async () => {
     const ids = await sampleIds(projectData, homeDir);
-    await createActiveLookbook(projectData, homeDir);
+    const lookbook = await createActiveLookbook(projectData, homeDir);
     const written = await projectData.writeSceneShotList({
       homeDir,
       document: sampleShotList(ids),
@@ -303,23 +313,318 @@ describe('media generation dependency graph estimates integration', () => {
     const firstFrameNode = preflight.plan!.dependencyMap.nodes.find(
       (node) => node.id === 'planned:first-frame:production-group:'
     );
+    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
+    const locationNodeId = `planned:location-environment-sheet:${ids.locationId}`;
+    const lookbookNodeId = `planned:lookbook-sheet:${lookbook.lookbook.id}`;
 
     expect(firstFrameNode).toMatchObject({
       kind: 'planned-generation',
-      state: 'missing',
+      state: 'planned',
+      materializationState: 'needs-authored-draft',
+      materializationReason:
+        'Author a concrete dependency draft before generating this shot input.',
       purpose: 'shot.first-frame',
-      pricing: { state: 'not-applicable', estimatedUsd: null },
-      diagnostics: [
-        expect.objectContaining({
-          code: 'CORE_SHOT_VIDEO_DEPENDENCY_DRAFT_MISSING',
-        }),
-      ],
+      pricing: { state: 'priced', estimatedUsd: 0.005 },
+      diagnostics: [],
     });
     expect(firstFrameNode).not.toHaveProperty('draftGenerationSpec');
+    expect(preflight.plan?.dependencyMap.execution.levels).toEqual([
+      [characterNodeId, locationNodeId, lookbookNodeId],
+    ]);
     expect(preflight.finalTake.canCreateSpec).toBe(false);
     expect(preflight.plan?.estimate).toMatchObject({
-      state: 'unavailable',
-      missingLineCount: expect.any(Number),
+      state: 'complete',
+      pricedLineCount: 5,
+      missingLineCount: 0,
+      requiresPriceOverride: false,
+    });
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(4.658, 6);
+  });
+
+  it('prices first and last frame dependencies before their prompts are authored', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    const lookbook = await createActiveLookbook(projectData, homeDir);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: sampleShotList(ids),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    const estimate = await projectData.estimateShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'first-last-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: {
+          duration: 9,
+          aspect_ratio: '16:9',
+          resolution: '720p',
+          generate_audio: true,
+        },
+      },
+    });
+
+    const firstFrameNode = estimate.plan!.dependencyMap.nodes.find(
+      (node) => node.id === 'planned:first-frame:production-group:'
+    );
+    const lastFrameNode = estimate.plan!.dependencyMap.nodes.find(
+      (node) => node.id === 'planned:last-frame:production-group:'
+    );
+    const characterNodeId = `planned:cast-character-sheet:${ids.castMemberId}`;
+    const locationNodeId = `planned:location-environment-sheet:${ids.locationId}`;
+    const lookbookNodeId = `planned:lookbook-sheet:${lookbook.lookbook.id}`;
+
+    expect(firstFrameNode).toMatchObject({
+      state: 'planned',
+      materializationState: 'needs-authored-draft',
+      pricing: { state: 'priced', estimatedUsd: 0.005 },
+    });
+    expect(firstFrameNode).not.toHaveProperty('draftGenerationSpec');
+    expect(lastFrameNode).toMatchObject({
+      state: 'planned',
+      materializationState: 'needs-authored-draft',
+      pricing: { state: 'priced', estimatedUsd: 0.005 },
+    });
+    expect(lastFrameNode).not.toHaveProperty('draftGenerationSpec');
+    expect(estimate.plan?.dependencyMap.execution.levels).toEqual([
+      [characterNodeId, locationNodeId, lookbookNodeId],
+    ]);
+    expect(estimate.plan?.estimate).toMatchObject({
+      state: 'complete',
+      pricedLineCount: 6,
+      unpricedLineCount: 0,
+      missingLineCount: 0,
+      requiresPriceOverride: false,
+    });
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.529, 6);
+  });
+
+  it('plans a valid shot.video-take spec with imported first and last frame inputs through the shared dependency planner', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: sampleShotList(ids),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/generic-first-frame.png',
+      'first frame'
+    );
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/generic-last-frame.png',
+      'last frame'
+    );
+    const firstFrame = await projectData.importShotFirstFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/generic-first-frame.png',
+    });
+    const lastFrame = await projectData.importShotLastFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/generic-last-frame.png',
+    });
+    const spec: ShotVideoTakeGenerationSpec = {
+      purpose: 'shot.video-take',
+      target: {
+        kind: 'sceneShotGroup',
+        id: 'scene_shot_video_take_group_generic',
+        sceneId: ids.sceneId,
+        shotListId: written.shotList.id,
+        productionGroupId: 'scene_shot_video_take_group_generic',
+        shotIds: ['shot_001'],
+      },
+      inputModeId: 'first-last-frame',
+      modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      prompt:
+        'Generate the final take from the imported first and last frame anchors.',
+      parameterValues: {
+        duration: '9',
+        aspect_ratio: '16:9',
+        resolution: '720p',
+        generate_audio: true,
+      },
+      inputs: [
+        generationInputFromAvailable(firstFrame.input),
+        generationInputFromAvailable(lastFrame.input),
+      ],
+      title: 'Generic planner first-last-frame take',
+    };
+
+    const plan = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec,
+    });
+
+    expect(plan.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'asset:first-frame:production-group:',
+          kind: 'existing-asset',
+          dependencyKind: 'first-frame',
+          state: 'ready',
+          materializationState: 'materialized',
+          assetId: firstFrame.input.assetId,
+          assetFileId: firstFrame.input.assetFileId,
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+        expect.objectContaining({
+          id: 'asset:last-frame:production-group:',
+          kind: 'existing-asset',
+          dependencyKind: 'last-frame',
+          state: 'ready',
+          materializationState: 'materialized',
+          assetId: lastFrame.input.assetId,
+          assetFileId: lastFrame.input.assetFileId,
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+      ])
+    );
+    expect(plan.lines.filter((line) => line.kind === 'dependency-generation')).toEqual([]);
+    expect(plan.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          nodeId: 'asset:first-frame:production-group:',
+          kind: 'reused-asset',
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+        expect.objectContaining({
+          nodeId: 'asset:last-frame:production-group:',
+          kind: 'reused-asset',
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+        expect.objectContaining({
+          nodeId: 'final:shot.video-take',
+          kind: 'final-video-generation',
+          pricing: { state: 'priced', estimatedUsd: 3.402 },
+        }),
+      ])
+    );
+    expect(plan.estimate).toMatchObject({
+      state: 'complete',
+      estimatedTotalUsd: 3.402,
+      pricedNodeCount: 3,
+      missingNodeCount: 0,
+      requiresPriceOverride: false,
+    });
+  });
+
+  it('reuses imported first and last frame shot inputs at zero cost in the shot production estimate', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: sampleShotList(ids),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/reused-first-frame.png',
+      'first frame'
+    );
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/reused-last-frame.png',
+      'last frame'
+    );
+    const firstFrame = await projectData.importShotFirstFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      sourceProjectRelativePath: 'generated/media/reused-first-frame.png',
+    });
+    const lastFrame = await projectData.importShotLastFrame({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      productionGroupId: firstFrame.target.productionGroupId,
+      sourceProjectRelativePath: 'generated/media/reused-last-frame.png',
+    });
+
+    const estimate = await projectData.estimateShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      productionGroupId: firstFrame.target.productionGroupId,
+      production: {
+        inputModeId: 'first-last-frame',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        preparedInputs: [
+          preparedInputFromAvailable(firstFrame.input),
+          preparedInputFromAvailable(lastFrame.input),
+        ],
+        parameterValues: {
+          duration: 9,
+          aspect_ratio: '16:9',
+          resolution: '720p',
+          generate_audio: true,
+        },
+      },
+    });
+
+    expect(estimate.issues).toEqual([]);
+    expect(estimate.plan?.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'asset:first-frame:production-group:',
+          kind: 'existing-asset',
+          assetId: firstFrame.input.assetId,
+          assetFileId: firstFrame.input.assetFileId,
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+        expect.objectContaining({
+          id: 'asset:last-frame:production-group:',
+          kind: 'existing-asset',
+          assetId: lastFrame.input.assetId,
+          assetFileId: lastFrame.input.assetFileId,
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+      ])
+    );
+    expect(
+      estimate.plan?.lines.filter((line) => line.kind === 'dependency-generation')
+    ).toEqual([]);
+    expect(estimate.plan?.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          nodeId: 'asset:first-frame:production-group:',
+          kind: 'reused-asset',
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+        expect.objectContaining({
+          nodeId: 'asset:last-frame:production-group:',
+          kind: 'reused-asset',
+          pricing: { state: 'priced', estimatedUsd: 0 },
+        }),
+        expect.objectContaining({
+          nodeId: 'final:shot.video-take',
+          kind: 'final-video-generation',
+          pricing: { state: 'priced', estimatedUsd: 3.402 },
+        }),
+      ])
+    );
+    expect(estimate.plan?.estimate).toMatchObject({
+      state: 'complete',
+      estimatedTotalUsd: 3.402,
+      pricedLineCount: 3,
+      missingLineCount: 0,
+      requiresPriceOverride: false,
     });
   });
 
@@ -438,7 +743,184 @@ describe('media generation dependency graph estimates integration', () => {
       target: { kind: 'castMember', id: ids.castMemberId },
     });
   });
+
+  it('reports ambiguous selected character sheets as structured selector diagnostics', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/ambiguous-character-sheet-a.png',
+      'character sheet a'
+    );
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/ambiguous-character-sheet-b.png',
+      'character sheet b'
+    );
+    const first = await projectData.importCastCharacterSheetMedia({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: 'generated/media/ambiguous-character-sheet-a.png',
+    });
+    const second = await projectData.importCastCharacterSheetMedia({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: 'generated/media/ambiguous-character-sheet-b.png',
+    });
+    await markAssetSelected({
+      homeDir,
+      target: { kind: 'castMember', castMemberId: ids.castMemberId },
+      assetId: first.imported.assetId,
+      selectionOrder: 1,
+    });
+    await markAssetSelected({
+      homeDir,
+      target: { kind: 'castMember', castMemberId: ids.castMemberId },
+      assetId: second.imported.assetId,
+      selectionOrder: 2,
+    });
+
+    const plan = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec: castProfileSpec(ids.castMemberId),
+    });
+
+    const nodeId = `missing:cast-character-sheet:${ids.castMemberId}`;
+    expect(plan.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: nodeId,
+          kind: 'external-input-required',
+          state: 'missing',
+          diagnostics: expect.arrayContaining([
+            expect.objectContaining({
+              code: 'CORE_MEDIA_DEPENDENCY_AMBIGUOUS_SELECTED_ASSET',
+              severity: 'error',
+            }),
+          ]),
+        }),
+      ])
+    );
+    expect(plan.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          nodeId,
+          kind: 'required-attachment',
+          pricing: { state: 'not-applicable', estimatedUsd: null },
+        }),
+      ])
+    );
+    expect(plan.estimate).toMatchObject({
+      state: 'unavailable',
+      estimatedTotalUsd: null,
+      missingNodeCount: 1,
+    });
+    expect(plan.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_AMBIGUOUS_SELECTED_ASSET',
+        }),
+      ])
+    );
+  });
+
+  it('reports selected character sheets with missing image files as structured selector diagnostics', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    await createActiveLookbook(projectData, homeDir);
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/missing-file-character-sheet.png',
+      'character sheet'
+    );
+    const imported = await projectData.importCastCharacterSheetMedia({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: 'generated/media/missing-file-character-sheet.png',
+    });
+    await markAssetSelected({
+      homeDir,
+      target: { kind: 'castMember', castMemberId: ids.castMemberId },
+      assetId: imported.imported.assetId,
+      selectionOrder: 1,
+    });
+    await removeAssetFiles({
+      homeDir,
+      assetId: imported.imported.assetId,
+    });
+
+    const plan = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec: castProfileSpec(ids.castMemberId),
+    });
+
+    const nodeId = `missing:cast-character-sheet:${ids.castMemberId}`;
+    expect(plan.dependencyMap.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: nodeId,
+          kind: 'external-input-required',
+          state: 'missing',
+          diagnostics: expect.arrayContaining([
+            expect.objectContaining({
+              code: 'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
+              severity: 'error',
+            }),
+          ]),
+        }),
+      ])
+    );
+    expect(plan.estimate).toMatchObject({
+      state: 'unavailable',
+      estimatedTotalUsd: null,
+      missingNodeCount: 1,
+    });
+    expect(plan.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
+        }),
+      ])
+    );
+  });
 });
+
+async function markAssetSelected(input: {
+  homeDir: string;
+  target: AssetTarget;
+  assetId: string;
+  selectionOrder: number;
+}): Promise<void> {
+  const { session } = await openProjectSession({
+    projectName: 'constantinople',
+    homeDir: input.homeDir,
+  });
+  updateAssetRelationshipSelection(session, {
+    target: input.target,
+    assetId: input.assetId,
+    selection: 'select',
+    selectionOrder: input.selectionOrder,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+async function removeAssetFiles(input: {
+  homeDir: string;
+  assetId: string;
+}): Promise<void> {
+  const { session } = await openProjectSession({
+    projectName: 'constantinople',
+    homeDir: input.homeDir,
+  });
+  deleteAssetFileRecordsForAsset(session, input.assetId);
+}
 
 async function sampleIds(
   projectData: ReturnType<typeof createProjectDataService>,
@@ -515,6 +997,37 @@ async function writeProjectFile(
   const absolutePath = path.join(project.projectFolder, projectRelativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, contents);
+}
+
+function generationInputFromAvailable(
+  input: NonNullable<
+    Awaited<ReturnType<ProjectDataService['importShotFirstFrame']>>
+  >['input']
+): ShotVideoTakeGenerationSpec['inputs'][number] {
+  return {
+    kind: input.kind,
+    assetId: input.assetId,
+    assetFileId: input.assetFileId,
+    role: input.kind,
+    mediaKind: input.mediaKind,
+    projectRelativePath: input.projectRelativePath,
+    subjectKind: input.subjectKind,
+    subjectId: input.subjectId,
+  };
+}
+
+function preparedInputFromAvailable(
+  input: NonNullable<
+    Awaited<ReturnType<ProjectDataService['importShotFirstFrame']>>
+  >['input']
+): ShotVideoTakePreparedInput {
+  return {
+    kind: input.kind,
+    assetId: input.assetId,
+    assetFileId: input.assetFileId,
+    subjectKind: input.subjectKind,
+    subjectId: input.subjectId,
+  };
 }
 
 function sampleShotList(

@@ -66,6 +66,7 @@ export const screenplayBlockSchema = {
       required: ['type', 'lines'],
       anyOf: [{ required: ['castMemberReference'] }, { required: ['castMemberId'] }],
       properties: {
+        dialogueId: stringId(),
         type: { const: 'dialogue' },
         castMemberReference: ref(),
         castMemberId: stringId(),

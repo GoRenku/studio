@@ -20,7 +20,7 @@ describe('shot video take preflight and validation', () => {
     await createSampleMovieProject({ projectData, homeDir });
   });
 
-  it('reports every requested input slot as a missing required dependency', async () => {
+  it('reports requested input slots as non-blocking dependency suggestions', async () => {
     const ids = await sampleIds();
     const written = await writeShotList(ids, 1);
 
@@ -52,7 +52,7 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    expect(preflight.valid).toBe(false);
+    expect(preflight.valid).toBe(true);
     expect(preflight.inputsToCreate).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -60,22 +60,44 @@ describe('shot video take preflight and validation', () => {
           subjectKind: 'cast-member',
           subjectId: ids.castMemberId,
           mediaKind: 'image',
+          required: false,
         }),
         expect.objectContaining({
           outputInputKind: 'location-sheet',
           subjectKind: 'location',
           subjectId: ids.locationId,
           mediaKind: 'image',
+          required: false,
         }),
         expect.objectContaining({
           outputInputKind: 'lookbook-sheet',
           subjectKind: 'lookbook',
           subjectId: 'lookbook_test',
           mediaKind: 'image',
+          required: false,
         }),
       ])
     );
-    expect(preflight.finalTake.canCreateSpec).toBe(false);
+    expect(preflight.finalTake.canCreateSpec).toBe(true);
+
+    const created = await projectData.createMediaGenerationSpec({
+      homeDir,
+      spec: {
+        purpose: 'shot.video-take',
+        target: preflight.target,
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        prompt: 'Generate the video take without optional visual references.',
+        parameterValues: { duration: 6 },
+        inputs: [],
+        title: 'Text-only take with optional references ignored',
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    expect(created).toMatchObject({
+      purpose: 'shot.video-take',
+      target: preflight.target,
+    });
   });
 
   it('rejects a multi-shot final spec without the required storyboard sheet', async () => {
@@ -934,7 +956,11 @@ describe('shot video take preflight and validation', () => {
           selected: true,
           card: expect.objectContaining({
             dependencyId: 'reference-image:shot:shot_001',
-            state: 'unavailable',
+            state: 'selected-planned',
+            pricing: expect.objectContaining({
+              state: 'priced',
+              estimatedUsd: 0.005,
+            }),
           }),
         }),
       ])

@@ -166,6 +166,7 @@ import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
 } from './dependency-draft-specs.js';
+import type { MediaGenerationDependencyDeclarationInput } from './purpose-registry.js';
 import {
   resolveMediaGenerationDependencyGraph,
   type MediaGenerationDependencyRootEstimate,
@@ -194,6 +195,7 @@ interface RequiredShotVideoTakeInputSlot {
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
   mediaKind: 'image' | 'audio' | 'video';
+  required: boolean;
   reason: string;
 }
 
@@ -487,6 +489,12 @@ export async function previewShotVideoTakeProduction(
     preparedInputsForContext(context, session, issues)
   );
   const inputsToCreate = missingDependencies(context, inputModeId, modelChoice, preparedInputs);
+  const missingRouteInputLabels = missingRequiredRouteInputLabelsForPreparedInputs({
+    context,
+    inputModeId,
+    modelChoice,
+    preparedInputs,
+  });
   const finalDraft = context.productionGroup.videoTakeProduction.agentProposal?.finalPromptDraft;
   const prompts = [
     ...context.productionGroup.videoTakeProduction.agentProposal?.dependencyDrafts.map((draft) => ({
@@ -529,7 +537,7 @@ export async function previewShotVideoTakeProduction(
     prompts,
     finalTake: {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      canCreateSpec: plan.dependencyMap.estimate.missingNodeCount === 0 &&
+      canCreateSpec: missingRouteInputLabels.length === 0 &&
         plan.diagnostics.every((diagnostic) => diagnostic.severity !== 'error'),
       title: finalDraft?.title ?? `${context.scene.title} video take`,
     },
@@ -1792,21 +1800,26 @@ async function buildShotVideoTakeDependencyMap(input: {
     resolveExistingAsset: async (slot) => {
       const requiredSlot = requiredSlotsByDependencyId.get(slot.dependencyId);
       if (!requiredSlot) {
-        return null;
+        return { asset: null, diagnostics: [] };
       }
       const prepared = input.preparedInputs.find((candidate) =>
         preparedInputMatchesSlot(candidate, requiredSlot)
       );
       return prepared
         ? {
-            assetId: prepared.assetId,
-            assetFileId: prepared.assetFileId,
+            asset: {
+              assetId: prepared.assetId,
+              assetFileId: prepared.assetFileId,
+            },
+            diagnostics: [],
           }
-        : null;
+        : { asset: null, diagnostics: [] };
     },
     declareDependencies: async ({ purpose }) =>
       isShotInputPurpose(purpose)
-        ? referenceBundleSlots(input.context).map(toMediaGenerationDependencySlot)
+        ? referenceBundleSlots(input.context, { required: false }).map(
+            toMediaGenerationDependencySlot
+          )
         : [],
     estimateRoot: async (): Promise<MediaGenerationDependencyRootEstimate> => {
       const finalPricing = await estimateFinalPlanLine({
@@ -1827,6 +1840,43 @@ async function buildShotVideoTakeDependencyMap(input: {
   return dependencyMap;
 }
 
+export async function declareShotVideoTakeDependencies(
+  input: MediaGenerationDependencyDeclarationInput
+): Promise<MediaGenerationDependencySlot[]> {
+  if (input.target.kind !== 'sceneShotGroup') {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_DEPENDENCY_DECLARATION_TARGET_INVALID',
+      `shot.video-take dependencies require a sceneShotGroup target. Received: ${input.target.kind}.`
+    );
+  }
+  if (input.request.kind !== 'media-generation-spec') {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_DEPENDENCY_DECLARATION_REQUEST_INVALID',
+      `shot.video-take dependencies require a media-generation-spec request. Received: ${input.request.kind}.`
+    );
+  }
+  const spec = input.request.spec as ShotVideoTakeGenerationSpec | undefined;
+  if (spec?.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_DEPENDENCY_DECLARATION_SPEC_INVALID',
+      'shot.video-take dependencies require a shot.video-take generation spec.'
+    );
+  }
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: input.target.sceneId,
+    shotListId: input.target.shotListId,
+    shotIds: input.target.shotIds,
+    ...(input.target.productionGroupId
+      ? { productionGroupId: input.target.productionGroupId }
+      : {}),
+  });
+  return requiredInputSlots(context, spec.inputModeId, spec.modelChoice).map(
+    toMediaGenerationDependencySlot
+  );
+}
+
 function toMediaGenerationDependencySlot(
   slot: RequiredShotVideoTakeInputSlot
 ): MediaGenerationDependencySlot {
@@ -1835,7 +1885,7 @@ function toMediaGenerationDependencySlot(
     dependencyKind: slot.dependencyKind,
     label: requiredInputLabel(slot),
     ...(slot.dependencyTarget ? { dependencyTarget: slot.dependencyTarget } : {}),
-    required: true,
+    required: slot.required,
     reason: slot.reason,
   };
 }
@@ -1949,14 +1999,22 @@ export async function buildShotInputDependencyDraftSpec(
         candidate.outputInputKind === outputInputKind
     );
   if (!isAuthoredShotDependencyDraft(draft)) {
-    throw new ProjectDataError(
-      'CORE_SHOT_VIDEO_DEPENDENCY_DRAFT_MISSING',
-      `A required shot video dependency needs an authored generation spec before it can be generated: ${input.label}.`,
-      {
-        suggestion:
-          'Author a dependency draft with a concrete prompt, title, purpose, dependency kind, and output input kind.',
-      }
-    );
+    return {
+      purpose,
+      spec: {
+        purpose,
+        target: input.dependencyTarget,
+        dependencyKind: dependencyKindForPurpose(purpose),
+        outputInputKind,
+        modelChoice: request.context.defaults.imageDependencyModelChoice,
+        prompt: estimateOnlyShotInputPrompt(input.label),
+        parameterValues: defaultShotInputParameterValues(),
+        title: input.label,
+      },
+      materializationState: 'needs-authored-draft',
+      materializationReason:
+        'Author a concrete dependency draft before generating this shot input.',
+    };
   }
   return {
     purpose,
@@ -1972,6 +2030,13 @@ export async function buildShotInputDependencyDraftSpec(
       title: draft.title ?? input.label,
     },
   };
+}
+
+function estimateOnlyShotInputPrompt(label: string): string {
+  return [
+    `Estimate placeholder for ${label}.`,
+    'This draft is used only for pricing; an authored prompt is required before generation.',
+  ].join(' ');
 }
 
 export interface ShotVideoTakeDependencyRequest {
@@ -3108,12 +3173,13 @@ function finalVideoPricingInputCounts(input: {
     input.spec.inputModeId,
     input.context.shotGroupMode
   );
-  const requiredImageInputCount = requiredInputSlots(
-    input.context,
-    input.spec.inputModeId,
-    input.spec.modelChoice,
-    { includeReferenceBundleForReferenceRoute: true }
-  ).filter((slot) => slot.mediaKind === 'image').length;
+  const requiredImageInputCount = route.inputSlots.reduce(
+    (count, slot) =>
+      slot.required && slot.mediaKind === 'image'
+        ? count + slot.minCount
+        : count,
+    0
+  );
   const preparedImageInputCount = input.spec.inputs.filter(
     (candidate) =>
       candidate.mediaKind === 'image' &&
@@ -3286,17 +3352,82 @@ function validateFinalSpecAgainstContext(
   context: ShotVideoTakeGenerationContext
 ): void {
   validateFinalPricingSpecAgainstContext(spec, context);
-  const missingInputs = requiredInputSlots(context, spec.inputModeId, spec.modelChoice).filter(
-    (slot) => !spec.inputs.some((input) => finalInputMatchesSlot(input, slot))
-  );
+  const missingInputs = missingRequiredRouteInputLabelsForFinalSpec({
+    context,
+    spec,
+  });
   if (missingInputs.length > 0) {
     throw new ProjectDataError(
       'PROJECT_DATA384',
       `Shot video take spec is missing required input${
         missingInputs.length === 1 ? '' : 's'
-      }: ${missingInputs.map((input) => requiredInputLabel(input)).join(', ')}.`
+      }: ${missingInputs.join(', ')}.`
     );
   }
+}
+
+function missingRequiredRouteInputLabelsForFinalSpec(input: {
+  context: ShotVideoTakeGenerationContext;
+  spec: ShotVideoTakeGenerationSpec;
+}): string[] {
+  const route = requireShotVideoTakeRoute(
+    input.spec.modelChoice,
+    input.spec.inputModeId,
+    input.context.shotGroupMode
+  );
+  return route.inputSlots
+    .filter((slot) => slot.required)
+    .filter(
+      (slot) =>
+        input.spec.inputs.filter((candidate) =>
+          finalInputMatchesRouteSlot(candidate, slot)
+        ).length < slot.minCount
+    )
+    .map(routeInputSlotLabel);
+}
+
+function missingRequiredRouteInputLabelsForPreparedInputs(input: {
+  context: ShotVideoTakeGenerationContext;
+  inputModeId: ShotVideoTakeInputModeId;
+  modelChoice: ShotVideoTakeModelChoice;
+  preparedInputs: ShotVideoTakePreflightInput[];
+}): string[] {
+  const route = requireShotVideoTakeRoute(
+    input.modelChoice,
+    input.inputModeId,
+    input.context.shotGroupMode
+  );
+  return route.inputSlots
+    .filter((slot) => slot.required)
+    .filter(
+      (slot) =>
+        input.preparedInputs.filter((candidate) =>
+          preparedInputMatchesRouteSlot(candidate, slot)
+        ).length < slot.minCount
+    )
+    .map(routeInputSlotLabel);
+}
+
+function preparedInputMatchesRouteSlot(
+  input: ShotVideoTakePreflightInput,
+  slot: ShotVideoRouteInputSlot
+): boolean {
+  if (input.kind === slot.kind) {
+    return true;
+  }
+  return (
+    slot.kind === 'reference-image' &&
+    [
+      'character-sheet',
+      'location-sheet',
+      'lookbook-sheet',
+      'multi-shot-storyboard-sheet',
+    ].includes(input.kind)
+  );
+}
+
+function routeInputSlotLabel(slot: ShotVideoRouteInputSlot): string {
+  return slot.kind;
 }
 
 function validateFinalPricingSpecAgainstContext(
@@ -3637,6 +3768,7 @@ function missingDependencies(
       ...(slot.subjectKind ? { subjectKind: slot.subjectKind } : {}),
       ...(slot.subjectId ? { subjectId: slot.subjectId } : {}),
       mediaKind: slot.mediaKind,
+      required: slot.required,
       reason: slot.reason,
     }));
 }
@@ -3652,20 +3784,21 @@ function requiredInputSlots(
   const referenceSlots =
     options.includeReferenceBundleForReferenceRoute &&
     route.inputSlots.some((slot) => slot.kind === 'reference-image')
-      ? referenceBundleSlots(context)
+      ? referenceBundleSlots(context, { required: false })
       : [];
   const modelSlots =
     report?.inputRoles
       .filter((role) => role.required)
       .flatMap((role) =>
         role.kind === 'reference-image'
-          ? referenceBundleSlots(context)
+          ? referenceBundleSlots(context, { required: false })
           : [
               requiredSlotForInputKind(
                 context,
                 role.kind,
                 role.mediaKind,
-                `The selected ${report.label} model requires a ${role.kind} input.`
+                `The selected ${report.label} model requires a ${role.kind} input.`,
+                true
               ),
             ]
       ) ?? [];
@@ -3676,14 +3809,16 @@ function requiredInputSlots(
 }
 
 function referenceBundleSlots(
-  context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeGenerationContext,
+  input: { required: boolean }
 ): RequiredShotVideoTakeInputSlot[] {
   const castSlots = context.referencedCast.map((castMember) =>
     requiredSlotForInputKind(
       context,
       'character-sheet',
       'image',
-      `Character sheet reference is required for ${castMember.name}.`,
+      `Character sheet reference is recommended for ${castMember.name}.`,
+      input.required,
       'cast-member',
       castMember.id
     )
@@ -3693,19 +3828,21 @@ function referenceBundleSlots(
       context,
       'location-sheet',
       'image',
-      `Location sheet reference is required for ${location.name}.`,
+      `Location sheet reference is recommended for ${location.name}.`,
+      input.required,
       'location',
       location.id
     )
   );
   const lookbookSlots = context.activeLookbook
-    ? lookbookSheetReferenceSlots(context)
+    ? lookbookSheetReferenceSlots(context, input)
     : [];
   return [...castSlots, ...locationSlots, ...lookbookSlots];
 }
 
 function lookbookSheetReferenceSlots(
-  context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeGenerationContext,
+  input: { required: boolean }
 ): RequiredShotVideoTakeInputSlot[] {
   if (!context.activeLookbook) {
     return [];
@@ -3729,7 +3866,8 @@ function lookbookSheetReferenceSlots(
         mediaKind: 'image',
         subjectKind: 'lookbook',
         subjectId: context.activeLookbook.id,
-        reason: `Selected lookbook sheet reference is missing for ${context.activeLookbook.name}.`,
+        required: input.required,
+        reason: `Selected lookbook sheet reference is recommended for ${context.activeLookbook.name}.`,
       },
     ];
   }
@@ -3738,7 +3876,8 @@ function lookbookSheetReferenceSlots(
       context,
       'lookbook-sheet',
       'image',
-      `Lookbook sheet reference is required for ${context.activeLookbook.name}.`,
+      `Lookbook sheet reference is recommended for ${context.activeLookbook.name}.`,
+      input.required,
       'lookbook',
       context.activeLookbook.id
     ),
@@ -3756,7 +3895,8 @@ function requiredSlotForRequestedInput(
     input.kind,
     mediaKindForInputKind(input.kind),
     input.note?.trim() ||
-      `Required ${input.kind}${subjectLabel} is missing. Select or import it before generating the final video take.`,
+      `Requested ${input.kind}${subjectLabel} is not selected for the final video take.`,
+    false,
     input.subjectKind,
     input.subjectId
   );
@@ -3767,6 +3907,7 @@ function requiredSlotForInputKind(
   kind: ShotVideoTakeInputKind,
   mediaKind: 'image' | 'audio' | 'video',
   reason: string,
+  required: boolean,
   subjectKind?: ShotVideoTakeInputSubjectKind,
   subjectId?: string
 ): RequiredShotVideoTakeInputSlot {
@@ -3777,6 +3918,7 @@ function requiredSlotForInputKind(
     ...(subjectKind ? { subjectKind } : {}),
     ...(subjectId ? { subjectId } : {}),
     mediaKind,
+    required,
     reason,
   };
 }
@@ -3900,18 +4042,6 @@ function uniqueRequiredInputSlots(
 
 function preparedInputMatchesSlot(
   input: ShotVideoTakePreflightInput,
-  slot: RequiredShotVideoTakeInputSlot
-): boolean {
-  return (
-    input.kind === slot.outputInputKind &&
-    input.mediaKind === slot.mediaKind &&
-    (!slot.subjectKind || input.subjectKind === slot.subjectKind) &&
-    (!slot.subjectId || input.subjectId === slot.subjectId)
-  );
-}
-
-function finalInputMatchesSlot(
-  input: ShotVideoTakeGenerationSpec['inputs'][number],
   slot: RequiredShotVideoTakeInputSlot
 ): boolean {
   return (

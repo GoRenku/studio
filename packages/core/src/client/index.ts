@@ -216,6 +216,7 @@ export type {
   MediaGenerationDependencyKind,
   MediaGenerationDependencyKindDefinition,
   MediaGenerationDependencyMap,
+  MediaGenerationDependencyMaterializationState,
   MediaGenerationDependencyNode,
   MediaGenerationDependencyNodeKind,
   MediaGenerationDependencyNodeState,

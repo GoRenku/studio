@@ -992,7 +992,12 @@ async function persistDialogueAudioTakeFile(input: {
     await fs.copyFile(sourcePath, targetPath, fsConstants.COPYFILE_EXCL);
     await fs.unlink(sourcePath);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'EEXIST'
+    ) {
       throw new ProjectDataError(
         'PROJECT_DATA386',
         `Scene Dialogue Audio take file already exists: ${projectRelativePath}.`,

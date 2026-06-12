@@ -1,30 +1,32 @@
+// @vitest-environment jsdom
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
-import {
-  listShotVideoModelFamilies,
-  type ShotVideoTakeInputMode,
-  type ShotVideoTakeModelChoice,
-} from '@gorenku/studio-engines';
+import { Hono } from 'hono';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
   SceneShotListDocument,
+  ShotVideoTakeAvailableInput,
   ShotVideoTakeDependencyDraft,
   ShotVideoTakeParameterValues,
   ShotVideoTakePreparedInput,
+  ShotVideoTakeProductionGroup,
   ShotVideoTakeProductionPlan,
+  ShotVideoTakeInputModeId,
+  ShotVideoTakeModelChoice,
   ShotVideoTakeShotGroupMode,
   ShotVideoTakeRequestedInput,
-} from '../../src/client/scene-shot-list.js';
-import type { ShotVideoTakeAvailableInput } from '../../src/client/media-generation.js';
+} from '@gorenku/studio-core/client';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
-} from '../../src/server/index.js';
+} from '@gorenku/studio-core/server';
+import { createProjectsRoute } from '../../server/routes/projects.js';
 import {
-  createSampleMovieProject,
-  writeConfig,
-} from '../../src/server/testing/project-data-fixtures.js';
+  estimateShotVideoTakeProduction,
+  planShotVideoTakeProduction,
+  readShotVideoTakeProduction,
+} from './studio-shot-video-takes-api';
 
 type ProjectDataService = ReturnType<typeof createProjectDataService>;
 
@@ -37,7 +39,7 @@ interface SampleIds {
 interface EstimateMatrixCase {
   label: string;
   modelChoice: ShotVideoTakeModelChoice;
-  inputModeId: ShotVideoTakeInputMode;
+  inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
   parameterValues: ShotVideoTakeParameterValues;
@@ -61,7 +63,7 @@ type EstimateMatrixCaseTemplate = Omit<
 interface RunSetupPricingPermutationCase {
   label: string;
   modelChoice: ShotVideoTakeModelChoice;
-  inputModeId: ShotVideoTakeInputMode;
+  inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
   parameterValues: ShotVideoTakeParameterValues;
@@ -83,6 +85,12 @@ const REFERENCE_BUNDLE_DEPENDENCY_COST_USD =
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD +
   GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD +
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
+const INPUT_MODES: ShotVideoTakeInputModeId[] = [
+  'text-only',
+  'first-frame',
+  'first-last-frame',
+  'reference',
+];
 const SHOT_GROUP_MODES: ShotVideoTakeShotGroupMode[] = ['single-shot', 'multi-shot'];
 
 const RUN_SETUP_PRICING_PERMUTATIONS: RunSetupPricingPermutationCase[] = [
@@ -146,7 +154,7 @@ function shotGroupCases(template: EstimateMatrixCaseTemplate): EstimateMatrixCas
 
 function shotGroupRouteCases<
   T extends {
-    inputModeId: ShotVideoTakeInputMode;
+    inputModeId: ShotVideoTakeInputModeId;
     providerModel: string;
   },
 >(templates: T[]): Array<T & { shotGroupMode: ShotVideoTakeShotGroupMode }> {
@@ -160,6 +168,7 @@ function shotGroupRouteCases<
 
 
 describe('shot video take estimate integration matrix', () => {
+  const originalFetch = global.fetch;
   let homeDir: string;
   let projectData: ProjectDataService;
   let setup: MatrixProjectSetup;
@@ -170,32 +179,152 @@ describe('shot video take estimate integration matrix', () => {
     );
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
     projectData = createProjectDataService();
-    await createSampleMovieProject({ projectData, homeDir });
+    await createE2eMovieProject({ projectData, homeDir });
     setup = await createMatrixProjectSetup(projectData, homeDir);
+    installStudioApiFetch({ projectData, homeDir });
   });
 
-  it('covers every current shot video model route exposed by the engines catalog', () => {
-    const catalogRouteKeys = listShotVideoModelFamilies()
-      .flatMap((family) =>
-        family.routes.map((route) =>
-          routeKey(family.choice, route.inputMode, route.shotGroupMode)
-        )
-      )
-      .sort();
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('covers every current shot video model route exposed through the Studio API', async () => {
+    const studioApiRouteKeys = await listStudioApiRouteKeys({
+      projectData,
+      homeDir,
+      setup,
+    });
     const matrixRouteKeys = ESTIMATE_MATRIX.map((entry) =>
       routeKey(entry.modelChoice, entry.inputModeId, entry.shotGroupMode)
     ).sort();
 
-    expect(matrixRouteKeys).toEqual(catalogRouteKeys);
+    expect(matrixRouteKeys).toEqual(studioApiRouteKeys);
+  });
+
+  it('prices first-last frame AI Production setup before any dependency prompts are drafted', async () => {
+    await projectData.setActiveSceneShotList({
+      homeDir,
+      sceneId: setup.ids.sceneId,
+      shotListId: setup.singleShotListId,
+    });
+
+    const estimate = await estimateShotVideoTakeProduction(
+      'constantinople',
+      setup.ids.sceneId,
+      {
+        productionGroupId: 'scene_shot_video_take_group_single',
+        shotIds: ['shot_001'],
+        videoTakeProduction: {
+          inputModeId: 'first-last-frame',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: {
+            duration: 9,
+            aspect_ratio: '16:9',
+            resolution: '720p',
+            generate_audio: true,
+          },
+        },
+      }
+    );
+
+    const dependencyLines = estimate.plan?.lines.filter(
+      (line) => line.kind === 'dependency-generation'
+    ) ?? [];
+    const firstFrameLine = dependencyLines.find(
+      (line) => line.dependencyKind === 'first-frame'
+    );
+    const lastFrameLine = dependencyLines.find(
+      (line) => line.dependencyKind === 'last-frame'
+    );
+
+    expect(estimate.issues).toEqual([]);
+    expect(estimate.plan?.estimate).toMatchObject({
+      state: 'complete',
+      pricedLineCount: 6,
+      unpricedLineCount: 0,
+      missingLineCount: 0,
+      requiresPriceOverride: false,
+    });
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.529, 6);
+    expect(dependencyLines).toHaveLength(5);
+    expect(firstFrameLine).toMatchObject({
+      pricing: { state: 'priced', estimatedUsd: 0.005 },
+      materializationState: 'needs-authored-draft',
+    });
+    expect(firstFrameLine).not.toHaveProperty('draftGenerationSpec');
+    expect(lastFrameLine).toMatchObject({
+      pricing: { state: 'priced', estimatedUsd: 0.005 },
+      materializationState: 'needs-authored-draft',
+    });
+    expect(lastFrameLine).not.toHaveProperty('draftGenerationSpec');
+    expect(estimate.plan?.finalEstimate?.estimatedCostUsd).toBeCloseTo(3.402, 6);
+    assertNoObsoleteEstimateFields(estimate);
+  });
+
+  it('serializes first-last frame pricing through the real Studio plan route before dependency prompts are drafted', async () => {
+    await projectData.setActiveSceneShotList({
+      homeDir,
+      sceneId: setup.ids.sceneId,
+      shotListId: setup.singleShotListId,
+    });
+
+    const report = await planShotVideoTakeProduction(
+      'constantinople',
+      setup.ids.sceneId,
+      {
+        productionGroupId: 'scene_shot_video_take_group_single',
+        shotIds: ['shot_001'],
+        videoTakeProduction: {
+          inputModeId: 'first-last-frame',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: {
+            duration: 9,
+            aspect_ratio: '16:9',
+            resolution: '720p',
+            generate_audio: true,
+          },
+        },
+      }
+    );
+
+    const firstFrameLine = report.plan.lines.find(
+      (line) => line.dependencyKind === 'first-frame'
+    );
+    const lastFrameLine = report.plan.lines.find(
+      (line) => line.dependencyKind === 'last-frame'
+    );
+
+    expect(report.diagnostics).toEqual([]);
+    expect(report.plan.estimate).toMatchObject({
+      state: 'complete',
+      estimatedTotalUsd: 3.529,
+      pricedLineCount: 6,
+      unpricedLineCount: 0,
+      missingLineCount: 0,
+      requiresPriceOverride: false,
+    });
+    expect(firstFrameLine).toMatchObject({
+      kind: 'dependency-generation',
+      materializationState: 'needs-authored-draft',
+      pricing: { state: 'priced', estimatedUsd: 0.005 },
+    });
+    expect(firstFrameLine).not.toHaveProperty('draftGenerationSpec');
+    expect(lastFrameLine).toMatchObject({
+      kind: 'dependency-generation',
+      materializationState: 'needs-authored-draft',
+      pricing: { state: 'priced', estimatedUsd: 0.005 },
+    });
+    expect(lastFrameLine).not.toHaveProperty('draftGenerationSpec');
+    assertNoObsoleteEstimateFields(report);
   });
 
   it.each(ESTIMATE_MATRIX)('$label estimates final video creation only', async (entry) => {
-    const estimate = await projectData.estimateShotVideoTakeProduction({
+    const estimate = await estimateFromBrowserClient({
+      projectData,
       homeDir,
-      sceneId: setup.ids.sceneId,
-      shotListId: shotListIdForCase(entry, setup),
-      shotIds: shotIdsForCase(entry),
-      production: productionForCase(entry, setup, { includePreparedInputs: true }),
+      setup,
+      entry,
+      includePreparedInputs: true,
     });
 
     expect(estimate.issues).toEqual([]);
@@ -227,15 +356,16 @@ describe('shot video take estimate integration matrix', () => {
       entry.expectedCostUsd,
       6
     );
+    assertNoObsoleteEstimateFields(estimate);
   });
 
   it.each(ESTIMATE_MATRIX)('$label keeps a numeric graph estimate before dependencies exist', async (entry) => {
-    const estimate = await projectData.estimateShotVideoTakeProduction({
+    const estimate = await estimateFromBrowserClient({
+      projectData,
       homeDir,
-      sceneId: setup.ids.sceneId,
-      shotListId: shotListIdForCase(entry, setup),
-      shotIds: shotIdsForCase(entry),
-      production: productionForCase(entry, setup, { includePreparedInputs: false }),
+      setup,
+      entry,
+      includePreparedInputs: false,
     });
 
     expect(estimate.issues).toEqual([]);
@@ -256,17 +386,18 @@ describe('shot video take estimate integration matrix', () => {
         }),
       ])
     );
+    assertNoObsoleteEstimateFields(estimate);
   });
 
   it.each(RUN_SETUP_PRICING_PERMUTATIONS)(
     '$label prices the unprepared UI state from the real dependency graph',
     async (entry) => {
-      const estimate = await projectData.estimateShotVideoTakeProduction({
+      const estimate = await estimateFromBrowserClient({
+        projectData,
         homeDir,
-        sceneId: setup.ids.sceneId,
-        shotListId: shotListIdForCase(entry, setup),
-        shotIds: shotIdsForCase(entry),
-        production: productionForCase(entry, setup, { includePreparedInputs: false }),
+        setup,
+        entry,
+        includePreparedInputs: false,
       });
 
       expect(estimate.issues).toEqual([]);
@@ -304,12 +435,152 @@ describe('shot video take estimate integration matrix', () => {
         entry.expectedFinalCostUsd,
         6
       );
+      assertNoObsoleteEstimateFields(estimate);
     }
   );
 });
 
+function assertNoObsoleteEstimateFields(value: unknown): void {
+  const visited = new Set<unknown>();
+  const visit = (candidate: unknown) => {
+    if (!candidate || typeof candidate !== 'object' || visited.has(candidate)) {
+      return;
+    }
+    visited.add(candidate);
+    if (Array.isArray(candidate)) {
+      candidate.forEach(visit);
+      return;
+    }
+    expect(candidate).not.toHaveProperty('estimateLines');
+    expect(candidate).not.toHaveProperty('cost');
+    Object.values(candidate).forEach(visit);
+  };
+  visit(value);
+}
+
+async function listStudioApiRouteKeys(input: {
+  projectData: ProjectDataService;
+  homeDir: string;
+  setup: MatrixProjectSetup;
+}): Promise<string[]> {
+  const routeKeys: string[] = [];
+  for (const shotGroupMode of SHOT_GROUP_MODES) {
+    await input.projectData.setActiveSceneShotList({
+      homeDir: input.homeDir,
+      sceneId: input.setup.ids.sceneId,
+      shotListId:
+        shotGroupMode === 'multi-shot'
+          ? input.setup.multiShotListId
+          : input.setup.singleShotListId,
+    });
+    for (const inputModeId of INPUT_MODES) {
+      const report = await readShotVideoTakeProduction(
+        'constantinople',
+        input.setup.ids.sceneId,
+        shotGroupMode === 'multi-shot' ? ['shot_001', 'shot_002'] : ['shot_001'],
+        inputModeId
+      );
+      routeKeys.push(
+        ...report.models.models
+          .filter((model) => model.available)
+          .map((model) =>
+            routeKey(model.modelChoice, inputModeId, shotGroupMode)
+          )
+      );
+    }
+  }
+  return [...new Set(routeKeys)].sort();
+}
+
+async function estimateFromBrowserClient(input: {
+  projectData: ProjectDataService;
+  homeDir: string;
+  setup: MatrixProjectSetup;
+  entry: EstimateMatrixCase | RunSetupPricingPermutationCase;
+  includePreparedInputs: boolean;
+}) {
+  await input.projectData.setActiveSceneShotList({
+    homeDir: input.homeDir,
+    sceneId: input.setup.ids.sceneId,
+    shotListId: shotListIdForCase(input.entry, input.setup),
+  });
+  return estimateShotVideoTakeProduction(
+    'constantinople',
+    input.setup.ids.sceneId,
+    productionGroupForCase(input.entry, input.setup, {
+      includePreparedInputs: input.includePreparedInputs,
+    })
+  );
+}
+
+function productionGroupForCase(
+  input: EstimateMatrixCase | RunSetupPricingPermutationCase,
+  setup: MatrixProjectSetup,
+  options: { includePreparedInputs: boolean }
+): ShotVideoTakeProductionGroup {
+  return {
+    productionGroupId:
+      input.shotGroupMode === 'multi-shot'
+        ? 'scene_shot_video_take_group_multi'
+        : 'scene_shot_video_take_group_single',
+    shotIds: shotIdsForCase(input),
+    videoTakeProduction: productionForCase(input, setup, options),
+  };
+}
+
+function installStudioApiFetch(input: {
+  projectData: ProjectDataService;
+  homeDir: string;
+}): void {
+  const app = new Hono().route(
+    '/studio-api/projects',
+    createProjectsRoute({
+      projectData: homeScopedProjectData(input.projectData, input.homeDir),
+    })
+  );
+  (window as unknown as {
+    __RENKU_STUDIO_BOOTSTRAP__?: { studioApiToken: string };
+  }).__RENKU_STUDIO_BOOTSTRAP__ = { studioApiToken: 'estimate-matrix-token' };
+  global.fetch = (async (requestInfo: RequestInfo | URL, init?: RequestInit) => {
+    const url =
+      requestInfo instanceof Request
+        ? requestInfo.url
+        : requestInfo instanceof URL
+          ? requestInfo.toString()
+          : requestInfo;
+    return app.request(url, init);
+  }) as typeof fetch;
+}
+
+function homeScopedProjectData(
+  projectData: ProjectDataService,
+  homeDir: string
+): ProjectDataService {
+  return new Proxy(projectData, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+      if (typeof value !== 'function') {
+        return value;
+      }
+      return (...args: unknown[]) => {
+        if (args.length === 0) {
+          return value.call(target);
+        }
+        return value.call(target, withHomeDir(args[0], homeDir), ...args.slice(1));
+      };
+    },
+  });
+}
+
+function withHomeDir(input: unknown, homeDir: string): unknown {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return input;
+  }
+  return { ...(input as Record<string, unknown>), homeDir };
+}
+
 function seedanceCase(
-  inputModeId: ShotVideoTakeInputMode,
+  inputModeId: ShotVideoTakeInputModeId,
   providerModel: string
 ): EstimateMatrixCaseTemplate {
   return {
@@ -411,7 +682,7 @@ function seedanceRunSetupPricingPermutations(): RunSetupPricingPermutationCase[]
 }
 
 function klingCase(
-  inputModeId: ShotVideoTakeInputMode,
+  inputModeId: ShotVideoTakeInputModeId,
   providerModel: string
 ): EstimateMatrixCaseTemplate {
   const hasAspectRatio = inputModeId === 'text-only';
@@ -490,7 +761,7 @@ function klingRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
 }
 
 function veoCase(
-  inputModeId: ShotVideoTakeInputMode,
+  inputModeId: ShotVideoTakeInputModeId,
   providerModel: string,
   expectedCostUsd: number
 ): EstimateMatrixCaseTemplate {
@@ -682,7 +953,7 @@ function grokRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
 }
 
 function ltxCase(
-  inputModeId: ShotVideoTakeInputMode,
+  inputModeId: ShotVideoTakeInputModeId,
   providerModel: string
 ): EstimateMatrixCaseTemplate {
   const routeSettings = {
@@ -763,7 +1034,7 @@ function ltxRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
 }
 
 function happyHorseCase(
-  inputModeId: ShotVideoTakeInputMode,
+  inputModeId: ShotVideoTakeInputModeId,
   providerModel: string
 ): EstimateMatrixCaseTemplate {
   const hasAspectRatio = inputModeId === 'text-only' || inputModeId === 'reference';
@@ -844,7 +1115,7 @@ function happyHorseRunSetupPricingPermutations(): RunSetupPricingPermutationCase
 }
 
 function missingDependencyCostForRoute(input: {
-  inputModeId: ShotVideoTakeInputMode;
+  inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
 }): number {
@@ -868,7 +1139,7 @@ function missingDependencyCostForRoute(input: {
 }
 
 function missingDependencyLineCountForRoute(input: {
-  inputModeId: ShotVideoTakeInputMode;
+  inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
 }): number {
@@ -889,7 +1160,7 @@ function missingDependencyLineCountForRoute(input: {
 }
 
 function requiresMultiShotStoryboard(input: {
-  inputModeId: ShotVideoTakeInputMode;
+  inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   providerModel: string;
 }): boolean {
@@ -898,6 +1169,135 @@ function requiresMultiShotStoryboard(input: {
     input.shotGroupMode === 'multi-shot' &&
     input.providerModel === 'bytedance/seedance-2.0/reference-to-video'
   );
+}
+
+async function writeConfig(homeDir: string, storageRoot: string): Promise<void> {
+  const configDir = path.join(homeDir, '.config', 'renku');
+  await fs.mkdir(configDir, { recursive: true });
+  await fs.writeFile(
+    path.join(configDir, 'config.yaml'),
+    `version: 0.1.0\nstorageRoot: ${storageRoot}\n`,
+    'utf8'
+  );
+}
+
+async function createE2eMovieProject(input: {
+  projectData: ProjectDataService;
+  homeDir: string;
+}): Promise<void> {
+  await input.projectData.createMovieProject({
+    projectName: 'constantinople',
+    title: 'Preparation of the Siege',
+    logline: 'A documentary about preparation before 1453.',
+    summary: 'A documentary project summary stored in SQLite.',
+    aspectRatio: '16:9',
+    homeDir: input.homeDir,
+    idGenerator: createDeterministicIdGenerator(),
+  });
+  await input.projectData.openCurrentProject({
+    projectName: 'constantinople',
+    homeDir: input.homeDir,
+  });
+  await input.projectData.applyCastOperations({
+    homeDir: input.homeDir,
+    document: {
+      kind: 'castOperations',
+      operations: [
+        {
+          operation: 'castMember.add',
+          castMember: {
+            key: 'narrator',
+            handle: 'narrator',
+            name: 'Narrator',
+            role: 'voiceover',
+          },
+        },
+        {
+          operation: 'castMember.add',
+          castMember: {
+            key: 'mehmed-ii',
+            handle: 'mehmed-ii',
+            name: 'Mehmed II',
+            role: 'protagonist',
+          },
+        },
+      ],
+    },
+    idGenerator: createDeterministicIdGenerator(),
+  });
+  await input.projectData.applyLocationOperations({
+    homeDir: input.homeDir,
+    document: {
+      kind: 'locationOperations',
+      operations: [
+        {
+          operation: 'location.add',
+          location: {
+            key: 'council-chamber',
+            handle: 'council-chamber',
+            name: "Mehmed's council chamber",
+            description: 'Formal Ottoman planning room with maps and oil lamps.',
+          },
+        },
+      ],
+    },
+    idGenerator: createDeterministicIdGenerator(),
+  });
+  await input.projectData.createScreenplay({
+    homeDir: input.homeDir,
+    document: sampleScreenplayCreateDocument(),
+    idGenerator: createDeterministicIdGenerator(),
+  });
+}
+
+function sampleScreenplayCreateDocument(): Parameters<
+  ProjectDataService['createScreenplay']
+>[0]['document'] {
+  return {
+    kind: 'screenplayCreate',
+    screenplay: {
+      title: 'Preparation of the Siege',
+      logline: 'A documentary about preparation before 1453.',
+      summary: 'Mehmed turns an inherited ambition into a concrete plan.',
+    },
+    cast: [],
+    locations: [],
+    acts: [
+      {
+        key: 'act-one',
+        title: 'Act I',
+        sequences: [
+          {
+            key: 'young-sultan',
+            title: "The Young Sultan's Obsession",
+            purpose: 'Mehmed turns conquest into policy.',
+            scenes: [
+              {
+                key: 'throne-city',
+                title: 'A Throne Facing an Ancient City',
+                setting: {
+                  interiorExterior: 'INT',
+                  timeOfDay: 'NIGHT',
+                  locationIds: ['location_test0001'],
+                },
+                storyFunction: [
+                  "Mehmed's accession is framed against Constantinople.",
+                ],
+                blocks: [
+                  {
+                    type: 'action',
+                    text: 'Mehmed studies the city map.',
+                    castMemberIds: ['cast_test0002'],
+                    locationIds: ['location_test0001'],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
 }
 
 async function createMatrixProjectSetup(
@@ -1242,7 +1642,7 @@ function shotListIdForCase(
 
 function routeKey(
   modelChoice: ShotVideoTakeModelChoice,
-  inputModeId: ShotVideoTakeInputMode,
+  inputModeId: ShotVideoTakeInputModeId,
   shotGroupMode: ShotVideoTakeShotGroupMode
 ): string {
   return `${modelChoice}:${inputModeId}:${shotGroupMode}`;

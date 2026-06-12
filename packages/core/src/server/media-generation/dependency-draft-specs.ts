@@ -5,6 +5,7 @@ import {
 import type {
   DraftMediaGenerationSpec,
   MediaGenerationDependencyKind,
+  MediaGenerationDependencyMaterializationState,
   MediaGenerationDependencyRequest,
   MediaGenerationDependencyPricing,
   MediaGenerationPurpose,
@@ -29,12 +30,17 @@ export interface MediaGenerationDependencyDraftSpecInput {
 export interface MediaGenerationDependencyDraftSpec {
   purpose: MediaGenerationPurpose;
   spec: MediaGenerationSpec;
+  materializationState?: Extract<
+    MediaGenerationDependencyMaterializationState,
+    'generatable' | 'needs-authored-draft'
+  >;
+  materializationReason?: string;
 }
 
 export async function buildMediaGenerationDependencyDraftSpec(input: {
   purpose: MediaGenerationPurpose;
   draftInput: MediaGenerationDependencyDraftSpecInput;
-}): Promise<DraftMediaGenerationSpec> {
+}): Promise<MediaGenerationDependencyDraftSpec> {
   const definition = requireMediaGenerationPurposeDefinition(input.purpose);
   if (!definition.buildDependencyDraftSpec) {
     throw new ProjectDataError(
@@ -47,14 +53,21 @@ export async function buildMediaGenerationDependencyDraftSpec(input: {
     );
   }
   const draft = await definition.buildDependencyDraftSpec(input.draftInput);
-  return { purpose: draft.purpose, spec: draft.spec };
+  return {
+    purpose: draft.purpose,
+    spec: draft.spec,
+    materializationState: draft.materializationState ?? 'generatable',
+    ...(draft.materializationReason
+      ? { materializationReason: draft.materializationReason }
+      : {}),
+  };
 }
 
 export async function estimateDraftDependency(
   input: {
     projectName?: string;
     homeDir?: string;
-    draftGenerationSpec: DraftMediaGenerationSpec;
+    draftGenerationSpec: DraftMediaGenerationSpec | MediaGenerationDependencyDraftSpec;
   },
   diagnostics: DiagnosticIssue[]
 ): Promise<MediaGenerationDependencyPricing> {

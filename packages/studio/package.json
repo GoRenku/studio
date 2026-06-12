@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:shot-video-estimates": "vitest run src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts",
     "test:watch": "vitest",
     "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
     "check:all": "pnpm lint && pnpm test:typecheck && pnpm test"

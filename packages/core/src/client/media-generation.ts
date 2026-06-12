@@ -1135,6 +1135,7 @@ export interface ShotVideoTakePreflightDependency {
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
   mediaKind: 'image' | 'audio' | 'video';
+  required: boolean;
   reason: string;
 }
 
@@ -1353,6 +1354,14 @@ export type MediaGenerationDependencyNodeKind =
 
 export type MediaGenerationDependencyNodeState = 'ready' | 'planned' | 'missing';
 
+export type MediaGenerationDependencyMaterializationState =
+  | 'materialized'
+  | 'generatable'
+  | 'needs-authored-draft'
+  | 'requires-external-input'
+  | 'blocked-by-dependencies'
+  | 'invalid-generation-draft';
+
 export type MediaGenerationDependencyPricing =
   | {
       state: 'priced';
@@ -1381,7 +1390,10 @@ export interface MediaGenerationDependencyNode {
   mediaKind: MediaKind;
   label: string;
   state: MediaGenerationDependencyNodeState;
+  materializationState: MediaGenerationDependencyMaterializationState;
+  materializationReason?: string;
   pricing: MediaGenerationDependencyPricing;
+  required: boolean;
   dependencyId?: string;
   dependencyKind?: MediaGenerationDependencyKind;
   dependencyTarget?: MediaGenerationTarget;
@@ -1395,6 +1407,7 @@ export interface MediaGenerationDependencyEdge {
   fromNodeId: string;
   toNodeId: string;
   dependencyId: string;
+  required: boolean;
 }
 
 export interface MediaGenerationDependencyEstimate {
@@ -1439,7 +1452,10 @@ export interface MediaGenerationPlanLine {
   dependencyKind?: MediaGenerationDependencyKind;
   depth: number;
   state: MediaGenerationDependencyNodeState;
+  materializationState: MediaGenerationDependencyMaterializationState;
+  materializationReason?: string;
   pricing: MediaGenerationDependencyPricing;
+  required: boolean;
   sourceAssetId?: string;
   draftGenerationSpec?: DraftMediaGenerationSpec;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];

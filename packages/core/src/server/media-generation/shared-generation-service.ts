@@ -154,7 +154,7 @@ export async function planMediaGenerationDependencies(
       slots,
       diagnostics: [],
       resolveExistingAsset: async (slot) =>
-        resolveExistingDependencyAsset({ session, slot }),
+        resolveExistingDependencyAsset({ request, session, slot }),
       declareDependencies: async ({ purpose, nodeId, slot }) => {
         const childDefinition = requireMediaGenerationPurposeDefinition(purpose);
         if (!childDefinition.declareDependencies || !slot.dependencyTarget) {
@@ -238,8 +238,9 @@ async function assertRootDependenciesResolved(input: {
   const plan = await planMediaGenerationDependencies(input);
   const unresolved = plan.dependencyMap.nodes.filter(
     (node) =>
-      node.kind === 'planned-generation' ||
-      node.kind === 'external-input-required'
+      node.required &&
+      (node.kind === 'planned-generation' ||
+        node.kind === 'external-input-required')
   );
   if (unresolved.length === 0) {
     return;

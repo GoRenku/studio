@@ -30,6 +30,11 @@ export interface ResolvedMediaGenerationDependencyAsset {
   assetFileId: string;
 }
 
+export interface MediaGenerationDependencyAssetResolution {
+  asset: ResolvedMediaGenerationDependencyAsset | null;
+  diagnostics: DiagnosticIssue[];
+}
+
 export interface MediaGenerationDependencyRootEstimate {
   pricing: MediaGenerationDependencyPricing;
   diagnostics: DiagnosticIssue[];
@@ -49,7 +54,7 @@ export interface ResolveMediaGenerationDependencyGraphInput {
   diagnostics: DiagnosticIssue[];
   resolveExistingAsset(
     slot: MediaGenerationDependencySlot
-  ): Promise<ResolvedMediaGenerationDependencyAsset | null>;
+  ): Promise<MediaGenerationDependencyAssetResolution>;
   declareDependencies(input: {
     purpose: MediaGenerationPurpose;
     nodeId: string;
@@ -80,11 +85,22 @@ export async function resolveMediaGenerationDependencyGraph(
       slot.dependencyKind
     );
     const policyMode = input.inputPolicyMode?.(slot.dependencyId) ?? 'auto';
-    const existingAsset =
-      policyMode === 'regenerate' ? null : await input.resolveExistingAsset(slot);
+    const resolution =
+      policyMode === 'regenerate'
+        ? { asset: null, diagnostics: [] }
+        : await input.resolveExistingAsset(slot);
+    if (slot.required) {
+      diagnostics.push(...resolution.diagnostics);
+    }
+    const blockingSelectorDiagnostics = resolution.diagnostics.filter(
+      (issue) => issue.severity === 'error'
+    );
+    const existingAsset = resolution.asset;
     const nodeId = existingAsset
       ? `asset:${slot.dependencyId}`
-      : definition.generationPurpose
+      : blockingSelectorDiagnostics.length > 0
+        ? `missing:${slot.dependencyId}`
+        : definition.generationPurpose
         ? `planned:${slot.dependencyId}`
         : `missing:${slot.dependencyId}`;
 
@@ -93,11 +109,39 @@ export async function resolveMediaGenerationDependencyGraph(
         fromNodeId: nodeId,
         toNodeId: parentNodeId,
         dependencyId: slot.dependencyId,
+        required: slot.required,
       });
       return nodeId;
     }
 
     nodeIds.add(nodeId);
+
+    if (blockingSelectorDiagnostics.length > 0) {
+      nodes.push({
+        id: nodeId,
+        kind: 'external-input-required',
+        purpose: definition.generationPurpose ?? null,
+        mediaKind: definition.mediaKind,
+        label: slot.label,
+        state: 'missing',
+        materializationState: 'requires-external-input',
+        materializationReason:
+          'Resolve the selected asset before this dependency can be planned.',
+        pricing: { state: 'not-applicable', estimatedUsd: null },
+        required: slot.required,
+        dependencyId: slot.dependencyId,
+        dependencyKind: slot.dependencyKind,
+        ...(slot.dependencyTarget ? { dependencyTarget: slot.dependencyTarget } : {}),
+        diagnostics: blockingSelectorDiagnostics,
+      });
+      edges.push({
+        fromNodeId: nodeId,
+        toNodeId: parentNodeId,
+        dependencyId: slot.dependencyId,
+        required: slot.required,
+      });
+      return nodeId;
+    }
 
     if (existingAsset) {
       nodes.push({
@@ -107,7 +151,9 @@ export async function resolveMediaGenerationDependencyGraph(
         mediaKind: definition.mediaKind,
         label: slot.label,
         state: 'ready',
+        materializationState: 'materialized',
         pricing: { state: 'priced', estimatedUsd: 0 },
+        required: slot.required,
         dependencyId: slot.dependencyId,
         dependencyKind: slot.dependencyKind,
         ...(slot.dependencyTarget ? { dependencyTarget: slot.dependencyTarget } : {}),
@@ -119,6 +165,7 @@ export async function resolveMediaGenerationDependencyGraph(
         fromNodeId: nodeId,
         toNodeId: parentNodeId,
         dependencyId: slot.dependencyId,
+        required: slot.required,
       });
       return nodeId;
     }
@@ -140,7 +187,9 @@ export async function resolveMediaGenerationDependencyGraph(
       { path: ['dependencyMap', 'nodes', nodeId] },
       'Attach or select a concrete project asset for this dependency.'
     );
-    diagnostics.push(missingIssue);
+    if (slot.required) {
+      diagnostics.push(missingIssue);
+    }
     nodes.push({
       id: nodeId,
       kind: 'external-input-required',
@@ -148,7 +197,11 @@ export async function resolveMediaGenerationDependencyGraph(
       mediaKind: definition.mediaKind,
       label: slot.label,
       state: 'missing',
+      materializationState: 'requires-external-input',
+      materializationReason:
+        'Attach or select a concrete project asset for this dependency.',
       pricing: { state: 'not-applicable', estimatedUsd: null },
+      required: slot.required,
       dependencyId: slot.dependencyId,
       dependencyKind: slot.dependencyKind,
       ...(slot.dependencyTarget ? { dependencyTarget: slot.dependencyTarget } : {}),
@@ -158,6 +211,7 @@ export async function resolveMediaGenerationDependencyGraph(
       fromNodeId: nodeId,
       toNodeId: parentNodeId,
       dependencyId: slot.dependencyId,
+      required: slot.required,
     });
     return nodeId;
   };
@@ -170,6 +224,8 @@ export async function resolveMediaGenerationDependencyGraph(
     mediaKind: MediaKind;
   }) => {
     let draftGenerationSpec: MediaGenerationDependencyNode['draftGenerationSpec'] | null = null;
+    let materializationState: MediaGenerationDependencyNode['materializationState'] = 'invalid-generation-draft';
+    let materializationReason: string | null = null;
     let pricing: MediaGenerationDependencyPricing = {
       state: 'not-applicable',
       estimatedUsd: null,
@@ -188,7 +244,7 @@ export async function resolveMediaGenerationDependencyGraph(
           }
         );
       }
-      draftGenerationSpec = await buildMediaGenerationDependencyDraftSpec({
+      const dependencyDraft = await buildMediaGenerationDependencyDraftSpec({
         purpose: nodeInput.purpose,
         draftInput: {
           projectName: input.projectName,
@@ -202,13 +258,22 @@ export async function resolveMediaGenerationDependencyGraph(
           reason: nodeInput.slot.reason,
         },
       });
+      materializationState = dependencyDraft.materializationState ?? 'generatable';
+      materializationReason = dependencyDraft.materializationReason ?? null;
+      const pricingDraftGenerationSpec = {
+        purpose: dependencyDraft.purpose,
+        spec: dependencyDraft.spec,
+      };
+      if (materializationState === 'generatable') {
+        draftGenerationSpec = pricingDraftGenerationSpec;
+      }
       pricing = await estimateDraftDependency(
         {
           projectName: input.projectName,
           homeDir: input.homeDir,
-          draftGenerationSpec,
+          draftGenerationSpec: pricingDraftGenerationSpec,
         },
-        diagnostics
+        nodeInput.slot.required ? diagnostics : nodeDiagnostics
       );
       state = 'planned';
       if (pricing.state === 'unpriced') {
@@ -238,18 +303,24 @@ export async function resolveMediaGenerationDependencyGraph(
         { path: ['dependencyMap', 'nodes', nodeInput.nodeId] },
         suggestion
       );
-      diagnostics.push(issue);
+      if (nodeInput.slot.required) {
+        diagnostics.push(issue);
+      }
       nodeDiagnostics.push(issue);
+      materializationReason = message;
     }
 
-    nodes.push({
+    const plannedNode: MediaGenerationDependencyNode = {
       id: nodeInput.nodeId,
       kind: 'planned-generation',
       purpose: nodeInput.purpose,
       mediaKind: nodeInput.mediaKind,
       label: nodeInput.slot.label,
       state,
+      materializationState,
+      ...(materializationReason ? { materializationReason } : {}),
       pricing,
+      required: nodeInput.slot.required,
       dependencyId: nodeInput.slot.dependencyId,
       dependencyKind: nodeInput.slot.dependencyKind,
       ...(nodeInput.slot.dependencyTarget
@@ -257,11 +328,13 @@ export async function resolveMediaGenerationDependencyGraph(
         : {}),
       ...(draftGenerationSpec ? { draftGenerationSpec } : {}),
       diagnostics: nodeDiagnostics,
-    });
+    };
+    nodes.push(plannedNode);
     edges.push({
       fromNodeId: nodeInput.nodeId,
       toNodeId: nodeInput.parentNodeId,
       dependencyId: nodeInput.slot.dependencyId,
+      required: nodeInput.slot.required,
     });
 
     const childSlots = await input.declareDependencies({
@@ -269,8 +342,32 @@ export async function resolveMediaGenerationDependencyGraph(
       nodeId: nodeInput.nodeId,
       slot: nodeInput.slot,
     });
+    const childNodeIds: Array<{ nodeId: string; required: boolean }> = [];
     for (const childSlot of childSlots) {
-      await addSlotNode(childSlot, nodeInput.nodeId);
+      childNodeIds.push({
+        nodeId: await addSlotNode(childSlot, nodeInput.nodeId),
+        required: childSlot.required,
+      });
+    }
+    const blockedByChild = childNodeIds.some(({ nodeId, required }) => {
+      if (!required) {
+        return false;
+      }
+      const childNode = nodes.find((node) => node.id === nodeId);
+      return Boolean(
+        childNode &&
+          (childNode.state === 'missing' ||
+            childNode.materializationState === 'needs-authored-draft' ||
+            childNode.materializationState === 'requires-external-input' ||
+            childNode.materializationState === 'blocked-by-dependencies' ||
+            childNode.materializationState === 'invalid-generation-draft')
+      );
+    });
+    if (blockedByChild && plannedNode.materializationState === 'generatable') {
+      plannedNode.materializationState = 'blocked-by-dependencies';
+      plannedNode.materializationReason =
+        'Resolve required child dependencies before generating this dependency.';
+      delete plannedNode.draftGenerationSpec;
     }
   };
 
@@ -280,24 +377,49 @@ export async function resolveMediaGenerationDependencyGraph(
 
   const rootEstimate = await input.estimateRoot();
   diagnostics.push(...rootEstimate.diagnostics);
+  const rootMaterializationState = nodes.some(
+    (node) =>
+      node.required &&
+      (node.kind === 'planned-generation' ||
+        node.kind === 'external-input-required' ||
+        node.materializationState === 'needs-authored-draft' ||
+        node.materializationState === 'requires-external-input' ||
+        node.materializationState === 'invalid-generation-draft' ||
+        node.materializationState === 'blocked-by-dependencies' ||
+        node.state === 'missing')
+  )
+    ? 'blocked-by-dependencies'
+    : 'generatable';
   nodes.push({
     id: input.rootNodeId,
     kind: 'final-generation',
     purpose: input.rootPurpose,
     mediaKind: input.rootMediaKind,
     label: input.rootLabel,
-    state: nodes.some((node) => node.state === 'missing') ? 'missing' : 'planned',
+    state: rootEstimate.pricing.state === 'not-applicable' ? 'missing' : 'planned',
+    materializationState: rootMaterializationState,
+    ...(rootMaterializationState === 'blocked-by-dependencies'
+      ? {
+          materializationReason:
+            'Generate, import, or author required dependencies before creating the final generation.',
+        }
+      : {}),
     pricing: rootEstimate.pricing,
+    required: true,
     dependencyTarget: input.rootTarget,
     diagnostics: rootEstimate.diagnostics,
   });
 
   const estimate = aggregateDependencyEstimate(nodes);
   const dependencyLevels = plannedGenerationLevels(nodes, edges);
-  const levels = [
-    ...dependencyLevels,
-    ...(nodes.some((node) => node.state === 'missing') ? [] : [[input.rootNodeId]]),
-  ];
+  const levels = [...dependencyLevels];
+  if (rootMaterializationState === 'generatable') {
+    if (levels.length > 0) {
+      levels[0] = [input.rootNodeId, ...levels[0]];
+    } else {
+      levels.push([input.rootNodeId]);
+    }
+  }
 
   return {
     dependencyMap: {
