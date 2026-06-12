@@ -3,10 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  STUDIO_DEV_SERVER_HOST,
+  STUDIO_DEV_SERVER_PORT,
+  STUDIO_DEV_SERVER_URL,
   STUDIO_RUNTIME_STALE_AFTER_MS,
   claimStudioRuntimeDescriptor,
   heartbeatStudioRuntimeDescriptor,
+  isStudioRuntimeDescriptorProcessAlive,
   isStudioRuntimeDescriptorStale,
+  isStudioRuntimeDescriptorUsable,
   readStudioRuntimeDescriptor,
   resolveStudioRuntimeDescriptorPath,
 } from './runtime-descriptor.js';
@@ -97,6 +102,104 @@ describe('Studio runtime descriptor', () => {
     });
   });
 
+  it('lets the canonical dev server replace a fresh non-canonical descriptor', async () => {
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: '127.0.0.1',
+      port: 5174,
+      serverUrl: 'http://127.0.0.1:5174',
+      cliNotificationToken: 'old-notification-token',
+    });
+
+    const descriptor = await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: STUDIO_DEV_SERVER_HOST,
+      port: STUDIO_DEV_SERVER_PORT,
+      serverUrl: STUDIO_DEV_SERVER_URL,
+      cliNotificationToken: 'notification-token-test',
+      replaceNonCanonicalDevServer: true,
+    });
+
+    expect(descriptor).toMatchObject({
+      host: STUDIO_DEV_SERVER_HOST,
+      port: STUDIO_DEV_SERVER_PORT,
+      serverUrl: STUDIO_DEV_SERVER_URL,
+      cliNotificationToken: 'notification-token-test',
+    });
+    await expect(readStudioRuntimeDescriptor({ homeDir })).resolves.toMatchObject({
+      serverInstanceId: descriptor.serverInstanceId,
+      serverUrl: STUDIO_DEV_SERVER_URL,
+    });
+  });
+
+  it('does not let a second canonical dev server replace a fresh canonical descriptor', async () => {
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: STUDIO_DEV_SERVER_HOST,
+      port: STUDIO_DEV_SERVER_PORT,
+      serverUrl: STUDIO_DEV_SERVER_URL,
+      cliNotificationToken: 'first-token',
+    });
+
+    await expect(
+      claimStudioRuntimeDescriptor({
+        homeDir,
+        host: STUDIO_DEV_SERVER_HOST,
+        port: STUDIO_DEV_SERVER_PORT,
+        serverUrl: STUDIO_DEV_SERVER_URL,
+        cliNotificationToken: 'second-token',
+        replaceNonCanonicalDevServer: true,
+      })
+    ).rejects.toMatchObject({
+      code: 'STUDIO_COORDINATION030',
+    });
+  });
+
+  it('lets the canonical dev server replace a fresh descriptor whose process is gone', async () => {
+    const descriptorPath = resolveStudioRuntimeDescriptorPath({ homeDir });
+    const now = new Date();
+    await fs.mkdir(path.dirname(descriptorPath), { recursive: true });
+    await fs.writeFile(
+      descriptorPath,
+      JSON.stringify(
+        {
+          version: '0.1.0',
+          serverInstanceId: 'studio_server_dead_process',
+          pid: 0,
+          host: STUDIO_DEV_SERVER_HOST,
+          port: STUDIO_DEV_SERVER_PORT,
+          serverUrl: STUDIO_DEV_SERVER_URL,
+          startedAt: now.toISOString(),
+          heartbeatAt: now.toISOString(),
+          cliNotificationToken: 'old-notification-token',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const descriptor = await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: STUDIO_DEV_SERVER_HOST,
+      port: STUDIO_DEV_SERVER_PORT,
+      serverUrl: STUDIO_DEV_SERVER_URL,
+      cliNotificationToken: 'notification-token-test',
+      replaceNonCanonicalDevServer: true,
+    });
+
+    expect(descriptor).toMatchObject({
+      host: STUDIO_DEV_SERVER_HOST,
+      port: STUDIO_DEV_SERVER_PORT,
+      serverUrl: STUDIO_DEV_SERVER_URL,
+      cliNotificationToken: 'notification-token-test',
+    });
+    await expect(readStudioRuntimeDescriptor({ homeDir })).resolves.toMatchObject({
+      serverInstanceId: descriptor.serverInstanceId,
+      cliNotificationToken: 'notification-token-test',
+    });
+  });
+
   it('reads older descriptors without a CLI notification token', async () => {
     const descriptorPath = resolveStudioRuntimeDescriptorPath({ homeDir });
     await fs.mkdir(path.dirname(descriptorPath), { recursive: true });
@@ -153,5 +256,38 @@ describe('Studio runtime descriptor', () => {
         new Date(heartbeatAt.getTime() + STUDIO_RUNTIME_STALE_AFTER_MS + 1)
       )
     ).toBe(true);
+  });
+
+  it('treats a fresh descriptor as usable only when its process is alive', () => {
+    const now = new Date();
+    const descriptor = {
+      version: '0.1.0' as const,
+      serverInstanceId: 'studio_server_test',
+      pid: process.pid,
+      host: STUDIO_DEV_SERVER_HOST,
+      port: STUDIO_DEV_SERVER_PORT,
+      serverUrl: STUDIO_DEV_SERVER_URL,
+      startedAt: now.toISOString(),
+      heartbeatAt: now.toISOString(),
+      cliNotificationToken: 'notification-token-test',
+    };
+
+    expect(isStudioRuntimeDescriptorProcessAlive(descriptor)).toBe(true);
+    expect(isStudioRuntimeDescriptorUsable(descriptor, now)).toBe(true);
+    expect(
+      isStudioRuntimeDescriptorProcessAlive({
+        ...descriptor,
+        pid: 0,
+      })
+    ).toBe(false);
+    expect(
+      isStudioRuntimeDescriptorUsable(
+        {
+          ...descriptor,
+          pid: 0,
+        },
+        now
+      )
+    ).toBe(false);
   });
 });

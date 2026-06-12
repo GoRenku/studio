@@ -8,6 +8,14 @@ import type { StudioEvent, StudioEventReadResult } from './events.js';
 
 export const STUDIO_EVENTS_FILE_NAME = 'studio-events.jsonl' as const;
 
+export interface StudioEventStoreSummary {
+  path: string;
+  exists: boolean;
+  lineCount: number;
+  invalidEventCount: number;
+  warningCount: number;
+}
+
 let appendQueue = Promise.resolve();
 
 export function resolveStudioEventStorePath(options: RenkuConfigPathOptions = {}): string {
@@ -61,6 +69,41 @@ export async function readStudioEventsFromStore(
   }
 }
 
+export async function readStudioEventStoreSummary(
+  options: RenkuConfigPathOptions = {}
+): Promise<StudioEventStoreSummary> {
+  const eventStorePath = resolveStudioEventStorePath(options);
+  let contents: string;
+  try {
+    contents = await fs.readFile(eventStorePath, 'utf8');
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      return {
+        path: eventStorePath,
+        exists: false,
+        lineCount: 0,
+        invalidEventCount: 0,
+        warningCount: 0,
+      };
+    }
+    throw new StudioCoordinationError(
+      'STUDIO_COORDINATION006',
+      `Unable to open Studio coordination event store at ${eventStorePath}.`,
+      { suggestion: 'Check that the Renku config directory is readable.' }
+    );
+  }
+
+  const lineCount = countCompleteEventLines(contents);
+  const invalidEventCount = collectInvalidEventLineSummaries(contents).length;
+  return {
+    path: eventStorePath,
+    exists: true,
+    lineCount,
+    invalidEventCount,
+    warningCount: invalidEventCount > 0 ? 1 : 0,
+  };
+}
+
 async function appendNow(
   event: StudioEvent,
   options: RenkuConfigPathOptions
@@ -89,10 +132,10 @@ async function appendNow(
 
 function parseEventLines(contents: string, offset: number): StudioEventReadResult {
   const events: StudioEvent[] = [];
-  const warnings = [];
+  const invalidLines: InvalidStudioEventLine[] = [];
   let cursor = offset;
   const lines = contents.split('\n');
-  const completeLineCount = contents.endsWith('\n') ? lines.length - 1 : lines.length - 1;
+  const completeLineCount = countCompleteEventLines(contents);
 
   for (let index = 0; index < completeLineCount; index += 1) {
     const line = lines[index] ?? '';
@@ -102,23 +145,91 @@ function parseEventLines(contents: string, offset: number): StudioEventReadResul
     }
     try {
       events.push(validateStudioEvent(JSON.parse(line)));
-    } catch {
-      warnings.push(
-        studioCoordinationWarning(
-          'STUDIO_COORDINATION007',
-          'Malformed Studio coordination event line was skipped.',
-          ['events', String(index)],
-          'Continue with later valid events and inspect the local event store if this repeats.'
-        )
-      );
+    } catch (error) {
+      invalidLines.push(invalidStudioEventLine(line, index, error));
     }
   }
 
   return {
     events,
     nextCursor: formatStudioEventCursor(cursor),
-    warnings,
+    warnings: summarizeInvalidEventLines(invalidLines),
   };
+}
+
+interface InvalidStudioEventLine {
+  lineNumber: number;
+  eventType?: string;
+  reason: string;
+}
+
+function countCompleteEventLines(contents: string): number {
+  return Math.max(0, contents.split('\n').length - 1);
+}
+
+function collectInvalidEventLineSummaries(
+  contents: string
+): InvalidStudioEventLine[] {
+  const invalidLines: InvalidStudioEventLine[] = [];
+  const lines = contents.split('\n');
+  const completeLineCount = countCompleteEventLines(contents);
+
+  for (let index = 0; index < completeLineCount; index += 1) {
+    const line = lines[index] ?? '';
+    if (!line.trim()) {
+      continue;
+    }
+    try {
+      validateStudioEvent(JSON.parse(line));
+    } catch (error) {
+      invalidLines.push(invalidStudioEventLine(line, index, error));
+    }
+  }
+
+  return invalidLines;
+}
+
+function invalidStudioEventLine(
+  line: string,
+  index: number,
+  error: unknown
+): InvalidStudioEventLine {
+  return {
+    lineNumber: index + 1,
+    eventType: readEventType(line),
+    reason: error instanceof Error ? error.message : 'Invalid Studio event.',
+  };
+}
+
+function summarizeInvalidEventLines(
+  invalidLines: InvalidStudioEventLine[]
+): StudioEventReadResult['warnings'] {
+  if (invalidLines.length === 0) {
+    return [];
+  }
+  const samples = invalidLines.slice(0, 3).map(formatInvalidLineSample).join('; ');
+  return [
+    studioCoordinationWarning(
+      'STUDIO_COORDINATION007',
+      `Skipped ${invalidLines.length} invalid historical Studio coordination event line${invalidLines.length === 1 ? '' : 's'}.`,
+      ['events'],
+      `Sample invalid lines: ${samples}. Continue with later valid events and inspect the local event store if this repeats.`
+    ),
+  ];
+}
+
+function formatInvalidLineSample(line: InvalidStudioEventLine): string {
+  const eventType = line.eventType ? ` ${line.eventType}` : '';
+  return `${line.lineNumber}${eventType} (${line.reason})`;
+}
+
+function readEventType(line: string): string | undefined {
+  try {
+    const value = JSON.parse(line) as { type?: unknown };
+    return typeof value.type === 'string' ? value.type : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 interface NodeError extends Error {

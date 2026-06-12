@@ -494,6 +494,9 @@ export type {
   VisualLanguageProjectReport,
 } from '../client/index.js';
 export {
+  STUDIO_DEV_SERVER_HOST,
+  STUDIO_DEV_SERVER_PORT,
+  STUDIO_DEV_SERVER_URL,
   STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS,
   STUDIO_RUNTIME_STALE_AFTER_MS,
   StudioCoordinationError,
@@ -503,7 +506,10 @@ export {
   createStudioOperationId,
   createStudioServerInstanceId,
   heartbeatStudioRuntimeDescriptor,
+  isStudioRuntimeDescriptorProcessAlive,
   isStudioRuntimeDescriptorStale,
+  isStudioRuntimeDescriptorUsable,
+  readStudioEventStoreSummary,
   readStudioRuntimeDescriptor,
   releaseStudioRuntimeDescriptor,
   resolveStudioEventStorePath,
@@ -543,6 +549,7 @@ export {
 export { sceneShotListResourceKeys } from './commands/scene-shot-list-commands.js';
 export type {
   AppendStudioEventInput,
+  ClaimStudioRuntimeDescriptorInput,
   ProjectInformationRefreshField,
   ReadStudioEventsInput,
   StudioBrowserSessionActiveEvent,
@@ -552,6 +559,7 @@ export type {
   StudioCurrentProject,
   StudioEvent,
   StudioEventReadResult,
+  StudioEventStoreSummary,
   StudioEventSource,
   StudioFocus,
   StudioFocusChangedEvent,

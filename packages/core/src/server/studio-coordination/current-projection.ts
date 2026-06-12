@@ -18,7 +18,7 @@ import {
   SUBJECT_FRAMING_LABELS,
 } from '../../client/shot-spec-labels.js';
 import { studioCoordinationWarning } from './errors.js';
-import { isStudioRuntimeDescriptorStale, readStudioRuntimeDescriptor } from './runtime-descriptor.js';
+import { isStudioRuntimeDescriptorUsable, readStudioRuntimeDescriptor } from './runtime-descriptor.js';
 import { resolveStudioSelectionForProject } from './focus-validation.js';
 import type {
   StudioSelection,
@@ -47,7 +47,7 @@ export async function projectStudioCurrent(
   const now = input.now ?? new Date();
   const runtime = await readStudioRuntimeDescriptor(input);
   const runtimeActive = Boolean(
-    runtime && !isStudioRuntimeDescriptorStale(runtime, now)
+    runtime && isStudioRuntimeDescriptorUsable(runtime, now)
   );
   const sessionActivity = new Map<string, StudioBrowserSessionActiveEvent>();
   const sessionFocus = new Map<string, StudioFocusChangedEvent>();

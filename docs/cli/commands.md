@@ -1908,6 +1908,29 @@ Behavior:
 - Reports "No active Studio selection is available" when Studio has no active
   project selection.
 
+## `renku studio server status`
+
+Show the canonical local Studio dev-server status for agents and humans.
+
+```bash
+renku studio server status
+renku studio server status --json
+```
+
+Behavior:
+
+- Reports the canonical browser URL as `http://localhost:5173`.
+- Reports whether a fresh Studio runtime descriptor exists and its recorded
+  process is still alive.
+- Reports whether the runtime descriptor matches the canonical dev server.
+- Reports runtime descriptor token presence as a boolean only. It never prints
+  the CLI notification token or the browser Studio API token.
+- Summarizes the Studio coordination event store with line counts and invalid
+  historical event counts instead of dumping every warning.
+- The intended agent policy is attach-only: agents should use the existing
+  server when the descriptor is fresh and canonical, and should not start a new
+  Studio dev server unless the user explicitly changes that policy.
+
 ## Maintenance Checklist
 
 When adding or changing a CLI command:

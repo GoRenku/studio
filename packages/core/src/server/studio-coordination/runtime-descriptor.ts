@@ -5,6 +5,10 @@ import { resolveRenkuConfigDir, type RenkuConfigPathOptions } from '../renku-con
 import { StudioCoordinationError } from './errors.js';
 
 export const STUDIO_RUNTIME_DESCRIPTOR_FILE_NAME = 'studio-runtime.json' as const;
+export const STUDIO_DEV_SERVER_HOST = 'localhost' as const;
+export const STUDIO_DEV_SERVER_PORT = 5173 as const;
+export const STUDIO_DEV_SERVER_URL =
+  `http://${STUDIO_DEV_SERVER_HOST}:${STUDIO_DEV_SERVER_PORT}` as const;
 export const STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS = 30_000;
 export const STUDIO_RUNTIME_STALE_AFTER_MS = 90_000;
 
@@ -26,6 +30,7 @@ export interface ClaimStudioRuntimeDescriptorInput extends RenkuConfigPathOption
   serverUrl: string;
   cliNotificationToken?: string;
   now?: Date;
+  replaceNonCanonicalDevServer?: boolean;
 }
 
 export function createStudioServerInstanceId(): string {
@@ -66,7 +71,11 @@ export async function claimStudioRuntimeDescriptor(
   const descriptorPath = resolveStudioRuntimeDescriptorPath(input);
   const existing = await readStudioRuntimeDescriptor(input);
   const now = input.now ?? new Date();
-  if (existing && !isStudioRuntimeDescriptorStale(existing, now)) {
+  if (
+    existing &&
+    isStudioRuntimeDescriptorUsable(existing, now) &&
+    !canReplaceExistingDevDescriptor(existing, input)
+  ) {
     throw new StudioCoordinationError(
       'STUDIO_COORDINATION030',
       `Renku Studio is already running at ${existing.serverUrl}.`,
@@ -91,6 +100,37 @@ export async function claimStudioRuntimeDescriptor(
   await fs.mkdir(path.dirname(descriptorPath), { recursive: true });
   await writeStudioRuntimeDescriptor(descriptorPath, descriptor);
   return descriptor;
+}
+
+function canReplaceExistingDevDescriptor(
+  existing: StudioRuntimeDescriptor,
+  input: ClaimStudioRuntimeDescriptorInput
+): boolean {
+  return (
+    input.replaceNonCanonicalDevServer === true &&
+    isCanonicalDevDescriptorInput(input) &&
+    !isCanonicalDevDescriptor(existing)
+  );
+}
+
+function isCanonicalDevDescriptorInput(
+  input: ClaimStudioRuntimeDescriptorInput
+): boolean {
+  return (
+    input.host === STUDIO_DEV_SERVER_HOST &&
+    input.port === STUDIO_DEV_SERVER_PORT &&
+    input.serverUrl === STUDIO_DEV_SERVER_URL
+  );
+}
+
+function isCanonicalDevDescriptor(
+  descriptor: StudioRuntimeDescriptor
+): boolean {
+  return (
+    descriptor.host === STUDIO_DEV_SERVER_HOST &&
+    descriptor.port === STUDIO_DEV_SERVER_PORT &&
+    descriptor.serverUrl === STUDIO_DEV_SERVER_URL
+  );
 }
 
 export async function heartbeatStudioRuntimeDescriptor(
@@ -121,6 +161,33 @@ export function isStudioRuntimeDescriptorStale(
   now = new Date()
 ): boolean {
   return now.getTime() - Date.parse(descriptor.heartbeatAt) > STUDIO_RUNTIME_STALE_AFTER_MS;
+}
+
+export function isStudioRuntimeDescriptorUsable(
+  descriptor: StudioRuntimeDescriptor,
+  now = new Date()
+): boolean {
+  return (
+    !isStudioRuntimeDescriptorStale(descriptor, now) &&
+    isStudioRuntimeDescriptorProcessAlive(descriptor)
+  );
+}
+
+export function isStudioRuntimeDescriptorProcessAlive(
+  descriptor: StudioRuntimeDescriptor
+): boolean {
+  if (!Number.isInteger(descriptor.pid) || descriptor.pid <= 0) {
+    return false;
+  }
+  try {
+    process.kill(descriptor.pid, 0);
+    return true;
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ESRCH') {
+      return false;
+    }
+    return true;
+  }
 }
 
 async function writeStudioRuntimeDescriptor(

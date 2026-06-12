@@ -5,6 +5,8 @@ import {
   claimStudioRuntimeDescriptor,
   createProjectDataService,
   createStudioCoordinationService,
+  resolveStudioEventStorePath,
+  resolveStudioRuntimeDescriptorPath,
 } from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { runRenkuCli } from './cli.js';
@@ -2691,6 +2693,225 @@ describe('renku CLI', () => {
     expect(stdout).toContain(
       `Focus: Scene ${scene.title} > Shots > Shot 1 > Composition`
     );
+    expect(stderr).toEqual([]);
+  });
+
+  it('reports missing Studio dev server status for agents', async () => {
+    const exitCode = await runRenkuCli(
+      ['studio', 'server', 'status', '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      server: {
+        running: false,
+        canonicalUrl: 'http://localhost:5173',
+        descriptor: {
+          present: false,
+          fresh: false,
+          matchesCanonical: false,
+          hasCliNotificationToken: false,
+        },
+      },
+      eventStore: {
+        path: '~/.config/renku/studio-events.jsonl',
+        lineCount: 0,
+        invalidEventCount: 0,
+        warningCount: 0,
+      },
+      agent: {
+        serverPolicy: 'attachOnly',
+        browserUrl: 'http://localhost:5173',
+      },
+    });
+    expect(stderr).toEqual([]);
+  });
+
+  it('reports fresh canonical Studio dev server status without exposing tokens', async () => {
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: 'localhost',
+      port: 5173,
+      serverUrl: 'http://localhost:5173',
+      cliNotificationToken: 'notification-token-test',
+    });
+    const eventStorePath = resolveStudioEventStorePath({ homeDir });
+    await fs.mkdir(path.dirname(eventStorePath), { recursive: true });
+    await fs.writeFile(
+      eventStorePath,
+      [
+        JSON.stringify({
+          id: 'studio_event_unsupported',
+          version: '0.1.0',
+          createdAt: new Date().toISOString(),
+          type: 'studio.focusChanged',
+          projectRef: {
+            name: 'constantinople',
+            id: 'project_test0001',
+            storageRoot: path.join(homeDir, 'movies'),
+          },
+          focus: {
+            screen: 'movieStudio',
+            selection: { type: 'storyboard' },
+          },
+          source: {
+            kind: 'studio',
+            browserSessionId: 'studio_browser_test',
+          },
+        }),
+        '',
+      ].join('\n'),
+      'utf8'
+    );
+
+    const exitCode = await runRenkuCli(
+      ['studio', 'server', 'status', '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    const output = stdout.join('\n');
+    expect(exitCode).toBe(0);
+    expect(output).not.toContain('notification-token-test');
+    expect(JSON.parse(output)).toMatchObject({
+      server: {
+        running: true,
+        canonicalUrl: 'http://localhost:5173',
+        descriptor: {
+          present: true,
+          fresh: true,
+          host: 'localhost',
+          port: 5173,
+          serverUrl: 'http://localhost:5173',
+          hasCliNotificationToken: true,
+          matchesCanonical: true,
+        },
+      },
+      eventStore: {
+        lineCount: 1,
+        invalidEventCount: 1,
+        warningCount: 1,
+      },
+    });
+    expect(stderr).toEqual([]);
+  });
+
+  it('reports stale Studio dev server descriptors', async () => {
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: 'localhost',
+      port: 5173,
+      serverUrl: 'http://localhost:5173',
+      cliNotificationToken: 'notification-token-test',
+      now: new Date('2000-01-01T00:00:00.000Z'),
+    });
+
+    const exitCode = await runRenkuCli(
+      ['studio', 'server', 'status', '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      server: {
+        running: false,
+        descriptor: {
+          present: true,
+          fresh: false,
+          matchesCanonical: true,
+        },
+      },
+    });
+    expect(stderr).toEqual([]);
+  });
+
+  it('reports fresh descriptors with dead processes as not running', async () => {
+    const descriptorPath = resolveStudioRuntimeDescriptorPath({ homeDir });
+    const now = new Date();
+    await fs.mkdir(path.dirname(descriptorPath), { recursive: true });
+    await fs.writeFile(
+      descriptorPath,
+      JSON.stringify(
+        {
+          version: '0.1.0',
+          serverInstanceId: 'studio_server_dead_process',
+          pid: 0,
+          host: 'localhost',
+          port: 5173,
+          serverUrl: 'http://localhost:5173',
+          startedAt: now.toISOString(),
+          heartbeatAt: now.toISOString(),
+          cliNotificationToken: 'notification-token-test',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const exitCode = await runRenkuCli(
+      ['studio', 'server', 'status', '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      server: {
+        running: false,
+        descriptor: {
+          present: true,
+          fresh: false,
+          matchesCanonical: true,
+        },
+      },
+    });
+    expect(stderr).toEqual([]);
+  });
+
+  it('reports fresh non-canonical Studio dev server descriptors', async () => {
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: 'localhost',
+      port: 5174,
+      serverUrl: 'http://localhost:5174',
+      cliNotificationToken: 'notification-token-test',
+    });
+
+    const exitCode = await runRenkuCli(
+      ['studio', 'server', 'status', '--json'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      server: {
+        running: true,
+        canonicalUrl: 'http://localhost:5173',
+        descriptor: {
+          present: true,
+          fresh: true,
+          host: 'localhost',
+          port: 5174,
+          serverUrl: 'http://localhost:5174',
+          matchesCanonical: false,
+        },
+      },
+    });
     expect(stderr).toEqual([]);
   });
 

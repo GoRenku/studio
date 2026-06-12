@@ -9,7 +9,10 @@ import {
 import { createDeterministicIdGenerator } from '../entity-ids.js';
 import { createSampleMovieProject } from '../testing/project-data-fixtures.js';
 import { createStudioCoordinationService } from './service.js';
-import { resolveStudioEventStorePath } from './event-store.js';
+import {
+  readStudioEventStoreSummary,
+  resolveStudioEventStorePath,
+} from './event-store.js';
 import { claimStudioRuntimeDescriptor } from './runtime-descriptor.js';
 
 describe('StudioCoordinationService', () => {
@@ -100,13 +103,32 @@ describe('StudioCoordinationService', () => {
     expect((appendError as Error).message).toMatch(/EEXIST|ENOTDIR/);
   });
 
-  it('skips malformed historical lines with structured warnings', async () => {
+  it('summarizes invalid historical lines with one structured warning', async () => {
     const eventStorePath = resolveStudioEventStorePath({ homeDir });
     await fs.mkdir(path.dirname(eventStorePath), { recursive: true });
     await fs.writeFile(
       eventStorePath,
       [
         '{not valid json}',
+        JSON.stringify({
+          id: 'studio_event_old_focus',
+          version: '0.1.0',
+          createdAt: new Date().toISOString(),
+          type: 'studio.focusChanged',
+          projectRef: {
+            name: 'constantinople',
+            id: 'project_test0001',
+            storageRoot: path.join(homeDir, 'projects'),
+          },
+          focus: {
+            screen: 'movieStudio',
+            selection: { type: 'storyboard' },
+          },
+          source: {
+            kind: 'studio',
+            browserSessionId: 'studio_browser_one',
+          },
+        }),
         JSON.stringify({
           id: 'studio_event_valid',
           version: '0.1.0',
@@ -131,9 +153,18 @@ describe('StudioCoordinationService', () => {
     expect(result.warnings).toEqual([
       expect.objectContaining({
         code: 'STUDIO_COORDINATION007',
+        message:
+          'Skipped 2 invalid historical Studio coordination event lines.',
         severity: 'warning',
+        location: expect.objectContaining({ path: ['events'] }),
       }),
     ]);
+
+    await expect(readStudioEventStoreSummary({ homeDir })).resolves.toMatchObject({
+      lineCount: 3,
+      invalidEventCount: 2,
+      warningCount: 1,
+    });
   });
 
   it('does not expose historical focus as current when Studio is stopped', async () => {

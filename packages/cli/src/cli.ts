@@ -23,7 +23,7 @@ import { runProjectSelectionCommand } from './commands/project-selection-command
 import { runProductionCommand } from './commands/production-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
-import { runStudioCurrentCommand } from './commands/studio-current-command.js';
+import { runStudioCommand } from './commands/studio-command.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -77,6 +77,7 @@ Commands
   project migrate      Apply pending project database migrations
   screenplay           Inspect, validate, create, and revise screenplay JSON
   studio current       Show current Studio focus and context
+  studio server status Show canonical local Studio server status
 
 Options
   --file               JSON input file for screenplay commands
@@ -656,7 +657,7 @@ export async function runRenkuCli(
           homeDir: options.homeDir,
         });
       case 'studio':
-        return await runStudioCurrentCommand({
+        return await runStudioCommand({
           input,
           json: cli.flags.json,
           io,

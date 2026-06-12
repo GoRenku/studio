@@ -55,6 +55,38 @@ describe('Studio notification client', () => {
     ).resolves.toEqual({ status: 'notRunning' });
   });
 
+  it('returns notRunning when the Studio runtime descriptor process is gone', async () => {
+    const descriptorPath = resolveStudioRuntimeDescriptorPath({ homeDir });
+    const now = new Date();
+    await fs.mkdir(path.dirname(descriptorPath), { recursive: true });
+    await fs.writeFile(
+      descriptorPath,
+      JSON.stringify(
+        {
+          version: '0.1.0',
+          serverInstanceId: 'studio_server_dead_process',
+          pid: 0,
+          host: '127.0.0.1',
+          port: 5173,
+          serverUrl: 'http://127.0.0.1:5173',
+          startedAt: now.toISOString(),
+          heartbeatAt: now.toISOString(),
+          cliNotificationToken: 'notification-token-test',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    await expect(
+      notifyStudioProjectResourcesChanged({
+        homeDir,
+        notification: notificationFixture(),
+      })
+    ).resolves.toEqual({ status: 'notRunning' });
+  });
+
   it('returns notConfigured when a fresh legacy descriptor has no notification token', async () => {
     const descriptorPath = resolveStudioRuntimeDescriptorPath({ homeDir });
     await fs.mkdir(path.dirname(descriptorPath), { recursive: true });
@@ -64,7 +96,7 @@ describe('Studio notification client', () => {
         {
           version: '0.1.0',
           serverInstanceId: 'studio_server_legacy',
-          pid: 123,
+          pid: process.pid,
           host: '127.0.0.1',
           port: 5173,
           serverUrl: 'http://127.0.0.1:5173',

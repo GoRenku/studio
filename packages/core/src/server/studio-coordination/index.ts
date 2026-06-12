@@ -11,7 +11,9 @@ export {
   validateStudioFocusRequestForProject,
 } from './focus-validation.js';
 export {
+  readStudioEventStoreSummary,
   resolveStudioEventStorePath,
+  type StudioEventStoreSummary,
 } from './event-store.js';
 export {
   studioAssetResourceKey,
@@ -46,13 +48,18 @@ export {
   studioVisualLanguageLookbooksResourceKey,
 } from './resource-keys.js';
 export {
+  STUDIO_DEV_SERVER_HOST,
+  STUDIO_DEV_SERVER_PORT,
+  STUDIO_DEV_SERVER_URL,
   STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS,
   STUDIO_RUNTIME_STALE_AFTER_MS,
   claimStudioRuntimeDescriptor,
   createStudioCliNotificationToken,
   createStudioServerInstanceId,
   heartbeatStudioRuntimeDescriptor,
+  isStudioRuntimeDescriptorProcessAlive,
   isStudioRuntimeDescriptorStale,
+  isStudioRuntimeDescriptorUsable,
   readStudioRuntimeDescriptor,
   releaseStudioRuntimeDescriptor,
   resolveStudioRuntimeDescriptorPath,

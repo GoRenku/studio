@@ -1,5 +1,5 @@
 import {
-  isStudioRuntimeDescriptorStale,
+  isStudioRuntimeDescriptorUsable,
   readStudioRuntimeDescriptor,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
@@ -32,7 +32,7 @@ export async function notifyStudioProjectResourcesChanged(input: {
   const descriptor = await readStudioRuntimeDescriptor({
     homeDir: input.homeDir,
   });
-  if (!descriptor || isStudioRuntimeDescriptorStale(descriptor, input.now)) {
+  if (!descriptor || !isStudioRuntimeDescriptorUsable(descriptor, input.now)) {
     return { status: 'notRunning' };
   }
   if (!descriptor.cliNotificationToken) {

@@ -10,7 +10,16 @@ import {
   createStudioBootstrapScript,
   createStudioRuntimeToken,
 } from './server/studio-runtime-token';
-import type { StudioRuntimeDescriptor } from '@gorenku/studio-core/server';
+import {
+  STUDIO_DEV_SERVER_HOST,
+  STUDIO_DEV_SERVER_PORT,
+  STUDIO_DEV_SERVER_URL,
+  type StudioRuntimeDescriptor,
+} from '@gorenku/studio-core/server';
+import {
+  appendStudioDevServerLog,
+  claimRequiredStudioDevRuntime,
+} from './server/studio-dev-server';
 
 const expandPath = (input: string | null | undefined) => {
   if (!input) return null;
@@ -57,20 +66,26 @@ export default defineConfig(({ mode }) => {
           let descriptor: StudioRuntimeDescriptor | null = null;
           let heartbeat: ReturnType<typeof setInterval> | null = null;
           const cliNotificationToken = createStudioCliNotificationToken();
+          void appendStudioDevServerLog(
+            `starting Studio dev server url=${STUDIO_DEV_SERVER_URL} pid=${process.pid}`
+          );
 
           server.httpServer?.once('listening', () => {
             const address = server.httpServer?.address();
             if (!address || typeof address === 'string') {
               return;
             }
-            const host = resolveStudioDevHost(server.config.server.host);
             const port = (address as AddressInfo).port;
-            const serverUrl = `http://${host}:${port}`;
-            void claimStudioRuntimeDescriptor({
-              host,
+            void appendStudioDevServerLog(
+              `listening Studio dev server url=${STUDIO_DEV_SERVER_URL} actualPort=${port} pid=${process.pid}`
+            );
+            void claimRequiredStudioDevRuntime({
               port,
-              serverUrl,
               cliNotificationToken,
+              claimRuntimeDescriptor: claimStudioRuntimeDescriptor,
+              closeServer: async () => {
+                await server.close();
+              },
             })
               .then((nextDescriptor) => {
                 descriptor = nextDescriptor;
@@ -78,17 +93,25 @@ export default defineConfig(({ mode }) => {
                   if (!descriptor) {
                     return;
                   }
-                  void heartbeatStudioRuntimeDescriptor(descriptor).then(
-                    (updatedDescriptor) => {
+                  void heartbeatStudioRuntimeDescriptor(descriptor)
+                    .then((updatedDescriptor) => {
                       descriptor = updatedDescriptor;
-                    }
-                  );
+                    })
+                    .catch((error) => {
+                      const message =
+                        error instanceof Error ? error.message : String(error);
+                      server.config.logger.error(message);
+                      void appendStudioDevServerLog(
+                        `runtime descriptor heartbeat failed: ${message}`
+                      );
+                    });
                 }, STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS);
               })
               .catch((error) => {
                 server.config.logger.error(
                   error instanceof Error ? error.message : String(error)
                 );
+                process.exitCode = 1;
               });
           });
 
@@ -98,8 +121,18 @@ export default defineConfig(({ mode }) => {
               heartbeat = null;
             }
             if (descriptor) {
-              void releaseStudioRuntimeDescriptor(descriptor);
+              void releaseStudioRuntimeDescriptor(descriptor).catch((error) => {
+                const message =
+                  error instanceof Error ? error.message : String(error);
+                server.config.logger.error(message);
+                void appendStudioDevServerLog(
+                  `runtime descriptor release failed: ${message}`
+                );
+              });
             }
+            void appendStudioDevServerLog(
+              `closed Studio dev server url=${STUDIO_DEV_SERVER_URL} pid=${process.pid}`
+            );
           });
 
           server.middlewares.use(
@@ -123,6 +156,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: STUDIO_DEV_SERVER_HOST,
+      port: STUDIO_DEV_SERVER_PORT,
+      strictPort: true,
       fs: {
         allow: [
           path.resolve(__dirname, '..'),
@@ -132,10 +168,3 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
-
-function resolveStudioDevHost(host: string | boolean | undefined): string {
-  if (typeof host === 'string' && host !== '0.0.0.0') {
-    return host;
-  }
-  return '127.0.0.1';
-}
