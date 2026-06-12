@@ -827,7 +827,7 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
-  it('prices missing default locations while keeping scoped generated locations ready', async () => {
+  it('keeps selected generated locations ready in the dependency inventory', async () => {
     const ids = await sampleIds();
     const scopedLocationId = await addExtraLocationToSceneNarrative(ids);
     const project = await projectData.readCurrentProject({ homeDir });
@@ -898,9 +898,9 @@ describe('shot video take preflight and validation', () => {
 
     expect(defaultLocation?.environmentSheets[0]?.card).toEqual(
       expect.objectContaining({
-        state: 'selected-planned',
+        state: 'selected-ready',
         dependencyLineId: `dependency:location-environment-sheet:${ids.locationId}`,
-        pricing: expect.objectContaining({ state: 'priced' }),
+        pricing: { state: 'priced', estimatedUsd: 0 },
       })
     );
     expect(scopedLocation?.environmentSheets[0]?.card).toEqual(
@@ -914,8 +914,11 @@ describe('shot video take preflight and validation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: `dependency:location-environment-sheet:${ids.locationId}`,
-          availability: { state: 'missing-generated' },
-          pricing: expect.objectContaining({ state: 'priced' }),
+          availability: { state: 'satisfied' },
+          selectedAsset: expect.objectContaining({
+            assetId: scopedLocationSheet.imported.assetId,
+          }),
+          pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
           id: `dependency:location-environment-sheet:${scopedLocationId}`,

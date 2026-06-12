@@ -82,10 +82,9 @@ const FIRST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const LAST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const REFERENCE_BUNDLE_DEPENDENCY_COST_USD =
-  GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD +
   GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD +
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
-const REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT = 3;
+const REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT = 2;
 const INPUT_MODES: ShotVideoTakeInputModeId[] = [
   'text-only',
   'first-frame',
@@ -246,8 +245,8 @@ describe('shot video take estimate integration matrix', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.529, 6);
-    expect(dependencyLines).toHaveLength(5);
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.489, 6);
+    expect(dependencyLines).toHaveLength(4);
     expect(firstFrameLine).toMatchObject({
       pricing: { state: 'priced', estimatedUsd: 0.005 },
       materializationState: 'needs-authored-draft',
@@ -298,12 +297,12 @@ describe('shot video take estimate integration matrix', () => {
     expect(report.diagnostics).toEqual([]);
     expect(report.plan.estimate).toMatchObject({
       state: 'complete',
-      estimatedTotalUsd: 3.529,
       pricedLineCount: 6,
       unpricedLineCount: 0,
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
+    expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(3.489, 6);
     expect(firstFrameLine).toMatchObject({
       kind: 'dependency-generation',
       materializationState: 'needs-authored-draft',
@@ -327,12 +326,12 @@ describe('shot video take estimate integration matrix', () => {
       entry,
       includePreparedInputs: true,
     });
-    const preparedDependencyCostUsd = preparedDependencyCostForRoute(entry);
+    const preparedDependencyCostUsd = preparedDependencyCostForRoute();
 
     expect(estimate.issues).toEqual([]);
     expect(
       estimate.plan?.lines.filter((line) => line.kind === 'dependency-generation')
-    ).toHaveLength(preparedDependencyLineCountForRoute(entry));
+    ).toHaveLength(preparedDependencyLineCountForRoute());
     expect(estimate.plan?.request.routeSettings).toEqual(entry.expectedRouteSettings);
     expect(estimate.estimate).toMatchObject({
       provider: 'fal-ai',
@@ -394,7 +393,7 @@ describe('shot video take estimate integration matrix', () => {
   });
 
   it.each(RUN_SETUP_PRICING_PERMUTATIONS)(
-    '$label prices the unprepared UI state from the real dependency graph',
+    '$label prices the unprepared UI state from the real dependency inventory',
     async (entry) => {
       const estimate = await estimateFromBrowserClient({
         projectData,
@@ -1154,18 +1153,12 @@ function missingDependencyLineCountForRoute(input: {
   return count;
 }
 
-function preparedDependencyCostForRoute(input: {
-  inputModeId: ShotVideoTakeInputModeId;
-}): number {
-  return input.inputModeId === 'reference' ? 0 : REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
+function preparedDependencyCostForRoute(): number {
+  return REFERENCE_BUNDLE_DEPENDENCY_COST_USD;
 }
 
-function preparedDependencyLineCountForRoute(input: {
-  inputModeId: ShotVideoTakeInputModeId;
-}): number {
-  return input.inputModeId === 'reference'
-    ? 0
-    : REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT;
+function preparedDependencyLineCountForRoute(): number {
+  return REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT;
 }
 
 function requiresMultiShotStoryboard(input: {

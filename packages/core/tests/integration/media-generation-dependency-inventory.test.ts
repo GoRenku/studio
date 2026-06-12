@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import * as studioEngines from '@gorenku/studio-engines';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   AssetTarget,
   CastProfileGenerationSpec,
@@ -16,7 +17,14 @@ import {
 } from '../../src/server/index.js';
 import { updateAssetRelationshipSelection } from '../../src/server/database/access/asset-relationships/index.js';
 import { deleteAssetFileRecordsForAsset } from '../../src/server/database/access/asset-files.js';
+import { deleteLocationEnvironmentSheetByAssetId } from '../../src/server/database/access/location-environment-sheets.js';
 import { openProjectSession } from '../../src/server/database/lifecycle/active-session.js';
+import { planMediaGenerationDependencyInventory } from '../../src/server/media-generation/dependency-inventory.js';
+import { resolveMediaGenerationDependencySelection } from '../../src/server/media-generation/dependency-selectors.js';
+import {
+  locationEnvironmentSheetDependencySlot,
+  lookbookSheetDependencySlot,
+} from '../../src/server/media-generation/dependency-slot-definitions.js';
 import {
   createSampleMovieProject,
   writeConfig,
@@ -33,6 +41,10 @@ describe('media generation dependency inventory estimates integration', () => {
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
     projectData = createProjectDataService();
     await createSampleMovieProject({ projectData, homeDir });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('estimates a draft Lookbook sheet dependency spec through the shared purpose registry without persisting it', async () => {
@@ -54,6 +66,38 @@ describe('media generation dependency inventory estimates integration', () => {
       target: { kind: 'lookbook', id: lookbook.lookbook.id },
     });
     expect(persisted.specs).toEqual([]);
+  });
+
+  it('reports root estimate failures as structured dependency diagnostics', async () => {
+    const lookbook = await createActiveLookbook(projectData, homeDir);
+    vi.spyOn(studioEngines, 'estimateGeneration').mockRejectedValueOnce(
+      new Error('Root estimator unavailable.')
+    );
+
+    const plan = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec: lookbookSheetSpec(lookbook.lookbook.id),
+    });
+
+    expect(plan.dependencyInventory.rootGeneration).toMatchObject({
+      pricing: {
+        state: 'unpriced',
+        estimatedUsd: null,
+        overrideRequired: true,
+      },
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_ROOT_ESTIMATE_FAILED',
+          severity: 'error',
+        }),
+      ],
+    });
+    expect(plan.estimate).toMatchObject({
+      state: 'partial',
+      estimatedTotalUsd: 0,
+      requiresPriceOverride: true,
+    });
   });
 
   it('prices shot reference video plus cast, location, and Lookbook dependency lines from the inventory', async () => {
@@ -199,7 +243,10 @@ describe('media generation dependency inventory estimates integration', () => {
       },
     });
 
-    const firstFrameLineId = 'dependency:first-frame:production-group:';
+    const firstFrameLine = preflight.plan!.dependencyInventory.dependencies.find(
+      (line) => line.dependencyKind === 'first-frame'
+    );
+    const firstFrameLineId = firstFrameLine!.id;
     const characterLineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
     const locationLineId = `dependency:location-environment-sheet:${ids.locationId}`;
     const lookbookLineId = `dependency:lookbook-sheet:${lookbook.lookbook.id}`;
@@ -309,7 +356,7 @@ describe('media generation dependency inventory estimates integration', () => {
     });
 
     const firstFrameLine = preflight.plan!.dependencyInventory.dependencies.find(
-      (line) => line.id === 'dependency:first-frame:production-group:'
+      (line) => line.dependencyKind === 'first-frame'
     );
     const characterLineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
     const locationLineId = `dependency:location-environment-sheet:${ids.locationId}`;
@@ -370,10 +417,10 @@ describe('media generation dependency inventory estimates integration', () => {
     });
 
     const firstFrameLine = estimate.plan!.dependencyInventory.dependencies.find(
-      (line) => line.id === 'dependency:first-frame:production-group:'
+      (line) => line.dependencyKind === 'first-frame'
     );
     const lastFrameLine = estimate.plan!.dependencyInventory.dependencies.find(
-      (line) => line.id === 'dependency:last-frame:production-group:'
+      (line) => line.dependencyKind === 'last-frame'
     );
 
     expect(firstFrameLine).toMatchObject({
@@ -594,10 +641,18 @@ describe('media generation dependency inventory estimates integration', () => {
     });
 
     expect(estimate.issues).toEqual([]);
+    const firstFrameLine = estimate.plan!.dependencyInventory.dependencies.find(
+      (line) => line.dependencyKind === 'first-frame'
+    );
+    const lastFrameLine = estimate.plan!.dependencyInventory.dependencies.find(
+      (line) => line.dependencyKind === 'last-frame'
+    );
+    const firstFrameLineId = firstFrameLine!.id;
+    const lastFrameLineId = lastFrameLine!.id;
     expect(estimate.plan?.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'dependency:first-frame:production-group:',
+          id: firstFrameLineId,
           availability: { state: 'satisfied' },
           selectedAsset: expect.objectContaining({
             assetId: firstFrame.input.assetId,
@@ -606,7 +661,7 @@ describe('media generation dependency inventory estimates integration', () => {
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          id: 'dependency:last-frame:production-group:',
+          id: lastFrameLineId,
           availability: { state: 'satisfied' },
           selectedAsset: expect.objectContaining({
             assetId: lastFrame.input.assetId,
@@ -622,12 +677,12 @@ describe('media generation dependency inventory estimates integration', () => {
     expect(estimate.plan?.lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyLineId: 'dependency:first-frame:production-group:',
+          dependencyLineId: firstFrameLineId,
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          dependencyLineId: 'dependency:last-frame:production-group:',
+          dependencyLineId: lastFrameLineId,
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
@@ -910,7 +965,353 @@ describe('media generation dependency inventory estimates integration', () => {
       ])
     );
   });
+
+  it('reports invalid selected Lookbook sheet ids as structured selector diagnostics', async () => {
+    const lookbook = await createActiveLookbook(projectData, homeDir);
+    const { session } = await openProjectSession({
+      projectName: 'constantinople',
+      homeDir,
+    });
+
+    const result = resolveMediaGenerationDependencySelection({
+      session,
+      slot: lookbookSheetDependencySlot({
+        lookbookId: lookbook.lookbook.id,
+        lookbookName: lookbook.lookbook.name,
+        lookbookSheetId: 'missing-lookbook-sheet',
+        required: true,
+        reason: 'Selected Lookbook sheet is required.',
+      }),
+    });
+
+    expect(result).toEqual({
+      state: 'invalid-selection',
+      asset: null,
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_LOOKBOOK_SHEET_SELECTION_INVALID',
+          severity: 'error',
+        }),
+      ],
+    });
+  });
+
+  it('reports selected Lookbook sheets with missing image files as structured selector diagnostics', async () => {
+    const lookbook = await createActiveLookbook(projectData, homeDir);
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/lookbook-sheet-with-missing-file.png',
+      'lookbook sheet'
+    );
+    const imported = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet-with-missing-file.png',
+      title: 'Lookbook sheet with missing file',
+    });
+    await removeAssetFiles({
+      homeDir,
+      assetId: imported.imported.asset.assetId,
+    });
+    const { session } = await openProjectSession({
+      projectName: 'constantinople',
+      homeDir,
+    });
+
+    const result = resolveMediaGenerationDependencySelection({
+      session,
+      slot: lookbookSheetDependencySlot({
+        lookbookId: lookbook.lookbook.id,
+        lookbookName: lookbook.lookbook.name,
+        lookbookSheetId: imported.imported.id,
+        required: true,
+        reason: 'Selected Lookbook sheet is required.',
+      }),
+    });
+
+    expect(result).toEqual({
+      state: 'invalid-selection',
+      asset: null,
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
+          severity: 'error',
+        }),
+      ],
+    });
+  });
+
+  it('reports selected location environment sheets with missing metadata as structured selector diagnostics', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    const files = await writeLocationSheetImportFiles(projectData, homeDir);
+    const imported = await projectData.importLocationEnvironmentSheetMedia({
+      projectName: 'constantinople',
+      homeDir,
+      locationId: ids.locationId,
+      files,
+      title: 'Council chamber environment sheet',
+    });
+    const { session } = await openProjectSession({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    deleteLocationEnvironmentSheetByAssetId(session, imported.imported.assetId);
+
+    const result = resolveMediaGenerationDependencySelection({
+      session,
+      slot: locationEnvironmentSheetDependencySlot({
+        locationId: ids.locationId,
+        locationName: "Mehmed's council chamber",
+        required: true,
+        reason: 'Selected location environment sheet is required.',
+      }),
+    });
+
+    expect(result).toEqual({
+      state: 'invalid-selection',
+      asset: null,
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_METADATA_MISSING',
+          severity: 'error',
+        }),
+      ],
+    });
+  });
 });
+
+describe('media generation dependency inventory planner contracts', () => {
+  it('dedupes structurally identical declarations and merges required lineage', async () => {
+    const slot = manualDependencySlot({ required: false });
+    const result = await planMediaGenerationDependencyInventory({
+      rootPurpose: 'shot.video-take',
+      rootTarget: {
+        kind: 'sceneShotGroup',
+        id: 'group',
+        sceneId: 'scene',
+        shotListId: 'list',
+        productionGroupId: 'group',
+        shotIds: ['shot'],
+      },
+      rootLineId: 'root:test',
+      rootLabel: 'Root',
+      rootMediaKind: 'video',
+      request: { kind: 'test' },
+      slots: [slot, { ...slot, required: true }],
+      diagnostics: [],
+      resolveSelection: async () => ({ state: 'missing', asset: null, diagnostics: [] }),
+      declareDependencies: async () => [],
+      estimateRoot: async () => ({
+        pricing: { state: 'priced', estimatedUsd: 1 },
+        diagnostics: [],
+        estimate: null,
+      }),
+    });
+
+    expect(result.dependencyInventory.dependencies).toHaveLength(1);
+    expect(result.dependencyInventory.dependencies[0]).toMatchObject({
+      dependencyId: 'manual:test',
+      required: true,
+      requiredBy: ['root:test'],
+    });
+  });
+
+  it('rejects duplicate declarations with conflicting selectors', async () => {
+    const slot = manualDependencySlot({ required: true });
+
+    await expect(
+      planMediaGenerationDependencyInventory({
+        rootPurpose: 'shot.video-take',
+        rootTarget: {
+          kind: 'sceneShotGroup',
+          id: 'group',
+          sceneId: 'scene',
+          shotListId: 'list',
+          productionGroupId: 'group',
+          shotIds: ['shot'],
+        },
+        rootLineId: 'root:test',
+        rootLabel: 'Root',
+        rootMediaKind: 'video',
+        request: { kind: 'test' },
+        slots: [
+          slot,
+          {
+            ...slot,
+            selector: {
+              kind: 'manual-attachment',
+              target: { kind: 'castMember', id: 'cast-a' },
+            },
+          },
+        ],
+        diagnostics: [],
+        resolveSelection: async () => ({ state: 'missing', asset: null, diagnostics: [] }),
+        declareDependencies: async () => [],
+        estimateRoot: async () => ({
+          pricing: { state: 'priced', estimatedUsd: 1 },
+          diagnostics: [],
+          estimate: null,
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_DEPENDENCY_CONFLICTING_DECLARATION',
+    });
+  });
+
+  it('rejects recursive dependency cycles with a structured diagnostic', async () => {
+    const slot = generatedDependencySlot('cycle-a');
+
+    await expect(
+      planMediaGenerationDependencyInventory({
+        rootPurpose: 'shot.video-take',
+        rootTarget: testShotGroupTarget(),
+        rootLineId: 'root:test',
+        rootLabel: 'Root',
+        rootMediaKind: 'video',
+        request: { kind: 'test' },
+        slots: [slot],
+        diagnostics: [],
+        resolveSelection: async () => ({ state: 'missing', asset: null, diagnostics: [] }),
+        declareDependencies: async () => [slot],
+        estimateRoot: async () => ({
+          pricing: { state: 'priced', estimatedUsd: 1 },
+          diagnostics: [],
+          estimate: null,
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_DEPENDENCY_CYCLE_DETECTED',
+    });
+  });
+
+  it('rejects dependency expansion past the max depth with a structured diagnostic', async () => {
+    const slots = Array.from({ length: 10 }, (_, index) =>
+      generatedDependencySlot(`depth-${index}`)
+    );
+
+    await expect(
+      planMediaGenerationDependencyInventory({
+        rootPurpose: 'shot.video-take',
+        rootTarget: testShotGroupTarget(),
+        rootLineId: 'root:test',
+        rootLabel: 'Root',
+        rootMediaKind: 'video',
+        request: { kind: 'test' },
+        slots: [slots[0]!],
+        diagnostics: [],
+        resolveSelection: async () => ({ state: 'missing', asset: null, diagnostics: [] }),
+        declareDependencies: async ({ slot }) => {
+          const currentIndex = slots.findIndex(
+            (candidate) => candidate.dependencyId === slot.dependencyId
+          );
+          return currentIndex >= 0 && currentIndex < slots.length - 1
+            ? [slots[currentIndex + 1]!]
+            : [];
+        },
+        estimateRoot: async () => ({
+          pricing: { state: 'priced', estimatedUsd: 1 },
+          diagnostics: [],
+          estimate: null,
+        }),
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_DEPENDENCY_MAX_DEPTH_EXCEEDED',
+    });
+  });
+
+  it('reports invalid shot-video selector request shapes instead of missing', () => {
+    const result = resolveMediaGenerationDependencySelection({
+      session: {} as never,
+      request: { kind: 'shot-video-take' },
+      slot: {
+        dependencyId: 'first-frame:production-group:group',
+        dependencyKind: 'first-frame',
+        label: 'First frame',
+        dependencyTarget: {
+          kind: 'sceneShotGroup',
+          id: 'group',
+          sceneId: 'scene',
+          shotListId: 'list',
+          productionGroupId: 'group',
+          shotIds: ['shot'],
+        },
+        selector: {
+          kind: 'shot-video-input',
+          inputKind: 'first-frame',
+          productionGroupId: 'group',
+          shotIds: ['shot'],
+        },
+        required: true,
+        reason: 'Required by route.',
+      },
+    });
+
+    expect(result).toMatchObject({
+      state: 'invalid-selection',
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_MEDIA_DEPENDENCY_SELECTOR_REQUEST_INVALID',
+        }),
+      ],
+    });
+  });
+});
+
+function manualDependencySlot(input: { required: boolean }) {
+  return {
+    dependencyId: 'manual:test',
+    dependencyKind: 'manual-attachment' as const,
+    label: 'Manual test dependency',
+    dependencyTarget: {
+      kind: 'sceneShotGroup' as const,
+      id: 'group',
+      sceneId: 'scene',
+      shotListId: 'list',
+      productionGroupId: 'group',
+      shotIds: ['shot'],
+    },
+    selector: {
+      kind: 'manual-attachment' as const,
+      target: {
+        kind: 'sceneShotGroup' as const,
+        id: 'group',
+        sceneId: 'scene',
+        shotListId: 'list',
+        productionGroupId: 'group',
+        shotIds: ['shot'],
+      },
+    },
+    required: input.required,
+    reason: 'Manual attachment required for test.',
+  };
+}
+
+function generatedDependencySlot(dependencyId: string) {
+  return {
+    dependencyId,
+    dependencyKind: 'lookbook-sheet' as const,
+    label: `Generated ${dependencyId}`,
+    dependencyTarget: { kind: 'lookbook' as const, id: dependencyId },
+    selector: {
+      kind: 'manual-attachment' as const,
+      target: { kind: 'lookbook' as const, id: dependencyId },
+    },
+    required: true,
+    reason: 'Generated dependency required for recursion test.',
+  };
+}
+
+function testShotGroupTarget() {
+  return {
+    kind: 'sceneShotGroup' as const,
+    id: 'group',
+    sceneId: 'scene',
+    shotListId: 'list',
+    productionGroupId: 'group',
+    shotIds: ['shot'],
+  };
+}
 
 async function markAssetSelected(input: {
   homeDir: string;
@@ -1017,6 +1418,35 @@ async function writeProjectFile(
   const absolutePath = path.join(project.projectFolder, projectRelativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, contents);
+}
+
+async function writeLocationSheetImportFiles(
+  projectData: ReturnType<typeof createProjectDataService>,
+  homeDir: string
+): Promise<{
+  composite: string;
+  view_front: string;
+  view_right: string;
+  view_back: string;
+  view_left: string;
+}> {
+  const project = await projectData.readCurrentProject({ homeDir });
+  if (!project) {
+    throw new Error('Expected current project to exist.');
+  }
+  const folder = 'generated/media/location-sheet-selector-test';
+  await fs.mkdir(path.join(project.projectFolder, folder), { recursive: true });
+  const files = {
+    composite: `${folder}/composite.png`,
+    view_front: `${folder}/front.png`,
+    view_right: `${folder}/right.png`,
+    view_back: `${folder}/back.png`,
+    view_left: `${folder}/left.png`,
+  };
+  for (const [role, projectRelativePath] of Object.entries(files)) {
+    await fs.writeFile(path.join(project.projectFolder, projectRelativePath), role);
+  }
+  return files;
 }
 
 function generationInputFromAvailable(

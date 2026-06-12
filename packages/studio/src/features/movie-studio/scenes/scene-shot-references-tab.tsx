@@ -235,7 +235,7 @@ export function SceneShotReferencesTab({
         </SceneShotReferenceSection>
 
         {referenceIssues.length ? (
-          <SceneShotReferenceSection title='Reference Issues'>
+          <SceneShotReferenceSection title='Reference Issues' defaultOpen>
             <Alert>
               <AlertTitle>Reference issues</AlertTitle>
               <AlertDescription>
@@ -260,7 +260,8 @@ function isReferenceDiagnosticIssue(issue: { code: string }): boolean {
   return (
     issue.code.startsWith('CORE_SHOT_REFERENCE_') ||
     issue.code.startsWith('CORE_SHOT_VIDEO_DEPENDENCY_') ||
-    issue.code.startsWith('CORE_SHOT_VIDEO_PLAN_REQUIRED_ATTACHMENT_')
+    issue.code.startsWith('CORE_SHOT_VIDEO_PLAN_REQUIRED_ATTACHMENT_') ||
+    issue.code.startsWith('CORE_MEDIA_DEPENDENCY_')
   );
 }
 
@@ -282,7 +283,6 @@ function GeneralReferenceCard({
   const preview = choice.card.previews[0];
   const imageUrl = preview ? generalReferenceImageUrl(projectName, sceneId, preview) : null;
   const previewImages = previewImageUrl(preview, imageUrl);
-  const inputSlot = inputSlotForDependencyId(choice.card.dependencyId);
 
   return (
     <SceneShotReferenceCard
@@ -299,8 +299,8 @@ function GeneralReferenceCard({
         if (!choice.selected && preview?.inputId) {
           return onSelectInput(preview.inputId);
         }
-        if (choice.selected && inputSlot) {
-          return onClearInput(inputSlot);
+        if (choice.selected && choice.clearInputSlot) {
+          return onClearInput(choice.clearInputSlot);
         }
         return Promise.resolve();
       }}
@@ -333,44 +333,4 @@ function nextLocationViewIds(
     return selectedViewIds.filter((candidate) => candidate !== viewId);
   }
   return [...new Set([...selectedViewIds, viewId])];
-}
-
-function inputSlotForDependencyId(
-  dependencyId: string | undefined
-): ShotVideoTakeInputSlot | null {
-  if (!dependencyId) {
-    return null;
-  }
-  const [kind, subjectKind, subjectId] = dependencyId.split(':');
-  if (!isShotVideoTakeInputKind(kind)) {
-    return null;
-  }
-  return {
-    kind,
-    ...(isShotVideoTakeInputSubjectKind(subjectKind) ? { subjectKind } : {}),
-    ...(subjectId ? { subjectId } : {}),
-  };
-}
-
-function isShotVideoTakeInputKind(
-  value: string | undefined
-): value is ShotVideoTakeInputSlot['kind'] {
-  return (
-    value === 'first-frame' ||
-    value === 'last-frame' ||
-    value === 'reference-image' ||
-    value === 'multi-shot-storyboard-sheet'
-  );
-}
-
-function isShotVideoTakeInputSubjectKind(
-  value: string | undefined
-): value is NonNullable<ShotVideoTakeInputSlot['subjectKind']> {
-  return (
-    value === 'cast-member' ||
-    value === 'location' ||
-    value === 'lookbook' ||
-    value === 'shot' ||
-    value === 'production-group'
-  );
 }

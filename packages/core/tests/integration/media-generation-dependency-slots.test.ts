@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { declareCastProfileDependencySlots } from '../../src/server/media-generation/cast-profile-dependency-slots.js';
+import {
+  parseShotVideoInputDependencyId,
+  shotVideoInputDependencyId,
+} from '../../src/server/media-generation/dependency-identifiers.js';
 import { declareShotVideoTakeDependencySlots } from '../../src/server/media-generation/shot-video-take/dependency-slots.js';
 import type { SceneShotMediaGenerationTarget } from '../../src/client/index.js';
 
@@ -33,14 +37,23 @@ describe('media generation dependency slot declarations', () => {
         expect.objectContaining({
           dependencyId: 'cast-character-sheet:cast-a',
           required: false,
+          selector: expect.objectContaining({
+            selectionPolicy: 'selected-or-default',
+          }),
         }),
         expect.objectContaining({
           dependencyId: 'location-environment-sheet:location-a',
           required: false,
+          selector: expect.objectContaining({
+            selectionPolicy: 'selected-or-default',
+          }),
         }),
         expect.objectContaining({
           dependencyId: 'lookbook-sheet:lookbook-a',
           required: false,
+          selector: expect.objectContaining({
+            selectionPolicy: 'selected-or-default',
+          }),
         }),
       ])
     );
@@ -116,8 +129,30 @@ describe('media generation dependency slot declarations', () => {
         selector: expect.objectContaining({
           kind: 'asset-relationship',
           role: 'character_sheet',
+          selectionPolicy: 'selected-or-default',
         }),
       }),
     ]);
+  });
+
+  it('builds and parses shot video dependency ids through the central contract', () => {
+    const dependencyId = shotVideoInputDependencyId({
+      kind: 'first-frame',
+      target,
+    });
+
+    expect(dependencyId).toBe('first-frame:production-group:production-group');
+    expect(parseShotVideoInputDependencyId(dependencyId)).toEqual({
+      ok: true,
+      value: {
+        kind: 'first-frame',
+        subjectKind: 'production-group',
+        subjectId: 'production-group',
+      },
+    });
+    expect(parseShotVideoInputDependencyId('not-a-real-kind:asset:a')).toEqual({
+      ok: false,
+      reason: 'unsupported-kind',
+    });
   });
 });

@@ -64,11 +64,32 @@ selectors, estimates planned dependency specs through the same shared lifecycle
 used by persisted specs, and aggregates the inventory total from dependency
 lines plus the root generation line.
 
+Dependency ids are also a core contract. Purpose code and Studio UI code must
+not hand-build or parse dependency ids locally. Core-owned dependency id helpers
+name the domain kind, target, and shot-video input slot, and core returns any
+mutation data the Studio UI needs, such as the exact input slot to clear for a
+selected general reference.
+
+Selectors must state their defaulting policy explicitly. `selected-only`
+selectors use only a concrete selected asset or sheet. `selected-or-default`
+selectors may fall back to the purpose-owned default only when that behavior is
+part of the selector contract. Unknown selector kinds, wrong request shapes,
+invalid selected targets, missing selected files, and broken environment-sheet
+metadata are structured dependency diagnostics, not quiet missing states.
+
 There is one pricing meaning. Generated node prices come from provider
 estimates in `@gorenku/studio-engines`; reused existing assets contribute
 `$0.00`; manual external attachments are not generation work and are not
 priced. Studio and CLI surfaces render inventory totals and line items, but
 they do not compute generation prices.
+
+Generated dependency lines start as unpriced until their draft spec is
+estimated. They must not fall back to `not-applicable` pricing. `not-applicable`
+is reserved for manual attachment work and unselected non-dependency
+alternatives in product surfaces. If a dependency draft is invalid, lacks an
+explicit materialization state, cannot be priced by a supported route, or the
+root generation estimate fails, the planner returns structured diagnostics and
+marks the inventory estimate unavailable or partial as appropriate.
 
 Root spec creation and update refuse to persist a spec while required
 dependencies are still planned or missing. Callers generate or import the

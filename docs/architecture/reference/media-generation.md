@@ -189,9 +189,50 @@ through engines pricing, estimates the root generation, and returns:
 Dependencies are an inventory, checklist, and estimate contract. They are not
 an automatic execution graph, and no dependency line is run automatically.
 
+Dependency declarations may share ids only when they describe the same
+dependency kind, target, selector, and user-visible label. The planner merges
+the `requiredBy` reasons for identical duplicate declarations and rejects
+conflicting duplicates with a structured dependency diagnostic. This keeps
+purpose-owned slot declarations reviewable and prevents two different assets or
+draft specs from silently occupying the same inventory line.
+
+Dependency ids are owned by core. Shared dependency id helpers construct cast
+character sheet, location environment sheet, Lookbook sheet, and shot-video
+input ids. Shot-video ids include the input kind, subject id, subject kind, and
+production group when that grouping is part of the selected target. Studio
+surfaces consume core-provided fields for mutations and must not parse
+dependency id strings to infer behavior.
+
+Selectors must name their selection policy:
+
+- `selected-only`: use the exact selected asset or sheet; if it is absent, the
+  dependency remains missing or invalid.
+- `selected-or-default`: use the exact selected asset or sheet when present;
+  otherwise use the purpose-owned default only when the selector has explicitly
+  opted into that behavior.
+
+Selector failures are structured diagnostics. Unknown selector kinds, malformed
+shot-video selector requests, invalid purpose requests, invalid Lookbook sheet
+ids, missing selected files, missing location environment sheet metadata,
+missing composite file ids, and missing composite file records must not be
+converted into quiet missing dependencies.
+
 Generated dependency prices come only from engines estimates. Existing assets
 are represented as satisfied dependency lines priced at `$0.00`. Manual
 attachments are not generation work and use `not-applicable` pricing.
+Unselected product alternatives may also display quiet `not-applicable` card
+pricing because they are not selected dependency work. Selected generated
+dependencies never use `not-applicable`; they are either priced, explicitly
+unpriced because a valid provider route lacks pricing metadata, or invalid with
+structured diagnostics.
+
+Draft dependency specs must declare their materialization state. A generated
+dependency that can be created by the shared generation service uses
+`generatable`. A dependency that needs an agent-authored draft before it can be
+run uses `needs-authored-draft`. Missing materialization state, invalid draft
+specs, unsupported pricing routes, and root-estimate failures are reported
+through dependency diagnostics instead of being hidden behind empty diagnostic
+lists.
 
 Estimate states:
 

@@ -56,9 +56,18 @@ http://localhost:5173
 ```
 
 Browser access is mandatory when the Browser plugin or Browser skill is present
-in the session. Do not treat a missing direct browser tool from tool discovery
-as Browser unavailability. In that case, read the Browser skill and connect
-through its documented browser-client bootstrap before attempting any fallback.
+in the session.
+
+Important: the Browser plugin is not exposed as a direct `browser` tool in many
+Codex sessions. Do not search for a standalone browser tool, and do not treat a
+missing direct browser tool from tool discovery as Browser unavailability.
+Instead:
+
+1. Read the Browser skill.
+2. Use the Node REPL JavaScript tool, usually `mcp__node_repl__js`.
+3. Import the Browser plugin's `scripts/browser-client.mjs` with its absolute
+   path, as documented by the Browser skill.
+4. Select the `iab` browser and navigate it to `http://localhost:5173`.
 
 Use local Playwright only when the Browser plugin/skill is genuinely absent, or
 when the documented Browser bootstrap fails. If a fallback is used, record the

@@ -1370,48 +1370,53 @@ Desktop browser verification:
 Use this checklist to track implementation. The plan is not complete until each
 item is checked or explicitly replaced by a reviewed plan update.
 
+Audit note, 2026-06-12: `[x]` means the current repository contains
+implementation or test/doc evidence for the item. Unchecked items are either
+not implemented, only partially implemented, conditionally not accepted product
+behavior, or not verified during this audit.
+
 ### Review Area
 
-- [ ] Confirm this plan supersedes the dependency portions of `0061`.
+- [x] Confirm this plan supersedes the dependency portions of `0061`.
 - [ ] Confirm `0062` is deferred or revised so it does not preserve the current
   graph complexity in smaller files.
-- [ ] Confirm no database schema change is required.
-- [ ] Confirm no dependency installation is required.
-- [ ] Confirm no backwards compatibility layer will be kept.
-- [ ] Confirm no dependency execution scheduler will be implemented.
-- [ ] Confirm current dirty worktree changes are not reverted.
+- [x] Confirm no database schema change is required.
+- [x] Confirm no dependency installation is required.
+- [x] Confirm no backwards compatibility layer will be kept.
+- [x] Confirm no dependency execution scheduler will be implemented.
+- [x] Confirm current dirty worktree changes are not reverted.
 
 ### Architecture Contracts
 
-- [ ] Add `MediaGenerationDependencyInventory`.
-- [ ] Add `MediaGenerationDependencyLine`.
-- [ ] Add `MediaGenerationRootGenerationLine`.
-- [ ] Add `MediaGenerationDependencyInventoryEstimate`.
-- [ ] Add inventory checklist item types for agent-facing missing work.
-- [ ] Replace public dependency graph usage in current generation plans.
-- [ ] Remove public `execution.levels`.
-- [ ] Remove public `topologicalNodeIds`.
-- [ ] Separate availability from pricing.
-- [ ] Separate pricing from authored generation draft readiness.
-- [ ] Keep dependency requiredness on purpose-owned slot declarations.
-- [ ] Keep shot-video intent-specific requiredness in
+- [x] Add `MediaGenerationDependencyInventory`.
+- [x] Add `MediaGenerationDependencyLine`.
+- [x] Add `MediaGenerationRootGenerationLine`.
+- [x] Add `MediaGenerationDependencyInventoryEstimate`.
+- [x] Add inventory checklist item types for agent-facing missing work.
+- [x] Replace public dependency graph usage in current generation plans.
+- [x] Remove public `execution.levels`.
+- [x] Remove public `topologicalNodeIds`.
+- [x] Separate availability from pricing.
+- [x] Separate pricing from authored generation draft readiness.
+- [x] Keep dependency requiredness on purpose-owned slot declarations.
+- [x] Keep shot-video intent-specific requiredness in
   `shot-video-take/dependency-slots.ts`.
-- [ ] Keep root spec creation blocked until required dependencies are
+- [x] Keep root spec creation blocked until required dependencies are
   satisfied.
-- [ ] Keep estimate-only dependency drafts non-runnable.
-- [ ] Preserve structured diagnostics at package boundaries.
+- [x] Keep estimate-only dependency drafts non-runnable.
+- [x] Preserve structured diagnostics at package boundaries.
 
 ### Dependency Slot Definitions
 
-- [ ] Add `dependency-slot-definitions.ts` for shared domain-named slot
+- [x] Add `dependency-slot-definitions.ts` for shared domain-named slot
   constructors.
-- [ ] Add `shot-video-take/dependency-slots.ts`.
-- [ ] Add `cast-profile-dependency-slots.ts`.
-- [ ] Add `cast-character-sheet-dependency-slots.ts`.
-- [ ] Add `location-environment-sheet-dependency-slots.ts`.
-- [ ] Wire `shot.video-take` purpose registration to
+- [x] Add `shot-video-take/dependency-slots.ts`.
+- [x] Add `cast-profile-dependency-slots.ts`.
+- [x] Add `cast-character-sheet-dependency-slots.ts`.
+- [x] Add `location-environment-sheet-dependency-slots.ts`.
+- [x] Wire `shot.video-take` purpose registration to
   `declareShotVideoTakeDependencySlots`.
-- [ ] Wire `cast.profile` purpose registration to
+- [x] Wire `cast.profile` purpose registration to
   `declareCastProfileDependencySlots`.
 - [ ] Wire `cast.character-sheet` purpose registration to
   `declareCastCharacterSheetDependencySlots` if character sheets require a
@@ -1419,108 +1424,108 @@ item is checked or explicitly replaced by a reviewed plan update.
 - [ ] Wire `location.environment-sheet` purpose registration to
   `declareLocationEnvironmentSheetDependencySlots` only when that dependency is
   accepted product behavior.
-- [ ] Cover `text-only` shot video slot declarations.
-- [ ] Cover `first-frame` shot video slot declarations.
-- [ ] Cover `first-last-frame` shot video slot declarations.
-- [ ] Cover `reference` shot video slot declarations.
-- [ ] Cover required and optional shot-video context slots.
-- [ ] Confirm slot files do not estimate, resolve assets, or build UI cards.
+- [x] Cover `text-only` shot video slot declarations.
+- [x] Cover `first-frame` shot video slot declarations.
+- [x] Cover `first-last-frame` shot video slot declarations.
+- [x] Cover `reference` shot video slot declarations.
+- [x] Cover required and optional shot-video context slots.
+- [x] Confirm slot files do not estimate, resolve assets, or build UI cards.
 
 ### Shared Implementation
 
-- [ ] Add `dependency-slot-definitions.ts`.
-- [ ] Add `dependency-selectors.ts`.
+- [x] Add `dependency-slot-definitions.ts`.
+- [x] Add `dependency-selectors.ts`.
 - [ ] Add `dependency-draft-estimates.ts`.
-- [ ] Add `dependency-inventory.ts`.
-- [ ] Add `dependency-inventory-lines.ts`.
-- [ ] Implement deterministic selector result contracts.
-- [ ] Implement recursive inventory expansion.
-- [ ] Implement dependency dedupe by stable dependency id.
-- [ ] Implement cycle detection.
-- [ ] Implement a small maximum expansion depth guard.
-- [ ] Implement inventory total aggregation.
-- [ ] Delete or replace `dependency-graph.ts`.
-- [ ] Delete or replace graph execution ordering helpers.
+- [x] Add `dependency-inventory.ts`.
+- [x] Add `dependency-inventory-lines.ts`.
+- [x] Implement deterministic selector result contracts.
+- [x] Implement recursive inventory expansion.
+- [x] Implement dependency dedupe by stable dependency id.
+- [x] Implement cycle detection.
+- [x] Implement a small maximum expansion depth guard.
+- [x] Implement inventory total aggregation.
+- [x] Delete or replace `dependency-graph.ts`.
+- [x] Delete or replace graph execution ordering helpers.
 
 ### Selector Coverage
 
-- [ ] Shot-video input selector resolves first frame.
-- [ ] Shot-video input selector resolves last frame.
-- [ ] Shot-video input selector resolves reference image.
-- [ ] Shot-video input selector resolves multi-shot storyboard sheet.
-- [ ] Cast selector resolves selected/default character sheet.
-- [ ] Location selector resolves selected/default environment sheet.
-- [ ] Location selector verifies composite image role.
+- [x] Shot-video input selector resolves first frame.
+- [x] Shot-video input selector resolves last frame.
+- [x] Shot-video input selector resolves reference image.
+- [x] Shot-video input selector resolves multi-shot storyboard sheet.
+- [x] Cast selector resolves selected/default character sheet.
+- [x] Location selector resolves selected/default environment sheet.
+- [x] Location selector verifies composite image role.
 - [ ] Lookbook selector resolves active selected/default Lookbook sheet.
-- [ ] Manual selector reports required attachment.
-- [ ] Ambiguous selected assets produce structured errors.
-- [ ] Missing selected files produce structured errors.
+- [x] Manual selector reports required attachment.
+- [x] Ambiguous selected assets produce structured errors.
+- [x] Missing selected files produce structured errors.
 - [ ] Invalid selected environment sheet metadata produces structured errors.
 
 ### Shot Video Implementation
 
-- [ ] Declare shot-video dependencies through the shared inventory path.
-- [ ] Price first-frame dependencies before authored prompts exist.
-- [ ] Price last-frame dependencies before authored prompts exist.
-- [ ] Price reference-image dependencies before authored prompts exist.
-- [ ] Price multi-shot storyboard dependencies before authored prompts exist.
-- [ ] Price selected missing cast character sheets consistently.
-- [ ] Price selected missing location environment sheets consistently.
-- [ ] Price selected missing Lookbook sheets consistently.
-- [ ] Reuse imported/generated inputs at `$0.00`.
-- [ ] Keep final video estimate separate from dependency availability.
-- [ ] Keep final video spec creation blocked until required dependencies are
+- [x] Declare shot-video dependencies through the shared inventory path.
+- [x] Price first-frame dependencies before authored prompts exist.
+- [x] Price last-frame dependencies before authored prompts exist.
+- [x] Price reference-image dependencies before authored prompts exist.
+- [x] Price multi-shot storyboard dependencies before authored prompts exist.
+- [x] Price selected missing cast character sheets consistently.
+- [x] Price selected missing location environment sheets consistently.
+- [x] Price selected missing Lookbook sheets consistently.
+- [x] Reuse imported/generated inputs at `$0.00`.
+- [x] Keep final video estimate separate from dependency availability.
+- [x] Keep final video spec creation blocked until required dependencies are
   satisfied.
 
 ### Reference Projection
 
-- [ ] Build General selected cards from inventory lines.
-- [ ] Build Lookbook selected cards from inventory lines.
-- [ ] Build Cast selected cards from inventory lines.
-- [ ] Build Location selected cards from inventory lines.
-- [ ] Attach available alternatives separately from selected dependency lines.
-- [ ] Remove selected generated card fallback to `not-applicable` pricing.
-- [ ] Emit a structured error when a selected generated card has no inventory
+- [x] Build General selected cards from inventory lines.
+- [x] Build Lookbook selected cards from inventory lines.
+- [x] Build Cast selected cards from inventory lines.
+- [x] Build Location selected cards from inventory lines.
+- [x] Attach available alternatives separately from selected dependency lines.
+- [x] Remove selected generated card fallback to `not-applicable` pricing.
+- [x] Emit a structured error when a selected generated card has no inventory
   line.
-- [ ] Preserve existing selection interactions.
+- [x] Preserve existing selection interactions.
 - [ ] Preserve Reference Issues section behavior and add invalid dependency
   diagnostics.
 
 ### Studio Contracts
 
-- [ ] Update Studio service response types.
-- [ ] Update AI Production tab to read inventory estimate.
-- [ ] Update References tab to read dependency line ids.
-- [ ] Ensure React code does not compute prices.
-- [ ] Ensure feature code uses local shadcn UI controls only.
-- [ ] Remove obsolete graph field assumptions from Studio tests.
+- [x] Update Studio service response types.
+- [x] Update AI Production tab to read inventory estimate.
+- [x] Update References tab to read dependency line ids.
+- [x] Ensure React code does not compute prices.
+- [x] Ensure feature code uses local shadcn UI controls only.
+- [x] Remove obsolete graph field assumptions from Studio tests.
 
 ### Tests
 
-- [ ] Add no-mock core inventory tests.
-- [ ] Add no-mock shot reference inventory tests.
-- [ ] Keep the route/model estimate matrix thorough.
-- [ ] Extend service E2E tests to assert inventory line pricing.
-- [ ] Add screenshot-state regression tests for inconsistent cast/location
+- [x] Add no-mock core inventory tests.
+- [x] Add no-mock shot reference inventory tests.
+- [x] Keep the route/model estimate matrix thorough.
+- [x] Extend service E2E tests to assert inventory line pricing.
+- [x] Add screenshot-state regression tests for inconsistent cast/location
   estimates.
-- [ ] Add invalid selector tests for cast.
+- [x] Add invalid selector tests for cast.
 - [ ] Add invalid selector tests for location.
 - [ ] Add invalid selector tests for Lookbook.
 - [ ] Add invalid selector tests for shot-video inputs.
 - [ ] Add duplicate declaration and cycle tests.
 - [ ] Add static tests for removed execution fields.
-- [ ] Do not delete any existing behavioral tests unless the behavior is
+- [x] Do not delete any existing behavioral tests unless the behavior is
   genuinely obsolete under this plan.
-- [ ] Replace execution-order assertions with inventory/checklist assertions.
+- [x] Replace execution-order assertions with inventory/checklist assertions.
 
 ### Documentation
 
-- [ ] Update `docs/architecture/media-generation.md`.
-- [ ] Update `docs/architecture/reference/media-generation.md`.
-- [ ] Supersede or update ADR `0032`.
-- [ ] Document that dependencies are an inventory/checklist/estimate contract.
-- [ ] Document that dependency generation is agent/user-driven, not automatic.
-- [ ] Document estimate-only drafts and why they are non-runnable.
+- [x] Update `docs/architecture/media-generation.md`.
+- [x] Update `docs/architecture/reference/media-generation.md`.
+- [x] Supersede or update ADR `0032`.
+- [x] Document that dependencies are an inventory/checklist/estimate contract.
+- [x] Document that dependency generation is agent/user-driven, not automatic.
+- [x] Document estimate-only drafts and why they are non-runnable.
 
 ### Final Verification
 

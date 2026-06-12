@@ -37,6 +37,12 @@ interface StudioServerStatus {
   agent: {
     serverPolicy: 'attachOnly';
     browserUrl: typeof STUDIO_DEV_SERVER_URL;
+    browserAccess: {
+      requiredSurface: 'inAppBrowser';
+      accessMethod: 'browserClientBootstrap';
+      requiredTool: 'mcp__node_repl__js';
+      directBrowserToolRequired: false;
+    };
   };
 }
 
@@ -144,6 +150,12 @@ async function readStudioServerStatus(input: {
     agent: {
       serverPolicy: 'attachOnly',
       browserUrl: STUDIO_DEV_SERVER_URL,
+      browserAccess: {
+        requiredSurface: 'inAppBrowser',
+        accessMethod: 'browserClientBootstrap',
+        requiredTool: 'mcp__node_repl__js',
+        directBrowserToolRequired: false,
+      },
     },
   };
 }
@@ -208,6 +220,9 @@ function writeStudioServerStatusSummary(
   if (!descriptor.present) {
     io.stdout.log('Studio dev server descriptor: missing.');
     io.stdout.log(`Canonical URL: ${status.server.canonicalUrl}`);
+    io.stdout.log(
+      'Browser access: use the in-app Browser through the browser-client bootstrap.'
+    );
     return;
   }
 
@@ -221,6 +236,9 @@ function writeStudioServerStatusSummary(
   }
   io.stdout.log(
     `Event store: ${status.eventStore.lineCount} lines, ${status.eventStore.invalidEventCount} invalid historical events.`
+  );
+  io.stdout.log(
+    'Browser access: use the in-app Browser through the browser-client bootstrap.'
   );
 }
 

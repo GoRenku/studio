@@ -315,6 +315,7 @@ export async function buildCastCharacterSheetDependencyDraftSpec(
       outputFormat: 'png',
       title: input.label,
     },
+    materializationState: 'generatable',
   };
 }
 

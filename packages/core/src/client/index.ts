@@ -211,6 +211,7 @@ export type {
   MediaGenerationEstimateReport,
   MediaGenerationAssetSelectorId,
   MediaGenerationDependencyAvailability,
+  MediaGenerationAssetSelectionPolicy,
   MediaGenerationDependencyChecklistItem,
   MediaGenerationDependencyGenerationDraft,
   MediaGenerationDependencyKind,

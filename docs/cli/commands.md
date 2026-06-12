@@ -1930,6 +1930,9 @@ Behavior:
 - The intended agent policy is attach-only: agents should use the existing
   server when the descriptor is fresh and canonical, and should not start a new
   Studio dev server unless the user explicitly changes that policy.
+- JSON output includes `agent.browserAccess` so agents know that Browser access
+  goes through the in-app Browser client bootstrap, not through a standalone
+  browser tool discovered by tool search.
 
 ## Maintenance Checklist
 

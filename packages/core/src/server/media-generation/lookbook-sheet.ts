@@ -322,6 +322,7 @@ export async function buildLookbookSheetDependencyDraftSpec(
       outputFormat: 'png',
       title: input.label,
     },
+    materializationState: 'generatable',
   };
 }
 

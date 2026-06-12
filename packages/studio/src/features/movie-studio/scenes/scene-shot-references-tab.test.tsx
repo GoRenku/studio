@@ -163,6 +163,33 @@ describe('SceneShotReferencesTab', () => {
     });
   });
 
+  it('renders dependency inventory diagnostics in Reference issues', () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        productionPlan={{
+          ...productionPlanWithReferenceImages(),
+          diagnostics: [
+            {
+              severity: 'error',
+              code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_METADATA_MISSING',
+              message: 'Selected location environment sheet is missing metadata.',
+            },
+          ],
+        } as ShotVideoTakeProductionPlanReport}
+        {...handlers}
+      />
+    );
+
+    expect(screen.getByText('Reference issues')).toBeTruthy();
+    expect(
+      screen.getByText('Selected location environment sheet is missing metadata.')
+    ).toBeTruthy();
+  });
+
   it('renders one cast card and selects alternate character sheets from a dialog', async () => {
     const handlers = referenceHandlers();
     render(
@@ -315,6 +342,11 @@ function productionPlanWithPlannedReferenceEstimate(): ShotVideoTakeProductionPl
           kind: 'first-frame',
           title: 'Missing First Frame',
           selected: true,
+          clearInputSlot: {
+            kind: 'first-frame',
+            subjectKind: 'shot',
+            subjectId: 'shot_001',
+          },
           card: {
             state: 'selected-planned',
             mediaKind: 'image',
@@ -343,6 +375,11 @@ function productionPlanWithReadyReferenceEstimate(): ShotVideoTakeProductionPlan
           kind: 'reference-image',
           title: 'Generated Character Sheet',
           selected: true,
+          clearInputSlot: {
+            kind: 'reference-image',
+            subjectKind: 'cast-member',
+            subjectId: 'cast_urban',
+          },
           card: {
             state: 'selected-ready',
             mediaKind: 'image',
@@ -514,6 +551,13 @@ function referenceChoice(
     kind,
     title,
     selected,
+    clearInputSlot: selected
+      ? {
+          kind,
+          subjectKind: 'shot',
+          subjectId: 'shot_001',
+        }
+      : null,
     card: {
       state: selected ? 'selected-ready' : 'available',
       mediaKind: 'image',

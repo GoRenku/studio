@@ -48,13 +48,24 @@ export function resolveMediaGenerationDependencySelection(input: {
       mediaKind: input.slot.selector.mediaKind,
       slot: input.slot,
       fileRole: input.slot.selector.fileRole,
+      selectionPolicy: input.slot.selector.selectionPolicy,
     });
   }
   if (input.slot.selector.kind === 'lookbook-sheet') {
-    const sheet = listLookbookSheets(
-      input.session,
-      input.slot.selector.lookbookId
-    )[0];
+    const sheets = listLookbookSheets(input.session, input.slot.selector.lookbookId);
+    const sheet = selectLookbookSheet({
+      sheets,
+      lookbookSheetId: input.slot.selector.lookbookSheetId,
+      selectionPolicy: input.slot.selector.selectionPolicy,
+    });
+    if (sheet === 'invalid-selected-sheet') {
+      return invalidSelection(
+        input.slot,
+        'CORE_MEDIA_DEPENDENCY_LOOKBOOK_SHEET_SELECTION_INVALID',
+        `Selected Lookbook sheet is not available for ${input.slot.label}.`,
+        'Select an existing Lookbook sheet or clear the stale selection.'
+      );
+    }
     const file = sheet?.asset.files.find((candidate) => candidate.mediaKind === 'image');
     if (sheet && !file) {
       return invalidSelection(
@@ -72,7 +83,15 @@ export function resolveMediaGenerationDependencySelection(input: {
         })
       : noAsset();
   }
-  return noAsset();
+  if (input.slot.selector.kind === 'manual-attachment') {
+    return noAsset();
+  }
+  return invalidSelection(
+    input.slot,
+    'CORE_MEDIA_DEPENDENCY_SELECTOR_KIND_UNHANDLED',
+    `Dependency selector kind is not handled for ${input.slot.label}.`,
+    'Update dependency selector handling for this slot kind.'
+  );
 }
 
 function shotVideoInputAssetFromRequest(
@@ -80,11 +99,21 @@ function shotVideoInputAssetFromRequest(
   slot: MediaGenerationDependencySlot
 ): MediaGenerationDependencySelectorResult {
   if (request?.kind !== 'media-generation-spec') {
-    return noAsset();
+    return invalidSelection(
+      slot,
+      'CORE_MEDIA_DEPENDENCY_SELECTOR_REQUEST_INVALID',
+      `Shot video input dependency selector received an invalid request kind for ${slot.label}.`,
+      'Resolve shot video input dependencies with a media-generation-spec request.'
+    );
   }
   const spec = request.spec as ShotVideoTakeGenerationSpec | undefined;
   if (spec?.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
-    return noAsset();
+    return invalidSelection(
+      slot,
+      'CORE_MEDIA_DEPENDENCY_SELECTOR_REQUEST_INVALID',
+      `Shot video input dependency selector received an invalid media generation spec for ${slot.label}.`,
+      'Resolve shot video input dependencies with a shot.video-take generation spec.'
+    );
   }
   const selectedInputs = spec.inputs.filter((candidate) =>
     shotVideoInputMatchesDependencySlot(candidate, slot)
@@ -139,6 +168,7 @@ function selectedAssetForTarget(
     mediaKind: string;
     slot: MediaGenerationDependencySlot;
     fileRole?: string;
+    selectionPolicy: 'selected-only' | 'selected-or-default';
   }
 ): MediaGenerationDependencySelectorResult {
   const selectedAssets = listAssetRelationshipPage(session, {
@@ -156,17 +186,29 @@ function selectedAssetForTarget(
       'Keep exactly one selected asset for this dependency.'
     );
   }
-  const asset = selectedAssets[0] ?? listAssetRelationshipPage(session, {
-    target: input.target,
-    role: input.role,
-    mediaKind: input.mediaKind,
-    limit: MAX_RESOURCE_PAGE_LIMIT,
-  }).items[0];
+  const asset =
+    selectedAssets[0] ??
+    (input.selectionPolicy === 'selected-or-default'
+      ? listAssetRelationshipPage(session, {
+          target: input.target,
+          role: input.role,
+          mediaKind: input.mediaKind,
+          limit: MAX_RESOURCE_PAGE_LIMIT,
+        }).items[0]
+      : undefined);
   if (!asset) {
     return noAsset();
   }
-  const file = dependencyFile(session, asset, input.mediaKind, input.fileRole);
-  if (!file) {
+  const fileResult = dependencyFile(session, asset, input.mediaKind, input.fileRole);
+  if (fileResult.state === 'invalid') {
+    return invalidSelection(
+      input.slot,
+      fileResult.code,
+      fileResult.message,
+      fileResult.suggestion
+    );
+  }
+  if (!fileResult.file) {
     return invalidSelection(
       input.slot,
       'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
@@ -176,9 +218,26 @@ function selectedAssetForTarget(
   }
   return withAsset({
     assetId: asset.assetId,
-    assetFileId: file.id,
-    projectRelativePath: file.projectRelativePath,
+    assetFileId: fileResult.file.id,
+    projectRelativePath: fileResult.file.projectRelativePath,
   });
+}
+
+function selectLookbookSheet(input: {
+  sheets: ReturnType<typeof listLookbookSheets>;
+  lookbookSheetId?: string;
+  selectionPolicy: 'selected-only' | 'selected-or-default';
+}): ReturnType<typeof listLookbookSheets>[number] | 'invalid-selected-sheet' | undefined {
+  if (input.lookbookSheetId) {
+    return (
+      input.sheets.find((sheet) => sheet.id === input.lookbookSheetId) ??
+      'invalid-selected-sheet'
+    );
+  }
+  if (input.selectionPolicy === 'selected-only') {
+    return undefined;
+  }
+  return input.sheets[0];
 }
 
 function dependencyFile(
@@ -186,18 +245,55 @@ function dependencyFile(
   asset: Asset,
   mediaKind: string,
   fileRole?: string
-): Asset['files'][number] | undefined {
+):
+  | { state: 'valid'; file: Asset['files'][number] | undefined }
+  | {
+      state: 'invalid';
+      code: string;
+      message: string;
+      suggestion: string;
+    } {
   if (fileRole === 'composite') {
     const sheet = readLocationEnvironmentSheetByAssetId(session, asset.assetId);
-    const compositeFileId = sheet?.compositeFileId ?? null;
-    return asset.files.find(
+    if (!sheet) {
+      return {
+        state: 'invalid',
+        code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_METADATA_MISSING',
+        message: `Selected location environment sheet is missing metadata: ${asset.assetId}.`,
+        suggestion:
+          'Regenerate or reimport the location environment sheet so its composite metadata is recorded.',
+      };
+    }
+    if (!sheet.compositeFileId) {
+      return {
+        state: 'invalid',
+        code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_COMPOSITE_FILE_MISSING',
+        message: `Selected location environment sheet has no composite file id: ${asset.assetId}.`,
+        suggestion:
+          'Regenerate the location environment sheet so the composite image can be selected.',
+      };
+    }
+    const compositeFile = asset.files.find(
       (candidate) =>
-        candidate.id === compositeFileId &&
+        candidate.id === sheet.compositeFileId &&
         candidate.role === 'composite' &&
         candidate.mediaKind === mediaKind
     );
+    if (!compositeFile) {
+      return {
+        state: 'invalid',
+        code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_COMPOSITE_FILE_RECORD_MISSING',
+        message: `Selected location environment sheet composite file record is missing: ${asset.assetId}.`,
+        suggestion:
+          'Regenerate or reimport the location environment sheet so the composite file record exists.',
+      };
+    }
+    return { state: 'valid', file: compositeFile };
   }
-  return asset.files.find((candidate) => candidate.mediaKind === mediaKind);
+  return {
+    state: 'valid',
+    file: asset.files.find((candidate) => candidate.mediaKind === mediaKind),
+  };
 }
 
 function withAsset(

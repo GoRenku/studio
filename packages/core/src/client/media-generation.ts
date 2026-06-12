@@ -106,6 +106,10 @@ export interface MediaGenerationDependencySlot {
   reason: string;
 }
 
+export type MediaGenerationAssetSelectionPolicy =
+  | 'selected-only'
+  | 'selected-or-default';
+
 export type MediaGenerationDependencySelectorInput =
   | {
       kind: 'shot-video-input';
@@ -121,10 +125,13 @@ export type MediaGenerationDependencySelectorInput =
       role: string;
       mediaKind: MediaKind;
       fileRole?: string;
+      selectionPolicy: MediaGenerationAssetSelectionPolicy;
     }
   | {
       kind: 'lookbook-sheet';
       lookbookId: string;
+      lookbookSheetId?: string;
+      selectionPolicy: MediaGenerationAssetSelectionPolicy;
     }
   | {
       kind: 'manual-attachment';
@@ -1283,6 +1290,11 @@ export interface ShotVideoTakeGeneralReferenceChoice {
   kind: ShotVideoTakeGeneralReferenceKind;
   title: string;
   selected: boolean;
+  clearInputSlot: {
+    kind: ShotVideoTakeInputKind;
+    subjectKind?: ShotVideoTakeInputSubjectKind;
+    subjectId?: string;
+  } | null;
   card: ShotVideoTakeReferenceCardPlan;
 }
 

@@ -411,6 +411,7 @@ export async function buildLocationEnvironmentSheetDependencyDraftSpec(
       outputFormat: 'png',
       title: input.label,
     },
+    materializationState: 'generatable',
   };
 }
 

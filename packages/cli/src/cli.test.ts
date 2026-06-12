@@ -2726,6 +2726,12 @@ describe('renku CLI', () => {
       agent: {
         serverPolicy: 'attachOnly',
         browserUrl: 'http://localhost:5173',
+        browserAccess: {
+          requiredSurface: 'inAppBrowser',
+          accessMethod: 'browserClientBootstrap',
+          requiredTool: 'mcp__node_repl__js',
+          directBrowserToolRequired: false,
+        },
       },
     });
     expect(stderr).toEqual([]);
@@ -2797,6 +2803,16 @@ describe('renku CLI', () => {
         lineCount: 1,
         invalidEventCount: 1,
         warningCount: 1,
+      },
+      agent: {
+        serverPolicy: 'attachOnly',
+        browserUrl: 'http://localhost:5173',
+        browserAccess: {
+          requiredSurface: 'inAppBrowser',
+          accessMethod: 'browserClientBootstrap',
+          requiredTool: 'mcp__node_repl__js',
+          directBrowserToolRequired: false,
+        },
       },
     });
     expect(stderr).toEqual([]);

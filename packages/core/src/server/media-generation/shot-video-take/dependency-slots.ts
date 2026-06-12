@@ -2,6 +2,7 @@ import type {
   MediaGenerationDependencySlot,
   SceneShotMediaGenerationTarget,
   ShotVideoTakeInputModeId,
+  ShotVideoTakeRequestedInput,
 } from '../../../client/index.js';
 import {
   castCharacterSheetDependencySlot,
@@ -15,8 +16,10 @@ export interface ShotVideoTakeDependencySlotInput {
   inputModeId: ShotVideoTakeInputModeId;
   selectedCast: Array<{ id: string; name: string }>;
   selectedLocations: Array<{ id: string; name: string }>;
-  activeLookbook: { id: string; name: string } | null;
+  activeLookbook: { id: string; name: string; selectedSheetId?: string | null } | null;
   customReferenceInputs: Array<{ id: string; title: string }>;
+  requestedInputs?: ShotVideoTakeRequestedInput[];
+  requiresMultiShotStoryboardSheet?: boolean;
 }
 
 export function declareShotVideoTakeDependencySlots(
@@ -24,6 +27,23 @@ export function declareShotVideoTakeDependencySlots(
 ): MediaGenerationDependencySlot[] {
   return [
     ...shotVideoInputModeSlots(input),
+    ...(input.requiresMultiShotStoryboardSheet
+      ? [
+          shotVideoInputDependencySlot({
+            kind: 'multi-shot-storyboard-sheet',
+            target: input.target,
+            required: true,
+            reason:
+              'The selected multi-shot reference-video route requires a storyboard sheet input.',
+          }),
+        ]
+      : []),
+    ...(input.requestedInputs ?? []).map((requestedInput) =>
+      requestedShotVideoInputSlot({
+        declarationInput: input,
+        requestedInput,
+      })
+    ),
     ...shotVideoReferenceContextSlots(input),
   ];
 }
@@ -88,6 +108,9 @@ function shotVideoReferenceContextSlots(
   input: ShotVideoTakeDependencySlotInput
 ): MediaGenerationDependencySlot[] {
   const requiredForReferenceRoute = input.inputModeId === 'reference';
+  if (!requiredForReferenceRoute && !input.activeLookbook) {
+    return [];
+  }
   const contextReason = requiredForReferenceRoute
     ? 'The selected reference-video route uses this selected reference image.'
     : 'This selected reference helps author and inspect planned shot inputs.';
@@ -98,6 +121,9 @@ function shotVideoReferenceContextSlots(
           lookbookSheetDependencySlot({
             lookbookId: input.activeLookbook.id,
             lookbookName: input.activeLookbook.name,
+            ...(input.activeLookbook.selectedSheetId
+              ? { lookbookSheetId: input.activeLookbook.selectedSheetId }
+              : {}),
             required: requiredForReferenceRoute,
             reason: contextReason,
           }),
@@ -120,4 +146,96 @@ function shotVideoReferenceContextSlots(
       })
     ),
   ];
+}
+
+function requestedShotVideoInputSlot(input: {
+  declarationInput: ShotVideoTakeDependencySlotInput;
+  requestedInput: ShotVideoTakeRequestedInput;
+}): MediaGenerationDependencySlot {
+  const subjectLabel =
+    input.requestedInput.subjectKind && input.requestedInput.subjectId
+      ? ` for ${input.requestedInput.subjectKind} ${input.requestedInput.subjectId}`
+      : '';
+  const reason =
+    input.requestedInput.note?.trim() ||
+    `Requested ${input.requestedInput.kind}${subjectLabel} is not selected for the final video take.`;
+  if (
+    input.requestedInput.kind === 'character-sheet' &&
+    input.requestedInput.subjectKind === 'cast-member' &&
+    input.requestedInput.subjectId
+  ) {
+    const castMember = input.declarationInput.selectedCast.find(
+      (candidate) => candidate.id === input.requestedInput.subjectId
+    );
+    return castCharacterSheetDependencySlot({
+      castMemberId: input.requestedInput.subjectId,
+      castMemberName: castMember?.name ?? input.requestedInput.subjectId,
+      required: false,
+      reason,
+    });
+  }
+  if (
+    input.requestedInput.kind === 'location-sheet' &&
+    input.requestedInput.subjectKind === 'location' &&
+    input.requestedInput.subjectId
+  ) {
+    const location = input.declarationInput.selectedLocations.find(
+      (candidate) => candidate.id === input.requestedInput.subjectId
+    );
+    return locationEnvironmentSheetDependencySlot({
+      locationId: input.requestedInput.subjectId,
+      locationName: location?.name ?? input.requestedInput.subjectId,
+      required: false,
+      reason,
+    });
+  }
+  if (
+    input.requestedInput.kind === 'lookbook-sheet' &&
+    input.requestedInput.subjectKind === 'lookbook' &&
+    input.requestedInput.subjectId
+  ) {
+    return lookbookSheetDependencySlot({
+      lookbookId: input.requestedInput.subjectId,
+      lookbookName:
+        input.declarationInput.activeLookbook?.id === input.requestedInput.subjectId
+          ? input.declarationInput.activeLookbook.name
+          : input.requestedInput.subjectId,
+      ...(input.declarationInput.activeLookbook?.selectedSheetId
+        ? { lookbookSheetId: input.declarationInput.activeLookbook.selectedSheetId }
+        : {}),
+      required: false,
+      reason,
+    });
+  }
+  if (
+    input.requestedInput.kind === 'first-frame' ||
+    input.requestedInput.kind === 'last-frame' ||
+    input.requestedInput.kind === 'reference-image' ||
+    input.requestedInput.kind === 'multi-shot-storyboard-sheet'
+  ) {
+    return shotVideoInputDependencySlot({
+      kind: input.requestedInput.kind,
+      target: input.declarationInput.target,
+      ...(input.requestedInput.subjectKind
+        ? { subjectKind: input.requestedInput.subjectKind }
+        : {}),
+      ...(input.requestedInput.subjectId
+        ? { subjectId: input.requestedInput.subjectId }
+        : {}),
+      required: false,
+      reason,
+    });
+  }
+  return {
+    dependencyId: `${input.requestedInput.kind}:manual:${input.requestedInput.subjectId ?? 'unscoped'}`,
+    dependencyKind: 'manual-attachment',
+    label: input.requestedInput.kind,
+    dependencyTarget: input.declarationInput.target,
+    selector: {
+      kind: 'manual-attachment',
+      target: input.declarationInput.target,
+    },
+    required: false,
+    reason,
+  };
 }

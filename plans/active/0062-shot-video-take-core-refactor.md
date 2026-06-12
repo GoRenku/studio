@@ -3,6 +3,24 @@
 Status: proposed
 Date: 2026-06-11
 
+## Dependency Planning Supersession
+
+As of `0063-generation-dependency-inventory-rewrite.md` and
+`0064-generation-dependency-inventory-cleanup.md`, the dependency graph bridge,
+dependency-map file, execution-level language, and graph-preserving split
+direction in this plan are superseded for media-generation dependency planning.
+
+Future shot-video file-size refactors may still use this plan for the broader
+module-splitting goal, but dependency work must build on the shared dependency
+inventory contract:
+
+- dependency declarations come from purpose-owned inventory slots;
+- dependency ids are built and parsed only by core-owned dependency id helpers;
+- Studio consumes core-provided mutation fields instead of parsing dependency
+  ids;
+- inventory lines and the root generation line are the pricing source;
+- dependency lines are not an automatic execution graph.
+
 ## Summary
 
 `packages/core/src/server/media-generation/shot-video-take.ts` has grown into a

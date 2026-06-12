@@ -4,6 +4,12 @@ import type {
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
 } from '../../client/index.js';
+import {
+  castCharacterSheetDependencyId,
+  locationEnvironmentSheetDependencyId,
+  lookbookSheetDependencyId,
+  shotVideoInputDependencyId,
+} from './dependency-identifiers.js';
 
 export function castCharacterSheetDependencySlot(input: {
   castMemberId: string;
@@ -12,7 +18,7 @@ export function castCharacterSheetDependencySlot(input: {
   reason: string;
 }): MediaGenerationDependencySlot {
   return {
-    dependencyId: `cast-character-sheet:${input.castMemberId}`,
+    dependencyId: castCharacterSheetDependencyId(input.castMemberId),
     dependencyKind: 'cast-character-sheet',
     label: `${input.castMemberName} character sheet`,
     dependencyTarget: { kind: 'castMember', id: input.castMemberId },
@@ -21,6 +27,7 @@ export function castCharacterSheetDependencySlot(input: {
       target: { kind: 'castMember', castMemberId: input.castMemberId },
       role: 'character_sheet',
       mediaKind: 'image',
+      selectionPolicy: 'selected-or-default',
     },
     required: input.required,
     reason: input.reason,
@@ -34,7 +41,7 @@ export function locationEnvironmentSheetDependencySlot(input: {
   reason: string;
 }): MediaGenerationDependencySlot {
   return {
-    dependencyId: `location-environment-sheet:${input.locationId}`,
+    dependencyId: locationEnvironmentSheetDependencyId(input.locationId),
     dependencyKind: 'location-environment-sheet',
     label: `${input.locationName} location sheet`,
     dependencyTarget: { kind: 'location', id: input.locationId },
@@ -44,6 +51,7 @@ export function locationEnvironmentSheetDependencySlot(input: {
       role: 'environment_sheet',
       mediaKind: 'image',
       fileRole: 'composite',
+      selectionPolicy: 'selected-or-default',
     },
     required: input.required,
     reason: input.reason,
@@ -53,17 +61,20 @@ export function locationEnvironmentSheetDependencySlot(input: {
 export function lookbookSheetDependencySlot(input: {
   lookbookId: string;
   lookbookName: string;
+  lookbookSheetId?: string;
   required: boolean;
   reason: string;
 }): MediaGenerationDependencySlot {
   return {
-    dependencyId: `lookbook-sheet:${input.lookbookId}`,
+    dependencyId: lookbookSheetDependencyId(input.lookbookId),
     dependencyKind: 'lookbook-sheet',
     label: `${input.lookbookName} Lookbook sheet`,
     dependencyTarget: { kind: 'lookbook', id: input.lookbookId },
     selector: {
       kind: 'lookbook-sheet',
       lookbookId: input.lookbookId,
+      ...(input.lookbookSheetId ? { lookbookSheetId: input.lookbookSheetId } : {}),
+      selectionPolicy: 'selected-or-default',
     },
     required: input.required,
     reason: input.reason,
@@ -83,13 +94,8 @@ export function shotVideoInputDependencySlot(input: {
   required: boolean;
   reason: string;
 }): MediaGenerationDependencySlot {
-  const subjectKey =
-    input.subjectKind && input.subjectId
-      ? `${input.subjectKind}:${input.subjectId}`
-      : `production-group:${input.target.productionGroupId ?? input.target.id}`;
-
   return {
-    dependencyId: `${input.kind}:${subjectKey}`,
+    dependencyId: shotVideoInputDependencyId(input),
     dependencyKind: input.kind,
     label: input.label ?? shotInputDependencyLabel(input.kind),
     dependencyTarget: input.target,

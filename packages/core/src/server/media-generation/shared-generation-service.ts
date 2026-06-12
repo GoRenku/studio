@@ -204,6 +204,12 @@ export async function planMediaGenerationDependencies(
             error instanceof Error
               ? `Root generation estimate failed: ${error.message}`
               : 'Root generation estimate failed.';
+          const issue = createDiagnosticError(
+            'CORE_MEDIA_DEPENDENCY_ROOT_ESTIMATE_FAILED',
+            message,
+            { path: ['dependencyInventory', 'rootGeneration'] },
+            'Review the root generation spec and provider pricing support.'
+          );
           return {
             pricing: {
               state: 'unpriced' as const,
@@ -211,7 +217,7 @@ export async function planMediaGenerationDependencies(
               reason: message,
               overrideRequired: true as const,
             },
-            diagnostics: [],
+            diagnostics: [issue],
             estimate: null,
           };
         }
