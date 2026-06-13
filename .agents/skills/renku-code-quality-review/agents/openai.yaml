@@ -1,4 +1,7 @@
 interface:
   display_name: "Renku Code Quality Review"
-  short_description: "Review Renku architecture and code shape"
-  default_prompt: "Use $renku-code-quality-review to review the current changes for Renku Studio architecture and code quality issues."
+  short_description: "Audit architecture and code quality"
+  default_prompt: "Use $renku-code-quality-review to run an explicit Renku Studio architecture and code-quality audit of the current changes."
+
+policy:
+  allow_implicit_invocation: false

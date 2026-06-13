@@ -1,19 +1,23 @@
 ---
 name: renku-code-quality-review
-description: Focused Renku Studio architecture and code-quality review. Use when Codex is asked to review Renku Studio changes for architectural correctness, layering, fail-fast structured errors, no fallback or compatibility shortcuts, function and file complexity, naming quality, frontend shadcn usage, CLI/server/core boundaries, media-generation dependency architecture, or repeated quality issues that ordinary correctness review may miss.
+description: Explicit Renku Studio architecture and code-quality audit. Use only when the user explicitly invokes $renku-code-quality-review or asks for an architecture/code-quality review by name, such as architecture review, code quality review, layering review, naming review, Shadcn usage review, fail-fast structured diagnostics review, no-fallback/no-compatibility review, package-boundary review, media-generation dependency architecture review, or repeated quality issues. Do not use for a bare review request, PR review, diff review, correctness review, bug review, security review, test review, or regression review unless the user explicitly asks for architecture or code quality.
 ---
 
 # Renku Code Quality Review
 
 ## Overview
 
-Use this skill for a focused Renku Studio architecture and code-quality review.
+Use this skill for an explicit Renku Studio architecture and code-quality audit.
 Prioritize shortcuts that will make the codebase harder to extend, even when the
 feature appears to work.
 
 This is not a general correctness review. Look specifically for architectural
 drift, weak boundaries, guessing behavior, avoidable complexity, vague names,
 and repeated project-specific failure modes.
+
+Do not use this skill for the ordinary `review` command, generic PR/diff review,
+or correctness-focused review unless the user explicitly asks for architecture or
+code quality.
 
 ## Review Workflow
 
