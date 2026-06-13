@@ -351,6 +351,8 @@ function shotTabLabel(tab: SceneShotDetailTab) {
       return { id: tab, label: 'Composition' };
     case 'motion':
       return { id: tab, label: 'Motion' };
+    case 'dialogs':
+      return { id: tab, label: 'Dialogs' };
     case 'cast':
       return { id: tab, label: 'Cast' };
     case 'location':
@@ -477,6 +479,7 @@ function shotTabSelections(input: {
       };
     case 'description':
     case 'lookbook':
+    case 'dialogs':
     case 'references':
       return { kind: input.shotTab };
   }

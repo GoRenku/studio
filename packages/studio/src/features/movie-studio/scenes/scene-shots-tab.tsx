@@ -422,6 +422,7 @@ export function SceneShotsTab({
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}
+            castMemberImages={resource.castMemberImages}
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
             onShotSpecsSaved={setResource}

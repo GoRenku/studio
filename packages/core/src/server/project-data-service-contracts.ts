@@ -243,6 +243,9 @@ export interface ProjectDataService {
   updateSceneShotReferenceInclusion(
     input: UpdateSceneShotReferenceInclusionInput
   ): Promise<SceneShotListResource>;
+  updateSceneShotGroupReferenceInclusion(
+    input: UpdateSceneShotGroupReferenceInclusionInput
+  ): Promise<SceneShotListResource>;
   readActStoryboardResource(
     input: ReadActStoryboardResourceInput
   ): Promise<ActStoryboardResource>;
@@ -1583,6 +1586,15 @@ export interface UpdateSceneShotReferenceInclusionInput
   projectName: string;
   sceneId: string;
   shotId: string;
+  dependencyId: string;
+  inclusion: import('../client/scene-shot-list.js').ShotReferenceInclusion | null;
+}
+
+export interface UpdateSceneShotGroupReferenceInclusionInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  shotIds: string[];
   dependencyId: string;
   inclusion: import('../client/scene-shot-list.js').ShotReferenceInclusion | null;
 }

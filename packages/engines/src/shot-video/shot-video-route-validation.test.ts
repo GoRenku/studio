@@ -33,4 +33,46 @@ describe('shot video route catalog validation', () => {
     expect(veoImageRoute?.parameters.map((parameter) => parameter.id)).not.toContain('seed');
     expect(happyHorseImageRoute?.parameters.map((parameter) => parameter.id)).not.toContain('aspect_ratio');
   });
+
+  it('declares audio reference slots only on Seedance reference routes', () => {
+    const audioRoutes = SHOT_VIDEO_MODEL_FAMILIES.flatMap((family) =>
+      family.routes
+        .filter((route) =>
+          route.inputSlots.some((slot) => slot.mediaKind === 'audio')
+        )
+        .map((route) => ({
+          choice: family.choice,
+          inputMode: route.inputMode,
+          shotGroupMode: route.shotGroupMode,
+          slot: route.inputSlots.find((slot) => slot.mediaKind === 'audio'),
+        }))
+    );
+
+    expect(audioRoutes).toEqual([
+      {
+        choice: 'fal-ai/bytedance/seedance-2.0',
+        inputMode: 'reference',
+        shotGroupMode: 'single-shot',
+        slot: expect.objectContaining({
+          kind: 'audio',
+          providerField: 'audio_urls',
+          required: false,
+          maxCount: 3,
+          asArray: true,
+        }),
+      },
+      {
+        choice: 'fal-ai/bytedance/seedance-2.0',
+        inputMode: 'reference',
+        shotGroupMode: 'multi-shot',
+        slot: expect.objectContaining({
+          kind: 'audio',
+          providerField: 'audio_urls',
+          required: false,
+          maxCount: 3,
+          asArray: true,
+        }),
+      },
+    ]);
+  });
 });

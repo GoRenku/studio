@@ -86,7 +86,8 @@ export function shotVideoInputDependencySlot(input: {
     | 'first-frame'
     | 'last-frame'
     | 'reference-image'
-    | 'multi-shot-storyboard-sheet';
+    | 'multi-shot-storyboard-sheet'
+    | 'audio';
   target: SceneShotMediaGenerationTarget;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
@@ -96,7 +97,7 @@ export function shotVideoInputDependencySlot(input: {
 }): MediaGenerationDependencySlot {
   return {
     dependencyId: shotVideoInputDependencyId(input),
-    dependencyKind: input.kind,
+    dependencyKind: shotInputDependencyKind(input),
     label: input.label ?? shotInputDependencyLabel(input.kind),
     dependencyTarget: input.target,
     selector: {
@@ -112,6 +113,24 @@ export function shotVideoInputDependencySlot(input: {
   };
 }
 
+function shotInputDependencyKind(input: {
+  kind:
+    | 'first-frame'
+    | 'last-frame'
+    | 'reference-image'
+    | 'multi-shot-storyboard-sheet'
+    | 'audio';
+  subjectKind?: ShotVideoTakeInputSubjectKind;
+}): MediaGenerationDependencySlot['dependencyKind'] {
+  if (input.kind === 'audio' && input.subjectKind === 'scene-dialogue') {
+    return 'reference-audio';
+  }
+  if (input.kind === 'audio') {
+    return 'manual-attachment';
+  }
+  return input.kind;
+}
+
 function shotInputDependencyLabel(kind: string): string {
   if (kind === 'first-frame') {
     return 'First frame';
@@ -121,6 +140,9 @@ function shotInputDependencyLabel(kind: string): string {
   }
   if (kind === 'multi-shot-storyboard-sheet') {
     return 'Storyboard sheet';
+  }
+  if (kind === 'audio') {
+    return 'Dialogue audio';
   }
   return 'Reference image';
 }

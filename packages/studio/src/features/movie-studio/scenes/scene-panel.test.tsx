@@ -154,6 +154,7 @@ function sceneShotList(): SceneShotListResourceResponse {
     activeShotList: null,
     storyboardImagesByShotId: {},
     castMemberLabels: {},
+    castMemberImages: {},
     locationLabels: {},
   };
 }

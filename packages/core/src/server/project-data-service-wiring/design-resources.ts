@@ -19,6 +19,7 @@ import {
   updateSceneShotLocationReference,
   updateSceneShotLocationViewReferences,
   updateSceneShotLookbookReference,
+  updateSceneShotGroupReferenceInclusion,
   updateSceneShotReferenceInclusion,
   updateSceneShotSpecs,
 } from '../resources/scene-storyboard-ui.js';
@@ -45,6 +46,7 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'updateSceneShotLookbookReference'
   | 'updateSceneShotCustomReferenceImages'
   | 'updateSceneShotReferenceInclusion'
+  | 'updateSceneShotGroupReferenceInclusion'
   | 'updateSceneShotSpecs'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
@@ -68,6 +70,7 @@ export function createDesignResourceServiceWiring(): Pick<
     updateSceneShotLookbookReference,
     updateSceneShotCustomReferenceImages,
     updateSceneShotReferenceInclusion,
+    updateSceneShotGroupReferenceInclusion,
     updateSceneShotSpecs,
     readActStoryboardResource,
     readStudioSelectionContext,

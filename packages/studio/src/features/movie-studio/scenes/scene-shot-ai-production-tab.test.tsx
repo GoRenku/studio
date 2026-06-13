@@ -99,6 +99,7 @@ function resource(): SceneShotListResourceResponse {
     activeShotList: shotList(),
     storyboardImagesByShotId: {},
     castMemberLabels: {},
+    castMemberImages: {},
     locationLabels: {},
   };
 }
@@ -252,6 +253,7 @@ function productionPlan(
     },
     references: {
       general: [],
+      dialogueAudio: [],
       lookbook: input.lookbook
         ? [
             {

@@ -315,6 +315,7 @@ export interface StudioCurrentEmptyShotTabSelections {
   kind:
     | 'description'
     | 'lookbook'
+    | 'dialogs'
     | 'references'
     | 'ai-production';
 }

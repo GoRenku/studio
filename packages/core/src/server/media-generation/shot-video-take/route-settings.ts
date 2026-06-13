@@ -99,6 +99,9 @@ export function finalInputMatchesRouteSlot(
   input: ShotVideoTakeGenerationSpec['inputs'][number],
   slot: ShotVideoRouteInputSlot
 ): boolean {
+  if (input.mediaKind !== slot.mediaKind) {
+    return false;
+  }
   if (input.kind === slot.kind) {
     return true;
   }
@@ -165,6 +168,9 @@ export function preparedInputMatchesRouteSlot(
   input: ShotVideoTakePreflightInput,
   slot: ShotVideoRouteInputSlot
 ): boolean {
+  if (input.mediaKind !== slot.mediaKind) {
+    return false;
+  }
   if (input.kind === slot.kind) {
     return true;
   }

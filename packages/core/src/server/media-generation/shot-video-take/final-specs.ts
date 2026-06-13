@@ -44,7 +44,9 @@ import {
   toGenerationRequest,
 } from './provider-payloads.js';
 import {
+  finalInputMatchesRouteSlot,
   missingRequiredRouteInputLabelsForFinalSpec,
+  requireShotVideoTakeRoute,
 } from './route-settings.js';
 import {
   sameShotIds,
@@ -211,6 +213,27 @@ export function validateFinalSpecAgainstContext(
       `Shot video take spec is missing required input${
         missingInputs.length === 1 ? '' : 's'
       }: ${missingInputs.join(', ')}.`
+    );
+  }
+  const route = requireShotVideoTakeRoute(
+    spec.modelChoice,
+    spec.inputModeId,
+    context.shotGroupMode
+  );
+  const unsupportedAudio = spec.inputs.find(
+    (input) =>
+      input.kind === 'audio' &&
+      input.subjectKind === 'scene-dialogue' &&
+      !route.inputSlots.some((slot) => finalInputMatchesRouteSlot(input, slot))
+  );
+  if (unsupportedAudio) {
+    throw new ProjectDataError(
+      'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
+      'Audio references are not supported by this model route.',
+      {
+        suggestion:
+          'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.',
+      }
     );
   }
 }

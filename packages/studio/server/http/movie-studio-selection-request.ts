@@ -22,6 +22,7 @@ const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'motion',
   'cast',
   'location',
+  'dialogs',
   'references',
   'ai-production',
 ];

@@ -10,6 +10,7 @@ import {
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+  SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 
@@ -45,6 +46,14 @@ const DEPENDENCY_KIND_DEFINITIONS = [
     assetSelector: 'shot-video-input',
     missingInputBehavior: 'plan-generation',
     generationPurpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  },
+  {
+    dependencyKind: 'reference-audio',
+    mediaKind: 'audio',
+    cardinality: 'one',
+    assetSelector: 'shot-video-input',
+    missingInputBehavior: 'plan-generation',
+    generationPurpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
   },
   {
     dependencyKind: 'cast-character-sheet',

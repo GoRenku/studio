@@ -10,6 +10,7 @@ export type MediaGenerationDependencyKind =
   | 'last-frame'
   | 'reference-image'
   | 'multi-shot-storyboard-sheet'
+  | 'reference-audio'
   | 'cast-character-sheet'
   | 'location-environment-sheet'
   | 'lookbook-sheet'
@@ -38,6 +39,7 @@ export interface MediaGenerationDependencySlot {
   dependencyTarget: MediaGenerationTarget;
   selector: MediaGenerationDependencySelectorInput;
   required: boolean;
+  defaultIncluded?: boolean;
   reason: string;
 }
 

@@ -321,6 +321,11 @@ export interface ShotReferenceInclusionRequest {
   inclusion: 'include' | 'exclude' | null;
 }
 
+export interface ShotGroupReferenceInclusionRequest
+  extends ShotReferenceInclusionRequest {
+  shotIds: string[];
+}
+
 export function readShotReferenceInclusionRequest(
   input: unknown
 ): ShotReferenceInclusionRequest {
@@ -345,6 +350,33 @@ export function readShotReferenceInclusionRequest(
   );
   finishOrThrow(issues);
   return { dependencyId, inclusion };
+}
+
+export function readShotGroupReferenceInclusionRequest(
+  input: unknown
+): ShotGroupReferenceInclusionRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['shotIds', 'dependencyId', 'inclusion'],
+    issues,
+    CONTEXT,
+    'Send only the shotIds, dependencyId, and inclusion fields.'
+  );
+  const shotIds = readStringArray(record.shotIds, ['shotIds'], issues);
+  const dependencyId = readStringValue(record.dependencyId, ['dependencyId'], issues);
+  const inclusion = readReferenceInclusionValue(
+    record.inclusion,
+    ['inclusion'],
+    issues
+  );
+  finishOrThrow(issues);
+  return { shotIds, dependencyId, inclusion };
 }
 
 function readProductionGroupValue(

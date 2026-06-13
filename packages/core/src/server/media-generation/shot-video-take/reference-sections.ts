@@ -14,10 +14,14 @@ import type {
   ShotVideoTakeGeneralReferenceChoice,
   ShotVideoTakeInputKind,
   ShotVideoTakeAvailableInput,
+  ShotVideoTakeDialogueAudioReferenceChoice,
 } from '../../../client/index.js';
 import {
   listLookbookSheets,
 } from '../../database/access/lookbook-sheets.js';
+import {
+  readScreenplaySceneFromSession,
+} from '../../database/access/screenplay-resource.js';
 import type {
   DatabaseSession,
 } from '../../database/lifecycle/store.js';
@@ -45,6 +49,9 @@ import {
   referenceCardPlan,
 } from './reference-card-plans.js';
 import {
+  resolveShotDialogueAudioReferences,
+} from './dialogue-audio-references.js';
+import {
   ReferenceInclusionResolution,
   referenceInclusionForDependencyId,
   requiredGeneralReferenceInclusion,
@@ -60,6 +67,9 @@ import {
   selectedLocationViewIdsForShots,
   selectedLookbookSheetIdsForShots,
 } from './reference-selection.js';
+import {
+  requireScreenplayDocument,
+} from './project-session.js';
 
 
 
@@ -141,6 +151,11 @@ export function buildShotVideoTakeReferenceSections(input: {
         ]
       : []
   );
+  const dialogueAudio = buildDialogueAudioReferenceChoices({
+    session: input.session,
+    context: input.context,
+    plan: input.plan,
+  });
   const diagnostics = [
     ...outOfScopeReferenceDiagnostics({
       context: input.context,
@@ -149,6 +164,7 @@ export function buildShotVideoTakeReferenceSections(input: {
     }),
     ...castMembers.flatMap((group) => group.diagnostics),
     ...locations.flatMap((group) => group.diagnostics),
+    ...dialogueAudio.diagnostics,
   ];
   return {
     references: {
@@ -161,6 +177,7 @@ export function buildShotVideoTakeReferenceSections(input: {
         context: input.context,
         plan: input.plan,
       }),
+      dialogueAudio: dialogueAudio.choices,
       castMembers,
       locations,
     },
@@ -487,6 +504,70 @@ export function buildLookbookReferenceChoices(input: {
       ),
     }),
   }));
+}
+
+
+
+export function buildDialogueAudioReferenceChoices(input: {
+  session: DatabaseSession;
+  context: ShotVideoTakeGenerationContext;
+  plan: ShotVideoTakeGenerationPlan;
+}): {
+  choices: ShotVideoTakeDialogueAudioReferenceChoice[];
+  diagnostics: DiagnosticIssue[];
+} {
+  const screenplay = requireScreenplayDocument(input.session);
+  const scene = readScreenplaySceneFromSession(input.session, input.context.scene.id);
+  const resolved = resolveShotDialogueAudioReferences({
+    session: input.session,
+    screenplay,
+    scene,
+    context: input.context,
+  });
+  const choices = resolved.references.map((reference) => {
+    const line = dependencyLineById(input.plan, reference.dependencyId);
+    const inclusion = referenceInclusionForDependencyId(
+      input.context,
+      reference.dependencyId,
+      reference.defaultIncluded,
+      line
+    );
+    return {
+      dependencyId: reference.dependencyId,
+      dialogueId: reference.dialogueId,
+      castMemberId: reference.castMemberId,
+      speakerName: reference.speakerName,
+      plainText: reference.plainText,
+      audioState: reference.audioState,
+      pickedTake: reference.pickedTake
+        ? {
+            takeId: reference.pickedTake.takeId,
+            takeLabel: reference.pickedTakeLabel ?? 'Take',
+            createdAt: reference.pickedTake.createdAt,
+            assetId: reference.pickedTake.assetId,
+            assetFileId: reference.pickedTake.assetFileId,
+          }
+        : null,
+      takeCount: reference.takeCount,
+      defaultIncluded: inclusion.defaultIncluded,
+      included: inclusion.included,
+      required: inclusion.required,
+      unavailableReason: reference.unavailableReason,
+      card: referenceCardPlan({
+        selected: inclusion.included,
+        mediaKind: 'audio',
+        dependencyId: reference.dependencyId,
+        line,
+        planLine: planLineForDependencyLine(input.plan, line),
+        inclusion,
+        previews: [],
+      }),
+    };
+  });
+  return {
+    choices,
+    diagnostics: resolved.diagnostics,
+  };
 }
 
 

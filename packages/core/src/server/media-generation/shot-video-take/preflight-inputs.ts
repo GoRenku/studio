@@ -14,6 +14,7 @@ import type {
 import {
   readAssetFileRecord,
 } from '../../database/access/asset-files.js';
+import { readScreenplaySceneFromSession } from '../../database/access/screenplay-resource.js';
 import {
   listLookbookSheets,
   readLookbookSheetRecord,
@@ -33,8 +34,17 @@ import {
   issue,
 } from './diagnostics.js';
 import {
+  resolveShotDialogueAudioReferences,
+} from './dialogue-audio-references.js';
+import {
+  referenceInclusionForDependencyId,
+} from './reference-inclusions.js';
+import {
   selectedLookbookSheetIdsForShots,
 } from './reference-selection.js';
+import {
+  requireScreenplayDocument,
+} from './project-session.js';
 
 
 
@@ -272,7 +282,64 @@ export function preparedInputsForContext(
   return [
     ...inputs.filter((input): input is ShotVideoTakePreflightInput => Boolean(input)),
     ...lookbookSheetInputsForContext(context, session, issues),
+    ...dialogueAudioInputsForContext(context, session, issues),
   ];
+}
+
+export function dialogueAudioInputsForContext(
+  context: ShotVideoTakeGenerationContext,
+  session: DatabaseSession,
+  issues: DiagnosticIssue[]
+): ShotVideoTakePreflightInput[] {
+  const screenplay = requireScreenplayDocument(session);
+  const scene = readScreenplaySceneFromSession(session, context.scene.id);
+  const resolved = resolveShotDialogueAudioReferences({
+    session,
+    screenplay,
+    scene,
+    context,
+  });
+  issues.push(...resolved.diagnostics);
+  const inputs = new Map<string, ShotVideoTakePreflightInput>();
+  for (const reference of resolved.references) {
+    const inclusion = referenceInclusionForDependencyId(
+      context,
+      reference.dependencyId,
+      reference.defaultIncluded
+    );
+    if (!inclusion.included) {
+      continue;
+    }
+    if (!reference.pickedTake) {
+      if (reference.audioState !== 'not-generated') {
+        issues.push(...reference.diagnostics);
+      }
+      continue;
+    }
+    const file = readAssetFileRecord(session, {
+      assetId: reference.pickedTake.assetId,
+      assetFileId: reference.pickedTake.assetFileId,
+    });
+    if (!file) {
+      issues.push(...reference.diagnostics);
+      continue;
+    }
+    const key = `${reference.dialogueId}:${reference.pickedTake.assetFileId}`;
+    if (inputs.has(key)) {
+      continue;
+    }
+    inputs.set(key, {
+      kind: 'audio',
+      assetId: reference.pickedTake.assetId,
+      assetFileId: reference.pickedTake.assetFileId,
+      role: 'dialogue_audio',
+      mediaKind: 'audio',
+      projectRelativePath: file.projectRelativePath as ProjectRelativePath,
+      subjectKind: 'scene-dialogue',
+      subjectId: reference.dialogueId,
+    });
+  }
+  return [...inputs.values()];
 }
 
 

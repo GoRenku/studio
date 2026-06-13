@@ -64,7 +64,13 @@ export function referenceDependencySlotIncluded(
     return true;
   }
   const override = referenceInclusionOverride(context, slot.dependencyId);
-  return override === 'exclude' ? false : true;
+  if (override === 'include') {
+    return true;
+  }
+  if (override === 'exclude') {
+    return false;
+  }
+  return slot.defaultIncluded ?? true;
 }
 
 export function filterPreparedInputsByReferenceInclusions(
@@ -89,11 +95,23 @@ export function referenceInclusionOverride(
   context: ShotVideoTakeGenerationContext,
   dependencyId: string
 ): 'include' | 'exclude' | null {
-  return (
-    context.shots
-      .map((shot) => shot.shotSpecs?.referenceInclusions?.[dependencyId] ?? null)
-      .find((inclusion) => inclusion !== null) ?? null
+  return groupReferenceInclusionOverride(
+    context.shots.map(
+      (shot) => shot.shotSpecs?.referenceInclusions?.[dependencyId] ?? null
+    )
   );
+}
+
+export function groupReferenceInclusionOverride(
+  inclusions: Array<'include' | 'exclude' | null>
+): 'include' | 'exclude' | null {
+  if (inclusions.includes('exclude')) {
+    return 'exclude';
+  }
+  if (inclusions.includes('include')) {
+    return 'include';
+  }
+  return null;
 }
 
 export function isReferencePreparedInput(kind: ShotVideoTakeInputKind): boolean {
@@ -104,7 +122,8 @@ export function isReferencePreparedInput(kind: ShotVideoTakeInputKind): boolean 
     kind === 'character-sheet' ||
     kind === 'location-sheet' ||
     kind === 'lookbook-sheet' ||
-    kind === 'multi-shot-storyboard-sheet'
+    kind === 'multi-shot-storyboard-sheet' ||
+    kind === 'audio'
   );
 }
 
@@ -117,10 +136,7 @@ export function referenceInclusionForDependencyId(
   line?: MediaGenerationDependencyLine | null
 ): ReferenceInclusionResolution {
   const required = line?.required ?? false;
-  const inclusionOverride =
-    context.shots
-      .map((shot) => shot.shotSpecs?.referenceInclusions?.[dependencyId] ?? null)
-      .find((inclusion) => inclusion !== null) ?? null;
+  const inclusionOverride = referenceInclusionOverride(context, dependencyId);
   return {
     dependencyId,
     defaultIncluded,

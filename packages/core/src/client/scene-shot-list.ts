@@ -123,6 +123,7 @@ export type ShotVideoTakeInputSubjectKind =
   | 'location'
   | 'lookbook'
   | 'production-group'
+  | 'scene-dialogue'
   | 'shot';
 
 export type ShotVideoTakeDependencyKind =

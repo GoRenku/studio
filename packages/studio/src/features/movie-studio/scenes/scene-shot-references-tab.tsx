@@ -14,6 +14,7 @@ import {
 import {
   updateShotCastCharacterSheetReference,
   updateShotLocationViewReferences,
+  updateShotGroupReferenceInclusion,
   updateShotReferenceInclusion,
 } from '@/services/studio-shot-video-takes-api';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
@@ -61,6 +62,23 @@ export function SceneShotReferencesTab({
     onResourceRefreshed?.(result.resource);
     await onPlanRefresh?.();
   };
+  const updateReferenceInclusion = async (
+    dependencyId: string,
+    inclusion: 'include' | 'exclude' | null
+  ) => {
+    const shotIds = productionPlan?.productionGroup?.shotIds ?? [shot.shotId];
+    const result =
+      shotIds.length > 1
+        ? await updateShotGroupReferenceInclusion(projectName, sceneId, shotIds, {
+            dependencyId,
+            inclusion,
+          })
+        : await updateShotReferenceInclusion(projectName, sceneId, shot.shotId, {
+            dependencyId,
+            inclusion,
+          });
+    await refreshAfterMutation(result);
+  };
 
   return (
     <>
@@ -76,13 +94,7 @@ export function SceneShotReferencesTab({
                   choice={choice}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
                   onToggleInclusion={async (dependencyId, inclusion) => {
-                    const result = await updateShotReferenceInclusion(
-                      projectName,
-                      sceneId,
-                      shot.shotId,
-                      { dependencyId, inclusion }
-                    );
-                    await refreshAfterMutation(result);
+                    await updateReferenceInclusion(dependencyId, inclusion);
                   }}
                 />
               ))}
@@ -124,16 +136,7 @@ export function SceneShotReferencesTab({
                       if (!choice.card.dependencyId) {
                         return;
                       }
-                      const result = await updateShotReferenceInclusion(
-                        projectName,
-                        sceneId,
-                        shot.shotId,
-                        {
-                          dependencyId: choice.card.dependencyId,
-                          inclusion: nextReferenceInclusion(choice.card),
-                        }
-                      );
-                      await refreshAfterMutation(result);
+                      await updateReferenceInclusion(choice.card.dependencyId, nextReferenceInclusion(choice.card));
                     }}
                   />
                 );
@@ -159,13 +162,7 @@ export function SceneShotReferencesTab({
                   group={group}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
                   onToggleInclusion={async (dependencyId, inclusion) => {
-                    const result = await updateShotReferenceInclusion(
-                      projectName,
-                      sceneId,
-                      shot.shotId,
-                      { dependencyId, inclusion }
-                    );
-                    await refreshAfterMutation(result);
+                    await updateReferenceInclusion(dependencyId, inclusion);
                   }}
                   onSelectSheet={async (castMemberId, assetId) => {
                     const sheetResult =
@@ -203,13 +200,7 @@ export function SceneShotReferencesTab({
                   group={group}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
                   onToggleInclusion={async (dependencyId, inclusion) => {
-                    const result = await updateShotReferenceInclusion(
-                      projectName,
-                      sceneId,
-                      shot.shotId,
-                      { dependencyId, inclusion }
-                    );
-                    await refreshAfterMutation(result);
+                    await updateReferenceInclusion(dependencyId, inclusion);
                   }}
                   onToggleView={async (locationId, assetId, viewId, selected) => {
                     const nextViewIds = nextLocationViewIds(

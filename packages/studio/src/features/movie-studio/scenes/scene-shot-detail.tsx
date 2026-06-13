@@ -3,7 +3,9 @@ import type {
   SceneShot,
   ShotVideoTakeProductionGroup,
 } from '@gorenku/studio-core/client';
-import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
+import type {
+  SceneShotListResourceResponse,
+} from '@/services/studio-project-contracts';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { SceneShotDetailTab } from '../movie-studio-selection';
@@ -26,6 +28,7 @@ import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotAiProductionTab } from './scene-shot-ai-production-tab';
 import { SceneShotAiProductionGroupTag } from './scene-shot-ai-production-group-tag';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
+import { SceneShotDialogsTab } from './scene-shot-dialogs-tab';
 import { ShotSpecsProvider } from './shot-specs-context';
 import {
   findRailGroupForShot,
@@ -44,6 +47,7 @@ interface SceneShotDetailProps {
   label: string;
   activeTab?: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
+  castMemberImages?: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
   locationLabels: Record<string, string>;
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onShotSpecsSaved?: (resource: SceneShotListResourceResponse) => void;
@@ -54,6 +58,7 @@ const DESIGN_TABS = [
   { value: 'description', label: 'Description' },
   { value: 'composition', label: 'Composition' },
   { value: 'motion', label: 'Motion' },
+  { value: 'dialogs', label: 'Dialogs' },
   { value: 'references', label: 'References' },
   { value: 'ai-production', label: 'AI Production' },
 ] as const;
@@ -68,6 +73,7 @@ export function SceneShotDetail({
   label,
   activeTab = 'description',
   castMemberLabels,
+  castMemberImages = {},
   locationLabels,
   onTabChange = () => {},
   onShotSpecsSaved,
@@ -205,6 +211,16 @@ export function SceneShotDetail({
                 </LineTabsContent>
                 <LineTabsContent value='motion'>
                   <SceneShotCameraMotionTab />
+                </LineTabsContent>
+                <LineTabsContent value='dialogs'>
+                  <SceneShotDialogsTab
+                    projectName={projectName}
+                    sceneId={sceneId}
+                    castMemberImages={castMemberImages}
+                    productionPlan={production.productionPlan}
+                    onResourceRefreshed={onShotSpecsSaved}
+                    onPlanRefresh={production.refreshProductionPlan}
+                  />
                 </LineTabsContent>
                 <LineTabsContent value='references'>
                   <SceneShotReferencesTab

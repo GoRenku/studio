@@ -33,6 +33,7 @@ import {
   readShotLocationViewReferencesRequest,
   readShotLookbookReferenceRequest,
   readShotReferenceInclusionRequest,
+  readShotGroupReferenceInclusionRequest,
   readShotVideoTakeProductionGroupRequest,
   readShotVideoTakeRailGroupsRequest,
   readShotVideoTakeProductionPlanRequest,
@@ -926,6 +927,34 @@ export function createScreenplayRoute({
               sceneId,
               shotListId: resource.activeShotListId,
               shotIds: [shotId],
+            }),
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/video-take-production/reference-inclusions',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const request = readShotGroupReferenceInclusionRequest(await c.req.json());
+          const resource = await projectData.updateSceneShotGroupReferenceInclusion({
+            projectName,
+            sceneId,
+            shotIds: request.shotIds,
+            dependencyId: request.dependencyId,
+            inclusion: request.inclusion,
+          });
+          return c.json({
+            resource: toSceneShotListResourceResponse(projectName, resource),
+            resourceKeys: sceneShotListResourceKeys({
+              sceneId,
+              shotListId: resource.activeShotListId,
+              shotIds: request.shotIds,
             }),
           });
         } catch (error) {

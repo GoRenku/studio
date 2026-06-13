@@ -34,6 +34,39 @@ describe('movie studio selection context Hono route', () => {
     });
   });
 
+  it('accepts the Dialogs shot-detail tab in scene selections', async () => {
+    const app = createMountedMovieStudioSelectionContextRoute();
+
+    const response = await app.request(
+      '/constantinople/movie-studio-selection/context',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          selection: {
+            type: 'scene',
+            id: 'scene_bombardment',
+            sceneTab: 'shots',
+            shotId: 'shot_001',
+            shotTab: 'dialogs',
+          },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      valid: true,
+      selection: {
+        type: 'scene',
+        id: 'scene_bombardment',
+        sceneTab: 'shots',
+        shotId: 'shot_001',
+        shotTab: 'dialogs',
+      },
+    });
+  });
+
   it('rejects unsupported selection types', async () => {
     const app = createMountedMovieStudioSelectionContextRoute();
 

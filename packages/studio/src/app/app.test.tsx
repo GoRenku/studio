@@ -1798,6 +1798,7 @@ function makeSceneShotListResource() {
     activeShotList: null,
     storyboardImagesByShotId: {},
     castMemberLabels: {},
+    castMemberImages: {},
     locationLabels: {},
   };
 }

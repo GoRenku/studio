@@ -4,6 +4,11 @@ import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { cn } from '@/lib/utils';
 import type { SceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
+import {
+  formatSceneDialogueAudioDuration,
+  formatSceneDialogueAudioTimestamp,
+  sceneDialogueAudioTakeLabels,
+} from './scene-dialogue-audio-take-format';
 
 interface SceneDialogueAudioTakesTabProps {
   actionDisabled: boolean;
@@ -28,7 +33,7 @@ export function SceneDialogueAudioTakesTab({
     );
   }
 
-  const labels = takeLabels(takes);
+  const labels = sceneDialogueAudioTakeLabels(takes);
   const orderedTakes = [...takes].sort(
     (left, right) =>
       Date.parse(right.createdAt) - Date.parse(left.createdAt) ||
@@ -38,7 +43,7 @@ export function SceneDialogueAudioTakesTab({
   return (
     <div className='flex flex-col gap-3'>
       {orderedTakes.map((take) => (
-        <TakeRow
+        <SceneDialogueAudioTakeRow
           key={take.takeId}
           actionDisabled={actionDisabled}
           label={labels.get(take.takeId) ?? 'Take'}
@@ -52,7 +57,7 @@ export function SceneDialogueAudioTakesTab({
   );
 }
 
-function TakeRow({
+export function SceneDialogueAudioTakeRow({
   actionDisabled,
   label,
   player,
@@ -91,7 +96,7 @@ function TakeRow({
             ) : null}
           </div>
           <span className='text-xs text-muted-foreground'>
-            {formatTimestamp(take.createdAt)}
+            {formatSceneDialogueAudioTimestamp(take.createdAt)}
           </span>
         </div>
         <div className='flex shrink-0 items-center gap-1'>
@@ -146,39 +151,9 @@ function TakeRow({
           }}
         />
         <span className='w-12 shrink-0 text-right text-xs text-muted-foreground'>
-          {duration ? formatDuration(duration) : '--:--'}
+          {duration ? formatSceneDialogueAudioDuration(duration) : '--:--'}
         </span>
       </div>
     </div>
   );
-}
-
-function takeLabels(takes: SceneDialogueAudioTakeWithUrl[]): Map<string, string> {
-  const sorted = [...takes].sort(
-    (left, right) =>
-      Date.parse(left.createdAt) - Date.parse(right.createdAt) ||
-      left.takeId.localeCompare(right.takeId)
-  );
-  return new Map(
-    sorted.map((take, index) => [take.takeId, `Take ${index + 1}`])
-  );
-}
-
-function formatTimestamp(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'Generated';
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }

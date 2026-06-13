@@ -4,6 +4,8 @@ import {
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
 import { createDeterministicIdGenerator } from '../../index.js';
+import { sceneDialogueAudioDependencyId } from '../dependency-identifiers.js';
+import { groupReferenceInclusionOverride } from './reference-inclusions.js';
 
 describe('shot video take preflight and validation', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -521,5 +523,146 @@ describe('shot video take preflight and validation', () => {
         choice.card.previews.map((preview) => preview.inputId)
       )
     ).toHaveLength(2);
+  });
+
+  it('reports shot dialogue references as dialogue audio choices keyed by dialogue id', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const initialScreenplay = await projectData.readScreenplay({ homeDir });
+    const initialScene =
+      initialScreenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: ids.sceneId,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...initialScene,
+          blocks: [
+            ...initialScene.blocks,
+            {
+              type: 'dialogue',
+              dialogueId: 'dialogue_urban_line',
+              castMemberId: ids.castMemberId,
+              lines: ['Hold the line.'],
+            },
+            {
+              type: 'dialogue',
+              dialogueId: 'dialogue_mara_line',
+              castMemberId: ids.castMemberId,
+              lines: ['Keep your head down.'],
+            },
+          ],
+        },
+      },
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const dialogueBlockIndex = scene.blocks.findIndex(
+      (block) => block.type === 'dialogue'
+    );
+    const dialogueBlock = scene.blocks[dialogueBlockIndex]!;
+    const unreferencedDialogueBlock = scene.blocks[dialogueBlockIndex + 1]!;
+    if (
+      dialogueBlock.type !== 'dialogue' ||
+      unreferencedDialogueBlock.type !== 'dialogue'
+    ) {
+      throw new Error('Expected sample scene to contain dialogue.');
+    }
+    const shotList = shotVideoTakeProject.sampleShotList(ids, 1);
+    shotList.shots[0] = {
+      ...shotList.shots[0]!,
+      dialogue: [{ blockIndex: dialogueBlockIndex, purpose: 'spoken line' }],
+    };
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: shotList,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      },
+    });
+    const expectedUrbanAudioEstimateUsd =
+      dialogueBlock.lines.join('\n').length * 0.0001;
+
+    expect(report.references.dialogueAudio).toEqual([
+      expect.objectContaining({
+        dependencyId: sceneDialogueAudioDependencyId(dialogueBlock.dialogueId),
+        dialogueId: dialogueBlock.dialogueId,
+        plainText: dialogueBlock.lines.join('\n'),
+        pickedTake: null,
+        takeCount: 0,
+        audioState: 'not-generated',
+        defaultIncluded: true,
+        included: true,
+        required: false,
+        unavailableReason: 'Not generated yet',
+        card: expect.objectContaining({
+          state: 'selected-planned',
+          defaultIncluded: true,
+          included: true,
+          pricing: expect.objectContaining({
+            state: 'priced',
+            estimatedUsd: expectedUrbanAudioEstimateUsd,
+          }),
+        }),
+      }),
+      expect.objectContaining({
+        dependencyId: sceneDialogueAudioDependencyId(
+          unreferencedDialogueBlock.dialogueId
+        ),
+        dialogueId: unreferencedDialogueBlock.dialogueId,
+        plainText: unreferencedDialogueBlock.lines.join('\n'),
+        pickedTake: null,
+        takeCount: 0,
+        audioState: 'not-generated',
+        defaultIncluded: false,
+        included: false,
+        required: false,
+        unavailableReason: 'Not generated yet',
+        card: expect.objectContaining({
+          state: 'not-selected',
+          defaultIncluded: false,
+          included: false,
+        }),
+      }),
+    ]);
+    expect(report.plan.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyKind: 'reference-audio',
+          purpose: 'scene.dialogue-audio',
+          label: 'Mehmed II dialogue audio',
+          availability: { state: 'missing-generated' },
+          pricing: expect.objectContaining({
+            state: 'priced',
+            estimatedUsd: expectedUrbanAudioEstimateUsd,
+          }),
+        }),
+      ])
+    );
+    const audioLine = report.plan.dependencyInventory.dependencies.find(
+      (line) => line.dependencyKind === 'reference-audio'
+    );
+    expect(report.plan.estimate.estimatedTotalUsd).toBeGreaterThanOrEqual(
+      audioLine?.pricing.state === 'priced' ? audioLine.pricing.estimatedUsd : 0
+    );
+  });
+
+  it('uses the named group reference inclusion policy for conflicting shot overrides', () => {
+    expect(groupReferenceInclusionOverride([null, 'include', null])).toBe(
+      'include'
+    );
+    expect(groupReferenceInclusionOverride([null, 'exclude', 'include'])).toBe(
+      'exclude'
+    );
+    expect(groupReferenceInclusionOverride([null, null])).toBeNull();
   });
 });

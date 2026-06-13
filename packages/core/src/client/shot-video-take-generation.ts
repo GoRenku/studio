@@ -385,6 +385,33 @@ export interface ShotVideoTakeLookbookReferenceChoice {
   card: ShotVideoTakeReferenceCardPlan;
 }
 
+export interface ShotVideoTakeDialogueAudioReferenceChoice {
+  dependencyId: string;
+  dialogueId: string;
+  castMemberId: string | null;
+  speakerName: string;
+  plainText: string;
+  audioState:
+    | 'ready'
+    | 'not-generated'
+    | 'no-picked-take'
+    | 'multiple-picked-takes'
+    | 'missing-file';
+  pickedTake: {
+    takeId: string;
+    takeLabel: string;
+    createdAt: string;
+    assetId: string;
+    assetFileId: string;
+  } | null;
+  takeCount: number;
+  defaultIncluded: boolean;
+  included: boolean;
+  required: boolean;
+  unavailableReason: string | null;
+  card: ShotVideoTakeReferenceCardPlan;
+}
+
 export interface ShotVideoTakeCastMemberReferenceGroup {
   castMemberId: string;
   name: string;
@@ -441,6 +468,7 @@ export interface ShotVideoTakeLocationViewReferenceChoice {
 export interface ShotVideoTakeReferenceSectionsReport {
   general: ShotVideoTakeGeneralReferenceChoice[];
   lookbook: ShotVideoTakeLookbookReferenceChoice[];
+  dialogueAudio: ShotVideoTakeDialogueAudioReferenceChoice[];
   castMembers: ShotVideoTakeCastMemberReferenceGroup[];
   locations: ShotVideoTakeLocationReferenceGroup[];
 }

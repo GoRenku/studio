@@ -134,6 +134,14 @@ describe('media generation purpose registry contract', () => {
         generationPurpose: 'shot.multi-shot-storyboard-sheet',
       },
       {
+        dependencyKind: 'reference-audio',
+        mediaKind: 'audio',
+        cardinality: 'one',
+        assetSelector: 'shot-video-input',
+        missingInputBehavior: 'plan-generation',
+        generationPurpose: 'scene.dialogue-audio',
+      },
+      {
         dependencyKind: 'cast-character-sheet',
         mediaKind: 'image',
         cardinality: 'one',

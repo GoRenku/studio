@@ -18,6 +18,9 @@ import type {
   DatabaseSession,
 } from '../../database/lifecycle/store.js';
 import {
+  readScreenplaySceneFromSession,
+} from '../../database/access/screenplay-resource.js';
+import {
   ProjectDataError,
 } from '../../project-data-error.js';
 import {
@@ -51,6 +54,12 @@ import {
   issue,
 } from './diagnostics.js';
 import {
+  resolveShotDialogueAudioReferences,
+} from './dialogue-audio-references.js';
+import type {
+  ResolvedShotDialogueAudioReference,
+} from './dialogue-audio-references.js';
+import {
   validateFinalPricingSpecAgainstContext,
 } from './final-specs.js';
 import {
@@ -71,6 +80,9 @@ import {
 import {
   selectedLookbookSheetIdsForShots,
 } from './reference-selection.js';
+import {
+  requireScreenplayDocument,
+} from './project-session.js';
 
 
 
@@ -87,12 +99,33 @@ export async function buildShotVideoTakeDependencyInventory(input: {
   inputPolicy: ShotVideoTakeInputPolicy;
   diagnostics: DiagnosticIssue[];
 }): Promise<MediaGenerationDependencyInventory> {
-  const requiredSlots = shotVideoTakeDependencySlotsForContext({
+  const screenplay = requireScreenplayDocument(input.session);
+  const scene = readScreenplaySceneFromSession(input.session, input.context.scene.id);
+  const dialogueAudioResolution = resolveShotDialogueAudioReferences({
+    session: input.session,
+    screenplay,
+    scene,
     context: input.context,
-    inputModeId: input.inputModeId,
-    route: input.route,
-    includeReferenceContext: true,
   });
+  input.diagnostics.push(...dialogueAudioResolution.diagnostics);
+  const dialogueAudioReferencesByDependencyId = new Map(
+    dialogueAudioResolution.references.map((reference) => [
+      reference.dependencyId,
+      reference,
+    ])
+  );
+  const requiredSlots = [
+    ...shotVideoTakeDependencySlotsForContext({
+      context: input.context,
+      inputModeId: input.inputModeId,
+      route: input.route,
+      includeReferenceContext: true,
+    }),
+    ...shotVideoTakeDialogueAudioDependencySlots({
+      context: input.context,
+      references: dialogueAudioResolution.references,
+    }),
+  ];
   validateRequiredReferenceInclusions({
     context: input.context,
     slots: requiredSlots,
@@ -108,6 +141,11 @@ export async function buildShotVideoTakeDependencyInventory(input: {
     input.context,
     input.preparedInputs
   );
+  validateSelectedAudioReferencesSupportedByRoute({
+    route: input.route,
+    preparedInputs: finalInputs,
+    diagnostics: input.diagnostics,
+  });
   const result = await planMediaGenerationDependencyInventory({
     projectName: input.projectName,
     homeDir: input.homeDir,
@@ -137,6 +175,18 @@ export async function buildShotVideoTakeDependencyInventory(input: {
       const requiredSlot = requiredSlotsByDependencyId.get(slot.dependencyId);
       if (!requiredSlot) {
         return { state: 'missing', asset: null, diagnostics: [] };
+      }
+      const dialogueAudioReference = dialogueAudioReferencesByDependencyId.get(
+        requiredSlot.dependencyId
+      );
+      if (dialogueAudioReference?.audioState === 'no-picked-take' ||
+        dialogueAudioReference?.audioState === 'multiple-picked-takes' ||
+        dialogueAudioReference?.audioState === 'missing-file') {
+        return {
+          state: 'invalid-selection',
+          asset: null,
+          diagnostics: dialogueAudioReference.diagnostics,
+        };
       }
       const prepared = input.preparedInputs.find((candidate) =>
         preparedInputMatchesSlot(candidate, requiredSlot)
@@ -176,6 +226,35 @@ export async function buildShotVideoTakeDependencyInventory(input: {
   } = result.dependencyInventory;
   dependencyInventory.finalEstimate = result.rootEstimate;
   return dependencyInventory;
+}
+
+function validateSelectedAudioReferencesSupportedByRoute(input: {
+  route: ShotVideoRoute;
+  preparedInputs: ShotVideoTakePreflightInput[];
+  diagnostics: DiagnosticIssue[];
+}): void {
+  const hasSelectedAudio = input.preparedInputs.some(
+    (preparedInput) =>
+      preparedInput.kind === 'audio' &&
+      preparedInput.subjectKind === 'scene-dialogue'
+  );
+  if (!hasSelectedAudio) {
+    return;
+  }
+  const routeSupportsAudio = input.route.inputSlots.some(
+    (slot) => slot.kind === 'audio' && slot.mediaKind === 'audio'
+  );
+  if (routeSupportsAudio) {
+    return;
+  }
+  input.diagnostics.push(
+    issue(
+      'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
+      'Audio references are not supported by this model route.',
+      ['productionGroup', 'videoTakeProduction', 'modelChoice'],
+      'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
+    )
+  );
 }
 
 
@@ -248,6 +327,35 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
     customReferenceInputs: [],
     requestedInputs: [],
   });
+}
+
+export function shotVideoTakeDialogueAudioDependencySlots(input: {
+  context: ShotVideoTakeGenerationContext;
+  references: ResolvedShotDialogueAudioReference[];
+}): MediaGenerationDependencySlot[] {
+  return input.references.map((reference) => ({
+    dependencyId: reference.dependencyId,
+    dependencyKind: 'reference-audio',
+    label: `${reference.speakerName} dialogue audio`,
+    dependencyTarget: {
+      kind: 'sceneDialogue',
+      sceneId: input.context.scene.id,
+      dialogueId: reference.dialogueId,
+    },
+    selector: {
+      kind: 'shot-video-input',
+      inputKind: 'audio',
+      productionGroupId:
+        input.context.target.productionGroupId ?? input.context.target.id,
+      shotIds: input.context.target.shotIds,
+      subjectKind: 'scene-dialogue',
+      subjectId: reference.dialogueId,
+    },
+    required: false,
+    defaultIncluded: reference.defaultIncluded,
+    reason:
+      'This selected dialogue audio reference helps the video model align voice and performance.',
+  }));
 }
 
 
@@ -419,7 +527,6 @@ export function preparedInputMatchesSlot(
   if (slot.selector.kind === 'shot-video-input') {
     return (
       input.kind === slot.selector.inputKind &&
-      input.mediaKind === 'image' &&
       (!slot.selector.subjectKind ||
         input.subjectKind === slot.selector.subjectKind) &&
       (!slot.selector.subjectId || input.subjectId === slot.selector.subjectId)

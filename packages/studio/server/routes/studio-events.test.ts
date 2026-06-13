@@ -300,6 +300,7 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
         activeShotList: null,
         storyboardImagesByShotId: {},
         castMemberLabels: {},
+        castMemberImages: {},
         locationLabels: {},
       };
     },

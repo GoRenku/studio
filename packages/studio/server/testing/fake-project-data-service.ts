@@ -387,6 +387,7 @@ export function fakeProjectDataService(): NonNullable<
         activeShotList: null,
         storyboardImagesByShotId: {},
         castMemberLabels: {},
+        castMemberImages: {},
         locationLabels: {},
       };
     },
@@ -416,6 +417,7 @@ export function fakeProjectDataService(): NonNullable<
         activeShotList: null,
         storyboardImagesByShotId: {},
         castMemberLabels: {},
+        castMemberImages: {},
         locationLabels: {},
       };
     },
@@ -441,6 +443,9 @@ export function fakeProjectDataService(): NonNullable<
       return fakeProjectDataService().readSceneShotListResource({} as never);
     },
     async updateSceneShotReferenceInclusion() {
+      return fakeProjectDataService().readSceneShotListResource({} as never);
+    },
+    async updateSceneShotGroupReferenceInclusion() {
       return fakeProjectDataService().readSceneShotListResource({} as never);
     },
     async readActStoryboardResource() {
@@ -1095,6 +1100,7 @@ export function fakeProjectDataService(): NonNullable<
         references: {
           general: [],
           lookbook: [],
+          dialogueAudio: [],
           castMembers: [],
           locations: [],
         },

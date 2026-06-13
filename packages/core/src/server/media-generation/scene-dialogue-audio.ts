@@ -53,6 +53,10 @@ import type { ProjectRelativePath } from '../../client/project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import type {
+  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftSpecInput,
+} from './dependency-draft-specs.js';
 import {
   estimateDraftMediaGenerationSpec,
   runMediaGenerationSpec,
@@ -67,6 +71,8 @@ const MODEL_CHOICES = new Set<SceneDialogueAudioModelChoice>([
 const DEFAULT_MODEL_CHOICE: SceneDialogueAudioModelChoice =
   'elevenlabs/eleven_v3';
 const DEFAULT_OUTPUT_FORMAT = 'mp3_44100_128';
+const ESTIMATE_ONLY_CAST_VOICE_ID = 'estimate_only_cast_voice';
+const ESTIMATE_ONLY_PROVIDER_VOICE_ID = 'estimate_only_provider_voice';
 const DEFAULT_VOICE_SETTINGS: SceneDialogueAudioVoiceSettings = {
   stability: 0.5,
   similarityBoost: 0.75,
@@ -123,6 +129,19 @@ export interface PickSceneDialogueAudioTakeInput extends RenkuConfigPathOptions 
 }
 
 export interface DeleteSceneDialogueAudioTakeInput extends PickSceneDialogueAudioTakeInput {}
+
+interface NormalizedSceneDialogueAudioSpec {
+  spec: SceneDialogueAudioGenerationSpec;
+  castMemberId: string;
+  castVoice: {
+    id: string;
+    name: string;
+    voiceId: string;
+  };
+  voiceSettings: SceneDialogueAudioVoiceSettings;
+  providerText: string;
+  textTreatment: SceneDialogueAudioTextTreatment;
+}
 
 export async function readSceneDialogueAudioContext(
   input: SceneDialogueAudioTargetInput,
@@ -223,7 +242,9 @@ export async function prepareSceneDialogueAudioDraftSpec(input: {
   homeDir?: string;
   spec: SceneDialogueAudioGenerationSpec;
 }): Promise<PreparedMediaGeneration> {
-  const normalized = await normalizeSpec(input);
+  const normalized = await normalizeSpec(input, {
+    allowEstimateOnlyVoice: true,
+  });
   return prepared(draftMediaGenerationSpecRecord(normalized.spec), normalized);
 }
 
@@ -235,6 +256,32 @@ export async function estimateSceneDialogueAudioDraft(
     homeDir: input.homeDir,
     spec: input.spec,
   });
+}
+
+export async function buildSceneDialogueAudioDependencyDraftSpec(
+  input: MediaGenerationDependencyDraftSpecInput,
+): Promise<MediaGenerationDependencyDraftSpec> {
+  if (input.dependencyTarget.kind !== 'sceneDialogue') {
+    throw new ProjectDataError(
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `Scene Dialogue Audio dependency requires a sceneDialogue target. Received: ${input.dependencyTarget.kind}.`,
+    );
+  }
+  const spec = await specForDialogueInput(
+    {
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+      sceneId: input.dependencyTarget.sceneId,
+      dialogueId: input.dependencyTarget.dialogueId,
+      setup: { title: input.label },
+    },
+    { allowEstimateOnlyVoice: true },
+  );
+  return {
+    purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
+    spec,
+    materializationState: 'generatable',
+  };
 }
 
 export async function updateSceneDialogueAudioSetup(
@@ -455,6 +502,7 @@ export async function runSceneDialogueAudioSpec(): Promise<never> {
 
 async function specForDialogueInput(
   input: GenerateSceneDialogueAudioTakeInput,
+  options: { allowEstimateOnlyVoice?: boolean } = {},
 ): Promise<SceneDialogueAudioGenerationSpec> {
   return withSceneDialogueAudioProjectSession(input, ({ session }) => {
     const existing = readSceneDialogueAudioRecord(session, {
@@ -477,7 +525,9 @@ async function specForDialogueInput(
       castVoiceId:
         input.setup.castVoiceId ??
         existing?.castVoiceId ??
-        defaultCastVoiceId(session, dialogue.castMemberId),
+        (options.allowEstimateOnlyVoice
+          ? ESTIMATE_ONLY_CAST_VOICE_ID
+          : defaultCastVoiceId(session, dialogue.castMemberId)),
       plainText: input.setup.plainText ?? existing?.plainText ?? plainText,
       v3Text: input.setup.v3Text ?? existing?.v3Text ?? plainText,
       voiceSettings:
@@ -523,14 +573,7 @@ async function normalizeSpec(input: {
   projectName?: string;
   homeDir?: string;
   spec: SceneDialogueAudioGenerationSpec;
-}): Promise<{
-  spec: SceneDialogueAudioGenerationSpec;
-  castMemberId: string;
-  castVoice: ReturnType<typeof listCastVoiceRecords>[number];
-  voiceSettings: SceneDialogueAudioVoiceSettings;
-  providerText: string;
-  textTreatment: SceneDialogueAudioTextTreatment;
-}> {
+}, options: { allowEstimateOnlyVoice?: boolean } = {}): Promise<NormalizedSceneDialogueAudioSpec> {
   if (input.spec.purpose !== SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE) {
     throw new ProjectDataError(
       'PROJECT_DATA384',
@@ -556,6 +599,11 @@ async function normalizeSpec(input: {
       input.spec.target.dialogueId,
     );
     if (!dialogue.castMemberId) {
+      if (options.allowEstimateOnlyVoice) {
+        return normalizeSpecWithEstimateOnlyVoice(input.spec, {
+          castMemberId: '',
+        });
+      }
       throw new ProjectDataError(
         'PROJECT_DATA386',
         `Dialogue has no Cast Member: ${input.spec.target.dialogueId}.`,
@@ -573,6 +621,11 @@ async function normalizeSpec(input: {
       castVoice.provider !== 'elevenlabs' ||
       !castVoice.voiceId.trim()
     ) {
+      if (options.allowEstimateOnlyVoice) {
+        return normalizeSpecWithEstimateOnlyVoice(input.spec, {
+          castMemberId: dialogue.castMemberId,
+        });
+      }
       throw new ProjectDataError(
         'PROJECT_DATA386',
         'This cast member is missing a usable ElevenLabs Cast Voice/provider voice id.',
@@ -610,6 +663,43 @@ async function normalizeSpec(input: {
       textTreatment,
     };
   });
+}
+
+function normalizeSpecWithEstimateOnlyVoice(
+  inputSpec: SceneDialogueAudioGenerationSpec,
+  input: { castMemberId: string },
+): NormalizedSceneDialogueAudioSpec {
+  const plainText = requiredTrimmed(inputSpec.plainText, 'plainText');
+  const v3Text =
+    inputSpec.modelChoice === 'elevenlabs/eleven_v3'
+      ? requiredTrimmed(inputSpec.v3Text, 'v3Text')
+      : inputSpec.v3Text.trim();
+  const voiceSettings = normalizeVoiceSettings(inputSpec.voiceSettings);
+  const textTreatment = textTreatmentForModel(inputSpec.modelChoice);
+  const providerText =
+    textTreatment === 'elevenlabs-v3-audio-tags' ? v3Text : plainText;
+  const spec: SceneDialogueAudioGenerationSpec = {
+    ...inputSpec,
+    castVoiceId: ESTIMATE_ONLY_CAST_VOICE_ID,
+    plainText,
+    v3Text: v3Text || plainText,
+    voiceSettings,
+    outputFormat: inputSpec.outputFormat?.trim() || DEFAULT_OUTPUT_FORMAT,
+    languageCode: inputSpec.languageCode?.trim() || null,
+    title: inputSpec.title?.trim() || undefined,
+  };
+  return {
+    spec,
+    castMemberId: input.castMemberId,
+    castVoice: {
+      id: ESTIMATE_ONLY_CAST_VOICE_ID,
+      name: 'Estimate-only voice',
+      voiceId: ESTIMATE_ONLY_PROVIDER_VOICE_ID,
+    },
+    voiceSettings,
+    providerText,
+    textTreatment,
+  };
 }
 
 function prepared(

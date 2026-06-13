@@ -34,6 +34,7 @@ export type SceneShotDetailTab =
   | 'description'
   | 'composition'
   | 'motion'
+  | 'dialogs'
   | 'references'
   | 'ai-production';
 
@@ -43,6 +44,7 @@ export const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'description',
   'composition',
   'motion',
+  'dialogs',
   'references',
   'ai-production',
 ];

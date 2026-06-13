@@ -161,6 +161,13 @@ The Studio shot References tab displays imported/generated `first-frame`,
 `last-frame`, `reference-image`, and `multi-shot-storyboard-sheet` inputs that
 belong to the selected shot or ordered production group.
 
+The Studio shot Dialogs tab displays scene dialogue audio references for the
+selected shot or ordered production group. Dialogue audio reference dependencies
+use dependency kind `reference-audio` and subject kind `scene-dialogue`. Their
+dependency ids are stable by screenplay dialogue id, while preflight and final
+generation resolve the current picked dialogue audio take to the concrete audio
+asset file.
+
 The CLI command names are generic, and the spec lifecycle now routes through
 the core shared generation service. The shared service resolves the purpose
 definition from the media generation purpose registry, then runs the common
@@ -202,6 +209,12 @@ input ids. Shot-video ids include the input kind, subject id, subject kind, and
 production group when that grouping is part of the selected target. Studio
 surfaces consume core-provided fields for mutations and must not parse
 dependency id strings to infer behavior.
+
+Scene dialogue audio shot-video ids intentionally use the dialogue id rather
+than a take id or asset file id. This lets a user keep a dialogue reference
+selected while choosing a different picked audio take; the final generation
+request snapshots the resolved asset file that was picked at request creation
+time.
 
 Selectors must name their selection policy:
 

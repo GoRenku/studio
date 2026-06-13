@@ -106,6 +106,7 @@ const SHOT_VIDEO_TAKE_INPUT_SUBJECT_KINDS = [
   'location',
   'lookbook',
   'production-group',
+  'scene-dialogue',
   'shot',
 ] as const;
 

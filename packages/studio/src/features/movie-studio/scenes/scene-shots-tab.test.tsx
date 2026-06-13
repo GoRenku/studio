@@ -494,6 +494,7 @@ function resource(
     activeShotList,
     storyboardImagesByShotId: {},
     castMemberLabels: { cast_mehmed: 'Mehmed' },
+    castMemberImages: {},
     locationLabels: { loc_chamber: 'Council Chamber' },
   };
 }
@@ -644,6 +645,7 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
     references: {
       general: [],
       lookbook: [],
+      dialogueAudio: [],
       castMembers: [],
       locations: [
         {

@@ -189,6 +189,14 @@ export function mapRouteInputSlot(
     );
   }
   matches.forEach((input) => {
+    const key = `${slot.providerField}:${input.projectRelativePath}`;
+    if (
+      inputFiles.some(
+        (file) => `${file.field}:${file.projectRelativePath}` === key
+      )
+    ) {
+      return;
+    }
     inputFiles.push({
       field: slot.providerField,
       projectRelativePath: input.projectRelativePath,

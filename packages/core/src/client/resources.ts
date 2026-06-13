@@ -186,6 +186,7 @@ export interface SceneShotListResource {
   activeShotList: SceneShotListDocument | null;
   storyboardImagesByShotId: Record<string, ScreenplayImageReference>;
   castMemberLabels: Record<string, string>;
+  castMemberImages: Record<string, ScreenplayImageReference>;
   locationLabels: Record<string, string>;
 }
 
@@ -397,6 +398,7 @@ export type SceneShotDetailTab =
   | 'lookbook'
   | 'composition'
   | 'motion'
+  | 'dialogs'
   | 'cast'
   | 'location'
   | 'references'

@@ -158,6 +158,9 @@ export function matchesSceneShotsResource(input: {
     (resourceKey) =>
       resourceKey === `scene:${input.sceneId}` ||
       resourceKey === `surface:scene:${input.sceneId}:shots` ||
+      resourceKey === `surface:scene:${input.sceneId}:dialogue-audio` ||
+      resourceKey.startsWith('scene-dialogue-audio:') ||
+      resourceKey.startsWith('scene-dialogue-audio-take:') ||
       resourceKey.startsWith('scene-shot-video-take-group:') ||
       resourceKey.startsWith('scene-shot-video-take-input:') ||
       (input.shotListId

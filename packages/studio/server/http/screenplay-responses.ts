@@ -88,9 +88,10 @@ export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
 
 export type SceneShotListResourceResponse = Omit<
   SceneShotListResource,
-  'storyboardImagesByShotId'
+  'storyboardImagesByShotId' | 'castMemberImages'
 > & {
   storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
+  castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
 export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {
@@ -218,6 +219,12 @@ export function toSceneShotListResourceResponse(
       Object.entries(resource.storyboardImagesByShotId).map(([shotId, image]) => [
         shotId,
         withSceneImageUrl(projectName, sceneId, image),
+      ])
+    ),
+    castMemberImages: Object.fromEntries(
+      Object.entries(resource.castMemberImages).map(([castMemberId, image]) => [
+        castMemberId,
+        withImageUrl(projectName, 'cast', castMemberId, image),
       ])
     ),
   };

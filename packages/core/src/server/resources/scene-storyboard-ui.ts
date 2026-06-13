@@ -20,6 +20,7 @@ import type { ScreenplayDocument } from '../../client/screenplay.js';
 import { deriveShotSpecPromptStrings } from '../../client/shot-spec-labels.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
+  listAssetRelationshipPage,
   readAssetRelationship,
   readAssetRelationshipRecord,
 } from '../database/access/asset-relationships/index.js';
@@ -57,6 +58,7 @@ import type {
   UpdateSceneShotLocationReferenceInput,
   UpdateSceneShotLocationViewReferencesInput,
   UpdateSceneShotLookbookReferenceInput,
+  UpdateSceneShotGroupReferenceInclusionInput,
   UpdateSceneShotReferenceInclusionInput,
   UpdateSceneShotSpecsInput,
 } from '../project-data-service-contracts.js';
@@ -75,7 +77,7 @@ export async function readSceneShotListResource(
       throwNotFound('act', context.sequence.actId);
     }
     const projection = readSceneStoryboardProjection(session, input.sceneId);
-    const screenplay = readScreenplayDocumentFromSession(session);
+    const screenplay = requireScreenplayDocumentFromSession(session);
     return {
       scene: context.scene,
       sequence: context.sequence,
@@ -90,6 +92,17 @@ export async function readSceneShotListResource(
             screenplay.cast.map((castMember) => [castMember.id, castMember.name])
           )
         : {},
+      castMemberImages: screenplay
+        ? Object.fromEntries(
+            screenplay.cast.flatMap((castMember) => {
+              if (!castMember.id) {
+                return [];
+              }
+              const image = firstCastMemberImage(session, castMember.id);
+              return image ? [[castMember.id, image]] : [];
+            })
+          )
+        : {},
       locationLabels: screenplay
         ? Object.fromEntries(
             screenplay.locations.map((location) => [location.id, location.name])
@@ -99,6 +112,68 @@ export async function readSceneShotListResource(
   } finally {
     session.close();
   }
+}
+
+function firstCastMemberImage(
+  session: DatabaseSession,
+  castMemberId: string
+): ScreenplayImageReference | undefined {
+  const target = { kind: 'castMember' as const, castMemberId };
+  const asset =
+    listAssetRelationshipPage(session, {
+      target,
+      role: 'profile',
+      mediaKind: 'image',
+      selection: 'select',
+      limit: 1,
+    }).items[0] ??
+    listAssetRelationshipPage(session, {
+      target,
+      role: 'profile',
+      mediaKind: 'image',
+      selection: 'take',
+      limit: 1,
+    }).items[0] ??
+    listAssetRelationshipPage(session, {
+      target,
+      role: 'character_sheet',
+      mediaKind: 'image',
+      selection: 'select',
+      limit: 1,
+    }).items[0] ??
+    listAssetRelationshipPage(session, {
+      target,
+      mediaKind: 'image',
+      selection: 'select',
+      limit: 1,
+    }).items[0] ??
+    listAssetRelationshipPage(session, {
+      target,
+      mediaKind: 'image',
+      selection: 'take',
+      limit: 1,
+    }).items[0];
+  return asset ? toScreenplayImageReference(asset) : undefined;
+}
+
+function toScreenplayImageReference(
+  asset: Asset
+): ScreenplayImageReference | undefined {
+  const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
+  if (!file) {
+    return undefined;
+  }
+  return {
+    assetId: asset.assetId,
+    relationshipId: asset.relationshipId,
+    assetFileId: file.id,
+    title: asset.title,
+    fileRole: file.role,
+    mediaKind: file.mediaKind,
+    mimeType: file.mimeType,
+    width: file.width,
+    height: file.height,
+  };
 }
 
 /**
@@ -371,6 +446,80 @@ export async function updateSceneShotReferenceInclusion(
   return readSceneShotListResource(input);
 }
 
+export async function updateSceneShotGroupReferenceInclusion(
+  input: UpdateSceneShotGroupReferenceInclusionInput
+): Promise<SceneShotListResource> {
+  const { session } = await openProjectSession(input);
+  try {
+    const shotListRow = readActiveSceneShotListRecord(session, input.sceneId);
+    if (!shotListRow) {
+      throw new ProjectDataError(
+        'PROJECT_DATA329',
+        `Scene has no active shot list to update: ${input.sceneId}.`,
+        {
+          suggestion:
+            'Create or activate a shot list for this scene before editing shot specs.',
+        }
+      );
+    }
+    const screenplay = requireScreenplayDocumentFromSession(session);
+    const document = readSceneShotListDocument({
+      row: shotListRow,
+      screenplay,
+    });
+    const uniqueShotIds = [...new Set(input.shotIds)];
+    if (uniqueShotIds.length === 0) {
+      throw new ProjectDataError(
+        'PROJECT_DATA379',
+        'Reference inclusion group update requires at least one shot id.',
+        { suggestion: 'Send the shot ids in the current production group.' }
+      );
+    }
+    const shots = uniqueShotIds.map((shotId) => {
+      const shot = document.shots.find((entry) => entry.shotId === shotId);
+      if (!shot) {
+        throw new ProjectDataError(
+          'PROJECT_DATA330',
+          `Shot was not found in the active shot list: ${shotId}.`,
+          { suggestion: 'Use shot ids from the active shot list.' }
+        );
+      }
+      validateReferenceInclusionOverride({
+        document,
+        shotId,
+        dependencyId: input.dependencyId,
+        inclusion: input.inclusion,
+      });
+      return shot;
+    });
+    for (const shot of shots) {
+      const next = { ...(shot.shotSpecs ?? {}) };
+      const referenceInclusions = { ...(next.referenceInclusions ?? {}) };
+      if (input.inclusion) {
+        referenceInclusions[input.dependencyId] = input.inclusion;
+      } else {
+        delete referenceInclusions[input.dependencyId];
+      }
+      if (Object.keys(referenceInclusions).length) {
+        next.referenceInclusions = referenceInclusions;
+      } else {
+        delete next.referenceInclusions;
+      }
+      applyShotSpecs(shot, next);
+    }
+    updateSceneShotListRecordDocument({
+      session,
+      id: shotListRow.id,
+      document,
+      screenplay,
+      now: new Date().toISOString(),
+    });
+  } finally {
+    session.close();
+  }
+  return readSceneShotListResource(input);
+}
+
 async function updateActiveShotSpecs(
   input: { projectName: string; sceneId: string; shotId: string; homeDir?: string },
   mutate: (
@@ -461,6 +610,20 @@ function productionGroupForShot(
       group.shotIds.includes(shotId)
     ) ?? null
   );
+}
+
+function requireScreenplayDocumentFromSession(
+  session: DatabaseSession
+): ScreenplayDocument {
+  const screenplay = readScreenplayDocumentFromSession(session);
+  if (!screenplay) {
+    throw new ProjectDataError(
+      'PROJECT_DATA012',
+      'Project has no screenplay document.',
+      { suggestion: 'Create or import a screenplay before editing shot references.' }
+    );
+  }
+  return screenplay;
 }
 
 function sceneNarrativeCastMemberIds(

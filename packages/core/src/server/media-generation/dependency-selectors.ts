@@ -154,7 +154,6 @@ function shotVideoInputMatchesDependencySlot(
   }
   return (
     input.kind === slot.selector.inputKind &&
-    input.mediaKind === 'image' &&
     (!slot.selector.subjectKind || input.subjectKind === slot.selector.subjectKind) &&
     (!slot.selector.subjectId || input.subjectId === slot.selector.subjectId)
   );

@@ -65,6 +65,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'updateSceneShotLookbookReference'
   | 'updateSceneShotCustomReferenceImages'
   | 'updateSceneShotReferenceInclusion'
+  | 'updateSceneShotGroupReferenceInclusion'
   | 'buildShotVideoTakeContext'
   | 'listShotVideoTakeModels'
   | 'updateShotVideoTakeProductionGroup'

@@ -8,6 +8,7 @@ import { SceneShotReferencesTab } from './scene-shot-references-tab';
 const mutationMocks = vi.hoisted(() => ({
   updateShotCastCharacterSheetReference: vi.fn(),
   updateShotLocationViewReferences: vi.fn(),
+  updateShotGroupReferenceInclusion: vi.fn(),
   updateShotReferenceInclusion: vi.fn(),
 }));
 
@@ -51,6 +52,8 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
     mutationMocks.updateShotCastCharacterSheetReference,
   updateShotLocationViewReferences:
     mutationMocks.updateShotLocationViewReferences,
+  updateShotGroupReferenceInclusion:
+    mutationMocks.updateShotGroupReferenceInclusion,
   updateShotReferenceInclusion: mutationMocks.updateShotReferenceInclusion,
 }));
 
@@ -169,6 +172,40 @@ describe('SceneShotReferencesTab', () => {
         }
       );
     });
+  });
+
+  it('updates reference inclusion across the production group for multi-shot plans', async () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        shot={SHOT}
+        productionPlan={{
+          ...productionPlanWithReferenceImages(),
+          productionGroup: {
+            productionGroupId: 'group_001',
+            shotIds: ['shot_001', 'shot_002'],
+            videoTakeProduction: {},
+          },
+        }}
+        {...handlers}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Include Blade glint insert' }));
+    await waitFor(() => {
+      expect(mutationMocks.updateShotGroupReferenceInclusion).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        ['shot_001', 'shot_002'],
+        {
+          dependencyId: 'reference-image:input_blade',
+          inclusion: 'include',
+        }
+      );
+    });
+    expect(mutationMocks.updateShotReferenceInclusion).not.toHaveBeenCalled();
   });
 
   it('renders dependency inventory diagnostics in Reference issues', () => {

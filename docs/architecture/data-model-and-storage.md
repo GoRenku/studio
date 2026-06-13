@@ -58,6 +58,9 @@ Use the focused documents below for current direction.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
   attaches them as assets.
+- Scene dialogue audio takes are durable scene dialogue media assets. Shot
+  video generation references them through the public `scene-dialogue` subject
+  kind and resolves the current picked take at generation-request time.
 - Scene storyboard images are durable per-shot Assets. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
   sheet for batch prompting, but import stores only the cropped shot images as

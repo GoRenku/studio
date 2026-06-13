@@ -383,6 +383,7 @@ function sceneShotListResource(
     },
     storyboardImagesByShotId: {},
     castMemberLabels: {},
+    castMemberImages: {},
     locationLabels: {},
   };
 }

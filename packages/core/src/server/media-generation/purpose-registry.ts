@@ -465,6 +465,8 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as SceneDialogueAudioGenerationSpec,
       }),
+    buildDependencyDraftSpec:
+      sceneDialogueAudio.buildSceneDialogueAudioDependencyDraftSpec,
     runSpec: sceneDialogueAudio.runSceneDialogueAudioSpec,
   },
   {

@@ -144,9 +144,10 @@ export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
 
 export type SceneShotListResourceResponse = Omit<
   SceneShotListResource,
-  'storyboardImagesByShotId'
+  'storyboardImagesByShotId' | 'castMemberImages'
 > & {
   storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
+  castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
 export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {

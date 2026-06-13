@@ -1,0 +1,465 @@
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Pause, Play } from 'lucide-react';
+import type {
+  MediaGenerationDependencyPricing,
+  ShotVideoTakeDialogueAudioReferenceChoice,
+  ShotVideoTakeProductionPlanReport,
+} from '@gorenku/studio-core/client';
+import type {
+  SceneShotListResourceResponse,
+} from '@/services/studio-project-contracts';
+import {
+  deleteSceneDialogueAudioTake,
+  pickSceneDialogueAudioTake,
+  readSceneDialogueAudioContext,
+  type SceneDialogueAudioContextWithUrls,
+} from '@/services/studio-scene-dialogue-audio-api';
+import {
+  updateShotGroupReferenceInclusion,
+  updateShotReferenceInclusion,
+} from '@/services/studio-shot-video-takes-api';
+import { Badge } from '@/ui/badge';
+import { Button } from '@/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/ui/dialog';
+import { ImageSelectionControl } from '@/ui/image-selection-control';
+import { Slider } from '@/ui/slider';
+import { cn } from '@/lib/utils';
+import {
+  SceneDialogueAudioTakeRow,
+} from './scene-dialogue-audio-takes-tab';
+import {
+  formatSceneDialogueAudioDuration,
+  sceneDialogueAudioTakeLabels,
+} from './scene-dialogue-audio-take-format';
+import { useSceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
+import { formatEstimateUsd } from './shot-video-take-production-projection';
+
+interface SceneShotDialogsTabProps {
+  projectName: string;
+  sceneId: string;
+  castMemberImages: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
+  productionPlan: ShotVideoTakeProductionPlanReport | null;
+  onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
+  onPlanRefresh?: () => Promise<void>;
+}
+
+export function SceneShotDialogsTab({
+  projectName,
+  sceneId,
+  castMemberImages,
+  productionPlan,
+  onResourceRefreshed,
+  onPlanRefresh,
+}: SceneShotDialogsTabProps) {
+  const [dialogueAudioContext, setDialogueAudioContext] =
+    useState<SceneDialogueAudioContextWithUrls | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const player = useSceneDialogueAudioPlayer();
+  const choices = productionPlan?.references.dialogueAudio ?? [];
+
+  const loadDialogueAudio = useCallback(() => {
+    let cancelled = false;
+    void readSceneDialogueAudioContext(projectName, sceneId).then((context) => {
+      if (!cancelled) {
+        setDialogueAudioContext(context);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectName, sceneId]);
+
+  useEffect(() => loadDialogueAudio(), [loadDialogueAudio]);
+
+  const updateReferenceInclusion = async (
+    dependencyId: string,
+    inclusion: 'include' | 'exclude' | null
+  ) => {
+    const shotIds = productionPlan?.productionGroup.shotIds ?? [];
+    const result =
+      shotIds.length > 1
+        ? await updateShotGroupReferenceInclusion(projectName, sceneId, shotIds, {
+            dependencyId,
+            inclusion,
+          })
+        : await updateShotReferenceInclusion(projectName, sceneId, shotIds[0] ?? '', {
+            dependencyId,
+            inclusion,
+          });
+    onResourceRefreshed?.(result.resource);
+    await onPlanRefresh?.();
+  };
+
+  const pickTake = async (dialogueId: string, takeId: string) => {
+    setActionBusy(true);
+    try {
+      const report = await pickSceneDialogueAudioTake(
+        projectName,
+        sceneId,
+        dialogueId,
+        takeId
+      );
+      setDialogueAudioContext(report.context);
+      await onPlanRefresh?.();
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const deleteTake = async (dialogueId: string, takeId: string) => {
+    setActionBusy(true);
+    try {
+      const report = await deleteSceneDialogueAudioTake(
+        projectName,
+        sceneId,
+        dialogueId,
+        takeId
+      );
+      setDialogueAudioContext(report.context);
+      await onPlanRefresh?.();
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  if (!choices.length) {
+    return (
+      <div className='py-4'>
+        <p className='text-sm text-muted-foreground'>
+          No dialogue in this scene.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className='py-4'>
+      <div className='flex flex-col gap-3'>
+        {choices.map((choice) => (
+          <SceneShotDialogueAudioReferenceCard
+            key={choice.dependencyId}
+            choice={choice}
+            context={dialogueAudioContext}
+            profileImageUrl={
+              choice.castMemberId
+                ? castMemberImages[choice.castMemberId]?.url ?? null
+                : null
+            }
+            actionDisabled={actionBusy}
+            player={player}
+            onToggleInclusion={(dependencyId, inclusion) =>
+              updateReferenceInclusion(dependencyId, inclusion)
+            }
+            onPickTake={pickTake}
+            onDeleteTake={deleteTake}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SceneShotDialogueAudioReferenceCard({
+  choice,
+  context,
+  profileImageUrl,
+  actionDisabled,
+  player,
+  onToggleInclusion,
+  onPickTake,
+  onDeleteTake,
+}: {
+  choice: ShotVideoTakeDialogueAudioReferenceChoice;
+  context: SceneDialogueAudioContextWithUrls | null;
+  profileImageUrl: string | null;
+  actionDisabled: boolean;
+  player: ReturnType<typeof useSceneDialogueAudioPlayer>;
+  onToggleInclusion: (
+    dependencyId: string,
+    inclusion: 'include' | 'exclude' | null
+  ) => Promise<void>;
+  onPickTake: (dialogueId: string, takeId: string) => Promise<void>;
+  onDeleteTake: (dialogueId: string, takeId: string) => Promise<void>;
+}) {
+  const audio = context?.audioByDialogueId[choice.dialogueId] ?? null;
+  const takes = audio?.takes ?? [];
+  const pickedTake = choice.pickedTake
+    ? takes.find((take) => take.takeId === choice.pickedTake?.takeId) ?? null
+    : null;
+  const progress = pickedTake ? player.progressByUrl[pickedTake.url] ?? 0 : 0;
+  const duration = pickedTake ? player.durationByUrl[pickedTake.url] ?? 0 : 0;
+  const isPlaying = pickedTake ? player.playingUrl === pickedTake.url : false;
+  const needsGeneration = choice.card.state === 'selected-planned';
+  const body = (
+    <DialogueCardBody
+      choice={choice}
+      profileImageUrl={profileImageUrl}
+      openable={choice.takeCount > 1}
+    />
+  );
+
+  return (
+    <div
+      className={cn(
+        'rounded-md border bg-muted/15 p-3 transition-colors',
+        choice.included
+          ? 'border-item-active-border bg-item-active-bg/70'
+          : 'border-border/45',
+        choice.takeCount > 1
+          ? 'hover:border-item-active-border/60 hover:bg-item-hover-bg/50'
+          : null
+      )}
+    >
+      <div className='grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3'>
+        {choice.takeCount > 1 ? (
+          <SceneShotDialogueAudioTakesDialog
+            choice={choice}
+            takes={takes}
+            actionDisabled={actionDisabled}
+            player={player}
+            onPickTake={onPickTake}
+            onDeleteTake={onDeleteTake}
+          >
+            {body}
+          </SceneShotDialogueAudioTakesDialog>
+        ) : (
+          body
+        )}
+        <div className='flex items-center gap-2'>
+          {needsGeneration ? (
+            <DialogueReferenceCostBadge pricing={choice.card.pricing} />
+          ) : choice.audioState !== 'ready' ? (
+            <Badge variant='outline'>{dialogueAudioStateLabel(choice)}</Badge>
+          ) : null}
+          {!choice.required ? (
+            <ImageSelectionControl
+              selected={choice.included}
+              selectedLabel={`Exclude ${choice.speakerName} dialogue audio`}
+              unselectedLabel={`Include ${choice.speakerName} dialogue audio`}
+              onToggleSelected={() =>
+                onToggleInclusion(
+                  choice.dependencyId,
+                  nextReferenceInclusion(choice)
+                )
+              }
+            />
+          ) : null}
+        </div>
+      </div>
+
+      <div className='mt-3 flex items-center gap-3'>
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          disabled={!pickedTake}
+          onClick={() => {
+            if (pickedTake) {
+              player.toggle(pickedTake.url);
+            }
+          }}
+          aria-label={isPlaying ? 'Pause dialogue audio' : 'Play dialogue audio'}
+        >
+          {isPlaying ? (
+            <Pause className='h-4 w-4' aria-hidden />
+          ) : (
+            <Play className='h-4 w-4' aria-hidden />
+          )}
+        </Button>
+        <Slider
+          min={0}
+          max={duration || 100}
+          step={0.1}
+          value={[duration ? Math.min(progress, duration) : 0]}
+          disabled={!duration}
+          sliderSize='sm'
+          aria-label={`${choice.speakerName} dialogue playback position`}
+          onValueChange={([seconds]) => {
+            if (pickedTake && seconds !== undefined) {
+              player.seek(pickedTake.url, seconds);
+            }
+          }}
+        />
+        <span className='w-12 shrink-0 text-right text-xs text-muted-foreground'>
+          {duration ? formatSceneDialogueAudioDuration(duration) : '--:--'}
+        </span>
+      </div>
+
+      <p className='mt-3 line-clamp-3 text-sm leading-6 text-foreground/88'>
+        {choice.plainText}
+      </p>
+    </div>
+  );
+}
+
+function DialogueCardBody({
+  choice,
+  profileImageUrl,
+  openable,
+}: {
+  choice: ShotVideoTakeDialogueAudioReferenceChoice;
+  profileImageUrl: string | null;
+  openable: boolean;
+}) {
+  return (
+    <div className='flex min-w-0 items-start gap-3 text-left'>
+      {profileImageUrl ? (
+        <img
+          src={profileImageUrl}
+          alt={`${choice.speakerName} profile image`}
+          className='size-14 shrink-0 rounded-md object-cover'
+        />
+      ) : (
+        <span
+          className='size-14 shrink-0 rounded-md border border-border/45 bg-muted'
+          aria-hidden
+        />
+      )}
+        <span className='flex min-w-0 flex-col gap-1'>
+        <span className='truncate text-sm font-semibold text-foreground'>
+          {choice.speakerName}
+        </span>
+        <span className='truncate text-xs text-muted-foreground'>
+          {choice.pickedTake?.takeLabel ?? dialogueAudioStateLabel(choice)}
+        </span>
+        {openable ? (
+          <span className='text-xs text-muted-foreground'>
+            {choice.takeCount} takes
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+function dialogueAudioStateLabel(
+  choice: Pick<
+    ShotVideoTakeDialogueAudioReferenceChoice,
+    'audioState' | 'unavailableReason'
+  >
+): string {
+  if (choice.audioState === 'not-generated') {
+    return 'Not generated';
+  }
+  if (choice.audioState === 'no-picked-take') {
+    return 'No picked take';
+  }
+  if (choice.audioState === 'multiple-picked-takes') {
+    return 'Multiple picked takes';
+  }
+  if (choice.audioState === 'missing-file') {
+    return 'Missing audio file';
+  }
+  return choice.unavailableReason ?? 'Unavailable';
+}
+
+function DialogueReferenceCostBadge({
+  pricing,
+}: {
+  pricing: MediaGenerationDependencyPricing;
+}) {
+  if (pricing.state === 'priced') {
+    return (
+      <Badge
+        variant='accent'
+        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal text-foreground tabular-nums'
+      >
+        {formatEstimateUsd(pricing.estimatedUsd)}
+      </Badge>
+    );
+  }
+  if (pricing.state === 'unpriced') {
+    return (
+      <Badge
+        variant='outline'
+        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal tabular-nums'
+      >
+        Unpriced
+      </Badge>
+    );
+  }
+  return null;
+}
+
+function SceneShotDialogueAudioTakesDialog({
+  choice,
+  takes,
+  actionDisabled,
+  player,
+  children,
+  onPickTake,
+  onDeleteTake,
+}: {
+  choice: ShotVideoTakeDialogueAudioReferenceChoice;
+  takes: NonNullable<
+    SceneDialogueAudioContextWithUrls['audioByDialogueId'][string]
+  >['takes'];
+  actionDisabled: boolean;
+  player: ReturnType<typeof useSceneDialogueAudioPlayer>;
+  children: ReactNode;
+  onPickTake: (dialogueId: string, takeId: string) => Promise<void>;
+  onDeleteTake: (dialogueId: string, takeId: string) => Promise<void>;
+}) {
+  const labels = useMemo(() => sceneDialogueAudioTakeLabels(takes), [takes]);
+  const orderedTakes = useMemo(
+    () =>
+      [...takes].sort(
+        (left, right) =>
+          Date.parse(right.createdAt) - Date.parse(left.createdAt) ||
+          right.takeId.localeCompare(left.takeId)
+      ),
+    [takes]
+  );
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          type='button'
+          variant='ghost'
+          className='h-auto min-w-0 justify-start rounded-md p-0 text-left hover:bg-transparent'
+        >
+          {children}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className='max-w-2xl'>
+        <DialogHeader>
+          <DialogTitle>{choice.speakerName}</DialogTitle>
+          <DialogDescription className='line-clamp-2'>
+            {choice.plainText}
+          </DialogDescription>
+        </DialogHeader>
+        <div className='flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1'>
+          {orderedTakes.map((take) => (
+            <SceneDialogueAudioTakeRow
+              key={take.takeId}
+              actionDisabled={actionDisabled}
+              label={labels.get(take.takeId) ?? 'Take'}
+              player={player}
+              take={take}
+              onPickTake={(takeId) => onPickTake(choice.dialogueId, takeId)}
+              onDeleteTake={(takeId) => onDeleteTake(choice.dialogueId, takeId)}
+            />
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function nextReferenceInclusion(choice: {
+  defaultIncluded: boolean;
+  included: boolean;
+}): 'include' | 'exclude' | null {
+  if (choice.included) {
+    return choice.defaultIncluded ? 'exclude' : null;
+  }
+  return choice.defaultIncluded ? null : 'include';
+}

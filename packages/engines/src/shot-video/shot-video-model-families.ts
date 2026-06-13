@@ -133,6 +133,17 @@ const OPTIONAL_REFERENCE_IMAGES_SLOT: ShotVideoRouteInputSlot = {
   minCount: 0,
 };
 
+const OPTIONAL_REFERENCE_AUDIO_SLOT: ShotVideoRouteInputSlot = {
+  id: 'reference-audio',
+  kind: 'audio',
+  providerField: 'audio_urls',
+  required: false,
+  minCount: 0,
+  maxCount: 3,
+  mediaKind: 'audio',
+  asArray: true,
+};
+
 const MULTI_SHOT_STORYBOARD_SLOT: ShotVideoRouteInputSlot = {
   id: 'multi-shot-storyboard-sheet',
   kind: 'multi-shot-storyboard-sheet',
@@ -311,8 +322,8 @@ export const SHOT_VIDEO_MODEL_FAMILIES: ShotVideoModelFamily[] = [
     route('first-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
     route('first-last-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
     route('first-last-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('reference', 'single-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, MULTI_SHOT_STORYBOARD_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('reference', 'single-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, MULTI_SHOT_STORYBOARD_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION),
   ]),
   family('fal-ai/kling-video/v3/pro', 'Kling', '3.0', [
     route('text-only', 'single-shot', 'kling-video/v3/pro/text-to-video', 'text-to-video', [], klingTextParameters, KLING_DURATION),

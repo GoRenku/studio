@@ -47,6 +47,7 @@ const shotVideoInputSubjectKinds = new Set<ShotVideoTakeInputSubjectKind>([
   'shot',
   'production-group',
   'asset',
+  'scene-dialogue',
 ]);
 
 export function castCharacterSheetDependencyId(castMemberId: string): string {
@@ -59,6 +60,14 @@ export function locationEnvironmentSheetDependencyId(locationId: string): string
 
 export function lookbookSheetDependencyId(lookbookId: string): string {
   return `lookbook-sheet:${lookbookId}`;
+}
+
+export function sceneDialogueAudioDependencyId(dialogueId: string): string {
+  return shotVideoInputDependencyId({
+    kind: 'audio',
+    subjectKind: 'scene-dialogue',
+    subjectId: dialogueId,
+  });
 }
 
 export function shotVideoInputDependencyId(
@@ -171,6 +180,9 @@ export function dependencyKindForShotVideoInput(
     kind === 'multi-shot-storyboard-sheet'
   ) {
     return kind;
+  }
+  if (kind === 'audio' && subjectKind === 'scene-dialogue') {
+    return 'reference-audio';
   }
   return 'manual-attachment';
 }
