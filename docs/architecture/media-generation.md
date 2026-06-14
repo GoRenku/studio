@@ -82,6 +82,12 @@ selectors, estimates planned dependency specs through the same shared lifecycle
 used by persisted specs, and aggregates the inventory total from dependency
 lines plus the root generation line.
 
+Dependency pricing and generation readiness are separate facts. A generated
+dependency can be priced while still reporting `missing-input` when the user or
+agent must supply setup before generation is runnable. Planning stays advisory:
+route capability warnings and missing-input reasons do not generate assets,
+drop selected references, cap selections, or rewrite user choices.
+
 Dependency ids are also a core contract. Purpose code and Studio UI code must
 not hand-build or parse dependency ids locally. Core-owned dependency id helpers
 name the domain kind, target, and shot-video input slot, and core returns any
@@ -106,6 +112,11 @@ estimates in `@gorenku/studio-engines`; reused existing assets contribute
 `$0.00`; manual external attachments are not generation work and are not
 priced. Studio and CLI surfaces render inventory totals and line items, but
 they do not compute generation prices.
+
+Execution boundaries still fail fast. Final spec creation and provider payload
+construction must reject selected inputs that cannot be sent to the selected
+provider route, including unsupported dialogue audio references or audio
+reference counts above the route limit.
 
 Generated dependency lines start as unpriced until their draft spec is
 estimated. They must not fall back to `not-applicable` pricing. `not-applicable`

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ScreenplayImageReferenceWithHttp,
   ShotVideoTakeProductionPlanReport,
@@ -37,6 +37,10 @@ class ResizeObserverStub {
 (globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= ResizeObserverStub;
 
 describe('SceneShotDialogsTab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders dialogue audio cards without compact Pick or Delete actions', async () => {
     serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
     const { container } = render(
@@ -51,6 +55,10 @@ describe('SceneShotDialogsTab', () => {
     );
 
     expect(container.querySelector('.flex.flex-col.gap-3')).toBeTruthy();
+    expect(
+      await screen.findByText('Seedance 2.0 allows up to 3 audio references per generation')
+    ).toBeTruthy();
+    expect(screen.getByText('1 / 3 selected')).toBeTruthy();
     expect(await screen.findByText('Urban')).toBeTruthy();
     expect(await screen.findByText('Take 1')).toBeTruthy();
     expect(screen.queryByText('Jun 12, 10:00 AM')).toBeNull();
@@ -137,6 +145,111 @@ describe('SceneShotDialogsTab', () => {
     expect(await screen.findByText('Urban')).toBeTruthy();
     expect(screen.getByText('Not generated')).toBeTruthy();
     expect(screen.getByText('$0.03')).toBeTruthy();
+  });
+
+  it('shows route capability warnings without clearing selected dialogue', async () => {
+    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
+    render(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
+          dialogueChoice({ included: true }),
+          dialogueChoice({
+            dependencyId: 'audio:scene-dialogue:dialogue_mara',
+            dialogueId: 'dialogue_mara',
+            castMemberId: 'cast_mara',
+            speakerName: 'Mara',
+            included: true,
+          }),
+        ], {
+          state: 'unsupported',
+          supported: false,
+          selectedCount: 2,
+          maxCount: null,
+          modelLabel: 'Test model',
+          message: 'This model does not use audio references',
+          diagnostics: [],
+        })}
+      />
+    );
+
+    expect(await screen.findByText('This model does not use audio references')).toBeTruthy();
+    expect(screen.getByText('2 selected')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: /Exclude Urban dialogue audio/ })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: /Exclude Mara dialogue audio/ })
+    ).toBeTruthy();
+  });
+
+  it('shows over-limit capability warnings with max-count copy', async () => {
+    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
+    render(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
+          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_1', dialogueId: 'dialogue_1' }),
+          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_2', dialogueId: 'dialogue_2' }),
+          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_3', dialogueId: 'dialogue_3' }),
+          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_4', dialogueId: 'dialogue_4' }),
+        ], {
+          state: 'over-limit',
+          supported: true,
+          selectedCount: 4,
+          maxCount: 3,
+          modelLabel: 'Seedance 2.0',
+          message: 'Seedance 2.0 allows up to 3 audio references per generation',
+          diagnostics: [],
+        })}
+      />
+    );
+
+    expect(
+      await screen.findByText('Seedance 2.0 allows up to 3 audio references per generation')
+    ).toBeTruthy();
+    expect(screen.getByText('4 / 3 selected')).toBeTruthy();
+  });
+
+  it('reloads dialogue audio context when plan take state changes', async () => {
+    serviceMocks.readSceneDialogueAudioContext
+      .mockResolvedValueOnce({ audioByDialogueId: {} })
+      .mockResolvedValueOnce(dialogueAudioContext());
+    const { rerender } = render(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        productionPlan={dialogueProductionPlan(0, ['shot_001'], [
+          dialogueChoice({
+            pickedTake: null,
+            takeCount: 0,
+            audioState: 'not-generated',
+          }),
+        ])}
+      />
+    );
+
+    await waitFor(() => {
+      expect(serviceMocks.readSceneDialogueAudioContext).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        productionPlan={dialogueProductionPlan(1)}
+      />
+    );
+
+    await waitFor(() => {
+      expect(serviceMocks.readSceneDialogueAudioContext).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('opens take management only when multiple takes are available', async () => {
@@ -246,7 +359,16 @@ function profileImage(): ScreenplayImageReferenceWithHttp {
 function dialogueProductionPlan(
   takeCount: number,
   shotIds: string[] = ['shot_001'],
-  dialogueAudio = [dialogueChoice({ takeCount })]
+  dialogueAudio = [dialogueChoice({ takeCount })],
+  dialogueAudioCapability: ShotVideoTakeProductionPlanReport['references']['dialogueAudioCapability'] = {
+    state: 'ok',
+    supported: true,
+    selectedCount: dialogueAudio.filter((choice) => choice.included).length,
+    maxCount: 3,
+    modelLabel: 'Seedance 2.0',
+    message: 'Seedance 2.0 allows up to 3 audio references per generation',
+    diagnostics: [],
+  }
 ): ShotVideoTakeProductionPlanReport {
   return {
     productionGroup: {
@@ -258,6 +380,7 @@ function dialogueProductionPlan(
       general: [],
       lookbook: [],
       dialogueAudio,
+      dialogueAudioCapability,
       castMembers: [],
       locations: [],
     },

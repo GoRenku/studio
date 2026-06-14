@@ -2,6 +2,8 @@ import {
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import type {
+  DraftMediaGenerationSpec,
+  MediaGenerationDependencyPricing,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeProductionPlan,
 } from '../../../client/index.js';
@@ -10,7 +12,7 @@ import {
 } from '../../project-data-error.js';
 import type {
   MediaGenerationDependencyDraftSpecInput,
-  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftPlan,
 } from '../dependency-draft-specs.js';
 import {
   PURPOSE_CONFIG,
@@ -23,7 +25,7 @@ import {
 
 export async function buildShotInputDependencyDraftSpec(
   input: MediaGenerationDependencyDraftSpecInput
-): Promise<MediaGenerationDependencyDraftSpec> {
+): Promise<MediaGenerationDependencyDraftPlan> {
   if (input.dependencyTarget.kind !== 'sceneShotGroup') {
     throw new ProjectDataError(
       'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
@@ -46,7 +48,7 @@ export async function buildShotInputDependencyDraftSpec(
         candidate.outputInputKind === outputInputKind
     );
   if (!isAuthoredShotDependencyDraft(draft)) {
-    return {
+    const pricingSpec = {
       purpose,
       spec: {
         purpose,
@@ -58,9 +60,18 @@ export async function buildShotInputDependencyDraftSpec(
         parameterValues: defaultShotInputParameterValues(),
         title: input.label,
       },
-      materializationState: 'needs-authored-draft',
+    } satisfies DraftMediaGenerationSpec;
+    const priced = await estimateMissingShotInputDependency({
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+      draftGenerationSpec: pricingSpec,
+    });
+    return {
+      materializationState: 'missing-input',
       materializationReason:
         'Author a concrete dependency draft before generating this shot input.',
+      pricing: priced.pricing,
+      estimate: priced.estimate,
     };
   }
   return {
@@ -78,6 +89,56 @@ export async function buildShotInputDependencyDraftSpec(
     },
     materializationState: 'generatable',
   };
+}
+
+async function estimateMissingShotInputDependency(input: {
+  projectName?: string;
+  homeDir?: string;
+  draftGenerationSpec: DraftMediaGenerationSpec;
+}): Promise<{
+  pricing: MediaGenerationDependencyPricing;
+  estimate: import('@gorenku/studio-engines').GenerationEstimate | null;
+}> {
+  try {
+    const { estimateDraftMediaGenerationSpec } = await import(
+      '../shared-generation-service.js'
+    );
+    const estimateReport = await estimateDraftMediaGenerationSpec({
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+      spec: input.draftGenerationSpec.spec,
+    });
+    const estimate = estimateReport.estimate;
+    if (estimate.estimatedCostUsd === null) {
+      return {
+        pricing: {
+          state: 'unpriced',
+          estimatedUsd: null,
+          reason:
+            estimate.warnings.join(' ') ||
+            'No pricing is configured for this dependency route.',
+          overrideRequired: true,
+        },
+        estimate,
+      };
+    }
+    return {
+      pricing: { state: 'priced', estimatedUsd: estimate.estimatedCostUsd },
+      estimate,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Dependency estimate failed.';
+    return {
+      pricing: {
+        state: 'unpriced',
+        estimatedUsd: null,
+        reason: message,
+        overrideRequired: true,
+      },
+      estimate: null,
+    };
+  }
 }
 
 

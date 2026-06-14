@@ -18,7 +18,7 @@ import type {
 import { ProjectDataError } from '../project-data-error.js';
 import { requireMediaGenerationDependencyKindDefinition } from './dependency-kind-registry.js';
 import { estimateMediaGenerationDependencyDraft } from './dependency-draft-estimates.js';
-import { buildMediaGenerationDependencyDraftSpec } from './dependency-draft-specs.js';
+import { planMediaGenerationDependencyDraft } from './dependency-draft-specs.js';
 import { aggregateDependencyInventoryEstimate } from './dependency-inventory-lines.js';
 import type { MediaGenerationDependencySelectorResult } from './dependency-selectors.js';
 
@@ -337,7 +337,7 @@ async function plannedGeneratedDependencyLine(
   const lineDiagnostics: DiagnosticIssue[] = [];
 
   try {
-    const dependencyDraft = await buildMediaGenerationDependencyDraftSpec({
+    const dependencyDraft = await planMediaGenerationDependencyDraft({
       purpose: inputLine.purpose,
       draftInput: {
         projectName: state.input.projectName,
@@ -351,22 +351,37 @@ async function plannedGeneratedDependencyLine(
         reason: inputLine.slot.reason,
       },
     });
+    if (dependencyDraft.materializationState === 'missing-input') {
+      pricing = dependencyDraft.pricing;
+      generationDraft = {
+        state: 'missing-input',
+        reason: dependencyDraft.materializationReason,
+      };
+      lineDiagnostics.push(...(dependencyDraft.diagnostics ?? []));
+      if (inputLine.slot.required) {
+        state.diagnostics.push(
+          ...(dependencyDraft.diagnostics ?? []).filter(
+            (issue) => issue.severity === 'error'
+          )
+        );
+      }
+      return {
+        ...inputLine.lineBase,
+        availability: { state: 'missing-generated' },
+        pricing,
+        generationDraft,
+        selectedAsset: null,
+        diagnostics: [...inputLine.lineBase.diagnostics, ...lineDiagnostics],
+      };
+    }
     const pricingDraftGenerationSpec = {
       purpose: dependencyDraft.purpose,
       spec: dependencyDraft.spec,
     };
-    generationDraft =
-      dependencyDraft.materializationState === 'needs-authored-draft'
-        ? {
-            state: 'estimate-only',
-            reason:
-              dependencyDraft.materializationReason ??
-              'Author a concrete dependency draft before generation.',
-          }
-        : {
-            state: 'authored',
-            draftGenerationSpec: pricingDraftGenerationSpec,
-          };
+    generationDraft = {
+      state: 'authored',
+      draftGenerationSpec: pricingDraftGenerationSpec,
+    };
     const estimateResult = await estimateMediaGenerationDependencyDraft({
       projectName: state.input.projectName,
       homeDir: state.input.homeDir,
@@ -475,8 +490,8 @@ function checklistAction(
   if (line.availability.state === 'invalid-selection') {
     return 'fix-invalid-selection';
   }
-  if (line.generationDraft.state === 'estimate-only') {
-    return 'author-generation-draft';
+  if (line.generationDraft.state === 'missing-input') {
+    return 'provide-missing-input';
   }
   return 'generate-dependency';
 }

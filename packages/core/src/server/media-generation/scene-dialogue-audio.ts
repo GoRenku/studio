@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import type {
+  MediaGenerationDependencyPricing,
   MediaGenerationEstimateReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
@@ -13,6 +14,11 @@ import type {
   SceneDialogueAudioTextTreatment,
   SceneDialogueAudioVoiceSettings,
 } from '../../client/index.js';
+import type { GenerationEstimate } from '@gorenku/studio-engines';
+import {
+  createDiagnosticWarning,
+  type DiagnosticIssue,
+} from '@gorenku/studio-diagnostics';
 import { SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE } from '../../client/index.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import {
@@ -54,7 +60,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import type {
-  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftPlan,
   MediaGenerationDependencyDraftSpecInput,
 } from './dependency-draft-specs.js';
 import {
@@ -71,8 +77,8 @@ const MODEL_CHOICES = new Set<SceneDialogueAudioModelChoice>([
 const DEFAULT_MODEL_CHOICE: SceneDialogueAudioModelChoice =
   'elevenlabs/eleven_v3';
 const DEFAULT_OUTPUT_FORMAT = 'mp3_44100_128';
-const ESTIMATE_ONLY_CAST_VOICE_ID = 'estimate_only_cast_voice';
-const ESTIMATE_ONLY_PROVIDER_VOICE_ID = 'estimate_only_provider_voice';
+const MISSING_CAST_VOICE_REASON =
+  'Assign a Cast Voice before generating dialogue audio.';
 const DEFAULT_VOICE_SETTINGS: SceneDialogueAudioVoiceSettings = {
   stability: 0.5,
   similarityBoost: 0.75,
@@ -242,9 +248,7 @@ export async function prepareSceneDialogueAudioDraftSpec(input: {
   homeDir?: string;
   spec: SceneDialogueAudioGenerationSpec;
 }): Promise<PreparedMediaGeneration> {
-  const normalized = await normalizeSpec(input, {
-    allowEstimateOnlyVoice: true,
-  });
+  const normalized = await normalizeSpec(input);
   return prepared(draftMediaGenerationSpecRecord(normalized.spec), normalized);
 }
 
@@ -260,28 +264,137 @@ export async function estimateSceneDialogueAudioDraft(
 
 export async function buildSceneDialogueAudioDependencyDraftSpec(
   input: MediaGenerationDependencyDraftSpecInput,
-): Promise<MediaGenerationDependencyDraftSpec> {
+): Promise<MediaGenerationDependencyDraftPlan> {
   if (input.dependencyTarget.kind !== 'sceneDialogue') {
     throw new ProjectDataError(
       'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
       `Scene Dialogue Audio dependency requires a sceneDialogue target. Received: ${input.dependencyTarget.kind}.`,
     );
   }
-  const spec = await specForDialogueInput(
-    {
+  const hasUsableVoice = await sceneDialogueHasUsableVoice({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: input.dependencyTarget.sceneId,
+    dialogueId: input.dependencyTarget.dialogueId,
+  });
+  if (!hasUsableVoice) {
+    const priced = await estimateSceneDialogueAudioPricingOnly({
       projectName: input.projectName,
       homeDir: input.homeDir,
       sceneId: input.dependencyTarget.sceneId,
       dialogueId: input.dependencyTarget.dialogueId,
       setup: { title: input.label },
-    },
-    { allowEstimateOnlyVoice: true },
-  );
+    });
+    return {
+      materializationState: 'missing-input',
+      materializationReason: MISSING_CAST_VOICE_REASON,
+      pricing: priced.pricing,
+      estimate: priced.estimate,
+      diagnostics: priced.diagnostics,
+    };
+  }
+  const spec = await specForDialogueInput({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: input.dependencyTarget.sceneId,
+    dialogueId: input.dependencyTarget.dialogueId,
+    setup: { title: input.label },
+  });
   return {
     purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
     spec,
     materializationState: 'generatable',
   };
+}
+
+export async function estimateSceneDialogueAudioPricingOnly(input: {
+  projectName?: string;
+  homeDir?: string;
+  sceneId: string;
+  dialogueId: string;
+  setup: Partial<SceneDialogueAudioGenerationSpec>;
+}): Promise<{
+  pricing: MediaGenerationDependencyPricing;
+  estimate: GenerationEstimate | null;
+  diagnostics: DiagnosticIssue[];
+}> {
+  try {
+    const pricingInput = await sceneDialogueAudioPricingInput(input);
+    const { estimateGeneration } = await import('@gorenku/studio-engines');
+    const estimate = await estimateGeneration({
+      policy: {
+        provider: 'elevenlabs',
+        model: parseModel(pricingInput.modelChoice),
+        mediaKind: 'audio',
+        mode: 'text-to-speech',
+        outputCount: 1,
+      },
+      request: {
+        parameters: {
+          text: pricingInput.providerText,
+          output_format: pricingInput.outputFormat,
+          ...(pricingInput.languageCode
+            ? { language_code: pricingInput.languageCode }
+            : {}),
+        },
+        pricingInputCounts: {},
+        outputNames: [pricingInput.outputName],
+      },
+    });
+    if (estimate.estimatedCostUsd === null) {
+      return {
+        pricing: {
+          state: 'unpriced',
+          estimatedUsd: null,
+          reason:
+            estimate.warnings.join(' ') ||
+            'No pricing is configured for this dialogue audio model.',
+          overrideRequired: true,
+        },
+        estimate,
+        diagnostics: [
+          createDiagnosticWarning(
+            'CORE_SCENE_DIALOGUE_AUDIO_MISSING_CAST_VOICE',
+            MISSING_CAST_VOICE_REASON,
+            { path: ['sceneDialogueAudio', input.dialogueId, 'castVoiceId'] },
+            MISSING_CAST_VOICE_REASON
+          ),
+        ],
+      };
+    }
+    return {
+      pricing: { state: 'priced', estimatedUsd: estimate.estimatedCostUsd },
+      estimate,
+      diagnostics: [
+        createDiagnosticWarning(
+          'CORE_SCENE_DIALOGUE_AUDIO_MISSING_CAST_VOICE',
+          MISSING_CAST_VOICE_REASON,
+          { path: ['sceneDialogueAudio', input.dialogueId, 'castVoiceId'] },
+          MISSING_CAST_VOICE_REASON
+        ),
+      ],
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Dialogue audio estimate failed.';
+    return {
+      pricing: {
+        state: 'unpriced',
+        estimatedUsd: null,
+        reason: message,
+        overrideRequired: true,
+      },
+      estimate: null,
+      diagnostics: [
+        createDiagnosticWarning(
+          'CORE_SCENE_DIALOGUE_AUDIO_MISSING_CAST_VOICE',
+          MISSING_CAST_VOICE_REASON,
+          { path: ['sceneDialogueAudio', input.dialogueId, 'castVoiceId'] },
+          MISSING_CAST_VOICE_REASON
+        ),
+      ],
+    };
+  }
 }
 
 export async function updateSceneDialogueAudioSetup(
@@ -502,7 +615,6 @@ export async function runSceneDialogueAudioSpec(): Promise<never> {
 
 async function specForDialogueInput(
   input: GenerateSceneDialogueAudioTakeInput,
-  options: { allowEstimateOnlyVoice?: boolean } = {},
 ): Promise<SceneDialogueAudioGenerationSpec> {
   return withSceneDialogueAudioProjectSession(input, ({ session }) => {
     const existing = readSceneDialogueAudioRecord(session, {
@@ -525,9 +637,7 @@ async function specForDialogueInput(
       castVoiceId:
         input.setup.castVoiceId ??
         existing?.castVoiceId ??
-        (options.allowEstimateOnlyVoice
-          ? ESTIMATE_ONLY_CAST_VOICE_ID
-          : defaultCastVoiceId(session, dialogue.castMemberId)),
+        defaultCastVoiceId(session, dialogue.castMemberId),
       plainText: input.setup.plainText ?? existing?.plainText ?? plainText,
       v3Text: input.setup.v3Text ?? existing?.v3Text ?? plainText,
       voiceSettings:
@@ -539,6 +649,92 @@ async function specForDialogueInput(
         DEFAULT_OUTPUT_FORMAT,
       languageCode: input.setup.languageCode ?? existing?.languageCode ?? null,
       title: input.setup.title,
+    };
+  });
+}
+
+async function sceneDialogueHasUsableVoice(input: {
+  projectName?: string;
+  homeDir?: string;
+  sceneId: string;
+  dialogueId: string;
+}): Promise<boolean> {
+  return withSceneDialogueAudioProjectSession(input, ({ session }) => {
+    const dialogue = requireDialogue(session, input.sceneId, input.dialogueId);
+    if (!dialogue.castMemberId) {
+      return false;
+    }
+    const existing = readSceneDialogueAudioRecord(session, {
+      sceneId: input.sceneId,
+      dialogueId: input.dialogueId,
+    });
+    if (existing?.castVoiceId) {
+      const selectedVoice = listCastVoiceRecords(session, dialogue.castMemberId).find(
+        (voice) => voice.id === existing.castVoiceId
+      );
+      return Boolean(
+        selectedVoice &&
+          selectedVoice.provider === 'elevenlabs' &&
+          selectedVoice.voiceId.trim()
+      );
+    }
+    return listCastVoiceRecords(session, dialogue.castMemberId).some(
+      (voice) => voice.provider === 'elevenlabs' && Boolean(voice.voiceId.trim())
+    );
+  });
+}
+
+async function sceneDialogueAudioPricingInput(input: {
+  projectName?: string;
+  homeDir?: string;
+  sceneId: string;
+  dialogueId: string;
+  setup: Partial<SceneDialogueAudioGenerationSpec>;
+}): Promise<{
+  modelChoice: SceneDialogueAudioModelChoice;
+  providerText: string;
+  outputFormat: string;
+  languageCode: string | null;
+  outputName: string;
+}> {
+  return withSceneDialogueAudioProjectSession(input, ({ session }) => {
+    const existing = readSceneDialogueAudioRecord(session, {
+      sceneId: input.sceneId,
+      dialogueId: input.dialogueId,
+    });
+    const dialogue = requireDialogue(session, input.sceneId, input.dialogueId);
+    const plainText =
+      input.setup.plainText ?? existing?.plainText ?? dialogue.lines.join('\n');
+    const modelChoice =
+      input.setup.modelChoice ??
+      (existing?.modelChoice as SceneDialogueAudioModelChoice | undefined) ??
+      DEFAULT_MODEL_CHOICE;
+    if (!MODEL_CHOICES.has(modelChoice)) {
+      throw new ProjectDataError(
+        'PROJECT_DATA385',
+        `Unsupported Scene Dialogue Audio model: ${modelChoice}.`,
+      );
+    }
+    const normalizedPlainText = requiredTrimmed(plainText, 'plainText');
+    const rawV3Text = input.setup.v3Text ?? existing?.v3Text ?? plainText;
+    const normalizedV3Text =
+      modelChoice === 'elevenlabs/eleven_v3'
+        ? requiredTrimmed(rawV3Text, 'v3Text')
+        : rawV3Text.trim();
+    const textTreatment = textTreatmentForModel(modelChoice);
+    const providerText =
+      textTreatment === 'elevenlabs-v3-audio-tags'
+        ? normalizedV3Text
+        : normalizedPlainText;
+    return {
+      modelChoice,
+      providerText,
+      outputFormat:
+        input.setup.outputFormat ??
+        existing?.outputFormat ??
+        DEFAULT_OUTPUT_FORMAT,
+      languageCode: input.setup.languageCode ?? existing?.languageCode ?? null,
+      outputName: `${input.setup.title?.trim() || 'dialogue-audio'}.mp3`,
     };
   });
 }
@@ -573,7 +769,7 @@ async function normalizeSpec(input: {
   projectName?: string;
   homeDir?: string;
   spec: SceneDialogueAudioGenerationSpec;
-}, options: { allowEstimateOnlyVoice?: boolean } = {}): Promise<NormalizedSceneDialogueAudioSpec> {
+}): Promise<NormalizedSceneDialogueAudioSpec> {
   if (input.spec.purpose !== SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE) {
     throw new ProjectDataError(
       'PROJECT_DATA384',
@@ -599,11 +795,6 @@ async function normalizeSpec(input: {
       input.spec.target.dialogueId,
     );
     if (!dialogue.castMemberId) {
-      if (options.allowEstimateOnlyVoice) {
-        return normalizeSpecWithEstimateOnlyVoice(input.spec, {
-          castMemberId: '',
-        });
-      }
       throw new ProjectDataError(
         'PROJECT_DATA386',
         `Dialogue has no Cast Member: ${input.spec.target.dialogueId}.`,
@@ -621,17 +812,11 @@ async function normalizeSpec(input: {
       castVoice.provider !== 'elevenlabs' ||
       !castVoice.voiceId.trim()
     ) {
-      if (options.allowEstimateOnlyVoice) {
-        return normalizeSpecWithEstimateOnlyVoice(input.spec, {
-          castMemberId: dialogue.castMemberId,
-        });
-      }
       throw new ProjectDataError(
         'PROJECT_DATA386',
         'This cast member is missing a usable ElevenLabs Cast Voice/provider voice id.',
         {
-          suggestion:
-            'Ask the agent to assign a voice id before generating dialogue audio.',
+          suggestion: MISSING_CAST_VOICE_REASON,
         },
       );
     }
@@ -663,43 +848,6 @@ async function normalizeSpec(input: {
       textTreatment,
     };
   });
-}
-
-function normalizeSpecWithEstimateOnlyVoice(
-  inputSpec: SceneDialogueAudioGenerationSpec,
-  input: { castMemberId: string },
-): NormalizedSceneDialogueAudioSpec {
-  const plainText = requiredTrimmed(inputSpec.plainText, 'plainText');
-  const v3Text =
-    inputSpec.modelChoice === 'elevenlabs/eleven_v3'
-      ? requiredTrimmed(inputSpec.v3Text, 'v3Text')
-      : inputSpec.v3Text.trim();
-  const voiceSettings = normalizeVoiceSettings(inputSpec.voiceSettings);
-  const textTreatment = textTreatmentForModel(inputSpec.modelChoice);
-  const providerText =
-    textTreatment === 'elevenlabs-v3-audio-tags' ? v3Text : plainText;
-  const spec: SceneDialogueAudioGenerationSpec = {
-    ...inputSpec,
-    castVoiceId: ESTIMATE_ONLY_CAST_VOICE_ID,
-    plainText,
-    v3Text: v3Text || plainText,
-    voiceSettings,
-    outputFormat: inputSpec.outputFormat?.trim() || DEFAULT_OUTPUT_FORMAT,
-    languageCode: inputSpec.languageCode?.trim() || null,
-    title: inputSpec.title?.trim() || undefined,
-  };
-  return {
-    spec,
-    castMemberId: input.castMemberId,
-    castVoice: {
-      id: ESTIMATE_ONLY_CAST_VOICE_ID,
-      name: 'Estimate-only voice',
-      voiceId: ESTIMATE_ONLY_PROVIDER_VOICE_ID,
-    },
-    voiceSettings,
-    providerText,
-    textTreatment,
-  };
 }
 
 function prepared(
@@ -921,8 +1069,7 @@ function defaultCastVoiceId(
       'PROJECT_DATA386',
       'This cast member is missing a usable ElevenLabs Cast Voice/provider voice id.',
       {
-        suggestion:
-          'Ask the agent to assign a voice id before generating dialogue audio.',
+        suggestion: MISSING_CAST_VOICE_REASON,
       },
     );
   }

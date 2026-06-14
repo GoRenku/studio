@@ -412,6 +412,16 @@ export interface ShotVideoTakeDialogueAudioReferenceChoice {
   card: ShotVideoTakeReferenceCardPlan;
 }
 
+export interface ShotVideoTakeDialogueAudioCapabilityReport {
+  state: 'ok' | 'unsupported' | 'over-limit';
+  supported: boolean;
+  selectedCount: number;
+  maxCount: number | null;
+  modelLabel: string;
+  message: string;
+  diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
 export interface ShotVideoTakeCastMemberReferenceGroup {
   castMemberId: string;
   name: string;
@@ -469,6 +479,7 @@ export interface ShotVideoTakeReferenceSectionsReport {
   general: ShotVideoTakeGeneralReferenceChoice[];
   lookbook: ShotVideoTakeLookbookReferenceChoice[];
   dialogueAudio: ShotVideoTakeDialogueAudioReferenceChoice[];
+  dialogueAudioCapability: ShotVideoTakeDialogueAudioCapabilityReport;
   castMembers: ShotVideoTakeCastMemberReferenceGroup[];
   locations: ShotVideoTakeLocationReferenceGroup[];
 }

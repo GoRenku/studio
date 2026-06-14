@@ -120,7 +120,7 @@ import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec,
 import { declareShotVideoTakeDependencies } from './shot-video-take/dependency-inventory.js';
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from './shot-video-take/media-imports.js';
 import type {
-  MediaGenerationDependencyDraftSpec,
+  MediaGenerationDependencyDraftPlan,
   MediaGenerationDependencyDraftSpecInput,
 } from './dependency-draft-specs.js';
 
@@ -218,9 +218,9 @@ export interface MediaGenerationPurposeDefinition {
   declareDependencies?(
     input: MediaGenerationDependencyDeclarationInput
   ): Promise<MediaGenerationDependencySlot[]>;
-  buildDependencyDraftSpec?(
+  planDependencyDraft?(
     input: MediaGenerationDependencyDraftSpecInput
-  ): Promise<MediaGenerationDependencyDraftSpec>;
+  ): Promise<MediaGenerationDependencyDraftPlan>;
   runSpec(input: RunMediaGenerationSpecInput): Promise<unknown>;
 }
 
@@ -297,7 +297,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as LookbookSheetGenerationSpec,
       }),
-    buildDependencyDraftSpec: lookbookSheet.buildLookbookSheetDependencyDraftSpec,
+    planDependencyDraft: lookbookSheet.buildLookbookSheetDependencyDraftSpec,
     runSpec: lookbookSheet.runLookbookSheetSpec,
   },
   {
@@ -335,7 +335,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as CastCharacterSheetGenerationSpec,
       }),
-    buildDependencyDraftSpec: characterSheet.buildCastCharacterSheetDependencyDraftSpec,
+    planDependencyDraft: characterSheet.buildCastCharacterSheetDependencyDraftSpec,
     runSpec: characterSheet.runCastCharacterSheetSpec,
   },
   {
@@ -465,7 +465,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as SceneDialogueAudioGenerationSpec,
       }),
-    buildDependencyDraftSpec:
+    planDependencyDraft:
       sceneDialogueAudio.buildSceneDialogueAudioDependencyDraftSpec,
     runSpec: sceneDialogueAudio.runSceneDialogueAudioSpec,
   },
@@ -505,7 +505,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as LocationEnvironmentSheetGenerationSpec,
       }),
-    buildDependencyDraftSpec:
+    planDependencyDraft:
       locationSheet.buildLocationEnvironmentSheetDependencyDraftSpec,
     runSpec: locationSheet.runLocationEnvironmentSheetSpec,
   },
@@ -571,7 +571,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotFirstFrameSpec,
   },
   {
@@ -598,7 +598,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotLastFrameSpec,
   },
   {
@@ -625,7 +625,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotReferenceImageSpec,
   },
   {
@@ -653,7 +653,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
-    buildDependencyDraftSpec: buildShotInputDependencyDraftSpec,
+    planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotMultiShotStoryboardSheetSpec,
   },
   {

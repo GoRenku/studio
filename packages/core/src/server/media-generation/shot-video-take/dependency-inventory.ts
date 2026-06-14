@@ -41,6 +41,9 @@ import {
 import type {
   DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
+import {
+  createDiagnosticWarning,
+} from '@gorenku/studio-diagnostics';
 import type {
   ShotVideoRoute,
 } from '@gorenku/studio-engines';
@@ -74,6 +77,7 @@ import {
 } from './purpose-config.js';
 import {
   filterPreparedInputsByReferenceInclusions,
+  referenceInclusionForDependencyId,
   referenceDependencySlotIncluded,
   validateRequiredReferenceInclusions,
 } from './reference-inclusions.js';
@@ -143,7 +147,8 @@ export async function buildShotVideoTakeDependencyInventory(input: {
   );
   validateSelectedAudioReferencesSupportedByRoute({
     route: input.route,
-    preparedInputs: finalInputs,
+    context: input.context,
+    references: dialogueAudioResolution.references,
     diagnostics: input.diagnostics,
   });
   const result = await planMediaGenerationDependencyInventory({
@@ -230,31 +235,44 @@ export async function buildShotVideoTakeDependencyInventory(input: {
 
 function validateSelectedAudioReferencesSupportedByRoute(input: {
   route: ShotVideoRoute;
-  preparedInputs: ShotVideoTakePreflightInput[];
+  context: ShotVideoTakeGenerationContext;
+  references: ResolvedShotDialogueAudioReference[];
   diagnostics: DiagnosticIssue[];
 }): void {
-  const hasSelectedAudio = input.preparedInputs.some(
-    (preparedInput) =>
-      preparedInput.kind === 'audio' &&
-      preparedInput.subjectKind === 'scene-dialogue'
-  );
-  if (!hasSelectedAudio) {
+  const selectedCount = input.references.filter((reference) =>
+    referenceInclusionForDependencyId(
+      input.context,
+      reference.dependencyId,
+      reference.defaultIncluded
+    ).included
+  ).length;
+  if (selectedCount === 0) {
     return;
   }
-  const routeSupportsAudio = input.route.inputSlots.some(
+  const audioSlot = input.route.inputSlots.find(
     (slot) => slot.kind === 'audio' && slot.mediaKind === 'audio'
   );
-  if (routeSupportsAudio) {
+  if (!audioSlot) {
+    input.diagnostics.push(
+      createDiagnosticWarning(
+        'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
+        'This model does not use audio references',
+        { path: ['productionGroup', 'videoTakeProduction', 'modelChoice'] },
+        'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
+      )
+    );
     return;
   }
-  input.diagnostics.push(
-    issue(
-      'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
-      'Audio references are not supported by this model route.',
-      ['productionGroup', 'videoTakeProduction', 'modelChoice'],
-      'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
-    )
-  );
+  if (typeof audioSlot.maxCount === 'number' && selectedCount > audioSlot.maxCount) {
+    input.diagnostics.push(
+      createDiagnosticWarning(
+        'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
+        `Selected dialogue audio references exceed this model route limit: ${selectedCount} / ${audioSlot.maxCount}.`,
+        { path: ['productionGroup', 'videoTakeProduction', 'requestedInputs'] },
+        `Select ${audioSlot.maxCount} or fewer dialogue audio references for this model route.`
+      )
+    );
+  }
 }
 
 

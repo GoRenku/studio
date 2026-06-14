@@ -236,6 +236,26 @@ export function validateFinalSpecAgainstContext(
       }
     );
   }
+  const audioSlot = route.inputSlots.find(
+    (slot) => slot.kind === 'audio' && slot.mediaKind === 'audio'
+  );
+  if (typeof audioSlot?.maxCount === 'number') {
+    const dialogueAudioCount = spec.inputs.filter(
+      (input) =>
+        input.kind === 'audio' &&
+        input.subjectKind === 'scene-dialogue' &&
+        finalInputMatchesRouteSlot(input, audioSlot)
+    ).length;
+    if (dialogueAudioCount > audioSlot.maxCount) {
+      throw new ProjectDataError(
+        'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
+        `Selected dialogue audio references exceed this model route limit: ${dialogueAudioCount} / ${audioSlot.maxCount}.`,
+        {
+          suggestion: `Select ${audioSlot.maxCount} or fewer dialogue audio references for this model route.`,
+        }
+      );
+    }
+  }
 }
 
 

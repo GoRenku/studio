@@ -152,9 +152,10 @@ check before final generation. Agents should read `inputsToCreate`,
 
 Core never synthesizes generic shot-video dependency prompts. First-frame,
 last-frame, ad hoc reference-image, and multi-shot storyboard sheet dependency
-lines may use estimate-only drafts before the user or agent authors concrete
-`agentProposal.dependencyDrafts[]` entries. Estimate-only drafts can price the
-dependency, but they are not runnable generation specs. `shot.reference-image`
+lines use `missing-input` before the user or agent authors concrete
+`agentProposal.dependencyDrafts[]` entries. Missing-input lines can still be
+priced when the purpose has enough model and text or prompt information to
+estimate cost, but they are not runnable generation specs. `shot.reference-image`
 specs also require a title that names the reference intent shown in Studio.
 
 The Studio shot References tab displays imported/generated `first-frame`,
@@ -167,6 +168,13 @@ use dependency kind `reference-audio` and subject kind `scene-dialogue`. Their
 dependency ids are stable by screenplay dialogue id, while preflight and final
 generation resolve the current picked dialogue audio take to the concrete audio
 asset file.
+
+Dialogue audio pricing is based on the selected model and dialogue text.
+Missing Cast Voice setup is reported as `missing-input` with the reason
+`Assign a Cast Voice before generating dialogue audio.`, while the dependency
+can remain priced. The production plan also reports the selected route's audio
+reference capability and warns when selected dialogue audio is unsupported or
+over the route limit. These warnings do not mutate selections.
 
 The CLI command names are generic, and the spec lifecycle now routes through
 the core shared generation service. The shared service resolves the purpose
@@ -241,11 +249,11 @@ structured diagnostics.
 
 Draft dependency specs must declare their materialization state. A generated
 dependency that can be created by the shared generation service uses
-`generatable`. A dependency that needs an agent-authored draft before it can be
-run uses `needs-authored-draft`. Missing materialization state, invalid draft
-specs, unsupported pricing routes, and root-estimate failures are reported
-through dependency diagnostics instead of being hidden behind empty diagnostic
-lists.
+`generatable`. A dependency that needs user or agent setup before it can be run
+uses `missing-input` with an actionable reason. Missing materialization state,
+invalid draft specs, unsupported pricing routes, and root-estimate failures are
+reported through dependency diagnostics instead of being hidden behind empty
+diagnostic lists.
 
 Estimate states:
 

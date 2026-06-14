@@ -68,6 +68,10 @@ function dependencyPlanLine(
     depth: 0,
     state: dependencyLineState(line),
     materializationState: dependencyLineMaterializationState(line),
+    ...(line.generationDraft.state === 'missing-input' ||
+    line.generationDraft.state === 'blocked'
+      ? { materializationReason: line.generationDraft.reason }
+      : {}),
     pricing: line.pricing,
     required: line.required,
     ...(line.selectedAsset ? { sourceAssetId: line.selectedAsset.assetId } : {}),
@@ -137,8 +141,8 @@ function dependencyLineMaterializationState(
   if (line.generationDraft.state === 'authored') {
     return 'generatable';
   }
-  if (line.generationDraft.state === 'estimate-only') {
-    return 'needs-authored-draft';
+  if (line.generationDraft.state === 'missing-input') {
+    return 'missing-input';
   }
   if (line.generationDraft.state === 'blocked') {
     return 'invalid-generation-draft';

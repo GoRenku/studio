@@ -91,7 +91,7 @@ export type MediaGenerationPlanLineState = 'ready' | 'planned' | 'missing';
 export type MediaGenerationDependencyMaterializationState =
   | 'materialized'
   | 'generatable'
-  | 'needs-authored-draft'
+  | 'missing-input'
   | 'requires-external-input'
   | 'blocked-by-dependencies'
   | 'invalid-generation-draft';
@@ -131,7 +131,7 @@ export type MediaGenerationDependencyAvailability =
 
 export type MediaGenerationDependencyGenerationDraft =
   | { state: 'not-generated' }
-  | { state: 'estimate-only'; reason: string }
+  | { state: 'missing-input'; reason: string }
   | { state: 'authored'; draftGenerationSpec: DraftMediaGenerationSpec }
   | { state: 'blocked'; reason: string };
 
@@ -179,7 +179,7 @@ export interface MediaGenerationDependencyChecklistItem {
   dependencyLineId: string;
   action:
     | 'inspect-existing-asset'
-    | 'author-generation-draft'
+    | 'provide-missing-input'
     | 'generate-dependency'
     | 'import-or-select-asset'
     | 'fix-invalid-selection';

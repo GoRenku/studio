@@ -1,4 +1,5 @@
 import type {
+  MediaGenerationDependencyPricing,
   MediaGenerationDependencyKind,
   MediaGenerationDependencyMaterializationState,
   MediaGenerationDependencyRequest,
@@ -26,36 +27,58 @@ export interface MediaGenerationDependencyDraftSpec {
   spec: MediaGenerationSpec;
   materializationState: Extract<
     MediaGenerationDependencyMaterializationState,
-    'generatable' | 'needs-authored-draft'
+    'generatable'
   >;
   materializationReason?: string;
 }
 
-export async function buildMediaGenerationDependencyDraftSpec(input: {
+export type MediaGenerationDependencyDraftPlan =
+  | MediaGenerationDependencyDraftSpec
+  | {
+      materializationState: Extract<
+        MediaGenerationDependencyMaterializationState,
+        'missing-input'
+      >;
+      materializationReason: string;
+      pricing: MediaGenerationDependencyPricing;
+      estimate: import('@gorenku/studio-engines').GenerationEstimate | null;
+      diagnostics?: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+    };
+
+export async function planMediaGenerationDependencyDraft(input: {
   purpose: MediaGenerationPurpose;
   draftInput: MediaGenerationDependencyDraftSpecInput;
-}): Promise<MediaGenerationDependencyDraftSpec> {
+}): Promise<MediaGenerationDependencyDraftPlan> {
   const definition = requireMediaGenerationPurposeDefinition(input.purpose);
-  if (!definition.buildDependencyDraftSpec) {
+  if (!definition.planDependencyDraft) {
     throw new ProjectDataError(
       'CORE_MEDIA_DEPENDENCY_MISSING_DRAFT_BUILDER',
       `Media generation purpose has no dependency draft builder: ${input.purpose}.`,
       {
         suggestion:
-          'Add buildDependencyDraftSpec to the purpose that owns this generated dependency.',
+          'Add planDependencyDraft to the purpose that owns this generated dependency.',
       }
     );
   }
-  const draft = await definition.buildDependencyDraftSpec(input.draftInput);
+  const draft = await definition.planDependencyDraft(input.draftInput);
   if (!draft.materializationState) {
     throw new ProjectDataError(
       'CORE_MEDIA_DEPENDENCY_DRAFT_MATERIALIZATION_STATE_MISSING',
       `Dependency draft builder did not declare a materialization state for ${input.purpose}.`,
       {
         suggestion:
-          'Return generatable or needs-authored-draft from the dependency draft builder.',
+          'Return generatable or missing-input from the dependency draft builder.',
       }
     );
+  }
+  if (draft.materializationState === 'missing-input') {
+    return {
+      materializationState: draft.materializationState,
+      materializationReason: draft.materializationReason,
+      pricing: draft.pricing,
+      estimate: draft.estimate,
+      ...(draft.diagnostics ? { diagnostics: draft.diagnostics } : {}),
+    };
   }
   return {
     purpose: draft.purpose,

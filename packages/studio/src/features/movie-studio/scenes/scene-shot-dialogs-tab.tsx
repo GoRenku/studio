@@ -62,7 +62,25 @@ export function SceneShotDialogsTab({
     useState<SceneDialogueAudioContextWithUrls | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const player = useSceneDialogueAudioPlayer();
-  const choices = productionPlan?.references.dialogueAudio ?? [];
+  const choices = useMemo(
+    () => productionPlan?.references.dialogueAudio ?? [],
+    [productionPlan?.references.dialogueAudio]
+  );
+  const capability = productionPlan?.references.dialogueAudioCapability ?? null;
+  const dialogueAudioReloadKey = useMemo(
+    () =>
+      choices
+        .map((choice) =>
+          [
+            choice.dialogueId,
+            choice.pickedTake?.takeId ?? 'none',
+            choice.takeCount,
+            choice.audioState,
+          ].join(':')
+        )
+        .join('|'),
+    [choices]
+  );
 
   const loadDialogueAudio = useCallback(() => {
     let cancelled = false;
@@ -76,7 +94,7 @@ export function SceneShotDialogsTab({
     };
   }, [projectName, sceneId]);
 
-  useEffect(() => loadDialogueAudio(), [loadDialogueAudio]);
+  useEffect(() => loadDialogueAudio(), [loadDialogueAudio, dialogueAudioReloadKey]);
 
   const updateReferenceInclusion = async (
     dependencyId: string,
@@ -142,6 +160,7 @@ export function SceneShotDialogsTab({
   return (
     <div className='py-4'>
       <div className='flex flex-col gap-3'>
+        {capability ? <DialogueAudioCapabilityRow capability={capability} /> : null}
         {choices.map((choice) => (
           <SceneShotDialogueAudioReferenceCard
             key={choice.dependencyId}
@@ -162,6 +181,39 @@ export function SceneShotDialogsTab({
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+function DialogueAudioCapabilityRow({
+  capability,
+}: {
+  capability: NonNullable<
+    ShotVideoTakeProductionPlanReport['references']['dialogueAudioCapability']
+  >;
+}) {
+  const warning = capability.state === 'unsupported' || capability.state === 'over-limit';
+  return (
+    <div
+      className={cn(
+        'flex min-h-11 items-center justify-between gap-4 rounded-md border px-3 py-2 text-sm',
+        warning
+          ? 'border-destructive/30 bg-destructive/10 text-destructive'
+          : 'border-border/45 bg-muted/20 text-foreground'
+      )}
+    >
+      <span className='min-w-0 truncate'>{capability.message}</span>
+      <Badge
+        variant='outline'
+        className={cn(
+          'shrink-0 border-transparent bg-transparent text-xs tabular-nums',
+          warning ? 'text-destructive' : 'text-muted-foreground'
+        )}
+      >
+        {typeof capability.maxCount === 'number'
+          ? `${capability.selectedCount} / ${capability.maxCount} selected`
+          : `${capability.selectedCount} selected`}
+      </Badge>
     </div>
   );
 }

@@ -254,6 +254,15 @@ function productionPlan(
     references: {
       general: [],
       dialogueAudio: [],
+      dialogueAudioCapability: {
+        state: 'ok',
+        supported: false,
+        selectedCount: 0,
+        maxCount: null,
+        modelLabel: 'Seedance 2.0',
+        message: 'This model does not use audio references',
+        diagnostics: [],
+      },
       lookbook: input.lookbook
         ? [
             {

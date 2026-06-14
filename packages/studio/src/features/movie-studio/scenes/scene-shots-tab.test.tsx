@@ -646,6 +646,15 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
       general: [],
       lookbook: [],
       dialogueAudio: [],
+      dialogueAudioCapability: {
+        state: 'ok',
+        supported: false,
+        selectedCount: 0,
+        maxCount: null,
+        modelLabel: 'Seedance 2.0',
+        message: 'This model does not use audio references',
+        diagnostics: [],
+      },
       castMembers: [],
       locations: [
         {

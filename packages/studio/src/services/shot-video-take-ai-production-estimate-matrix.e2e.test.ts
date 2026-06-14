@@ -249,12 +249,12 @@ describe('shot video take estimate integration matrix', () => {
     expect(dependencyLines).toHaveLength(4);
     expect(firstFrameLine).toMatchObject({
       pricing: { state: 'priced', estimatedUsd: 0.005 },
-      materializationState: 'needs-authored-draft',
+      materializationState: 'missing-input',
     });
     expect(firstFrameLine).not.toHaveProperty('draftGenerationSpec');
     expect(lastFrameLine).toMatchObject({
       pricing: { state: 'priced', estimatedUsd: 0.005 },
-      materializationState: 'needs-authored-draft',
+      materializationState: 'missing-input',
     });
     expect(lastFrameLine).not.toHaveProperty('draftGenerationSpec');
     expect(estimate.plan?.finalEstimate?.estimatedCostUsd).toBeCloseTo(3.402, 6);
@@ -305,13 +305,13 @@ describe('shot video take estimate integration matrix', () => {
     expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(3.489, 6);
     expect(firstFrameLine).toMatchObject({
       kind: 'dependency-generation',
-      materializationState: 'needs-authored-draft',
+      materializationState: 'missing-input',
       pricing: { state: 'priced', estimatedUsd: 0.005 },
     });
     expect(firstFrameLine).not.toHaveProperty('draftGenerationSpec');
     expect(lastFrameLine).toMatchObject({
       kind: 'dependency-generation',
-      materializationState: 'needs-authored-draft',
+      materializationState: 'missing-input',
       pricing: { state: 'priced', estimatedUsd: 0.005 },
     });
     expect(lastFrameLine).not.toHaveProperty('draftGenerationSpec');

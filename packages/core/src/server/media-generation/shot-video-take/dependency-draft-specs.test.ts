@@ -6,7 +6,7 @@ import type {
 import { buildShotInputDependencyDraftSpec } from './dependency-draft-specs.js';
 
 describe('shot video take dependency draft specs', () => {
-  it('returns needs-authored-draft for missing dependency prompts', async () => {
+  it('returns missing-input for missing dependency prompts', async () => {
     const target = testTarget();
 
     await expect(
@@ -23,12 +23,9 @@ describe('shot video take dependency draft specs', () => {
         reason: 'Required by selected route.',
       })
     ).resolves.toMatchObject({
-      purpose: 'shot.first-frame',
-      materializationState: 'needs-authored-draft',
-      spec: {
-        prompt: expect.stringContaining('Estimate placeholder'),
-        title: 'First frame',
-      },
+      materializationState: 'missing-input',
+      materializationReason:
+        'Author a concrete dependency draft before generating this shot input.',
     });
   });
 

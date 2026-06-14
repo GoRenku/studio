@@ -15,6 +15,7 @@ import type {
   ShotVideoTakeInputKind,
   ShotVideoTakeAvailableInput,
   ShotVideoTakeDialogueAudioReferenceChoice,
+  ShotVideoTakeDialogueAudioCapabilityReport,
 } from '../../../client/index.js';
 import {
   listLookbookSheets,
@@ -156,6 +157,10 @@ export function buildShotVideoTakeReferenceSections(input: {
     context: input.context,
     plan: input.plan,
   });
+  const dialogueAudioCapability = buildDialogueAudioCapabilityReport({
+    plan: input.plan,
+    choices: dialogueAudio.choices,
+  });
   const diagnostics = [
     ...outOfScopeReferenceDiagnostics({
       context: input.context,
@@ -165,6 +170,7 @@ export function buildShotVideoTakeReferenceSections(input: {
     ...castMembers.flatMap((group) => group.diagnostics),
     ...locations.flatMap((group) => group.diagnostics),
     ...dialogueAudio.diagnostics,
+    ...dialogueAudioCapability.diagnostics,
   ];
   return {
     references: {
@@ -178,10 +184,78 @@ export function buildShotVideoTakeReferenceSections(input: {
         plan: input.plan,
       }),
       dialogueAudio: dialogueAudio.choices,
+      dialogueAudioCapability,
       castMembers,
       locations,
     },
     diagnostics,
+  };
+}
+
+export function buildDialogueAudioCapabilityReport(input: {
+  plan: ShotVideoTakeGenerationPlan;
+  choices: ShotVideoTakeDialogueAudioReferenceChoice[];
+}): ShotVideoTakeDialogueAudioCapabilityReport {
+  const selectedCount = input.choices.filter((choice) => choice.included).length;
+  const audioRole = input.plan.route.inputRoles.find(
+    (role) => role.kind === 'audio' && role.mediaKind === 'audio'
+  );
+  const supported = Boolean(audioRole);
+  const maxCount = audioRole?.maxCount ?? null;
+  const modelLabel = input.plan.model.label;
+  if (!supported) {
+    const message = 'This model does not use audio references';
+    const diagnostics =
+      selectedCount > 0
+        ? [
+            createDiagnosticWarning(
+              'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
+              message,
+              { path: ['productionGroup', 'videoTakeProduction', 'modelChoice'] },
+              'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
+            ),
+          ]
+        : [];
+    return {
+      state: selectedCount > 0 ? 'unsupported' : 'ok',
+      supported: false,
+      selectedCount,
+      maxCount: null,
+      modelLabel,
+      message,
+      diagnostics,
+    };
+  }
+  const message =
+    typeof maxCount === 'number'
+      ? `${modelLabel} allows up to ${maxCount} audio references per generation`
+      : `${modelLabel} accepts audio references`;
+  if (typeof maxCount === 'number' && selectedCount > maxCount) {
+    return {
+      state: 'over-limit',
+      supported: true,
+      selectedCount,
+      maxCount,
+      modelLabel,
+      message,
+      diagnostics: [
+        createDiagnosticWarning(
+          'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
+          message,
+          { path: ['productionGroup', 'videoTakeProduction', 'requestedInputs'] },
+          `Select ${maxCount} or fewer dialogue audio references for this model route.`
+        ),
+      ],
+    };
+  }
+  return {
+    state: 'ok',
+    supported: true,
+    selectedCount,
+    maxCount,
+    modelLabel,
+    message,
+    diagnostics: [],
   };
 }
 

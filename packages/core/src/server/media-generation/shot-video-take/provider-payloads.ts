@@ -188,6 +188,20 @@ export function mapRouteInputSlot(
       `Shot video take spec requires a prepared ${slot.kind} input.`
     );
   }
+  if (
+    slot.kind === 'audio' &&
+    slot.mediaKind === 'audio' &&
+    typeof slot.maxCount === 'number' &&
+    matches.length > slot.maxCount
+  ) {
+    throw new ProjectDataError(
+      'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
+      `Selected dialogue audio references exceed this model route limit: ${matches.length} / ${slot.maxCount}.`,
+      {
+        suggestion: `Select ${slot.maxCount} or fewer dialogue audio references for this model route.`,
+      }
+    );
+  }
   matches.forEach((input) => {
     const key = `${slot.providerField}:${input.projectRelativePath}`;
     if (

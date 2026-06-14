@@ -365,7 +365,7 @@ describe('media generation dependency inventory estimates integration', () => {
     expect(firstFrameLine).toMatchObject({
       availability: { state: 'missing-generated' },
       generationDraft: {
-        state: 'estimate-only',
+        state: 'missing-input',
         reason: 'Author a concrete dependency draft before generating this shot input.',
       },
       purpose: 'shot.first-frame',
@@ -425,13 +425,13 @@ describe('media generation dependency inventory estimates integration', () => {
 
     expect(firstFrameLine).toMatchObject({
       availability: { state: 'missing-generated' },
-      generationDraft: { state: 'estimate-only' },
+      generationDraft: { state: 'missing-input' },
       pricing: { state: 'priced', estimatedUsd: 0.005 },
     });
     expect(firstFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
     expect(lastFrameLine).toMatchObject({
       availability: { state: 'missing-generated' },
-      generationDraft: { state: 'estimate-only' },
+      generationDraft: { state: 'missing-input' },
       pricing: { state: 'priced', estimatedUsd: 0.005 },
     });
     expect(lastFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');

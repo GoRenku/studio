@@ -5,6 +5,7 @@ import {
 } from '../../testing/shot-video-take-fixtures.js';
 import { createDeterministicIdGenerator } from '../../index.js';
 import { sceneDialogueAudioDependencyId } from '../dependency-identifiers.js';
+import { buildDialogueAudioCapabilityReport } from './reference-sections.js';
 import { groupReferenceInclusionOverride } from './reference-inclusions.js';
 
 describe('shot video take preflight and validation', () => {
@@ -634,6 +635,14 @@ describe('shot video take preflight and validation', () => {
         }),
       }),
     ]);
+    expect(report.references.dialogueAudioCapability).toMatchObject({
+      state: 'ok',
+      supported: true,
+      selectedCount: 1,
+      maxCount: 3,
+      modelLabel: 'Seedance 2.0',
+      message: 'Seedance 2.0 allows up to 3 audio references per generation',
+    });
     expect(report.plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -641,6 +650,10 @@ describe('shot video take preflight and validation', () => {
           purpose: 'scene.dialogue-audio',
           label: 'Mehmed II dialogue audio',
           availability: { state: 'missing-generated' },
+          generationDraft: {
+            state: 'missing-input',
+            reason: 'Assign a Cast Voice before generating dialogue audio.',
+          },
           pricing: expect.objectContaining({
             state: 'priced',
             estimatedUsd: expectedUrbanAudioEstimateUsd,
@@ -665,4 +678,124 @@ describe('shot video take preflight and validation', () => {
     );
     expect(groupReferenceInclusionOverride([null, null])).toBeNull();
   });
+
+  it('reports unsupported dialogue audio capability before audio is generated', () => {
+    const report = buildDialogueAudioCapabilityReport({
+      plan: dialogueCapabilityPlan({
+        inputRoles: [],
+      }),
+      choices: [
+        dialogueCapabilityChoice({
+          included: true,
+          audioState: 'not-generated',
+        }),
+      ],
+    });
+
+    expect(report).toMatchObject({
+      state: 'unsupported',
+      supported: false,
+      selectedCount: 1,
+      maxCount: null,
+      message: 'This model does not use audio references',
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
+          severity: 'warning',
+        }),
+      ],
+    });
+  });
+
+  it('reports over-limit dialogue audio capability before final spec creation', () => {
+    const report = buildDialogueAudioCapabilityReport({
+      plan: dialogueCapabilityPlan({
+        inputRoles: [
+          {
+            kind: 'audio',
+            mediaKind: 'audio',
+            required: false,
+            minCount: 0,
+            maxCount: 3,
+          },
+        ],
+      }),
+      choices: [
+        dialogueCapabilityChoice({ dialogueId: 'dialogue_001' }),
+        dialogueCapabilityChoice({ dialogueId: 'dialogue_002' }),
+        dialogueCapabilityChoice({ dialogueId: 'dialogue_003' }),
+        dialogueCapabilityChoice({ dialogueId: 'dialogue_004' }),
+      ],
+    });
+
+    expect(report).toMatchObject({
+      state: 'over-limit',
+      supported: true,
+      selectedCount: 4,
+      maxCount: 3,
+      message: 'Seedance 2.0 allows up to 3 audio references per generation',
+      diagnostics: [
+        expect.objectContaining({
+          code: 'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
+          severity: 'warning',
+        }),
+      ],
+    });
+  });
 });
+
+function dialogueCapabilityPlan(input: {
+  inputRoles: Array<{
+    kind: string;
+    mediaKind: string;
+    required: boolean;
+    minCount: number;
+    maxCount?: number | null;
+  }>;
+}) {
+  return {
+    model: { label: 'Seedance 2.0' },
+    route: { inputRoles: input.inputRoles },
+  } as Parameters<typeof buildDialogueAudioCapabilityReport>[0]['plan'];
+}
+
+function dialogueCapabilityChoice(
+  overrides: Partial<
+    Parameters<typeof buildDialogueAudioCapabilityReport>[0]['choices'][number]
+  > = {}
+) {
+  const dialogueId = overrides.dialogueId ?? 'dialogue_urban';
+  return {
+    dependencyId: sceneDialogueAudioDependencyId(dialogueId),
+    dialogueId,
+    castMemberId: 'cast_urban',
+    speakerName: 'Urban',
+    plainText: 'Hold the line.',
+    audioState: 'ready',
+    pickedTake: {
+      takeId: 'take_001',
+      takeLabel: 'Take 1',
+      createdAt: '2026-06-12T10:00:00.000Z',
+      assetId: 'asset_take_001',
+      assetFileId: 'file_take_001',
+    },
+    takeCount: 1,
+    defaultIncluded: true,
+    included: true,
+    required: false,
+    unavailableReason: null,
+    card: {
+      state: 'selected-ready',
+      mediaKind: 'audio',
+      dependencyId: sceneDialogueAudioDependencyId(dialogueId),
+      defaultIncluded: true,
+      included: true,
+      required: false,
+      inclusionOverride: null,
+      pricing: { state: 'not-applicable', estimatedUsd: null },
+      previews: [],
+      diagnostics: [],
+    },
+    ...overrides,
+  } as Parameters<typeof buildDialogueAudioCapabilityReport>[0]['choices'][number];
+}
