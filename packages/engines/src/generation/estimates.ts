@@ -179,7 +179,8 @@ function videoTokenPrice(
   }
   const duration = seconds(payload);
   const { width, height } = videoDimensions(payload);
-  const tokens = (width * height * duration * 30) / 1024;
+  const tokenFramesPerSecond = pricing.tokenFramesPerSecond ?? 30;
+  const tokens = (width * height * duration * tokenFramesPerSecond) / 1024;
   return (tokens / 1_000_000) * pricePerMillionTokens * count;
 }
 

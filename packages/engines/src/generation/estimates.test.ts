@@ -269,7 +269,47 @@ describe('generation estimates', () => {
         },
       })
     ).resolves.toMatchObject({
-      estimatedCostUsd: 3.402,
+      estimatedCostUsd: expect.closeTo(2.7216, 5),
+      warnings: [],
+      billableUnits: {
+        duration: '9',
+        resolution: '720p',
+        aspect_ratio: '16:9',
+      },
+    });
+  });
+
+  it('estimates bundled Seedance 2.0 fast video token pricing', async () => {
+    const catalog = await loadBundledGenerationCatalog();
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: 'bytedance/seedance-2.0/fast/image-to-video',
+          mediaKind: 'video',
+        },
+        request: {
+          prompt: 'A locked-off shot of smoke moving across a wall.',
+          parameters: {
+            duration: '9',
+            resolution: '720p',
+            aspect_ratio: '16:9',
+            generate_audio: true,
+          },
+          inputFiles: [
+            {
+              field: 'image_url',
+              projectRelativePath: 'generated/images/walls-in-smoke.png',
+              mediaKind: 'image',
+              required: true,
+            },
+          ],
+        },
+      })
+    ).resolves.toMatchObject({
+      estimatedCostUsd: expect.closeTo(2.17728, 5),
       warnings: [],
       billableUnits: {
         duration: '9',

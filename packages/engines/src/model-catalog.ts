@@ -23,6 +23,7 @@ export interface ModelPriceConfig {
   pricePerMinute?: number;
   pricePerCharacter?: number;
   pricePerMillionTokens?: number;
+  tokenFramesPerSecond?: number;
   pricePerMegapixel?: number;
   pricePerInputImage?: number;
   prices?: Array<Record<string, unknown>>;
