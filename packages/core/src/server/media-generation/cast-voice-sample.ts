@@ -1,4 +1,6 @@
 import type {
+  CastVoiceProviderCapability,
+  CastVoiceProviderRegistration,
   CastVoiceSampleGenerationContext,
   CastVoiceSampleGenerationSpec,
   CastVoiceSampleModelChoice,
@@ -17,7 +19,11 @@ import {
   readActiveCastDesignDocument,
   toCastDesignSummary,
 } from '../database/access/department-design.js';
-import { listCastVoiceRecords } from '../database/access/cast-voices.js';
+import {
+  listCastVoiceProviderRegistrationRecords,
+  listCastVoiceRecords,
+  type CastVoiceProviderRegistrationRecord,
+} from '../database/access/cast-voices.js';
 import {
   listAssetRelationshipPage,
   readAssetRelationship,
@@ -101,10 +107,11 @@ export async function buildCastVoiceSampleContext(
           id: voice.id,
           castMemberId: voice.castMemberId,
           name: voice.name,
-          provider: voice.provider,
-          model: voice.model,
-          voiceId: voice.voiceId,
           purpose: voice.purpose,
+          providerRegistrations: listCastVoiceProviderRegistrationRecords(
+            session,
+            voice.id
+          ).map(toCastVoiceProviderRegistration),
           sampleSource: castVoiceSampleSource(voice),
           sample: {
             ...sample,
@@ -126,6 +133,84 @@ export async function buildCastVoiceSampleContext(
       }),
     };
   });
+}
+
+function toCastVoiceProviderRegistration(
+  record: CastVoiceProviderRegistrationRecord
+): CastVoiceProviderRegistration {
+  return {
+    id: record.id,
+    castVoiceId: record.castVoiceId,
+    provider: toCastVoiceProvider(record.provider, record.id),
+    registrationModel: toCastVoiceProviderRegistrationModel(
+      record.registrationModel,
+      record.id
+    ),
+    externalVoiceId: record.externalVoiceId,
+    capabilities: parseRegistrationCapabilities(record),
+    sourceSampleAssetId: record.sourceSampleAssetId,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
+function toCastVoiceProvider(provider: string, registrationId: string) {
+  if (provider === 'elevenlabs' || provider === 'fal-ai') {
+    return provider;
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA358',
+    `Cast Voice provider registration ${registrationId} has unsupported provider: ${provider}.`
+  );
+}
+
+function toCastVoiceProviderRegistrationModel(model: string, registrationId: string) {
+  if (
+    model === 'eleven_v3' ||
+    model === 'eleven_multilingual_v2' ||
+    model === 'eleven_turbo_v2_5' ||
+    model === 'kling-video/create-voice'
+  ) {
+    return model;
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA358',
+    `Cast Voice provider registration ${registrationId} has unsupported model: ${model}.`
+  );
+}
+
+function parseRegistrationCapabilities(
+  record: CastVoiceProviderRegistrationRecord
+): CastVoiceProviderCapability[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(record.capabilitiesJson);
+  } catch {
+    throw invalidRegistrationCapabilities(record.id);
+  }
+  if (!Array.isArray(parsed)) {
+    throw invalidRegistrationCapabilities(record.id);
+  }
+  return Array.from(
+    new Set(
+      parsed.map((candidate) => {
+        if (
+          candidate === 'dialogue-audio-tts' ||
+          candidate === 'kling-video-voice-control'
+        ) {
+          return candidate;
+        }
+        throw invalidRegistrationCapabilities(record.id);
+      })
+    )
+  );
+}
+
+function invalidRegistrationCapabilities(registrationId: string): ProjectDataError {
+  return new ProjectDataError(
+    'PROJECT_DATA358',
+    `Cast Voice provider registration ${registrationId} has invalid capabilities.`
+  );
 }
 
 function castVoiceSampleSource(voice: ReturnType<typeof listCastVoiceRecords>[number]) {

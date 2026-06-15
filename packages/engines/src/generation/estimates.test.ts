@@ -357,6 +357,131 @@ describe('generation estimates', () => {
     });
   });
 
+  it('estimates bundled Kling V3, O3, and create-voice pricing rows', async () => {
+    const catalog = await loadBundledGenerationCatalog();
+    const cases = [
+      {
+        model: 'kling-video/v3/standard/text-to-video',
+        parameters: { duration: '5', generate_audio: false },
+        expected: 0.42,
+      },
+      {
+        model: 'kling-video/v3/standard/text-to-video',
+        parameters: { duration: '5', generate_audio: true },
+        expected: 0.63,
+      },
+      {
+        model: 'kling-video/v3/standard/image-to-video',
+        parameters: { duration: '5', generate_audio: true, uses_voice_control: true },
+        expected: 0.77,
+      },
+      {
+        model: 'kling-video/v3/pro/text-to-video',
+        parameters: { duration: '5', generate_audio: false },
+        expected: 0.56,
+      },
+      {
+        model: 'kling-video/v3/pro/text-to-video',
+        parameters: { duration: '5', generate_audio: true },
+        expected: 0.84,
+      },
+      {
+        model: 'kling-video/v3/pro/image-to-video',
+        parameters: { duration: '5', generate_audio: true, uses_voice_control: true },
+        expected: 0.98,
+      },
+      {
+        model: 'kling-video/o3/standard/reference-to-video',
+        parameters: { duration: '5', generate_audio: false },
+        expected: 0.42,
+      },
+      {
+        model: 'kling-video/o3/standard/reference-to-video',
+        parameters: { duration: '5', generate_audio: true },
+        expected: 0.56,
+      },
+      {
+        model: 'kling-video/o3/pro/reference-to-video',
+        parameters: { duration: '5', generate_audio: false },
+        expected: 0.56,
+      },
+      {
+        model: 'kling-video/o3/pro/reference-to-video',
+        parameters: { duration: '5', generate_audio: true },
+        expected: 0.7,
+      },
+      {
+        model: 'kling-video/o3/standard/video-to-video/reference',
+        parameters: { duration: '5' },
+        expected: 0.63,
+      },
+      {
+        model: 'kling-video/o3/pro/video-to-video/reference',
+        parameters: { duration: '5' },
+        expected: 0.84,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const estimate = await estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: testCase.model,
+          mediaKind: 'video',
+        },
+        request: {
+          prompt: 'A measured camera move through the scene.',
+          parameters: testCase.parameters,
+          pricingInputCounts: {},
+        },
+      });
+      expect(estimate.estimatedCostUsd).toBeCloseTo(testCase.expected, 6);
+    }
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: 'kling-video/create-voice',
+          mediaKind: 'json',
+        },
+        request: {
+          parameters: { voice_url: 'https://example.com/voice.mp3' },
+          pricingInputCounts: {},
+        },
+      })
+    ).resolves.toMatchObject({
+      estimatedCostUsd: 0.007,
+      warnings: [],
+    });
+  });
+
+  it('rejects Kling V3 voice-control estimates when audio generation is off', async () => {
+    const catalog = await loadBundledGenerationCatalog();
+
+    await expect(
+      estimateGeneration({
+        catalog,
+        policy: {
+          provider: 'fal-ai',
+          model: 'kling-video/v3/pro/image-to-video',
+          mediaKind: 'video',
+        },
+        request: {
+          prompt: 'A quiet character study.',
+          parameters: {
+            duration: '5',
+            generate_audio: false,
+            uses_voice_control: true,
+          },
+          pricingInputCounts: {},
+        },
+      })
+    ).rejects.toThrow('Kling V3 voice control pricing requires generate_audio: true.');
+  });
+
   it('estimates bundled ElevenLabs text-to-speech pricing by character for every TTS model', async () => {
     const catalog = await loadBundledGenerationCatalog();
     const text = 'A thousand years of stone remembered the sound.';

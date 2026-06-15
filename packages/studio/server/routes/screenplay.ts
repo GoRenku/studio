@@ -1006,7 +1006,8 @@ function parseShotVideoTakeInputModeQuery(
     raw === 'text-only' ||
     raw === 'first-frame' ||
     raw === 'first-last-frame' ||
-    raw === 'reference'
+    raw === 'reference' ||
+    raw === 'source-video-reference'
   ) {
     return raw;
   }
@@ -1015,7 +1016,7 @@ function parseShotVideoTakeInputModeQuery(
     message: 'Unsupported shot video take input mode query parameter.',
     issues: [],
     suggestion:
-      'Pass a supported inputModeId value such as text-only, first-frame, first-last-frame, or reference.',
+      'Pass a supported inputModeId value such as text-only, first-frame, first-last-frame, reference, or source-video-reference.',
   });
 }
 

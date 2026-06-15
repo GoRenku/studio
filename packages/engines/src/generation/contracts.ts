@@ -33,6 +33,7 @@ export interface GenerationPolicy {
 
 export interface GenerationInputFile {
   field: string;
+  payloadPath?: Array<string | number>;
   projectRelativePath: string;
   mediaKind: GenerationMediaKind;
   asArray?: boolean;

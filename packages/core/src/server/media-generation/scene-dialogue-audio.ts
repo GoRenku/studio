@@ -27,7 +27,12 @@ import {
   nextAssetRelationshipSortOrder,
 } from '../database/access/asset-relationships/index.js';
 import { insertAssetRecord } from '../database/access/assets.js';
-import { listCastVoiceRecords } from '../database/access/cast-voices.js';
+import {
+  listCastVoiceProviderRegistrationRecords,
+  listCastVoiceRecords,
+  type CastVoiceProviderRegistrationRecord,
+  type CastVoiceRecord,
+} from '../database/access/cast-voices.js';
 import { listProjectLocaleRecords } from '../database/access/project-locales.js';
 import {
   insertMediaGenerationSpec,
@@ -142,7 +147,7 @@ interface NormalizedSceneDialogueAudioSpec {
   castVoice: {
     id: string;
     name: string;
-    voiceId: string;
+    externalVoiceId: string;
   };
   voiceSettings: SceneDialogueAudioVoiceSettings;
   providerText: string;
@@ -323,7 +328,7 @@ export async function estimateSceneDialogueAudioPricingOnly(input: {
     const { estimateGeneration } = await import('@gorenku/studio-engines');
     const estimate = await estimateGeneration({
       policy: {
-        provider: 'elevenlabs',
+        provider: 'elevenlabs' as const,
         model: parseModel(pricingInput.modelChoice),
         mediaKind: 'audio',
         mode: 'text-to-speech',
@@ -550,7 +555,7 @@ export async function generateSceneDialogueAudioTake(
         castVoiceId: normalized.castVoice.id,
         castVoiceName: normalized.castVoice.name,
         provider: 'elevenlabs',
-        providerVoiceId: normalized.castVoice.voiceId.trim(),
+        providerVoiceId: normalized.castVoice.externalVoiceId.trim(),
         providerTextSnapshot: normalized.providerText,
         plainTextSnapshot: normalized.spec.plainText,
         v3TextSnapshot: normalized.spec.v3Text,
@@ -672,14 +677,10 @@ async function sceneDialogueHasUsableVoice(input: {
       const selectedVoice = listCastVoiceRecords(session, dialogue.castMemberId).find(
         (voice) => voice.id === existing.castVoiceId
       );
-      return Boolean(
-        selectedVoice &&
-          selectedVoice.provider === 'elevenlabs' &&
-          selectedVoice.voiceId.trim()
-      );
+      return Boolean(selectedVoice && dialogueTtsRegistration(session, selectedVoice));
     }
     return listCastVoiceRecords(session, dialogue.castMemberId).some(
-      (voice) => voice.provider === 'elevenlabs' && Boolean(voice.voiceId.trim())
+      (voice) => Boolean(dialogueTtsRegistration(session, voice))
     );
   });
 }
@@ -807,14 +808,13 @@ async function normalizeSpec(input: {
     const castVoice = listCastVoiceRecords(session, dialogue.castMemberId).find(
       (voice) => voice.id === input.spec.castVoiceId,
     );
-    if (
-      !castVoice ||
-      castVoice.provider !== 'elevenlabs' ||
-      !castVoice.voiceId.trim()
-    ) {
+    const providerRegistration = castVoice
+      ? dialogueTtsRegistration(session, castVoice)
+      : null;
+    if (!castVoice || !providerRegistration) {
       throw new ProjectDataError(
         'PROJECT_DATA386',
-        'This cast member is missing a usable ElevenLabs Cast Voice/provider voice id.',
+        'This cast member is missing a usable ElevenLabs Cast Voice provider registration.',
         {
           suggestion: MISSING_CAST_VOICE_REASON,
         },
@@ -842,7 +842,11 @@ async function normalizeSpec(input: {
     return {
       spec,
       castMemberId: dialogue.castMemberId,
-      castVoice,
+      castVoice: {
+        id: castVoice.id,
+        name: castVoice.name,
+        externalVoiceId: providerRegistration.externalVoiceId,
+      },
       voiceSettings,
       providerText,
       textTreatment,
@@ -879,7 +883,7 @@ function buildProviderPayload(
 ): Record<string, unknown> {
   return {
     text: normalized.providerText,
-    voice: normalized.castVoice.voiceId.trim(),
+    voice: normalized.castVoice.externalVoiceId.trim(),
     output_format: normalized.spec.outputFormat ?? DEFAULT_OUTPUT_FORMAT,
     ...(normalized.spec.languageCode
       ? { language_code: normalized.spec.languageCode }
@@ -961,17 +965,23 @@ function buildContextFromSession(
       session,
       dialogue.castMemberId,
     )
-      .filter((voice) => voice.provider === 'elevenlabs')
-      .map((voice) => ({
-        id: voice.id,
-        castMemberId: voice.castMemberId,
-        name: voice.name,
-        provider: 'elevenlabs',
-        model: voice.model,
-        voiceId: voice.voiceId,
-        purpose: voice.purpose,
-        usable: Boolean(voice.voiceId.trim()),
-      }));
+      .map((voice) => {
+        const registration = dialogueTtsRegistration(session, voice);
+        if (!registration) {
+          return null;
+        }
+        return {
+          id: voice.id,
+          castMemberId: voice.castMemberId,
+          name: voice.name,
+          provider: 'elevenlabs' as const,
+          model: registration.registrationModel,
+          voiceId: registration.externalVoiceId,
+          purpose: voice.purpose,
+          usable: Boolean(registration.externalVoiceId.trim()),
+        };
+      })
+      .filter((voice) => voice !== null);
   }
   return {
     purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
@@ -1061,13 +1071,12 @@ function defaultCastVoiceId(
     );
   }
   const voice = listCastVoiceRecords(session, castMemberId).find(
-    (candidate) =>
-      candidate.provider === 'elevenlabs' && candidate.voiceId.trim(),
+    (candidate) => Boolean(dialogueTtsRegistration(session, candidate)),
   );
   if (!voice) {
     throw new ProjectDataError(
       'PROJECT_DATA386',
-      'This cast member is missing a usable ElevenLabs Cast Voice/provider voice id.',
+      'This cast member is missing a usable ElevenLabs Cast Voice provider registration.',
       {
         suggestion: MISSING_CAST_VOICE_REASON,
       },
@@ -1094,6 +1103,36 @@ function normalizeOptionalCastVoiceId(
     );
   }
   return voice.id;
+}
+
+function dialogueTtsRegistration(
+  session: DatabaseSession,
+  voice: CastVoiceRecord,
+): CastVoiceProviderRegistrationRecord | null {
+  return (
+    listCastVoiceProviderRegistrationRecords(session, voice.id).find(
+      (registration) =>
+        registration.provider === 'elevenlabs' &&
+        registration.externalVoiceId.trim() &&
+        registrationHasCapability(registration, 'dialogue-audio-tts'),
+    ) ?? null
+  );
+}
+
+function registrationHasCapability(
+  registration: CastVoiceProviderRegistrationRecord,
+  capability: string,
+): boolean {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(registration.capabilitiesJson);
+  } catch {
+    throw new ProjectDataError(
+      'PROJECT_DATA358',
+      `Cast Voice provider registration ${registration.id} has invalid capabilities.`
+    );
+  }
+  return Array.isArray(parsed) && parsed.includes(capability);
 }
 
 function modelReports(): SceneDialogueAudioModelListReport['models'] {

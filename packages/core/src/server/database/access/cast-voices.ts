@@ -1,16 +1,15 @@
 import { and, asc, eq, or, sql } from 'drizzle-orm';
-import { castVoices } from '../../schema/index.js';
+import { castVoiceProviderRegistrations, castVoices } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type CastVoiceRecord = typeof castVoices.$inferSelect;
+export type CastVoiceProviderRegistrationRecord =
+  typeof castVoiceProviderRegistrations.$inferSelect;
 
 export interface InsertCastVoiceRecord {
   id: string;
   castMemberId: string;
   name: string;
-  provider: string;
-  model: string;
-  voiceId: string;
   purpose: string;
   sampleAssetId: string;
   sampleSourceKind: string;
@@ -18,6 +17,18 @@ export interface InsertCastVoiceRecord {
   sampleFetchedAt?: string | null;
   sampleApiBaseUrl?: string | null;
   sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InsertCastVoiceProviderRegistrationRecord {
+  id: string;
+  castVoiceId: string;
+  provider: string;
+  registrationModel: string;
+  externalVoiceId: string;
+  capabilitiesJson: string;
+  sourceSampleAssetId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +50,72 @@ export function listCastVoiceRecords(
     .where(eq(castVoices.castMemberId, castMemberId))
     .orderBy(asc(castVoices.sortOrder), asc(castVoices.name), asc(castVoices.id))
     .all();
+}
+
+export function insertCastVoiceProviderRegistrationRecord(
+  session: DatabaseSession,
+  record: InsertCastVoiceProviderRegistrationRecord
+): void {
+  session.db.insert(castVoiceProviderRegistrations).values(record).run();
+}
+
+export function listCastVoiceProviderRegistrationRecords(
+  session: DatabaseSession,
+  castVoiceId: string
+): CastVoiceProviderRegistrationRecord[] {
+  return session.db
+    .select()
+    .from(castVoiceProviderRegistrations)
+    .where(eq(castVoiceProviderRegistrations.castVoiceId, castVoiceId))
+    .orderBy(
+      asc(castVoiceProviderRegistrations.provider),
+      asc(castVoiceProviderRegistrations.registrationModel),
+      asc(castVoiceProviderRegistrations.id)
+    )
+    .all();
+}
+
+export function readCastVoiceProviderRegistrationRecord(
+  session: DatabaseSession,
+  input: { castVoiceId: string; registrationId: string }
+): CastVoiceProviderRegistrationRecord | null {
+  return (
+    session.db
+      .select()
+      .from(castVoiceProviderRegistrations)
+      .where(
+        and(
+          eq(castVoiceProviderRegistrations.castVoiceId, input.castVoiceId),
+          eq(castVoiceProviderRegistrations.id, input.registrationId)
+        )
+      )
+      .get() ?? null
+  );
+}
+
+export function deleteCastVoiceProviderRegistrationRecords(
+  session: DatabaseSession,
+  castVoiceId: string
+): void {
+  session.db
+    .delete(castVoiceProviderRegistrations)
+    .where(eq(castVoiceProviderRegistrations.castVoiceId, castVoiceId))
+    .run();
+}
+
+export function deleteCastVoiceProviderRegistrationRecord(
+  session: DatabaseSession,
+  input: { castVoiceId: string; registrationId: string }
+): void {
+  session.db
+    .delete(castVoiceProviderRegistrations)
+    .where(
+      and(
+        eq(castVoiceProviderRegistrations.castVoiceId, input.castVoiceId),
+        eq(castVoiceProviderRegistrations.id, input.registrationId)
+      )
+    )
+    .run();
 }
 
 export function readCastVoiceRecord(

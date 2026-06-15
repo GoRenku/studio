@@ -79,13 +79,17 @@ export type ShotVideoTakeInputModeId =
   | 'text-only'
   | 'first-frame'
   | 'first-last-frame'
-  | 'reference';
+  | 'reference'
+  | 'source-video-reference';
 
 export type ShotVideoTakeShotGroupMode = 'single-shot' | 'multi-shot';
 
 export type ShotVideoTakeModelChoice =
   | 'fal-ai/bytedance/seedance-2.0'
+  | 'fal-ai/kling-video/v3/standard'
   | 'fal-ai/kling-video/v3/pro'
+  | 'fal-ai/kling-video/o3/standard'
+  | 'fal-ai/kling-video/o3/pro'
   | 'fal-ai/veo3.1'
   | 'fal-ai/xai/grok-imagine-video-1.5'
   | 'fal-ai/ltx-3.2'

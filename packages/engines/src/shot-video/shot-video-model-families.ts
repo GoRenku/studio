@@ -4,13 +4,17 @@ export type ShotVideoTakeInputMode =
   | 'text-only'
   | 'first-frame'
   | 'first-last-frame'
-  | 'reference';
+  | 'reference'
+  | 'source-video-reference';
 
 export type ShotVideoTakeShotGroupMode = 'single-shot' | 'multi-shot';
 
 export type ShotVideoTakeModelChoice =
   | 'fal-ai/bytedance/seedance-2.0'
+  | 'fal-ai/kling-video/v3/standard'
   | 'fal-ai/kling-video/v3/pro'
+  | 'fal-ai/kling-video/o3/standard'
+  | 'fal-ai/kling-video/o3/pro'
   | 'fal-ai/veo3.1'
   | 'fal-ai/xai/grok-imagine-video-1.5'
   | 'fal-ai/ltx-3.2'
@@ -77,13 +81,45 @@ export interface ShotVideoRoutePricing {
   providerModel: string;
 }
 
+export interface ShotVideoRouteReferenceContract {
+  topLevelImages?: {
+    providerField: 'image_urls';
+    promptTokenPrefix: '@Image';
+    maxCount?: number;
+  };
+  elements?: {
+    providerField: 'elements';
+    promptTokenPrefix: '@Element';
+    supportsImageSet: boolean;
+    supportsVideo: boolean;
+    supportsVoiceId: boolean;
+    maxVideoElementCount?: number;
+    maxTotalWhenVideoPresent?: number;
+  };
+  sourceVideo?: {
+    providerField: 'video_url';
+    promptToken: '@Video1';
+    mode: 'reference' | 'edit';
+  };
+  audioReferences?: {
+    providerField: 'audio_urls';
+    promptTokenPrefix: '@Audio';
+    maxCount?: number;
+    requiresVisualReference: boolean;
+    generatedDialogueRequiresBestEffort: boolean;
+  };
+}
+
 export interface ShotVideoRoute {
   inputMode: ShotVideoTakeInputMode;
   shotGroupMode: ShotVideoTakeShotGroupMode;
+  providerFamily: 'seedance' | 'kling-v3' | 'kling-o3' | 'flat';
   providerModel: string;
   mode: Extract<GenerationMode, 'text-to-video' | 'image-to-video'>;
   inputSlots: ShotVideoRouteInputSlot[];
   parameters: ShotVideoRouteParameter[];
+  providerDefaults?: Record<string, ShotVideoTakeRouteParameterValue>;
+  referenceContract?: ShotVideoRouteReferenceContract;
   duration: ShotVideoDurationDomain | null;
   pricing: ShotVideoRoutePricing;
 }
@@ -104,6 +140,16 @@ const FIRST_FRAME_SLOT: ShotVideoRouteInputSlot = {
   minCount: 1,
   maxCount: 1,
   mediaKind: 'image',
+};
+
+const KLING_O3_FIRST_FRAME_SLOT: ShotVideoRouteInputSlot = {
+  ...FIRST_FRAME_SLOT,
+  providerField: 'image_url',
+};
+
+const KLING_V3_START_FRAME_SLOT: ShotVideoRouteInputSlot = {
+  ...FIRST_FRAME_SLOT,
+  providerField: 'start_image_url',
 };
 
 const LAST_FRAME_END_IMAGE_SLOT: ShotVideoRouteInputSlot = {
@@ -142,6 +188,16 @@ const OPTIONAL_REFERENCE_AUDIO_SLOT: ShotVideoRouteInputSlot = {
   maxCount: 3,
   mediaKind: 'audio',
   asArray: true,
+};
+
+const SOURCE_VIDEO_SLOT: ShotVideoRouteInputSlot = {
+  id: 'source-video',
+  kind: 'source-video',
+  providerField: 'video_url',
+  required: true,
+  minCount: 1,
+  maxCount: 1,
+  mediaKind: 'video',
 };
 
 const MULTI_SHOT_STORYBOARD_SLOT: ShotVideoRouteInputSlot = {
@@ -242,6 +298,126 @@ const klingImageParameters = klingTextParameters.filter(
   (parameter) => parameter.id !== 'aspect_ratio'
 );
 
+const klingV3Defaults: Record<string, ShotVideoTakeRouteParameterValue> = {
+  duration: '5',
+  generate_audio: true,
+  shot_type: 'customize',
+  negative_prompt: 'blur, distort, and low quality',
+  cfg_scale: 0.5,
+};
+
+const klingV3TextDefaults: Record<string, ShotVideoTakeRouteParameterValue> = {
+  ...klingV3Defaults,
+  aspect_ratio: '16:9',
+};
+
+const klingO3TextParameters: ShotVideoRouteParameter[] = [
+  selectParameter('duration', 'Duration', '5', [
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    '11',
+    '12',
+    '13',
+    '14',
+    '15',
+  ]),
+  selectParameter('aspect_ratio', 'Aspect Ratio', '16:9', ['16:9', '9:16', '1:1']),
+  switchParameter('generate_audio', 'Generate Audio', false),
+];
+
+const klingO3ImageParameters = klingO3TextParameters.filter(
+  (parameter) => parameter.id !== 'aspect_ratio'
+);
+
+const klingO3ReferenceParameters = klingO3TextParameters;
+
+const klingO3SourceVideoReferenceParameters: ShotVideoRouteParameter[] = [
+  selectParameter('duration', 'Duration', '5', [
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    '11',
+    '12',
+    '13',
+    '14',
+    '15',
+  ]),
+  selectParameter('aspect_ratio', 'Aspect Ratio', 'auto', ['auto', '16:9', '9:16', '1:1']),
+  switchParameter('keep_audio', 'Keep Audio', true),
+];
+
+const klingO3Defaults: Record<string, ShotVideoTakeRouteParameterValue> = {
+  duration: '5',
+  generate_audio: false,
+  shot_type: 'customize',
+};
+
+const klingO3TextDefaults: Record<string, ShotVideoTakeRouteParameterValue> = {
+  ...klingO3Defaults,
+  aspect_ratio: '16:9',
+};
+
+const klingO3SourceVideoReferenceDefaults: Record<string, ShotVideoTakeRouteParameterValue> = {
+  duration: '5',
+  keep_audio: true,
+  shot_type: 'customize',
+  aspect_ratio: 'auto',
+};
+
+const klingElementContract: NonNullable<ShotVideoRouteReferenceContract['elements']> = {
+  providerField: 'elements',
+  promptTokenPrefix: '@Element',
+  supportsImageSet: true,
+  supportsVideo: true,
+  supportsVoiceId: true,
+  maxVideoElementCount: 1,
+};
+
+const klingO3ReferenceContract: ShotVideoRouteReferenceContract = {
+  topLevelImages: {
+    providerField: 'image_urls',
+    promptTokenPrefix: '@Image',
+  },
+  elements: {
+    ...klingElementContract,
+    maxTotalWhenVideoPresent: 4,
+  },
+};
+
+const klingO3SourceVideoReferenceContract: ShotVideoRouteReferenceContract = {
+  ...klingO3ReferenceContract,
+  sourceVideo: {
+    providerField: 'video_url',
+    promptToken: '@Video1',
+    mode: 'reference',
+  },
+};
+
+const seedanceReferenceContract: ShotVideoRouteReferenceContract = {
+  topLevelImages: {
+    providerField: 'image_urls',
+    promptTokenPrefix: '@Image',
+  },
+  audioReferences: {
+    providerField: 'audio_urls',
+    promptTokenPrefix: '@Audio',
+    maxCount: 3,
+    requiresVisualReference: true,
+    generatedDialogueRequiresBestEffort: true,
+  },
+};
+
 const veoTextParameters: ShotVideoRouteParameter[] = [
   selectParameter('duration', 'Duration', '8s', ['4s', '6s', '8s']),
   selectParameter('aspect_ratio', 'Aspect Ratio', '16:9', ['16:9', '9:16']),
@@ -316,54 +492,90 @@ const happyHorseImageParameters = happyHorseTextParameters.filter(
 
 export const SHOT_VIDEO_MODEL_FAMILIES: ShotVideoModelFamily[] = [
   family('fal-ai/bytedance/seedance-2.0', 'Seedance', '2.0', [
-    route('text-only', 'single-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
-    route('text-only', 'multi-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
-    route('first-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('first-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('first-last-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('first-last-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('reference', 'single-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, MULTI_SHOT_STORYBOARD_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('seedance', 'text-only', 'single-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
+    route('seedance', 'text-only', 'multi-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
+    route('seedance', 'first-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('seedance', 'first-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('seedance', 'first-last-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('seedance', 'first-last-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
+    route('seedance', 'reference', 'single-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
+    route('seedance', 'reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, MULTI_SHOT_STORYBOARD_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
   ]),
-  family('fal-ai/kling-video/v3/pro', 'Kling', '3.0', [
-    route('text-only', 'single-shot', 'kling-video/v3/pro/text-to-video', 'text-to-video', [], klingTextParameters, KLING_DURATION),
-    route('text-only', 'multi-shot', 'kling-video/v3/pro/text-to-video', 'text-to-video', [], klingTextParameters, KLING_DURATION),
-    route('first-frame', 'single-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }], klingImageParameters, KLING_DURATION),
-    route('first-frame', 'multi-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }], klingImageParameters, KLING_DURATION),
-    route('first-last-frame', 'single-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'end_image_url' }], klingImageParameters, KLING_DURATION),
-    route('first-last-frame', 'multi-shot', 'kling-video/v3/pro/image-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'start_image_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'end_image_url' }], klingImageParameters, KLING_DURATION),
+  family('fal-ai/kling-video/v3/standard', 'Kling V3 Standard', '3.0', [
+    ...klingV3Routes('standard'),
+  ]),
+  family('fal-ai/kling-video/v3/pro', 'Kling V3 Pro', '3.0', [
+    ...klingV3Routes('pro'),
+  ]),
+  family('fal-ai/kling-video/o3/standard', 'Kling O3 Standard', 'O3', [
+    ...klingO3Routes('standard'),
+  ]),
+  family('fal-ai/kling-video/o3/pro', 'Kling O3 Pro', 'O3', [
+    ...klingO3Routes('pro'),
   ]),
   family('fal-ai/veo3.1', 'Veo', '3.1', [
-    route('text-only', 'single-shot', 'veo3.1', 'text-to-video', [], veoTextParameters, VEO_DURATION),
-    route('text-only', 'multi-shot', 'veo3.1', 'text-to-video', [], veoTextParameters, VEO_DURATION),
-    route('first-frame', 'single-shot', 'veo3.1/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], veoImageParameters, VEO_DURATION),
-    route('first-frame', 'multi-shot', 'veo3.1/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], veoImageParameters, VEO_DURATION),
-    route('first-last-frame', 'single-shot', 'veo3.1/first-last-frame-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'first_frame_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'last_frame_url' }], veoFirstLastParameters, VEO_DURATION),
-    route('first-last-frame', 'multi-shot', 'veo3.1/first-last-frame-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'first_frame_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'last_frame_url' }], veoFirstLastParameters, VEO_DURATION),
-    route('reference', 'single-shot', 'veo3.1/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], veoReferenceParameters, { kind: 'discrete', valuesSeconds: [8] }),
-    route('reference', 'multi-shot', 'veo3.1/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], veoReferenceParameters, { kind: 'discrete', valuesSeconds: [8] }),
+    route('flat', 'text-only', 'single-shot', 'veo3.1', 'text-to-video', [], veoTextParameters, VEO_DURATION),
+    route('flat', 'text-only', 'multi-shot', 'veo3.1', 'text-to-video', [], veoTextParameters, VEO_DURATION),
+    route('flat', 'first-frame', 'single-shot', 'veo3.1/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], veoImageParameters, VEO_DURATION),
+    route('flat', 'first-frame', 'multi-shot', 'veo3.1/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], veoImageParameters, VEO_DURATION),
+    route('flat', 'first-last-frame', 'single-shot', 'veo3.1/first-last-frame-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'first_frame_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'last_frame_url' }], veoFirstLastParameters, VEO_DURATION),
+    route('flat', 'first-last-frame', 'multi-shot', 'veo3.1/first-last-frame-to-video', 'image-to-video', [{ ...FIRST_FRAME_SLOT, providerField: 'first_frame_url' }, { ...LAST_FRAME_END_IMAGE_SLOT, providerField: 'last_frame_url' }], veoFirstLastParameters, VEO_DURATION),
+    route('flat', 'reference', 'single-shot', 'veo3.1/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], veoReferenceParameters, { kind: 'discrete', valuesSeconds: [8] }),
+    route('flat', 'reference', 'multi-shot', 'veo3.1/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], veoReferenceParameters, { kind: 'discrete', valuesSeconds: [8] }),
   ]),
   family('fal-ai/xai/grok-imagine-video-1.5', 'XAI Grok Imagine Video', '1.5', [
-    route('first-frame', 'single-shot', 'xai/grok-imagine-video/v1.5/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], grokParameters, GROK_DURATION),
-    route('first-frame', 'multi-shot', 'xai/grok-imagine-video/v1.5/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], grokParameters, GROK_DURATION),
+    route('flat', 'first-frame', 'single-shot', 'xai/grok-imagine-video/v1.5/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], grokParameters, GROK_DURATION),
+    route('flat', 'first-frame', 'multi-shot', 'xai/grok-imagine-video/v1.5/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], grokParameters, GROK_DURATION),
   ]),
   family('fal-ai/ltx-3.2', 'LTX', '3.2', [
-    route('text-only', 'single-shot', 'ltx-2.3/text-to-video', 'text-to-video', [], ltxTextParameters, LTX_DURATION),
-    route('text-only', 'multi-shot', 'ltx-2.3/text-to-video', 'text-to-video', [], ltxTextParameters, LTX_DURATION),
-    route('first-frame', 'single-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], ltxImageParameters, LTX_DURATION),
-    route('first-frame', 'multi-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], ltxImageParameters, LTX_DURATION),
-    route('first-last-frame', 'single-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], ltxImageParameters, LTX_DURATION),
-    route('first-last-frame', 'multi-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], ltxImageParameters, LTX_DURATION),
+    route('flat', 'text-only', 'single-shot', 'ltx-2.3/text-to-video', 'text-to-video', [], ltxTextParameters, LTX_DURATION),
+    route('flat', 'text-only', 'multi-shot', 'ltx-2.3/text-to-video', 'text-to-video', [], ltxTextParameters, LTX_DURATION),
+    route('flat', 'first-frame', 'single-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], ltxImageParameters, LTX_DURATION),
+    route('flat', 'first-frame', 'multi-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], ltxImageParameters, LTX_DURATION),
+    route('flat', 'first-last-frame', 'single-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], ltxImageParameters, LTX_DURATION),
+    route('flat', 'first-last-frame', 'multi-shot', 'ltx-2.3/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], ltxImageParameters, LTX_DURATION),
   ]),
   family('fal-ai/alibaba/happy-horse', 'Alibaba Happy Horse', '', [
-    route('text-only', 'single-shot', 'alibaba/happy-horse/text-to-video', 'text-to-video', [], happyHorseTextParameters, HAPPY_HORSE_DURATION),
-    route('text-only', 'multi-shot', 'alibaba/happy-horse/text-to-video', 'text-to-video', [], happyHorseTextParameters, HAPPY_HORSE_DURATION),
-    route('first-frame', 'single-shot', 'alibaba/happy-horse/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], happyHorseImageParameters, HAPPY_HORSE_DURATION),
-    route('first-frame', 'multi-shot', 'alibaba/happy-horse/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], happyHorseImageParameters, HAPPY_HORSE_DURATION),
-    route('reference', 'single-shot', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
-    route('reference', 'multi-shot', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('flat', 'text-only', 'single-shot', 'alibaba/happy-horse/text-to-video', 'text-to-video', [], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('flat', 'text-only', 'multi-shot', 'alibaba/happy-horse/text-to-video', 'text-to-video', [], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('flat', 'first-frame', 'single-shot', 'alibaba/happy-horse/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], happyHorseImageParameters, HAPPY_HORSE_DURATION),
+    route('flat', 'first-frame', 'multi-shot', 'alibaba/happy-horse/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], happyHorseImageParameters, HAPPY_HORSE_DURATION),
+    route('flat', 'reference', 'single-shot', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
+    route('flat', 'reference', 'multi-shot', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
   ]),
 ];
+
+function klingV3Routes(level: 'standard' | 'pro'): ShotVideoRoute[] {
+  const textModel = `kling-video/v3/${level}/text-to-video`;
+  const imageModel = `kling-video/v3/${level}/image-to-video`;
+  return [
+    route('kling-v3', 'text-only', 'single-shot', textModel, 'text-to-video', [], klingTextParameters, KLING_DURATION, klingV3TextDefaults),
+    route('kling-v3', 'text-only', 'multi-shot', textModel, 'text-to-video', [], klingTextParameters, KLING_DURATION, klingV3TextDefaults),
+    route('kling-v3', 'first-frame', 'single-shot', imageModel, 'image-to-video', [KLING_V3_START_FRAME_SLOT], klingImageParameters, KLING_DURATION, klingV3Defaults, { elements: klingElementContract }),
+    route('kling-v3', 'first-frame', 'multi-shot', imageModel, 'image-to-video', [KLING_V3_START_FRAME_SLOT], klingImageParameters, KLING_DURATION, klingV3Defaults, { elements: klingElementContract }),
+    route('kling-v3', 'first-last-frame', 'single-shot', imageModel, 'image-to-video', [KLING_V3_START_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], klingImageParameters, KLING_DURATION, klingV3Defaults, { elements: klingElementContract }),
+    route('kling-v3', 'first-last-frame', 'multi-shot', imageModel, 'image-to-video', [KLING_V3_START_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], klingImageParameters, KLING_DURATION, klingV3Defaults, { elements: klingElementContract }),
+  ];
+}
+
+function klingO3Routes(level: 'standard' | 'pro'): ShotVideoRoute[] {
+  const textModel = `kling-video/o3/${level}/text-to-video`;
+  const imageModel = `kling-video/o3/${level}/image-to-video`;
+  const referenceModel = `kling-video/o3/${level}/reference-to-video`;
+  const sourceVideoReferenceModel = `kling-video/o3/${level}/video-to-video/reference`;
+  return [
+    route('kling-o3', 'text-only', 'single-shot', textModel, 'text-to-video', [], klingO3TextParameters, KLING_DURATION, klingO3TextDefaults),
+    route('kling-o3', 'text-only', 'multi-shot', textModel, 'text-to-video', [], klingO3TextParameters, KLING_DURATION, klingO3TextDefaults),
+    route('kling-o3', 'first-frame', 'single-shot', imageModel, 'image-to-video', [KLING_O3_FIRST_FRAME_SLOT], klingO3ImageParameters, KLING_DURATION, klingO3Defaults),
+    route('kling-o3', 'first-frame', 'multi-shot', imageModel, 'image-to-video', [KLING_O3_FIRST_FRAME_SLOT], klingO3ImageParameters, KLING_DURATION, klingO3Defaults),
+    route('kling-o3', 'first-last-frame', 'single-shot', imageModel, 'image-to-video', [KLING_O3_FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], klingO3ImageParameters, KLING_DURATION, klingO3Defaults),
+    route('kling-o3', 'first-last-frame', 'multi-shot', imageModel, 'image-to-video', [KLING_O3_FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], klingO3ImageParameters, KLING_DURATION, klingO3Defaults),
+    route('kling-o3', 'reference', 'single-shot', referenceModel, 'image-to-video', [], klingO3ReferenceParameters, KLING_DURATION, klingO3TextDefaults, klingO3ReferenceContract),
+    route('kling-o3', 'reference', 'multi-shot', referenceModel, 'image-to-video', [], klingO3ReferenceParameters, KLING_DURATION, klingO3TextDefaults, klingO3ReferenceContract),
+    route('kling-o3', 'source-video-reference', 'single-shot', sourceVideoReferenceModel, 'image-to-video', [SOURCE_VIDEO_SLOT], klingO3SourceVideoReferenceParameters, KLING_DURATION, klingO3SourceVideoReferenceDefaults, klingO3SourceVideoReferenceContract),
+    route('kling-o3', 'source-video-reference', 'multi-shot', sourceVideoReferenceModel, 'image-to-video', [SOURCE_VIDEO_SLOT], klingO3SourceVideoReferenceParameters, KLING_DURATION, klingO3SourceVideoReferenceDefaults, klingO3SourceVideoReferenceContract),
+  ];
+}
 
 export function listShotVideoModelFamilies(): ShotVideoModelFamily[] {
   return SHOT_VIDEO_MODEL_FAMILIES;
@@ -399,21 +611,27 @@ function family(
 }
 
 function route(
+  providerFamily: ShotVideoRoute['providerFamily'],
   inputMode: ShotVideoTakeInputMode,
   shotGroupMode: ShotVideoTakeShotGroupMode,
   providerModel: string,
   mode: ShotVideoRoute['mode'],
   inputSlots: ShotVideoRouteInputSlot[],
   parameters: ShotVideoRouteParameter[],
-  duration: ShotVideoDurationDomain | null
+  duration: ShotVideoDurationDomain | null,
+  providerDefaults: Record<string, ShotVideoTakeRouteParameterValue> = {},
+  referenceContract?: ShotVideoRouteReferenceContract
 ): ShotVideoRoute {
   return {
     inputMode,
     shotGroupMode,
+    providerFamily,
     providerModel,
     mode,
     inputSlots,
     parameters,
+    ...(Object.keys(providerDefaults).length > 0 ? { providerDefaults } : {}),
+    ...(referenceContract ? { referenceContract } : {}),
     duration,
     pricing: { provider: 'fal-ai', providerModel },
   };

@@ -5,6 +5,7 @@ import { normalizeShotVideoRouteSettings } from './shot-video-route-parameters.j
 const route = {
   inputMode: 'text-only',
   shotGroupMode: 'single-shot',
+  providerFamily: 'flat',
   providerModel: 'fake-provider/text-to-video',
   mode: 'text-to-video',
   inputSlots: [],

@@ -10,7 +10,10 @@ describe('shot video route catalog validation', () => {
     expect(result.warnings).toEqual([]);
     expect(SHOT_VIDEO_MODEL_FAMILIES.map((family) => family.choice)).toEqual([
       'fal-ai/bytedance/seedance-2.0',
+      'fal-ai/kling-video/v3/standard',
       'fal-ai/kling-video/v3/pro',
+      'fal-ai/kling-video/o3/standard',
+      'fal-ai/kling-video/o3/pro',
       'fal-ai/veo3.1',
       'fal-ai/xai/grok-imagine-video-1.5',
       'fal-ai/ltx-3.2',

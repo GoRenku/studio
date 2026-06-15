@@ -4,6 +4,7 @@ import {
   Image as ImageIcon,
   Layers,
   Type,
+  Video,
   type LucideProps,
 } from 'lucide-react';
 import type { ShotVideoTakeInputModeId } from '@gorenku/studio-core/client';
@@ -17,6 +18,7 @@ const INPUT_MODE_ICONS: Partial<Record<ShotVideoTakeInputModeId, ComponentType<L
   'first-frame': ImageIcon,
   'first-last-frame': GalleryHorizontalEnd,
   reference: Layers,
+  'source-video-reference': Video,
 };
 
 interface SceneShotAiProductionInputModeListProps {

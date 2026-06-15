@@ -27,10 +27,24 @@ export type {
   CastVoiceAttachmentReport,
   CastVoiceElevenLabsSampleAttachmentDocument,
   CastVoiceListReport,
+  CastVoiceProvider,
+  CastVoiceProviderCapability,
+  CastVoiceProviderRegistrationListReport,
+  CastVoiceProviderRegistration,
+  CastVoiceProviderRegistrationModel,
+  CastVoiceProviderRegistrationReadReport,
+  CastVoiceProviderRegistrationRemoveReport,
+  CastVoiceProviderRegistrationWriteReport,
   CastVoiceReadReport,
   CastVoiceRemoveReport,
   CastVoiceSampleSource,
   CastVoiceValidationReport,
+  KlingVoiceRegistrationEstimateReport,
+  KlingVoiceRegistrationRunReport,
+  KlingVoiceRegistrationSpec,
+} from './cast-voices.js';
+export {
+  KLING_VOICE_REGISTRATION_PURPOSE,
 } from './cast-voices.js';
 export type {
   CastDesignContextReport,

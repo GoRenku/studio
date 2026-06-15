@@ -315,7 +315,7 @@ describe('media generation dependency inventory estimates integration', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(4.658, 6);
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7508, 6);
   });
 
   it('blocks generated shot dependencies when the agent has not authored a dependency draft', async () => {
@@ -387,7 +387,7 @@ describe('media generation dependency inventory estimates integration', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(4.658, 6);
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7508, 6);
   });
 
   it('prices first and last frame dependencies before their prompts are authored', async () => {
@@ -442,7 +442,7 @@ describe('media generation dependency inventory estimates integration', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.529, 6);
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8486, 6);
   });
 
   it('plans a valid shot.video-take spec with imported first and last frame inputs through the shared dependency planner', async () => {
@@ -569,7 +569,7 @@ describe('media generation dependency inventory estimates integration', () => {
         expect.objectContaining({
           dependencyLineId: 'root:shot.video-take',
           kind: 'final-video-generation',
-          pricing: { state: 'priced', estimatedUsd: 3.402 },
+          pricing: { state: 'priced', estimatedUsd: 2.7216 },
         }),
       ])
     );
@@ -698,13 +698,13 @@ describe('media generation dependency inventory estimates integration', () => {
         expect.objectContaining({
           dependencyLineId: 'root:shot.video-take',
           kind: 'final-video-generation',
-          pricing: { state: 'priced', estimatedUsd: 3.402 },
+          pricing: { state: 'priced', estimatedUsd: 2.7216 },
         }),
       ])
     );
     expect(estimate.plan?.estimate).toMatchObject({
       state: 'partial',
-      estimatedTotalUsd: 3.402,
+      estimatedTotalUsd: 2.7216,
       pricedLineCount: 3,
       missingLineCount: 0,
       requiresPriceOverride: true,

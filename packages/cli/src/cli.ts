@@ -228,6 +228,9 @@ function createCliFlags() {
     voice: {
       type: 'string',
     },
+    registration: {
+      type: 'string',
+    },
     location: {
       type: 'string',
     },
@@ -455,6 +458,9 @@ export async function runRenkuCli(
             project: cli.flags.project,
             cast: cli.flags.cast,
             voice: cli.flags.voice,
+            registration: cli.flags.registration,
+            approvalToken: cli.flags.approvalToken,
+            simulate: cli.flags.simulate,
             design: cli.flags.design,
             active: cli.flags.active,
             dryRun: cli.flags.dryRun,

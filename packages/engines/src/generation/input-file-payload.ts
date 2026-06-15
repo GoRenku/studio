@@ -20,10 +20,17 @@ export function createGenerationProviderPayloadBase(
 
 export function assignGenerationInputFilePayloadValue(input: {
   payload: Record<string, unknown>;
-  file: Pick<GenerationInputFile, 'field' | 'asArray' | 'projectRelativePath'>;
+  file: Pick<
+    GenerationInputFile,
+    'field' | 'payloadPath' | 'asArray' | 'projectRelativePath'
+  >;
   value: unknown;
 }): void {
   const { payload, file, value } = input;
+  if (file.payloadPath) {
+    assignNestedGenerationInputFilePayloadValue(payload, file, value);
+    return;
+  }
   if (file.asArray) {
     appendGenerationInputFilePayloadValue(payload, file, value);
     return;
@@ -44,6 +51,70 @@ export function assignGenerationInputFilePayloadValue(input: {
     );
   }
   payload[file.field] = value;
+}
+
+function assignNestedGenerationInputFilePayloadValue(
+  payload: Record<string, unknown>,
+  file: Pick<GenerationInputFile, 'payloadPath' | 'projectRelativePath'>,
+  value: unknown
+): void {
+  const path = file.payloadPath;
+  if (!path || path.length === 0) {
+    throw new Error('Generation input file payloadPath cannot be empty.');
+  }
+  let cursor: unknown = payload;
+  for (const segment of path.slice(0, -1)) {
+    if (typeof segment === 'number') {
+      if (!Array.isArray(cursor) || segment < 0 || segment >= cursor.length) {
+        throw new Error(
+          `Generation input file payloadPath points outside an array at segment ${segment}.`
+        );
+      }
+      cursor = cursor[segment];
+      continue;
+    }
+    if (!isRecord(cursor) || !Object.hasOwn(cursor, segment)) {
+      throw new Error(
+        `Generation input file payloadPath is missing object segment "${segment}".`
+      );
+    }
+    cursor = cursor[segment];
+  }
+  const leaf = path[path.length - 1];
+  if (Array.isArray(cursor) && typeof leaf === 'number') {
+    const existing = cursor[leaf];
+    const logicalValue = logicalInputValue(file.projectRelativePath);
+    if (
+      logicalValue &&
+      existing !== undefined &&
+      existing !== logicalValue &&
+      existing !== value
+    ) {
+      throw new Error(
+        `Generation input file payloadPath already contains a different value at "${path.join('.')}".`
+      );
+    }
+    cursor[leaf] = value;
+    return;
+  }
+  if (!isRecord(cursor) || typeof leaf !== 'string') {
+    throw new Error(
+      'Generation input file payloadPath must end with an object field or array index.'
+    );
+  }
+  const existing = cursor[leaf];
+  const logicalValue = logicalInputValue(file.projectRelativePath);
+  if (
+    logicalValue &&
+    existing !== undefined &&
+    existing !== logicalValue &&
+    existing !== value
+  ) {
+    throw new Error(
+      `Generation input file payloadPath already contains a different value at "${path.join('.')}".`
+    );
+  }
+  cursor[leaf] = value;
 }
 
 function appendGenerationInputFilePayloadValue(
@@ -86,6 +157,10 @@ function hasPayloadField(
   field: string
 ): boolean {
   return Object.prototype.hasOwnProperty.call(payload, field);
+}
+
+function isRecord(input: unknown): input is Record<string, unknown> {
+  return Boolean(input && typeof input === 'object' && !Array.isArray(input));
 }
 
 function logicalInputValue(projectRelativePath: string | undefined): string | null {

@@ -144,6 +144,22 @@ export interface ShotVideoTakeGenerationInput {
   projectRelativePath: ProjectRelativePath;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
+  providerReferenceRole?:
+    | 'top-level-image'
+    | 'element-frontal-image'
+    | 'element-reference-image'
+    | 'element-video'
+    | 'source-video'
+    | 'audio-reference';
+  elementId?: string;
+  providerVoiceRegistration?: {
+    id: string;
+    provider: 'fal-ai';
+    registrationModel: 'kling-video/create-voice';
+    externalVoiceId: string;
+    capabilities: Array<'kling-video-voice-control'>;
+  };
+  seedanceAudioReferenceIntent?: 'clean-voice-sample' | 'generated-dialogue-best-effort';
 }
 
 export interface ShotVideoTakeGenerationSpec {

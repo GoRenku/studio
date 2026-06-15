@@ -68,13 +68,14 @@ Use the focused documents below for current direction.
   `scene_shot_storyboard_image`. Core does not store crop boxes, grid cells, or
   extraction metadata for storyboard slicing.
 - Cast Voices are durable Cast Member-owned records in `cast_voice`. A Cast
-  Voice stores the provider, model, provider voice id, Renku reference name, and
-  purpose. It also stores `sampleSource` provenance so Renku can distinguish a
-  custom file, a generated Cast Voice sample, and an existing ElevenLabs
-  provider sample fetched by `voiceId + sampleId`. Its playable sample is still
-  a normal audio Asset related to the cast member with role `voice_sample`;
-  generic asset deletion must reject that sample while the Cast Voice points at
-  it.
+  Voice stores the Renku reference name, editorial purpose, playable sample
+  asset, and `sampleSource` provenance. Provider-specific handles live in
+  `cast_voice_provider_registration`, so the same Cast Voice can carry an
+  ElevenLabs dialogue-audio TTS registration and a Kling video voice-control
+  registration without treating either provider id as the Cast Voice itself.
+  The playable sample is still a normal audio Asset related to the cast member
+  with role `voice_sample`; generic asset deletion must reject that sample while
+  the Cast Voice points at it.
 - Asset relationship tables can store relationship-scoped `reference_name` and
   `purpose`. Use these fields when the same Asset needs different local meaning
   in different relationships, such as named Character Sheets or Voice Samples.

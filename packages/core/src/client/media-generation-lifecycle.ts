@@ -98,6 +98,7 @@ export interface PreparedMediaGeneration {
       prompt?: string;
       inputFiles?: Array<{
         field: string;
+        payloadPath?: Array<string | number>;
         projectRelativePath: string;
         mediaKind: 'image' | 'audio' | 'video';
         asArray?: boolean;

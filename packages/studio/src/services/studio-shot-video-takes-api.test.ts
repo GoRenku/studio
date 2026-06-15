@@ -143,6 +143,30 @@ describe('studio-shot-video-takes-api', () => {
     expect(lastBody()).toEqual({ productionGroup: PRODUCTION_GROUP });
   });
 
+  it.each([
+    'fal-ai/kling-video/v3/standard',
+    'fal-ai/kling-video/v3/pro',
+    'fal-ai/kling-video/o3/standard',
+    'fal-ai/kling-video/o3/pro',
+  ] as const)('estimates the %s production group without remapping the model', async (modelChoice) => {
+    vi.mocked(global.fetch).mockResolvedValue(okResponse({ estimate: {} }));
+    const productionGroup: ShotVideoTakeProductionGroup = {
+      productionGroupId: 'scene_shot_video_take_group_001',
+      shotIds: ['shot_001'],
+      videoTakeProduction: {
+        inputModeId: 'reference',
+        modelChoice,
+        parameterValues: { duration: '5' },
+      },
+    };
+    await estimateShotVideoTakeProduction(
+      'constantinople',
+      'scene_hook',
+      productionGroup
+    );
+    expect(lastBody()).toEqual({ productionGroup });
+  });
+
   it('selects a reusable input with shotIds and inputId', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       okResponse({ resource: {}, resourceKeys: [] })

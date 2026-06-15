@@ -148,8 +148,8 @@ Production UI table.
 
 | Model family | Main modes | Inputs to model | Duration style | Audio | Notes for Renku |
 | --- | --- | --- | --- | --- | --- |
-| Seedance 2.0 | text-to-video, image-to-video, reference-to-video, edit, extend | prompt; start image; optional end image; reference images, video clips, and audio files on reference endpoint | text endpoint accepts `auto` or string seconds `4` through `15`; reference/edit endpoints need endpoint-specific checks | native audio on supported endpoints | Good candidate for reference-heavy and agent-prepared dependency workflows. Needs endpoint-level rows for text, image, reference, edit, and extend. |
-| Kling 3.0 | text-to-video, image-to-video, multi-shot, first/last-frame on I2V variants, elements/references, lipsync variants | prompt or `multi_prompt`; `start_image_url`; optional `end_image_url`; `elements`; audio or voice ids on specific variants | V3 endpoints expose `3` through `15`; older Pro endpoints often expose `5` or `10` | native audio toggle on V3; voice/lipsync variants are separate contracts | Strong fit for multi-shot generation, but model catalog must distinguish V3 text, V3 image, 4K, Pro/Standard, and lipsync endpoints. |
+| Seedance 2.0 | text-to-video, image-to-video, reference-to-video, edit, extend | prompt; start image; optional end image; reference images, video clips, and audio files on reference endpoint | text endpoint accepts `auto`, or string seconds `4` through `15`; reference/edit endpoints need endpoint-specific checks | native audio on supported endpoints | Good candidate for reference-heavy and agent-prepared dependency workflows. Audio files are per-generation voice/style references, not provider voice registrations or exact dialogue tracks. |
+| Kling 3.0 / O3 | V3 text-to-video, V3 image-to-video, O3 text-to-video, O3 image-to-video, O3 reference-to-video, O3 video-to-video reference/edit, multi-shot, elements/references, lipsync variants | prompt or `multi_prompt`; V3 `start_image_url`; optional V3 `end_image_url`; O3 `image_url`; O3 `image_urls`; O3/V3 `elements`; O3 V2V `video_url`; Kling provider `voice_id` on supported video-backed elements | V3 and O3 text/image/reference endpoints expose `3` through `15`; O3 V2V source video inputs require 3-10s `.mp4`/`.mov` provider media | V3 native audio toggle and V3 voice-control surcharge; O3 text/image/reference native audio toggle without a published voice-control surcharge as of June 14, 2026 | Strong fit for route-specific generation, but catalog must keep V3/O3 level, input mode, element, source-video, and voice-registration contracts explicit. Kling voice control uses `kling-video/create-voice` to create a reusable provider `voice_id`; it is not a direct audio upload to a video route. |
 | Veo 3.1 | text-to-video, image-to-video, first/last-frame interpolation, reference-based generation, extend-video | prompt; images on image/reference/first-last variants; source video for extend | up to 8 seconds per generation; extend mode adds shorter continuation steps | native audio toggle; pricing changes when audio is enabled | Strong candidate for high-quality first-frame, first/last, and dialogue/audio shots. Catalog must split standard/fast and mode-specific endpoints. |
 | Grok Imagine Video 1.5 | text-to-video, image-to-video, reference-to-video, edit-video, extend-video | prompt; image; reference images; source video for edit/extend | API examples use explicit `duration`; options must be read from xAI model schema at implementation time | provider documentation prices output video by second/resolution; audio support must be verified per endpoint | Useful for xAI-native image/video workflows. Request modes are mutually exclusive, so catalog rows or validation must prevent mixing image and references. |
 | Alibaba Happy Horse | image-to-video | required first-frame image plus prompt | integer seconds `3` through `15` | no separate audio-input contract in the current fal endpoint | Treat as specialized I2V. It can serve first-frame intent but not text-only or reference-heavy intent. |
@@ -190,6 +190,13 @@ Reference-to-video currently accepts multiple modalities: up to nine images,
 three video clips, and three audio files. The prompt references them with
 provider tokens such as `[Image1]`, `[Video1]`, and `[Audio1]`. The UI should
 not expose token mapping directly; provider payload preparation should own that.
+The official Seedance 2.0 model card describes audio as one of the supported
+multimodal reference inputs, with up to three audio clips on the open platform
+as of the June 14, 2026 review. Renku therefore treats Seedance `audio_urls` as
+per-generation voice/style conditioning. Clean Cast Voice samples are the
+default audio reference; generated dialogue audio is allowed only with explicit
+best-effort intent because the model card does not promise exact dialogue,
+timing, or waveform preservation.
 
 Pricing dimensions:
 
@@ -198,9 +205,10 @@ Pricing dimensions:
 - audio inclusion;
 - token-like output-size formula in fal pricing text.
 
-### Kling 3.0
+### Kling 3.0 / O3
 
-Observed fal V3 Pro text-to-video request fields include:
+Observed fal V3 Standard/Pro text-to-video and image-to-video request fields
+include:
 
 - `prompt` or `multi_prompt`, but not both;
 - `duration`;
@@ -221,6 +229,41 @@ Image-to-video V3 variants add:
 - optional `end_image_url`;
 - optional `elements`, which can represent character/object examples and can be
   referenced in the prompt.
+
+O3 route contracts differ from V3 and must stay explicit:
+
+- O3 image-to-video uses required `image_url`, not V3 `start_image_url`;
+- O3 reference-to-video uses optional top-level `image_urls` plus `elements`;
+- O3 video-to-video reference/edit uses required `video_url`, optional
+  `image_urls`, and optional elements. fal's current O3 V2V pages require
+  `.mp4` or `.mov` source videos between 3 and 10 seconds.
+
+Kling voice control is modeled as provider registration:
+
+- `fal-ai/kling-video/create-voice` accepts `voice_url` from `.mp3`, `.wav`,
+  `.mp4`, or `.mov` source media, requires clean single-voice content from 5 to
+  30 seconds, costs `$0.007` per generation, and returns `voice_id`;
+- a successful `voice_id` is stored as a Cast Voice Provider Registration with
+  capability `kling-video-voice-control`;
+- video generation payloads may attach that provider id only as
+  `elements[].voice_id` on video-backed Kling elements.
+
+Pricing was rechecked against fal.ai docs on June 14, 2026:
+
+- V3 Standard: `$0.084/sec` audio off, `$0.126/sec` audio on, `$0.154/sec`
+  audio on with voice control;
+- V3 Pro: `$0.112/sec` audio off, `$0.168/sec` audio on, `$0.196/sec` audio on
+  with voice control;
+- O3 Standard text/image/reference: `$0.084/sec` audio off and `$0.112/sec`
+  audio on;
+- O3 Pro text/image/reference: `$0.112/sec` audio off and `$0.14/sec` audio on;
+- O3 Standard V2V reference/edit: `$0.126/sec`;
+- O3 Pro V2V edit: `$0.168/sec`.
+
+The reviewed O3 pages publish `voice_id` in element schemas on routes that use
+combo elements, but they do not publish an O3 voice-control surcharge. Renku
+therefore prices O3 without a derived voice-control surcharge until fal
+publishes one.
 
 There are also lipsync-style variants with their own contracts:
 

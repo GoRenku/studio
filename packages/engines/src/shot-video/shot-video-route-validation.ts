@@ -118,6 +118,27 @@ function validateFields(input: {
       ));
     }
   }
+  for (const field of Object.keys(input.route.providerDefaults ?? {})) {
+    if (!Object.hasOwn(input.properties, field)) {
+      input.issues.push(errorIssue(
+        'ENGINES_SHOT_VIDEO_ROUTE_UNKNOWN_INPUT_FIELD',
+        `Shot video route default field is not in provider schema: ${field}.`,
+        input.path.concat('providerDefaults', field),
+        'Use only provider defaults that are accepted by the selected route schema.'
+      ));
+    }
+  }
+  const referenceFields = referenceContractProviderFields(input.route);
+  for (const field of referenceFields) {
+    if (!Object.hasOwn(input.properties, field)) {
+      input.issues.push(errorIssue(
+        'ENGINES_SHOT_VIDEO_ROUTE_UNKNOWN_INPUT_FIELD',
+        `Shot video route reference contract field is not in provider schema: ${field}.`,
+        input.path.concat('referenceContract'),
+        'Use the exact provider field from the route input schema.'
+      ));
+    }
+  }
 }
 
 function validateDefaults(input: {
@@ -177,6 +198,8 @@ function validateRequiredFields(input: {
     ...PROMPT_FIELDS,
     ...input.route.inputSlots.map((slot) => slot.providerField),
     ...input.route.parameters.map((parameter) => parameter.providerField),
+    ...Object.keys(input.route.providerDefaults ?? {}),
+    ...referenceContractProviderFields(input.route),
   ]);
   for (const field of input.required) {
     if (!supplied.has(field)) {
@@ -188,6 +211,17 @@ function validateRequiredFields(input: {
       ));
     }
   }
+}
+
+function referenceContractProviderFields(route: ShotVideoRoute): string[] {
+  const contract = route.referenceContract;
+  const fields: Array<string | undefined> = [
+    contract?.topLevelImages?.providerField,
+    contract?.elements?.providerField,
+    contract?.sourceVideo?.providerField,
+    contract?.audioReferences?.providerField,
+  ];
+  return fields.filter((field): field is string => typeof field === 'string');
 }
 
 function durationSeconds(value: unknown): number | null {

@@ -37,7 +37,10 @@ export function SceneShotAiProductionTab({
     planState,
   } = production;
 
-  const inputModeOptions = useMemo(() => buildInputModeOptions(), []);
+  const inputModeOptions = useMemo(
+    () => buildInputModeOptions(models, selectedModel),
+    [models, selectedModel]
+  );
   const isMultiShotGroup = (productionGroup?.shotIds.length ?? 1) > 1;
 
   const modelRows = useMemo(

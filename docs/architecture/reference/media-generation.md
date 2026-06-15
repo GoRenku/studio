@@ -367,9 +367,24 @@ The only model choices for this purpose are direct ElevenLabs TTS models:
 - `elevenlabs/eleven_turbo_v2_5`
 
 Do not use fal.ai or Wavespeed ElevenLabs wrapper models for Cast Voice
-samples. The provider payload maps `voiceId` to ElevenLabs `voice`,
-`voiceSettings.similarityBoost` to `voice_settings.similarity_boost`, and
-`languageCode` to `language_code`.
+samples. Dialogue-audio generation reads the Cast Voice's ElevenLabs provider
+registration with capability `dialogue-audio-tts`, maps its external provider
+voice id to ElevenLabs `voice`, maps `voiceSettings.similarityBoost` to
+`voice_settings.similarity_boost`, and maps `languageCode` to `language_code`.
+
+Kling native-audio video voice control is a separate provider registration
+flow. `renku cast voice kling-registration run` sends a clean 5-30 second voice
+or single-speaker video sample to `fal-ai/kling-video/create-voice`, stores the
+returned `voice_id` as a Cast Voice Provider Registration with capability
+`kling-video-voice-control`, and later binds that provider id only to
+video-backed Kling elements. Do not send a generated dialogue-audio take
+directly to a Kling V3/O3 video route for native voice control.
+
+Seedance 2.0 reference-video audio is not a durable voice registration. Its
+`audio_urls` inputs are per-generation reference media for voice/style
+conditioning. The default Renku path should use clean Cast Voice samples; exact
+dialogue timing or waveform preservation belongs in lipsync, talking-head, or
+composition workflows instead.
 
 Profile images should usually be generated after a character sheet exists. When
 using an edit model, the generated request carries a logical `image_urls` file
@@ -826,9 +841,12 @@ not `renku media import`:
 renku cast voice attach --file <cast-voice-attachment-json> --json
 ```
 
-The attachment document names the cast member, reference name, purpose,
-provider, model, voice id, and sample source path. Generated attachments may
-include a generation receipt; imported external samples may omit it.
+The attachment document names the cast member, reference name, purpose, initial
+ElevenLabs registration details, and sample source path. Generated attachments
+may include a generation receipt; imported external samples may omit it.
+Additional provider handles are managed through Cast Voice Provider
+Registration commands so one Cast Voice can safely share one playable sample
+across ElevenLabs TTS and Kling video voice-control workflows.
 
 Single-file imports expect a project-relative source path. Location Environment
 Sheet imports expect JSON files whose entries are project-relative paths.

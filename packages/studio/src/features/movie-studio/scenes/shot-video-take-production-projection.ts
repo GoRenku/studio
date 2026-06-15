@@ -17,6 +17,7 @@ export const SHOT_VIDEO_TAKE_INPUT_MODE_IDS: ShotVideoTakeInputModeId[] = [
   'first-frame',
   'first-last-frame',
   'reference',
+  'source-video-reference',
 ];
 
 const INPUT_MODE_LABELS: Partial<Record<ShotVideoTakeInputModeId, string>> = {
@@ -24,6 +25,7 @@ const INPUT_MODE_LABELS: Partial<Record<ShotVideoTakeInputModeId, string>> = {
   'first-frame': 'First frame',
   'first-last-frame': 'First + last frame',
   reference: 'Reference',
+  'source-video-reference': 'Source video',
 };
 
 const INPUT_MODE_UNAVAILABLE_REASON: Partial<Record<ShotVideoTakeInputModeId, string>> = {
@@ -31,6 +33,7 @@ const INPUT_MODE_UNAVAILABLE_REASON: Partial<Record<ShotVideoTakeInputModeId, st
   'first-frame': 'No first frame',
   'first-last-frame': 'No first/last frame',
   reference: 'No reference input',
+  'source-video-reference': 'No source video',
 };
 
 export interface InputModeOption {
@@ -40,12 +43,19 @@ export interface InputModeOption {
   disabledTooltip: string | null;
 }
 
-export function buildInputModeOptions(): InputModeOption[] {
+export function buildInputModeOptions(
+  models?: ShotVideoTakeModelListReport | null,
+  selectedModel?: ShotVideoTakeModelChoice
+): InputModeOption[] {
+  const model = models ? findModelReport(models, selectedModel) : null;
   return SHOT_VIDEO_TAKE_INPUT_MODE_IDS.map((id) => ({
     id,
     label: INPUT_MODE_LABELS[id] ?? id,
-    enabled: true,
-    disabledTooltip: null,
+    enabled: !model || model.supportedInputModes.includes(id),
+    disabledTooltip:
+      model && !model.supportedInputModes.includes(id)
+        ? (INPUT_MODE_UNAVAILABLE_REASON[id] ?? 'Unavailable')
+        : null,
   }));
 }
 

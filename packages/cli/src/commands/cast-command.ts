@@ -30,6 +30,9 @@ export async function runCastCommand(options: {
     project?: string;
     cast?: string;
     voice?: string;
+    registration?: string;
+    approvalToken?: string;
+    simulate?: boolean;
     design?: string;
     active?: boolean;
     dryRun?: boolean;
@@ -183,11 +186,17 @@ export async function runCastCommand(options: {
       handlers: castVoiceCommandHandlers,
       unknownCommand: unknownCastVoiceCommand,
     });
-    if (nested === 'attach' || nested === 'remove') {
+    if (
+      nested === 'attach' ||
+      nested === 'remove' ||
+      (nested === 'registrations' &&
+        (options.input[2] === 'create' || options.input[2] === 'remove')) ||
+      (nested === 'kling-registration' && options.input[2] === 'run')
+    ) {
       await appendStudioResourceChangedEvent({
         runtime,
         report: result as StudioResourceChangedReport,
-        command: `cast voice ${nested}`,
+        command: `cast voice ${options.input.slice(1).join(' ')}`,
       });
     }
     writeJson(options.io, result);

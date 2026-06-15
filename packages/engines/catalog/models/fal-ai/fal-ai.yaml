@@ -999,48 +999,68 @@ models:
     mime:
       - video/mp4
     price:
-      function: costByVideoDurationAndWithAudio
-      inputs: [duration, generate_audio]
+      function: costByVideoDurationAndAudioVoiceControl
+      inputs: [duration, generate_audio, uses_voice_control]
       prices:
         - generate_audio: true
+          uses_voice_control: true
+          pricePerSecond: 0.196
+        - generate_audio: true
+          uses_voice_control: false
           pricePerSecond: 0.168
         - generate_audio: false
+          uses_voice_control: false
           pricePerSecond: 0.112
   - name: kling-video/v3/pro/text-to-video
     type: video
     mime:
       - video/mp4
     price:
-      function: costByVideoDurationAndWithAudio
-      inputs: [duration, generate_audio]
+      function: costByVideoDurationAndAudioVoiceControl
+      inputs: [duration, generate_audio, uses_voice_control]
       prices:
         - generate_audio: true
+          uses_voice_control: true
+          pricePerSecond: 0.196
+        - generate_audio: true
+          uses_voice_control: false
           pricePerSecond: 0.168
         - generate_audio: false
+          uses_voice_control: false
           pricePerSecond: 0.112
   - name: kling-video/v3/standard/image-to-video
     type: video
     mime:
       - video/mp4
     price:
-      function: costByVideoDurationAndWithAudio
-      inputs: [duration, generate_audio]
+      function: costByVideoDurationAndAudioVoiceControl
+      inputs: [duration, generate_audio, uses_voice_control]
       prices:
         - generate_audio: true
+          uses_voice_control: true
+          pricePerSecond: 0.154
+        - generate_audio: true
+          uses_voice_control: false
           pricePerSecond: 0.126
         - generate_audio: false
+          uses_voice_control: false
           pricePerSecond: 0.084
   - name: kling-video/v3/standard/text-to-video
     type: video
     mime:
       - video/mp4
     price:
-      function: costByVideoDurationAndWithAudio
-      inputs: [duration, generate_audio]
+      function: costByVideoDurationAndAudioVoiceControl
+      inputs: [duration, generate_audio, uses_voice_control]
       prices:
         - generate_audio: true
+          uses_voice_control: true
+          pricePerSecond: 0.154
+        - generate_audio: true
+          uses_voice_control: false
           pricePerSecond: 0.126
         - generate_audio: false
+          uses_voice_control: false
           pricePerSecond: 0.084
   # Sora 2 Models
   - name: sora-2/text-to-video

@@ -1,16 +1,39 @@
 import type { Asset } from './assets.js';
+import type { GenerationEstimate } from '@gorenku/studio-engines';
 import type { ProjectRelativePath } from './project.js';
 
 export interface CastVoice {
   id: string;
   castMemberId: string;
   name: string;
-  provider: string;
-  model: string;
-  voiceId: string;
   purpose: string;
+  providerRegistrations: CastVoiceProviderRegistration[];
   sampleSource: CastVoiceSampleSource;
   sample: Asset;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CastVoiceProvider = 'elevenlabs' | 'fal-ai';
+
+export type CastVoiceProviderRegistrationModel =
+  | 'eleven_v3'
+  | 'eleven_multilingual_v2'
+  | 'eleven_turbo_v2_5'
+  | 'kling-video/create-voice';
+
+export type CastVoiceProviderCapability =
+  | 'dialogue-audio-tts'
+  | 'kling-video-voice-control';
+
+export interface CastVoiceProviderRegistration {
+  id: string;
+  castVoiceId: string;
+  provider: CastVoiceProvider;
+  registrationModel: CastVoiceProviderRegistrationModel;
+  externalVoiceId: string;
+  capabilities: CastVoiceProviderCapability[];
+  sourceSampleAssetId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +90,67 @@ export interface CastVoiceListReport {
 
 export interface CastVoiceReadReport {
   voice: CastVoice;
+}
+
+export interface CastVoiceProviderRegistrationListReport {
+  registrations: CastVoiceProviderRegistration[];
+}
+
+export interface CastVoiceProviderRegistrationReadReport {
+  registration: CastVoiceProviderRegistration;
+}
+
+export interface CastVoiceProviderRegistrationWriteReport {
+  project: {
+    id?: string;
+    name: string;
+  };
+  voice: CastVoice;
+  registration: CastVoiceProviderRegistration;
+  resourceKeys: string[];
+}
+
+export interface CastVoiceProviderRegistrationRemoveReport {
+  project: {
+    id?: string;
+    name: string;
+  };
+  removed: {
+    castMemberId: string;
+    castVoiceId: string;
+    registrationId: string;
+  };
+  resourceKeys: string[];
+}
+
+export const KLING_VOICE_REGISTRATION_PURPOSE = 'klingVoiceRegistration' as const;
+
+export interface KlingVoiceRegistrationSpec {
+  purpose: typeof KLING_VOICE_REGISTRATION_PURPOSE;
+  castVoiceName: string;
+  castMemberId: string;
+  sourceCastVoiceId?: string;
+  sourceSampleAssetId?: string | null;
+  sourceProjectRelativePath: ProjectRelativePath;
+}
+
+export interface KlingVoiceRegistrationEstimateReport {
+  spec: KlingVoiceRegistrationSpec;
+  providerPayload: Record<string, unknown>;
+  estimate: GenerationEstimate;
+}
+
+export interface KlingVoiceRegistrationRunReport {
+  project: {
+    id?: string;
+    name: string;
+  };
+  spec: KlingVoiceRegistrationSpec;
+  providerPayload: Record<string, unknown>;
+  providerVoiceId: string;
+  registration: CastVoiceProviderRegistration;
+  voice: CastVoice;
+  resourceKeys: string[];
 }
 
 export interface CastVoiceValidationReport {

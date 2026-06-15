@@ -51,6 +51,12 @@ describe('CLI command architecture', () => {
       'validate',
       'attach',
       'remove',
+      'registrations list',
+      'registrations show',
+      'registrations create',
+      'registrations remove',
+      'kling-registration estimate',
+      'kling-registration run',
     ]);
   });
 

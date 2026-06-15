@@ -312,7 +312,9 @@ New Cast Members use `key`, not `id`. Existing Cast Members use durable `id`.
 ## `renku cast voice`
 
 List, inspect, validate, attach, and remove durable Cast Voice references for a
-Cast Member.
+Cast Member. Cast Voice records own the Renku reference name, purpose, sample
+asset, and sample provenance. Provider-specific reusable voice handles live in
+Cast Voice Provider Registrations.
 
 ```bash
 renku cast voice list --cast <cast-member-id> --json
@@ -322,26 +324,45 @@ renku cast voice validate --file - --json
 renku cast voice attach --file <cast-voice-attachment-json> --json
 renku cast voice attach --file - --json
 renku cast voice remove --cast <cast-member-id> --voice <cast-voice-id-or-name> --json
+renku cast voice registrations list --voice <cast-voice-id-or-name> --json
+renku cast voice registrations show --registration <registration-id> --json
+renku cast voice registrations create --voice <cast-voice-id-or-name> --file <registration-json> --json
+renku cast voice registrations remove --registration <registration-id> --json
+renku cast voice kling-registration estimate --file <kling-registration-spec-json> --json
+renku cast voice kling-registration run --file <kling-registration-spec-json> --approval-token <token> --json
 ```
 
 Options:
 
 - `--cast`: required for `list`, `show`, and `remove`.
 - `--voice`: required for `show` and `remove`; accepts either the durable Cast
-  Voice id or the Cast Voice reference name.
-- `--file`: required for `validate` and `attach`. Use `-` to read stdin.
+  Voice id or the Cast Voice reference name. Provider-registration commands use
+  it to scope list/create operations to one Cast Voice.
+- `--registration`: required for provider-registration `show` and `remove`.
+- `--file`: required for `validate`, `attach`, provider-registration `create`,
+  and Kling registration estimate/run. Use `-` to read stdin.
+- `--approval-token`: required when running a real Kling provider registration
+  unless `--simulate` is used.
+- `--simulate`: run the Kling registration through the shared generation
+  simulation path and store a simulated provider voice id.
 - `--json`: print machine-readable JSON.
 
 Behavior:
 
 - Requires a current authoring project.
-- Cast Voices are Cast Member-owned provider voice references, not Cast Design
+- Cast Voices are Cast Member-owned editorial voice references, not Cast Design
   JSON fields.
 - `attach` copies the sample audio file into the Cast Member voice sample asset
   folder, registers a `cast_voice_sample` audio asset, and creates the Cast
-  Voice record.
-- `remove` deletes the Cast Voice, the linked sample asset record, its asset
-  file records, and the copied audio file.
+  Voice record with an initial ElevenLabs provider registration.
+- `registrations create` attaches an explicit provider handle to an existing
+  Cast Voice. ElevenLabs registrations require `dialogue-audio-tts`; Kling
+  registrations require `kling-video-voice-control`.
+- `kling-registration run` sends the Cast Voice sample to
+  `fal-ai/kling-video/create-voice`, reads the returned provider `voice_id`,
+  and stores it as a `fal-ai` provider registration.
+- `remove` deletes the Cast Voice, its provider registrations, the linked
+  sample asset record, its asset file records, and the copied audio file.
 - Generic asset deletion fails for Cast Voice sample assets. Remove the Cast
   Voice instead.
 - The current direct ElevenLabs models are `eleven_v3`,
@@ -368,6 +389,29 @@ Input JSON shape:
       "model": "eleven_v3"
     }
   }
+}
+```
+
+Provider registration JSON shape:
+
+```json
+{
+  "provider": "fal-ai",
+  "registrationModel": "kling-video/create-voice",
+  "externalVoiceId": "829877809978941442",
+  "capabilities": ["kling-video-voice-control"],
+  "sourceSampleAssetId": "asset_ada_voice_sample"
+}
+```
+
+Kling registration spec JSON shape:
+
+```json
+{
+  "purpose": "klingVoiceRegistration",
+  "castVoiceId": "cast_voice_ada_normal",
+  "sourceProjectRelativePath": "cast/ada/voice-samples/clean-sample.wav",
+  "sourceSampleAssetId": "asset_ada_voice_sample"
 }
 ```
 

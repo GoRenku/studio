@@ -17,9 +17,19 @@ import type {
   CastVoiceAttachmentCommandDocument,
   CastVoiceAttachmentReport,
   CastVoiceListReport,
+  CastVoiceProvider,
+  CastVoiceProviderCapability,
+  CastVoiceProviderRegistrationListReport,
+  CastVoiceProviderRegistrationModel,
+  CastVoiceProviderRegistrationReadReport,
+  CastVoiceProviderRegistrationRemoveReport,
+  CastVoiceProviderRegistrationWriteReport,
   CastVoiceReadReport,
   CastVoiceRemoveReport,
   CastVoiceValidationReport,
+  KlingVoiceRegistrationEstimateReport,
+  KlingVoiceRegistrationRunReport,
+  KlingVoiceRegistrationSpec,
   CastOperationDocument,
   DepartmentCommandReport,
   InspirationAnalysisValidationReport,
@@ -285,6 +295,12 @@ export interface ProjectDataService {
   readCastMember(input: ReadCastMemberInput): Promise<import('../client/cast-members.js').CastMember>;
   listCastVoices(input: ListCastVoicesInput): Promise<CastVoiceListReport>;
   readCastVoice(input: ReadCastVoiceInput): Promise<CastVoiceReadReport>;
+  listCastVoiceProviderRegistrations(input: ReadCastVoiceInput): Promise<CastVoiceProviderRegistrationListReport>;
+  readCastVoiceProviderRegistration(input: ReadCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationReadReport>;
+  createCastVoiceProviderRegistration(input: CreateCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationWriteReport>;
+  removeCastVoiceProviderRegistration(input: RemoveCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationRemoveReport>;
+  estimateKlingCastVoiceRegistration(input: EstimateKlingCastVoiceRegistrationInput): Promise<KlingVoiceRegistrationEstimateReport>;
+  runKlingCastVoiceRegistration(input: RunKlingCastVoiceRegistrationInput): Promise<KlingVoiceRegistrationRunReport>;
   validateCastVoiceAttachment(input: ValidateCastVoiceAttachmentInput): Promise<CastVoiceValidationReport>;
   attachCastVoice(input: AttachCastVoiceInput): Promise<CastVoiceAttachmentReport>;
   removeCastVoice(input: RemoveCastVoiceInput): Promise<CastVoiceRemoveReport>;
@@ -581,6 +597,36 @@ export interface ListCastVoicesInput extends RenkuConfigPathOptions {
 
 export interface ReadCastVoiceInput extends ListCastVoicesInput {
   voiceIdOrName: string;
+}
+
+export interface ReadCastVoiceProviderRegistrationInput extends ReadCastVoiceInput {
+  registrationId: string;
+}
+
+export interface CreateCastVoiceProviderRegistrationInput extends ReadCastVoiceInput {
+  registration: {
+    provider: CastVoiceProvider;
+    registrationModel: CastVoiceProviderRegistrationModel;
+    externalVoiceId: string;
+    capabilities: CastVoiceProviderCapability[];
+    sourceSampleAssetId?: string | null;
+  };
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface RemoveCastVoiceProviderRegistrationInput
+  extends ReadCastVoiceProviderRegistrationInput {}
+
+export interface EstimateKlingCastVoiceRegistrationInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: KlingVoiceRegistrationSpec;
+}
+
+export interface RunKlingCastVoiceRegistrationInput
+  extends EstimateKlingCastVoiceRegistrationInput {
+  approvalToken?: string;
+  simulate?: boolean;
+  idGenerator?: ProjectIdGenerator;
 }
 
 export interface ValidateCastVoiceAttachmentInput extends RenkuConfigPathOptions {

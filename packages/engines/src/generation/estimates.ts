@@ -138,6 +138,9 @@ function priceFromConfig(
         if (key === 'pricePerSecond') {
           return true;
         }
+        if (key === 'uses_voice_control' && value === false) {
+          return payload[key] === false || payload[key] === undefined;
+        }
         return payload[key] === value;
       })
     );
@@ -152,6 +155,35 @@ function priceFromConfig(
       Object.entries(candidate).every(([key, value]) => {
         if (key === 'pricePerSecond') {
           return true;
+        }
+        if (key === 'uses_voice_control' && value === false) {
+          return payload[key] === false || payload[key] === undefined;
+        }
+        return payload[key] === value;
+      })
+    );
+    const pricePerSecond = row?.pricePerSecond;
+    return typeof pricePerSecond === 'number'
+      ? pricePerSecond * seconds(payload) * count +
+          inputImageCost(pricing, payload, count, pricingInputCounts)
+      : null;
+  }
+  if (
+    pricing.function === 'costByVideoDurationAndAudioVoiceControl' &&
+    pricing.prices
+  ) {
+    if (payload.uses_voice_control === true && payload.generate_audio === false) {
+      throw new Error(
+        'Kling V3 voice control pricing requires generate_audio: true.'
+      );
+    }
+    const row = pricing.prices.find((candidate) =>
+      Object.entries(candidate).every(([key, value]) => {
+        if (key === 'pricePerSecond') {
+          return true;
+        }
+        if (key === 'uses_voice_control' && value === false) {
+          return payload[key] === false || payload[key] === undefined;
         }
         return payload[key] === value;
       })

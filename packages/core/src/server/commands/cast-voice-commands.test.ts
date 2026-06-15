@@ -59,10 +59,16 @@ describe('Cast Voice commands', () => {
     expect(attached.voice).toMatchObject({
       castMemberId,
       name: 'normal-voice',
-      provider: 'elevenlabs',
-      model: 'eleven_v3',
-      voiceId: 'voice_urban_normal',
       purpose: 'calm strategic baseline',
+      providerRegistrations: [
+        expect.objectContaining({
+          provider: 'elevenlabs',
+          registrationModel: 'eleven_v3',
+          externalVoiceId: 'voice_urban_normal',
+          capabilities: ['dialogue-audio-tts'],
+          sourceSampleAssetId: attached.voice.sample.assetId,
+        }),
+      ],
       sampleSource: { kind: 'custom_file' },
       sample: {
         role: 'voice_sample',
@@ -149,6 +155,215 @@ describe('Cast Voice commands', () => {
         }),
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA341' });
+  });
+
+  it('creates, reads, lists, and removes provider registrations on one Cast Voice', async () => {
+    await writeSample('generated/audio/normal.mp3', 'voice bytes');
+    const attached = await projectData.attachCastVoice({
+      projectName: 'constantinople',
+      homeDir,
+      document: attachmentDocument(),
+    });
+
+    const created = await projectData.createCastVoiceProviderRegistration({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId,
+      voiceIdOrName: attached.voice.id,
+      registration: {
+        provider: 'fal-ai',
+        registrationModel: 'kling-video/create-voice',
+        externalVoiceId: 'kling_voice_urban',
+        capabilities: ['kling-video-voice-control'],
+      },
+    });
+
+    expect(created.registration).toMatchObject({
+      castVoiceId: attached.voice.id,
+      provider: 'fal-ai',
+      registrationModel: 'kling-video/create-voice',
+      externalVoiceId: 'kling_voice_urban',
+      capabilities: ['kling-video-voice-control'],
+      sourceSampleAssetId: attached.voice.sample.assetId,
+    });
+    expect(created.voice.providerRegistrations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          provider: 'elevenlabs',
+          capabilities: ['dialogue-audio-tts'],
+        }),
+        expect.objectContaining({
+          provider: 'fal-ai',
+          capabilities: ['kling-video-voice-control'],
+        }),
+      ])
+    );
+
+    await expect(
+      projectData.listCastVoiceProviderRegistrations({
+        projectName: 'constantinople',
+        homeDir,
+        castMemberId,
+        voiceIdOrName: attached.voice.id,
+      })
+    ).resolves.toMatchObject({
+      registrations: expect.arrayContaining([
+        expect.objectContaining({ id: created.registration.id }),
+      ]),
+    });
+
+    await expect(
+      projectData.readCastVoiceProviderRegistration({
+        projectName: 'constantinople',
+        homeDir,
+        castMemberId,
+        voiceIdOrName: attached.voice.id,
+        registrationId: created.registration.id,
+      })
+    ).resolves.toMatchObject({
+      registration: { externalVoiceId: 'kling_voice_urban' },
+    });
+
+    await expect(
+      projectData.removeCastVoiceProviderRegistration({
+        projectName: 'constantinople',
+        homeDir,
+        castMemberId,
+        voiceIdOrName: attached.voice.id,
+        registrationId: created.registration.id,
+      })
+    ).resolves.toMatchObject({
+      removed: {
+        castVoiceId: attached.voice.id,
+        registrationId: created.registration.id,
+      },
+    });
+    await expect(
+      projectData.listCastVoiceProviderRegistrations({
+        projectName: 'constantinople',
+        homeDir,
+        castMemberId,
+        voiceIdOrName: attached.voice.id,
+      })
+    ).resolves.toMatchObject({
+      registrations: [
+        expect.objectContaining({
+          provider: 'elevenlabs',
+          capabilities: ['dialogue-audio-tts'],
+        }),
+      ],
+    });
+  });
+
+  it('rejects provider registrations with mismatched capabilities', async () => {
+    await writeSample('generated/audio/normal.mp3', 'voice bytes');
+    const attached = await projectData.attachCastVoice({
+      projectName: 'constantinople',
+      homeDir,
+      document: attachmentDocument(),
+    });
+
+    await expect(
+      projectData.createCastVoiceProviderRegistration({
+        projectName: 'constantinople',
+        homeDir,
+        castMemberId,
+        voiceIdOrName: attached.voice.id,
+        registration: {
+          provider: 'fal-ai',
+          registrationModel: 'kling-video/create-voice',
+          externalVoiceId: 'kling_voice_urban',
+          capabilities: ['dialogue-audio-tts'],
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA360' });
+  });
+
+  it('estimates and runs a simulated Kling Cast Voice registration', async () => {
+    await writeWavSample('generated/audio/normal.wav', 6);
+    const attached = await projectData.attachCastVoice({
+      projectName: 'constantinople',
+      homeDir,
+      document: attachmentDocument({
+        sample: {
+          sourceProjectRelativePath: 'generated/audio/normal.wav' as ProjectRelativePath,
+          title: 'Mehmed normal voice sample',
+        },
+      }),
+    });
+    const spec = {
+      purpose: 'klingVoiceRegistration' as const,
+      castVoiceName: attached.voice.name,
+      castMemberId,
+      sourceCastVoiceId: attached.voice.id,
+      sourceProjectRelativePath:
+        'cast/mehmed-ii/voice-samples/normal.wav' as ProjectRelativePath,
+    };
+
+    const estimate = await projectData.estimateKlingCastVoiceRegistration({
+      projectName: 'constantinople',
+      homeDir,
+      spec,
+    });
+    expect(estimate.estimate).toMatchObject({
+      provider: 'fal-ai',
+      model: 'kling-video/create-voice',
+      mediaKind: 'json',
+      estimatedCostUsd: 0.007,
+    });
+
+    const registered = await projectData.runKlingCastVoiceRegistration({
+      projectName: 'constantinople',
+      homeDir,
+      spec,
+      simulate: true,
+    });
+
+    expect(registered.providerVoiceId).toBeTruthy();
+    expect(registered.registration).toMatchObject({
+      provider: 'fal-ai',
+      registrationModel: 'kling-video/create-voice',
+      capabilities: ['kling-video-voice-control'],
+      sourceSampleAssetId: attached.voice.sample.assetId,
+    });
+    expect(registered.voice.providerRegistrations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          provider: 'fal-ai',
+          externalVoiceId: registered.providerVoiceId,
+          capabilities: ['kling-video-voice-control'],
+        }),
+      ])
+    );
+  });
+
+  it('rejects Kling Cast Voice registrations outside the provider duration window', async () => {
+    await writeWavSample('generated/audio/normal.wav', 31);
+    const attached = await projectData.attachCastVoice({
+      projectName: 'constantinople',
+      homeDir,
+      document: attachmentDocument({
+        sample: {
+          sourceProjectRelativePath: 'generated/audio/normal.wav' as ProjectRelativePath,
+          title: 'Mehmed long voice sample',
+        },
+      }),
+    });
+
+    await expect(
+      projectData.estimateKlingCastVoiceRegistration({
+        projectName: 'constantinople',
+        homeDir,
+        spec: {
+          purpose: 'klingVoiceRegistration',
+          castVoiceName: attached.voice.name,
+          castMemberId,
+          sourceCastVoiceId: attached.voice.id,
+          sourceProjectRelativePath:
+            'cast/mehmed-ii/voice-samples/normal.wav' as ProjectRelativePath,
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA368' });
   });
 
   it('rejects unsupported providers, wrapper models, and receipt mismatches', async () => {
@@ -379,5 +594,34 @@ describe('Cast Voice commands', () => {
     const absolutePath = path.join(projectPath, projectRelativePath);
     await fs.mkdir(path.dirname(absolutePath), { recursive: true });
     await fs.writeFile(absolutePath, contents);
+  }
+
+  async function writeWavSample(projectRelativePath: string, durationSeconds: number) {
+    const absolutePath = path.join(projectPath, projectRelativePath);
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+    await fs.writeFile(absolutePath, silentWav(durationSeconds));
+  }
+
+  function silentWav(durationSeconds: number): Buffer {
+    const sampleRate = 8000;
+    const channels = 1;
+    const bitsPerSample = 16;
+    const bytesPerSample = bitsPerSample / 8;
+    const dataSize = sampleRate * durationSeconds * channels * bytesPerSample;
+    const buffer = Buffer.alloc(44 + dataSize);
+    buffer.write('RIFF', 0);
+    buffer.writeUInt32LE(36 + dataSize, 4);
+    buffer.write('WAVE', 8);
+    buffer.write('fmt ', 12);
+    buffer.writeUInt32LE(16, 16);
+    buffer.writeUInt16LE(1, 20);
+    buffer.writeUInt16LE(channels, 22);
+    buffer.writeUInt32LE(sampleRate, 24);
+    buffer.writeUInt32LE(sampleRate * channels * bytesPerSample, 28);
+    buffer.writeUInt16LE(channels * bytesPerSample, 32);
+    buffer.writeUInt16LE(bitsPerSample, 34);
+    buffer.write('data', 36);
+    buffer.writeUInt32LE(dataSize, 40);
+    return buffer;
   }
 });

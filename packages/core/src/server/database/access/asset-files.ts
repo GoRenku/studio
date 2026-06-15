@@ -31,6 +31,17 @@ export function listAssetFileRecords(session: DatabaseSession): AssetFileRecord[
   return session.db.select().from(assetFiles).all();
 }
 
+export function listAssetFileRecordsForAsset(
+  session: DatabaseSession,
+  assetId: string
+): AssetFileRecord[] {
+  return session.db
+    .select()
+    .from(assetFiles)
+    .where(eq(assetFiles.assetId, assetId))
+    .all();
+}
+
 export function readAssetFileRecord(
   session: DatabaseSession,
   input: { assetId: string; assetFileId: string }

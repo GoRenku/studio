@@ -6,6 +6,7 @@ import { Hono } from 'hono';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
   SceneShotListDocument,
+  ProjectRelativePath,
   ShotVideoTakeAvailableInput,
   ShotVideoTakeDependencyDraft,
   ShotVideoTakeParameterValues,
@@ -90,6 +91,7 @@ const INPUT_MODES: ShotVideoTakeInputModeId[] = [
   'first-frame',
   'first-last-frame',
   'reference',
+  'source-video-reference',
 ];
 const SHOT_GROUP_MODES: ShotVideoTakeShotGroupMode[] = ['single-shot', 'multi-shot'];
 
@@ -114,6 +116,7 @@ interface MatrixProjectSetup {
     multiShotLastFrame: ShotVideoTakePreparedInput;
     storyboard: ShotVideoTakePreparedInput;
     referenceBundle: ShotVideoTakePreparedInput[];
+    sourceVideo: ShotVideoTakePreparedInput;
   };
 }
 
@@ -122,9 +125,22 @@ const ESTIMATE_MATRIX: EstimateMatrixCase[] = [
   ...shotGroupCases(seedanceCase('first-frame', 'bytedance/seedance-2.0/image-to-video')),
   ...shotGroupCases(seedanceCase('first-last-frame', 'bytedance/seedance-2.0/image-to-video')),
   ...shotGroupCases(seedanceCase('reference', 'bytedance/seedance-2.0/reference-to-video')),
-  ...shotGroupCases(klingCase('text-only', 'kling-video/v3/pro/text-to-video')),
-  ...shotGroupCases(klingCase('first-frame', 'kling-video/v3/pro/image-to-video')),
-  ...shotGroupCases(klingCase('first-last-frame', 'kling-video/v3/pro/image-to-video')),
+  ...shotGroupCases(klingV3Case('standard', 'text-only', 'kling-video/v3/standard/text-to-video')),
+  ...shotGroupCases(klingV3Case('standard', 'first-frame', 'kling-video/v3/standard/image-to-video')),
+  ...shotGroupCases(klingV3Case('standard', 'first-last-frame', 'kling-video/v3/standard/image-to-video')),
+  ...shotGroupCases(klingV3Case('pro', 'text-only', 'kling-video/v3/pro/text-to-video')),
+  ...shotGroupCases(klingV3Case('pro', 'first-frame', 'kling-video/v3/pro/image-to-video')),
+  ...shotGroupCases(klingV3Case('pro', 'first-last-frame', 'kling-video/v3/pro/image-to-video')),
+  ...shotGroupCases(klingO3Case('standard', 'text-only', 'kling-video/o3/standard/text-to-video')),
+  ...shotGroupCases(klingO3Case('standard', 'first-frame', 'kling-video/o3/standard/image-to-video')),
+  ...shotGroupCases(klingO3Case('standard', 'first-last-frame', 'kling-video/o3/standard/image-to-video')),
+  ...shotGroupCases(klingO3Case('standard', 'reference', 'kling-video/o3/standard/reference-to-video')),
+  ...shotGroupCases(klingO3Case('standard', 'source-video-reference', 'kling-video/o3/standard/video-to-video/reference')),
+  ...shotGroupCases(klingO3Case('pro', 'text-only', 'kling-video/o3/pro/text-to-video')),
+  ...shotGroupCases(klingO3Case('pro', 'first-frame', 'kling-video/o3/pro/image-to-video')),
+  ...shotGroupCases(klingO3Case('pro', 'first-last-frame', 'kling-video/o3/pro/image-to-video')),
+  ...shotGroupCases(klingO3Case('pro', 'reference', 'kling-video/o3/pro/reference-to-video')),
+  ...shotGroupCases(klingO3Case('pro', 'source-video-reference', 'kling-video/o3/pro/video-to-video/reference')),
   ...shotGroupCases(veoCase('text-only', 'veo3.1', 1.2)),
   ...shotGroupCases(veoCase('first-frame', 'veo3.1/image-to-video', 3.2)),
   ...shotGroupCases(veoCase('first-last-frame', 'veo3.1/first-last-frame-to-video', 3.2)),
@@ -245,7 +261,7 @@ describe('shot video take estimate integration matrix', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.489, 6);
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8086, 6);
     expect(dependencyLines).toHaveLength(4);
     expect(firstFrameLine).toMatchObject({
       pricing: { state: 'priced', estimatedUsd: 0.005 },
@@ -257,7 +273,7 @@ describe('shot video take estimate integration matrix', () => {
       materializationState: 'missing-input',
     });
     expect(lastFrameLine).not.toHaveProperty('draftGenerationSpec');
-    expect(estimate.plan?.finalEstimate?.estimatedCostUsd).toBeCloseTo(3.402, 6);
+    expect(estimate.plan?.finalEstimate?.estimatedCostUsd).toBeCloseTo(2.7216, 6);
     assertNoObsoleteEstimateFields(estimate);
   });
 
@@ -302,7 +318,7 @@ describe('shot video take estimate integration matrix', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(3.489, 6);
+    expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(2.8086, 6);
     expect(firstFrameLine).toMatchObject({
       kind: 'dependency-generation',
       materializationState: 'missing-input',
@@ -609,25 +625,25 @@ function seedanceCase(
       aspect_ratio: '16:9',
       resolution: '720p',
     },
-    expectedCostUsd: 3.402,
+    expectedCostUsd: 2.7216,
   };
 }
 
 function seedanceRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
   const duration = 6;
   const expectedFinalCosts = [
-    { resolution: '480p' as const, aspectRatio: '21:9', expectedFinalCostUsd: 1.323 },
-    { resolution: '480p' as const, aspectRatio: '16:9', expectedFinalCostUsd: 1.00760625 },
-    { resolution: '480p' as const, aspectRatio: '4:3', expectedFinalCostUsd: 0.756 },
-    { resolution: '480p' as const, aspectRatio: '1:1', expectedFinalCostUsd: 0.567 },
-    { resolution: '480p' as const, aspectRatio: '3:4', expectedFinalCostUsd: 0.42525 },
-    { resolution: '480p' as const, aspectRatio: '9:16', expectedFinalCostUsd: 0.3189375 },
-    { resolution: '720p' as const, aspectRatio: '21:9', expectedFinalCostUsd: 2.97675 },
-    { resolution: '720p' as const, aspectRatio: '16:9', expectedFinalCostUsd: 2.268 },
-    { resolution: '720p' as const, aspectRatio: '4:3', expectedFinalCostUsd: 1.701 },
-    { resolution: '720p' as const, aspectRatio: '1:1', expectedFinalCostUsd: 1.27575 },
-    { resolution: '720p' as const, aspectRatio: '3:4', expectedFinalCostUsd: 0.9568125 },
-    { resolution: '720p' as const, aspectRatio: '9:16', expectedFinalCostUsd: 0.717609375 },
+    { resolution: '480p' as const, aspectRatio: '21:9', expectedFinalCostUsd: 1.0584 },
+    { resolution: '480p' as const, aspectRatio: '16:9', expectedFinalCostUsd: 0.806085 },
+    { resolution: '480p' as const, aspectRatio: '4:3', expectedFinalCostUsd: 0.6048 },
+    { resolution: '480p' as const, aspectRatio: '1:1', expectedFinalCostUsd: 0.4536 },
+    { resolution: '480p' as const, aspectRatio: '3:4', expectedFinalCostUsd: 0.3402 },
+    { resolution: '480p' as const, aspectRatio: '9:16', expectedFinalCostUsd: 0.25515 },
+    { resolution: '720p' as const, aspectRatio: '21:9', expectedFinalCostUsd: 2.3814 },
+    { resolution: '720p' as const, aspectRatio: '16:9', expectedFinalCostUsd: 1.8144 },
+    { resolution: '720p' as const, aspectRatio: '4:3', expectedFinalCostUsd: 1.3608 },
+    { resolution: '720p' as const, aspectRatio: '1:1', expectedFinalCostUsd: 1.0206 },
+    { resolution: '720p' as const, aspectRatio: '3:4', expectedFinalCostUsd: 0.76545 },
+    { resolution: '720p' as const, aspectRatio: '9:16', expectedFinalCostUsd: 0.5740875 },
   ];
   const routeCases = shotGroupRouteCases([
     {
@@ -684,7 +700,8 @@ function seedanceRunSetupPricingPermutations(): RunSetupPricingPermutationCase[]
   );
 }
 
-function klingCase(
+function klingV3Case(
+  level: 'standard' | 'pro',
   inputModeId: ShotVideoTakeInputModeId,
   providerModel: string
 ): EstimateMatrixCaseTemplate {
@@ -696,8 +713,8 @@ function klingCase(
     cfg_scale: 0.5,
   };
   return {
-    label: `Kling 3.0 ${inputModeId}`,
-    modelChoice: 'fal-ai/kling-video/v3/pro',
+    label: `Kling V3 ${level} ${inputModeId}`,
+    modelChoice: `fal-ai/kling-video/v3/${level}`,
     inputModeId,
     providerModel,
     parameterValues: routeSettings,
@@ -706,30 +723,77 @@ function klingCase(
       duration: '9',
       generate_audio: true,
     },
-    expectedCostUsd: 1.512,
+    expectedCostUsd: level === 'standard' ? 1.134 : 1.512,
+  };
+}
+
+function klingO3Case(
+  level: 'standard' | 'pro',
+  inputModeId: ShotVideoTakeInputModeId,
+  providerModel: string
+): EstimateMatrixCaseTemplate {
+  const sourceVideo = inputModeId === 'source-video-reference';
+  const hasAspectRatio =
+    inputModeId === 'text-only' ||
+    inputModeId === 'reference' ||
+    inputModeId === 'source-video-reference';
+  const routeSettings = {
+    duration: '9',
+    ...(hasAspectRatio ? { aspect_ratio: sourceVideo ? 'auto' : '16:9' } : {}),
+    ...(sourceVideo ? { keep_audio: true } : { generate_audio: true }),
+  };
+  const audioRate = level === 'standard' ? 0.112 : 0.14;
+  const sourceVideoRate = level === 'standard' ? 0.126 : 0.168;
+  return {
+    label: `Kling O3 ${level} ${inputModeId}`,
+    modelChoice: `fal-ai/kling-video/o3/${level}`,
+    inputModeId,
+    providerModel,
+    parameterValues: routeSettings,
+    expectedRouteSettings: routeSettings,
+    expectedBillableUnits: {
+      duration: '9',
+      ...(sourceVideo ? {} : { generate_audio: true }),
+    },
+    expectedCostUsd: 9 * (sourceVideo ? sourceVideoRate : audioRate),
   };
 }
 
 function klingRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
   const duration = 6;
+  return [
+    ...klingV3RunSetupPricingPermutations(duration, 'standard'),
+    ...klingV3RunSetupPricingPermutations(duration, 'pro'),
+    ...klingO3RunSetupPricingPermutations(duration, 'standard'),
+    ...klingO3RunSetupPricingPermutations(duration, 'pro'),
+  ];
+}
+
+function klingV3RunSetupPricingPermutations(
+  duration: number,
+  level: 'standard' | 'pro'
+): RunSetupPricingPermutationCase[] {
+  const rates = level === 'standard'
+    ? { audioOn: 0.126, audioOff: 0.084 }
+    : { audioOn: 0.168, audioOff: 0.112 };
   const expectedFinalCosts = [
-    { generateAudio: true, expectedFinalCostUsd: 1.008 },
-    { generateAudio: false, expectedFinalCostUsd: 0.672 },
+    { generateAudio: true, expectedFinalCostUsd: duration * rates.audioOn },
+    { generateAudio: false, expectedFinalCostUsd: duration * rates.audioOff },
   ];
   const routeCases = shotGroupRouteCases([
     {
       inputModeId: 'text-only' as const,
-      providerModel: 'kling-video/v3/pro/text-to-video',
+      providerModel: `kling-video/v3/${level}/text-to-video`,
       hasAspectRatio: true,
     },
     {
       inputModeId: 'first-frame' as const,
-      providerModel: 'kling-video/v3/pro/image-to-video',
+      providerModel: `kling-video/v3/${level}/image-to-video`,
       hasAspectRatio: false,
     },
     {
       inputModeId: 'first-last-frame' as const,
-      providerModel: 'kling-video/v3/pro/image-to-video',
+      providerModel: `kling-video/v3/${level}/image-to-video`,
       hasAspectRatio: false,
     },
   ]);
@@ -743,8 +807,8 @@ function klingRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
         cfg_scale: 0.5,
       };
       return {
-        label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} Kling 3.0 ${duration}s audio ${costCase.generateAudio ? 'on' : 'off'}`,
-        modelChoice: 'fal-ai/kling-video/v3/pro',
+        label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} Kling V3 ${level} ${duration}s audio ${costCase.generateAudio ? 'on' : 'off'}`,
+        modelChoice: `fal-ai/kling-video/v3/${level}`,
         inputModeId: routeCase.inputModeId,
         shotGroupMode: routeCase.shotGroupMode,
         providerModel: routeCase.providerModel,
@@ -761,6 +825,86 @@ function klingRunSetupPricingPermutations(): RunSetupPricingPermutationCase[] {
       };
     })
   );
+}
+
+function klingO3RunSetupPricingPermutations(
+  duration: number,
+  level: 'standard' | 'pro'
+): RunSetupPricingPermutationCase[] {
+  const audioRates = level === 'standard'
+    ? { audioOn: 0.112, audioOff: 0.084, sourceVideo: 0.126 }
+    : { audioOn: 0.14, audioOff: 0.112, sourceVideo: 0.168 };
+  const routeCases = shotGroupRouteCases([
+    {
+      inputModeId: 'text-only' as const,
+      providerModel: `kling-video/o3/${level}/text-to-video`,
+      hasAspectRatio: true,
+      sourceVideo: false,
+    },
+    {
+      inputModeId: 'first-frame' as const,
+      providerModel: `kling-video/o3/${level}/image-to-video`,
+      hasAspectRatio: false,
+      sourceVideo: false,
+    },
+    {
+      inputModeId: 'first-last-frame' as const,
+      providerModel: `kling-video/o3/${level}/image-to-video`,
+      hasAspectRatio: false,
+      sourceVideo: false,
+    },
+    {
+      inputModeId: 'reference' as const,
+      providerModel: `kling-video/o3/${level}/reference-to-video`,
+      hasAspectRatio: true,
+      sourceVideo: false,
+    },
+    {
+      inputModeId: 'source-video-reference' as const,
+      providerModel: `kling-video/o3/${level}/video-to-video/reference`,
+      hasAspectRatio: true,
+      sourceVideo: true,
+    },
+  ]);
+  return routeCases.flatMap((routeCase) => {
+    const costCases = routeCase.sourceVideo
+      ? [{ keepAudio: true, expectedFinalCostUsd: duration * audioRates.sourceVideo }]
+      : [
+          { generateAudio: true, expectedFinalCostUsd: duration * audioRates.audioOn },
+          { generateAudio: false, expectedFinalCostUsd: duration * audioRates.audioOff },
+        ];
+    return costCases.map((costCase): RunSetupPricingPermutationCase => {
+      const expectedDependencyCostUsd = missingDependencyCostForRoute(routeCase);
+      const expectedRouteSettings = {
+        duration: String(duration),
+        ...(routeCase.hasAspectRatio
+          ? { aspect_ratio: routeCase.sourceVideo ? 'auto' : '16:9' }
+          : {}),
+        ...(routeCase.sourceVideo
+          ? { keep_audio: 'keepAudio' in costCase ? costCase.keepAudio : true }
+          : { generate_audio: 'generateAudio' in costCase ? costCase.generateAudio : true }),
+      };
+      return {
+        label: `${routeCase.shotGroupMode} ${routeCase.inputModeId} Kling O3 ${level} ${duration}s`,
+        modelChoice: `fal-ai/kling-video/o3/${level}`,
+        inputModeId: routeCase.inputModeId,
+        shotGroupMode: routeCase.shotGroupMode,
+        providerModel: routeCase.providerModel,
+        parameterValues: expectedRouteSettings,
+        expectedRouteSettings,
+        expectedBillableUnits: {
+          duration: String(duration),
+          ...(routeCase.sourceVideo
+            ? {}
+            : { generate_audio: 'generateAudio' in costCase ? costCase.generateAudio : true }),
+        },
+        expectedFinalCostUsd: costCase.expectedFinalCostUsd,
+        expectedDependencyCostUsd,
+        expectedDependencyLineCount: missingDependencyLineCountForRoute(routeCase),
+        expectedTotalCostUsd: costCase.expectedFinalCostUsd + expectedDependencyCostUsd,
+      };
+    });
+  });
 }
 
 function veoCase(
@@ -1332,6 +1476,12 @@ async function createMatrixProjectSetup(
     'generated/media/reference-bundle.png',
     'reference bundle image'
   );
+  await writeProjectFile(
+    projectData,
+    homeDir,
+    'generated/media/source-video.mp4',
+    'source video'
+  );
 
   const firstFrame = await projectData.importShotFirstFrame({
     homeDir,
@@ -1376,6 +1526,21 @@ async function createMatrixProjectSetup(
   const referenceFile = referenceImage.imported.files[0];
   if (!referenceFile) {
     throw new Error('Expected imported reference image to have a primary file.');
+  }
+  const sourceVideo = await projectData.registerAsset({
+    projectName: 'constantinople',
+    homeDir,
+    target: { kind: 'scene', sceneId: ids.sceneId },
+    type: 'shot_source_video',
+    mediaKind: 'video',
+    title: 'Source video reference',
+    projectRelativePath: 'generated/media/source-video.mp4' as ProjectRelativePath,
+    fileRole: 'primary',
+    role: 'shot_source_video',
+  });
+  const sourceVideoFile = sourceVideo.files[0];
+  if (!sourceVideoFile) {
+    throw new Error('Expected registered source video to have a primary file.');
   }
   const context = await projectData.buildShotVideoTakeContext({
     homeDir,
@@ -1423,6 +1588,13 @@ async function createMatrixProjectSetup(
       multiShotLastFrame: preparedInputFromImported(multiShotLastFrame.input),
       storyboard: preparedInputFromImported(storyboard.input),
       referenceBundle,
+      sourceVideo: {
+        kind: 'source-video',
+        assetId: sourceVideo.assetId,
+        assetFileId: sourceVideoFile.id,
+        subjectKind: 'asset',
+        subjectId: sourceVideo.assetId,
+      },
     },
   };
 }
@@ -1590,6 +1762,11 @@ function preparedInputsForCase(
     return requiresMultiShotStoryboard(input)
       ? [...setup.preparedInputs.referenceBundle, setup.preparedInputs.storyboard]
       : setup.preparedInputs.referenceBundle;
+  }
+  if (input.inputModeId === 'source-video-reference') {
+    return requiresMultiShotStoryboard(input)
+      ? [setup.preparedInputs.sourceVideo, setup.preparedInputs.storyboard]
+      : [setup.preparedInputs.sourceVideo];
   }
   return requiresMultiShotStoryboard(input) ? [setup.preparedInputs.storyboard] : [];
 }

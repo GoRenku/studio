@@ -10,9 +10,6 @@ export const castVoices = sqliteTable(
       .notNull()
       .references(() => castMembers.id),
     name: text('name').notNull(),
-    provider: text('provider').notNull(),
-    model: text('model').notNull(),
-    voiceId: text('voice_id').notNull(),
     purpose: text('purpose').notNull(),
     sampleAssetId: text('sample_asset_id')
       .notNull()
@@ -31,12 +28,35 @@ export const castVoices = sqliteTable(
       table.sortOrder,
       table.id
     ),
-    index('cast_voice_provider_model_voice_idx').on(
-      table.provider,
-      table.model,
-      table.voiceId
-    ),
     uniqueIndex('cast_voice_sample_asset_idx').on(table.sampleAssetId),
     uniqueIndex('cast_voice_cast_name_idx').on(table.castMemberId, table.name),
+  ],
+);
+
+export const castVoiceProviderRegistrations = sqliteTable(
+  'cast_voice_provider_registration',
+  {
+    id: text('id').primaryKey(),
+    castVoiceId: text('cast_voice_id')
+      .notNull()
+      .references(() => castVoices.id),
+    provider: text('provider').notNull(),
+    registrationModel: text('registration_model').notNull(),
+    externalVoiceId: text('external_voice_id').notNull(),
+    capabilitiesJson: text('capabilities_json').notNull(),
+    sourceSampleAssetId: text('source_sample_asset_id').references(() => assets.id),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('cast_voice_provider_registration_voice_idx').on(
+      table.castVoiceId,
+      table.provider
+    ),
+    index('cast_voice_provider_registration_external_idx').on(
+      table.provider,
+      table.registrationModel,
+      table.externalVoiceId
+    ),
   ],
 );

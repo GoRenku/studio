@@ -1572,14 +1572,25 @@ describe('renku CLI', () => {
     );
     expect(attachExitCode).toBe(0);
     const attached = JSON.parse(stdout.join('\n')) as {
-      voice: { id: string; name: string; sample: { assetId: string } };
+      voice: {
+        id: string;
+        name: string;
+        sample: { assetId: string };
+        providerRegistrations: Array<{ id: string }>;
+      };
     };
     expect(attached).toMatchObject({
       voice: {
         name: 'normal-voice',
-        provider: 'elevenlabs',
-        model: 'eleven_v3',
         sampleSource: { kind: 'generated_sample' },
+        providerRegistrations: [
+          expect.objectContaining({
+            provider: 'elevenlabs',
+            registrationModel: 'eleven_v3',
+            externalVoiceId: 'voice_urban_normal',
+            capabilities: ['dialogue-audio-tts'],
+          }),
+        ],
         sample: {
           role: 'voice_sample',
           files: [

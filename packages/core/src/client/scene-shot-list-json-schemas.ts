@@ -86,6 +86,7 @@ const SHOT_VIDEO_TAKE_INPUT_MODE_IDS = [
   'first-frame',
   'first-last-frame',
   'reference',
+  'source-video-reference',
 ] as const;
 
 const SHOT_VIDEO_TAKE_INPUT_KINDS = [
@@ -135,7 +136,10 @@ const SHOT_VIDEO_TAKE_INPUT_MODELS = [
 
 const SHOT_VIDEO_TAKE_MODELS = [
   'fal-ai/bytedance/seedance-2.0',
+  'fal-ai/kling-video/v3/standard',
   'fal-ai/kling-video/v3/pro',
+  'fal-ai/kling-video/o3/standard',
+  'fal-ai/kling-video/o3/pro',
   'fal-ai/veo3.1',
   'fal-ai/xai/grok-imagine-video-1.5',
   'fal-ai/ltx-3.2',

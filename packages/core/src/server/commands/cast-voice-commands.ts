@@ -1,20 +1,42 @@
 import crypto from 'node:crypto';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fetchElevenLabsVoiceSampleAudio } from '@gorenku/studio-engines';
+import { promisify } from 'node:util';
+import {
+  estimateGeneration,
+  fetchElevenLabsVoiceSampleAudio,
+  runGeneration,
+} from '@gorenku/studio-engines';
+import { KLING_VOICE_REGISTRATION_PURPOSE } from '../../client/index.js';
 import type {
   Asset,
   CastVoice,
   CastVoiceAttachmentCommandDocument,
   CastVoiceAttachmentReport,
   CastVoiceListReport,
+  CastVoiceProvider,
+  CastVoiceProviderCapability,
+  CastVoiceProviderRegistrationListReport,
+  CastVoiceProviderRegistration,
   CastVoiceReadReport,
+  CastVoiceProviderRegistrationModel,
+  CastVoiceProviderRegistrationReadReport,
+  CastVoiceProviderRegistrationRemoveReport,
+  CastVoiceProviderRegistrationWriteReport,
   CastVoiceRemoveReport,
   CastVoiceSampleSource,
   CastVoiceValidationReport,
+  KlingVoiceRegistrationEstimateReport,
+  KlingVoiceRegistrationRunReport,
+  KlingVoiceRegistrationSpec,
 } from '../../client/index.js';
 import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
-import { insertAssetFileRecord } from '../database/access/asset-files.js';
+import {
+  deleteAssetFileRecordsForAsset,
+  insertAssetFileRecord,
+  listAssetFileRecordsForAsset,
+} from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
   deleteAssetRelationshipRecord,
@@ -26,15 +48,20 @@ import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   castVoiceNameExists,
+  deleteCastVoiceProviderRegistrationRecord,
+  deleteCastVoiceProviderRegistrationRecords,
   deleteCastVoiceRecord,
   insertCastVoiceRecord,
+  insertCastVoiceProviderRegistrationRecord,
+  listCastVoiceProviderRegistrationRecords,
   listCastVoiceRecords,
   nextCastVoiceSortOrder,
+  readCastVoiceProviderRegistrationRecord,
   readCastVoiceRecord,
   readCastVoiceRecordBySampleAssetId,
+  type CastVoiceProviderRegistrationRecord,
   type CastVoiceRecord,
 } from '../database/access/cast-voices.js';
-import { deleteAssetFileRecordsForAsset } from '../database/access/asset-files.js';
 import { deleteAssetRecord } from '../database/access/assets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
@@ -59,11 +86,19 @@ const DIRECT_ELEVENLABS_TTS_MODELS = new Set([
   'eleven_multilingual_v2',
   'eleven_turbo_v2_5',
 ]);
+const execFileAsync = promisify(execFile);
 
 const AUDIO_EXTENSIONS = new Map([
   ['.mp3', 'audio/mpeg'],
   ['.wav', 'audio/wav'],
   ['.m4a', 'audio/mp4'],
+]);
+
+const KLING_VOICE_SOURCE_MEDIA_KINDS = new Map<string, 'audio' | 'video'>([
+  ['.mp3', 'audio'],
+  ['.wav', 'audio'],
+  ['.mp4', 'video'],
+  ['.mov', 'video'],
 ]);
 
 export interface CastVoiceProjectInput extends RenkuConfigPathOptions {
@@ -76,6 +111,21 @@ export interface CastVoiceTargetInput extends CastVoiceProjectInput {
 
 export interface CastVoiceLookupInput extends CastVoiceTargetInput {
   voiceIdOrName: string;
+}
+
+export interface CastVoiceProviderRegistrationLookupInput extends CastVoiceLookupInput {
+  registrationId: string;
+}
+
+export interface CastVoiceProviderRegistrationCreateInput extends CastVoiceLookupInput {
+  registration: {
+    provider: CastVoiceProvider;
+    registrationModel: CastVoiceProviderRegistrationModel;
+    externalVoiceId: string;
+    capabilities: CastVoiceProviderCapability[];
+    sourceSampleAssetId?: string | null;
+  };
+  idGenerator?: ProjectIdGenerator;
 }
 
 export interface CastVoiceAttachmentInput extends CastVoiceProjectInput {
@@ -104,6 +154,243 @@ export async function readCastVoice(
     requireCastMember(session, input.castMemberId);
     const record = requireCastVoiceRecord(session, input);
     return { voice: toCastVoice(session, record) };
+  });
+}
+
+export async function listCastVoiceProviderRegistrations(
+  input: CastVoiceLookupInput
+): Promise<CastVoiceProviderRegistrationListReport> {
+  return withCastVoiceProjectSession(input, ({ session }) => {
+    requireCastMember(session, input.castMemberId);
+    const record = requireCastVoiceRecord(session, input);
+    return {
+      registrations: listCastVoiceProviderRegistrationRecords(
+        session,
+        record.id
+      ).map(toCastVoiceProviderRegistration),
+    };
+  });
+}
+
+export async function readCastVoiceProviderRegistration(
+  input: CastVoiceProviderRegistrationLookupInput
+): Promise<CastVoiceProviderRegistrationReadReport> {
+  return withCastVoiceProjectSession(input, ({ session }) => {
+    requireCastMember(session, input.castMemberId);
+    const record = requireCastVoiceRecord(session, input);
+    return {
+      registration: requireCastVoiceProviderRegistrationRecord(session, {
+        castVoiceId: record.id,
+        registrationId: input.registrationId,
+      }),
+    };
+  });
+}
+
+export async function createCastVoiceProviderRegistration(
+  input: CastVoiceProviderRegistrationCreateInput
+): Promise<CastVoiceProviderRegistrationWriteReport> {
+  return withCastVoiceProjectSession(input, ({ currentProject, session }) => {
+    requireCastMember(session, input.castMemberId);
+    const record = requireCastVoiceRecord(session, input);
+    const registration = validateProviderRegistrationCreateInput(input.registration);
+    const sourceSampleAssetId =
+      registration.sourceSampleAssetId === undefined
+        ? record.sampleAssetId
+        : registration.sourceSampleAssetId;
+    validateProviderRegistrationSourceSample(session, {
+      castMemberId: input.castMemberId,
+      sourceSampleAssetId,
+    });
+    const ids = createUniqueIdAllocator(
+      input.idGenerator ?? createRandomIdGenerator()
+    );
+    const now = new Date().toISOString();
+    const registrationId = ids('cast_voice_provider_registration');
+    insertCastVoiceProviderRegistrationRecord(session, {
+      id: registrationId,
+      castVoiceId: record.id,
+      provider: registration.provider,
+      registrationModel: registration.registrationModel,
+      externalVoiceId: registration.externalVoiceId,
+      capabilitiesJson: JSON.stringify(registration.capabilities),
+      sourceSampleAssetId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return {
+      project: {
+        id: currentProject.projectId,
+        name: currentProject.projectName,
+      },
+      voice: toCastVoice(session, record),
+      registration: requireCastVoiceProviderRegistrationRecord(session, {
+        castVoiceId: record.id,
+        registrationId,
+      }),
+      resourceKeys: studioResourceKeysForAssetTarget({
+        kind: 'castMember',
+        castMemberId: input.castMemberId,
+      }),
+    };
+  });
+}
+
+export async function removeCastVoiceProviderRegistration(
+  input: CastVoiceProviderRegistrationLookupInput
+): Promise<CastVoiceProviderRegistrationRemoveReport> {
+  return withCastVoiceProjectSession(input, ({ currentProject, session }) => {
+    requireCastMember(session, input.castMemberId);
+    const record = requireCastVoiceRecord(session, input);
+    requireCastVoiceProviderRegistrationRecord(session, {
+      castVoiceId: record.id,
+      registrationId: input.registrationId,
+    });
+    deleteCastVoiceProviderRegistrationRecord(session, {
+      castVoiceId: record.id,
+      registrationId: input.registrationId,
+    });
+    return {
+      project: {
+        id: currentProject.projectId,
+        name: currentProject.projectName,
+      },
+      removed: {
+        castMemberId: input.castMemberId,
+        castVoiceId: record.id,
+        registrationId: input.registrationId,
+      },
+      resourceKeys: studioResourceKeysForAssetTarget({
+        kind: 'castMember',
+        castMemberId: input.castMemberId,
+      }),
+    };
+  });
+}
+
+export async function estimateKlingCastVoiceRegistration(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: KlingVoiceRegistrationSpec;
+}): Promise<KlingVoiceRegistrationEstimateReport> {
+  const prepared = await prepareKlingVoiceRegistration(input);
+  const estimate = await estimateGeneration({
+    policy: klingVoiceRegistrationPolicy(),
+    request: {
+      inputFiles: [
+        {
+          field: 'voice_url',
+          projectRelativePath: prepared.sourceProjectRelativePath,
+          mediaKind: prepared.sourceMediaKind,
+          required: true,
+        },
+      ],
+      parameters: {},
+      pricingInputCounts: {},
+      outputNames: [klingVoiceRegistrationOutputName(prepared.spec)],
+    },
+  });
+  return {
+    spec: prepared.spec,
+    providerPayload: { voice_url: prepared.sourceProjectRelativePath },
+    estimate,
+  };
+}
+
+export async function runKlingCastVoiceRegistration(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: KlingVoiceRegistrationSpec;
+  approvalToken?: string;
+  simulate?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}): Promise<KlingVoiceRegistrationRunReport> {
+  const prepared = await prepareKlingVoiceRegistration(input);
+  const estimate = await estimateGeneration({
+    policy: klingVoiceRegistrationPolicy(),
+    request: {
+      inputFiles: [
+        {
+          field: 'voice_url',
+          projectRelativePath: prepared.sourceProjectRelativePath,
+          mediaKind: prepared.sourceMediaKind,
+          required: true,
+        },
+      ],
+      parameters: {},
+      pricingInputCounts: {},
+      outputNames: [klingVoiceRegistrationOutputName(prepared.spec)],
+    },
+  });
+  if (!input.simulate && input.approvalToken !== estimate.approvalToken) {
+    throw new ProjectDataError(
+      'PROJECT_DATA364',
+      'Kling Cast Voice registration requires an approval token from the matching estimate.',
+      { suggestion: 'Run the estimate command and pass its approval token to the run command.' }
+    );
+  }
+  const result = await runGeneration({
+    policy: klingVoiceRegistrationPolicy(),
+    request: {
+      inputFiles: [
+        {
+          field: 'voice_url',
+          projectRelativePath: prepared.sourceProjectRelativePath,
+          mediaKind: prepared.sourceMediaKind,
+          required: true,
+        },
+      ],
+      parameters: {},
+      pricingInputCounts: {},
+      outputNames: [klingVoiceRegistrationOutputName(prepared.spec)],
+    },
+    mode: input.simulate ? 'simulated' : 'live',
+    approvalToken: input.approvalToken,
+    outputRoot: path.join(prepared.projectFolder, 'generated/media'),
+    outputProjectRelativeRoot: 'generated/media',
+    inputRoot: prepared.projectFolder,
+  });
+  const providerVoiceId = await readKlingVoiceIdFromOutputs({
+    projectFolder: prepared.projectFolder,
+    outputs: result.outputs,
+    simulated: Boolean(input.simulate),
+  });
+  return withCastVoiceProjectSession(input, ({ currentProject, session }) => {
+    const ids = createUniqueIdAllocator(
+      input.idGenerator ?? createRandomIdGenerator()
+    );
+    const now = new Date().toISOString();
+    const registrationId = ids('cast_voice_provider_registration');
+    insertCastVoiceProviderRegistrationRecord(session, {
+      id: registrationId,
+      castVoiceId: prepared.castVoice.id,
+      provider: 'fal-ai',
+      registrationModel: 'kling-video/create-voice',
+      externalVoiceId: providerVoiceId,
+      capabilitiesJson: JSON.stringify(['kling-video-voice-control']),
+      sourceSampleAssetId: prepared.sourceSampleAssetId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const registration = requireCastVoiceProviderRegistrationRecord(session, {
+      castVoiceId: prepared.castVoice.id,
+      registrationId,
+    });
+    return {
+      project: {
+        id: currentProject.projectId,
+        name: currentProject.projectName,
+      },
+      spec: prepared.spec,
+      providerPayload: { voice_url: prepared.sourceProjectRelativePath },
+      providerVoiceId,
+      registration,
+      voice: toCastVoice(session, prepared.castVoice),
+      resourceKeys: studioResourceKeysForAssetTarget({
+        kind: 'castMember',
+        castMemberId: prepared.spec.castMemberId,
+      }),
+    };
   });
 }
 
@@ -198,6 +485,7 @@ export async function removeCastVoice(
     await deleteAssetFiles(projectFolder, sample);
     session.db.transaction((tx) => {
       const txSession = { ...session, db: tx };
+      deleteCastVoiceProviderRegistrationRecords(txSession, record.id);
       deleteCastVoiceRecord(txSession, {
         castMemberId: input.castMemberId,
         voiceId: record.id,
@@ -261,10 +549,10 @@ function toCastVoice(session: Parameters<typeof readAssetRelationship>[0], recor
     id: record.id,
     castMemberId: record.castMemberId,
     name: record.name,
-    provider: record.provider,
-    model: record.model,
-    voiceId: record.voiceId,
     purpose: record.purpose,
+    providerRegistrations: listCastVoiceProviderRegistrationRecords(session, record.id).map(
+      toCastVoiceProviderRegistration
+    ),
     sampleSource: toCastVoiceSampleSource(record),
     sample: {
       ...sample,
@@ -295,6 +583,7 @@ interface PreparedCastVoiceSample {
   destinationProjectRelativePath: string;
   mimeType: string;
   sizeBytes: number;
+  durationSeconds?: number;
   contentHash: string;
   origin: 'imported' | 'generated' | 'elevenlabs_sample';
   sampleSource: CastVoiceSampleSource;
@@ -431,6 +720,7 @@ async function prepareFileCastVoiceAttachment(input: {
     destinationProjectRelativePath,
     mimeType: fileSample.mimeType,
     sizeBytes: fileSample.sizeBytes,
+    durationSeconds: await probeMediaDurationSeconds(destinationPath),
     contentHash: await hashFile(destinationPath),
     origin: fileSample.receipt ? 'generated' : 'imported',
     sampleSource: fileSample.receipt
@@ -470,6 +760,7 @@ async function prepareElevenLabsVoiceSampleAttachment(input: {
     destinationProjectRelativePath,
     mimeType: 'audio/mpeg',
     sizeBytes: fetched.audioBytes.length,
+    durationSeconds: await probeMediaDurationSeconds(destinationPath),
     contentHash: hashBuffer(fetched.audioBytes),
     origin: 'elevenlabs_sample',
     sampleSource: {
@@ -523,6 +814,7 @@ async function insertCastVoiceWithSampleAsset(input: {
         mimeType: input.prepared.mimeType,
         mediaKind: 'audio',
         sizeBytes: input.prepared.sizeBytes,
+        durationSeconds: input.prepared.durationSeconds,
         contentHash: input.prepared.contentHash,
         createdAt: now,
         updatedAt: now,
@@ -545,9 +837,6 @@ async function insertCastVoiceWithSampleAsset(input: {
         id: voiceId,
         castMemberId: input.validated.castMember.id,
         name: input.validated.name,
-        provider: input.validated.provider,
-        model: input.validated.model,
-        voiceId: input.validated.voiceId,
         purpose: input.validated.purpose,
         sampleAssetId: assetId,
         sampleSourceKind: input.prepared.sampleSource.kind,
@@ -561,6 +850,17 @@ async function insertCastVoiceWithSampleAsset(input: {
           ? input.prepared.sampleSource.apiBaseUrl
           : null,
         sortOrder: nextCastVoiceSortOrder(txSession, input.validated.castMember.id),
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertCastVoiceProviderRegistrationRecord(txSession, {
+        id: ids('cast_voice_provider_registration'),
+        castVoiceId: voiceId,
+        provider: input.validated.provider,
+        registrationModel: input.validated.model,
+        externalVoiceId: input.validated.voiceId,
+        capabilitiesJson: JSON.stringify(['dialogue-audio-tts']),
+        sourceSampleAssetId: assetId,
         createdAt: now,
         updatedAt: now,
       });
@@ -601,6 +901,275 @@ function requireCastVoiceRecord(
     );
   }
   return record;
+}
+
+function requireCastVoiceProviderRegistrationRecord(
+  session: Parameters<typeof readCastVoiceProviderRegistrationRecord>[0],
+  input: { castVoiceId: string; registrationId: string }
+): CastVoiceProviderRegistration {
+  const record = readCastVoiceProviderRegistrationRecord(session, input);
+  if (!record) {
+    throw new ProjectDataError(
+      'PROJECT_DATA359',
+      `Cast Voice provider registration was not found for Cast Voice ${input.castVoiceId}: ${input.registrationId}.`
+    );
+  }
+  return toCastVoiceProviderRegistration(record);
+}
+
+function validateProviderRegistrationCreateInput(
+  input: CastVoiceProviderRegistrationCreateInput['registration']
+): CastVoiceProviderRegistrationCreateInput['registration'] {
+  const provider = input.provider;
+  const registrationModel = input.registrationModel;
+  const externalVoiceId = requiredTrimmed(input.externalVoiceId, 'externalVoiceId');
+  const capabilities = Array.from(new Set(input.capabilities));
+  if (capabilities.length === 0) {
+    throw new ProjectDataError(
+      'PROJECT_DATA360',
+      'Cast Voice provider registration requires at least one capability.'
+    );
+  }
+  for (const capability of capabilities) {
+    if (
+      capability !== 'dialogue-audio-tts' &&
+      capability !== 'kling-video-voice-control'
+    ) {
+      throw new ProjectDataError(
+        'PROJECT_DATA360',
+        `Unsupported Cast Voice provider registration capability: ${String(capability)}.`
+      );
+    }
+  }
+  if (provider === 'elevenlabs') {
+    if (!DIRECT_ELEVENLABS_TTS_MODELS.has(registrationModel)) {
+      throw new ProjectDataError(
+        'PROJECT_DATA361',
+        `Unsupported ElevenLabs Cast Voice provider registration model: ${registrationModel}.`
+      );
+    }
+    if (capabilities.some((capability) => capability !== 'dialogue-audio-tts')) {
+      throw new ProjectDataError(
+        'PROJECT_DATA360',
+        'ElevenLabs Cast Voice provider registrations only support dialogue-audio-tts.'
+      );
+    }
+  } else if (provider === 'fal-ai') {
+    if (registrationModel !== 'kling-video/create-voice') {
+      throw new ProjectDataError(
+        'PROJECT_DATA361',
+        `Unsupported fal-ai Cast Voice provider registration model: ${registrationModel}.`
+      );
+    }
+    if (capabilities.some((capability) => capability !== 'kling-video-voice-control')) {
+      throw new ProjectDataError(
+        'PROJECT_DATA360',
+        'Kling Cast Voice provider registrations only support kling-video-voice-control.'
+      );
+    }
+  } else {
+    throw new ProjectDataError(
+      'PROJECT_DATA362',
+      `Unsupported Cast Voice provider registration provider: ${String(provider)}.`
+    );
+  }
+  return {
+    provider,
+    registrationModel,
+    externalVoiceId,
+    capabilities,
+    sourceSampleAssetId: input.sourceSampleAssetId,
+  };
+}
+
+function validateProviderRegistrationSourceSample(
+  session: Parameters<typeof readAssetRelationship>[0],
+  input: { castMemberId: string; sourceSampleAssetId: string | null }
+): void {
+  if (!input.sourceSampleAssetId) {
+    return;
+  }
+  const relationship = readAssetRelationship(session, {
+    target: { kind: 'castMember', castMemberId: input.castMemberId },
+    assetId: input.sourceSampleAssetId,
+  });
+  if (!relationship || relationship.mediaKind !== 'audio') {
+    throw new ProjectDataError(
+      'PROJECT_DATA363',
+      `Cast Voice provider registration source sample asset was not found for Cast Member ${input.castMemberId}: ${input.sourceSampleAssetId}.`,
+      { suggestion: 'Use an audio sample asset attached to the same Cast Member.' }
+    );
+  }
+}
+
+async function prepareKlingVoiceRegistration(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: KlingVoiceRegistrationSpec;
+}): Promise<{
+  projectFolder: string;
+  spec: KlingVoiceRegistrationSpec;
+  castVoice: CastVoiceRecord;
+  sourceProjectRelativePath: string;
+  sourceSampleAssetId: string;
+  sourceMediaKind: 'audio' | 'video';
+}> {
+  if (input.spec.purpose !== KLING_VOICE_REGISTRATION_PURPOSE) {
+    throw new ProjectDataError(
+      'PROJECT_DATA364',
+      `Kling Cast Voice registration purpose must be ${KLING_VOICE_REGISTRATION_PURPOSE}.`
+    );
+  }
+  const sourceProjectRelativePath = normalizeProjectRelativePath(
+    input.spec.sourceProjectRelativePath
+  );
+  const sourceMediaKind = klingVoiceSourceMediaKind(sourceProjectRelativePath);
+  return withCastVoiceProjectSession(input, async ({ projectFolder, session }) => {
+    requireCastMember(session, input.spec.castMemberId);
+    const castVoice = requireCastVoiceRecord(session, {
+      castMemberId: input.spec.castMemberId,
+      voiceIdOrName: input.spec.sourceCastVoiceId ?? input.spec.castVoiceName,
+    });
+    const sourcePath = resolveProjectRelativePath(
+      projectFolder,
+      sourceProjectRelativePath
+    );
+    assertResolvedPathInsideProject(projectFolder, sourcePath);
+    await statExistingFile(sourcePath);
+    const sourceSampleAssetId =
+      input.spec.sourceSampleAssetId ?? castVoice.sampleAssetId;
+    validateProviderRegistrationSourceSample(session, {
+      castMemberId: castVoice.castMemberId,
+      sourceSampleAssetId,
+    });
+    validateKlingRegistrationSourceSampleFile(session, {
+      sourceSampleAssetId,
+      sourceProjectRelativePath,
+    });
+    return {
+      projectFolder,
+      spec: {
+        ...input.spec,
+        castVoiceName: castVoice.name,
+        castMemberId: castVoice.castMemberId,
+        sourceCastVoiceId: castVoice.id,
+        sourceProjectRelativePath,
+      },
+      castVoice,
+      sourceProjectRelativePath,
+      sourceSampleAssetId,
+      sourceMediaKind,
+    };
+  });
+}
+
+function validateKlingRegistrationSourceSampleFile(
+  session: Parameters<typeof listAssetFileRecordsForAsset>[0],
+  input: { sourceSampleAssetId: string; sourceProjectRelativePath: string }
+): void {
+  const files = listAssetFileRecordsForAsset(session, input.sourceSampleAssetId);
+  const sourceFile = files.find(
+    (file) => file.projectRelativePath === input.sourceProjectRelativePath
+  );
+  if (!sourceFile) {
+    throw new ProjectDataError(
+      'PROJECT_DATA366',
+      `Kling Cast Voice registration source path does not belong to sample asset ${input.sourceSampleAssetId}: ${input.sourceProjectRelativePath}.`,
+      { suggestion: 'Use the Cast Voice sample asset file path as the Kling voice registration source.' }
+    );
+  }
+  if (sourceFile.durationSeconds === null) {
+    throw new ProjectDataError(
+      'PROJECT_DATA367',
+      `Kling Cast Voice registration source sample is missing duration metadata: ${input.sourceProjectRelativePath}.`,
+      { suggestion: 'Refresh or reattach the sample so Renku can verify the 5-30 second provider requirement before registration.' }
+    );
+  }
+  if (sourceFile.durationSeconds < 5 || sourceFile.durationSeconds > 30) {
+    throw new ProjectDataError(
+      'PROJECT_DATA368',
+      `Kling Cast Voice registration source sample must be 5-30 seconds: ${input.sourceProjectRelativePath} is ${sourceFile.durationSeconds}s.`,
+      { suggestion: 'Choose a clean single-voice sample between 5 and 30 seconds.' }
+    );
+  }
+}
+
+function klingVoiceSourceMediaKind(projectRelativePath: string): 'audio' | 'video' {
+  const extension = path.extname(projectRelativePath).toLowerCase();
+  const mediaKind = KLING_VOICE_SOURCE_MEDIA_KINDS.get(extension);
+  if (!mediaKind) {
+    throw new ProjectDataError(
+      'PROJECT_DATA365',
+      `Kling Cast Voice registration source must be an .mp3, .wav, .mp4, or .mov file: ${projectRelativePath}.`
+    );
+  }
+  return mediaKind;
+}
+
+function klingVoiceRegistrationPolicy() {
+  return {
+    provider: 'fal-ai' as const,
+    model: 'kling-video/create-voice',
+    mediaKind: 'json' as const,
+    mode: 'json' as const,
+    outputCount: 1,
+  };
+}
+
+function klingVoiceRegistrationOutputName(spec: KlingVoiceRegistrationSpec): string {
+  return `${spec.castVoiceName}-kling-voice.json`;
+}
+
+async function readKlingVoiceIdFromOutputs(input: {
+  projectFolder: string;
+  outputs: unknown;
+  simulated: boolean;
+}): Promise<string> {
+  if (!Array.isArray(input.outputs)) {
+    throw missingKlingVoiceId();
+  }
+  const output = input.outputs.find(
+    (candidate) =>
+      candidate &&
+      typeof candidate === 'object' &&
+      typeof (candidate as { projectRelativePath?: unknown }).projectRelativePath ===
+        'string'
+  ) as { projectRelativePath: string } | undefined;
+  if (!output) {
+    throw missingKlingVoiceId();
+  }
+  const jsonPath = resolveProjectRelativePath(
+    input.projectFolder,
+    normalizeProjectRelativePath(output.projectRelativePath)
+  );
+  assertResolvedPathInsideProject(input.projectFolder, jsonPath);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await fs.readFile(jsonPath, 'utf8'));
+  } catch {
+    if (input.simulated) {
+      return 'simulated_kling_voice';
+    }
+    throw missingKlingVoiceId();
+  }
+  const voiceId =
+    parsed && typeof parsed === 'object'
+      ? (parsed as { voice_id?: unknown }).voice_id
+      : null;
+  if (typeof voiceId !== 'string' || !voiceId.trim()) {
+    if (input.simulated) {
+      return 'simulated_kling_voice';
+    }
+    throw missingKlingVoiceId();
+  }
+  return voiceId.trim();
+}
+
+function missingKlingVoiceId(): ProjectDataError {
+  return new ProjectDataError(
+    'PROJECT_DATA366',
+    'Kling Cast Voice registration output did not include voice_id.'
+  );
 }
 
 function requiredReferenceName(input: string): string {
@@ -709,6 +1278,84 @@ function toCastVoiceSampleSource(record: CastVoiceRecord): CastVoiceSampleSource
   );
 }
 
+function toCastVoiceProviderRegistration(
+  record: CastVoiceProviderRegistrationRecord
+): CastVoiceProviderRegistration {
+  return {
+    id: record.id,
+    castVoiceId: record.castVoiceId,
+    provider: toCastVoiceProvider(record.provider, record.id),
+    registrationModel: toCastVoiceProviderRegistrationModel(
+      record.registrationModel,
+      record.id
+    ),
+    externalVoiceId: record.externalVoiceId,
+    capabilities: parseRegistrationCapabilities(record),
+    sourceSampleAssetId: record.sourceSampleAssetId,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
+function toCastVoiceProvider(provider: string, registrationId: string) {
+  if (provider === 'elevenlabs' || provider === 'fal-ai') {
+    return provider;
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA358',
+    `Cast Voice provider registration ${registrationId} has unsupported provider: ${provider}.`
+  );
+}
+
+function toCastVoiceProviderRegistrationModel(model: string, registrationId: string) {
+  if (
+    model === 'eleven_v3' ||
+    model === 'eleven_multilingual_v2' ||
+    model === 'eleven_turbo_v2_5' ||
+    model === 'kling-video/create-voice'
+  ) {
+    return model;
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA358',
+    `Cast Voice provider registration ${registrationId} has unsupported model: ${model}.`
+  );
+}
+
+function parseRegistrationCapabilities(
+  record: CastVoiceProviderRegistrationRecord
+): CastVoiceProviderCapability[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(record.capabilitiesJson);
+  } catch {
+    throw invalidRegistrationCapabilities(record.id);
+  }
+  if (!Array.isArray(parsed)) {
+    throw invalidRegistrationCapabilities(record.id);
+  }
+  return Array.from(
+    new Set(
+      parsed.map((candidate) => {
+        if (
+          candidate === 'dialogue-audio-tts' ||
+          candidate === 'kling-video-voice-control'
+        ) {
+          return candidate;
+        }
+        throw invalidRegistrationCapabilities(record.id);
+      })
+    )
+  );
+}
+
+function invalidRegistrationCapabilities(registrationId: string): ProjectDataError {
+  return new ProjectDataError(
+    'PROJECT_DATA358',
+    `Cast Voice provider registration ${registrationId} has invalid capabilities.`
+  );
+}
+
 function requiredTrimmed(input: string, fieldName: string): string {
   const value = input?.trim();
   if (!value) {
@@ -793,6 +1440,26 @@ function assertResolvedPathInsideProject(
 async function hashFile(absolutePath: string): Promise<string> {
   const buffer = await fs.readFile(absolutePath);
   return hashBuffer(buffer);
+}
+
+async function probeMediaDurationSeconds(
+  absolutePath: string
+): Promise<number | undefined> {
+  try {
+    const { stdout } = await execFileAsync('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      absolutePath,
+    ]);
+    const seconds = Number(stdout.trim());
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function hashBuffer(buffer: Buffer): string {
