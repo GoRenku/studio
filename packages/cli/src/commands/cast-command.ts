@@ -190,8 +190,7 @@ export async function runCastCommand(options: {
       nested === 'attach' ||
       nested === 'remove' ||
       (nested === 'registrations' &&
-        (options.input[2] === 'create' || options.input[2] === 'remove')) ||
-      (nested === 'kling-registration' && options.input[2] === 'run')
+        (options.input[2] === 'create' || options.input[2] === 'remove'))
     ) {
       await appendStudioResourceChangedEvent({
         runtime,

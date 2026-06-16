@@ -55,8 +55,6 @@ describe('CLI command architecture', () => {
       'registrations show',
       'registrations create',
       'registrations remove',
-      'kling-registration estimate',
-      'kling-registration run',
     ]);
   });
 

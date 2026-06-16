@@ -152,14 +152,7 @@ export interface ShotVideoTakeGenerationInput {
     | 'source-video'
     | 'audio-reference';
   elementId?: string;
-  providerVoiceRegistration?: {
-    id: string;
-    provider: 'fal-ai';
-    registrationModel: 'kling-video/create-voice';
-    externalVoiceId: string;
-    capabilities: Array<'kling-video-voice-control'>;
-  };
-  seedanceAudioReferenceIntent?: 'clean-voice-sample' | 'generated-dialogue-best-effort';
+  seedanceAudioReferenceIntent?: 'clean-voice-sample' | 'generated-dialogue-reference';
 }
 
 export interface ShotVideoTakeGenerationSpec {

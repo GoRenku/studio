@@ -4,6 +4,10 @@
 
 Accepted.
 
+The Kling provider-registration decision in this ADR is superseded by
+`0034-use-transient-kling-voice-ids-for-shot-video.md`. The source-video route
+decision remains accepted.
+
 ## Context
 
 Kling V3 and O3 expose different route contracts even when the product label

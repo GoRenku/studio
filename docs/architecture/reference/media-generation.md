@@ -372,19 +372,22 @@ registration with capability `dialogue-audio-tts`, maps its external provider
 voice id to ElevenLabs `voice`, maps `voiceSettings.similarityBoost` to
 `voice_settings.similarity_boost`, and maps `languageCode` to `language_code`.
 
-Kling native-audio video voice control is a separate provider registration
-flow. `renku cast voice kling-registration run` sends a clean 5-30 second voice
-or single-speaker video sample to `fal-ai/kling-video/create-voice`, stores the
-returned `voice_id` as a Cast Voice Provider Registration with capability
-`kling-video-voice-control`, and later binds that provider id only to
-video-backed Kling elements. Do not send a generated dialogue-audio take
-directly to a Kling V3/O3 video route for native voice control.
+Kling native-audio video voice control is not modeled as a durable Cast Voice
+provider registration. When a shot-video spec selects generated dialogue audio
+for a supported Kling route, Renku sends that audio to
+`fal-ai/kling-video/create-voice` as an internal preparation step, injects the
+returned transient `voice_id` into the in-memory final payload for a
+video-backed Kling element, and records only the final video generation run.
+Renku may reuse a matching transient `voice_id` from
+`.renku/cache/kling-transient-voice-ids.json` for 24 hours when the selected
+dialogue audio content fingerprint matches. This cache is an internal provider
+artifact cache, not a reusable Cast Voice provider handle.
 
-Seedance 2.0 reference-video audio is not a durable voice registration. Its
-`audio_urls` inputs are per-generation reference media for voice/style
-conditioning. The default Renku path should use clean Cast Voice samples; exact
-dialogue timing or waveform preservation belongs in lipsync, talking-head, or
-composition workflows instead.
+Seedance 2.0 reference-video audio is also not a durable voice registration.
+Its `audio_urls` inputs are per-generation reference media for voice/style
+conditioning. When selected dialogue audio exists, it is the normal reference
+audio input for Seedance. Exact dialogue timing or waveform preservation belongs
+in lipsync, talking-head, or composition workflows instead.
 
 Profile images should usually be generated after a character sheet exists. When
 using an edit model, the generated request carries a logical `image_urls` file
@@ -844,9 +847,11 @@ renku cast voice attach --file <cast-voice-attachment-json> --json
 The attachment document names the cast member, reference name, purpose, initial
 ElevenLabs registration details, and sample source path. Generated attachments
 may include a generation receipt; imported external samples may omit it.
-Additional provider handles are managed through Cast Voice Provider
+Additional durable provider handles are managed through Cast Voice Provider
 Registration commands so one Cast Voice can safely share one playable sample
-across ElevenLabs TTS and Kling video voice-control workflows.
+across ElevenLabs TTS workflows. Kling video voice control uses selected
+dialogue audio through transient shot-video preparation instead of a durable
+Cast Voice registration.
 
 Single-file imports expect a project-relative source path. Location Environment
 Sheet imports expect JSON files whose entries are project-relative paths.

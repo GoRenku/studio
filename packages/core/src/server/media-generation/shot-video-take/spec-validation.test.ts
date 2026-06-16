@@ -107,6 +107,63 @@ describe('shot video take preflight and validation', () => {
       code: 'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
     });
   });
+
+  it('includes transient Kling create-voice cost in final shot-video estimates', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const context = await projectData.buildShotVideoTakeContext({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+    });
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/audio/dialogue-001.wav',
+      'voice bytes'
+    );
+
+    const spec = await projectData.createShotVideoTakeSpec({
+      homeDir,
+      spec: {
+        purpose: 'shot.video-take',
+        target: context.target,
+        inputModeId: 'first-frame',
+        modelChoice: 'fal-ai/kling-video/v3/pro',
+        prompt: '@Element1 says quietly, "We keep moving."',
+        parameterValues: { duration: '5', generate_audio: true },
+        inputs: [
+          imageInput('first-frame', 'first_frame', 'generated/images/start.png'),
+          elementVideoInput('urban', 'generated/video/urban-reference.mp4'),
+          dialogueAudioInput('audio_file_001', 'generated/audio/dialogue-001.wav'),
+        ],
+      },
+    });
+
+    const estimate = await projectData.estimateShotVideoTakeSpec({
+      homeDir,
+      specId: spec.id,
+    });
+
+    expect(estimate.estimate.estimatedCostUsd).toBeCloseTo(0.987);
+    expect(estimate.estimate.approvalToken).toMatch(/^sha256:/);
+    expect(estimate.estimate.billableUnits).toMatchObject({
+      transientKlingVoiceConversions: 1,
+      transientKlingVoiceCacheStates: [
+        expect.objectContaining({
+          sourceProjectPath: 'generated/audio/dialogue-001.wav',
+          cacheResult: 'miss',
+          targetElementId: 'urban',
+        }),
+      ],
+      internalTransientVoiceEstimates: [
+        expect.objectContaining({
+          provider: 'fal-ai',
+          model: 'kling-video/create-voice',
+          estimatedCostUsd: 0.007,
+        }),
+      ],
+    });
+  });
 });
 
 function dialogueAudioInput(assetFileId: string, projectRelativePath: string) {
@@ -119,5 +176,38 @@ function dialogueAudioInput(assetFileId: string, projectRelativePath: string) {
     projectRelativePath: projectRelativePath as ProjectRelativePath,
     subjectKind: 'scene-dialogue' as const,
     subjectId: assetFileId,
+    providerReferenceRole: 'audio-reference' as const,
+  };
+}
+
+function imageInput(
+  kind: 'first-frame',
+  role: string,
+  projectRelativePath: string
+) {
+  return {
+    kind,
+    assetId: `asset_${role}`,
+    assetFileId: `asset_file_${role}`,
+    role,
+    mediaKind: 'image' as const,
+    projectRelativePath: projectRelativePath as ProjectRelativePath,
+    subjectKind: 'shot' as const,
+    subjectId: 'shot_001',
+  };
+}
+
+function elementVideoInput(elementId: string, projectRelativePath: string) {
+  return {
+    kind: 'source-video' as const,
+    assetId: `asset_${elementId}_video`,
+    assetFileId: `asset_file_${elementId}_video`,
+    role: 'source_video',
+    mediaKind: 'video' as const,
+    projectRelativePath: projectRelativePath as ProjectRelativePath,
+    subjectKind: 'cast-member' as const,
+    subjectId: elementId,
+    providerReferenceRole: 'element-video' as const,
+    elementId,
   };
 }

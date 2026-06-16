@@ -6,7 +6,10 @@ import {
   type ShotVideoTakeGenerationContext,
   type ShotVideoTakeGenerationSpec,
 } from '../../../client/index.js';
-import { buildShotVideoTakeProviderPayload } from './provider-payloads.js';
+import {
+  buildKlingTransientVoiceConversions,
+  buildShotVideoTakeProviderPayload,
+} from './provider-payloads.js';
 
 describe('shot video take provider payloads', () => {
   it('maps selected dialogue audio references to deduplicated provider audio input files', () => {
@@ -90,7 +93,7 @@ describe('shot video take provider payloads', () => {
     );
   });
 
-  it('rejects Seedance audio references without visual references or best-effort intent', () => {
+  it('rejects Seedance audio references without visual references', () => {
     const common = {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
       target: shotTarget(),
@@ -111,29 +114,6 @@ describe('shot video take provider payloads', () => {
     ).toThrow(
       expect.objectContaining({
         code: 'CORE_SHOT_VIDEO_SEEDANCE_AUDIO_REQUIRES_VISUAL_REFERENCE',
-      })
-    );
-
-    expect(() =>
-      buildShotVideoTakeProviderPayload(
-        {
-          ...common,
-          inputs: [
-            referenceImageInput('image_file_001', 'generated/images/reference-001.png'),
-            {
-              ...dialogueAudioInput(
-                'audio_file_001',
-                'generated/audio/dialogue-001.mp3'
-              ),
-              seedanceAudioReferenceIntent: undefined,
-            },
-          ],
-        },
-        { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
-      )
-    ).toThrow(
-      expect.objectContaining({
-        code: 'CORE_SHOT_VIDEO_SEEDANCE_DIALOGUE_AUDIO_BEST_EFFORT_REQUIRED',
       })
     );
   });
@@ -251,45 +231,82 @@ describe('shot video take provider payloads', () => {
     );
   });
 
-  it('maps Kling V3 video elements with provider voice IDs', () => {
-    const plan = buildShotVideoTakeProviderPayload(
-      {
-        purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-        target: shotTarget(),
-        inputModeId: 'first-frame',
-        modelChoice: 'fal-ai/kling-video/v3/pro',
-        prompt: '@Element1 says, "We keep moving."',
-        parameterValues: { duration: '5', generate_audio: true },
-        inputs: [
-          firstFrameInput('generated/images/start.png'),
-          elementVideoInput('urban', 'generated/video/urban-reference.mp4', {
-            id: 'cast_voice_provider_registration_001',
-            provider: 'fal-ai',
-            registrationModel: 'kling-video/create-voice',
-            externalVoiceId: 'kling_voice_urban',
-            capabilities: ['kling-video-voice-control'],
-          }),
-        ],
-      },
-      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
-    );
+  it('projects Kling V3 dialogue audio into transient video-element voice conversions', () => {
+    const spec: ShotVideoTakeGenerationSpec = {
+      purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+      target: shotTarget(),
+      inputModeId: 'first-frame',
+      modelChoice: 'fal-ai/kling-video/v3/pro',
+      prompt: '@Element1 says, "We keep moving."',
+      parameterValues: { duration: '5', generate_audio: true },
+      inputs: [
+        firstFrameInput('generated/images/start.png'),
+        elementVideoInput('urban', 'generated/video/urban-reference.mp4'),
+        dialogueAudioInput('audio_file_urban', 'generated/audio/dialogue-urban.mp3'),
+      ],
+    };
+    const context = { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext;
+    const plan = buildShotVideoTakeProviderPayload(spec, context);
+    const conversions = buildKlingTransientVoiceConversions({
+      spec,
+      payload: plan.payload,
+      route: undefined,
+    });
 
     expect(plan.payload.elements).toEqual([
       {
         video_url: 'renku-input://generated/video/urban-reference.mp4',
-        voice_id: 'kling_voice_urban',
       },
+    ]);
+    expect(conversions).toEqual([
+      expect.objectContaining({
+        provider: 'fal-ai',
+        model: 'kling-video/create-voice',
+        sourceAudio: expect.objectContaining({
+          assetFileId: 'audio_file_urban',
+          projectRelativePath: 'generated/audio/dialogue-urban.mp3',
+        }),
+        targetElementId: 'urban',
+        targetPromptToken: '@Element1',
+        payloadPath: ['elements', 0, 'voice_id'],
+      }),
     ]);
   });
 
-  it('rejects multiple Kling video elements and image-set voice binding', () => {
+  it('rejects Kling V3 text-only dialogue audio because there is no element voice target', () => {
+    expect(() =>
+      buildShotVideoTakeProviderPayload(
+        {
+          purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+          target: shotTarget(),
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/kling-video/v3/pro',
+          prompt: 'Generate the shot with selected dialogue audio.',
+          parameterValues: { duration: '5', generate_audio: true },
+          inputs: [
+            dialogueAudioInput(
+              'audio_file_urban',
+              'generated/audio/dialogue-urban.mp3'
+            ),
+          ],
+        },
+        { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      )
+    ).toThrow(
+      expect.objectContaining({
+        code: 'CORE_SHOT_VIDEO_KLING_DIALOGUE_AUDIO_ELEMENTS_UNSUPPORTED',
+      })
+    );
+  });
+
+  it('rejects multiple Kling video elements and unsupported dialogue audio binding', () => {
     const common = {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
       target: shotTarget(),
       inputModeId: 'first-frame' as const,
       modelChoice: 'fal-ai/kling-video/v3/pro' as const,
       prompt: 'Generate the shot.',
-      parameterValues: { duration: '5' },
+      parameterValues: { duration: '5', generate_audio: true },
     };
 
     expect(() =>
@@ -316,43 +333,21 @@ describe('shot video take provider payloads', () => {
           ...common,
           inputs: [
             firstFrameInput('generated/images/start.png'),
-            elementFrontalImageInput('urban', 'generated/cast/urban-front.png', {
-              id: 'cast_voice_provider_registration_001',
-              provider: 'fal-ai',
-              registrationModel: 'kling-video/create-voice',
-              externalVoiceId: 'kling_voice_urban',
-              capabilities: ['kling-video-voice-control'],
-            }),
+            elementFrontalImageInput('urban', 'generated/cast/urban-front.png'),
+            {
+              ...dialogueAudioInput(
+                'audio_file_urban',
+                'generated/audio/dialogue-urban.mp3'
+              ),
+              elementId: 'urban',
+            },
           ],
         },
-        { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
       )
     ).toThrow(
       expect.objectContaining({
         code: 'CORE_SHOT_VIDEO_KLING_IMAGE_ELEMENT_VOICE_UNSUPPORTED',
-      })
-    );
-
-    expect(() =>
-      buildShotVideoTakeProviderPayload(
-        {
-          ...common,
-          inputs: [
-            firstFrameInput('generated/images/start.png'),
-            elementVideoInput('urban', 'generated/video/urban-reference.mp4', {
-              id: 'cast_voice_provider_registration_001',
-              provider: 'fal-ai',
-              registrationModel: 'kling-video/create-voice',
-              externalVoiceId: 'kling_voice_urban',
-              capabilities: [],
-            } as never),
-          ],
-        },
-        { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
-      )
-    ).toThrow(
-      expect.objectContaining({
-        code: 'CORE_SHOT_VIDEO_KLING_VOICE_REGISTRATION_CAPABILITY_REQUIRED',
       })
     );
   });
@@ -436,7 +431,8 @@ function dialogueAudioInput(assetFileId: string, projectRelativePath: string) {
     projectRelativePath: projectRelativePath as ProjectRelativePath,
     subjectKind: 'scene-dialogue' as const,
     subjectId: 'dialogue_urban',
-    seedanceAudioReferenceIntent: 'generated-dialogue-best-effort' as const,
+    providerReferenceRole: 'audio-reference' as const,
+    seedanceAudioReferenceIntent: 'generated-dialogue-reference' as const,
   };
 }
 
@@ -472,16 +468,12 @@ function topLevelImageInput(projectRelativePath: string) {
 
 function elementFrontalImageInput(
   elementId: string,
-  projectRelativePath: string,
-  providerVoiceRegistration?: NonNullable<
-    ShotVideoTakeGenerationSpec['inputs'][number]['providerVoiceRegistration']
-  >
+  projectRelativePath: string
 ) {
   return {
     ...imageInput('character-sheet', 'character_sheet', projectRelativePath),
     providerReferenceRole: 'element-frontal-image' as const,
     elementId,
-    ...(providerVoiceRegistration ? { providerVoiceRegistration } : {}),
   };
 }
 
@@ -495,10 +487,7 @@ function elementReferenceImageInput(elementId: string, projectRelativePath: stri
 
 function elementVideoInput(
   elementId: string,
-  projectRelativePath: string,
-  providerVoiceRegistration?: NonNullable<
-    ShotVideoTakeGenerationSpec['inputs'][number]['providerVoiceRegistration']
-  >
+  projectRelativePath: string
 ) {
   return {
     kind: 'source-video' as const,
@@ -511,7 +500,6 @@ function elementVideoInput(
     subjectId: elementId,
     providerReferenceRole: 'element-video' as const,
     elementId,
-    ...(providerVoiceRegistration ? { providerVoiceRegistration } : {}),
   };
 }
 

@@ -1,7 +1,6 @@
 import type {
   CastVoiceAttachmentCommandDocument,
   CreateCastVoiceProviderRegistrationInput,
-  KlingVoiceRegistrationSpec,
 } from '@gorenku/studio-core/server';
 import {
   readRequiredJsonInput,
@@ -58,14 +57,6 @@ export const castVoiceCommandHandlers = [
   {
     path: ['registrations', 'remove'],
     run: runRegistrationRemove,
-  },
-  {
-    path: ['kling-registration', 'estimate'],
-    run: runKlingRegistrationEstimate,
-  },
-  {
-    path: ['kling-registration', 'run'],
-    run: runKlingRegistrationRun,
   },
 ] satisfies CliCommandHandler<CastVoiceCommandFlags>[];
 
@@ -156,34 +147,6 @@ async function runRegistrationRemove(input: CastVoiceCommandInput): Promise<unkn
     castMemberId: requiredFlag(input.flags.cast, '--cast'),
     voiceIdOrName: requiredFlag(input.flags.voice, '--voice'),
     registrationId: requiredFlag(input.flags.registration, '--registration'),
-  });
-}
-
-async function runKlingRegistrationEstimate(input: CastVoiceCommandInput): Promise<unknown> {
-  const filePath = requiredFlag(input.flags.file, '--file');
-  const spec = (await readRequiredJsonInput(
-    filePath,
-    'cast voice kling-registration estimate'
-  )) as KlingVoiceRegistrationSpec;
-  return input.runtime.projectDataService.estimateKlingCastVoiceRegistration({
-    homeDir: input.runtime.homeDir,
-    projectName: input.flags.project,
-    spec,
-  });
-}
-
-async function runKlingRegistrationRun(input: CastVoiceCommandInput): Promise<unknown> {
-  const filePath = requiredFlag(input.flags.file, '--file');
-  const spec = (await readRequiredJsonInput(
-    filePath,
-    'cast voice kling-registration run'
-  )) as KlingVoiceRegistrationSpec;
-  return input.runtime.projectDataService.runKlingCastVoiceRegistration({
-    homeDir: input.runtime.homeDir,
-    projectName: input.flags.project,
-    spec,
-    approvalToken: input.flags.approvalToken,
-    simulate: input.flags.simulate,
   });
 }
 

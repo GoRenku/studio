@@ -27,9 +27,6 @@ import type {
   CastVoiceReadReport,
   CastVoiceRemoveReport,
   CastVoiceValidationReport,
-  KlingVoiceRegistrationEstimateReport,
-  KlingVoiceRegistrationRunReport,
-  KlingVoiceRegistrationSpec,
   CastOperationDocument,
   DepartmentCommandReport,
   InspirationAnalysisValidationReport,
@@ -299,8 +296,6 @@ export interface ProjectDataService {
   readCastVoiceProviderRegistration(input: ReadCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationReadReport>;
   createCastVoiceProviderRegistration(input: CreateCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationWriteReport>;
   removeCastVoiceProviderRegistration(input: RemoveCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationRemoveReport>;
-  estimateKlingCastVoiceRegistration(input: EstimateKlingCastVoiceRegistrationInput): Promise<KlingVoiceRegistrationEstimateReport>;
-  runKlingCastVoiceRegistration(input: RunKlingCastVoiceRegistrationInput): Promise<KlingVoiceRegistrationRunReport>;
   validateCastVoiceAttachment(input: ValidateCastVoiceAttachmentInput): Promise<CastVoiceValidationReport>;
   attachCastVoice(input: AttachCastVoiceInput): Promise<CastVoiceAttachmentReport>;
   removeCastVoice(input: RemoveCastVoiceInput): Promise<CastVoiceRemoveReport>;
@@ -616,18 +611,6 @@ export interface CreateCastVoiceProviderRegistrationInput extends ReadCastVoiceI
 
 export interface RemoveCastVoiceProviderRegistrationInput
   extends ReadCastVoiceProviderRegistrationInput {}
-
-export interface EstimateKlingCastVoiceRegistrationInput extends RenkuConfigPathOptions {
-  projectName?: string;
-  spec: KlingVoiceRegistrationSpec;
-}
-
-export interface RunKlingCastVoiceRegistrationInput
-  extends EstimateKlingCastVoiceRegistrationInput {
-  approvalToken?: string;
-  simulate?: boolean;
-  idGenerator?: ProjectIdGenerator;
-}
 
 export interface ValidateCastVoiceAttachmentInput extends RenkuConfigPathOptions {
   projectName?: string;

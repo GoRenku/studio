@@ -24,6 +24,7 @@ import type {
   MediaGenerationPurpose,
   MediaGenerationDependencyRequest,
   MediaGenerationDependencySlot,
+  MediaGenerationEstimateReport,
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
   MediaGenerationRequestTarget,
@@ -115,7 +116,7 @@ import { buildShotVideoTakeContext } from './shot-video-take/context.js';
 import { listShotVideoTakeModels, listShotInputModels } from './shot-video-take/model-list.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotMultiShotStoryboardSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotMultiShotStoryboardSheetSpec, prepareShotInputDraftSpec } from './shot-video-take/input-specs.js';
 import { buildShotInputDependencyDraftSpec } from './shot-video-take/dependency-draft-specs.js';
-import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec } from './shot-video-take/final-specs.js';
+import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec, estimateShotVideoTakeSpec } from './shot-video-take/final-specs.js';
 import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotMultiShotStoryboardSheetSpec, runShotVideoTakeSpec } from './shot-video-take/generation-runs.js';
 import { declareShotVideoTakeDependencies } from './shot-video-take/dependency-inventory.js';
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from './shot-video-take/media-imports.js';
@@ -215,6 +216,7 @@ export interface MediaGenerationPurposeDefinition {
   listSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateSpec?(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   declareDependencies?(
     input: MediaGenerationDependencyDeclarationInput
   ): Promise<MediaGenerationDependencySlot[]>;
@@ -684,6 +686,7 @@ const DEFINITIONS = [
       } satisfies UpdateShotVideoTakeGenerationSpecInput),
     listSpecs: (input) => listShotVideoTakeSpecs(toShotInput(input)),
     prepareSpec: prepareShotVideoTakeSpec,
+    estimateSpec: estimateShotVideoTakeSpec,
     prepareDraftSpec: (input) =>
       prepareShotVideoTakeDraftSpec({
         projectName: input.projectName,

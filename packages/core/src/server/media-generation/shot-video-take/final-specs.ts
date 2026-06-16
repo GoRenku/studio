@@ -41,8 +41,14 @@ import {
 } from './project-session.js';
 import {
   buildShotVideoTakeProviderPayload,
+  buildShotVideoTakePricingProviderPayload,
+  buildKlingTransientVoiceConversions,
   toGenerationRequest,
 } from './provider-payloads.js';
+import {
+  buildKlingTransientVoiceEstimateDetails,
+  combineShotVideoTakeEstimate,
+} from './kling-transient-voice.js';
 import {
   finalInputMatchesRouteSlot,
   missingRequiredRouteInputLabelsForFinalSpec,
@@ -180,8 +186,58 @@ export async function estimateShotVideoTakeSpec(
 ): Promise<MediaGenerationEstimateReport> {
   const prepared = await prepareShotVideoTakeSpec(input);
   const { estimateGeneration } = await import('@gorenku/studio-engines');
-  const estimate = await estimateGeneration(prepared.generation);
-  return { ...prepared, estimate };
+  assertShotVideoTakeSpec(prepared.spec.spec);
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: prepared.spec.spec.target.sceneId,
+    shotListId: prepared.spec.spec.target.shotListId,
+    shotIds: prepared.spec.spec.target.shotIds,
+    productionGroupId: prepared.spec.spec.target.productionGroupId,
+  });
+  const pricingPlan = buildShotVideoTakePricingProviderPayload({
+    spec: prepared.spec.spec,
+    context,
+  });
+  const pricingGeneration = toGenerationRequest(pricingPlan, prepared.spec.spec);
+  const finalEstimate = await estimateGeneration(pricingGeneration);
+  const route = requireShotVideoTakeRoute(
+    prepared.spec.spec.modelChoice,
+    prepared.spec.spec.inputModeId,
+    context.shotGroupMode
+  );
+  const transientVoiceConversions = buildKlingTransientVoiceConversions({
+    spec: prepared.spec.spec,
+    route,
+    payload: pricingPlan.payload,
+  });
+  if (transientVoiceConversions.length === 0) {
+    return { ...prepared, estimate: finalEstimate };
+  }
+  const projectFolder = await withShotProjectSession(input, ({ projectFolder }) => projectFolder);
+  const transientVoiceEstimateDetails =
+    await buildKlingTransientVoiceEstimateDetails({
+      projectFolder,
+      conversions: transientVoiceConversions,
+      estimateGeneration,
+    });
+  return {
+    ...prepared,
+    estimate: combineShotVideoTakeEstimate({
+      finalEstimate,
+      transientVoiceEstimates: transientVoiceEstimateDetails.estimates,
+      transientVoiceCacheStates: transientVoiceEstimateDetails.cacheStates,
+      approvalBasis: {
+        final: pricingGeneration,
+        transientKlingVoiceConversions:
+          transientVoiceEstimateDetails.estimates.map((estimate) => ({
+            provider: estimate.provider,
+            model: estimate.model,
+            approvalToken: estimate.approvalToken,
+          })),
+      },
+    }),
+  };
 }
 
 
@@ -224,6 +280,8 @@ export function validateFinalSpecAgainstContext(
     (input) =>
       input.kind === 'audio' &&
       input.subjectKind === 'scene-dialogue' &&
+      route.providerFamily !== 'kling-v3' &&
+      route.providerFamily !== 'kling-o3' &&
       !route.inputSlots.some((slot) => finalInputMatchesRouteSlot(input, slot))
   );
   if (unsupportedAudio) {

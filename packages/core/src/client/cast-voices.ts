@@ -1,5 +1,4 @@
 import type { Asset } from './assets.js';
-import type { GenerationEstimate } from '@gorenku/studio-engines';
 import type { ProjectRelativePath } from './project.js';
 
 export interface CastVoice {
@@ -14,17 +13,14 @@ export interface CastVoice {
   updatedAt: string;
 }
 
-export type CastVoiceProvider = 'elevenlabs' | 'fal-ai';
+export type CastVoiceProvider = 'elevenlabs';
 
 export type CastVoiceProviderRegistrationModel =
   | 'eleven_v3'
   | 'eleven_multilingual_v2'
-  | 'eleven_turbo_v2_5'
-  | 'kling-video/create-voice';
+  | 'eleven_turbo_v2_5';
 
-export type CastVoiceProviderCapability =
-  | 'dialogue-audio-tts'
-  | 'kling-video-voice-control';
+export type CastVoiceProviderCapability = 'dialogue-audio-tts';
 
 export interface CastVoiceProviderRegistration {
   id: string;
@@ -120,36 +116,6 @@ export interface CastVoiceProviderRegistrationRemoveReport {
     castVoiceId: string;
     registrationId: string;
   };
-  resourceKeys: string[];
-}
-
-export const KLING_VOICE_REGISTRATION_PURPOSE = 'klingVoiceRegistration' as const;
-
-export interface KlingVoiceRegistrationSpec {
-  purpose: typeof KLING_VOICE_REGISTRATION_PURPOSE;
-  castVoiceName: string;
-  castMemberId: string;
-  sourceCastVoiceId?: string;
-  sourceSampleAssetId?: string | null;
-  sourceProjectRelativePath: ProjectRelativePath;
-}
-
-export interface KlingVoiceRegistrationEstimateReport {
-  spec: KlingVoiceRegistrationSpec;
-  providerPayload: Record<string, unknown>;
-  estimate: GenerationEstimate;
-}
-
-export interface KlingVoiceRegistrationRunReport {
-  project: {
-    id?: string;
-    name: string;
-  };
-  spec: KlingVoiceRegistrationSpec;
-  providerPayload: Record<string, unknown>;
-  providerVoiceId: string;
-  registration: CastVoiceProviderRegistration;
-  voice: CastVoice;
   resourceKeys: string[];
 }
 

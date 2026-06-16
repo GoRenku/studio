@@ -1,5 +1,8 @@
 import { estimateGeneration, runGeneration } from '@gorenku/studio-engines';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
+import {
+  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+} from '../../client/index.js';
 import type {
   MediaGenerationDependencyPlan,
   MediaGenerationEstimateReport,
@@ -107,6 +110,11 @@ export async function prepareDraftMediaGenerationSpec(
 export async function estimateMediaGenerationSpec(
   input: ReadMediaGenerationSpecInput
 ): Promise<MediaGenerationEstimateReport> {
+  const specRecord = await readMediaGenerationSpec(input);
+  const definition = requireMediaGenerationPurposeDefinition(specRecord.purpose);
+  if (definition.estimateSpec) {
+    return definition.estimateSpec(input);
+  }
   const prepared = await prepareMediaGenerationSpec(input);
   const estimate = await estimateGeneration(prepared.generation);
   return { ...prepared, estimate };
@@ -280,6 +288,10 @@ async function assertRootDependenciesResolved(input: {
 export async function runMediaGenerationSpec(
   input: RunMediaGenerationSpecInput
 ): Promise<MediaGenerationRunReport> {
+  const specRecord = await readMediaGenerationSpec(input);
+  if (specRecord.purpose === SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
+    return requireMediaGenerationPurposeDefinition(specRecord.purpose).runSpec(input) as Promise<MediaGenerationRunReport>;
+  }
   const prepared = await prepareMediaGenerationSpec(input);
   const estimate = await estimateGeneration(prepared.generation);
   if (

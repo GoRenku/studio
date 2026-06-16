@@ -4,6 +4,14 @@
 
 Implemented.
 
+Superseded note, June 15, 2026: the Kling durable provider-registration
+direction in this plan has been replaced by
+`0071-kling-inline-transient-voice-id-and-dialogue-audio.md` and ADR
+`0034-use-transient-kling-voice-ids-for-shot-video.md`. The V3/O3 route and
+source-video contract work remains useful context, but agents should not use
+the Kling registration commands, types, or checklist items below as current
+implementation direction.
+
 This plan proposes how Renku Studio should model fal.ai Kling V3 and Kling O3
 video generation routes. It is intentionally a contract plan before
 implementation: the current shot-video route layer is too flat for Kling's

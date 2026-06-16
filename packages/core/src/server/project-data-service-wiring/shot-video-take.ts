@@ -5,7 +5,8 @@ import { updateShotVideoTakeProductionGroup, updateShotVideoTakeRailGroups } fro
 import { estimateShotVideoTakeProduction, planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
 import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
-import { validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
+import { estimateShotVideoTakeSpec, prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
+import { runShotVideoTakeSpec } from '../media-generation/shot-video-take/generation-runs.js';
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
 
@@ -74,9 +75,9 @@ export function createShotVideoTakeServiceWiring() {
     updateShotVideoTakeSpec: sharedGeneration.updateMediaGenerationSpec,
     readShotVideoTakeSpec: sharedGeneration.readMediaGenerationSpec,
     listShotVideoTakeSpecs: listShotVideoTakeSpecs,
-    prepareShotVideoTakeSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateShotVideoTakeSpec: sharedGeneration.estimateMediaGenerationSpec,
-    runShotVideoTakeSpec: sharedGeneration.runMediaGenerationSpec,
+    prepareShotVideoTakeSpec: prepareShotVideoTakeSpec,
+    estimateShotVideoTakeSpec: estimateShotVideoTakeSpec,
+    runShotVideoTakeSpec: runShotVideoTakeSpec,
     importShotFirstFrame: importShotFirstFrame,
     importShotLastFrame: importShotLastFrame,
     importShotReferenceImage: importShotReferenceImage,

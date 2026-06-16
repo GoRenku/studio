@@ -1,6 +1,8 @@
 import type {
   MediaGenerationRunReport,
+  ShotVideoTakeGenerationSpec,
 } from '../../../client/index.js';
+import { ProjectDataError } from '../../project-data-error.js';
 import {
   insertMediaGenerationRun,
 } from '../../database/access/media-generation.js';
@@ -12,6 +14,7 @@ import type {
   RunMediaGenerationSpecInput,
 } from '../../project-data-service-contracts.js';
 import {
+  estimateShotVideoTakeSpec,
   prepareShotVideoTakeSpec,
 } from './final-specs.js';
 import {
@@ -23,6 +26,19 @@ import {
 import {
   withShotProjectSession,
 } from './project-session.js';
+import {
+  buildShotVideoTakeContext,
+} from './context.js';
+import {
+  injectKlingTransientVoiceIds,
+  resolveKlingTransientVoices,
+} from './kling-transient-voice.js';
+import {
+  buildKlingTransientVoiceConversions,
+} from './provider-payloads.js';
+import {
+  requireShotVideoTakeRoute,
+} from './route-settings.js';
 import {
   readShotSpec,
 } from './spec-records.js';
@@ -77,12 +93,33 @@ export async function runShotVideoTakeSpec(
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareShotVideoTakeSpec(input);
   const { estimateGeneration, runGeneration } = await import('@gorenku/studio-engines');
-  const estimate = await estimateGeneration(prepared.generation);
+  const combinedEstimate = await estimateShotVideoTakeSpec(input);
+  if (!input.simulate && input.approvalToken !== combinedEstimate.estimate.approvalToken) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_TAKE_APPROVAL_TOKEN_MISMATCH',
+      'Shot video take generation requires an approval token from the matching combined estimate.',
+      {
+        suggestion:
+          'Run the estimate command again and pass its approval token to the run command.',
+      }
+    );
+  }
   const outputPaths = await resolveShotGenerationOutputPaths(input);
+  const transientVoiceDiagnostics = await prepareKlingTransientVoicePayload({
+    commandInput: input,
+    spec: prepared.spec.spec,
+    providerPayload: prepared.providerPayload,
+    requestParameters: prepared.generation.request.parameters,
+    projectFolder: outputPaths.projectFolder,
+    simulate: Boolean(input.simulate),
+    estimateGeneration,
+    runGeneration,
+  });
+  const finalRequestEstimate = await estimateGeneration(prepared.generation);
   const result = await runGeneration({
     ...prepared.generation,
     mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    approvalToken: finalRequestEstimate.approvalToken,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -92,13 +129,84 @@ export async function runShotVideoTakeSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate,
-    approvalToken: estimate.approvalToken,
+    estimate: combinedEstimate.estimate,
+    approvalToken: combinedEstimate.estimate.approvalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,
-    diagnostics: result.diagnostics ?? {},
+    diagnostics: {
+      ...(isRecord(result.diagnostics) ? result.diagnostics : {}),
+      ...(transientVoiceDiagnostics
+        ? { klingTransientVoiceConversions: transientVoiceDiagnostics }
+        : {}),
+    },
   });
+}
+
+async function prepareKlingTransientVoicePayload(input: {
+  commandInput: RunMediaGenerationSpecInput;
+  spec: unknown;
+  providerPayload: Record<string, unknown>;
+  requestParameters: Record<string, unknown>;
+  projectFolder: string;
+  simulate: boolean;
+  estimateGeneration: typeof import('@gorenku/studio-engines').estimateGeneration;
+  runGeneration: typeof import('@gorenku/studio-engines').runGeneration;
+}): Promise<Record<string, unknown> | null> {
+  const spec = input.spec as ShotVideoTakeGenerationSpec;
+  const context = await buildShotVideoTakeContext({
+    projectName: input.commandInput.projectName,
+    homeDir: input.commandInput.homeDir,
+    sceneId: spec.target.sceneId,
+    shotListId: spec.target.shotListId,
+    shotIds: spec.target.shotIds,
+    productionGroupId: spec.target.productionGroupId,
+  });
+  const route = requireShotVideoTakeRoute(
+    spec.modelChoice,
+    spec.inputModeId,
+    context.shotGroupMode
+  );
+  const conversions = buildKlingTransientVoiceConversions({
+    spec,
+    route,
+    payload: input.providerPayload,
+  });
+  if (conversions.length === 0) {
+    return null;
+  }
+  const report = await resolveKlingTransientVoices({
+    projectFolder: input.projectFolder,
+    conversions,
+    simulate: input.simulate,
+    estimateGeneration: input.estimateGeneration,
+    runGeneration: input.runGeneration,
+  });
+  injectKlingTransientVoiceIds({
+    payload: input.providerPayload,
+    requestParameters: input.requestParameters,
+    resolutions: report.resolutions,
+  });
+  return {
+    cacheWarnings: report.warnings,
+    conversions: report.resolutions.map((resolution) => ({
+      provider: resolution.conversion.provider,
+      model: resolution.conversion.model,
+      sourceAudioAssetFileId: resolution.conversion.sourceAudio.assetFileId,
+      sourceProjectPath: resolution.conversion.sourceAudio.projectRelativePath,
+      sourceAudioFingerprint: resolution.sourceAudioFingerprint,
+      targetElementId: resolution.conversion.targetElementId,
+      targetPromptToken: resolution.conversion.targetPromptToken,
+      payloadPath: resolution.conversion.payloadPath,
+      cacheResult: resolution.cacheResult,
+      expiresAt: resolution.expiresAt,
+      simulated: resolution.simulated,
+    })),
+  };
+}
+
+function isRecord(input: unknown): input is Record<string, unknown> {
+  return Boolean(input) && typeof input === 'object' && !Array.isArray(input);
 }
 
 

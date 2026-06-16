@@ -4,11 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import {
-  estimateGeneration,
   fetchElevenLabsVoiceSampleAudio,
-  runGeneration,
 } from '@gorenku/studio-engines';
-import { KLING_VOICE_REGISTRATION_PURPOSE } from '../../client/index.js';
 import type {
   Asset,
   CastVoice,
@@ -27,15 +24,11 @@ import type {
   CastVoiceRemoveReport,
   CastVoiceSampleSource,
   CastVoiceValidationReport,
-  KlingVoiceRegistrationEstimateReport,
-  KlingVoiceRegistrationRunReport,
-  KlingVoiceRegistrationSpec,
 } from '../../client/index.js';
 import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
 import {
   deleteAssetFileRecordsForAsset,
   insertAssetFileRecord,
-  listAssetFileRecordsForAsset,
 } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
@@ -92,13 +85,6 @@ const AUDIO_EXTENSIONS = new Map([
   ['.mp3', 'audio/mpeg'],
   ['.wav', 'audio/wav'],
   ['.m4a', 'audio/mp4'],
-]);
-
-const KLING_VOICE_SOURCE_MEDIA_KINDS = new Map<string, 'audio' | 'video'>([
-  ['.mp3', 'audio'],
-  ['.wav', 'audio'],
-  ['.mp4', 'video'],
-  ['.mov', 'video'],
 ]);
 
 export interface CastVoiceProjectInput extends RenkuConfigPathOptions {
@@ -263,132 +249,6 @@ export async function removeCastVoiceProviderRegistration(
       resourceKeys: studioResourceKeysForAssetTarget({
         kind: 'castMember',
         castMemberId: input.castMemberId,
-      }),
-    };
-  });
-}
-
-export async function estimateKlingCastVoiceRegistration(input: {
-  projectName?: string;
-  homeDir?: string;
-  spec: KlingVoiceRegistrationSpec;
-}): Promise<KlingVoiceRegistrationEstimateReport> {
-  const prepared = await prepareKlingVoiceRegistration(input);
-  const estimate = await estimateGeneration({
-    policy: klingVoiceRegistrationPolicy(),
-    request: {
-      inputFiles: [
-        {
-          field: 'voice_url',
-          projectRelativePath: prepared.sourceProjectRelativePath,
-          mediaKind: prepared.sourceMediaKind,
-          required: true,
-        },
-      ],
-      parameters: {},
-      pricingInputCounts: {},
-      outputNames: [klingVoiceRegistrationOutputName(prepared.spec)],
-    },
-  });
-  return {
-    spec: prepared.spec,
-    providerPayload: { voice_url: prepared.sourceProjectRelativePath },
-    estimate,
-  };
-}
-
-export async function runKlingCastVoiceRegistration(input: {
-  projectName?: string;
-  homeDir?: string;
-  spec: KlingVoiceRegistrationSpec;
-  approvalToken?: string;
-  simulate?: boolean;
-  idGenerator?: ProjectIdGenerator;
-}): Promise<KlingVoiceRegistrationRunReport> {
-  const prepared = await prepareKlingVoiceRegistration(input);
-  const estimate = await estimateGeneration({
-    policy: klingVoiceRegistrationPolicy(),
-    request: {
-      inputFiles: [
-        {
-          field: 'voice_url',
-          projectRelativePath: prepared.sourceProjectRelativePath,
-          mediaKind: prepared.sourceMediaKind,
-          required: true,
-        },
-      ],
-      parameters: {},
-      pricingInputCounts: {},
-      outputNames: [klingVoiceRegistrationOutputName(prepared.spec)],
-    },
-  });
-  if (!input.simulate && input.approvalToken !== estimate.approvalToken) {
-    throw new ProjectDataError(
-      'PROJECT_DATA364',
-      'Kling Cast Voice registration requires an approval token from the matching estimate.',
-      { suggestion: 'Run the estimate command and pass its approval token to the run command.' }
-    );
-  }
-  const result = await runGeneration({
-    policy: klingVoiceRegistrationPolicy(),
-    request: {
-      inputFiles: [
-        {
-          field: 'voice_url',
-          projectRelativePath: prepared.sourceProjectRelativePath,
-          mediaKind: prepared.sourceMediaKind,
-          required: true,
-        },
-      ],
-      parameters: {},
-      pricingInputCounts: {},
-      outputNames: [klingVoiceRegistrationOutputName(prepared.spec)],
-    },
-    mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
-    outputRoot: path.join(prepared.projectFolder, 'generated/media'),
-    outputProjectRelativeRoot: 'generated/media',
-    inputRoot: prepared.projectFolder,
-  });
-  const providerVoiceId = await readKlingVoiceIdFromOutputs({
-    projectFolder: prepared.projectFolder,
-    outputs: result.outputs,
-    simulated: Boolean(input.simulate),
-  });
-  return withCastVoiceProjectSession(input, ({ currentProject, session }) => {
-    const ids = createUniqueIdAllocator(
-      input.idGenerator ?? createRandomIdGenerator()
-    );
-    const now = new Date().toISOString();
-    const registrationId = ids('cast_voice_provider_registration');
-    insertCastVoiceProviderRegistrationRecord(session, {
-      id: registrationId,
-      castVoiceId: prepared.castVoice.id,
-      provider: 'fal-ai',
-      registrationModel: 'kling-video/create-voice',
-      externalVoiceId: providerVoiceId,
-      capabilitiesJson: JSON.stringify(['kling-video-voice-control']),
-      sourceSampleAssetId: prepared.sourceSampleAssetId,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const registration = requireCastVoiceProviderRegistrationRecord(session, {
-      castVoiceId: prepared.castVoice.id,
-      registrationId,
-    });
-    return {
-      project: {
-        id: currentProject.projectId,
-        name: currentProject.projectName,
-      },
-      spec: prepared.spec,
-      providerPayload: { voice_url: prepared.sourceProjectRelativePath },
-      providerVoiceId,
-      registration,
-      voice: toCastVoice(session, prepared.castVoice),
-      resourceKeys: studioResourceKeysForAssetTarget({
-        kind: 'castMember',
-        castMemberId: prepared.spec.castMemberId,
       }),
     };
   });
@@ -931,10 +791,7 @@ function validateProviderRegistrationCreateInput(
     );
   }
   for (const capability of capabilities) {
-    if (
-      capability !== 'dialogue-audio-tts' &&
-      capability !== 'kling-video-voice-control'
-    ) {
+    if (capability !== 'dialogue-audio-tts') {
       throw new ProjectDataError(
         'PROJECT_DATA360',
         `Unsupported Cast Voice provider registration capability: ${String(capability)}.`
@@ -952,19 +809,6 @@ function validateProviderRegistrationCreateInput(
       throw new ProjectDataError(
         'PROJECT_DATA360',
         'ElevenLabs Cast Voice provider registrations only support dialogue-audio-tts.'
-      );
-    }
-  } else if (provider === 'fal-ai') {
-    if (registrationModel !== 'kling-video/create-voice') {
-      throw new ProjectDataError(
-        'PROJECT_DATA361',
-        `Unsupported fal-ai Cast Voice provider registration model: ${registrationModel}.`
-      );
-    }
-    if (capabilities.some((capability) => capability !== 'kling-video-voice-control')) {
-      throw new ProjectDataError(
-        'PROJECT_DATA360',
-        'Kling Cast Voice provider registrations only support kling-video-voice-control.'
       );
     }
   } else {
@@ -1000,176 +844,6 @@ function validateProviderRegistrationSourceSample(
       { suggestion: 'Use an audio sample asset attached to the same Cast Member.' }
     );
   }
-}
-
-async function prepareKlingVoiceRegistration(input: {
-  projectName?: string;
-  homeDir?: string;
-  spec: KlingVoiceRegistrationSpec;
-}): Promise<{
-  projectFolder: string;
-  spec: KlingVoiceRegistrationSpec;
-  castVoice: CastVoiceRecord;
-  sourceProjectRelativePath: string;
-  sourceSampleAssetId: string;
-  sourceMediaKind: 'audio' | 'video';
-}> {
-  if (input.spec.purpose !== KLING_VOICE_REGISTRATION_PURPOSE) {
-    throw new ProjectDataError(
-      'PROJECT_DATA364',
-      `Kling Cast Voice registration purpose must be ${KLING_VOICE_REGISTRATION_PURPOSE}.`
-    );
-  }
-  const sourceProjectRelativePath = normalizeProjectRelativePath(
-    input.spec.sourceProjectRelativePath
-  );
-  const sourceMediaKind = klingVoiceSourceMediaKind(sourceProjectRelativePath);
-  return withCastVoiceProjectSession(input, async ({ projectFolder, session }) => {
-    requireCastMember(session, input.spec.castMemberId);
-    const castVoice = requireCastVoiceRecord(session, {
-      castMemberId: input.spec.castMemberId,
-      voiceIdOrName: input.spec.sourceCastVoiceId ?? input.spec.castVoiceName,
-    });
-    const sourcePath = resolveProjectRelativePath(
-      projectFolder,
-      sourceProjectRelativePath
-    );
-    assertResolvedPathInsideProject(projectFolder, sourcePath);
-    await statExistingFile(sourcePath);
-    const sourceSampleAssetId =
-      input.spec.sourceSampleAssetId ?? castVoice.sampleAssetId;
-    validateProviderRegistrationSourceSample(session, {
-      castMemberId: castVoice.castMemberId,
-      sourceSampleAssetId,
-    });
-    validateKlingRegistrationSourceSampleFile(session, {
-      sourceSampleAssetId,
-      sourceProjectRelativePath,
-    });
-    return {
-      projectFolder,
-      spec: {
-        ...input.spec,
-        castVoiceName: castVoice.name,
-        castMemberId: castVoice.castMemberId,
-        sourceCastVoiceId: castVoice.id,
-        sourceProjectRelativePath,
-      },
-      castVoice,
-      sourceProjectRelativePath,
-      sourceSampleAssetId,
-      sourceMediaKind,
-    };
-  });
-}
-
-function validateKlingRegistrationSourceSampleFile(
-  session: Parameters<typeof listAssetFileRecordsForAsset>[0],
-  input: { sourceSampleAssetId: string; sourceProjectRelativePath: string }
-): void {
-  const files = listAssetFileRecordsForAsset(session, input.sourceSampleAssetId);
-  const sourceFile = files.find(
-    (file) => file.projectRelativePath === input.sourceProjectRelativePath
-  );
-  if (!sourceFile) {
-    throw new ProjectDataError(
-      'PROJECT_DATA366',
-      `Kling Cast Voice registration source path does not belong to sample asset ${input.sourceSampleAssetId}: ${input.sourceProjectRelativePath}.`,
-      { suggestion: 'Use the Cast Voice sample asset file path as the Kling voice registration source.' }
-    );
-  }
-  if (sourceFile.durationSeconds === null) {
-    throw new ProjectDataError(
-      'PROJECT_DATA367',
-      `Kling Cast Voice registration source sample is missing duration metadata: ${input.sourceProjectRelativePath}.`,
-      { suggestion: 'Refresh or reattach the sample so Renku can verify the 5-30 second provider requirement before registration.' }
-    );
-  }
-  if (sourceFile.durationSeconds < 5 || sourceFile.durationSeconds > 30) {
-    throw new ProjectDataError(
-      'PROJECT_DATA368',
-      `Kling Cast Voice registration source sample must be 5-30 seconds: ${input.sourceProjectRelativePath} is ${sourceFile.durationSeconds}s.`,
-      { suggestion: 'Choose a clean single-voice sample between 5 and 30 seconds.' }
-    );
-  }
-}
-
-function klingVoiceSourceMediaKind(projectRelativePath: string): 'audio' | 'video' {
-  const extension = path.extname(projectRelativePath).toLowerCase();
-  const mediaKind = KLING_VOICE_SOURCE_MEDIA_KINDS.get(extension);
-  if (!mediaKind) {
-    throw new ProjectDataError(
-      'PROJECT_DATA365',
-      `Kling Cast Voice registration source must be an .mp3, .wav, .mp4, or .mov file: ${projectRelativePath}.`
-    );
-  }
-  return mediaKind;
-}
-
-function klingVoiceRegistrationPolicy() {
-  return {
-    provider: 'fal-ai' as const,
-    model: 'kling-video/create-voice',
-    mediaKind: 'json' as const,
-    mode: 'json' as const,
-    outputCount: 1,
-  };
-}
-
-function klingVoiceRegistrationOutputName(spec: KlingVoiceRegistrationSpec): string {
-  return `${spec.castVoiceName}-kling-voice.json`;
-}
-
-async function readKlingVoiceIdFromOutputs(input: {
-  projectFolder: string;
-  outputs: unknown;
-  simulated: boolean;
-}): Promise<string> {
-  if (!Array.isArray(input.outputs)) {
-    throw missingKlingVoiceId();
-  }
-  const output = input.outputs.find(
-    (candidate) =>
-      candidate &&
-      typeof candidate === 'object' &&
-      typeof (candidate as { projectRelativePath?: unknown }).projectRelativePath ===
-        'string'
-  ) as { projectRelativePath: string } | undefined;
-  if (!output) {
-    throw missingKlingVoiceId();
-  }
-  const jsonPath = resolveProjectRelativePath(
-    input.projectFolder,
-    normalizeProjectRelativePath(output.projectRelativePath)
-  );
-  assertResolvedPathInsideProject(input.projectFolder, jsonPath);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await fs.readFile(jsonPath, 'utf8'));
-  } catch {
-    if (input.simulated) {
-      return 'simulated_kling_voice';
-    }
-    throw missingKlingVoiceId();
-  }
-  const voiceId =
-    parsed && typeof parsed === 'object'
-      ? (parsed as { voice_id?: unknown }).voice_id
-      : null;
-  if (typeof voiceId !== 'string' || !voiceId.trim()) {
-    if (input.simulated) {
-      return 'simulated_kling_voice';
-    }
-    throw missingKlingVoiceId();
-  }
-  return voiceId.trim();
-}
-
-function missingKlingVoiceId(): ProjectDataError {
-  return new ProjectDataError(
-    'PROJECT_DATA366',
-    'Kling Cast Voice registration output did not include voice_id.'
-  );
 }
 
 function requiredReferenceName(input: string): string {
@@ -1297,8 +971,11 @@ function toCastVoiceProviderRegistration(
   };
 }
 
-function toCastVoiceProvider(provider: string, registrationId: string) {
-  if (provider === 'elevenlabs' || provider === 'fal-ai') {
+function toCastVoiceProvider(
+  provider: string,
+  registrationId: string
+): CastVoiceProvider {
+  if (provider === 'elevenlabs') {
     return provider;
   }
   throw new ProjectDataError(
@@ -1307,12 +984,14 @@ function toCastVoiceProvider(provider: string, registrationId: string) {
   );
 }
 
-function toCastVoiceProviderRegistrationModel(model: string, registrationId: string) {
+function toCastVoiceProviderRegistrationModel(
+  model: string,
+  registrationId: string
+): CastVoiceProviderRegistrationModel {
   if (
     model === 'eleven_v3' ||
     model === 'eleven_multilingual_v2' ||
-    model === 'eleven_turbo_v2_5' ||
-    model === 'kling-video/create-voice'
+    model === 'eleven_turbo_v2_5'
   ) {
     return model;
   }
@@ -1337,10 +1016,7 @@ function parseRegistrationCapabilities(
   return Array.from(
     new Set(
       parsed.map((candidate) => {
-        if (
-          candidate === 'dialogue-audio-tts' ||
-          candidate === 'kling-video-voice-control'
-        ) {
+        if (candidate === 'dialogue-audio-tts') {
           return candidate;
         }
         throw invalidRegistrationCapabilities(record.id);

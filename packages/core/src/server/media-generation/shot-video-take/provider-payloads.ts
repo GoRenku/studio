@@ -39,6 +39,22 @@ export interface ShotVideoTakeProviderPlan {
   pricingInputCounts?: PreparedMediaGeneration['generation']['request']['pricingInputCounts'];
 }
 
+export interface KlingTransientVoiceConversion {
+  provider: 'fal-ai';
+  model: 'kling-video/create-voice';
+  sourceAudio: {
+    inputId: string;
+    assetId: string;
+    assetFileId: string;
+    projectRelativePath: string;
+    subjectKind?: string;
+    subjectId?: string;
+  };
+  targetElementId: string;
+  targetPromptToken: `@Element${number}`;
+  payloadPath: Array<string | number>;
+}
+
 
 
 export function buildShotVideoTakeProviderPayload(
@@ -112,9 +128,21 @@ export function buildKlingV3ShotVideoPayload(
   }
   if (route.inputMode === 'text-only') {
     rejectKlingElementInputs(spec, 'CORE_SHOT_VIDEO_KLING_V3_TEXT_ELEMENTS_UNSUPPORTED');
+    buildKlingTransientVoiceConversions({
+      spec,
+      route,
+      payload,
+      elements: [],
+    });
   } else {
     const bundle = projectKlingReferenceBundle(spec, route);
     applyKlingElements(payload, inputFiles, bundle.elements, route);
+    buildKlingTransientVoiceConversions({
+      spec,
+      route,
+      payload,
+      elements: bundle.elements,
+    });
     validateKlingVoiceControl({
       route,
       payload,
@@ -150,6 +178,12 @@ export function buildKlingO3ShotVideoPayload(
   applyKlingTopLevelImages(payload, inputFiles, bundle.topLevelImages, route);
   applyKlingElements(payload, inputFiles, bundle.elements, route);
   applyKlingSourceVideo(payload, inputFiles, bundle.sourceVideo, route);
+  buildKlingTransientVoiceConversions({
+    spec,
+    route,
+    payload,
+    elements: bundle.elements,
+  });
   return {
     provider: 'fal-ai',
     model: route.providerModel,
@@ -174,10 +208,12 @@ export function buildShotVideoTakePricingProviderPayload(input: {
   );
   const payload = baseShotVideoPayload(spec, route);
   if (route.providerFamily === 'kling-v3') {
-    const bundle = projectKlingReferenceBundle(spec, route);
-    payload.uses_voice_control = bundle.elements.some(
-      (element) => element.kind === 'video' && element.providerVoiceId
-    );
+    payload.uses_voice_control =
+      buildKlingTransientVoiceConversionsForPricing({
+        spec,
+        route,
+        payload,
+      }).length > 0;
   }
   return {
     provider: 'fal-ai',
@@ -290,8 +326,6 @@ export interface KlingVideoElementReference {
   elementId: string;
   promptToken: `@Element${number}`;
   video: KlingReferenceFile;
-  voiceRegistrationId?: string;
-  providerVoiceId?: string;
 }
 
 export interface KlingSourceVideoReference extends KlingReferenceFile {
@@ -356,30 +390,12 @@ function projectKlingElementReference(
 ): KlingElementReference {
   const elementInputs = inputs.filter((input) => requireElementId(input) === elementId);
   const video = elementInputs.find((input) => input.providerReferenceRole === 'element-video');
-  const voiceInput = elementInputs.find((input) => input.providerVoiceRegistration);
   if (video) {
-    const registration = voiceInput?.providerVoiceRegistration;
-    if (registration && !registration.capabilities.includes('kling-video-voice-control')) {
-      throw new ProjectDataError(
-        'CORE_SHOT_VIDEO_KLING_VOICE_REGISTRATION_CAPABILITY_REQUIRED',
-        `Kling element ${elementId} selected a provider registration without kling-video-voice-control capability.`,
-        {
-          suggestion:
-            'Select a Kling voice registration created with kling-video/create-voice.',
-        }
-      );
-    }
     return {
       kind: 'video',
       elementId,
       promptToken: `@Element${index + 1}` as const,
       video: referenceFile(video),
-      ...(registration
-        ? {
-            voiceRegistrationId: registration.id,
-            providerVoiceId: registration.externalVoiceId,
-          }
-        : {}),
     };
   }
   const frontalImage = elementInputs.find(
@@ -392,16 +408,6 @@ function projectKlingElementReference(
       {
         suggestion:
           'Provide an element-frontal-image input for each image-set element.',
-      }
-    );
-  }
-  if (voiceInput?.providerVoiceRegistration) {
-    throw new ProjectDataError(
-      'CORE_SHOT_VIDEO_KLING_IMAGE_ELEMENT_VOICE_UNSUPPORTED',
-      `Kling image-set element ${elementId} cannot use voice binding.`,
-      {
-        suggestion:
-          'Use a video-backed element when selecting a Kling voice registration.',
       }
     );
   }
@@ -530,7 +536,6 @@ function applyKlingElements(
       });
       return {
         video_url: logicalInputUrl(element.video.projectRelativePath),
-        ...(element.providerVoiceId ? { voice_id: element.providerVoiceId } : {}),
       };
     }
     inputFiles.push({
@@ -610,7 +615,13 @@ function validateKlingVoiceControl(input: {
   elements: KlingElementReference[];
 }): void {
   const usesVoiceControl = input.elements.some(
-    (element) => element.kind === 'video' && element.providerVoiceId
+    (element) =>
+      element.kind === 'video' &&
+      readPayloadPath(input.payload, [
+        'elements',
+        input.elements.indexOf(element),
+        'voice_id',
+      ]) !== undefined
   );
   if (!usesVoiceControl) {
     return;
@@ -621,10 +632,172 @@ function validateKlingVoiceControl(input: {
       'Kling V3 voice control requires generate_audio: true.',
       {
         suggestion:
-          'Enable native audio or remove the selected Kling voice registration.',
+          'Enable native audio or remove the selected dialogue audio reference.',
       }
     );
   }
+}
+
+export function buildKlingTransientVoiceConversions(input: {
+  spec: ShotVideoTakeGenerationSpec;
+  route?: ShotVideoRoute;
+  payload?: Record<string, unknown>;
+  elements?: KlingElementReference[];
+}): KlingTransientVoiceConversion[] {
+  const route =
+    input.route ??
+    requireShotVideoTakeRoute(
+      input.spec.modelChoice,
+      input.spec.inputModeId,
+      input.spec.target.shotIds.length > 1 ? 'multi-shot' : 'single-shot'
+    );
+  if (route.providerFamily !== 'kling-v3' && route.providerFamily !== 'kling-o3') {
+    return [];
+  }
+  const audioInputs = selectedKlingDialogueAudioInputs(input.spec);
+  if (audioInputs.length === 0) {
+    return [];
+  }
+  const elementContract = route.referenceContract?.elements;
+  if (!elementContract?.supportsVoiceId) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_KLING_DIALOGUE_AUDIO_ELEMENTS_UNSUPPORTED',
+      'Selected dialogue audio cannot be bound because this Kling route has no element reference contract.',
+      {
+        suggestion:
+          'Choose a Kling route with video-backed elements or exclude the dialogue audio reference.',
+      }
+    );
+  }
+  const elements = input.elements ?? projectKlingReferenceBundle(input.spec, route).elements;
+  const conversions = audioInputs.map((audioInput) =>
+    bindKlingDialogueAudioInput({
+      audioInput,
+      audioInputCount: audioInputs.length,
+      elements,
+    })
+  );
+  if (
+    conversions.length > 0 &&
+    route.providerFamily === 'kling-v3' &&
+    input.payload?.generate_audio !== true
+  ) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_KLING_VOICE_REQUIRES_AUDIO',
+      'Kling V3 dialogue audio voice conditioning requires generate_audio: true.',
+      {
+        suggestion:
+          'Enable native audio or exclude the dialogue audio reference.',
+      }
+    );
+  }
+  return conversions;
+}
+
+function buildKlingTransientVoiceConversionsForPricing(input: {
+  spec: ShotVideoTakeGenerationSpec;
+  route: ShotVideoRoute;
+  payload: Record<string, unknown>;
+}): KlingTransientVoiceConversion[] {
+  const bundle = projectKlingReferenceBundle(input.spec, input.route);
+  return buildKlingTransientVoiceConversions({
+    spec: input.spec,
+    route: input.route,
+    payload: input.payload,
+    elements: bundle.elements,
+  });
+}
+
+function selectedKlingDialogueAudioInputs(
+  spec: ShotVideoTakeGenerationSpec
+): ShotVideoTakeGenerationInput[] {
+  return spec.inputs.filter(
+    (input) =>
+      input.kind === 'audio' &&
+      input.mediaKind === 'audio' &&
+      input.subjectKind === 'scene-dialogue'
+  );
+}
+
+function bindKlingDialogueAudioInput(input: {
+  audioInput: ShotVideoTakeGenerationInput;
+  audioInputCount: number;
+  elements: KlingElementReference[];
+}): KlingTransientVoiceConversion {
+  const videoElements = input.elements.filter(
+    (element): element is KlingVideoElementReference => element.kind === 'video'
+  );
+  const requestedElementId = input.audioInput.elementId?.trim();
+  let targetElement: KlingVideoElementReference | undefined;
+  if (requestedElementId) {
+    const matchingElement = input.elements.find(
+      (element) => element.elementId === requestedElementId
+    );
+    if (matchingElement?.kind === 'image-set') {
+      throw new ProjectDataError(
+        'CORE_SHOT_VIDEO_KLING_IMAGE_ELEMENT_VOICE_UNSUPPORTED',
+        `Dialogue audio cannot be bound to Kling image-set element ${requestedElementId}.`,
+        {
+          suggestion:
+            'Bind dialogue audio to a video-backed element, or remove the elementId from the audio input when there is only one video element.',
+        }
+      );
+    }
+    targetElement = matchingElement;
+  } else if (input.audioInputCount === 1 && videoElements.length === 1) {
+    targetElement = videoElements[0];
+  } else {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_KLING_DIALOGUE_AUDIO_BINDING_AMBIGUOUS',
+      'Selected Kling dialogue audio cannot be bound automatically.',
+      {
+        suggestion:
+          'Provide elementId on each dialogue audio input so Renku knows which video-backed element should receive the transient voice_id.',
+      }
+    );
+  }
+  if (!targetElement) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_KLING_DIALOGUE_AUDIO_VIDEO_ELEMENT_REQUIRED',
+      'Selected dialogue audio cannot be bound because no matching video-backed Kling element exists.',
+      {
+        suggestion:
+          'Select a video-backed element for this Kling route and set the dialogue audio input elementId to that element.',
+      }
+    );
+  }
+  const elementIndex = input.elements.findIndex(
+    (element) => element.elementId === targetElement.elementId
+  );
+  return {
+    provider: 'fal-ai',
+    model: 'kling-video/create-voice',
+    sourceAudio: {
+      inputId: input.audioInput.assetFileId,
+      assetId: input.audioInput.assetId,
+      assetFileId: input.audioInput.assetFileId,
+      projectRelativePath: input.audioInput.projectRelativePath,
+      subjectKind: input.audioInput.subjectKind,
+      subjectId: input.audioInput.subjectId,
+    },
+    targetElementId: targetElement.elementId,
+    targetPromptToken: targetElement.promptToken,
+    payloadPath: ['elements', elementIndex, 'voice_id'],
+  };
+}
+
+function readPayloadPath(
+  payload: Record<string, unknown>,
+  path: Array<string | number>
+): unknown {
+  let current: unknown = payload;
+  for (const segment of path) {
+    if (!current || typeof current !== 'object') {
+      return undefined;
+    }
+    current = (current as Record<string | number, unknown>)[segment];
+  }
+  return current;
 }
 
 
@@ -665,21 +838,6 @@ function validateSeedanceAudioReferences(
       {
         suggestion:
           'Select a reference image/video or remove the Seedance audio references.',
-      }
-    );
-  }
-  const generatedDialogue = audioInputs.find(
-    (input) =>
-      input.subjectKind === 'scene-dialogue' &&
-      input.seedanceAudioReferenceIntent !== 'generated-dialogue-best-effort'
-  );
-  if (generatedDialogue) {
-    throw new ProjectDataError(
-      'CORE_SHOT_VIDEO_SEEDANCE_DIALOGUE_AUDIO_BEST_EFFORT_REQUIRED',
-      'Generated dialogue audio can only be used as a Seedance best-effort audio reference.',
-      {
-        suggestion:
-          'Set seedanceAudioReferenceIntent to generated-dialogue-best-effort, or use a clean cast voice sample for audio_urls.',
       }
     );
   }

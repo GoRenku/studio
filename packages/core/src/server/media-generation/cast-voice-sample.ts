@@ -154,8 +154,11 @@ function toCastVoiceProviderRegistration(
   };
 }
 
-function toCastVoiceProvider(provider: string, registrationId: string) {
-  if (provider === 'elevenlabs' || provider === 'fal-ai') {
+function toCastVoiceProvider(
+  provider: string,
+  registrationId: string
+): CastVoiceProviderRegistration['provider'] {
+  if (provider === 'elevenlabs') {
     return provider;
   }
   throw new ProjectDataError(
@@ -164,12 +167,14 @@ function toCastVoiceProvider(provider: string, registrationId: string) {
   );
 }
 
-function toCastVoiceProviderRegistrationModel(model: string, registrationId: string) {
+function toCastVoiceProviderRegistrationModel(
+  model: string,
+  registrationId: string
+): CastVoiceProviderRegistration['registrationModel'] {
   if (
     model === 'eleven_v3' ||
     model === 'eleven_multilingual_v2' ||
-    model === 'eleven_turbo_v2_5' ||
-    model === 'kling-video/create-voice'
+    model === 'eleven_turbo_v2_5'
   ) {
     return model;
   }
@@ -194,10 +199,7 @@ function parseRegistrationCapabilities(
   return Array.from(
     new Set(
       parsed.map((candidate) => {
-        if (
-          candidate === 'dialogue-audio-tts' ||
-          candidate === 'kling-video-voice-control'
-        ) {
+        if (candidate === 'dialogue-audio-tts') {
           return candidate;
         }
         throw invalidRegistrationCapabilities(record.id);
