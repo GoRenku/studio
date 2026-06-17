@@ -7,7 +7,7 @@ import type {
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
   ShotVideoTakePreflightInput,
-  ShotVideoTakeProductionPlan,
+  ShotVideoTakeGenerationProduction,
   ShotVideoTakeGenerationSpec,
   ShotVideoTakeModelChoiceReport,
 } from '../../../client/index.js';
@@ -39,8 +39,8 @@ import {
   preparedInputsForContext,
 } from './preflight-inputs.js';
 import {
-  updateShotVideoTakeProductionGroup,
-} from './production-groups.js';
+  updateSceneShotVideoTakeGenerationProduction,
+} from './take-generations.js';
 import {
   planShotVideoTakeProduction,
 } from './production-plan.js';
@@ -56,7 +56,7 @@ import {
 } from './route-settings.js';
 import {
   sameShotIds,
-} from './shot-group.js';
+} from './take-generation-context.js';
 
 
 
@@ -64,13 +64,16 @@ export async function previewShotVideoTakeProduction(
   input: PreviewShotVideoTakeProductionInput
 ): Promise<ShotVideoTakePreflightReport> {
   if (input.production) {
-    await updateShotVideoTakeProductionGroup({ ...input, production: input.production });
+    await updateSceneShotVideoTakeGenerationProduction({
+      ...input,
+      production: input.production,
+    });
   }
   const context = await buildShotVideoTakeContext(input);
   const issues = validatePreflight(context);
-  const inputModeId = context.productionGroup.videoTakeProduction.inputModeId ?? context.defaults.inputModeId;
+  const inputModeId = context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
-    context.productionGroup.videoTakeProduction.modelChoice ??
+    context.takeGeneration.production.modelChoice ??
     defaultModelChoiceForInputMode(inputModeId);
   const preparedInputs = await withShotProjectSession(input, ({ session }) =>
     preparedInputsForContext(context, session, issues)
@@ -81,9 +84,9 @@ export async function previewShotVideoTakeProduction(
     modelChoice,
     preparedInputs,
   });
-  const finalDraft = context.productionGroup.videoTakeProduction.agentProposal?.finalPromptDraft;
+  const finalDraft = context.takeGeneration.production.agentProposal?.finalPromptDraft;
   const prompts = [
-    ...context.productionGroup.videoTakeProduction.agentProposal?.dependencyDrafts.map((draft) => ({
+    ...context.takeGeneration.production.agentProposal?.dependencyDrafts.map((draft) => ({
       purpose: draft.purpose,
       prompt: draft.prompt,
       title: draft.title,
@@ -113,7 +116,7 @@ export async function previewShotVideoTakeProduction(
     issues: plan.diagnostics,
     plan,
     target: context.target,
-    productionGroup: context.productionGroup,
+    takeGeneration: context.takeGeneration,
     inputModeId,
     shotGroupMode: context.shotGroupMode,
     modelChoice,
@@ -140,10 +143,10 @@ export function finalTakeSpecForPreflight(input: {
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   preparedInputs: ShotVideoTakePreflightInput[];
-  parameterValues?: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
+  parameterValues?: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
   promptMode?: 'require-authored' | 'estimate-placeholder';
 }): ShotVideoTakeGenerationSpec {
-  const plan = input.context.productionGroup.videoTakeProduction;
+  const plan = input.context.takeGeneration.production;
   const finalDraft = plan.agentProposal?.finalPromptDraft;
   const prompt = finalDraft?.prompt.trim()
     ? finalDraft.prompt
@@ -190,13 +193,13 @@ export function parameterValuesForFinalTake(
   context: ShotVideoTakeGenerationContext,
   inputModeId: ShotVideoTakeInputModeId,
   modelChoice: ShotVideoTakeModelChoice
-): NonNullable<ShotVideoTakeProductionPlan['parameterValues']> {
+): NonNullable<ShotVideoTakeGenerationProduction['parameterValues']> {
   const report = modelChoices(context, inputModeId).find((model) => model.modelChoice === modelChoice);
   if (!report) {
     return {};
   }
-  const values: NonNullable<ShotVideoTakeProductionPlan['parameterValues']> = {};
-  const planValues = context.productionGroup.videoTakeProduction.parameterValues ?? {};
+  const values: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']> = {};
+  const planValues = context.takeGeneration.production.parameterValues ?? {};
   for (const parameter of report.parameters) {
     const contextDefault = context.defaults.parameterValues[parameter.name];
     if (parameter.defaultValue !== undefined) {
@@ -219,8 +222,8 @@ export function parameterValuesForFinalTake(
 
 export function canonicalParameterValue(
   parameter: ShotVideoTakeModelChoiceReport['parameters'][number],
-  value: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>[string]
-): NonNullable<ShotVideoTakeProductionPlan['parameterValues']>[string] {
+  value: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>[string]
+): NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>[string] {
   if (!parameter.allowedValues?.length) {
     return value;
   }
@@ -248,7 +251,7 @@ export function canonicalParameterValue(
 
 export function validatePreflight(context: ShotVideoTakeGenerationContext): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
-  const plan = context.productionGroup.videoTakeProduction;
+  const plan = context.takeGeneration.production;
   const inputModeId = plan.inputModeId ?? context.defaults.inputModeId;
   const modelChoice = plan.modelChoice ?? defaultModelChoiceForInputMode(inputModeId);
   const route = selectShotVideoRoute({
@@ -261,7 +264,7 @@ export function validatePreflight(context: ShotVideoTakeGenerationContext): Diag
       issue(
         'PROJECT_DATA375',
         'Shot video take model does not support the selected input mode for this shot group.',
-        ['productionGroup', 'videoTakeProduction', 'inputModeId'],
+        ['takeGeneration', 'production', 'inputModeId'],
         'Choose a model and input mode combination that supports the current shot group.'
       )
     );
@@ -272,7 +275,7 @@ export function validatePreflight(context: ShotVideoTakeGenerationContext): Diag
         issue(
           'PROJECT_DATA376',
           'Shot video take agent proposal is stale for the current input mode.',
-          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'basedOnInputModeId'],
+          ['takeGeneration', 'production', 'agentProposal', 'basedOnInputModeId'],
           'Refresh the proposal before creating specs.'
         )
       );
@@ -282,20 +285,20 @@ export function validatePreflight(context: ShotVideoTakeGenerationContext): Diag
         issue(
           'PROJECT_DATA377',
           'Shot video take agent proposal is stale for the current model.',
-          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'basedOnModelChoice'],
+          ['takeGeneration', 'production', 'agentProposal', 'basedOnModelChoice'],
           'Refresh the proposal before creating specs.'
         )
       );
     }
     if (
       plan.agentProposal.basedOnShotIds &&
-      !sameShotIds(plan.agentProposal.basedOnShotIds, context.productionGroup.shotIds)
+      !sameShotIds(plan.agentProposal.basedOnShotIds, context.takeGeneration.shotIds)
     ) {
       issues.push(
         issue(
           'PROJECT_DATA378',
           'Shot video take agent proposal is stale for the current shot group.',
-          ['productionGroup', 'videoTakeProduction', 'agentProposal', 'basedOnShotIds'],
+          ['takeGeneration', 'production', 'agentProposal', 'basedOnShotIds'],
           'Refresh the proposal before creating specs.'
         )
       );
@@ -310,7 +313,7 @@ export function agentBrief(context: ShotVideoTakeGenerationContext): string {
   return [
     `Scene: ${context.scene.title}`,
     `Shots: ${context.shots.map((shot) => `${shot.shotId}: ${shot.action}`).join(' | ')}`,
-    `Input mode: ${context.productionGroup.videoTakeProduction.inputModeId ?? context.defaults.inputModeId}`,
+    `Input mode: ${context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId}`,
     `Shot group mode: ${context.shotGroupMode}`,
   ].join('\n');
 }

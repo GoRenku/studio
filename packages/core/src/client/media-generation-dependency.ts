@@ -48,10 +48,10 @@ export type MediaGenerationAssetSelectionPolicy =
   | 'selected-or-default';
 
 export type MediaGenerationDependencySelectorInput =
-  | {
+    | {
       kind: 'shot-video-input';
       inputKind: ShotVideoTakeInputKind;
-      productionGroupId: string;
+      takeGenerationId: string;
       shotIds: string[];
       subjectKind?: ShotVideoTakeInputSubjectKind;
       subjectId?: string;

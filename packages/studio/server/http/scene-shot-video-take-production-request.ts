@@ -1,9 +1,8 @@
 import type {
   LocationAzimuthViewId,
+  ShotVideoTakeGenerationProduction,
   ShotVideoTakeInputPolicy,
-  ShotVideoTakeProductionGroup,
 } from '@gorenku/studio-core/client';
-import type { ShotVideoTakeRailGroupInput } from '@gorenku/studio-core/server';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -17,15 +16,15 @@ import {
 
 const CONTEXT = 'scene shot video take production request';
 
-/**
- * Parse the `{ productionGroup }` envelope used by the AI Production autosave
- * and preview routes (0041). The reader only checks the envelope shape; deep
- * validation of input mode, model, parameters, and group membership is delegated to
- * core (0040).
- */
-export function readShotVideoTakeProductionGroupRequest(
+export interface SceneShotVideoTakeGenerationCreateRequest {
+  shotListId: string;
+  shotIds: string[];
+  title?: string;
+}
+
+export function readSceneShotVideoTakeGenerationCreateRequest(
   input: unknown
-): ShotVideoTakeProductionGroup {
+): SceneShotVideoTakeGenerationCreateRequest {
   const issues: DiagnosticIssue[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
@@ -34,59 +33,99 @@ export function readShotVideoTakeProductionGroupRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['productionGroup'],
+    ['shotListId', 'shotIds', 'title'],
     issues,
     CONTEXT,
-    'Send only the productionGroup field.'
+    'Send only shotListId, shotIds, and title.'
   );
+  const shotListId = readStringValue(record.shotListId, ['shotListId'], issues);
+  const shotIds = readStringArray(record.shotIds, ['shotIds'], issues);
+  const title =
+    record.title === undefined
+      ? undefined
+      : readStringValue(record.title, ['title'], issues);
 
-  const productionGroup = readProductionGroupValue(record.productionGroup, issues);
-
-  finishOrThrow(issues);
-  return productionGroup;
-}
-
-export interface ShotVideoTakeRailGroupsRequest {
-  railGroups: ShotVideoTakeRailGroupInput[];
-}
-
-export function readShotVideoTakeRailGroupsRequest(
-  input: unknown
-): ShotVideoTakeRailGroupsRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['railGroups'],
-    issues,
-    CONTEXT,
-    'Send only the railGroups field.'
-  );
-  if (!Array.isArray(record.railGroups)) {
+  if (Array.isArray(record.shotIds) && shotIds.length === 0) {
     issues.push(
       createDiagnosticError(
-        'STUDIO_SERVER350',
-        'railGroups must be an array.',
-        { path: ['railGroups'], context: CONTEXT },
-        'Send an array of rail group membership objects.'
+        'STUDIO_SERVER343',
+        'shotIds must contain at least one shot id.',
+        { path: ['shotIds'], context: CONTEXT },
+        'Send at least one shot id.'
       )
     );
-    finishOrThrow(issues);
-    return { railGroups: [] };
   }
-  const railGroups = record.railGroups.map((value, index) =>
-    readRailGroupValue(value, ['railGroups', String(index)], issues)
-  );
   finishOrThrow(issues);
-  return { railGroups };
+  return {
+    shotListId,
+    shotIds,
+    ...(title ? { title } : {}),
+  };
+}
+
+export interface SceneShotVideoTakeGenerationProductionRequest {
+  production: ShotVideoTakeGenerationProduction;
+}
+
+export interface SceneShotVideoTakeGenerationShotsRequest {
+  shotIds: string[];
+}
+
+export function readSceneShotVideoTakeGenerationShotsRequest(
+  input: unknown
+): SceneShotVideoTakeGenerationShotsRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['shotIds'],
+    issues,
+    CONTEXT,
+    'Send only the shotIds field.'
+  );
+  const shotIds = readStringArray(record.shotIds, ['shotIds'], issues);
+
+  if (Array.isArray(record.shotIds) && shotIds.length === 0) {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER345',
+        'shotIds must contain at least one shot id.',
+        { path: ['shotIds'], context: CONTEXT },
+        'Send at least one shot id.'
+      )
+    );
+  }
+  finishOrThrow(issues);
+  return { shotIds };
+}
+
+export function readSceneShotVideoTakeGenerationProductionRequest(
+  input: unknown
+): SceneShotVideoTakeGenerationProductionRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['production'],
+    issues,
+    CONTEXT,
+    'Send only the production field.'
+  );
+  const production = readProductionValue(record.production, ['production'], issues);
+  finishOrThrow(issues);
+  return { production };
 }
 
 export interface ShotVideoTakeProductionPlanRequest {
-  productionGroup: ShotVideoTakeProductionGroup;
+  production?: ShotVideoTakeGenerationProduction;
   inputPolicy?: ShotVideoTakeInputPolicy;
 }
 
@@ -101,17 +140,19 @@ export function readShotVideoTakeProductionPlanRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['productionGroup', 'inputPolicy'],
+    ['production', 'inputPolicy'],
     issues,
     CONTEXT,
-    'Send only the productionGroup and inputPolicy fields.'
+    'Send only the production and inputPolicy fields.'
   );
 
-  const productionGroup = readProductionGroupValue(record.productionGroup, issues);
-
+  const production =
+    record.production === undefined
+      ? undefined
+      : readProductionValue(record.production, ['production'], issues);
   finishOrThrow(issues);
   return {
-    productionGroup,
+    ...(production ? { production } : {}),
     inputPolicy: record.inputPolicy as ShotVideoTakeInputPolicy | undefined,
   };
 }
@@ -321,11 +362,6 @@ export interface ShotReferenceInclusionRequest {
   inclusion: 'include' | 'exclude' | null;
 }
 
-export interface ShotGroupReferenceInclusionRequest
-  extends ShotReferenceInclusionRequest {
-  shotIds: string[];
-}
-
 export function readShotReferenceInclusionRequest(
   input: unknown
 ): ShotReferenceInclusionRequest {
@@ -352,114 +388,23 @@ export function readShotReferenceInclusionRequest(
   return { dependencyId, inclusion };
 }
 
-export function readShotGroupReferenceInclusionRequest(
-  input: unknown
-): ShotGroupReferenceInclusionRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['shotIds', 'dependencyId', 'inclusion'],
-    issues,
-    CONTEXT,
-    'Send only the shotIds, dependencyId, and inclusion fields.'
-  );
-  const shotIds = readStringArray(record.shotIds, ['shotIds'], issues);
-  const dependencyId = readStringValue(record.dependencyId, ['dependencyId'], issues);
-  const inclusion = readReferenceInclusionValue(
-    record.inclusion,
-    ['inclusion'],
-    issues
-  );
-  finishOrThrow(issues);
-  return { shotIds, dependencyId, inclusion };
-}
-
-function readProductionGroupValue(
+function readProductionValue(
   value: unknown,
+  path: string[],
   issues: DiagnosticIssue[]
-): ShotVideoTakeProductionGroup {
+): ShotVideoTakeGenerationProduction {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     issues.push(
       createDiagnosticError(
         'STUDIO_SERVER340',
-        'productionGroup must be an object.',
-        { path: ['productionGroup'], context: CONTEXT },
-        'Send the structured production group object.'
+        `${path.join('.')} must be an object.`,
+        { path, context: CONTEXT },
+        'Send the structured take-generation production object.'
       )
     );
     throwRequestError(issues);
   }
-  return value as ShotVideoTakeProductionGroup;
-}
-
-function readRailGroupValue(
-  value: unknown,
-  path: string[],
-  issues: DiagnosticIssue[]
-): ShotVideoTakeRailGroupInput {
-  const record = readHttpRequestRecord(value, path, issues, CONTEXT);
-  if (!record) {
-    return { shotIds: [] };
-  }
-  assertHttpRequestFields(
-    record,
-    path,
-    [
-      'productionGroupId',
-      'sourceProductionGroupId',
-      'mergePartnerProductionGroupId',
-      'shotIds',
-    ],
-    issues,
-    CONTEXT,
-    'Send only productionGroupId, sourceProductionGroupId, mergePartnerProductionGroupId, and shotIds.'
-  );
-  const shotIds = readStringArray(record.shotIds, [...path, 'shotIds'], issues);
-  if (Array.isArray(record.shotIds) && shotIds.length === 0) {
-    issues.push(
-      createDiagnosticError(
-        'STUDIO_SERVER343',
-        `${[...path, 'shotIds'].join('.')} must contain at least one shot id.`,
-        { path: [...path, 'shotIds'], context: CONTEXT },
-        'Send at least one shot id for each rail group.'
-      )
-    );
-  }
-  return {
-    ...(record.productionGroupId === undefined
-      ? {}
-      : {
-          productionGroupId: readStringValue(
-            record.productionGroupId,
-            [...path, 'productionGroupId'],
-            issues
-          ),
-        }),
-    ...(record.sourceProductionGroupId === undefined
-      ? {}
-      : {
-          sourceProductionGroupId: readStringValue(
-            record.sourceProductionGroupId,
-            [...path, 'sourceProductionGroupId'],
-            issues
-          ),
-        }),
-    ...(record.mergePartnerProductionGroupId === undefined
-      ? {}
-      : {
-          mergePartnerProductionGroupId: readStringValue(
-            record.mergePartnerProductionGroupId,
-            [...path, 'mergePartnerProductionGroupId'],
-            issues
-          ),
-        }),
-    shotIds,
-  };
+  return value as ShotVideoTakeGenerationProduction;
 }
 
 function readStringArray(
@@ -589,6 +534,6 @@ function throwRequestError(issues: DiagnosticIssue[]): never {
     code: 'STUDIO_SERVER341',
     message: 'Shot video take production request failed validation.',
     issues,
-    suggestion: 'Send a productionGroup object.',
+    suggestion: 'Send the fields supported by the take-generation route.',
   });
 }

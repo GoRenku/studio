@@ -21,9 +21,7 @@ describe('shot video take preflight and validation', () => {
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -102,17 +100,13 @@ describe('shot video take preflight and validation', () => {
 
     await projectData.importShotFirstFrame({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       sourceProjectRelativePath,
     });
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
     });
 
     expect(preflight.preparedInputs).toEqual(
@@ -139,9 +133,7 @@ describe('shot video take preflight and validation', () => {
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',

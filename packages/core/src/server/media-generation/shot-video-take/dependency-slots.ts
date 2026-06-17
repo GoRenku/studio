@@ -1,6 +1,6 @@
 import type {
   MediaGenerationDependencySlot,
-  SceneShotMediaGenerationTarget,
+  SceneShotVideoTakeGenerationTarget,
   ShotVideoTakeInputModeId,
   ShotVideoTakeRequestedInput,
 } from '../../../client/index.js';
@@ -12,7 +12,7 @@ import {
 } from '../dependency-slot-definitions.js';
 
 export interface ShotVideoTakeDependencySlotInput {
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   inputModeId: ShotVideoTakeInputModeId;
   selectedCast: Array<{ id: string; name: string; isVoiceOver?: boolean }>;
   selectedLocations: Array<{ id: string; name: string }>;
@@ -34,7 +34,7 @@ export function declareShotVideoTakeDependencySlots(
               target: input.target,
               required: false,
               reason:
-                'This generated multi-shot storyboard reference helps preserve continuity across the production group.',
+                'This generated multi-shot storyboard reference helps preserve continuity across the take generation.',
             }),
           ]
       : []),

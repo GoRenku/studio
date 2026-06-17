@@ -552,7 +552,7 @@ const DEFINITIONS = [
   {
     purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
     mediaKind: 'image',
-    targetKind: 'sceneShotGroup',
+    targetKind: 'sceneShotVideoTakeGeneration',
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -579,7 +579,7 @@ const DEFINITIONS = [
   {
     purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
     mediaKind: 'image',
-    targetKind: 'sceneShotGroup',
+    targetKind: 'sceneShotVideoTakeGeneration',
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -606,7 +606,7 @@ const DEFINITIONS = [
   {
     purpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
     mediaKind: 'image',
-    targetKind: 'sceneShotGroup',
+    targetKind: 'sceneShotVideoTakeGeneration',
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -633,7 +633,7 @@ const DEFINITIONS = [
   {
     purpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
-    targetKind: 'sceneShotGroup',
+    targetKind: 'sceneShotVideoTakeGeneration',
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -661,7 +661,7 @@ const DEFINITIONS = [
   {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     mediaKind: 'video',
-    targetKind: 'sceneShotGroup',
+    targetKind: 'sceneShotVideoTakeGeneration',
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) => listShotVideoTakeModels(toShotModelInput(input)),
     validateSpec: (input) =>
@@ -778,16 +778,11 @@ function toSceneInput(
 function toShotInput(
   input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
 ): ShotVideoTakeContextInput {
-  const target = requireTargetKind(input, 'sceneShotGroup');
+  const target = requireTargetKind(input, 'sceneShotVideoTakeGeneration');
   return {
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: target.sceneId,
-    shotListId: input.shotListId ?? target.shotListId,
-    shotIds: input.shotIds ?? target.shotIds,
-    ...(target.productionGroupId
-      ? { productionGroupId: target.productionGroupId }
-      : {}),
+    takeGenerationId: target.takeGenerationId,
   };
 }
 

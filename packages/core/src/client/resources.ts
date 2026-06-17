@@ -353,7 +353,7 @@ export interface DirectorSceneReadiness {
       };
   shotVideo: {
     preflightAvailable: boolean;
-    selectedProductionGroupId: string | null;
+    selectedTakeGenerationId: string | null;
     selectedShotIds: string[];
     selectedInputCount: number;
     selectedTakeCount: number;
@@ -391,7 +391,9 @@ export type StudioSelectionContextResult =
       diagnostics: DiagnosticIssue[];
 };
 
-export type ScenePanelTab = 'narrative' | 'shots';
+export type ScenePanelTab = 'narrative' | 'shots' | 'takes';
+
+export type SceneTakeWorkspaceMode = 'list' | 'new' | 'edit';
 
 export type SceneShotDetailTab =
   | 'description'
@@ -421,6 +423,8 @@ export type StudioSelection =
       id: string;
       sceneTab?: ScenePanelTab;
       shotId?: string;
+      takeWorkspaceMode?: SceneTakeWorkspaceMode;
+      takeGenerationId?: string;
       shotTab?: SceneShotDetailTab;
     };
 

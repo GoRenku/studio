@@ -10,8 +10,6 @@ export interface SceneShotListDocument {
   baseShotListId?: string | null;
   lookbookInfluence?: string;
   shots: SceneShot[];
-  videoTakeRailGroups?: ShotVideoTakeRailGroup[];
-  videoTakeProductionGroups?: ShotVideoTakeProductionGroup[];
   openQuestions?: string[];
 }
 
@@ -126,7 +124,7 @@ export type ShotVideoTakeInputSubjectKind =
   | 'cast-member'
   | 'location'
   | 'lookbook'
-  | 'production-group'
+  | 'take-generation'
   | 'scene-dialogue'
   | 'shot';
 
@@ -155,18 +153,7 @@ export interface ShotVideoTakePreparedInput {
   subjectId: string;
 }
 
-export interface ShotVideoTakeProductionGroup {
-  productionGroupId: string;
-  shotIds: string[];
-  videoTakeProduction: ShotVideoTakeProductionPlan;
-}
-
-export interface ShotVideoTakeRailGroup {
-  productionGroupId: string;
-  shotIds: string[];
-}
-
-export interface ShotVideoTakeProductionPlan {
+export interface ShotVideoTakeGenerationProduction {
   inputModeId?: ShotVideoTakeInputModeId;
   modelChoice?: ShotVideoTakeModelChoice;
   parameterValues?: ShotVideoTakeParameterValues;
@@ -531,8 +518,6 @@ export interface SceneShotListApplyReport extends SceneShotListCommandReport {
   shotList: SceneShotListSummary;
   changes: SceneShotListApplyChange[];
   storyboard: SceneShotListStoryboardStatus;
-  prunedVideoTakeRailGroupIds: string[];
-  prunedVideoTakeProductionGroupIds: string[];
 }
 
 export interface SceneShotListApplyChange {

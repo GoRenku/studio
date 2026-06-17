@@ -46,10 +46,10 @@ import {
   shotVideoTakeResourceKeys,
 } from './resource-keys.js';
 import {
-  PreparedShotGroup,
-  prepareShotGroupInSession,
+  PreparedSceneShotVideoTakeGeneration,
+  prepareSceneShotVideoTakeGenerationInSession,
   requireShot,
-} from './shot-group.js';
+} from './take-generation-context.js';
 
 
 
@@ -57,12 +57,9 @@ export async function buildShotVideoTakeContext(
   input: ShotVideoTakeContextInput
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
-    const now = new Date().toISOString();
-    const prepared = prepareShotGroupInSession({
+    const prepared = prepareSceneShotVideoTakeGenerationInSession({
       session,
       input,
-      now,
-      persist: false,
     });
     return buildContextFromPrepared({
       session,
@@ -79,7 +76,7 @@ export function buildContextFromPrepared(input: {
   session: DatabaseSession;
   projectFolder: string;
   project: Pick<ProjectRecord, 'id' | 'name'>;
-  prepared: PreparedShotGroup;
+  prepared: PreparedSceneShotVideoTakeGeneration;
 }): ShotVideoTakeGenerationContext {
   const screenplay = requireScreenplayDocument(input.session);
   const hierarchy = requireSceneHierarchy(screenplay, input.prepared.sceneId);
@@ -127,8 +124,9 @@ export function buildContextFromPrepared(input: {
       updatedAt: input.prepared.shotListRow.updatedAt,
       isActive: activeShotListId === input.prepared.shotListId,
     },
-    productionGroup: input.prepared.productionGroup,
+    takeGeneration: input.prepared.takeGeneration,
     shots,
+    displayShots: input.prepared.shotList.shots,
     referencedCast: orderedScreenplayItems(screenplay.cast, selectedCastMemberIds)
       .map((castMember) => ({
         id: castMember.id as string,
@@ -156,14 +154,12 @@ export function buildContextFromPrepared(input: {
     storyboardImages: [],
     availableInputs: listShotVideoTakeInputRecords(input.session, {
       sceneId: input.prepared.sceneId,
-      shotListId: input.prepared.shotListId,
-      productionGroupId: input.prepared.productionGroup.productionGroupId,
+      takeGenerationId: input.prepared.takeGeneration.takeGenerationId,
       shotIds: input.prepared.orderedShotIds,
     }),
     existingTakes: listShotVideoTakes(input.session, {
       sceneId: input.prepared.sceneId,
-      shotListId: input.prepared.shotListId,
-      productionGroupId: input.prepared.productionGroup.productionGroupId,
+      takeGenerationId: input.prepared.takeGeneration.takeGenerationId,
     }),
     shotGroupMode:
       input.prepared.orderedShotIds.length > 1 ? 'multi-shot' : 'single-shot',

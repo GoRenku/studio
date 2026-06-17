@@ -7,7 +7,8 @@ import type {
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
-  ShotVideoTakeProductionGroup,
+  SceneShotVideoTakeGeneration,
+  ShotVideoTakeGenerationProduction,
   ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from './studio-project-contracts';
@@ -25,12 +26,22 @@ export interface ShotVideoTakeProductionRead {
   models: ShotVideoTakeModelListReport;
 }
 
-interface MutationResponse {
-  resource: SceneShotListResourceResponse;
+interface TakeGenerationMutationResponse {
+  context: ShotVideoTakeGenerationContext;
   resourceKeys: string[];
 }
 
 export interface ShotVideoTakeProductionMutation {
+  context: ShotVideoTakeGenerationContext;
+  resourceKeys: string[];
+}
+
+interface ResourceMutationResponse {
+  resource: SceneShotListResourceResponse;
+  resourceKeys: string[];
+}
+
+export interface ShotVideoTakeResourceMutation {
   resource: SceneShotListResourceResponse;
   resourceKeys: string[];
 }
@@ -39,70 +50,99 @@ export interface ShotVideoTakePlanRead {
   report: ShotVideoTakeProductionPlanReport;
 }
 
-/**
- * Read the AI Production planning context and the model report together in one
- * request, avoiding a UI-driven waterfall (0041). `shotIds` are sent as a
- * comma-separated ordered list.
- */
+export interface SceneShotVideoTakeGenerationsRead {
+  takeGenerations: SceneShotVideoTakeGeneration[];
+}
+
+export async function listSceneShotVideoTakeGenerations(
+  projectName: string,
+  sceneId: string
+): Promise<SceneShotVideoTakeGenerationsRead> {
+  const response = await fetch(takeGenerationsPath(projectName, sceneId));
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  return (await response.json()) as SceneShotVideoTakeGenerationsRead;
+}
+
+export async function createSceneShotVideoTakeGeneration(
+  projectName: string,
+  sceneId: string,
+  input: { shotListId: string; shotIds: string[]; title?: string }
+): Promise<SceneShotVideoTakeGeneration> {
+  const response = await fetch(takeGenerationsPath(projectName, sceneId), {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as {
+    takeGeneration: SceneShotVideoTakeGeneration;
+  };
+  return body.takeGeneration;
+}
+
+export async function updateSceneShotVideoTakeGenerationShots(
+  projectName: string,
+  sceneId: string,
+  takeGenerationId: string,
+  shotIds: string[]
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeGenerationMutation(
+    `${productionPath(projectName, sceneId, takeGenerationId)}/shots`,
+    'PATCH',
+    { shotIds }
+  );
+}
+
+/** Read the AI Production planning context and the model report together. */
 export async function readShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  shotIds: string[],
+  takeGenerationId: string,
   inputModeId?: ShotVideoTakeInputModeId
 ): Promise<ShotVideoTakeProductionRead> {
-  const search = new URLSearchParams({ shotIds: shotIds.join(',') });
+  const search = new URLSearchParams();
   if (inputModeId) {
     search.set('inputModeId', inputModeId);
   }
-  const response = await fetch(
-    `${productionPath(projectName, sceneId)}?${search.toString()}`
-  );
+  const query = search.size > 0 ? `?${search.toString()}` : '';
+  const response = await fetch(`${productionPath(projectName, sceneId, takeGenerationId)}${query}`);
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
   return (await response.json()) as ShotVideoTakeProductionRead;
 }
 
-/** Autosave the production group through core (0041). */
+/** Autosave the take-generation production setup through core. */
 export async function updateShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  productionGroup: ShotVideoTakeProductionGroup
+  takeGenerationId: string,
+  production: ShotVideoTakeGenerationProduction
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(productionPath(projectName, sceneId), 'PATCH', {
-    productionGroup,
-  });
-}
-
-export interface ShotVideoTakeRailGroupUpdate {
-  productionGroupId?: string;
-  sourceProductionGroupId?: string;
-  mergePartnerProductionGroupId?: string;
-  shotIds: string[];
-}
-
-export async function updateShotVideoTakeRailGroups(
-  projectName: string,
-  sceneId: string,
-  railGroups: ShotVideoTakeRailGroupUpdate[]
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(`${productionPath(projectName, sceneId)}/rail-groups`, 'PATCH', {
-    railGroups,
-  });
+  return sendTakeGenerationMutation(
+    productionPath(projectName, sceneId, takeGenerationId),
+    'PATCH',
+    { production }
+  );
 }
 
 /** Estimate the current production setup without opening the preflight plan. */
 export async function estimateShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  productionGroup: ShotVideoTakeProductionGroup
+  takeGenerationId: string,
+  production: ShotVideoTakeGenerationProduction
 ): Promise<ShotVideoTakeProductionEstimateReport> {
   const response = await fetch(
-    `${productionPath(projectName, sceneId)}/estimate`,
+    `${productionPath(projectName, sceneId, takeGenerationId)}/estimate`,
     {
       method: 'POST',
       headers: jsonHeaders(),
-      body: JSON.stringify({ productionGroup }),
+      body: JSON.stringify({ production }),
     }
   );
   if (!response.ok) {
@@ -117,13 +157,14 @@ export async function estimateShotVideoTakeProduction(
 export async function planShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  productionGroup: ShotVideoTakeProductionGroup,
+  takeGenerationId: string,
+  production?: ShotVideoTakeGenerationProduction,
   inputPolicy: ShotVideoTakeInputPolicy = { defaultMode: 'auto' }
 ): Promise<ShotVideoTakeProductionPlanReport> {
-  const response = await fetch(`${productionPath(projectName, sceneId)}/plan`, {
+  const response = await fetch(`${productionPath(projectName, sceneId, takeGenerationId)}/plan`, {
     method: 'POST',
     headers: jsonHeaders(),
-    body: JSON.stringify({ productionGroup, inputPolicy }),
+    body: JSON.stringify({ ...(production ? { production } : {}), inputPolicy }),
   });
   if (!response.ok) {
     throw await readStudioApiError(response);
@@ -137,8 +178,8 @@ export async function updateShotCastReferences(
   sceneId: string,
   shotId: string,
   castMemberIds: string[]
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(shotReferencePath(projectName, sceneId, shotId, 'cast-references'), 'PATCH', {
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(shotReferencePath(projectName, sceneId, shotId, 'cast-references'), 'PATCH', {
     castMemberIds,
   });
 }
@@ -148,8 +189,8 @@ export async function updateShotLocationReference(
   sceneId: string,
   shotId: string,
   locationId: string
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
     shotReferencePath(projectName, sceneId, shotId, 'location-reference'),
     'PATCH',
     { locationId }
@@ -161,8 +202,8 @@ export async function updateShotCastCharacterSheetReference(
   sceneId: string,
   shotId: string,
   input: { castMemberId: string; assetId: string | null }
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
     shotReferencePath(projectName, sceneId, shotId, 'cast-character-sheet-reference'),
     'PATCH',
     input
@@ -174,8 +215,8 @@ export async function updateShotLocationSheetReference(
   sceneId: string,
   shotId: string,
   input: { locationId: string; assetId: string | null }
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
     shotReferencePath(projectName, sceneId, shotId, 'location-sheet-reference'),
     'PATCH',
     input
@@ -191,8 +232,8 @@ export async function updateShotLocationViewReferences(
     assetId: string;
     viewIds: LocationAzimuthViewId[];
   }
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
     shotReferencePath(projectName, sceneId, shotId, 'location-view-references'),
     'PATCH',
     input
@@ -204,8 +245,8 @@ export async function updateShotLookbookReference(
   sceneId: string,
   shotId: string,
   lookbookSheetId: string | null
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
     shotReferencePath(projectName, sceneId, shotId, 'lookbook-reference'),
     'PATCH',
     { lookbookSheetId }
@@ -217,8 +258,8 @@ export async function updateShotCustomReferenceImages(
   sceneId: string,
   shotId: string,
   customReferenceInputIds: string[]
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
     shotReferencePath(projectName, sceneId, shotId, 'reference-images'),
     'PATCH',
     { customReferenceInputIds }
@@ -230,8 +271,8 @@ export async function updateShotReferenceInclusion(
   sceneId: string,
   shotId: string,
   input: { dependencyId: string; inclusion: 'include' | 'exclude' | null }
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
     shotReferencePath(projectName, sceneId, shotId, 'reference-inclusions'),
     'PATCH',
     input
@@ -241,27 +282,27 @@ export async function updateShotReferenceInclusion(
 export async function updateShotGroupReferenceInclusion(
   projectName: string,
   sceneId: string,
-  shotIds: string[],
+  takeGenerationId: string,
   input: { dependencyId: string; inclusion: 'include' | 'exclude' | null }
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
-    `${productionPath(projectName, sceneId)}/reference-inclusions`,
+): Promise<ShotVideoTakeResourceMutation> {
+  return sendResourceMutation(
+    `${productionPath(projectName, sceneId, takeGenerationId)}/reference-inclusions`,
     'PATCH',
-    { shotIds, ...input }
+    input
   );
 }
 
-/** Reuse an existing dependency input for the group (0041). */
+/** Reuse an existing dependency input for the take generation. */
 export async function selectShotVideoTakeInput(
   projectName: string,
   sceneId: string,
-  shotIds: string[],
+  takeGenerationId: string,
   inputId: string
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
-    `${productionPath(projectName, sceneId)}/inputs/select`,
+  return sendTakeGenerationMutation(
+    `${productionPath(projectName, sceneId, takeGenerationId)}/inputs/select`,
     'POST',
-    { shotIds, inputId }
+    { inputId }
   );
 }
 
@@ -269,14 +310,13 @@ export async function selectShotVideoTakeInput(
 export async function clearShotVideoTakeInput(
   projectName: string,
   sceneId: string,
-  shotIds: string[],
+  takeGenerationId: string,
   inputSlot: ShotVideoTakeInputSlot
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
-    `${productionPath(projectName, sceneId)}/inputs/clear`,
+  return sendTakeGenerationMutation(
+    `${productionPath(projectName, sceneId, takeGenerationId)}/inputs/clear`,
     'POST',
     {
-      shotIds,
       kind: inputSlot.kind,
       ...(inputSlot.subjectKind ? { subjectKind: inputSlot.subjectKind } : {}),
       ...(inputSlot.subjectId ? { subjectId: inputSlot.subjectId } : {}),
@@ -288,21 +328,37 @@ export async function clearShotVideoTakeInput(
 export async function deleteShotVideoTakeInput(
   projectName: string,
   sceneId: string,
-  shotIds: string[],
+  takeGenerationId: string,
   inputId: string
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendMutation(
-    `${productionPath(projectName, sceneId)}/inputs/${encodeURIComponent(inputId)}`,
+  return sendTakeGenerationMutation(
+    `${productionPath(projectName, sceneId, takeGenerationId)}/inputs/${encodeURIComponent(inputId)}`,
     'DELETE',
-    { shotIds }
+    {}
   );
 }
 
-async function sendMutation(
+async function sendTakeGenerationMutation(
   path: string,
   method: 'DELETE' | 'PATCH' | 'POST',
   body: unknown
-): Promise<MutationResponse> {
+): Promise<TakeGenerationMutationResponse> {
+  return sendMutation<TakeGenerationMutationResponse>(path, method, body);
+}
+
+async function sendResourceMutation(
+  path: string,
+  method: 'DELETE' | 'PATCH' | 'POST',
+  body: unknown
+): Promise<ResourceMutationResponse> {
+  return sendMutation<ResourceMutationResponse>(path, method, body);
+}
+
+async function sendMutation<T>(
+  path: string,
+  method: 'DELETE' | 'PATCH' | 'POST',
+  body: unknown
+): Promise<T> {
   const response = await fetch(path, {
     method,
     headers: jsonHeaders(),
@@ -311,7 +367,7 @@ async function sendMutation(
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  return (await response.json()) as MutationResponse;
+  return (await response.json()) as T;
 }
 
 function jsonHeaders(): Record<string, string> {
@@ -329,8 +385,16 @@ function readStudioApiToken(): string {
   return token;
 }
 
-function productionPath(projectName: string, sceneId: string): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/video-take-production`;
+function takeGenerationsPath(projectName: string, sceneId: string): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/take-generations`;
+}
+
+function productionPath(
+  projectName: string,
+  sceneId: string,
+  takeGenerationId: string
+): string {
+  return `${takeGenerationsPath(projectName, sceneId)}/${encodeURIComponent(takeGenerationId)}`;
 }
 
 function shotReferencePath(

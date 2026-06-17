@@ -6,19 +6,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import type { SceneShotVideoTakeGeneration } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
-import { updateShotVideoTakeRailGroups } from '@/services/studio-shot-video-takes-api';
-import type { SaveNotificationStatus } from '@/ui/save-notification';
-import { Button } from '@/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/ui/dialog';
+  createSceneShotVideoTakeGeneration,
+  listSceneShotVideoTakeGenerations,
+} from '@/services/studio-shot-video-takes-api';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -44,14 +39,6 @@ import {
   saveNotificationStatusesEqual,
   type DetailSaveNotificationSlot,
 } from '../detail-save-notification';
-import {
-  createShotRailGroupDraftsFromRailGroups,
-  cycleShotRailGroupMembership,
-  shotRailDraftsEqual,
-  shotRailGroupsForSave,
-  summarizeShotRailGroupChanges,
-  type ShotRailGroupDraft,
-} from './shot-video-take-grouping';
 
 interface SceneShotsTabProps {
   projectName: string;
@@ -74,29 +61,26 @@ export function SceneShotsTab({
 }: SceneShotsTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
+  const [takeGenerations, setTakeGenerations] = useState<
+    SceneShotVideoTakeGeneration[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
-  const [isEditingGroups, setIsEditingGroups] = useState(false);
-  const [draftRailGroups, setDraftRailGroups] = useState<ShotRailGroupDraft[]>(
-    []
-  );
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [applyState, setApplyState] = useState<'idle' | 'saving'>('idle');
-  const [groupingApplyError, setGroupingApplyError] = useState<string | null>(
-    null
-  );
   const saveNotificationSequenceRef = useRef(0);
-  const groupingSavedTimeoutRef = useRef<number | null>(null);
   const [detailSaveNotification, setDetailSaveNotification] =
-    useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
-  const [groupingSaveNotification, setGroupingSaveNotification] =
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
   const activeShotTab = shotTab ?? 'description';
 
   const loadResource = useCallback(() => {
     let cancelled = false;
-    void readSceneShotListResource(projectName, sceneId)
-      .then((nextResource) => {
-        if (!cancelled) setResource(nextResource);
+    void Promise.all([
+      readSceneShotListResource(projectName, sceneId),
+      listSceneShotVideoTakeGenerations(projectName, sceneId),
+    ])
+      .then(([nextResource, takeGenerationReport]) => {
+        if (!cancelled) {
+          setResource(nextResource);
+          setTakeGenerations(takeGenerationReport.takeGenerations);
+        }
       })
       .catch((loadError) => {
         if (!cancelled) {
@@ -132,33 +116,6 @@ export function SceneShotsTab({
     [resource]
   );
 
-  const productionGroups = useMemo(
-    () => resource?.activeShotList?.videoTakeProductionGroups ?? [],
-    [resource]
-  );
-  const persistedRailGroups = useMemo(
-    () =>
-      createShotRailGroupDraftsFromRailGroups(
-        resource?.activeShotList?.videoTakeRailGroups
-      ),
-    [resource?.activeShotList?.videoTakeRailGroups]
-  );
-  const visibleRailGroups = isEditingGroups
-    ? draftRailGroups
-    : persistedRailGroups;
-  const groupingDraftChanged =
-    isEditingGroups &&
-    !shotRailDraftsEqual(persistedRailGroups, draftRailGroups);
-  const groupingSummary = useMemo(
-    () =>
-      summarizeShotRailGroupChanges({
-        shots,
-        persistedDraftGroups: persistedRailGroups,
-        draftGroups: draftRailGroups,
-      }),
-    [draftRailGroups, persistedRailGroups, shots]
-  );
-
   const selectedShotId = useMemo(() => {
     if (shotId && shots.some((shot) => shot.shotId === shotId)) {
       return shotId;
@@ -192,52 +149,6 @@ export function SceneShotsTab({
     [onSelect, sceneId, selectedShotId]
   );
 
-  const handleCycleShotGroup = useCallback(
-    (clickedShotId: string) => {
-      handleSelectShot(clickedShotId);
-      setGroupingApplyError(null);
-      setIsEditingGroups(true);
-      setDraftRailGroups((currentDraftGroups) =>
-        cycleShotRailGroupMembership({
-          shots,
-          draftGroups: isEditingGroups ? currentDraftGroups : persistedRailGroups,
-          clickedShotId,
-        })
-      );
-    },
-    [handleSelectShot, isEditingGroups, persistedRailGroups, shots]
-  );
-
-  const handleOpenReview = useCallback(() => {
-    setReviewOpen(true);
-  }, []);
-
-  const handleCancelReview = useCallback(() => {
-    setReviewOpen(false);
-  }, []);
-
-  const clearGroupingSavedTimeout = useCallback(() => {
-    if (groupingSavedTimeoutRef.current !== null) {
-      window.clearTimeout(groupingSavedTimeoutRef.current);
-      groupingSavedTimeoutRef.current = null;
-    }
-  }, []);
-
-  const reportGroupingSaveNotification = useCallback(
-    (status: SaveNotificationStatus) => {
-      setGroupingSaveNotification((current) => {
-        if (saveNotificationStatusesEqual(current.status, status)) {
-          return current;
-        }
-        return {
-          status,
-          sequence: ++saveNotificationSequenceRef.current,
-        };
-      });
-    },
-    []
-  );
-
   const reportDetailSaveNotification = useCallback(
     (status: SaveNotificationStatus) => {
       setDetailSaveNotification((current) => {
@@ -253,74 +164,9 @@ export function SceneShotsTab({
     []
   );
 
-  const handleDiscardGroups = useCallback(() => {
-    setDraftRailGroups(persistedRailGroups);
-    setIsEditingGroups(false);
-    setReviewOpen(false);
-    setGroupingApplyError(null);
-    clearGroupingSavedTimeout();
-    reportGroupingSaveNotification(idleSaveNotification);
-  }, [
-    clearGroupingSavedTimeout,
-    persistedRailGroups,
-    reportGroupingSaveNotification,
-  ]);
-
-  const handleApplyGroups = useCallback(async () => {
-    if (!resource?.activeShotList || !groupingDraftChanged) {
-      setReviewOpen(false);
-      return;
-    }
-    setApplyState('saving');
-    setGroupingApplyError(null);
-    clearGroupingSavedTimeout();
-    reportGroupingSaveNotification({ state: 'saving', message: 'Saving' });
-    try {
-      const result = await updateShotVideoTakeRailGroups(
-        projectName,
-        sceneId,
-        shotRailGroupsForSave(draftRailGroups)
-      );
-      setResource(result.resource);
-      setDraftRailGroups(
-        createShotRailGroupDraftsFromRailGroups(
-          result.resource.activeShotList?.videoTakeRailGroups
-        )
-      );
-      setIsEditingGroups(false);
-      setReviewOpen(false);
-      reportGroupingSaveNotification({ state: 'saved', message: 'Saved' });
-      groupingSavedTimeoutRef.current = window.setTimeout(() => {
-        reportGroupingSaveNotification(idleSaveNotification);
-        groupingSavedTimeoutRef.current = null;
-      }, 1800);
-    } catch (applyError) {
-      const message =
-        applyError instanceof Error
-          ? applyError.message
-          : 'Unable to apply shot grouping.';
-      setGroupingApplyError(message);
-      reportGroupingSaveNotification({ state: 'error', message });
-    } finally {
-      setApplyState('idle');
-    }
-  }, [
-    clearGroupingSavedTimeout,
-    draftRailGroups,
-    groupingDraftChanged,
-    projectName,
-    reportGroupingSaveNotification,
-    resource?.activeShotList,
-    sceneId,
-  ]);
-
   const saveNotification = useMemo(
-    () =>
-      chooseDetailSaveNotification([
-        detailSaveNotification,
-        groupingSaveNotification,
-      ]),
-    [detailSaveNotification, groupingSaveNotification]
+    () => chooseDetailSaveNotification([detailSaveNotification]),
+    [detailSaveNotification]
   );
 
   useEffect(() => {
@@ -328,34 +174,13 @@ export function SceneShotsTab({
     return () => onSaveNotificationChange?.(idleSaveNotification);
   }, [onSaveNotificationChange, saveNotification]);
 
-  useEffect(
-    () => () => {
-      clearGroupingSavedTimeout();
-    },
-    [clearGroupingSavedTimeout]
-  );
-
   useEffect(() => {
     if (!onHeaderActionChange) {
       return;
     }
-    if (!isEditingGroups) {
-      onHeaderActionChange(null);
-      return;
-    }
-    onHeaderActionChange(
-      <Button
-        type='button'
-        variant='outline'
-        size='sm'
-        onClick={handleOpenReview}
-        className='h-7 rounded-full border-amber-500/45 bg-amber-500/12 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700 hover:bg-amber-500/18 dark:text-amber-300'
-      >
-        Editing Groups
-      </Button>
-    );
+    onHeaderActionChange(null);
     return () => onHeaderActionChange(null);
-  }, [handleOpenReview, isEditingGroups, onHeaderActionChange]);
+  }, [onHeaderActionChange]);
 
   if (error) {
     return (
@@ -380,6 +205,21 @@ export function SceneShotsTab({
   );
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
+  const selectedTakeGeneration =
+    takeGenerations.find((candidate) =>
+      selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
+    ) ?? null;
+  const handleCreateTakeGeneration = async () => {
+    if (!resource.activeShotListId || !selectedShot) {
+      return;
+    }
+    const created = await createSceneShotVideoTakeGeneration(projectName, sceneId, {
+      shotListId: resource.activeShotListId,
+      shotIds: [selectedShot.shotId],
+      title: selectedShot.title,
+    });
+    setTakeGenerations((current) => [...current, created]);
+  };
 
   return (
     <div className='flex min-h-0 min-w-0 flex-1 overflow-hidden bg-panel-bg p-3'>
@@ -400,9 +240,7 @@ export function SceneShotsTab({
             shots={shots}
             imagesByShotId={resource.storyboardImagesByShotId}
             selectedShotId={selectedShot.shotId}
-            railGroups={visibleRailGroups}
             onSelectShot={handleSelectShot}
-            onCycleShotGroup={handleCycleShotGroup}
           />
         </ResizablePanel>
         <ResizableHandle withHandle />
@@ -416,9 +254,7 @@ export function SceneShotsTab({
             projectName={projectName}
             sceneId={sceneId}
             shot={selectedShot}
-            shots={shots}
-            railGroups={visibleRailGroups}
-            productionGroups={productionGroups}
+            takeGeneration={selectedTakeGeneration}
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}
@@ -426,97 +262,11 @@ export function SceneShotsTab({
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
             onShotSpecsSaved={setResource}
+            onCreateTakeGeneration={handleCreateTakeGeneration}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
-      <ShotGroupingReviewDialog
-        open={reviewOpen}
-        applyState={applyState}
-        applyError={groupingApplyError}
-        changed={groupingDraftChanged}
-        summary={groupingSummary}
-        onApply={handleApplyGroups}
-        onDiscard={handleDiscardGroups}
-        onCancel={handleCancelReview}
-      />
     </div>
-  );
-}
-
-interface ShotGroupingReviewDialogProps {
-  open: boolean;
-  applyState: 'idle' | 'saving';
-  applyError: string | null;
-  changed: boolean;
-  summary: ReturnType<typeof summarizeShotRailGroupChanges>;
-  onApply: () => void;
-  onDiscard: () => void;
-  onCancel: () => void;
-}
-
-function ShotGroupingReviewDialog({
-  open,
-  applyState,
-  applyError,
-  changed,
-  summary,
-  onApply,
-  onDiscard,
-  onCancel,
-}: ShotGroupingReviewDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent className='max-w-xl overflow-hidden p-0'>
-        <DialogHeader>
-          <DialogTitle>Review Changes</DialogTitle>
-          <DialogDescription>
-            Apply the current shot rail grouping draft or discard it.
-          </DialogDescription>
-        </DialogHeader>
-        <div className='space-y-4 px-6 py-4'>
-          <div className='rounded-lg border border-border/50 bg-card/35 p-3'>
-            <h3 className='mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-              Group changes
-            </h3>
-            <ul className='space-y-1.5 text-sm text-foreground'>
-              {summary.messages.map((message) => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
-          </div>
-          <div className='space-y-2 text-sm text-muted-foreground'>
-            <p>AI Production settings are preserved for resulting groups.</p>
-            <p>
-              Merged groups keep the upper group&apos;s active AI Production
-              settings.
-            </p>
-            <p>
-              {summary.changedPromptCount === 0
-                ? 'No generated prompts need regeneration.'
-                : `${summary.changedPromptCount} generated prompt ${summary.changedPromptCount === 1 ? 'plan needs' : 'plans need'} regeneration after apply.`}
-            </p>
-            {applyError ? (
-              <p className='text-destructive'>{applyError}</p>
-            ) : null}
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type='button' variant='ghost' onClick={onDiscard}>
-            Discard
-          </Button>
-          <Button type='button' variant='outline' onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            type='button'
-            onClick={onApply}
-            disabled={!changed || applyState === 'saving'}
-          >
-            {applyState === 'saving' ? 'Applying...' : 'Apply Changes'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

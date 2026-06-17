@@ -8,7 +8,7 @@ import type {
   ShotVideoTakeInputModelChoice,
   ShotVideoTakeInputGenerationPurpose,
   MediaGenerationDependencyKind,
-  ShotVideoTakeProductionPlan,
+  ShotVideoTakeGenerationProduction,
   ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeModelChoice,
 } from '../../../client/index.js';
@@ -89,7 +89,7 @@ export function shotInputPurposeForDependencyKind(
 
 
 
-export function defaultShotInputParameterValues(): NonNullable<ShotVideoTakeProductionPlan['parameterValues']> {
+export function defaultShotInputParameterValues(): NonNullable<ShotVideoTakeGenerationProduction['parameterValues']> {
   return {
     image_size: { width: 1024, height: 768 },
     quality: 'low',

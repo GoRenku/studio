@@ -5,14 +5,13 @@ import {
   shotVideoInputDependencyId,
 } from '../../src/server/media-generation/dependency-identifiers.js';
 import { declareShotVideoTakeDependencySlots } from '../../src/server/media-generation/shot-video-take/dependency-slots.js';
-import type { SceneShotMediaGenerationTarget } from '../../src/client/index.js';
+import type { SceneShotVideoTakeGenerationTarget } from '../../src/client/index.js';
 
-const target: SceneShotMediaGenerationTarget = {
-  kind: 'sceneShotGroup',
-  id: 'scene:shot-list:production-group',
+const target: SceneShotVideoTakeGenerationTarget = {
+  kind: 'sceneShotVideoTakeGeneration',
+  id: 'take-generation',
   sceneId: 'scene',
-  shotListId: 'shot-list',
-  productionGroupId: 'production-group',
+  takeGenerationId: 'take-generation',
   shotIds: ['shot-a'],
 };
 
@@ -72,7 +71,7 @@ describe('media generation dependency slot declarations', () => {
     expect(slots).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyId: 'first-frame:production-group:production-group',
+          dependencyId: 'first-frame:take-generation:take-generation',
           dependencyKind: 'first-frame',
           required: true,
           selector: expect.objectContaining({ kind: 'shot-video-input' }),
@@ -94,7 +93,7 @@ describe('media generation dependency slot declarations', () => {
     expect(slots).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyId: 'first-frame:production-group:production-group',
+          dependencyId: 'first-frame:take-generation:take-generation',
           required: true,
         }),
         expect.objectContaining({
@@ -234,13 +233,13 @@ describe('media generation dependency slot declarations', () => {
       target,
     });
 
-    expect(dependencyId).toBe('first-frame:production-group:production-group');
+    expect(dependencyId).toBe('first-frame:take-generation:take-generation');
     expect(parseShotVideoInputDependencyId(dependencyId)).toEqual({
       ok: true,
       value: {
         kind: 'first-frame',
-        subjectKind: 'production-group',
-        subjectId: 'production-group',
+        subjectKind: 'take-generation',
+        subjectId: 'take-generation',
       },
     });
     expect(parseShotVideoInputDependencyId('not-a-real-kind:asset:a')).toEqual({

@@ -9,13 +9,13 @@ import type {
 import {
   assets,
   assetFiles,
-  sceneShotVideoTakeInputShots,
   sceneShotVideoTakeInputs,
   sceneShotVideoTakeShots,
   sceneShotVideoTakes,
 } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import { listSceneShotVideoTakeGenerationShotIds } from './scene-shot-video-take-generations.js';
 
 export type SceneShotVideoTakeInputRecord =
   typeof sceneShotVideoTakeInputs.$inferSelect;
@@ -24,8 +24,7 @@ export type SceneShotVideoTakeRecord = typeof sceneShotVideoTakes.$inferSelect;
 export interface InsertShotVideoTakeInputRecord {
   id: string;
   sceneId: string;
-  shotListId: string;
-  productionGroupId: string;
+  takeGenerationId: string;
   inputKind: ShotVideoTakeInputKind;
   subjectKind: ShotVideoTakeInputSubjectKind;
   subjectId: string;
@@ -33,15 +32,13 @@ export interface InsertShotVideoTakeInputRecord {
   assetFileId: string;
   mediaGenerationRunId?: string | null;
   selection: 'select' | 'take';
-  shotIds: string[];
   now: string;
 }
 
 export interface InsertShotVideoTakeRecord {
   id: string;
   sceneId: string;
-  shotListId: string;
-  productionGroupId: string;
+  takeGenerationId: string;
   assetId: string;
   assetFileId: string;
   mediaGenerationRunId?: string | null;
@@ -62,8 +59,7 @@ export function insertShotVideoTakeInputRecord(
     .values({
       id: input.id,
       sceneId: input.sceneId,
-      shotListId: input.shotListId,
-      productionGroupId: input.productionGroupId,
+      takeGenerationId: input.takeGenerationId,
       inputKind: input.inputKind,
       subjectKind: input.subjectKind,
       subjectId: input.subjectId,
@@ -75,12 +71,6 @@ export function insertShotVideoTakeInputRecord(
       updatedAt: input.now,
     })
     .run();
-  input.shotIds.forEach((shotId, shotOrder) => {
-    session.db
-      .insert(sceneShotVideoTakeInputShots)
-      .values({ inputId: input.id, shotId, shotOrder })
-      .run();
-  });
   return requireShotVideoTakeInput(session, input.id);
 }
 
@@ -88,8 +78,7 @@ export function listShotVideoTakeInputs(
   session: DatabaseSession,
   input: {
     sceneId: string;
-    shotListId: string;
-    productionGroupId: string;
+    takeGenerationId: string;
     shotIds?: string[];
   }
 ): ShotVideoTakeAvailableInput[] {
@@ -106,8 +95,10 @@ export function listShotVideoTakeInputs(
     .where(
       and(
         eq(sceneShotVideoTakeInputs.sceneId, input.sceneId),
-        eq(sceneShotVideoTakeInputs.shotListId, input.shotListId),
-        eq(sceneShotVideoTakeInputs.productionGroupId, input.productionGroupId)
+        eq(
+          sceneShotVideoTakeInputs.takeGenerationId,
+          input.takeGenerationId
+        )
       )
     )
     .orderBy(
@@ -168,8 +159,7 @@ export function selectShotVideoTakeInputRecord(
   const selected = requireShotVideoTakeInputRecord(session, input.inputId);
   setMatchingInputRecordsToTake(session, {
     sceneId: selected.sceneId,
-    shotListId: selected.shotListId,
-    productionGroupId: selected.productionGroupId,
+    takeGenerationId: selected.takeGenerationId,
     inputKind: selected.inputKind as ShotVideoTakeInputKind,
     subjectKind: selected.subjectKind as ShotVideoTakeInputSubjectKind,
     subjectId: selected.subjectId,
@@ -186,8 +176,7 @@ export function clearShotVideoTakeInputRecordSelection(
   session: DatabaseSession,
   input: {
     sceneId: string;
-    shotListId: string;
-    productionGroupId: string;
+    takeGenerationId: string;
     inputKind: ShotVideoTakeInputKind;
     subjectKind: ShotVideoTakeInputSubjectKind;
     subjectId: string;
@@ -200,8 +189,10 @@ export function clearShotVideoTakeInputRecordSelection(
     .where(
       and(
         eq(sceneShotVideoTakeInputs.sceneId, input.sceneId),
-        eq(sceneShotVideoTakeInputs.shotListId, input.shotListId),
-        eq(sceneShotVideoTakeInputs.productionGroupId, input.productionGroupId),
+        eq(
+          sceneShotVideoTakeInputs.takeGenerationId,
+          input.takeGenerationId
+        ),
         eq(sceneShotVideoTakeInputs.inputKind, input.inputKind),
         eq(sceneShotVideoTakeInputs.subjectKind, input.subjectKind),
         eq(sceneShotVideoTakeInputs.subjectId, input.subjectId)
@@ -216,10 +207,6 @@ export function deleteShotVideoTakeInputRecord(
 ): void {
   const row = requireShotVideoTakeInputRecord(session, inputId);
   session.db
-    .delete(sceneShotVideoTakeInputShots)
-    .where(eq(sceneShotVideoTakeInputShots.inputId, inputId))
-    .run();
-  session.db
     .delete(sceneShotVideoTakeInputs)
     .where(eq(sceneShotVideoTakeInputs.id, inputId))
     .run();
@@ -232,15 +219,14 @@ export function insertShotVideoTakeRecord(
   input: InsertShotVideoTakeRecord
 ): SceneShotVideoTake {
   if (input.isSelected) {
-    clearSelectedTakesForGroup(session, input);
+    clearSelectedTakesForGeneration(session, input);
   }
   session.db
     .insert(sceneShotVideoTakes)
     .values({
       id: input.id,
       sceneId: input.sceneId,
-      shotListId: input.shotListId,
-      productionGroupId: input.productionGroupId,
+      takeGenerationId: input.takeGenerationId,
       assetId: input.assetId,
       assetFileId: input.assetFileId,
       mediaGenerationRunId: input.mediaGenerationRunId ?? null,
@@ -260,7 +246,7 @@ export function insertShotVideoTakeRecord(
 
 export function listShotVideoTakes(
   session: DatabaseSession,
-  input: { sceneId: string; shotListId: string; productionGroupId: string }
+  input: { sceneId: string; takeGenerationId: string }
 ): SceneShotVideoTake[] {
   return session.db
     .select()
@@ -268,8 +254,7 @@ export function listShotVideoTakes(
     .where(
       and(
         eq(sceneShotVideoTakes.sceneId, input.sceneId),
-        eq(sceneShotVideoTakes.shotListId, input.shotListId),
-        eq(sceneShotVideoTakes.productionGroupId, input.productionGroupId)
+        eq(sceneShotVideoTakes.takeGenerationId, input.takeGenerationId)
       )
     )
     .orderBy(desc(sceneShotVideoTakes.createdAt), desc(sceneShotVideoTakes.id))
@@ -319,8 +304,7 @@ function setMatchingInputRecordsToTake(
   session: DatabaseSession,
   input: {
     sceneId: string;
-    shotListId: string;
-    productionGroupId: string;
+    takeGenerationId: string;
     inputKind: ShotVideoTakeInputKind;
     subjectKind: ShotVideoTakeInputSubjectKind;
     subjectId: string;
@@ -332,8 +316,10 @@ function setMatchingInputRecordsToTake(
     .where(
       and(
         eq(sceneShotVideoTakeInputs.sceneId, input.sceneId),
-        eq(sceneShotVideoTakeInputs.shotListId, input.shotListId),
-        eq(sceneShotVideoTakeInputs.productionGroupId, input.productionGroupId),
+        eq(
+          sceneShotVideoTakeInputs.takeGenerationId,
+          input.takeGenerationId
+        ),
         eq(sceneShotVideoTakeInputs.inputKind, input.inputKind),
         eq(sceneShotVideoTakeInputs.subjectKind, input.subjectKind),
         eq(sceneShotVideoTakeInputs.subjectId, input.subjectId)
@@ -342,9 +328,9 @@ function setMatchingInputRecordsToTake(
     .run();
 }
 
-function clearSelectedTakesForGroup(
+function clearSelectedTakesForGeneration(
   session: DatabaseSession,
-  input: { sceneId: string; shotListId: string; productionGroupId: string; now: string }
+  input: { sceneId: string; takeGenerationId: string; now: string }
 ): void {
   session.db
     .update(sceneShotVideoTakes)
@@ -352,8 +338,7 @@ function clearSelectedTakesForGroup(
     .where(
       and(
         eq(sceneShotVideoTakes.sceneId, input.sceneId),
-        eq(sceneShotVideoTakes.shotListId, input.shotListId),
-        eq(sceneShotVideoTakes.productionGroupId, input.productionGroupId)
+        eq(sceneShotVideoTakes.takeGenerationId, input.takeGenerationId)
       )
     )
     .run();
@@ -376,8 +361,11 @@ function toAvailableInput(
     mediaKind: mediaKind as 'image' | 'audio' | 'video',
     subjectKind: row.subjectKind as ShotVideoTakeInputSubjectKind,
     subjectId: row.subjectId,
-    productionGroupId: row.productionGroupId,
-    shotIds: listInputShotIds(session, row.id),
+    takeGenerationId: row.takeGenerationId,
+    shotIds: listSceneShotVideoTakeGenerationShotIds(
+      session,
+      row.takeGenerationId
+    ),
     ...(row.mediaGenerationRunId
       ? { mediaGenerationRunId: row.mediaGenerationRunId }
       : {}),
@@ -392,6 +380,7 @@ function toVideoTake(
 ): SceneShotVideoTake {
   return {
     takeId: row.id,
+    takeGenerationId: row.takeGenerationId,
     assetId: row.assetId,
     assetFileId: row.assetFileId,
     ...(row.mediaGenerationRunId
@@ -401,16 +390,6 @@ function toVideoTake(
     selected: row.isSelected,
     createdAt: row.createdAt,
   };
-}
-
-function listInputShotIds(session: DatabaseSession, inputId: string): string[] {
-  return session.db
-    .select()
-    .from(sceneShotVideoTakeInputShots)
-    .where(eq(sceneShotVideoTakeInputShots.inputId, inputId))
-    .orderBy(asc(sceneShotVideoTakeInputShots.shotOrder))
-    .all()
-    .map((row) => row.shotId);
 }
 
 function listTakeShotIds(session: DatabaseSession, takeId: string): string[] {

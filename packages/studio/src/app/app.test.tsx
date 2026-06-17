@@ -752,18 +752,18 @@ describe('App', () => {
     [
       'Scene shot',
       { type: 'scene', id: 'scene_1_1', shotId: 'shot_001' },
-      '/projects/constantinople/scenes/scene_1_1?sceneTab=shots&shot=shot_001',
+      '/projects/constantinople/scenes/scene_1_1?sceneTab=takes&shot=shot_001',
     ],
     [
       'Scene shot composition',
       {
         type: 'scene',
         id: 'scene_1_1',
-        sceneTab: 'shots',
+        sceneTab: 'takes',
         shotId: 'shot_001',
         shotTab: 'composition',
       },
-      '/projects/constantinople/scenes/scene_1_1?sceneTab=shots&shot=shot_001&shotTab=composition',
+      '/projects/constantinople/scenes/scene_1_1?sceneTab=takes&shot=shot_001&shotTab=composition',
     ],
     ['Cast overview', { type: 'cast' }, '/projects/constantinople/cast'],
     [

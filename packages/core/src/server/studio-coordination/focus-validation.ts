@@ -17,7 +17,7 @@ import type {
   StudioFocusRequest,
 } from './events.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots', 'takes'];
 const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'description',
   'lookbook',
@@ -333,9 +333,9 @@ function validateSceneTabs(
       diagnostics: [
         createDiagnosticError(
           'STUDIO_COORDINATION036',
-          'Shot focus requires the Shots scene tab.',
+          'Shot focus requires the Takes scene tab.',
           { path: ['focus', 'selection', 'sceneTab'], context: 'studio.focusRequested' },
-          'Use sceneTab: "shots" when requesting a shot or shot-detail tab.'
+          'Use sceneTab: "takes" when requesting a shot or shot-detail tab.'
         ),
       ],
     };
@@ -346,13 +346,14 @@ function validateSceneTabs(
 function effectiveSceneTab(
   selection: Extract<StudioSelection, { type: 'scene' }>
 ): ScenePanelTab {
-  return selection.sceneTab ?? (selection.shotId || selection.shotTab ? 'shots' : 'narrative');
+  return selection.sceneTab ?? (selection.shotId || selection.shotTab ? 'takes' : 'narrative');
 }
 
 function sceneTabLabel(tab: ScenePanelTab): { id: ScenePanelTab; label: string } {
   return {
     id: tab,
-    label: tab === 'shots' ? 'Shots' : 'Narrative',
+    label:
+      tab === 'takes' ? 'Takes' : tab === 'shots' ? 'Shots' : 'Narrative',
   };
 }
 

@@ -8,10 +8,6 @@ import type {
 } from '@gorenku/studio-core/client';
 import type { RenkuCliIo } from '../cli.js';
 import {
-  parseSceneTarget,
-  parseShots,
-} from './studio-target-parsing.js';
-import {
   requiredFlag,
   writeJson,
 } from './structured-command.js';
@@ -23,9 +19,7 @@ export async function runGenerationPlanCommand(options: {
     purpose?: string;
     target?: string;
     model?: string;
-    shotList?: string;
-    shots?: string;
-    productionGroup?: string;
+    takeGeneration?: string;
     intent?: string;
   };
   json: boolean;
@@ -41,7 +35,6 @@ export async function runGenerationPlanCommand(options: {
     });
   }
   const service = createProjectDataService();
-  const target = requiredFlag(options.flags.target, '--target');
   const inputModeId = requiredFlag(
     options.flags.intent,
     '--intent'
@@ -50,10 +43,10 @@ export async function runGenerationPlanCommand(options: {
   const plan = await service.planShotVideoTakeProduction({
     projectName: options.flags.project,
     homeDir: options.homeDir,
-    sceneId: parseSceneTarget(target, 'Shot video take plan'),
-    shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
-    shotIds: parseShots(requiredFlag(options.flags.shots, '--shots')),
-    productionGroupId: requiredFlag(options.flags.productionGroup, '--production-group'),
+    takeGenerationId: requiredFlag(
+      options.flags.takeGeneration,
+      '--take-generation'
+    ),
     production: {
       inputModeId,
       modelChoice,

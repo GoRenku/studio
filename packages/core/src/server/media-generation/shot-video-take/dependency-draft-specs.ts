@@ -5,7 +5,7 @@ import type {
   DraftMediaGenerationSpec,
   MediaGenerationDependencyPricing,
   ShotVideoTakeGenerationContext,
-  ShotVideoTakeProductionPlan,
+  ShotVideoTakeGenerationProduction,
 } from '../../../client/index.js';
 import {
   ProjectDataError,
@@ -26,10 +26,10 @@ import {
 export async function buildShotInputDependencyDraftSpec(
   input: MediaGenerationDependencyDraftSpecInput
 ): Promise<MediaGenerationDependencyDraftPlan> {
-  if (input.dependencyTarget.kind !== 'sceneShotGroup') {
+  if (input.dependencyTarget.kind !== 'sceneShotVideoTakeGeneration') {
     throw new ProjectDataError(
       'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
-      `Shot input dependency requires a sceneShotGroup target. Received: ${input.dependencyTarget.kind}.`
+      `Shot input dependency requires a sceneShotVideoTakeGeneration target. Received: ${input.dependencyTarget.kind}.`
     );
   }
   if (input.request.kind !== 'shot-video-take') {
@@ -42,7 +42,7 @@ export async function buildShotInputDependencyDraftSpec(
   const purpose = shotInputPurposeForDependencyKind(input.dependencyKind);
   const outputInputKind = PURPOSE_CONFIG[purpose].outputInputKind;
   const draft =
-    request.context.productionGroup.videoTakeProduction.agentProposal?.dependencyDrafts.find(
+    request.context.takeGeneration.production.agentProposal?.dependencyDrafts.find(
       (candidate) =>
         candidate.purpose === purpose &&
         candidate.outputInputKind === outputInputKind
@@ -160,8 +160,8 @@ export interface ShotVideoTakeDependencyRequest {
 
 
 export function isAuthoredShotDependencyDraft(
-  draft: NonNullable<ShotVideoTakeProductionPlan['agentProposal']>['dependencyDrafts'][number] | undefined
-): draft is NonNullable<ShotVideoTakeProductionPlan['agentProposal']>['dependencyDrafts'][number] {
+  draft: NonNullable<ShotVideoTakeGenerationProduction['agentProposal']>['dependencyDrafts'][number] | undefined
+): draft is NonNullable<ShotVideoTakeGenerationProduction['agentProposal']>['dependencyDrafts'][number] {
   if (!draft?.prompt.trim()) {
     return false;
   }

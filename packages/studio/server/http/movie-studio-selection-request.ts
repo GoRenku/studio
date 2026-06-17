@@ -14,7 +14,7 @@ import {
   readRequiredHttpString,
 } from './request-validation.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots', 'takes'];
 const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'description',
   'lookbook',
@@ -66,6 +66,17 @@ export function readMovieStudioSelectionRequest(input: unknown): {
   const shotId =
     typeof selection.shotId === 'string' && selection.shotId.trim()
       ? selection.shotId.trim()
+      : undefined;
+  const takeWorkspaceMode =
+    selection.takeWorkspaceMode === 'list' ||
+    selection.takeWorkspaceMode === 'new' ||
+    selection.takeWorkspaceMode === 'edit'
+      ? selection.takeWorkspaceMode
+      : undefined;
+  const takeGenerationId =
+    typeof selection.takeGenerationId === 'string' &&
+    selection.takeGenerationId.trim()
+      ? selection.takeGenerationId.trim()
       : undefined;
   const sceneTab =
     typeof selection.sceneTab === 'string' && selection.sceneTab.trim()
@@ -142,6 +153,8 @@ export function readMovieStudioSelectionRequest(input: unknown): {
       folderId,
       lookbookId,
       shotId,
+      takeWorkspaceMode,
+      takeGenerationId,
       sceneTab: sceneTab as ScenePanelTab | undefined,
       shotTab: shotTab as SceneShotDetailTab | undefined,
     }),
@@ -174,6 +187,8 @@ function studioSelectionFromRequest(
     folderId?: string;
     lookbookId?: string;
     shotId?: string;
+    takeWorkspaceMode?: 'list' | 'new' | 'edit';
+    takeGenerationId?: string;
     sceneTab?: ScenePanelTab;
     shotTab?: SceneShotDetailTab;
   }
@@ -185,6 +200,12 @@ function studioSelectionFromRequest(
         id: ids.id as string,
         ...(ids.sceneTab ? { sceneTab: ids.sceneTab } : {}),
         ...(ids.shotId ? { shotId: ids.shotId } : {}),
+        ...(ids.takeWorkspaceMode
+          ? { takeWorkspaceMode: ids.takeWorkspaceMode }
+          : {}),
+        ...(ids.takeGenerationId
+          ? { takeGenerationId: ids.takeGenerationId }
+          : {}),
         ...(ids.shotTab ? { shotTab: ids.shotTab } : {}),
       };
     case 'act':

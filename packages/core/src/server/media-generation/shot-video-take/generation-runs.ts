@@ -157,10 +157,7 @@ async function prepareKlingTransientVoicePayload(input: {
   const context = await buildShotVideoTakeContext({
     projectName: input.commandInput.projectName,
     homeDir: input.commandInput.homeDir,
-    sceneId: spec.target.sceneId,
-    shotListId: spec.target.shotListId,
-    shotIds: spec.target.shotIds,
-    productionGroupId: spec.target.productionGroupId,
+    takeGenerationId: spec.target.takeGenerationId,
   });
   const route = requireShotVideoTakeRoute(
     spec.modelChoice,

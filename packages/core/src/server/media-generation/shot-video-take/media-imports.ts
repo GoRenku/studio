@@ -60,8 +60,8 @@ import {
   shotVideoTakeResourceKeys,
 } from './resource-keys.js';
 import {
-  prepareShotGroupInSession,
-} from './shot-group.js';
+  prepareSceneShotVideoTakeGenerationInSession,
+} from './take-generation-context.js';
 
 
 
@@ -71,7 +71,7 @@ export async function importShotInputMedia(
 ): Promise<ShotVideoTakeInputMediaImportReport> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareShotGroupInSession({ session, input, now });
+    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
     const imported = await importGeneratedFile({
       session,
       projectFolder,
@@ -86,8 +86,8 @@ export async function importShotInputMedia(
     const subject =
       PURPOSE_CONFIG[purpose].outputInputKind === 'multi-shot-storyboard-sheet'
         ? {
-            subjectKind: 'production-group' as const,
-            subjectId: prepared.productionGroup.productionGroupId,
+            subjectKind: 'take-generation' as const,
+            subjectId: prepared.takeGeneration.takeGenerationId,
           }
         : {
             subjectKind: 'shot' as const,
@@ -95,16 +95,14 @@ export async function importShotInputMedia(
           };
     const relationship = insertShotVideoTakeInputRecord(session, {
       id: imported.nextId('scene_shot_video_take_input'),
-      sceneId: input.sceneId,
-      shotListId: input.shotListId,
-      productionGroupId: prepared.productionGroup.productionGroupId,
+      sceneId: prepared.sceneId,
+      takeGenerationId: prepared.takeGeneration.takeGenerationId,
       inputKind: PURPOSE_CONFIG[purpose].outputInputKind,
       ...subject,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
       mediaGenerationRunId: receiptRunId(input.receipt),
       selection: input.selection ?? 'select',
-      shotIds: prepared.orderedShotIds,
       now,
     });
     if (relationship.selected) {
@@ -158,7 +156,7 @@ export async function importShotVideoTake(
 ): Promise<ShotVideoTakeMediaImportReport> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareShotGroupInSession({ session, input, now });
+    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
     const imported = await importGeneratedFile({
       session,
       projectFolder,
@@ -172,9 +170,8 @@ export async function importShotVideoTake(
     });
     const take = insertShotVideoTakeRecord(session, {
       id: imported.nextId('scene_shot_video_take'),
-      sceneId: input.sceneId,
-      shotListId: input.shotListId,
-      productionGroupId: prepared.productionGroup.productionGroupId,
+      sceneId: prepared.sceneId,
+      takeGenerationId: prepared.takeGeneration.takeGenerationId,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
       mediaGenerationRunId: receiptRunId(input.receipt),

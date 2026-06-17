@@ -33,9 +33,10 @@ vi.mock('@/services/studio-project-assets-api', () => ({
     (
       projectName: string,
       sceneId: string,
+      takeGenerationId: string,
       inputId: string,
       fileId: string
-    ) => `/shot-inputs/${projectName}/${sceneId}/${inputId}/${fileId}`
+    ) => `/shot-inputs/${projectName}/${sceneId}/${takeGenerationId}/${inputId}/${fileId}`
   ),
   locationAssetFileUrl: vi.fn(
     (
@@ -87,20 +88,20 @@ describe('SceneShotReferencesTab', () => {
     ).not.toBeNull();
     expect(
       screen.getByRole('img', { name: 'First Frame' }).getAttribute('src')
-    ).toBe('/shot-inputs/constantinople/scene_hook/input_first/file_first');
+    ).toBe('/scene-assets/constantinople/scene_hook/asset_input_first/file_first');
     expect(
       screen.getByRole('img', { name: 'Last Frame' }).getAttribute('src')
-    ).toBe('/shot-inputs/constantinople/scene_hook/input_last/file_last');
+    ).toBe('/scene-assets/constantinople/scene_hook/asset_input_last/file_last');
     expect(
       screen.getByRole('img', { name: 'Multi-Shot Storyboard Reference (3 shots)' })
         .getAttribute('src')
-    ).toBe('/shot-inputs/constantinople/scene_hook/input_storyboard/file_storyboard');
+    ).toBe('/scene-assets/constantinople/scene_hook/asset_input_storyboard/file_storyboard');
     expect(
       screen.getByRole('img', { name: 'Texture continuity' }).getAttribute('src')
-    ).toBe('/shot-inputs/constantinople/scene_hook/input_texture/file_texture');
+    ).toBe('/scene-assets/constantinople/scene_hook/asset_input_texture/file_texture');
     expect(
       screen.getByRole('img', { name: 'Blade glint insert' }).getAttribute('src')
-    ).toBe('/shot-inputs/constantinople/scene_hook/input_blade/file_blade');
+    ).toBe('/scene-assets/constantinople/scene_hook/asset_input_blade/file_blade');
   });
 
   it('shows inventory estimates for selected planned dependency references', () => {
@@ -174,7 +175,7 @@ describe('SceneShotReferencesTab', () => {
     });
   });
 
-  it('updates reference inclusion across the production group for multi-shot plans', async () => {
+  it('updates reference inclusion across the take generation for multi-shot plans', async () => {
     const handlers = referenceHandlers();
     render(
       <SceneShotReferencesTab
@@ -183,10 +184,20 @@ describe('SceneShotReferencesTab', () => {
         shot={SHOT}
         productionPlan={{
           ...productionPlanWithReferenceImages(),
-          productionGroup: {
-            productionGroupId: 'group_001',
+          takeGeneration: {
+            takeGenerationId: 'take_generation_001',
+            sceneId: 'scene_hook',
+            shotListId: 'shot_list_hook',
             shotIds: ['shot_001', 'shot_002'],
-            videoTakeProduction: {},
+            title: 'Take generation',
+            production: {},
+            createdAt: '',
+            updatedAt: '',
+            compatibility: {
+              editState: 'editable',
+              reasons: [],
+              message: 'This take generation matches the current shot list.',
+            },
           },
         }}
         {...handlers}
@@ -198,7 +209,7 @@ describe('SceneShotReferencesTab', () => {
       expect(mutationMocks.updateShotGroupReferenceInclusion).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
-        ['shot_001', 'shot_002'],
+        'take_generation_001',
         {
           dependencyId: 'reference-image:input_blade',
           inclusion: 'include',

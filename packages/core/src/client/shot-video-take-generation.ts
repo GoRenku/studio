@@ -2,10 +2,10 @@ import type { GenerationEstimate } from '@gorenku/studio-engines';
 import type { Asset } from './assets.js';
 import type { ProjectRelativePath } from './project.js';
 import type { SceneSetting } from './screenplay.js';
-import type { SceneShot, LocationAzimuthViewId, ShotVideoTakePromptDraft, ShotVideoTakeDependencyKind, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, ShotVideoTakeProductionGroup } from './scene-shot-list.js';
+import type { SceneShot, LocationAzimuthViewId, ShotVideoTakePromptDraft, ShotVideoTakeDependencyKind, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, ShotVideoTakeGenerationProduction } from './scene-shot-list.js';
 import type { MediaGenerationDependencyKind, MediaGenerationDependencyInventory, MediaGenerationDependencyPricing, MediaGenerationPlanLine } from './media-generation-dependency.js';
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
-import type { SceneShotMediaGenerationTarget } from './media-generation-target.js';
+import type { SceneShotVideoTakeGenerationTarget } from './media-generation-target.js';
 import { SHOT_FIRST_FRAME_GENERATION_PURPOSE, SHOT_LAST_FRAME_GENERATION_PURPOSE, SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE, SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from './media-generation-purpose.js';
 
 export type ShotVideoTakeInputModelChoice =
@@ -71,6 +71,47 @@ export interface ShotVideoTakeStoryboardImageReference {
   projectRelativePath: ProjectRelativePath;
 }
 
+export type SceneShotVideoTakeGenerationEditState =
+  | 'editable'
+  | 'view-only';
+
+export type SceneShotVideoTakeGenerationIncompatibilityReason =
+  | 'active-shot-list-changed'
+  | 'shot-list-content-changed'
+  | 'storyboard-images-changed'
+  | 'selected-shots-missing'
+  | 'selected-shot-content-changed'
+  | 'selected-storyboard-images-changed'
+  | 'scene-narrative-changed';
+
+export interface SceneShotVideoTakeGenerationCompatibility {
+  editState: SceneShotVideoTakeGenerationEditState;
+  reasons: SceneShotVideoTakeGenerationIncompatibilityReason[];
+  message: string;
+}
+
+export interface SceneShotVideoTakeGenerationCompatibilitySnapshot {
+  activeShotListId: string | null;
+  orderedShotIds: string[];
+  shotListContentFingerprint: string;
+  storyboardStateFingerprint: string;
+  selectedShotIds: string[];
+  selectedShotContentFingerprint: string;
+  selectedStoryboardStateFingerprint: string;
+}
+
+export interface SceneShotVideoTakeGeneration {
+  takeGenerationId: string;
+  sceneId: string;
+  shotListId: string;
+  title: string;
+  shotIds: string[];
+  production: ShotVideoTakeGenerationProduction;
+  compatibility: SceneShotVideoTakeGenerationCompatibility;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ShotVideoTakeAvailableInput {
   inputId: string;
   kind: ShotVideoTakeInputKind;
@@ -81,7 +122,7 @@ export interface ShotVideoTakeAvailableInput {
   mediaKind: 'image' | 'audio' | 'video';
   subjectKind: ShotVideoTakeInputSubjectKind;
   subjectId: string;
-  productionGroupId?: string;
+  takeGenerationId: string;
   shotIds: string[];
   mediaGenerationRunId?: string;
   selected: boolean;
@@ -90,6 +131,7 @@ export interface ShotVideoTakeAvailableInput {
 
 export interface SceneShotVideoTake {
   takeId: string;
+  takeGenerationId: string;
   assetId: string;
   assetFileId: string;
   mediaGenerationRunId?: string;
@@ -106,13 +148,14 @@ export interface ShotVideoTakeDefaults {
 
 export interface ShotVideoTakeGenerationContext {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   project: ShotVideoTakeProjectContext;
   scene: ShotVideoTakeSceneContext;
   shotList: ShotVideoTakeShotListContext;
-  productionGroup: ShotVideoTakeProductionGroup;
+  takeGeneration: SceneShotVideoTakeGeneration;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   shots: SceneShot[];
+  displayShots: SceneShot[];
   referencedCast: ShotVideoTakeCastReference[];
   referencedLocations: ShotVideoTakeLocationReference[];
   activeLookbook: ShotVideoTakeLookbookReference | null;
@@ -125,7 +168,7 @@ export interface ShotVideoTakeGenerationContext {
 
 export interface ShotVideoTakeInputGenerationSpec {
   purpose: ShotVideoTakeInputGenerationPurpose;
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   planId?: string;
   dependencyKind: ShotVideoTakeDependencyKind;
   outputInputKind: ShotVideoTakeInputKind;
@@ -157,7 +200,7 @@ export interface ShotVideoTakeGenerationInput {
 
 export interface ShotVideoTakeGenerationSpec {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   planId?: string;
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
@@ -213,7 +256,7 @@ export interface ShotVideoTakeModelChoiceReport {
 
 export interface ShotVideoTakeModelListReport {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   inputModeId?: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   defaultModelChoice: ShotVideoTakeModelChoice;
@@ -232,7 +275,7 @@ export interface ShotVideoTakeInputModelChoiceReport {
 
 export interface ShotVideoTakeInputModelListReport {
   purpose: ShotVideoTakeInputGenerationPurpose;
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   defaultModelChoice: ShotVideoTakeInputModelChoice;
   models: ShotVideoTakeInputModelChoiceReport[];
 }
@@ -306,8 +349,8 @@ export interface ShotVideoTakePreflightReport {
   valid: boolean;
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
   plan?: ShotVideoTakeGenerationPlan;
-  target: SceneShotMediaGenerationTarget;
-  productionGroup: ShotVideoTakeProductionGroup;
+  target: SceneShotVideoTakeGenerationTarget;
+  takeGeneration: SceneShotVideoTakeGeneration;
   inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
@@ -322,8 +365,8 @@ export interface ShotVideoTakePreflightReport {
 }
 
 export interface ShotVideoTakeProductionEstimateReport {
-  target: SceneShotMediaGenerationTarget;
-  productionGroup: ShotVideoTakeProductionGroup;
+  target: SceneShotVideoTakeGenerationTarget;
+  takeGeneration: SceneShotVideoTakeGeneration;
   inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
@@ -341,6 +384,7 @@ export type ShotVideoTakeReferenceChoiceState =
 
 export interface ShotVideoTakeReferenceImagePreview {
   inputId?: string;
+  takeGenerationId?: string;
   assetId: string;
   assetFileId: string;
   projectRelativePath: ProjectRelativePath;
@@ -494,8 +538,8 @@ export interface ShotVideoTakeReferenceSectionsReport {
 }
 
 export interface ShotVideoTakeProductionPlanReport {
-  target: SceneShotMediaGenerationTarget;
-  productionGroup: ShotVideoTakeProductionGroup;
+  target: SceneShotVideoTakeGenerationTarget;
+  takeGeneration: SceneShotVideoTakeGeneration;
   finalPrompt: ShotVideoTakePromptDraft | null;
   plan: ShotVideoTakeGenerationPlan;
   references: ShotVideoTakeReferenceSectionsReport;
@@ -513,7 +557,7 @@ export interface ShotVideoTakeGenerationPlanRequest {
   projectId: string;
   sceneId: string;
   shotListId: string;
-  productionGroupId: string;
+  takeGenerationId: string;
   inputMode: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
@@ -568,7 +612,7 @@ export interface ShotVideoTakeInputMediaImportReport {
   };
   changes?: Array<{ type: string; [key: string]: string }>;
   purpose: ShotVideoTakeInputGenerationPurpose;
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   imported: Asset;
   input: ShotVideoTakeAvailableInput;
   receipt?: unknown;
@@ -585,7 +629,7 @@ export interface ShotVideoTakeMediaImportReport {
   };
   changes?: Array<{ type: string; [key: string]: string }>;
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
-  target: SceneShotMediaGenerationTarget;
+  target: SceneShotVideoTakeGenerationTarget;
   imported: Asset;
   take: SceneShotVideoTake;
   receipt?: unknown;

@@ -211,7 +211,7 @@ export function buildDialogueAudioCapabilityReport(input: {
             createDiagnosticWarning(
               'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
               message,
-              { path: ['productionGroup', 'videoTakeProduction', 'modelChoice'] },
+              { path: ['takeGeneration', 'production', 'modelChoice'] },
               'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
             ),
           ]
@@ -242,7 +242,7 @@ export function buildDialogueAudioCapabilityReport(input: {
         createDiagnosticWarning(
           'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
           message,
-          { path: ['productionGroup', 'videoTakeProduction', 'requestedInputs'] },
+          { path: ['takeGeneration', 'production', 'requestedInputs'] },
           `Select ${maxCount} or fewer dialogue audio references for this model route.`
         ),
       ],
@@ -709,7 +709,7 @@ export function buildGeneralReferenceChoices(input: {
     };
     choicesByKey.set(`planned:${line.dependencyId}`, choice);
   });
-  input.context.productionGroup.videoTakeProduction.requestedInputs?.forEach(
+  input.context.takeGeneration.production.requestedInputs?.forEach(
     (requestedInput) => {
       const referenceInputKind = shotReferenceTabInputKind(requestedInput.kind);
       if (!referenceInputKind) {
@@ -831,6 +831,7 @@ export function buildGeneralReferenceChoices(input: {
         previews: [
           {
             inputId: availableInput.inputId,
+            takeGenerationId: availableInput.takeGenerationId,
             assetId: availableInput.assetId,
             assetFileId: availableInput.assetFileId,
             projectRelativePath: availableInput.projectRelativePath,

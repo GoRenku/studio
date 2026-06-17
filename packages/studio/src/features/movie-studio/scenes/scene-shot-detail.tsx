@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   SceneShot,
-  ShotVideoTakeProductionGroup,
+  SceneShotVideoTakeGeneration,
 } from '@gorenku/studio-core/client';
 import type {
   SceneShotListResourceResponse,
@@ -26,24 +26,17 @@ import { SceneShotDescriptionTab } from './scene-shot-description-tab';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotAiProductionTab } from './scene-shot-ai-production-tab';
-import { SceneShotAiProductionGroupTag } from './scene-shot-ai-production-group-tag';
+import { SceneShotAiProductionTakeGenerationTag } from './scene-shot-ai-production-take-generation-tag';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 import { SceneShotDialogsTab } from './scene-shot-dialogs-tab';
 import { ShotSpecsProvider } from './shot-specs-context';
-import {
-  findRailGroupForShot,
-  groupTagLabel,
-  type ShotRailGroupDraft,
-} from './shot-video-take-grouping';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
 
 interface SceneShotDetailProps {
   projectName: string;
   sceneId: string;
   shot: SceneShot;
-  shots: SceneShot[];
-  railGroups: ShotRailGroupDraft[];
-  productionGroups: ShotVideoTakeProductionGroup[];
+  takeGeneration: SceneShotVideoTakeGeneration | null;
   label: string;
   activeTab?: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
@@ -51,6 +44,7 @@ interface SceneShotDetailProps {
   locationLabels: Record<string, string>;
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onShotSpecsSaved?: (resource: SceneShotListResourceResponse) => void;
+  onCreateTakeGeneration?: () => Promise<void>;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -67,9 +61,7 @@ export function SceneShotDetail({
   projectName,
   sceneId,
   shot,
-  shots,
-  railGroups,
-  productionGroups,
+  takeGeneration,
   label,
   activeTab = 'description',
   castMemberLabels,
@@ -77,6 +69,7 @@ export function SceneShotDetail({
   locationLabels,
   onTabChange = () => {},
   onShotSpecsSaved,
+  onCreateTakeGeneration,
   onSaveNotificationChange,
 }: SceneShotDetailProps) {
   const saveNotificationSequenceRef = useRef(0);
@@ -84,36 +77,17 @@ export function SceneShotDetail({
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
   const [productionSaveNotification, setProductionSaveNotification] =
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
-  const groupTag = useMemo(() => {
-    const group = findRailGroupForShot(railGroups, shot.shotId);
-    return groupTagLabel(shots, group);
-  }, [railGroups, shot.shotId, shots]);
-  const visibleRailGroup = useMemo(
-    () => findRailGroupForShot(railGroups, shot.shotId),
-    [railGroups, shot.shotId]
-  );
-  const singleShotProductionGroup = useMemo(
+  const takeGenerationTag = useMemo(
     () =>
-      productionGroups.find(
-        (group) =>
-          group.shotIds.length === 1 && group.shotIds[0] === shot.shotId
-      ) ?? null,
-    [productionGroups, shot.shotId]
+      takeGeneration && takeGeneration.shotIds.length > 1
+        ? `${takeGeneration.shotIds.length} shots`
+        : null,
+    [takeGeneration]
   );
-  const shotIdsKey = (
-    visibleRailGroup?.shotIds ??
-    singleShotProductionGroup?.shotIds ??
-    [shot.shotId]
-  ).join(',');
-  const productionGroupIdKey =
-    visibleRailGroup?.productionGroupId ??
-    singleShotProductionGroup?.productionGroupId ??
-    null;
   const production = useShotVideoTakeProduction({
     projectName,
     sceneId,
-    shotIds: shotIdsKey.split(','),
-    productionGroupId: productionGroupIdKey,
+    takeGenerationId: takeGeneration?.takeGenerationId,
     onResourceRefreshed: onShotSpecsSaved,
   });
   const handleShotSpecsSaveNotificationChange = useCallback(
@@ -194,7 +168,11 @@ export function SceneShotDetail({
               className='flex h-full min-h-0 min-w-0 flex-col gap-0'
               items={DESIGN_TABS.map((tab) => ({ ...tab }))}
               trailing={
-                groupTag ? <SceneShotAiProductionGroupTag label={groupTag} /> : null
+                takeGenerationTag ? (
+                  <SceneShotAiProductionTakeGenerationTag
+                    label={takeGenerationTag}
+                  />
+                ) : null
               }
             >
               <div className='min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel-bg px-4'>
@@ -233,7 +211,10 @@ export function SceneShotDetail({
                   />
                 </LineTabsContent>
                 <LineTabsContent value='ai-production' className='h-full'>
-                  <SceneShotAiProductionTab production={production} />
+                  <SceneShotAiProductionTab
+                    production={production}
+                    onCreateTakeGeneration={onCreateTakeGeneration}
+                  />
                 </LineTabsContent>
               </div>
             </LineTabs>

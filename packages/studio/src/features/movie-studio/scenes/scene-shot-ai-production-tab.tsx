@@ -6,6 +6,7 @@ import type {
 import { SceneShotAiProductionInputModeList } from './scene-shot-ai-production-input-mode-list';
 import { SceneShotAiProductionModelTable } from './scene-shot-ai-production-model-table';
 import { SceneShotAiProductionRunSetup } from './scene-shot-ai-production-run-setup';
+import { Button } from '@/ui/button';
 import {
   buildInputModeOptions,
   buildModelRows,
@@ -16,16 +17,18 @@ import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-pro
 
 interface SceneShotAiProductionTabProps {
   production: UseShotVideoTakeProductionResult;
+  onCreateTakeGeneration?: () => Promise<void>;
 }
 
 export function SceneShotAiProductionTab({
   production,
+  onCreateTakeGeneration,
 }: SceneShotAiProductionTabProps) {
   const {
     loadState,
     loadError,
     models,
-    productionGroup,
+    takeGeneration,
     selectedInputMode,
     selectedModel,
     setInputMode,
@@ -41,7 +44,7 @@ export function SceneShotAiProductionTab({
     () => buildInputModeOptions(models, selectedModel),
     [models, selectedModel]
   );
-  const isMultiShotGroup = (productionGroup?.shotIds.length ?? 1) > 1;
+  const isMultiShotGeneration = (takeGeneration?.shotIds.length ?? 1) > 1;
 
   const modelRows = useMemo(
     () => (models && selectedInputMode ? buildModelRows(models, selectedInputMode) : []),
@@ -68,9 +71,19 @@ export function SceneShotAiProductionTab({
     );
   }
 
-  if (loadState === 'loading' || !productionGroup || !models) {
+  if (loadState === 'loading') {
     return (
       <p className='py-6 text-sm text-muted-foreground'>Loading AI Production…</p>
+    );
+  }
+
+  if (!takeGeneration || !models) {
+    return (
+      <div className='flex h-full items-center justify-center py-8'>
+        <Button type='button' onClick={() => void onCreateTakeGeneration?.()}>
+          Create Take Generation
+        </Button>
+      </div>
     );
   }
 
@@ -91,13 +104,13 @@ export function SceneShotAiProductionTab({
         />
         <SceneShotAiProductionRunSetup
           parameters={enabledParameters(selectedModelReport)}
-          values={productionGroup.videoTakeProduction.parameterValues ?? {}}
+          values={takeGeneration.production.parameterValues ?? {}}
           onParameterChange={setParameter}
           estimate={displayEstimateTotal(estimate, productionPlan)}
           estimatePending={estimateState === 'loading' || planState === 'loading'}
           finalPrompt={productionPlan?.finalPrompt ?? null}
           promptStale={promptStale}
-          isMultiShotGroup={isMultiShotGroup}
+          isMultiShotGroup={isMultiShotGeneration}
         />
       </div>
     </div>

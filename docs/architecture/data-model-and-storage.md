@@ -44,6 +44,11 @@ Use the focused documents below for current direction.
 - Scene Shot Lists are SQLite-owned project data. They store validated,
   agent-authored scene coverage history as tagged JSON in `scene_shot_list`,
   with one active shot list per scene tracked in `scene_shot_list_state`.
+- Scene Shot Video Take Generations are SQLite-owned project data. They bind a
+  scene, a scene shot list, an explicit ordered shot selection, take-generation
+  production settings, and compatibility state for shot-video planning. The
+  Scene Shot List remains the ordered coverage source of truth; take
+  generations own selected-shot membership for a video take attempt.
 - Cast Design and Location Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
   `cast_design` and `location_design`, with one active document per owner

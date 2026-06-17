@@ -10,7 +10,7 @@ interface SceneShotRailRowProps {
   image?: ScreenplayImageReferenceWithHttp;
   selected: boolean;
   onSelect: () => void;
-  onCycleGroup: () => void;
+  onCycleGroup?: () => void;
 }
 
 export function SceneShotRailRow({
@@ -58,24 +58,26 @@ export function SceneShotRailRow({
           </span>
         </span>
       </Button>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type='button'
-            variant='secondary'
-            size='icon'
-            aria-label={`Cycle grouping for ${label}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onCycleGroup();
-            }}
-            className='absolute bottom-2 right-2 h-7 w-7 opacity-0 shadow-sm transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100'
-          >
-            <Link2 className='h-3.5 w-3.5' />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side='right'>Cycle shot group</TooltipContent>
-      </Tooltip>
+      {onCycleGroup ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type='button'
+              variant='secondary'
+              size='icon'
+              aria-label={`Cycle grouping for ${label}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onCycleGroup();
+              }}
+              className='absolute bottom-2 right-2 h-7 w-7 opacity-0 shadow-sm transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100'
+            >
+              <Link2 className='h-3.5 w-3.5' />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side='right'>Cycle shot group</TooltipContent>
+        </Tooltip>
+      ) : null}
     </div>
   );
 }

@@ -4,6 +4,11 @@ import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
 import { createScreenplayRoute } from './screenplay.js';
 
+const TAKE_GENERATION_ID = 'scene_shot_video_take_generation_001';
+const TAKE_GENERATION_PATH =
+  `/constantinople/screenplay/scenes/scene_opening/take-generations/${TAKE_GENERATION_ID}`;
+const PRODUCTION = { inputModeId: 'text-only' as const };
+
 function mount(overrides: Partial<ReturnType<typeof fakeProjectDataService>> = {}) {
   return new Hono().route(
     '/:projectName',
@@ -16,164 +21,106 @@ function mount(overrides: Partial<ReturnType<typeof fakeProjectDataService>> = {
   );
 }
 
-const PRODUCTION_GROUP = {
-  productionGroupId: 'scene_shot_video_take_group_001',
-  shotIds: ['shot_001'],
-  videoTakeProduction: { inputModeId: 'text-only' as const },
-};
-
-describe('shot video take production routes', () => {
-  it('GET requires shotIds', async () => {
-    const app = mount();
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production'
+describe('shot video take generation routes', () => {
+  it('lists and creates take generations for a scene', async () => {
+    const createSceneShotVideoTakeGeneration = vi.fn(
+      fakeProjectDataService().createSceneShotVideoTakeGeneration
     );
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe('STUDIO_SERVER344');
+    const app = mount({ createSceneShotVideoTakeGeneration });
+
+    const listResponse = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/take-generations'
+    );
+    expect(listResponse.status).toBe(200);
+    const listBody = await listResponse.json();
+    expect(listBody.takeGenerations).toEqual(expect.any(Array));
+
+    const createResponse = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/take-generations',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shotListId: 'shot_list_opening',
+          shotIds: ['shot_001'],
+          title: 'Manual take generation',
+        }),
+      }
+    );
+    expect(createResponse.status).toBe(200);
+    expect(createSceneShotVideoTakeGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
+        shotListId: 'shot_list_opening',
+        shotIds: ['shot_001'],
+        title: 'Manual take generation',
+      })
+    );
   });
 
   it('GET returns context and model report from core', async () => {
     const app = mount();
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production?shotIds=shot_001,shot_002'
-    );
+    const response = await app.request(TAKE_GENERATION_PATH);
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.context.purpose).toBe('shot.video-take');
-    expect(body.context.target.shotIds).toEqual(['shot_001', 'shot_002']);
+    expect(body.context.target.takeGenerationId).toBe(TAKE_GENERATION_ID);
     expect(body.models.purpose).toBe('shot.video-take');
     expect(body.models.models.length).toBeGreaterThan(0);
   });
 
   it('PATCH rejects unknown top-level fields', async () => {
     const app = mount();
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production',
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productionGroup: PRODUCTION_GROUP, extra: true }),
-      }
-    );
+    const response = await app.request(TAKE_GENERATION_PATH, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ production: PRODUCTION, extra: true }),
+    });
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error.code).toBe('STUDIO_SERVER341');
   });
 
-  it('PATCH delegates to core and returns the refreshed resource with keys', async () => {
-    const updateShotVideoTakeProductionGroup = vi.fn(
-      fakeProjectDataService().updateShotVideoTakeProductionGroup
+  it('PATCH delegates production updates to core', async () => {
+    const updateSceneShotVideoTakeGenerationProduction = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakeGenerationProduction
     );
-    const app = mount({ updateShotVideoTakeProductionGroup });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production',
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productionGroup: PRODUCTION_GROUP }),
-      }
-    );
+    const app = mount({ updateSceneShotVideoTakeGenerationProduction });
+    const response = await app.request(TAKE_GENERATION_PATH, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ production: PRODUCTION }),
+    });
     expect(response.status).toBe(200);
-    expect(updateShotVideoTakeProductionGroup).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sceneId: 'scene_opening',
-        shotListId: 'shot_list_opening',
-        shotIds: ['shot_001'],
-        productionGroupId: 'scene_shot_video_take_group_001',
-        production: { inputModeId: 'text-only' },
-      })
-    );
-    const body = await response.json();
-    expect(body.resource.activeShotListId).toBe('shot_list_opening');
-    expect(body.resourceKeys).toContain(
-      'scene-shot-list:shot_list_opening:video-take-production'
-    );
-  });
-
-  it('rail-groups PATCH rejects unknown top-level fields', async () => {
-    const app = mount();
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/rail-groups',
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ railGroups: [], extra: true }),
-      }
-    );
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe('STUDIO_SERVER341');
-  });
-
-  it('rail-groups PATCH rejects empty rail group shot ids', async () => {
-    const app = mount();
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/rail-groups',
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ railGroups: [{ shotIds: [] }] }),
-      }
-    );
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe('STUDIO_SERVER341');
-    expect(body.error.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'STUDIO_SERVER343' }),
-      ])
-    );
-  });
-
-  it('rail-groups PATCH delegates the replacement draft to core', async () => {
-    const updateShotVideoTakeRailGroups = vi.fn(
-      fakeProjectDataService().updateShotVideoTakeRailGroups
-    );
-    const app = mount({ updateShotVideoTakeRailGroups });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/rail-groups',
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          railGroups: [
-            {
-              productionGroupId: 'group_upper',
-              mergePartnerProductionGroupId: 'group_lower',
-              shotIds: ['shot_001', 'shot_002'],
-            },
-            {
-              sourceProductionGroupId: 'group_source',
-              shotIds: ['shot_003'],
-            },
-          ],
-        }),
-      }
-    );
-    expect(response.status).toBe(200);
-    expect(updateShotVideoTakeRailGroups).toHaveBeenCalledWith(
+    expect(updateSceneShotVideoTakeGenerationProduction).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
-        sceneId: 'scene_opening',
-        shotListId: 'shot_list_opening',
-        railGroups: [
-          {
-            productionGroupId: 'group_upper',
-            mergePartnerProductionGroupId: 'group_lower',
-            shotIds: ['shot_001', 'shot_002'],
-          },
-          {
-            sourceProductionGroupId: 'group_source',
-            shotIds: ['shot_003'],
-          },
-        ],
+        takeGenerationId: TAKE_GENERATION_ID,
+        production: PRODUCTION,
       })
     );
     const body = await response.json();
-    expect(body.resource.activeShotListId).toBe('shot_list_opening');
-    expect(body.resourceKeys).toContain(
-      'scene-shot-list:shot_list_opening:video-take-rail-groups'
+    expect(body.resourceKeys.length).toBeGreaterThan(0);
+  });
+
+  it('shots PATCH delegates the replacement shot ids to core', async () => {
+    const updateSceneShotVideoTakeGenerationShots = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakeGenerationShots
+    );
+    const app = mount({ updateSceneShotVideoTakeGenerationShots });
+    const response = await app.request(`${TAKE_GENERATION_PATH}/shots`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shotIds: ['shot_001', 'shot_002'] }),
+    });
+    expect(response.status).toBe(200);
+    expect(updateSceneShotVideoTakeGenerationShots).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        takeGenerationId: TAKE_GENERATION_ID,
+        shotIds: ['shot_001', 'shot_002'],
+      })
     );
   });
 
@@ -182,28 +129,23 @@ describe('shot video take production routes', () => {
       fakeProjectDataService().readShotVideoTakeProductionPlan
     );
     const app = mount({ readShotVideoTakeProductionPlan });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/plan',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productionGroup: PRODUCTION_GROUP,
-          inputPolicy: {
-            defaultMode: 'auto',
-            slotModes: { 'first-frame': 'regenerate' },
-          },
-        }),
-      }
-    );
+    const response = await app.request(`${TAKE_GENERATION_PATH}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        production: PRODUCTION,
+        inputPolicy: {
+          defaultMode: 'auto',
+          slotModes: { 'first-frame': 'regenerate' },
+        },
+      }),
+    });
     expect(response.status).toBe(200);
     expect(readShotVideoTakeProductionPlan).toHaveBeenCalledWith(
       expect.objectContaining({
-        sceneId: 'scene_opening',
-        shotListId: 'shot_list_opening',
-        shotIds: ['shot_001'],
-        productionGroupId: 'scene_shot_video_take_group_001',
-        production: { inputModeId: 'text-only' },
+        projectName: 'constantinople',
+        takeGenerationId: TAKE_GENERATION_ID,
+        production: PRODUCTION,
         inputPolicy: {
           defaultMode: 'auto',
           slotModes: { 'first-frame': 'regenerate' },
@@ -219,123 +161,87 @@ describe('shot video take production routes', () => {
       fakeProjectDataService().estimateShotVideoTakeProduction
     );
     const app = mount({ estimateShotVideoTakeProduction });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/estimate',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productionGroup: PRODUCTION_GROUP }),
-      }
-    );
+    const response = await app.request(`${TAKE_GENERATION_PATH}/estimate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ production: PRODUCTION }),
+    });
     expect(response.status).toBe(200);
     expect(estimateShotVideoTakeProduction).toHaveBeenCalledWith(
       expect.objectContaining({
-        sceneId: 'scene_opening',
-        shotListId: 'shot_list_opening',
-        shotIds: ['shot_001'],
-        productionGroupId: 'scene_shot_video_take_group_001',
-        production: { inputModeId: 'text-only' },
+        projectName: 'constantinople',
+        takeGenerationId: TAKE_GENERATION_ID,
+        production: PRODUCTION,
       })
     );
     const body = await response.json();
     expect(body.estimate.estimate.estimatedCostUsd).toBe(0.42);
   });
 
-  it('input select delegates to core and returns resource keys', async () => {
+  it('input mutations delegate to core and return resource keys', async () => {
     const selectShotVideoTakeInput = vi.fn(
       fakeProjectDataService().selectShotVideoTakeInput
     );
-    const app = mount({ selectShotVideoTakeInput });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/inputs/select',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shotIds: ['shot_001'], inputId: 'input_001' }),
-      }
-    );
-    expect(response.status).toBe(200);
-    expect(selectShotVideoTakeInput).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sceneId: 'scene_opening',
-        shotListId: 'shot_list_opening',
-        shotIds: ['shot_001'],
-        inputId: 'input_001',
-      })
-    );
-    const body = await response.json();
-    expect(body.resourceKeys.length).toBeGreaterThan(0);
-  });
-
-  it('input clear delegates to core and returns resource keys', async () => {
     const clearShotVideoTakeInputSelection = vi.fn(
       fakeProjectDataService().clearShotVideoTakeInputSelection
     );
-    const app = mount({ clearShotVideoTakeInputSelection });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/inputs/clear',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shotIds: ['shot_001'],
-          kind: 'first-frame',
-          subjectKind: 'shot',
-          subjectId: 'shot_001',
-        }),
-      }
+    const deleteShotVideoTakeInput = vi.fn(
+      fakeProjectDataService().deleteShotVideoTakeInput
     );
-    expect(response.status).toBe(200);
+    const app = mount({
+      selectShotVideoTakeInput,
+      clearShotVideoTakeInputSelection,
+      deleteShotVideoTakeInput,
+    });
+
+    const selectResponse = await app.request(`${TAKE_GENERATION_PATH}/inputs/select`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inputId: 'input_001' }),
+    });
+    expect(selectResponse.status).toBe(200);
+    expect(selectShotVideoTakeInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        takeGenerationId: TAKE_GENERATION_ID,
+        inputId: 'input_001',
+      })
+    );
+
+    const clearResponse = await app.request(`${TAKE_GENERATION_PATH}/inputs/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'first-frame',
+        subjectKind: 'shot',
+        subjectId: 'shot_001',
+      }),
+    });
+    expect(clearResponse.status).toBe(200);
     expect(clearShotVideoTakeInputSelection).toHaveBeenCalledWith(
       expect.objectContaining({
+        takeGenerationId: TAKE_GENERATION_ID,
         kind: 'first-frame',
         subjectKind: 'shot',
         subjectId: 'shot_001',
       })
     );
-    const body = await response.json();
-    expect(body.resourceKeys.length).toBeGreaterThan(0);
-  });
 
-  it('input clear requires non-empty shotIds', async () => {
-    const app = mount();
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/inputs/clear',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shotIds: [], kind: 'first-frame' }),
-      }
-    );
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe('STUDIO_SERVER343');
-  });
-
-  it('input delete delegates to core and returns resource keys', async () => {
-    const deleteShotVideoTakeInput = vi.fn(
-      fakeProjectDataService().deleteShotVideoTakeInput
-    );
-    const app = mount({ deleteShotVideoTakeInput });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production/inputs/input_001',
+    const deleteResponse = await app.request(
+      `${TAKE_GENERATION_PATH}/inputs/input_001`,
       {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shotIds: ['shot_001'] }),
+        body: JSON.stringify({}),
       }
     );
-    expect(response.status).toBe(200);
+    expect(deleteResponse.status).toBe(200);
     expect(deleteShotVideoTakeInput).toHaveBeenCalledWith(
       expect.objectContaining({
-        sceneId: 'scene_opening',
-        shotListId: 'shot_list_opening',
-        shotIds: ['shot_001'],
+        takeGenerationId: TAKE_GENERATION_ID,
         inputId: 'input_001',
       })
     );
-    const body = await response.json();
-    expect(body.resourceKeys.length).toBeGreaterThan(0);
   });
 
   it('serializes structured errors from core', async () => {
@@ -349,9 +255,7 @@ describe('shot video take production routes', () => {
         });
       },
     });
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/video-take-production?shotIds=shot_001'
-    );
+    const response = await app.request(TAKE_GENERATION_PATH);
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error.code).toBe('PROJECT_DATA360');

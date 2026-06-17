@@ -52,7 +52,7 @@ import {
 } from './purpose-config.js';
 import {
   sameShotIds,
-} from './shot-group.js';
+} from './take-generation-context.js';
 import {
   readShotSpec,
 } from './spec-records.js';
@@ -64,10 +64,7 @@ export async function validateShotInputSpec(input: ValidateShotVideoTakeInputGen
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: normalized.target.sceneId,
-    shotListId: normalized.target.shotListId,
-    shotIds: normalized.target.shotIds,
-    productionGroupId: normalized.target.productionGroupId,
+    takeGenerationId: normalized.target.takeGenerationId,
   });
   validateInputSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeInputProviderPayload(normalized);
@@ -158,7 +155,7 @@ export async function listShotInputSpecs(
   return withShotProjectSession(input, ({ session }) => ({
     specs: listMediaGenerationSpecs(session, {
       purpose,
-      targetKind: 'sceneShotGroup',
+      targetKind: 'sceneShotVideoTakeGeneration',
       targetId: context.target.id,
     }),
   }));
@@ -207,10 +204,7 @@ export async function prepareShotInputDraftSpec(input: {
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: normalized.target.sceneId,
-    shotListId: normalized.target.shotListId,
-    shotIds: normalized.target.shotIds,
-    productionGroupId: normalized.target.productionGroupId,
+    takeGenerationId: normalized.target.takeGenerationId,
   });
   validateInputSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeInputProviderPayload(normalized);
@@ -312,7 +306,7 @@ export function validateInputSpecAgainstContext(
   if (!sameShotIds(spec.target.shotIds, context.target.shotIds)) {
     throw new ProjectDataError(
       'PROJECT_DATA368',
-      'Shot video take input spec targets a stale shot group.'
+      'Shot video take input spec targets stale take-generation shot ids.'
     );
   }
   if (
@@ -321,7 +315,7 @@ export function validateInputSpecAgainstContext(
   ) {
     throw new ProjectDataError(
       'PROJECT_DATA369',
-      'shot.multi-shot-storyboard-sheet requires a multi-shot production group.'
+      'shot.multi-shot-storyboard-sheet requires a multi-shot take generation.'
     );
   }
 }

@@ -2212,7 +2212,7 @@ describe('renku CLI', () => {
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(generationContextExitCode).toBe(0);
+    expect(generationContextExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
       shotListId: writeReport.activeShotListId,
@@ -2265,6 +2265,30 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
+    const takeCreateExitCode = await runRenkuCli(
+      [
+        'generation',
+        'take',
+        'create',
+        '--purpose',
+        'shot.video-take',
+        '--target',
+        `scene:${sceneId}`,
+        '--shot-list',
+        writeReport.activeShotListId,
+        '--shots',
+        'shot_001',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(takeCreateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
+    const takeGeneration = JSON.parse(stdout.join('\n')) as {
+      takeGenerationId: string;
+    };
+
+    stdout = [];
+    stderr = [];
     const productionUpdateExitCode = await runRenkuCli(
       [
         'generation',
@@ -2274,12 +2298,8 @@ describe('renku CLI', () => {
         'shot.video-take',
         '--target',
         `scene:${sceneId}`,
-        '--shot-list',
-        writeReport.activeShotListId,
-        '--shots',
-        'shot_001',
-        '--production-group',
-        'scene_shot_video_take_group_manual',
+        '--take-generation',
+        takeGeneration.takeGenerationId,
         '--file',
         shotProductionPath,
         '--json',
@@ -2289,7 +2309,7 @@ describe('renku CLI', () => {
     expect(productionUpdateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       target: {
-        productionGroupId: 'scene_shot_video_take_group_manual',
+        takeGenerationId: takeGeneration.takeGenerationId,
         shotIds: ['shot_001'],
       },
     });
@@ -2304,8 +2324,8 @@ describe('renku CLI', () => {
         'shot.video-take',
         '--target',
         `scene:${sceneId}`,
-        '--shot-list',
-        writeReport.activeShotListId,
+        '--take-generation',
+        takeGeneration.takeGenerationId,
         '--shots',
         'shot_001',
         '--json',
@@ -2316,11 +2336,11 @@ describe('renku CLI', () => {
     const shotContext = JSON.parse(stdout.join('\n'));
     expect(shotContext).toMatchObject({
       target: {
-        productionGroupId: 'scene_shot_video_take_group_manual',
+        takeGenerationId: takeGeneration.takeGenerationId,
         shotIds: ['shot_001'],
       },
-      productionGroup: {
-        productionGroupId: 'scene_shot_video_take_group_manual',
+      takeGeneration: {
+        takeGenerationId: takeGeneration.takeGenerationId,
       },
     });
 
@@ -2335,8 +2355,8 @@ describe('renku CLI', () => {
         'shot.first-frame',
         '--target',
         `scene:${sceneId}`,
-        '--shot-list',
-        writeReport.activeShotListId,
+        '--take-generation',
+        takeGeneration.takeGenerationId,
         '--shots',
         'shot_001',
         '--json',
@@ -2349,7 +2369,7 @@ describe('renku CLI', () => {
       purpose: 'shot.first-frame',
       defaultModelChoice: 'fal-ai/openai/gpt-image-2',
       target: {
-        productionGroupId: 'scene_shot_video_take_group_manual',
+        takeGenerationId: takeGeneration.takeGenerationId,
       },
       models: expect.arrayContaining([
         expect.objectContaining({ modelChoice: 'fal-ai/openai/gpt-image-2' }),

@@ -39,7 +39,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(19);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(20);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -57,8 +57,9 @@ describe('migrate database command', () => {
           'scene_shot_list',
           'scene_shot_list_state',
           'scene_shot_storyboard_image',
+          'scene_shot_video_take_generation',
+          'scene_shot_video_take_generation_shot',
           'scene_shot_video_take_input',
-          'scene_shot_video_take_input_shot',
           'scene_shot_video_take',
           'scene_shot_video_take_shot',
           'scene_dialogue_audio',

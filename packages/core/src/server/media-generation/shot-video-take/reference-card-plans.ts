@@ -213,6 +213,9 @@ export function previewImagesForDependencyLine(
   return [
     {
       ...(availableInput ? { inputId: availableInput.inputId } : {}),
+      ...(availableInput
+        ? { takeGenerationId: availableInput.takeGenerationId }
+        : {}),
       assetId: line.selectedAsset.assetId,
       assetFileId: line.selectedAsset.assetFileId,
       projectRelativePath: line.selectedAsset.projectRelativePath,

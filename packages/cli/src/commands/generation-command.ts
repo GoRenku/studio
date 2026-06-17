@@ -58,6 +58,8 @@ export function generationResourceChangedReport(
   const mutationPath = commandPath.join(' ');
   if (
     mutationPath !== 'production update' &&
+    mutationPath !== 'take create' &&
+    mutationPath !== 'take update-shots' &&
     mutationPath !== 'input select' &&
     mutationPath !== 'input clear' &&
     mutationPath !== 'dialogue-audio generate' &&

@@ -10,6 +10,7 @@ import {
   readSceneNarrativeResource,
   readSceneShotListResource,
 } from '@/services/studio-screenplay-api';
+import { listSceneShotVideoTakeGenerations } from '@/services/studio-shot-video-takes-api';
 import { ScenePanel } from './scene-panel';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -17,13 +18,22 @@ vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneShotListResource: vi.fn(),
 }));
 
+vi.mock('@/services/studio-shot-video-takes-api', () => ({
+  createSceneShotVideoTakeGeneration: vi.fn(),
+  listSceneShotVideoTakeGenerations: vi.fn(),
+}));
+
 describe('ScenePanel', () => {
   beforeEach(() => {
     vi.mocked(readSceneNarrativeResource).mockReset();
     vi.mocked(readSceneShotListResource).mockReset();
+    vi.mocked(listSceneShotVideoTakeGenerations).mockReset();
+    vi.mocked(listSceneShotVideoTakeGenerations).mockResolvedValue({
+      takeGenerations: [],
+    });
   });
 
-  it('opens the Shots tab when the same scene receives a shot deep link', async () => {
+  it('opens the Takes tab when the same scene receives a shot deep link', async () => {
     vi.mocked(readSceneNarrativeResource).mockResolvedValue(sceneNarrative());
     vi.mocked(readSceneShotListResource).mockResolvedValue(sceneShotList());
 
@@ -51,7 +61,7 @@ describe('ScenePanel', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('tab', { name: 'Shots' }).getAttribute('aria-selected')
+        screen.getByRole('tab', { name: 'Takes' }).getAttribute('aria-selected')
       ).toBe('true');
     });
     await screen.findByText('No shot list yet.');

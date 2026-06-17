@@ -23,9 +23,7 @@ describe('shot video take media imports', () => {
 
     const report = await projectData.importShotFirstFrame({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       sourceProjectRelativePath,
       title: 'Imported first frame',
     });
@@ -63,9 +61,7 @@ describe('shot video take media imports', () => {
 
     const report = await projectData.importShotVideoTake({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       sourceProjectRelativePath,
       title: 'Imported final take',
     });

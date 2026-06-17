@@ -42,10 +42,16 @@ import {
   withShotProjectSession,
 } from './project-session.js';
 import {
-  PreparedShotGroup,
-  prepareShotGroupInSession,
+  PreparedSceneShotVideoTakeGeneration,
+  prepareSceneShotVideoTakeGenerationInSession,
   sameShotIds,
-} from './shot-group.js';
+} from './take-generation-context.js';
+import {
+  updateSceneShotVideoTakeGenerationProductionRecord,
+} from '../../database/access/scene-shot-video-take-generations.js';
+import {
+  requireScreenplayDocument,
+} from './project-session.js';
 
 
 
@@ -111,15 +117,15 @@ export async function selectShotVideoTakeInput(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareShotGroupInSession({ session, input, now });
+    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
     const selectedBeforeMutation = requireShotVideoTakeInput(session, input.inputId);
     if (
-      selectedBeforeMutation.productionGroupId !== prepared.productionGroup.productionGroupId ||
+      selectedBeforeMutation.takeGenerationId !== prepared.takeGeneration.takeGenerationId ||
       !sameShotIds(selectedBeforeMutation.shotIds, prepared.orderedShotIds)
     ) {
       throw new ProjectDataError(
         'PROJECT_DATA362',
-        'Shot video take input belongs to a different production group.'
+        'Shot video take input belongs to a different take generation.'
       );
     }
     const selected = selectShotVideoTakeInputRecord(session, {
@@ -144,11 +150,10 @@ export async function clearShotVideoTakeInputSelection(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareShotGroupInSession({ session, input, now });
+    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
     clearShotVideoTakeInputRecordSelection(session, {
-      sceneId: input.sceneId,
-      shotListId: input.shotListId,
-      productionGroupId: prepared.productionGroup.productionGroupId,
+      sceneId: prepared.sceneId,
+      takeGenerationId: prepared.takeGeneration.takeGenerationId,
       inputKind: input.kind,
       subjectKind: input.subjectKind,
       subjectId: input.subjectId,
@@ -178,15 +183,15 @@ export async function deleteShotVideoTakeInput(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareShotGroupInSession({ session, input, now });
+    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
     const deleting = requireShotVideoTakeInput(session, input.inputId);
     if (
-      deleting.productionGroupId !== prepared.productionGroup.productionGroupId ||
+      deleting.takeGenerationId !== prepared.takeGeneration.takeGenerationId ||
       !sameShotIds(deleting.shotIds, prepared.orderedShotIds)
     ) {
       throw new ProjectDataError(
         'PROJECT_DATA362',
-        'Shot video take input belongs to a different production group.'
+        'Shot video take input belongs to a different take generation.'
       );
     }
 
@@ -195,9 +200,8 @@ export async function deleteShotVideoTakeInput(
 
     if (deleting.selected) {
       const replacement = listShotVideoTakeInputRecords(session, {
-        sceneId: input.sceneId,
-        shotListId: input.shotListId,
-        productionGroupId: prepared.productionGroup.productionGroupId,
+        sceneId: prepared.sceneId,
+        takeGenerationId: prepared.takeGeneration.takeGenerationId,
         shotIds: prepared.orderedShotIds,
       }).find(
         (candidate) =>
@@ -236,7 +240,7 @@ export async function deleteShotVideoTakeInput(
 
 export function updatePreparedInputSelection(input: {
   session: DatabaseSession;
-  prepared: PreparedShotGroup;
+  prepared: PreparedSceneShotVideoTakeGeneration;
   now: string;
   input: Pick<
     ShotVideoTakeAvailableInput,
@@ -244,7 +248,7 @@ export function updatePreparedInputSelection(input: {
   >;
   selected: boolean;
 }): void {
-  const plan = input.prepared.productionGroup.videoTakeProduction;
+  const plan = input.prepared.takeGeneration.production;
   const preparedInputs = (plan.preparedInputs ?? []).filter(
     (candidate) =>
       candidate.kind !== input.input.kind ||
@@ -260,15 +264,11 @@ export function updatePreparedInputSelection(input: {
       subjectId: input.input.subjectId,
     });
   }
-  prepareShotGroupInSession({
-    session: input.session,
-    input: {
-      sceneId: input.prepared.sceneId,
-      shotListId: input.prepared.shotListId,
-      shotIds: input.prepared.orderedShotIds,
-      productionGroupId: input.prepared.productionGroup.productionGroupId,
-    },
-    now: input.now,
+  const screenplay = requireScreenplayDocument(input.session);
+  updateSceneShotVideoTakeGenerationProductionRecord(input.session, {
+    takeGenerationId: input.prepared.takeGeneration.takeGenerationId,
     production: { ...plan, preparedInputs },
+    screenplay,
+    now: input.now,
   });
 }

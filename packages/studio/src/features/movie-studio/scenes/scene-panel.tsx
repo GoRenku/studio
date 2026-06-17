@@ -10,10 +10,12 @@ import {
 import type {
   ScenePanelTab,
   SceneShotDetailTab,
+  SceneTakeWorkspaceMode,
   StudioSelection,
 } from '../movie-studio-selection';
 import { SceneNarrativeTab } from './scene-narrative-tab';
-import { SceneShotsTab } from './scene-shots-tab';
+import { SceneShotsReviewTab } from './scene-shots-review-tab';
+import { SceneTakesTab } from './scene-takes-tab';
 
 interface SceneNeighbor {
   id: string;
@@ -25,6 +27,8 @@ interface ScenePanelProps {
   sceneId: string;
   sceneTab?: ScenePanelTab;
   shotId?: string;
+  takeWorkspaceMode?: SceneTakeWorkspaceMode;
+  takeGenerationId?: string;
   shotTab?: SceneShotDetailTab;
   onSelect: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
@@ -39,6 +43,8 @@ export function ScenePanel({
   sceneId,
   sceneTab,
   shotId,
+  takeWorkspaceMode,
+  takeGenerationId,
   shotTab,
   onSelect,
   onHeaderActionChange,
@@ -51,7 +57,13 @@ export function ScenePanel({
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
   const activeTab: ScenePanelTab =
-    sceneTab ?? (shotId || shotTab ? 'shots' : 'narrative');
+    sceneTab ?? (shotId || shotTab || takeGenerationId ? 'takes' : 'narrative');
+  const takesLabel =
+    activeTab === 'takes' && takeWorkspaceMode === 'edit'
+      ? 'Takes - Edit'
+      : activeTab === 'takes' && takeWorkspaceMode === 'new'
+        ? 'Takes - New'
+        : 'Takes';
 
   useEffect(() => {
     let cancelled = false;
@@ -98,16 +110,29 @@ export function ScenePanel({
   return (
     <LineTabs
       value={activeTab}
-      onValueChange={(value) =>
-        onSelect(
-          value === 'shots'
-            ? { type: 'scene', id: sceneId, sceneTab: 'shots', shotId, shotTab }
-            : { type: 'scene', id: sceneId }
-        )
-      }
+      onValueChange={(value) => {
+        if (value === 'shots') {
+          onSelect({ type: 'scene', id: sceneId, sceneTab: 'shots', shotId });
+          return;
+        }
+        if (value === 'takes') {
+          onSelect({
+            type: 'scene',
+            id: sceneId,
+            sceneTab: 'takes',
+            shotId,
+            shotTab,
+            takeWorkspaceMode,
+            takeGenerationId,
+          });
+          return;
+        }
+        onSelect({ type: 'scene', id: sceneId });
+      }}
       items={[
         { value: 'narrative', label: 'Narrative' },
         { value: 'shots', label: 'Shots' },
+        { value: 'takes', label: takesLabel },
       ]}
     >
       <LineTabsContent value='narrative' className='overflow-hidden'>
@@ -126,11 +151,26 @@ export function ScenePanel({
         value='shots'
         className='flex min-h-0 min-w-0 overflow-hidden'
       >
-        <SceneShotsTab
+        <SceneShotsReviewTab
+          projectName={projectName}
+          sceneId={sceneId}
+          shotId={shotId}
+          onSelect={onSelect}
+          onHeaderActionChange={onHeaderActionChange}
+          onSaveNotificationChange={onSaveNotificationChange}
+        />
+      </LineTabsContent>
+      <LineTabsContent
+        value='takes'
+        className='flex min-h-0 min-w-0 overflow-hidden'
+      >
+        <SceneTakesTab
           projectName={projectName}
           sceneId={sceneId}
           shotId={shotId}
           shotTab={shotTab}
+          takeWorkspaceMode={takeWorkspaceMode}
+          takeGenerationId={takeGenerationId}
           onSelect={onSelect}
           onHeaderActionChange={onHeaderActionChange}
           onSaveNotificationChange={onSaveNotificationChange}

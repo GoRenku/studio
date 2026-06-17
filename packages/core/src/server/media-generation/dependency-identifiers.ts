@@ -1,13 +1,13 @@
 import type {
   MediaGenerationDependencyKind,
-  SceneShotMediaGenerationTarget,
+  SceneShotVideoTakeGenerationTarget,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
 } from '../../client/index.js';
 
 export interface ShotVideoInputDependencyIdentifierInput {
   kind: ShotVideoTakeInputKind;
-  target?: SceneShotMediaGenerationTarget;
+  target?: SceneShotVideoTakeGenerationTarget;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
 }
@@ -45,7 +45,7 @@ const shotVideoInputSubjectKinds = new Set<ShotVideoTakeInputSubjectKind>([
   'location',
   'lookbook',
   'shot',
-  'production-group',
+  'take-generation',
   'asset',
   'scene-dialogue',
 ]);
@@ -94,9 +94,9 @@ export function shotVideoInputDependencyId(
   ) {
     return lookbookSheetDependencyId(input.subjectId);
   }
-  const subjectKind = input.subjectKind ?? 'production-group';
+  const subjectKind = input.subjectKind ?? 'take-generation';
   const subjectId =
-    input.subjectId ?? input.target?.productionGroupId ?? input.target?.id ?? '';
+    input.subjectId ?? input.target?.takeGenerationId ?? input.target?.id ?? '';
   return [input.kind, subjectKind, subjectId].join(':');
 }
 

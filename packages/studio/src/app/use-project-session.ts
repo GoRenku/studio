@@ -356,14 +356,20 @@ function readStudioRoute(): StudioRoute {
     const sceneTabParam = search.get('sceneTab');
     const shotParam = search.get('shot');
     const shotTabParam = search.get('shotTab');
+    const takeWorkspaceModeParam = search.get('takeMode');
+    const takeGenerationParam = search.get('takeGeneration');
     const sceneTab = sceneTabParam
       ? readScenePanelTab(sceneTabParam)
       : shotParam || shotTabParam
-        ? 'shots'
+        ? 'takes'
         : undefined;
     const shotTab = shotTabParam
       ? readSceneShotDetailTab(shotTabParam)
       : undefined;
+    const takeWorkspaceMode =
+      takeWorkspaceModeParam === 'new' || takeWorkspaceModeParam === 'edit'
+        ? takeWorkspaceModeParam
+        : undefined;
     if (sceneTabParam && !sceneTab) {
       return {
         screen: 'movieStudio',
@@ -385,7 +391,7 @@ function readStudioRoute(): StudioRoute {
         screen: 'movieStudio',
         projectName: decodeURIComponent(sceneRoute[1]),
         selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
-        routeError: 'Shot route state requires sceneTab=shots.',
+        routeError: 'Shot route state requires sceneTab=takes.',
       };
     }
     const shotId = shotParam || undefined;
@@ -394,6 +400,8 @@ function readStudioRoute(): StudioRoute {
       id: decodeURIComponent(sceneRoute[2]),
       ...(sceneTab ? { sceneTab } : {}),
       ...(shotId ? { shotId } : {}),
+      ...(takeWorkspaceMode ? { takeWorkspaceMode } : {}),
+      ...(takeGenerationParam ? { takeGenerationId: takeGenerationParam } : {}),
       ...(shotTab ? { shotTab } : {}),
     };
     return {
@@ -627,12 +635,20 @@ function studioSelectionRoutePath(
     const params = new URLSearchParams();
     const effectiveSceneTab =
       selection.sceneTab ??
-      (selection.shotId || selection.shotTab ? 'shots' : 'narrative');
-    if (effectiveSceneTab === 'shots') {
-      params.set('sceneTab', 'shots');
+      (selection.shotId || selection.shotTab || selection.takeGenerationId
+        ? 'takes'
+        : 'narrative');
+    if (effectiveSceneTab !== 'narrative') {
+      params.set('sceneTab', effectiveSceneTab);
     }
     if (selection.shotId) {
       params.set('shot', selection.shotId);
+    }
+    if (selection.takeWorkspaceMode && selection.takeWorkspaceMode !== 'list') {
+      params.set('takeMode', selection.takeWorkspaceMode);
+    }
+    if (selection.takeGenerationId) {
+      params.set('takeGeneration', selection.takeGenerationId);
     }
     if (selection.shotTab && selection.shotTab !== 'description') {
       params.set('shotTab', selection.shotTab);

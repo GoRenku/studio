@@ -1,6 +1,6 @@
 import type {
   ShotVideoTakeGenerationContext,
-  ShotVideoTakeProductionPlan,
+  ShotVideoTakeGenerationProduction,
   ShotVideoTakeModelChoiceReport,
   ShotVideoTakeGenerationSpec,
   ShotVideoTakeInputModeId,
@@ -29,10 +29,10 @@ export function normalizeRouteSettingsForContext(input: {
   return normalizeShotVideoRouteSettings({
     route: input.route,
     defaults: input.context.defaults.parameterValues,
-    settings: input.context.productionGroup.videoTakeProduction.parameterValues,
+    settings: input.context.takeGeneration.production.parameterValues,
   }) as {
-    values: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
-    providerValues: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
+    values: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
+    providerValues: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
     droppedSettingIds: string[];
     invalidSettingIds: string[];
   };

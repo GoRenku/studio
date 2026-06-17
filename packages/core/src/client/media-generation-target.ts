@@ -24,21 +24,19 @@ export interface SceneDialogueMediaGenerationTarget {
   dialogueId: string;
 }
 
-export interface SceneShotMediaGenerationTarget {
-  kind: 'sceneShotGroup';
+export interface SceneShotVideoTakeGenerationTarget {
+  kind: 'sceneShotVideoTakeGeneration';
   id: string;
   sceneId: string;
-  shotListId: string;
-  productionGroupId: string;
+  takeGenerationId: string;
   shotIds: string[];
 }
 
-export interface SceneShotMediaGenerationRequestTarget {
-  kind: 'sceneShotGroup';
+export interface SceneShotVideoTakeGenerationRequestTarget {
+  kind: 'sceneShotVideoTakeGeneration';
   id?: string;
   sceneId: string;
-  shotListId: string;
-  productionGroupId?: string;
+  takeGenerationId: string;
   shotIds: string[];
 }
 
@@ -48,7 +46,7 @@ export type MediaGenerationTarget =
   | LocationMediaGenerationTarget
   | SceneMediaGenerationTarget
   | SceneDialogueMediaGenerationTarget
-  | SceneShotMediaGenerationTarget;
+  | SceneShotVideoTakeGenerationTarget;
 
 export type MediaGenerationRequestTarget =
   | LookbookImageGenerationTarget
@@ -56,4 +54,4 @@ export type MediaGenerationRequestTarget =
   | LocationMediaGenerationTarget
   | SceneMediaGenerationTarget
   | SceneDialogueMediaGenerationTarget
-  | SceneShotMediaGenerationRequestTarget;
+  | SceneShotVideoTakeGenerationRequestTarget;

@@ -25,10 +25,14 @@ export type StudioSelection =
       id: string;
       sceneTab?: ScenePanelTab;
       shotId?: string;
+      takeWorkspaceMode?: SceneTakeWorkspaceMode;
+      takeGenerationId?: string;
       shotTab?: SceneShotDetailTab;
     };
 
-export type ScenePanelTab = 'narrative' | 'shots';
+export type ScenePanelTab = 'narrative' | 'shots' | 'takes';
+
+export type SceneTakeWorkspaceMode = 'list' | 'new' | 'edit';
 
 export type SceneShotDetailTab =
   | 'description'
@@ -38,7 +42,11 @@ export type SceneShotDetailTab =
   | 'references'
   | 'ai-production';
 
-export const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
+export const SCENE_PANEL_TABS: ScenePanelTab[] = [
+  'narrative',
+  'shots',
+  'takes',
+];
 
 export const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'description',

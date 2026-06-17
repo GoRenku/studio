@@ -47,10 +47,6 @@ import {
   readActiveLocationDesignId,
 } from '../database/access/department-design.js';
 import {
-  listShotVideoTakeInputs,
-  listShotVideoTakes,
-} from '../database/access/shot-video-takes.js';
-import {
   withCurrentProjectSession,
   type CurrentProject,
 } from '../database/lifecycle/current-project.js';
@@ -304,12 +300,12 @@ function readSelectedSceneReadiness(
       activeShotListId: null,
       shotCount: 0,
       storyboardStatus: { available: false, missingShotIds: [] },
-      shotVideo: {
-        preflightAvailable: false,
-        selectedProductionGroupId: null,
-        selectedShotIds: [],
-        selectedInputCount: 0,
-        selectedTakeCount: 0,
+    shotVideo: {
+      preflightAvailable: false,
+      selectedTakeGenerationId: null,
+      selectedShotIds: [],
+      selectedInputCount: 0,
+      selectedTakeCount: 0,
       },
     };
   }
@@ -330,25 +326,6 @@ function readSelectedSceneReadiness(
     .filter((shot) => !storyboardShotIds.has(shot.shotId))
     .map((shot) => shot.shotId);
   const selectedShotIds = selectedShotIdsForScene(selection, document);
-  const selectedProductionGroupId = productionGroupIdForShotIds(
-    document,
-    selectedShotIds
-  );
-  const selectedInputCount = selectedProductionGroupId
-    ? listShotVideoTakeInputs(session, {
-        sceneId: selection.id,
-        shotListId: activeShotList.id,
-        productionGroupId: selectedProductionGroupId,
-        shotIds: selectedShotIds,
-      }).filter((input) => input.selected).length
-    : 0;
-  const selectedTakeCount = selectedProductionGroupId
-    ? listShotVideoTakes(session, {
-        sceneId: selection.id,
-        shotListId: activeShotList.id,
-        productionGroupId: selectedProductionGroupId,
-      }).filter((take) => take.selected).length
-    : 0;
 
   if (selection.shotId && !selectedShotIds.includes(selection.shotId)) {
     diagnostics.push(
@@ -372,10 +349,10 @@ function readSelectedSceneReadiness(
     },
     shotVideo: {
       preflightAvailable: selectedShotIds.length > 0,
-      selectedProductionGroupId,
+      selectedTakeGenerationId: null,
       selectedShotIds,
-      selectedInputCount,
-      selectedTakeCount,
+      selectedInputCount: 0,
+      selectedTakeCount: 0,
     },
   };
 }
@@ -390,32 +367,6 @@ function selectedShotIdsForScene(
       : [];
   }
   return document.shots.map((shot) => shot.shotId);
-}
-
-function productionGroupIdForShotIds(
-  document: SceneShotListDocument,
-  shotIds: string[]
-): string | null {
-  if (shotIds.length === 0) {
-    return null;
-  }
-  const exactProductionGroup = document.videoTakeProductionGroups?.find((group) =>
-    sameShotIds(group.shotIds, shotIds)
-  );
-  if (exactProductionGroup) {
-    return exactProductionGroup.productionGroupId;
-  }
-  const exactRailGroup = document.videoTakeRailGroups?.find((group) =>
-    sameShotIds(group.shotIds, shotIds)
-  );
-  if (exactRailGroup) {
-    return exactRailGroup.productionGroupId;
-  }
-  return null;
-}
-
-function sameShotIds(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((shotId, index) => shotId === right[index]);
 }
 
 function readinessDiagnostics(input: {

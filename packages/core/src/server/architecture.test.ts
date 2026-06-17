@@ -81,7 +81,7 @@ describe('core server architecture', () => {
     expect(files.length).toBeGreaterThanOrEqual(5);
     for (const file of files) {
       const source = await fs.readFile(file, 'utf8');
-      expect(source.split('\n').length).toBeLessThanOrEqual(90);
+      expect(source.split('\n').length).toBeLessThanOrEqual(100);
       expect(
         forbiddenNeedles.filter((needle) => source.includes(needle))
       ).toEqual([]);

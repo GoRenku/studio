@@ -4,7 +4,6 @@ import type {
 } from '@gorenku/studio-core/server';
 import {
   buildDiagnosticResult,
-  createDiagnosticError,
   createStructuredError,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
@@ -20,20 +19,16 @@ const CLEAR_CONTEXT = 'scene shot video take input clear request';
 const DELETE_CONTEXT = 'scene shot video take input delete request';
 
 export interface ShotVideoTakeInputSelectRequest {
-  shotIds: string[];
   inputId: string;
 }
 
 export interface ShotVideoTakeInputClearRequest {
-  shotIds: string[];
   kind: ShotVideoTakeInputKind;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
 }
 
-export interface ShotVideoTakeInputDeleteRequest {
-  shotIds: string[];
-}
+export type ShotVideoTakeInputDeleteRequest = Record<string, never>;
 
 /**
  * Parse the reusable-input select body (0041). Subject-kind and subject-id
@@ -50,17 +45,16 @@ export function readShotVideoTakeInputSelectRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['shotIds', 'inputId'],
+    ['inputId'],
     issues,
     SELECT_CONTEXT,
-    'Send only the shotIds and inputId fields.'
+    'Send only the inputId field.'
   );
 
-  const shotIds = readShotIds(record, issues, SELECT_CONTEXT);
   const inputId = readRequiredHttpString(record, ['inputId'], issues, SELECT_CONTEXT);
 
   finishOrThrow(issues);
-  return { shotIds: shotIds ?? [], inputId: inputId ?? '' };
+  return { inputId: inputId ?? '' };
 }
 
 /**
@@ -78,13 +72,12 @@ export function readShotVideoTakeInputClearRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['shotIds', 'kind', 'subjectKind', 'subjectId'],
+    ['kind', 'subjectKind', 'subjectId'],
     issues,
     CLEAR_CONTEXT,
-    'Send only the shotIds, kind, subjectKind, and subjectId fields.'
+    'Send only the kind, subjectKind, and subjectId fields.'
   );
 
-  const shotIds = readShotIds(record, issues, CLEAR_CONTEXT);
   const kind = readRequiredHttpString(record, ['kind'], issues, CLEAR_CONTEXT);
   const subjectKind = readOptionalHttpString(
     record,
@@ -96,7 +89,6 @@ export function readShotVideoTakeInputClearRequest(
 
   finishOrThrow(issues);
   return {
-    shotIds: shotIds ?? [],
     kind: (kind ?? '') as ShotVideoTakeInputKind,
     ...(subjectKind
       ? { subjectKind: subjectKind as ShotVideoTakeInputSubjectKind }
@@ -116,40 +108,14 @@ export function readShotVideoTakeInputDeleteRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['shotIds'],
+    [],
     issues,
     DELETE_CONTEXT,
-    'Send only the shotIds field.'
+    'Send an empty object.'
   );
 
-  const shotIds = readShotIds(record, issues, DELETE_CONTEXT);
-
   finishOrThrow(issues);
-  return { shotIds: shotIds ?? [] };
-}
-
-function readShotIds(
-  record: Record<string, unknown>,
-  issues: DiagnosticIssue[],
-  context: string
-): string[] | null {
-  const value = record.shotIds;
-  if (
-    !Array.isArray(value) ||
-    value.length === 0 ||
-    value.some((entry) => typeof entry !== 'string')
-  ) {
-    issues.push(
-      createDiagnosticError(
-        'STUDIO_SERVER342',
-        'shotIds must be a non-empty array of shot ids.',
-        { path: ['shotIds'], context },
-        'Send the ordered shot ids that share the production group.'
-      )
-    );
-    return null;
-  }
-  return value as string[];
+  return {};
 }
 
 function finishOrThrow(issues: DiagnosticIssue[]): void {

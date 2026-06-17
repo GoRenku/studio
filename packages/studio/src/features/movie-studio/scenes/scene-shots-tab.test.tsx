@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
   SceneShotListDocument,
+  SceneShotVideoTakeGeneration,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
@@ -14,10 +15,11 @@ import type { SceneShotListResourceResponse } from '@/services/studio-project-co
 import { readLocationAssets } from '@/services/studio-project-assets-api';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
+  createSceneShotVideoTakeGeneration,
   estimateShotVideoTakeProduction,
+  listSceneShotVideoTakeGenerations,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
-  updateShotVideoTakeRailGroups,
 } from '@/services/studio-shot-video-takes-api';
 import { SaveNotification } from '@/ui/save-notification';
 import type {
@@ -46,11 +48,12 @@ vi.mock('@/services/studio-project-assets-api', () => ({
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
+  listSceneShotVideoTakeGenerations: vi.fn(),
+  createSceneShotVideoTakeGeneration: vi.fn(),
   readShotVideoTakeProduction: vi.fn(),
   updateShotVideoTakeProduction: vi.fn(),
   estimateShotVideoTakeProduction: vi.fn(),
   planShotVideoTakeProduction: vi.fn(),
-  updateShotVideoTakeRailGroups: vi.fn(),
   selectShotVideoTakeInput: vi.fn(),
   clearShotVideoTakeInput: vi.fn(),
   updateShotLocationReference: vi.fn(),
@@ -69,6 +72,12 @@ describe('SceneShotsTab', () => {
     vi.mocked(readSceneShotListResource).mockReset();
     vi.mocked(readLocationAssets).mockReset();
     vi.mocked(readLocationAssets).mockResolvedValue([]);
+    vi.mocked(listSceneShotVideoTakeGenerations)
+      .mockReset()
+      .mockResolvedValue({ takeGenerations: [takeGeneration()] });
+    vi.mocked(createSceneShotVideoTakeGeneration)
+      .mockReset()
+      .mockResolvedValue(takeGeneration());
     vi.mocked(readShotVideoTakeProduction)
       .mockReset()
       .mockResolvedValue({ context: productionContext(), models: productionModels() });
@@ -78,18 +87,6 @@ describe('SceneShotsTab', () => {
     vi.mocked(planShotVideoTakeProduction)
       .mockReset()
       .mockResolvedValue(productionPlan());
-    vi.mocked(updateShotVideoTakeRailGroups)
-      .mockReset()
-      .mockResolvedValue({
-        resource: resource(
-          shotList({
-            videoTakeRailGroups: [
-              { productionGroupId: 'production_group_hook', shotIds: ['shot_001'] },
-            ],
-          })
-        ),
-        resourceKeys: [],
-      });
   });
 
   it('renders the empty state when there is no active shot list', async () => {
@@ -214,182 +211,6 @@ describe('SceneShotsTab', () => {
     const playButton = screen.getByRole('button', { name: 'Play shot' });
     expect(playButton.hasAttribute('disabled')).toBe(true);
   });
-
-  it('enters group edit mode on first group click without saving immediately', async () => {
-    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
-
-    render(<SceneShotsTabHarness />);
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
-    );
-
-    expect(updateShotVideoTakeRailGroups).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Editing Groups' })).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
-    expect(await screen.findByText('Review Changes')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Apply Changes' })).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Discard' })).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeNull();
-  });
-
-  it('selects the shot row when the grouping button is clicked', async () => {
-    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
-
-    render(<SceneShotsTabHarness />);
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Shot 2 — Council reaction' })
-    );
-    expect(await screen.findByText('Beat two.')).not.toBeNull();
-    await waitFor(() =>
-      expect(readShotVideoTakeProduction).toHaveBeenCalledTimes(2)
-    );
-    expect(
-      screen
-        .getByRole('button', { name: 'Shot 2 — Council reaction' })
-        .getAttribute('aria-current')
-    ).toBe('true');
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Cycle grouping for Shot 1' })
-    );
-
-    expect(await screen.findByText('Beat one.')).not.toBeNull();
-    expect(
-      screen
-        .getByRole('button', { name: 'Shot 1 — Map study' })
-        .getAttribute('aria-current')
-    ).toBe('true');
-  });
-
-  it('keeps a dirty local grouping draft through a background resource refresh', async () => {
-    vi.mocked(readSceneShotListResource)
-      .mockResolvedValueOnce(resource(shotList()))
-      .mockResolvedValueOnce(
-        resource(
-          shotList({
-            videoTakeRailGroups: [
-              { productionGroupId: 'server_group', shotIds: ['shot_002'] },
-            ],
-          })
-        )
-      );
-
-    render(<SceneShotsTabHarness />);
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
-    );
-
-    window.dispatchEvent(
-      new CustomEvent('renku:studio-resource-changed', {
-        detail: {
-          projectName: 'constantinople',
-          resourceKeys: ['scene-shot-list:shot_list_hook:video-take-rail-groups'],
-        },
-      })
-    );
-
-    await waitFor(() =>
-      expect(readSceneShotListResource).toHaveBeenCalledTimes(2)
-    );
-    expect(
-      document.querySelector('[data-group-id^="shot_rail_group_draft_"]')
-    ).not.toBeNull();
-    expect(document.querySelector('[data-group-id="server_group"]')).toBeNull();
-  });
-
-  it('discards local group edits without sending a save request', async () => {
-    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
-
-    render(<SceneShotsTabHarness />);
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Discard' }));
-
-    expect(updateShotVideoTakeRailGroups).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Editing Groups' })).toBeNull()
-    );
-  });
-
-  it('applies local group edits through one rail-groups request', async () => {
-    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
-
-    render(<SceneShotsTabHarness />);
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Apply Changes' }));
-
-    await waitFor(() =>
-      expect(updateShotVideoTakeRailGroups).toHaveBeenCalledWith(
-        'constantinople',
-        'scene_hook',
-        [{ shotIds: ['shot_001'] }]
-      )
-    );
-    expect((await screen.findByRole('status')).textContent).toContain('Saved');
-  });
-
-  it('keeps the review dialog and local draft visible when apply fails', async () => {
-    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
-    vi.mocked(updateShotVideoTakeRailGroups).mockRejectedValueOnce(
-      new Error('Validation failed.')
-    );
-
-    render(<SceneShotsTabHarness />);
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Apply Changes' }));
-
-    expect(await screen.findAllByText('Validation failed.')).toHaveLength(2);
-    expect((await screen.findByRole('alert', { hidden: true })).textContent).toContain(
-      'Validation failed.'
-    );
-    expect(screen.getByText('Review Changes')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Discard' })).not.toBeNull();
-    expect(
-      document.querySelector('[aria-label="Cycle grouping for Shot 1"]')
-    ).not.toBeNull();
-    expect(
-      document.querySelector('[data-group-id^="shot_rail_group_draft_"]')
-    ).not.toBeNull();
-  });
-
-  it('reloads AI Production when an applied draft receives a durable group id', async () => {
-    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(shotList()));
-
-    render(<SceneShotsTabHarness />);
-
-    await waitFor(() =>
-      expect(readShotVideoTakeProduction).toHaveBeenCalledTimes(1)
-    );
-
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Cycle grouping for Shot 1' })
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Editing Groups' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Apply Changes' }));
-
-    await waitFor(() =>
-      expect(readShotVideoTakeProduction).toHaveBeenCalledTimes(2)
-    );
-    expect(readShotVideoTakeProduction).toHaveBeenLastCalledWith(
-      'constantinople',
-      'scene_hook',
-      ['shot_001']
-    );
-  });
 });
 
 function SceneShotsTabHarness({
@@ -499,15 +320,32 @@ function resource(
   };
 }
 
+function takeGeneration(): SceneShotVideoTakeGeneration {
+  return {
+    takeGenerationId: 'take_generation_hook',
+    sceneId: 'scene_hook',
+    shotListId: 'shot_list_hook',
+    shotIds: ['shot_001'],
+    title: 'Take generation hook',
+    production: { inputModeId: 'text-only' },
+    createdAt: '',
+    updatedAt: '',
+    compatibility: {
+      editState: 'editable',
+      reasons: [],
+      message: 'This take generation matches the current shot list.',
+    },
+  };
+}
+
 function productionContext(): ShotVideoTakeGenerationContext {
   return {
     purpose: 'shot.video-take',
     target: {
-      kind: 'sceneShotGroup',
-      id: 'production_group_hook',
+      kind: 'sceneShotVideoTakeGeneration',
+      id: 'take_generation_hook',
       sceneId: 'scene_hook',
-      shotListId: 'shot_list_hook',
-      productionGroupId: 'production_group_hook',
+      takeGenerationId: 'take_generation_hook',
       shotIds: ['shot_001'],
     },
     project: { name: 'constantinople', title: 'Constantinople', aspectRatio: '16:9' },
@@ -525,12 +363,23 @@ function productionContext(): ShotVideoTakeGenerationContext {
       updatedAt: '',
       isActive: true,
     },
-    productionGroup: {
-      productionGroupId: 'production_group_hook',
+    takeGeneration: {
+      takeGenerationId: 'take_generation_hook',
+      sceneId: 'scene_hook',
+      shotListId: 'shot_list_hook',
       shotIds: ['shot_001'],
-      videoTakeProduction: { inputModeId: 'text-only' },
+      title: 'Take generation hook',
+      production: { inputModeId: 'text-only' },
+      createdAt: '',
+      updatedAt: '',
+      compatibility: {
+        editState: 'editable',
+        reasons: [],
+        message: 'This take generation matches the current shot list.',
+      },
     },
     shots: [shot('shot_001', 'Map study', 'Beat one.')],
+    displayShots: [shot('shot_001', 'Map study', 'Beat one.')],
     referencedCast: [],
     referencedLocations: [],
     activeLookbook: null,
@@ -561,7 +410,7 @@ function productionModels(): ShotVideoTakeModelListReport {
 function productionEstimate(): ShotVideoTakeProductionEstimateReport {
   return {
     target: productionContext().target,
-    productionGroup: productionContext().productionGroup,
+    takeGeneration: productionContext().takeGeneration,
     inputModeId: 'text-only',
     shotGroupMode: 'single-shot',
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -574,7 +423,7 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
   const context = productionContext();
   return {
     target: context.target,
-    productionGroup: context.productionGroup,
+    takeGeneration: context.takeGeneration,
     finalPrompt: null,
     plan: {
       planId: 'plan_hook',
@@ -582,7 +431,7 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
         projectId: 'project_hook',
         sceneId: 'scene_hook',
         shotListId: 'shot_list_hook',
-        productionGroupId: 'production_group_hook',
+        takeGenerationId: 'take_generation_hook',
         inputMode: 'text-only',
         shotGroupMode: 'single-shot',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',

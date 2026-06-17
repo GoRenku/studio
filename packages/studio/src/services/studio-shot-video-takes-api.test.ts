@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ShotVideoTakeProductionGroup } from '@gorenku/studio-core/client';
+import type { ShotVideoTakeGenerationProduction } from '@gorenku/studio-core/client';
 import {
   clearShotVideoTakeInput,
   estimateShotVideoTakeProduction,
@@ -14,14 +14,10 @@ import {
   updateShotLocationViewReferences,
   updateShotReferenceInclusion,
   updateShotVideoTakeProduction,
-  updateShotVideoTakeRailGroups,
 } from './studio-shot-video-takes-api';
 
-const PRODUCTION_GROUP: ShotVideoTakeProductionGroup = {
-  productionGroupId: 'scene_shot_video_take_group_001',
-  shotIds: ['shot_001', 'shot_002'],
-  videoTakeProduction: { inputModeId: 'reference' },
-};
+const TAKE_GENERATION_ID = 'scene_shot_video_take_generation_001';
+const PRODUCTION: ShotVideoTakeGenerationProduction = { inputModeId: 'reference' };
 
 function okResponse(body: unknown): Response {
   return {
@@ -52,95 +48,62 @@ describe('studio-shot-video-takes-api', () => {
     vi.restoreAllMocks();
   });
 
-  it('reads production with comma-separated shot ids', async () => {
+  it('reads production for a take generation', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       okResponse({ context: {}, models: {} })
     );
-    await readShotVideoTakeProduction('constantinople', 'scene_hook', [
-      'shot_001',
-      'shot_002',
-    ]);
+    await readShotVideoTakeProduction('constantinople', 'scene_hook', TAKE_GENERATION_ID);
     const [url] = lastCall();
     expect(String(url)).toBe(
-      '/studio-api/projects/constantinople/screenplay/scenes/scene_hook/video-take-production?shotIds=shot_001%2Cshot_002'
+      `/studio-api/projects/constantinople/screenplay/scenes/scene_hook/take-generations/${TAKE_GENERATION_ID}`
     );
   });
 
-  it('autosaves the production group', async () => {
+  it('autosaves take-generation production', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
+      okResponse({ context: {}, resourceKeys: [] })
     );
     await updateShotVideoTakeProduction(
       'constantinople',
       'scene_hook',
-      PRODUCTION_GROUP
+      TAKE_GENERATION_ID,
+      PRODUCTION
     );
     const [url, init] = lastCall();
-    expect(String(url)).toContain('/video-take-production');
+    expect(String(url)).toContain(`/take-generations/${TAKE_GENERATION_ID}`);
     expect((init as RequestInit).method).toBe('PATCH');
-    expect(lastBody()).toEqual({ productionGroup: PRODUCTION_GROUP });
+    expect(lastBody()).toEqual({ production: PRODUCTION });
   });
 
-  it('applies rail groups atomically', async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
-    );
-    await updateShotVideoTakeRailGroups('constantinople', 'scene_hook', [
-      {
-        productionGroupId: 'group_upper',
-        mergePartnerProductionGroupId: 'group_lower',
-        shotIds: ['shot_001', 'shot_002', 'shot_003'],
-      },
-      {
-        sourceProductionGroupId: 'group_source',
-        shotIds: ['shot_004'],
-      },
-    ]);
-    const [url, init] = lastCall();
-    expect(String(url)).toContain('/video-take-production/rail-groups');
-    expect((init as RequestInit).method).toBe('PATCH');
-    expect(lastBody()).toEqual({
-      railGroups: [
-        {
-          productionGroupId: 'group_upper',
-          mergePartnerProductionGroupId: 'group_lower',
-          shotIds: ['shot_001', 'shot_002', 'shot_003'],
-        },
-        {
-          sourceProductionGroupId: 'group_source',
-          shotIds: ['shot_004'],
-        },
-      ],
-    });
-  });
-
-  it('reads the inline production plan report with the production group', async () => {
+  it('reads the inline production plan report with production', async () => {
     vi.mocked(global.fetch).mockResolvedValue(okResponse({ report: {} }));
     await planShotVideoTakeProduction(
       'constantinople',
       'scene_hook',
-      PRODUCTION_GROUP
+      TAKE_GENERATION_ID,
+      PRODUCTION
     );
     const [url, init] = lastCall();
-    expect(String(url)).toContain('/video-take-production/plan');
+    expect(String(url)).toContain(`/take-generations/${TAKE_GENERATION_ID}/plan`);
     expect((init as RequestInit).method).toBe('POST');
     expect(lastBody()).toEqual({
-      productionGroup: PRODUCTION_GROUP,
+      production: PRODUCTION,
       inputPolicy: { defaultMode: 'auto' },
     });
   });
 
-  it('estimates with the production group', async () => {
+  it('estimates with production', async () => {
     vi.mocked(global.fetch).mockResolvedValue(okResponse({ estimate: {} }));
     await estimateShotVideoTakeProduction(
       'constantinople',
       'scene_hook',
-      PRODUCTION_GROUP
+      TAKE_GENERATION_ID,
+      PRODUCTION
     );
     const [url, init] = lastCall();
-    expect(String(url)).toContain('/video-take-production/estimate');
+    expect(String(url)).toContain(`/take-generations/${TAKE_GENERATION_ID}/estimate`);
     expect((init as RequestInit).method).toBe('POST');
-    expect(lastBody()).toEqual({ productionGroup: PRODUCTION_GROUP });
+    expect(lastBody()).toEqual({ production: PRODUCTION });
   });
 
   it.each([
@@ -148,53 +111,49 @@ describe('studio-shot-video-takes-api', () => {
     'fal-ai/kling-video/v3/pro',
     'fal-ai/kling-video/o3/standard',
     'fal-ai/kling-video/o3/pro',
-  ] as const)('estimates the %s production group without remapping the model', async (modelChoice) => {
+  ] as const)('estimates the %s production without remapping the model', async (modelChoice) => {
     vi.mocked(global.fetch).mockResolvedValue(okResponse({ estimate: {} }));
-    const productionGroup: ShotVideoTakeProductionGroup = {
-      productionGroupId: 'scene_shot_video_take_group_001',
-      shotIds: ['shot_001'],
-      videoTakeProduction: {
-        inputModeId: 'reference',
-        modelChoice,
-        parameterValues: { duration: '5' },
-      },
+    const production: ShotVideoTakeGenerationProduction = {
+      inputModeId: 'reference',
+      modelChoice,
+      parameterValues: { duration: '5' },
     };
     await estimateShotVideoTakeProduction(
       'constantinople',
       'scene_hook',
-      productionGroup
+      TAKE_GENERATION_ID,
+      production
     );
-    expect(lastBody()).toEqual({ productionGroup });
+    expect(lastBody()).toEqual({ production });
   });
 
-  it('selects a reusable input with shotIds and inputId', async () => {
+  it('selects a reusable input for a take generation', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
+      okResponse({ context: {}, resourceKeys: [] })
     );
     await selectShotVideoTakeInput(
       'constantinople',
       'scene_hook',
-      ['shot_001'],
+      TAKE_GENERATION_ID,
       'input_001'
     );
     const [url] = lastCall();
-    expect(String(url)).toContain('/video-take-production/inputs/select');
-    expect(lastBody()).toEqual({ shotIds: ['shot_001'], inputId: 'input_001' });
+    expect(String(url)).toContain(`/take-generations/${TAKE_GENERATION_ID}/inputs/select`);
+    expect(lastBody()).toEqual({ inputId: 'input_001' });
   });
 
-  it('clears an input with shotIds, kind, and optional subject', async () => {
+  it('clears an input with kind and optional subject', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
+      okResponse({ context: {}, resourceKeys: [] })
     );
-    await clearShotVideoTakeInput('constantinople', 'scene_hook', ['shot_001'], {
+    await clearShotVideoTakeInput('constantinople', 'scene_hook', TAKE_GENERATION_ID, {
       kind: 'first-frame',
       subjectKind: 'shot',
       subjectId: 'shot_001',
     });
     const [url] = lastCall();
-    expect(String(url)).toContain('/video-take-production/inputs/clear');
+    expect(String(url)).toContain(`/take-generations/${TAKE_GENERATION_ID}/inputs/clear`);
     expect(lastBody()).toEqual({
-      shotIds: ['shot_001'],
       kind: 'first-frame',
       subjectKind: 'shot',
       subjectId: 'shot_001',
@@ -342,7 +301,11 @@ describe('studio-shot-video-takes-api', () => {
       }),
     } as unknown as Response);
     await expect(
-      readShotVideoTakeProduction('constantinople', 'scene_hook', ['shot_001'])
+      readShotVideoTakeProduction(
+        'constantinople',
+        'scene_hook',
+        TAKE_GENERATION_ID
+      )
     ).rejects.toThrow('PROJECT_DATA360: Boom.');
   });
 });

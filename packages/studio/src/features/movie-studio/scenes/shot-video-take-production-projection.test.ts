@@ -8,11 +8,10 @@ import {
 const MODELS: ShotVideoTakeModelListReport = {
   purpose: 'shot.video-take',
   target: {
-    kind: 'sceneShotGroup',
-    id: 'g1',
+    kind: 'sceneShotVideoTakeGeneration',
+    id: 'scene_hook:take_generation_001',
     sceneId: 'scene_hook',
-    shotListId: 'list_1',
-    productionGroupId: 'g1',
+    takeGenerationId: 'take_generation_001',
     shotIds: ['s1'],
   },
   shotGroupMode: 'single-shot',

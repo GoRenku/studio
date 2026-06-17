@@ -8,7 +8,7 @@ import {
   type StudioProjectRef,
 } from './events.js';
 
-const SCENE_PANEL_TABS = ['narrative', 'shots'];
+const SCENE_PANEL_TABS = ['narrative', 'shots', 'takes'];
 const SCENE_SHOT_DETAIL_TABS = [
   'description',
   'lookbook',

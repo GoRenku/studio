@@ -511,9 +511,6 @@ export async function applySceneShotListOperations(
       }),
       changes: operationResult.changes,
       storyboard,
-      prunedVideoTakeRailGroupIds: operationResult.prunedVideoTakeRailGroupIds,
-      prunedVideoTakeProductionGroupIds:
-        operationResult.prunedVideoTakeProductionGroupIds,
     };
   });
 }
@@ -549,8 +546,6 @@ function buildShotListDocumentFromOperations(input: {
   removedShotIds: string[];
   updatedShotIds: string[];
   preservedShotIds: string[];
-  prunedVideoTakeRailGroupIds: string[];
-  prunedVideoTakeProductionGroupIds: string[];
 } {
   const draft: SceneShotListDocument = {
     ...structuredClone(input.base),
@@ -591,7 +586,6 @@ function buildShotListDocumentFromOperations(input: {
         originalShotIds.has(shot.shotId) && !touchedShotIds.has(shot.shotId)
     )
     .map((shot) => shot.shotId);
-  const pruned = pruneInvalidVideoTakeGroups(draft, nextShotIds);
   const changes: SceneShotListApplyChange[] = [
     { type: 'inserted', shotIds: insertedShotIds },
     { type: 'removed', shotIds: removedShotIds },
@@ -605,7 +599,6 @@ function buildShotListDocumentFromOperations(input: {
     removedShotIds,
     updatedShotIds,
     preservedShotIds,
-    ...pruned,
   };
 }
 
@@ -707,48 +700,6 @@ function removeShotIds(shots: SceneShot[], shotIds: string[]): void {
     }
     shots.splice(index, 1);
   }
-}
-
-function pruneInvalidVideoTakeGroups(
-  document: SceneShotListDocument,
-  validShotIds: Set<string>
-): {
-  prunedVideoTakeRailGroupIds: string[];
-  prunedVideoTakeProductionGroupIds: string[];
-} {
-  const prunedVideoTakeRailGroupIds: string[] = [];
-  const prunedVideoTakeProductionGroupIds: string[] = [];
-  document.videoTakeRailGroups = (document.videoTakeRailGroups ?? [])
-    .map((group) => ({
-      ...group,
-      shotIds: group.shotIds.filter((shotId) => validShotIds.has(shotId)),
-    }))
-    .filter((group) => {
-      const keep = group.shotIds.length > 0;
-      if (!keep) {
-        prunedVideoTakeRailGroupIds.push(group.productionGroupId);
-      }
-      return keep;
-    });
-  document.videoTakeProductionGroups = (document.videoTakeProductionGroups ?? [])
-    .map((group) => ({
-      ...group,
-      shotIds: group.shotIds.filter((shotId) => validShotIds.has(shotId)),
-    }))
-    .filter((group) => {
-      const keep = group.shotIds.length > 0;
-      if (!keep) {
-        prunedVideoTakeProductionGroupIds.push(group.productionGroupId);
-      }
-      return keep;
-    });
-  if (document.videoTakeRailGroups.length === 0) {
-    delete document.videoTakeRailGroups;
-  }
-  if (document.videoTakeProductionGroups.length === 0) {
-    delete document.videoTakeProductionGroups;
-  }
-  return { prunedVideoTakeRailGroupIds, prunedVideoTakeProductionGroupIds };
 }
 
 function carryForwardStoryboardImages(input: {

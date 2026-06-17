@@ -113,7 +113,7 @@ Options
   --take               Scene Dialogue Audio take id
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for shot video take generation
-  --production-group   Shot video take production group id
+  --take-generation    Scene shot video take generation id
   --intent             Shot video take input mode id
   --input              Shot video take reusable input id
   --kind               Shot video take input kind
@@ -261,7 +261,7 @@ function createCliFlags() {
     shots: {
       type: 'string',
     },
-    productionGroup: {
+    takeGeneration: {
       type: 'string',
     },
     intent: {
@@ -548,9 +548,7 @@ export async function runRenkuCli(
               purpose: cli.flags.purpose,
               target: cli.flags.target,
               model: cli.flags.model,
-              shotList: cli.flags.shotList,
-              shots: cli.flags.shots,
-              productionGroup: cli.flags.productionGroup,
+              takeGeneration: cli.flags.takeGeneration,
               intent: cli.flags.intent,
             },
             json: cli.flags.json,
@@ -571,7 +569,7 @@ export async function runRenkuCli(
             spec: cli.flags.spec,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
-            productionGroup: cli.flags.productionGroup,
+            takeGeneration: cli.flags.takeGeneration,
             intent: cli.flags.intent,
             input: cli.flags.input,
             kind: cli.flags.kind,
@@ -617,6 +615,7 @@ export async function runRenkuCli(
             receipt: cli.flags.receipt,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
+            takeGeneration: cli.flags.takeGeneration,
             selection: cli.flags.selection,
           },
           json: cli.flags.json,

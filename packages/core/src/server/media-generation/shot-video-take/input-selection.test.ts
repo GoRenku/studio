@@ -15,24 +15,26 @@ describe('shot video take preflight and validation', () => {
     projectData = shotVideoTakeProject.projectData;
   });
 
-  it('validates selected input ownership before mutating another group selection', async () => {
+  it('validates selected input ownership before mutating another take generation selection', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
-    await shotVideoTakeProject.writeProjectFile('generated/media/group-two-a.png', 'first frame a');
-    await shotVideoTakeProject.writeProjectFile('generated/media/group-two-b.png', 'first frame b');
-    const selected = await projectData.importShotFirstFrame({
+    const otherTakeGeneration = await projectData.createSceneShotVideoTakeGeneration({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_002'],
+    });
+    await shotVideoTakeProject.writeProjectFile('generated/media/group-two-a.png', 'first frame a');
+    await shotVideoTakeProject.writeProjectFile('generated/media/group-two-b.png', 'first frame b');
+    const selected = await projectData.importShotFirstFrame({
+      homeDir,
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       sourceProjectRelativePath: 'generated/media/group-two-a.png',
       selection: 'select',
     });
     const unselected = await projectData.importShotFirstFrame({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_002'],
+      takeGenerationId: otherTakeGeneration.takeGenerationId,
       sourceProjectRelativePath: 'generated/media/group-two-b.png',
       selection: 'take',
     });
@@ -40,22 +42,22 @@ describe('shot video take preflight and validation', () => {
     await expect(
       projectData.selectShotVideoTakeInput({
         homeDir,
-        sceneId: ids.sceneId,
-        shotListId: written.shotList.id,
-        shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
         inputId: unselected.input.inputId,
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA362' });
 
-    const groupTwoInputs = await projectData.listShotVideoTakeInputs({
+    const firstGenerationInputs = await projectData.listShotVideoTakeInputs({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_002'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
     });
-    expect(groupTwoInputs.inputs.find((input) => input.inputId === selected.input.inputId))
+    expect(firstGenerationInputs.inputs.find((input) => input.inputId === selected.input.inputId))
       .toMatchObject({ selected: true });
-    expect(groupTwoInputs.inputs.find((input) => input.inputId === unselected.input.inputId))
+    const otherGenerationInputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      takeGenerationId: otherTakeGeneration.takeGenerationId,
+    });
+    expect(otherGenerationInputs.inputs.find((input) => input.inputId === unselected.input.inputId))
       .toMatchObject({ selected: false });
   });
 
@@ -66,34 +68,26 @@ describe('shot video take preflight and validation', () => {
     await shotVideoTakeProject.writeProjectFile('generated/media/reference-b.png', 'reference b');
     const selected = await projectData.importShotReferenceImage({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       sourceProjectRelativePath: 'generated/media/reference-a.png',
       selection: 'select',
     });
     const unselected = await projectData.importShotReferenceImage({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       sourceProjectRelativePath: 'generated/media/reference-b.png',
       selection: 'take',
     });
 
     await projectData.deleteShotVideoTakeInput({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
       inputId: selected.input.inputId,
     });
 
     const inputs = await projectData.listShotVideoTakeInputs({
       homeDir,
-      sceneId: ids.sceneId,
-      shotListId: written.shotList.id,
-      shotIds: ['shot_001'],
+      takeGenerationId: written.takeGeneration.takeGenerationId,
     });
     expect(inputs.inputs).toHaveLength(1);
     expect(inputs.inputs[0]).toMatchObject({

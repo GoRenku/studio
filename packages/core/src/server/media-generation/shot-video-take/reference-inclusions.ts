@@ -177,7 +177,7 @@ export function routeRequiresGeneralReference(
   kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
 ): boolean {
   const inputModeId =
-    context.productionGroup.videoTakeProduction.inputModeId ?? context.defaults.inputModeId;
+    context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId;
   if (kind === 'first-frame') {
     return inputModeId === 'first-frame' || inputModeId === 'first-last-frame';
   }

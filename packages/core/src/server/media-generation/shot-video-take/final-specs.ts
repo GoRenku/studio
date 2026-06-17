@@ -56,7 +56,7 @@ import {
 } from './route-settings.js';
 import {
   sameShotIds,
-} from './shot-group.js';
+} from './take-generation-context.js';
 import {
   readShotSpec,
 } from './spec-records.js';
@@ -70,10 +70,7 @@ export async function validateShotVideoTakeSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: normalized.target.sceneId,
-    shotListId: normalized.target.shotListId,
-    shotIds: normalized.target.shotIds,
-    productionGroupId: normalized.target.productionGroupId,
+    takeGenerationId: normalized.target.takeGenerationId,
   });
   validateFinalSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeProviderPayload(normalized, context);
@@ -124,7 +121,7 @@ export async function listShotVideoTakeSpecs(
   return withShotProjectSession(input, ({ session }) => ({
     specs: listMediaGenerationSpecs(session, {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      targetKind: 'sceneShotGroup',
+      targetKind: 'sceneShotVideoTakeGeneration',
       targetId: context.target.id,
     }),
   }));
@@ -140,10 +137,7 @@ export async function prepareShotVideoTakeSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: specRecord.spec.target.sceneId,
-    shotListId: specRecord.spec.target.shotListId,
-    shotIds: specRecord.spec.target.shotIds,
-    productionGroupId: specRecord.spec.target.productionGroupId,
+    takeGenerationId: specRecord.spec.target.takeGenerationId,
   });
   validateFinalSpecAgainstContext(specRecord.spec, context);
   const plan = buildShotVideoTakeProviderPayload(specRecord.spec, context);
@@ -165,10 +159,7 @@ export async function prepareShotVideoTakeDraftSpec(input: {
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: normalized.target.sceneId,
-    shotListId: normalized.target.shotListId,
-    shotIds: normalized.target.shotIds,
-    productionGroupId: normalized.target.productionGroupId,
+    takeGenerationId: normalized.target.takeGenerationId,
   });
   validateFinalSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeProviderPayload(normalized, context);
@@ -190,10 +181,7 @@ export async function estimateShotVideoTakeSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: prepared.spec.spec.target.sceneId,
-    shotListId: prepared.spec.spec.target.shotListId,
-    shotIds: prepared.spec.spec.target.shotIds,
-    productionGroupId: prepared.spec.spec.target.productionGroupId,
+    takeGenerationId: prepared.spec.spec.target.takeGenerationId,
   });
   const pricingPlan = buildShotVideoTakePricingProviderPayload({
     spec: prepared.spec.spec,
@@ -325,14 +313,14 @@ export function validateFinalPricingSpecAgainstContext(
   if (!sameShotIds(spec.target.shotIds, context.target.shotIds)) {
     throw new ProjectDataError(
       'PROJECT_DATA370',
-      'Shot video take spec targets a stale shot group.'
+      'Shot video take spec targets stale take-generation shot ids.'
     );
   }
   const report = modelChoices(context, spec.inputModeId).find((model) => model.modelChoice === spec.modelChoice);
   if (!report || !report.available || !report.supportedInputModes.includes(spec.inputModeId)) {
     throw new ProjectDataError(
       'PROJECT_DATA371',
-      'Shot video take model does not support the selected input mode for this shot group.'
+      'Shot video take model does not support the selected input mode for this take generation.'
     );
   }
   for (const key of Object.keys(spec.parameterValues)) {

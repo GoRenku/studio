@@ -252,7 +252,7 @@ async function enrichSceneShotFocusContext(input: {
     ...input.context,
     sceneTab: sceneTabLabel(sceneTab),
   };
-  if (sceneTab !== 'shots') {
+  if (sceneTab !== 'shots' && sceneTab !== 'takes') {
     return { context: baseContext, warnings: [] };
   }
   try {
@@ -284,14 +284,6 @@ async function enrichSceneShotFocusContext(input: {
     }
     const shot = shots[shotIndex]!;
     const shotTab = selection.shotTab ?? 'description';
-    const railGroup =
-      resource.activeShotList?.videoTakeRailGroups?.find((group) =>
-        group.shotIds.includes(shot.shotId)
-      ) ?? null;
-    const productionGroup =
-      resource.activeShotList?.videoTakeProductionGroups?.find((group) =>
-        group.shotIds.includes(shot.shotId)
-      ) ?? null;
     return {
       context: {
         ...baseContext,
@@ -306,10 +298,6 @@ async function enrichSceneShotFocusContext(input: {
             shotTab,
             castMemberLabels: resource.castMemberLabels,
             locationLabels: resource.locationLabels,
-            productionGroupId:
-              railGroup?.productionGroupId ?? productionGroup?.productionGroupId,
-            productionShotIds:
-              railGroup?.shotIds ?? productionGroup?.shotIds ?? [shot.shotId],
           }),
         },
       },
@@ -331,13 +319,14 @@ async function enrichSceneShotFocusContext(input: {
 }
 
 function effectiveSceneTab(selection: Extract<StudioSelection, { type: 'scene' }>): ScenePanelTab {
-  return selection.sceneTab ?? (selection.shotId || selection.shotTab ? 'shots' : 'narrative');
+  return selection.sceneTab ?? (selection.shotId || selection.shotTab ? 'takes' : 'narrative');
 }
 
 function sceneTabLabel(tab: ScenePanelTab) {
   return {
     id: tab,
-    label: tab === 'shots' ? 'Shots' : 'Narrative',
+    label:
+      tab === 'takes' ? 'Takes' : tab === 'shots' ? 'Shots' : 'Narrative',
   };
 }
 
@@ -369,8 +358,6 @@ function shotTabSelections(input: {
   shotTab: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
   locationLabels: Record<string, string>;
-  productionGroupId?: string;
-  productionShotIds: string[];
 }): StudioCurrentShotTabSelections {
   const shotSpecs = input.shot.shotSpecs;
   switch (input.shotTab) {
@@ -471,11 +458,8 @@ function shotTabSelections(input: {
     }
     case 'ai-production':
       return {
-        kind: 'production-group',
-        ...(input.productionGroupId
-          ? { productionGroupId: input.productionGroupId }
-          : {}),
-        shotIds: input.productionShotIds,
+        kind: 'take-generation',
+        shotIds: [input.shot.shotId],
       };
     case 'description':
     case 'lookbook':

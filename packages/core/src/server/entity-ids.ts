@@ -37,7 +37,7 @@ export type EntityIdPrefix =
   | 'location_environment_sheet_view'
   | 'scene_shot_list'
   | 'scene_shot_storyboard_image'
-  | 'scene_shot_video_take_group'
+  | 'scene_shot_video_take_generation'
   | 'scene_shot_video_take_input'
   | 'scene_shot_video_take'
   | 'scene_dialogue_audio'

@@ -6,7 +6,8 @@ import type {
   ShotVideoTakeModelListReport,
   ShotVideoTakeParameterValue,
   ShotVideoTakeProductionEstimateReport,
-  ShotVideoTakeProductionGroup,
+  SceneShotVideoTakeGeneration,
+  ShotVideoTakeGenerationProduction,
   ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
 import {
@@ -32,13 +33,7 @@ import {
 export interface UseShotVideoTakeProductionInput {
   projectName: string;
   sceneId: string;
-  /** Ordered shot ids of the group to plan (the selected shot's group). */
-  shotIds: string[];
-  /**
-   * Reloads production state when a local draft is persisted and receives a
-   * durable group id, even if the selected shot ids did not change.
-   */
-  productionGroupId?: string | null;
+  takeGenerationId?: string | null;
   onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
 }
 
@@ -47,7 +42,7 @@ export interface UseShotVideoTakeProductionResult {
   loadError: string | null;
   context: ShotVideoTakeGenerationContext | null;
   models: ShotVideoTakeModelListReport | null;
-  productionGroup: ShotVideoTakeProductionGroup | null;
+  takeGeneration: SceneShotVideoTakeGeneration | null;
   selectedInputMode: ShotVideoTakeInputModeId | null;
   selectedModel: ShotVideoTakeModelChoice | undefined;
   setInputMode: (inputMode: ShotVideoTakeInputModeId) => void;
@@ -66,23 +61,11 @@ export interface UseShotVideoTakeProductionResult {
   deleteInput: (inputId: string) => Promise<void>;
 }
 
-function findGroupInResource(
-  resource: SceneShotListResourceResponse,
-  productionGroupId: string
-): ShotVideoTakeProductionGroup | null {
-  return (
-    resource.activeShotList?.videoTakeProductionGroups?.find(
-      (group) => group.productionGroupId === productionGroupId
-    ) ?? null
-  );
-}
-
 export function useShotVideoTakeProduction(
   input: UseShotVideoTakeProductionInput
 ): UseShotVideoTakeProductionResult {
-  const { projectName, sceneId, onResourceRefreshed } = input;
-  const shotIdsKey = input.shotIds.join(',');
-  const productionGroupIdKey = input.productionGroupId ?? '';
+  const { projectName, sceneId, takeGenerationId, onResourceRefreshed } = input;
+  const takeGenerationIdKey = takeGenerationId ?? '';
 
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
     'loading'
@@ -94,8 +77,8 @@ export function useShotVideoTakeProduction(
   const [models, setModels] = useState<ShotVideoTakeModelListReport | null>(
     null
   );
-  const [productionGroup, setProductionGroup] =
-    useState<ShotVideoTakeProductionGroup | null>(null);
+  const [takeGeneration, setTakeGeneration] =
+    useState<SceneShotVideoTakeGeneration | null>(null);
   const [productionPlan, setProductionPlan] =
     useState<ShotVideoTakeProductionPlanReport | null>(null);
   const [estimate, setEstimate] =
@@ -116,7 +99,6 @@ export function useShotVideoTakeProduction(
   useEffect(() => {
     let cancelled = false;
     hasUserEditedRef.current = false;
-    const shotIds = shotIdsKey.split(',').filter((id) => id.length > 0);
     const load = async () => {
       setLoadState('loading');
       setLoadError(null);
@@ -124,10 +106,10 @@ export function useShotVideoTakeProduction(
       setEstimate(null);
       setEstimateState('idle');
       setEstimateError(null);
-      if (shotIds.length === 0) {
+      if (!takeGenerationId) {
         setContext(null);
         setModels(null);
-        setProductionGroup(null);
+        setTakeGeneration(null);
         setLoadState('ready');
         return;
       }
@@ -135,12 +117,12 @@ export function useShotVideoTakeProduction(
         const read = await readShotVideoTakeProduction(
           projectName,
           sceneId,
-          shotIds
+          takeGenerationId
         );
         if (cancelled) return;
         setContext(read.context);
         setModels(read.models);
-        setProductionGroup(read.context.productionGroup);
+        setTakeGeneration(read.context.takeGeneration);
         setLoadState('ready');
       } catch (error) {
         if (cancelled) return;
@@ -154,82 +136,89 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, productionGroupIdKey, sceneId, shotIdsKey]);
+  }, [projectName, sceneId, takeGenerationId, takeGenerationIdKey]);
 
   const save = useCallback(
-    (group: ShotVideoTakeProductionGroup) =>
-      updateShotVideoTakeProduction(projectName, sceneId, group),
-    [projectName, sceneId]
+    (production: ShotVideoTakeGenerationProduction) => {
+      if (!takeGenerationId) {
+        return Promise.reject(new Error('No take generation to save.'));
+      }
+      return updateShotVideoTakeProduction(
+        projectName,
+        sceneId,
+        takeGenerationId,
+        production
+      );
+    },
+    [projectName, sceneId, takeGenerationId]
   );
 
   const autosave = useDebouncedAutosave({
-    value: productionGroup,
-    save: (group) => {
-      if (!group) {
-        return Promise.reject(new Error('No production group to save.'));
+    value: takeGeneration?.production ?? null,
+    save: (production) => {
+      if (!production) {
+        return Promise.reject(new Error('No take generation production to save.'));
       }
-      return save(group);
+      return save(production);
     },
     failureMessage: 'AI Production settings could not be saved.',
-    isReady: () => hasUserEditedRef.current && productionGroup !== null,
+    isReady: () => hasUserEditedRef.current && takeGeneration !== null,
     onSaved: (result) => {
-      onResourceRefreshed?.(result.resource);
+      hasUserEditedRef.current = false;
+      setContext(result.context);
+      setTakeGeneration(result.context.takeGeneration);
+      void onResourceRefreshed;
     },
   });
 
   const editProduction = useCallback(
     (
       mutate: (
-        group: ShotVideoTakeProductionGroup
-      ) => ShotVideoTakeProductionGroup
+        production: ShotVideoTakeGenerationProduction
+      ) => ShotVideoTakeGenerationProduction
     ) => {
       hasUserEditedRef.current = true;
-      setProductionGroup((current) => (current ? mutate(current) : current));
+      setTakeGeneration((current) =>
+        current ? { ...current, production: mutate(current.production) } : current
+      );
     },
     []
   );
 
   const selectedInputMode = useMemo<ShotVideoTakeInputModeId | null>(() => {
-    if (!productionGroup) return null;
+    if (!takeGeneration) return null;
     return (
-      productionGroup.videoTakeProduction.inputModeId ??
+      takeGeneration.production.inputModeId ??
       context?.defaults.inputModeId ??
       null
     );
-  }, [context?.defaults.inputModeId, productionGroup]);
-  const productionGroupShotIdsKey = productionGroup?.shotIds.join(',') ?? '';
-  const storedModelChoice = productionGroup?.videoTakeProduction.modelChoice;
+  }, [context?.defaults.inputModeId, takeGeneration]);
+  const storedModelChoice = takeGeneration?.production.modelChoice;
 
   const setInputMode = useCallback(
     (inputMode: ShotVideoTakeInputModeId) => {
       editProduction((group) => ({
         ...group,
-        videoTakeProduction: {
-          ...group.videoTakeProduction,
-          inputModeId: inputMode,
-        },
+        inputModeId: inputMode,
       }));
     },
     [editProduction]
   );
 
   useEffect(() => {
-    if (!selectedInputMode || !productionGroupShotIdsKey) {
+    if (!selectedInputMode || !takeGenerationId) {
       return;
     }
     if (models?.inputModeId === selectedInputMode) {
       return;
     }
     let cancelled = false;
-    const shotIds = productionGroupShotIdsKey
-      .split(',')
-      .filter((shotId) => shotId.length > 0);
     const loadModels = async () => {
       try {
         const read = await readShotVideoTakeProduction(
           projectName,
           sceneId,
-          shotIds,
+          takeGenerationId,
           selectedInputMode
         );
         if (cancelled) {
@@ -250,10 +239,7 @@ export function useShotVideoTakeProduction(
         if (nextModel && nextModel !== storedModelChoice) {
           editProduction((group) => ({
             ...group,
-            videoTakeProduction: {
-              ...group.videoTakeProduction,
-              modelChoice: nextModel,
-            },
+            modelChoice: nextModel,
           }));
         }
       } catch (error) {
@@ -272,22 +258,19 @@ export function useShotVideoTakeProduction(
     };
   }, [
     editProduction,
-    productionGroupShotIdsKey,
     projectName,
     sceneId,
     selectedInputMode,
     storedModelChoice,
     models?.inputModeId,
+    takeGenerationId,
   ]);
 
   const setModel = useCallback(
     (model: ShotVideoTakeModelChoice) => {
       editProduction((group) => ({
         ...group,
-        videoTakeProduction: {
-          ...group.videoTakeProduction,
-          modelChoice: model,
-        },
+        modelChoice: model,
       }));
     },
     [editProduction]
@@ -297,12 +280,9 @@ export function useShotVideoTakeProduction(
     (name: string, value: ShotVideoTakeParameterValue) => {
       editProduction((group) => ({
         ...group,
-        videoTakeProduction: {
-          ...group.videoTakeProduction,
-          parameterValues: {
-            ...group.videoTakeProduction.parameterValues,
-            [name]: value,
-          },
+        parameterValues: {
+          ...group.parameterValues,
+          [name]: value,
         },
       }));
     },
@@ -310,7 +290,7 @@ export function useShotVideoTakeProduction(
   );
 
   useEffect(() => {
-    if (!productionGroup) {
+    if (!takeGeneration || !takeGenerationId) {
       return;
     }
     let cancelled = false;
@@ -321,7 +301,8 @@ export function useShotVideoTakeProduction(
         const report = await estimateShotVideoTakeProduction(
           projectName,
           sceneId,
-          productionGroup
+          takeGenerationId,
+          takeGeneration.production
         );
         if (cancelled) {
           return;
@@ -343,22 +324,23 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, productionGroup]);
+  }, [projectName, sceneId, takeGeneration, takeGenerationId]);
 
   const refreshProductionPlan = useCallback(async () => {
-    if (!productionGroup) return;
+    if (!takeGenerationId) return;
     setPlanState('loading');
     setPlanError(null);
     try {
       const report = await planShotVideoTakeProduction(
         projectName,
         sceneId,
-        productionGroup
+        takeGenerationId,
+        takeGeneration?.production
       );
       setProductionPlan(report);
       setEstimate({
         target: report.target,
-        productionGroup: report.productionGroup,
+        takeGeneration: report.takeGeneration,
         inputModeId: report.plan.request.inputMode,
         shotGroupMode: report.plan.request.shotGroupMode,
         modelChoice: report.plan.request.modelChoice,
@@ -375,10 +357,10 @@ export function useShotVideoTakeProduction(
       );
       setPlanState('error');
     }
-  }, [projectName, sceneId, productionGroup]);
+  }, [projectName, sceneId, takeGeneration, takeGenerationId]);
 
   useEffect(() => {
-    if (!productionGroup) {
+    if (!takeGenerationId) {
       return;
     }
     let cancelled = false;
@@ -389,7 +371,8 @@ export function useShotVideoTakeProduction(
         const report = await planShotVideoTakeProduction(
           projectName,
           sceneId,
-          productionGroup
+          takeGenerationId,
+          takeGeneration?.production
         );
         if (cancelled) {
           return;
@@ -397,7 +380,7 @@ export function useShotVideoTakeProduction(
         setProductionPlan(report);
         setEstimate({
           target: report.target,
-          productionGroup: report.productionGroup,
+          takeGeneration: report.takeGeneration,
           inputModeId: report.plan.request.inputMode,
           shotGroupMode: report.plan.request.shotGroupMode,
           modelChoice: report.plan.request.modelChoice,
@@ -422,65 +405,57 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, productionGroup]);
+  }, [projectName, sceneId, takeGeneration?.production, takeGenerationId]);
 
-  const applyMutationResult = useCallback(
-    (resource: SceneShotListResourceResponse, productionGroupId: string) => {
-      onResourceRefreshed?.(resource);
-      const refreshed = findGroupInResource(resource, productionGroupId);
-      if (refreshed) {
-        // Reusing/regenerating a dependency is an explicit action; adopt the
-        // refreshed group without re-arming autosave.
-        hasUserEditedRef.current = false;
-        setProductionGroup(refreshed);
-      }
-    },
-    [onResourceRefreshed]
-  );
+  const applyMutationResult = useCallback((result: { context: ShotVideoTakeGenerationContext }) => {
+    hasUserEditedRef.current = false;
+    setContext(result.context);
+    setTakeGeneration(result.context.takeGeneration);
+  }, []);
 
   const reuseInput = useCallback(
     async (inputId: string) => {
-      if (!productionGroup) return;
+      if (!takeGenerationId) return;
       const result = await selectShotVideoTakeInput(
         projectName,
         sceneId,
-        productionGroup.shotIds,
+        takeGenerationId,
         inputId
       );
-      applyMutationResult(result.resource, productionGroup.productionGroupId);
+      applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, productionGroup, projectName, refreshProductionPlan, sceneId]
+    [applyMutationResult, projectName, refreshProductionPlan, sceneId, takeGenerationId]
   );
 
   const regenerateInput = useCallback(
     async (slot: ShotVideoTakeInputSlot) => {
-      if (!productionGroup) return;
+      if (!takeGenerationId) return;
       const result = await clearShotVideoTakeInput(
         projectName,
         sceneId,
-        productionGroup.shotIds,
+        takeGenerationId,
         slot
       );
-      applyMutationResult(result.resource, productionGroup.productionGroupId);
+      applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, productionGroup, projectName, refreshProductionPlan, sceneId]
+    [applyMutationResult, projectName, refreshProductionPlan, sceneId, takeGenerationId]
   );
 
   const deleteInput = useCallback(
     async (inputId: string) => {
-      if (!productionGroup) return;
+      if (!takeGenerationId) return;
       const result = await deleteShotVideoTakeInput(
         projectName,
         sceneId,
-        productionGroup.shotIds,
+        takeGenerationId,
         inputId
       );
-      applyMutationResult(result.resource, productionGroup.productionGroupId);
+      applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, productionGroup, projectName, refreshProductionPlan, sceneId]
+    [applyMutationResult, projectName, refreshProductionPlan, sceneId, takeGenerationId]
   );
 
   const selectedModel =
@@ -494,7 +469,7 @@ export function useShotVideoTakeProduction(
     loadError,
     context,
     models,
-    productionGroup,
+    takeGeneration,
     selectedInputMode,
     selectedModel,
     setInputMode,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type ProjectRelativePath,
-  type SceneShotMediaGenerationTarget,
+  type SceneShotVideoTakeGenerationTarget,
   type ShotVideoTakeGenerationContext,
   type ShotVideoTakeGenerationSpec,
 } from '../../../client/index.js';
@@ -13,12 +13,11 @@ import {
 
 describe('shot video take provider payloads', () => {
   it('maps selected dialogue audio references to deduplicated provider audio input files', () => {
-    const target: SceneShotMediaGenerationTarget = {
-      kind: 'sceneShotGroup',
-      id: 'scene_001:shot_list_001:group_001',
+    const target: SceneShotVideoTakeGenerationTarget = {
+      kind: 'sceneShotVideoTakeGeneration',
+      id: 'scene_001:take_generation_001',
       sceneId: 'scene_001',
-      shotListId: 'shot_list_001',
-      productionGroupId: 'group_001',
+      takeGenerationId: 'take_generation_001',
       shotIds: ['shot_001'],
     };
     const spec: ShotVideoTakeGenerationSpec = {
@@ -58,12 +57,11 @@ describe('shot video take provider payloads', () => {
   });
 
   it('rejects provider payloads with more dialogue audio inputs than the route allows', () => {
-    const target: SceneShotMediaGenerationTarget = {
-      kind: 'sceneShotGroup',
-      id: 'scene_001:shot_list_001:group_001',
+    const target: SceneShotVideoTakeGenerationTarget = {
+      kind: 'sceneShotVideoTakeGeneration',
+      id: 'scene_001:take_generation_001',
       sceneId: 'scene_001',
-      shotListId: 'shot_list_001',
-      productionGroupId: 'group_001',
+      takeGenerationId: 'take_generation_001',
       shotIds: ['shot_001'],
     };
     const spec: ShotVideoTakeGenerationSpec = {
@@ -410,13 +408,12 @@ describe('shot video take provider payloads', () => {
   });
 });
 
-function shotTarget(): SceneShotMediaGenerationTarget {
+function shotTarget(): SceneShotVideoTakeGenerationTarget {
   return {
-    kind: 'sceneShotGroup',
-    id: 'scene_001:shot_list_001:group_001',
+    kind: 'sceneShotVideoTakeGeneration',
+    id: 'scene_001:take_generation_001',
     sceneId: 'scene_001',
-    shotListId: 'shot_list_001',
-    productionGroupId: 'group_001',
+    takeGenerationId: 'take_generation_001',
     shotIds: ['shot_001'],
   };
 }

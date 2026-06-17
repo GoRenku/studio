@@ -100,13 +100,19 @@ export function SceneShotDialogsTab({
     dependencyId: string,
     inclusion: 'include' | 'exclude' | null
   ) => {
-    const shotIds = productionPlan?.productionGroup.shotIds ?? [];
+    const takeGeneration = productionPlan?.takeGeneration;
+    const shotIds = takeGeneration?.shotIds ?? [];
     const result =
-      shotIds.length > 1
-        ? await updateShotGroupReferenceInclusion(projectName, sceneId, shotIds, {
-            dependencyId,
-            inclusion,
-          })
+      takeGeneration && shotIds.length > 1
+        ? await updateShotGroupReferenceInclusion(
+            projectName,
+            sceneId,
+            takeGeneration.takeGenerationId,
+            {
+              dependencyId,
+              inclusion,
+            }
+          )
         : await updateShotReferenceInclusion(projectName, sceneId, shotIds[0] ?? '', {
             dependencyId,
             inclusion,

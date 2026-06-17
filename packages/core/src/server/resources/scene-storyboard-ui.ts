@@ -12,10 +12,8 @@ import type {
 import type {
   SceneShot,
   SceneShotListDocument,
-  ShotReferenceInclusion,
   ShotSpecs,
 } from '../../client/scene-shot-list.js';
-import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type { ScreenplayDocument } from '../../client/screenplay.js';
 import { deriveShotSpecPromptStrings } from '../../client/shot-spec-labels.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -423,12 +421,6 @@ export async function updateSceneShotReferenceInclusion(
   input: UpdateSceneShotReferenceInclusionInput
 ): Promise<SceneShotListResource> {
   await updateActiveShotSpecs(input, (_session, shot, _screenplay, document) => {
-    validateReferenceInclusionOverride({
-      document,
-      shotId: input.shotId,
-      dependencyId: input.dependencyId,
-      inclusion: input.inclusion,
-    });
     const next = { ...(shot.shotSpecs ?? {}) };
     const referenceInclusions = { ...(next.referenceInclusions ?? {}) };
     if (input.inclusion) {
@@ -472,7 +464,7 @@ export async function updateSceneShotGroupReferenceInclusion(
       throw new ProjectDataError(
         'PROJECT_DATA379',
         'Reference inclusion group update requires at least one shot id.',
-        { suggestion: 'Send the shot ids in the current production group.' }
+        { suggestion: 'Send the shot ids in the current take generation.' }
       );
     }
     const shots = uniqueShotIds.map((shotId) => {
@@ -484,12 +476,6 @@ export async function updateSceneShotGroupReferenceInclusion(
           { suggestion: 'Use shot ids from the active shot list.' }
         );
       }
-      validateReferenceInclusionOverride({
-        document,
-        shotId,
-        dependencyId: input.dependencyId,
-        inclusion: input.inclusion,
-      });
       return shot;
     });
     for (const shot of shots) {
@@ -566,50 +552,6 @@ async function updateActiveShotSpecs(
   } finally {
     session.close();
   }
-}
-
-function validateReferenceInclusionOverride(input: {
-  document: SceneShotListDocument;
-  shotId: string;
-  dependencyId: string;
-  inclusion: ShotReferenceInclusion | null;
-}): void {
-  if (input.inclusion !== 'exclude') {
-    return;
-  }
-  const inputModeId =
-    productionGroupForShot(input.document, input.shotId)?.videoTakeProduction
-      .inputModeId ?? 'first-frame';
-  const excludesFirstFrame = input.dependencyId.startsWith('first-frame:');
-  const excludesLastFrame = input.dependencyId.startsWith('last-frame:');
-  const invalid =
-    (excludesFirstFrame &&
-      (inputModeId === 'first-frame' || inputModeId === 'first-last-frame')) ||
-    (excludesLastFrame && inputModeId === 'first-last-frame');
-  if (!invalid) {
-    return;
-  }
-  const issue = createDiagnosticError(
-    'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
-    `Required reference cannot be excluded: ${input.dependencyId}.`,
-    { path: ['shotSpecs', 'referenceInclusions', input.dependencyId] },
-    'Clear the exclusion or choose a generation route where this reference is optional.'
-  );
-  throw new ProjectDataError(issue.code, issue.message, {
-    issues: [issue],
-    suggestion: issue.suggestion,
-  });
-}
-
-function productionGroupForShot(
-  document: SceneShotListDocument,
-  shotId: string
-): NonNullable<SceneShotListDocument['videoTakeProductionGroups']>[number] | null {
-  return (
-    document.videoTakeProductionGroups?.find((group) =>
-      group.shotIds.includes(shotId)
-    ) ?? null
-  );
 }
 
 function requireScreenplayDocumentFromSession(

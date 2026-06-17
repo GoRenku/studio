@@ -62,15 +62,31 @@ describe('media generation purpose registry contract', () => {
       { purpose: 'lookbook.sheet', mediaKind: 'image', targetKind: 'lookbook' },
       { purpose: 'scene.dialogue-audio', mediaKind: 'audio', targetKind: 'sceneDialogue' },
       { purpose: 'scene.storyboard-sheet', mediaKind: 'image', targetKind: 'scene' },
-      { purpose: 'shot.first-frame', mediaKind: 'image', targetKind: 'sceneShotGroup' },
-      { purpose: 'shot.last-frame', mediaKind: 'image', targetKind: 'sceneShotGroup' },
+      {
+        purpose: 'shot.first-frame',
+        mediaKind: 'image',
+        targetKind: 'sceneShotVideoTakeGeneration',
+      },
+      {
+        purpose: 'shot.last-frame',
+        mediaKind: 'image',
+        targetKind: 'sceneShotVideoTakeGeneration',
+      },
       {
         purpose: 'shot.multi-shot-storyboard-sheet',
         mediaKind: 'image',
-        targetKind: 'sceneShotGroup',
+        targetKind: 'sceneShotVideoTakeGeneration',
       },
-      { purpose: 'shot.reference-image', mediaKind: 'image', targetKind: 'sceneShotGroup' },
-      { purpose: 'shot.video-take', mediaKind: 'video', targetKind: 'sceneShotGroup' },
+      {
+        purpose: 'shot.reference-image',
+        mediaKind: 'image',
+        targetKind: 'sceneShotVideoTakeGeneration',
+      },
+      {
+        purpose: 'shot.video-take',
+        mediaKind: 'video',
+        targetKind: 'sceneShotVideoTakeGeneration',
+      },
     ]);
   });
 

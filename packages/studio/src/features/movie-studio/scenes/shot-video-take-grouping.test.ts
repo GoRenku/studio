@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type {
   SceneShot,
-  ShotVideoTakeRailGroup,
 } from '@gorenku/studio-core/client';
 import {
   buildShotGroupingProjection,
-  createShotRailGroupDraftsFromRailGroups,
-  cycleShotRailGroupMembership,
+  createShotGroupDraftsFromTakeGenerations,
+  cycleShotGroupMembership,
   groupShotLabels,
   groupTagLabel,
-  shotRailGroupsForSave,
-  type ShotRailGroupDraft,
+  shotGroupsForSave,
+  type TakeScopedShotGroupDraft,
 } from './shot-video-take-grouping';
 
 function shot(id: string): SceneShot {
@@ -32,28 +31,28 @@ function shot(id: string): SceneShot {
 
 const SHOTS = ['s1', 's2', 's3', 's4', 's5'].map(shot);
 
-function railGroup(
-  productionGroupId: string,
+function takeGeneration(
+  takeGenerationId: string,
   shotIds: string[]
-): ShotVideoTakeRailGroup {
-  return { productionGroupId, shotIds };
+): { takeGenerationId: string; shotIds: string[] } {
+  return { takeGenerationId, shotIds };
 }
 
 function draft(
   draftGroupId: string,
   shotIds: string[],
-  input: Partial<ShotRailGroupDraft> = {}
-): ShotRailGroupDraft {
+  input: Partial<TakeScopedShotGroupDraft> = {}
+): TakeScopedShotGroupDraft {
   return { draftGroupId, shotIds, ...input };
 }
 
 function cycle(
-  groups: ShotRailGroupDraft[],
+  groups: TakeScopedShotGroupDraft[],
   clickedShotId: string,
   ids: string[] = ['new_group']
-): ShotRailGroupDraft[] {
+): TakeScopedShotGroupDraft[] {
   let nextIdIndex = 0;
-  return cycleShotRailGroupMembership({
+  return cycleShotGroupMembership({
     shots: SHOTS,
     draftGroups: groups,
     clickedShotId,
@@ -61,11 +60,13 @@ function cycle(
   });
 }
 
-function shotIds(groups: ShotRailGroupDraft[]): string[][] {
+function shotIds(groups: TakeScopedShotGroupDraft[]): string[][] {
   return groups.map((group) => group.shotIds);
 }
 
-function expectOrderedNonOverlappingGroups(groups: ShotRailGroupDraft[]) {
+function expectOrderedNonOverlappingGroups(
+  groups: TakeScopedShotGroupDraft[]
+) {
   const seenShotIds = new Set<string>();
   let previousFirstShotIndex = -1;
   const shotIndexById = new Map(SHOTS.map((shot, index) => [shot.shotId, index]));
@@ -95,7 +96,7 @@ describe('buildShotGroupingProjection', () => {
       draft('g2', ['s3', 's4']),
     ]);
     expect(projection.entries[0]).toMatchObject({
-      productionGroupId: 'g1',
+      takeGenerationId: 'g1',
       groupSize: 1,
       isGroupStart: true,
       isGroupEnd: true,
@@ -103,7 +104,7 @@ describe('buildShotGroupingProjection', () => {
     });
     expect(projection.entries[2].variant).toBe(1);
     expect(projection.entries[3].isGroupEnd).toBe(true);
-    expect(projection.entries[1].productionGroupId).toBeNull();
+    expect(projection.entries[1].takeGenerationId).toBeNull();
   });
 
   it('ignores stale group shot ids that are not in the active shot list', () => {
@@ -111,7 +112,7 @@ describe('buildShotGroupingProjection', () => {
       draft('stale_group', ['missing_shot']),
     ]);
 
-    expect(projection.entries.map((entry) => entry.productionGroupId)).toEqual([
+    expect(projection.entries.map((entry) => entry.takeGenerationId)).toEqual([
       null,
       null,
       null,
@@ -121,7 +122,7 @@ describe('buildShotGroupingProjection', () => {
   });
 });
 
-describe('cycleShotRailGroupMembership', () => {
+describe('cycleShotGroupMembership', () => {
   it('creates one-shot groups at the first and last shot boundaries', () => {
     expect(shotIds(cycle([], 's1'))).toEqual([['s1']]);
     expect(shotIds(cycle([], 's5'))).toEqual([['s5']]);
@@ -161,8 +162,8 @@ describe('cycleShotRailGroupMembership', () => {
 
   it('cycles an ambiguous gap above, below, merged, then none', () => {
     const start = [
-      draft('g1', ['s1', 's2'], { productionGroupId: 'g1' }),
-      draft('g2', ['s4', 's5'], { productionGroupId: 'g2' }),
+      draft('g1', ['s1', 's2'], { takeGenerationId: 'g1' }),
+      draft('g2', ['s4', 's5'], { takeGenerationId: 'g2' }),
     ];
     const above = cycle(start, 's3');
     expect(shotIds(above)).toEqual([
@@ -179,8 +180,8 @@ describe('cycleShotRailGroupMembership', () => {
 
     const merged = cycle(below, 's3');
     expect(shotIds(merged)).toEqual([['s1', 's2', 's3', 's4', 's5']]);
-    expect(merged[0].productionGroupId).toBe('g1');
-    expect(merged[0].mergePartnerProductionGroupId).toBe('g2');
+    expect(merged[0].takeGenerationId).toBe('g1');
+    expect(merged[0].mergePartnerTakeGenerationId).toBe('g2');
 
     const cleared = cycle(merged, 's3');
     expect(shotIds(cleared)).toEqual([
@@ -206,7 +207,7 @@ describe('cycleShotRailGroupMembership', () => {
 
   it('splits a middle shot into upper and lower groups', () => {
     const result = cycle(
-      [draft('g1', ['s1', 's2', 's3', 's4', 's5'], { productionGroupId: 'g1' })],
+      [draft('g1', ['s1', 's2', 's3', 's4', 's5'], { takeGenerationId: 'g1' })],
       's3',
       ['lower']
     );
@@ -214,24 +215,24 @@ describe('cycleShotRailGroupMembership', () => {
       ['s1', 's2'],
       ['s4', 's5'],
     ]);
-    expect(result[0].productionGroupId).toBe('g1');
-    expect(result[1].sourceProductionGroupId).toBe('g1');
+    expect(result[0].takeGenerationId).toBe('g1');
+    expect(result[1].sourceTakeGenerationId).toBe('g1');
   });
 
   it('splits a three-shot group into two one-shot groups', () => {
     const result = cycle(
-      [draft('g1', ['s1', 's2', 's3'], { productionGroupId: 'g1' })],
+      [draft('g1', ['s1', 's2', 's3'], { takeGenerationId: 'g1' })],
       's2',
       ['lower']
     );
     expect(shotIds(result)).toEqual([['s1'], ['s3']]);
-    expect(result[1].sourceProductionGroupId).toBe('g1');
+    expect(result[1].sourceTakeGenerationId).toBe('g1');
   });
 
   it('cycles the middle shot after a split through above, below, merged, none', () => {
     const split = [
-      draft('g1', ['s1'], { productionGroupId: 'g1' }),
-      draft('lower', ['s3'], { sourceProductionGroupId: 'g1' }),
+      draft('g1', ['s1'], { takeGenerationId: 'g1' }),
+      draft('lower', ['s3'], { sourceTakeGenerationId: 'g1' }),
     ];
     expect(shotIds(cycle(split, 's2'))).toEqual([
       ['s1', 's2'],
@@ -248,7 +249,7 @@ describe('cycleShotRailGroupMembership', () => {
     const result = cycle(
       [
         draft('stale_group', ['missing_shot'], {
-          productionGroupId: 'stale_group',
+          takeGenerationId: 'stale_group',
         }),
       ],
       's2'
@@ -279,41 +280,47 @@ describe('cycleShotRailGroupMembership', () => {
 });
 
 describe('save projection and labels', () => {
-  it('creates drafts from persisted rail groups', () => {
+  it('creates drafts from take generations', () => {
     expect(
-      createShotRailGroupDraftsFromRailGroups([railGroup('g1', ['s2'])])
+      createShotGroupDraftsFromTakeGenerations([
+        takeGeneration('take_generation_1', ['s2']),
+      ])
     ).toEqual([
-      { draftGroupId: 'g1', productionGroupId: 'g1', shotIds: ['s2'] },
+      {
+        draftGroupId: 'take_generation_1',
+        takeGenerationId: 'take_generation_1',
+        shotIds: ['s2'],
+      },
     ]);
   });
 
   it('serializes one-shot and split groups without empty shot ids', () => {
     expect(
-      shotRailGroupsForSave([
-        draft('g1', ['s1'], { productionGroupId: 'g1' }),
-        draft('lower', ['s3'], { sourceProductionGroupId: 'g1' }),
+      shotGroupsForSave([
+        draft('g1', ['s1'], { takeGenerationId: 'g1' }),
+        draft('lower', ['s3'], { sourceTakeGenerationId: 'g1' }),
       ])
     ).toEqual([
-      { productionGroupId: 'g1', shotIds: ['s1'] },
-      { sourceProductionGroupId: 'g1', shotIds: ['s3'] },
+      { takeGenerationId: 'g1', shotIds: ['s1'] },
+      { sourceTakeGenerationId: 'g1', shotIds: ['s3'] },
     ]);
   });
 
-  it('serializes unsaved merges with the upper group id and merge partner id', () => {
+  it('serializes unsaved merges with the upper take generation id and merge partner id', () => {
     const above = cycle(
       [
-        draft('g1', ['s1', 's2'], { productionGroupId: 'g1' }),
-        draft('g2', ['s4', 's5'], { productionGroupId: 'g2' }),
+        draft('g1', ['s1', 's2'], { takeGenerationId: 'g1' }),
+        draft('g2', ['s4', 's5'], { takeGenerationId: 'g2' }),
       ],
       's3'
     );
     const below = cycle(above, 's3');
     const merged = cycle(below, 's3');
 
-    expect(shotRailGroupsForSave(merged)).toEqual([
+    expect(shotGroupsForSave(merged)).toEqual([
       {
-        productionGroupId: 'g1',
-        mergePartnerProductionGroupId: 'g2',
+        takeGenerationId: 'g1',
+        mergePartnerTakeGenerationId: 'g2',
         shotIds: ['s1', 's2', 's3', 's4', 's5'],
       },
     ]);

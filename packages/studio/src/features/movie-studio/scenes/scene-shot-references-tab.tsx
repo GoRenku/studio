@@ -66,13 +66,19 @@ export function SceneShotReferencesTab({
     dependencyId: string,
     inclusion: 'include' | 'exclude' | null
   ) => {
-    const shotIds = productionPlan?.productionGroup?.shotIds ?? [shot.shotId];
+    const takeGeneration = productionPlan?.takeGeneration;
+    const shotIds = takeGeneration?.shotIds ?? [shot.shotId];
     const result =
-      shotIds.length > 1
-        ? await updateShotGroupReferenceInclusion(projectName, sceneId, shotIds, {
-            dependencyId,
-            inclusion,
-          })
+      takeGeneration && shotIds.length > 1
+        ? await updateShotGroupReferenceInclusion(
+            projectName,
+            sceneId,
+            takeGeneration.takeGenerationId,
+            {
+              dependencyId,
+              inclusion,
+            }
+          )
         : await updateShotReferenceInclusion(projectName, sceneId, shot.shotId, {
             dependencyId,
             inclusion,
@@ -315,13 +321,17 @@ function generalReferenceImageUrl(
   sceneId: string,
   preview: ShotVideoTakeReferenceImagePreview
 ): string {
-  if (preview.inputId) {
+  if (preview.inputId && preview.takeGenerationId) {
     return shotVideoTakeInputFileUrl(
       projectName,
       sceneId,
+      preview.takeGenerationId,
       preview.inputId,
       preview.assetFileId
     );
+  }
+  if (preview.url) {
+    return preview.url;
   }
   return sceneAssetFileUrl(projectName, sceneId, preview.assetId, preview.assetFileId);
 }

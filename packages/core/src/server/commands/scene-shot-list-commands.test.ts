@@ -334,9 +334,9 @@ describe('scene shot list commands', () => {
     ).resolves.toMatchObject({ valid: true });
   });
 
-  it('validates shot video take production groups', async () => {
+  it('rejects obsolete shot video take production groups on shot lists', async () => {
     const ids = await sampleIds();
-    const valid = {
+    const obsolete = {
       ...sampleShotList(ids, 'Grouped video take coverage', 3),
       videoTakeProductionGroups: [
         {
@@ -357,82 +357,14 @@ describe('scene shot list commands', () => {
           },
         },
       ],
-    } satisfies SceneShotListDocument;
+    } as unknown as SceneShotListDocument;
 
     await expect(
-      projectData.validateSceneShotList({ homeDir, document: valid })
-    ).resolves.toMatchObject({ valid: true });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...valid,
-          videoTakeProductionGroups: [
-            valid.videoTakeProductionGroups[0]!,
-            {
-              ...valid.videoTakeProductionGroups[1]!,
-              shotIds: ['shot_001', 'shot_003'],
-            },
-          ],
-        },
-      })
+      projectData.validateSceneShotList({ homeDir, document: obsolete })
     ).rejects.toMatchObject({
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('more than one video take production group'),
-        }),
-        expect.objectContaining({
-          message: expect.stringContaining('contiguous'),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...valid,
-          videoTakeProductionGroups: [
-            {
-              ...valid.videoTakeProductionGroups[0]!,
-              videoTakeProduction: {
-                inputModeId: 'multi-shot' as never,
-              },
-            },
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'Unsupported value at videoTakeProductionGroups.0.videoTakeProduction.inputModeId'
-          ),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...valid,
-          videoTakeProductionGroups: [
-            {
-              productionGroupId: 'scene_shot_video_take_group_003',
-              shotIds: ['shot_001'],
-              videoTakeProduction: {
-                unexpectedField: true,
-              } as never,
-            },
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining('Unknown field'),
+          message: expect.stringContaining('videoTakeProductionGroups'),
         }),
       ]),
     });

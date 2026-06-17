@@ -228,9 +228,9 @@ function validateSceneSelectionTabs(
     return unsupportedSelection(
       createDiagnosticError(
         'STUDIO_COORDINATION036',
-        'Shot focus requires the Shots scene tab.',
+        'Shot focus requires the Takes scene tab.',
         { path: ['selection', 'sceneTab'], context: 'movie studio selection' },
-        'Use sceneTab: "shots" when requesting a shot or shot-detail tab.'
+        'Use sceneTab: "takes" when requesting a shot or shot-detail tab.'
       )
     );
   }

@@ -101,12 +101,12 @@ const SHOT_VIDEO_TAKE_INPUT_KINDS = [
   'audio',
 ] as const;
 
-const SHOT_VIDEO_TAKE_INPUT_SUBJECT_KINDS = [
+export const SHOT_VIDEO_TAKE_INPUT_SUBJECT_KINDS = [
   'asset',
   'cast-member',
   'location',
   'lookbook',
-  'production-group',
+  'take-generation',
   'scene-dialogue',
   'shot',
 ] as const;
@@ -169,29 +169,6 @@ export const sceneShotListDocumentSchema = {
     },
     lookbookInfluence: nonEmptyString(),
     shots: sceneShotArraySchema({ minItems: 1 }),
-    videoTakeRailGroups: {
-      type: 'array',
-      items: objectWith(['productionGroupId', 'shotIds'], {
-        productionGroupId: nonEmptyString(),
-        shotIds: {
-          type: 'array',
-          minItems: 1,
-          items: nonEmptyString(),
-        },
-      }),
-    },
-    videoTakeProductionGroups: {
-      type: 'array',
-      items: objectWith(['productionGroupId', 'shotIds', 'videoTakeProduction'], {
-        productionGroupId: nonEmptyString(),
-        shotIds: {
-          type: 'array',
-          minItems: 1,
-          items: nonEmptyString(),
-        },
-        videoTakeProduction: shotVideoTakeProductionPlanSchema(),
-      }),
-    },
     openQuestions: {
       type: 'array',
       items: nonEmptyString(),
@@ -473,7 +450,40 @@ function shotSpecsSchema(): Record<string, unknown> {
   };
 }
 
-function shotVideoTakeProductionPlanSchema(): Record<string, unknown> {
+export const shotVideoTakeGenerationProductionSchema = {
+  $id: 'https://schemas.gorenku.com/studio/shot-video-take-generation-production.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  ...shotVideoTakeProductionSchemaProperties(),
+} as const;
+
+export const sceneShotVideoTakeGenerationCompatibilitySnapshotSchema = {
+  $id: 'https://schemas.gorenku.com/studio/scene-shot-video-take-generation-compatibility-snapshot.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: [
+    'activeShotListId',
+    'orderedShotIds',
+    'shotListContentFingerprint',
+    'storyboardStateFingerprint',
+    'selectedShotIds',
+    'selectedShotContentFingerprint',
+    'selectedStoryboardStateFingerprint',
+  ],
+  properties: {
+    activeShotListId: {
+      anyOf: [nonEmptyString(), { type: 'null' }],
+    },
+    orderedShotIds: nonEmptyStringArraySchema(),
+    shotListContentFingerprint: { type: 'string' },
+    storyboardStateFingerprint: { type: 'string' },
+    selectedShotIds: nonEmptyStringArraySchema({ minItems: 1 }),
+    selectedShotContentFingerprint: { type: 'string' },
+    selectedStoryboardStateFingerprint: { type: 'string' },
+  },
+  additionalProperties: false,
+} as const;
+
+function shotVideoTakeProductionSchemaProperties(): Record<string, unknown> {
   return {
     type: 'object',
     properties: {

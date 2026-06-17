@@ -41,9 +41,8 @@ export function parseGenerationPurpose(
 export function parseGenerationTarget(input: {
   purpose: string;
   target: string;
-  shotListId?: string;
   shots?: string;
-  productionGroupId?: string;
+  takeGenerationId?: string;
 }): MediaGenerationRequestTarget {
   const purpose = parseGenerationPurpose(input.purpose);
   if (isLookbookGenerationPurpose(purpose)) {
@@ -99,23 +98,20 @@ export function unsupportedGenerationPurpose(purpose: string): StructuredError {
 
 function parseSceneShotGroupTarget(input: {
   target: string;
-  shotListId?: string;
   shots?: string;
-  productionGroupId?: string;
+  takeGenerationId?: string;
 }): MediaGenerationRequestTarget {
   const sceneId = parseSceneTarget(input.target, 'Shot media generation');
-  const shotListId = requiredFlag(input.shotListId, '--shot-list');
+  const takeGenerationId = requiredFlag(
+    input.takeGenerationId,
+    '--take-generation'
+  );
   const shotIds = parseShots(requiredFlag(input.shots, '--shots'));
   return {
-    kind: 'sceneShotGroup',
-    ...(input.productionGroupId
-      ? { id: `${sceneId}:${shotListId}:${input.productionGroupId}` }
-      : {}),
+    kind: 'sceneShotVideoTakeGeneration',
+    id: takeGenerationId,
     sceneId,
-    shotListId,
-    ...(input.productionGroupId
-      ? { productionGroupId: input.productionGroupId }
-      : {}),
+    takeGenerationId,
     shotIds,
   };
 }

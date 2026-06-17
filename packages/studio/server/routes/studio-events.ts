@@ -25,7 +25,7 @@ import {
 } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots'];
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots', 'takes'];
 const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'description',
   'lookbook',
@@ -322,6 +322,17 @@ function readStudioSelection(value: unknown): StudioSelection | null {
         ? selection.shotId
         : undefined;
     const shotTab = readSceneShotDetailTab(selection.shotTab);
+    const takeWorkspaceMode =
+      selection.takeWorkspaceMode === 'list' ||
+      selection.takeWorkspaceMode === 'new' ||
+      selection.takeWorkspaceMode === 'edit'
+        ? selection.takeWorkspaceMode
+        : undefined;
+    const takeGenerationId =
+      typeof selection.takeGenerationId === 'string' &&
+      selection.takeGenerationId.trim()
+        ? selection.takeGenerationId
+        : undefined;
     if (selection.sceneTab !== undefined && !sceneTab) {
       return null;
     }
@@ -333,6 +344,8 @@ function readStudioSelection(value: unknown): StudioSelection | null {
       id: selection.id,
       ...(sceneTab ? { sceneTab } : {}),
       ...(shotId ? { shotId } : {}),
+      ...(takeWorkspaceMode ? { takeWorkspaceMode } : {}),
+      ...(takeGenerationId ? { takeGenerationId } : {}),
       ...(shotTab ? { shotTab } : {}),
     };
   }

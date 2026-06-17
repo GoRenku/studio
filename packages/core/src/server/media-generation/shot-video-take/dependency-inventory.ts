@@ -5,7 +5,7 @@ import type {
   ShotVideoTakeGenerationContext,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
-  ShotVideoTakeProductionPlan,
+  ShotVideoTakeGenerationProduction,
   ShotVideoTakePreflightInput,
   ShotVideoTakeInputPolicy,
   MediaGenerationDependencyInventory,
@@ -98,7 +98,7 @@ export async function buildShotVideoTakeDependencyInventory(input: {
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   route: ShotVideoRoute;
-  normalizedSettings: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
+  normalizedSettings: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
   preparedInputs: ShotVideoTakePreflightInput[];
   inputPolicy: ShotVideoTakeInputPolicy;
   diagnostics: DiagnosticIssue[];
@@ -257,7 +257,7 @@ function validateSelectedAudioReferencesSupportedByRoute(input: {
       createDiagnosticWarning(
         'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
         'This model does not use audio references',
-        { path: ['productionGroup', 'videoTakeProduction', 'modelChoice'] },
+        { path: ['takeGeneration', 'production', 'modelChoice'] },
         'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
       )
     );
@@ -268,7 +268,7 @@ function validateSelectedAudioReferencesSupportedByRoute(input: {
       createDiagnosticWarning(
         'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
         `Selected dialogue audio references exceed this model route limit: ${selectedCount} / ${audioSlot.maxCount}.`,
-        { path: ['productionGroup', 'videoTakeProduction', 'requestedInputs'] },
+        { path: ['takeGeneration', 'production', 'requestedInputs'] },
         `Select ${audioSlot.maxCount} or fewer dialogue audio references for this model route.`
       )
     );
@@ -309,7 +309,7 @@ export function shotVideoTakeDependencySlotsForContext(input: {
         id: availableInput.subjectId || availableInput.assetId,
         title: availableInput.title,
       })),
-    requestedInputs: input.context.productionGroup.videoTakeProduction.requestedInputs,
+    requestedInputs: input.context.takeGeneration.production.requestedInputs,
     requiresMultiShotStoryboardSheet: input.context.shotGroupMode === 'multi-shot',
   });
   if (input.includeReferenceContext) {
@@ -363,8 +363,7 @@ export function shotVideoTakeDialogueAudioDependencySlots(input: {
     selector: {
       kind: 'shot-video-input',
       inputKind: 'audio',
-      productionGroupId:
-        input.context.target.productionGroupId ?? input.context.target.id,
+      takeGenerationId: input.context.target.takeGenerationId,
       shotIds: input.context.target.shotIds,
       subjectKind: 'scene-dialogue',
       subjectId: reference.dialogueId,
@@ -381,10 +380,10 @@ export function shotVideoTakeDialogueAudioDependencySlots(input: {
 export async function declareShotVideoTakeDependencies(
   input: MediaGenerationDependencyDeclarationInput
 ): Promise<MediaGenerationDependencySlot[]> {
-  if (input.target.kind !== 'sceneShotGroup') {
+  if (input.target.kind !== 'sceneShotVideoTakeGeneration') {
     throw new ProjectDataError(
       'CORE_SHOT_VIDEO_DEPENDENCY_DECLARATION_TARGET_INVALID',
-      `shot.video-take dependencies require a sceneShotGroup target. Received: ${input.target.kind}.`
+      `shot.video-take dependencies require a sceneShotVideoTakeGeneration target. Received: ${input.target.kind}.`
     );
   }
   if (input.request.kind !== 'media-generation-spec') {
@@ -403,12 +402,7 @@ export async function declareShotVideoTakeDependencies(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    sceneId: input.target.sceneId,
-    shotListId: input.target.shotListId,
-    shotIds: input.target.shotIds,
-    ...(input.target.productionGroupId
-      ? { productionGroupId: input.target.productionGroupId }
-      : {}),
+    takeGenerationId: input.target.takeGenerationId,
   });
   return declareShotVideoTakeDependencySlots({
     target: context.target,
@@ -455,7 +449,7 @@ export async function estimateFinalPlanLine(input: {
   context: ShotVideoTakeGenerationContext;
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
-  normalizedSettings: NonNullable<ShotVideoTakeProductionPlan['parameterValues']>;
+  normalizedSettings: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
   preparedInputs: ShotVideoTakePreflightInput[];
   diagnostics: DiagnosticIssue[];
 }): Promise<{

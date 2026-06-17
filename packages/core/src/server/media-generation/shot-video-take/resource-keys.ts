@@ -1,14 +1,16 @@
 import {
-  PreparedShotGroup,
-} from './shot-group.js';
+  PreparedSceneShotVideoTakeGeneration,
+} from './take-generation-context.js';
 
 
 
-export function shotVideoTakeResourceKeys(prepared: PreparedShotGroup): string[] {
+export function shotVideoTakeResourceKeys(
+  prepared: PreparedSceneShotVideoTakeGeneration
+): string[] {
   return [
     `scene:${prepared.sceneId}`,
     `surface:scene:${prepared.sceneId}:shots`,
-    `scene-shot-list:${prepared.shotListId}:video-take-production`,
-    `scene-shot-video-take-group:${prepared.productionGroup.productionGroupId}`,
+    `surface:scene:${prepared.sceneId}:takes`,
+    `scene-shot-video-take-generation:${prepared.takeGeneration.takeGenerationId}`,
   ];
 }

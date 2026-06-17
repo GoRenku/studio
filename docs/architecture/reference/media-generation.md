@@ -47,7 +47,8 @@ lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
 scene:<scene-id>
-scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]>
+scene:<scene-id> --shot-list <shot-list-id>
+scene:<scene-id> --take-generation <take-generation-id>
 ```
 
 Core contract target shapes:
@@ -74,11 +75,10 @@ Core contract target shapes:
 }
 
 {
-  kind: "sceneShotGroup";
+  kind: "sceneShotVideoTakeGeneration";
   id: string;
   sceneId: string;
-  shotListId: string;
-  productionGroupId: string;
+  takeGenerationId: string;
   shotIds: string[];
 }
 ```
@@ -96,11 +96,12 @@ renku generation context --purpose cast.voice-sample --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
 renku generation context --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
-renku generation context --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.reference-image --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation take create --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation context --purpose shot.first-frame --target scene:<id> --take-generation <take-generation-id> --json
+renku generation context --purpose shot.last-frame --target scene:<id> --take-generation <take-generation-id> --json
+renku generation context --purpose shot.reference-image --target scene:<id> --take-generation <take-generation-id> --json
+renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take-generation <take-generation-id> --json
+renku generation context --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --json
 
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
 renku generation model list --purpose lookbook.sheet --target lookbook:<id> --json
@@ -110,17 +111,17 @@ renku generation model list --purpose cast.voice-sample --target cast:<id> --jso
 renku generation model list --purpose location.environment-sheet --target location:<id> --json
 renku generation model list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
-renku generation model list --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.reference-image --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --intent <input-mode-id> --json
+renku generation model list --purpose shot.first-frame --target scene:<id> --take-generation <take-generation-id> --json
+renku generation model list --purpose shot.last-frame --target scene:<id> --take-generation <take-generation-id> --json
+renku generation model list --purpose shot.reference-image --target scene:<id> --take-generation <take-generation-id> --json
+renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take-generation <take-generation-id> --json
+renku generation model list --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --intent <input-mode-id> --json
 
-renku generation production update --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
-renku generation preflight --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
-renku generation input list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --json
-renku generation input select --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --input <input-id> --json
-renku generation input clear --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
+renku generation production update --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --file <shot-video-production-json> --json
+renku generation preflight --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --file <shot-video-production-json> --json
+renku generation input list --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --json
+renku generation input select --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --input <input-id> --json
+renku generation input clear --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
 
 renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
@@ -134,11 +135,11 @@ renku generation spec list --purpose cast.profile --target cast:<id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<id> --json
 renku generation spec list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
-renku generation spec list --purpose shot.first-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.last-frame --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.reference-image --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.first-frame --target scene:<id> --take-generation <take-generation-id> --json
+renku generation spec list --purpose shot.last-frame --target scene:<id> --take-generation <take-generation-id> --json
+renku generation spec list --purpose shot.reference-image --target scene:<id> --take-generation <take-generation-id> --json
+renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take-generation <take-generation-id> --json
+renku generation spec list --purpose shot.video-take --target scene:<id> --take-generation <take-generation-id> --json
 
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
@@ -160,10 +161,10 @@ specs also require a title that names the reference intent shown in Studio.
 
 The Studio shot References tab displays imported/generated `first-frame`,
 `last-frame`, `reference-image`, and `multi-shot-storyboard-sheet` inputs that
-belong to the selected shot or ordered production group.
+belong to the selected shot-video take generation.
 
 The Studio shot Dialogs tab displays scene dialogue audio references for the
-selected shot or ordered production group. Dialogue audio reference dependencies
+selected shot-video take generation. Dialogue audio reference dependencies
 use dependency kind `reference-audio` and subject kind `scene-dialogue`. Their
 dependency ids are stable by screenplay dialogue id, while preflight and final
 generation resolve the current picked dialogue audio take to the concrete audio
@@ -214,7 +215,7 @@ draft specs from silently occupying the same inventory line.
 Dependency ids are owned by core. Shared dependency id helpers construct cast
 character sheet, location environment sheet, Lookbook sheet, and shot-video
 input ids. Shot-video ids include the input kind, subject id, subject kind, and
-production group when that grouping is part of the selected target. Studio
+take generation when that ownership is part of the selected target. Studio
 surfaces consume core-provided fields for mutations and must not parse
 dependency id strings to infer behavior.
 

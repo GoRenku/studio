@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type {
-  SceneShotMediaGenerationTarget,
+  SceneShotVideoTakeGenerationTarget,
   ShotVideoTakeGenerationContext,
 } from '../../../client/index.js';
 import { buildShotInputDependencyDraftSpec } from './dependency-draft-specs.js';
@@ -83,21 +83,20 @@ describe('shot video take dependency draft specs', () => {
   });
 });
 
-function testTarget(): SceneShotMediaGenerationTarget {
+function testTarget(): SceneShotVideoTakeGenerationTarget {
   return {
-    kind: 'sceneShotGroup',
-    id: 'scene_a:shot_list_a:group_a',
+    kind: 'sceneShotVideoTakeGeneration',
+    id: 'take_generation_a',
     sceneId: 'scene_a',
-    shotListId: 'shot_list_a',
-    productionGroupId: 'group_a',
+    takeGenerationId: 'take_generation_a',
     shotIds: ['shot_001'],
   };
 }
 
 function testContext(
-  target: SceneShotMediaGenerationTarget,
+  target: SceneShotVideoTakeGenerationTarget,
   dependencyDraft?: NonNullable<
-    ShotVideoTakeGenerationContext['productionGroup']['videoTakeProduction']['agentProposal']
+    ShotVideoTakeGenerationContext['takeGeneration']['production']['agentProposal']
   >['dependencyDrafts'][number]
 ): ShotVideoTakeGenerationContext {
   return {
@@ -123,10 +122,20 @@ function testContext(
       updatedAt: '2026-01-01T00:00:00.000Z',
       isActive: true,
     },
-    productionGroup: {
-      productionGroupId: 'group_a',
+    takeGeneration: {
+      takeGenerationId: 'take_generation_a',
+      sceneId: 'scene_a',
+      shotListId: 'shot_list_a',
       shotIds: ['shot_001'],
-      videoTakeProduction: {
+      title: 'Take generation A',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      compatibility: {
+        editState: 'editable',
+        reasons: [],
+        message: 'This take generation matches the current shot list.',
+      },
+      production: {
         ...(dependencyDraft
           ? {
               agentProposal: {
@@ -141,6 +150,7 @@ function testContext(
     },
     shotGroupMode: 'single-shot',
     shots: [],
+    displayShots: [],
     referencedCast: [],
     referencedLocations: [],
     activeLookbook: null,

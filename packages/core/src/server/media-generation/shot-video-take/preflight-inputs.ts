@@ -243,7 +243,7 @@ export function preparedInputsForContext(
   session: DatabaseSession,
   issues: DiagnosticIssue[]
 ): ShotVideoTakePreflightInput[] {
-  const inputs: Array<ShotVideoTakePreflightInput | null> = (context.productionGroup.videoTakeProduction.preparedInputs ?? [])
+  const inputs: Array<ShotVideoTakePreflightInput | null> = (context.takeGeneration.production.preparedInputs ?? [])
     .map((input) => {
       const available = context.availableInputs.find(
         (candidate) =>
@@ -262,7 +262,7 @@ export function preparedInputsForContext(
           issue(
             'PROJECT_DATA378',
             'Prepared shot video take input does not resolve to an asset file.',
-            ['productionGroup', 'videoTakeProduction', 'preparedInputs'],
+            ['takeGeneration', 'production', 'preparedInputs'],
             'Select an existing reusable input or import the missing dependency again.'
           )
         );

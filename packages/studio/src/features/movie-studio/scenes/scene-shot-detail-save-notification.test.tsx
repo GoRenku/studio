@@ -2,7 +2,10 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { SceneShot } from '@gorenku/studio-core/client';
+import type {
+  SceneShot,
+  SceneShotVideoTakeGeneration,
+} from '@gorenku/studio-core/client';
 import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-production';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
 import { SceneShotDetail } from './scene-shot-detail';
@@ -33,6 +36,22 @@ const SHOT: SceneShot = {
   locationIds: [],
 };
 
+const TAKE_GENERATION: SceneShotVideoTakeGeneration = {
+  takeGenerationId: 'take_generation_001',
+  sceneId: 'scene_hook',
+  shotListId: 'shot_list_hook',
+  shotIds: ['shot_001'],
+  title: 'Shot 1 take generation',
+  production: {},
+  createdAt: '',
+  updatedAt: '',
+  compatibility: {
+    editState: 'editable',
+    reasons: [],
+    message: 'This take generation matches the current shot list.',
+  },
+};
+
 function productionResult(
   autosave: UseShotVideoTakeProductionResult['autosave']
 ): UseShotVideoTakeProductionResult {
@@ -41,7 +60,7 @@ function productionResult(
     loadError: null,
     context: null,
     models: null,
-    productionGroup: null,
+    takeGeneration: TAKE_GENERATION,
     selectedInputMode: null,
     selectedModel: undefined,
     setInputMode: vi.fn(),
@@ -73,9 +92,7 @@ describe('SceneShotDetail save notifications', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
-        shots={[SHOT]}
-        railGroups={[]}
-        productionGroups={[]}
+        takeGeneration={TAKE_GENERATION}
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}
@@ -103,9 +120,7 @@ describe('SceneShotDetail save notifications', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
-        shots={[SHOT]}
-        railGroups={[]}
-        productionGroups={[]}
+        takeGeneration={TAKE_GENERATION}
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}
@@ -123,9 +138,7 @@ describe('SceneShotDetail save notifications', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
-        shots={[SHOT]}
-        railGroups={[]}
-        productionGroups={[]}
+        takeGeneration={TAKE_GENERATION}
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}

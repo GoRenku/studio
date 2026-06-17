@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
   SceneShotListDocument,
+  SceneShotVideoTakeGeneration,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
@@ -13,7 +14,9 @@ import type {
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
+  createSceneShotVideoTakeGeneration,
   estimateShotVideoTakeProduction,
+  listSceneShotVideoTakeGenerations,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
 } from '@/services/studio-shot-video-takes-api';
@@ -31,6 +34,8 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
+  listSceneShotVideoTakeGenerations: vi.fn(),
+  createSceneShotVideoTakeGeneration: vi.fn(),
   readShotVideoTakeProduction: vi.fn(),
   estimateShotVideoTakeProduction: vi.fn(),
   planShotVideoTakeProduction: vi.fn(),
@@ -76,16 +81,6 @@ function shotList(): SceneShotListDocument {
     summary: '',
     coverageStrategy: '',
     shots: SHOTS,
-    videoTakeRailGroups: [
-      { productionGroupId: 'group_1', shotIds: ['shot_001', 'shot_002'] },
-    ],
-    videoTakeProductionGroups: [
-      {
-        productionGroupId: 'group_1',
-        shotIds: ['shot_001', 'shot_002'],
-        videoTakeProduction: { inputModeId: 'reference' },
-      },
-    ],
   };
 }
 
@@ -104,15 +99,35 @@ function resource(): SceneShotListResourceResponse {
   };
 }
 
+function takeGeneration(): SceneShotVideoTakeGeneration {
+  return {
+    takeGenerationId: 'take_generation_1',
+    sceneId: 'scene_hook',
+    shotListId: 'shot_list_hook',
+    shotIds: ['shot_001', 'shot_002'],
+    title: 'Take generation 1',
+    production: {
+      inputModeId: 'reference',
+      modelChoice: 'fal-ai/bytedance/seedance-2.0',
+    },
+    createdAt: '',
+    updatedAt: '',
+    compatibility: {
+      editState: 'editable',
+      reasons: [],
+      message: 'This take generation matches the current shot list.',
+    },
+  };
+}
+
 function context(): ShotVideoTakeGenerationContext {
   return {
     purpose: 'shot.video-take',
     target: {
-      kind: 'sceneShotGroup',
-      id: 'group_1',
+      kind: 'sceneShotVideoTakeGeneration',
+      id: 'take_generation_1',
       sceneId: 'scene_hook',
-      shotListId: 'shot_list_hook',
-      productionGroupId: 'group_1',
+      takeGenerationId: 'take_generation_1',
       shotIds: ['shot_001', 'shot_002'],
     },
     project: { name: 'p', title: 'P', aspectRatio: '16:9' },
@@ -125,15 +140,26 @@ function context(): ShotVideoTakeGenerationContext {
       updatedAt: '',
       isActive: true,
     },
-    productionGroup: {
-      productionGroupId: 'group_1',
+    takeGeneration: {
+      takeGenerationId: 'take_generation_1',
+      sceneId: 'scene_hook',
+      shotListId: 'shot_list_hook',
       shotIds: ['shot_001', 'shot_002'],
-      videoTakeProduction: {
+      title: 'Take generation 1',
+      production: {
         inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
       },
+      createdAt: '',
+      updatedAt: '',
+      compatibility: {
+        editState: 'editable',
+        reasons: [],
+        message: 'This take generation matches the current shot list.',
+      },
     },
     shots: SHOTS,
+    displayShots: SHOTS,
     referencedCast: [],
     referencedLocations: [],
     activeLookbook: null,
@@ -183,7 +209,7 @@ function productionPlan(
 ): ShotVideoTakeProductionPlanReport {
   return {
     target: context().target,
-    productionGroup: context().productionGroup,
+    takeGeneration: context().takeGeneration,
     finalPrompt: input.finalPrompt ? { prompt: input.finalPrompt } : null,
     plan: {
       planId: 'plan_001',
@@ -191,7 +217,7 @@ function productionPlan(
         projectId: 'project_001',
         sceneId: 'scene_hook',
         shotListId: 'shot_list_hook',
-        productionGroupId: 'group_1',
+        takeGenerationId: 'take_generation_1',
         inputMode: 'reference',
         shotGroupMode: 'multi-shot',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -293,9 +319,9 @@ function productionPlan(
       ? [
           {
             code: 'PROJECT_DATA378',
-            message: 'The saved prompt was authored for a previous shot grouping.',
+            message: 'The saved prompt was authored for a previous take generation.',
             severity: 'error',
-            location: { path: ['videoTakeProductionGroups', '0', 'agentProposal'] },
+            location: { path: ['takeGeneration', 'production', 'agentProposal'] },
           },
         ]
       : [],
@@ -305,7 +331,7 @@ function productionPlan(
 function estimate(): ShotVideoTakeProductionEstimateReport {
   return {
     target: context().target,
-    productionGroup: context().productionGroup,
+    takeGeneration: context().takeGeneration,
     inputModeId: 'reference',
     shotGroupMode: 'multi-shot',
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -332,6 +358,12 @@ async function openAiProductionTab() {
 describe('AI Production tab', () => {
   beforeEach(() => {
     vi.mocked(readSceneShotListResource).mockReset().mockResolvedValue(resource());
+    vi.mocked(listSceneShotVideoTakeGenerations)
+      .mockReset()
+      .mockResolvedValue({ takeGenerations: [takeGeneration()] });
+    vi.mocked(createSceneShotVideoTakeGeneration)
+      .mockReset()
+      .mockResolvedValue(takeGeneration());
     vi.mocked(readShotVideoTakeProduction)
       .mockReset()
       .mockResolvedValue({ context: context(), models: models() });
@@ -346,19 +378,6 @@ describe('AI Production tab', () => {
   it('shows AI Production inside the lower shot tab region', async () => {
     render(<SceneShotsTabHarness />);
     expect(await screen.findByRole('tab', { name: 'AI Production' })).not.toBeNull();
-  });
-
-  it('shows the group tag for a multi-shot group at the tab bar', async () => {
-    render(<SceneShotsTabHarness />);
-    expect(await screen.findByText('Shot 1-2')).not.toBeNull();
-  });
-
-  it('renders a group button on each rail card using local controls', async () => {
-    render(<SceneShotsTabHarness />);
-    const groupButton = await screen.findByRole('button', {
-      name: 'Cycle grouping for Shot 1',
-    });
-    expect(groupButton.tagName).toBe('BUTTON');
   });
 
   it('renders input modes, the model table, and inline run setup with a multi-shot group tag', async () => {

@@ -9,16 +9,16 @@ import { SceneShotRailRow } from './scene-shot-rail-row';
 import { shotLabel } from './scene-shot-labels';
 import {
   buildShotGroupingProjection,
-  type ShotRailGroupDraft,
+  type TakeScopedShotGroupDraft,
 } from './shot-video-take-grouping';
 
 interface SceneShotRailProps {
   shots: SceneShot[];
   imagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
   selectedShotId: string | null;
-  railGroups: ShotRailGroupDraft[];
+  railGroups?: TakeScopedShotGroupDraft[];
   onSelectShot: (shotId: string) => void;
-  onCycleShotGroup: (shotId: string) => void;
+  onCycleShotGroup?: (shotId: string) => void;
 }
 
 const GROUP_VARIANT_CLASS: Record<0 | 1, string> = {
@@ -37,7 +37,7 @@ export function SceneShotRail({
   shots,
   imagesByShotId,
   selectedShotId,
-  railGroups,
+  railGroups = [],
   onSelectShot,
   onCycleShotGroup,
 }: SceneShotRailProps) {
@@ -49,15 +49,12 @@ export function SceneShotRail({
     row?.scrollIntoView?.({ block: 'nearest' });
   }, [selectedShotId]);
 
-  // Build contiguous segments: each durable group is one segment with a shared
-  // background; ungrouped shots are standalone segments. Adjacent segments are
-  // separated by the list gap.
   const segments = useMemo<RailSegment[]>(() => {
     const projection = buildShotGroupingProjection(shots, railGroups);
     const result: RailSegment[] = [];
     shots.forEach((shot, index) => {
       const entry = projection.entries[index];
-      const groupId = entry.productionGroupId;
+      const groupId = entry.takeGenerationId;
       const previous = result[result.length - 1];
       if (groupId && previous && previous.groupId === groupId) {
         previous.rows.push({ shot, index });
@@ -107,7 +104,11 @@ export function SceneShotRail({
                     image={imagesByShotId[shot.shotId]}
                     selected={shot.shotId === selectedShotId}
                     onSelect={() => onSelectShot(shot.shotId)}
-                    onCycleGroup={() => onCycleShotGroup(shot.shotId)}
+                    onCycleGroup={
+                      onCycleShotGroup
+                        ? () => onCycleShotGroup(shot.shotId)
+                        : undefined
+                    }
                   />
                 </div>
               ))}
