@@ -225,6 +225,13 @@
       "when": 1781780657953,
       "tag": "0031_take-owned-table-names",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1781787791112,
+      "tag": "0032_remove_take_legacy",
+      "breakpoints": true
     }
   ]
 }

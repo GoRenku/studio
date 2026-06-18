@@ -2,10 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type {
-  SceneShotListDocument,
-  SceneShotWithLegacyShotSpecs,
-} from '../../client/index.js';
+import type { SceneShotListDocument } from '../../client/index.js';
 import {
   createProjectDataService,
 } from '../project-data-service.js';
@@ -321,7 +318,7 @@ describe('StudioCoordinationService', () => {
     const castMember = screenplay.screenplay!.cast[1]!;
     const location = screenplay.screenplay!.locations[0]!;
     const sceneId = scene.id as string;
-    const legacyShot: SceneShotWithLegacyShotSpecs = {
+    const shot = {
       shotId: 'shot_001',
       title: 'Map study',
       storyBeat: 'Mehmed studies the map.',
@@ -334,13 +331,8 @@ describe('StudioCoordinationService', () => {
       coveredBlockIndexes: [0],
       castMemberIds: [castMember.id as string],
       locationIds: [location.id as string],
-      shotSpecs: {
-        shotSize: 'medium-close-up',
-        subjectFraming: ['single'],
-        cameraAngle: 'low-angle',
-      },
     };
-    await projectData.writeSceneShotList({
+    const written = await projectData.writeSceneShotList({
       homeDir,
       document: {
         kind: 'sceneShotList',
@@ -348,8 +340,26 @@ describe('StudioCoordinationService', () => {
         title: 'Council chamber coverage',
         summary: 'A restrained coverage plan.',
         coverageStrategy: 'Hold the table in one composed frame.',
-        shots: [legacyShot],
+        shots: [shot],
       } satisfies SceneShotListDocument,
+    });
+    const take = await projectData.createSceneShotVideoTake({
+      homeDir,
+      sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+    });
+    await projectData.updateSceneShotVideoTakeShotDesign({
+      homeDir,
+      takeId: take.takeId,
+      shotId: 'shot_001',
+      shotDesign: {
+        composition: {
+          shotSize: 'medium-close-up',
+          subjectFraming: ['single'],
+          cameraAngle: 'low-angle',
+        },
+      },
     });
     const coordination = createStudioCoordinationService({ homeDir });
     const now = new Date();
@@ -384,6 +394,7 @@ describe('StudioCoordinationService', () => {
           sceneTab: 'shots',
           shotId: 'shot_001',
           shotTab: 'composition',
+          takeId: take.takeId,
         },
       },
       source: {
@@ -400,6 +411,7 @@ describe('StudioCoordinationService', () => {
       sceneTab: 'shots',
       shotId: 'shot_001',
       shotTab: 'composition',
+      takeId: take.takeId,
     });
     expect(current.context).toMatchObject({
       kind: 'scene',

@@ -3,10 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type {
-  SceneShotListDocument,
-  SceneShotWithLegacyShotSpecs,
-} from '../../client/scene-shot-list.js';
+import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
 import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
 import {
   createSampleMovieProject,
@@ -61,7 +58,7 @@ describe('scene shot list commands', () => {
               ...valid.shots[0]!,
               shotId: 'shot_001_duplicate',
               coveredBlockIndexes: [99],
-            } as SceneShotWithLegacyShotSpecs,
+            },
           ],
         },
       })
@@ -101,7 +98,7 @@ describe('scene shot list commands', () => {
               ...valid.shots[0]!,
               title: 'Duplicate identifier',
               locationIds: ['location_missing'],
-            } as SceneShotWithLegacyShotSpecs,
+            },
           ],
         },
       })
@@ -112,262 +109,6 @@ describe('scene shot list commands', () => {
         }),
         expect.objectContaining({
           message: expect.stringContaining('unknown location'),
-        }),
-      ]),
-    });
-  });
-
-  it('validates Composition and Location shot specs fields', async () => {
-    const ids = await sampleIds();
-    const valid = sampleShotList(ids);
-    const extended: LegacySceneShotListDocument = {
-      ...valid,
-      shots: [
-        {
-          ...valid.shots[0]!,
-          shotSpecs: {
-            shotSize: 'establishing-shot',
-            subjectFraming: ['single'],
-            lens: {
-              type: 'wide',
-              millimeters: 28,
-              focus: 'rack-focus',
-            },
-            movement: { movement: 'rack-focus' },
-            location: {
-              locationId: ids.locationId,
-              viewIds: ['front'],
-            },
-            custom: {
-              composition: 'hold the map edge in the lower foreground',
-            },
-          },
-        } as SceneShotWithLegacyShotSpecs,
-      ],
-    };
-
-    await expect(
-      projectData.validateSceneShotList({ homeDir, document: extended })
-    ).resolves.toMatchObject({ valid: true });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...extended,
-          shots: [
-            {
-              ...extended.shots[0]!,
-              shotSpecs: {
-                ...extended.shots[0]!.shotSpecs!,
-                custom: {
-                  framing: 'obsolete custom field',
-                } as unknown as NonNullable<
-                  NonNullable<
-                    SceneShotWithLegacyShotSpecs['shotSpecs']
-                  >['custom']
-                >,
-              },
-            } as SceneShotWithLegacyShotSpecs,
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining('Unknown field'),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...extended,
-          shots: [
-            {
-              ...extended.shots[0]!,
-              shotSpecs: {
-                ...extended.shots[0]!.shotSpecs!,
-                lens: {
-                  type: 'wide',
-                  matteBox: true,
-                } as unknown as NonNullable<
-                  NonNullable<
-                    SceneShotWithLegacyShotSpecs['shotSpecs']
-                  >['lens']
-                >,
-              },
-            } as SceneShotWithLegacyShotSpecs,
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining('Unknown field'),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...extended,
-          shots: [
-            {
-              ...extended.shots[0]!,
-              shotSpecs: {
-                ...extended.shots[0]!.shotSpecs!,
-                lens: {
-                  millimeters: 28,
-                },
-              },
-            } as SceneShotWithLegacyShotSpecs,
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-                  message: expect.stringContaining('requires a lens type'),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...extended,
-          shots: [
-            {
-              ...extended.shots[0]!,
-              shotSpecs: {
-                ...extended.shots[0]!.shotSpecs!,
-                lens: { type: 'wide', focus: 'deep-focus' },
-                movement: { movement: 'rack-focus' },
-              },
-            } as SceneShotWithLegacyShotSpecs,
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining('requires rack-focus'),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...extended,
-          shots: [
-            {
-              ...extended.shots[0]!,
-              shotSpecs: {
-                ...extended.shots[0]!.shotSpecs!,
-                location: {
-                  locationId: 'location_elsewhere',
-                },
-              },
-            } as SceneShotWithLegacyShotSpecs,
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining('unknown project location'),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...extended,
-          shots: [
-            {
-              ...extended.shots[0]!,
-              shotSpecs: {
-                ...extended.shots[0]!.shotSpecs!,
-                castReferences: {
-                  castMemberIds: ['cast_elsewhere'],
-                },
-              },
-            } as SceneShotWithLegacyShotSpecs,
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining('unknown cast member'),
-        }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateSceneShotList({
-        homeDir,
-        document: {
-          ...extended,
-          shots: [
-            {
-              ...extended.shots[0]!,
-              locationIds: [],
-              shotSpecs: {
-                ...extended.shots[0]!.shotSpecs!,
-                location: {
-                  locationId: ids.locationId,
-                  viewIds: ['front'],
-                },
-              },
-            } as SceneShotWithLegacyShotSpecs,
-          ],
-        },
-      })
-    ).resolves.toMatchObject({ valid: true });
-  });
-
-  it('rejects obsolete shot video take production groups on shot lists', async () => {
-    const ids = await sampleIds();
-    const obsolete = {
-      ...sampleShotList(ids, 'Grouped video take coverage', 3),
-      videoTakeProductionGroups: [
-        {
-          productionGroupId: 'scene_shot_video_take_group_001',
-          shotIds: ['shot_001'],
-          videoTakeProduction: {
-            inputModeId: 'first-last-frame',
-            modelChoice: 'fal-ai/veo3.1',
-            parameterValues: { duration: '6s' },
-          },
-        },
-        {
-          productionGroupId: 'scene_shot_video_take_group_002',
-          shotIds: ['shot_002', 'shot_003'],
-          videoTakeProduction: {
-            inputModeId: 'reference',
-            modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          },
-        },
-      ],
-    } as unknown as SceneShotListDocument;
-
-    await expect(
-      projectData.validateSceneShotList({ homeDir, document: obsolete })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining('videoTakeProductionGroups'),
         }),
       ]),
     });
@@ -816,24 +557,14 @@ describe('scene shot list commands', () => {
       ids,
       'Longer coverage',
       5
-    ) as LegacySceneShotListDocument;
+    );
     shotList.shots[0] = {
       ...shotList.shots[0]!,
-      shotSpecs: {
-        location: {
-          locationId: overrideLocationId,
-          viewIds: ['right'],
-        },
-      },
+      locationIds: [overrideLocationId],
     };
     shotList.shots[1] = {
       ...shotList.shots[1]!,
-      shotSpecs: {
-        location: {
-          locationId: ids.locationId,
-          viewIds: ['left'],
-        },
-      },
+      locationIds: [ids.locationId],
     };
     const written = await projectData.writeSceneShotList({
       homeDir,
@@ -908,10 +639,10 @@ describe('scene shot list commands', () => {
       'lens intent: moderate wide lens feel'
     );
     expect(validation.providerPayload.prompt).toContain(
-      `location: Golden Horn overlook (${overrideLocationId}); view: Right`
+      `location: Golden Horn overlook (${overrideLocationId})`
     );
     expect(validation.providerPayload.prompt).toContain(
-      `location: Mehmed's council chamber (${ids.locationId}); view: Left`
+      `location: Mehmed's council chamber (${ids.locationId})`
     );
     expect(validation.providerPayload.prompt).toContain(
       `Golden Horn overlook (${overrideLocationId})`
@@ -1012,10 +743,6 @@ describe('scene shot list commands', () => {
     });
   }
 });
-
-type LegacySceneShotListDocument = Omit<SceneShotListDocument, 'shots'> & {
-  shots: SceneShotWithLegacyShotSpecs[];
-};
 
 function sampleShotList(
   ids: { sceneId: string; castMemberId: string; locationId: string },

@@ -5,7 +5,7 @@ import { fakeProjectDataService } from '../testing/fake-project-data-service.js'
 import { createScreenplayRoute } from './screenplay.js';
 
 const TAKE_ID = 'scene_shot_video_take_001';
-const TAKE_GENERATION_PATH =
+const TAKE_PATH =
   `/constantinople/screenplay/scenes/scene_opening/takes/${TAKE_ID}`;
 const PRODUCTION = { inputModeId: 'text-only' as const };
 
@@ -21,8 +21,8 @@ function mount(overrides: Partial<ReturnType<typeof fakeProjectDataService>> = {
   );
 }
 
-describe('shot video take generation routes', () => {
-  it('lists and creates take generations for a scene', async () => {
+describe('shot video take routes', () => {
+  it('lists and creates takes for a scene', async () => {
     const createSceneShotVideoTake = vi.fn(
       fakeProjectDataService().createSceneShotVideoTake
     );
@@ -43,7 +43,7 @@ describe('shot video take generation routes', () => {
         body: JSON.stringify({
           shotListId: 'shot_list_opening',
           shotIds: ['shot_001'],
-          title: 'Manual take generation',
+          title: 'Manual video take',
         }),
       }
     );
@@ -54,14 +54,14 @@ describe('shot video take generation routes', () => {
         sceneId: 'scene_opening',
         shotListId: 'shot_list_opening',
         shotIds: ['shot_001'],
-        title: 'Manual take generation',
+        title: 'Manual video take',
       })
     );
   });
 
   it('GET returns context and model report from core', async () => {
     const app = mount();
-    const response = await app.request(TAKE_GENERATION_PATH);
+    const response = await app.request(TAKE_PATH);
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.context.purpose).toBe('shot.video-take');
@@ -75,7 +75,7 @@ describe('shot video take generation routes', () => {
       fakeProjectDataService().readSceneShotVideoTakeEditContext
     );
     const app = mount({ readSceneShotVideoTakeEditContext });
-    const response = await app.request(`${TAKE_GENERATION_PATH}/edit-context`);
+    const response = await app.request(`${TAKE_PATH}/edit-context`);
     expect(response.status).toBe(200);
     expect(readSceneShotVideoTakeEditContext).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -106,7 +106,7 @@ describe('shot video take generation routes', () => {
       },
     }));
     const app = mount({ readSceneShotVideoTakeEditContext });
-    const response = await app.request(`${TAKE_GENERATION_PATH}/edit-context`);
+    const response = await app.request(`${TAKE_PATH}/edit-context`);
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error.code).toBe('STUDIO_SERVER352');
@@ -114,7 +114,7 @@ describe('shot video take generation routes', () => {
 
   it('PATCH rejects unknown top-level fields', async () => {
     const app = mount();
-    const response = await app.request(TAKE_GENERATION_PATH, {
+    const response = await app.request(TAKE_PATH, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ production: PRODUCTION, extra: true }),
@@ -129,7 +129,7 @@ describe('shot video take generation routes', () => {
       fakeProjectDataService().updateSceneShotVideoTakeProduction
     );
     const app = mount({ updateSceneShotVideoTakeProduction });
-    const response = await app.request(TAKE_GENERATION_PATH, {
+    const response = await app.request(TAKE_PATH, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ production: PRODUCTION }),
@@ -151,7 +151,7 @@ describe('shot video take generation routes', () => {
       fakeProjectDataService().updateSceneShotVideoTakeShots
     );
     const app = mount({ updateSceneShotVideoTakeShots });
-    const response = await app.request(`${TAKE_GENERATION_PATH}/shots`, {
+    const response = await app.request(`${TAKE_PATH}/shots`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ shotIds: ['shot_001', 'shot_002'] }),
@@ -166,26 +166,26 @@ describe('shot video take generation routes', () => {
     );
   });
 
-  it('shot specs PATCH delegates take-owned shot settings to core', async () => {
-    const updateSceneShotVideoTakeShotSpecs = vi.fn(
-      fakeProjectDataService().updateSceneShotVideoTakeShotSpecs
+  it('shot design PATCH delegates take-owned shot design to core', async () => {
+    const updateSceneShotVideoTakeShotDesign = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakeShotDesign
     );
-    const app = mount({ updateSceneShotVideoTakeShotSpecs });
+    const app = mount({ updateSceneShotVideoTakeShotDesign });
     const response = await app.request(
-      `${TAKE_GENERATION_PATH}/shots/shot_001/specs`,
+      `${TAKE_PATH}/shots/shot_001/design`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shotSpecs: { shotSize: 'close-up' } }),
+        body: JSON.stringify({ shotDesign: { shotSize: 'close-up' } }),
       }
     );
     expect(response.status).toBe(200);
-    expect(updateSceneShotVideoTakeShotSpecs).toHaveBeenCalledWith(
+    expect(updateSceneShotVideoTakeShotDesign).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
         takeId: TAKE_ID,
         shotId: 'shot_001',
-        shotSpecs: { shotSize: 'close-up' },
+        shotDesign: { shotSize: 'close-up' },
       })
     );
   });
@@ -195,7 +195,7 @@ describe('shot video take generation routes', () => {
       fakeProjectDataService().readShotVideoTakeProductionPlan
     );
     const app = mount({ readShotVideoTakeProductionPlan });
-    const response = await app.request(`${TAKE_GENERATION_PATH}/plan`, {
+    const response = await app.request(`${TAKE_PATH}/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -227,7 +227,7 @@ describe('shot video take generation routes', () => {
       fakeProjectDataService().estimateShotVideoTakeProduction
     );
     const app = mount({ estimateShotVideoTakeProduction });
-    const response = await app.request(`${TAKE_GENERATION_PATH}/estimate`, {
+    const response = await app.request(`${TAKE_PATH}/estimate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ production: PRODUCTION }),
@@ -260,7 +260,7 @@ describe('shot video take generation routes', () => {
       deleteShotVideoTakeInput,
     });
 
-    const selectResponse = await app.request(`${TAKE_GENERATION_PATH}/inputs/select`, {
+    const selectResponse = await app.request(`${TAKE_PATH}/inputs/select`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ inputId: 'input_001' }),
@@ -274,7 +274,7 @@ describe('shot video take generation routes', () => {
       })
     );
 
-    const clearResponse = await app.request(`${TAKE_GENERATION_PATH}/inputs/clear`, {
+    const clearResponse = await app.request(`${TAKE_PATH}/inputs/clear`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -294,7 +294,7 @@ describe('shot video take generation routes', () => {
     );
 
     const deleteResponse = await app.request(
-      `${TAKE_GENERATION_PATH}/inputs/input_001`,
+      `${TAKE_PATH}/inputs/input_001`,
       {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -314,11 +314,11 @@ describe('shot video take generation routes', () => {
 
   it('reference inclusion PATCH delegates take-owned shot state updates to core', async () => {
     const fakeProjectData = fakeProjectDataService();
-    const updateSceneShotVideoTakeShotSpecs = vi.fn(
-      fakeProjectData.updateSceneShotVideoTakeShotSpecs
+    const updateSceneShotVideoTakeState = vi.fn(
+      fakeProjectData.updateSceneShotVideoTakeState
     );
     const app = mount({
-      updateSceneShotVideoTakeShotSpecs,
+      updateSceneShotVideoTakeState,
       buildShotVideoTakeContext: async (input) => {
         const context = await fakeProjectData.buildShotVideoTakeContext(input);
         return {
@@ -355,11 +355,6 @@ describe('shot video take generation routes', () => {
               coveredBlockIndexes: [1],
               locationIds: [],
               castMemberIds: [],
-              shotSpecs: {
-                referenceInclusions: {
-                  'reference-image:shot:shot_002': 'include',
-                },
-              },
             },
           ],
         };
@@ -367,7 +362,7 @@ describe('shot video take generation routes', () => {
     });
 
     const response = await app.request(
-      `${TAKE_GENERATION_PATH}/reference-inclusions`,
+      `${TAKE_PATH}/reference-inclusions`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -379,31 +374,17 @@ describe('shot video take generation routes', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(updateSceneShotVideoTakeShotSpecs).toHaveBeenCalledTimes(2);
-    expect(updateSceneShotVideoTakeShotSpecs).toHaveBeenNthCalledWith(
-      1,
+    expect(updateSceneShotVideoTakeState).toHaveBeenCalledOnce();
+    expect(updateSceneShotVideoTakeState).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
         takeId: TAKE_ID,
-        shotId: 'shot_001',
-        shotSpecs: {
-          referenceInclusions: {
-            'reference-image:shot:shot_001': 'exclude',
-          },
-        },
-      })
-    );
-    expect(updateSceneShotVideoTakeShotSpecs).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        projectName: 'constantinople',
-        takeId: TAKE_ID,
-        shotId: 'shot_002',
-        shotSpecs: {
-          referenceInclusions: {
-            'reference-image:shot:shot_001': 'exclude',
-            'reference-image:shot:shot_002': 'include',
-          },
+        statePatch: {
+          referenceSelections: expect.objectContaining({
+            dependencyInclusions: {
+              'reference-image:shot:shot_001': 'exclude',
+            },
+          }),
         },
       })
     );
@@ -412,20 +393,93 @@ describe('shot video take generation routes', () => {
         target: {
           takeId: TAKE_ID,
         },
+        take: {
+          state: {
+            referenceSelections: {
+              dependencyInclusions: {
+                'reference-image:shot:shot_001': 'exclude',
+              },
+            },
+          },
+        },
       },
     });
   });
 
-  it('rejects group reference inclusion when the URL scene does not own the take generation', async () => {
-    const updateSceneShotVideoTakeShotSpecs = vi.fn(
-      fakeProjectDataService().updateSceneShotVideoTakeShotSpecs
+  it('reference inclusion PATCH deletes take-owned dependency overrides', async () => {
+    const fakeProjectData = fakeProjectDataService();
+    const updateSceneShotVideoTakeState = vi.fn(
+      fakeProjectData.updateSceneShotVideoTakeState
     );
     const app = mount({
-      updateSceneShotVideoTakeShotSpecs,
+      updateSceneShotVideoTakeState,
+      buildShotVideoTakeContext: async (input) => {
+        const context = await fakeProjectData.buildShotVideoTakeContext(input);
+        return {
+          ...context,
+          take: {
+            ...context.take,
+            state: {
+              ...context.take.state,
+              referenceSelections: {
+                ...context.take.state.referenceSelections,
+                dependencyInclusions: {
+                  'reference-image:shot:shot_001': 'include',
+                },
+              },
+            },
+          },
+        };
+      },
+    });
+
+    const response = await app.request(
+      `${TAKE_PATH}/reference-inclusions`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dependencyId: 'reference-image:shot:shot_001',
+          inclusion: null,
+        }),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateSceneShotVideoTakeState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        takeId: TAKE_ID,
+        statePatch: {
+          referenceSelections: expect.objectContaining({
+            dependencyInclusions: {},
+          }),
+        },
+      })
+    );
+    await expect(response.json()).resolves.toMatchObject({
+      context: {
+        take: {
+          state: {
+            referenceSelections: {
+              dependencyInclusions: {},
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('rejects group reference inclusion when the URL scene does not own the take', async () => {
+    const updateSceneShotVideoTakeState = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakeState
+    );
+    const app = mount({
+      updateSceneShotVideoTakeState,
       buildShotVideoTakeContext: async (input) => ({
         ...(await fakeProjectDataService().buildShotVideoTakeContext(input)),
         scene: {
-          id: 'scene_from_take_generation',
+          id: 'scene_from_take',
           title: 'Different Scene',
           setting: { locationIds: [] },
           storyFunction: [],
@@ -434,7 +488,7 @@ describe('shot video take generation routes', () => {
     });
 
     const response = await app.request(
-      `${TAKE_GENERATION_PATH}/reference-inclusions`,
+      `${TAKE_PATH}/reference-inclusions`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -446,10 +500,9 @@ describe('shot video take generation routes', () => {
     );
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-      error: { code: 'STUDIO_SERVER350' },
-    });
-    expect(updateSceneShotVideoTakeShotSpecs).not.toHaveBeenCalled();
+    expect(updateSceneShotVideoTakeState).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.error.code).toBe('STUDIO_SERVER350');
   });
 
   it('serializes structured errors from core', async () => {
@@ -463,7 +516,7 @@ describe('shot video take generation routes', () => {
         });
       },
     });
-    const response = await app.request(TAKE_GENERATION_PATH);
+    const response = await app.request(TAKE_PATH);
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error.code).toBe('PROJECT_DATA360');

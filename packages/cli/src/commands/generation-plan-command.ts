@@ -2,7 +2,7 @@ import { createProjectDataService } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type {
   MediaGenerationPlanLine,
-  ShotVideoTakeGenerationPlan,
+  ShotVideoTakeOutputGenerationPlan,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
 } from '@gorenku/studio-core/client';
@@ -59,7 +59,7 @@ export async function runGenerationPlanCommand(options: {
   return 0;
 }
 
-function formatShotVideoTakePlan(plan: ShotVideoTakeGenerationPlan): string {
+function formatShotVideoTakePlan(plan: ShotVideoTakeOutputGenerationPlan): string {
   const lines = [
     `Plan: ${plan.planId}`,
     `Model: ${plan.model.label}`,
@@ -96,7 +96,7 @@ function formatShotVideoTakePlan(plan: ShotVideoTakeGenerationPlan): string {
   return lines.join('\n');
 }
 
-function formatEstimate(plan: ShotVideoTakeGenerationPlan): string {
+function formatEstimate(plan: ShotVideoTakeOutputGenerationPlan): string {
   if (plan.estimate.state === 'unavailable') {
     return 'Needs plan';
   }
@@ -121,7 +121,7 @@ function formatLinePrice(line: MediaGenerationPlanLine): string {
   return 'not applicable';
 }
 
-function formatEstimateTotal(plan: ShotVideoTakeGenerationPlan): string {
+function formatEstimateTotal(plan: ShotVideoTakeOutputGenerationPlan): string {
   if (plan.estimate.estimatedTotalUsd === null) {
     return 'unknown';
   }

@@ -1,11 +1,11 @@
 import type {
   ShotVideoTakeProductionEstimateReport,
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationPlan,
+  ShotVideoTakeProductionContext,
+  ShotVideoTakeOutputGenerationPlan,
   ShotVideoTakeProductionPlanReport,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakeInputPolicy,
 } from '../../../client/index.js';
 import {
@@ -71,7 +71,7 @@ import {
 } from './route-settings.js';
 import {
   prepareSceneShotVideoTakeInSession,
-} from './take-generation-context.js';
+} from './take-context.js';
 
 
 
@@ -96,7 +96,7 @@ export async function estimateShotVideoTakeProduction(
 
 export async function shotVideoTakePlanReportContext(
   input: PreviewShotVideoTakeProductionInput
-): Promise<Pick<ShotVideoTakeGenerationContext, 'target' | 'take'>> {
+): Promise<Pick<ShotVideoTakeProductionContext, 'target' | 'take'>> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const prepared = prepareSceneShotVideoTakeInSession({
       session,
@@ -119,7 +119,7 @@ export async function shotVideoTakePlanReportContext(
 
 export async function planShotVideoTakeProduction(
   input: PlanShotVideoTakeProductionInput
-): Promise<ShotVideoTakeGenerationPlan> {
+): Promise<ShotVideoTakeOutputGenerationPlan> {
   const context = await withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const prepared = prepareSceneShotVideoTakeInSession({
       session,
@@ -136,9 +136,9 @@ export async function planShotVideoTakeProduction(
     });
   });
   const diagnostics = validatePreflight(context);
-  const inputModeId = context.take.production.inputModeId ?? context.defaults.inputModeId;
+  const inputModeId = context.take.state.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
-    context.take.production.modelChoice ??
+    context.take.state.production.modelChoice ??
     defaultModelChoiceForInputMode(inputModeId);
   const route = requireShotVideoTakeRoute(modelChoice, inputModeId, context.shotGroupMode);
   const family = SHOT_VIDEO_MODEL_FAMILIES.find((candidate) => candidate.choice === modelChoice);
@@ -273,8 +273,8 @@ export async function readShotVideoTakeProductionPlan(
 
 export function buildShotVideoTakeProductionPlanReport(input: {
   session: DatabaseSession;
-  context: ShotVideoTakeGenerationContext;
-  plan: ShotVideoTakeGenerationPlan;
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
 }): ShotVideoTakeProductionPlanReport {
   const screenplay = requireScreenplayDocument(input.session);
   const shotListRow = requireSceneShotListForScene({
@@ -308,7 +308,7 @@ export function buildShotVideoTakeProductionPlanReport(input: {
     target: input.context.target,
     take: input.context.take,
     finalPrompt:
-      input.context.take.production.agentProposal
+      input.context.take.state.production.agentProposal
         ?.finalPromptDraft ?? null,
     plan: input.plan,
     references: referenceSections.references,
@@ -322,7 +322,7 @@ export function shotVideoTakePlanId(input: {
   targetId: string;
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
-  settings: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
+  settings: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>;
   inputPolicy: ShotVideoTakeInputPolicy;
 }): string {
   const hash = crypto
@@ -334,9 +334,9 @@ export function shotVideoTakePlanId(input: {
 }
 
 function contextWithProductionOverride(input: {
-  context: ShotVideoTakeGenerationContext;
-  production?: ShotVideoTakeGenerationProduction;
-}): ShotVideoTakeGenerationContext {
+  context: ShotVideoTakeProductionContext;
+  production?: SceneShotVideoTakeProductionState;
+}): ShotVideoTakeProductionContext {
   if (!input.production) {
     return input.context;
   }
@@ -344,7 +344,10 @@ function contextWithProductionOverride(input: {
     ...input.context,
     take: {
       ...input.context.take,
-      production: input.production,
+      state: {
+        ...input.context.take.state,
+        production: input.production,
+      },
     },
   };
 }

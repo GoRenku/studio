@@ -96,7 +96,7 @@ renku generation context --purpose cast.voice-sample --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
 renku generation context --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
-renku generation take create --purpose shot.video-take --target scene:<id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku take create --scene <scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
 renku generation context --purpose shot.first-frame --target scene:<id> --take <take-id> --json
 renku generation context --purpose shot.last-frame --target scene:<id> --take <take-id> --json
 renku generation context --purpose shot.reference-image --target scene:<id> --take <take-id> --json

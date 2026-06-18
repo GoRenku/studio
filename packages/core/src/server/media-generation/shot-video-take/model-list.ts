@@ -5,7 +5,7 @@ import type {
   ShotVideoTakeModelListReport,
   ShotVideoTakeInputGenerationPurpose,
   ShotVideoTakeInputModelListReport,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoiceReport,
   ShotVideoTakeInputModelChoiceReport,
@@ -74,7 +74,7 @@ export function modelFamilyLabel(
 
 
 export function modelChoices(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   inputModeId?: ShotVideoTakeInputModeId
 ): ShotVideoTakeModelChoiceReport[] {
   const selectedInputMode = inputModeId ?? context.defaults.inputModeId;

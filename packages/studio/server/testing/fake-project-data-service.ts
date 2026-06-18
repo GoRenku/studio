@@ -7,9 +7,9 @@ import type {
   SceneDialogueAudioContext,
   SceneShotVideoTakeEditContext,
   SceneShotVideoTake,
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationPlan,
-  ShotVideoTakeGenerationProduction,
+  ShotVideoTakeProductionContext,
+  ShotVideoTakeOutputGenerationPlan,
+  SceneShotVideoTakeProductionState,
 } from '@gorenku/studio-core/client';
 import { SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
@@ -393,63 +393,6 @@ export function fakeProjectDataService(): NonNullable<
         castMemberImages: {},
         locationLabels: {},
       };
-    },
-    async updateSceneShotSpecs() {
-      return {
-        scene: {
-          id: 'scene_opening',
-          sequenceId: 'seq_opening',
-          title: 'Opening Scene',
-          setting: { locationIds: [] },
-        },
-        sequence: {
-          id: 'seq_opening',
-          actId: 'act_opening',
-          number: 1,
-          title: 'Opening',
-          sceneCount: 1,
-        },
-        act: {
-          id: 'act_opening',
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-        projectAspectRatio: '16:9',
-        activeShotListId: 'shot_list_opening',
-        activeShotList: null,
-        storyboardImagesByShotId: {},
-        castMemberLabels: {},
-        castMemberImages: {},
-        locationLabels: {},
-      };
-    },
-    async updateSceneShotCastReferences() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotCastCharacterSheetReference() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotLocationReference() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotLocationSheetReference() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotLocationViewReferences() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotLookbookReference() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotCustomReferenceImages() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotReferenceInclusion() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
-    },
-    async updateSceneShotGroupReferenceInclusion() {
-      return fakeProjectDataService().readSceneShotListResource({} as never);
     },
     async readActStoryboardResource() {
       return {
@@ -1043,7 +986,7 @@ export function fakeProjectDataService(): NonNullable<
     async createSceneShotVideoTake(input) {
       return makeSceneShotVideoTake({
         sceneId: input.sceneId,
-        shotListId: input.shotListId,
+        sourceShotListId: input.shotListId,
         shotIds: input.shotIds,
         title: input.title,
       });
@@ -1097,9 +1040,46 @@ export function fakeProjectDataService(): NonNullable<
       return makeShotVideoTakeContext(input, input.production);
     },
     async updateSceneShotVideoTakeState(input) {
-      return makeShotVideoTakeContext(input, input.statePatch.production);
+      const context = makeShotVideoTakeContext(input, input.statePatch.production);
+      const referenceSelections = input.statePatch.referenceSelections
+        ? {
+            ...context.take.state.referenceSelections,
+            ...input.statePatch.referenceSelections,
+            dependencyInclusions:
+              input.statePatch.referenceSelections.dependencyInclusions ??
+              context.take.state.referenceSelections.dependencyInclusions,
+            selectedCharacterSheetAssetIds:
+              input.statePatch.referenceSelections.selectedCharacterSheetAssetIds ??
+              context.take.state.referenceSelections.selectedCharacterSheetAssetIds,
+            selectedLocationSheetAssetIds:
+              input.statePatch.referenceSelections.selectedLocationSheetAssetIds ??
+              context.take.state.referenceSelections.selectedLocationSheetAssetIds,
+            selectedLocationViewIds:
+              input.statePatch.referenceSelections.selectedLocationViewIds ??
+              context.take.state.referenceSelections.selectedLocationViewIds,
+            selectedLookbookSheetIds:
+              input.statePatch.referenceSelections.selectedLookbookSheetIds ??
+              context.take.state.referenceSelections.selectedLookbookSheetIds,
+            selectedDialogueAudioTakeIds:
+              input.statePatch.referenceSelections.selectedDialogueAudioTakeIds ??
+              context.take.state.referenceSelections.selectedDialogueAudioTakeIds,
+          }
+        : context.take.state.referenceSelections;
+      return {
+        ...context,
+        take: {
+          ...context.take,
+          state: {
+            ...context.take.state,
+            ...input.statePatch,
+            referenceSelections,
+            production:
+              input.statePatch.production ?? context.take.state.production,
+          },
+        },
+      };
     },
-    async updateSceneShotVideoTakeShotSpecs(input) {
+    async updateSceneShotVideoTakeShotDesign(input) {
       return makeShotVideoTakeContext(input);
     },
     async updateSceneShotVideoTakeShots(input) {
@@ -1183,8 +1163,8 @@ export function fakeProjectDataService(): NonNullable<
 
 function makeShotVideoTakePlan(input: {
   takeId: string;
-  production?: ShotVideoTakeGenerationProduction;
-}): ShotVideoTakeGenerationPlan {
+  production?: SceneShotVideoTakeProductionState;
+}): ShotVideoTakeOutputGenerationPlan {
   const target = makeShotVideoTakeTarget(input);
   const take = makeSceneShotVideoTake({
     takeId: input.takeId,
@@ -1199,7 +1179,7 @@ function makeShotVideoTakePlan(input: {
     request: {
       projectId: 'project_test',
       sceneId: take.sceneId,
-      shotListId: take.shotListId,
+      shotListId: take.sourceShotListId,
       takeId: take.takeId,
       inputMode,
       shotGroupMode,
@@ -1296,7 +1276,7 @@ function makeShotVideoTakeTarget(input: {
     kind: 'sceneShotVideoTake' as const,
     id: take.takeId,
     sceneId: take.sceneId,
-    shotListId: take.shotListId,
+    sourceShotListId: take.sourceShotListId,
     takeId: take.takeId,
     shotIds: take.shotIds,
   };
@@ -1306,12 +1286,11 @@ function makeShotVideoTakeContext(
   input: {
     takeId: string;
   },
-  production?: ShotVideoTakeGenerationProduction,
+  production?: SceneShotVideoTakeProductionState,
   shotIds?: string[]
-): ShotVideoTakeGenerationContext {
+): ShotVideoTakeProductionContext {
   const take = makeSceneShotVideoTake({
     takeId: input.takeId,
-    production,
     shotIds,
   });
   const target = makeShotVideoTakeTarget(input);
@@ -1330,7 +1309,7 @@ function makeShotVideoTakeContext(
       storyFunction: [],
     },
     shotList: {
-      id: take.shotListId,
+      id: take.sourceShotListId,
       title: 'Opening coverage',
       summary: 'Coverage summary.',
       createdAt: '2026-05-22T00:00:00.000Z',
@@ -1394,10 +1373,10 @@ function makeSceneShotVideoTake(
   input: {
     takeId?: string;
     sceneId?: string;
-    shotListId?: string;
+    sourceShotListId?: string;
     shotIds?: string[];
     title?: string;
-    production?: ShotVideoTakeGenerationProduction;
+    production?: SceneShotVideoTakeProductionState;
   } = {}
 ): SceneShotVideoTake {
   const shotIds = input.shotIds ?? ['shot_001'];
@@ -1405,7 +1384,7 @@ function makeSceneShotVideoTake(
     takeId:
       input.takeId ?? 'scene_shot_video_take_001',
     sceneId: input.sceneId ?? 'scene_opening',
-    shotListId: input.shotListId ?? 'shot_list_opening',
+    sourceShotListId: input.sourceShotListId ?? 'shot_list_opening',
     title: input.title ?? 'Opening take',
     shotIds,
     state: {
@@ -1421,7 +1400,6 @@ function makeSceneShotVideoTake(
       },
       production: input.production ?? {},
     },
-    production: input.production ?? {},
     status: {
       editability: {
         state: 'editable',

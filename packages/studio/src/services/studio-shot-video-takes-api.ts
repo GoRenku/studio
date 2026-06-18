@@ -1,6 +1,6 @@
 import type {
   LocationAzimuthViewId,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeInputPolicy,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
@@ -8,12 +8,11 @@ import type {
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   SceneShotVideoTake,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeShotDesign,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakeProductionPlanReport,
-  ShotSpecs,
   SceneShotVideoTakeEditContext,
 } from '@gorenku/studio-core/client';
-import type { SceneShotListResourceResponse } from './studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
 
 /** The dependency input slot the reuse/regenerate controls act on (0041). */
@@ -24,27 +23,17 @@ export interface ShotVideoTakeInputSlot {
 }
 
 export interface ShotVideoTakeProductionRead {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   models: ShotVideoTakeModelListReport;
 }
 
-interface TakeGenerationMutationResponse {
-  context: ShotVideoTakeGenerationContext;
+interface TakeMutationResponse {
+  context: ShotVideoTakeProductionContext;
   resourceKeys: string[];
 }
 
 export interface ShotVideoTakeProductionMutation {
-  context: ShotVideoTakeGenerationContext;
-  resourceKeys: string[];
-}
-
-interface ResourceMutationResponse {
-  resource: SceneShotListResourceResponse;
-  resourceKeys: string[];
-}
-
-export interface ShotVideoTakeResourceMutation {
-  resource: SceneShotListResourceResponse;
+  context: ShotVideoTakeProductionContext;
   resourceKeys: string[];
 }
 
@@ -96,7 +85,7 @@ export async function updateSceneShotVideoTakeShots(
   takeId: string,
   shotIds: string[]
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeGenerationMutation(
+  return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/shots`,
     'PATCH',
     { shotIds }
@@ -142,26 +131,26 @@ export async function updateShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
   takeId: string,
-  production: ShotVideoTakeGenerationProduction
+  production: SceneShotVideoTakeProductionState
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeGenerationMutation(
+  return sendTakeMutation(
     productionPath(projectName, sceneId, takeId),
     'PATCH',
     { production }
   );
 }
 
-export async function updateSceneShotVideoTakeShotSpecs(
+export async function updateSceneShotVideoTakeShotDesign(
   projectName: string,
   sceneId: string,
   takeId: string,
   shotId: string,
-  shotSpecs: ShotSpecs | null
+  shotDesign: SceneShotVideoTakeShotDesign | null
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeGenerationMutation(
-    `${productionPath(projectName, sceneId, takeId)}/shots/${encodeURIComponent(shotId)}/specs`,
+  return sendTakeMutation(
+    `${productionPath(projectName, sceneId, takeId)}/shots/${encodeURIComponent(shotId)}/design`,
     'PATCH',
-    { shotSpecs }
+    { shotDesign }
   );
 }
 
@@ -170,7 +159,7 @@ export async function estimateShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
   takeId: string,
-  production: ShotVideoTakeGenerationProduction
+  production: SceneShotVideoTakeProductionState
 ): Promise<ShotVideoTakeProductionEstimateReport> {
   const response = await fetch(
     `${productionPath(projectName, sceneId, takeId)}/estimate`,
@@ -193,7 +182,7 @@ export async function planShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
   takeId: string,
-  production?: ShotVideoTakeGenerationProduction,
+  production?: SceneShotVideoTakeProductionState,
   inputPolicy: ShotVideoTakeInputPolicy = { defaultMode: 'auto' }
 ): Promise<ShotVideoTakeProductionPlanReport> {
   const response = await fetch(`${productionPath(projectName, sceneId, takeId)}/plan`, {
@@ -208,107 +197,70 @@ export async function planShotVideoTakeProduction(
   return body.report;
 }
 
-export async function updateShotCastReferences(
+export async function updateTakeCharacterSheetSelection(
   projectName: string,
   sceneId: string,
-  shotId: string,
-  castMemberIds: string[]
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(shotReferencePath(projectName, sceneId, shotId, 'cast-references'), 'PATCH', {
-    castMemberIds,
-  });
-}
-
-export async function updateShotLocationReference(
-  projectName: string,
-  sceneId: string,
-  shotId: string,
-  locationId: string
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'location-reference'),
-    'PATCH',
-    { locationId }
-  );
-}
-
-export async function updateShotCastCharacterSheetReference(
-  projectName: string,
-  sceneId: string,
-  shotId: string,
+  takeId: string,
   input: { castMemberId: string; assetId: string | null }
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'cast-character-sheet-reference'),
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeMutation(
+    `${productionPath(projectName, sceneId, takeId)}/reference-selections/character-sheets`,
     'PATCH',
     input
   );
 }
 
-export async function updateShotLocationSheetReference(
+export async function updateTakeLocationSheetSelection(
   projectName: string,
   sceneId: string,
-  shotId: string,
+  takeId: string,
   input: { locationId: string; assetId: string | null }
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'location-sheet-reference'),
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeMutation(
+    `${productionPath(projectName, sceneId, takeId)}/reference-selections/location-sheets`,
     'PATCH',
     input
   );
 }
 
-export async function updateShotLocationViewReferences(
+export async function updateTakeLocationViewSelection(
   projectName: string,
   sceneId: string,
-  shotId: string,
+  takeId: string,
   input: {
     locationId: string;
     assetId: string;
     viewIds: LocationAzimuthViewId[];
   }
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'location-view-references'),
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeMutation(
+    `${productionPath(projectName, sceneId, takeId)}/reference-selections/location-views`,
     'PATCH',
     input
   );
 }
 
-export async function updateShotLookbookReference(
+export async function updateTakeLookbookSheetSelection(
   projectName: string,
   sceneId: string,
-  shotId: string,
+  takeId: string,
   lookbookSheetId: string | null
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'lookbook-reference'),
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeMutation(
+    `${productionPath(projectName, sceneId, takeId)}/reference-selections/lookbook-sheets`,
     'PATCH',
     { lookbookSheetId }
   );
 }
 
-export async function updateShotCustomReferenceImages(
+export async function updateTakeDialogueAudioSelection(
   projectName: string,
   sceneId: string,
-  shotId: string,
-  customReferenceInputIds: string[]
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'reference-images'),
-    'PATCH',
-    { customReferenceInputIds }
-  );
-}
-
-export async function updateShotReferenceInclusion(
-  projectName: string,
-  sceneId: string,
-  shotId: string,
-  input: { dependencyId: string; inclusion: 'include' | 'exclude' | null }
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    shotReferencePath(projectName, sceneId, shotId, 'reference-inclusions'),
+  takeId: string,
+  input: { dialogueId: string; takeId: string | null }
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeMutation(
+    `${productionPath(projectName, sceneId, takeId)}/reference-selections/dialogue-audio`,
     'PATCH',
     input
   );
@@ -320,7 +272,7 @@ export async function updateShotGroupReferenceInclusion(
   takeId: string,
   input: { dependencyId: string; inclusion: 'include' | 'exclude' | null }
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeGenerationMutation(
+  return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-inclusions`,
     'PATCH',
     input
@@ -334,7 +286,7 @@ export async function selectShotVideoTakeInput(
   takeId: string,
   inputId: string
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeGenerationMutation(
+  return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/inputs/select`,
     'POST',
     { inputId }
@@ -348,7 +300,7 @@ export async function clearShotVideoTakeInput(
   takeId: string,
   inputSlot: ShotVideoTakeInputSlot
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeGenerationMutation(
+  return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/inputs/clear`,
     'POST',
     {
@@ -366,27 +318,19 @@ export async function deleteShotVideoTakeInput(
   takeId: string,
   inputId: string
 ): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeGenerationMutation(
+  return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/inputs/${encodeURIComponent(inputId)}`,
     'DELETE',
     {}
   );
 }
 
-async function sendTakeGenerationMutation(
+async function sendTakeMutation(
   path: string,
   method: 'DELETE' | 'PATCH' | 'POST',
   body: unknown
-): Promise<TakeGenerationMutationResponse> {
-  return sendMutation<TakeGenerationMutationResponse>(path, method, body);
-}
-
-async function sendResourceMutation(
-  path: string,
-  method: 'DELETE' | 'PATCH' | 'POST',
-  body: unknown
-): Promise<ResourceMutationResponse> {
-  return sendMutation<ResourceMutationResponse>(path, method, body);
+): Promise<TakeMutationResponse> {
+  return sendMutation<TakeMutationResponse>(path, method, body);
 }
 
 async function sendMutation<T>(
@@ -430,13 +374,4 @@ function productionPath(
   takeId: string
 ): string {
   return `${takesPath(projectName, sceneId)}/${encodeURIComponent(takeId)}`;
-}
-
-function shotReferencePath(
-  projectName: string,
-  sceneId: string,
-  shotId: string,
-  suffix: string
-): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/shots/${encodeURIComponent(shotId)}/${suffix}`;
 }

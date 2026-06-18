@@ -3,7 +3,7 @@ import {
 } from '../../../client/index.js';
 import type {
   SceneShotVideoTakeEditContext,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
   readActiveLookbookId,
@@ -50,7 +50,7 @@ import {
   PreparedSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
   requireShot,
-} from './take-generation-context.js';
+} from './take-context.js';
 import {
   applyTakeStateToShot,
 } from './take-state.js';
@@ -59,7 +59,7 @@ import {
 
 export async function buildShotVideoTakeContext(
   input: ShotVideoTakeContextInput
-): Promise<ShotVideoTakeGenerationContext> {
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const prepared = prepareSceneShotVideoTakeInSession({
       session,
@@ -91,7 +91,7 @@ export function buildContextFromPrepared(input: {
   projectFolder: string;
   project: Pick<ProjectRecord, 'id' | 'name'>;
   prepared: PreparedSceneShotVideoTake;
-}): ShotVideoTakeGenerationContext {
+}): ShotVideoTakeProductionContext {
   const screenplay = requireScreenplayDocument(input.session);
   const hierarchy = requireSceneHierarchy(screenplay, input.prepared.sceneId);
   const projectInfo = readProjectInformationResourceFromDatabase(input.session);
@@ -134,12 +134,12 @@ export function buildContextFromPrepared(input: {
       storyFunction: hierarchy.scene.storyFunction ?? [],
     },
     shotList: {
-      id: input.prepared.shotListId,
+      id: input.prepared.sourceShotListId,
       title: input.prepared.shotList.title,
       summary: input.prepared.shotList.summary,
       createdAt: input.prepared.shotListRow.createdAt,
       updatedAt: input.prepared.shotListRow.updatedAt,
-      isActive: activeShotListId === input.prepared.shotListId,
+      isActive: activeShotListId === input.prepared.sourceShotListId,
     },
     take: input.prepared.take,
     shots,
@@ -199,7 +199,7 @@ export function buildContextFromPrepared(input: {
 
 
 function shotVideoTakeEditContextFromGenerationContext(
-  context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeProductionContext
 ): SceneShotVideoTakeEditContext {
   const selectedInputs = context.mediaInputs.filter((input) => input.selected);
   const readyInputs = selectedInputs.filter(

@@ -81,7 +81,7 @@ export type * from './cast-media-generation.js';
 export type * from './location-media-generation.js';
 export type * from './scene-audio-generation.js';
 export type * from './scene-storyboard-media-generation.js';
-export type * from './shot-video-take-generation.js';
+export type * from './shot-video-take.js';
 export {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
@@ -194,7 +194,6 @@ export type {
   RigId,
   SceneShot,
   SceneShotDialogueReference,
-  SceneShotWithLegacyShotSpecs,
   ShotVideoTakeAgentProposal,
   ShotVideoTakeDependencyDraft,
   ShotVideoTakeDependencyKind,
@@ -206,14 +205,10 @@ export type {
   ShotVideoTakeParameterValue,
   ShotVideoTakeParameterValues,
   ShotVideoTakePreparedInput,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakePromptDraft,
   ShotVideoTakeRequestedInput,
-  ShotCustomSpecs,
   ShotLensSpecs,
-  ShotLocationSpecs,
-  ShotMovementSpecs,
-  ShotSpecs,
   ShotMovementId,
   ShotSizeId,
   SubjectFramingId,
@@ -257,9 +252,9 @@ export {
   RIG_LABELS,
   SHOT_SIZE_LABELS,
   SUBJECT_FRAMING_LABELS,
-  deriveShotSpecPromptStrings,
+  deriveTakeShotDesignPromptStrings,
 } from './shot-spec-labels.js';
-export type { DerivedShotSpecPromptStrings } from './shot-spec-labels.js';
+export type { DerivedTakeShotDesignPromptStrings } from './shot-spec-labels.js';
 export type {
   Project,
   ProjectCoverImage,

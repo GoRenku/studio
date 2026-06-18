@@ -12,7 +12,6 @@ import type {
   SequenceResourceResponse,
   StoryArcResourceResponse,
 } from './studio-project-contracts';
-import type { ShotSpecs } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 import { decorateSceneDialogueAudioContext } from './studio-scene-dialogue-audio-api';
 
@@ -160,40 +159,6 @@ export async function readSceneShotListResource(
   return readResource(
     screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/shot-list`)
   );
-}
-
-/**
- * Persist a shot's structured shot specs (0036). Sends the full specs
- * object (or null to clear it) and returns the refreshed shot-list resource.
- */
-export async function updateSceneShotSpecs(
-  projectName: string,
-  sceneId: string,
-  shotId: string,
-  shotSpecs: ShotSpecs | null
-): Promise<SceneShotListResourceResponse> {
-  const response = await fetch(
-    screenplayPath(
-      projectName,
-      `/scenes/${encodeURIComponent(sceneId)}/shots/${encodeURIComponent(shotId)}`
-    ),
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Renku-Studio-Token': readStudioApiToken(),
-      },
-      body: JSON.stringify({ shotSpecs }),
-    }
-  );
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-  const body = (await response.json()) as ResourceResponse<SceneShotListResourceResponse>;
-  if (!body.resource) {
-    throw new Error('Renku Studio API returned no screenplay resource.');
-  }
-  return body.resource;
 }
 
 function readStudioApiToken(): string {

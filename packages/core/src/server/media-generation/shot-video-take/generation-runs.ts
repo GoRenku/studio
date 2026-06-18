@@ -1,6 +1,6 @@
 import type {
   MediaGenerationRunReport,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeOutputGenerationSpec,
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import {
@@ -33,7 +33,7 @@ import {
 } from './context.js';
 import {
   assertEditableSceneShotVideoTake,
-} from './take-generation-context.js';
+} from './take-context.js';
 import {
   injectKlingTransientVoiceIds,
   resolveKlingTransientVoices,
@@ -117,7 +117,7 @@ export async function runShotVideoTakeSpec(
   if (!input.simulate && input.approvalToken !== combinedEstimate.estimate.approvalToken) {
     throw new ProjectDataError(
       'CORE_SHOT_VIDEO_TAKE_APPROVAL_TOKEN_MISMATCH',
-      'Shot video take generation requires an approval token from the matching combined estimate.',
+      'Shot Video Take run requires an approval token from the matching combined estimate.',
       {
         suggestion:
           'Run the estimate command again and pass its approval token to the run command.',
@@ -173,7 +173,7 @@ async function prepareKlingTransientVoicePayload(input: {
   estimateGeneration: typeof import('@gorenku/studio-engines').estimateGeneration;
   runGeneration: typeof import('@gorenku/studio-engines').runGeneration;
 }): Promise<Record<string, unknown> | null> {
-  const spec = input.spec as ShotVideoTakeGenerationSpec;
+  const spec = input.spec as ShotVideoTakeOutputGenerationSpec;
   const context = await buildShotVideoTakeContext({
     projectName: input.commandInput.projectName,
     homeDir: input.commandInput.homeDir,

@@ -40,7 +40,7 @@ import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
 import { SceneShotListEmpty } from './scene-shot-list-empty';
 import { shotLabel } from './scene-shot-labels';
 import {
-  createShotGroupDraftsFromTakeGenerations,
+  createShotGroupDraftsFromTakes,
   cycleShotGroupMembership,
   shotGroupDraftsEqual,
   summarizeShotGroupChanges,
@@ -84,7 +84,7 @@ export function SceneTakesTab({
 }: SceneTakesTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
-  const [takes, setTakeGenerations] = useState<
+  const [takes, setTakes] = useState<
     SceneShotVideoTake[]
   >([]);
   const [draftGroupEdit, setDraftGroupEdit] = useState<{
@@ -110,7 +110,7 @@ export function SceneTakesTab({
       .then(([nextResource, takeReport]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setTakeGenerations(takeReport.takes);
+          setTakes(takeReport.takes);
         }
       })
       .catch((loadError) => {
@@ -147,7 +147,7 @@ export function SceneTakesTab({
     [resource]
   );
 
-  const activeTakeGeneration = useMemo(() => {
+  const activeTake = useMemo(() => {
     if (takeId) {
       const selected = takes.find(
         (candidate) => candidate.takeId === takeId
@@ -164,14 +164,14 @@ export function SceneTakesTab({
 
   const persistedGroups = useMemo(
     () =>
-      createShotGroupDraftsFromTakeGenerations(
-        activeTakeGeneration ? [activeTakeGeneration] : []
+      createShotGroupDraftsFromTakes(
+        activeTake ? [activeTake] : []
       ),
-    [activeTakeGeneration]
+    [activeTake]
   );
-  const activeTakeGenerationKey = activeTakeGeneration?.takeId ?? null;
+  const activeTakeKey = activeTake?.takeId ?? null;
   const draftGroups =
-    draftGroupEdit?.takeId === activeTakeGenerationKey
+    draftGroupEdit?.takeId === activeTakeKey
       ? draftGroupEdit.groups
       : persistedGroups;
 
@@ -194,12 +194,12 @@ export function SceneTakesTab({
     if (shotId && shots.some((shot) => shot.shotId === shotId)) {
       return shotId;
     }
-    const takeShotId = activeTakeGeneration?.shotIds[0];
+    const takeShotId = activeTake?.shotIds[0];
     if (takeShotId && shots.some((shot) => shot.shotId === takeShotId)) {
       return takeShotId;
     }
     return shots[0]?.shotId ?? null;
-  }, [activeTakeGeneration, shots, shotId]);
+  }, [activeTake, shots, shotId]);
 
   const handleSelectShot = useCallback(
     (nextShotId: string) => {
@@ -207,13 +207,13 @@ export function SceneTakesTab({
         type: 'scene',
         id: sceneId,
         sceneTab: 'takes',
-        takeWorkspaceMode: activeTakeGeneration ? 'edit' : 'new',
-        takeId: activeTakeGeneration?.takeId,
+        takeWorkspaceMode: activeTake ? 'edit' : 'new',
+        takeId: activeTake?.takeId,
         shotId: nextShotId,
         shotTab: activeShotTab,
       });
     },
-    [activeShotTab, activeTakeGeneration, onSelect, sceneId]
+    [activeShotTab, activeTake, onSelect, sceneId]
   );
 
   const handleSelectShotTab = useCallback(
@@ -222,24 +222,24 @@ export function SceneTakesTab({
         type: 'scene',
         id: sceneId,
         sceneTab: 'takes',
-        takeWorkspaceMode: activeTakeGeneration ? 'edit' : 'new',
-        takeId: activeTakeGeneration?.takeId,
+        takeWorkspaceMode: activeTake ? 'edit' : 'new',
+        takeId: activeTake?.takeId,
         shotId: selectedShotId ?? undefined,
         shotTab: nextShotTab,
       });
     },
-    [activeTakeGeneration, onSelect, sceneId, selectedShotId]
+    [activeTake, onSelect, sceneId, selectedShotId]
   );
 
-  const handleOpenTakeGeneration = useCallback(
-    (nextTakeGeneration: SceneShotVideoTake) => {
+  const handleOpenTake = useCallback(
+    (nextTake: SceneShotVideoTake) => {
       onSelect({
         type: 'scene',
         id: sceneId,
         sceneTab: 'takes',
         takeWorkspaceMode: 'edit',
-        takeId: nextTakeGeneration.takeId,
-        shotId: nextTakeGeneration.shotIds[0],
+        takeId: nextTake.takeId,
+        shotId: nextTake.shotIds[0],
         shotTab: activeShotTab,
       });
     },
@@ -257,23 +257,23 @@ export function SceneTakesTab({
 
   const handleCycleShotGroup = useCallback(
     (clickedShotId: string) => {
-      if (!activeTakeGeneration) {
+      if (!activeTake) {
         return;
       }
       handleSelectShot(clickedShotId);
       setDraftGroupEdit((currentDraftGroupEdit) => {
         const currentDraftGroups =
-          currentDraftGroupEdit?.takeId === activeTakeGenerationKey
+          currentDraftGroupEdit?.takeId === activeTakeKey
             ? currentDraftGroupEdit.groups
             : persistedGroups;
         return {
-          takeId: activeTakeGenerationKey,
+          takeId: activeTakeKey,
           groups: cycleShotGroupMembership({
             shots,
             draftGroups: currentDraftGroups.length
               ? currentDraftGroups
-              : createShotGroupDraftsFromTakeGenerations([
-                  activeTakeGeneration,
+              : createShotGroupDraftsFromTakes([
+                  activeTake,
                 ]),
             clickedShotId,
           }),
@@ -281,8 +281,8 @@ export function SceneTakesTab({
       });
     },
     [
-      activeTakeGeneration,
-      activeTakeGenerationKey,
+      activeTake,
+      activeTakeKey,
       handleSelectShot,
       persistedGroups,
       shots,
@@ -296,11 +296,11 @@ export function SceneTakesTab({
   }, []);
 
   const handleApplyGroupingChanges = useCallback(async () => {
-    if (!activeTakeGeneration || groupApplyPending) {
+    if (!activeTake || groupApplyPending) {
       return;
     }
     const openDraft = draftGroups.find(
-      (group) => group.takeId === activeTakeGeneration.takeId
+      (group) => group.takeId === activeTake.takeId
     );
     if (!openDraft || openDraft.shotIds.length === 0) {
       setGroupApplyError('The current take must keep at least one shot.');
@@ -312,14 +312,14 @@ export function SceneTakesTab({
       const result = await updateSceneShotVideoTakeShots(
         projectName,
         sceneId,
-        activeTakeGeneration.takeId,
+        activeTake.takeId,
         openDraft.shotIds
       );
-      const updatedTakeGeneration = result.context.take;
-      setTakeGenerations((current) =>
+      const updatedTake = result.context.take;
+      setTakes((current) =>
         current.map((candidate) =>
-          candidate.takeId === updatedTakeGeneration.takeId
-            ? updatedTakeGeneration
+          candidate.takeId === updatedTake.takeId
+            ? updatedTake
             : candidate
         )
       );
@@ -335,7 +335,7 @@ export function SceneTakesTab({
       setGroupApplyPending(false);
     }
   }, [
-    activeTakeGeneration,
+    activeTake,
     draftGroups,
     groupApplyPending,
     projectName,
@@ -424,7 +424,7 @@ export function SceneTakesTab({
     return <SceneShotListEmpty />;
   }
 
-  const createNewTakeGeneration = async () => {
+  const createNewTake = async () => {
     if (!resource.activeShotListId || !shots[0]) {
       return;
     }
@@ -433,7 +433,7 @@ export function SceneTakesTab({
       shotIds: [shots[0].shotId],
       title: shots[0].title,
     });
-    setTakeGenerations((current) => [...current, created]);
+    setTakes((current) => [...current, created]);
     onSelect({
       type: 'scene',
       id: sceneId,
@@ -461,7 +461,7 @@ export function SceneTakesTab({
                 type='button'
                 variant='ghost'
                 className='aspect-video h-auto min-w-0 flex-col items-stretch justify-end overflow-hidden rounded-md border border-border/40 bg-muted/30 p-0 text-left hover:border-border/70 hover:bg-muted/45'
-                onClick={() => handleOpenTakeGeneration(take)}
+                onClick={() => handleOpenTake(take)}
               >
                 <span className='flex min-h-0 flex-1 items-center justify-center bg-muted text-sm text-muted-foreground'>
                   Take
@@ -481,7 +481,7 @@ export function SceneTakesTab({
             type='button'
             variant='outline'
             className='aspect-video h-auto min-w-0 flex-col gap-2 rounded-md border-dashed bg-muted/20'
-            onClick={createNewTakeGeneration}
+            onClick={createNewTake}
           >
             <Plus className='h-5 w-5' />
             <span className='text-sm font-medium'>New Take</span>
@@ -496,13 +496,13 @@ export function SceneTakesTab({
   );
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
-  const selectedTakeGeneration =
-    activeTakeGeneration ??
+  const selectedTake =
+    activeTake ??
     takes.find((candidate) =>
       selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
     ) ??
     null;
-  const handleCreateTakeGeneration = async () => {
+  const handleCreateTake = async () => {
     if (!resource.activeShotListId || !selectedShot) {
       return;
     }
@@ -511,7 +511,7 @@ export function SceneTakesTab({
       shotIds: [selectedShot.shotId],
       title: selectedShot.title,
     });
-    setTakeGenerations((current) => [...current, created]);
+    setTakes((current) => [...current, created]);
     onSelect({
       type: 'scene',
       id: sceneId,
@@ -607,15 +607,14 @@ export function SceneTakesTab({
             projectName={projectName}
             sceneId={sceneId}
             shot={selectedShot}
-            take={selectedTakeGeneration}
+            take={selectedTake}
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}
             castMemberImages={resource.castMemberImages}
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
-            onShotSpecsSaved={setResource}
-            onCreateTakeGeneration={handleCreateTakeGeneration}
+            onCreateTake={handleCreateTake}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>

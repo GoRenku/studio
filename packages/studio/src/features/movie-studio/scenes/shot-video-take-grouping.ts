@@ -27,8 +27,8 @@ export interface ShotGroupingProjection {
 export interface TakeScopedShotGroupDraft {
   draftGroupId: string;
   takeId?: string;
-  sourceTakeGenerationId?: string;
-  mergePartnerTakeGenerationId?: string;
+  sourceTakeId?: string;
+  mergePartnerTakeId?: string;
   mergePartnerDraft?: TakeScopedShotGroupDraft;
   mergePivotShotId?: string;
   shotIds: string[];
@@ -41,8 +41,8 @@ export interface ShotRailGroupChangeSummary {
 
 export interface TakeScopedShotGroupSaveInput {
   takeId?: string;
-  sourceTakeGenerationId?: string;
-  mergePartnerTakeGenerationId?: string;
+  sourceTakeId?: string;
+  mergePartnerTakeId?: string;
   shotIds: string[];
 }
 
@@ -61,7 +61,7 @@ export function shotDisplayLabel(index: number): string {
   return `Shot ${index + 1}`;
 }
 
-export function createShotGroupDraftsFromTakeGenerations(
+export function createShotGroupDraftsFromTakes(
   takes: { takeId: string; shotIds: string[] }[] | undefined
 ): TakeScopedShotGroupDraft[] {
   return (takes ?? []).map((take) => ({
@@ -321,11 +321,11 @@ export function shotGroupsForSave(
     ...(group.takeId
       ? { takeId: group.takeId }
       : {}),
-    ...(group.sourceTakeGenerationId
-      ? { sourceTakeGenerationId: group.sourceTakeGenerationId }
+    ...(group.sourceTakeId
+      ? { sourceTakeId: group.sourceTakeId }
       : {}),
-    ...(group.mergePartnerTakeGenerationId
-      ? { mergePartnerTakeGenerationId: group.mergePartnerTakeGenerationId }
+    ...(group.mergePartnerTakeId
+      ? { mergePartnerTakeId: group.mergePartnerTakeId }
       : {}),
     shotIds: [...group.shotIds],
   }));
@@ -354,7 +354,7 @@ export function summarizeShotGroupChanges(input: {
 
   input.draftGroups.forEach((group) => {
     const groupId = group.takeId ?? group.draftGroupId;
-    if (group.mergePartnerTakeGenerationId) {
+    if (group.mergePartnerTakeId) {
       messages.push(`Merge into ${groupRangeLabel(input.shots, group)}.`);
       changedPromptGroupIds.add(groupId);
       return;
@@ -365,7 +365,7 @@ export function summarizeShotGroupChanges(input: {
     if (!persisted) {
       messages.push(
         `Create ${groupRangeLabel(input.shots, group)}${
-          group.sourceTakeGenerationId ? ' from split settings' : ''
+          group.sourceTakeId ? ' from split settings' : ''
         }.`
       );
       changedPromptGroupIds.add(groupId);
@@ -385,7 +385,7 @@ export function summarizeShotGroupChanges(input: {
     }
     const mergedInto = input.draftGroups.some(
       (draftGroup) =>
-        draftGroup.mergePartnerTakeGenerationId === group.takeId
+        draftGroup.mergePartnerTakeId === group.takeId
     );
     if (mergedInto) {
       return;
@@ -499,8 +499,8 @@ function splitDraftGroupAtShot(input: {
     const index = indexByShotId.get(shotId);
     return index !== undefined && index > targetIndex;
   });
-  const sourceTakeGenerationId =
-    input.group.takeId ?? input.group.sourceTakeGenerationId;
+  const sourceTakeId =
+    input.group.takeId ?? input.group.sourceTakeId;
   const replacementGroups: TakeScopedShotGroupDraft[] = [
     ...(upperShotIds.length > 0
       ? [
@@ -514,7 +514,7 @@ function splitDraftGroupAtShot(input: {
       ? [
           {
             draftGroupId: input.createDraftGroupId(),
-            ...(sourceTakeGenerationId ? { sourceTakeGenerationId } : {}),
+            ...(sourceTakeId ? { sourceTakeId } : {}),
             shotIds: orderShotIds(input.shots, lowerShotIds),
           },
         ]
@@ -537,15 +537,15 @@ function mergeAdjacentDraftGroups(input: {
   lowerGroup: TakeScopedShotGroupDraft;
   pivotShotId: string;
 }): TakeScopedShotGroupDraft[] {
-  const mergePartnerTakeGenerationId =
-    input.lowerGroup.takeId ?? input.lowerGroup.sourceTakeGenerationId;
+  const mergePartnerTakeId =
+    input.lowerGroup.takeId ?? input.lowerGroup.sourceTakeId;
   const mergedGroup: TakeScopedShotGroupDraft = {
     ...clearMergeState(input.upperGroup),
     shotIds: orderShotIds(input.shots, [
       ...input.upperGroup.shotIds,
       ...input.lowerGroup.shotIds,
     ]),
-    ...(mergePartnerTakeGenerationId ? { mergePartnerTakeGenerationId } : {}),
+    ...(mergePartnerTakeId ? { mergePartnerTakeId } : {}),
     mergePartnerDraft: input.lowerGroup,
     mergePivotShotId: input.pivotShotId,
   };
@@ -629,7 +629,7 @@ function clearMergeState(
   group: TakeScopedShotGroupDraft
 ): TakeScopedShotGroupDraft {
   const nextGroup: TakeScopedShotGroupDraft = { ...group };
-  delete nextGroup.mergePartnerTakeGenerationId;
+  delete nextGroup.mergePartnerTakeId;
   delete nextGroup.mergePartnerDraft;
   delete nextGroup.mergePivotShotId;
   return nextGroup;

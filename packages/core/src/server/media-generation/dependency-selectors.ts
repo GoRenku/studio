@@ -4,7 +4,7 @@ import type {
   MediaGenerationDependencyRequest,
   MediaGenerationDependencySelectedAsset,
   MediaGenerationDependencySlot,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeOutputGenerationSpec,
 } from '../../client/index.js';
 import { SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from '../../client/index.js';
 import {
@@ -106,13 +106,13 @@ function shotVideoInputAssetFromRequest(
       'Resolve shot video input dependencies with a media-generation-spec request.'
     );
   }
-  const spec = request.spec as ShotVideoTakeGenerationSpec | undefined;
+  const spec = request.spec as ShotVideoTakeOutputGenerationSpec | undefined;
   if (spec?.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
     return invalidSelection(
       slot,
       'CORE_MEDIA_DEPENDENCY_SELECTOR_REQUEST_INVALID',
       `Shot video input dependency selector received an invalid media generation spec for ${slot.label}.`,
-      'Resolve shot video input dependencies with a shot.video-take generation spec.'
+      'Resolve shot video input dependencies with a shot video take output generation spec.'
     );
   }
   const selectedInputs = spec.inputs.filter((candidate) =>
@@ -146,7 +146,7 @@ function shotVideoInputAssetFromRequest(
 }
 
 function shotVideoInputMatchesDependencySlot(
-  input: ShotVideoTakeGenerationSpec['inputs'][number],
+  input: ShotVideoTakeOutputGenerationSpec['inputs'][number],
   slot: MediaGenerationDependencySlot
 ): boolean {
   if (slot.selector.kind !== 'shot-video-input') {

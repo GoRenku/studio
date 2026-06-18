@@ -37,13 +37,12 @@ const SHOT: SceneShot = {
 };
 
 const TAKE: SceneShotVideoTake = {
-  takeId: 'take_generation_001',
+  takeId: 'take_001',
   sceneId: 'scene_hook',
-  shotListId: 'shot_list_hook',
+  sourceShotListId: 'shot_list_hook',
   shotIds: ['shot_001'],
-  title: 'Shot 1 take generation',
+  title: 'Shot 1 Shot Video Take',
   state: emptyTakeState(),
-  production: {},
   createdAt: '',
   updatedAt: '',
   status: {

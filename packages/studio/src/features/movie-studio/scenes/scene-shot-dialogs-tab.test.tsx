@@ -292,7 +292,7 @@ describe('SceneShotDialogsTab', () => {
       expect(serviceMocks.updateShotGroupReferenceInclusion).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
-        'take_generation_001',
+        'take_001',
         {
           dependencyId: 'audio:scene-dialogue:dialogue_urban',
           inclusion: null,
@@ -372,11 +372,11 @@ function dialogueProductionPlan(
 ): ShotVideoTakeProductionPlanReport {
   return {
     take: {
-      takeId: 'take_generation_001',
+      takeId: 'take_001',
       sceneId: 'scene_hook',
       shotListId: 'shot_list_hook',
       shotIds,
-      title: 'Take generation',
+      title: 'Take',
       production: {},
       createdAt: '',
       updatedAt: '',

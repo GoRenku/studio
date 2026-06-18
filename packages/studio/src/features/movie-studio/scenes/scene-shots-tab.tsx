@@ -61,7 +61,7 @@ export function SceneShotsTab({
 }: SceneShotsTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
-  const [takes, setTakeGenerations] = useState<
+  const [takes, setTakes] = useState<
     SceneShotVideoTake[]
   >([]);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export function SceneShotsTab({
       .then(([nextResource, takeReport]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setTakeGenerations(takeReport.takes);
+          setTakes(takeReport.takes);
         }
       })
       .catch((loadError) => {
@@ -205,11 +205,11 @@ export function SceneShotsTab({
   );
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
-  const selectedTakeGeneration =
+  const selectedTake =
     takes.find((candidate) =>
       selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
     ) ?? null;
-  const handleCreateTakeGeneration = async () => {
+  const handleCreateTake = async () => {
     if (!resource.activeShotListId || !selectedShot) {
       return;
     }
@@ -218,7 +218,7 @@ export function SceneShotsTab({
       shotIds: [selectedShot.shotId],
       title: selectedShot.title,
     });
-    setTakeGenerations((current) => [...current, created]);
+    setTakes((current) => [...current, created]);
   };
 
   return (
@@ -254,15 +254,14 @@ export function SceneShotsTab({
             projectName={projectName}
             sceneId={sceneId}
             shot={selectedShot}
-            take={selectedTakeGeneration}
+            take={selectedTake}
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}
             castMemberImages={resource.castMemberImages}
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
-            onShotSpecsSaved={setResource}
-            onCreateTakeGeneration={handleCreateTakeGeneration}
+            onCreateTake={handleCreateTake}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>

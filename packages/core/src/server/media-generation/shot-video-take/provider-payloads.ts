@@ -3,10 +3,10 @@ import {
 } from '../../../client/index.js';
 import type {
   PreparedMediaGeneration,
-  ShotVideoTakeGenerationSpec,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeOutputGenerationSpec,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeInputGenerationSpec,
-  ShotVideoTakeGenerationInput,
+  ShotVideoTakeOutputGenerationInput,
 } from '../../../client/index.js';
 import {
   ProjectDataError,
@@ -58,8 +58,8 @@ export interface KlingTransientVoiceConversion {
 
 
 export function buildShotVideoTakeProviderPayload(
-  spec: ShotVideoTakeGenerationSpec,
-  context: ShotVideoTakeGenerationContext
+  spec: ShotVideoTakeOutputGenerationSpec,
+  context: ShotVideoTakeProductionContext
 ): ShotVideoTakeProviderPlan {
   const route = requireShotVideoTakeRoute(
     spec.modelChoice,
@@ -81,8 +81,8 @@ export function buildShotVideoTakeProviderPayload(
 
 
 function buildFlatShotVideoPayload(
-  spec: ShotVideoTakeGenerationSpec,
-  context: ShotVideoTakeGenerationContext,
+  spec: ShotVideoTakeOutputGenerationSpec,
+  context: ShotVideoTakeProductionContext,
   route: ShotVideoRoute
 ): ShotVideoTakeProviderPlan {
   const inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']> = [];
@@ -103,8 +103,8 @@ function buildFlatShotVideoPayload(
 
 
 function buildSeedanceShotVideoPayload(
-  spec: ShotVideoTakeGenerationSpec,
-  context: ShotVideoTakeGenerationContext,
+  spec: ShotVideoTakeOutputGenerationSpec,
+  context: ShotVideoTakeProductionContext,
   route: ShotVideoRoute
 ): ShotVideoTakeProviderPlan {
   validateSeedanceAudioReferences(spec, route);
@@ -114,8 +114,8 @@ function buildSeedanceShotVideoPayload(
 
 
 export function buildKlingV3ShotVideoPayload(
-  spec: ShotVideoTakeGenerationSpec,
-  _context: ShotVideoTakeGenerationContext,
+  spec: ShotVideoTakeOutputGenerationSpec,
+  _context: ShotVideoTakeProductionContext,
   route: ShotVideoRoute
 ): ShotVideoTakeProviderPlan {
   const inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']> = [];
@@ -162,8 +162,8 @@ export function buildKlingV3ShotVideoPayload(
 
 
 export function buildKlingO3ShotVideoPayload(
-  spec: ShotVideoTakeGenerationSpec,
-  _context: ShotVideoTakeGenerationContext,
+  spec: ShotVideoTakeOutputGenerationSpec,
+  _context: ShotVideoTakeProductionContext,
   route: ShotVideoRoute
 ): ShotVideoTakeProviderPlan {
   const inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']> = [];
@@ -197,8 +197,8 @@ export function buildKlingO3ShotVideoPayload(
 
 
 export function buildShotVideoTakePricingProviderPayload(input: {
-  spec: ShotVideoTakeGenerationSpec;
-  context: ShotVideoTakeGenerationContext;
+  spec: ShotVideoTakeOutputGenerationSpec;
+  context: ShotVideoTakeProductionContext;
 }): ShotVideoTakeProviderPlan {
   const { spec, context } = input;
   const route = requireShotVideoTakeRoute(
@@ -229,8 +229,8 @@ export function buildShotVideoTakePricingProviderPayload(input: {
 
 
 export function finalVideoPricingInputCounts(input: {
-  spec: ShotVideoTakeGenerationSpec;
-  context: ShotVideoTakeGenerationContext;
+  spec: ShotVideoTakeOutputGenerationSpec;
+  context: ShotVideoTakeProductionContext;
 }): ShotVideoTakeProviderPlan['pricingInputCounts'] {
   const route = requireShotVideoTakeRoute(
     input.spec.modelChoice,
@@ -256,7 +256,7 @@ export function finalVideoPricingInputCounts(input: {
 
 
 function baseShotVideoPayload(
-  spec: ShotVideoTakeGenerationSpec,
+  spec: ShotVideoTakeOutputGenerationSpec,
   route: ShotVideoRoute
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {
@@ -335,7 +335,7 @@ export interface KlingSourceVideoReference extends KlingReferenceFile {
 
 
 function projectKlingReferenceBundle(
-  spec: ShotVideoTakeGenerationSpec,
+  spec: ShotVideoTakeOutputGenerationSpec,
   route: ShotVideoRoute
 ): KlingReferenceBundle {
   const topLevelImages = spec.inputs
@@ -373,8 +373,8 @@ function projectKlingReferenceBundle(
 
 
 function isKlingTopLevelImageInput(
-  input: ShotVideoTakeGenerationInput
-): input is ShotVideoTakeGenerationInput & { mediaKind: 'image' } {
+  input: ShotVideoTakeOutputGenerationInput
+): input is ShotVideoTakeOutputGenerationInput & { mediaKind: 'image' } {
   return (
     input.providerReferenceRole === 'top-level-image' &&
     input.mediaKind === 'image'
@@ -386,7 +386,7 @@ function isKlingTopLevelImageInput(
 function projectKlingElementReference(
   elementId: string,
   index: number,
-  inputs: ShotVideoTakeGenerationInput[]
+  inputs: ShotVideoTakeOutputGenerationInput[]
 ): KlingElementReference {
   const elementInputs = inputs.filter((input) => requireElementId(input) === elementId);
   const video = elementInputs.find((input) => input.providerReferenceRole === 'element-video');
@@ -424,7 +424,7 @@ function projectKlingElementReference(
 
 
 
-function referenceFile(input: ShotVideoTakeGenerationInput): KlingReferenceFile {
+function referenceFile(input: ShotVideoTakeOutputGenerationInput): KlingReferenceFile {
   if (input.mediaKind !== 'image' && input.mediaKind !== 'video') {
     throw new ProjectDataError(
       'CORE_SHOT_VIDEO_KLING_REFERENCE_MEDIA_KIND_UNSUPPORTED',
@@ -440,7 +440,7 @@ function referenceFile(input: ShotVideoTakeGenerationInput): KlingReferenceFile 
 
 
 
-function requireElementId(input: ShotVideoTakeGenerationInput): string {
+function requireElementId(input: ShotVideoTakeOutputGenerationInput): string {
   const elementId = input.elementId?.trim();
   if (!elementId) {
     throw new ProjectDataError(
@@ -639,7 +639,7 @@ function validateKlingVoiceControl(input: {
 }
 
 export function buildKlingTransientVoiceConversions(input: {
-  spec: ShotVideoTakeGenerationSpec;
+  spec: ShotVideoTakeOutputGenerationSpec;
   route?: ShotVideoRoute;
   payload?: Record<string, unknown>;
   elements?: KlingElementReference[];
@@ -695,7 +695,7 @@ export function buildKlingTransientVoiceConversions(input: {
 }
 
 function buildKlingTransientVoiceConversionsForPricing(input: {
-  spec: ShotVideoTakeGenerationSpec;
+  spec: ShotVideoTakeOutputGenerationSpec;
   route: ShotVideoRoute;
   payload: Record<string, unknown>;
 }): KlingTransientVoiceConversion[] {
@@ -709,8 +709,8 @@ function buildKlingTransientVoiceConversionsForPricing(input: {
 }
 
 function selectedKlingDialogueAudioInputs(
-  spec: ShotVideoTakeGenerationSpec
-): ShotVideoTakeGenerationInput[] {
+  spec: ShotVideoTakeOutputGenerationSpec
+): ShotVideoTakeOutputGenerationInput[] {
   return spec.inputs.filter(
     (input) =>
       input.kind === 'audio' &&
@@ -720,7 +720,7 @@ function selectedKlingDialogueAudioInputs(
 }
 
 function bindKlingDialogueAudioInput(input: {
-  audioInput: ShotVideoTakeGenerationInput;
+  audioInput: ShotVideoTakeOutputGenerationInput;
   audioInputCount: number;
   elements: KlingElementReference[];
 }): KlingTransientVoiceConversion {
@@ -803,7 +803,7 @@ function readPayloadPath(
 
 
 function rejectKlingElementInputs(
-  spec: ShotVideoTakeGenerationSpec,
+  spec: ShotVideoTakeOutputGenerationSpec,
   code: string
 ): void {
   if (!spec.inputs.some((input) => input.providerReferenceRole?.startsWith('element-'))) {
@@ -818,7 +818,7 @@ function rejectKlingElementInputs(
 
 
 function validateSeedanceAudioReferences(
-  spec: ShotVideoTakeGenerationSpec,
+  spec: ShotVideoTakeOutputGenerationSpec,
   route: ShotVideoRoute
 ): void {
   if (!route.referenceContract?.audioReferences) {
@@ -873,7 +873,7 @@ export function buildShotVideoTakeInputProviderPayload(
 
 export function toGenerationRequest(
   plan: ShotVideoTakeProviderPlan,
-  spec: ShotVideoTakeInputGenerationSpec | ShotVideoTakeGenerationSpec
+  spec: ShotVideoTakeInputGenerationSpec | ShotVideoTakeOutputGenerationSpec
 ): PreparedMediaGeneration['generation'] {
   const { prompt, ...parameters } = plan.payload;
   return {
@@ -899,7 +899,7 @@ export function toGenerationRequest(
 
 
 export function mapRouteInputSlot(
-  spec: ShotVideoTakeGenerationSpec,
+  spec: ShotVideoTakeOutputGenerationSpec,
   inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>,
   slot: ShotVideoRouteInputSlot
 ): void {
@@ -945,7 +945,7 @@ export function mapRouteInputSlot(
 
 
 
-export function outputName(spec: ShotVideoTakeInputGenerationSpec | ShotVideoTakeGenerationSpec): string {
+export function outputName(spec: ShotVideoTakeInputGenerationSpec | ShotVideoTakeOutputGenerationSpec): string {
   const base = spec.title?.trim() || spec.prompt.slice(0, 40) || 'shot-video-take';
   return `${base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'shot-video-take'}${
     spec.purpose === SHOT_VIDEO_TAKE_GENERATION_PURPOSE ? '.mp4' : '.png'

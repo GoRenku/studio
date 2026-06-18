@@ -2,14 +2,16 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { ShotVideoTakeProductionPlanReport } from '@gorenku/studio-core/client';
+import type {
+  SceneShotVideoTake,
+  ShotVideoTakeProductionPlanReport,
+} from '@gorenku/studio-core/client';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 
 const mutationMocks = vi.hoisted(() => ({
-  updateShotCastCharacterSheetReference: vi.fn(),
-  updateShotLocationViewReferences: vi.fn(),
+  updateTakeCharacterSheetSelection: vi.fn(),
+  updateTakeLocationViewSelection: vi.fn(),
   updateShotGroupReferenceInclusion: vi.fn(),
-  updateShotReferenceInclusion: vi.fn(),
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
@@ -49,13 +51,12 @@ vi.mock('@/services/studio-project-assets-api', () => ({
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  updateShotCastCharacterSheetReference:
-    mutationMocks.updateShotCastCharacterSheetReference,
-  updateShotLocationViewReferences:
-    mutationMocks.updateShotLocationViewReferences,
+  updateTakeCharacterSheetSelection:
+    mutationMocks.updateTakeCharacterSheetSelection,
+  updateTakeLocationViewSelection:
+    mutationMocks.updateTakeLocationViewSelection,
   updateShotGroupReferenceInclusion:
     mutationMocks.updateShotGroupReferenceInclusion,
-  updateShotReferenceInclusion: mutationMocks.updateShotReferenceInclusion,
 }));
 
 describe('SceneShotReferencesTab', () => {
@@ -72,8 +73,7 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
-        productionPlan={productionPlanWithReferenceImages()}
+        productionPlan={withTake(productionPlanWithReferenceImages())}
         {...handlers}
       />
     );
@@ -110,7 +110,6 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
         productionPlan={productionPlanWithPlannedReferenceEstimate()}
         {...handlers}
       />
@@ -126,7 +125,6 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
         productionPlan={productionPlanWithReadyReferenceEstimate()}
         {...handlers}
       />
@@ -142,18 +140,17 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
-        productionPlan={productionPlanWithReferenceImages()}
+        productionPlan={withTake(productionPlanWithReferenceImages())}
         {...handlers}
       />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Include Blade glint insert' }));
     await waitFor(() => {
-      expect(mutationMocks.updateShotReferenceInclusion).toHaveBeenCalledWith(
+      expect(mutationMocks.updateShotGroupReferenceInclusion).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
-        'shot_001',
+        'take_001',
         {
           dependencyId: 'reference-image:input_blade',
           inclusion: 'include',
@@ -163,10 +160,10 @@ describe('SceneShotReferencesTab', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Exclude Texture continuity' }));
     await waitFor(() => {
-      expect(mutationMocks.updateShotReferenceInclusion).toHaveBeenCalledWith(
+      expect(mutationMocks.updateShotGroupReferenceInclusion).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
-        'shot_001',
+        'take_001',
         {
           dependencyId: 'reference-image:input_texture',
           inclusion: 'exclude',
@@ -175,23 +172,21 @@ describe('SceneShotReferencesTab', () => {
     });
   });
 
-  it('updates reference inclusion across the take generation for multi-shot plans', async () => {
+  it('updates reference inclusion across the Shot Video Take for multi-shot plans', async () => {
     const handlers = referenceHandlers();
     render(
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
         productionPlan={{
           ...productionPlanWithReferenceImages(),
           take: {
-            takeId: 'take_generation_001',
+            takeId: 'take_001',
             sceneId: 'scene_hook',
-            shotListId: 'shot_list_hook',
+            sourceShotListId: 'shot_list_hook',
             shotIds: ['shot_001', 'shot_002'],
-            title: 'Take generation',
+            title: 'Shot Video Take',
             state: emptyTakeState(),
-            production: {},
             createdAt: '',
             updatedAt: '',
             status: {
@@ -224,7 +219,7 @@ describe('SceneShotReferencesTab', () => {
       expect(mutationMocks.updateShotGroupReferenceInclusion).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
-        'take_generation_001',
+        'take_001',
         {
           dependencyId: 'reference-image:input_blade',
           inclusion: 'include',
@@ -232,7 +227,6 @@ describe('SceneShotReferencesTab', () => {
     );
   });
 
-    expect(mutationMocks.updateShotReferenceInclusion).not.toHaveBeenCalled();
   });
 
   it('renders dependency inventory diagnostics in Reference issues', () => {
@@ -241,7 +235,6 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
         productionPlan={{
           ...productionPlanWithReferenceImages(),
           diagnostics: [
@@ -268,8 +261,7 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
-        productionPlan={productionPlanWithCastReferences()}
+        productionPlan={withTake(productionPlanWithCastReferences())}
         {...handlers}
       />
     );
@@ -288,10 +280,10 @@ describe('SceneShotReferencesTab', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Set Sheet 2 pick' }));
 
     await waitFor(() => {
-      expect(mutationMocks.updateShotCastCharacterSheetReference).toHaveBeenCalledWith(
+      expect(mutationMocks.updateTakeCharacterSheetSelection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
-        'shot_001',
+        'take_001',
         {
           castMemberId: 'cast_urban',
           assetId: 'asset_urban-2',
@@ -306,8 +298,7 @@ describe('SceneShotReferencesTab', () => {
       <SceneShotReferencesTab
         projectName='constantinople'
         sceneId='scene_hook'
-        shot={SHOT}
-        productionPlan={productionPlanWithLocationReferences()}
+        productionPlan={withTake(productionPlanWithLocationReferences())}
         {...handlers}
       />
     );
@@ -320,10 +311,10 @@ describe('SceneShotReferencesTab', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Set Front pick' }));
 
     await waitFor(() => {
-      expect(mutationMocks.updateShotLocationViewReferences).toHaveBeenCalledWith(
+      expect(mutationMocks.updateTakeLocationViewSelection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
-        'shot_001',
+        'take_001',
         {
           locationId: 'location_walls',
           assetId: 'asset_walls_sheet',
@@ -334,24 +325,8 @@ describe('SceneShotReferencesTab', () => {
   });
 });
 
-const SHOT = {
-  shotId: 'shot_001',
-  title: 'Map study',
-  storyBeat: 'beat',
-  narrativePurpose: 'purpose',
-  description: 'description',
-  shotType: 'wide',
-  subject: 'subject',
-  action: 'action',
-  dialogue: [],
-  coveredBlockIndexes: [0],
-  castMemberIds: [],
-  locationIds: [],
-};
-
 function referenceHandlers() {
   return {
-    onResourceRefreshed: vi.fn(),
     onPlanRefresh: vi.fn(async () => undefined),
   };
 }
@@ -404,6 +379,47 @@ function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport 
     },
     diagnostics: [],
   } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
+function withTake(
+  report: ShotVideoTakeProductionPlanReport
+): ShotVideoTakeProductionPlanReport {
+  return {
+    ...report,
+    take: makeTake(),
+  };
+}
+
+function makeTake(): SceneShotVideoTake {
+  return {
+    takeId: 'take_001',
+    sceneId: 'scene_hook',
+    sourceShotListId: 'shot_list_hook',
+    shotIds: ['shot_001'],
+    title: 'Shot Video Take',
+    state: emptyTakeState(),
+    createdAt: '',
+    updatedAt: '',
+    status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
+      },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
+    },
+  };
 }
 
 function productionPlanWithPlannedReferenceEstimate(): ShotVideoTakeProductionPlanReport {

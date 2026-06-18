@@ -8,7 +8,7 @@ import type {
   CastProfileGenerationSpec,
   LookbookSheetGenerationSpec,
   SceneShotListDocument,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeOutputGenerationSpec,
   ShotVideoTakePreparedInput,
 } from '../../src/client/index.js';
 import {
@@ -109,7 +109,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const take = await createSampleTakeGeneration({
+    const take = await createSampleTake({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -212,7 +212,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const take = await createSampleTakeGeneration({
+    const take = await createSampleTake({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -339,7 +339,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const take = await createSampleTakeGeneration({
+    const take = await createSampleTake({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -417,7 +417,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const take = await createSampleTakeGeneration({
+    const take = await createSampleTake({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -478,7 +478,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const take = await createSampleTakeGeneration({
+    const take = await createSampleTake({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -507,7 +507,7 @@ describe('media generation dependency inventory estimates integration', () => {
       takeId: take.takeId,
       sourceProjectRelativePath: 'generated/media/generic-last-frame.png',
     });
-    const spec: ShotVideoTakeGenerationSpec = {
+    const spec: ShotVideoTakeOutputGenerationSpec = {
       purpose: 'shot.video-take',
       target: {
         kind: 'sceneShotVideoTake',
@@ -616,7 +616,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const take = await createSampleTakeGeneration({
+    const take = await createSampleTake({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -1197,7 +1197,7 @@ describe('media generation dependency inventory planner contracts', () => {
     await expect(
       planMediaGenerationDependencyInventory({
         rootPurpose: 'shot.video-take',
-        rootTarget: testTakeGenerationTarget(),
+        rootTarget: testTakeTarget(),
         rootLineId: 'root:test',
         rootLabel: 'Root',
         rootMediaKind: 'video',
@@ -1225,7 +1225,7 @@ describe('media generation dependency inventory planner contracts', () => {
     await expect(
       planMediaGenerationDependencyInventory({
         rootPurpose: 'shot.video-take',
-        rootTarget: testTakeGenerationTarget(),
+        rootTarget: testTakeTarget(),
         rootLineId: 'root:test',
         rootLabel: 'Root',
         rootMediaKind: 'video',
@@ -1331,7 +1331,7 @@ function generatedDependencySlot(dependencyId: string) {
   };
 }
 
-function testTakeGenerationTarget() {
+function testTakeTarget() {
   return {
     kind: 'sceneShotVideoTake' as const,
     id: 'scene:take_generation',
@@ -1384,7 +1384,7 @@ async function sampleIds(
   };
 }
 
-async function createSampleTakeGeneration(input: {
+async function createSampleTake(input: {
   projectData: ReturnType<typeof createProjectDataService>;
   homeDir: string;
   sceneId: string;
@@ -1497,7 +1497,7 @@ function generationInputFromAvailable(
   input: NonNullable<
     Awaited<ReturnType<ProjectDataService['importShotFirstFrame']>>
   >['mediaInput']
-): ShotVideoTakeGenerationSpec['inputs'][number] {
+): ShotVideoTakeOutputGenerationSpec['inputs'][number] {
   return {
     kind: input.kind,
     assetId: input.assetId,

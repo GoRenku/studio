@@ -4,9 +4,9 @@ import {
 import type {
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeOutputGenerationSpec,
   MediaGenerationEstimateReport,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
   insertMediaGenerationSpec,
@@ -21,9 +21,9 @@ import {
   ProjectDataError,
 } from '../../project-data-error.js';
 import type {
-  ValidateShotVideoTakeGenerationSpecInput,
-  CreateShotVideoTakeGenerationSpecInput,
-  UpdateShotVideoTakeGenerationSpecInput,
+  ValidateShotVideoTakeOutputGenerationSpecInput,
+  CreateShotVideoTakeOutputGenerationSpecInput,
+  UpdateShotVideoTakeOutputGenerationSpecInput,
   ShotVideoTakeContextInput,
   ReadMediaGenerationSpecInput,
 } from '../../project-data-service-contracts.js';
@@ -57,7 +57,7 @@ import {
 import {
   assertEditableSceneShotVideoTake,
   sameShotIds,
-} from './take-generation-context.js';
+} from './take-context.js';
 import {
   readShotSpec,
 } from './spec-records.js';
@@ -65,7 +65,7 @@ import {
 
 
 export async function validateShotVideoTakeSpec(
-  input: ValidateShotVideoTakeGenerationSpecInput
+  input: ValidateShotVideoTakeOutputGenerationSpecInput
 ) {
   const normalized = normalizeFinalSpec(input.spec);
   const context = await buildShotVideoTakeContext({
@@ -86,7 +86,7 @@ export async function validateShotVideoTakeSpec(
 
 
 export async function createShotVideoTakeSpec(
-  input: CreateShotVideoTakeGenerationSpecInput
+  input: CreateShotVideoTakeOutputGenerationSpecInput
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeFinalSpec(input.spec);
   const validation = await validateShotVideoTakeSpec({ ...input, spec: normalized });
@@ -105,7 +105,7 @@ export async function createShotVideoTakeSpec(
 
 
 export async function updateShotVideoTakeSpec(
-  input: UpdateShotVideoTakeGenerationSpecInput
+  input: UpdateShotVideoTakeOutputGenerationSpecInput
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeFinalSpec(input.spec);
   const validation = await validateShotVideoTakeSpec({ ...input, spec: normalized });
@@ -161,7 +161,7 @@ export async function prepareShotVideoTakeSpec(
 export async function prepareShotVideoTakeDraftSpec(input: {
   projectName?: string;
   homeDir?: string;
-  spec: ShotVideoTakeGenerationSpec;
+  spec: ShotVideoTakeOutputGenerationSpec;
 }): Promise<PreparedMediaGeneration> {
   const normalized = normalizeFinalSpec(input.spec);
   const context = await buildShotVideoTakeContext({
@@ -238,7 +238,7 @@ export async function estimateShotVideoTakeSpec(
 
 
 
-export function normalizeFinalSpec(spec: ShotVideoTakeGenerationSpec): ShotVideoTakeGenerationSpec {
+export function normalizeFinalSpec(spec: ShotVideoTakeOutputGenerationSpec): ShotVideoTakeOutputGenerationSpec {
   if (spec.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
     throw new ProjectDataError(
       'PROJECT_DATA367',
@@ -251,8 +251,8 @@ export function normalizeFinalSpec(spec: ShotVideoTakeGenerationSpec): ShotVideo
 
 
 export function validateFinalSpecAgainstContext(
-  spec: ShotVideoTakeGenerationSpec,
-  context: ShotVideoTakeGenerationContext
+  spec: ShotVideoTakeOutputGenerationSpec,
+  context: ShotVideoTakeProductionContext
 ): void {
   validateFinalPricingSpecAgainstContext(spec, context);
   const missingInputs = missingRequiredRouteInputLabelsForFinalSpec({
@@ -315,8 +315,8 @@ export function validateFinalSpecAgainstContext(
 
 
 export function validateFinalPricingSpecAgainstContext(
-  spec: ShotVideoTakeGenerationSpec,
-  context: ShotVideoTakeGenerationContext
+  spec: ShotVideoTakeOutputGenerationSpec,
+  context: ShotVideoTakeProductionContext
 ): void {
   if (!sameShotIds(spec.target.shotIds, context.target.shotIds)) {
     throw new ProjectDataError(
@@ -345,7 +345,7 @@ export function validateFinalPricingSpecAgainstContext(
 
 export function assertShotVideoTakeSpec(
   spec: unknown
-): asserts spec is ShotVideoTakeGenerationSpec {
+): asserts spec is ShotVideoTakeOutputGenerationSpec {
   if (!spec || typeof spec !== 'object' || (spec as { purpose?: string }).purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
     throw new ProjectDataError('PROJECT_DATA367', 'Media generation spec is not a shot video take spec.');
   }

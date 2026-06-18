@@ -13,7 +13,7 @@ import {
   DesignSection,
   PillToggle,
 } from './scene-shot-design-controls';
-import { useShotSpecsContext } from './shot-specs-context';
+import { useTakeShotDesignContext } from './take-shot-design-context';
 import {
   CAMERA_ANGLE_OPTIONS,
   FOCUS_OPTIONS,
@@ -24,19 +24,24 @@ import {
 } from './scene-shot-design-vocabulary';
 
 export function SceneShotCompositionTab() {
-  const { shotSpecs, update } = useShotSpecsContext();
-  const lens = shotSpecs.lens ?? {};
+  const { shotDesign, update } = useTakeShotDesignContext();
+  const composition = shotDesign.composition ?? {};
+  const motion = shotDesign.motion ?? {};
+  const lens = composition.lens ?? {};
 
   const toggleShotSize = (id: string) =>
     update({
-      ...shotSpecs,
-      shotSize:
-        shotSpecs.shotSize === id ? undefined : (id as ShotSizeId),
+      ...shotDesign,
+      composition: {
+        ...composition,
+        shotSize:
+          composition.shotSize === id ? undefined : (id as ShotSizeId),
+      },
     });
 
   const toggleSubjectFraming = (raw: string) => {
     const id = raw as SubjectFramingId;
-    const current = shotSpecs.subjectFraming ?? [];
+    const current = composition.subjectFraming ?? [];
     let next: SubjectFramingId[];
     if (current.includes(id)) {
       next = current.filter((value) => value !== id);
@@ -51,37 +56,49 @@ export function SceneShotCompositionTab() {
     } else {
       next = [...current, id];
     }
-    update({ ...shotSpecs, subjectFraming: next });
+    update({
+      ...shotDesign,
+      composition: { ...composition, subjectFraming: next },
+    });
   };
 
   const toggleAngle = (id: string) =>
     update({
-      ...shotSpecs,
-      cameraAngle:
-        shotSpecs.cameraAngle === id ? undefined : (id as CameraAngleId),
+      ...shotDesign,
+      composition: {
+        ...composition,
+        cameraAngle:
+          composition.cameraAngle === id ? undefined : (id as CameraAngleId),
+      },
     });
 
   const setDutch = (value: 'left' | 'right' | undefined) =>
-    update({ ...shotSpecs, dutch: value });
+    update({ ...shotDesign, composition: { ...composition, dutch: value } });
 
   const toggleLens = (id: LensId) =>
     update({
-      ...shotSpecs,
-      lens: {
-        ...lens,
-        type: lens.type === id ? undefined : id,
-        millimeters:
-          lens.type === id ? undefined : lens.millimeters,
+      ...shotDesign,
+      composition: {
+        ...composition,
+        lens: {
+          ...lens,
+          type: lens.type === id ? undefined : id,
+          millimeters:
+            lens.type === id ? undefined : lens.millimeters,
+        },
       },
     });
 
   const setLensMillimeters = (value: string) => {
     const trimmed = value.trim();
     update({
-      ...shotSpecs,
-      lens: {
-        ...lens,
-        millimeters: trimmed ? Number(trimmed) : undefined,
+      ...shotDesign,
+      composition: {
+        ...composition,
+        lens: {
+          ...lens,
+          millimeters: trimmed ? Number(trimmed) : undefined,
+        },
       },
     });
   };
@@ -89,29 +106,35 @@ export function SceneShotCompositionTab() {
   const toggleFocus = (id: FocusId) => {
     const clearingRackFocus = lens.focus === id && id === 'rack-focus';
     update({
-      ...shotSpecs,
-      lens: {
-        ...lens,
-        focus: lens.focus === id ? undefined : id,
+      ...shotDesign,
+      composition: {
+        ...composition,
+        lens: {
+          ...lens,
+          focus: lens.focus === id ? undefined : id,
+        },
       },
-      movement: clearingRackFocus
+      motion: clearingRackFocus
         ? {
-            ...shotSpecs.movement,
+            ...motion,
             movement:
-              shotSpecs.movement?.movement === 'rack-focus'
+              motion.movement === 'rack-focus'
                 ? undefined
-                : shotSpecs.movement?.movement,
+                : motion.movement,
             secondary:
-              shotSpecs.movement?.secondary === 'rack-focus'
+              motion.secondary === 'rack-focus'
                 ? undefined
-                : shotSpecs.movement?.secondary,
+                : motion.secondary,
           }
-        : shotSpecs.movement,
+        : shotDesign.motion,
     });
   };
 
   const setCustomComposition = (value: string) =>
-    update({ ...shotSpecs, custom: { ...shotSpecs.custom, composition: value } });
+    update({
+      ...shotDesign,
+      composition: { ...composition, customComposition: value },
+    });
 
   return (
     <div className='space-y-6 py-4'>
@@ -119,7 +142,7 @@ export function SceneShotCompositionTab() {
         <OptionTileGroup
           ariaLabel='Shot size'
           options={SHOT_SIZE_OPTIONS}
-          selectedIds={shotSpecs.shotSize ? [shotSpecs.shotSize] : []}
+          selectedIds={composition.shotSize ? [composition.shotSize] : []}
           onToggle={toggleShotSize}
         />
       </DesignSection>
@@ -128,7 +151,7 @@ export function SceneShotCompositionTab() {
         <OptionTileGroup
           ariaLabel='Subject framing'
           options={SUBJECT_FRAMING_OPTIONS}
-          selectedIds={shotSpecs.subjectFraming ?? []}
+          selectedIds={composition.subjectFraming ?? []}
           onToggle={toggleSubjectFraming}
         />
       </DesignSection>
@@ -137,7 +160,7 @@ export function SceneShotCompositionTab() {
         <OptionTileGroup
           ariaLabel='Camera angle and height'
           options={CAMERA_ANGLE_OPTIONS}
-          selectedIds={shotSpecs.cameraAngle ? [shotSpecs.cameraAngle] : []}
+          selectedIds={composition.cameraAngle ? [composition.cameraAngle] : []}
           onToggle={toggleAngle}
         />
       </DesignSection>
@@ -145,20 +168,20 @@ export function SceneShotCompositionTab() {
       <DesignSection title='Dutch'>
         <div className='flex flex-wrap gap-2'>
           <PillToggle
-            selected={!shotSpecs.dutch}
+            selected={!composition.dutch}
             onClick={() => setDutch(undefined)}
           >
             None
           </PillToggle>
           <PillToggle
-            selected={shotSpecs.dutch === 'left'}
+            selected={composition.dutch === 'left'}
             onClick={() => setDutch('left')}
           >
             <RotateCcw className='h-3.5 w-3.5' />
             Left
           </PillToggle>
           <PillToggle
-            selected={shotSpecs.dutch === 'right'}
+            selected={composition.dutch === 'right'}
             onClick={() => setDutch('right')}
           >
             <RotateCw className='h-3.5 w-3.5' />
@@ -210,7 +233,7 @@ export function SceneShotCompositionTab() {
       <DesignSection title='6. Custom Composition'>
         <CustomFieldRow
           placeholder='Custom composition...'
-          value={shotSpecs.custom?.composition ?? ''}
+          value={composition.customComposition ?? ''}
           onChange={setCustomComposition}
         />
       </DesignSection>

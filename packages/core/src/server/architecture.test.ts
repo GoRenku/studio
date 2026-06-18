@@ -120,7 +120,6 @@ describe('core server architecture', () => {
         continue;
       }
       const deletedClientPath = ['media-generation', 'js'].join('.');
-      const deletedShotVideoPath = ['shot-video-take', 'js'].join('.');
       const importsDeletedClientPath =
         source.includes(`from '../client/${deletedClientPath}'`) ||
         source.includes(`from "../client/${deletedClientPath}"`) ||
@@ -128,13 +127,8 @@ describe('core server architecture', () => {
         source.includes(`from "../../client/${deletedClientPath}"`) ||
         source.includes(`import('./${deletedClientPath}')`) ||
         source.includes(`import("./${deletedClientPath}")`);
-      const importsDeletedShotVideoPath =
-        source.includes(`from './${deletedShotVideoPath}'`) ||
-        source.includes(`from "./${deletedShotVideoPath}"`) ||
-        source.includes(`from '../media-generation/${deletedShotVideoPath}'`) ||
-        source.includes(`from "../media-generation/${deletedShotVideoPath}"`);
 
-      if (importsDeletedClientPath || importsDeletedShotVideoPath) {
+      if (importsDeletedClientPath) {
         offenders.push(relativePath);
       }
     }

@@ -10,15 +10,13 @@ import type {
 } from '@/services/studio-project-contracts';
 import {
   deleteSceneDialogueAudioTake,
-  pickSceneDialogueAudioTake,
   readSceneDialogueAudioContext,
   type SceneDialogueAudioContextWithUrls,
 } from '@/services/studio-scene-dialogue-audio-api';
 import {
   updateShotGroupReferenceInclusion,
-  updateShotReferenceInclusion,
+  updateTakeDialogueAudioSelection,
   type ShotVideoTakeProductionMutation,
-  type ShotVideoTakeResourceMutation,
 } from '@/services/studio-shot-video-takes-api';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
@@ -48,7 +46,6 @@ interface SceneShotDialogsTabProps {
   sceneId: string;
   castMemberImages: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
-  onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
   onPlanRefresh?: () => Promise<void>;
 }
 
@@ -57,7 +54,6 @@ export function SceneShotDialogsTab({
   sceneId,
   castMemberImages,
   productionPlan,
-  onResourceRefreshed,
   onPlanRefresh,
 }: SceneShotDialogsTabProps) {
   const [dialogueAudioContext, setDialogueAudioContext] =
@@ -103,38 +99,41 @@ export function SceneShotDialogsTab({
     inclusion: 'include' | 'exclude' | null
   ) => {
     const take = productionPlan?.take;
-    const shotIds = take?.shotIds ?? [];
-    const result: ShotVideoTakeResourceMutation | ShotVideoTakeProductionMutation =
-      take
-        ? await updateShotGroupReferenceInclusion(
-            projectName,
-            sceneId,
-            take.takeId,
-            {
-              dependencyId,
-              inclusion,
-            }
-          )
-        : await updateShotReferenceInclusion(projectName, sceneId, shotIds[0] ?? '', {
-            dependencyId,
-            inclusion,
-          });
-    if ('resource' in result) {
-      onResourceRefreshed?.(result.resource);
+    if (!take) {
+      return;
     }
+    const result: ShotVideoTakeProductionMutation =
+      await updateShotGroupReferenceInclusion(
+        projectName,
+        sceneId,
+        take.takeId,
+        {
+          dependencyId,
+          inclusion,
+        }
+      );
+    void result;
     await onPlanRefresh?.();
   };
 
   const pickTake = async (dialogueId: string, takeId: string) => {
+    const take = productionPlan?.take;
+    if (!take) {
+      return;
+    }
     setActionBusy(true);
     try {
-      const report = await pickSceneDialogueAudioTake(
+      await updateTakeDialogueAudioSelection(
         projectName,
         sceneId,
-        dialogueId,
-        takeId
+        take.takeId,
+        { dialogueId, takeId }
       );
-      setDialogueAudioContext(report.context);
+      const context = await readSceneDialogueAudioContext(
+        projectName,
+        sceneId
+      );
+      setDialogueAudioContext(context);
       await onPlanRefresh?.();
     } finally {
       setActionBusy(false);
@@ -410,11 +409,8 @@ function dialogueAudioStateLabel(
   if (choice.audioState === 'not-generated') {
     return 'Not generated';
   }
-  if (choice.audioState === 'no-picked-take') {
-    return 'No picked take';
-  }
-  if (choice.audioState === 'multiple-picked-takes') {
-    return 'Multiple picked takes';
+  if (choice.audioState === 'no-selected-take') {
+    return 'No selected take';
   }
   if (choice.audioState === 'missing-file') {
     return 'Missing audio file';

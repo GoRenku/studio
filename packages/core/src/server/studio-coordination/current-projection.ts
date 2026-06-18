@@ -5,7 +5,7 @@ import type {
   ScenePanelTab,
   SceneShot,
   SceneShotDetailTab,
-  SceneShotWithLegacyShotSpecs,
+  SceneShotVideoTakeShotDesign,
 } from '../../client/index.js';
 import {
   CAMERA_ANGLE_LABELS,
@@ -374,36 +374,45 @@ async function shotTabSelections(input: {
   selections: StudioCurrentShotTabSelections;
   warnings: DiagnosticIssue[];
 }> {
-  const shotSpecs = (input.shot as SceneShotWithLegacyShotSpecs).shotSpecs;
+  const take = input.takeId
+    ? await input.projectData.readSceneShotVideoTake({
+        projectName: input.projectName,
+        takeId: input.takeId,
+        homeDir: input.homeDir,
+      })
+    : null;
+  const shotDesign = take?.state.shotDesignByShotId[input.shot.shotId];
+  const composition = shotDesign?.composition;
+  const motion = shotDesign?.motion;
   switch (input.shotTab) {
     case 'composition':
       return {
         selections: {
           kind: 'composition',
-        ...(shotSpecs?.shotSize
+        ...(composition?.shotSize
           ? {
               shotSize: {
-                id: shotSpecs.shotSize,
-                label: SHOT_SIZE_LABELS[shotSpecs.shotSize],
+                id: composition.shotSize,
+                label: SHOT_SIZE_LABELS[composition.shotSize],
               },
             }
           : {}),
-        subjectFraming: (shotSpecs?.subjectFraming ?? []).map((id) => ({
+        subjectFraming: (composition?.subjectFraming ?? []).map((id) => ({
           id,
           label: SUBJECT_FRAMING_LABELS[id],
         })),
-        ...(shotSpecs?.cameraAngle
+        ...(composition?.cameraAngle
           ? {
               cameraAngle: {
-                id: shotSpecs.cameraAngle,
-                label: CAMERA_ANGLE_LABELS[shotSpecs.cameraAngle],
+                id: composition.cameraAngle,
+                label: CAMERA_ANGLE_LABELS[composition.cameraAngle],
               },
             }
           : {}),
-        ...(shotSpecs?.dutch ? { dutch: shotSpecs.dutch } : {}),
-          ...compositionLens(shotSpecs),
-          ...(shotSpecs?.custom?.composition?.trim()
-            ? { customComposition: shotSpecs.custom.composition.trim() }
+        ...(composition?.dutch ? { dutch: composition.dutch } : {}),
+          ...compositionLens(shotDesign),
+          ...(composition?.customComposition?.trim()
+            ? { customComposition: composition.customComposition.trim() }
             : {}),
         },
         warnings: [],
@@ -412,51 +421,51 @@ async function shotTabSelections(input: {
       return {
         selections: {
           kind: 'motion',
-        ...(shotSpecs?.movement?.movement
+        ...(motion?.movement
           ? {
               movement: {
-                id: shotSpecs.movement.movement,
-                label: MOVEMENT_LABELS[shotSpecs.movement.movement],
+                id: motion.movement,
+                label: MOVEMENT_LABELS[motion.movement],
               },
             }
           : {}),
-        ...(shotSpecs?.movement?.secondary
+        ...(motion?.secondary
           ? {
               secondary: {
-                id: shotSpecs.movement.secondary,
-                label: MOVEMENT_LABELS[shotSpecs.movement.secondary],
+                id: motion.secondary,
+                label: MOVEMENT_LABELS[motion.secondary],
               },
             }
           : {}),
-        directions: (shotSpecs?.movement?.directions ?? []).map((id) => ({
+        directions: (motion?.directions ?? []).map((id) => ({
           id,
           label: MOVE_DIRECTION_LABELS[id],
         })),
-        ...(shotSpecs?.movement?.track
+        ...(motion?.track
           ? {
               track: {
-                id: shotSpecs.movement.track,
-                label: MOVE_TRACK_LABELS[shotSpecs.movement.track],
+                id: motion.track,
+                label: MOVE_TRACK_LABELS[motion.track],
               },
             }
           : {}),
-        ...(shotSpecs?.movement?.rig
+        ...(motion?.rig
           ? {
               rig: {
-                id: shotSpecs.movement.rig,
-                label: RIG_LABELS[shotSpecs.movement.rig],
+                id: motion.rig,
+                label: RIG_LABELS[motion.rig],
               },
             }
           : {}),
-          ...(shotSpecs?.custom?.movement?.trim()
-            ? { customMotion: shotSpecs.custom.movement.trim() }
+          ...(motion?.customMotion?.trim()
+            ? { customMotion: motion.customMotion.trim() }
             : {}),
         },
         warnings: [],
       };
     case 'cast': {
       const castMemberIds =
-        shotSpecs?.castReferences?.castMemberIds ?? input.shot.castMemberIds;
+        shotDesign?.cast?.castMemberIds ?? input.shot.castMemberIds;
       return {
         selections: {
           kind: 'cast',
@@ -469,8 +478,8 @@ async function shotTabSelections(input: {
       };
     }
     case 'location': {
-      const locationIds = shotSpecs?.location?.locationId
-        ? [shotSpecs.location.locationId]
+      const locationIds = shotDesign?.location?.locationId
+        ? [shotDesign.location.locationId]
         : input.shot.locationIds;
       return {
         selections: {
@@ -517,7 +526,7 @@ async function shotTabSelections(input: {
           selections: {
             kind: 'take',
             takeId: take.takeId,
-            sourceShotListId: take.shotListId,
+            sourceShotListId: take.sourceShotListId,
             shotIds: take.shotIds,
           },
           warnings: [],
@@ -544,10 +553,8 @@ async function shotTabSelections(input: {
   }
 }
 
-function compositionLens(
-  shotSpecs: SceneShotWithLegacyShotSpecs['shotSpecs']
-) {
-  const lens = shotSpecs?.lens;
+function compositionLens(shotDesign: SceneShotVideoTakeShotDesign | undefined) {
+  const lens = shotDesign?.composition?.lens;
   if (!lens?.type && !lens?.focus && lens?.millimeters === undefined) {
     return {};
   }

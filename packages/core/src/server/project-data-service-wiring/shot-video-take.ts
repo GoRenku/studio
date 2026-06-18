@@ -1,7 +1,7 @@
 import { buildShotVideoTakeContext, readSceneShotVideoTakeEditContext } from '../media-generation/shot-video-take/context.js';
 import { listShotVideoTakeModels } from '../media-generation/shot-video-take/model-list.js';
 import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/shot-video-take/input-selection.js';
-import { createSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeState, updateSceneShotVideoTakeShotSpecs, updateSceneShotVideoTakeShots } from '../media-generation/shot-video-take/take-generations.js';
+import { createSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeState, updateSceneShotVideoTakeShotDesign, updateSceneShotVideoTakeShots } from '../media-generation/shot-video-take/takes.js';
 import { estimateShotVideoTakeProduction, planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
 import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
@@ -21,8 +21,8 @@ export function createShotVideoTakeServiceWiring() {
       updateSceneShotVideoTakeProduction,
     updateSceneShotVideoTakeState:
       updateSceneShotVideoTakeState,
-    updateSceneShotVideoTakeShotSpecs:
-      updateSceneShotVideoTakeShotSpecs,
+    updateSceneShotVideoTakeShotDesign:
+      updateSceneShotVideoTakeShotDesign,
     updateSceneShotVideoTakeShots:
       updateSceneShotVideoTakeShots,
     buildShotVideoTakeContext: buildShotVideoTakeContext,

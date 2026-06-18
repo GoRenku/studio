@@ -1,6 +1,6 @@
 import type {
   SceneShotVideoTake,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
   insertSceneShotVideoTakeRecord,
@@ -8,9 +8,9 @@ import {
   requireSceneShotVideoTake,
   updateSceneShotVideoTakeProductionRecord,
   updateSceneShotVideoTakeStateRecord,
-  updateSceneShotVideoTakeShotSpecsRecord,
+  updateSceneShotVideoTakeShotDesignRecord,
   updateSceneShotVideoTakeShotMembershipRecord,
-} from '../../database/access/scene-shot-video-take-generations.js';
+} from '../../database/access/scene-shot-video-takes.js';
 import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
@@ -21,7 +21,7 @@ import type {
   ReadSceneShotVideoTakeInput,
   UpdateSceneShotVideoTakeProductionInput,
   UpdateSceneShotVideoTakeStateInput,
-  UpdateSceneShotVideoTakeShotSpecsInput,
+  UpdateSceneShotVideoTakeShotDesignInput,
   UpdateSceneShotVideoTakeShotsInput,
 } from '../../project-data-service-contracts.js';
 import {
@@ -34,7 +34,7 @@ import {
 import {
   assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
-} from './take-generation-context.js';
+} from './take-context.js';
 
 export async function createSceneShotVideoTake(
   input: CreateSceneShotVideoTakeInput
@@ -84,7 +84,7 @@ export async function listSceneShotVideoTakes(
 
 export async function updateSceneShotVideoTakeProduction(
   input: UpdateSceneShotVideoTakeProductionInput
-): Promise<ShotVideoTakeGenerationContext> {
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
     const current = requireSceneShotVideoTake(session, {
@@ -111,9 +111,9 @@ export async function updateSceneShotVideoTakeProduction(
   });
 }
 
-export async function updateSceneShotVideoTakeShotSpecs(
-  input: UpdateSceneShotVideoTakeShotSpecsInput
-): Promise<ShotVideoTakeGenerationContext> {
+export async function updateSceneShotVideoTakeShotDesign(
+  input: UpdateSceneShotVideoTakeShotDesignInput
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
     const current = requireSceneShotVideoTake(session, {
@@ -121,10 +121,10 @@ export async function updateSceneShotVideoTakeShotSpecs(
       screenplay,
     });
     assertEditableSceneShotVideoTake(current);
-    updateSceneShotVideoTakeShotSpecsRecord(session, {
+    updateSceneShotVideoTakeShotDesignRecord(session, {
       takeId: input.takeId,
       shotId: input.shotId,
-      shotSpecs: input.shotSpecs,
+      shotDesign: input.shotDesign,
       screenplay,
       now: new Date().toISOString(),
     });
@@ -143,7 +143,7 @@ export async function updateSceneShotVideoTakeShotSpecs(
 
 export async function updateSceneShotVideoTakeState(
   input: UpdateSceneShotVideoTakeStateInput
-): Promise<ShotVideoTakeGenerationContext> {
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
     const current = requireSceneShotVideoTake(session, {
@@ -175,7 +175,7 @@ export async function updateSceneShotVideoTakeState(
 
 export async function updateSceneShotVideoTakeShots(
   input: UpdateSceneShotVideoTakeShotsInput
-): Promise<ShotVideoTakeGenerationContext> {
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
     const current = requireSceneShotVideoTake(session, {
@@ -218,27 +218,27 @@ function mergeSceneShotVideoTakeStatePatch(input: {
       ...input.current.referenceSelections,
       ...input.patch.referenceSelections,
       dependencyInclusions: {
-        ...input.current.referenceSelections.dependencyInclusions,
-        ...input.patch.referenceSelections?.dependencyInclusions,
+        ...(input.patch.referenceSelections?.dependencyInclusions ??
+          input.current.referenceSelections.dependencyInclusions),
       },
       selectedCharacterSheetAssetIds: {
-        ...input.current.referenceSelections.selectedCharacterSheetAssetIds,
-        ...input.patch.referenceSelections?.selectedCharacterSheetAssetIds,
+        ...(input.patch.referenceSelections?.selectedCharacterSheetAssetIds ??
+          input.current.referenceSelections.selectedCharacterSheetAssetIds),
       },
       selectedLocationSheetAssetIds: {
-        ...input.current.referenceSelections.selectedLocationSheetAssetIds,
-        ...input.patch.referenceSelections?.selectedLocationSheetAssetIds,
+        ...(input.patch.referenceSelections?.selectedLocationSheetAssetIds ??
+          input.current.referenceSelections.selectedLocationSheetAssetIds),
       },
       selectedLocationViewIds: {
-        ...input.current.referenceSelections.selectedLocationViewIds,
-        ...input.patch.referenceSelections?.selectedLocationViewIds,
+        ...(input.patch.referenceSelections?.selectedLocationViewIds ??
+          input.current.referenceSelections.selectedLocationViewIds),
       },
       selectedLookbookSheetIds:
         input.patch.referenceSelections?.selectedLookbookSheetIds ??
         input.current.referenceSelections.selectedLookbookSheetIds,
       selectedDialogueAudioTakeIds: {
-        ...input.current.referenceSelections.selectedDialogueAudioTakeIds,
-        ...input.patch.referenceSelections?.selectedDialogueAudioTakeIds,
+        ...(input.patch.referenceSelections?.selectedDialogueAudioTakeIds ??
+          input.current.referenceSelections.selectedDialogueAudioTakeIds),
       },
     },
     production: {

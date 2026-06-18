@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type {
   SceneShotVideoTakeTarget,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import { buildShotInputDependencyDraftSpec } from './dependency-draft-specs.js';
 
@@ -86,9 +86,9 @@ describe('shot video take dependency draft specs', () => {
 function testTarget(): SceneShotVideoTakeTarget {
   return {
     kind: 'sceneShotVideoTake',
-    id: 'take_generation_a',
+    id: 'take_a',
     sceneId: 'scene_a',
-    takeId: 'take_generation_a',
+    takeId: 'take_a',
     shotIds: ['shot_001'],
   };
 }
@@ -96,9 +96,9 @@ function testTarget(): SceneShotVideoTakeTarget {
 function testContext(
   target: SceneShotVideoTakeTarget,
   dependencyDraft?: NonNullable<
-    ShotVideoTakeGenerationContext['take']['production']['agentProposal']
+    ShotVideoTakeProductionContext['take']['state']['production']['agentProposal']
   >['dependencyDrafts'][number]
-): ShotVideoTakeGenerationContext {
+): ShotVideoTakeProductionContext {
   return {
     purpose: 'shot.video-take',
     target,
@@ -123,11 +123,11 @@ function testContext(
       isActive: true,
     },
     take: {
-      takeId: 'take_generation_a',
+      takeId: 'take_a',
       sceneId: 'scene_a',
-      shotListId: 'shot_list_a',
+      sourceShotListId: 'shot_list_a',
       shotIds: ['shot_001'],
-      title: 'Take generation A',
+      title: 'Shot Video Take A',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
       status: {
@@ -160,19 +160,18 @@ function testContext(
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },
-        production: {},
-      },
-      production: {
-        ...(dependencyDraft
-          ? {
-              agentProposal: {
-                basedOnInputModeId: 'first-frame',
-                basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
-                basedOnShotIds: ['shot_001'],
-                dependencyDrafts: [dependencyDraft],
-              },
-            }
-          : {}),
+        production: {
+          ...(dependencyDraft
+            ? {
+                agentProposal: {
+                  basedOnInputModeId: 'first-frame',
+                  basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+                  basedOnShotIds: ['shot_001'],
+                  dependencyDrafts: [dependencyDraft],
+                },
+              }
+            : {}),
+        },
       },
     },
     shotGroupMode: 'single-shot',

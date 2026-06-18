@@ -19,7 +19,7 @@ import {
   DesignSection,
   PillToggle,
 } from './scene-shot-design-controls';
-import { useShotSpecsContext } from './shot-specs-context';
+import { useTakeShotDesignContext } from './take-shot-design-context';
 import { MOVEMENT_OPTIONS, RIG_OPTIONS } from './scene-shot-design-vocabulary';
 
 // Minimum tile width (px) for the Movement preview grid. The grid is
@@ -50,21 +50,25 @@ const TRACK_OPTIONS: Array<{
 ];
 
 export function SceneShotCameraMotionTab() {
-  const { shotSpecs, update } = useShotSpecsContext();
-  const movement = shotSpecs.movement ?? {};
+  const { shotDesign, update } = useTakeShotDesignContext();
+  const composition = shotDesign.composition ?? {};
+  const movement = shotDesign.motion ?? {};
 
   const toggleMovement = (id: string) =>
     update({
-      ...shotSpecs,
-      movement: {
+      ...shotDesign,
+      motion: {
         ...movement,
         movement:
           movement.movement === id ? undefined : (id as ShotMovementId),
       },
-      lens:
+      composition:
         movement.movement !== id && id === 'rack-focus'
-          ? { ...shotSpecs.lens, focus: 'rack-focus' }
-          : shotSpecs.lens,
+          ? {
+              ...composition,
+              lens: { ...composition.lens, focus: 'rack-focus' },
+            }
+          : shotDesign.composition,
     });
 
   const toggleDirection = (id: MoveDirectionId) => {
@@ -72,13 +76,13 @@ export function SceneShotCameraMotionTab() {
     const next = current.includes(id)
       ? current.filter((value) => value !== id)
       : [...current, id];
-    update({ ...shotSpecs, movement: { ...movement, directions: next } });
+    update({ ...shotDesign, motion: { ...movement, directions: next } });
   };
 
   const toggleTrack = (id: MoveTrackId) =>
     update({
-      ...shotSpecs,
-      movement: {
+      ...shotDesign,
+      motion: {
         ...movement,
         track: movement.track === id ? undefined : id,
       },
@@ -86,15 +90,15 @@ export function SceneShotCameraMotionTab() {
 
   const toggleRig = (id: string) =>
     update({
-      ...shotSpecs,
-      movement: {
+      ...shotDesign,
+      motion: {
         ...movement,
         rig: movement.rig === id ? undefined : (id as RigId),
       },
     });
 
   const setCustomMotion = (value: string) =>
-    update({ ...shotSpecs, custom: { ...shotSpecs.custom, movement: value } });
+    update({ ...shotDesign, motion: { ...movement, customMotion: value } });
 
   return (
     <div className='space-y-6 py-4'>
@@ -161,7 +165,7 @@ export function SceneShotCameraMotionTab() {
       <DesignSection title='Custom motion'>
         <CustomFieldRow
           placeholder='Custom motion…'
-          value={shotSpecs.custom?.movement ?? ''}
+          value={movement.customMotion ?? ''}
           onChange={setCustomMotion}
         />
       </DesignSection>

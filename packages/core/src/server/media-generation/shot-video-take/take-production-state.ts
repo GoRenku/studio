@@ -1,12 +1,12 @@
 import type {
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
 } from '../../../client/index.js';
 
-export function carryTakeGenerationProductionForShotMembership(input: {
-  production: ShotVideoTakeGenerationProduction;
+export function carryTakeProductionStateForShotMembership(input: {
+  production: SceneShotVideoTakeProductionState;
   previousShotIds: string[];
   nextShotIds: string[];
-}): ShotVideoTakeGenerationProduction {
+}): SceneShotVideoTakeProductionState {
   const membershipChanged = !sameShotIds(
     input.previousShotIds,
     input.nextShotIds

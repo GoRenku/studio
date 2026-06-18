@@ -1,22 +1,14 @@
 import type {
   LocationAzimuthViewId,
   SceneShot,
-  SceneShotWithLegacyShotSpecs,
+  SceneShotVideoTakeState,
 } from '../../../client/index.js';
 import type { SceneReferenceScope } from './reference-scope.js';
 
-
-
-type SceneShotReferenceCarrier = SceneShotWithLegacyShotSpecs;
-
 export function selectedCastIdsForShots(
-  shots: SceneShotReferenceCarrier[]
+  shots: SceneShot[]
 ): Set<string> {
-  return new Set(
-    shots.flatMap(
-      (shot) => shot.shotSpecs?.castReferences?.castMemberIds ?? shot.castMemberIds
-    )
-  );
+  return new Set(shots.flatMap((shot) => shot.castMemberIds));
 }
 
 export function selectedNarrativeCastIdsForShots(input: {
@@ -42,14 +34,11 @@ export function defaultCastIdsForShots(shots: SceneShot[]): Set<string> {
 
 
 export function selectedLocationIdsForShots(
-  shots: SceneShotReferenceCarrier[]
+  shots: SceneShot[]
 ): Set<string> {
   const selected = new Set<string>();
   shots.forEach((shot) => {
     shot.locationIds.forEach((locationId) => selected.add(locationId));
-    if (shot.shotSpecs?.location?.locationId) {
-      selected.add(shot.shotSpecs.location.locationId);
-    }
   });
   return selected;
 }
@@ -89,62 +78,35 @@ export function effectiveScopedLocationSelectionForShots(
 
 
 
-export function selectedLookbookSheetIdsForShots(
-  shots: SceneShotReferenceCarrier[]
+export function selectedLookbookSheetIdsForTakeState(
+  state: SceneShotVideoTakeState
 ): Set<string> {
-  const selected = new Set<string>();
-  for (const shot of shots) {
-    const lookbookSheetId = shot.shotSpecs?.lookbookReference?.lookbookSheetId;
-    if (lookbookSheetId) {
-      selected.add(lookbookSheetId);
-    }
-  }
-  return selected;
+  return new Set(state.referenceSelections.selectedLookbookSheetIds);
 }
 
 
 
-export function selectedCharacterSheetAssetIdForShots(
-  shots: SceneShotReferenceCarrier[],
+export function selectedCharacterSheetAssetIdForTakeState(
+  state: SceneShotVideoTakeState,
   castMemberId: string
 ): string | null {
-  for (const shot of shots) {
-    const assetId = shot.shotSpecs?.castReferences?.characterSheetAssetIds?.[
-      castMemberId
-    ];
-    if (assetId) {
-      return assetId;
-    }
-  }
-  return null;
+  return state.referenceSelections.selectedCharacterSheetAssetIds[castMemberId] ?? null;
 }
 
 
 
-export function selectedEnvironmentSheetAssetIdForShots(
-  shots: SceneShotReferenceCarrier[],
+export function selectedEnvironmentSheetAssetIdForTakeState(
+  state: SceneShotVideoTakeState,
   locationId: string
 ): string | null {
-  for (const shot of shots) {
-    const location = shot.shotSpecs?.location;
-    if (location?.locationId === locationId && location.environmentSheetAssetId) {
-      return location.environmentSheetAssetId;
-    }
-  }
-  return null;
+  return state.referenceSelections.selectedLocationSheetAssetIds[locationId] ?? null;
 }
 
 
 
-export function selectedLocationViewIdsForShots(
-  shots: SceneShotReferenceCarrier[],
+export function selectedLocationViewIdsForTakeState(
+  state: SceneShotVideoTakeState,
   locationId: string
 ): LocationAzimuthViewId[] {
-  for (const shot of shots) {
-    const location = shot.shotSpecs?.location;
-    if (location?.locationId === locationId && location.viewIds?.length) {
-      return [...new Set(location.viewIds)];
-    }
-  }
-  return ['front'];
+  return state.referenceSelections.selectedLocationViewIds[locationId] ?? ['front'];
 }

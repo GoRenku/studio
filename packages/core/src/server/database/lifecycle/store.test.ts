@@ -126,7 +126,7 @@ function projectDatabasePath(projectFolder: string): string {
 }
 
 function createCurrentProjectDatabase(projectFolder: string): void {
-  createProjectDatabaseWithSchemaGeneration(projectFolder, 22);
+  createProjectDatabaseWithSchemaGeneration(projectFolder, 23);
 }
 
 function createProjectDatabaseWithSchemaGeneration(

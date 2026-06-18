@@ -1,10 +1,10 @@
 import type {
   ShotVideoTakeInputKind,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakePreflightInput,
   SceneShotVideoTakeMediaInput,
   ShotVideoTakePreflightDependency,
-  ShotVideoTakeGenerationPlan,
+  ShotVideoTakeOutputGenerationPlan,
   ShotVideoTakePreflightInputItem,
   MediaGenerationPlanLine,
   MediaGenerationDependencyLine,
@@ -40,7 +40,7 @@ import {
   referenceInclusionForDependencyId,
 } from './reference-inclusions.js';
 import {
-  selectedLookbookSheetIdsForShots,
+  selectedLookbookSheetIdsForTakeState,
 } from './reference-selection.js';
 import {
   requireScreenplayDocument,
@@ -63,11 +63,11 @@ export const SHOT_VIDEO_TAKE_INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, s
 
 
 export function buildShotVideoTakePreflightInputItems(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   preparedInputs: ShotVideoTakePreflightInput[];
   mediaInputs: SceneShotVideoTakeMediaInput[];
   inputsToCreate: ShotVideoTakePreflightDependency[];
-  plan: ShotVideoTakeGenerationPlan;
+  plan: ShotVideoTakeOutputGenerationPlan;
 }): ShotVideoTakePreflightInputItem[] {
   const items: ShotVideoTakePreflightInputItem[] = [];
 
@@ -152,7 +152,7 @@ export function itemStatusForLine(
 
 
 export function inputItemTitle(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   line: MediaGenerationPlanLine
 ): string {
   const target = dependencyTargetForLine(context, line);
@@ -211,7 +211,7 @@ export function slotForPlanLine(
 
 
 export function dependencyTargetForLine(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   line: MediaGenerationPlanLine
 ): MediaGenerationDependencyLine['target'] {
   if (!line.dependencyId) {
@@ -239,11 +239,11 @@ export function inputKindLabel(kind: ShotVideoTakeInputKind): string {
 
 
 export function preparedInputsForContext(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   session: DatabaseSession,
   issues: DiagnosticIssue[]
 ): ShotVideoTakePreflightInput[] {
-  const inputs: Array<ShotVideoTakePreflightInput | null> = (context.take.production.preparedInputs ?? [])
+  const inputs: Array<ShotVideoTakePreflightInput | null> = (context.take.state.production.preparedInputs ?? [])
     .map((input) => {
       const available = context.mediaInputs.find(
         (candidate) =>
@@ -287,7 +287,7 @@ export function preparedInputsForContext(
 }
 
 export function dialogueAudioInputsForContext(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   session: DatabaseSession,
   issues: DiagnosticIssue[]
 ): ShotVideoTakePreflightInput[] {
@@ -345,14 +345,14 @@ export function dialogueAudioInputsForContext(
 
 
 export function lookbookSheetInputsForContext(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   session: DatabaseSession,
   issues: DiagnosticIssue[]
 ): ShotVideoTakePreflightInput[] {
   if (!context.activeLookbook) {
     return [];
   }
-  const selectedIds = selectedLookbookSheetIdsForShots(context.shots);
+  const selectedIds = selectedLookbookSheetIdsForTakeState(context.take.state);
   if (selectedIds.size === 0) {
     const defaultSheet = listLookbookSheets(session, context.activeLookbook.id)[0];
     if (defaultSheet) {
@@ -369,7 +369,7 @@ export function lookbookSheetInputsForContext(
 
 
 export function lookbookSheetInputForId(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   session: DatabaseSession,
   issues: DiagnosticIssue[],
   sheetId: string
@@ -380,7 +380,7 @@ export function lookbookSheetInputForId(
       issue(
         'PROJECT_DATA412',
         'Selected lookbook sheet does not belong to the active lookbook.',
-        ['shots', 'shotSpecs', 'lookbookReference', 'lookbookSheetId'],
+        ['take', 'state', 'referenceSelections', 'selectedLookbookSheetIds'],
         'Choose a lookbook sheet from the active lookbook.'
       )
     );
@@ -393,7 +393,7 @@ export function lookbookSheetInputForId(
       issue(
         'PROJECT_DATA413',
         'Selected lookbook sheet has no image file.',
-        ['shots', 'shotSpecs', 'lookbookReference', 'lookbookSheetId'],
+        ['take', 'state', 'referenceSelections', 'selectedLookbookSheetIds'],
         'Regenerate or import a lookbook sheet with an image file.'
       )
     );

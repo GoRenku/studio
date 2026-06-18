@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ShotVideoTakeGenerationProduction } from '@gorenku/studio-core/client';
+import type { SceneShotVideoTakeProductionState } from '@gorenku/studio-core/client';
 import {
   clearShotVideoTakeInput,
   estimateShotVideoTakeProduction,
@@ -8,19 +8,17 @@ import {
   readSceneShotVideoTakeEditContext,
   readShotVideoTakeProduction,
   selectShotVideoTakeInput,
-  updateShotCastCharacterSheetReference,
-  updateShotCustomReferenceImages,
-  updateShotLocationReference,
-  updateShotLocationSheetReference,
-  updateShotLocationViewReferences,
-  updateShotReferenceInclusion,
   updateShotGroupReferenceInclusion,
+  updateTakeCharacterSheetSelection,
+  updateTakeDialogueAudioSelection,
+  updateTakeLocationSheetSelection,
+  updateTakeLocationViewSelection,
   updateShotVideoTakeProduction,
-  updateSceneShotVideoTakeShotSpecs,
+  updateSceneShotVideoTakeShotDesign,
 } from './studio-shot-video-takes-api';
 
 const TAKE_ID = 'scene_shot_video_take_001';
-const PRODUCTION: ShotVideoTakeGenerationProduction = { inputModeId: 'reference' };
+const PRODUCTION: SceneShotVideoTakeProductionState = { inputModeId: 'reference' };
 
 function okResponse(body: unknown): Response {
   return {
@@ -92,23 +90,25 @@ describe('studio-shot-video-takes-api', () => {
     expect(init).toBeUndefined();
   });
 
-  it('autosaves take-owned shot specs', async () => {
+  it('autosaves take-owned shot design', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       okResponse({ context: {}, resourceKeys: [] })
     );
-    await updateSceneShotVideoTakeShotSpecs(
+    await updateSceneShotVideoTakeShotDesign(
       'constantinople',
       'scene_hook',
       TAKE_ID,
       'shot_001',
-      { shotSize: 'close-up' }
+      { composition: { shotSize: 'close-up' } }
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
-      `/takes/${TAKE_ID}/shots/shot_001/specs`
+      `/takes/${TAKE_ID}/shots/shot_001/design`
     );
     expect((init as RequestInit).method).toBe('PATCH');
-    expect(lastBody()).toEqual({ shotSpecs: { shotSize: 'close-up' } });
+    expect(lastBody()).toEqual({
+      shotDesign: { composition: { shotSize: 'close-up' } },
+    });
   });
 
   it('reads the inline production plan report with production', async () => {
@@ -149,7 +149,7 @@ describe('studio-shot-video-takes-api', () => {
     'fal-ai/kling-video/o3/pro',
   ] as const)('estimates the %s production without remapping the model', async (modelChoice) => {
     vi.mocked(global.fetch).mockResolvedValue(okResponse({ estimate: {} }));
-    const production: ShotVideoTakeGenerationProduction = {
+    const production: SceneShotVideoTakeProductionState = {
       inputModeId: 'reference',
       modelChoice,
       parameterValues: { duration: '5' },
@@ -196,37 +196,19 @@ describe('studio-shot-video-takes-api', () => {
     });
   });
 
-  it('updates the shot location reference with only the scoped location id', async () => {
+  it('updates the take character sheet selection', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
+      okResponse({ context: {}, resourceKeys: [] })
     );
-    await updateShotLocationReference(
+    await updateTakeCharacterSheetSelection(
       'constantinople',
       'scene_hook',
-      'shot_001',
-      'loc_chamber'
-    );
-    const [url, init] = lastCall();
-    expect(String(url)).toContain(
-      '/screenplay/scenes/scene_hook/shots/shot_001/location-reference'
-    );
-    expect((init as RequestInit).method).toBe('PATCH');
-    expect(lastBody()).toEqual({ locationId: 'loc_chamber' });
-  });
-
-  it('updates the shot cast character sheet reference', async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
-    );
-    await updateShotCastCharacterSheetReference(
-      'constantinople',
-      'scene_hook',
-      'shot_001',
+      TAKE_ID,
       { castMemberId: 'cast_theodora', assetId: 'asset_sheet_001' }
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
-      '/screenplay/scenes/scene_hook/shots/shot_001/cast-character-sheet-reference'
+      `/screenplay/scenes/scene_hook/takes/${TAKE_ID}/reference-selections/character-sheets`
     );
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
@@ -235,19 +217,19 @@ describe('studio-shot-video-takes-api', () => {
     });
   });
 
-  it('updates the shot location environment sheet reference', async () => {
+  it('updates the take location environment sheet selection', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
+      okResponse({ context: {}, resourceKeys: [] })
     );
-    await updateShotLocationSheetReference(
+    await updateTakeLocationSheetSelection(
       'constantinople',
       'scene_hook',
-      'shot_001',
+      TAKE_ID,
       { locationId: 'loc_chamber', assetId: 'asset_environment_001' }
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
-      '/screenplay/scenes/scene_hook/shots/shot_001/location-sheet-reference'
+      `/screenplay/scenes/scene_hook/takes/${TAKE_ID}/reference-selections/location-sheets`
     );
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
@@ -256,14 +238,14 @@ describe('studio-shot-video-takes-api', () => {
     });
   });
 
-  it('updates the shot location view references', async () => {
+  it('updates the take location view selection', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
+      okResponse({ context: {}, resourceKeys: [] })
     );
-    await updateShotLocationViewReferences(
+    await updateTakeLocationViewSelection(
       'constantinople',
       'scene_hook',
-      'shot_001',
+      TAKE_ID,
       {
         locationId: 'loc_chamber',
         assetId: 'asset_environment_001',
@@ -272,7 +254,7 @@ describe('studio-shot-video-takes-api', () => {
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
-      '/screenplay/scenes/scene_hook/shots/shot_001/location-view-references'
+      `/screenplay/scenes/scene_hook/takes/${TAKE_ID}/reference-selections/location-views`
     );
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
@@ -282,48 +264,22 @@ describe('studio-shot-video-takes-api', () => {
     });
   });
 
-  it('updates the shot custom reference images on the current reference route', async () => {
+  it('updates the take dialogue audio selection', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
+      okResponse({ context: {}, resourceKeys: [] })
     );
-    await updateShotCustomReferenceImages(
-      'constantinople',
-      'scene_hook',
-      'shot_001',
-      ['input_texture', 'input_blade']
-    );
-    const [url, init] = lastCall();
-    expect(String(url)).toContain(
-      '/screenplay/scenes/scene_hook/shots/shot_001/reference-images'
-    );
-    expect(String(url)).not.toContain('custom-reference-images');
-    expect((init as RequestInit).method).toBe('PATCH');
-    expect(lastBody()).toEqual({
-      customReferenceInputIds: ['input_texture', 'input_blade'],
+    await updateTakeDialogueAudioSelection('constantinople', 'scene_hook', TAKE_ID, {
+      dialogueId: 'dialogue_001',
+      takeId: 'audio_take_001',
     });
-  });
-
-  it('updates a shot reference inclusion override', async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ resource: {}, resourceKeys: [] })
-    );
-    await updateShotReferenceInclusion(
-      'constantinople',
-      'scene_hook',
-      'shot_001',
-      {
-        dependencyId: 'reference-image:shot:shot_001',
-        inclusion: 'exclude',
-      }
-    );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
-      '/screenplay/scenes/scene_hook/shots/shot_001/reference-inclusions'
+      `/screenplay/scenes/scene_hook/takes/${TAKE_ID}/reference-selections/dialogue-audio`
     );
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
-      dependencyId: 'reference-image:shot:shot_001',
-      inclusion: 'exclude',
+      dialogueId: 'dialogue_001',
+      takeId: 'audio_take_001',
     });
   });
 

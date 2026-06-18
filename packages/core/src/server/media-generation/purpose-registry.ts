@@ -38,8 +38,8 @@ import type {
   SceneDialogueAudioContext,
   SceneDialogueAudioGenerationSpec,
   SceneDialogueAudioModelListReport,
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeProductionContext,
+  ShotVideoTakeOutputGenerationSpec,
   ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeInputMediaImportReport,
   ShotVideoTakeMediaImportReport,
@@ -70,7 +70,7 @@ import type {
   CreateLookbookImageGenerationSpecInput,
   CreateLookbookSheetGenerationSpecInput,
   CreateSceneStoryboardSheetGenerationSpecInput,
-  CreateShotVideoTakeGenerationSpecInput,
+  CreateShotVideoTakeOutputGenerationSpecInput,
   CreateShotVideoTakeInputGenerationSpecInput,
   ImportCastMediaInput,
   ImportLocationEnvironmentSheetMediaInput,
@@ -92,7 +92,7 @@ import type {
   UpdateLookbookImageGenerationSpecInput,
   UpdateLookbookSheetGenerationSpecInput,
   UpdateSceneStoryboardSheetGenerationSpecInput,
-  UpdateShotVideoTakeGenerationSpecInput,
+  UpdateShotVideoTakeOutputGenerationSpecInput,
   UpdateShotVideoTakeInputGenerationSpecInput,
   ValidateCastCharacterSheetGenerationSpecInput,
   ValidateCastProfileGenerationSpecInput,
@@ -101,7 +101,7 @@ import type {
   ValidateLookbookSheetGenerationSpecInput,
   ValidateSceneStoryboardSheetGenerationSpecInput,
   ValidateSceneDialogueAudioGenerationSpecInput,
-  ValidateShotVideoTakeGenerationSpecInput,
+  ValidateShotVideoTakeOutputGenerationSpecInput,
   ValidateShotVideoTakeInputGenerationSpecInput,
 } from '../project-data-service-contracts.js';
 import * as characterSheet from './cast-character-sheet.js';
@@ -134,7 +134,7 @@ export type MediaGenerationContextReport =
   | SceneDialogueAudioContext
   | LocationEnvironmentSheetGenerationContext
   | SceneStoryboardSheetGenerationContext
-  | ShotVideoTakeGenerationContext;
+  | ShotVideoTakeProductionContext;
 
 export type MediaGenerationModelListReport =
   | LookbookImageModelListReport
@@ -668,22 +668,22 @@ const DEFINITIONS = [
       validateShotVideoTakeSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
-        spec: input.spec as ShotVideoTakeGenerationSpec,
-      } satisfies ValidateShotVideoTakeGenerationSpecInput),
+        spec: input.spec as ShotVideoTakeOutputGenerationSpec,
+      } satisfies ValidateShotVideoTakeOutputGenerationSpecInput),
     createSpec: (input) =>
       createShotVideoTakeSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
-        spec: input.spec as ShotVideoTakeGenerationSpec,
+        spec: input.spec as ShotVideoTakeOutputGenerationSpec,
         idGenerator: input.idGenerator,
-      } satisfies CreateShotVideoTakeGenerationSpecInput),
+      } satisfies CreateShotVideoTakeOutputGenerationSpecInput),
     updateSpec: (input) =>
       updateShotVideoTakeSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
         specId: input.specId,
-        spec: input.spec as ShotVideoTakeGenerationSpec,
-      } satisfies UpdateShotVideoTakeGenerationSpecInput),
+        spec: input.spec as ShotVideoTakeOutputGenerationSpec,
+      } satisfies UpdateShotVideoTakeOutputGenerationSpecInput),
     listSpecs: (input) => listShotVideoTakeSpecs(toShotInput(input)),
     prepareSpec: prepareShotVideoTakeSpec,
     estimateSpec: estimateShotVideoTakeSpec,
@@ -691,7 +691,7 @@ const DEFINITIONS = [
       prepareShotVideoTakeDraftSpec({
         projectName: input.projectName,
         homeDir: input.homeDir,
-        spec: input.spec as ShotVideoTakeGenerationSpec,
+        spec: input.spec as ShotVideoTakeOutputGenerationSpec,
       }),
     declareDependencies: declareShotVideoTakeDependencies,
     runSpec: runShotVideoTakeSpec,

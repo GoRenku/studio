@@ -84,7 +84,7 @@ export const sceneShotVideoTakes = sqliteTable(
     sceneId: text('scene_id')
       .notNull()
       .references(() => scenes.id, { onDelete: 'cascade' }),
-    shotListId: text('shot_list_id')
+    sourceShotListId: text('source_shot_list_id')
       .notNull()
       .references(() => sceneShotLists.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
@@ -93,7 +93,6 @@ export const sceneShotVideoTakes = sqliteTable(
       .default(
         '{"version":1,"shotDesignByShotId":{},"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{},"selectedLocationViewIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{}}'
       ),
-    production: text('production_json').notNull(),
     historySnapshot: text('history_snapshot_json').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -105,7 +104,7 @@ export const sceneShotVideoTakes = sqliteTable(
       table.id
     ),
     index('scene_shot_video_take_source_shot_list_idx').on(
-      table.shotListId,
+      table.sourceShotListId,
       table.createdAt,
       table.id
     ),

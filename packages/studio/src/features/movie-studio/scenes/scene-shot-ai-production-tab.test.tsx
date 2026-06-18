@@ -6,7 +6,7 @@ import type {
   SceneShot,
   SceneShotListDocument,
   SceneShotVideoTake,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
@@ -30,7 +30,6 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneShotListResource: vi.fn(),
-  updateSceneShotSpecs: vi.fn(),
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
@@ -105,13 +104,12 @@ function take(): SceneShotVideoTake {
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
   } as const;
   return {
-    takeId: 'take_generation_1',
+    takeId: 'take_1',
     sceneId: 'scene_hook',
-    shotListId: 'shot_list_hook',
+    sourceShotListId: 'shot_list_hook',
     shotIds: ['shot_001', 'shot_002'],
-    title: 'Take generation 1',
+    title: 'Shot Video Take 1',
     state: emptyTakeState(production),
-    production,
     createdAt: '',
     updatedAt: '',
     status: {
@@ -152,14 +150,14 @@ function emptyTakeState(production = {}) {
   };
 }
 
-function context(): ShotVideoTakeGenerationContext {
+function context(): ShotVideoTakeProductionContext {
   return {
     purpose: 'shot.video-take',
     target: {
       kind: 'sceneShotVideoTake',
-      id: 'take_generation_1',
+      id: 'take_1',
       sceneId: 'scene_hook',
-      takeId: 'take_generation_1',
+      takeId: 'take_1',
       shotIds: ['shot_001', 'shot_002'],
     },
     project: { name: 'p', title: 'P', aspectRatio: '16:9' },
@@ -228,11 +226,11 @@ function productionPlan(
     finalPrompt: input.finalPrompt ? { prompt: input.finalPrompt } : null,
     plan: {
       planId: 'plan_001',
-      request: {
-        projectId: 'project_001',
-        sceneId: 'scene_hook',
+        request: {
+          projectId: 'project_001',
+          sceneId: 'scene_hook',
         shotListId: 'shot_list_hook',
-        takeId: 'take_generation_1',
+        takeId: 'take_1',
         inputMode: 'reference',
         shotGroupMode: 'multi-shot',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -334,7 +332,7 @@ function productionPlan(
       ? [
           {
             code: 'PROJECT_DATA378',
-            message: 'The saved prompt was authored for a previous take generation.',
+            message: 'The saved prompt was authored for a previous Shot Video Take.',
             severity: 'error',
             location: { path: ['take', 'production', 'agentProposal'] },
           },

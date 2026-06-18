@@ -6,7 +6,7 @@ import type { CastCharacterSheetGenerationSpec, CastCharacterSheetModelChoice, C
 import type { LocationEnvironmentSheetGenerationSpec, LocationEnvironmentSheetModelChoice } from './location-media-generation.js';
 import type { SceneDialogueAudioGenerationSpec, SceneDialogueAudioModelChoice } from './scene-audio-generation.js';
 import type { SceneStoryboardSheetGenerationSpec, SceneStoryboardSheetModelChoice } from './scene-storyboard-media-generation.js';
-import type { ShotVideoTakeGenerationSpec, ShotVideoTakeInputGenerationSpec, ShotVideoTakeInputModelChoice } from './shot-video-take-generation.js';
+import type { ShotVideoTakeOutputGenerationSpec, ShotVideoTakeInputGenerationSpec, ShotVideoTakeInputModelChoice } from './shot-video-take.js';
 import type { ShotVideoTakeModelChoice } from './scene-shot-list.js';
 
 export type MediaGenerationSpec =
@@ -19,7 +19,7 @@ export type MediaGenerationSpec =
   | LocationEnvironmentSheetGenerationSpec
   | SceneStoryboardSheetGenerationSpec
   | ShotVideoTakeInputGenerationSpec
-  | ShotVideoTakeGenerationSpec;
+  | ShotVideoTakeOutputGenerationSpec;
 
 export interface MediaGenerationSpecRecord {
   id: string;

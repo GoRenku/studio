@@ -153,7 +153,7 @@ export interface ShotVideoTakePreparedInput {
   subjectId: string;
 }
 
-export interface ShotVideoTakeGenerationProduction {
+export interface SceneShotVideoTakeProductionState {
   inputModeId?: ShotVideoTakeInputModeId;
   modelChoice?: ShotVideoTakeModelChoice;
   parameterValues?: ShotVideoTakeParameterValues;
@@ -172,10 +172,10 @@ export interface ShotVideoTakeAgentProposal {
 }
 
 export interface ShotVideoTakeDependencyDraft {
-  purpose: import('./shot-video-take-generation.js').ShotVideoTakeInputGenerationPurpose;
+  purpose: import('./shot-video-take.js').ShotVideoTakeInputGenerationPurpose;
   dependencyKind: ShotVideoTakeDependencyKind;
   outputInputKind: ShotVideoTakeInputKind;
-  modelChoice?: import('./shot-video-take-generation.js').ShotVideoTakeInputModelChoice;
+  modelChoice?: import('./shot-video-take.js').ShotVideoTakeInputModelChoice;
   prompt: string;
   parameterValues?: ShotVideoTakeParameterValues;
   title?: string;
@@ -208,10 +208,6 @@ export interface SceneShot {
   audioNotes?: string;
   productionNotes?: string;
 }
-
-export type SceneShotWithLegacyShotSpecs = SceneShot & {
-  shotSpecs?: ShotSpecs;
-};
 
 /**
  * Single ordered shot-size ladder, tightest to widest. The mockup's overlapping
@@ -320,52 +316,6 @@ export interface ShotLensSpecs {
   type?: LensId;
   millimeters?: number;
   focus?: FocusId;
-}
-
-export interface ShotLocationSpecs {
-  locationId?: string;
-  environmentSheetAssetId?: string;
-  viewIds?: LocationAzimuthViewId[];
-}
-
-export interface ShotCastReferenceSpecs {
-  castMemberIds?: string[];
-  characterSheetAssetIds?: Record<string, string>;
-}
-
-export interface ShotLookbookReferenceSpecs {
-  lookbookSheetId?: string;
-}
-
-export interface ShotReferenceImageSpecs {
-  customReferenceInputIds?: string[];
-}
-
-export type ShotReferenceInclusion = 'include' | 'exclude';
-
-export type ShotReferenceInclusionSpecs = Record<
-  string,
-  ShotReferenceInclusion
->;
-
-export interface ShotCustomSpecs {
-  composition?: string;
-  movement?: string;
-}
-
-export interface ShotSpecs {
-  shotSize?: ShotSizeId;
-  subjectFraming?: SubjectFramingId[];
-  cameraAngle?: CameraAngleId;
-  dutch?: 'left' | 'right';
-  movement?: ShotMovementSpecs;
-  lens?: ShotLensSpecs;
-  location?: ShotLocationSpecs;
-  castReferences?: ShotCastReferenceSpecs;
-  lookbookReference?: ShotLookbookReferenceSpecs;
-  referenceImages?: ShotReferenceImageSpecs;
-  referenceInclusions?: ShotReferenceInclusionSpecs;
-  custom?: ShotCustomSpecs;
 }
 
 export interface SceneShotDialogueReference {

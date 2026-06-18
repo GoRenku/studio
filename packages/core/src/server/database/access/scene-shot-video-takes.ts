@@ -2,23 +2,22 @@ import { asc, desc, eq } from 'drizzle-orm';
 import type {
   SceneShot,
   SceneShotListDocument,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
 } from '../../../client/scene-shot-list.js';
 import type {
   SceneShotVideoTake,
   SceneShotVideoTakeStatus,
   SceneShotVideoTakeHistorySnapshot,
   SceneShotVideoTakeHistoryDifference,
+  SceneShotVideoTakeShotDesign,
   SceneShotVideoTakeState,
-} from '../../../client/shot-video-take-generation.js';
+} from '../../../client/shot-video-take.js';
 import {
   parseSceneShotVideoTakeHistorySnapshot,
   parseSceneShotVideoTakeState,
-  parseShotVideoTakeGenerationProduction,
   serializeSceneShotVideoTakeHistorySnapshot,
   serializeSceneShotVideoTakeState,
-  serializeShotVideoTakeGenerationProduction,
-} from '../../shot-video-take-generation-json/validator.js';
+} from '../../shot-video-take-json/validator.js';
 import {
   sceneShotVideoTakeShots,
   sceneShotVideoTakes,
@@ -35,13 +34,10 @@ import {
 } from './scene-shot-lists.js';
 import type { ScreenplayDocument } from '../../../client/screenplay.js';
 import {
-  carryTakeGenerationProductionForShotMembership,
-} from '../../media-generation/shot-video-take/take-generation-production.js';
-import {
   buildSceneShotVideoTakeState,
   carrySceneShotVideoTakeStateForShotMembership,
   updateSceneShotVideoTakeStateProduction,
-  updateSceneShotVideoTakeShotSpecs,
+  updateSceneShotVideoTakeShotDesign,
 } from '../../media-generation/shot-video-take/take-state.js';
 
 export type SceneShotVideoTakeRecord =
@@ -53,7 +49,7 @@ export interface CreateSceneShotVideoTakeRecordInput {
   shotListId: string;
   title?: string;
   shotIds: string[];
-  production?: ShotVideoTakeGenerationProduction;
+  production?: SceneShotVideoTakeProductionState;
   screenplay: ScreenplayDocument;
   now: string;
 }
@@ -84,17 +80,14 @@ export function insertSceneShotVideoTakeRecord(
     .values({
       id: input.id,
       sceneId: input.sceneId,
-      shotListId: input.shotListId,
-      title: input.title ?? defaultTakeGenerationTitle(shotIds),
+      sourceShotListId: input.shotListId,
+      title: input.title ?? defaultTakeTitle(shotIds),
       stateJson: serializeSceneShotVideoTakeState({
         state: buildSceneShotVideoTakeState({
           shots: shotList.shots,
           shotIds,
           production: input.production ?? {},
         }),
-      }),
-      production: serializeShotVideoTakeGenerationProduction({
-        production: input.production ?? {},
       }),
       historySnapshot:
         serializeSceneShotVideoTakeHistorySnapshot({
@@ -104,7 +97,7 @@ export function insertSceneShotVideoTakeRecord(
       updatedAt: input.now,
     })
     .run();
-  insertTakeGenerationShotMembership({
+  insertTakeShotMembership({
     session,
     takeId: input.id,
     shotListId: input.shotListId,
@@ -164,7 +157,7 @@ export function updateSceneShotVideoTakeProductionRecord(
   session: DatabaseSession,
   input: {
     takeId: string;
-    production: ShotVideoTakeGenerationProduction;
+    production: SceneShotVideoTakeProductionState;
     screenplay: ScreenplayDocument;
     now: string;
   }
@@ -180,9 +173,6 @@ export function updateSceneShotVideoTakeProductionRecord(
           state: currentState,
           production: input.production,
         }),
-      }),
-      production: serializeShotVideoTakeGenerationProduction({
-        production: input.production,
       }),
       updatedAt: input.now,
     })
@@ -203,29 +193,24 @@ export function updateSceneShotVideoTakeShotMembershipRecord(
     now: string;
   }
 ): SceneShotVideoTake {
-  const generation = requireSceneShotVideoTake(session, {
+  const take = requireSceneShotVideoTake(session, {
     takeId: input.takeId,
     screenplay: input.screenplay,
   });
   const shotListRow = requireSceneShotListForScene({
     session,
-    sceneId: generation.sceneId,
-    shotListId: generation.shotListId,
+    sceneId: take.sceneId,
+    shotListId: take.sourceShotListId,
   });
   const shotList = readSceneShotListDocument({
     row: shotListRow,
     screenplay: input.screenplay,
   });
   const shotIds = normalizeShotIds(shotList.shots, input.shotIds);
-  const production = carryTakeGenerationProductionForShotMembership({
-    production: generation.production,
-    previousShotIds: generation.shotIds,
-    nextShotIds: shotIds,
-  });
   const snapshot = buildSceneShotVideoTakeHistorySnapshot({
     session,
-    sceneId: generation.sceneId,
-    shotListId: generation.shotListId,
+    sceneId: take.sceneId,
+    shotListId: take.sourceShotListId,
     shotList,
     shotIds,
   });
@@ -238,10 +223,10 @@ export function updateSceneShotVideoTakeShotMembershipRecord(
       )
     )
     .run();
-  insertTakeGenerationShotMembership({
+  insertTakeShotMembership({
     session,
     takeId: input.takeId,
-    shotListId: generation.shotListId,
+    shotListId: take.sourceShotListId,
     shotList,
     shotIds,
   });
@@ -250,14 +235,11 @@ export function updateSceneShotVideoTakeShotMembershipRecord(
     .set({
       stateJson: serializeSceneShotVideoTakeState({
         state: carrySceneShotVideoTakeStateForShotMembership({
-          state: generation.state,
+          state: take.state,
           shots: shotList.shots,
+          previousShotIds: take.shotIds,
           shotIds,
-          production,
         }),
-      }),
-      production: serializeShotVideoTakeGenerationProduction({
-        production,
       }),
       historySnapshot:
         serializeSceneShotVideoTakeHistorySnapshot({
@@ -273,30 +255,30 @@ export function updateSceneShotVideoTakeShotMembershipRecord(
   });
 }
 
-export function updateSceneShotVideoTakeShotSpecsRecord(
+export function updateSceneShotVideoTakeShotDesignRecord(
   session: DatabaseSession,
   input: {
     takeId: string;
     shotId: string;
-    shotSpecs: import('../../../client/scene-shot-list.js').ShotSpecs | null;
+    shotDesign: SceneShotVideoTakeShotDesign | null;
     screenplay: ScreenplayDocument;
     now: string;
   }
 ): SceneShotVideoTake {
-  const generation = requireSceneShotVideoTake(session, {
+  const take = requireSceneShotVideoTake(session, {
     takeId: input.takeId,
     screenplay: input.screenplay,
   });
-  if (!generation.shotIds.includes(input.shotId)) {
+  if (!take.shotIds.includes(input.shotId)) {
     throw new ProjectDataError(
       'PROJECT_DATA422',
       `Shot id is not in the Scene Shot Video Take: ${input.shotId}.`
     );
   }
-  const state = updateSceneShotVideoTakeShotSpecs({
-    state: generation.state,
+  const state = updateSceneShotVideoTakeShotDesign({
+    state: take.state,
     shotId: input.shotId,
-    shotSpecs: input.shotSpecs,
+    shotDesign: input.shotDesign,
   });
   session.db
     .update(sceneShotVideoTakes)
@@ -325,9 +307,6 @@ export function updateSceneShotVideoTakeStateRecord(
     .update(sceneShotVideoTakes)
     .set({
       stateJson: serializeSceneShotVideoTakeState({ state: input.state }),
-      production: serializeShotVideoTakeGenerationProduction({
-        production: input.state.production,
-      }),
       updatedAt: input.now,
     })
     .where(eq(sceneShotVideoTakes.id, input.takeId))
@@ -384,9 +363,6 @@ function toSceneShotVideoTake(
   session: DatabaseSession,
   input: { row: SceneShotVideoTakeRecord; screenplay: ScreenplayDocument }
 ): SceneShotVideoTake {
-  const production = parseShotVideoTakeGenerationProduction({
-    value: input.row.production,
-  });
   const state = parseSceneShotVideoTakeState({
     value: input.row.stateJson,
   });
@@ -400,11 +376,10 @@ function toSceneShotVideoTake(
   return {
     takeId: input.row.id,
     sceneId: input.row.sceneId,
-    shotListId: input.row.shotListId,
+    sourceShotListId: input.row.sourceShotListId,
     title: input.row.title,
     shotIds,
     state,
-    production,
     status: projectSceneShotVideoTakeStatus(session, {
       row: input.row,
       snapshot,
@@ -432,7 +407,7 @@ function projectSceneShotVideoTakeStatus(
   }
   const currentShotListRow = requireSceneShotListRecord(
     session,
-    input.row.shotListId
+    input.row.sourceShotListId
   );
   const currentShotList = readSceneShotListDocument({
     row: currentShotListRow,
@@ -447,7 +422,7 @@ function projectSceneShotVideoTakeStatus(
   if (
     storyboardStateFingerprint({
       session,
-      shotListId: input.row.shotListId,
+      shotListId: input.row.sourceShotListId,
       shotIds: currentShotList.shots.map((shot) => shot.shotId),
     }) !== input.snapshot.storyboardStateFingerprint
   ) {
@@ -472,7 +447,7 @@ function projectSceneShotVideoTakeStatus(
     if (
       storyboardStateFingerprint({
         session,
-        shotListId: input.row.shotListId,
+        shotListId: input.row.sourceShotListId,
         shotIds: input.shotIds,
       }) !== input.snapshot.selectedStoryboardStateFingerprint
     ) {
@@ -528,7 +503,7 @@ function currentSceneShotVideoTakeState(
   return parseSceneShotVideoTakeState({ value: row.stateJson });
 }
 
-function insertTakeGenerationShotMembership(input: {
+function insertTakeShotMembership(input: {
   session: DatabaseSession;
   takeId: string;
   shotListId: string;
@@ -575,7 +550,7 @@ function normalizeShotIds(shots: SceneShot[], shotIds: string[]): string[] {
   if (shotIds.length === 0) {
     throw new ProjectDataError(
       'PROJECT_DATA379',
-      'Shot video take generation requires at least one shot id.'
+      'Shot Video Take requires at least one shot id.'
     );
   }
   const valid = new Set(shots.map((shot) => shot.shotId));
@@ -590,7 +565,7 @@ function normalizeShotIds(shots: SceneShot[], shotIds: string[]): string[] {
     if (unique.has(shotId)) {
       throw new ProjectDataError(
         'PROJECT_DATA380',
-        `Shot id is duplicated in the take generation: ${shotId}.`
+        `Shot id is duplicated in the Shot Video Take: ${shotId}.`
       );
     }
     unique.add(shotId);
@@ -601,7 +576,7 @@ function normalizeShotIds(shots: SceneShot[], shotIds: string[]): string[] {
   if (!isContiguous(ordered, shots)) {
     throw new ProjectDataError(
       'PROJECT_DATA381',
-      'Shot video take generations must use contiguous shot ids.'
+      'Shot Video Takes must use contiguous shot ids.'
     );
   }
   return ordered;
@@ -662,8 +637,8 @@ function storyboardImageFingerprint(
   );
 }
 
-function defaultTakeGenerationTitle(shotIds: string[]): string {
+function defaultTakeTitle(shotIds: string[]): string {
   return shotIds.length === 1
-    ? `Take generation for ${shotIds[0]}`
-    : `Take generation for ${shotIds[0]}-${shotIds[shotIds.length - 1]}`;
+    ? `Take for ${shotIds[0]}`
+    : `Take for ${shotIds[0]}-${shotIds[shotIds.length - 1]}`;
 }

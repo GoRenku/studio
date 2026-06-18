@@ -2,16 +2,16 @@ import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import type {
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakePreflightInput,
   ShotVideoTakeInputPolicy,
   MediaGenerationDependencyInventory,
   ShotVideoTakePreflightReport,
   MediaGenerationDependencySlot,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeOutputGenerationSpec,
   MediaGenerationDependencyPricing,
 } from '../../../client/index.js';
 import type {
@@ -82,7 +82,7 @@ import {
   validateRequiredReferenceInclusions,
 } from './reference-inclusions.js';
 import {
-  selectedLookbookSheetIdsForShots,
+  selectedLookbookSheetIdsForTakeState,
 } from './reference-selection.js';
 import {
   requireScreenplayDocument,
@@ -94,11 +94,11 @@ export async function buildShotVideoTakeDependencyInventory(input: {
   session: DatabaseSession;
   projectName?: string;
   homeDir?: string;
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   route: ShotVideoRoute;
-  normalizedSettings: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
+  normalizedSettings: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>;
   preparedInputs: ShotVideoTakePreflightInput[];
   inputPolicy: ShotVideoTakeInputPolicy;
   diagnostics: DiagnosticIssue[];
@@ -184,9 +184,10 @@ export async function buildShotVideoTakeDependencyInventory(input: {
       const dialogueAudioReference = dialogueAudioReferencesByDependencyId.get(
         requiredSlot.dependencyId
       );
-      if (dialogueAudioReference?.audioState === 'no-picked-take' ||
-        dialogueAudioReference?.audioState === 'multiple-picked-takes' ||
-        dialogueAudioReference?.audioState === 'missing-file') {
+      if (
+        dialogueAudioReference?.audioState === 'no-selected-take' ||
+        dialogueAudioReference?.audioState === 'missing-file'
+      ) {
         return {
           state: 'invalid-selection',
           asset: null,
@@ -235,7 +236,7 @@ export async function buildShotVideoTakeDependencyInventory(input: {
 
 function validateSelectedAudioReferencesSupportedByRoute(input: {
   route: ShotVideoRoute;
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   references: ResolvedShotDialogueAudioReference[];
   diagnostics: DiagnosticIssue[];
 }): void {
@@ -278,7 +279,7 @@ function validateSelectedAudioReferencesSupportedByRoute(input: {
 
 
 export function shotVideoTakeDependencySlotsForContext(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   inputModeId: ShotVideoTakeInputModeId;
   route: ShotVideoRoute;
   includeReferenceContext: boolean;
@@ -300,7 +301,7 @@ export function shotVideoTakeDependencySlotsForContext(input: {
           id: input.context.activeLookbook.id,
           name: input.context.activeLookbook.name,
           selectedSheetId:
-            [...selectedLookbookSheetIdsForShots(input.context.shots)][0] ?? null,
+            [...selectedLookbookSheetIdsForTakeState(input.context.take.state)][0] ?? null,
         }
       : null,
     customReferenceInputs: input.context.mediaInputs
@@ -309,7 +310,7 @@ export function shotVideoTakeDependencySlotsForContext(input: {
         id: mediaInput.subjectId || mediaInput.assetId,
         title: mediaInput.title,
       })),
-    requestedInputs: input.context.take.production.requestedInputs,
+    requestedInputs: input.context.take.state.production.requestedInputs,
     requiresMultiShotStoryboardSheet: input.context.shotGroupMode === 'multi-shot',
   });
   if (input.includeReferenceContext) {
@@ -321,7 +322,7 @@ export function shotVideoTakeDependencySlotsForContext(input: {
 
 
 export function shotVideoTakeReferenceDependencySlotsForContext(
-  context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeProductionContext
 ): MediaGenerationDependencySlot[] {
   return declareShotVideoTakeDependencySlots({
     target: context.target,
@@ -339,7 +340,7 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
       ? {
           id: context.activeLookbook.id,
           name: context.activeLookbook.name,
-          selectedSheetId: [...selectedLookbookSheetIdsForShots(context.shots)][0] ?? null,
+          selectedSheetId: [...selectedLookbookSheetIdsForTakeState(context.take.state)][0] ?? null,
         }
       : null,
     customReferenceInputs: [],
@@ -348,7 +349,7 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
 }
 
 export function shotVideoTakeDialogueAudioDependencySlots(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   references: ResolvedShotDialogueAudioReference[];
 }): MediaGenerationDependencySlot[] {
   return input.references.map((reference) => ({
@@ -392,11 +393,11 @@ export async function declareShotVideoTakeDependencies(
       `shot.video-take dependencies require a media-generation-spec request. Received: ${input.request.kind}.`
     );
   }
-  const spec = input.request.spec as ShotVideoTakeGenerationSpec | undefined;
+  const spec = input.request.spec as ShotVideoTakeOutputGenerationSpec | undefined;
   if (spec?.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE) {
     throw new ProjectDataError(
       'CORE_SHOT_VIDEO_DEPENDENCY_DECLARATION_SPEC_INVALID',
-      'shot.video-take dependencies require a shot.video-take generation spec.'
+      'shot.video-take dependencies require a shot video take output generation spec.'
     );
   }
   const context = await buildShotVideoTakeContext({
@@ -420,7 +421,7 @@ export async function declareShotVideoTakeDependencies(
       ? {
           id: context.activeLookbook.id,
           name: context.activeLookbook.name,
-          selectedSheetId: [...selectedLookbookSheetIdsForShots(context.shots)][0] ?? null,
+          selectedSheetId: [...selectedLookbookSheetIdsForTakeState(context.take.state)][0] ?? null,
         }
       : null,
     customReferenceInputs: spec.inputs
@@ -446,10 +447,10 @@ export function finalEstimateFromDependencyInventory(
 
 
 export async function estimateFinalPlanLine(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
-  normalizedSettings: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
+  normalizedSettings: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>;
   preparedInputs: ShotVideoTakePreflightInput[];
   diagnostics: DiagnosticIssue[];
 }): Promise<{

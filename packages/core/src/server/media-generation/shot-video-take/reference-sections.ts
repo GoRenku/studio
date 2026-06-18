@@ -1,7 +1,7 @@
 import type {
   ShotVideoTakeProductionPlanReport,
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationPlan,
+  ShotVideoTakeProductionContext,
+  ShotVideoTakeOutputGenerationPlan,
   ShotVideoTakeCastMemberReferenceGroup,
   Asset,
   MediaGenerationDependencyLine,
@@ -62,11 +62,11 @@ import {
   defaultLocationIdsForShots,
   effectiveScopedLocationSelectionForShots,
   selectedCastIdsForShots,
-  selectedCharacterSheetAssetIdForShots,
-  selectedEnvironmentSheetAssetIdForShots,
+  selectedCharacterSheetAssetIdForTakeState,
+  selectedEnvironmentSheetAssetIdForTakeState,
   selectedLocationIdsForShots,
-  selectedLocationViewIdsForShots,
-  selectedLookbookSheetIdsForShots,
+  selectedLocationViewIdsForTakeState,
+  selectedLookbookSheetIdsForTakeState,
 } from './reference-selection.js';
 import {
   requireScreenplayDocument,
@@ -98,8 +98,8 @@ export type ShotVideoTakeReferenceSections = {
 
 export function buildShotVideoTakeReferenceSections(input: {
   session: DatabaseSession;
-  context: ShotVideoTakeGenerationContext;
-  plan: ShotVideoTakeGenerationPlan;
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
   narrativeScope: ShotVideoTakeReferenceSectionScope;
   scope: ShotVideoTakeReferenceSectionScope;
 }): ShotVideoTakeReferenceSections {
@@ -193,7 +193,7 @@ export function buildShotVideoTakeReferenceSections(input: {
 }
 
 export function buildDialogueAudioCapabilityReport(input: {
-  plan: ShotVideoTakeGenerationPlan;
+  plan: ShotVideoTakeOutputGenerationPlan;
   choices: ShotVideoTakeDialogueAudioReferenceChoice[];
 }): ShotVideoTakeDialogueAudioCapabilityReport {
   const selectedCount = input.choices.filter((choice) => choice.included).length;
@@ -263,8 +263,8 @@ export function buildDialogueAudioCapabilityReport(input: {
 
 export function buildCastMemberReferenceGroup(input: {
   session: DatabaseSession;
-  context: ShotVideoTakeGenerationContext;
-  plan: ShotVideoTakeGenerationPlan;
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
   castMemberId: string;
   name: string;
   role: string | null;
@@ -289,7 +289,7 @@ export function buildCastMemberReferenceGroup(input: {
   );
   const defaultCharacterSheetAssetId = assets[0]?.assetId ?? null;
   const selectedCharacterSheetAssetId =
-    selectedCharacterSheetAssetIdForShots(input.context.shots, input.castMemberId) ??
+    selectedCharacterSheetAssetIdForTakeState(input.context.take.state, input.castMemberId) ??
     defaultCharacterSheetAssetId;
   const characterSheets = assets.map((asset, index) =>
     buildCharacterSheetReferenceChoice({
@@ -382,8 +382,8 @@ export function buildCharacterSheetReferenceChoice(input: {
 
 export function buildLocationReferenceGroup(input: {
   session: DatabaseSession;
-  context: ShotVideoTakeGenerationContext;
-  plan: ShotVideoTakeGenerationPlan;
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
   locationId: string;
   name: string;
   useDefaultSelectionWhenNoScopedSelection: boolean;
@@ -409,10 +409,10 @@ export function buildLocationReferenceGroup(input: {
   );
   const defaultEnvironmentSheetAssetId = assets[0]?.assetId ?? null;
   const selectedEnvironmentSheetAssetId =
-    selectedEnvironmentSheetAssetIdForShots(input.context.shots, input.locationId) ??
+    selectedEnvironmentSheetAssetIdForTakeState(input.context.take.state, input.locationId) ??
     defaultEnvironmentSheetAssetId;
-  const selectedViewIds = selectedLocationViewIdsForShots(
-    input.context.shots,
+  const selectedViewIds = selectedLocationViewIdsForTakeState(
+    input.context.take.state,
     input.locationId
   );
   const environmentSheets = assets.map((asset, index) =>
@@ -514,8 +514,8 @@ export function buildEnvironmentSheetReferenceChoice(input: {
 
 export function buildLookbookReferenceChoices(input: {
   session: DatabaseSession;
-  context: ShotVideoTakeGenerationContext;
-  plan: ShotVideoTakeGenerationPlan;
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
 }): ShotVideoTakeLookbookReferenceChoice[] {
   if (!input.context.activeLookbook) {
     return [];
@@ -525,7 +525,7 @@ export function buildLookbookReferenceChoices(input: {
     input.context.activeLookbook.id
   );
   const selectedSheetId =
-    [...selectedLookbookSheetIdsForShots(input.context.shots)][0] ?? null;
+    [...selectedLookbookSheetIdsForTakeState(input.context.take.state)][0] ?? null;
   const defaultSheetId = lookbookSheets[0]?.id ?? null;
   const selectedChoiceId = selectedSheetId ?? defaultSheetId;
   const dependencyId = lookbookSheetDependencyId(input.context.activeLookbook.id);
@@ -584,8 +584,8 @@ export function buildLookbookReferenceChoices(input: {
 
 export function buildDialogueAudioReferenceChoices(input: {
   session: DatabaseSession;
-  context: ShotVideoTakeGenerationContext;
-  plan: ShotVideoTakeGenerationPlan;
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
 }): {
   choices: ShotVideoTakeDialogueAudioReferenceChoice[];
   diagnostics: DiagnosticIssue[];
@@ -647,8 +647,8 @@ export function buildDialogueAudioReferenceChoices(input: {
 
 
 export function buildGeneralReferenceChoices(input: {
-  context: ShotVideoTakeGenerationContext;
-  plan: ShotVideoTakeGenerationPlan;
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
 }): ShotVideoTakeGeneralReferenceChoice[] {
   const choicesByKey = new Map<string, ShotVideoTakeGeneralReferenceChoice>();
   const plannedInputIds = new Set<string>();
@@ -709,7 +709,7 @@ export function buildGeneralReferenceChoices(input: {
     };
     choicesByKey.set(`planned:${line.dependencyId}`, choice);
   });
-  input.context.take.production.requestedInputs?.forEach(
+  input.context.take.state.production.requestedInputs?.forEach(
     (requestedInput) => {
       const referenceInputKind = shotReferenceTabInputKind(requestedInput.kind);
       if (!referenceInputKind) {
@@ -848,7 +848,7 @@ export function buildGeneralReferenceChoices(input: {
 
 
 export function excludedDefaultGeneralReferenceChoices(
-  context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeProductionContext
 ): Array<{
   dependencyId: string;
   kind: 'multi-shot-storyboard-sheet';
@@ -903,7 +903,7 @@ export function generalReferenceKindForInputKind(
 
 
 export function titleForAvailableImageReference(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   input: SceneShotVideoTakeMediaInput
 ): string {
   if (input.kind === 'first-frame') {
@@ -924,7 +924,7 @@ export function titleForAvailableImageReference(
 
 
 export function titleForPlannedImageReference(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet',
   line: MediaGenerationDependencyLine
 ): string {
@@ -948,7 +948,7 @@ export function titleForPlannedImageReference(
 
 
 export function titleForRequestedImageReference(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
 ): string {
   if (kind === 'first-frame') {
@@ -966,7 +966,7 @@ export function titleForRequestedImageReference(
 
 
 export function multiShotStoryboardSheetTitle(
-  context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeProductionContext
 ): string {
   if (context.target.shotIds.length <= 1) {
     return 'Multi-Shot Storyboard Reference';
@@ -977,7 +977,7 @@ export function multiShotStoryboardSheetTitle(
 
 
 export function outOfScopeReferenceDiagnostics(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   sceneCastMemberIds: Set<string>;
   sceneLocationIds: Set<string>;
 }): DiagnosticIssue[] {
@@ -988,7 +988,7 @@ export function outOfScopeReferenceDiagnostics(input: {
         createDiagnosticWarning(
           'CORE_SHOT_REFERENCE_CAST_OUTSIDE_NARRATIVE',
           `Shot references cast outside this scene's narrative scope: ${castMemberId}.`,
-          { path: ['shotSpecs', 'castReferences', 'castMemberIds'] },
+          { path: ['shots', 'castMemberIds'] },
           'Remove the shot cast reference or add the cast member to the scene narrative first.'
         )
       );
@@ -1000,7 +1000,7 @@ export function outOfScopeReferenceDiagnostics(input: {
         createDiagnosticWarning(
           'CORE_SHOT_REFERENCE_LOCATION_OUTSIDE_NARRATIVE',
           `Shot references a location outside this scene's narrative scope: ${locationId}.`,
-          { path: ['shotSpecs', 'location', 'locationId'] },
+          { path: ['shots', 'locationIds'] },
           'Remove the shot location reference or add the location to the scene narrative first.'
         )
       );

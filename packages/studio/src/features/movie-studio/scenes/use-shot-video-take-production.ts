@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
   ShotVideoTakeModelListReport,
   ShotVideoTakeParameterValue,
   ShotVideoTakeProductionEstimateReport,
   SceneShotVideoTake,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
 import {
   useDebouncedAutosave,
   type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
-import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import {
   defaultModelForInputMode,
   findModelReport,
@@ -34,13 +33,12 @@ export interface UseShotVideoTakeProductionInput {
   projectName: string;
   sceneId: string;
   takeId?: string | null;
-  onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
 }
 
 export interface UseShotVideoTakeProductionResult {
   loadState: 'loading' | 'ready' | 'error';
   loadError: string | null;
-  context: ShotVideoTakeGenerationContext | null;
+  context: ShotVideoTakeProductionContext | null;
   models: ShotVideoTakeModelListReport | null;
   take: SceneShotVideoTake | null;
   isEditable: boolean;
@@ -65,14 +63,14 @@ export interface UseShotVideoTakeProductionResult {
 export function useShotVideoTakeProduction(
   input: UseShotVideoTakeProductionInput
 ): UseShotVideoTakeProductionResult {
-  const { projectName, sceneId, takeId, onResourceRefreshed } = input;
+  const { projectName, sceneId, takeId } = input;
   const takeIdKey = takeId ?? '';
 
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
     'loading'
   );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [context, setContext] = useState<ShotVideoTakeGenerationContext | null>(
+  const [context, setContext] = useState<ShotVideoTakeProductionContext | null>(
     null
   );
   const [models, setModels] = useState<ShotVideoTakeModelListReport | null>(
@@ -141,7 +139,7 @@ export function useShotVideoTakeProduction(
   }, [projectName, sceneId, takeId, takeIdKey]);
 
   const save = useCallback(
-    (production: ShotVideoTakeGenerationProduction) => {
+    (production: SceneShotVideoTakeProductionState) => {
       if (!takeId) {
         return Promise.reject(new Error('No take to save.'));
       }
@@ -156,7 +154,7 @@ export function useShotVideoTakeProduction(
   );
 
   const autosave = useDebouncedAutosave({
-    value: take?.production ?? null,
+    value: take?.state.production ?? null,
     save: (production) => {
       if (!production) {
         return Promise.reject(new Error('No take production to save.'));
@@ -172,22 +170,27 @@ export function useShotVideoTakeProduction(
       hasUserEditedRef.current = false;
       setContext(result.context);
       setTake(result.context.take);
-      void onResourceRefreshed;
     },
   });
 
   const editProduction = useCallback(
     (
       mutate: (
-        production: ShotVideoTakeGenerationProduction
-      ) => ShotVideoTakeGenerationProduction
+        production: SceneShotVideoTakeProductionState
+      ) => SceneShotVideoTakeProductionState
     ) => {
       setTake((current) => {
         if (!current || current.status.editability.state !== 'editable') {
           return current;
         }
         hasUserEditedRef.current = true;
-        return { ...current, production: mutate(current.production) };
+        return {
+          ...current,
+          state: {
+            ...current.state,
+            production: mutate(current.state.production),
+          },
+        };
       });
     },
     []
@@ -196,12 +199,12 @@ export function useShotVideoTakeProduction(
   const selectedInputMode = useMemo<ShotVideoTakeInputModeId | null>(() => {
     if (!take) return null;
     return (
-      take.production.inputModeId ??
+      take.state.production.inputModeId ??
       context?.defaults.inputModeId ??
       null
     );
   }, [context?.defaults.inputModeId, take]);
-  const storedModelChoice = take?.production.modelChoice;
+  const storedModelChoice = take?.state.production.modelChoice;
 
   const setInputMode = useCallback(
     (inputMode: ShotVideoTakeInputModeId) => {
@@ -311,7 +314,7 @@ export function useShotVideoTakeProduction(
           projectName,
           sceneId,
           takeId,
-          take.production
+          take.state.production
         );
         if (cancelled) {
           return;
@@ -344,7 +347,7 @@ export function useShotVideoTakeProduction(
         projectName,
         sceneId,
         takeId,
-        take?.production
+        take?.state.production
       );
       setProductionPlan(report);
       setEstimate({
@@ -381,7 +384,7 @@ export function useShotVideoTakeProduction(
           projectName,
           sceneId,
           takeId,
-          take?.production
+          take?.state.production
         );
         if (cancelled) {
           return;
@@ -414,9 +417,9 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, take?.production, takeId]);
+  }, [projectName, sceneId, take?.state.production, takeId]);
 
-  const applyMutationResult = useCallback((result: { context: ShotVideoTakeGenerationContext }) => {
+  const applyMutationResult = useCallback((result: { context: ShotVideoTakeProductionContext }) => {
     hasUserEditedRef.current = false;
     setContext(result.context);
     setTake(result.context.take);

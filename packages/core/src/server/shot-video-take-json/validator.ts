@@ -7,14 +7,10 @@ import {
 import type {
   SceneShotVideoTakeHistorySnapshot,
   SceneShotVideoTakeState,
-} from '../../client/shot-video-take-generation.js';
-import type {
-  ShotVideoTakeGenerationProduction,
-} from '../../client/scene-shot-list.js';
+} from '../../client/shot-video-take.js';
 import {
   sceneShotVideoTakeStateSchema,
   sceneShotVideoTakeHistorySnapshotSchema,
-  shotVideoTakeGenerationProductionSchema,
 } from '../../client/scene-shot-list-json-schemas.js';
 
 const ajv = new Ajv2020({
@@ -26,7 +22,6 @@ const ajv = new Ajv2020({
   coerceTypes: false,
 });
 
-ajv.addSchema(shotVideoTakeGenerationProductionSchema);
 ajv.addSchema(sceneShotVideoTakeHistorySnapshotSchema);
 ajv.addSchema(sceneShotVideoTakeStateSchema);
 
@@ -59,37 +54,6 @@ export function parseSceneShotVideoTakeState(input: {
     path: ['take', 'state'],
   });
   return parsed as SceneShotVideoTakeState;
-}
-
-export function serializeShotVideoTakeGenerationProduction(input: {
-  production: ShotVideoTakeGenerationProduction;
-}): string {
-  assertJsonShape({
-    value: input.production,
-    schemaId: shotVideoTakeGenerationProductionSchema.$id,
-    code: 'PROJECT_DATA417',
-    message: 'Shot video take generation production JSON failed validation.',
-    path: ['production'],
-  });
-  return JSON.stringify(input.production);
-}
-
-export function parseShotVideoTakeGenerationProduction(input: {
-  value: string;
-}): ShotVideoTakeGenerationProduction {
-  const parsed = parseStoredJson(input.value, {
-    code: 'PROJECT_DATA417',
-    message: 'Stored shot video take generation production must be valid JSON.',
-    path: ['take', 'production'],
-  });
-  assertJsonShape({
-    value: parsed,
-    schemaId: shotVideoTakeGenerationProductionSchema.$id,
-    code: 'PROJECT_DATA417',
-    message: 'Stored shot video take generation production JSON failed validation.',
-    path: ['take', 'production'],
-  });
-  return parsed as ShotVideoTakeGenerationProduction;
 }
 
 export function serializeSceneShotVideoTakeHistorySnapshot(
@@ -169,13 +133,13 @@ function failJsonValidation(error: {
         error.code,
         error.message,
         { path: error.path },
-        'Repair the stored shot video take generation JSON.'
+        'Repair the stored Shot Video Take JSON.'
       ),
     ]),
     {
       code: error.code,
       message: error.message,
-      suggestion: 'Repair the stored shot video take generation JSON.',
+      suggestion: 'Repair the stored Shot Video Take JSON.',
     }
   );
   throw new Error('unreachable');

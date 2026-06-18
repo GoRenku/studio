@@ -26,10 +26,10 @@ import { SceneShotDescriptionTab } from './scene-shot-description-tab';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotAiProductionTab } from './scene-shot-ai-production-tab';
-import { SceneShotAiProductionTakeGenerationTag } from './scene-shot-ai-production-take-generation-tag';
+import { SceneShotAiProductionTakeTag } from './scene-shot-ai-production-take-tag';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 import { SceneShotDialogsTab } from './scene-shot-dialogs-tab';
-import { ShotSpecsProvider } from './shot-specs-context';
+import { TakeShotDesignProvider } from './take-shot-design-context';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
 
 interface SceneShotDetailProps {
@@ -43,8 +43,7 @@ interface SceneShotDetailProps {
   castMemberImages?: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
   locationLabels: Record<string, string>;
   onTabChange?: (tab: SceneShotDetailTab) => void;
-  onShotSpecsSaved?: (resource: SceneShotListResourceResponse) => void;
-  onCreateTakeGeneration?: () => Promise<void>;
+  onCreateTake?: () => Promise<void>;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -68,12 +67,11 @@ export function SceneShotDetail({
   castMemberImages = {},
   locationLabels,
   onTabChange = () => {},
-  onShotSpecsSaved,
-  onCreateTakeGeneration,
+  onCreateTake,
   onSaveNotificationChange,
 }: SceneShotDetailProps) {
   const saveNotificationSequenceRef = useRef(0);
-  const [shotSpecsSaveNotification, setShotSpecsSaveNotification] =
+  const [shotDesignSaveNotification, setShotDesignSaveNotification] =
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
   const [productionSaveNotification, setProductionSaveNotification] =
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
@@ -88,11 +86,10 @@ export function SceneShotDetail({
     projectName,
     sceneId,
     takeId: take?.takeId,
-    onResourceRefreshed: onShotSpecsSaved,
   });
-  const handleShotSpecsSaveNotificationChange = useCallback(
+  const handleShotDesignSaveNotificationChange = useCallback(
     (status: SaveNotificationStatus) => {
-      setShotSpecsSaveNotification((current) => {
+      setShotDesignSaveNotification((current) => {
         if (saveNotificationStatusesEqual(current.status, status)) {
           return current;
         }
@@ -120,10 +117,10 @@ export function SceneShotDetail({
   const saveNotification = useMemo(
     () =>
       chooseDetailSaveNotification([
-        shotSpecsSaveNotification,
+        shotDesignSaveNotification,
         productionSaveNotification,
       ]),
-    [productionSaveNotification, shotSpecsSaveNotification]
+    [productionSaveNotification, shotDesignSaveNotification]
   );
 
   useEffect(() => {
@@ -154,14 +151,13 @@ export function SceneShotDetail({
           minSize={25}
           className='min-h-0'
         >
-          <ShotSpecsProvider
+          <TakeShotDesignProvider
             key={`${take?.takeId ?? 'shot-list'}:${shot.shotId}`}
             projectName={projectName}
             sceneId={sceneId}
             shot={shot}
             take={take}
-            onSaved={onShotSpecsSaved}
-            onSaveNotificationChange={handleShotSpecsSaveNotificationChange}
+            onSaveNotificationChange={handleShotDesignSaveNotificationChange}
           >
             <LineTabs
               value={activeTab}
@@ -170,7 +166,7 @@ export function SceneShotDetail({
               items={DESIGN_TABS.map((tab) => ({ ...tab }))}
               trailing={
                 takeTag ? (
-                  <SceneShotAiProductionTakeGenerationTag
+                  <SceneShotAiProductionTakeTag
                     label={takeTag}
                   />
                 ) : null
@@ -197,7 +193,6 @@ export function SceneShotDetail({
                     sceneId={sceneId}
                     castMemberImages={castMemberImages}
                     productionPlan={production.productionPlan}
-                    onResourceRefreshed={onShotSpecsSaved}
                     onPlanRefresh={production.refreshProductionPlan}
                   />
                 </LineTabsContent>
@@ -205,21 +200,19 @@ export function SceneShotDetail({
                   <SceneShotReferencesTab
                     projectName={projectName}
                     sceneId={sceneId}
-                    shot={shot}
                     productionPlan={production.productionPlan}
-                    onResourceRefreshed={onShotSpecsSaved}
                     onPlanRefresh={production.refreshProductionPlan}
                   />
                 </LineTabsContent>
                 <LineTabsContent value='ai-production' className='h-full'>
                   <SceneShotAiProductionTab
                     production={production}
-                    onCreateTakeGeneration={onCreateTakeGeneration}
+                    onCreateTake={onCreateTake}
                   />
                 </LineTabsContent>
               </div>
             </LineTabs>
-          </ShotSpecsProvider>
+          </TakeShotDesignProvider>
         </ResizablePanel>
       </ResizablePanelGroup>
     </section>

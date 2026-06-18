@@ -3,8 +3,8 @@ import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type ProjectRelativePath,
   type SceneShotVideoTakeTarget,
-  type ShotVideoTakeGenerationContext,
-  type ShotVideoTakeGenerationSpec,
+  type ShotVideoTakeProductionContext,
+  type ShotVideoTakeOutputGenerationSpec,
 } from '../../../client/index.js';
 import {
   buildKlingTransientVoiceConversions,
@@ -15,12 +15,12 @@ describe('shot video take provider payloads', () => {
   it('maps selected dialogue audio references to deduplicated provider audio input files', () => {
     const target: SceneShotVideoTakeTarget = {
       kind: 'sceneShotVideoTake',
-      id: 'scene_001:take_generation_001',
+      id: 'scene_001:take_001',
       sceneId: 'scene_001',
-      takeId: 'take_generation_001',
+      takeId: 'take_001',
       shotIds: ['shot_001'],
     };
-    const spec: ShotVideoTakeGenerationSpec = {
+    const spec: ShotVideoTakeOutputGenerationSpec = {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
       target,
       inputModeId: 'reference',
@@ -36,7 +36,7 @@ describe('shot video take provider payloads', () => {
 
     const plan = buildShotVideoTakeProviderPayload(spec, {
       shotGroupMode: 'single-shot',
-    } as ShotVideoTakeGenerationContext);
+    } as ShotVideoTakeProductionContext);
 
     expect(plan.inputFiles).toEqual([
       {
@@ -59,12 +59,12 @@ describe('shot video take provider payloads', () => {
   it('rejects provider payloads with more dialogue audio inputs than the route allows', () => {
     const target: SceneShotVideoTakeTarget = {
       kind: 'sceneShotVideoTake',
-      id: 'scene_001:take_generation_001',
+      id: 'scene_001:take_001',
       sceneId: 'scene_001',
-      takeId: 'take_generation_001',
+      takeId: 'take_001',
       shotIds: ['shot_001'],
     };
-    const spec: ShotVideoTakeGenerationSpec = {
+    const spec: ShotVideoTakeOutputGenerationSpec = {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
       target,
       inputModeId: 'reference',
@@ -83,7 +83,7 @@ describe('shot video take provider payloads', () => {
     expect(() =>
       buildShotVideoTakeProviderPayload(spec, {
         shotGroupMode: 'single-shot',
-      } as ShotVideoTakeGenerationContext)
+      } as ShotVideoTakeProductionContext)
     ).toThrow(
       expect.objectContaining({
         code: 'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
@@ -107,7 +107,7 @@ describe('shot video take provider payloads', () => {
           ...common,
           inputs: [dialogueAudioInput('audio_file_001', 'generated/audio/dialogue-001.mp3')],
         },
-        { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+        { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
       )
     ).toThrow(
       expect.objectContaining({
@@ -133,7 +133,7 @@ describe('shot video take provider payloads', () => {
           ),
         ],
       },
-      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
     );
 
     expect(plan.payload).toMatchObject({
@@ -165,7 +165,7 @@ describe('shot video take provider payloads', () => {
           lastFrameInput('generated/images/end.png'),
         ],
       },
-      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
     );
 
     expect(plan.model).toBe('kling-video/v3/standard/image-to-video');
@@ -206,7 +206,7 @@ describe('shot video take provider payloads', () => {
           elementReferenceImageInput('urban', 'generated/cast/urban-side.png'),
         ],
       },
-      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
     );
 
     expect(plan.payload.elements).toEqual([
@@ -230,7 +230,7 @@ describe('shot video take provider payloads', () => {
   });
 
   it('projects Kling V3 dialogue audio into transient video-element voice conversions', () => {
-    const spec: ShotVideoTakeGenerationSpec = {
+    const spec: ShotVideoTakeOutputGenerationSpec = {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
       target: shotTarget(),
       inputModeId: 'first-frame',
@@ -243,7 +243,7 @@ describe('shot video take provider payloads', () => {
         dialogueAudioInput('audio_file_urban', 'generated/audio/dialogue-urban.mp3'),
       ],
     };
-    const context = { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext;
+    const context = { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext;
     const plan = buildShotVideoTakeProviderPayload(spec, context);
     const conversions = buildKlingTransientVoiceConversions({
       spec,
@@ -288,7 +288,7 @@ describe('shot video take provider payloads', () => {
             ),
           ],
         },
-        { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+        { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
       )
     ).toThrow(
       expect.objectContaining({
@@ -317,7 +317,7 @@ describe('shot video take provider payloads', () => {
             elementVideoInput('scribe', 'generated/video/scribe-reference.mp4'),
           ],
         },
-        { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+        { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
       )
     ).toThrow(
       expect.objectContaining({
@@ -341,7 +341,7 @@ describe('shot video take provider payloads', () => {
             },
           ],
         },
-      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
       )
     ).toThrow(
       expect.objectContaining({
@@ -364,7 +364,7 @@ describe('shot video take provider payloads', () => {
           elementFrontalImageInput('urban', 'generated/cast/urban-front.png'),
         ],
       },
-      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
     );
 
     expect(plan.model).toBe('kling-video/o3/pro/reference-to-video');
@@ -394,7 +394,7 @@ describe('shot video take provider payloads', () => {
           topLevelImageInput('generated/images/lookbook-style.png'),
         ],
       },
-      { shotGroupMode: 'single-shot' } as ShotVideoTakeGenerationContext
+      { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext
     );
 
     expect(plan.model).toBe('kling-video/o3/standard/video-to-video/reference');
@@ -411,9 +411,9 @@ describe('shot video take provider payloads', () => {
 function shotTarget(): SceneShotVideoTakeTarget {
   return {
     kind: 'sceneShotVideoTake',
-    id: 'scene_001:take_generation_001',
+    id: 'scene_001:take_001',
     sceneId: 'scene_001',
-    takeId: 'take_generation_001',
+    takeId: 'take_001',
     shotIds: ['shot_001'],
   };
 }

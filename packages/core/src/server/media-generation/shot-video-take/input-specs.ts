@@ -10,7 +10,7 @@ import type {
   PreparedMediaGeneration,
   ShotVideoTakeInputGenerationSpec,
   MediaGenerationEstimateReport,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
   insertMediaGenerationSpec,
@@ -53,7 +53,7 @@ import {
 import {
   assertEditableSceneShotVideoTake,
   sameShotIds,
-} from './take-generation-context.js';
+} from './take-context.js';
 import {
   readShotSpec,
 } from './spec-records.js';
@@ -294,7 +294,7 @@ export function normalizeInputSpec(
 
 export function validateInputSpecAgainstContext(
   spec: ShotVideoTakeInputGenerationSpec,
-  context: ShotVideoTakeGenerationContext
+  context: ShotVideoTakeProductionContext
 ): void {
   if (!spec.prompt.trim()) {
     throw new ProjectDataError(

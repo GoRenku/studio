@@ -11,7 +11,6 @@ import type {
   SceneShot,
   SceneShotListOperationDocument,
   SceneShotListDocument,
-  SceneShotWithLegacyShotSpecs,
   SceneStoryboardImagesImportDocument,
 } from '../../client/scene-shot-list.js';
 import {
@@ -327,7 +326,6 @@ function validateSceneShotListSemantics(input: {
         );
       }
     });
-    validateShotSpecsSemantics(shot, shotPath, context, issues, filePath);
     shot.dialogue.forEach((dialogue, dialogueIndex) => {
       const block = scene.blocks[dialogue.blockIndex];
       if (!block) {
@@ -487,143 +485,6 @@ function validateUniqueStringValues(
     }
     seen.add(value);
   });
-}
-
-function validateShotSpecsSemantics(
-  shot: SceneShot,
-  shotPath: string[],
-  context: ReturnType<typeof buildSceneValidationContext>,
-  issues: DiagnosticIssue[],
-  filePath?: string
-): void {
-  const design = legacyShotSpecs(shot);
-  if (!design) {
-    return;
-  }
-  validateShotSpecsLocation(shot, shotPath, context, issues, filePath);
-  validateShotSpecsCastReferences(shot, shotPath, context, issues, filePath);
-  validateShotSpecsLens(shot, shotPath, issues, filePath);
-}
-
-function legacyShotSpecs(shot: SceneShot): SceneShotWithLegacyShotSpecs['shotSpecs'] {
-  return (shot as SceneShotWithLegacyShotSpecs).shotSpecs;
-}
-
-function validateShotSpecsLocation(
-  shot: SceneShot,
-  shotPath: string[],
-  context: ReturnType<typeof buildSceneValidationContext>,
-  issues: DiagnosticIssue[],
-  filePath?: string
-): void {
-  const location = legacyShotSpecs(shot)?.location;
-  if (!location) {
-    return;
-  }
-  const locationPath = [...shotPath, 'shotSpecs', 'location'];
-  if (location.locationId) {
-    if (!context.locationIds.has(location.locationId)) {
-      issues.push(
-        error(
-          'Shot location reference uses an unknown project location.',
-          [...locationPath, 'locationId'],
-          filePath,
-          'Use a location id from the current project.'
-        )
-      );
-    }
-  }
-  void locationPath;
-}
-
-function validateShotSpecsCastReferences(
-  shot: SceneShot,
-  shotPath: string[],
-  context: ReturnType<typeof buildSceneValidationContext>,
-  issues: DiagnosticIssue[],
-  filePath?: string
-): void {
-  const castMemberIds = legacyShotSpecs(shot)?.castReferences?.castMemberIds;
-  if (!castMemberIds) {
-    return;
-  }
-  const seen = new Set<string>();
-  castMemberIds.forEach((castMemberId, castMemberIndex) => {
-    const path = [
-      ...shotPath,
-      'shotSpecs',
-      'castReferences',
-      'castMemberIds',
-      String(castMemberIndex),
-    ];
-    if (seen.has(castMemberId)) {
-      issues.push(
-        error(
-          'Shot cast references contain a duplicate cast member.',
-          path,
-          filePath,
-          'Use each cast member id only once.'
-        )
-      );
-    }
-    seen.add(castMemberId);
-    if (!context.castMemberIds.has(castMemberId)) {
-      issues.push(
-        error(
-          'Shot cast reference uses an unknown cast member.',
-          path,
-          filePath,
-          'Use a cast member id from the current project.'
-        )
-      );
-    }
-  });
-}
-
-function validateShotSpecsLens(
-  shot: SceneShot,
-  shotPath: string[],
-  issues: DiagnosticIssue[],
-  filePath?: string
-): void {
-  const lens = legacyShotSpecs(shot)?.lens;
-  const lensPath = [...shotPath, 'shotSpecs', 'lens'];
-  if (lens?.millimeters !== undefined && !lens.type) {
-    issues.push(
-      error(
-        'Shot lens millimeters requires a lens type selection.',
-        [...lensPath, 'millimeters'],
-        filePath,
-        'Set lens.type before setting lens.millimeters.'
-      )
-    );
-  }
-  if (
-    lens?.millimeters !== undefined &&
-    (lens.millimeters < 1 || lens.millimeters > 300)
-  ) {
-    issues.push(
-      error(
-        'Shot lens millimeters must be between 1 and 300.',
-        [...lensPath, 'millimeters'],
-        filePath,
-        'Use a practical lens millimeter value from 1 to 300.'
-      )
-    );
-  }
-  const movement = legacyShotSpecs(shot)?.movement;
-  const hasRackFocusMovement =
-    movement?.movement === 'rack-focus' || movement?.secondary === 'rack-focus';
-  if (hasRackFocusMovement && lens?.focus !== 'rack-focus') {
-    issues.push(
-      error(
-        'Rack-focus camera motion requires rack-focus composition focus.',
-        [...lensPath, 'focus'],
-        filePath,
-        'Set lens.focus to rack-focus or choose a different camera motion.'
-      )
-    );
-  }
 }
 
 function buildSceneValidationContext(

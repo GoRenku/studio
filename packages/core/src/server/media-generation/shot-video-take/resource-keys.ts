@@ -1,6 +1,6 @@
 import {
   PreparedSceneShotVideoTake,
-} from './take-generation-context.js';
+} from './take-context.js';
 
 
 

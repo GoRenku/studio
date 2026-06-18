@@ -67,7 +67,7 @@ browser entrypoint remains `packages/core/src/client/index.ts`.
 
 Shot-video server behavior is split under
 `packages/core/src/server/media-generation/shot-video-take`. Context loading,
-production group mutation, route settings, provider payloads, dependency
+take production state updates, route settings, provider payloads, dependency
 inventory, dependency draft specs, preflight reports, production plan reports,
 reference projection, input selection, media import, spec lifecycle, run
 recording, and project-relative file safety each have a purpose-named owner

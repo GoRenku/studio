@@ -77,7 +77,6 @@ import type {
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
   LocationEnvironmentSheetModelListReport,
-  LocationAzimuthViewId,
   MediaGenerationPurpose,
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
@@ -89,11 +88,12 @@ import type {
   SceneShotVideoTakeMediaInput,
   SceneShotVideoTake,
   SceneShotVideoTakeEditContext,
+  SceneShotVideoTakeShotDesign,
   SceneShotVideoTakeState,
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationProduction,
-  ShotVideoTakeGenerationPlan,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeProductionContext,
+  SceneShotVideoTakeProductionState,
+  ShotVideoTakeOutputGenerationPlan,
+  ShotVideoTakeOutputGenerationSpec,
   ShotVideoTakeInputPolicy,
   ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeInputMediaImportReport,
@@ -150,7 +150,6 @@ import type {
   StoryArcResource,
   ActStoryboardResource,
   SceneShotListResource,
-  ShotSpecs,
   VisualLanguageCommandReport,
 } from '../client/index.js';
 import type {
@@ -224,36 +223,6 @@ export interface ProjectDataService {
   ): Promise<SceneNarrativeResource>;
   readSceneShotListResource(
     input: ReadSceneShotListResourceInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotSpecs(
-    input: UpdateSceneShotSpecsInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotCastReferences(
-    input: UpdateSceneShotCastReferencesInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotLocationReference(
-    input: UpdateSceneShotLocationReferenceInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotCastCharacterSheetReference(
-    input: UpdateSceneShotCastCharacterSheetReferenceInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotLocationSheetReference(
-    input: UpdateSceneShotLocationSheetReferenceInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotLocationViewReferences(
-    input: UpdateSceneShotLocationViewReferencesInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotLookbookReference(
-    input: UpdateSceneShotLookbookReferenceInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotCustomReferenceImages(
-    input: UpdateSceneShotCustomReferenceImagesInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotReferenceInclusion(
-    input: UpdateSceneShotReferenceInclusionInput
-  ): Promise<SceneShotListResource>;
-  updateSceneShotGroupReferenceInclusion(
-    input: UpdateSceneShotGroupReferenceInclusionInput
   ): Promise<SceneShotListResource>;
   readActStoryboardResource(
     input: ReadActStoryboardResourceInput
@@ -495,21 +464,21 @@ export interface ProjectDataService {
   createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<{ takes: SceneShotVideoTake[] }>;
-  updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeGenerationContext>;
-  updateSceneShotVideoTakeState(input: UpdateSceneShotVideoTakeStateInput): Promise<ShotVideoTakeGenerationContext>;
-  updateSceneShotVideoTakeShotSpecs(input: UpdateSceneShotVideoTakeShotSpecsInput): Promise<ShotVideoTakeGenerationContext>;
-  updateSceneShotVideoTakeShots(input: UpdateSceneShotVideoTakeShotsInput): Promise<ShotVideoTakeGenerationContext>;
-  buildShotVideoTakeContext(input: ShotVideoTakeContextInput): Promise<ShotVideoTakeGenerationContext>;
+  updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeState(input: UpdateSceneShotVideoTakeStateInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeShotDesign(input: UpdateSceneShotVideoTakeShotDesignInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeShots(input: UpdateSceneShotVideoTakeShotsInput): Promise<ShotVideoTakeProductionContext>;
+  buildShotVideoTakeContext(input: ShotVideoTakeContextInput): Promise<ShotVideoTakeProductionContext>;
   readSceneShotVideoTakeEditContext(input: ShotVideoTakeContextInput): Promise<SceneShotVideoTakeEditContext>;
   listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
   listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: SceneShotVideoTakeMediaInput[]; resourceKeys: string[] }>;
   estimateShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionEstimateReport>;
-  planShotVideoTakeProduction(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeGenerationPlan>;
+  planShotVideoTakeProduction(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeOutputGenerationPlan>;
   readShotVideoTakeProductionPlan(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionPlanReport>;
   previewShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakePreflightReport>;
-  selectShotVideoTakeInput(input: SelectShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
-  clearShotVideoTakeInputSelection(input: ClearShotVideoTakeInputSelectionInput): Promise<ShotVideoTakeGenerationContext>;
-  deleteShotVideoTakeInput(input: DeleteShotVideoTakeInputInput): Promise<ShotVideoTakeGenerationContext>;
+  selectShotVideoTakeInput(input: SelectShotVideoTakeInputInput): Promise<ShotVideoTakeProductionContext>;
+  clearShotVideoTakeInputSelection(input: ClearShotVideoTakeInputSelectionInput): Promise<ShotVideoTakeProductionContext>;
+  deleteShotVideoTakeInput(input: DeleteShotVideoTakeInputInput): Promise<ShotVideoTakeProductionContext>;
   validateShotFirstFrameSpec(input: ValidateShotVideoTakeInputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeInputGenerationSpec; providerPayload: Record<string, unknown> }>;
   createShotFirstFrameSpec(input: CreateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
   updateShotFirstFrameSpec(input: UpdateShotVideoTakeInputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
@@ -542,9 +511,9 @@ export interface ProjectDataService {
   prepareShotMultiShotStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   estimateShotMultiShotStoryboardSheetSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   runShotMultiShotStoryboardSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
-  validateShotVideoTakeSpec(input: ValidateShotVideoTakeGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeGenerationSpec; providerPayload: Record<string, unknown> }>;
-  createShotVideoTakeSpec(input: CreateShotVideoTakeGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
-  updateShotVideoTakeSpec(input: UpdateShotVideoTakeGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  validateShotVideoTakeSpec(input: ValidateShotVideoTakeOutputGenerationSpecInput): Promise<{ valid: true; spec: ShotVideoTakeOutputGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createShotVideoTakeSpec(input: CreateShotVideoTakeOutputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateShotVideoTakeSpec(input: UpdateShotVideoTakeOutputGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
   readShotVideoTakeSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
   listShotVideoTakeSpecs(input: ShotVideoTakeContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareShotVideoTakeSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
@@ -1406,7 +1375,7 @@ export interface ShotVideoTakeModelListInput extends ShotVideoTakeContextInput {
 
 export interface UpdateSceneShotVideoTakeProductionInput
   extends ShotVideoTakeContextInput {
-  production: ShotVideoTakeGenerationProduction;
+  production: SceneShotVideoTakeProductionState;
 }
 
 export interface UpdateSceneShotVideoTakeStateInput
@@ -1414,10 +1383,10 @@ export interface UpdateSceneShotVideoTakeStateInput
   statePatch: Partial<SceneShotVideoTakeState>;
 }
 
-export interface UpdateSceneShotVideoTakeShotSpecsInput
+export interface UpdateSceneShotVideoTakeShotDesignInput
   extends ShotVideoTakeContextInput {
   shotId: string;
-  shotSpecs: ShotSpecs | null;
+  shotDesign: SceneShotVideoTakeShotDesign | null;
 }
 
 export interface UpdateSceneShotVideoTakeShotsInput
@@ -1427,12 +1396,12 @@ export interface UpdateSceneShotVideoTakeShotsInput
 
 export interface PreviewShotVideoTakeProductionInput
   extends ShotVideoTakeContextInput {
-  production?: ShotVideoTakeGenerationProduction;
+  production?: SceneShotVideoTakeProductionState;
 }
 
 export interface PlanShotVideoTakeProductionInput
   extends ShotVideoTakeContextInput {
-  production?: ShotVideoTakeGenerationProduction;
+  production?: SceneShotVideoTakeProductionState;
   inputPolicy?: ShotVideoTakeInputPolicy;
 }
 
@@ -1469,19 +1438,19 @@ export interface UpdateShotVideoTakeInputGenerationSpecInput
   specId: string;
 }
 
-export interface ValidateShotVideoTakeGenerationSpecInput
+export interface ValidateShotVideoTakeOutputGenerationSpecInput
   extends RenkuConfigPathOptions {
   projectName?: string;
-  spec: ShotVideoTakeGenerationSpec;
+  spec: ShotVideoTakeOutputGenerationSpec;
 }
 
-export interface CreateShotVideoTakeGenerationSpecInput
-  extends ValidateShotVideoTakeGenerationSpecInput {
+export interface CreateShotVideoTakeOutputGenerationSpecInput
+  extends ValidateShotVideoTakeOutputGenerationSpecInput {
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface UpdateShotVideoTakeGenerationSpecInput
-  extends ValidateShotVideoTakeGenerationSpecInput {
+export interface UpdateShotVideoTakeOutputGenerationSpecInput
+  extends ValidateShotVideoTakeOutputGenerationSpecInput {
   specId: string;
 }
 
@@ -1559,95 +1528,6 @@ export interface ReadSceneNarrativeResourceInput extends RenkuConfigPathOptions 
 export interface ReadSceneShotListResourceInput extends RenkuConfigPathOptions {
   projectName: string;
   sceneId: string;
-}
-
-export interface UpdateSceneShotSpecsInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  /** Full structured selection for the shot, or null to clear it. */
-  shotSpecs: ShotSpecs | null;
-}
-
-export interface UpdateSceneShotCastReferencesInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  castMemberIds: string[];
-}
-
-export interface UpdateSceneShotLocationReferenceInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  locationId: string;
-  environmentSheetAssetId?: string | null;
-  viewIds?: LocationAzimuthViewId[];
-}
-
-export interface UpdateSceneShotCastCharacterSheetReferenceInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  castMemberId: string;
-  assetId: string | null;
-}
-
-export interface UpdateSceneShotLocationSheetReferenceInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  locationId: string;
-  assetId: string | null;
-}
-
-export interface UpdateSceneShotLocationViewReferencesInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  locationId: string;
-  assetId: string;
-  viewIds: LocationAzimuthViewId[];
-}
-
-export interface UpdateSceneShotLookbookReferenceInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  lookbookSheetId: string | null;
-}
-
-export interface UpdateSceneShotCustomReferenceImagesInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  customReferenceInputIds: string[];
-}
-
-export interface UpdateSceneShotReferenceInclusionInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotId: string;
-  dependencyId: string;
-  inclusion: import('../client/scene-shot-list.js').ShotReferenceInclusion | null;
-}
-
-export interface UpdateSceneShotGroupReferenceInclusionInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  sceneId: string;
-  shotIds: string[];
-  dependencyId: string;
-  inclusion: import('../client/scene-shot-list.js').ShotReferenceInclusion | null;
 }
 
 export interface ReadActStoryboardResourceInput extends RenkuConfigPathOptions {

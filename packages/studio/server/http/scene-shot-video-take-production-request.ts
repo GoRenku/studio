@@ -1,6 +1,6 @@
 import type {
   LocationAzimuthViewId,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakeInputPolicy,
 } from '@gorenku/studio-core/client';
 import {
@@ -64,7 +64,7 @@ export function readSceneShotVideoTakeCreateRequest(
 }
 
 export interface SceneShotVideoTakeProductionRequest {
-  production: ShotVideoTakeGenerationProduction;
+  production: SceneShotVideoTakeProductionState;
 }
 
 export interface SceneShotVideoTakeShotsRequest {
@@ -125,7 +125,7 @@ export function readSceneShotVideoTakeProductionRequest(
 }
 
 export interface ShotVideoTakeProductionPlanRequest {
-  production?: ShotVideoTakeGenerationProduction;
+  production?: SceneShotVideoTakeProductionState;
   inputPolicy?: ShotVideoTakeInputPolicy;
 }
 
@@ -155,60 +155,6 @@ export function readShotVideoTakeProductionPlanRequest(
     ...(production ? { production } : {}),
     inputPolicy: record.inputPolicy as ShotVideoTakeInputPolicy | undefined,
   };
-}
-
-export interface ShotCastReferencesRequest {
-  castMemberIds: string[];
-}
-
-export function readShotCastReferencesRequest(
-  input: unknown
-): ShotCastReferencesRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['castMemberIds'],
-    issues,
-    CONTEXT,
-    'Send only the castMemberIds field.'
-  );
-  const castMemberIds = readStringArray(
-    record.castMemberIds,
-    ['castMemberIds'],
-    issues
-  );
-  finishOrThrow(issues);
-  return { castMemberIds };
-}
-
-export interface ShotLocationReferenceRequest {
-  locationId: string;
-}
-
-export function readShotLocationReferenceRequest(
-  input: unknown
-): ShotLocationReferenceRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['locationId'],
-    issues,
-    CONTEXT,
-    'Send only the locationId field.'
-  );
-  const locationId = readStringValue(record.locationId, ['locationId'], issues);
-  finishOrThrow(issues);
-  return { locationId };
 }
 
 export interface ShotCastCharacterSheetReferenceRequest {
@@ -328,35 +274,6 @@ export function readShotLookbookReferenceRequest(
   return { lookbookSheetId };
 }
 
-export interface ShotCustomReferenceImagesRequest {
-  customReferenceInputIds: string[];
-}
-
-export function readShotCustomReferenceImagesRequest(
-  input: unknown
-): ShotCustomReferenceImagesRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['customReferenceInputIds'],
-    issues,
-    CONTEXT,
-    'Send only the customReferenceInputIds field.'
-  );
-  const customReferenceInputIds = readStringArray(
-    record.customReferenceInputIds,
-    ['customReferenceInputIds'],
-    issues
-  );
-  finishOrThrow(issues);
-  return { customReferenceInputIds };
-}
-
 export interface ShotReferenceInclusionRequest {
   dependencyId: string;
   inclusion: 'include' | 'exclude' | null;
@@ -388,11 +305,41 @@ export function readShotReferenceInclusionRequest(
   return { dependencyId, inclusion };
 }
 
+export interface TakeDialogueAudioSelectionRequest {
+  dialogueId: string;
+  takeId: string | null;
+}
+
+export function readTakeDialogueAudioSelectionRequest(
+  input: unknown
+): TakeDialogueAudioSelectionRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['dialogueId', 'takeId'],
+    issues,
+    CONTEXT,
+    'Send only the dialogueId and takeId fields.'
+  );
+  const dialogueId = readStringValue(record.dialogueId, ['dialogueId'], issues);
+  const takeId =
+    record.takeId === null
+      ? null
+      : readStringValue(record.takeId, ['takeId'], issues);
+  finishOrThrow(issues);
+  return { dialogueId, takeId };
+}
+
 function readProductionValue(
   value: unknown,
   path: string[],
   issues: DiagnosticIssue[]
-): ShotVideoTakeGenerationProduction {
+): SceneShotVideoTakeProductionState {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     issues.push(
       createDiagnosticError(
@@ -404,7 +351,7 @@ function readProductionValue(
     );
     throwRequestError(issues);
   }
-  return value as ShotVideoTakeGenerationProduction;
+  return value as SceneShotVideoTakeProductionState;
 }
 
 function readStringArray(

@@ -325,7 +325,6 @@ function sceneShotSchema(): Record<string, unknown> {
       },
       audioNotes: nonEmptyString(),
       productionNotes: nonEmptyString(),
-      shotSpecs: shotSpecsSchema(),
     }
   );
 }
@@ -346,111 +345,7 @@ function storyboardPolicySchema(): Record<string, unknown> {
   ] as const);
 }
 
-function shotSpecsSchema(): Record<string, unknown> {
-  return {
-    type: 'object',
-    properties: {
-      shotSize: enumValue(SHOT_SIZE_IDS),
-      subjectFraming: {
-        type: 'array',
-        items: enumValue(SUBJECT_FRAMING_IDS),
-      },
-      cameraAngle: enumValue(CAMERA_ANGLE_IDS),
-      dutch: enumValue(['left', 'right'] as const),
-      movement: {
-        type: 'object',
-        properties: {
-          movement: enumValue(MOVEMENT_IDS),
-          secondary: enumValue(MOVEMENT_IDS),
-          directions: {
-            type: 'array',
-            items: enumValue(MOVE_DIRECTION_IDS),
-          },
-          track: enumValue(['straight', 'circular'] as const),
-          rig: enumValue([
-            'sticks',
-            'hand-held',
-            'gimbal',
-            'slider',
-            'jib',
-            'drone',
-            'dolly',
-            'steadicam',
-            'crane',
-          ] as const),
-        },
-        additionalProperties: false,
-      },
-      lens: {
-        type: 'object',
-        properties: {
-          type: enumValue(LENS_IDS),
-          millimeters: { type: 'number', exclusiveMinimum: 0 },
-          focus: enumValue(FOCUS_IDS),
-        },
-        additionalProperties: false,
-      },
-      location: {
-        type: 'object',
-        properties: {
-          locationId: nonEmptyString(),
-          environmentSheetAssetId: nonEmptyString(),
-          viewIds: {
-            type: 'array',
-            items: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
-          },
-        },
-        additionalProperties: false,
-      },
-      castReferences: {
-        type: 'object',
-        properties: {
-          castMemberIds: {
-            type: 'array',
-            items: nonEmptyString(),
-          },
-          characterSheetAssetIds: {
-            type: 'object',
-            additionalProperties: nonEmptyString(),
-          },
-        },
-        additionalProperties: false,
-      },
-      lookbookReference: {
-        type: 'object',
-        properties: {
-          lookbookSheetId: nonEmptyString(),
-        },
-        additionalProperties: false,
-      },
-      referenceImages: {
-        type: 'object',
-        properties: {
-          customReferenceInputIds: {
-            type: 'array',
-            items: nonEmptyString(),
-          },
-        },
-        additionalProperties: false,
-      },
-      referenceInclusions: {
-        type: 'object',
-        additionalProperties: enumValue(['include', 'exclude'] as const),
-      },
-      custom: {
-        type: 'object',
-        properties: {
-          composition: nonEmptyString(),
-          movement: nonEmptyString(),
-        },
-        additionalProperties: false,
-      },
-    },
-    additionalProperties: false,
-  };
-}
-
-export const shotVideoTakeGenerationProductionSchema = {
+export const sceneShotVideoTakeProductionStateSchema = {
   $id: 'https://schemas.gorenku.com/studio/shot-video-take-production.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   ...shotVideoTakeProductionSchemaProperties(),

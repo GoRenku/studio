@@ -9,9 +9,9 @@ const MODELS: ShotVideoTakeModelListReport = {
   purpose: 'shot.video-take',
   target: {
     kind: 'sceneShotVideoTake',
-    id: 'scene_hook:take_generation_001',
+    id: 'scene_hook:take_001',
     sceneId: 'scene_hook',
-    takeId: 'take_generation_001',
+    takeId: 'take_001',
     shotIds: ['s1'],
   },
   shotGroupMode: 'single-shot',

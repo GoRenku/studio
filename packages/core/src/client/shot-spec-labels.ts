@@ -6,11 +6,11 @@ import type {
   MoveDirectionId,
   MoveTrackId,
   RigId,
-  ShotSpecs,
   ShotMovementId,
   ShotSizeId,
   SubjectFramingId,
 } from './scene-shot-list.js';
+import type { SceneShotVideoTakeShotDesign } from './shot-video-take.js';
 
 // Canonical display labels for the structured shot specs vocabularies (0036).
 // These are the single source of truth shared by the prompt-string derivation
@@ -114,13 +114,13 @@ export const LOCATION_AZIMUTH_VIEW_LABELS: Record<LocationAzimuthViewId, string>
 };
 
 /**
- * Human-readable contract strings derived from the structured shot specs
+ * Human-readable contract strings derived from the structured take shot design
  * selection (0036). These keep the existing free-text `SceneShot` fields
  * populated — they remain the prompt-facing contract the skill already reads.
  * Each value is `undefined` when nothing is selected so callers can omit the
  * field (the schema requires non-empty strings).
  */
-export interface DerivedShotSpecPromptStrings {
+export interface DerivedTakeShotDesignPromptStrings {
   shotType?: string;
   cameraAngle?: string;
   framing?: string;
@@ -128,48 +128,54 @@ export interface DerivedShotSpecPromptStrings {
   cameraMovement?: string;
 }
 
-export function deriveShotSpecPromptStrings(
-  shotSpecs: ShotSpecs | undefined
-): DerivedShotSpecPromptStrings {
-  if (!shotSpecs) {
+export function deriveTakeShotDesignPromptStrings(
+  shotDesign: SceneShotVideoTakeShotDesign | undefined
+): DerivedTakeShotDesignPromptStrings {
+  if (!shotDesign) {
     return {};
   }
   return {
-    shotType: shotSpecs.shotSize
-      ? SHOT_SIZE_LABELS[shotSpecs.shotSize]
+    shotType: shotDesign.composition?.shotSize
+      ? SHOT_SIZE_LABELS[shotDesign.composition.shotSize]
       : undefined,
-    cameraAngle: deriveCameraAngle(shotSpecs),
-    framing: deriveFraming(shotSpecs),
-    lensIntent: deriveLensIntent(shotSpecs),
-    cameraMovement: deriveCameraMovement(shotSpecs),
+    cameraAngle: deriveCameraAngle(shotDesign),
+    framing: deriveFraming(shotDesign),
+    lensIntent: deriveLensIntent(shotDesign),
+    cameraMovement: deriveCameraMovement(shotDesign),
   };
 }
 
-function deriveCameraAngle(shotSpecs: ShotSpecs): string | undefined {
+function deriveCameraAngle(
+  shotDesign: SceneShotVideoTakeShotDesign
+): string | undefined {
   const parts: string[] = [];
-  if (shotSpecs.cameraAngle) {
-    parts.push(CAMERA_ANGLE_LABELS[shotSpecs.cameraAngle]);
+  if (shotDesign.composition?.cameraAngle) {
+    parts.push(CAMERA_ANGLE_LABELS[shotDesign.composition.cameraAngle]);
   }
-  if (shotSpecs.dutch) {
-    parts.push(`Dutch ${shotSpecs.dutch}`);
+  if (shotDesign.composition?.dutch) {
+    parts.push(`Dutch ${shotDesign.composition.dutch}`);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
 
-function deriveFraming(shotSpecs: ShotSpecs): string | undefined {
+function deriveFraming(
+  shotDesign: SceneShotVideoTakeShotDesign
+): string | undefined {
   const parts: string[] = [];
-  for (const id of shotSpecs.subjectFraming ?? []) {
+  for (const id of shotDesign.composition?.subjectFraming ?? []) {
     parts.push(SUBJECT_FRAMING_LABELS[id]);
   }
-  const custom = shotSpecs.custom?.composition?.trim();
+  const custom = shotDesign.composition?.customComposition?.trim();
   if (custom) {
     parts.push(custom);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
 
-function deriveLensIntent(shotSpecs: ShotSpecs): string | undefined {
-  const lens = shotSpecs.lens;
+function deriveLensIntent(
+  shotDesign: SceneShotVideoTakeShotDesign
+): string | undefined {
+  const lens = shotDesign.composition?.lens;
   const parts: string[] = [];
   if (lens?.type) {
     const lensLabel = LENS_LABELS[lens.type];
@@ -185,8 +191,10 @@ function deriveLensIntent(shotSpecs: ShotSpecs): string | undefined {
   return parts.length ? parts.join(', ') : undefined;
 }
 
-function deriveCameraMovement(shotSpecs: ShotSpecs): string | undefined {
-  const movement = shotSpecs.movement;
+function deriveCameraMovement(
+  shotDesign: SceneShotVideoTakeShotDesign
+): string | undefined {
+  const movement = shotDesign.motion;
   const parts: string[] = [];
   if (movement?.movement) {
     parts.push(MOVEMENT_LABELS[movement.movement]);
@@ -207,7 +215,7 @@ function deriveCameraMovement(shotSpecs: ShotSpecs): string | undefined {
   if (movement?.rig) {
     parts.push(`on ${RIG_LABELS[movement.rig].toLowerCase()}`);
   }
-  const custom = shotSpecs.custom?.movement?.trim();
+  const custom = shotDesign.motion?.customMotion?.trim();
   if (custom) {
     parts.push(custom);
   }

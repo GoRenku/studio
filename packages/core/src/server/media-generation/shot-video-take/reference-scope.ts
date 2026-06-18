@@ -11,12 +11,6 @@ import {
   requireSceneHierarchy,
   requireScreenplayDocument,
 } from './project-session.js';
-import type {
-  SceneShotWithLegacyShotSpecs,
-} from '../../../client/index.js';
-
-
-
 export type SceneReferenceScope = {
   castMembers: NonNullable<ReturnType<typeof requireScreenplayDocument>['cast']>;
   locations: NonNullable<ReturnType<typeof requireScreenplayDocument>['locations']>;
@@ -69,13 +63,8 @@ export function sceneShotReferenceScope(input: {
     )
   );
   input.shotList.shots.forEach((shot) => {
-    const shotWithLegacySpecs = shot as SceneShotWithLegacyShotSpecs;
     addOrderedIds(castMemberIds, shot.castMemberIds);
-    addOrderedIds(castMemberIds, shotWithLegacySpecs.shotSpecs?.castReferences?.castMemberIds ?? []);
     addOrderedIds(locationIds, shot.locationIds);
-    if (shotWithLegacySpecs.shotSpecs?.location?.locationId) {
-      addOrderedIds(locationIds, [shotWithLegacySpecs.shotSpecs.location.locationId]);
-    }
   });
   return {
     castMembers: orderedScreenplayItems(input.screenplay.cast, castMemberIds),

@@ -4,9 +4,9 @@ import type {
   ShotVideoTakeLocationViewReferenceChoice,
   ProjectRelativePath,
   ShotVideoTakeReferenceImagePreview,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   MediaGenerationDependencyLine,
-  ShotVideoTakeGenerationPlan,
+  ShotVideoTakeOutputGenerationPlan,
   MediaGenerationPlanLine,
   ShotVideoTakeReferenceCardPlan,
   ShotVideoTakeReferenceChoiceState,
@@ -199,7 +199,7 @@ export function previewImagesForLookbookSheet(
 
 
 export function previewImagesForDependencyLine(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   line: MediaGenerationDependencyLine | null
 ): ShotVideoTakeReferenceImagePreview[] {
   if (!line?.selectedAsset) {
@@ -228,7 +228,7 @@ export function previewImagesForDependencyLine(
 
 
 export function dependencyLineById(
-  plan: ShotVideoTakeGenerationPlan,
+  plan: ShotVideoTakeOutputGenerationPlan,
   dependencyId: string
 ): MediaGenerationDependencyLine | null {
   const lines = plan.dependencyInventory.dependencies.filter(
@@ -240,7 +240,7 @@ export function dependencyLineById(
 
 
 export function planLineForDependencyLine(
-  plan: ShotVideoTakeGenerationPlan,
+  plan: ShotVideoTakeOutputGenerationPlan,
   line: MediaGenerationDependencyLine | null
 ): MediaGenerationPlanLine | null {
   if (!line) {

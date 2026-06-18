@@ -62,7 +62,7 @@ import {
 import {
   assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
-} from './take-generation-context.js';
+} from './take-context.js';
 
 
 

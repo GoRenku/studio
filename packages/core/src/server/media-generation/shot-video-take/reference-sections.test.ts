@@ -43,13 +43,15 @@ describe('shot video take preflight and validation', () => {
       required: false,
     });
 
-    await projectData.updateSceneShotVideoTakeShotSpecs({
+    await projectData.updateSceneShotVideoTakeState({
       homeDir,
       takeId: written.take.takeId,
-      shotId: 'shot_001',
-      shotSpecs: {
-        referenceInclusions: {
-          [storyboardChoice!.card.dependencyId!]: 'exclude',
+      statePatch: {
+        referenceSelections: {
+          ...written.take.state.referenceSelections,
+          dependencyInclusions: {
+            [storyboardChoice!.card.dependencyId!]: 'exclude',
+          },
         },
       },
     });
@@ -198,14 +200,12 @@ describe('shot video take preflight and validation', () => {
       unselectedExtraCast?.characterSheets[0]?.card.dependencyLineId
     ).toBeUndefined();
 
-    await projectData.updateSceneShotVideoTakeShotSpecs({
+    await projectData.updateSceneShotVideoTakeShotDesign({
       homeDir,
       takeId: take.takeId,
       shotId: 'shot_001',
-      shotSpecs: {
-        castReferences: {
-          castMemberIds: [extraCastMemberId],
-        },
+      shotDesign: {
+        cast: { castMemberIds: [extraCastMemberId] },
       },
     });
     const updatedReport = await projectData.readShotVideoTakeProductionPlan({
@@ -297,13 +297,13 @@ describe('shot video take preflight and validation', () => {
       title: 'Sheet B',
     });
 
-    await projectData.updateSceneShotVideoTakeShotSpecs({
+    await projectData.updateSceneShotVideoTakeState({
       homeDir,
       takeId: written.take.takeId,
-      shotId: 'shot_001',
-      shotSpecs: {
-        lookbookReference: {
-          lookbookSheetId: sheetB.imported.id,
+      statePatch: {
+        referenceSelections: {
+          ...written.take.state.referenceSelections,
+          selectedLookbookSheetIds: [sheetB.imported.id],
         },
       },
     });
@@ -423,14 +423,15 @@ describe('shot video take preflight and validation', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
 
-    await projectData.updateSceneShotVideoTakeShotSpecs({
+    await projectData.updateSceneShotVideoTakeState({
       homeDir,
       takeId: written.take.takeId,
-      shotId: 'shot_001',
-      shotSpecs: {
-        referenceInclusions: {
-          [`first-frame:take:${written.take.takeId}`]:
-            'exclude',
+      statePatch: {
+        referenceSelections: {
+          ...written.take.state.referenceSelections,
+          dependencyInclusions: {
+            [`first-frame:take:${written.take.takeId}`]: 'exclude',
+          },
         },
       },
     });

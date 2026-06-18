@@ -3,9 +3,8 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
-import type { SceneShotWithLegacyShotSpecs } from '../../../client/index.js';
 
-describe('shot video take generation shot membership', () => {
+describe('Shot Video Take shot membership', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
   let homeDir: string;
   let projectData: ShotVideoTakeTestProject['projectData'];
@@ -46,7 +45,7 @@ describe('shot video take generation shot membership', () => {
       shotIds: ['shot_001'],
     });
 
-    expect(context.take.production).toMatchObject({
+    expect(context.take.state.production).toMatchObject({
       inputModeId: 'reference',
       modelChoice: 'fal-ai/bytedance/seedance-2.0',
       customPromptNote: 'Hold the cannon smoke low.',
@@ -110,7 +109,7 @@ describe('shot video take generation shot membership', () => {
     });
 
     expect(context.take.shotIds).toEqual(['shot_003']);
-    expect(context.take.production).toMatchObject({
+    expect(context.take.state.production).toMatchObject({
       inputModeId: 'first-frame',
       modelChoice: 'fal-ai/bytedance/seedance-2.0',
       parameterValues: { duration: 9 },
@@ -126,7 +125,7 @@ describe('shot video take generation shot membership', () => {
         finalPromptDraft: { prompt: 'Original three-shot prompt.' },
       },
     });
-    expect(context.take.production.preparedInputs).toBeUndefined();
+    expect(context.take.state.production.preparedInputs).toBeUndefined();
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
@@ -139,7 +138,7 @@ describe('shot video take generation shot membership', () => {
     );
   });
 
-  it('keeps open take generation settings when membership expands like a merge', async () => {
+  it('keeps open Shot Video Take settings when membership expands like a merge', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 5);
     const take = await projectData.createSceneShotVideoTake({
@@ -154,7 +153,7 @@ describe('shot video take generation shot membership', () => {
       takeId: take.takeId,
       production: {
         inputModeId: 'text-only',
-        customPromptNote: 'Open take generation settings win.',
+        customPromptNote: 'Open Shot Video Take settings win.',
       },
     });
 
@@ -164,9 +163,9 @@ describe('shot video take generation shot membership', () => {
       shotIds: ['shot_001', 'shot_002', 'shot_003', 'shot_004', 'shot_005'],
     });
 
-    expect(context.take.production).toMatchObject({
+    expect(context.take.state.production).toMatchObject({
       inputModeId: 'text-only',
-      customPromptNote: 'Open take generation settings win.',
+      customPromptNote: 'Open Shot Video Take settings win.',
     });
   });
 
@@ -195,7 +194,7 @@ describe('shot video take generation shot membership', () => {
     expect(context.take.status.history.differences).toContain(
       'active-shot-list-changed'
     );
-    expect(context.take.production.inputModeId).toBe('text-only');
+    expect(context.take.state.production.inputModeId).toBe('text-only');
     expect(context.take.state.production.inputModeId).toBe('text-only');
   });
 
@@ -204,11 +203,11 @@ describe('shot video take generation shot membership', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const takeId = written.take.takeId;
 
-    await projectData.updateSceneShotVideoTakeShotSpecs({
+    await projectData.updateSceneShotVideoTakeShotDesign({
       homeDir,
       takeId,
       shotId: 'shot_001',
-      shotSpecs: { shotSize: 'close-up' },
+      shotDesign: { composition: { shotSize: 'close-up' } },
     });
     await projectData.writeSceneShotList({
       homeDir,
@@ -230,8 +229,7 @@ describe('shot video take generation shot membership', () => {
       'shot_001',
     ]);
     expect(
-      (editContext.sourceShots[0] as SceneShotWithLegacyShotSpecs | undefined)
-        ?.shotSpecs?.shotSize
+      editContext.take.state.shotDesignByShotId.shot_001?.composition?.shotSize
     ).toBe('close-up');
     expect(editContext.take.status.history.differences).toContain(
       'active-shot-list-changed'
@@ -255,18 +253,18 @@ describe('shot video take generation shot membership', () => {
     });
 
     const firstContext =
-      await projectData.updateSceneShotVideoTakeShotSpecs({
+      await projectData.updateSceneShotVideoTakeShotDesign({
         homeDir,
         takeId: firstTakeId,
         shotId: 'shot_001',
-        shotSpecs: { shotSize: 'close-up' },
+        shotDesign: { composition: { shotSize: 'close-up' } },
       });
     const secondContext =
-      await projectData.updateSceneShotVideoTakeShotSpecs({
+      await projectData.updateSceneShotVideoTakeShotDesign({
         homeDir,
         takeId: secondTake.takeId,
         shotId: 'shot_001',
-        shotSpecs: { shotSize: 'wide-shot' },
+        shotDesign: { composition: { shotSize: 'wide-shot' } },
       });
 
     expect(
@@ -291,11 +289,11 @@ describe('shot video take generation shot membership', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
 
-    await projectData.updateSceneShotVideoTakeShotSpecs({
+    await projectData.updateSceneShotVideoTakeShotDesign({
       homeDir,
       takeId: written.take.takeId,
       shotId: 'shot_001',
-      shotSpecs: { shotSize: 'medium-close-up' },
+      shotDesign: { composition: { shotSize: 'medium-close-up' } },
     });
 
     const shotList = await projectData.readSceneShotList({
@@ -303,11 +301,7 @@ describe('shot video take generation shot membership', () => {
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
     });
-    expect(
-      (shotList.shotList?.shots[0] as
-        | SceneShotWithLegacyShotSpecs
-        | undefined)?.shotSpecs
-    ).toBeUndefined();
+    expect(shotList.shotList?.shots[0]?.shotType).toBe('wide');
   });
 
   it('rejects duplicate and non-contiguous shot ids with structured core errors', async () => {

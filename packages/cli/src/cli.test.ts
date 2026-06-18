@@ -7,7 +7,6 @@ import {
   createStudioCoordinationService,
   resolveStudioEventStorePath,
   resolveStudioRuntimeDescriptorPath,
-  type SceneShotWithLegacyShotSpecs,
 } from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { runRenkuCli } from './cli.js';
@@ -2707,7 +2706,7 @@ describe('renku CLI', () => {
     const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
     const castMember = screenplay.screenplay!.cast[0]!;
     const location = screenplay.screenplay!.locations[0]!;
-    await projectData.writeSceneShotList({
+    const writtenShotList = await projectData.writeSceneShotList({
       homeDir,
       document: {
         kind: 'sceneShotList',
@@ -2729,13 +2728,26 @@ describe('renku CLI', () => {
             coveredBlockIndexes: [0],
             castMemberIds: [castMember.id as string],
             locationIds: [location.id as string],
-            shotSpecs: {
-              shotSize: 'medium-close-up',
-              subjectFraming: ['single'],
-              cameraAngle: 'low-angle',
-            },
-          } as SceneShotWithLegacyShotSpecs,
+          },
         ],
+      },
+    });
+    const take = await projectData.createSceneShotVideoTake({
+      homeDir,
+      sceneId: scene.id as string,
+      shotListId: writtenShotList.shotList.id,
+      shotIds: ['shot_001'],
+    });
+    await projectData.updateSceneShotVideoTakeShotDesign({
+      homeDir,
+      takeId: take.takeId,
+      shotId: 'shot_001',
+      shotDesign: {
+        composition: {
+          shotSize: 'medium-close-up',
+          subjectFraming: ['single'],
+          cameraAngle: 'low-angle',
+        },
       },
     });
     const project = await projectData.readProject({
@@ -2769,7 +2781,9 @@ describe('renku CLI', () => {
         selection: {
           type: 'scene',
           id: scene.id as string,
-          sceneTab: 'shots',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: take.takeId,
           shotId: 'shot_001',
           shotTab: 'composition',
         },
@@ -2789,13 +2803,15 @@ describe('renku CLI', () => {
     const current = JSON.parse(stdout.join('\n'));
     expect(current.selection).toMatchObject({
       type: 'scene',
-      sceneTab: 'shots',
+      sceneTab: 'takes',
+      takeWorkspaceMode: 'edit',
+      takeId: take.takeId,
       shotId: 'shot_001',
       shotTab: 'composition',
     });
     expect(current.context).toMatchObject({
       kind: 'scene',
-      sceneTab: { id: 'shots', label: 'Shots' },
+      sceneTab: { id: 'takes', label: 'Takes' },
       shot: {
         id: 'shot_001',
         activeTab: { id: 'composition', label: 'Composition' },
@@ -2818,7 +2834,7 @@ describe('renku CLI', () => {
     expect(textExitCode).toBe(0);
     expect(stdout).toContain('Current Studio project: constantinople');
     expect(stdout).toContain(
-      `Focus: Scene ${scene.title} > Shots > Shot 1 > Composition`
+      `Focus: Scene ${scene.title} > Takes > Shot 1 > Composition`
     );
     expect(stderr).toEqual([]);
   });

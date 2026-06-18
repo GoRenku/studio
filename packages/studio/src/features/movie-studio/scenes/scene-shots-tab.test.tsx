@@ -6,7 +6,7 @@ import type {
   SceneShot,
   SceneShotListDocument,
   SceneShotVideoTake,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
@@ -31,7 +31,6 @@ import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneShotListResource: vi.fn(),
-  updateSceneShotSpecs: vi.fn(),
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
@@ -56,7 +55,6 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
   planShotVideoTakeProduction: vi.fn(),
   selectShotVideoTakeInput: vi.fn(),
   clearShotVideoTakeInput: vi.fn(),
-  updateShotLocationReference: vi.fn(),
 }));
 
 // jsdom lacks ResizeObserver, which the Radix Slider in the video stage uses.
@@ -322,13 +320,12 @@ function resource(
 
 function take(): SceneShotVideoTake {
   return {
-    takeId: 'take_generation_hook',
+    takeId: 'take_hook',
     sceneId: 'scene_hook',
-    shotListId: 'shot_list_hook',
+    sourceShotListId: 'shot_list_hook',
     shotIds: ['shot_001'],
-    title: 'Take generation hook',
+    title: 'Shot Video Take hook',
     state: emptyTakeState({ inputModeId: 'text-only' }),
-    production: { inputModeId: 'text-only' },
     createdAt: '',
     updatedAt: '',
     status: {
@@ -353,14 +350,14 @@ function take(): SceneShotVideoTake {
   };
 }
 
-function productionContext(): ShotVideoTakeGenerationContext {
+function productionContext(): ShotVideoTakeProductionContext {
   return {
     purpose: 'shot.video-take',
     target: {
       kind: 'sceneShotVideoTake',
-      id: 'take_generation_hook',
+      id: 'take_hook',
       sceneId: 'scene_hook',
-      takeId: 'take_generation_hook',
+      takeId: 'take_hook',
       shotIds: ['shot_001'],
     },
     project: { name: 'constantinople', title: 'Constantinople', aspectRatio: '16:9' },
@@ -448,7 +445,7 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
         projectId: 'project_hook',
         sceneId: 'scene_hook',
         shotListId: 'shot_list_hook',
-        takeId: 'take_generation_hook',
+        takeId: 'take_hook',
         inputMode: 'text-only',
         shotGroupMode: 'single-shot',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',

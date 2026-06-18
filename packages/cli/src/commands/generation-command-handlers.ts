@@ -442,7 +442,7 @@ function readShotVideoContextInput(input: GenerationCommandInput) {
   const target = requiredFlag(input.flags.target, '--target');
   return {
     ...generationProjectInput(input.runtime),
-    sceneId: parseSceneTarget(target, 'Shot video take generation'),
+    sceneId: parseSceneTarget(target, 'Shot Video Take'),
     takeId: requiredFlag(input.flags.take, '--take'),
   };
 }

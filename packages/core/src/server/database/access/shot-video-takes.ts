@@ -19,7 +19,7 @@ import {
 import { ProjectDataError } from '../../project-data-error.js';
 import {
   parseSceneShotVideoTakeState,
-} from '../../shot-video-take-generation-json/validator.js';
+} from '../../shot-video-take-json/validator.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type SceneShotVideoTakeInputRecord =

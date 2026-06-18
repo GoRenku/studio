@@ -4,7 +4,6 @@ import {
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
 import { createDeterministicIdGenerator } from '../../index.js';
-import type { SceneShotWithLegacyShotSpecs } from '../../../client/index.js';
 
 describe('shot video take preflight and validation', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -263,14 +262,8 @@ describe('shot video take preflight and validation', () => {
         shots: [
           {
             ...shotVideoTakeProject.sampleShotList(ids, 1).shots[0]!,
-            shotSpecs: {
-              location: {
-                locationId: scopedLocationId,
-                environmentSheetAssetId: scopedLocationSheet.imported.assetId,
-                viewIds: ['front'],
-              },
-            },
-          } as SceneShotWithLegacyShotSpecs,
+            locationIds: [ids.locationId, scopedLocationId],
+          },
         ],
       },
     });
@@ -280,6 +273,21 @@ describe('shot video take preflight and validation', () => {
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.updateSceneShotVideoTakeState({
+      homeDir,
+      takeId: take.takeId,
+      statePatch: {
+        referenceSelections: {
+          ...take.state.referenceSelections,
+          selectedLocationSheetAssetIds: {
+            [scopedLocationId]: scopedLocationSheet.imported.assetId,
+          },
+          selectedLocationViewIds: {
+            [scopedLocationId]: ['front'],
+          },
+        },
+      },
     });
     const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
@@ -350,13 +358,21 @@ describe('shot video take preflight and validation', () => {
   it('excludes optional reference-image dependencies from shot video plans', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    await projectData.updateSceneShotVideoTakeShotSpecs({
+    await projectData.updateSceneShotVideoTakeShotDesign({
       homeDir,
       takeId: written.take.takeId,
       shotId: 'shot_001',
-      shotSpecs: {
-        referenceInclusions: {
+      shotDesign: {},
+    });
+    await projectData.updateSceneShotVideoTakeState({
+      homeDir,
+      takeId: written.take.takeId,
+      statePatch: {
+        referenceSelections: {
+          ...written.take.state.referenceSelections,
+          dependencyInclusions: {
           'reference-image:shot:shot_001': 'exclude',
+          },
         },
       },
     });

@@ -9,7 +9,7 @@ import {
 } from '../../database/access/scene-shot-lists.js';
 import {
   requireSceneShotVideoTake,
-} from '../../database/access/scene-shot-video-take-generations.js';
+} from '../../database/access/scene-shot-video-takes.js';
 import type {
   DatabaseSession,
 } from '../../database/lifecycle/store.js';
@@ -25,7 +25,7 @@ import {
 
 export interface PreparedSceneShotVideoTake {
   sceneId: string;
-  shotListId: string;
+  sourceShotListId: string;
   take: SceneShotVideoTake;
   shotListRow: ReturnType<typeof requireSceneShotListForScene>;
   shotList: ReturnType<typeof readSceneShotListDocument>;
@@ -45,12 +45,12 @@ export function prepareSceneShotVideoTakeInSession(input: {
   const shotListRow = requireSceneShotListForScene({
     session: input.session,
     sceneId: take.sceneId,
-    shotListId: take.shotListId,
+    shotListId: take.sourceShotListId,
   });
   const shotList = readSceneShotListDocument({ row: shotListRow, screenplay });
   return {
     sceneId: take.sceneId,
-    shotListId: take.shotListId,
+    sourceShotListId: take.sourceShotListId,
     take,
     shotListRow,
     shotList,

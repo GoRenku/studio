@@ -9,7 +9,7 @@ import type {
   ProjectRelativePath,
   SceneShotVideoTakeMediaInput,
   ShotVideoTakeDependencyDraft,
-  ShotVideoTakeGenerationProduction,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakeParameterValues,
   ShotVideoTakePreparedInput,
   ShotVideoTakeInputModeId,
@@ -107,8 +107,8 @@ interface MatrixProjectSetup {
   ids: SampleIds;
   singleShotListId: string;
   multiShotListId: string;
-  singleTakeGenerationId: string;
-  multiTakeGenerationId: string;
+  singleTakeId: string;
+  multiTakeId: string;
   activeLookbookId: string | null;
   preparedInputs: {
     firstFrame: ShotVideoTakePreparedInput;
@@ -228,7 +228,7 @@ describe('shot video take estimate integration matrix', () => {
     const estimate = await estimateShotVideoTakeProduction(
       'constantinople',
       setup.ids.sceneId,
-      setup.singleTakeGenerationId,
+      setup.singleTakeId,
       {
         inputModeId: 'first-last-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -285,7 +285,7 @@ describe('shot video take estimate integration matrix', () => {
     const report = await planShotVideoTakeProduction(
       'constantinople',
       setup.ids.sceneId,
-      setup.singleTakeGenerationId,
+      setup.singleTakeId,
       {
         inputModeId: 'first-last-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -492,8 +492,8 @@ async function listStudioApiRouteKeys(input: {
         'constantinople',
         input.setup.ids.sceneId,
         shotGroupMode === 'multi-shot'
-          ? input.setup.multiTakeGenerationId
-          : input.setup.singleTakeGenerationId,
+          ? input.setup.multiTakeId
+          : input.setup.singleTakeId,
         inputModeId
       );
       routeKeys.push(
@@ -1432,13 +1432,13 @@ async function createMatrixProjectSetup(
   const shotListIds = createDeterministicIdGenerator();
   const singleShotList = await writeShotList(projectData, homeDir, ids, 1, shotListIds);
   const multiShotList = await writeShotList(projectData, homeDir, ids, 2, shotListIds);
-  const singleTakeGeneration = await projectData.createSceneShotVideoTake({
+  const singleTake = await projectData.createSceneShotVideoTake({
     homeDir,
     sceneId: ids.sceneId,
     shotListId: singleShotList.shotList.id,
     shotIds: ['shot_001'],
   });
-  const multiTakeGeneration = await projectData.createSceneShotVideoTake({
+  const multiTake = await projectData.createSceneShotVideoTake({
     homeDir,
     sceneId: ids.sceneId,
     shotListId: multiShotList.shotList.id,
@@ -1480,27 +1480,27 @@ async function createMatrixProjectSetup(
 
   const firstFrame = await projectData.importShotFirstFrame({
     homeDir,
-    takeId: singleTakeGeneration.takeId,
+    takeId: singleTake.takeId,
     sourceProjectRelativePath: 'generated/media/first-frame.png',
   });
   const lastFrame = await projectData.importShotLastFrame({
     homeDir,
-    takeId: singleTakeGeneration.takeId,
+    takeId: singleTake.takeId,
     sourceProjectRelativePath: 'generated/media/last-frame.png',
   });
   const multiShotFirstFrame = await projectData.importShotFirstFrame({
     homeDir,
-    takeId: multiTakeGeneration.takeId,
+    takeId: multiTake.takeId,
     sourceProjectRelativePath: 'generated/media/multi-shot-first-frame.png',
   });
   const multiShotLastFrame = await projectData.importShotLastFrame({
     homeDir,
-    takeId: multiTakeGeneration.takeId,
+    takeId: multiTake.takeId,
     sourceProjectRelativePath: 'generated/media/multi-shot-last-frame.png',
   });
   const storyboard = await projectData.importShotMultiShotStoryboardSheet({
     homeDir,
-    takeId: multiTakeGeneration.takeId,
+    takeId: multiTake.takeId,
     sourceProjectRelativePath: 'generated/media/multi-shot-storyboard.png',
   });
   const referenceImage = await projectData.importCastCharacterSheetMedia({
@@ -1529,7 +1529,7 @@ async function createMatrixProjectSetup(
   }
   const context = await projectData.buildShotVideoTakeContext({
     homeDir,
-    takeId: singleTakeGeneration.takeId,
+    takeId: singleTake.takeId,
   });
   const referenceBundle: ShotVideoTakePreparedInput[] = [
     {
@@ -1563,8 +1563,8 @@ async function createMatrixProjectSetup(
     ids,
     singleShotListId: singleShotList.shotList.id,
     multiShotListId: multiShotList.shotList.id,
-    singleTakeGenerationId: singleTakeGeneration.takeId,
-    multiTakeGenerationId: multiTakeGeneration.takeId,
+    singleTakeId: singleTake.takeId,
+    multiTakeId: multiTake.takeId,
     activeLookbookId: context.activeLookbook?.id ?? activeLookbook.lookbook.id,
     preparedInputs: {
       firstFrame: preparedInputFromImported(firstFrame.mediaInput),
@@ -1649,7 +1649,7 @@ function productionForCase(
   input: EstimateMatrixCase | RunSetupPricingPermutationCase,
   setup: MatrixProjectSetup,
   options: { includePreparedInputs: boolean }
-): ShotVideoTakeGenerationProduction {
+): SceneShotVideoTakeProductionState {
   return {
     inputModeId: input.inputModeId,
     modelChoice: input.modelChoice,
@@ -1808,8 +1808,8 @@ function takeIdForCase(
   setup: MatrixProjectSetup
 ): string {
   return input.shotGroupMode === 'multi-shot'
-    ? setup.multiTakeGenerationId
-    : setup.singleTakeGenerationId;
+    ? setup.multiTakeId
+    : setup.singleTakeId;
 }
 
 function routeKey(

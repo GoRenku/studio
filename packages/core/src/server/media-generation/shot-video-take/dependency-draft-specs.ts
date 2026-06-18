@@ -4,8 +4,8 @@ import {
 import type {
   DraftMediaGenerationSpec,
   MediaGenerationDependencyPricing,
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationProduction,
+  ShotVideoTakeProductionContext,
+  SceneShotVideoTakeProductionState,
 } from '../../../client/index.js';
 import {
   ProjectDataError,
@@ -42,7 +42,7 @@ export async function buildShotInputDependencyDraftSpec(
   const purpose = shotInputPurposeForDependencyKind(input.dependencyKind);
   const outputInputKind = PURPOSE_CONFIG[purpose].outputInputKind;
   const draft =
-    request.context.take.production.agentProposal?.dependencyDrafts.find(
+    request.context.take.state.production.agentProposal?.dependencyDrafts.find(
       (candidate) =>
         candidate.purpose === purpose &&
         candidate.outputInputKind === outputInputKind
@@ -154,14 +154,14 @@ export function estimateOnlyShotInputPrompt(label: string): string {
 
 export interface ShotVideoTakeDependencyRequest {
   kind: 'shot-video-take';
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
 }
 
 
 
 export function isAuthoredShotDependencyDraft(
-  draft: NonNullable<ShotVideoTakeGenerationProduction['agentProposal']>['dependencyDrafts'][number] | undefined
-): draft is NonNullable<ShotVideoTakeGenerationProduction['agentProposal']>['dependencyDrafts'][number] {
+  draft: NonNullable<SceneShotVideoTakeProductionState['agentProposal']>['dependencyDrafts'][number] | undefined
+): draft is NonNullable<SceneShotVideoTakeProductionState['agentProposal']>['dependencyDrafts'][number] {
   if (!draft?.prompt.trim()) {
     return false;
   }

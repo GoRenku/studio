@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type {
   LocationAzimuthViewId,
-  SceneShot,
   ShotVideoTakeGeneralReferenceChoice,
   ShotVideoTakeProductionPlanReport,
   ShotVideoTakeReferenceImagePreview,
@@ -12,14 +11,11 @@ import {
   shotVideoTakeInputFileUrl,
 } from '@/services/studio-project-assets-api';
 import {
-  updateShotCastCharacterSheetReference,
-  updateShotLocationViewReferences,
   updateShotGroupReferenceInclusion,
-  updateShotReferenceInclusion,
+  updateTakeCharacterSheetSelection,
+  updateTakeLocationViewSelection,
   type ShotVideoTakeProductionMutation,
-  type ShotVideoTakeResourceMutation,
 } from '@/services/studio-shot-video-takes-api';
-import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import {
   ImagePreviewDialog,
   type PreviewImage,
@@ -39,18 +35,14 @@ import { SceneShotReferenceSection } from './scene-shot-reference-section';
 interface SceneShotReferencesTabProps {
   projectName: string;
   sceneId: string;
-  shot: SceneShot;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
-  onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
   onPlanRefresh?: () => Promise<void>;
 }
 
 export function SceneShotReferencesTab({
   projectName,
   sceneId,
-  shot,
   productionPlan,
-  onResourceRefreshed,
   onPlanRefresh,
 }: SceneShotReferencesTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
@@ -58,12 +50,7 @@ export function SceneShotReferencesTab({
   const referenceIssues =
     productionPlan?.diagnostics.filter(isReferenceDiagnosticIssue) ?? [];
 
-  const refreshAfterMutation = async (
-    result: ShotVideoTakeResourceMutation | ShotVideoTakeProductionMutation
-  ) => {
-    if ('resource' in result) {
-      onResourceRefreshed?.(result.resource);
-    }
+  const refreshAfterMutation = async (_result: ShotVideoTakeProductionMutation) => {
     await onPlanRefresh?.();
   };
   const updateReferenceInclusion = async (
@@ -71,21 +58,19 @@ export function SceneShotReferencesTab({
     inclusion: 'include' | 'exclude' | null
   ) => {
     const take = productionPlan?.take;
+    if (!take) {
+      return;
+    }
     const result =
-      take
-        ? await updateShotGroupReferenceInclusion(
-            projectName,
-            sceneId,
-            take.takeId,
-            {
-              dependencyId,
-              inclusion,
-            }
-          )
-        : await updateShotReferenceInclusion(projectName, sceneId, shot.shotId, {
-            dependencyId,
-            inclusion,
-          });
+      await updateShotGroupReferenceInclusion(
+        projectName,
+        sceneId,
+        take.takeId,
+        {
+          dependencyId,
+          inclusion,
+        }
+      );
     await refreshAfterMutation(result);
   };
 
@@ -174,11 +159,15 @@ export function SceneShotReferencesTab({
                     await updateReferenceInclusion(dependencyId, inclusion);
                   }}
                   onSelectSheet={async (castMemberId, assetId) => {
+                    const take = productionPlan?.take;
+                    if (!take) {
+                      return;
+                    }
                     const sheetResult =
-                      await updateShotCastCharacterSheetReference(
+                      await updateTakeCharacterSheetSelection(
                         projectName,
                         sceneId,
-                        shot.shotId,
+                        take.takeId,
                         {
                           castMemberId,
                           assetId,
@@ -212,15 +201,19 @@ export function SceneShotReferencesTab({
                     await updateReferenceInclusion(dependencyId, inclusion);
                   }}
                   onToggleView={async (locationId, assetId, viewId, selected) => {
+                    const take = productionPlan?.take;
+                    if (!take) {
+                      return;
+                    }
                     const nextViewIds = nextLocationViewIds(
                       group.selectedViewIds,
                       viewId,
                       selected
                     );
-                    const result = await updateShotLocationViewReferences(
+                    const result = await updateTakeLocationViewSelection(
                       projectName,
                       sceneId,
-                      shot.shotId,
+                      take.takeId,
                       { locationId, assetId, viewIds: nextViewIds }
                     );
                     await refreshAfterMutation(result);

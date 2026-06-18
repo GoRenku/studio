@@ -1,6 +1,6 @@
 import type {
   ProjectRelativePath,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   SceneShotVideoTakeMediaInput,
 } from '../../../client/index.js';
 import {
@@ -46,10 +46,10 @@ import {
   assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
   sameShotIds,
-} from './take-generation-context.js';
+} from './take-context.js';
 import {
   updateSceneShotVideoTakeProductionRecord,
-} from '../../database/access/scene-shot-video-take-generations.js';
+} from '../../database/access/scene-shot-video-takes.js';
 import {
   requireScreenplayDocument,
 } from './project-session.js';
@@ -115,7 +115,7 @@ export async function resolveShotVideoTakeInputFile(
 
 export async function selectShotVideoTakeInput(
   input: SelectShotVideoTakeInputInput
-): Promise<ShotVideoTakeGenerationContext> {
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeInSession({ session, input });
@@ -127,7 +127,7 @@ export async function selectShotVideoTakeInput(
     ) {
       throw new ProjectDataError(
         'PROJECT_DATA362',
-        'Shot video take input belongs to a different take generation.'
+        'Shot video take input belongs to a different Shot Video Take.'
       );
     }
     const selected = selectShotVideoTakeInputRecord(session, {
@@ -149,7 +149,7 @@ export async function selectShotVideoTakeInput(
 
 export async function clearShotVideoTakeInputSelection(
   input: ClearShotVideoTakeInputSelectionInput
-): Promise<ShotVideoTakeGenerationContext> {
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeInSession({ session, input });
@@ -183,7 +183,7 @@ export async function clearShotVideoTakeInputSelection(
 
 export async function deleteShotVideoTakeInput(
   input: DeleteShotVideoTakeInputInput
-): Promise<ShotVideoTakeGenerationContext> {
+): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeInSession({ session, input });
@@ -195,7 +195,7 @@ export async function deleteShotVideoTakeInput(
     ) {
       throw new ProjectDataError(
         'PROJECT_DATA362',
-        'Shot video take input belongs to a different take generation.'
+        'Shot video take input belongs to a different Shot Video Take.'
       );
     }
 
@@ -252,7 +252,7 @@ export function updatePreparedInputSelection(input: {
   >;
   selected: boolean;
 }): void {
-  const plan = input.prepared.take.production;
+  const plan = input.prepared.take.state.production;
   const preparedInputs = (plan.preparedInputs ?? []).filter(
     (candidate) =>
       candidate.kind !== input.input.kind ||

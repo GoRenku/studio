@@ -3,12 +3,12 @@ import {
 } from '../../../client/index.js';
 import type {
   ShotVideoTakePreflightReport,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
   ShotVideoTakePreflightInput,
-  ShotVideoTakeGenerationProduction,
-  ShotVideoTakeGenerationSpec,
+  SceneShotVideoTakeProductionState,
+  ShotVideoTakeOutputGenerationSpec,
   ShotVideoTakeModelChoiceReport,
 } from '../../../client/index.js';
 import {
@@ -53,7 +53,7 @@ import {
 } from './route-settings.js';
 import {
   sameShotIds,
-} from './take-generation-context.js';
+} from './take-context.js';
 
 
 
@@ -65,9 +65,9 @@ export async function previewShotVideoTakeProduction(
     production: input.production,
   });
   const issues = validatePreflight(context);
-  const inputModeId = context.take.production.inputModeId ?? context.defaults.inputModeId;
+  const inputModeId = context.take.state.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
-    context.take.production.modelChoice ??
+    context.take.state.production.modelChoice ??
     defaultModelChoiceForInputMode(inputModeId);
   const preparedInputs = await withShotProjectSession(input, ({ session }) =>
     preparedInputsForContext(context, session, issues)
@@ -78,9 +78,9 @@ export async function previewShotVideoTakeProduction(
     modelChoice,
     preparedInputs,
   });
-  const finalDraft = context.take.production.agentProposal?.finalPromptDraft;
+  const finalDraft = context.take.state.production.agentProposal?.finalPromptDraft;
   const prompts = [
-    ...context.take.production.agentProposal?.dependencyDrafts.map((draft) => ({
+    ...context.take.state.production.agentProposal?.dependencyDrafts.map((draft) => ({
       purpose: draft.purpose,
       prompt: draft.prompt,
       title: draft.title,
@@ -133,14 +133,14 @@ export async function previewShotVideoTakeProduction(
 
 
 export function finalTakeSpecForPreflight(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   preparedInputs: ShotVideoTakePreflightInput[];
-  parameterValues?: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
+  parameterValues?: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>;
   promptMode?: 'require-authored' | 'estimate-placeholder';
-}): ShotVideoTakeGenerationSpec {
-  const plan = input.context.take.production;
+}): ShotVideoTakeOutputGenerationSpec {
+  const plan = input.context.take.state.production;
   const finalDraft = plan.agentProposal?.finalPromptDraft;
   const prompt = finalDraft?.prompt.trim()
     ? finalDraft.prompt
@@ -184,16 +184,16 @@ export function finalTakeSpecForPreflight(input: {
 
 
 export function parameterValuesForFinalTake(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   inputModeId: ShotVideoTakeInputModeId,
   modelChoice: ShotVideoTakeModelChoice
-): NonNullable<ShotVideoTakeGenerationProduction['parameterValues']> {
+): NonNullable<SceneShotVideoTakeProductionState['parameterValues']> {
   const report = modelChoices(context, inputModeId).find((model) => model.modelChoice === modelChoice);
   if (!report) {
     return {};
   }
-  const values: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']> = {};
-  const planValues = context.take.production.parameterValues ?? {};
+  const values: NonNullable<SceneShotVideoTakeProductionState['parameterValues']> = {};
+  const planValues = context.take.state.production.parameterValues ?? {};
   for (const parameter of report.parameters) {
     const contextDefault = context.defaults.parameterValues[parameter.name];
     if (parameter.defaultValue !== undefined) {
@@ -216,8 +216,8 @@ export function parameterValuesForFinalTake(
 
 export function canonicalParameterValue(
   parameter: ShotVideoTakeModelChoiceReport['parameters'][number],
-  value: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>[string]
-): NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>[string] {
+  value: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>[string]
+): NonNullable<SceneShotVideoTakeProductionState['parameterValues']>[string] {
   if (!parameter.allowedValues?.length) {
     return value;
   }
@@ -244,9 +244,9 @@ export function canonicalParameterValue(
 
 
 function contextWithProductionOverride(input: {
-  context: ShotVideoTakeGenerationContext;
-  production?: ShotVideoTakeGenerationProduction;
-}): ShotVideoTakeGenerationContext {
+  context: ShotVideoTakeProductionContext;
+  production?: SceneShotVideoTakeProductionState;
+}): ShotVideoTakeProductionContext {
   if (!input.production) {
     return input.context;
   }
@@ -254,16 +254,19 @@ function contextWithProductionOverride(input: {
     ...input.context,
     take: {
       ...input.context.take,
-      production: input.production,
+      state: {
+        ...input.context.take.state,
+        production: input.production,
+      },
     },
   };
 }
 
 
 
-export function validatePreflight(context: ShotVideoTakeGenerationContext): DiagnosticIssue[] {
+export function validatePreflight(context: ShotVideoTakeProductionContext): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
-  const plan = context.take.production;
+  const plan = context.take.state.production;
   const inputModeId = plan.inputModeId ?? context.defaults.inputModeId;
   const modelChoice = plan.modelChoice ?? defaultModelChoiceForInputMode(inputModeId);
   const route = selectShotVideoRoute({
@@ -321,11 +324,11 @@ export function validatePreflight(context: ShotVideoTakeGenerationContext): Diag
 
 
 
-export function agentBrief(context: ShotVideoTakeGenerationContext): string {
+export function agentBrief(context: ShotVideoTakeProductionContext): string {
   return [
     `Scene: ${context.scene.title}`,
     `Shots: ${context.shots.map((shot) => `${shot.shotId}: ${shot.action}`).join(' | ')}`,
-    `Input mode: ${context.take.production.inputModeId ?? context.defaults.inputModeId}`,
+    `Input mode: ${context.take.state.production.inputModeId ?? context.defaults.inputModeId}`,
     `Shot group mode: ${context.shotGroupMode}`,
   ].join('\n');
 }

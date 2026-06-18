@@ -4,7 +4,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import {
   buildShotGroupingProjection,
-  createShotGroupDraftsFromTakeGenerations,
+  createShotGroupDraftsFromTakes,
   cycleShotGroupMembership,
   groupShotLabels,
   groupTagLabel,
@@ -181,7 +181,7 @@ describe('cycleShotGroupMembership', () => {
     const merged = cycle(below, 's3');
     expect(shotIds(merged)).toEqual([['s1', 's2', 's3', 's4', 's5']]);
     expect(merged[0].takeId).toBe('g1');
-    expect(merged[0].mergePartnerTakeGenerationId).toBe('g2');
+    expect(merged[0].mergePartnerTakeId).toBe('g2');
 
     const cleared = cycle(merged, 's3');
     expect(shotIds(cleared)).toEqual([
@@ -216,7 +216,7 @@ describe('cycleShotGroupMembership', () => {
       ['s4', 's5'],
     ]);
     expect(result[0].takeId).toBe('g1');
-    expect(result[1].sourceTakeGenerationId).toBe('g1');
+    expect(result[1].sourceTakeId).toBe('g1');
   });
 
   it('splits a three-shot group into two one-shot groups', () => {
@@ -226,13 +226,13 @@ describe('cycleShotGroupMembership', () => {
       ['lower']
     );
     expect(shotIds(result)).toEqual([['s1'], ['s3']]);
-    expect(result[1].sourceTakeGenerationId).toBe('g1');
+    expect(result[1].sourceTakeId).toBe('g1');
   });
 
   it('cycles the middle shot after a split through above, below, merged, none', () => {
     const split = [
       draft('g1', ['s1'], { takeId: 'g1' }),
-      draft('lower', ['s3'], { sourceTakeGenerationId: 'g1' }),
+      draft('lower', ['s3'], { sourceTakeId: 'g1' }),
     ];
     expect(shotIds(cycle(split, 's2'))).toEqual([
       ['s1', 's2'],
@@ -280,15 +280,15 @@ describe('cycleShotGroupMembership', () => {
 });
 
 describe('save projection and labels', () => {
-  it('creates drafts from take generations', () => {
+  it('creates drafts from takes', () => {
     expect(
-      createShotGroupDraftsFromTakeGenerations([
-        take('take_generation_1', ['s2']),
+      createShotGroupDraftsFromTakes([
+        take('take_1', ['s2']),
       ])
     ).toEqual([
       {
-        draftGroupId: 'take_generation_1',
-        takeId: 'take_generation_1',
+        draftGroupId: 'take_1',
+        takeId: 'take_1',
         shotIds: ['s2'],
       },
     ]);
@@ -298,15 +298,15 @@ describe('save projection and labels', () => {
     expect(
       shotGroupsForSave([
         draft('g1', ['s1'], { takeId: 'g1' }),
-        draft('lower', ['s3'], { sourceTakeGenerationId: 'g1' }),
+        draft('lower', ['s3'], { sourceTakeId: 'g1' }),
       ])
     ).toEqual([
       { takeId: 'g1', shotIds: ['s1'] },
-      { sourceTakeGenerationId: 'g1', shotIds: ['s3'] },
+      { sourceTakeId: 'g1', shotIds: ['s3'] },
     ]);
   });
 
-  it('serializes unsaved merges with the upper take generation id and merge partner id', () => {
+  it('serializes unsaved merges with the upper take id and merge partner id', () => {
     const above = cycle(
       [
         draft('g1', ['s1', 's2'], { takeId: 'g1' }),
@@ -320,7 +320,7 @@ describe('save projection and labels', () => {
     expect(shotGroupsForSave(merged)).toEqual([
       {
         takeId: 'g1',
-        mergePartnerTakeGenerationId: 'g2',
+        mergePartnerTakeId: 'g2',
         shotIds: ['s1', 's2', 's3', 's4', 's5'],
       },
     ]);

@@ -1,8 +1,8 @@
 import type {
-  ShotVideoTakeGenerationContext,
-  ShotVideoTakeGenerationProduction,
+  ShotVideoTakeProductionContext,
+  SceneShotVideoTakeProductionState,
   ShotVideoTakeModelChoiceReport,
-  ShotVideoTakeGenerationSpec,
+  ShotVideoTakeOutputGenerationSpec,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
   ShotVideoTakePreflightInput,
@@ -23,16 +23,16 @@ import type {
 
 
 export function normalizeRouteSettingsForContext(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   route: ShotVideoRoute;
 }) {
   return normalizeShotVideoRouteSettings({
     route: input.route,
     defaults: input.context.defaults.parameterValues,
-    settings: input.context.take.production.parameterValues,
+    settings: input.context.take.state.production.parameterValues,
   }) as {
-    values: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
-    providerValues: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
+    values: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>;
+    providerValues: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>;
     droppedSettingIds: string[];
     invalidSettingIds: string[];
   };
@@ -96,7 +96,7 @@ export function durationSupportForRoute(
 
 
 export function finalInputMatchesRouteSlot(
-  input: ShotVideoTakeGenerationSpec['inputs'][number],
+  input: ShotVideoTakeOutputGenerationSpec['inputs'][number],
   slot: ShotVideoRouteInputSlot
 ): boolean {
   if (input.mediaKind !== slot.mediaKind) {
@@ -119,8 +119,8 @@ export function finalInputMatchesRouteSlot(
 
 
 export function missingRequiredRouteInputLabelsForFinalSpec(input: {
-  context: ShotVideoTakeGenerationContext;
-  spec: ShotVideoTakeGenerationSpec;
+  context: ShotVideoTakeProductionContext;
+  spec: ShotVideoTakeOutputGenerationSpec;
 }): string[] {
   const route = requireShotVideoTakeRoute(
     input.spec.modelChoice,
@@ -141,7 +141,7 @@ export function missingRequiredRouteInputLabelsForFinalSpec(input: {
 
 
 export function missingRequiredRouteInputLabelsForPreparedInputs(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   inputModeId: ShotVideoTakeInputModeId;
   modelChoice: ShotVideoTakeModelChoice;
   preparedInputs: ShotVideoTakePreflightInput[];

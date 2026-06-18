@@ -18,12 +18,12 @@ import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-pro
 
 interface SceneShotAiProductionTabProps {
   production: UseShotVideoTakeProductionResult;
-  onCreateTakeGeneration?: () => Promise<void>;
+  onCreateTake?: () => Promise<void>;
 }
 
 export function SceneShotAiProductionTab({
   production,
-  onCreateTakeGeneration,
+  onCreateTake,
 }: SceneShotAiProductionTabProps) {
   const {
     loadState,
@@ -82,7 +82,7 @@ export function SceneShotAiProductionTab({
   if (!take || !models) {
     return (
       <div className='flex h-full items-center justify-center py-8'>
-        <Button type='button' onClick={() => void onCreateTakeGeneration?.()}>
+        <Button type='button' onClick={() => void onCreateTake?.()}>
           Create Take
         </Button>
       </div>
@@ -116,7 +116,7 @@ export function SceneShotAiProductionTab({
         />
         <SceneShotAiProductionRunSetup
           parameters={enabledParameters(selectedModelReport)}
-          values={take.production.parameterValues ?? {}}
+          values={take.state.production.parameterValues ?? {}}
           onParameterChange={setParameter}
           estimate={displayEstimateTotal(estimate, productionPlan)}
           estimatePending={estimateState === 'loading' || planState === 'loading'}

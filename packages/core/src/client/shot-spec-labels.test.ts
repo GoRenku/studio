@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { deriveShotSpecPromptStrings } from './shot-spec-labels.js';
+import { deriveTakeShotDesignPromptStrings } from './shot-spec-labels.js';
 
-describe('deriveShotSpecPromptStrings', () => {
-  it('returns no strings for empty or absent specs', () => {
-    expect(deriveShotSpecPromptStrings(undefined)).toEqual({});
-    expect(deriveShotSpecPromptStrings({})).toEqual({
+describe('deriveTakeShotDesignPromptStrings', () => {
+  it('returns no strings for empty or absent design', () => {
+    expect(deriveTakeShotDesignPromptStrings(undefined)).toEqual({});
+    expect(deriveTakeShotDesignPromptStrings({})).toEqual({
       shotType: undefined,
       cameraAngle: undefined,
       framing: undefined,
@@ -14,23 +14,26 @@ describe('deriveShotSpecPromptStrings', () => {
   });
 
   it('derives shot size, angle + dutch, framing, lens, focus, and movement strings', () => {
-    const derived = deriveShotSpecPromptStrings({
-      shotSize: 'medium-close-up',
-      subjectFraming: ['single', 'over-the-shoulder'],
-      cameraAngle: 'eye-level',
-      dutch: 'right',
-      lens: {
-        type: 'wide',
-        millimeters: 28,
-        focus: 'shallow-focus',
+    const derived = deriveTakeShotDesignPromptStrings({
+      composition: {
+        shotSize: 'medium-close-up',
+        subjectFraming: ['single', 'over-the-shoulder'],
+        cameraAngle: 'eye-level',
+        dutch: 'right',
+        lens: {
+          type: 'wide',
+          millimeters: 28,
+          focus: 'shallow-focus',
+        },
+        customComposition: 'tight on hands',
       },
-      movement: {
+      motion: {
         movement: 'tracking',
         directions: ['left', 'forward'],
         track: 'circular',
         rig: 'gimbal',
+        customMotion: 'slow ramp',
       },
-      custom: { composition: 'tight on hands', movement: 'slow ramp' },
     });
 
     expect(derived.shotType).toBe('Medium Close-Up');
@@ -43,15 +46,15 @@ describe('deriveShotSpecPromptStrings', () => {
   });
 
   it('keeps a custom movement even without a structured movement object', () => {
-    const derived = deriveShotSpecPromptStrings({
-      custom: { movement: 'handheld drift' },
+    const derived = deriveTakeShotDesignPromptStrings({
+      motion: { customMotion: 'handheld drift' },
     });
     expect(derived.cameraMovement).toBe('handheld drift');
   });
 
-  it('derives the establishing shot label from structured shot size specs', () => {
-    const derived = deriveShotSpecPromptStrings({
-      shotSize: 'establishing-shot',
+  it('derives the establishing shot label from structured shot size design', () => {
+    const derived = deriveTakeShotDesignPromptStrings({
+      composition: { shotSize: 'establishing-shot' },
     });
 
     expect(derived.shotType).toBe('Establishing Shot');

@@ -15,10 +15,10 @@ describe('shot video take preflight and validation', () => {
     projectData = shotVideoTakeProject.projectData;
   });
 
-  it('validates selected input ownership before mutating another take generation selection', async () => {
+  it('validates selected input ownership before mutating another Shot Video Take selection', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
-    const otherTakeGeneration = await projectData.createSceneShotVideoTake({
+    const otherTake = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
@@ -34,7 +34,7 @@ describe('shot video take preflight and validation', () => {
     });
     const unselected = await projectData.importShotFirstFrame({
       homeDir,
-      takeId: otherTakeGeneration.takeId,
+      takeId: otherTake.takeId,
       sourceProjectRelativePath: 'generated/media/group-two-b.png',
       selection: 'take',
     });
@@ -47,23 +47,23 @@ describe('shot video take preflight and validation', () => {
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA362' });
 
-    const firstGenerationInputs = await projectData.listShotVideoTakeInputs({
+    const firstTakeInputs = await projectData.listShotVideoTakeInputs({
       homeDir,
       takeId: written.take.takeId,
     });
-    expect(firstGenerationInputs.inputs.find((input) => input.inputId === selected.mediaInput.inputId))
+    expect(firstTakeInputs.inputs.find((input) => input.inputId === selected.mediaInput.inputId))
       .toMatchObject({ selected: true });
-    const otherGenerationInputs = await projectData.listShotVideoTakeInputs({
+    const otherTakeInputs = await projectData.listShotVideoTakeInputs({
       homeDir,
-      takeId: otherTakeGeneration.takeId,
+      takeId: otherTake.takeId,
     });
-    expect(otherGenerationInputs.inputs.find((input) => input.inputId === unselected.mediaInput.inputId))
+    expect(otherTakeInputs.inputs.find((input) => input.inputId === unselected.mediaInput.inputId))
       .toMatchObject({ selected: false });
   });
 
 
 
-  it('preserves input shot membership when the take generation shot ids change', async () => {
+  it('preserves input shot membership when the Shot Video Take shot ids change', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
     const take = await projectData.createSceneShotVideoTake({

@@ -34,7 +34,7 @@ export function declareShotVideoTakeDependencySlots(
               target: input.target,
               required: false,
               reason:
-                'This generated multi-shot storyboard reference helps preserve continuity across the take generation.',
+                'This generated multi-shot storyboard reference helps preserve continuity across the take.',
             }),
           ]
       : []),

@@ -214,47 +214,4 @@ describe('screenplay Hono route', () => {
     });
   });
 
-  it('updates shot reference inclusion overrides through the core service contract', async () => {
-    const updateSceneShotReferenceInclusion = vi.fn(async () =>
-      fakeProjectDataService().readSceneShotListResource({} as never)
-    );
-    const app = new Hono().route(
-      '/:projectName',
-      createScreenplayRoute({
-        requireToken: async (_c, next) => {
-          await next();
-        },
-        projectData: {
-          ...fakeProjectDataService(),
-          updateSceneShotReferenceInclusion,
-        },
-      })
-    );
-
-    const response = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/shots/shot_001/reference-inclusions',
-      {
-        method: 'PATCH',
-        body: JSON.stringify({
-          dependencyId: 'reference-image:shot:shot_001',
-          inclusion: 'exclude',
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-
-    expect(response.status).toBe(200);
-    expect(updateSceneShotReferenceInclusion).toHaveBeenCalledWith({
-      projectName: 'constantinople',
-      sceneId: 'scene_opening',
-      shotId: 'shot_001',
-      dependencyId: 'reference-image:shot:shot_001',
-      inclusion: 'exclude',
-    });
-    await expect(response.json()).resolves.toMatchObject({
-      resource: {
-        scene: { id: 'scene_opening' },
-      },
-    });
-  });
 });

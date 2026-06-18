@@ -2,10 +2,9 @@ import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
   MediaGenerationDependencyLine,
   MediaGenerationDependencySlot,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
   ShotVideoTakeInputKind,
   ShotVideoTakePreflightInput,
-  SceneShotWithLegacyShotSpecs,
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { shotVideoInputDependencyId } from '../dependency-identifiers.js';
@@ -21,7 +20,7 @@ export interface ReferenceInclusionResolution {
 }
 
 export function validateRequiredReferenceInclusions(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   slots: MediaGenerationDependencySlot[];
 }): void {
   const issues = input.slots.flatMap((slot) => {
@@ -35,7 +34,7 @@ export function validateRequiredReferenceInclusions(input: {
           'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
           `Required reference cannot be excluded: ${slot.label}.`,
           {
-            path: ['shotSpecs', 'referenceInclusions', slot.dependencyId],
+            path: ['take', 'state', 'referenceSelections', 'dependencyInclusions', slot.dependencyId],
             context: `dependencyId=${slot.dependencyId}`,
           },
           'Clear the exclusion or choose a generation route where this reference is optional.'
@@ -58,7 +57,7 @@ export function validateRequiredReferenceInclusions(input: {
 }
 
 export function referenceDependencySlotIncluded(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   slot: MediaGenerationDependencySlot
 ): boolean {
   if (slot.required) {
@@ -75,7 +74,7 @@ export function referenceDependencySlotIncluded(
 }
 
 export function filterPreparedInputsByReferenceInclusions(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   preparedInputs: ShotVideoTakePreflightInput[]
 ): ShotVideoTakePreflightInput[] {
   return preparedInputs.filter((preparedInput) => {
@@ -93,16 +92,10 @@ export function filterPreparedInputsByReferenceInclusions(
 }
 
 export function referenceInclusionOverride(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   dependencyId: string
 ): 'include' | 'exclude' | null {
-  return groupReferenceInclusionOverride(
-    context.shots.map(
-      (shot) =>
-        (shot as SceneShotWithLegacyShotSpecs).shotSpecs
-          ?.referenceInclusions?.[dependencyId] ?? null
-    )
-  );
+  return context.take.state.referenceSelections.dependencyInclusions[dependencyId] ?? null;
 }
 
 export function groupReferenceInclusionOverride(
@@ -133,7 +126,7 @@ export function isReferencePreparedInput(kind: ShotVideoTakeInputKind): boolean 
 
 
 export function referenceInclusionForDependencyId(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   dependencyId: string,
   defaultIncluded: boolean,
   line?: MediaGenerationDependencyLine | null
@@ -158,7 +151,7 @@ export function referenceInclusionForDependencyId(
 
 
 export function requiredGeneralReferenceInclusion(input: {
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
   kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet';
   selected: boolean;
   inclusion: ReferenceInclusionResolution;
@@ -176,11 +169,11 @@ export function requiredGeneralReferenceInclusion(input: {
 
 
 export function routeRequiresGeneralReference(
-  context: ShotVideoTakeGenerationContext,
+  context: ShotVideoTakeProductionContext,
   kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
 ): boolean {
   const inputModeId =
-    context.take.production.inputModeId ?? context.defaults.inputModeId;
+    context.take.state.production.inputModeId ?? context.defaults.inputModeId;
   if (kind === 'first-frame') {
     return inputModeId === 'first-frame' || inputModeId === 'first-last-frame';
   }

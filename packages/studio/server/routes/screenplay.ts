@@ -1,6 +1,4 @@
 import {
-  sceneShotListResourceKeys,
-  type SceneShotWithLegacyShotSpecs,
   type ShotVideoTakeInputModeId,
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
@@ -23,20 +21,18 @@ import {
   toSceneShotListResourceResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
-import { readSceneShotSpecsRequest } from '../http/scene-shot-specs-request.js';
+import { readSceneShotDesignRequest } from '../http/scene-shot-design-request.js';
 import { readCastMemberVoiceOverRequest } from '../http/cast-member-request.js';
 import {
-  readShotCastReferencesRequest,
   readShotCastCharacterSheetReferenceRequest,
-  readShotCustomReferenceImagesRequest,
   readShotLocationSheetReferenceRequest,
-  readShotLocationReferenceRequest,
   readShotLocationViewReferencesRequest,
   readShotLookbookReferenceRequest,
   readShotReferenceInclusionRequest,
   readSceneShotVideoTakeCreateRequest,
   readSceneShotVideoTakeProductionRequest,
   readSceneShotVideoTakeShotsRequest,
+  readTakeDialogueAudioSelectionRequest,
   readShotVideoTakeProductionPlanRequest,
 } from '../http/scene-shot-video-take-production-request.js';
 import {
@@ -442,7 +438,7 @@ export function createScreenplayRoute({
           takeId: takeId,
           inputModeId:
             requestedInputModeId ??
-            context.take.production.inputModeId ??
+            context.take.state.production.inputModeId ??
             context.defaults.inputModeId,
         });
         return c.json({ context, models });
@@ -526,7 +522,7 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/shots/:shotId/specs',
+      '/screenplay/scenes/:sceneId/takes/:takeId/shots/:shotId/design',
       requireToken,
       async (c) => {
         try {
@@ -534,21 +530,21 @@ export function createScreenplayRoute({
           const sceneId = c.req.param('sceneId') as string;
           const takeId = c.req.param('takeId') as string;
           const shotId = c.req.param('shotId') as string;
-          const shotSpecs = readSceneShotSpecsRequest(await c.req.json());
+          const shotDesign = readSceneShotDesignRequest(await c.req.json());
           const context =
-            await projectData.updateSceneShotVideoTakeShotSpecs({
+            await projectData.updateSceneShotVideoTakeShotDesign({
               projectName,
               takeId: takeId,
               shotId,
-              shotSpecs,
+              shotDesign,
             });
           if (context.scene.id !== sceneId) {
             throw createStructuredError({
               code: 'STUDIO_SERVER351',
-              message: 'Take generation does not belong to the requested scene.',
+              message: 'Shot Video Take does not belong to the requested scene.',
               issues: [],
               suggestion:
-                'Refresh Studio and retry the take shot settings change from the correct scene.',
+                'Refresh Studio and retry the take shot design change from the correct scene.',
             });
           }
           return c.json({
@@ -694,117 +690,43 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId',
+      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/character-sheets',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
-          const shotSpecs = readSceneShotSpecsRequest(
-            await c.req.json()
-          );
-          const resource = await projectData.updateSceneShotSpecs({
-            projectName,
-            sceneId,
-            shotId,
-            shotSpecs,
-          });
-          return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/cast-references',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
-          const request = readShotCastReferencesRequest(await c.req.json());
-          const resource = await projectData.updateSceneShotCastReferences({
-            projectName,
-            sceneId,
-            shotId,
-            castMemberIds: request.castMemberIds,
-          });
-          return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/location-reference',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
-          const request = readShotLocationReferenceRequest(await c.req.json());
-          const resource = await projectData.updateSceneShotLocationReference({
-            projectName,
-            sceneId,
-            shotId,
-            locationId: request.locationId,
-          });
-          return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/cast-character-sheet-reference',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
+          const takeId = c.req.param('takeId') as string;
           const request = readShotCastCharacterSheetReferenceRequest(
             await c.req.json()
           );
-          const resource =
-            await projectData.updateSceneShotCastCharacterSheetReference({
-              projectName,
-              sceneId,
-              shotId,
-              castMemberId: request.castMemberId,
-              assetId: request.assetId,
-            });
+          const context = await readTakeContextForScene({
+            projectData,
+            projectName,
+            sceneId,
+            takeId,
+          });
+          const selectedCharacterSheetAssetIds = {
+            ...context.take.state.referenceSelections.selectedCharacterSheetAssetIds,
+          };
+          if (request.assetId) {
+            selectedCharacterSheetAssetIds[request.castMemberId] = request.assetId;
+          } else {
+            delete selectedCharacterSheetAssetIds[request.castMemberId];
+          }
+          const nextContext = await projectData.updateSceneShotVideoTakeState({
+            projectName,
+            takeId,
+            statePatch: {
+              referenceSelections: {
+                ...context.take.state.referenceSelections,
+                selectedCharacterSheetAssetIds,
+              },
+            },
+          });
           return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
+            context: nextContext,
+            resourceKeys: nextContext.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -812,28 +734,46 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/location-sheet-reference',
+      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/location-sheets',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
+          const takeId = c.req.param('takeId') as string;
           const request = readShotLocationSheetReferenceRequest(await c.req.json());
-          const resource = await projectData.updateSceneShotLocationSheetReference({
+          const context = await readTakeContextForScene({
+            projectData,
             projectName,
             sceneId,
-            shotId,
-            locationId: request.locationId,
-            assetId: request.assetId,
+            takeId,
+          });
+          const selectedLocationSheetAssetIds = {
+            ...context.take.state.referenceSelections.selectedLocationSheetAssetIds,
+          };
+          const selectedLocationViewIds = {
+            ...context.take.state.referenceSelections.selectedLocationViewIds,
+          };
+          if (request.assetId) {
+            selectedLocationSheetAssetIds[request.locationId] = request.assetId;
+          } else {
+            delete selectedLocationSheetAssetIds[request.locationId];
+            delete selectedLocationViewIds[request.locationId];
+          }
+          const nextContext = await projectData.updateSceneShotVideoTakeState({
+            projectName,
+            takeId,
+            statePatch: {
+              referenceSelections: {
+                ...context.take.state.referenceSelections,
+                selectedLocationSheetAssetIds,
+                selectedLocationViewIds,
+              },
+            },
           });
           return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
+            context: nextContext,
+            resourceKeys: nextContext.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -841,29 +781,42 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/location-view-references',
+      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/location-views',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
+          const takeId = c.req.param('takeId') as string;
           const request = readShotLocationViewReferencesRequest(await c.req.json());
-          const resource = await projectData.updateSceneShotLocationViewReferences({
+          const context = await readTakeContextForScene({
+            projectData,
             projectName,
             sceneId,
-            shotId,
-            locationId: request.locationId,
-            assetId: request.assetId,
-            viewIds: request.viewIds,
+            takeId,
+          });
+          const selectedLocationSheetAssetIds = {
+            ...context.take.state.referenceSelections.selectedLocationSheetAssetIds,
+            [request.locationId]: request.assetId,
+          };
+          const selectedLocationViewIds = {
+            ...context.take.state.referenceSelections.selectedLocationViewIds,
+            [request.locationId]: request.viewIds,
+          };
+          const nextContext = await projectData.updateSceneShotVideoTakeState({
+            projectName,
+            takeId,
+            statePatch: {
+              referenceSelections: {
+                ...context.take.state.referenceSelections,
+                selectedLocationSheetAssetIds,
+                selectedLocationViewIds,
+              },
+            },
           });
           return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
+            context: nextContext,
+            resourceKeys: nextContext.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -871,27 +824,36 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/lookbook-reference',
+      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/lookbook-sheets',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
+          const takeId = c.req.param('takeId') as string;
           const request = readShotLookbookReferenceRequest(await c.req.json());
-          const resource = await projectData.updateSceneShotLookbookReference({
+          const context = await readTakeContextForScene({
+            projectData,
             projectName,
             sceneId,
-            shotId,
-            lookbookSheetId: request.lookbookSheetId,
+            takeId,
+          });
+          const selectedLookbookSheetIds = request.lookbookSheetId
+            ? [request.lookbookSheetId]
+            : [];
+          const nextContext = await projectData.updateSceneShotVideoTakeState({
+            projectName,
+            takeId,
+            statePatch: {
+              referenceSelections: {
+                ...context.take.state.referenceSelections,
+                selectedLookbookSheetIds,
+              },
+            },
           });
           return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
+            context: nextContext,
+            resourceKeys: nextContext.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -899,56 +861,41 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/reference-images',
+      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/dialogue-audio',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
-          const request = readShotCustomReferenceImagesRequest(await c.req.json());
-          const resource = await projectData.updateSceneShotCustomReferenceImages({
+          const takeId = c.req.param('takeId') as string;
+          const request = readTakeDialogueAudioSelectionRequest(await c.req.json());
+          const context = await readTakeContextForScene({
+            projectData,
             projectName,
             sceneId,
-            shotId,
-            customReferenceInputIds: request.customReferenceInputIds,
+            takeId,
           });
-          return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/shots/:shotId/reference-inclusions',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const shotId = c.req.param('shotId') as string;
-          const request = readShotReferenceInclusionRequest(await c.req.json());
-          const resource = await projectData.updateSceneShotReferenceInclusion({
+          const selectedDialogueAudioTakeIds = {
+            ...context.take.state.referenceSelections.selectedDialogueAudioTakeIds,
+          };
+          if (request.takeId) {
+            selectedDialogueAudioTakeIds[request.dialogueId] = request.takeId;
+          } else {
+            delete selectedDialogueAudioTakeIds[request.dialogueId];
+          }
+          const nextContext = await projectData.updateSceneShotVideoTakeState({
             projectName,
-            sceneId,
-            shotId,
-            dependencyId: request.dependencyId,
-            inclusion: request.inclusion,
+            takeId,
+            statePatch: {
+              referenceSelections: {
+                ...context.take.state.referenceSelections,
+                selectedDialogueAudioTakeIds,
+              },
+            },
           });
           return c.json({
-            resource: toSceneShotListResourceResponse(projectName, resource),
-            resourceKeys: sceneShotListResourceKeys({
-              sceneId,
-              shotListId: resource.activeShotListId,
-              shotIds: [shotId],
-            }),
+            context: nextContext,
+            resourceKeys: nextContext.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -972,38 +919,30 @@ export function createScreenplayRoute({
             throw createStructuredError({
               code: 'STUDIO_SERVER350',
               message:
-                'Take generation does not belong to the requested scene.',
+                'Shot Video Take does not belong to the requested scene.',
               issues: [],
               suggestion:
                 'Refresh Studio and retry the reference inclusion change from the take scene.',
             });
           }
-          let nextContext = context;
-          for (const shot of context.shots) {
-            const shotSpecs = {
-              ...((shot as SceneShotWithLegacyShotSpecs).shotSpecs ?? {}),
-            };
-            const referenceInclusions = {
-              ...(shotSpecs.referenceInclusions ?? {}),
-            };
-            if (request.inclusion) {
-              referenceInclusions[request.dependencyId] = request.inclusion;
-            } else {
-              delete referenceInclusions[request.dependencyId];
-            }
-            if (Object.keys(referenceInclusions).length) {
-              shotSpecs.referenceInclusions = referenceInclusions;
-            } else {
-              delete shotSpecs.referenceInclusions;
-            }
-            nextContext =
-              await projectData.updateSceneShotVideoTakeShotSpecs({
-                projectName,
-                takeId: takeId,
-                shotId: shot.shotId,
-                shotSpecs,
-              });
+          const dependencyInclusions = {
+            ...context.take.state.referenceSelections.dependencyInclusions,
+          };
+          if (request.inclusion) {
+            dependencyInclusions[request.dependencyId] = request.inclusion;
+          } else {
+            delete dependencyInclusions[request.dependencyId];
           }
+          const nextContext = await projectData.updateSceneShotVideoTakeState({
+            projectName,
+            takeId,
+            statePatch: {
+              referenceSelections: {
+                ...context.take.state.referenceSelections,
+                dependencyInclusions,
+              },
+            },
+          });
           return c.json({
             context: nextContext,
             resourceKeys: nextContext.resourceKeys,
@@ -1028,6 +967,28 @@ export function createScreenplayRoute({
         return projectErrorResponse(c, error);
       }
     });
+}
+
+async function readTakeContextForScene(input: {
+  projectData: ProjectsRouteProjectData;
+  projectName: string;
+  sceneId: string;
+  takeId: string;
+}) {
+  const context = await input.projectData.buildShotVideoTakeContext({
+    projectName: input.projectName,
+    takeId: input.takeId,
+  });
+  if (context.scene.id !== input.sceneId) {
+    throw createStructuredError({
+      code: 'STUDIO_SERVER350',
+      message: 'Shot Video Take does not belong to the requested scene.',
+      issues: [],
+      suggestion:
+        'Refresh Studio and retry the reference selection change from the take scene.',
+    });
+  }
+  return context;
 }
 
 function parseShotVideoTakeInputModeQuery(

@@ -7,7 +7,7 @@ import type {
 } from '../../../client/screenplay.js';
 import type {
   SceneDialogueAudioTake,
-  ShotVideoTakeGenerationContext,
+  ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import { readAssetFileRecord } from '../../database/access/asset-files.js';
 import {
@@ -28,8 +28,7 @@ export interface ResolvedShotDialogueAudioReference {
   audioState:
     | 'ready'
     | 'not-generated'
-    | 'no-picked-take'
-    | 'multiple-picked-takes'
+    | 'no-selected-take'
     | 'missing-file';
   pickedTake: SceneDialogueAudioTake | null;
   pickedTakeLabel: string | null;
@@ -42,7 +41,7 @@ export function resolveShotDialogueAudioReferences(input: {
   session: DatabaseSession;
   screenplay: ScreenplayDocument;
   scene: Scene;
-  context: ShotVideoTakeGenerationContext;
+  context: ShotVideoTakeProductionContext;
 }): {
   references: ResolvedShotDialogueAudioReference[];
   diagnostics: DiagnosticIssue[];
@@ -109,8 +108,14 @@ export function resolveShotDialogueAudioReferences(input: {
   const references = dialogueBlocksInSceneOrder.map((dialogueBlock) => {
     const dialogueId = dialogueBlock.dialogueId;
     const audio = audioByDialogueId.get(dialogueId) ?? null;
-    const pickedTakes = audio?.takes.filter((take) => take.picked) ?? [];
-    const pickedTake = pickedTakes.length === 1 ? pickedTakes[0]! : null;
+    const selectedTakeId =
+      input.context.take.state.referenceSelections.selectedDialogueAudioTakeIds[
+        dialogueId
+      ];
+    const pickedTake =
+      selectedTakeId && audio
+        ? audio.takes.find((take) => take.takeId === selectedTakeId) ?? null
+        : null;
     const takeLabel = pickedTake && audio
       ? takeLabels(audio.takes).get(pickedTake.takeId) ?? 'Take'
       : null;
@@ -121,26 +126,23 @@ export function resolveShotDialogueAudioReferences(input: {
     if (!audio || audio.takes.length === 0) {
       unavailableReason = 'Not generated yet';
       audioState = 'not-generated';
-    } else if (pickedTakes.length > 1) {
-      unavailableReason = 'Multiple picked audio takes';
-      audioState = 'multiple-picked-takes';
-      referenceDiagnostics.push(
-        createDiagnosticError(
-          'CORE_SHOT_DIALOGUE_AUDIO_MULTIPLE_PICKED_TAKES',
-          'Dialogue audio reference has multiple picked audio takes.',
-          { path: ['sceneDialogueAudio', dialogueId, 'pickedTakeId'] },
-          'Pick exactly one dialogue audio take before using this dialogue as a video reference.'
-        )
-      );
     } else if (!pickedTake) {
-      unavailableReason = 'No picked audio take';
-      audioState = 'no-picked-take';
+      unavailableReason = 'No selected audio take';
+      audioState = 'no-selected-take';
       referenceDiagnostics.push(
         createDiagnosticError(
-          'CORE_SHOT_DIALOGUE_AUDIO_PICKED_TAKE_MISSING',
-          'Dialogue audio reference has no picked audio take.',
-          { path: ['sceneDialogueAudio', dialogueId, 'pickedTakeId'] },
-          'Pick a dialogue audio take before using this dialogue as a video reference.'
+          'CORE_SHOT_DIALOGUE_AUDIO_SELECTED_TAKE_MISSING',
+          'Dialogue audio reference has no selected audio take.',
+          {
+            path: [
+              'take',
+              'state',
+              'referenceSelections',
+              'selectedDialogueAudioTakeIds',
+              dialogueId,
+            ],
+          },
+          'Select a dialogue audio take before using this dialogue as a video reference.'
         )
       );
     } else if (
@@ -154,7 +156,7 @@ export function resolveShotDialogueAudioReferences(input: {
       referenceDiagnostics.push(
         createDiagnosticError(
           'CORE_SHOT_DIALOGUE_AUDIO_ASSET_FILE_MISSING',
-          'Picked dialogue audio take does not resolve to an asset file.',
+          'Selected dialogue audio take does not resolve to an asset file.',
           { path: ['sceneDialogueAudio', dialogueId, 'takes', pickedTake.takeId] },
           'Regenerate or import the dialogue audio take before using it as a video reference.'
         )

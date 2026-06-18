@@ -45,15 +45,23 @@ That means:
 - do not add shims for prior APIs;
 - do not add fallback branches for old structures;
 - do not add compatibility layers;
+- do not add duplicate convenience fields, convenience DTO properties, derived
+  mirrors, or parallel state whose purpose is to make an old or intermediate
+  model easier to keep using;
 - do not add wrapper components, wrapper functions, adapter files, facade
   modules, or thin pass-through helpers whose main purpose is to preserve,
   rename, or locally repackage another API, component, command, route, schema,
   or import path;
 - do not add convenience re-exports to avoid fixing callers;
-- do not keep tests whose only purpose is to reject an obsolete format;
+- do not keep tests whose only purpose is to reject, warn about, repair,
+  translate, or otherwise recognize an obsolete format;
 - do not keep old loaders after the model changes;
+- do not add warnings, errors, diagnostics, repair paths, migration-at-read
+  paths, or special validation branches whose purpose is to recognize an
+  obsolete shape by name;
 - do not mention obsolete names in new code unless a document is explicitly
-  describing a historical decision.
+  describing a historical decision or a one-way database migration is converting
+  already-existing development data to the current shape.
 
 When a name, owner package, API, folder structure, schema, route, command, or
 file format changes, update callers directly to the new shape and delete the
@@ -61,6 +69,11 @@ obsolete code.
 
 Tests should describe the current intended behavior only. They should not become
 a museum of previous iterations.
+
+Current code should read as if obsolete models never existed. One-way database
+migrations may mention old table names, column names, ids, or JSON fields only
+to transform existing development data into the current model. Runtime code
+must not preserve those names as recognized concepts.
 
 When working in this repository, prioritize clarity, explicit contracts, and
 small focused changes.
@@ -213,6 +226,12 @@ The default behavior should be:
 - distinguish warnings from errors;
 - include locations and suggestions when they help the caller fix the problem;
 - serialize structured errors consistently in CLI and Studio HTTP responses.
+
+Do not create structured diagnostics specifically for obsolete schemas,
+commands, fields, aliases, or compatibility shapes. Once a model is replaced,
+runtime validation should describe only the current contract; obsolete shapes
+should not get named warnings, repair suggestions, compatibility errors, or
+agent-readable guidance.
 
 For import YAML, unknown fields are warnings and must be ignored. They must
 never drive database schema, DTO, or API shape changes. Required fields that are

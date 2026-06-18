@@ -2,7 +2,7 @@ import type { GenerationEstimate } from '@gorenku/studio-engines';
 import type { Asset } from './assets.js';
 import type { ProjectRelativePath } from './project.js';
 import type { SceneSetting } from './screenplay.js';
-import type { SceneShot, LocationAzimuthViewId, ShotVideoTakePromptDraft, ShotVideoTakeDependencyKind, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, ShotVideoTakeGenerationProduction, ShotSizeId, SubjectFramingId, CameraAngleId, ShotLensSpecs, ShotMovementId, MoveDirectionId, MoveTrackId, RigId } from './scene-shot-list.js';
+import type { SceneShot, LocationAzimuthViewId, ShotVideoTakePromptDraft, ShotVideoTakeDependencyKind, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, SceneShotVideoTakeProductionState, ShotSizeId, SubjectFramingId, CameraAngleId, ShotLensSpecs, ShotMovementId, MoveDirectionId, MoveTrackId, RigId } from './scene-shot-list.js';
 import type { MediaGenerationDependencyKind, MediaGenerationDependencyInventory, MediaGenerationDependencyPricing, MediaGenerationPlanLine } from './media-generation-dependency.js';
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
 import type { SceneShotVideoTakeTarget } from './media-generation-target.js';
@@ -124,11 +124,10 @@ export interface SceneShotVideoTakeHistoryStatus {
 export interface SceneShotVideoTake {
   takeId: string;
   sceneId: string;
-  shotListId: string;
+  sourceShotListId: string;
   title: string;
   shotIds: string[];
   state: SceneShotVideoTakeState;
-  production: ShotVideoTakeGenerationProduction;
   status: SceneShotVideoTakeStatus;
   createdAt: string;
   updatedAt: string;
@@ -193,9 +192,6 @@ export interface SceneShotVideoTakeReferenceSelections {
   selectedDialogueAudioTakeIds: Record<string, string>;
 }
 
-export type SceneShotVideoTakeProductionState =
-  ShotVideoTakeGenerationProduction;
-
 export interface SceneShotVideoTakePromptState {
   generatedPromptDraft?: ShotVideoTakePromptDraft;
   acceptedPrompt?: ShotVideoTakePromptDraft;
@@ -241,7 +237,7 @@ export interface ShotVideoTakeDefaults {
   parameterValues: ShotVideoTakeParameterValues;
 }
 
-export interface ShotVideoTakeGenerationContext {
+export interface ShotVideoTakeProductionContext {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   target: SceneShotVideoTakeTarget;
   project: ShotVideoTakeProjectContext;
@@ -301,7 +297,7 @@ export interface ShotVideoTakeInputGenerationSpec {
   title?: string;
 }
 
-export interface ShotVideoTakeGenerationInput {
+export interface ShotVideoTakeOutputGenerationInput {
   kind: ShotVideoTakeInputKind;
   assetId: string;
   assetFileId: string;
@@ -321,7 +317,7 @@ export interface ShotVideoTakeGenerationInput {
   seedanceAudioReferenceIntent?: 'clean-voice-sample' | 'generated-dialogue-reference';
 }
 
-export interface ShotVideoTakeGenerationSpec {
+export interface ShotVideoTakeOutputGenerationSpec {
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   target: SceneShotVideoTakeTarget;
   planId?: string;
@@ -330,7 +326,7 @@ export interface ShotVideoTakeGenerationSpec {
   prompt: string;
   negativePrompt?: string;
   parameterValues: ShotVideoTakeParameterValues;
-  inputs: ShotVideoTakeGenerationInput[];
+  inputs: ShotVideoTakeOutputGenerationInput[];
   title?: string;
 }
 
@@ -403,7 +399,7 @@ export interface ShotVideoTakeInputModelListReport {
   models: ShotVideoTakeInputModelChoiceReport[];
 }
 
-export interface ShotVideoTakePreflightInput extends ShotVideoTakeGenerationInput {
+export interface ShotVideoTakePreflightInput extends ShotVideoTakeOutputGenerationInput {
   subjectKind: ShotVideoTakeInputSubjectKind;
   subjectId: string;
 }
@@ -471,7 +467,7 @@ export interface ShotVideoTakePreflightFinalTake {
 export interface ShotVideoTakePreflightReport {
   valid: boolean;
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
-  plan?: ShotVideoTakeGenerationPlan;
+  plan?: ShotVideoTakeOutputGenerationPlan;
   target: SceneShotVideoTakeTarget;
   take: SceneShotVideoTake;
   inputModeId: ShotVideoTakeInputModeId;
@@ -494,7 +490,7 @@ export interface ShotVideoTakeProductionEstimateReport {
   shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
   estimate: GenerationEstimate | null;
-  plan?: ShotVideoTakeGenerationPlan;
+  plan?: ShotVideoTakeOutputGenerationPlan;
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
@@ -570,8 +566,7 @@ export interface ShotVideoTakeDialogueAudioReferenceChoice {
   audioState:
     | 'ready'
     | 'not-generated'
-    | 'no-picked-take'
-    | 'multiple-picked-takes'
+    | 'no-selected-take'
     | 'missing-file';
   pickedTake: {
     takeId: string;
@@ -664,7 +659,7 @@ export interface ShotVideoTakeProductionPlanReport {
   target: SceneShotVideoTakeTarget;
   take: SceneShotVideoTake;
   finalPrompt: ShotVideoTakePromptDraft | null;
-  plan: ShotVideoTakeGenerationPlan;
+  plan: ShotVideoTakeOutputGenerationPlan;
   references: ShotVideoTakeReferenceSectionsReport;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
@@ -676,7 +671,7 @@ export interface ShotVideoTakeInputPolicy {
   slotModes?: Record<string, ShotVideoInputPolicyMode>;
 }
 
-export interface ShotVideoTakeGenerationPlanRequest {
+export interface ShotVideoTakeOutputGenerationPlanRequest {
   projectId: string;
   sceneId: string;
   shotListId: string;
@@ -704,7 +699,7 @@ export interface ShotVideoTakePlanRoute {
   parameters: ShotVideoTakeParameterReport[];
 }
 
-export interface ShotVideoTakeGenerationPlanEstimate {
+export interface ShotVideoTakeOutputGenerationPlanEstimate {
   state: 'complete' | 'partial' | 'unavailable';
   estimatedTotalUsd: number | null;
   pricedLineCount: number;
@@ -713,14 +708,14 @@ export interface ShotVideoTakeGenerationPlanEstimate {
   requiresPriceOverride: boolean;
 }
 
-export interface ShotVideoTakeGenerationPlan {
+export interface ShotVideoTakeOutputGenerationPlan {
   planId: string;
-  request: ShotVideoTakeGenerationPlanRequest;
+  request: ShotVideoTakeOutputGenerationPlanRequest;
   model: ShotVideoTakePlanModel;
   route: ShotVideoTakePlanRoute;
   dependencyInventory: MediaGenerationDependencyInventory;
   lines: MediaGenerationPlanLine[];
-  estimate: ShotVideoTakeGenerationPlanEstimate;
+  estimate: ShotVideoTakeOutputGenerationPlanEstimate;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
   finalEstimate: GenerationEstimate | null;
 }

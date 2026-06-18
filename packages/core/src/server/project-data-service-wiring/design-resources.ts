@@ -12,16 +12,6 @@ import {
 import {
   readActStoryboardResource,
   readSceneShotListResource,
-  updateSceneShotCastCharacterSheetReference,
-  updateSceneShotCastReferences,
-  updateSceneShotCustomReferenceImages,
-  updateSceneShotLocationSheetReference,
-  updateSceneShotLocationReference,
-  updateSceneShotLocationViewReferences,
-  updateSceneShotLookbookReference,
-  updateSceneShotGroupReferenceInclusion,
-  updateSceneShotReferenceInclusion,
-  updateSceneShotSpecs,
 } from '../resources/scene-storyboard-ui.js';
 import { readStudioSelectionContext } from '../resources/selection-context.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
@@ -38,16 +28,6 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
   | 'readSceneShotListResource'
-  | 'updateSceneShotCastCharacterSheetReference'
-  | 'updateSceneShotCastReferences'
-  | 'updateSceneShotLocationSheetReference'
-  | 'updateSceneShotLocationReference'
-  | 'updateSceneShotLocationViewReferences'
-  | 'updateSceneShotLookbookReference'
-  | 'updateSceneShotCustomReferenceImages'
-  | 'updateSceneShotReferenceInclusion'
-  | 'updateSceneShotGroupReferenceInclusion'
-  | 'updateSceneShotSpecs'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
 > {
@@ -62,16 +42,6 @@ export function createDesignResourceServiceWiring(): Pick<
     readSequenceResource,
     readSceneNarrativeResource,
     readSceneShotListResource,
-    updateSceneShotCastCharacterSheetReference,
-    updateSceneShotCastReferences,
-    updateSceneShotLocationSheetReference,
-    updateSceneShotLocationReference,
-    updateSceneShotLocationViewReferences,
-    updateSceneShotLookbookReference,
-    updateSceneShotCustomReferenceImages,
-    updateSceneShotReferenceInclusion,
-    updateSceneShotGroupReferenceInclusion,
-    updateSceneShotSpecs,
     readActStoryboardResource,
     readStudioSelectionContext,
   };
