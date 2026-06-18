@@ -1,5 +1,55 @@
 # Agent Rules for Renku Studio
 
+## Top Instruction: Architecture Is A Hard Gate
+
+Do not make or accept a fix that is architecturally incorrect, even when it
+appears to solve the immediate bug.
+
+Renku Studio architecture rules are hard boundaries, not preferences. A change
+is not complete, acceptable, or review-ready if it fixes behavior by putting
+business logic in the wrong layer, bypassing the package that owns the domain
+rule, duplicating validation in an adapter, or creating a shortcut around the
+current contract.
+
+The default behavior must be:
+
+- fix the ownership boundary first, then fix the bug inside that boundary;
+- stop and redesign the slice when the obvious patch would cross a package,
+  storage, schema, command, or UI ownership line;
+- reject route-local, CLI-local, React-local, or agent-local business rules
+  when the rule belongs in `packages/core`;
+- reject broad escape-hatch APIs that let adapters write arbitrary domain state
+  instead of calling focused core commands;
+- reject "temporary" server, CLI, or UI validation whose real purpose is to
+  compensate for missing core validation;
+- keep durable metadata mutations behind core-owned commands and services;
+- keep Studio server handlers thin: read HTTP params/body, call core, serialize
+  the core response, and translate structured errors;
+- keep CLI handlers thin: parse flags/files, call core, format output, and
+  report structured diagnostics;
+- keep React feature code as a projection consumer that sends user intent to the
+  server instead of enforcing project metadata rules locally.
+
+If a bug exposes a missing core command, missing domain validator, weak service
+contract, or vague ownership boundary, add or correct that architecture as part
+of the fix. Do not patch around it in the caller.
+
+Concrete examples of forbidden fixes:
+
+- adding Studio server route logic that decides whether an asset belongs to a
+  Cast Member, Location, Lookbook, dialogue, take, or dependency slot;
+- allowing HTTP or CLI code to call a generic state patch API to mutate durable
+  take metadata;
+- adding React checks that decide whether generated media can be used as a
+  selected dependency when core does not enforce the same rule;
+- adding CLI-specific purpose or provider business logic instead of using the
+  shared core generation service;
+- accepting invalid project state and relying on a later panel, preflight, or
+  render path to interpret or repair it.
+
+When reviewing code, treat architectural boundary violations as high-severity
+issues even if tests pass and the UI appears to work.
+
 ## Top Instruction: Use Shadcn UI Controls Only
 
 In `packages/studio`, it is strictly forbidden to use raw HTML form or
