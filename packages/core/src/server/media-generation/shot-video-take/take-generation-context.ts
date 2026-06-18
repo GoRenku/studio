@@ -1,14 +1,14 @@
 import type {
   SceneShot,
-  SceneShotVideoTakeGeneration,
-  SceneShotVideoTakeGenerationTarget,
+  SceneShotVideoTake,
+  SceneShotVideoTakeTarget,
 } from '../../../client/index.js';
 import {
   requireSceneShotListForScene,
   readSceneShotListDocument,
 } from '../../database/access/scene-shot-lists.js';
 import {
-  requireSceneShotVideoTakeGeneration,
+  requireSceneShotVideoTake,
 } from '../../database/access/scene-shot-video-take-generations.js';
 import type {
   DatabaseSession,
@@ -23,66 +23,66 @@ import {
   requireScreenplayDocument,
 } from './project-session.js';
 
-export interface PreparedSceneShotVideoTakeGeneration {
+export interface PreparedSceneShotVideoTake {
   sceneId: string;
   shotListId: string;
-  takeGeneration: SceneShotVideoTakeGeneration;
+  take: SceneShotVideoTake;
   shotListRow: ReturnType<typeof requireSceneShotListForScene>;
   shotList: ReturnType<typeof readSceneShotListDocument>;
   orderedShotIds: string[];
-  target: SceneShotVideoTakeGenerationTarget;
+  target: SceneShotVideoTakeTarget;
 }
 
-export function prepareSceneShotVideoTakeGenerationInSession(input: {
+export function prepareSceneShotVideoTakeInSession(input: {
   session: DatabaseSession;
   input: ShotVideoTakeContextInput;
-}): PreparedSceneShotVideoTakeGeneration {
+}): PreparedSceneShotVideoTake {
   const screenplay = requireScreenplayDocument(input.session);
-  const takeGeneration = requireSceneShotVideoTakeGeneration(input.session, {
-    takeGenerationId: input.input.takeGenerationId,
+  const take = requireSceneShotVideoTake(input.session, {
+    takeId: input.input.takeId,
     screenplay,
   });
   const shotListRow = requireSceneShotListForScene({
     session: input.session,
-    sceneId: takeGeneration.sceneId,
-    shotListId: takeGeneration.shotListId,
+    sceneId: take.sceneId,
+    shotListId: take.shotListId,
   });
   const shotList = readSceneShotListDocument({ row: shotListRow, screenplay });
   return {
-    sceneId: takeGeneration.sceneId,
-    shotListId: takeGeneration.shotListId,
-    takeGeneration,
+    sceneId: take.sceneId,
+    shotListId: take.shotListId,
+    take,
     shotListRow,
     shotList,
-    orderedShotIds: [...takeGeneration.shotIds],
-    target: sceneShotVideoTakeGenerationTarget(takeGeneration),
+    orderedShotIds: [...take.shotIds],
+    target: sceneShotVideoTakeTarget(take),
   };
 }
 
-export function sceneShotVideoTakeGenerationTarget(
-  takeGeneration: Pick<
-    SceneShotVideoTakeGeneration,
-    'takeGenerationId' | 'sceneId' | 'shotIds'
+export function sceneShotVideoTakeTarget(
+  take: Pick<
+    SceneShotVideoTake,
+    'takeId' | 'sceneId' | 'shotIds'
   >
-): SceneShotVideoTakeGenerationTarget {
+): SceneShotVideoTakeTarget {
   return {
-    kind: 'sceneShotVideoTakeGeneration',
-    id: takeGeneration.takeGenerationId,
-    sceneId: takeGeneration.sceneId,
-    takeGenerationId: takeGeneration.takeGenerationId,
-    shotIds: [...takeGeneration.shotIds],
+    kind: 'sceneShotVideoTake',
+    id: take.takeId,
+    sceneId: take.sceneId,
+    takeId: take.takeId,
+    shotIds: [...take.shotIds],
   };
 }
 
-export function assertEditableTakeGeneration(
-  takeGeneration: Pick<SceneShotVideoTakeGeneration, 'compatibility' | 'takeGenerationId'>
+export function assertEditableSceneShotVideoTake(
+  take: Pick<SceneShotVideoTake, 'status' | 'takeId'>
 ): void {
-  if (takeGeneration.compatibility.editState === 'editable') {
+  if (take.status.editability.state === 'editable') {
     return;
   }
   throw new ProjectDataError(
     'PROJECT_DATA420',
-    `Scene Shot Video Take Generation is view-only: ${takeGeneration.takeGenerationId}.`
+    `Scene Shot Video Take is read-only: ${take.takeId}.`
   );
 }
 

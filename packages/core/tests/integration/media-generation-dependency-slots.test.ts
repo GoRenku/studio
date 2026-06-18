@@ -5,13 +5,13 @@ import {
   shotVideoInputDependencyId,
 } from '../../src/server/media-generation/dependency-identifiers.js';
 import { declareShotVideoTakeDependencySlots } from '../../src/server/media-generation/shot-video-take/dependency-slots.js';
-import type { SceneShotVideoTakeGenerationTarget } from '../../src/client/index.js';
+import type { SceneShotVideoTakeTarget } from '../../src/client/index.js';
 
-const target: SceneShotVideoTakeGenerationTarget = {
-  kind: 'sceneShotVideoTakeGeneration',
-  id: 'take-generation',
+const target: SceneShotVideoTakeTarget = {
+  kind: 'sceneShotVideoTake',
+  id: 'take',
   sceneId: 'scene',
-  takeGenerationId: 'take-generation',
+  takeId: 'take',
   shotIds: ['shot-a'],
 };
 
@@ -71,7 +71,7 @@ describe('media generation dependency slot declarations', () => {
     expect(slots).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyId: 'first-frame:take-generation:take-generation',
+          dependencyId: 'first-frame:take:take',
           dependencyKind: 'first-frame',
           required: true,
           selector: expect.objectContaining({ kind: 'shot-video-input' }),
@@ -93,7 +93,7 @@ describe('media generation dependency slot declarations', () => {
     expect(slots).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyId: 'first-frame:take-generation:take-generation',
+          dependencyId: 'first-frame:take:take',
           required: true,
         }),
         expect.objectContaining({
@@ -233,13 +233,13 @@ describe('media generation dependency slot declarations', () => {
       target,
     });
 
-    expect(dependencyId).toBe('first-frame:take-generation:take-generation');
+    expect(dependencyId).toBe('first-frame:take:take');
     expect(parseShotVideoInputDependencyId(dependencyId)).toEqual({
       ok: true,
       value: {
         kind: 'first-frame',
-        subjectKind: 'take-generation',
-        subjectId: 'take-generation',
+        subjectKind: 'take',
+        subjectId: 'take',
       },
     });
     expect(parseShotVideoInputDependencyId('not-a-real-kind:asset:a')).toEqual({

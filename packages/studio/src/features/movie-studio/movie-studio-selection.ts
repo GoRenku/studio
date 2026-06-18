@@ -26,7 +26,7 @@ export type StudioSelection =
       sceneTab?: ScenePanelTab;
       shotId?: string;
       takeWorkspaceMode?: SceneTakeWorkspaceMode;
-      takeGenerationId?: string;
+      takeId?: string;
       shotTab?: SceneShotDetailTab;
     };
 

@@ -357,7 +357,7 @@ function readStudioRoute(): StudioRoute {
     const shotParam = search.get('shot');
     const shotTabParam = search.get('shotTab');
     const takeWorkspaceModeParam = search.get('takeMode');
-    const takeGenerationParam = search.get('takeGeneration');
+    const takeParam = search.get('take');
     const sceneTab = sceneTabParam
       ? readScenePanelTab(sceneTabParam)
       : shotParam || shotTabParam
@@ -401,7 +401,7 @@ function readStudioRoute(): StudioRoute {
       ...(sceneTab ? { sceneTab } : {}),
       ...(shotId ? { shotId } : {}),
       ...(takeWorkspaceMode ? { takeWorkspaceMode } : {}),
-      ...(takeGenerationParam ? { takeGenerationId: takeGenerationParam } : {}),
+      ...(takeParam ? { takeId: takeParam } : {}),
       ...(shotTab ? { shotTab } : {}),
     };
     return {
@@ -635,7 +635,7 @@ function studioSelectionRoutePath(
     const params = new URLSearchParams();
     const effectiveSceneTab =
       selection.sceneTab ??
-      (selection.shotId || selection.shotTab || selection.takeGenerationId
+      (selection.shotId || selection.shotTab || selection.takeId
         ? 'takes'
         : 'narrative');
     if (effectiveSceneTab !== 'narrative') {
@@ -647,8 +647,8 @@ function studioSelectionRoutePath(
     if (selection.takeWorkspaceMode && selection.takeWorkspaceMode !== 'list') {
       params.set('takeMode', selection.takeWorkspaceMode);
     }
-    if (selection.takeGenerationId) {
-      params.set('takeGeneration', selection.takeGenerationId);
+    if (selection.takeId) {
+      params.set('take', selection.takeId);
     }
     if (selection.shotTab && selection.shotTab !== 'description') {
       params.set('shotTab', selection.shotTab);

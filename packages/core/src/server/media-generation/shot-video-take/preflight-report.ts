@@ -65,9 +65,9 @@ export async function previewShotVideoTakeProduction(
     production: input.production,
   });
   const issues = validatePreflight(context);
-  const inputModeId = context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId;
+  const inputModeId = context.take.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
-    context.takeGeneration.production.modelChoice ??
+    context.take.production.modelChoice ??
     defaultModelChoiceForInputMode(inputModeId);
   const preparedInputs = await withShotProjectSession(input, ({ session }) =>
     preparedInputsForContext(context, session, issues)
@@ -78,9 +78,9 @@ export async function previewShotVideoTakeProduction(
     modelChoice,
     preparedInputs,
   });
-  const finalDraft = context.takeGeneration.production.agentProposal?.finalPromptDraft;
+  const finalDraft = context.take.production.agentProposal?.finalPromptDraft;
   const prompts = [
-    ...context.takeGeneration.production.agentProposal?.dependencyDrafts.map((draft) => ({
+    ...context.take.production.agentProposal?.dependencyDrafts.map((draft) => ({
       purpose: draft.purpose,
       prompt: draft.prompt,
       title: draft.title,
@@ -101,7 +101,7 @@ export async function previewShotVideoTakeProduction(
   const inputPlanItems = buildShotVideoTakePreflightInputItems({
     context,
     preparedInputs,
-    availableInputs: context.availableInputs,
+    mediaInputs: context.mediaInputs,
     inputsToCreate,
     plan,
   });
@@ -110,12 +110,12 @@ export async function previewShotVideoTakeProduction(
     issues: plan.diagnostics,
     plan,
     target: context.target,
-    takeGeneration: context.takeGeneration,
+    take: context.take,
     inputModeId,
     shotGroupMode: context.shotGroupMode,
     modelChoice,
     preparedInputs,
-    availableInputs: context.availableInputs,
+    mediaInputs: context.mediaInputs,
     inputsToCreate,
     inputPlanItems,
     prompts,
@@ -140,7 +140,7 @@ export function finalTakeSpecForPreflight(input: {
   parameterValues?: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
   promptMode?: 'require-authored' | 'estimate-placeholder';
 }): ShotVideoTakeGenerationSpec {
-  const plan = input.context.takeGeneration.production;
+  const plan = input.context.take.production;
   const finalDraft = plan.agentProposal?.finalPromptDraft;
   const prompt = finalDraft?.prompt.trim()
     ? finalDraft.prompt
@@ -193,7 +193,7 @@ export function parameterValuesForFinalTake(
     return {};
   }
   const values: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']> = {};
-  const planValues = context.takeGeneration.production.parameterValues ?? {};
+  const planValues = context.take.production.parameterValues ?? {};
   for (const parameter of report.parameters) {
     const contextDefault = context.defaults.parameterValues[parameter.name];
     if (parameter.defaultValue !== undefined) {
@@ -252,8 +252,8 @@ function contextWithProductionOverride(input: {
   }
   return {
     ...input.context,
-    takeGeneration: {
-      ...input.context.takeGeneration,
+    take: {
+      ...input.context.take,
       production: input.production,
     },
   };
@@ -263,7 +263,7 @@ function contextWithProductionOverride(input: {
 
 export function validatePreflight(context: ShotVideoTakeGenerationContext): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
-  const plan = context.takeGeneration.production;
+  const plan = context.take.production;
   const inputModeId = plan.inputModeId ?? context.defaults.inputModeId;
   const modelChoice = plan.modelChoice ?? defaultModelChoiceForInputMode(inputModeId);
   const route = selectShotVideoRoute({
@@ -276,7 +276,7 @@ export function validatePreflight(context: ShotVideoTakeGenerationContext): Diag
       issue(
         'PROJECT_DATA375',
         'Shot video take model does not support the selected input mode for this shot group.',
-        ['takeGeneration', 'production', 'inputModeId'],
+        ['take', 'production', 'inputModeId'],
         'Choose a model and input mode combination that supports the current shot group.'
       )
     );
@@ -287,7 +287,7 @@ export function validatePreflight(context: ShotVideoTakeGenerationContext): Diag
         issue(
           'PROJECT_DATA376',
           'Shot video take agent proposal is stale for the current input mode.',
-          ['takeGeneration', 'production', 'agentProposal', 'basedOnInputModeId'],
+          ['take', 'production', 'agentProposal', 'basedOnInputModeId'],
           'Refresh the proposal before creating specs.'
         )
       );
@@ -297,20 +297,20 @@ export function validatePreflight(context: ShotVideoTakeGenerationContext): Diag
         issue(
           'PROJECT_DATA377',
           'Shot video take agent proposal is stale for the current model.',
-          ['takeGeneration', 'production', 'agentProposal', 'basedOnModelChoice'],
+          ['take', 'production', 'agentProposal', 'basedOnModelChoice'],
           'Refresh the proposal before creating specs.'
         )
       );
     }
     if (
       plan.agentProposal.basedOnShotIds &&
-      !sameShotIds(plan.agentProposal.basedOnShotIds, context.takeGeneration.shotIds)
+      !sameShotIds(plan.agentProposal.basedOnShotIds, context.take.shotIds)
     ) {
       issues.push(
         issue(
           'PROJECT_DATA378',
           'Shot video take agent proposal is stale for the current shot group.',
-          ['takeGeneration', 'production', 'agentProposal', 'basedOnShotIds'],
+          ['take', 'production', 'agentProposal', 'basedOnShotIds'],
           'Refresh the proposal before creating specs.'
         )
       );
@@ -325,7 +325,7 @@ export function agentBrief(context: ShotVideoTakeGenerationContext): string {
   return [
     `Scene: ${context.scene.title}`,
     `Shots: ${context.shots.map((shot) => `${shot.shotId}: ${shot.action}`).join(' | ')}`,
-    `Input mode: ${context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId}`,
+    `Input mode: ${context.take.production.inputModeId ?? context.defaults.inputModeId}`,
     `Shot group mode: ${context.shotGroupMode}`,
   ].join('\n');
 }

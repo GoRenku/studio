@@ -6,10 +6,12 @@ import {
 } from '@/hooks/use-debounced-autosave';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { updateSceneShotSpecs } from '@/services/studio-screenplay-api';
+import { updateSceneShotVideoTakeShotSpecs } from '@/services/studio-shot-video-takes-api';
 
 export interface UseShotSpecsInput {
   projectName: string;
   sceneId: string;
+  takeId?: string | null;
   shotId: string;
   initial: ShotSpecs | undefined;
   onSaved?: (resource: SceneShotListResourceResponse) => void;
@@ -29,25 +31,37 @@ export interface UseShotSpecsResult {
 export function useShotSpecs(
   input: UseShotSpecsInput
 ): UseShotSpecsResult {
-  const { projectName, sceneId, shotId, initial, onSaved } = input;
+  const { projectName, sceneId, takeId, shotId, initial, onSaved } = input;
   const [shotSpecs, setShotSpecs] = useState<ShotSpecs>(initial ?? {});
 
   const save = useCallback(
     (value: ShotSpecs) =>
-      updateSceneShotSpecs(
-        projectName,
-        sceneId,
-        shotId,
-        isEmptyShotSpecs(value) ? null : value
-      ),
-    [projectName, sceneId, shotId]
+      takeId
+        ? updateSceneShotVideoTakeShotSpecs(
+            projectName,
+            sceneId,
+            takeId,
+            shotId,
+            isEmptyShotSpecs(value) ? null : value
+          ).then(() => undefined)
+        : updateSceneShotSpecs(
+            projectName,
+            sceneId,
+            shotId,
+            isEmptyShotSpecs(value) ? null : value
+          ),
+    [projectName, sceneId, takeId, shotId]
   );
 
   const status = useDebouncedAutosave({
     value: shotSpecs,
     save,
     failureMessage: 'Shot settings could not be saved.',
-    onSaved: (resource) => onSaved?.(resource),
+    onSaved: (resource) => {
+      if (resource) {
+        onSaved?.(resource);
+      }
+    },
   });
 
   return { shotSpecs, update: setShotSpecs, status };

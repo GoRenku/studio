@@ -205,16 +205,16 @@ export function previewImagesForDependencyLine(
   if (!line?.selectedAsset) {
     return [];
   }
-  const availableInput = context.availableInputs.find(
+  const mediaInput = context.mediaInputs.find(
     (input) =>
       input.assetId === line.selectedAsset?.assetId &&
       input.assetFileId === line.selectedAsset?.assetFileId
   );
   return [
     {
-      ...(availableInput ? { inputId: availableInput.inputId } : {}),
-      ...(availableInput
-        ? { takeGenerationId: availableInput.takeGenerationId }
+      ...(mediaInput ? { inputId: mediaInput.inputId } : {}),
+      ...(mediaInput
+        ? { takeId: mediaInput.takeId }
         : {}),
       assetId: line.selectedAsset.assetId,
       assetFileId: line.selectedAsset.assetFileId,

@@ -54,7 +54,7 @@ export function SceneShotRail({
     const result: RailSegment[] = [];
     shots.forEach((shot, index) => {
       const entry = projection.entries[index];
-      const groupId = entry.takeGenerationId;
+      const groupId = entry.takeId;
       const previous = result[result.length - 1];
       if (groupId && previous && previous.groupId === groupId) {
         previous.rows.push({ shot, index });

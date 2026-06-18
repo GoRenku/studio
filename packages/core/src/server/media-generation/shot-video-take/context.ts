@@ -2,6 +2,7 @@ import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import type {
+  SceneShotVideoTakeEditContext,
   ShotVideoTakeGenerationContext,
 } from '../../../client/index.js';
 import {
@@ -46,10 +47,13 @@ import {
   shotVideoTakeResourceKeys,
 } from './resource-keys.js';
 import {
-  PreparedSceneShotVideoTakeGeneration,
-  prepareSceneShotVideoTakeGenerationInSession,
+  PreparedSceneShotVideoTake,
+  prepareSceneShotVideoTakeInSession,
   requireShot,
 } from './take-generation-context.js';
+import {
+  applyTakeStateToShot,
+} from './take-state.js';
 
 
 
@@ -57,7 +61,7 @@ export async function buildShotVideoTakeContext(
   input: ShotVideoTakeContextInput
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({
+    const prepared = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
@@ -72,17 +76,30 @@ export async function buildShotVideoTakeContext(
 
 
 
+export async function readSceneShotVideoTakeEditContext(
+  input: ShotVideoTakeContextInput
+): Promise<SceneShotVideoTakeEditContext> {
+  return shotVideoTakeEditContextFromGenerationContext(
+    await buildShotVideoTakeContext(input)
+  );
+}
+
+
+
 export function buildContextFromPrepared(input: {
   session: DatabaseSession;
   projectFolder: string;
   project: Pick<ProjectRecord, 'id' | 'name'>;
-  prepared: PreparedSceneShotVideoTakeGeneration;
+  prepared: PreparedSceneShotVideoTake;
 }): ShotVideoTakeGenerationContext {
   const screenplay = requireScreenplayDocument(input.session);
   const hierarchy = requireSceneHierarchy(screenplay, input.prepared.sceneId);
   const projectInfo = readProjectInformationResourceFromDatabase(input.session);
   const shots = input.prepared.orderedShotIds.map((shotId) =>
-    requireShot(input.prepared.shotList.shots, shotId)
+    applyTakeStateToShot({
+      shot: requireShot(input.prepared.shotList.shots, shotId),
+      state: input.prepared.take.state,
+    })
   );
   const narrativeScope = sceneNarrativeReferenceScope({
     session: input.session,
@@ -124,9 +141,14 @@ export function buildContextFromPrepared(input: {
       updatedAt: input.prepared.shotListRow.updatedAt,
       isActive: activeShotListId === input.prepared.shotListId,
     },
-    takeGeneration: input.prepared.takeGeneration,
+    take: input.prepared.take,
     shots,
-    displayShots: input.prepared.shotList.shots,
+    displayShots: input.prepared.shotList.shots.map((shot) =>
+      applyTakeStateToShot({
+        shot,
+        state: input.prepared.take.state,
+      })
+    ),
     referencedCast: orderedScreenplayItems(screenplay.cast, selectedCastMemberIds)
       .map((castMember) => ({
         id: castMember.id as string,
@@ -152,14 +174,14 @@ export function buildContextFromPrepared(input: {
         })()
       : null,
     storyboardImages: [],
-    availableInputs: listShotVideoTakeInputRecords(input.session, {
+    mediaInputs: listShotVideoTakeInputRecords(input.session, {
       sceneId: input.prepared.sceneId,
-      takeGenerationId: input.prepared.takeGeneration.takeGenerationId,
+      takeId: input.prepared.take.takeId,
       shotIds: input.prepared.orderedShotIds,
     }),
-    existingTakes: listShotVideoTakes(input.session, {
+    outputs: listShotVideoTakes(input.session, {
       sceneId: input.prepared.sceneId,
-      takeGenerationId: input.prepared.takeGeneration.takeGenerationId,
+      takeId: input.prepared.take.takeId,
     }),
     shotGroupMode:
       input.prepared.orderedShotIds.length > 1 ? 'multi-shot' : 'single-shot',
@@ -171,5 +193,41 @@ export function buildContextFromPrepared(input: {
       },
     },
     resourceKeys: shotVideoTakeResourceKeys(input.prepared),
+  };
+}
+
+
+
+function shotVideoTakeEditContextFromGenerationContext(
+  context: ShotVideoTakeGenerationContext
+): SceneShotVideoTakeEditContext {
+  const selectedInputs = context.mediaInputs.filter((input) => input.selected);
+  const readyInputs = selectedInputs.filter(
+    (input) => input.assetId && input.assetFileId && input.projectRelativePath
+  );
+  return {
+    purpose: context.purpose,
+    target: context.target,
+    project: context.project,
+    scene: context.scene,
+    take: context.take,
+    sourceShotList: context.shotList,
+    sourceShots: context.shots,
+    displayShots: context.displayShots,
+    shotGroupMode: context.shotGroupMode,
+    referencedCast: context.referencedCast,
+    referencedLocations: context.referencedLocations,
+    activeLookbook: context.activeLookbook,
+    storyboardImages: context.storyboardImages,
+    mediaInputs: context.mediaInputs,
+    outputs: context.outputs,
+    assetReadiness: {
+      selectedInputCount: selectedInputs.length,
+      readyInputCount: readyInputs.length,
+      missingInputCount: selectedInputs.length - readyInputs.length,
+      diagnostics: [],
+    },
+    defaults: context.defaults,
+    resourceKeys: context.resourceKeys,
   };
 }

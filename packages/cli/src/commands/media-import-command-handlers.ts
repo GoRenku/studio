@@ -49,7 +49,7 @@ export interface MediaCommandFlags {
   receipt?: string;
   shotList?: string;
   shots?: string;
-  takeGeneration?: string;
+  take?: string;
   selection?: string;
 }
 
@@ -346,10 +346,7 @@ async function importShotVideoTake(
   const singleFile = await readSingleFileImport(input.flags);
   return input.runtime.projectDataService.importShotVideoTake({
     ...mediaImportProjectInput(input.runtime),
-    takeGenerationId: requiredFlag(
-      input.flags.takeGeneration,
-      '--take-generation'
-    ),
+    takeId: requiredFlag(input.flags.take, '--take'),
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
     receipt: singleFile.receipt,
@@ -367,10 +364,7 @@ async function importShotInputMedia(
   const singleFile = await readSingleFileImport(input.flags);
   return importMedia({
     ...mediaImportProjectInput(input.runtime),
-    takeGenerationId: requiredFlag(
-      input.flags.takeGeneration,
-      '--take-generation'
-    ),
+    takeId: requiredFlag(input.flags.take, '--take'),
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
     receipt: singleFile.receipt,

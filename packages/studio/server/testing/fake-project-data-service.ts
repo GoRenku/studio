@@ -5,7 +5,8 @@ import type {
   ProjectRelativePath,
   ProjectLibrary,
   SceneDialogueAudioContext,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTakeEditContext,
+  SceneShotVideoTake,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationPlan,
   ShotVideoTakeGenerationProduction,
@@ -83,7 +84,7 @@ export function fakeProjectDataService(): NonNullable<
             'generated/media/shot-video-input.png' as ProjectRelativePath,
           subjectKind: 'shot',
           subjectId: 'shot_001',
-          takeGenerationId: 'scene_shot_video_take_generation_001',
+          takeId: 'scene_shot_video_take_001',
           selected: true,
           shotIds: ['shot_001'],
           createdAt: '2026-01-01T00:00:00.000Z',
@@ -1039,23 +1040,23 @@ export function fakeProjectDataService(): NonNullable<
         sections: input.sections,
       });
     },
-    async createSceneShotVideoTakeGeneration(input) {
-      return makeSceneShotVideoTakeGeneration({
+    async createSceneShotVideoTake(input) {
+      return makeSceneShotVideoTake({
         sceneId: input.sceneId,
         shotListId: input.shotListId,
         shotIds: input.shotIds,
         title: input.title,
       });
     },
-    async readSceneShotVideoTakeGeneration(input) {
-      return makeSceneShotVideoTakeGeneration({
-        takeGenerationId: input.takeGenerationId,
+    async readSceneShotVideoTake(input) {
+      return makeSceneShotVideoTake({
+        takeId: input.takeId,
       });
     },
-    async listSceneShotVideoTakeGenerations(input) {
+    async listSceneShotVideoTakes(input) {
       return {
-        takeGenerations: [
-          makeSceneShotVideoTakeGeneration({
+        takes: [
+          makeSceneShotVideoTake({
             sceneId: input.sceneId,
           }),
         ],
@@ -1063,6 +1064,9 @@ export function fakeProjectDataService(): NonNullable<
     },
     async buildShotVideoTakeContext(input) {
       return makeShotVideoTakeContext(input);
+    },
+    async readSceneShotVideoTakeEditContext(input) {
+      return makeSceneShotVideoTakeEditContext(input);
     },
     async listShotVideoTakeModels(input) {
       const context = makeShotVideoTakeContext(input);
@@ -1089,10 +1093,16 @@ export function fakeProjectDataService(): NonNullable<
         ],
       };
     },
-    async updateSceneShotVideoTakeGenerationProduction(input) {
+    async updateSceneShotVideoTakeProduction(input) {
       return makeShotVideoTakeContext(input, input.production);
     },
-    async updateSceneShotVideoTakeGenerationShots(input) {
+    async updateSceneShotVideoTakeState(input) {
+      return makeShotVideoTakeContext(input, input.statePatch.production);
+    },
+    async updateSceneShotVideoTakeShotSpecs(input) {
+      return makeShotVideoTakeContext(input);
+    },
+    async updateSceneShotVideoTakeShots(input) {
       return makeShotVideoTakeContext(input, undefined, input.shotIds);
     },
     async planShotVideoTakeProduction(input) {
@@ -1101,13 +1111,13 @@ export function fakeProjectDataService(): NonNullable<
     async readShotVideoTakeProductionPlan(input) {
       const target = makeShotVideoTakeTarget(input);
       const plan = makeShotVideoTakePlan(input);
-      const takeGeneration = makeSceneShotVideoTakeGeneration({
-        takeGenerationId: input.takeGenerationId,
+      const take = makeSceneShotVideoTake({
+        takeId: input.takeId,
         production: input.production,
       });
       return {
         target,
-        takeGeneration,
+        take,
         finalPrompt: null,
         plan,
         references: {
@@ -1132,16 +1142,16 @@ export function fakeProjectDataService(): NonNullable<
     async estimateShotVideoTakeProduction(input) {
       const target = makeShotVideoTakeTarget(input);
       const plan = makeShotVideoTakePlan(input);
-      const takeGeneration = makeSceneShotVideoTakeGeneration({
-        takeGenerationId: input.takeGenerationId,
+      const take = makeSceneShotVideoTake({
+        takeId: input.takeId,
         production: input.production,
       });
       return {
         target,
-        takeGeneration,
+        take,
         inputModeId: input.production?.inputModeId ?? 'text-only',
         shotGroupMode:
-          takeGeneration.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
+          take.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
         modelChoice:
           input.production?.modelChoice ??
           'fal-ai/bytedance/seedance-2.0',
@@ -1172,25 +1182,25 @@ export function fakeProjectDataService(): NonNullable<
 }
 
 function makeShotVideoTakePlan(input: {
-  takeGenerationId: string;
+  takeId: string;
   production?: ShotVideoTakeGenerationProduction;
 }): ShotVideoTakeGenerationPlan {
   const target = makeShotVideoTakeTarget(input);
-  const takeGeneration = makeSceneShotVideoTakeGeneration({
-    takeGenerationId: input.takeGenerationId,
+  const take = makeSceneShotVideoTake({
+    takeId: input.takeId,
     production: input.production,
   });
   const inputMode = input.production?.inputModeId ?? 'text-only';
   const shotGroupMode =
-    takeGeneration.shotIds.length > 1 ? 'multi-shot' : 'single-shot';
+    take.shotIds.length > 1 ? 'multi-shot' : 'single-shot';
   const modelChoice = input.production?.modelChoice ?? 'fal-ai/bytedance/seedance-2.0';
   return {
     planId: 'shot_video_take_plan_fake',
     request: {
       projectId: 'project_test',
-      sceneId: takeGeneration.sceneId,
-      shotListId: takeGeneration.shotListId,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      sceneId: take.sceneId,
+      shotListId: take.shotListId,
+      takeId: take.takeId,
       inputMode,
       shotGroupMode,
       modelChoice,
@@ -1277,30 +1287,30 @@ function makeShotVideoTakePlan(input: {
 }
 
 function makeShotVideoTakeTarget(input: {
-  takeGenerationId: string;
+  takeId: string;
 }) {
-  const takeGeneration = makeSceneShotVideoTakeGeneration({
-    takeGenerationId: input.takeGenerationId,
+  const take = makeSceneShotVideoTake({
+    takeId: input.takeId,
   });
   return {
-    kind: 'sceneShotVideoTakeGeneration' as const,
-    id: takeGeneration.takeGenerationId,
-    sceneId: takeGeneration.sceneId,
-    shotListId: takeGeneration.shotListId,
-    takeGenerationId: takeGeneration.takeGenerationId,
-    shotIds: takeGeneration.shotIds,
+    kind: 'sceneShotVideoTake' as const,
+    id: take.takeId,
+    sceneId: take.sceneId,
+    shotListId: take.shotListId,
+    takeId: take.takeId,
+    shotIds: take.shotIds,
   };
 }
 
 function makeShotVideoTakeContext(
   input: {
-    takeGenerationId: string;
+    takeId: string;
   },
   production?: ShotVideoTakeGenerationProduction,
   shotIds?: string[]
 ): ShotVideoTakeGenerationContext {
-  const takeGeneration = makeSceneShotVideoTakeGeneration({
-    takeGenerationId: input.takeGenerationId,
+  const take = makeSceneShotVideoTake({
+    takeId: input.takeId,
     production,
     shotIds,
   });
@@ -1314,64 +1324,122 @@ function makeShotVideoTakeContext(
       aspectRatio: '16:9',
     },
     scene: {
-      id: takeGeneration.sceneId,
+      id: take.sceneId,
       title: 'Opening Scene',
       setting: { locationIds: [] },
       storyFunction: [],
     },
     shotList: {
-      id: takeGeneration.shotListId,
+      id: take.shotListId,
       title: 'Opening coverage',
       summary: 'Coverage summary.',
       createdAt: '2026-05-22T00:00:00.000Z',
       updatedAt: '2026-05-22T00:00:00.000Z',
       isActive: true,
     },
-    takeGeneration,
-    shotGroupMode: takeGeneration.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
+    take,
+    shotGroupMode: take.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
     shots: [],
     displayShots: [],
     referencedCast: [],
     referencedLocations: [],
     activeLookbook: null,
     storyboardImages: [],
-    availableInputs: [],
-    existingTakes: [],
+    mediaInputs: [],
+    outputs: [],
     defaults: {
       inputModeId: 'text-only',
       imageDependencyModelChoice: 'fal-ai/nano-banana-2',
       parameterValues: {},
     },
     resourceKeys: [
-      `surface:scene:${takeGeneration.sceneId}:takes`,
-      `scene-shot-video-take-generation:${takeGeneration.takeGenerationId}`,
+      `surface:scene:${take.sceneId}:takes`,
+      `scene-shot-video-take:${take.takeId}`,
     ],
   };
 }
 
-function makeSceneShotVideoTakeGeneration(
+function makeSceneShotVideoTakeEditContext(input: {
+  takeId: string;
+}): SceneShotVideoTakeEditContext {
+  const context = makeShotVideoTakeContext(input);
+  return {
+    purpose: context.purpose,
+    target: context.target,
+    project: context.project,
+    scene: context.scene,
+    take: context.take,
+    sourceShotList: context.shotList,
+    sourceShots: context.shots,
+    displayShots: context.displayShots,
+    shotGroupMode: context.shotGroupMode,
+    referencedCast: context.referencedCast,
+    referencedLocations: context.referencedLocations,
+    activeLookbook: context.activeLookbook,
+    storyboardImages: context.storyboardImages,
+    mediaInputs: context.mediaInputs,
+    outputs: context.outputs,
+    assetReadiness: {
+      selectedInputCount: 0,
+      readyInputCount: 0,
+      missingInputCount: 0,
+      diagnostics: [],
+    },
+    defaults: context.defaults,
+    resourceKeys: context.resourceKeys,
+  };
+}
+
+function makeSceneShotVideoTake(
   input: {
-    takeGenerationId?: string;
+    takeId?: string;
     sceneId?: string;
     shotListId?: string;
     shotIds?: string[];
     title?: string;
     production?: ShotVideoTakeGenerationProduction;
   } = {}
-): SceneShotVideoTakeGeneration {
+): SceneShotVideoTake {
   const shotIds = input.shotIds ?? ['shot_001'];
   return {
-    takeGenerationId:
-      input.takeGenerationId ?? 'scene_shot_video_take_generation_001',
+    takeId:
+      input.takeId ?? 'scene_shot_video_take_001',
     sceneId: input.sceneId ?? 'scene_opening',
     shotListId: input.shotListId ?? 'shot_list_opening',
     title: input.title ?? 'Opening take',
     shotIds,
+    state: {
+      version: 1,
+      shotDesignByShotId: {},
+      referenceSelections: {
+        dependencyInclusions: {},
+        selectedCharacterSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
+        selectedLocationViewIds: {},
+        selectedLookbookSheetIds: [],
+        selectedDialogueAudioTakeIds: {},
+      },
+      production: input.production ?? {},
+    },
     production: input.production ?? {},
-    compatibility: {
-      editState: 'editable',
-      reasons: [],
-      message: 'Take generation is editable.',
+    status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
+      },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
     },
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

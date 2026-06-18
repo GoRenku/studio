@@ -2,7 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneShotListDocument } from '../../client/index.js';
+import type {
+  SceneShotListDocument,
+  SceneShotWithLegacyShotSpecs,
+} from '../../client/index.js';
 import {
   createProjectDataService,
 } from '../project-data-service.js';
@@ -318,6 +321,25 @@ describe('StudioCoordinationService', () => {
     const castMember = screenplay.screenplay!.cast[1]!;
     const location = screenplay.screenplay!.locations[0]!;
     const sceneId = scene.id as string;
+    const legacyShot: SceneShotWithLegacyShotSpecs = {
+      shotId: 'shot_001',
+      title: 'Map study',
+      storyBeat: 'Mehmed studies the map.',
+      narrativePurpose: 'Establish the obsession.',
+      description: 'Wide static shot of Mehmed at the table.',
+      shotType: 'Medium Close-Up',
+      subject: 'Mehmed and the city map',
+      action: 'Mehmed studies the map in silence.',
+      dialogue: [],
+      coveredBlockIndexes: [0],
+      castMemberIds: [castMember.id as string],
+      locationIds: [location.id as string],
+      shotSpecs: {
+        shotSize: 'medium-close-up',
+        subjectFraming: ['single'],
+        cameraAngle: 'low-angle',
+      },
+    };
     await projectData.writeSceneShotList({
       homeDir,
       document: {
@@ -326,27 +348,7 @@ describe('StudioCoordinationService', () => {
         title: 'Council chamber coverage',
         summary: 'A restrained coverage plan.',
         coverageStrategy: 'Hold the table in one composed frame.',
-        shots: [
-          {
-            shotId: 'shot_001',
-            title: 'Map study',
-            storyBeat: 'Mehmed studies the map.',
-            narrativePurpose: 'Establish the obsession.',
-            description: 'Wide static shot of Mehmed at the table.',
-            shotType: 'Medium Close-Up',
-            subject: 'Mehmed and the city map',
-            action: 'Mehmed studies the map in silence.',
-            dialogue: [],
-            coveredBlockIndexes: [0],
-            castMemberIds: [castMember.id as string],
-            locationIds: [location.id as string],
-            shotSpecs: {
-              shotSize: 'medium-close-up',
-              subjectFraming: ['single'],
-              cameraAngle: 'low-angle',
-            },
-          },
-        ],
+        shots: [legacyShot],
       } satisfies SceneShotListDocument,
     });
     const coordination = createStudioCoordinationService({ homeDir });
@@ -421,7 +423,7 @@ describe('StudioCoordinationService', () => {
 
 
 
-  it('reports the selected multi-shot take generation in AI Production current focus', async () => {
+  it('reports the selected multi-shot take in AI Production current focus', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);
     const projectData = createProjectDataService();
@@ -458,7 +460,7 @@ describe('StudioCoordinationService', () => {
         })),
       } satisfies SceneShotListDocument,
     });
-    const takeGeneration = await projectData.createSceneShotVideoTakeGeneration({
+    const take = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId,
       shotListId: shotList.shotList.id,
@@ -497,7 +499,7 @@ describe('StudioCoordinationService', () => {
           sceneTab: 'takes',
           shotId: 'shot_001',
           shotTab: 'ai-production',
-          takeGenerationId: takeGeneration.takeGenerationId,
+          takeId: take.takeId,
         },
       },
       source: {
@@ -515,8 +517,9 @@ describe('StudioCoordinationService', () => {
         id: 'shot_001',
         activeTab: { id: 'ai-production', label: 'AI Production' },
         currentTabSelections: {
-          kind: 'take-generation',
-          takeGenerationId: takeGeneration.takeGenerationId,
+          kind: 'take',
+          takeId: take.takeId,
+          sourceShotListId: shotList.shotList.id,
           shotIds: ['shot_001', 'shot_002'],
         },
       },

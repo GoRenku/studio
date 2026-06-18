@@ -27,7 +27,6 @@ export interface GenerationCommandFlags {
   scene?: string;
   dialogue?: string;
   take?: string;
-  takeGeneration?: string;
   intent?: string;
   input?: string;
   kind?: string;
@@ -51,22 +50,6 @@ export const generationCommandHandlers = [
   {
     path: ['production', 'update'],
     run: runProductionUpdate,
-  },
-  {
-    path: ['take', 'create'],
-    run: runTakeCreate,
-  },
-  {
-    path: ['take', 'list'],
-    run: runTakeList,
-  },
-  {
-    path: ['take', 'show'],
-    run: runTakeShow,
-  },
-  {
-    path: ['take', 'update-shots'],
-    run: runTakeUpdateShots,
   },
   {
     path: ['preflight'],
@@ -146,49 +129,9 @@ async function runProductionUpdate(
   const production = await readJsonFile(
     requiredFlag(input.flags.file, '--file'),
   );
-  return input.runtime.projectDataService.updateSceneShotVideoTakeGenerationProduction({
+  return input.runtime.projectDataService.updateSceneShotVideoTakeProduction({
     ...readShotVideoContextInput(input),
     production: production as never,
-  });
-}
-
-async function runTakeCreate(input: GenerationCommandInput): Promise<unknown> {
-  assertShotVideoPurpose(input.flags);
-  const target = requiredFlag(input.flags.target, '--target');
-  return input.runtime.projectDataService.createSceneShotVideoTakeGeneration({
-    ...generationProjectInput(input.runtime),
-    sceneId: parseSceneTarget(target, 'Shot video take generation create'),
-    shotListId: requiredFlag(input.flags.shotList, '--shot-list'),
-    shotIds: parseShots(requiredFlag(input.flags.shots, '--shots')),
-  });
-}
-
-async function runTakeList(input: GenerationCommandInput): Promise<unknown> {
-  assertShotVideoPurpose(input.flags);
-  return input.runtime.projectDataService.listSceneShotVideoTakeGenerations({
-    ...generationProjectInput(input.runtime),
-    sceneId: requiredFlag(input.flags.scene, '--scene'),
-  });
-}
-
-async function runTakeShow(input: GenerationCommandInput): Promise<unknown> {
-  assertShotVideoPurpose(input.flags);
-  return input.runtime.projectDataService.readSceneShotVideoTakeGeneration({
-    ...generationProjectInput(input.runtime),
-    takeGenerationId: requiredFlag(
-      input.flags.takeGeneration,
-      '--take-generation'
-    ),
-  });
-}
-
-async function runTakeUpdateShots(
-  input: GenerationCommandInput,
-): Promise<unknown> {
-  assertShotVideoPurpose(input.flags);
-  return input.runtime.projectDataService.updateSceneShotVideoTakeGenerationShots({
-    ...readShotVideoContextInput(input),
-    shotIds: parseShots(requiredFlag(input.flags.shots, '--shots')),
   });
 }
 
@@ -488,7 +431,7 @@ function readGenerationContextInput(input: GenerationCommandInput) {
       purpose,
       target,
       shots: input.flags.shots,
-      takeGenerationId: input.flags.takeGeneration,
+      takeId: input.flags.take,
     }),
     shotListId: input.flags.shotList,
     shotIds: input.flags.shots ? parseShots(input.flags.shots) : undefined,
@@ -500,10 +443,7 @@ function readShotVideoContextInput(input: GenerationCommandInput) {
   return {
     ...generationProjectInput(input.runtime),
     sceneId: parseSceneTarget(target, 'Shot video take generation'),
-    takeGenerationId: requiredFlag(
-      input.flags.takeGeneration,
-      '--take-generation'
-    ),
+    takeId: requiredFlag(input.flags.take, '--take'),
   };
 }
 

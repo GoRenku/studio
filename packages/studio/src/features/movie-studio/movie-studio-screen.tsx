@@ -409,7 +409,7 @@ export function MovieStudioScreen({
                   sceneTab={selection.sceneTab}
                   shotId={selection.shotId}
                   takeWorkspaceMode={selection.takeWorkspaceMode}
-                  takeGenerationId={selection.takeGenerationId}
+                  takeId={selection.takeId}
                   shotTab={selection.shotTab}
                   onSelect={selectMovieStudioSurface}
                   onHeaderActionChange={handleActiveSceneHeaderActionChange}

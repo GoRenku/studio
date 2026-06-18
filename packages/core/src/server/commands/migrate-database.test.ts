@@ -39,7 +39,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(20);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(22);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -57,11 +57,12 @@ describe('migrate database command', () => {
           'scene_shot_list',
           'scene_shot_list_state',
           'scene_shot_storyboard_image',
-          'scene_shot_video_take_generation',
-          'scene_shot_video_take_generation_shot',
-          'scene_shot_video_take_input',
           'scene_shot_video_take',
           'scene_shot_video_take_shot',
+          'scene_shot_video_take_media_input',
+          'scene_shot_video_take_media_input_shot',
+          'scene_shot_video_take_output',
+          'scene_shot_video_take_output_shot',
           'scene_dialogue_audio',
           'scene_dialogue_audio_take',
           'cast_voice_provider_registration',
@@ -108,15 +109,15 @@ describe('migrate database command', () => {
       expect(
         readIndexForTable(
           sqlite,
-          'scene_shot_video_take_input',
-          'scene_shot_video_take_input_selected_idx'
+          'scene_shot_video_take_media_input',
+          'scene_shot_video_take_media_input_selected_idx'
         )
       ).toMatchObject({ isUnique: 1 });
       expect(
         readIndexForTable(
           sqlite,
-          'scene_shot_video_take',
-          'scene_shot_video_take_selected_idx'
+          'scene_shot_video_take_output',
+          'scene_shot_video_take_output_selected_idx'
         )
       ).toMatchObject({ isUnique: 1 });
     } finally {

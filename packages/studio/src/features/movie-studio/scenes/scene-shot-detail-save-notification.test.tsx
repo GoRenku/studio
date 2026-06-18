@@ -4,7 +4,7 @@ import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTake,
 } from '@gorenku/studio-core/client';
 import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-production';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
@@ -36,21 +36,52 @@ const SHOT: SceneShot = {
   locationIds: [],
 };
 
-const TAKE_GENERATION: SceneShotVideoTakeGeneration = {
-  takeGenerationId: 'take_generation_001',
+const TAKE: SceneShotVideoTake = {
+  takeId: 'take_generation_001',
   sceneId: 'scene_hook',
   shotListId: 'shot_list_hook',
   shotIds: ['shot_001'],
   title: 'Shot 1 take generation',
+  state: emptyTakeState(),
   production: {},
   createdAt: '',
   updatedAt: '',
-  compatibility: {
-    editState: 'editable',
-    reasons: [],
-    message: 'This take generation matches the current shot list.',
-  },
+  status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
+      },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
+    },
 };
+
+function emptyTakeState() {
+  return {
+    version: 1 as const,
+    shotDesignByShotId: {},
+    referenceSelections: {
+      dependencyInclusions: {},
+      selectedCharacterSheetAssetIds: {},
+      selectedLocationSheetAssetIds: {},
+      selectedLocationViewIds: {},
+      selectedLookbookSheetIds: [],
+      selectedDialogueAudioTakeIds: {},
+    },
+    production: {},
+  };
+}
 
 function productionResult(
   autosave: UseShotVideoTakeProductionResult['autosave']
@@ -60,7 +91,7 @@ function productionResult(
     loadError: null,
     context: null,
     models: null,
-    takeGeneration: TAKE_GENERATION,
+    take: TAKE,
     isEditable: true,
     selectedInputMode: null,
     selectedModel: undefined,
@@ -93,7 +124,7 @@ describe('SceneShotDetail save notifications', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
-        takeGeneration={TAKE_GENERATION}
+        take={TAKE}
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}
@@ -121,7 +152,7 @@ describe('SceneShotDetail save notifications', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
-        takeGeneration={TAKE_GENERATION}
+        take={TAKE}
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}
@@ -139,7 +170,7 @@ describe('SceneShotDetail save notifications', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
-        takeGeneration={TAKE_GENERATION}
+        take={TAKE}
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}

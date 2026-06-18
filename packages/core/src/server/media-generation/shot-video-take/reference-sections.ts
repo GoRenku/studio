@@ -13,7 +13,7 @@ import type {
   ShotVideoTakeLookbookReferenceChoice,
   ShotVideoTakeGeneralReferenceChoice,
   ShotVideoTakeInputKind,
-  ShotVideoTakeAvailableInput,
+  SceneShotVideoTakeMediaInput,
   ShotVideoTakeDialogueAudioReferenceChoice,
   ShotVideoTakeDialogueAudioCapabilityReport,
 } from '../../../client/index.js';
@@ -211,7 +211,7 @@ export function buildDialogueAudioCapabilityReport(input: {
             createDiagnosticWarning(
               'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
               message,
-              { path: ['takeGeneration', 'production', 'modelChoice'] },
+              { path: ['take', 'production', 'modelChoice'] },
               'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
             ),
           ]
@@ -242,7 +242,7 @@ export function buildDialogueAudioCapabilityReport(input: {
         createDiagnosticWarning(
           'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
           message,
-          { path: ['takeGeneration', 'production', 'requestedInputs'] },
+          { path: ['take', 'production', 'requestedInputs'] },
           `Select ${maxCount} or fewer dialogue audio references for this model route.`
         ),
       ],
@@ -709,7 +709,7 @@ export function buildGeneralReferenceChoices(input: {
     };
     choicesByKey.set(`planned:${line.dependencyId}`, choice);
   });
-  input.context.takeGeneration.production.requestedInputs?.forEach(
+  input.context.take.production.requestedInputs?.forEach(
     (requestedInput) => {
       const referenceInputKind = shotReferenceTabInputKind(requestedInput.kind);
       if (!referenceInputKind) {
@@ -776,65 +776,65 @@ export function buildGeneralReferenceChoices(input: {
       });
     }
   });
-  input.context.availableInputs.forEach((availableInput) => {
-    const referenceInputKind = shotReferenceTabInputKind(availableInput.kind);
+  input.context.mediaInputs.forEach((mediaInput) => {
+    const referenceInputKind = shotReferenceTabInputKind(mediaInput.kind);
     if (!referenceInputKind) {
       return;
     }
-    if (plannedInputIds.has(availableInput.inputId)) {
+    if (plannedInputIds.has(mediaInput.inputId)) {
       return;
     }
     const dependencyId = shotVideoInputDependencyId({
       kind: referenceInputKind,
-      subjectKind: availableInput.subjectKind,
-      subjectId: availableInput.subjectId,
+      subjectKind: mediaInput.subjectKind,
+      subjectId: mediaInput.subjectId,
     });
     const plannedLine = dependencyLineById(input.plan, dependencyId);
     const line =
-      plannedLine?.selectedAsset?.assetId === availableInput.assetId &&
-      plannedLine.selectedAsset.assetFileId === availableInput.assetFileId
+      plannedLine?.selectedAsset?.assetId === mediaInput.assetId &&
+      plannedLine.selectedAsset.assetFileId === mediaInput.assetFileId
         ? plannedLine
         : null;
     const referenceKind = generalReferenceKindForInputKind(referenceInputKind);
-    const title = titleForAvailableImageReference(input.context, availableInput);
+    const title = titleForAvailableImageReference(input.context, mediaInput);
     const inclusion = referenceInclusionForDependencyId(
       input.context,
       dependencyId,
-      availableInput.selected,
+      mediaInput.selected,
       line
     );
     const cardInclusion = requiredGeneralReferenceInclusion({
       context: input.context,
       kind: referenceInputKind,
-      selected: availableInput.selected,
+      selected: mediaInput.selected,
       inclusion,
     });
-    choicesByKey.set(`input:${availableInput.inputId}`, {
-      id: `input:${availableInput.inputId}`,
+    choicesByKey.set(`input:${mediaInput.inputId}`, {
+      id: `input:${mediaInput.inputId}`,
       kind: referenceKind,
       title,
       selected: inclusion.included,
       clearInputSlot: {
         kind: referenceInputKind,
-        ...(availableInput.subjectKind
-          ? { subjectKind: availableInput.subjectKind }
+        ...(mediaInput.subjectKind
+          ? { subjectKind: mediaInput.subjectKind }
           : {}),
-        ...(availableInput.subjectId ? { subjectId: availableInput.subjectId } : {}),
+        ...(mediaInput.subjectId ? { subjectId: mediaInput.subjectId } : {}),
       },
       card: referenceCardPlan({
         selected: inclusion.included,
-        mediaKind: availableInput.mediaKind,
+        mediaKind: mediaInput.mediaKind,
         dependencyId,
         line,
         planLine: planLineForDependencyLine(input.plan, line),
         inclusion: cardInclusion,
         previews: [
           {
-            inputId: availableInput.inputId,
-            takeGenerationId: availableInput.takeGenerationId,
-            assetId: availableInput.assetId,
-            assetFileId: availableInput.assetFileId,
-            projectRelativePath: availableInput.projectRelativePath,
+            inputId: mediaInput.inputId,
+            takeId: mediaInput.takeId,
+            assetId: mediaInput.assetId,
+            assetFileId: mediaInput.assetFileId,
+            projectRelativePath: mediaInput.projectRelativePath,
             title,
             alt: title,
           },
@@ -904,7 +904,7 @@ export function generalReferenceKindForInputKind(
 
 export function titleForAvailableImageReference(
   context: ShotVideoTakeGenerationContext,
-  input: ShotVideoTakeAvailableInput
+  input: SceneShotVideoTakeMediaInput
 ): string {
   if (input.kind === 'first-frame') {
     return 'First Frame';

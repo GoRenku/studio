@@ -22,9 +22,9 @@ describe('shot video take preflight and validation', () => {
   it('keeps excluded default multi-shot storyboard references visible for restore', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
-    await projectData.updateSceneShotVideoTakeGenerationProduction({
+    await projectData.updateSceneShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -33,7 +33,7 @@ describe('shot video take preflight and validation', () => {
 
     const defaultReport = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
     });
     const storyboardChoice = defaultReport.references.general.find(
       (choice) => choice.kind === 'multi-shot-storyboard-sheet'
@@ -43,18 +43,20 @@ describe('shot video take preflight and validation', () => {
       required: false,
     });
 
-    await projectData.updateSceneShotReferenceInclusion({
-      projectName: 'constantinople',
+    await projectData.updateSceneShotVideoTakeShotSpecs({
       homeDir,
-      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
       shotId: 'shot_001',
-      dependencyId: storyboardChoice!.card.dependencyId!,
-      inclusion: 'exclude',
+      shotSpecs: {
+        referenceInclusions: {
+          [storyboardChoice!.card.dependencyId!]: 'exclude',
+        },
+      },
     });
 
     const excludedReport = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
     });
 
     expect(excludedReport.references.general).toEqual(
@@ -91,7 +93,7 @@ describe('shot video take preflight and validation', () => {
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -127,7 +129,7 @@ describe('shot video take preflight and validation', () => {
       document: shotList,
       idGenerator: createDeterministicIdGenerator(),
     });
-    const takeGeneration = await projectData.createSceneShotVideoTakeGeneration({
+    const take = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
@@ -149,7 +151,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -196,16 +198,19 @@ describe('shot video take preflight and validation', () => {
       unselectedExtraCast?.characterSheets[0]?.card.dependencyLineId
     ).toBeUndefined();
 
-    await projectData.updateSceneShotCastReferences({
-      projectName: 'constantinople',
+    await projectData.updateSceneShotVideoTakeShotSpecs({
       homeDir,
-      sceneId: ids.sceneId,
+      takeId: take.takeId,
       shotId: 'shot_001',
-      castMemberIds: [extraCastMemberId],
+      shotSpecs: {
+        castReferences: {
+          castMemberIds: [extraCastMemberId],
+        },
+      },
     });
     const updatedReport = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -242,7 +247,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -292,12 +297,15 @@ describe('shot video take preflight and validation', () => {
       title: 'Sheet B',
     });
 
-    await projectData.updateSceneShotLookbookReference({
-      projectName: 'constantinople',
+    await projectData.updateSceneShotVideoTakeShotSpecs({
       homeDir,
-      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
       shotId: 'shot_001',
-      lookbookSheetId: sheetB.imported.id,
+      shotSpecs: {
+        lookbookReference: {
+          lookbookSheetId: sheetB.imported.id,
+        },
+      },
     });
 
     const production = {
@@ -307,7 +315,7 @@ describe('shot video take preflight and validation', () => {
     };
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production,
     });
     const selectedSheetFile = sheetB.imported.asset.files[0]!;
@@ -346,7 +354,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production,
     });
     const sheetAChoice = report.references.lookbook.find(
@@ -379,7 +387,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -415,19 +423,22 @@ describe('shot video take preflight and validation', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
 
-    await projectData.updateSceneShotReferenceInclusion({
-      projectName: 'constantinople',
+    await projectData.updateSceneShotVideoTakeShotSpecs({
       homeDir,
-      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
       shotId: 'shot_001',
-      dependencyId: `first-frame:take-generation:${written.takeGeneration.takeGenerationId}`,
-      inclusion: 'exclude',
+      shotSpecs: {
+        referenceInclusions: {
+          [`first-frame:take:${written.take.takeId}`]:
+            'exclude',
+        },
+      },
     });
 
     await expect(
       projectData.readShotVideoTakeProductionPlan({
         homeDir,
-        takeGenerationId: written.takeGeneration.takeGenerationId,
+        takeId: written.take.takeId,
         production: {
           inputModeId: 'first-frame',
           modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -445,29 +456,29 @@ describe('shot video take preflight and validation', () => {
     await shotVideoTakeProject.writeProjectFile('generated/media/first-frame-b.png', 'first frame b');
     const selected = await projectData.importShotFirstFrame({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/first-frame-a.png',
       selection: 'select',
     });
     await projectData.importShotFirstFrame({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/first-frame-b.png',
       selection: 'take',
     });
-    await projectData.updateSceneShotVideoTakeGenerationProduction({
+    await projectData.updateSceneShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         preparedInputs: [
           {
-            kind: selected.input.kind,
-            assetId: selected.input.assetId,
-            assetFileId: selected.input.assetFileId,
-            subjectKind: selected.input.subjectKind,
-            subjectId: selected.input.subjectId,
+            kind: selected.mediaInput.kind,
+            assetId: selected.mediaInput.assetId,
+            assetFileId: selected.mediaInput.assetFileId,
+            subjectKind: selected.mediaInput.subjectKind,
+            subjectId: selected.mediaInput.subjectId,
           },
         ],
       },
@@ -475,7 +486,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
     });
 
     const firstFrameChoices = report.references.general.filter(
@@ -551,7 +562,7 @@ describe('shot video take preflight and validation', () => {
       document: shotList,
       idGenerator: createDeterministicIdGenerator(),
     });
-    const takeGeneration = await projectData.createSceneShotVideoTakeGeneration({
+    const take = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
@@ -561,7 +572,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',

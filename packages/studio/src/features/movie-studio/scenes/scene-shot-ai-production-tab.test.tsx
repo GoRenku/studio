@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
   SceneShotListDocument,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTake,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
@@ -14,9 +14,9 @@ import type {
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
-  createSceneShotVideoTakeGeneration,
+  createSceneShotVideoTake,
   estimateShotVideoTakeProduction,
-  listSceneShotVideoTakeGenerations,
+  listSceneShotVideoTakes,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
 } from '@/services/studio-shot-video-takes-api';
@@ -34,8 +34,8 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  listSceneShotVideoTakeGenerations: vi.fn(),
-  createSceneShotVideoTakeGeneration: vi.fn(),
+  listSceneShotVideoTakes: vi.fn(),
+  createSceneShotVideoTake: vi.fn(),
   readShotVideoTakeProduction: vi.fn(),
   estimateShotVideoTakeProduction: vi.fn(),
   planShotVideoTakeProduction: vi.fn(),
@@ -99,24 +99,56 @@ function resource(): SceneShotListResourceResponse {
   };
 }
 
-function takeGeneration(): SceneShotVideoTakeGeneration {
+function take(): SceneShotVideoTake {
+  const production = {
+    inputModeId: 'reference',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0',
+  } as const;
   return {
-    takeGenerationId: 'take_generation_1',
+    takeId: 'take_generation_1',
     sceneId: 'scene_hook',
     shotListId: 'shot_list_hook',
     shotIds: ['shot_001', 'shot_002'],
     title: 'Take generation 1',
-    production: {
-      inputModeId: 'reference',
-      modelChoice: 'fal-ai/bytedance/seedance-2.0',
-    },
+    state: emptyTakeState(production),
+    production,
     createdAt: '',
     updatedAt: '',
-    compatibility: {
-      editState: 'editable',
-      reasons: [],
-      message: 'This take generation matches the current shot list.',
+    status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
+      },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
     },
+  };
+}
+
+function emptyTakeState(production = {}) {
+  return {
+    version: 1 as const,
+    shotDesignByShotId: {},
+    referenceSelections: {
+      dependencyInclusions: {},
+      selectedCharacterSheetAssetIds: {},
+      selectedLocationSheetAssetIds: {},
+      selectedLocationViewIds: {},
+      selectedLookbookSheetIds: [],
+      selectedDialogueAudioTakeIds: {},
+    },
+    production,
   };
 }
 
@@ -124,10 +156,10 @@ function context(): ShotVideoTakeGenerationContext {
   return {
     purpose: 'shot.video-take',
     target: {
-      kind: 'sceneShotVideoTakeGeneration',
+      kind: 'sceneShotVideoTake',
       id: 'take_generation_1',
       sceneId: 'scene_hook',
-      takeGenerationId: 'take_generation_1',
+      takeId: 'take_generation_1',
       shotIds: ['shot_001', 'shot_002'],
     },
     project: { name: 'p', title: 'P', aspectRatio: '16:9' },
@@ -140,32 +172,15 @@ function context(): ShotVideoTakeGenerationContext {
       updatedAt: '',
       isActive: true,
     },
-    takeGeneration: {
-      takeGenerationId: 'take_generation_1',
-      sceneId: 'scene_hook',
-      shotListId: 'shot_list_hook',
-      shotIds: ['shot_001', 'shot_002'],
-      title: 'Take generation 1',
-      production: {
-        inputModeId: 'reference',
-        modelChoice: 'fal-ai/bytedance/seedance-2.0',
-      },
-      createdAt: '',
-      updatedAt: '',
-      compatibility: {
-        editState: 'editable',
-        reasons: [],
-        message: 'This take generation matches the current shot list.',
-      },
-    },
+    take: take(),
     shots: SHOTS,
     displayShots: SHOTS,
     referencedCast: [],
     referencedLocations: [],
     activeLookbook: null,
     storyboardImages: [],
-    availableInputs: [],
-    existingTakes: [],
+    mediaInputs: [],
+    outputs: [],
     shotGroupMode: 'multi-shot',
     defaults: {
       inputModeId: 'reference',
@@ -209,7 +224,7 @@ function productionPlan(
 ): ShotVideoTakeProductionPlanReport {
   return {
     target: context().target,
-    takeGeneration: context().takeGeneration,
+    take: context().take,
     finalPrompt: input.finalPrompt ? { prompt: input.finalPrompt } : null,
     plan: {
       planId: 'plan_001',
@@ -217,7 +232,7 @@ function productionPlan(
         projectId: 'project_001',
         sceneId: 'scene_hook',
         shotListId: 'shot_list_hook',
-        takeGenerationId: 'take_generation_1',
+        takeId: 'take_generation_1',
         inputMode: 'reference',
         shotGroupMode: 'multi-shot',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -321,7 +336,7 @@ function productionPlan(
             code: 'PROJECT_DATA378',
             message: 'The saved prompt was authored for a previous take generation.',
             severity: 'error',
-            location: { path: ['takeGeneration', 'production', 'agentProposal'] },
+            location: { path: ['take', 'production', 'agentProposal'] },
           },
         ]
       : [],
@@ -331,7 +346,7 @@ function productionPlan(
 function estimate(): ShotVideoTakeProductionEstimateReport {
   return {
     target: context().target,
-    takeGeneration: context().takeGeneration,
+    take: context().take,
     inputModeId: 'reference',
     shotGroupMode: 'multi-shot',
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -358,12 +373,12 @@ async function openAiProductionTab() {
 describe('AI Production tab', () => {
   beforeEach(() => {
     vi.mocked(readSceneShotListResource).mockReset().mockResolvedValue(resource());
-    vi.mocked(listSceneShotVideoTakeGenerations)
+    vi.mocked(listSceneShotVideoTakes)
       .mockReset()
-      .mockResolvedValue({ takeGenerations: [takeGeneration()] });
-    vi.mocked(createSceneShotVideoTakeGeneration)
+      .mockResolvedValue({ takes: [take()] });
+    vi.mocked(createSceneShotVideoTake)
       .mockReset()
-      .mockResolvedValue(takeGeneration());
+      .mockResolvedValue(take());
     vi.mocked(readShotVideoTakeProduction)
       .mockReset()
       .mockResolvedValue({ context: context(), models: models() });

@@ -328,10 +328,10 @@ function readStudioSelection(value: unknown): StudioSelection | null {
       selection.takeWorkspaceMode === 'edit'
         ? selection.takeWorkspaceMode
         : undefined;
-    const takeGenerationId =
-      typeof selection.takeGenerationId === 'string' &&
-      selection.takeGenerationId.trim()
-        ? selection.takeGenerationId
+    const takeId =
+      typeof selection.takeId === 'string' &&
+      selection.takeId.trim()
+        ? selection.takeId
         : undefined;
     if (selection.sceneTab !== undefined && !sceneTab) {
       return null;
@@ -345,7 +345,7 @@ function readStudioSelection(value: unknown): StudioSelection | null {
       ...(sceneTab ? { sceneTab } : {}),
       ...(shotId ? { shotId } : {}),
       ...(takeWorkspaceMode ? { takeWorkspaceMode } : {}),
-      ...(takeGenerationId ? { takeGenerationId } : {}),
+      ...(takeId ? { takeId } : {}),
       ...(shotTab ? { shotTab } : {}),
     };
   }

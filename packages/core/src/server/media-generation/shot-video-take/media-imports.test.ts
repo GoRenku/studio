@@ -15,7 +15,7 @@ describe('shot video take media imports', () => {
     projectData = shotVideoTakeProject.projectData;
   });
 
-  it('imports first-frame media with stable asset, file, and input records', async () => {
+  it('imports first-frame media with stable asset, file, and media input records', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const sourceProjectRelativePath = 'generated/media/first-frame.png';
@@ -23,7 +23,7 @@ describe('shot video take media imports', () => {
 
     const report = await projectData.importShotFirstFrame({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       sourceProjectRelativePath,
       title: 'Imported first frame',
     });
@@ -35,7 +35,7 @@ describe('shot video take media imports', () => {
         title: 'Imported first frame',
         mediaKind: 'image',
       },
-      input: {
+      mediaInput: {
         kind: 'first-frame',
         selected: true,
         projectRelativePath: sourceProjectRelativePath,
@@ -53,7 +53,7 @@ describe('shot video take media imports', () => {
     );
   });
 
-  it('imports final shot video takes with stable take records', async () => {
+  it('imports final shot video outputs with stable output records', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const sourceProjectRelativePath = 'generated/media/final-take.mp4';
@@ -61,7 +61,7 @@ describe('shot video take media imports', () => {
 
     const report = await projectData.importShotVideoTake({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       sourceProjectRelativePath,
       title: 'Imported final take',
     });
@@ -73,7 +73,7 @@ describe('shot video take media imports', () => {
         title: 'Imported final take',
         mediaKind: 'video',
       },
-      take: {
+      output: {
         shotIds: ['shot_001'],
         selected: true,
       },
@@ -88,5 +88,47 @@ describe('shot video take media imports', () => {
         }),
       ])
     );
+  });
+
+  it('rejects deleting assets retained by take media inputs and outputs', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/first-frame.png',
+      'first frame'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/final-take.mp4',
+      'final video'
+    );
+    const mediaInputReport = await projectData.importShotFirstFrame({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/first-frame.png',
+      title: 'Imported first frame',
+    });
+    const outputReport = await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/final-take.mp4',
+      title: 'Imported final take',
+    });
+
+    await expect(
+      projectData.deleteAsset({
+        homeDir,
+        projectName: 'constantinople',
+        target: { kind: 'project' },
+        assetId: mediaInputReport.imported.assetId,
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA421' });
+    await expect(
+      projectData.deleteAsset({
+        homeDir,
+        projectName: 'constantinople',
+        target: { kind: 'project' },
+        assetId: outputReport.imported.assetId,
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA421' });
   });
 });

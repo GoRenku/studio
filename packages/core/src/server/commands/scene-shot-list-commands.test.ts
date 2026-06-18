@@ -3,7 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
+import type {
+  SceneShotListDocument,
+  SceneShotWithLegacyShotSpecs,
+} from '../../client/scene-shot-list.js';
 import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
 import {
   createSampleMovieProject,
@@ -58,7 +61,7 @@ describe('scene shot list commands', () => {
               ...valid.shots[0]!,
               shotId: 'shot_001_duplicate',
               coveredBlockIndexes: [99],
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -98,7 +101,7 @@ describe('scene shot list commands', () => {
               ...valid.shots[0]!,
               title: 'Duplicate identifier',
               locationIds: ['location_missing'],
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -117,7 +120,7 @@ describe('scene shot list commands', () => {
   it('validates Composition and Location shot specs fields', async () => {
     const ids = await sampleIds();
     const valid = sampleShotList(ids);
-    const extended: SceneShotListDocument = {
+    const extended: LegacySceneShotListDocument = {
       ...valid,
       shots: [
         {
@@ -139,7 +142,7 @@ describe('scene shot list commands', () => {
               composition: 'hold the map edge in the lower foreground',
             },
           },
-        },
+        } as SceneShotWithLegacyShotSpecs,
       ],
     };
 
@@ -161,11 +164,11 @@ describe('scene shot list commands', () => {
                   framing: 'obsolete custom field',
                 } as unknown as NonNullable<
                   NonNullable<
-                    SceneShotListDocument['shots'][number]['shotSpecs']
+                    SceneShotWithLegacyShotSpecs['shotSpecs']
                   >['custom']
                 >,
               },
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -192,11 +195,11 @@ describe('scene shot list commands', () => {
                   matteBox: true,
                 } as unknown as NonNullable<
                   NonNullable<
-                    SceneShotListDocument['shots'][number]['shotSpecs']
+                    SceneShotWithLegacyShotSpecs['shotSpecs']
                   >['lens']
                 >,
               },
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -222,7 +225,7 @@ describe('scene shot list commands', () => {
                   millimeters: 28,
                 },
               },
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -247,7 +250,7 @@ describe('scene shot list commands', () => {
                 lens: { type: 'wide', focus: 'deep-focus' },
                 movement: { movement: 'rack-focus' },
               },
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -273,7 +276,7 @@ describe('scene shot list commands', () => {
                   locationId: 'location_elsewhere',
                 },
               },
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -299,7 +302,7 @@ describe('scene shot list commands', () => {
                   castMemberIds: ['cast_elsewhere'],
                 },
               },
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -327,7 +330,7 @@ describe('scene shot list commands', () => {
                   viewIds: ['front'],
                 },
               },
-            },
+            } as SceneShotWithLegacyShotSpecs,
           ],
         },
       })
@@ -809,7 +812,11 @@ describe('scene shot list commands', () => {
   it('validates scene storyboard sheet specs and preserves binding options', async () => {
     const ids = await sampleIds();
     const overrideLocationId = await addFlashbackLocation();
-    const shotList = sampleShotList(ids, 'Longer coverage', 5);
+    const shotList = sampleShotList(
+      ids,
+      'Longer coverage',
+      5
+    ) as LegacySceneShotListDocument;
     shotList.shots[0] = {
       ...shotList.shots[0]!,
       shotSpecs: {
@@ -1005,6 +1012,10 @@ describe('scene shot list commands', () => {
     });
   }
 });
+
+type LegacySceneShotListDocument = Omit<SceneShotListDocument, 'shots'> & {
+  shots: SceneShotWithLegacyShotSpecs[];
+};
 
 function sampleShotList(
   ids: { sceneId: string; castMemberId: string; locationId: string },

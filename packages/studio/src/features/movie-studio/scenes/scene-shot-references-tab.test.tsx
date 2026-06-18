@@ -33,10 +33,10 @@ vi.mock('@/services/studio-project-assets-api', () => ({
     (
       projectName: string,
       sceneId: string,
-      takeGenerationId: string,
+      takeId: string,
       inputId: string,
       fileId: string
-    ) => `/shot-inputs/${projectName}/${sceneId}/${takeGenerationId}/${inputId}/${fileId}`
+    ) => `/shot-inputs/${projectName}/${sceneId}/${takeId}/${inputId}/${fileId}`
   ),
   locationAssetFileUrl: vi.fn(
     (
@@ -184,20 +184,35 @@ describe('SceneShotReferencesTab', () => {
         shot={SHOT}
         productionPlan={{
           ...productionPlanWithReferenceImages(),
-          takeGeneration: {
-            takeGenerationId: 'take_generation_001',
+          take: {
+            takeId: 'take_generation_001',
             sceneId: 'scene_hook',
             shotListId: 'shot_list_hook',
             shotIds: ['shot_001', 'shot_002'],
             title: 'Take generation',
+            state: emptyTakeState(),
             production: {},
             createdAt: '',
             updatedAt: '',
-            compatibility: {
-              editState: 'editable',
-              reasons: [],
-              message: 'This take generation matches the current shot list.',
-            },
+            status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
+      },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
+    },
           },
         }}
         {...handlers}
@@ -214,8 +229,9 @@ describe('SceneShotReferencesTab', () => {
           dependencyId: 'reference-image:input_blade',
           inclusion: 'include',
         }
-      );
-    });
+    );
+  });
+
     expect(mutationMocks.updateShotReferenceInclusion).not.toHaveBeenCalled();
   });
 
@@ -656,5 +672,21 @@ function referenceChoice(
       ],
       diagnostics: [],
     },
+  };
+}
+
+function emptyTakeState() {
+  return {
+    version: 1 as const,
+    shotDesignByShotId: {},
+    referenceSelections: {
+      dependencyInclusions: {},
+      selectedCharacterSheetAssetIds: {},
+      selectedLocationSheetAssetIds: {},
+      selectedLocationViewIds: {},
+      selectedLookbookSheetIds: [],
+      selectedDialogueAudioTakeIds: {},
+    },
+    production: {},
   };
 }

@@ -19,7 +19,7 @@ export async function runGenerationPlanCommand(options: {
     purpose?: string;
     target?: string;
     model?: string;
-    takeGeneration?: string;
+    take?: string;
     intent?: string;
   };
   json: boolean;
@@ -43,10 +43,7 @@ export async function runGenerationPlanCommand(options: {
   const plan = await service.planShotVideoTakeProduction({
     projectName: options.flags.project,
     homeDir: options.homeDir,
-    takeGenerationId: requiredFlag(
-      options.flags.takeGeneration,
-      '--take-generation'
-    ),
+    takeId: requiredFlag(options.flags.take, '--take'),
     production: {
       inputModeId,
       modelChoice,

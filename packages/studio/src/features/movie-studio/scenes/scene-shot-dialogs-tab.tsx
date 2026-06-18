@@ -17,6 +17,8 @@ import {
 import {
   updateShotGroupReferenceInclusion,
   updateShotReferenceInclusion,
+  type ShotVideoTakeProductionMutation,
+  type ShotVideoTakeResourceMutation,
 } from '@/services/studio-shot-video-takes-api';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
@@ -100,14 +102,14 @@ export function SceneShotDialogsTab({
     dependencyId: string,
     inclusion: 'include' | 'exclude' | null
   ) => {
-    const takeGeneration = productionPlan?.takeGeneration;
-    const shotIds = takeGeneration?.shotIds ?? [];
-    const result =
-      takeGeneration && shotIds.length > 1
+    const take = productionPlan?.take;
+    const shotIds = take?.shotIds ?? [];
+    const result: ShotVideoTakeResourceMutation | ShotVideoTakeProductionMutation =
+      take
         ? await updateShotGroupReferenceInclusion(
             projectName,
             sceneId,
-            takeGeneration.takeGenerationId,
+            take.takeId,
             {
               dependencyId,
               inclusion,
@@ -117,7 +119,9 @@ export function SceneShotDialogsTab({
             dependencyId,
             inclusion,
           });
-    onResourceRefreshed?.(result.resource);
+    if ('resource' in result) {
+      onResourceRefreshed?.(result.resource);
+    }
     await onPlanRefresh?.();
   };
 

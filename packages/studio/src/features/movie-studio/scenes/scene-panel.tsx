@@ -28,7 +28,7 @@ interface ScenePanelProps {
   sceneTab?: ScenePanelTab;
   shotId?: string;
   takeWorkspaceMode?: SceneTakeWorkspaceMode;
-  takeGenerationId?: string;
+  takeId?: string;
   shotTab?: SceneShotDetailTab;
   onSelect: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
@@ -44,7 +44,7 @@ export function ScenePanel({
   sceneTab,
   shotId,
   takeWorkspaceMode,
-  takeGenerationId,
+  takeId,
   shotTab,
   onSelect,
   onHeaderActionChange,
@@ -57,7 +57,7 @@ export function ScenePanel({
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
   const activeTab: ScenePanelTab =
-    sceneTab ?? (shotId || shotTab || takeGenerationId ? 'takes' : 'narrative');
+    sceneTab ?? (shotId || shotTab || takeId ? 'takes' : 'narrative');
   const takesLabel =
     activeTab === 'takes' && takeWorkspaceMode === 'edit'
       ? 'Takes - Edit'
@@ -123,7 +123,7 @@ export function ScenePanel({
             shotId,
             shotTab,
             takeWorkspaceMode,
-            takeGenerationId,
+            takeId,
           });
           return;
         }
@@ -170,7 +170,7 @@ export function ScenePanel({
           shotId={shotId}
           shotTab={shotTab}
           takeWorkspaceMode={takeWorkspaceMode}
-          takeGenerationId={takeGenerationId}
+          takeId={takeId}
           onSelect={onSelect}
           onHeaderActionChange={onHeaderActionChange}
           onSaveNotificationChange={onSaveNotificationChange}

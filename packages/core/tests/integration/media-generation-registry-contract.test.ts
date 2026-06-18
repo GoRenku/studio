@@ -65,27 +65,27 @@ describe('media generation purpose registry contract', () => {
       {
         purpose: 'shot.first-frame',
         mediaKind: 'image',
-        targetKind: 'sceneShotVideoTakeGeneration',
+        targetKind: 'sceneShotVideoTake',
       },
       {
         purpose: 'shot.last-frame',
         mediaKind: 'image',
-        targetKind: 'sceneShotVideoTakeGeneration',
+        targetKind: 'sceneShotVideoTake',
       },
       {
         purpose: 'shot.multi-shot-storyboard-sheet',
         mediaKind: 'image',
-        targetKind: 'sceneShotVideoTakeGeneration',
+        targetKind: 'sceneShotVideoTake',
       },
       {
         purpose: 'shot.reference-image',
         mediaKind: 'image',
-        targetKind: 'sceneShotVideoTakeGeneration',
+        targetKind: 'sceneShotVideoTake',
       },
       {
         purpose: 'shot.video-take',
         mediaKind: 'video',
-        targetKind: 'sceneShotVideoTakeGeneration',
+        targetKind: 'sceneShotVideoTake',
       },
     ]);
   });

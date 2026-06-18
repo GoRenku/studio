@@ -86,8 +86,10 @@ import type {
   SceneDialogueAudioGenerationSpec,
   SceneDialogueAudioModelListReport,
   SceneDialogueAudioMutationReport,
-  ShotVideoTakeAvailableInput,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTakeMediaInput,
+  SceneShotVideoTake,
+  SceneShotVideoTakeEditContext,
+  SceneShotVideoTakeState,
   ShotVideoTakeGenerationContext,
   ShotVideoTakeGenerationProduction,
   ShotVideoTakeGenerationPlan,
@@ -490,14 +492,17 @@ export interface ProjectDataService {
   estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
   runMediaGenerationSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
-  createSceneShotVideoTakeGeneration(input: CreateSceneShotVideoTakeGenerationInput): Promise<SceneShotVideoTakeGeneration>;
-  readSceneShotVideoTakeGeneration(input: ReadSceneShotVideoTakeGenerationInput): Promise<SceneShotVideoTakeGeneration>;
-  listSceneShotVideoTakeGenerations(input: ListSceneShotVideoTakeGenerationsInput): Promise<{ takeGenerations: SceneShotVideoTakeGeneration[] }>;
-  updateSceneShotVideoTakeGenerationProduction(input: UpdateSceneShotVideoTakeGenerationProductionInput): Promise<ShotVideoTakeGenerationContext>;
-  updateSceneShotVideoTakeGenerationShots(input: UpdateSceneShotVideoTakeGenerationShotsInput): Promise<ShotVideoTakeGenerationContext>;
+  createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
+  readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
+  listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<{ takes: SceneShotVideoTake[] }>;
+  updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeGenerationContext>;
+  updateSceneShotVideoTakeState(input: UpdateSceneShotVideoTakeStateInput): Promise<ShotVideoTakeGenerationContext>;
+  updateSceneShotVideoTakeShotSpecs(input: UpdateSceneShotVideoTakeShotSpecsInput): Promise<ShotVideoTakeGenerationContext>;
+  updateSceneShotVideoTakeShots(input: UpdateSceneShotVideoTakeShotsInput): Promise<ShotVideoTakeGenerationContext>;
   buildShotVideoTakeContext(input: ShotVideoTakeContextInput): Promise<ShotVideoTakeGenerationContext>;
+  readSceneShotVideoTakeEditContext(input: ShotVideoTakeContextInput): Promise<SceneShotVideoTakeEditContext>;
   listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
-  listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: ShotVideoTakeAvailableInput[]; resourceKeys: string[] }>;
+  listShotVideoTakeInputs(input: ShotVideoTakeContextInput): Promise<{ inputs: SceneShotVideoTakeMediaInput[]; resourceKeys: string[] }>;
   estimateShotVideoTakeProduction(input: PreviewShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionEstimateReport>;
   planShotVideoTakeProduction(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeGenerationPlan>;
   readShotVideoTakeProductionPlan(input: PlanShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionPlanReport>;
@@ -1367,7 +1372,7 @@ export interface ImportSceneStoryboardImagesMediaInput
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface CreateSceneShotVideoTakeGenerationInput
+export interface CreateSceneShotVideoTakeInput
   extends RenkuConfigPathOptions {
   projectName?: string;
   sceneId: string;
@@ -1377,13 +1382,13 @@ export interface CreateSceneShotVideoTakeGenerationInput
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface ReadSceneShotVideoTakeGenerationInput
+export interface ReadSceneShotVideoTakeInput
   extends RenkuConfigPathOptions {
   projectName?: string;
-  takeGenerationId: string;
+  takeId: string;
 }
 
-export interface ListSceneShotVideoTakeGenerationsInput
+export interface ListSceneShotVideoTakesInput
   extends RenkuConfigPathOptions {
   projectName?: string;
   sceneId: string;
@@ -1391,7 +1396,7 @@ export interface ListSceneShotVideoTakeGenerationsInput
 
 export interface ShotVideoTakeContextInput extends RenkuConfigPathOptions {
   projectName?: string;
-  takeGenerationId: string;
+  takeId: string;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1399,12 +1404,23 @@ export interface ShotVideoTakeModelListInput extends ShotVideoTakeContextInput {
   inputModeId?: ShotVideoTakeInputModeId;
 }
 
-export interface UpdateSceneShotVideoTakeGenerationProductionInput
+export interface UpdateSceneShotVideoTakeProductionInput
   extends ShotVideoTakeContextInput {
   production: ShotVideoTakeGenerationProduction;
 }
 
-export interface UpdateSceneShotVideoTakeGenerationShotsInput
+export interface UpdateSceneShotVideoTakeStateInput
+  extends ShotVideoTakeContextInput {
+  statePatch: Partial<SceneShotVideoTakeState>;
+}
+
+export interface UpdateSceneShotVideoTakeShotSpecsInput
+  extends ShotVideoTakeContextInput {
+  shotId: string;
+  shotSpecs: ShotSpecs | null;
+}
+
+export interface UpdateSceneShotVideoTakeShotsInput
   extends ShotVideoTakeContextInput {
   shotIds: string[];
 }
@@ -1727,7 +1743,7 @@ export interface ResolveShotVideoTakeInputFileInput
 }
 
 export interface ResolvedShotVideoTakeInputFile {
-  input: ShotVideoTakeAvailableInput;
+  input: SceneShotVideoTakeMediaInput;
   file: AssetFile;
   absolutePath: string;
 }

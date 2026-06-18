@@ -71,7 +71,10 @@ import type {
 } from '../project-data-service-contracts.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { sceneShotListResourceKeys } from '../commands/scene-shot-list-commands.js';
-import type { SceneShot } from '../../client/scene-shot-list.js';
+import type {
+  SceneShot,
+  SceneShotWithLegacyShotSpecs,
+} from '../../client/scene-shot-list.js';
 import { LOCATION_AZIMUTH_VIEW_LABELS } from '../../client/shot-spec-labels.js';
 import {
   mapGptQuality,
@@ -1034,7 +1037,7 @@ function selectedShotsForSpec(
 }
 
 function effectiveShotLocationIds(shot: SceneShot): string[] {
-  const selectedLocationId = shot.shotSpecs?.location?.locationId;
+  const selectedLocationId = legacyShotSpecs(shot)?.location?.locationId;
   return selectedLocationId ? [selectedLocationId] : shot.locationIds;
 }
 
@@ -1061,11 +1064,15 @@ function shotLocationPromptText(
 }
 
 function shotLocationViewPromptText(shot: SceneShot): string | null {
-  const viewIds = shot.shotSpecs?.location?.viewIds;
+  const viewIds = legacyShotSpecs(shot)?.location?.viewIds;
   if (viewIds?.length) {
     return viewIds.map((viewId) => LOCATION_AZIMUTH_VIEW_LABELS[viewId]).join(', ');
   }
   return null;
+}
+
+function legacyShotSpecs(shot: SceneShot): SceneShotWithLegacyShotSpecs['shotSpecs'] {
+  return (shot as SceneShotWithLegacyShotSpecs).shotSpecs;
 }
 
 function orientationForFrame(frame: string): string {

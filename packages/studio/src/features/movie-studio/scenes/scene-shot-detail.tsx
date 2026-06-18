@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   SceneShot,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTake,
 } from '@gorenku/studio-core/client';
 import type {
   SceneShotListResourceResponse,
@@ -36,7 +36,7 @@ interface SceneShotDetailProps {
   projectName: string;
   sceneId: string;
   shot: SceneShot;
-  takeGeneration: SceneShotVideoTakeGeneration | null;
+  take: SceneShotVideoTake | null;
   label: string;
   activeTab?: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
@@ -61,7 +61,7 @@ export function SceneShotDetail({
   projectName,
   sceneId,
   shot,
-  takeGeneration,
+  take,
   label,
   activeTab = 'description',
   castMemberLabels,
@@ -77,17 +77,17 @@ export function SceneShotDetail({
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
   const [productionSaveNotification, setProductionSaveNotification] =
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
-  const takeGenerationTag = useMemo(
+  const takeTag = useMemo(
     () =>
-      takeGeneration && takeGeneration.shotIds.length > 1
-        ? `${takeGeneration.shotIds.length} shots`
+      take && take.shotIds.length > 1
+        ? `${take.shotIds.length} shots`
         : null,
-    [takeGeneration]
+    [take]
   );
   const production = useShotVideoTakeProduction({
     projectName,
     sceneId,
-    takeGenerationId: takeGeneration?.takeGenerationId,
+    takeId: take?.takeId,
     onResourceRefreshed: onShotSpecsSaved,
   });
   const handleShotSpecsSaveNotificationChange = useCallback(
@@ -155,10 +155,11 @@ export function SceneShotDetail({
           className='min-h-0'
         >
           <ShotSpecsProvider
-            key={shot.shotId}
+            key={`${take?.takeId ?? 'shot-list'}:${shot.shotId}`}
             projectName={projectName}
             sceneId={sceneId}
             shot={shot}
+            take={take}
             onSaved={onShotSpecsSaved}
             onSaveNotificationChange={handleShotSpecsSaveNotificationChange}
           >
@@ -168,9 +169,9 @@ export function SceneShotDetail({
               className='flex h-full min-h-0 min-w-0 flex-col gap-0'
               items={DESIGN_TABS.map((tab) => ({ ...tab }))}
               trailing={
-                takeGenerationTag ? (
+                takeTag ? (
                   <SceneShotAiProductionTakeGenerationTag
-                    label={takeGenerationTag}
+                    label={takeTag}
                   />
                 ) : null
               }

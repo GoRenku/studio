@@ -1,7 +1,7 @@
-import { buildShotVideoTakeContext } from '../media-generation/shot-video-take/context.js';
+import { buildShotVideoTakeContext, readSceneShotVideoTakeEditContext } from '../media-generation/shot-video-take/context.js';
 import { listShotVideoTakeModels } from '../media-generation/shot-video-take/model-list.js';
 import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/shot-video-take/input-selection.js';
-import { createSceneShotVideoTakeGeneration, listSceneShotVideoTakeGenerations, readSceneShotVideoTakeGeneration, updateSceneShotVideoTakeGenerationProduction, updateSceneShotVideoTakeGenerationShots } from '../media-generation/shot-video-take/take-generations.js';
+import { createSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeState, updateSceneShotVideoTakeShotSpecs, updateSceneShotVideoTakeShots } from '../media-generation/shot-video-take/take-generations.js';
 import { estimateShotVideoTakeProduction, planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
 import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
@@ -12,16 +12,21 @@ import * as sharedGeneration from '../media-generation/shared-generation-service
 
 export function createShotVideoTakeServiceWiring() {
   return {
-    createSceneShotVideoTakeGeneration:
-      createSceneShotVideoTakeGeneration,
-    readSceneShotVideoTakeGeneration: readSceneShotVideoTakeGeneration,
-    listSceneShotVideoTakeGenerations:
-      listSceneShotVideoTakeGenerations,
-    updateSceneShotVideoTakeGenerationProduction:
-      updateSceneShotVideoTakeGenerationProduction,
-    updateSceneShotVideoTakeGenerationShots:
-      updateSceneShotVideoTakeGenerationShots,
+    createSceneShotVideoTake:
+      createSceneShotVideoTake,
+    readSceneShotVideoTake: readSceneShotVideoTake,
+    listSceneShotVideoTakes:
+      listSceneShotVideoTakes,
+    updateSceneShotVideoTakeProduction:
+      updateSceneShotVideoTakeProduction,
+    updateSceneShotVideoTakeState:
+      updateSceneShotVideoTakeState,
+    updateSceneShotVideoTakeShotSpecs:
+      updateSceneShotVideoTakeShotSpecs,
+    updateSceneShotVideoTakeShots:
+      updateSceneShotVideoTakeShots,
     buildShotVideoTakeContext: buildShotVideoTakeContext,
+    readSceneShotVideoTakeEditContext,
     listShotVideoTakeModels: listShotVideoTakeModels,
     listShotVideoTakeInputs: listShotVideoTakeInputs,
     estimateShotVideoTakeProduction:

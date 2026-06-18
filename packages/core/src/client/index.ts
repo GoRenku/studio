@@ -194,6 +194,7 @@ export type {
   RigId,
   SceneShot,
   SceneShotDialogueReference,
+  SceneShotWithLegacyShotSpecs,
   ShotVideoTakeAgentProposal,
   ShotVideoTakeDependencyDraft,
   ShotVideoTakeDependencyKind,

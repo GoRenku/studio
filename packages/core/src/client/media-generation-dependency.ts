@@ -51,7 +51,7 @@ export type MediaGenerationDependencySelectorInput =
     | {
       kind: 'shot-video-input';
       inputKind: ShotVideoTakeInputKind;
-      takeGenerationId: string;
+      takeId: string;
       shotIds: string[];
       subjectKind?: ShotVideoTakeInputSubjectKind;
       subjectId?: string;

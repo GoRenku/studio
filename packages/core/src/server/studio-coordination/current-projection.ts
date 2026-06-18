@@ -5,6 +5,7 @@ import type {
   ScenePanelTab,
   SceneShot,
   SceneShotDetailTab,
+  SceneShotWithLegacyShotSpecs,
 } from '../../client/index.js';
 import {
   CAMERA_ANGLE_LABELS,
@@ -289,7 +290,7 @@ async function enrichSceneShotFocusContext(input: {
       projectName: input.projectName,
       homeDir: input.options.homeDir,
       sceneId: selection.id,
-      takeGenerationId: selection.takeGenerationId,
+      takeId: selection.takeId,
       shot,
       shotTab,
       castMemberLabels: resource.castMemberLabels,
@@ -364,7 +365,7 @@ async function shotTabSelections(input: {
   projectName: string;
   homeDir?: string;
   sceneId: string;
-  takeGenerationId?: string;
+  takeId?: string;
   shot: SceneShot;
   shotTab: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
@@ -373,7 +374,7 @@ async function shotTabSelections(input: {
   selections: StudioCurrentShotTabSelections;
   warnings: DiagnosticIssue[];
 }> {
-  const shotSpecs = input.shot.shotSpecs;
+  const shotSpecs = (input.shot as SceneShotWithLegacyShotSpecs).shotSpecs;
   switch (input.shotTab) {
     case 'composition':
       return {
@@ -484,39 +485,40 @@ async function shotTabSelections(input: {
     }
     case 'ai-production': {
       const fallback = {
-        kind: 'take-generation' as const,
-        ...(input.takeGenerationId
-          ? { takeGenerationId: input.takeGenerationId }
+        kind: 'take' as const,
+        ...(input.takeId
+          ? { takeId: input.takeId }
           : {}),
         shotIds: [input.shot.shotId],
       };
-      if (!input.takeGenerationId) {
+      if (!input.takeId) {
         return { selections: fallback, warnings: [] };
       }
       try {
-        const takeGeneration = await input.projectData.readSceneShotVideoTakeGeneration({
+        const take = await input.projectData.readSceneShotVideoTake({
           projectName: input.projectName,
           homeDir: input.homeDir,
-          takeGenerationId: input.takeGenerationId,
+          takeId: input.takeId,
         });
-        if (takeGeneration.sceneId !== input.sceneId) {
+        if (take.sceneId !== input.sceneId) {
           return {
             selections: fallback,
             warnings: [
               studioCoordinationWarning(
                 'STUDIO_COORDINATION040',
-                'Current Studio take generation focus belongs to a different scene.',
-                ['selection', 'takeGenerationId'],
-                'Refresh Studio and select a take generation in the current scene.'
+                'Current Studio take focus belongs to a different scene.',
+                ['selection', 'takeId'],
+                'Refresh Studio and select a take in the current scene.'
               ),
             ],
           };
         }
         return {
           selections: {
-            kind: 'take-generation',
-            takeGenerationId: takeGeneration.takeGenerationId,
-            shotIds: takeGeneration.shotIds,
+            kind: 'take',
+            takeId: take.takeId,
+            sourceShotListId: take.shotListId,
+            shotIds: take.shotIds,
           },
           warnings: [],
         };
@@ -526,9 +528,9 @@ async function shotTabSelections(input: {
           warnings: [
             studioCoordinationWarning(
               'STUDIO_COORDINATION041',
-              'Current Studio take generation focus could not load.',
-              ['selection', 'takeGenerationId'],
-              'Refresh Studio and select an existing take generation.'
+              'Current Studio take focus could not load.',
+              ['selection', 'takeId'],
+              'Refresh Studio and select an existing take.'
             ),
           ],
         };
@@ -542,7 +544,9 @@ async function shotTabSelections(input: {
   }
 }
 
-function compositionLens(shotSpecs: SceneShot['shotSpecs']) {
+function compositionLens(
+  shotSpecs: SceneShotWithLegacyShotSpecs['shotSpecs']
+) {
   const lens = shotSpecs?.lens;
   if (!lens?.type && !lens?.focus && lens?.millimeters === undefined) {
     return {};

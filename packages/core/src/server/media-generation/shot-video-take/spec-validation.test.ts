@@ -21,7 +21,7 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
     const context = await projectData.buildShotVideoTakeContext({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
     });
 
     await expect(
@@ -48,7 +48,7 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const context = await projectData.buildShotVideoTakeContext({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
     });
 
     await expect(
@@ -76,7 +76,7 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const context = await projectData.buildShotVideoTakeContext({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
     });
 
     await expect(
@@ -107,7 +107,7 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const context = await projectData.buildShotVideoTakeContext({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
     });
     await shotVideoTakeProject.writeProjectFile(
       'generated/audio/dialogue-001.wav',

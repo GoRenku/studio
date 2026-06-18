@@ -106,7 +106,7 @@ export const SHOT_VIDEO_TAKE_INPUT_SUBJECT_KINDS = [
   'cast-member',
   'location',
   'lookbook',
-  'take-generation',
+  'take',
   'scene-dialogue',
   'shot',
 ] as const;
@@ -451,13 +451,97 @@ function shotSpecsSchema(): Record<string, unknown> {
 }
 
 export const shotVideoTakeGenerationProductionSchema = {
-  $id: 'https://schemas.gorenku.com/studio/shot-video-take-generation-production.schema.json',
+  $id: 'https://schemas.gorenku.com/studio/shot-video-take-production.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   ...shotVideoTakeProductionSchemaProperties(),
 } as const;
 
-export const sceneShotVideoTakeGenerationCompatibilitySnapshotSchema = {
-  $id: 'https://schemas.gorenku.com/studio/scene-shot-video-take-generation-compatibility-snapshot.schema.json',
+export const sceneShotVideoTakeStateSchema = {
+  $id: 'https://schemas.gorenku.com/studio/scene-shot-video-take-state.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: [
+    'version',
+    'shotDesignByShotId',
+    'referenceSelections',
+    'production',
+  ],
+  properties: {
+    version: { const: 1 },
+    shotDesignByShotId: {
+      type: 'object',
+      additionalProperties: sceneShotVideoTakeShotDesignSchema(),
+    },
+    referenceSelections: {
+      type: 'object',
+      required: [
+        'dependencyInclusions',
+        'selectedCharacterSheetAssetIds',
+        'selectedLocationSheetAssetIds',
+        'selectedLocationViewIds',
+        'selectedLookbookSheetIds',
+        'selectedDialogueAudioTakeIds',
+      ],
+      properties: {
+        dependencyInclusions: {
+          type: 'object',
+          additionalProperties: enumValue(['include', 'exclude'] as const),
+        },
+        selectedCharacterSheetAssetIds: {
+          type: 'object',
+          additionalProperties: nonEmptyString(),
+        },
+        selectedLocationSheetAssetIds: {
+          type: 'object',
+          additionalProperties: nonEmptyString(),
+        },
+        selectedLocationViewIds: {
+          type: 'object',
+          additionalProperties: {
+            type: 'array',
+            items: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
+          },
+        },
+        selectedLookbookSheetIds: {
+          type: 'array',
+          items: nonEmptyString(),
+        },
+        selectedDialogueAudioTakeIds: {
+          type: 'object',
+          additionalProperties: nonEmptyString(),
+        },
+      },
+      additionalProperties: false,
+    },
+    production: shotVideoTakeProductionSchemaProperties(),
+    promptState: {
+      type: 'object',
+      properties: {
+        generatedPromptDraft: shotVideoTakePromptDraftSchema(),
+        acceptedPrompt: shotVideoTakePromptDraftSchema(),
+        lastGeneratedFrom: {
+          type: 'object',
+          required: ['shotIds', 'dependencyIds'],
+          properties: {
+            inputModeId: enumValue(SHOT_VIDEO_TAKE_INPUT_MODE_IDS),
+            modelChoice: enumValue(SHOT_VIDEO_TAKE_MODELS),
+            shotIds: nonEmptyStringArraySchema(),
+            dependencyIds: {
+              type: 'array',
+              items: nonEmptyString(),
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const sceneShotVideoTakeHistorySnapshotSchema = {
+  $id: 'https://schemas.gorenku.com/studio/scene-shot-video-take-history-snapshot.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
   required: [
@@ -482,6 +566,114 @@ export const sceneShotVideoTakeGenerationCompatibilitySnapshotSchema = {
   },
   additionalProperties: false,
 } as const;
+
+function sceneShotVideoTakeShotDesignSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      composition: {
+        type: 'object',
+        properties: {
+          shotSize: enumValue(SHOT_SIZE_IDS),
+          subjectFraming: {
+            type: 'array',
+            items: enumValue(SUBJECT_FRAMING_IDS),
+          },
+          cameraAngle: enumValue(CAMERA_ANGLE_IDS),
+          dutch: enumValue(['left', 'right'] as const),
+          lens: shotLensSchema(),
+          customComposition: nonEmptyString(),
+        },
+        additionalProperties: false,
+      },
+      motion: {
+        type: 'object',
+        properties: {
+          movement: enumValue(MOVEMENT_IDS),
+          secondary: enumValue(MOVEMENT_IDS),
+          directions: {
+            type: 'array',
+            items: enumValue(MOVE_DIRECTION_IDS),
+          },
+          track: enumValue(['straight', 'circular'] as const),
+          rig: enumValue([
+            'sticks',
+            'hand-held',
+            'gimbal',
+            'slider',
+            'jib',
+            'drone',
+            'dolly',
+            'steadicam',
+            'crane',
+          ] as const),
+          customMotion: nonEmptyString(),
+        },
+        additionalProperties: false,
+      },
+      cast: {
+        type: 'object',
+        properties: {
+          castMemberIds: {
+            type: 'array',
+            items: nonEmptyString(),
+          },
+          characterSheetAssetIds: {
+            type: 'object',
+            additionalProperties: nonEmptyString(),
+          },
+        },
+        additionalProperties: false,
+      },
+      location: {
+        type: 'object',
+        properties: {
+          locationId: nonEmptyString(),
+          environmentSheetAssetId: nonEmptyString(),
+          viewIds: {
+            type: 'array',
+            items: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
+          },
+        },
+        additionalProperties: false,
+      },
+      lookbook: {
+        type: 'object',
+        properties: {
+          lookbookId: nonEmptyString(),
+          lookbookSheetId: nonEmptyString(),
+        },
+        additionalProperties: false,
+      },
+      referenceImages: {
+        type: 'object',
+        properties: {
+          customMediaInputIds: {
+            type: 'array',
+            items: nonEmptyString(),
+          },
+        },
+        additionalProperties: false,
+      },
+      dialogue: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['dialogueId', 'inclusion'],
+          properties: {
+            dialogueId: nonEmptyString(),
+            inclusion: enumValue(['include', 'exclude'] as const),
+            sceneDialogueAudioTakeId: nonEmptyString(),
+            assetId: nonEmptyString(),
+            assetFileId: nonEmptyString(),
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    additionalProperties: false,
+  };
+}
 
 function shotVideoTakeProductionSchemaProperties(): Record<string, unknown> {
   return {
@@ -553,6 +745,26 @@ function shotVideoTakeProductionSchemaProperties(): Record<string, unknown> {
     },
     additionalProperties: false,
   };
+}
+
+function shotLensSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      type: enumValue(LENS_IDS),
+      millimeters: { type: 'number', exclusiveMinimum: 0 },
+      focus: enumValue(FOCUS_IDS),
+    },
+    additionalProperties: false,
+  };
+}
+
+function shotVideoTakePromptDraftSchema(): Record<string, unknown> {
+  return objectWith(['prompt'], {
+    prompt: nonEmptyString(),
+    negativePrompt: nonEmptyString(),
+    title: nonEmptyString(),
+  });
 }
 
 function shotVideoTakeParameterValuesSchema(): Record<string, unknown> {

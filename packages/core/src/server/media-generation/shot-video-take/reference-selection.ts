@@ -1,12 +1,17 @@
 import type {
   LocationAzimuthViewId,
   SceneShot,
+  SceneShotWithLegacyShotSpecs,
 } from '../../../client/index.js';
 import type { SceneReferenceScope } from './reference-scope.js';
 
 
 
-export function selectedCastIdsForShots(shots: SceneShot[]): Set<string> {
+type SceneShotReferenceCarrier = SceneShotWithLegacyShotSpecs;
+
+export function selectedCastIdsForShots(
+  shots: SceneShotReferenceCarrier[]
+): Set<string> {
   return new Set(
     shots.flatMap(
       (shot) => shot.shotSpecs?.castReferences?.castMemberIds ?? shot.castMemberIds
@@ -36,7 +41,9 @@ export function defaultCastIdsForShots(shots: SceneShot[]): Set<string> {
 
 
 
-export function selectedLocationIdsForShots(shots: SceneShot[]): Set<string> {
+export function selectedLocationIdsForShots(
+  shots: SceneShotReferenceCarrier[]
+): Set<string> {
   const selected = new Set<string>();
   shots.forEach((shot) => {
     shot.locationIds.forEach((locationId) => selected.add(locationId));
@@ -82,7 +89,9 @@ export function effectiveScopedLocationSelectionForShots(
 
 
 
-export function selectedLookbookSheetIdsForShots(shots: SceneShot[]): Set<string> {
+export function selectedLookbookSheetIdsForShots(
+  shots: SceneShotReferenceCarrier[]
+): Set<string> {
   const selected = new Set<string>();
   for (const shot of shots) {
     const lookbookSheetId = shot.shotSpecs?.lookbookReference?.lookbookSheetId;
@@ -96,7 +105,7 @@ export function selectedLookbookSheetIdsForShots(shots: SceneShot[]): Set<string
 
 
 export function selectedCharacterSheetAssetIdForShots(
-  shots: SceneShot[],
+  shots: SceneShotReferenceCarrier[],
   castMemberId: string
 ): string | null {
   for (const shot of shots) {
@@ -113,7 +122,7 @@ export function selectedCharacterSheetAssetIdForShots(
 
 
 export function selectedEnvironmentSheetAssetIdForShots(
-  shots: SceneShot[],
+  shots: SceneShotReferenceCarrier[],
   locationId: string
 ): string | null {
   for (const shot of shots) {
@@ -128,7 +137,7 @@ export function selectedEnvironmentSheetAssetIdForShots(
 
 
 export function selectedLocationViewIdsForShots(
-  shots: SceneShot[],
+  shots: SceneShotReferenceCarrier[],
   locationId: string
 ): LocationAzimuthViewId[] {
   for (const shot of shots) {

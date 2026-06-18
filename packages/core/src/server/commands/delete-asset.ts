@@ -10,6 +10,9 @@ import {
 } from '../database/access/asset-relationships/index.js';
 import { deleteLocationEnvironmentSheetByAssetId } from '../database/access/location-environment-sheets.js';
 import { deleteSceneShotStoryboardImageByAssetId } from '../database/access/scene-shot-lists.js';
+import {
+  assertAssetNotReferencedByShotVideoTakeRecords,
+} from '../database/access/shot-video-takes.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { assertAssetIsNotCastVoiceSample } from './cast-voice-commands.js';
 import {
@@ -28,6 +31,7 @@ export async function deleteAsset(
 ): Promise<void> {
   const { projectFolder, session } = await openProjectSession(input);
   try {
+    assertAssetNotReferencedByShotVideoTakeRecords(session, input.assetId);
     const asset = readAssetRelationship(session, {
       target: input.target,
       assetId: input.assetId,

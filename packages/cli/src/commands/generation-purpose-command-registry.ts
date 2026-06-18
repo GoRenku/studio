@@ -42,7 +42,7 @@ export function parseGenerationTarget(input: {
   purpose: string;
   target: string;
   shots?: string;
-  takeGenerationId?: string;
+  takeId?: string;
 }): MediaGenerationRequestTarget {
   const purpose = parseGenerationPurpose(input.purpose);
   if (isLookbookGenerationPurpose(purpose)) {
@@ -99,19 +99,16 @@ export function unsupportedGenerationPurpose(purpose: string): StructuredError {
 function parseSceneShotGroupTarget(input: {
   target: string;
   shots?: string;
-  takeGenerationId?: string;
+  takeId?: string;
 }): MediaGenerationRequestTarget {
   const sceneId = parseSceneTarget(input.target, 'Shot media generation');
-  const takeGenerationId = requiredFlag(
-    input.takeGenerationId,
-    '--take-generation'
-  );
+  const takeId = requiredFlag(input.takeId, '--take');
   const shotIds = parseShots(requiredFlag(input.shots, '--shots'));
   return {
-    kind: 'sceneShotVideoTakeGeneration',
-    id: takeGenerationId,
+    kind: 'sceneShotVideoTake',
+    id: takeId,
     sceneId,
-    takeGenerationId,
+    takeId,
     shotIds,
   };
 }

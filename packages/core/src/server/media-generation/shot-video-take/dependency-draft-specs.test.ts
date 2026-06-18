@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type {
-  SceneShotVideoTakeGenerationTarget,
+  SceneShotVideoTakeTarget,
   ShotVideoTakeGenerationContext,
 } from '../../../client/index.js';
 import { buildShotInputDependencyDraftSpec } from './dependency-draft-specs.js';
@@ -83,20 +83,20 @@ describe('shot video take dependency draft specs', () => {
   });
 });
 
-function testTarget(): SceneShotVideoTakeGenerationTarget {
+function testTarget(): SceneShotVideoTakeTarget {
   return {
-    kind: 'sceneShotVideoTakeGeneration',
+    kind: 'sceneShotVideoTake',
     id: 'take_generation_a',
     sceneId: 'scene_a',
-    takeGenerationId: 'take_generation_a',
+    takeId: 'take_generation_a',
     shotIds: ['shot_001'],
   };
 }
 
 function testContext(
-  target: SceneShotVideoTakeGenerationTarget,
+  target: SceneShotVideoTakeTarget,
   dependencyDraft?: NonNullable<
-    ShotVideoTakeGenerationContext['takeGeneration']['production']['agentProposal']
+    ShotVideoTakeGenerationContext['take']['production']['agentProposal']
   >['dependencyDrafts'][number]
 ): ShotVideoTakeGenerationContext {
   return {
@@ -122,18 +122,45 @@ function testContext(
       updatedAt: '2026-01-01T00:00:00.000Z',
       isActive: true,
     },
-    takeGeneration: {
-      takeGenerationId: 'take_generation_a',
+    take: {
+      takeId: 'take_generation_a',
       sceneId: 'scene_a',
       shotListId: 'shot_list_a',
       shotIds: ['shot_001'],
       title: 'Take generation A',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      compatibility: {
-        editState: 'editable',
-        reasons: [],
-        message: 'This take generation matches the current shot list.',
+      status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
+      },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
+    },
+      state: {
+        version: 1,
+        shotDesignByShotId: {},
+        referenceSelections: {
+          dependencyInclusions: {},
+          selectedCharacterSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
+          selectedLocationViewIds: {},
+          selectedLookbookSheetIds: [],
+          selectedDialogueAudioTakeIds: {},
+        },
+        production: {},
       },
       production: {
         ...(dependencyDraft
@@ -155,8 +182,8 @@ function testContext(
     referencedLocations: [],
     activeLookbook: null,
     storyboardImages: [],
-    availableInputs: [],
-    existingTakes: [],
+    mediaInputs: [],
+    outputs: [],
     defaults: {
       inputModeId: 'first-frame',
       imageDependencyModelChoice: 'fal-ai/openai/gpt-image-2',

@@ -60,8 +60,8 @@ import {
   shotVideoTakeResourceKeys,
 } from './resource-keys.js';
 import {
-  assertEditableTakeGeneration,
-  prepareSceneShotVideoTakeGenerationInSession,
+  assertEditableSceneShotVideoTake,
+  prepareSceneShotVideoTakeInSession,
 } from './take-generation-context.js';
 
 
@@ -72,8 +72,8 @@ export async function importShotInputMedia(
 ): Promise<ShotVideoTakeInputMediaImportReport> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
-    assertEditableTakeGeneration(prepared.takeGeneration);
+    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(prepared.take);
     const imported = await importGeneratedFile({
       session,
       projectFolder,
@@ -88,17 +88,17 @@ export async function importShotInputMedia(
     const subject =
       PURPOSE_CONFIG[purpose].outputInputKind === 'multi-shot-storyboard-sheet'
         ? {
-            subjectKind: 'take-generation' as const,
-            subjectId: prepared.takeGeneration.takeGenerationId,
+            subjectKind: 'take' as const,
+            subjectId: prepared.take.takeId,
           }
         : {
             subjectKind: 'shot' as const,
             subjectId: prepared.orderedShotIds[0] as string,
           };
     const relationship = insertShotVideoTakeInputRecord(session, {
-      id: imported.nextId('scene_shot_video_take_input'),
+      id: imported.nextId('scene_shot_video_take_media_input'),
       sceneId: prepared.sceneId,
-      takeGenerationId: prepared.takeGeneration.takeGenerationId,
+      takeId: prepared.take.takeId,
       inputKind: PURPOSE_CONFIG[purpose].outputInputKind,
       ...subject,
       assetId: imported.assetId,
@@ -125,7 +125,7 @@ export async function importShotInputMedia(
       purpose,
       target: prepared.target,
       imported: imported.asset,
-      input: relationship,
+      mediaInput: relationship,
       ...(input.receipt ? { receipt: input.receipt } : {}),
       resourceKeys: shotVideoTakeResourceKeys(prepared).concat([
         `scene-shot-video-take-input:${relationship.inputId}`,
@@ -159,8 +159,8 @@ export async function importShotVideoTake(
 ): Promise<ShotVideoTakeMediaImportReport> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
-    assertEditableTakeGeneration(prepared.takeGeneration);
+    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(prepared.take);
     const imported = await importGeneratedFile({
       session,
       projectFolder,
@@ -172,10 +172,10 @@ export async function importShotVideoTake(
       idGenerator: input.idGenerator,
       now,
     });
-    const take = insertShotVideoTakeRecord(session, {
-      id: imported.nextId('scene_shot_video_take'),
+    const output = insertShotVideoTakeRecord(session, {
+      id: imported.nextId('scene_shot_video_take_output'),
       sceneId: prepared.sceneId,
-      takeGenerationId: prepared.takeGeneration.takeGenerationId,
+      takeId: prepared.take.takeId,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
       mediaGenerationRunId: receiptRunId(input.receipt),
@@ -187,11 +187,11 @@ export async function importShotVideoTake(
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
-      changes: [{ type: 'shotVideoTake.imported', takeId: take.takeId }],
+      changes: [{ type: 'shotVideoTakeOutput.imported', outputId: output.outputId }],
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
       target: prepared.target,
       imported: imported.asset,
-      take,
+      output,
       ...(input.receipt ? { receipt: input.receipt } : {}),
       resourceKeys: shotVideoTakeResourceKeys(prepared).concat([
         `asset:${imported.assetId}`,

@@ -4,6 +4,7 @@ import {
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
 import { createDeterministicIdGenerator } from '../../index.js';
+import type { SceneShotWithLegacyShotSpecs } from '../../../client/index.js';
 
 describe('shot video take preflight and validation', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -34,7 +35,7 @@ describe('shot video take preflight and validation', () => {
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -87,7 +88,7 @@ describe('shot video take preflight and validation', () => {
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'first-frame',
         modelChoice: 'fal-ai/kling-video/v3/pro',
@@ -134,7 +135,7 @@ describe('shot video take preflight and validation', () => {
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -198,7 +199,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -269,11 +270,11 @@ describe('shot video take preflight and validation', () => {
                 viewIds: ['front'],
               },
             },
-          },
+          } as SceneShotWithLegacyShotSpecs,
         ],
       },
     });
-    const takeGeneration = await projectData.createSceneShotVideoTakeGeneration({
+    const take = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
@@ -295,7 +296,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -349,18 +350,20 @@ describe('shot video take preflight and validation', () => {
   it('excludes optional reference-image dependencies from shot video plans', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    await projectData.updateSceneShotReferenceInclusion({
-      projectName: 'constantinople',
+    await projectData.updateSceneShotVideoTakeShotSpecs({
       homeDir,
-      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
       shotId: 'shot_001',
-      dependencyId: 'reference-image:shot:shot_001',
-      inclusion: 'exclude',
+      shotSpecs: {
+        referenceInclusions: {
+          'reference-image:shot:shot_001': 'exclude',
+        },
+      },
     });
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeGenerationId: written.takeGeneration.takeGenerationId,
+      takeId: written.take.takeId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',

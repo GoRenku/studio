@@ -6,7 +6,7 @@ import type {
   ShotVideoTakeModelListReport,
   ShotVideoTakeParameterValue,
   ShotVideoTakeProductionEstimateReport,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTake,
   ShotVideoTakeGenerationProduction,
   ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
@@ -33,7 +33,7 @@ import {
 export interface UseShotVideoTakeProductionInput {
   projectName: string;
   sceneId: string;
-  takeGenerationId?: string | null;
+  takeId?: string | null;
   onResourceRefreshed?: (resource: SceneShotListResourceResponse) => void;
 }
 
@@ -42,7 +42,7 @@ export interface UseShotVideoTakeProductionResult {
   loadError: string | null;
   context: ShotVideoTakeGenerationContext | null;
   models: ShotVideoTakeModelListReport | null;
-  takeGeneration: SceneShotVideoTakeGeneration | null;
+  take: SceneShotVideoTake | null;
   isEditable: boolean;
   selectedInputMode: ShotVideoTakeInputModeId | null;
   selectedModel: ShotVideoTakeModelChoice | undefined;
@@ -65,8 +65,8 @@ export interface UseShotVideoTakeProductionResult {
 export function useShotVideoTakeProduction(
   input: UseShotVideoTakeProductionInput
 ): UseShotVideoTakeProductionResult {
-  const { projectName, sceneId, takeGenerationId, onResourceRefreshed } = input;
-  const takeGenerationIdKey = takeGenerationId ?? '';
+  const { projectName, sceneId, takeId, onResourceRefreshed } = input;
+  const takeIdKey = takeId ?? '';
 
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
     'loading'
@@ -78,8 +78,8 @@ export function useShotVideoTakeProduction(
   const [models, setModels] = useState<ShotVideoTakeModelListReport | null>(
     null
   );
-  const [takeGeneration, setTakeGeneration] =
-    useState<SceneShotVideoTakeGeneration | null>(null);
+  const [take, setTake] =
+    useState<SceneShotVideoTake | null>(null);
   const [productionPlan, setProductionPlan] =
     useState<ShotVideoTakeProductionPlanReport | null>(null);
   const [estimate, setEstimate] =
@@ -96,7 +96,7 @@ export function useShotVideoTakeProduction(
   // Autosave only starts after the user edits a value, so loading the group
   // never triggers a spurious save.
   const hasUserEditedRef = useRef(false);
-  const isEditable = takeGeneration?.compatibility.editState === 'editable';
+  const isEditable = take?.status.editability.state === 'editable';
 
   useEffect(() => {
     let cancelled = false;
@@ -108,10 +108,10 @@ export function useShotVideoTakeProduction(
       setEstimate(null);
       setEstimateState('idle');
       setEstimateError(null);
-      if (!takeGenerationId) {
+      if (!takeId) {
         setContext(null);
         setModels(null);
-        setTakeGeneration(null);
+        setTake(null);
         setLoadState('ready');
         return;
       }
@@ -119,12 +119,12 @@ export function useShotVideoTakeProduction(
         const read = await readShotVideoTakeProduction(
           projectName,
           sceneId,
-          takeGenerationId
+          takeId
         );
         if (cancelled) return;
         setContext(read.context);
         setModels(read.models);
-        setTakeGeneration(read.context.takeGeneration);
+        setTake(read.context.take);
         setLoadState('ready');
       } catch (error) {
         if (cancelled) return;
@@ -138,40 +138,40 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, takeGenerationId, takeGenerationIdKey]);
+  }, [projectName, sceneId, takeId, takeIdKey]);
 
   const save = useCallback(
     (production: ShotVideoTakeGenerationProduction) => {
-      if (!takeGenerationId) {
-        return Promise.reject(new Error('No take generation to save.'));
+      if (!takeId) {
+        return Promise.reject(new Error('No take to save.'));
       }
       return updateShotVideoTakeProduction(
         projectName,
         sceneId,
-        takeGenerationId,
+        takeId,
         production
       );
     },
-    [projectName, sceneId, takeGenerationId]
+    [projectName, sceneId, takeId]
   );
 
   const autosave = useDebouncedAutosave({
-    value: takeGeneration?.production ?? null,
+    value: take?.production ?? null,
     save: (production) => {
       if (!production) {
-        return Promise.reject(new Error('No take generation production to save.'));
+        return Promise.reject(new Error('No take production to save.'));
       }
       return save(production);
     },
     failureMessage: 'AI Production settings could not be saved.',
     isReady: () =>
       hasUserEditedRef.current &&
-      takeGeneration !== null &&
-      takeGeneration.compatibility.editState === 'editable',
+      take !== null &&
+      take.status.editability.state === 'editable',
     onSaved: (result) => {
       hasUserEditedRef.current = false;
       setContext(result.context);
-      setTakeGeneration(result.context.takeGeneration);
+      setTake(result.context.take);
       void onResourceRefreshed;
     },
   });
@@ -182,8 +182,8 @@ export function useShotVideoTakeProduction(
         production: ShotVideoTakeGenerationProduction
       ) => ShotVideoTakeGenerationProduction
     ) => {
-      setTakeGeneration((current) => {
-        if (!current || current.compatibility.editState !== 'editable') {
+      setTake((current) => {
+        if (!current || current.status.editability.state !== 'editable') {
           return current;
         }
         hasUserEditedRef.current = true;
@@ -194,14 +194,14 @@ export function useShotVideoTakeProduction(
   );
 
   const selectedInputMode = useMemo<ShotVideoTakeInputModeId | null>(() => {
-    if (!takeGeneration) return null;
+    if (!take) return null;
     return (
-      takeGeneration.production.inputModeId ??
+      take.production.inputModeId ??
       context?.defaults.inputModeId ??
       null
     );
-  }, [context?.defaults.inputModeId, takeGeneration]);
-  const storedModelChoice = takeGeneration?.production.modelChoice;
+  }, [context?.defaults.inputModeId, take]);
+  const storedModelChoice = take?.production.modelChoice;
 
   const setInputMode = useCallback(
     (inputMode: ShotVideoTakeInputModeId) => {
@@ -214,7 +214,7 @@ export function useShotVideoTakeProduction(
   );
 
   useEffect(() => {
-    if (!selectedInputMode || !takeGenerationId) {
+    if (!selectedInputMode || !takeId) {
       return;
     }
     if (models?.inputModeId === selectedInputMode) {
@@ -226,7 +226,7 @@ export function useShotVideoTakeProduction(
         const read = await readShotVideoTakeProduction(
           projectName,
           sceneId,
-          takeGenerationId,
+          takeId,
           selectedInputMode
         );
         if (cancelled) {
@@ -271,7 +271,7 @@ export function useShotVideoTakeProduction(
     selectedInputMode,
     storedModelChoice,
     models?.inputModeId,
-    takeGenerationId,
+    takeId,
     isEditable,
   ]);
 
@@ -299,7 +299,7 @@ export function useShotVideoTakeProduction(
   );
 
   useEffect(() => {
-    if (!takeGeneration || !takeGenerationId) {
+    if (!take || !takeId) {
       return;
     }
     let cancelled = false;
@@ -310,8 +310,8 @@ export function useShotVideoTakeProduction(
         const report = await estimateShotVideoTakeProduction(
           projectName,
           sceneId,
-          takeGenerationId,
-          takeGeneration.production
+          takeId,
+          take.production
         );
         if (cancelled) {
           return;
@@ -333,23 +333,23 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, takeGeneration, takeGenerationId]);
+  }, [projectName, sceneId, take, takeId]);
 
   const refreshProductionPlan = useCallback(async () => {
-    if (!takeGenerationId) return;
+    if (!takeId) return;
     setPlanState('loading');
     setPlanError(null);
     try {
       const report = await planShotVideoTakeProduction(
         projectName,
         sceneId,
-        takeGenerationId,
-        takeGeneration?.production
+        takeId,
+        take?.production
       );
       setProductionPlan(report);
       setEstimate({
         target: report.target,
-        takeGeneration: report.takeGeneration,
+        take: report.take,
         inputModeId: report.plan.request.inputMode,
         shotGroupMode: report.plan.request.shotGroupMode,
         modelChoice: report.plan.request.modelChoice,
@@ -366,10 +366,10 @@ export function useShotVideoTakeProduction(
       );
       setPlanState('error');
     }
-  }, [projectName, sceneId, takeGeneration, takeGenerationId]);
+  }, [projectName, sceneId, take, takeId]);
 
   useEffect(() => {
-    if (!takeGenerationId) {
+    if (!takeId) {
       return;
     }
     let cancelled = false;
@@ -380,8 +380,8 @@ export function useShotVideoTakeProduction(
         const report = await planShotVideoTakeProduction(
           projectName,
           sceneId,
-          takeGenerationId,
-          takeGeneration?.production
+          takeId,
+          take?.production
         );
         if (cancelled) {
           return;
@@ -389,7 +389,7 @@ export function useShotVideoTakeProduction(
         setProductionPlan(report);
         setEstimate({
           target: report.target,
-          takeGeneration: report.takeGeneration,
+          take: report.take,
           inputModeId: report.plan.request.inputMode,
           shotGroupMode: report.plan.request.shotGroupMode,
           modelChoice: report.plan.request.modelChoice,
@@ -414,57 +414,57 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, takeGeneration?.production, takeGenerationId]);
+  }, [projectName, sceneId, take?.production, takeId]);
 
   const applyMutationResult = useCallback((result: { context: ShotVideoTakeGenerationContext }) => {
     hasUserEditedRef.current = false;
     setContext(result.context);
-    setTakeGeneration(result.context.takeGeneration);
+    setTake(result.context.take);
   }, []);
 
   const reuseInput = useCallback(
     async (inputId: string) => {
-      if (!takeGenerationId || !isEditable) return;
+      if (!takeId || !isEditable) return;
       const result = await selectShotVideoTakeInput(
         projectName,
         sceneId,
-        takeGenerationId,
+        takeId,
         inputId
       );
       applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeGenerationId]
+    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
   );
 
   const regenerateInput = useCallback(
     async (slot: ShotVideoTakeInputSlot) => {
-      if (!takeGenerationId || !isEditable) return;
+      if (!takeId || !isEditable) return;
       const result = await clearShotVideoTakeInput(
         projectName,
         sceneId,
-        takeGenerationId,
+        takeId,
         slot
       );
       applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeGenerationId]
+    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
   );
 
   const deleteInput = useCallback(
     async (inputId: string) => {
-      if (!takeGenerationId || !isEditable) return;
+      if (!takeId || !isEditable) return;
       const result = await deleteShotVideoTakeInput(
         projectName,
         sceneId,
-        takeGenerationId,
+        takeId,
         inputId
       );
       applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeGenerationId]
+    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
   );
 
   const selectedModel =
@@ -478,7 +478,7 @@ export function useShotVideoTakeProduction(
     loadError,
     context,
     models,
-    takeGeneration,
+    take,
     isEditable,
     selectedInputMode,
     selectedModel,

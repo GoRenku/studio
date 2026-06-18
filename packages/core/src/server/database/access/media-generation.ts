@@ -110,7 +110,7 @@ export function listMediaGenerationSpecs(
   session: DatabaseSession,
   input: {
     purpose: MediaGenerationPurpose;
-    targetKind: 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotVideoTakeGeneration';
+    targetKind: 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotVideoTake';
     targetId: string;
   }
 ): MediaGenerationSpecRecord[] {

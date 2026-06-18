@@ -16,15 +16,15 @@ import {
 
 const CONTEXT = 'scene shot video take production request';
 
-export interface SceneShotVideoTakeGenerationCreateRequest {
+export interface SceneShotVideoTakeCreateRequest {
   shotListId: string;
   shotIds: string[];
   title?: string;
 }
 
-export function readSceneShotVideoTakeGenerationCreateRequest(
+export function readSceneShotVideoTakeCreateRequest(
   input: unknown
-): SceneShotVideoTakeGenerationCreateRequest {
+): SceneShotVideoTakeCreateRequest {
   const issues: DiagnosticIssue[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
@@ -63,17 +63,17 @@ export function readSceneShotVideoTakeGenerationCreateRequest(
   };
 }
 
-export interface SceneShotVideoTakeGenerationProductionRequest {
+export interface SceneShotVideoTakeProductionRequest {
   production: ShotVideoTakeGenerationProduction;
 }
 
-export interface SceneShotVideoTakeGenerationShotsRequest {
+export interface SceneShotVideoTakeShotsRequest {
   shotIds: string[];
 }
 
-export function readSceneShotVideoTakeGenerationShotsRequest(
+export function readSceneShotVideoTakeShotsRequest(
   input: unknown
-): SceneShotVideoTakeGenerationShotsRequest {
+): SceneShotVideoTakeShotsRequest {
   const issues: DiagnosticIssue[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
@@ -103,9 +103,9 @@ export function readSceneShotVideoTakeGenerationShotsRequest(
   return { shotIds };
 }
 
-export function readSceneShotVideoTakeGenerationProductionRequest(
+export function readSceneShotVideoTakeProductionRequest(
   input: unknown
-): SceneShotVideoTakeGenerationProductionRequest {
+): SceneShotVideoTakeProductionRequest {
   const issues: DiagnosticIssue[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
@@ -399,7 +399,7 @@ function readProductionValue(
         'STUDIO_SERVER340',
         `${path.join('.')} must be an object.`,
         { path, context: CONTEXT },
-        'Send the structured take-generation production object.'
+        'Send the structured take production object.'
       )
     );
     throwRequestError(issues);
@@ -534,6 +534,6 @@ function throwRequestError(issues: DiagnosticIssue[]): never {
     code: 'STUDIO_SERVER341',
     message: 'Shot video take production request failed validation.',
     issues,
-    suggestion: 'Send the fields supported by the take-generation route.',
+    suggestion: 'Send the fields supported by the take route.',
   });
 }

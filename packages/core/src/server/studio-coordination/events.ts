@@ -66,7 +66,7 @@ export type StudioSelection =
       sceneTab?: ScenePanelTab;
       shotId?: string;
       takeWorkspaceMode?: 'list' | 'new' | 'edit';
-      takeGenerationId?: string;
+      takeId?: string;
       shotTab?: SceneShotDetailTab;
     };
 
@@ -265,7 +265,7 @@ export type StudioCurrentShotTabSelections =
   | StudioCurrentMotionSelections
   | StudioCurrentCastSelections
   | StudioCurrentLocationSelections
-  | StudioCurrentTakeGenerationSelections
+  | StudioCurrentTakeSelections
   | StudioCurrentEmptyShotTabSelections;
 
 export interface StudioCurrentSelectionLabel<Id extends string> {
@@ -307,9 +307,10 @@ export interface StudioCurrentLocationSelections {
   locations: { id: string; name: string }[];
 }
 
-export interface StudioCurrentTakeGenerationSelections {
-  kind: 'take-generation';
-  takeGenerationId?: string;
+export interface StudioCurrentTakeSelections {
+  kind: 'take';
+  takeId?: string;
+  sourceShotListId?: string;
   shotIds: string[];
 }
 

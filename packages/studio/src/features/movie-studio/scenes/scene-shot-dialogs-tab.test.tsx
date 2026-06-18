@@ -371,8 +371,8 @@ function dialogueProductionPlan(
   }
 ): ShotVideoTakeProductionPlanReport {
   return {
-    takeGeneration: {
-      takeGenerationId: 'take_generation_001',
+    take: {
+      takeId: 'take_generation_001',
       sceneId: 'scene_hook',
       shotListId: 'shot_list_hook',
       shotIds,
@@ -380,11 +380,25 @@ function dialogueProductionPlan(
       production: {},
       createdAt: '',
       updatedAt: '',
-      compatibility: {
-        editState: 'editable',
-        reasons: [],
-        message: 'This take generation matches the current shot list.',
+      status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
       },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
+    },
     },
     references: {
       general: [],

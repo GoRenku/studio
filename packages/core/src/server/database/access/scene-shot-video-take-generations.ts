@@ -5,20 +5,23 @@ import type {
   ShotVideoTakeGenerationProduction,
 } from '../../../client/scene-shot-list.js';
 import type {
-  SceneShotVideoTakeGeneration,
-  SceneShotVideoTakeGenerationCompatibility,
-  SceneShotVideoTakeGenerationCompatibilitySnapshot,
-  SceneShotVideoTakeGenerationIncompatibilityReason,
+  SceneShotVideoTake,
+  SceneShotVideoTakeStatus,
+  SceneShotVideoTakeHistorySnapshot,
+  SceneShotVideoTakeHistoryDifference,
+  SceneShotVideoTakeState,
 } from '../../../client/shot-video-take-generation.js';
 import {
-  parseSceneShotVideoTakeGenerationCompatibilitySnapshot,
+  parseSceneShotVideoTakeHistorySnapshot,
+  parseSceneShotVideoTakeState,
   parseShotVideoTakeGenerationProduction,
-  serializeSceneShotVideoTakeGenerationCompatibilitySnapshot,
+  serializeSceneShotVideoTakeHistorySnapshot,
+  serializeSceneShotVideoTakeState,
   serializeShotVideoTakeGenerationProduction,
 } from '../../shot-video-take-generation-json/validator.js';
 import {
-  sceneShotVideoTakeGenerationShots,
-  sceneShotVideoTakeGenerations,
+  sceneShotVideoTakeShots,
+  sceneShotVideoTakes,
 } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
@@ -34,11 +37,17 @@ import type { ScreenplayDocument } from '../../../client/screenplay.js';
 import {
   carryTakeGenerationProductionForShotMembership,
 } from '../../media-generation/shot-video-take/take-generation-production.js';
+import {
+  buildSceneShotVideoTakeState,
+  carrySceneShotVideoTakeStateForShotMembership,
+  updateSceneShotVideoTakeStateProduction,
+  updateSceneShotVideoTakeShotSpecs,
+} from '../../media-generation/shot-video-take/take-state.js';
 
-export type SceneShotVideoTakeGenerationRecord =
-  typeof sceneShotVideoTakeGenerations.$inferSelect;
+export type SceneShotVideoTakeRecord =
+  typeof sceneShotVideoTakes.$inferSelect;
 
-export interface CreateSceneShotVideoTakeGenerationRecordInput {
+export interface CreateSceneShotVideoTakeRecordInput {
   id: string;
   sceneId: string;
   shotListId: string;
@@ -49,10 +58,10 @@ export interface CreateSceneShotVideoTakeGenerationRecordInput {
   now: string;
 }
 
-export function insertSceneShotVideoTakeGenerationRecord(
+export function insertSceneShotVideoTakeRecord(
   session: DatabaseSession,
-  input: CreateSceneShotVideoTakeGenerationRecordInput
-): SceneShotVideoTakeGeneration {
+  input: CreateSceneShotVideoTakeRecordInput
+): SceneShotVideoTake {
   const shotListRow = requireSceneShotListForScene({
     session,
     sceneId: input.sceneId,
@@ -63,7 +72,7 @@ export function insertSceneShotVideoTakeGenerationRecord(
     screenplay: input.screenplay,
   });
   const shotIds = normalizeShotIds(shotList.shots, input.shotIds);
-  const snapshot = buildSceneShotVideoTakeGenerationCompatibilitySnapshot({
+  const snapshot = buildSceneShotVideoTakeHistorySnapshot({
     session,
     sceneId: input.sceneId,
     shotListId: input.shotListId,
@@ -71,17 +80,24 @@ export function insertSceneShotVideoTakeGenerationRecord(
     shotIds,
   });
   session.db
-    .insert(sceneShotVideoTakeGenerations)
+    .insert(sceneShotVideoTakes)
     .values({
       id: input.id,
       sceneId: input.sceneId,
       shotListId: input.shotListId,
       title: input.title ?? defaultTakeGenerationTitle(shotIds),
+      stateJson: serializeSceneShotVideoTakeState({
+        state: buildSceneShotVideoTakeState({
+          shots: shotList.shots,
+          shotIds,
+          production: input.production ?? {},
+        }),
+      }),
       production: serializeShotVideoTakeGenerationProduction({
         production: input.production ?? {},
       }),
-      compatibilitySnapshot:
-        serializeSceneShotVideoTakeGenerationCompatibilitySnapshot({
+      historySnapshot:
+        serializeSceneShotVideoTakeHistorySnapshot({
           snapshot,
         }),
       createdAt: input.now,
@@ -90,96 +106,105 @@ export function insertSceneShotVideoTakeGenerationRecord(
     .run();
   insertTakeGenerationShotMembership({
     session,
-    takeGenerationId: input.id,
+    takeId: input.id,
     shotListId: input.shotListId,
     shotList,
     shotIds,
   });
-  return requireSceneShotVideoTakeGeneration(session, {
-    takeGenerationId: input.id,
+  return requireSceneShotVideoTake(session, {
+    takeId: input.id,
     screenplay: input.screenplay,
   });
 }
 
-export function requireSceneShotVideoTakeGeneration(
+export function requireSceneShotVideoTake(
   session: DatabaseSession,
-  input: { takeGenerationId: string; screenplay: ScreenplayDocument }
-): SceneShotVideoTakeGeneration {
+  input: { takeId: string; screenplay: ScreenplayDocument }
+): SceneShotVideoTake {
   const row =
     session.db
       .select()
-      .from(sceneShotVideoTakeGenerations)
-      .where(eq(sceneShotVideoTakeGenerations.id, input.takeGenerationId))
+      .from(sceneShotVideoTakes)
+      .where(eq(sceneShotVideoTakes.id, input.takeId))
       .get() ?? null;
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA419',
-      `Scene Shot Video Take Generation was not found: ${input.takeGenerationId}.`
+      `Scene Shot Video Take was not found: ${input.takeId}.`
     );
   }
-  return toSceneShotVideoTakeGeneration(session, {
+  return toSceneShotVideoTake(session, {
     row,
     screenplay: input.screenplay,
   });
 }
 
-export function listSceneShotVideoTakeGenerationsForScene(
+export function listSceneShotVideoTakesForScene(
   session: DatabaseSession,
   input: { sceneId: string; screenplay: ScreenplayDocument }
-): SceneShotVideoTakeGeneration[] {
+): SceneShotVideoTake[] {
   return session.db
     .select()
-    .from(sceneShotVideoTakeGenerations)
-    .where(eq(sceneShotVideoTakeGenerations.sceneId, input.sceneId))
+    .from(sceneShotVideoTakes)
+    .where(eq(sceneShotVideoTakes.sceneId, input.sceneId))
     .orderBy(
-      desc(sceneShotVideoTakeGenerations.updatedAt),
-      desc(sceneShotVideoTakeGenerations.id)
+      desc(sceneShotVideoTakes.updatedAt),
+      desc(sceneShotVideoTakes.id)
     )
     .all()
     .map((row) =>
-      toSceneShotVideoTakeGeneration(session, {
+      toSceneShotVideoTake(session, {
         row,
         screenplay: input.screenplay,
       })
     );
 }
 
-export function updateSceneShotVideoTakeGenerationProductionRecord(
+export function updateSceneShotVideoTakeProductionRecord(
   session: DatabaseSession,
   input: {
-    takeGenerationId: string;
+    takeId: string;
     production: ShotVideoTakeGenerationProduction;
     screenplay: ScreenplayDocument;
     now: string;
   }
-): SceneShotVideoTakeGeneration {
+): SceneShotVideoTake {
+  const currentState = currentSceneShotVideoTakeState(session, {
+    takeId: input.takeId,
+  });
   session.db
-    .update(sceneShotVideoTakeGenerations)
+    .update(sceneShotVideoTakes)
     .set({
+      stateJson: serializeSceneShotVideoTakeState({
+        state: updateSceneShotVideoTakeStateProduction({
+          state: currentState,
+          production: input.production,
+        }),
+      }),
       production: serializeShotVideoTakeGenerationProduction({
         production: input.production,
       }),
       updatedAt: input.now,
     })
-    .where(eq(sceneShotVideoTakeGenerations.id, input.takeGenerationId))
+    .where(eq(sceneShotVideoTakes.id, input.takeId))
     .run();
-  return requireSceneShotVideoTakeGeneration(session, {
-    takeGenerationId: input.takeGenerationId,
+  return requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
     screenplay: input.screenplay,
   });
 }
 
-export function updateSceneShotVideoTakeGenerationShotMembershipRecord(
+export function updateSceneShotVideoTakeShotMembershipRecord(
   session: DatabaseSession,
   input: {
-    takeGenerationId: string;
+    takeId: string;
     shotIds: string[];
     screenplay: ScreenplayDocument;
     now: string;
   }
-): SceneShotVideoTakeGeneration {
-  const generation = requireSceneShotVideoTakeGeneration(session, {
-    takeGenerationId: input.takeGenerationId,
+): SceneShotVideoTake {
+  const generation = requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
     screenplay: input.screenplay,
   });
   const shotListRow = requireSceneShotListForScene({
@@ -197,7 +222,7 @@ export function updateSceneShotVideoTakeGenerationShotMembershipRecord(
     previousShotIds: generation.shotIds,
     nextShotIds: shotIds,
   });
-  const snapshot = buildSceneShotVideoTakeGenerationCompatibilitySnapshot({
+  const snapshot = buildSceneShotVideoTakeHistorySnapshot({
     session,
     sceneId: generation.sceneId,
     shotListId: generation.shotListId,
@@ -205,63 +230,136 @@ export function updateSceneShotVideoTakeGenerationShotMembershipRecord(
     shotIds,
   });
   session.db
-    .delete(sceneShotVideoTakeGenerationShots)
+    .delete(sceneShotVideoTakeShots)
     .where(
       eq(
-        sceneShotVideoTakeGenerationShots.takeGenerationId,
-        input.takeGenerationId
+        sceneShotVideoTakeShots.takeId,
+        input.takeId
       )
     )
     .run();
   insertTakeGenerationShotMembership({
     session,
-    takeGenerationId: input.takeGenerationId,
+    takeId: input.takeId,
     shotListId: generation.shotListId,
     shotList,
     shotIds,
   });
   session.db
-    .update(sceneShotVideoTakeGenerations)
+    .update(sceneShotVideoTakes)
     .set({
+      stateJson: serializeSceneShotVideoTakeState({
+        state: carrySceneShotVideoTakeStateForShotMembership({
+          state: generation.state,
+          shots: shotList.shots,
+          shotIds,
+          production,
+        }),
+      }),
       production: serializeShotVideoTakeGenerationProduction({
         production,
       }),
-      compatibilitySnapshot:
-        serializeSceneShotVideoTakeGenerationCompatibilitySnapshot({
+      historySnapshot:
+        serializeSceneShotVideoTakeHistorySnapshot({
           snapshot,
         }),
       updatedAt: input.now,
     })
-    .where(eq(sceneShotVideoTakeGenerations.id, input.takeGenerationId))
+    .where(eq(sceneShotVideoTakes.id, input.takeId))
     .run();
-  return requireSceneShotVideoTakeGeneration(session, {
-    takeGenerationId: input.takeGenerationId,
+  return requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
     screenplay: input.screenplay,
   });
 }
 
-export function listSceneShotVideoTakeGenerationShotIds(
+export function updateSceneShotVideoTakeShotSpecsRecord(
   session: DatabaseSession,
-  takeGenerationId: string
+  input: {
+    takeId: string;
+    shotId: string;
+    shotSpecs: import('../../../client/scene-shot-list.js').ShotSpecs | null;
+    screenplay: ScreenplayDocument;
+    now: string;
+  }
+): SceneShotVideoTake {
+  const generation = requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+  if (!generation.shotIds.includes(input.shotId)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA422',
+      `Shot id is not in the Scene Shot Video Take: ${input.shotId}.`
+    );
+  }
+  const state = updateSceneShotVideoTakeShotSpecs({
+    state: generation.state,
+    shotId: input.shotId,
+    shotSpecs: input.shotSpecs,
+  });
+  session.db
+    .update(sceneShotVideoTakes)
+    .set({
+      stateJson: serializeSceneShotVideoTakeState({ state }),
+      updatedAt: input.now,
+    })
+    .where(eq(sceneShotVideoTakes.id, input.takeId))
+    .run();
+  return requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+}
+
+export function updateSceneShotVideoTakeStateRecord(
+  session: DatabaseSession,
+  input: {
+    takeId: string;
+    state: SceneShotVideoTakeState;
+    screenplay: ScreenplayDocument;
+    now: string;
+  }
+): SceneShotVideoTake {
+  session.db
+    .update(sceneShotVideoTakes)
+    .set({
+      stateJson: serializeSceneShotVideoTakeState({ state: input.state }),
+      production: serializeShotVideoTakeGenerationProduction({
+        production: input.state.production,
+      }),
+      updatedAt: input.now,
+    })
+    .where(eq(sceneShotVideoTakes.id, input.takeId))
+    .run();
+  return requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+}
+
+export function listSceneShotVideoTakeShotIds(
+  session: DatabaseSession,
+  takeId: string
 ): string[] {
   return session.db
     .select()
-    .from(sceneShotVideoTakeGenerationShots)
+    .from(sceneShotVideoTakeShots)
     .where(
-      eq(sceneShotVideoTakeGenerationShots.takeGenerationId, takeGenerationId)
+      eq(sceneShotVideoTakeShots.takeId, takeId)
     )
-    .orderBy(asc(sceneShotVideoTakeGenerationShots.shotOrder))
+    .orderBy(asc(sceneShotVideoTakeShots.shotOrder))
     .all()
     .map((row) => row.shotId);
 }
 
-export function buildSceneShotVideoTakeGenerationCompatibilitySnapshot(input: {
+export function buildSceneShotVideoTakeHistorySnapshot(input: {
   session: DatabaseSession;
   sceneId: string;
   shotListId: string;
   shotList: SceneShotListDocument;
   shotIds: string[];
-}): SceneShotVideoTakeGenerationCompatibilitySnapshot {
+}): SceneShotVideoTakeHistorySnapshot {
   const selectedShots = shotsForIds(input.shotList.shots, input.shotIds);
   return {
     activeShotListId: readActiveSceneShotListId(input.session, input.sceneId),
@@ -282,28 +380,32 @@ export function buildSceneShotVideoTakeGenerationCompatibilitySnapshot(input: {
   };
 }
 
-function toSceneShotVideoTakeGeneration(
+function toSceneShotVideoTake(
   session: DatabaseSession,
-  input: { row: SceneShotVideoTakeGenerationRecord; screenplay: ScreenplayDocument }
-): SceneShotVideoTakeGeneration {
+  input: { row: SceneShotVideoTakeRecord; screenplay: ScreenplayDocument }
+): SceneShotVideoTake {
   const production = parseShotVideoTakeGenerationProduction({
     value: input.row.production,
   });
-  const snapshot = parseSceneShotVideoTakeGenerationCompatibilitySnapshot({
-    value: input.row.compatibilitySnapshot,
+  const state = parseSceneShotVideoTakeState({
+    value: input.row.stateJson,
   });
-  const shotIds = listSceneShotVideoTakeGenerationShotIds(
+  const snapshot = parseSceneShotVideoTakeHistorySnapshot({
+    value: input.row.historySnapshot,
+  });
+  const shotIds = listSceneShotVideoTakeShotIds(
     session,
     input.row.id
   );
   return {
-    takeGenerationId: input.row.id,
+    takeId: input.row.id,
     sceneId: input.row.sceneId,
     shotListId: input.row.shotListId,
     title: input.row.title,
     shotIds,
+    state,
     production,
-    compatibility: projectSceneShotVideoTakeGenerationCompatibility(session, {
+    status: projectSceneShotVideoTakeStatus(session, {
       row: input.row,
       snapshot,
       shotIds,
@@ -314,19 +416,19 @@ function toSceneShotVideoTakeGeneration(
   };
 }
 
-function projectSceneShotVideoTakeGenerationCompatibility(
+function projectSceneShotVideoTakeStatus(
   session: DatabaseSession,
   input: {
-    row: SceneShotVideoTakeGenerationRecord;
-    snapshot: SceneShotVideoTakeGenerationCompatibilitySnapshot;
+    row: SceneShotVideoTakeRecord;
+    snapshot: SceneShotVideoTakeHistorySnapshot;
     shotIds: string[];
     screenplay: ScreenplayDocument;
   }
-): SceneShotVideoTakeGenerationCompatibility {
-  const reasons: SceneShotVideoTakeGenerationIncompatibilityReason[] = [];
+): SceneShotVideoTakeStatus {
+  const differences: SceneShotVideoTakeHistoryDifference[] = [];
   const activeShotListId = readActiveSceneShotListId(session, input.row.sceneId);
   if (activeShotListId !== input.snapshot.activeShotListId) {
-    reasons.push('active-shot-list-changed');
+    differences.push('active-shot-list-changed');
   }
   const currentShotListRow = requireSceneShotListRecord(
     session,
@@ -340,7 +442,7 @@ function projectSceneShotVideoTakeGenerationCompatibility(
     shotListContentFingerprint(currentShotList.shots) !==
     input.snapshot.shotListContentFingerprint
   ) {
-    reasons.push('shot-list-content-changed');
+    differences.push('shot-list-content-changed');
   }
   if (
     storyboardStateFingerprint({
@@ -349,7 +451,7 @@ function projectSceneShotVideoTakeGenerationCompatibility(
       shotIds: currentShotList.shots.map((shot) => shot.shotId),
     }) !== input.snapshot.storyboardStateFingerprint
   ) {
-    reasons.push('storyboard-images-changed');
+    differences.push('storyboard-images-changed');
   }
   const currentShotIds = new Set(
     currentShotList.shots.map((shot) => shot.shotId)
@@ -358,14 +460,14 @@ function projectSceneShotVideoTakeGenerationCompatibility(
     (shotId) => !currentShotIds.has(shotId)
   );
   if (selectedShotsMissing) {
-    reasons.push('selected-shots-missing');
+    differences.push('selected-shots-missing');
   } else {
     const selectedShots = shotsForIds(currentShotList.shots, input.shotIds);
     if (
       shotListContentFingerprint(selectedShots) !==
       input.snapshot.selectedShotContentFingerprint
     ) {
-      reasons.push('selected-shot-content-changed');
+      differences.push('selected-shot-content-changed');
     }
     if (
       storyboardStateFingerprint({
@@ -374,22 +476,61 @@ function projectSceneShotVideoTakeGenerationCompatibility(
         shotIds: input.shotIds,
       }) !== input.snapshot.selectedStoryboardStateFingerprint
     ) {
-      reasons.push('selected-storyboard-images-changed');
+      differences.push('selected-storyboard-images-changed');
     }
   }
   return {
-    editState: reasons.length > 0 ? 'view-only' : 'editable',
-    reasons,
-    message:
-      reasons.length > 0
-        ? 'This take generation no longer matches the current shot list.'
-        : 'This take generation matches the current shot list.',
+    editability: {
+      state: 'editable',
+      diagnostics: [],
+      message: 'This take is editable.',
+    },
+    resolvability: {
+      state: 'resolvable',
+      diagnostics: [],
+      message: 'All tracked take references resolve.',
+    },
+    runnability: {
+      state: 'not-evaluated',
+      diagnostics: [],
+      message: 'Run readiness is evaluated by shot-video preflight.',
+    },
+    archive: {
+      state: 'active',
+      message: 'This take is active.',
+    },
+    history: {
+      differences,
+      message:
+        differences.length > 0
+          ? 'This take has history differences from the current scene state.'
+          : 'This take matches its recorded history snapshot.',
+    },
   };
+}
+
+function currentSceneShotVideoTakeState(
+  session: DatabaseSession,
+  input: { takeId: string }
+): SceneShotVideoTakeState {
+  const row =
+    session.db
+      .select()
+      .from(sceneShotVideoTakes)
+      .where(eq(sceneShotVideoTakes.id, input.takeId))
+      .get() ?? null;
+  if (!row) {
+    throw new ProjectDataError(
+      'PROJECT_DATA419',
+      `Scene Shot Video Take was not found: ${input.takeId}.`
+    );
+  }
+  return parseSceneShotVideoTakeState({ value: row.stateJson });
 }
 
 function insertTakeGenerationShotMembership(input: {
   session: DatabaseSession;
-  takeGenerationId: string;
+  takeId: string;
   shotListId: string;
   shotList: SceneShotListDocument;
   shotIds: string[];
@@ -402,9 +543,9 @@ function insertTakeGenerationShotMembership(input: {
       shotId: shot.shotId,
     });
     input.session.db
-      .insert(sceneShotVideoTakeGenerationShots)
+      .insert(sceneShotVideoTakeShots)
       .values({
-        takeGenerationId: input.takeGenerationId,
+        takeId: input.takeId,
         shotId: shot.shotId,
         shotOrder,
         shotContentFingerprint: shotContentFingerprint(shot),

@@ -1,6 +1,6 @@
 import type {
   MediaGenerationDependencySlot,
-  SceneShotVideoTakeGenerationTarget,
+  SceneShotVideoTakeTarget,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
 } from '../../client/index.js';
@@ -88,7 +88,7 @@ export function shotVideoInputDependencySlot(input: {
     | 'reference-image'
     | 'multi-shot-storyboard-sheet'
     | 'audio';
-  target: SceneShotVideoTakeGenerationTarget;
+  target: SceneShotVideoTakeTarget;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
   label?: string;
@@ -103,7 +103,7 @@ export function shotVideoInputDependencySlot(input: {
     selector: {
       kind: 'shot-video-input',
       inputKind: input.kind as ShotVideoTakeInputKind,
-      takeGenerationId: input.target.takeGenerationId,
+      takeId: input.target.takeId,
       shotIds: input.target.shotIds,
       ...(input.subjectKind ? { subjectKind: input.subjectKind } : {}),
       ...(input.subjectId ? { subjectId: input.subjectId } : {}),

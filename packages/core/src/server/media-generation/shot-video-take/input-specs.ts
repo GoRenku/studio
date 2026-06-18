@@ -51,7 +51,7 @@ import {
   titleForInputSpec,
 } from './purpose-config.js';
 import {
-  assertEditableTakeGeneration,
+  assertEditableSceneShotVideoTake,
   sameShotIds,
 } from './take-generation-context.js';
 import {
@@ -65,7 +65,7 @@ export async function validateShotInputSpec(input: ValidateShotVideoTakeInputGen
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: normalized.target.takeGenerationId,
+    takeId: normalized.target.takeId,
   });
   validateInputSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeInputProviderPayload(normalized);
@@ -97,7 +97,7 @@ export async function createShotInputSpec(
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeInputSpec(input.spec);
   const validation = await validateShotInputSpec({ ...input, spec: normalized });
-  assertEditableTakeGeneration(validation.context.takeGeneration);
+  assertEditableSceneShotVideoTake(validation.context.take);
   return withShotProjectSession(input, ({ session }) => {
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     return insertMediaGenerationSpec(session, {
@@ -129,7 +129,7 @@ export async function updateShotInputSpec(
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeInputSpec(input.spec);
   const validation = await validateShotInputSpec({ ...input, spec: normalized });
-  assertEditableTakeGeneration(validation.context.takeGeneration);
+  assertEditableSceneShotVideoTake(validation.context.take);
   return withShotProjectSession(input, ({ session }) =>
     updateMediaGenerationSpec(session, {
       id: input.specId,
@@ -163,7 +163,7 @@ export async function listShotInputSpecs(
   return withShotProjectSession(input, ({ session }) => ({
     specs: listMediaGenerationSpecs(session, {
       purpose,
-      targetKind: 'sceneShotVideoTakeGeneration',
+      targetKind: 'sceneShotVideoTake',
       targetId: context.target.id,
     }),
   }));
@@ -212,7 +212,7 @@ export async function prepareShotInputDraftSpec(input: {
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: normalized.target.takeGenerationId,
+    takeId: normalized.target.takeId,
   });
   validateInputSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeInputProviderPayload(normalized);
@@ -314,7 +314,7 @@ export function validateInputSpecAgainstContext(
   if (!sameShotIds(spec.target.shotIds, context.target.shotIds)) {
     throw new ProjectDataError(
       'PROJECT_DATA368',
-      'Shot video take input spec targets stale take-generation shot ids.'
+      'Shot video take input spec targets stale take shot ids.'
     );
   }
   if (
@@ -323,7 +323,7 @@ export function validateInputSpecAgainstContext(
   ) {
     throw new ProjectDataError(
       'PROJECT_DATA369',
-      'shot.multi-shot-storyboard-sheet requires a multi-shot take generation.'
+      'shot.multi-shot-storyboard-sheet requires a multi-shot take.'
     );
   }
 }

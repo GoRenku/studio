@@ -2,7 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
+import type {
+  SceneShotListDocument,
+  SceneShotWithLegacyShotSpecs,
+} from '../../client/scene-shot-list.js';
 import { createProjectDataService } from '../index.js';
 import {
   createSampleMovieProject,
@@ -126,7 +129,7 @@ describe('scene storyboard UI resources', () => {
 
     const shot = updated.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
-    );
+    ) as SceneShotWithLegacyShotSpecs | undefined;
     expect(shot?.shotSpecs?.location).toEqual({
       locationId: secondLocationId,
     });
@@ -150,7 +153,7 @@ describe('scene storyboard UI resources', () => {
 
     const shot = updated.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
-    );
+    ) as SceneShotWithLegacyShotSpecs | undefined;
     expect(shot?.shotSpecs?.location).toEqual({
       locationId: ids.locationId,
       environmentSheetAssetId: assetId,

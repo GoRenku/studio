@@ -350,10 +350,10 @@ export interface DirectorSceneReadiness {
     | {
         available: true;
         missingShotIds: string[];
-      };
+  };
   shotVideo: {
     preflightAvailable: boolean;
-    selectedTakeGenerationId: string | null;
+    selectedTakeId: string | null;
     selectedShotIds: string[];
     selectedInputCount: number;
     selectedTakeCount: number;
@@ -424,7 +424,7 @@ export type StudioSelection =
       sceneTab?: ScenePanelTab;
       shotId?: string;
       takeWorkspaceMode?: SceneTakeWorkspaceMode;
-      takeGenerationId?: string;
+      takeId?: string;
       shotTab?: SceneShotDetailTab;
     };
 

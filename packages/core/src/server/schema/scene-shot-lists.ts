@@ -77,8 +77,8 @@ export const sceneShotStoryboardImages = sqliteTable(
   ],
 );
 
-export const sceneShotVideoTakeGenerations = sqliteTable(
-  'scene_shot_video_take_generation',
+export const sceneShotVideoTakes = sqliteTable(
+  'scene_shot_video_take',
   {
     id: text('id').primaryKey(),
     sceneId: text('scene_id')
@@ -88,18 +88,23 @@ export const sceneShotVideoTakeGenerations = sqliteTable(
       .notNull()
       .references(() => sceneShotLists.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    stateJson: text('state_json')
+      .notNull()
+      .default(
+        '{"version":1,"shotDesignByShotId":{},"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{},"selectedLocationViewIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{}}'
+      ),
     production: text('production_json').notNull(),
-    compatibilitySnapshot: text('compatibility_snapshot_json').notNull(),
+    historySnapshot: text('history_snapshot_json').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    index('scene_shot_video_take_generation_scene_idx').on(
+    index('scene_shot_video_take_scene_idx').on(
       table.sceneId,
       table.updatedAt,
       table.id
     ),
-    index('scene_shot_video_take_generation_shot_list_idx').on(
+    index('scene_shot_video_take_source_shot_list_idx').on(
       table.shotListId,
       table.createdAt,
       table.id
@@ -107,12 +112,12 @@ export const sceneShotVideoTakeGenerations = sqliteTable(
   ],
 );
 
-export const sceneShotVideoTakeGenerationShots = sqliteTable(
-  'scene_shot_video_take_generation_shot',
+export const sceneShotVideoTakeShots = sqliteTable(
+  'scene_shot_video_take_shot',
   {
-    takeGenerationId: text('take_generation_id')
+    takeId: text('take_id')
       .notNull()
-      .references(() => sceneShotVideoTakeGenerations.id, {
+      .references(() => sceneShotVideoTakes.id, {
         onDelete: 'cascade',
       }),
     shotId: text('shot_id').notNull(),
@@ -125,27 +130,27 @@ export const sceneShotVideoTakeGenerationShots = sqliteTable(
     ).notNull(),
   },
   (table) => [
-    uniqueIndex('scene_shot_video_take_generation_shot_idx').on(
-      table.takeGenerationId,
+    uniqueIndex('scene_shot_video_take_shot_idx').on(
+      table.takeId,
       table.shotId
     ),
-    index('scene_shot_video_take_generation_shot_order_idx').on(
-      table.takeGenerationId,
+    index('scene_shot_video_take_shot_order_idx').on(
+      table.takeId,
       table.shotOrder
     ),
   ],
 );
 
-export const sceneShotVideoTakeInputs = sqliteTable(
-  'scene_shot_video_take_input',
+export const sceneShotVideoTakeMediaInputs = sqliteTable(
+  'scene_shot_video_take_media_input',
   {
     id: text('id').primaryKey(),
     sceneId: text('scene_id')
       .notNull()
       .references(() => scenes.id, { onDelete: 'cascade' }),
-    takeGenerationId: text('take_generation_id')
+    takeId: text('take_id')
       .notNull()
-      .references(() => sceneShotVideoTakeGenerations.id, {
+      .references(() => sceneShotVideoTakes.id, {
         onDelete: 'cascade',
       }),
     inputKind: text('input_kind').notNull(),
@@ -166,17 +171,17 @@ export const sceneShotVideoTakeInputs = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    index('scene_shot_video_take_input_generation_idx').on(
+    index('scene_shot_video_take_media_input_take_idx').on(
       table.sceneId,
-      table.takeGenerationId,
+      table.takeId,
       table.createdAt,
       table.id
     ),
-    index('scene_shot_video_take_input_asset_idx').on(table.assetId),
-    uniqueIndex('scene_shot_video_take_input_selected_idx')
+    index('scene_shot_video_take_media_input_asset_idx').on(table.assetId),
+    uniqueIndex('scene_shot_video_take_media_input_selected_idx')
       .on(
         table.sceneId,
-        table.takeGenerationId,
+        table.takeId,
         table.inputKind,
         table.subjectKind,
         table.subjectId
@@ -185,37 +190,37 @@ export const sceneShotVideoTakeInputs = sqliteTable(
   ],
 );
 
-export const sceneShotVideoTakeInputShots = sqliteTable(
-  'scene_shot_video_take_input_shot',
+export const sceneShotVideoTakeMediaInputShots = sqliteTable(
+  'scene_shot_video_take_media_input_shot',
   {
     inputId: text('input_id')
       .notNull()
-      .references(() => sceneShotVideoTakeInputs.id, { onDelete: 'cascade' }),
+      .references(() => sceneShotVideoTakeMediaInputs.id, { onDelete: 'cascade' }),
     shotId: text('shot_id').notNull(),
     shotOrder: integer('shot_order').notNull(),
   },
   (table) => [
-    uniqueIndex('scene_shot_video_take_input_shot_idx').on(
+    uniqueIndex('scene_shot_video_take_media_input_shot_idx').on(
       table.inputId,
       table.shotId
     ),
-    index('scene_shot_video_take_input_shot_order_idx').on(
+    index('scene_shot_video_take_media_input_shot_order_idx').on(
       table.inputId,
       table.shotOrder
     ),
   ],
 );
 
-export const sceneShotVideoTakes = sqliteTable(
-  'scene_shot_video_take',
+export const sceneShotVideoTakeOutputs = sqliteTable(
+  'scene_shot_video_take_output',
   {
     id: text('id').primaryKey(),
     sceneId: text('scene_id')
       .notNull()
       .references(() => scenes.id, { onDelete: 'cascade' }),
-    takeGenerationId: text('take_generation_id')
+    takeId: text('take_id')
       .notNull()
-      .references(() => sceneShotVideoTakeGenerations.id, {
+      .references(() => sceneShotVideoTakes.id, {
         onDelete: 'cascade',
       }),
     assetId: text('asset_id')
@@ -233,35 +238,35 @@ export const sceneShotVideoTakes = sqliteTable(
     isSelected: integer('is_selected', { mode: 'boolean' }).notNull(),
   },
   (table) => [
-    index('scene_shot_video_take_generation_idx').on(
+    index('scene_shot_video_take_output_take_idx').on(
       table.sceneId,
-      table.takeGenerationId,
+      table.takeId,
       table.createdAt,
       table.id
     ),
-    index('scene_shot_video_take_asset_idx').on(table.assetId),
-    uniqueIndex('scene_shot_video_take_selected_idx')
-      .on(table.sceneId, table.takeGenerationId)
+    index('scene_shot_video_take_output_asset_idx').on(table.assetId),
+    uniqueIndex('scene_shot_video_take_output_selected_idx')
+      .on(table.sceneId, table.takeId)
       .where(sql`${table.isSelected} = 1`),
   ],
 );
 
-export const sceneShotVideoTakeShots = sqliteTable(
-  'scene_shot_video_take_shot',
+export const sceneShotVideoTakeOutputShots = sqliteTable(
+  'scene_shot_video_take_output_shot',
   {
-    takeId: text('take_id')
+    outputId: text('output_id')
       .notNull()
-      .references(() => sceneShotVideoTakes.id, { onDelete: 'cascade' }),
+      .references(() => sceneShotVideoTakeOutputs.id, { onDelete: 'cascade' }),
     shotId: text('shot_id').notNull(),
     shotOrder: integer('shot_order').notNull(),
   },
   (table) => [
-    uniqueIndex('scene_shot_video_take_shot_idx').on(
-      table.takeId,
+    uniqueIndex('scene_shot_video_take_output_shot_idx').on(
+      table.outputId,
       table.shotId
     ),
-    index('scene_shot_video_take_shot_order_idx').on(
-      table.takeId,
+    index('scene_shot_video_take_output_shot_order_idx').on(
+      table.outputId,
       table.shotOrder
     ),
   ],

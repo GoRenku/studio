@@ -55,7 +55,7 @@ import {
   requireShotVideoTakeRoute,
 } from './route-settings.js';
 import {
-  assertEditableTakeGeneration,
+  assertEditableSceneShotVideoTake,
   sameShotIds,
 } from './take-generation-context.js';
 import {
@@ -71,7 +71,7 @@ export async function validateShotVideoTakeSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: normalized.target.takeGenerationId,
+    takeId: normalized.target.takeId,
   });
   validateFinalSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeProviderPayload(normalized, context);
@@ -90,7 +90,7 @@ export async function createShotVideoTakeSpec(
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeFinalSpec(input.spec);
   const validation = await validateShotVideoTakeSpec({ ...input, spec: normalized });
-  assertEditableTakeGeneration(validation.context.takeGeneration);
+  assertEditableSceneShotVideoTake(validation.context.take);
   return withShotProjectSession(input, ({ session }) => {
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     return insertMediaGenerationSpec(session, {
@@ -109,7 +109,7 @@ export async function updateShotVideoTakeSpec(
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeFinalSpec(input.spec);
   const validation = await validateShotVideoTakeSpec({ ...input, spec: normalized });
-  assertEditableTakeGeneration(validation.context.takeGeneration);
+  assertEditableSceneShotVideoTake(validation.context.take);
   return withShotProjectSession(input, ({ session }) =>
     updateMediaGenerationSpec(session, {
       id: input.specId,
@@ -129,7 +129,7 @@ export async function listShotVideoTakeSpecs(
   return withShotProjectSession(input, ({ session }) => ({
     specs: listMediaGenerationSpecs(session, {
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      targetKind: 'sceneShotVideoTakeGeneration',
+      targetKind: 'sceneShotVideoTake',
       targetId: context.target.id,
     }),
   }));
@@ -145,7 +145,7 @@ export async function prepareShotVideoTakeSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: specRecord.spec.target.takeGenerationId,
+    takeId: specRecord.spec.target.takeId,
   });
   validateFinalSpecAgainstContext(specRecord.spec, context);
   const plan = buildShotVideoTakeProviderPayload(specRecord.spec, context);
@@ -167,7 +167,7 @@ export async function prepareShotVideoTakeDraftSpec(input: {
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: normalized.target.takeGenerationId,
+    takeId: normalized.target.takeId,
   });
   validateFinalSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeProviderPayload(normalized, context);
@@ -189,7 +189,7 @@ export async function estimateShotVideoTakeSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: prepared.spec.spec.target.takeGenerationId,
+    takeId: prepared.spec.spec.target.takeId,
   });
   const pricingPlan = buildShotVideoTakePricingProviderPayload({
     spec: prepared.spec.spec,
@@ -321,14 +321,14 @@ export function validateFinalPricingSpecAgainstContext(
   if (!sameShotIds(spec.target.shotIds, context.target.shotIds)) {
     throw new ProjectDataError(
       'PROJECT_DATA370',
-      'Shot video take spec targets stale take-generation shot ids.'
+      'Shot video take spec targets stale take shot ids.'
     );
   }
   const report = modelChoices(context, spec.inputModeId).find((model) => model.modelChoice === spec.modelChoice);
   if (!report || !report.available || !report.supportedInputModes.includes(spec.inputModeId)) {
     throw new ProjectDataError(
       'PROJECT_DATA371',
-      'Shot video take model does not support the selected input mode for this take generation.'
+      'Shot video take model does not support the selected input mode for this take.'
     );
   }
   for (const key of Object.keys(spec.parameterValues)) {

@@ -7,13 +7,13 @@ import {
   type ReactNode,
 } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
-import type { SceneShotVideoTakeGeneration } from '@gorenku/studio-core/client';
+import type { SceneShotVideoTake } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
-  createSceneShotVideoTakeGeneration,
-  listSceneShotVideoTakeGenerations,
-  updateSceneShotVideoTakeGenerationShots,
+  createSceneShotVideoTake,
+  listSceneShotVideoTakes,
+  updateSceneShotVideoTakeShots,
 } from '@/services/studio-shot-video-takes-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { Button } from '@/ui/button';
@@ -65,7 +65,7 @@ interface SceneTakesTabProps {
   shotId?: string;
   shotTab?: SceneShotDetailTab;
   takeWorkspaceMode?: SceneTakeWorkspaceMode;
-  takeGenerationId?: string;
+  takeId?: string;
   onSelect?: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
@@ -77,18 +77,18 @@ export function SceneTakesTab({
   shotId,
   shotTab,
   takeWorkspaceMode,
-  takeGenerationId,
+  takeId,
   onSelect = () => {},
   onHeaderActionChange,
   onSaveNotificationChange,
 }: SceneTakesTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
-  const [takeGenerations, setTakeGenerations] = useState<
-    SceneShotVideoTakeGeneration[]
+  const [takes, setTakeGenerations] = useState<
+    SceneShotVideoTake[]
   >([]);
   const [draftGroupEdit, setDraftGroupEdit] = useState<{
-    takeGenerationId: string | null;
+    takeId: string | null;
     groups: TakeScopedShotGroupDraft[];
   } | null>(null);
   const [groupReviewOpen, setGroupReviewOpen] = useState(false);
@@ -105,12 +105,12 @@ export function SceneTakesTab({
     let cancelled = false;
     void Promise.all([
       readSceneShotListResource(projectName, sceneId),
-      listSceneShotVideoTakeGenerations(projectName, sceneId),
+      listSceneShotVideoTakes(projectName, sceneId),
     ])
-      .then(([nextResource, takeGenerationReport]) => {
+      .then(([nextResource, takeReport]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setTakeGenerations(takeGenerationReport.takeGenerations);
+          setTakeGenerations(takeReport.takes);
         }
       })
       .catch((loadError) => {
@@ -148,9 +148,9 @@ export function SceneTakesTab({
   );
 
   const activeTakeGeneration = useMemo(() => {
-    if (takeGenerationId) {
-      const selected = takeGenerations.find(
-        (candidate) => candidate.takeGenerationId === takeGenerationId
+    if (takeId) {
+      const selected = takes.find(
+        (candidate) => candidate.takeId === takeId
       );
       if (selected) {
         return selected;
@@ -159,8 +159,8 @@ export function SceneTakesTab({
     if (workspaceMode === 'new') {
       return null;
     }
-    return takeGenerations[0] ?? null;
-  }, [takeGenerationId, takeGenerations, workspaceMode]);
+    return takes[0] ?? null;
+  }, [takeId, takes, workspaceMode]);
 
   const persistedGroups = useMemo(
     () =>
@@ -169,9 +169,9 @@ export function SceneTakesTab({
       ),
     [activeTakeGeneration]
   );
-  const activeTakeGenerationKey = activeTakeGeneration?.takeGenerationId ?? null;
+  const activeTakeGenerationKey = activeTakeGeneration?.takeId ?? null;
   const draftGroups =
-    draftGroupEdit?.takeGenerationId === activeTakeGenerationKey
+    draftGroupEdit?.takeId === activeTakeGenerationKey
       ? draftGroupEdit.groups
       : persistedGroups;
 
@@ -208,7 +208,7 @@ export function SceneTakesTab({
         id: sceneId,
         sceneTab: 'takes',
         takeWorkspaceMode: activeTakeGeneration ? 'edit' : 'new',
-        takeGenerationId: activeTakeGeneration?.takeGenerationId,
+        takeId: activeTakeGeneration?.takeId,
         shotId: nextShotId,
         shotTab: activeShotTab,
       });
@@ -223,7 +223,7 @@ export function SceneTakesTab({
         id: sceneId,
         sceneTab: 'takes',
         takeWorkspaceMode: activeTakeGeneration ? 'edit' : 'new',
-        takeGenerationId: activeTakeGeneration?.takeGenerationId,
+        takeId: activeTakeGeneration?.takeId,
         shotId: selectedShotId ?? undefined,
         shotTab: nextShotTab,
       });
@@ -232,13 +232,13 @@ export function SceneTakesTab({
   );
 
   const handleOpenTakeGeneration = useCallback(
-    (nextTakeGeneration: SceneShotVideoTakeGeneration) => {
+    (nextTakeGeneration: SceneShotVideoTake) => {
       onSelect({
         type: 'scene',
         id: sceneId,
         sceneTab: 'takes',
         takeWorkspaceMode: 'edit',
-        takeGenerationId: nextTakeGeneration.takeGenerationId,
+        takeId: nextTakeGeneration.takeId,
         shotId: nextTakeGeneration.shotIds[0],
         shotTab: activeShotTab,
       });
@@ -263,11 +263,11 @@ export function SceneTakesTab({
       handleSelectShot(clickedShotId);
       setDraftGroupEdit((currentDraftGroupEdit) => {
         const currentDraftGroups =
-          currentDraftGroupEdit?.takeGenerationId === activeTakeGenerationKey
+          currentDraftGroupEdit?.takeId === activeTakeGenerationKey
             ? currentDraftGroupEdit.groups
             : persistedGroups;
         return {
-          takeGenerationId: activeTakeGenerationKey,
+          takeId: activeTakeGenerationKey,
           groups: cycleShotGroupMembership({
             shots,
             draftGroups: currentDraftGroups.length
@@ -300,7 +300,7 @@ export function SceneTakesTab({
       return;
     }
     const openDraft = draftGroups.find(
-      (group) => group.takeGenerationId === activeTakeGeneration.takeGenerationId
+      (group) => group.takeId === activeTakeGeneration.takeId
     );
     if (!openDraft || openDraft.shotIds.length === 0) {
       setGroupApplyError('The current take must keep at least one shot.');
@@ -309,16 +309,16 @@ export function SceneTakesTab({
     setGroupApplyPending(true);
     setGroupApplyError(null);
     try {
-      const result = await updateSceneShotVideoTakeGenerationShots(
+      const result = await updateSceneShotVideoTakeShots(
         projectName,
         sceneId,
-        activeTakeGeneration.takeGenerationId,
+        activeTakeGeneration.takeId,
         openDraft.shotIds
       );
-      const updatedTakeGeneration = result.context.takeGeneration;
+      const updatedTakeGeneration = result.context.take;
       setTakeGenerations((current) =>
         current.map((candidate) =>
-          candidate.takeGenerationId === updatedTakeGeneration.takeGenerationId
+          candidate.takeId === updatedTakeGeneration.takeId
             ? updatedTakeGeneration
             : candidate
         )
@@ -428,7 +428,7 @@ export function SceneTakesTab({
     if (!resource.activeShotListId || !shots[0]) {
       return;
     }
-    const created = await createSceneShotVideoTakeGeneration(projectName, sceneId, {
+    const created = await createSceneShotVideoTake(projectName, sceneId, {
       shotListId: resource.activeShotListId,
       shotIds: [shots[0].shotId],
       title: shots[0].title,
@@ -439,7 +439,7 @@ export function SceneTakesTab({
       id: sceneId,
       sceneTab: 'takes',
       takeWorkspaceMode: 'new',
-      takeGenerationId: created.takeGenerationId,
+      takeId: created.takeId,
       shotId: shots[0].shotId,
       shotTab: activeShotTab,
     });
@@ -449,29 +449,29 @@ export function SceneTakesTab({
     return (
       <div className='min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel-bg p-4'>
         <div className='grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3'>
-          {takeGenerations.map((takeGeneration) => {
+          {takes.map((take) => {
             const firstShotIndex = shots.findIndex(
-              (shot) => shot.shotId === takeGeneration.shotIds[0]
+              (shot) => shot.shotId === take.shotIds[0]
             );
             const firstShot =
               firstShotIndex >= 0 ? shots[firstShotIndex] : null;
             return (
               <Button
-                key={takeGeneration.takeGenerationId}
+                key={take.takeId}
                 type='button'
                 variant='ghost'
                 className='aspect-video h-auto min-w-0 flex-col items-stretch justify-end overflow-hidden rounded-md border border-border/40 bg-muted/30 p-0 text-left hover:border-border/70 hover:bg-muted/45'
-                onClick={() => handleOpenTakeGeneration(takeGeneration)}
+                onClick={() => handleOpenTakeGeneration(take)}
               >
                 <span className='flex min-h-0 flex-1 items-center justify-center bg-muted text-sm text-muted-foreground'>
                   Take
                 </span>
                 <span className='w-full bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.72)_32%,rgba(0,0,0,0.86)_100%)] px-4 pb-3 pt-10'>
                   <span className='block truncate text-sm font-semibold text-white'>
-                    {firstShot?.title ?? takeGeneration.title}
+                    {firstShot?.title ?? take.title}
                   </span>
                   <span className='mt-0.5 block truncate text-xs text-white/72'>
-                    {shotRangeLabel(shots, takeGeneration.shotIds)}
+                    {shotRangeLabel(shots, take.shotIds)}
                   </span>
                 </span>
               </Button>
@@ -498,7 +498,7 @@ export function SceneTakesTab({
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
   const selectedTakeGeneration =
     activeTakeGeneration ??
-    takeGenerations.find((candidate) =>
+    takes.find((candidate) =>
       selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
     ) ??
     null;
@@ -506,7 +506,7 @@ export function SceneTakesTab({
     if (!resource.activeShotListId || !selectedShot) {
       return;
     }
-    const created = await createSceneShotVideoTakeGeneration(projectName, sceneId, {
+    const created = await createSceneShotVideoTake(projectName, sceneId, {
       shotListId: resource.activeShotListId,
       shotIds: [selectedShot.shotId],
       title: selectedShot.title,
@@ -517,7 +517,7 @@ export function SceneTakesTab({
       id: sceneId,
       sceneTab: 'takes',
       takeWorkspaceMode: 'edit',
-      takeGenerationId: created.takeGenerationId,
+      takeId: created.takeId,
       shotId: selectedShot.shotId,
       shotTab: activeShotTab,
     });
@@ -607,7 +607,7 @@ export function SceneTakesTab({
             projectName={projectName}
             sceneId={sceneId}
             shot={selectedShot}
-            takeGeneration={selectedTakeGeneration}
+            take={selectedTakeGeneration}
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}

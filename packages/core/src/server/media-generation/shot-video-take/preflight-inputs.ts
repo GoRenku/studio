@@ -2,7 +2,7 @@ import type {
   ShotVideoTakeInputKind,
   ShotVideoTakeGenerationContext,
   ShotVideoTakePreflightInput,
-  ShotVideoTakeAvailableInput,
+  SceneShotVideoTakeMediaInput,
   ShotVideoTakePreflightDependency,
   ShotVideoTakeGenerationPlan,
   ShotVideoTakePreflightInputItem,
@@ -65,22 +65,22 @@ export const SHOT_VIDEO_TAKE_INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, s
 export function buildShotVideoTakePreflightInputItems(input: {
   context: ShotVideoTakeGenerationContext;
   preparedInputs: ShotVideoTakePreflightInput[];
-  availableInputs: ShotVideoTakeAvailableInput[];
+  mediaInputs: SceneShotVideoTakeMediaInput[];
   inputsToCreate: ShotVideoTakePreflightDependency[];
   plan: ShotVideoTakeGenerationPlan;
 }): ShotVideoTakePreflightInputItem[] {
   const items: ShotVideoTakePreflightInputItem[] = [];
 
-  const candidatesByDependencyId = new Map<string, ShotVideoTakeAvailableInput[]>();
-  input.availableInputs.forEach((availableInput) => {
+  const candidatesByDependencyId = new Map<string, SceneShotVideoTakeMediaInput[]>();
+  input.mediaInputs.forEach((mediaInput) => {
     const key = shotVideoInputDependencyId({
-      kind: availableInput.kind,
-      subjectKind: availableInput.subjectKind,
-      subjectId: availableInput.subjectId,
+      kind: mediaInput.kind,
+      subjectKind: mediaInput.subjectKind,
+      subjectId: mediaInput.subjectId,
     });
     candidatesByDependencyId.set(key, [
       ...(candidatesByDependencyId.get(key) ?? []),
-      availableInput,
+      mediaInput,
     ]);
   });
 
@@ -243,9 +243,9 @@ export function preparedInputsForContext(
   session: DatabaseSession,
   issues: DiagnosticIssue[]
 ): ShotVideoTakePreflightInput[] {
-  const inputs: Array<ShotVideoTakePreflightInput | null> = (context.takeGeneration.production.preparedInputs ?? [])
+  const inputs: Array<ShotVideoTakePreflightInput | null> = (context.take.production.preparedInputs ?? [])
     .map((input) => {
-      const available = context.availableInputs.find(
+      const available = context.mediaInputs.find(
         (candidate) =>
           candidate.assetId === input.assetId &&
           candidate.assetFileId === input.assetFileId &&
@@ -262,7 +262,7 @@ export function preparedInputsForContext(
           issue(
             'PROJECT_DATA378',
             'Prepared shot video take input does not resolve to an asset file.',
-            ['takeGeneration', 'production', 'preparedInputs'],
+            ['take', 'production', 'preparedInputs'],
             'Select an existing reusable input or import the missing dependency again.'
           )
         );

@@ -4,6 +4,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
+  SceneShotVideoTake,
+  SceneShotWithLegacyShotSpecs,
 } from '@gorenku/studio-core/client';
 import type {
   SceneShotListResourceResponse,
@@ -14,9 +16,14 @@ import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotDetail } from './scene-shot-detail';
 import { ShotSpecsProvider } from './shot-specs-context';
+import { updateSceneShotVideoTakeShotSpecs } from '@/services/studio-shot-video-takes-api';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   updateSceneShotSpecs: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@/services/studio-shot-video-takes-api', () => ({
+  updateSceneShotVideoTakeShotSpecs: vi.fn().mockResolvedValue({}),
 }));
 
 class ResizeObserverStub {
@@ -41,10 +48,58 @@ const SHOT: SceneShot = {
   locationIds: [],
 };
 
+function takeWithShotDesign(
+  shotDesignByShotId: SceneShotVideoTake['state']['shotDesignByShotId']
+): SceneShotVideoTake {
+  return {
+    takeId: 'take_001',
+    sceneId: 'scene_hook',
+    shotListId: 'shot_list_hook',
+    title: 'Shot 1 take',
+    shotIds: ['shot_001'],
+    state: {
+      version: 1,
+      shotDesignByShotId,
+      referenceSelections: {
+        dependencyInclusions: {},
+        selectedCharacterSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
+        selectedLocationViewIds: {},
+        selectedLookbookSheetIds: [],
+        selectedDialogueAudioTakeIds: {},
+      },
+      production: {},
+    },
+    production: {},
+    status: {
+      editability: {
+        state: 'editable',
+        diagnostics: [],
+        message: 'This take is editable.',
+      },
+      resolvability: {
+        state: 'resolvable',
+        diagnostics: [],
+        message: 'All tracked take references resolve.',
+      },
+      runnability: {
+        state: 'not-evaluated',
+        diagnostics: [],
+        message: 'Run readiness is evaluated by shot-video preflight.',
+      },
+      archive: { state: 'active', message: 'This take is active.' },
+      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
+    },
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
 function renderWithProvider(
   children: React.ReactNode,
   options: {
     shot?: SceneShot;
+    take?: SceneShotVideoTake | null;
     onSaved?: (resource: SceneShotListResourceResponse) => void;
     onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   } = {}
@@ -54,6 +109,7 @@ function renderWithProvider(
       projectName='constantinople'
       sceneId='scene_hook'
       shot={options.shot ?? SHOT}
+      take={options.take}
       onSaved={options.onSaved}
       onSaveNotificationChange={options.onSaveNotificationChange}
     >
@@ -75,7 +131,7 @@ describe('SceneShotDetail', () => {
         projectName='constantinople'
         sceneId='scene_hook'
         shot={SHOT}
-        takeGeneration={null}
+        take={null}
         label='Shot 1'
         castMemberLabels={{}}
         locationLabels={{}}
@@ -98,6 +154,7 @@ describe('SceneShotDetail', () => {
 describe('SceneShotCompositionTab', () => {
   beforeEach(() => {
     vi.mocked(updateSceneShotSpecs).mockClear();
+    vi.mocked(updateSceneShotVideoTakeShotSpecs).mockClear();
   });
 
   it('treats shot size as a single-select ladder', () => {
@@ -187,7 +244,7 @@ describe('SceneShotCompositionTab', () => {
     const savedResource = sceneShotListResource({
       ...SHOT,
       shotSpecs: { shotSize: 'medium-close-up' },
-    });
+    } as SceneShotWithLegacyShotSpecs);
     vi.mocked(updateSceneShotSpecs).mockResolvedValueOnce(savedResource);
     const onSaved = vi.fn();
     renderWithProvider(<SceneShotCompositionTab />, { onSaved });
@@ -252,19 +309,21 @@ describe('SceneShotCompositionTab', () => {
 
   it('clearing the last specs field sends null shot specs', async () => {
     renderWithProvider(<SceneShotCompositionTab />, {
-      shot: {
-        ...SHOT,
-        shotSpecs: { shotSize: 'close-up' },
-      },
+      take: takeWithShotDesign({
+        shot_001: {
+          composition: { shotSize: 'close-up' },
+        },
+      }),
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Close-Up' }));
 
     await waitFor(
       () => {
-        expect(updateSceneShotSpecs).toHaveBeenCalledWith(
+        expect(updateSceneShotVideoTakeShotSpecs).toHaveBeenCalledWith(
           'constantinople',
           'scene_hook',
+          'take_001',
           'shot_001',
           null
         );

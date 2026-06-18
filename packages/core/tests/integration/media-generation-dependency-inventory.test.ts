@@ -109,7 +109,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const takeGeneration = await createSampleTakeGeneration({
+    const take = await createSampleTakeGeneration({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -119,7 +119,7 @@ describe('media generation dependency inventory estimates integration', () => {
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'reference',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -212,7 +212,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const takeGeneration = await createSampleTakeGeneration({
+    const take = await createSampleTakeGeneration({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -222,7 +222,7 @@ describe('media generation dependency inventory estimates integration', () => {
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -339,7 +339,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const takeGeneration = await createSampleTakeGeneration({
+    const take = await createSampleTakeGeneration({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -349,7 +349,7 @@ describe('media generation dependency inventory estimates integration', () => {
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'first-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -417,7 +417,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const takeGeneration = await createSampleTakeGeneration({
+    const take = await createSampleTakeGeneration({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -427,7 +427,7 @@ describe('media generation dependency inventory estimates integration', () => {
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'first-last-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -478,7 +478,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const takeGeneration = await createSampleTakeGeneration({
+    const take = await createSampleTakeGeneration({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -499,21 +499,21 @@ describe('media generation dependency inventory estimates integration', () => {
     );
     const firstFrame = await projectData.importShotFirstFrame({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       sourceProjectRelativePath: 'generated/media/generic-first-frame.png',
     });
     const lastFrame = await projectData.importShotLastFrame({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       sourceProjectRelativePath: 'generated/media/generic-last-frame.png',
     });
     const spec: ShotVideoTakeGenerationSpec = {
       purpose: 'shot.video-take',
       target: {
-        kind: 'sceneShotVideoTakeGeneration',
-        id: takeGeneration.takeGenerationId,
+        kind: 'sceneShotVideoTake',
+        id: take.takeId,
         sceneId: ids.sceneId,
-        takeGenerationId: takeGeneration.takeGenerationId,
+        takeId: take.takeId,
         shotIds: ['shot_001'],
       },
       inputModeId: 'first-last-frame',
@@ -527,8 +527,8 @@ describe('media generation dependency inventory estimates integration', () => {
         generate_audio: true,
       },
       inputs: [
-        generationInputFromAvailable(firstFrame.input),
-        generationInputFromAvailable(lastFrame.input),
+        generationInputFromAvailable(firstFrame.mediaInput),
+        generationInputFromAvailable(lastFrame.mediaInput),
       ],
       title: 'Generic planner first-last-frame take',
     };
@@ -542,22 +542,22 @@ describe('media generation dependency inventory estimates integration', () => {
     expect(plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `dependency:first-frame:take-generation:${takeGeneration.takeGenerationId}`,
+          id: `dependency:first-frame:take:${take.takeId}`,
           dependencyKind: 'first-frame',
           availability: { state: 'satisfied' },
           selectedAsset: expect.objectContaining({
-            assetId: firstFrame.input.assetId,
-            assetFileId: firstFrame.input.assetFileId,
+            assetId: firstFrame.mediaInput.assetId,
+            assetFileId: firstFrame.mediaInput.assetFileId,
           }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          id: `dependency:last-frame:take-generation:${takeGeneration.takeGenerationId}`,
+          id: `dependency:last-frame:take:${take.takeId}`,
           dependencyKind: 'last-frame',
           availability: { state: 'satisfied' },
           selectedAsset: expect.objectContaining({
-            assetId: lastFrame.input.assetId,
-            assetFileId: lastFrame.input.assetFileId,
+            assetId: lastFrame.mediaInput.assetId,
+            assetFileId: lastFrame.mediaInput.assetFileId,
           }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
@@ -582,12 +582,12 @@ describe('media generation dependency inventory estimates integration', () => {
     expect(plan.lines).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyLineId: `dependency:first-frame:take-generation:${takeGeneration.takeGenerationId}`,
+          dependencyLineId: `dependency:first-frame:take:${take.takeId}`,
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
         expect.objectContaining({
-          dependencyLineId: `dependency:last-frame:take-generation:${takeGeneration.takeGenerationId}`,
+          dependencyLineId: `dependency:last-frame:take:${take.takeId}`,
           kind: 'reused-asset',
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
@@ -616,7 +616,7 @@ describe('media generation dependency inventory estimates integration', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const takeGeneration = await createSampleTakeGeneration({
+    const take = await createSampleTakeGeneration({
       projectData,
       homeDir,
       sceneId: ids.sceneId,
@@ -637,24 +637,24 @@ describe('media generation dependency inventory estimates integration', () => {
     );
     const firstFrame = await projectData.importShotFirstFrame({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       sourceProjectRelativePath: 'generated/media/reused-first-frame.png',
     });
     const lastFrame = await projectData.importShotLastFrame({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       sourceProjectRelativePath: 'generated/media/reused-last-frame.png',
     });
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
-      takeGenerationId: takeGeneration.takeGenerationId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'first-last-frame',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
         preparedInputs: [
-          preparedInputFromAvailable(firstFrame.input),
-          preparedInputFromAvailable(lastFrame.input),
+          preparedInputFromAvailable(firstFrame.mediaInput),
+          preparedInputFromAvailable(lastFrame.mediaInput),
         ],
         parameterValues: {
           duration: 9,
@@ -680,8 +680,8 @@ describe('media generation dependency inventory estimates integration', () => {
           id: firstFrameLineId,
           availability: { state: 'satisfied' },
           selectedAsset: expect.objectContaining({
-            assetId: firstFrame.input.assetId,
-            assetFileId: firstFrame.input.assetFileId,
+            assetId: firstFrame.mediaInput.assetId,
+            assetFileId: firstFrame.mediaInput.assetFileId,
           }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
@@ -689,8 +689,8 @@ describe('media generation dependency inventory estimates integration', () => {
           id: lastFrameLineId,
           availability: { state: 'satisfied' },
           selectedAsset: expect.objectContaining({
-            assetId: lastFrame.input.assetId,
-            assetFileId: lastFrame.input.assetFileId,
+            assetId: lastFrame.mediaInput.assetId,
+            assetFileId: lastFrame.mediaInput.assetFileId,
           }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
@@ -1121,10 +1121,10 @@ describe('media generation dependency inventory planner contracts', () => {
     const result = await planMediaGenerationDependencyInventory({
       rootPurpose: 'shot.video-take',
       rootTarget: {
-        kind: 'sceneShotVideoTakeGeneration',
+        kind: 'sceneShotVideoTake',
         id: 'scene:take_generation',
         sceneId: 'scene',
-        takeGenerationId: 'take_generation',
+        takeId: 'take_generation',
         shotIds: ['shot'],
       },
       rootLineId: 'root:test',
@@ -1157,10 +1157,10 @@ describe('media generation dependency inventory planner contracts', () => {
       planMediaGenerationDependencyInventory({
         rootPurpose: 'shot.video-take',
         rootTarget: {
-          kind: 'sceneShotVideoTakeGeneration',
+          kind: 'sceneShotVideoTake',
           id: 'scene:take_generation',
           sceneId: 'scene',
-          takeGenerationId: 'take_generation',
+          takeId: 'take_generation',
           shotIds: ['shot'],
         },
         rootLineId: 'root:test',
@@ -1257,20 +1257,20 @@ describe('media generation dependency inventory planner contracts', () => {
       session: {} as never,
       request: { kind: 'shot-video-take' },
       slot: {
-        dependencyId: 'first-frame:take-generation:take_generation',
+        dependencyId: 'first-frame:take:take_generation',
         dependencyKind: 'first-frame',
         label: 'First frame',
         dependencyTarget: {
-          kind: 'sceneShotVideoTakeGeneration',
+          kind: 'sceneShotVideoTake',
           id: 'scene:take_generation',
           sceneId: 'scene',
-          takeGenerationId: 'take_generation',
+          takeId: 'take_generation',
           shotIds: ['shot'],
         },
         selector: {
           kind: 'shot-video-input',
           inputKind: 'first-frame',
-          takeGenerationId: 'take_generation',
+          takeId: 'take_generation',
           shotIds: ['shot'],
         },
         required: true,
@@ -1295,19 +1295,19 @@ function manualDependencySlot(input: { required: boolean }) {
     dependencyKind: 'manual-attachment' as const,
     label: 'Manual test dependency',
     dependencyTarget: {
-      kind: 'sceneShotVideoTakeGeneration' as const,
+      kind: 'sceneShotVideoTake' as const,
       id: 'scene:take_generation',
       sceneId: 'scene',
-      takeGenerationId: 'take_generation',
+      takeId: 'take_generation',
       shotIds: ['shot'],
     },
     selector: {
       kind: 'manual-attachment' as const,
       target: {
-        kind: 'sceneShotVideoTakeGeneration' as const,
+        kind: 'sceneShotVideoTake' as const,
         id: 'scene:take_generation',
         sceneId: 'scene',
-        takeGenerationId: 'take_generation',
+        takeId: 'take_generation',
         shotIds: ['shot'],
       },
     },
@@ -1333,10 +1333,10 @@ function generatedDependencySlot(dependencyId: string) {
 
 function testTakeGenerationTarget() {
   return {
-    kind: 'sceneShotVideoTakeGeneration' as const,
+    kind: 'sceneShotVideoTake' as const,
     id: 'scene:take_generation',
     sceneId: 'scene',
-    takeGenerationId: 'take_generation',
+    takeId: 'take_generation',
     shotIds: ['shot'],
   };
 }
@@ -1391,7 +1391,7 @@ async function createSampleTakeGeneration(input: {
   shotListId: string;
   shotIds: string[];
 }) {
-  return input.projectData.createSceneShotVideoTakeGeneration({
+  return input.projectData.createSceneShotVideoTake({
     homeDir: input.homeDir,
     sceneId: input.sceneId,
     shotListId: input.shotListId,
@@ -1496,7 +1496,7 @@ async function writeLocationSheetImportFiles(
 function generationInputFromAvailable(
   input: NonNullable<
     Awaited<ReturnType<ProjectDataService['importShotFirstFrame']>>
-  >['input']
+  >['mediaInput']
 ): ShotVideoTakeGenerationSpec['inputs'][number] {
   return {
     kind: input.kind,
@@ -1513,7 +1513,7 @@ function generationInputFromAvailable(
 function preparedInputFromAvailable(
   input: NonNullable<
     Awaited<ReturnType<ProjectDataService['importShotFirstFrame']>>
-  >['input']
+  >['mediaInput']
 ): ShotVideoTakePreparedInput {
   return {
     kind: input.kind,

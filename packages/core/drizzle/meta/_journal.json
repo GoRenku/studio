@@ -211,6 +211,20 @@
       "when": 1781726458974,
       "tag": "0029_high_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1781775499498,
+      "tag": "0030_take-owned-state",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1781780657953,
+      "tag": "0031_take-owned-table-names",
+      "breakpoints": true
     }
   ]
 }

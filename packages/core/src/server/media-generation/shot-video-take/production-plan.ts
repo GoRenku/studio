@@ -70,7 +70,7 @@ import {
   requireShotVideoTakeRoute,
 } from './route-settings.js';
 import {
-  prepareSceneShotVideoTakeGenerationInSession,
+  prepareSceneShotVideoTakeInSession,
 } from './take-generation-context.js';
 
 
@@ -82,7 +82,7 @@ export async function estimateShotVideoTakeProduction(
   const reportContext = await shotVideoTakePlanReportContext(input);
   return {
     target: reportContext.target,
-    takeGeneration: reportContext.takeGeneration,
+    take: reportContext.take,
     inputModeId: plan.request.inputMode,
     shotGroupMode: plan.request.shotGroupMode,
     modelChoice: plan.request.modelChoice,
@@ -96,9 +96,9 @@ export async function estimateShotVideoTakeProduction(
 
 export async function shotVideoTakePlanReportContext(
   input: PreviewShotVideoTakeProductionInput
-): Promise<Pick<ShotVideoTakeGenerationContext, 'target' | 'takeGeneration'>> {
+): Promise<Pick<ShotVideoTakeGenerationContext, 'target' | 'take'>> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({
+    const prepared = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
@@ -111,7 +111,7 @@ export async function shotVideoTakePlanReportContext(
       }),
       production: input.production,
     });
-    return { target: context.target, takeGeneration: context.takeGeneration };
+    return { target: context.target, take: context.take };
   });
 }
 
@@ -121,7 +121,7 @@ export async function planShotVideoTakeProduction(
   input: PlanShotVideoTakeProductionInput
 ): Promise<ShotVideoTakeGenerationPlan> {
   const context = await withShotProjectSession(input, ({ session, projectFolder, project }) => {
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({
+    const prepared = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
@@ -136,9 +136,9 @@ export async function planShotVideoTakeProduction(
     });
   });
   const diagnostics = validatePreflight(context);
-  const inputModeId = context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId;
+  const inputModeId = context.take.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
-    context.takeGeneration.production.modelChoice ??
+    context.take.production.modelChoice ??
     defaultModelChoiceForInputMode(inputModeId);
   const route = requireShotVideoTakeRoute(modelChoice, inputModeId, context.shotGroupMode);
   const family = SHOT_VIDEO_MODEL_FAMILIES.find((candidate) => candidate.choice === modelChoice);
@@ -157,7 +157,7 @@ export async function planShotVideoTakeProduction(
       createDiagnosticWarning(
         'CORE_SHOT_VIDEO_PLAN_STALE_SETTING_DROPPED',
         `Shot video take setting is not supported by the selected route and was ignored: ${settingId}.`,
-        { path: ['takeGeneration', 'production', 'parameterValues', settingId] },
+        { path: ['take', 'production', 'parameterValues', settingId] },
         'Review Run Setup after switching model or input mode.'
       )
     );
@@ -167,7 +167,7 @@ export async function planShotVideoTakeProduction(
       issue(
         'CORE_SHOT_VIDEO_PLAN_INVALID_SETTING',
         `Shot video take setting is invalid for the selected route: ${settingId}.`,
-        ['takeGeneration', 'production', 'parameterValues', settingId],
+        ['take', 'production', 'parameterValues', settingId],
         'Choose one of the values supported by the selected route.'
       )
     );
@@ -207,7 +207,7 @@ export async function planShotVideoTakeProduction(
       projectId: context.project.id ?? context.project.name,
       sceneId: context.scene.id,
       shotListId: context.shotList.id,
-      takeGenerationId: context.takeGeneration.takeGenerationId,
+      takeId: context.take.takeId,
       inputMode: inputModeId,
       shotGroupMode: context.shotGroupMode,
       modelChoice,
@@ -248,7 +248,7 @@ export async function readShotVideoTakeProductionPlan(
 ): Promise<ShotVideoTakeProductionPlanReport> {
   const plan = await planShotVideoTakeProduction(input);
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({
+    const prepared = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
@@ -306,9 +306,9 @@ export function buildShotVideoTakeProductionPlanReport(input: {
   ];
   return {
     target: input.context.target,
-    takeGeneration: input.context.takeGeneration,
+    take: input.context.take,
     finalPrompt:
-      input.context.takeGeneration.production.agentProposal
+      input.context.take.production.agentProposal
         ?.finalPromptDraft ?? null,
     plan: input.plan,
     references: referenceSections.references,
@@ -342,8 +342,8 @@ function contextWithProductionOverride(input: {
   }
   return {
     ...input.context,
-    takeGeneration: {
-      ...input.context.takeGeneration,
+    take: {
+      ...input.context.take,
       production: input.production,
     },
   };

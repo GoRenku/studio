@@ -7,9 +7,11 @@ import type {
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTake,
   ShotVideoTakeGenerationProduction,
   ShotVideoTakeProductionPlanReport,
+  ShotSpecs,
+  SceneShotVideoTakeEditContext,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from './studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
@@ -50,27 +52,31 @@ export interface ShotVideoTakePlanRead {
   report: ShotVideoTakeProductionPlanReport;
 }
 
-export interface SceneShotVideoTakeGenerationsRead {
-  takeGenerations: SceneShotVideoTakeGeneration[];
+export interface SceneShotVideoTakeEditContextRead {
+  editContext: SceneShotVideoTakeEditContext;
 }
 
-export async function listSceneShotVideoTakeGenerations(
+export interface SceneShotVideoTakesRead {
+  takes: SceneShotVideoTake[];
+}
+
+export async function listSceneShotVideoTakes(
   projectName: string,
   sceneId: string
-): Promise<SceneShotVideoTakeGenerationsRead> {
-  const response = await fetch(takeGenerationsPath(projectName, sceneId));
+): Promise<SceneShotVideoTakesRead> {
+  const response = await fetch(takesPath(projectName, sceneId));
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  return (await response.json()) as SceneShotVideoTakeGenerationsRead;
+  return (await response.json()) as SceneShotVideoTakesRead;
 }
 
-export async function createSceneShotVideoTakeGeneration(
+export async function createSceneShotVideoTake(
   projectName: string,
   sceneId: string,
   input: { shotListId: string; shotIds: string[]; title?: string }
-): Promise<SceneShotVideoTakeGeneration> {
-  const response = await fetch(takeGenerationsPath(projectName, sceneId), {
+): Promise<SceneShotVideoTake> {
+  const response = await fetch(takesPath(projectName, sceneId), {
     method: 'POST',
     headers: jsonHeaders(),
     body: JSON.stringify(input),
@@ -79,29 +85,44 @@ export async function createSceneShotVideoTakeGeneration(
     throw await readStudioApiError(response);
   }
   const body = (await response.json()) as {
-    takeGeneration: SceneShotVideoTakeGeneration;
+    take: SceneShotVideoTake;
   };
-  return body.takeGeneration;
+  return body.take;
 }
 
-export async function updateSceneShotVideoTakeGenerationShots(
+export async function updateSceneShotVideoTakeShots(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   shotIds: string[]
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeGenerationMutation(
-    `${productionPath(projectName, sceneId, takeGenerationId)}/shots`,
+    `${productionPath(projectName, sceneId, takeId)}/shots`,
     'PATCH',
     { shotIds }
   );
+}
+
+export async function readSceneShotVideoTakeEditContext(
+  projectName: string,
+  sceneId: string,
+  takeId: string
+): Promise<SceneShotVideoTakeEditContext> {
+  const response = await fetch(
+    `${productionPath(projectName, sceneId, takeId)}/edit-context`
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as SceneShotVideoTakeEditContextRead;
+  return body.editContext;
 }
 
 /** Read the AI Production planning context and the model report together. */
 export async function readShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   inputModeId?: ShotVideoTakeInputModeId
 ): Promise<ShotVideoTakeProductionRead> {
   const search = new URLSearchParams();
@@ -109,24 +130,38 @@ export async function readShotVideoTakeProduction(
     search.set('inputModeId', inputModeId);
   }
   const query = search.size > 0 ? `?${search.toString()}` : '';
-  const response = await fetch(`${productionPath(projectName, sceneId, takeGenerationId)}${query}`);
+  const response = await fetch(`${productionPath(projectName, sceneId, takeId)}${query}`);
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
   return (await response.json()) as ShotVideoTakeProductionRead;
 }
 
-/** Autosave the take-generation production setup through core. */
+/** Autosave the take production setup through core. */
 export async function updateShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   production: ShotVideoTakeGenerationProduction
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeGenerationMutation(
-    productionPath(projectName, sceneId, takeGenerationId),
+    productionPath(projectName, sceneId, takeId),
     'PATCH',
     { production }
+  );
+}
+
+export async function updateSceneShotVideoTakeShotSpecs(
+  projectName: string,
+  sceneId: string,
+  takeId: string,
+  shotId: string,
+  shotSpecs: ShotSpecs | null
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeGenerationMutation(
+    `${productionPath(projectName, sceneId, takeId)}/shots/${encodeURIComponent(shotId)}/specs`,
+    'PATCH',
+    { shotSpecs }
   );
 }
 
@@ -134,11 +169,11 @@ export async function updateShotVideoTakeProduction(
 export async function estimateShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   production: ShotVideoTakeGenerationProduction
 ): Promise<ShotVideoTakeProductionEstimateReport> {
   const response = await fetch(
-    `${productionPath(projectName, sceneId, takeGenerationId)}/estimate`,
+    `${productionPath(projectName, sceneId, takeId)}/estimate`,
     {
       method: 'POST',
       headers: jsonHeaders(),
@@ -157,11 +192,11 @@ export async function estimateShotVideoTakeProduction(
 export async function planShotVideoTakeProduction(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   production?: ShotVideoTakeGenerationProduction,
   inputPolicy: ShotVideoTakeInputPolicy = { defaultMode: 'auto' }
 ): Promise<ShotVideoTakeProductionPlanReport> {
-  const response = await fetch(`${productionPath(projectName, sceneId, takeGenerationId)}/plan`, {
+  const response = await fetch(`${productionPath(projectName, sceneId, takeId)}/plan`, {
     method: 'POST',
     headers: jsonHeaders(),
     body: JSON.stringify({ ...(production ? { production } : {}), inputPolicy }),
@@ -282,25 +317,25 @@ export async function updateShotReferenceInclusion(
 export async function updateShotGroupReferenceInclusion(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   input: { dependencyId: string; inclusion: 'include' | 'exclude' | null }
-): Promise<ShotVideoTakeResourceMutation> {
-  return sendResourceMutation(
-    `${productionPath(projectName, sceneId, takeGenerationId)}/reference-inclusions`,
+): Promise<ShotVideoTakeProductionMutation> {
+  return sendTakeGenerationMutation(
+    `${productionPath(projectName, sceneId, takeId)}/reference-inclusions`,
     'PATCH',
     input
   );
 }
 
-/** Reuse an existing dependency input for the take generation. */
+/** Reuse an existing dependency input for the take. */
 export async function selectShotVideoTakeInput(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   inputId: string
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeGenerationMutation(
-    `${productionPath(projectName, sceneId, takeGenerationId)}/inputs/select`,
+    `${productionPath(projectName, sceneId, takeId)}/inputs/select`,
     'POST',
     { inputId }
   );
@@ -310,11 +345,11 @@ export async function selectShotVideoTakeInput(
 export async function clearShotVideoTakeInput(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   inputSlot: ShotVideoTakeInputSlot
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeGenerationMutation(
-    `${productionPath(projectName, sceneId, takeGenerationId)}/inputs/clear`,
+    `${productionPath(projectName, sceneId, takeId)}/inputs/clear`,
     'POST',
     {
       kind: inputSlot.kind,
@@ -328,11 +363,11 @@ export async function clearShotVideoTakeInput(
 export async function deleteShotVideoTakeInput(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   inputId: string
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeGenerationMutation(
-    `${productionPath(projectName, sceneId, takeGenerationId)}/inputs/${encodeURIComponent(inputId)}`,
+    `${productionPath(projectName, sceneId, takeId)}/inputs/${encodeURIComponent(inputId)}`,
     'DELETE',
     {}
   );
@@ -385,16 +420,16 @@ function readStudioApiToken(): string {
   return token;
 }
 
-function takeGenerationsPath(projectName: string, sceneId: string): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/take-generations`;
+function takesPath(projectName: string, sceneId: string): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/takes`;
 }
 
 function productionPath(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string
+  takeId: string
 ): string {
-  return `${takeGenerationsPath(projectName, sceneId)}/${encodeURIComponent(takeGenerationId)}`;
+  return `${takesPath(projectName, sceneId)}/${encodeURIComponent(takeId)}`;
 }
 
 function shotReferencePath(

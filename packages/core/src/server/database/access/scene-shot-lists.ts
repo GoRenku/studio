@@ -3,6 +3,7 @@ import type {
   SceneShot,
   SceneShotListDocument,
   SceneShotListSummary,
+  SceneShotWithLegacyShotSpecs,
 } from '../../../client/scene-shot-list.js';
 import type { ScreenplayDocument } from '../../../client/screenplay.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -348,7 +349,7 @@ export function shotContentFingerprint(shot: SceneShot): string {
     locationIds: shot.locationIds,
     audioNotes: shot.audioNotes ?? null,
     productionNotes: shot.productionNotes ?? null,
-    shotSpecs: shot.shotSpecs ?? null,
+    shotSpecs: (shot as SceneShotWithLegacyShotSpecs).shotSpecs ?? null,
   });
 }
 

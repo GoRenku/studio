@@ -124,7 +124,7 @@ export type ShotVideoTakeInputSubjectKind =
   | 'cast-member'
   | 'location'
   | 'lookbook'
-  | 'take-generation'
+  | 'take'
   | 'scene-dialogue'
   | 'shot';
 
@@ -207,14 +207,11 @@ export interface SceneShot {
   locationIds: string[];
   audioNotes?: string;
   productionNotes?: string;
-  /**
-   * Optional structured shot specifications (0036). Absence means the shot has
-   * not been specified in the Studio shot tabs yet. The free-text strings above
-   * (`shotType`, `cameraAngle`, `cameraMovement`, `framing`) remain the
-   * prompt-facing contract and are derived from this structure on each edit.
-   */
-  shotSpecs?: ShotSpecs;
 }
+
+export type SceneShotWithLegacyShotSpecs = SceneShot & {
+  shotSpecs?: ShotSpecs;
+};
 
 /**
  * Single ordered shot-size ladder, tightest to widest. The mockup's overlapping

@@ -302,7 +302,7 @@ function readSelectedSceneReadiness(
       storyboardStatus: { available: false, missingShotIds: [] },
     shotVideo: {
       preflightAvailable: false,
-      selectedTakeGenerationId: null,
+      selectedTakeId: null,
       selectedShotIds: [],
       selectedInputCount: 0,
       selectedTakeCount: 0,
@@ -349,7 +349,7 @@ function readSelectedSceneReadiness(
     },
     shotVideo: {
       preflightAvailable: selectedShotIds.length > 0,
-      selectedTakeGenerationId: null,
+      selectedTakeId: null,
       selectedShotIds,
       selectedInputCount: 0,
       selectedTakeCount: 0,

@@ -5,13 +5,15 @@ import {
   throwIfDiagnosticResultInvalid,
 } from '@gorenku/studio-diagnostics';
 import type {
-  SceneShotVideoTakeGenerationCompatibilitySnapshot,
+  SceneShotVideoTakeHistorySnapshot,
+  SceneShotVideoTakeState,
 } from '../../client/shot-video-take-generation.js';
 import type {
   ShotVideoTakeGenerationProduction,
 } from '../../client/scene-shot-list.js';
 import {
-  sceneShotVideoTakeGenerationCompatibilitySnapshotSchema,
+  sceneShotVideoTakeStateSchema,
+  sceneShotVideoTakeHistorySnapshotSchema,
   shotVideoTakeGenerationProductionSchema,
 } from '../../client/scene-shot-list-json-schemas.js';
 
@@ -25,7 +27,39 @@ const ajv = new Ajv2020({
 });
 
 ajv.addSchema(shotVideoTakeGenerationProductionSchema);
-ajv.addSchema(sceneShotVideoTakeGenerationCompatibilitySnapshotSchema);
+ajv.addSchema(sceneShotVideoTakeHistorySnapshotSchema);
+ajv.addSchema(sceneShotVideoTakeStateSchema);
+
+export function serializeSceneShotVideoTakeState(input: {
+  state: SceneShotVideoTakeState;
+}): string {
+  assertJsonShape({
+    value: input.state,
+    schemaId: sceneShotVideoTakeStateSchema.$id,
+    code: 'PROJECT_DATA421',
+    message: 'Scene shot video take state JSON failed validation.',
+    path: ['state'],
+  });
+  return JSON.stringify(input.state);
+}
+
+export function parseSceneShotVideoTakeState(input: {
+  value: string;
+}): SceneShotVideoTakeState {
+  const parsed = parseStoredJson(input.value, {
+    code: 'PROJECT_DATA421',
+    message: 'Stored scene shot video take state must be valid JSON.',
+    path: ['take', 'state'],
+  });
+  assertJsonShape({
+    value: parsed,
+    schemaId: sceneShotVideoTakeStateSchema.$id,
+    code: 'PROJECT_DATA421',
+    message: 'Stored scene shot video take state JSON failed validation.',
+    path: ['take', 'state'],
+  });
+  return parsed as SceneShotVideoTakeState;
+}
 
 export function serializeShotVideoTakeGenerationProduction(input: {
   production: ShotVideoTakeGenerationProduction;
@@ -46,50 +80,50 @@ export function parseShotVideoTakeGenerationProduction(input: {
   const parsed = parseStoredJson(input.value, {
     code: 'PROJECT_DATA417',
     message: 'Stored shot video take generation production must be valid JSON.',
-    path: ['takeGeneration', 'production'],
+    path: ['take', 'production'],
   });
   assertJsonShape({
     value: parsed,
     schemaId: shotVideoTakeGenerationProductionSchema.$id,
     code: 'PROJECT_DATA417',
     message: 'Stored shot video take generation production JSON failed validation.',
-    path: ['takeGeneration', 'production'],
+    path: ['take', 'production'],
   });
   return parsed as ShotVideoTakeGenerationProduction;
 }
 
-export function serializeSceneShotVideoTakeGenerationCompatibilitySnapshot(
-  input: { snapshot: SceneShotVideoTakeGenerationCompatibilitySnapshot }
+export function serializeSceneShotVideoTakeHistorySnapshot(
+  input: { snapshot: SceneShotVideoTakeHistorySnapshot }
 ): string {
   assertJsonShape({
     value: input.snapshot,
-    schemaId: sceneShotVideoTakeGenerationCompatibilitySnapshotSchema.$id,
+    schemaId: sceneShotVideoTakeHistorySnapshotSchema.$id,
     code: 'PROJECT_DATA418',
     message:
-      'Scene shot video take generation compatibility snapshot JSON failed validation.',
-    path: ['compatibilitySnapshot'],
+      'Scene shot video take history snapshot JSON failed validation.',
+    path: ['historySnapshot'],
   });
   return JSON.stringify(input.snapshot);
 }
 
-export function parseSceneShotVideoTakeGenerationCompatibilitySnapshot(input: {
+export function parseSceneShotVideoTakeHistorySnapshot(input: {
   value: string;
-}): SceneShotVideoTakeGenerationCompatibilitySnapshot {
+}): SceneShotVideoTakeHistorySnapshot {
   const parsed = parseStoredJson(input.value, {
     code: 'PROJECT_DATA418',
     message:
-      'Stored scene shot video take generation compatibility snapshot must be valid JSON.',
-    path: ['takeGeneration', 'compatibilitySnapshot'],
+      'Stored scene shot video take history snapshot must be valid JSON.',
+    path: ['take', 'historySnapshot'],
   });
   assertJsonShape({
     value: parsed,
-    schemaId: sceneShotVideoTakeGenerationCompatibilitySnapshotSchema.$id,
+    schemaId: sceneShotVideoTakeHistorySnapshotSchema.$id,
     code: 'PROJECT_DATA418',
     message:
-      'Stored scene shot video take generation compatibility snapshot JSON failed validation.',
-    path: ['takeGeneration', 'compatibilitySnapshot'],
+      'Stored scene shot video take history snapshot JSON failed validation.',
+    path: ['take', 'historySnapshot'],
   });
-  return parsed as SceneShotVideoTakeGenerationCompatibilitySnapshot;
+  return parsed as SceneShotVideoTakeHistorySnapshot;
 }
 
 function parseStoredJson(

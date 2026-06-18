@@ -323,11 +323,11 @@ export function sceneAssetFileUrl(
 export function shotVideoTakeInputFileUrl(
   projectName: string,
   sceneId: string,
-  takeGenerationId: string,
+  takeId: string,
   inputId: string,
   assetFileId: string
 ): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/take-generations/${encodeURIComponent(takeGenerationId)}/inputs/${encodeURIComponent(inputId)}/files/${encodeURIComponent(assetFileId)}`;
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/takes/${encodeURIComponent(takeId)}/inputs/${encodeURIComponent(inputId)}/files/${encodeURIComponent(assetFileId)}`;
 }
 
 function castDesignResourceUrl(

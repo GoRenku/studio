@@ -16,6 +16,8 @@ import {
   updateShotLocationViewReferences,
   updateShotGroupReferenceInclusion,
   updateShotReferenceInclusion,
+  type ShotVideoTakeProductionMutation,
+  type ShotVideoTakeResourceMutation,
 } from '@/services/studio-shot-video-takes-api';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import {
@@ -56,24 +58,25 @@ export function SceneShotReferencesTab({
   const referenceIssues =
     productionPlan?.diagnostics.filter(isReferenceDiagnosticIssue) ?? [];
 
-  const refreshAfterMutation = async (result: {
-    resource: SceneShotListResourceResponse;
-  }) => {
-    onResourceRefreshed?.(result.resource);
+  const refreshAfterMutation = async (
+    result: ShotVideoTakeResourceMutation | ShotVideoTakeProductionMutation
+  ) => {
+    if ('resource' in result) {
+      onResourceRefreshed?.(result.resource);
+    }
     await onPlanRefresh?.();
   };
   const updateReferenceInclusion = async (
     dependencyId: string,
     inclusion: 'include' | 'exclude' | null
   ) => {
-    const takeGeneration = productionPlan?.takeGeneration;
-    const shotIds = takeGeneration?.shotIds ?? [shot.shotId];
+    const take = productionPlan?.take;
     const result =
-      takeGeneration && shotIds.length > 1
+      take
         ? await updateShotGroupReferenceInclusion(
             projectName,
             sceneId,
-            takeGeneration.takeGenerationId,
+            take.takeId,
             {
               dependencyId,
               inclusion,
@@ -321,11 +324,11 @@ function generalReferenceImageUrl(
   sceneId: string,
   preview: ShotVideoTakeReferenceImagePreview
 ): string {
-  if (preview.inputId && preview.takeGenerationId) {
+  if (preview.inputId && preview.takeId) {
     return shotVideoTakeInputFileUrl(
       projectName,
       sceneId,
-      preview.takeGenerationId,
+      preview.takeId,
       preview.inputId,
       preview.assetFileId
     );

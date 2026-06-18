@@ -4,6 +4,7 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
   SceneShotListDocument,
+  SceneShotWithLegacyShotSpecs,
   ShotSpecs,
 } from '../../client/scene-shot-list.js';
 import { createProjectDataService } from '../index.js';
@@ -61,7 +62,7 @@ describe('updateSceneShotSpecs', () => {
 
     const shot = resource.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
-    );
+    ) as SceneShotWithLegacyShotSpecs | undefined
     expect(shot?.shotSpecs).toEqual(shotSpecs);
     // Derived contract strings stay populated for the prompt builder.
     expect(shot?.shotType).toBe('Medium Close-Up');
@@ -97,7 +98,7 @@ describe('updateSceneShotSpecs', () => {
 
     const shot = cleared.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
-    );
+    ) as SceneShotWithLegacyShotSpecs | undefined
     expect(shot?.shotSpecs).toBeUndefined();
     expect(shot?.shotType).toBe('Unspecified');
   });
@@ -130,7 +131,7 @@ describe('updateSceneShotSpecs', () => {
 
     const shot = updated.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
-    );
+    ) as SceneShotWithLegacyShotSpecs | undefined
     expect(shot?.shotSpecs).toEqual({
       movement: { movement: 'tracking' },
     });
@@ -156,7 +157,7 @@ describe('updateSceneShotSpecs', () => {
 
     const shot = updated.activeShotList?.shots.find(
       (entry) => entry.shotId === 'shot_001'
-    );
+    ) as SceneShotWithLegacyShotSpecs | undefined
     expect(shot?.shotType).toBe('wide');
     expect(shot?.cameraMovement).toBe('Tracking');
   });

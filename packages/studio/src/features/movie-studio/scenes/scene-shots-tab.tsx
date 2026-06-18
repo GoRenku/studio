@@ -6,12 +6,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { SceneShotVideoTakeGeneration } from '@gorenku/studio-core/client';
+import type { SceneShotVideoTake } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
-  createSceneShotVideoTakeGeneration,
-  listSceneShotVideoTakeGenerations,
+  createSceneShotVideoTake,
+  listSceneShotVideoTakes,
 } from '@/services/studio-shot-video-takes-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
@@ -61,8 +61,8 @@ export function SceneShotsTab({
 }: SceneShotsTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
-  const [takeGenerations, setTakeGenerations] = useState<
-    SceneShotVideoTakeGeneration[]
+  const [takes, setTakeGenerations] = useState<
+    SceneShotVideoTake[]
   >([]);
   const [error, setError] = useState<string | null>(null);
   const saveNotificationSequenceRef = useRef(0);
@@ -74,12 +74,12 @@ export function SceneShotsTab({
     let cancelled = false;
     void Promise.all([
       readSceneShotListResource(projectName, sceneId),
-      listSceneShotVideoTakeGenerations(projectName, sceneId),
+      listSceneShotVideoTakes(projectName, sceneId),
     ])
-      .then(([nextResource, takeGenerationReport]) => {
+      .then(([nextResource, takeReport]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setTakeGenerations(takeGenerationReport.takeGenerations);
+          setTakeGenerations(takeReport.takes);
         }
       })
       .catch((loadError) => {
@@ -206,14 +206,14 @@ export function SceneShotsTab({
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
   const selectedTakeGeneration =
-    takeGenerations.find((candidate) =>
+    takes.find((candidate) =>
       selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
     ) ?? null;
   const handleCreateTakeGeneration = async () => {
     if (!resource.activeShotListId || !selectedShot) {
       return;
     }
-    const created = await createSceneShotVideoTakeGeneration(projectName, sceneId, {
+    const created = await createSceneShotVideoTake(projectName, sceneId, {
       shotListId: resource.activeShotListId,
       shotIds: [selectedShot.shotId],
       title: selectedShot.title,
@@ -254,7 +254,7 @@ export function SceneShotsTab({
             projectName={projectName}
             sceneId={sceneId}
             shot={selectedShot}
-            takeGeneration={selectedTakeGeneration}
+            take={selectedTakeGeneration}
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}

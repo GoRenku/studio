@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type {
   SceneShotListDocument,
-  SceneShotVideoTakeGeneration,
+  SceneShotVideoTake,
 } from '../../client/index.js';
 import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
 import { createSampleMovieProject, writeConfig } from './project-data-fixtures.js';
@@ -49,7 +49,7 @@ export interface ShotVideoTakeTestProject {
   ): Promise<
     Awaited<
       ReturnType<ReturnType<typeof createProjectDataService>['writeSceneShotList']>
-    > & { takeGeneration: SceneShotVideoTakeGeneration }
+    > & { take: SceneShotVideoTake }
   >;
   writeProjectFile(projectRelativePath: string, contents: string): Promise<void>;
   writeLocationSheetImportFiles(
@@ -184,14 +184,14 @@ export async function createShotVideoTakeTestProject(): Promise<ShotVideoTakeTes
         document,
         idGenerator: createDeterministicIdGenerator(),
       });
-      const takeGeneration = await projectData.createSceneShotVideoTakeGeneration({
+      const take = await projectData.createSceneShotVideoTake({
         homeDir,
         sceneId: ids.sceneId,
         shotListId: report.shotList.id,
         shotIds: document.shots.map((shot) => shot.shotId),
         idGenerator: createDeterministicIdGenerator(),
       });
-      return { ...report, takeGeneration };
+      return { ...report, take };
     },
     writeProjectFile(projectRelativePath, contents) {
       return writeShotVideoTakeProjectFile({

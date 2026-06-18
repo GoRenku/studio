@@ -73,10 +73,10 @@ export function readMovieStudioSelectionRequest(input: unknown): {
     selection.takeWorkspaceMode === 'edit'
       ? selection.takeWorkspaceMode
       : undefined;
-  const takeGenerationId =
-    typeof selection.takeGenerationId === 'string' &&
-    selection.takeGenerationId.trim()
-      ? selection.takeGenerationId.trim()
+  const takeId =
+    typeof selection.takeId === 'string' &&
+    selection.takeId.trim()
+      ? selection.takeId.trim()
       : undefined;
   const sceneTab =
     typeof selection.sceneTab === 'string' && selection.sceneTab.trim()
@@ -154,7 +154,7 @@ export function readMovieStudioSelectionRequest(input: unknown): {
       lookbookId,
       shotId,
       takeWorkspaceMode,
-      takeGenerationId,
+      takeId,
       sceneTab: sceneTab as ScenePanelTab | undefined,
       shotTab: shotTab as SceneShotDetailTab | undefined,
     }),
@@ -188,7 +188,7 @@ function studioSelectionFromRequest(
     lookbookId?: string;
     shotId?: string;
     takeWorkspaceMode?: 'list' | 'new' | 'edit';
-    takeGenerationId?: string;
+    takeId?: string;
     sceneTab?: ScenePanelTab;
     shotTab?: SceneShotDetailTab;
   }
@@ -203,8 +203,8 @@ function studioSelectionFromRequest(
         ...(ids.takeWorkspaceMode
           ? { takeWorkspaceMode: ids.takeWorkspaceMode }
           : {}),
-        ...(ids.takeGenerationId
-          ? { takeGenerationId: ids.takeGenerationId }
+        ...(ids.takeId
+          ? { takeId: ids.takeId }
           : {}),
         ...(ids.shotTab ? { shotTab: ids.shotTab } : {}),
       };

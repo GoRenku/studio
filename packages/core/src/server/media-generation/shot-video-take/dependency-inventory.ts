@@ -257,7 +257,7 @@ function validateSelectedAudioReferencesSupportedByRoute(input: {
       createDiagnosticWarning(
         'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_UNSUPPORTED',
         'This model does not use audio references',
-        { path: ['takeGeneration', 'production', 'modelChoice'] },
+        { path: ['take', 'production', 'modelChoice'] },
         'Choose a shot-video model route with audio reference input support or exclude the dialogue audio references.'
       )
     );
@@ -268,7 +268,7 @@ function validateSelectedAudioReferencesSupportedByRoute(input: {
       createDiagnosticWarning(
         'CORE_SHOT_DIALOGUE_AUDIO_ROUTE_MAX_COUNT_EXCEEDED',
         `Selected dialogue audio references exceed this model route limit: ${selectedCount} / ${audioSlot.maxCount}.`,
-        { path: ['takeGeneration', 'production', 'requestedInputs'] },
+        { path: ['take', 'production', 'requestedInputs'] },
         `Select ${audioSlot.maxCount} or fewer dialogue audio references for this model route.`
       )
     );
@@ -303,13 +303,13 @@ export function shotVideoTakeDependencySlotsForContext(input: {
             [...selectedLookbookSheetIdsForShots(input.context.shots)][0] ?? null,
         }
       : null,
-    customReferenceInputs: input.context.availableInputs
-      .filter((availableInput) => availableInput.kind === 'reference-image')
-      .map((availableInput) => ({
-        id: availableInput.subjectId || availableInput.assetId,
-        title: availableInput.title,
+    customReferenceInputs: input.context.mediaInputs
+      .filter((mediaInput) => mediaInput.kind === 'reference-image')
+      .map((mediaInput) => ({
+        id: mediaInput.subjectId || mediaInput.assetId,
+        title: mediaInput.title,
       })),
-    requestedInputs: input.context.takeGeneration.production.requestedInputs,
+    requestedInputs: input.context.take.production.requestedInputs,
     requiresMultiShotStoryboardSheet: input.context.shotGroupMode === 'multi-shot',
   });
   if (input.includeReferenceContext) {
@@ -363,7 +363,7 @@ export function shotVideoTakeDialogueAudioDependencySlots(input: {
     selector: {
       kind: 'shot-video-input',
       inputKind: 'audio',
-      takeGenerationId: input.context.target.takeGenerationId,
+      takeId: input.context.target.takeId,
       shotIds: input.context.target.shotIds,
       subjectKind: 'scene-dialogue',
       subjectId: reference.dialogueId,
@@ -380,10 +380,10 @@ export function shotVideoTakeDialogueAudioDependencySlots(input: {
 export async function declareShotVideoTakeDependencies(
   input: MediaGenerationDependencyDeclarationInput
 ): Promise<MediaGenerationDependencySlot[]> {
-  if (input.target.kind !== 'sceneShotVideoTakeGeneration') {
+  if (input.target.kind !== 'sceneShotVideoTake') {
     throw new ProjectDataError(
       'CORE_SHOT_VIDEO_DEPENDENCY_DECLARATION_TARGET_INVALID',
-      `shot.video-take dependencies require a sceneShotVideoTakeGeneration target. Received: ${input.target.kind}.`
+      `shot.video-take dependencies require a sceneShotVideoTake target. Received: ${input.target.kind}.`
     );
   }
   if (input.request.kind !== 'media-generation-spec') {
@@ -402,7 +402,7 @@ export async function declareShotVideoTakeDependencies(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: input.target.takeGenerationId,
+    takeId: input.target.takeId,
   });
   return declareShotVideoTakeDependencySlots({
     target: context.target,

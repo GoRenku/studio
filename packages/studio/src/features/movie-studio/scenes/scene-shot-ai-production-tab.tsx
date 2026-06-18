@@ -29,7 +29,7 @@ export function SceneShotAiProductionTab({
     loadState,
     loadError,
     models,
-    takeGeneration,
+    take,
     isEditable,
     selectedInputMode,
     selectedModel,
@@ -46,7 +46,7 @@ export function SceneShotAiProductionTab({
     () => buildInputModeOptions(models, selectedModel),
     [models, selectedModel]
   );
-  const isMultiShotGeneration = (takeGeneration?.shotIds.length ?? 1) > 1;
+  const isMultiShotGeneration = (take?.shotIds.length ?? 1) > 1;
 
   const modelRows = useMemo(
     () => (models && selectedInputMode ? buildModelRows(models, selectedInputMode) : []),
@@ -79,11 +79,11 @@ export function SceneShotAiProductionTab({
     );
   }
 
-  if (!takeGeneration || !models) {
+  if (!take || !models) {
     return (
       <div className='flex h-full items-center justify-center py-8'>
         <Button type='button' onClick={() => void onCreateTakeGeneration?.()}>
-          Create Take Generation
+          Create Take
         </Button>
       </div>
     );
@@ -93,9 +93,9 @@ export function SceneShotAiProductionTab({
     <div className='flex h-full min-h-0 flex-col py-4'>
       {!isEditable ? (
         <div className='mb-3 flex items-center gap-2 px-1'>
-          <Badge variant='outline'>view-only</Badge>
+          <Badge variant='outline'>read-only</Badge>
           <p className='text-xs text-muted-foreground'>
-            {takeGeneration.compatibility.message}
+            {take.status.editability.message}
           </p>
         </div>
       ) : null}
@@ -116,7 +116,7 @@ export function SceneShotAiProductionTab({
         />
         <SceneShotAiProductionRunSetup
           parameters={enabledParameters(selectedModelReport)}
-          values={takeGeneration.production.parameterValues ?? {}}
+          values={take.production.parameterValues ?? {}}
           onParameterChange={setParameter}
           estimate={displayEstimateTotal(estimate, productionPlan)}
           estimatePending={estimateState === 'loading' || planState === 'loading'}

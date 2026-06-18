@@ -11,6 +11,7 @@ import type {
   SceneShot,
   SceneShotListOperationDocument,
   SceneShotListDocument,
+  SceneShotWithLegacyShotSpecs,
   SceneStoryboardImagesImportDocument,
 } from '../../client/scene-shot-list.js';
 import {
@@ -495,13 +496,17 @@ function validateShotSpecsSemantics(
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
-  const design = shot.shotSpecs;
+  const design = legacyShotSpecs(shot);
   if (!design) {
     return;
   }
   validateShotSpecsLocation(shot, shotPath, context, issues, filePath);
   validateShotSpecsCastReferences(shot, shotPath, context, issues, filePath);
   validateShotSpecsLens(shot, shotPath, issues, filePath);
+}
+
+function legacyShotSpecs(shot: SceneShot): SceneShotWithLegacyShotSpecs['shotSpecs'] {
+  return (shot as SceneShotWithLegacyShotSpecs).shotSpecs;
 }
 
 function validateShotSpecsLocation(
@@ -511,7 +516,7 @@ function validateShotSpecsLocation(
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
-  const location = shot.shotSpecs?.location;
+  const location = legacyShotSpecs(shot)?.location;
   if (!location) {
     return;
   }
@@ -538,7 +543,7 @@ function validateShotSpecsCastReferences(
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
-  const castMemberIds = shot.shotSpecs?.castReferences?.castMemberIds;
+  const castMemberIds = legacyShotSpecs(shot)?.castReferences?.castMemberIds;
   if (!castMemberIds) {
     return;
   }
@@ -581,7 +586,7 @@ function validateShotSpecsLens(
   issues: DiagnosticIssue[],
   filePath?: string
 ): void {
-  const lens = shot.shotSpecs?.lens;
+  const lens = legacyShotSpecs(shot)?.lens;
   const lensPath = [...shotPath, 'shotSpecs', 'lens'];
   if (lens?.millimeters !== undefined && !lens.type) {
     issues.push(
@@ -606,7 +611,7 @@ function validateShotSpecsLens(
       )
     );
   }
-  const movement = shot.shotSpecs?.movement;
+  const movement = legacyShotSpecs(shot)?.movement;
   const hasRackFocusMovement =
     movement?.movement === 'rack-focus' || movement?.secondary === 'rack-focus';
   if (hasRackFocusMovement && lens?.focus !== 'rack-focus') {

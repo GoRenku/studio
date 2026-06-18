@@ -12,7 +12,7 @@ export interface ShotGroupingEntry {
   shotId: string;
   index: number;
   label: string;
-  takeGenerationId: string | null;
+  takeId: string | null;
   groupSize: number;
   variant: 0 | 1 | null;
   isGroupStart: boolean;
@@ -26,7 +26,7 @@ export interface ShotGroupingProjection {
 
 export interface TakeScopedShotGroupDraft {
   draftGroupId: string;
-  takeGenerationId?: string;
+  takeId?: string;
   sourceTakeGenerationId?: string;
   mergePartnerTakeGenerationId?: string;
   mergePartnerDraft?: TakeScopedShotGroupDraft;
@@ -40,14 +40,14 @@ export interface ShotRailGroupChangeSummary {
 }
 
 export interface TakeScopedShotGroupSaveInput {
-  takeGenerationId?: string;
+  takeId?: string;
   sourceTakeGenerationId?: string;
   mergePartnerTakeGenerationId?: string;
   shotIds: string[];
 }
 
 type VisibleTakeScopedShotGroup = {
-  takeGenerationId: string;
+  takeId: string;
   shotIds: string[];
 } | TakeScopedShotGroupDraft;
 
@@ -62,12 +62,12 @@ export function shotDisplayLabel(index: number): string {
 }
 
 export function createShotGroupDraftsFromTakeGenerations(
-  takeGenerations: { takeGenerationId: string; shotIds: string[] }[] | undefined
+  takes: { takeId: string; shotIds: string[] }[] | undefined
 ): TakeScopedShotGroupDraft[] {
-  return (takeGenerations ?? []).map((takeGeneration) => ({
-    draftGroupId: takeGeneration.takeGenerationId,
-    takeGenerationId: takeGeneration.takeGenerationId,
-    shotIds: [...takeGeneration.shotIds],
+  return (takes ?? []).map((take) => ({
+    draftGroupId: take.takeId,
+    takeId: take.takeId,
+    shotIds: [...take.shotIds],
   }));
 }
 
@@ -102,7 +102,7 @@ export function buildShotGroupingProjection(
         shotId: shot.shotId,
         index,
         label: shotDisplayLabel(index),
-        takeGenerationId: null,
+        takeId: null,
         groupSize: 1,
         variant: null,
         isGroupStart: false,
@@ -114,7 +114,7 @@ export function buildShotGroupingProjection(
       shotId: shot.shotId,
       index,
       label: shotDisplayLabel(index),
-      takeGenerationId: owned.resolved.groupId,
+      takeId: owned.resolved.groupId,
       groupSize: indexes.length,
       variant: owned.variant,
       isGroupStart: index === indexes[0],
@@ -307,7 +307,7 @@ export function shotGroupDraftsEqual(
       const other = normalizedRight[index];
       return (
         other &&
-        group.takeGenerationId === other.takeGenerationId &&
+        group.takeId === other.takeId &&
         group.shotIds === other.shotIds
       );
     })
@@ -318,8 +318,8 @@ export function shotGroupsForSave(
   draftGroups: TakeScopedShotGroupDraft[]
 ): TakeScopedShotGroupSaveInput[] {
   return draftGroups.map((group) => ({
-    ...(group.takeGenerationId
-      ? { takeGenerationId: group.takeGenerationId }
+    ...(group.takeId
+      ? { takeId: group.takeId }
       : {}),
     ...(group.sourceTakeGenerationId
       ? { sourceTakeGenerationId: group.sourceTakeGenerationId }
@@ -341,26 +341,26 @@ export function summarizeShotGroupChanges(input: {
   }
   const persistedById = new Map(
     input.persistedDraftGroups
-      .filter((group) => group.takeGenerationId)
-      .map((group) => [group.takeGenerationId as string, group])
+      .filter((group) => group.takeId)
+      .map((group) => [group.takeId as string, group])
   );
   const draftById = new Map(
     input.draftGroups
-      .filter((group) => group.takeGenerationId)
-      .map((group) => [group.takeGenerationId as string, group])
+      .filter((group) => group.takeId)
+      .map((group) => [group.takeId as string, group])
   );
   const messages: string[] = [];
   const changedPromptGroupIds = new Set<string>();
 
   input.draftGroups.forEach((group) => {
-    const groupId = group.takeGenerationId ?? group.draftGroupId;
+    const groupId = group.takeId ?? group.draftGroupId;
     if (group.mergePartnerTakeGenerationId) {
       messages.push(`Merge into ${groupRangeLabel(input.shots, group)}.`);
       changedPromptGroupIds.add(groupId);
       return;
     }
-    const persisted = group.takeGenerationId
-      ? persistedById.get(group.takeGenerationId)
+    const persisted = group.takeId
+      ? persistedById.get(group.takeId)
       : undefined;
     if (!persisted) {
       messages.push(
@@ -380,12 +380,12 @@ export function summarizeShotGroupChanges(input: {
   });
 
   input.persistedDraftGroups.forEach((group) => {
-    if (group.takeGenerationId && draftById.has(group.takeGenerationId)) {
+    if (group.takeId && draftById.has(group.takeId)) {
       return;
     }
     const mergedInto = input.draftGroups.some(
       (draftGroup) =>
-        draftGroup.mergePartnerTakeGenerationId === group.takeGenerationId
+        draftGroup.mergePartnerTakeGenerationId === group.takeId
     );
     if (mergedInto) {
       return;
@@ -500,7 +500,7 @@ function splitDraftGroupAtShot(input: {
     return index !== undefined && index > targetIndex;
   });
   const sourceTakeGenerationId =
-    input.group.takeGenerationId ?? input.group.sourceTakeGenerationId;
+    input.group.takeId ?? input.group.sourceTakeGenerationId;
   const replacementGroups: TakeScopedShotGroupDraft[] = [
     ...(upperShotIds.length > 0
       ? [
@@ -538,7 +538,7 @@ function mergeAdjacentDraftGroups(input: {
   pivotShotId: string;
 }): TakeScopedShotGroupDraft[] {
   const mergePartnerTakeGenerationId =
-    input.lowerGroup.takeGenerationId ?? input.lowerGroup.sourceTakeGenerationId;
+    input.lowerGroup.takeId ?? input.lowerGroup.sourceTakeGenerationId;
   const mergedGroup: TakeScopedShotGroupDraft = {
     ...clearMergeState(input.upperGroup),
     shotIds: orderShotIds(input.shots, [
@@ -638,7 +638,7 @@ function clearMergeState(
 function comparableDraftGroups(groups: TakeScopedShotGroupDraft[]) {
   return groups
     .map((group) => ({
-      takeGenerationId: group.takeGenerationId ?? null,
+      takeId: group.takeId ?? null,
       shotIds: group.shotIds.join(','),
     }))
     .sort((left, right) => left.shotIds.localeCompare(right.shotIds));
@@ -671,7 +671,7 @@ function firstShotIndex(shots: SceneShot[], shotIds: string[]): number {
 }
 
 function visibleGroupId(group: VisibleTakeScopedShotGroup): string {
-  return 'draftGroupId' in group ? group.draftGroupId : group.takeGenerationId;
+  return 'draftGroupId' in group ? group.draftGroupId : group.takeId;
 }
 
 function buildIndexByShotId(shots: SceneShot[]): Map<string, number> {

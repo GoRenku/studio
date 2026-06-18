@@ -1,7 +1,7 @@
 import type {
   ProjectRelativePath,
   ShotVideoTakeGenerationContext,
-  ShotVideoTakeAvailableInput,
+  SceneShotVideoTakeMediaInput,
 } from '../../../client/index.js';
 import {
   readAssetFileRecord,
@@ -42,13 +42,13 @@ import {
   withShotProjectSession,
 } from './project-session.js';
 import {
-  PreparedSceneShotVideoTakeGeneration,
-  assertEditableTakeGeneration,
-  prepareSceneShotVideoTakeGenerationInSession,
+  PreparedSceneShotVideoTake,
+  assertEditableSceneShotVideoTake,
+  prepareSceneShotVideoTakeInSession,
   sameShotIds,
 } from './take-generation-context.js';
 import {
-  updateSceneShotVideoTakeGenerationProductionRecord,
+  updateSceneShotVideoTakeProductionRecord,
 } from '../../database/access/scene-shot-video-take-generations.js';
 import {
   requireScreenplayDocument,
@@ -59,7 +59,7 @@ import {
 export async function listShotVideoTakeInputs(input: ShotVideoTakeContextInput) {
   const context = await buildShotVideoTakeContext(input);
   return {
-    inputs: context.availableInputs,
+    inputs: context.mediaInputs,
     resourceKeys: context.resourceKeys,
   };
 }
@@ -118,11 +118,11 @@ export async function selectShotVideoTakeInput(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
-    assertEditableTakeGeneration(prepared.takeGeneration);
+    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(prepared.take);
     const selectedBeforeMutation = requireShotVideoTakeInput(session, input.inputId);
     if (
-      selectedBeforeMutation.takeGenerationId !== prepared.takeGeneration.takeGenerationId ||
+      selectedBeforeMutation.takeId !== prepared.take.takeId ||
       !sameShotIds(selectedBeforeMutation.shotIds, prepared.orderedShotIds)
     ) {
       throw new ProjectDataError(
@@ -152,11 +152,11 @@ export async function clearShotVideoTakeInputSelection(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
-    assertEditableTakeGeneration(prepared.takeGeneration);
+    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(prepared.take);
     clearShotVideoTakeInputRecordSelection(session, {
       sceneId: prepared.sceneId,
-      takeGenerationId: prepared.takeGeneration.takeGenerationId,
+      takeId: prepared.take.takeId,
       inputKind: input.kind,
       subjectKind: input.subjectKind,
       subjectId: input.subjectId,
@@ -186,11 +186,11 @@ export async function deleteShotVideoTakeInput(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
-    assertEditableTakeGeneration(prepared.takeGeneration);
+    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(prepared.take);
     const deleting = requireShotVideoTakeInput(session, input.inputId);
     if (
-      deleting.takeGenerationId !== prepared.takeGeneration.takeGenerationId ||
+      deleting.takeId !== prepared.take.takeId ||
       !sameShotIds(deleting.shotIds, prepared.orderedShotIds)
     ) {
       throw new ProjectDataError(
@@ -205,7 +205,7 @@ export async function deleteShotVideoTakeInput(
     if (deleting.selected) {
       const replacement = listShotVideoTakeInputRecords(session, {
         sceneId: prepared.sceneId,
-        takeGenerationId: prepared.takeGeneration.takeGenerationId,
+        takeId: prepared.take.takeId,
         shotIds: prepared.orderedShotIds,
       }).find(
         (candidate) =>
@@ -244,15 +244,15 @@ export async function deleteShotVideoTakeInput(
 
 export function updatePreparedInputSelection(input: {
   session: DatabaseSession;
-  prepared: PreparedSceneShotVideoTakeGeneration;
+  prepared: PreparedSceneShotVideoTake;
   now: string;
   input: Pick<
-    ShotVideoTakeAvailableInput,
+    SceneShotVideoTakeMediaInput,
     'kind' | 'assetId' | 'assetFileId' | 'subjectKind' | 'subjectId'
   >;
   selected: boolean;
 }): void {
-  const plan = input.prepared.takeGeneration.production;
+  const plan = input.prepared.take.production;
   const preparedInputs = (plan.preparedInputs ?? []).filter(
     (candidate) =>
       candidate.kind !== input.input.kind ||
@@ -269,8 +269,8 @@ export function updatePreparedInputSelection(input: {
     });
   }
   const screenplay = requireScreenplayDocument(input.session);
-  updateSceneShotVideoTakeGenerationProductionRecord(input.session, {
-    takeGenerationId: input.prepared.takeGeneration.takeGenerationId,
+  updateSceneShotVideoTakeProductionRecord(input.session, {
+    takeId: input.prepared.take.takeId,
     production: { ...plan, preparedInputs },
     screenplay,
     now: input.now,

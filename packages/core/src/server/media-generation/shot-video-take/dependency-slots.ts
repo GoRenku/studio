@@ -1,6 +1,6 @@
 import type {
   MediaGenerationDependencySlot,
-  SceneShotVideoTakeGenerationTarget,
+  SceneShotVideoTakeTarget,
   ShotVideoTakeInputModeId,
   ShotVideoTakeRequestedInput,
 } from '../../../client/index.js';
@@ -12,7 +12,7 @@ import {
 } from '../dependency-slot-definitions.js';
 
 export interface ShotVideoTakeDependencySlotInput {
-  target: SceneShotVideoTakeGenerationTarget;
+  target: SceneShotVideoTakeTarget;
   inputModeId: ShotVideoTakeInputModeId;
   selectedCast: Array<{ id: string; name: string; isVoiceOver?: boolean }>;
   selectedLocations: Array<{ id: string; name: string }>;

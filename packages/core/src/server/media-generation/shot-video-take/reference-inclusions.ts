@@ -5,6 +5,7 @@ import type {
   ShotVideoTakeGenerationContext,
   ShotVideoTakeInputKind,
   ShotVideoTakePreflightInput,
+  SceneShotWithLegacyShotSpecs,
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { shotVideoInputDependencyId } from '../dependency-identifiers.js';
@@ -97,7 +98,9 @@ export function referenceInclusionOverride(
 ): 'include' | 'exclude' | null {
   return groupReferenceInclusionOverride(
     context.shots.map(
-      (shot) => shot.shotSpecs?.referenceInclusions?.[dependencyId] ?? null
+      (shot) =>
+        (shot as SceneShotWithLegacyShotSpecs).shotSpecs
+          ?.referenceInclusions?.[dependencyId] ?? null
     )
   );
 }
@@ -177,7 +180,7 @@ export function routeRequiresGeneralReference(
   kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
 ): boolean {
   const inputModeId =
-    context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId;
+    context.take.production.inputModeId ?? context.defaults.inputModeId;
   if (kind === 'first-frame') {
     return inputModeId === 'first-frame' || inputModeId === 'first-last-frame';
   }

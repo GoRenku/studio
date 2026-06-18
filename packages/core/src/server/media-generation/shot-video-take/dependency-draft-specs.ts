@@ -26,10 +26,10 @@ import {
 export async function buildShotInputDependencyDraftSpec(
   input: MediaGenerationDependencyDraftSpecInput
 ): Promise<MediaGenerationDependencyDraftPlan> {
-  if (input.dependencyTarget.kind !== 'sceneShotVideoTakeGeneration') {
+  if (input.dependencyTarget.kind !== 'sceneShotVideoTake') {
     throw new ProjectDataError(
       'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
-      `Shot input dependency requires a sceneShotVideoTakeGeneration target. Received: ${input.dependencyTarget.kind}.`
+      `Shot input dependency requires a sceneShotVideoTake target. Received: ${input.dependencyTarget.kind}.`
     );
   }
   if (input.request.kind !== 'shot-video-take') {
@@ -42,7 +42,7 @@ export async function buildShotInputDependencyDraftSpec(
   const purpose = shotInputPurposeForDependencyKind(input.dependencyKind);
   const outputInputKind = PURPOSE_CONFIG[purpose].outputInputKind;
   const draft =
-    request.context.takeGeneration.production.agentProposal?.dependencyDrafts.find(
+    request.context.take.production.agentProposal?.dependencyDrafts.find(
       (candidate) =>
         candidate.purpose === purpose &&
         candidate.outputInputKind === outputInputKind

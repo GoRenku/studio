@@ -24,6 +24,7 @@ import { runProductionCommand } from './commands/production-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCommand } from './commands/studio-command.js';
+import { runTakeCommand } from './commands/take-command.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -78,6 +79,7 @@ Commands
   screenplay           Inspect, validate, create, and revise screenplay JSON
   studio current       Show current Studio focus and context
   studio server status Show canonical local Studio server status
+  take                 List, show, create, and update shot video takes
 
 Options
   --file               JSON input file for screenplay commands
@@ -110,10 +112,9 @@ Options
   --revision           Screenplay revision id
   --scene              Scene id for scene-owned commands
   --dialogue           Scene dialogue id
-  --take               Scene Dialogue Audio take id
+  --take               Scene Dialogue Audio take id or Shot Video Take id
   --shot-list          Scene Shot List id
-  --shots              Comma-separated shot ids for shot video take generation
-  --take-generation    Scene shot video take generation id
+  --shots              Comma-separated shot ids for Shot Video Take commands
   --intent             Shot video take input mode id
   --input              Shot video take reusable input id
   --kind               Shot video take input kind
@@ -259,9 +260,6 @@ function createCliFlags() {
       type: 'string',
     },
     shots: {
-      type: 'string',
-    },
-    takeGeneration: {
       type: 'string',
     },
     intent: {
@@ -548,7 +546,7 @@ export async function runRenkuCli(
               purpose: cli.flags.purpose,
               target: cli.flags.target,
               model: cli.flags.model,
-              takeGeneration: cli.flags.takeGeneration,
+              take: cli.flags.take,
               intent: cli.flags.intent,
             },
             json: cli.flags.json,
@@ -569,7 +567,7 @@ export async function runRenkuCli(
             spec: cli.flags.spec,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
-            takeGeneration: cli.flags.takeGeneration,
+            take: cli.flags.take,
             intent: cli.flags.intent,
             input: cli.flags.input,
             kind: cli.flags.kind,
@@ -615,7 +613,7 @@ export async function runRenkuCli(
             receipt: cli.flags.receipt,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
-            takeGeneration: cli.flags.takeGeneration,
+            take: cli.flags.take,
             selection: cli.flags.selection,
           },
           json: cli.flags.json,
@@ -664,6 +662,21 @@ export async function runRenkuCli(
       case 'studio':
         return await runStudioCommand({
           input,
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'take':
+        return await runTakeCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            scene: cli.flags.scene,
+            shotList: cli.flags.shotList,
+            shots: cli.flags.shots,
+            take: cli.flags.take,
+            file: cli.flags.file,
+          },
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,

@@ -12,6 +12,7 @@ import type {
 import type {
   SceneShot,
   SceneShotListDocument,
+  SceneShotWithLegacyShotSpecs,
   ShotSpecs,
 } from '../../client/scene-shot-list.js';
 import type { ScreenplayDocument } from '../../client/screenplay.js';
@@ -249,7 +250,7 @@ export async function updateSceneShotCastReferences(
         );
       }
     }
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     next.castReferences = {
       ...(next.castReferences ?? {}),
       castMemberIds: [...new Set(input.castMemberIds)],
@@ -264,7 +265,7 @@ export async function updateSceneShotLocationReference(
 ): Promise<SceneShotListResource> {
   await updateActiveShotSpecs(input, (session, shot, screenplay) => {
     validateSceneLocationReference(session, screenplay, input.sceneId, input.locationId);
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     next.location = {
       locationId: input.locationId,
       ...(input.environmentSheetAssetId
@@ -302,7 +303,7 @@ export async function updateSceneShotCastCharacterSheetReference(
         );
       }
     }
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     const characterSheetAssetIds = {
       ...(next.castReferences?.characterSheetAssetIds ?? {}),
     };
@@ -328,7 +329,7 @@ export async function updateSceneShotLocationSheetReference(
     if (input.assetId) {
       validateLocationSheetAsset(session, input.locationId, input.assetId);
     }
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     next.location = {
       ...(next.location ?? {}),
       locationId: input.locationId,
@@ -367,7 +368,7 @@ export async function updateSceneShotLocationViewReferences(
         );
       }
     }
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     next.location = {
       ...(next.location ?? {}),
       locationId: input.locationId,
@@ -383,7 +384,7 @@ export async function updateSceneShotLookbookReference(
   input: UpdateSceneShotLookbookReferenceInput
 ): Promise<SceneShotListResource> {
   await updateActiveShotSpecs(input, (session, shot) => {
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     if (input.lookbookSheetId) {
       if (!readLookbookSheet(session, input.lookbookSheetId)) {
         throw new ProjectDataError(
@@ -408,7 +409,7 @@ export async function updateSceneShotCustomReferenceImages(
     for (const inputId of input.customReferenceInputIds) {
       requireShotVideoTakeInput(session, inputId);
     }
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     next.referenceImages = {
       customReferenceInputIds: [...new Set(input.customReferenceInputIds)],
     };
@@ -421,7 +422,7 @@ export async function updateSceneShotReferenceInclusion(
   input: UpdateSceneShotReferenceInclusionInput
 ): Promise<SceneShotListResource> {
   await updateActiveShotSpecs(input, (_session, shot, _screenplay, document) => {
-    const next = { ...(shot.shotSpecs ?? {}) };
+    const next = { ...(legacyShotSpecs(shot) ?? {}) };
     const referenceInclusions = { ...(next.referenceInclusions ?? {}) };
     if (input.inclusion) {
       referenceInclusions[input.dependencyId] = input.inclusion;
@@ -479,7 +480,7 @@ export async function updateSceneShotGroupReferenceInclusion(
       return shot;
     });
     for (const shot of shots) {
-      const next = { ...(shot.shotSpecs ?? {}) };
+      const next = { ...(legacyShotSpecs(shot) ?? {}) };
       const referenceInclusions = { ...(next.referenceInclusions ?? {}) };
       if (input.inclusion) {
         referenceInclusions[input.dependencyId] = input.inclusion;
@@ -642,8 +643,8 @@ function validateSceneLocationReference(
 }
 
 function shotReferencesLocation(shot: SceneShot, locationId: string): boolean {
-  if (shot.shotSpecs?.location?.locationId) {
-    return shot.shotSpecs.location.locationId === locationId;
+  if (legacyShotSpecs(shot)?.location?.locationId) {
+    return legacyShotSpecs(shot)?.location?.locationId === locationId;
   }
   return shot.locationIds.includes(locationId);
 }
@@ -685,18 +686,19 @@ function applyShotSpecs(
   shot: SceneShot,
   shotSpecs: ShotSpecs | null
 ): void {
-  const previous = shot.shotSpecs;
+  const shotWithLegacySpecs = shot as SceneShotWithLegacyShotSpecs;
+  const previous = shotWithLegacySpecs.shotSpecs;
   const normalized = normalizeShotSpecs(shotSpecs);
   if (normalized) {
-    shot.shotSpecs = normalized;
+    shotWithLegacySpecs.shotSpecs = normalized;
   } else {
-    delete shot.shotSpecs;
+    delete shotWithLegacySpecs.shotSpecs;
   }
 
   // Derive prompt-facing strings for axes owned by the structured specs. When
   // a previously specified axis is removed, clear its old derived text so stale
   // selections do not leak into generation prompts.
-  const derived = deriveShotSpecPromptStrings(shot.shotSpecs);
+  const derived = deriveShotSpecPromptStrings(legacyShotSpecs(shot));
   if (derived.shotType !== undefined) {
     shot.shotType = derived.shotType;
   } else if (hasShotSizeSpecs(previous)) {
@@ -722,6 +724,10 @@ function applyShotSpecs(
   } else if (hasLensIntentSpecs(previous)) {
     delete shot.lensIntent;
   }
+}
+
+function legacyShotSpecs(shot: SceneShot): ShotSpecs | undefined {
+  return (shot as SceneShotWithLegacyShotSpecs).shotSpecs;
 }
 
 function hasShotSizeSpecs(shotSpecs: ShotSpecs | undefined): boolean {

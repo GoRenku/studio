@@ -32,7 +32,7 @@ import {
   buildShotVideoTakeContext,
 } from './context.js';
 import {
-  assertEditableTakeGeneration,
+  assertEditableSceneShotVideoTake,
 } from './take-generation-context.js';
 import {
   injectKlingTransientVoiceIds,
@@ -59,9 +59,9 @@ export async function runShotInputSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: spec.target.takeGenerationId,
+    takeId: spec.target.takeId,
   });
-  assertEditableTakeGeneration(context.takeGeneration);
+  assertEditableSceneShotVideoTake(context.take);
   const { estimateGeneration, runGeneration } = await import('@gorenku/studio-engines');
   const estimate = await estimateGeneration(prepared.generation);
   const outputPaths = await resolveShotGenerationOutputPaths(input);
@@ -109,9 +109,9 @@ export async function runShotVideoTakeSpec(
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeGenerationId: prepared.spec.spec.target.takeGenerationId,
+    takeId: prepared.spec.spec.target.takeId,
   });
-  assertEditableTakeGeneration(context.takeGeneration);
+  assertEditableSceneShotVideoTake(context.take);
   const { estimateGeneration, runGeneration } = await import('@gorenku/studio-engines');
   const combinedEstimate = await estimateShotVideoTakeSpec(input);
   if (!input.simulate && input.approvalToken !== combinedEstimate.estimate.approvalToken) {
@@ -177,7 +177,7 @@ async function prepareKlingTransientVoicePayload(input: {
   const context = await buildShotVideoTakeContext({
     projectName: input.commandInput.projectName,
     homeDir: input.commandInput.homeDir,
-    takeGenerationId: spec.target.takeGenerationId,
+    takeId: spec.target.takeId,
   });
   const route = requireShotVideoTakeRoute(
     spec.modelChoice,

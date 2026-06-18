@@ -29,7 +29,7 @@ export function normalizeRouteSettingsForContext(input: {
   return normalizeShotVideoRouteSettings({
     route: input.route,
     defaults: input.context.defaults.parameterValues,
-    settings: input.context.takeGeneration.production.parameterValues,
+    settings: input.context.take.production.parameterValues,
   }) as {
     values: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
     providerValues: NonNullable<ShotVideoTakeGenerationProduction['parameterValues']>;
