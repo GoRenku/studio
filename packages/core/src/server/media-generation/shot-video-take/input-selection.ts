@@ -43,6 +43,7 @@ import {
 } from './project-session.js';
 import {
   PreparedSceneShotVideoTakeGeneration,
+  assertEditableTakeGeneration,
   prepareSceneShotVideoTakeGenerationInSession,
   sameShotIds,
 } from './take-generation-context.js';
@@ -118,6 +119,7 @@ export async function selectShotVideoTakeInput(
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
+    assertEditableTakeGeneration(prepared.takeGeneration);
     const selectedBeforeMutation = requireShotVideoTakeInput(session, input.inputId);
     if (
       selectedBeforeMutation.takeGenerationId !== prepared.takeGeneration.takeGenerationId ||
@@ -151,6 +153,7 @@ export async function clearShotVideoTakeInputSelection(
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
+    assertEditableTakeGeneration(prepared.takeGeneration);
     clearShotVideoTakeInputRecordSelection(session, {
       sceneId: prepared.sceneId,
       takeGenerationId: prepared.takeGeneration.takeGenerationId,
@@ -184,6 +187,7 @@ export async function deleteShotVideoTakeInput(
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
+    assertEditableTakeGeneration(prepared.takeGeneration);
     const deleting = requireShotVideoTakeInput(session, input.inputId);
     if (
       deleting.takeGenerationId !== prepared.takeGeneration.takeGenerationId ||

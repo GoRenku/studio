@@ -244,6 +244,44 @@ describe('shot video take generation routes', () => {
     );
   });
 
+
+
+  it('rejects group reference inclusion when the URL scene does not own the take generation', async () => {
+    const updateSceneShotGroupReferenceInclusion = vi.fn(
+      fakeProjectDataService().updateSceneShotGroupReferenceInclusion
+    );
+    const app = mount({
+      updateSceneShotGroupReferenceInclusion,
+      buildShotVideoTakeContext: async (input) => ({
+        ...(await fakeProjectDataService().buildShotVideoTakeContext(input)),
+        scene: {
+          id: 'scene_from_take_generation',
+          title: 'Different Scene',
+          setting: { locationIds: [] },
+          storyFunction: [],
+        },
+      }),
+    });
+
+    const response = await app.request(
+      `${TAKE_GENERATION_PATH}/reference-inclusions`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dependencyId: 'reference-image:shot:shot_001',
+          inclusion: 'exclude',
+        }),
+      }
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'STUDIO_SERVER350' },
+    });
+    expect(updateSceneShotGroupReferenceInclusion).not.toHaveBeenCalled();
+  });
+
   it('serializes structured errors from core', async () => {
     const app = mount({
       buildShotVideoTakeContext: async () => {

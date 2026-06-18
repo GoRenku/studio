@@ -6,6 +6,7 @@ import type {
 import { SceneShotAiProductionInputModeList } from './scene-shot-ai-production-input-mode-list';
 import { SceneShotAiProductionModelTable } from './scene-shot-ai-production-model-table';
 import { SceneShotAiProductionRunSetup } from './scene-shot-ai-production-run-setup';
+import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import {
   buildInputModeOptions,
@@ -29,6 +30,7 @@ export function SceneShotAiProductionTab({
     loadError,
     models,
     takeGeneration,
+    isEditable,
     selectedInputMode,
     selectedModel,
     setInputMode,
@@ -89,18 +91,28 @@ export function SceneShotAiProductionTab({
 
   return (
     <div className='flex h-full min-h-0 flex-col py-4'>
+      {!isEditable ? (
+        <div className='mb-3 flex items-center gap-2 px-1'>
+          <Badge variant='outline'>view-only</Badge>
+          <p className='text-xs text-muted-foreground'>
+            {takeGeneration.compatibility.message}
+          </p>
+        </div>
+      ) : null}
       <div className='grid min-h-0 flex-1 grid-cols-[150px_minmax(240px,1fr)_minmax(260px,1.1fr)] gap-4'>
         <div className='flex min-h-0 flex-col overflow-y-auto pr-1'>
           <SceneShotAiProductionInputModeList
             options={inputModeOptions}
             selectedInputMode={selectedInputMode}
             onSelectInputMode={setInputMode}
+            disabled={!isEditable}
           />
         </div>
         <SceneShotAiProductionModelTable
           rows={modelRows}
           selectedModel={selectedModel}
           onSelectModel={setModel}
+          disabled={!isEditable}
         />
         <SceneShotAiProductionRunSetup
           parameters={enabledParameters(selectedModelReport)}
@@ -111,6 +123,7 @@ export function SceneShotAiProductionTab({
           finalPrompt={productionPlan?.finalPrompt ?? null}
           promptStale={promptStale}
           isMultiShotGroup={isMultiShotGeneration}
+          disabled={!isEditable}
         />
       </div>
     </div>

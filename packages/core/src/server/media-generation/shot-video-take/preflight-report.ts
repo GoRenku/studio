@@ -39,9 +39,6 @@ import {
   preparedInputsForContext,
 } from './preflight-inputs.js';
 import {
-  updateSceneShotVideoTakeGenerationProduction,
-} from './take-generations.js';
-import {
   planShotVideoTakeProduction,
 } from './production-plan.js';
 import {
@@ -63,13 +60,10 @@ import {
 export async function previewShotVideoTakeProduction(
   input: PreviewShotVideoTakeProductionInput
 ): Promise<ShotVideoTakePreflightReport> {
-  if (input.production) {
-    await updateSceneShotVideoTakeGenerationProduction({
-      ...input,
-      production: input.production,
-    });
-  }
-  const context = await buildShotVideoTakeContext(input);
+  const context = contextWithProductionOverride({
+    context: await buildShotVideoTakeContext(input),
+    production: input.production,
+  });
   const issues = validatePreflight(context);
   const inputModeId = context.takeGeneration.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
@@ -245,6 +239,24 @@ export function canonicalParameterValue(
     (allowed) => durationSeconds(allowed) === seconds
   );
   return durationMatch ?? value;
+}
+
+
+
+function contextWithProductionOverride(input: {
+  context: ShotVideoTakeGenerationContext;
+  production?: ShotVideoTakeGenerationProduction;
+}): ShotVideoTakeGenerationContext {
+  if (!input.production) {
+    return input.context;
+  }
+  return {
+    ...input.context,
+    takeGeneration: {
+      ...input.context.takeGeneration,
+      production: input.production,
+    },
+  };
 }
 
 

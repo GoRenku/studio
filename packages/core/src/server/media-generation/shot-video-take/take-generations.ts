@@ -28,6 +28,7 @@ import {
   withShotProjectSession,
 } from './project-session.js';
 import {
+  assertEditableTakeGeneration,
   prepareSceneShotVideoTakeGenerationInSession,
 } from './take-generation-context.js';
 
@@ -82,6 +83,11 @@ export async function updateSceneShotVideoTakeGenerationProduction(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
+    const current = requireSceneShotVideoTakeGeneration(session, {
+      takeGenerationId: input.takeGenerationId,
+      screenplay,
+    });
+    assertEditableTakeGeneration(current);
     updateSceneShotVideoTakeGenerationProductionRecord(session, {
       takeGenerationId: input.takeGenerationId,
       production: input.production,
@@ -106,6 +112,11 @@ export async function updateSceneShotVideoTakeGenerationShots(
 ): Promise<ShotVideoTakeGenerationContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
+    const current = requireSceneShotVideoTakeGeneration(session, {
+      takeGenerationId: input.takeGenerationId,
+      screenplay,
+    });
+    assertEditableTakeGeneration(current);
     updateSceneShotVideoTakeGenerationShotMembershipRecord(session, {
       takeGenerationId: input.takeGenerationId,
       shotIds: input.shotIds,

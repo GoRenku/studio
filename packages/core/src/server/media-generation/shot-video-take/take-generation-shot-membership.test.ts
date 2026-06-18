@@ -169,6 +169,30 @@ describe('shot video take generation shot membership', () => {
     });
   });
 
+
+
+  it('rejects production edits after the take generation becomes view-only', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const takeGenerationId = written.takeGeneration.takeGenerationId;
+
+    await projectData.writeSceneShotList({
+      homeDir,
+      document: {
+        ...shotVideoTakeProject.sampleShotList(ids, 1),
+        title: 'Replacement active coverage',
+      },
+    });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeGenerationProduction({
+        homeDir,
+        takeGenerationId,
+        production: { inputModeId: 'text-only' },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA420' });
+  });
+
   it('rejects duplicate and non-contiguous shot ids with structured core errors', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 4);

@@ -74,6 +74,18 @@ export function sceneShotVideoTakeGenerationTarget(
   };
 }
 
+export function assertEditableTakeGeneration(
+  takeGeneration: Pick<SceneShotVideoTakeGeneration, 'compatibility' | 'takeGenerationId'>
+): void {
+  if (takeGeneration.compatibility.editState === 'editable') {
+    return;
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA420',
+    `Scene Shot Video Take Generation is view-only: ${takeGeneration.takeGenerationId}.`
+  );
+}
+
 export function requireShot(shots: SceneShot[], shotId: string): SceneShot {
   const shot = shots.find((candidate) => candidate.shotId === shotId);
   if (!shot) {

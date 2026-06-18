@@ -25,6 +25,7 @@ interface SceneShotAiProductionInputModeListProps {
   options: InputModeOption[];
   selectedInputMode: ShotVideoTakeInputModeId | null;
   onSelectInputMode: (inputMode: ShotVideoTakeInputModeId) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -34,6 +35,7 @@ export function SceneShotAiProductionInputModeList({
   options,
   selectedInputMode,
   onSelectInputMode,
+  disabled = false,
 }: SceneShotAiProductionInputModeListProps) {
   return (
     <div className='flex flex-col gap-1'>
@@ -48,7 +50,7 @@ export function SceneShotAiProductionInputModeList({
             type='button'
             variant='ghost'
             size='sm'
-            disabled={!option.enabled}
+            disabled={disabled || !option.enabled}
             aria-pressed={selected}
             onClick={() => onSelectInputMode(option.id)}
             className={cn(

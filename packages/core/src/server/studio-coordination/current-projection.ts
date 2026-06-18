@@ -284,6 +284,17 @@ async function enrichSceneShotFocusContext(input: {
     }
     const shot = shots[shotIndex]!;
     const shotTab = selection.shotTab ?? 'description';
+    const shotTabProjection = await shotTabSelections({
+      projectData: input.projectData,
+      projectName: input.projectName,
+      homeDir: input.options.homeDir,
+      sceneId: selection.id,
+      takeGenerationId: selection.takeGenerationId,
+      shot,
+      shotTab,
+      castMemberLabels: resource.castMemberLabels,
+      locationLabels: resource.locationLabels,
+    });
     return {
       context: {
         ...baseContext,
@@ -293,15 +304,10 @@ async function enrichSceneShotFocusContext(input: {
           label: `Shot ${shotIndex + 1}`,
           title: shot.title,
           activeTab: shotTabLabel(shotTab),
-          currentTabSelections: shotTabSelections({
-            shot,
-            shotTab,
-            castMemberLabels: resource.castMemberLabels,
-            locationLabels: resource.locationLabels,
-          }),
+          currentTabSelections: shotTabProjection.selections,
         },
       },
-      warnings: [],
+      warnings: shotTabProjection.warnings,
     };
   } catch {
     return {
@@ -353,17 +359,26 @@ function shotTabLabel(tab: SceneShotDetailTab) {
   }
 }
 
-function shotTabSelections(input: {
+async function shotTabSelections(input: {
+  projectData: ReturnType<typeof createProjectDataService>;
+  projectName: string;
+  homeDir?: string;
+  sceneId: string;
+  takeGenerationId?: string;
   shot: SceneShot;
   shotTab: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
   locationLabels: Record<string, string>;
-}): StudioCurrentShotTabSelections {
+}): Promise<{
+  selections: StudioCurrentShotTabSelections;
+  warnings: DiagnosticIssue[];
+}> {
   const shotSpecs = input.shot.shotSpecs;
   switch (input.shotTab) {
     case 'composition':
       return {
-        kind: 'composition',
+        selections: {
+          kind: 'composition',
         ...(shotSpecs?.shotSize
           ? {
               shotSize: {
@@ -385,14 +400,17 @@ function shotTabSelections(input: {
             }
           : {}),
         ...(shotSpecs?.dutch ? { dutch: shotSpecs.dutch } : {}),
-        ...compositionLens(shotSpecs),
-        ...(shotSpecs?.custom?.composition?.trim()
-          ? { customComposition: shotSpecs.custom.composition.trim() }
-          : {}),
+          ...compositionLens(shotSpecs),
+          ...(shotSpecs?.custom?.composition?.trim()
+            ? { customComposition: shotSpecs.custom.composition.trim() }
+            : {}),
+        },
+        warnings: [],
       };
     case 'motion':
       return {
-        kind: 'motion',
+        selections: {
+          kind: 'motion',
         ...(shotSpecs?.movement?.movement
           ? {
               movement: {
@@ -429,19 +447,24 @@ function shotTabSelections(input: {
               },
             }
           : {}),
-        ...(shotSpecs?.custom?.movement?.trim()
-          ? { customMotion: shotSpecs.custom.movement.trim() }
-          : {}),
+          ...(shotSpecs?.custom?.movement?.trim()
+            ? { customMotion: shotSpecs.custom.movement.trim() }
+            : {}),
+        },
+        warnings: [],
       };
     case 'cast': {
       const castMemberIds =
         shotSpecs?.castReferences?.castMemberIds ?? input.shot.castMemberIds;
       return {
-        kind: 'cast',
-        cast: castMemberIds.map((id) => ({
-          id,
-          name: input.castMemberLabels[id] ?? id,
-        })),
+        selections: {
+          kind: 'cast',
+          cast: castMemberIds.map((id) => ({
+            id,
+            name: input.castMemberLabels[id] ?? id,
+          })),
+        },
+        warnings: [],
       };
     }
     case 'location': {
@@ -449,23 +472,73 @@ function shotTabSelections(input: {
         ? [shotSpecs.location.locationId]
         : input.shot.locationIds;
       return {
-        kind: 'location',
-        locations: locationIds.map((id) => ({
-          id,
-          name: input.locationLabels[id] ?? id,
-        })),
+        selections: {
+          kind: 'location',
+          locations: locationIds.map((id) => ({
+            id,
+            name: input.locationLabels[id] ?? id,
+          })),
+        },
+        warnings: [],
       };
     }
-    case 'ai-production':
-      return {
-        kind: 'take-generation',
+    case 'ai-production': {
+      const fallback = {
+        kind: 'take-generation' as const,
+        ...(input.takeGenerationId
+          ? { takeGenerationId: input.takeGenerationId }
+          : {}),
         shotIds: [input.shot.shotId],
       };
+      if (!input.takeGenerationId) {
+        return { selections: fallback, warnings: [] };
+      }
+      try {
+        const takeGeneration = await input.projectData.readSceneShotVideoTakeGeneration({
+          projectName: input.projectName,
+          homeDir: input.homeDir,
+          takeGenerationId: input.takeGenerationId,
+        });
+        if (takeGeneration.sceneId !== input.sceneId) {
+          return {
+            selections: fallback,
+            warnings: [
+              studioCoordinationWarning(
+                'STUDIO_COORDINATION040',
+                'Current Studio take generation focus belongs to a different scene.',
+                ['selection', 'takeGenerationId'],
+                'Refresh Studio and select a take generation in the current scene.'
+              ),
+            ],
+          };
+        }
+        return {
+          selections: {
+            kind: 'take-generation',
+            takeGenerationId: takeGeneration.takeGenerationId,
+            shotIds: takeGeneration.shotIds,
+          },
+          warnings: [],
+        };
+      } catch {
+        return {
+          selections: fallback,
+          warnings: [
+            studioCoordinationWarning(
+              'STUDIO_COORDINATION041',
+              'Current Studio take generation focus could not load.',
+              ['selection', 'takeGenerationId'],
+              'Refresh Studio and select an existing take generation.'
+            ),
+          ],
+        };
+      }
+    }
     case 'description':
     case 'lookbook':
     case 'dialogs':
     case 'references':
-      return { kind: input.shotTab };
+      return { selections: { kind: input.shotTab }, warnings: [] };
   }
 }
 

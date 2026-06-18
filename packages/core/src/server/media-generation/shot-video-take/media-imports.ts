@@ -60,6 +60,7 @@ import {
   shotVideoTakeResourceKeys,
 } from './resource-keys.js';
 import {
+  assertEditableTakeGeneration,
   prepareSceneShotVideoTakeGenerationInSession,
 } from './take-generation-context.js';
 
@@ -72,6 +73,7 @@ export async function importShotInputMedia(
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
+    assertEditableTakeGeneration(prepared.takeGeneration);
     const imported = await importGeneratedFile({
       session,
       projectFolder,
@@ -103,6 +105,7 @@ export async function importShotInputMedia(
       assetFileId: imported.assetFileId,
       mediaGenerationRunId: receiptRunId(input.receipt),
       selection: input.selection ?? 'select',
+      shotIds: prepared.orderedShotIds,
       now,
     });
     if (relationship.selected) {
@@ -157,6 +160,7 @@ export async function importShotVideoTake(
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeGenerationInSession({ session, input });
+    assertEditableTakeGeneration(prepared.takeGeneration);
     const imported = await importGeneratedFile({
       session,
       projectFolder,

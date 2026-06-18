@@ -55,6 +55,7 @@ import {
   requireShotVideoTakeRoute,
 } from './route-settings.js';
 import {
+  assertEditableTakeGeneration,
   sameShotIds,
 } from './take-generation-context.js';
 import {
@@ -74,7 +75,12 @@ export async function validateShotVideoTakeSpec(
   });
   validateFinalSpecAgainstContext(normalized, context);
   const plan = buildShotVideoTakeProviderPayload(normalized, context);
-  return { valid: true as const, spec: normalized, providerPayload: plan.payload };
+  return {
+    valid: true as const,
+    spec: normalized,
+    providerPayload: plan.payload,
+    context,
+  };
 }
 
 
@@ -83,7 +89,8 @@ export async function createShotVideoTakeSpec(
   input: CreateShotVideoTakeGenerationSpecInput
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeFinalSpec(input.spec);
-  await validateShotVideoTakeSpec({ ...input, spec: normalized });
+  const validation = await validateShotVideoTakeSpec({ ...input, spec: normalized });
+  assertEditableTakeGeneration(validation.context.takeGeneration);
   return withShotProjectSession(input, ({ session }) => {
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     return insertMediaGenerationSpec(session, {
@@ -101,7 +108,8 @@ export async function updateShotVideoTakeSpec(
   input: UpdateShotVideoTakeGenerationSpecInput
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = normalizeFinalSpec(input.spec);
-  await validateShotVideoTakeSpec({ ...input, spec: normalized });
+  const validation = await validateShotVideoTakeSpec({ ...input, spec: normalized });
+  assertEditableTakeGeneration(validation.context.takeGeneration);
   return withShotProjectSession(input, ({ session }) =>
     updateMediaGenerationSpec(session, {
       id: input.specId,

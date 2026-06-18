@@ -18,6 +18,7 @@ interface SceneShotAiProductionRunSetupProps {
   finalPrompt: ShotVideoTakePromptDraft | null;
   promptStale: boolean;
   isMultiShotGroup: boolean;
+  disabled?: boolean;
 }
 
 export function SceneShotAiProductionRunSetup({
@@ -29,6 +30,7 @@ export function SceneShotAiProductionRunSetup({
   finalPrompt,
   promptStale,
   isMultiShotGroup,
+  disabled = false,
 }: SceneShotAiProductionRunSetupProps) {
   return (
     <div className='flex min-h-0 flex-col'>
@@ -64,6 +66,7 @@ export function SceneShotAiProductionRunSetup({
               parameter={parameter}
               value={values[parameter.name] ?? parameter.defaultValue}
               onChange={(value) => onParameterChange(parameter.name, value)}
+              disabled={disabled}
             />
           ))
         )}

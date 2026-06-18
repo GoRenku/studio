@@ -7,6 +7,7 @@ interface SceneShotAiProductionModelTableProps {
   rows: ModelRow[];
   selectedModel: ShotVideoTakeModelChoice | undefined;
   onSelectModel: (model: ShotVideoTakeModelChoice) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -18,6 +19,7 @@ export function SceneShotAiProductionModelTable({
   rows,
   selectedModel,
   onSelectModel,
+  disabled = false,
 }: SceneShotAiProductionModelTableProps) {
   return (
     <div className='flex min-h-0 flex-col'>
@@ -43,14 +45,14 @@ export function SceneShotAiProductionModelTable({
             {rows.map((row) => {
               const selected = row.modelChoice === selectedModel;
               const select = () => {
-                if (row.available) onSelectModel(row.modelChoice);
+                if (!disabled && row.available) onSelectModel(row.modelChoice);
               };
               return (
                 <tr
                   key={row.modelChoice}
                   aria-selected={selected}
-                  aria-disabled={!row.available}
-                  tabIndex={row.available ? 0 : -1}
+                  aria-disabled={disabled || !row.available}
+                  tabIndex={!disabled && row.available ? 0 : -1}
                   onClick={select}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -60,7 +62,7 @@ export function SceneShotAiProductionModelTable({
                   }}
                   className={cn(
                     'border-b border-border/25 outline-none last:border-b-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
-                    row.available
+                    !disabled && row.available
                       ? 'cursor-pointer hover:bg-item-hover-bg'
                       : 'cursor-not-allowed opacity-55',
                     selected && 'bg-primary/12'

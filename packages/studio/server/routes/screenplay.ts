@@ -906,10 +906,20 @@ export function createScreenplayRoute({
             projectName,
             takeGenerationId,
           });
+          if (context.scene.id !== sceneId) {
+            throw createStructuredError({
+              code: 'STUDIO_SERVER350',
+              message:
+                'Take generation does not belong to the requested scene.',
+              issues: [],
+              suggestion:
+                'Refresh Studio and retry the reference inclusion change from the take generation scene.',
+            });
+          }
           const shotIds = context.takeGeneration.shotIds;
           const resource = await projectData.updateSceneShotGroupReferenceInclusion({
             projectName,
-            sceneId,
+            sceneId: context.scene.id,
             shotIds,
             dependencyId: request.dependencyId,
             inclusion: request.inclusion,

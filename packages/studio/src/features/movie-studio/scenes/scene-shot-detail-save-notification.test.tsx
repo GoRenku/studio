@@ -61,6 +61,7 @@ function productionResult(
     context: null,
     models: null,
     takeGeneration: TAKE_GENERATION,
+    isEditable: true,
     selectedInputMode: null,
     selectedModel: undefined,
     setInputMode: vi.fn(),

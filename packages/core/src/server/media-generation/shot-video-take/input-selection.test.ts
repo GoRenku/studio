@@ -61,6 +61,58 @@ describe('shot video take preflight and validation', () => {
       .toMatchObject({ selected: false });
   });
 
+
+
+  it('preserves input shot membership when the take generation shot ids change', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const takeGeneration = await projectData.createSceneShotVideoTakeGeneration({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+    });
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/shot-one-first-frame.png',
+      'shot one first frame'
+    );
+    const imported = await projectData.importShotFirstFrame({
+      homeDir,
+      takeGenerationId: takeGeneration.takeGenerationId,
+      sourceProjectRelativePath: 'generated/media/shot-one-first-frame.png',
+      selection: 'select',
+    });
+
+    await projectData.updateSceneShotVideoTakeGenerationShots({
+      homeDir,
+      takeGenerationId: takeGeneration.takeGenerationId,
+      shotIds: ['shot_002'],
+    });
+
+    const shotTwoInputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      takeGenerationId: takeGeneration.takeGenerationId,
+    });
+    expect(shotTwoInputs.inputs).toHaveLength(0);
+
+    await projectData.updateSceneShotVideoTakeGenerationShots({
+      homeDir,
+      takeGenerationId: takeGeneration.takeGenerationId,
+      shotIds: ['shot_001'],
+    });
+
+    const shotOneInputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      takeGenerationId: takeGeneration.takeGenerationId,
+    });
+    expect(shotOneInputs.inputs).toEqual([
+      expect.objectContaining({
+        inputId: imported.input.inputId,
+        shotIds: ['shot_001'],
+      }),
+    ]);
+  });
+
   it('deletes an input take and promotes another matching take when selected', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);

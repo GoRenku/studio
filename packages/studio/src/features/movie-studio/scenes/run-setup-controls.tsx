@@ -24,6 +24,7 @@ interface ControlProps {
   parameter: ShotVideoTakeParameterReport;
   value: ShotVideoTakeParameterValue | undefined;
   onChange: (value: ShotVideoTakeParameterValue) => void;
+  disabled?: boolean;
 }
 
 /** Vertical label + control field, matching the design-section micro-label tone. */
@@ -63,12 +64,13 @@ function controlId(name: string): string {
   return `shot-video-take-parameter-${name}`;
 }
 
-export function RunSetupSelect({ parameter, value, onChange }: ControlProps) {
+export function RunSetupSelect({ parameter, value, onChange, disabled = false }: ControlProps) {
   const id = controlId(parameter.name);
   const allowed = parameter.allowedValues ?? [];
   return (
     <RunSetupField label={parameter.label} htmlFor={id} required={parameter.required}>
       <Select
+        disabled={disabled}
         value={value === undefined || value === null ? undefined : String(value)}
         onValueChange={(next) => {
           const match = allowed.find((option) => String(option) === next);
@@ -90,12 +92,13 @@ export function RunSetupSelect({ parameter, value, onChange }: ControlProps) {
   );
 }
 
-export function RunSetupToggle({ parameter, value, onChange }: ControlProps) {
+export function RunSetupToggle({ parameter, value, onChange, disabled = false }: ControlProps) {
   const id = controlId(parameter.name);
   return (
     <RunSetupField label={parameter.label} htmlFor={id} required={parameter.required} inline>
       <Switch
         id={id}
+        disabled={disabled}
         checked={Boolean(value)}
         onCheckedChange={(checked) => onChange(checked)}
       />
@@ -103,12 +106,13 @@ export function RunSetupToggle({ parameter, value, onChange }: ControlProps) {
   );
 }
 
-export function RunSetupNumber({ parameter, value, onChange }: ControlProps) {
+export function RunSetupNumber({ parameter, value, onChange, disabled = false }: ControlProps) {
   const id = controlId(parameter.name);
   return (
     <RunSetupField label={parameter.label} htmlFor={id} required={parameter.required}>
       <Input
         id={id}
+        disabled={disabled}
         type='number'
         min={parameter.minimum}
         max={parameter.maximum}
@@ -122,12 +126,13 @@ export function RunSetupNumber({ parameter, value, onChange }: ControlProps) {
   );
 }
 
-export function RunSetupText({ parameter, value, onChange }: ControlProps) {
+export function RunSetupText({ parameter, value, onChange, disabled = false }: ControlProps) {
   const id = controlId(parameter.name);
   return (
     <RunSetupField label={parameter.label} htmlFor={id} required={parameter.required}>
       <Input
         id={id}
+        disabled={disabled}
         type='text'
         value={value === undefined || value === null ? '' : String(value)}
         onChange={(event) => onChange(event.target.value)}

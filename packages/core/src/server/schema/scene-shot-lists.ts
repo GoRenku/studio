@@ -185,6 +185,27 @@ export const sceneShotVideoTakeInputs = sqliteTable(
   ],
 );
 
+export const sceneShotVideoTakeInputShots = sqliteTable(
+  'scene_shot_video_take_input_shot',
+  {
+    inputId: text('input_id')
+      .notNull()
+      .references(() => sceneShotVideoTakeInputs.id, { onDelete: 'cascade' }),
+    shotId: text('shot_id').notNull(),
+    shotOrder: integer('shot_order').notNull(),
+  },
+  (table) => [
+    uniqueIndex('scene_shot_video_take_input_shot_idx').on(
+      table.inputId,
+      table.shotId
+    ),
+    index('scene_shot_video_take_input_shot_order_idx').on(
+      table.inputId,
+      table.shotOrder
+    ),
+  ],
+);
+
 export const sceneShotVideoTakes = sqliteTable(
   'scene_shot_video_take',
   {

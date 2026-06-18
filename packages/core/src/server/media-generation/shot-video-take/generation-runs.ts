@@ -14,6 +14,7 @@ import type {
   RunMediaGenerationSpecInput,
 } from '../../project-data-service-contracts.js';
 import {
+  assertShotVideoTakeSpec,
   estimateShotVideoTakeSpec,
   prepareShotVideoTakeSpec,
 } from './final-specs.js';
@@ -21,6 +22,7 @@ import {
   resolveShotGenerationOutputPaths,
 } from './generation-output-paths.js';
 import {
+  assertShotInputSpec,
   prepareShotInputSpec,
 } from './input-specs.js';
 import {
@@ -29,6 +31,9 @@ import {
 import {
   buildShotVideoTakeContext,
 } from './context.js';
+import {
+  assertEditableTakeGeneration,
+} from './take-generation-context.js';
 import {
   injectKlingTransientVoiceIds,
   resolveKlingTransientVoices,
@@ -49,6 +54,14 @@ export async function runShotInputSpec(
   input: RunMediaGenerationSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareShotInputSpec(input);
+  const spec = prepared.spec.spec;
+  assertShotInputSpec(spec);
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    takeGenerationId: spec.target.takeGenerationId,
+  });
+  assertEditableTakeGeneration(context.takeGeneration);
   const { estimateGeneration, runGeneration } = await import('@gorenku/studio-engines');
   const estimate = await estimateGeneration(prepared.generation);
   const outputPaths = await resolveShotGenerationOutputPaths(input);
@@ -92,6 +105,13 @@ export async function runShotVideoTakeSpec(
   input: RunMediaGenerationSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareShotVideoTakeSpec(input);
+  assertShotVideoTakeSpec(prepared.spec.spec);
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    takeGenerationId: prepared.spec.spec.target.takeGenerationId,
+  });
+  assertEditableTakeGeneration(context.takeGeneration);
   const { estimateGeneration, runGeneration } = await import('@gorenku/studio-engines');
   const combinedEstimate = await estimateShotVideoTakeSpec(input);
   if (!input.simulate && input.approvalToken !== combinedEstimate.estimate.approvalToken) {

@@ -419,6 +419,110 @@ describe('StudioCoordinationService', () => {
     });
   });
 
+
+
+  it('reports the selected multi-shot take generation in AI Production current focus', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+    const projectData = createProjectDataService();
+    await createSampleMovieProject({
+      homeDir,
+      projectData,
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const castMember = screenplay.screenplay!.cast[1]!;
+    const location = screenplay.screenplay!.locations[0]!;
+    const sceneId = scene.id as string;
+    const shotList = await projectData.writeSceneShotList({
+      homeDir,
+      document: {
+        kind: 'sceneShotList',
+        sceneId,
+        title: 'Council chamber coverage',
+        summary: 'A restrained coverage plan.',
+        coverageStrategy: 'Hold the table in one composed frame.',
+        shots: ['shot_001', 'shot_002'].map((shotId, index) => ({
+          shotId,
+          title: index === 0 ? 'Map study' : 'Map study alternate',
+          storyBeat: 'Mehmed studies the map.',
+          narrativePurpose: 'Establish the obsession.',
+          description: 'Wide static shot of Mehmed at the table.',
+          shotType: 'Medium Close-Up',
+          subject: 'Mehmed and the city map',
+          action: 'Mehmed studies the map in silence.',
+          dialogue: [],
+          coveredBlockIndexes: [0],
+          castMemberIds: [castMember.id as string],
+          locationIds: [location.id as string],
+        })),
+      } satisfies SceneShotListDocument,
+    });
+    const takeGeneration = await projectData.createSceneShotVideoTakeGeneration({
+      homeDir,
+      sceneId,
+      shotListId: shotList.shotList.id,
+      shotIds: ['shot_001', 'shot_002'],
+    });
+    const coordination = createStudioCoordinationService({ homeDir });
+    const now = new Date();
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: '127.0.0.1',
+      port: 5173,
+      serverUrl: 'http://127.0.0.1:5173',
+      now,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_one',
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+      createdAt: now.toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'scene',
+          id: sceneId,
+          sceneTab: 'takes',
+          shotId: 'shot_001',
+          shotTab: 'ai-production',
+          takeGenerationId: takeGeneration.takeGenerationId,
+        },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_one',
+      },
+      createdAt: now.toISOString(),
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.context).toMatchObject({
+      kind: 'scene',
+      shot: {
+        id: 'shot_001',
+        activeTab: { id: 'ai-production', label: 'AI Production' },
+        currentTabSelections: {
+          kind: 'take-generation',
+          takeGenerationId: takeGeneration.takeGenerationId,
+          shotIds: ['shot_001', 'shot_002'],
+        },
+      },
+    });
+  });
+
   it('reports unresolved selected project data through current-context diagnostics', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);

@@ -9,13 +9,13 @@ import type {
 import {
   assets,
   assetFiles,
+  sceneShotVideoTakeInputShots,
   sceneShotVideoTakeInputs,
   sceneShotVideoTakeShots,
   sceneShotVideoTakes,
 } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
-import { listSceneShotVideoTakeGenerationShotIds } from './scene-shot-video-take-generations.js';
 
 export type SceneShotVideoTakeInputRecord =
   typeof sceneShotVideoTakeInputs.$inferSelect;
@@ -32,6 +32,7 @@ export interface InsertShotVideoTakeInputRecord {
   assetFileId: string;
   mediaGenerationRunId?: string | null;
   selection: 'select' | 'take';
+  shotIds: string[];
   now: string;
 }
 
@@ -71,6 +72,12 @@ export function insertShotVideoTakeInputRecord(
       updatedAt: input.now,
     })
     .run();
+  input.shotIds.forEach((shotId, shotOrder) => {
+    session.db
+      .insert(sceneShotVideoTakeInputShots)
+      .values({ inputId: input.id, shotId, shotOrder })
+      .run();
+  });
   return requireShotVideoTakeInput(session, input.id);
 }
 
@@ -362,10 +369,7 @@ function toAvailableInput(
     subjectKind: row.subjectKind as ShotVideoTakeInputSubjectKind,
     subjectId: row.subjectId,
     takeGenerationId: row.takeGenerationId,
-    shotIds: listSceneShotVideoTakeGenerationShotIds(
-      session,
-      row.takeGenerationId
-    ),
+    shotIds: listTakeInputShotIds(session, row.id),
     ...(row.mediaGenerationRunId
       ? { mediaGenerationRunId: row.mediaGenerationRunId }
       : {}),
@@ -398,6 +402,19 @@ function listTakeShotIds(session: DatabaseSession, takeId: string): string[] {
     .from(sceneShotVideoTakeShots)
     .where(eq(sceneShotVideoTakeShots.takeId, takeId))
     .orderBy(asc(sceneShotVideoTakeShots.shotOrder))
+    .all()
+    .map((row) => row.shotId);
+}
+
+function listTakeInputShotIds(
+  session: DatabaseSession,
+  inputId: string
+): string[] {
+  return session.db
+    .select()
+    .from(sceneShotVideoTakeInputShots)
+    .where(eq(sceneShotVideoTakeInputShots.inputId, inputId))
+    .orderBy(asc(sceneShotVideoTakeInputShots.shotOrder))
     .all()
     .map((row) => row.shotId);
 }

@@ -204,6 +204,13 @@
       "when": 1781602168406,
       "tag": "0028_take_scoped_shot_video_generation",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1781726458974,
+      "tag": "0029_high_genesis",
+      "breakpoints": true
     }
   ]
 }

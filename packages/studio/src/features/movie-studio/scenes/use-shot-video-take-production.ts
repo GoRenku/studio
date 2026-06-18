@@ -43,6 +43,7 @@ export interface UseShotVideoTakeProductionResult {
   context: ShotVideoTakeGenerationContext | null;
   models: ShotVideoTakeModelListReport | null;
   takeGeneration: SceneShotVideoTakeGeneration | null;
+  isEditable: boolean;
   selectedInputMode: ShotVideoTakeInputModeId | null;
   selectedModel: ShotVideoTakeModelChoice | undefined;
   setInputMode: (inputMode: ShotVideoTakeInputModeId) => void;
@@ -95,6 +96,7 @@ export function useShotVideoTakeProduction(
   // Autosave only starts after the user edits a value, so loading the group
   // never triggers a spurious save.
   const hasUserEditedRef = useRef(false);
+  const isEditable = takeGeneration?.compatibility.editState === 'editable';
 
   useEffect(() => {
     let cancelled = false;
@@ -162,7 +164,10 @@ export function useShotVideoTakeProduction(
       return save(production);
     },
     failureMessage: 'AI Production settings could not be saved.',
-    isReady: () => hasUserEditedRef.current && takeGeneration !== null,
+    isReady: () =>
+      hasUserEditedRef.current &&
+      takeGeneration !== null &&
+      takeGeneration.compatibility.editState === 'editable',
     onSaved: (result) => {
       hasUserEditedRef.current = false;
       setContext(result.context);
@@ -177,10 +182,13 @@ export function useShotVideoTakeProduction(
         production: ShotVideoTakeGenerationProduction
       ) => ShotVideoTakeGenerationProduction
     ) => {
-      hasUserEditedRef.current = true;
-      setTakeGeneration((current) =>
-        current ? { ...current, production: mutate(current.production) } : current
-      );
+      setTakeGeneration((current) => {
+        if (!current || current.compatibility.editState !== 'editable') {
+          return current;
+        }
+        hasUserEditedRef.current = true;
+        return { ...current, production: mutate(current.production) };
+      });
     },
     []
   );
@@ -236,7 +244,7 @@ export function useShotVideoTakeProduction(
           return;
         }
         const nextModel = defaultModelForInputMode(read.models, selectedInputMode);
-        if (nextModel && nextModel !== storedModelChoice) {
+        if (nextModel && nextModel !== storedModelChoice && isEditable) {
           editProduction((group) => ({
             ...group,
             modelChoice: nextModel,
@@ -264,6 +272,7 @@ export function useShotVideoTakeProduction(
     storedModelChoice,
     models?.inputModeId,
     takeGenerationId,
+    isEditable,
   ]);
 
   const setModel = useCallback(
@@ -415,7 +424,7 @@ export function useShotVideoTakeProduction(
 
   const reuseInput = useCallback(
     async (inputId: string) => {
-      if (!takeGenerationId) return;
+      if (!takeGenerationId || !isEditable) return;
       const result = await selectShotVideoTakeInput(
         projectName,
         sceneId,
@@ -425,12 +434,12 @@ export function useShotVideoTakeProduction(
       applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, projectName, refreshProductionPlan, sceneId, takeGenerationId]
+    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeGenerationId]
   );
 
   const regenerateInput = useCallback(
     async (slot: ShotVideoTakeInputSlot) => {
-      if (!takeGenerationId) return;
+      if (!takeGenerationId || !isEditable) return;
       const result = await clearShotVideoTakeInput(
         projectName,
         sceneId,
@@ -440,12 +449,12 @@ export function useShotVideoTakeProduction(
       applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, projectName, refreshProductionPlan, sceneId, takeGenerationId]
+    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeGenerationId]
   );
 
   const deleteInput = useCallback(
     async (inputId: string) => {
-      if (!takeGenerationId) return;
+      if (!takeGenerationId || !isEditable) return;
       const result = await deleteShotVideoTakeInput(
         projectName,
         sceneId,
@@ -455,7 +464,7 @@ export function useShotVideoTakeProduction(
       applyMutationResult(result);
       await refreshProductionPlan();
     },
-    [applyMutationResult, projectName, refreshProductionPlan, sceneId, takeGenerationId]
+    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeGenerationId]
   );
 
   const selectedModel =
@@ -470,6 +479,7 @@ export function useShotVideoTakeProduction(
     context,
     models,
     takeGeneration,
+    isEditable,
     selectedInputMode,
     selectedModel,
     setInputMode,
