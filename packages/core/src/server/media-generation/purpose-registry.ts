@@ -782,6 +782,7 @@ function toShotInput(
   return {
     projectName: input.projectName,
     homeDir: input.homeDir,
+    sceneId: target.sceneId,
     takeId: target.takeId,
   };
 }

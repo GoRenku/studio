@@ -424,17 +424,21 @@ type GenerationCommandInput = Parameters<
 function readGenerationContextInput(input: GenerationCommandInput) {
   const purpose = requiredFlag(input.flags.purpose, '--purpose');
   const target = requiredFlag(input.flags.target, '--target');
+  const parsedTarget = parseGenerationTarget({
+    purpose,
+    target,
+    shots: input.flags.shots,
+    takeId: input.flags.take,
+  });
   return {
     ...generationProjectInput(input.runtime),
     purpose: parseGenerationPurpose(purpose),
-    target: parseGenerationTarget({
-      purpose,
-      target,
-      shots: input.flags.shots,
-      takeId: input.flags.take,
-    }),
+    target: parsedTarget,
     shotListId: input.flags.shotList,
-    shotIds: input.flags.shots ? parseShots(input.flags.shots) : undefined,
+    shotIds:
+      parsedTarget.kind === 'sceneShotVideoTake' || !input.flags.shots
+        ? undefined
+        : parseShots(input.flags.shots),
   };
 }
 

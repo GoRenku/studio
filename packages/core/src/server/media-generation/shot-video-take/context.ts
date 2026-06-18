@@ -79,7 +79,7 @@ export async function buildShotVideoTakeContext(
 export async function readSceneShotVideoTakeEditContext(
   input: ShotVideoTakeContextInput
 ): Promise<SceneShotVideoTakeEditContext> {
-  return shotVideoTakeEditContextFromGenerationContext(
+  return shotVideoTakeEditContextFromProductionContext(
     await buildShotVideoTakeContext(input)
   );
 }
@@ -198,7 +198,7 @@ export function buildContextFromPrepared(input: {
 
 
 
-function shotVideoTakeEditContextFromGenerationContext(
+function shotVideoTakeEditContextFromProductionContext(
   context: ShotVideoTakeProductionContext
 ): SceneShotVideoTakeEditContext {
   const selectedInputs = context.mediaInputs.filter((input) => input.selected);

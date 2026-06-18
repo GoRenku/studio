@@ -533,7 +533,7 @@ function buildNextSteps(input: {
       title: 'Preflight selected shot video',
       specialistSkill: 'media-producer',
       reason: 'The selected scene has an active shot list and can move into shot-video preflight.',
-      command: `renku generation preflight --purpose shot.video-take --target scene:${input.selectedScene.sceneId} --shot-list ${input.selectedScene.activeShotListId} --shots ${input.selectedScene.shotVideo.selectedShotIds.join(',')} --json`,
+      command: `renku generation preflight --purpose shot.video-take --target scene:${input.selectedScene.sceneId} --take <take-id> --json`,
     });
   }
   return steps;

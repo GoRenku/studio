@@ -81,6 +81,25 @@ describe('shot video take preflight and validation', () => {
     expect(estimate.issues).toEqual([]);
   });
 
+  it('rejects null input policies instead of treating them as omitted', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await expect(
+      projectData.readShotVideoTakeProductionPlan({
+        homeDir,
+        takeId: written.take.takeId,
+        production: {
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        },
+        inputPolicy: null as never,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA434',
+    });
+  });
+
   it('drops stale settings that are unsupported by the selected route before estimating', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
@@ -274,20 +293,13 @@ describe('shot video take preflight and validation', () => {
       shotIds: ['shot_001'],
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.updateSceneShotVideoTakeState({
+    await projectData.updateSceneShotVideoTakeLocationViewSelection({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: take.takeId,
-      statePatch: {
-        referenceSelections: {
-          ...take.state.referenceSelections,
-          selectedLocationSheetAssetIds: {
-            [scopedLocationId]: scopedLocationSheet.imported.assetId,
-          },
-          selectedLocationViewIds: {
-            [scopedLocationId]: ['front'],
-          },
-        },
-      },
+      locationId: scopedLocationId,
+      assetId: scopedLocationSheet.imported.assetId,
+      viewIds: ['front'],
     });
     const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
@@ -304,6 +316,7 @@ describe('shot video take preflight and validation', () => {
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: take.takeId,
       production: {
         inputModeId: 'text-only',
@@ -364,33 +377,36 @@ describe('shot video take preflight and validation', () => {
       shotId: 'shot_001',
       shotDesign: {},
     });
-    await projectData.updateSceneShotVideoTakeState({
-      homeDir,
-      takeId: written.take.takeId,
-      statePatch: {
-        referenceSelections: {
-          ...written.take.state.referenceSelections,
-          dependencyInclusions: {
-          'reference-image:shot:shot_001': 'exclude',
-          },
+    const production = {
+      inputModeId: 'text-only' as const,
+      modelChoice: 'fal-ai/bytedance/seedance-2.0' as const,
+      requestedInputs: [
+        {
+          kind: 'reference-image' as const,
+          subjectKind: 'shot' as const,
+          subjectId: 'shot_001',
         },
-      },
+      ],
+    };
+    await projectData.updateSceneShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+      production,
+    });
+    await projectData.updateSceneShotVideoTakeReferenceInclusion({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+      dependencyId: 'reference-image:shot:shot_001',
+      inclusion: 'exclude',
     });
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: written.take.takeId,
-      production: {
-        inputModeId: 'text-only',
-        modelChoice: 'fal-ai/bytedance/seedance-2.0',
-        requestedInputs: [
-          {
-            kind: 'reference-image',
-            subjectKind: 'shot',
-            subjectId: 'shot_001',
-          },
-        ],
-      },
+      production,
     });
 
     expect(report.plan.dependencyInventory.dependencies).not.toEqual(

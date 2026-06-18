@@ -1,7 +1,8 @@
 import { buildShotVideoTakeContext, readSceneShotVideoTakeEditContext } from '../media-generation/shot-video-take/context.js';
 import { listShotVideoTakeModels } from '../media-generation/shot-video-take/model-list.js';
 import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/shot-video-take/input-selection.js';
-import { createSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeState, updateSceneShotVideoTakeShotDesign, updateSceneShotVideoTakeShots } from '../media-generation/shot-video-take/takes.js';
+import { createSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeShotDesign, updateSceneShotVideoTakeShots } from '../media-generation/shot-video-take/takes.js';
+import { updateSceneShotVideoTakeCharacterSheetSelection, updateSceneShotVideoTakeLocationSheetSelection, updateSceneShotVideoTakeLocationViewSelection, updateSceneShotVideoTakeLookbookSheetSelection, updateSceneShotVideoTakeDialogueAudioSelection, updateSceneShotVideoTakeReferenceInclusion } from '../media-generation/shot-video-take/reference-selection-mutations.js';
 import { estimateShotVideoTakeProduction, planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
 import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
@@ -12,34 +13,29 @@ import * as sharedGeneration from '../media-generation/shared-generation-service
 
 export function createShotVideoTakeServiceWiring() {
   return {
-    createSceneShotVideoTake:
-      createSceneShotVideoTake,
+    createSceneShotVideoTake,
     readSceneShotVideoTake: readSceneShotVideoTake,
-    listSceneShotVideoTakes:
-      listSceneShotVideoTakes,
-    updateSceneShotVideoTakeProduction:
-      updateSceneShotVideoTakeProduction,
-    updateSceneShotVideoTakeState:
-      updateSceneShotVideoTakeState,
-    updateSceneShotVideoTakeShotDesign:
-      updateSceneShotVideoTakeShotDesign,
-    updateSceneShotVideoTakeShots:
-      updateSceneShotVideoTakeShots,
+    listSceneShotVideoTakes,
+    updateSceneShotVideoTakeProduction,
+    updateSceneShotVideoTakeShotDesign,
+    updateSceneShotVideoTakeShots,
+    updateSceneShotVideoTakeCharacterSheetSelection,
+    updateSceneShotVideoTakeLocationSheetSelection,
+    updateSceneShotVideoTakeLocationViewSelection,
+    updateSceneShotVideoTakeLookbookSheetSelection,
+    updateSceneShotVideoTakeDialogueAudioSelection,
+    updateSceneShotVideoTakeReferenceInclusion,
     buildShotVideoTakeContext: buildShotVideoTakeContext,
     readSceneShotVideoTakeEditContext,
     listShotVideoTakeModels: listShotVideoTakeModels,
     listShotVideoTakeInputs: listShotVideoTakeInputs,
-    estimateShotVideoTakeProduction:
-      estimateShotVideoTakeProduction,
-    planShotVideoTakeProduction:
-      planShotVideoTakeProduction,
-    readShotVideoTakeProductionPlan:
-      readShotVideoTakeProductionPlan,
+    estimateShotVideoTakeProduction,
+    planShotVideoTakeProduction,
+    readShotVideoTakeProductionPlan,
     previewShotVideoTakeProduction: previewShotVideoTakeProduction,
     resolveShotVideoTakeInputFile: resolveShotVideoTakeInputFile,
     selectShotVideoTakeInput: selectShotVideoTakeInput,
-    clearShotVideoTakeInputSelection:
-      clearShotVideoTakeInputSelection,
+    clearShotVideoTakeInputSelection,
     deleteShotVideoTakeInput: deleteShotVideoTakeInput,
     validateShotFirstFrameSpec: validateShotFirstFrameSpec,
     createShotFirstFrameSpec: sharedGeneration.createMediaGenerationSpec,

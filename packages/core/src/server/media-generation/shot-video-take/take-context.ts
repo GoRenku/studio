@@ -42,6 +42,16 @@ export function prepareSceneShotVideoTakeInSession(input: {
     takeId: input.input.takeId,
     screenplay,
   });
+  if (input.input.sceneId && take.sceneId !== input.input.sceneId) {
+    throw new ProjectDataError(
+      'PROJECT_DATA423',
+      'Scene Shot Video Take does not belong to the requested scene.',
+      {
+        suggestion:
+          'Refresh the take context and retry the operation from the scene that owns this take.',
+      }
+    );
+  }
   const shotListRow = requireSceneShotListForScene({
     session: input.session,
     sceneId: take.sceneId,

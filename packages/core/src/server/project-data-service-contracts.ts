@@ -55,6 +55,7 @@ import type {
   LookbookSection,
   LookbookValidationReport,
   LookbookWriteReport,
+  LocationAzimuthViewId,
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
@@ -89,7 +90,6 @@ import type {
   SceneShotVideoTake,
   SceneShotVideoTakeEditContext,
   SceneShotVideoTakeShotDesign,
-  SceneShotVideoTakeState,
   ShotVideoTakeProductionContext,
   SceneShotVideoTakeProductionState,
   ShotVideoTakeOutputGenerationPlan,
@@ -465,9 +465,14 @@ export interface ProjectDataService {
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<{ takes: SceneShotVideoTake[] }>;
   updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionContext>;
-  updateSceneShotVideoTakeState(input: UpdateSceneShotVideoTakeStateInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeShotDesign(input: UpdateSceneShotVideoTakeShotDesignInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeShots(input: UpdateSceneShotVideoTakeShotsInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeCharacterSheetSelection(input: UpdateSceneShotVideoTakeCharacterSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeLocationSheetSelection(input: UpdateSceneShotVideoTakeLocationSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeLocationViewSelection(input: UpdateSceneShotVideoTakeLocationViewSelectionInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeLookbookSheetSelection(input: UpdateSceneShotVideoTakeLookbookSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeDialogueAudioSelection(input: UpdateSceneShotVideoTakeDialogueAudioSelectionInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeReferenceInclusion(input: UpdateSceneShotVideoTakeReferenceInclusionInput): Promise<ShotVideoTakeProductionContext>;
   buildShotVideoTakeContext(input: ShotVideoTakeContextInput): Promise<ShotVideoTakeProductionContext>;
   readSceneShotVideoTakeEditContext(input: ShotVideoTakeContextInput): Promise<SceneShotVideoTakeEditContext>;
   listShotVideoTakeModels(input: ShotVideoTakeModelListInput): Promise<ShotVideoTakeModelListReport>;
@@ -1354,6 +1359,7 @@ export interface CreateSceneShotVideoTakeInput
 export interface ReadSceneShotVideoTakeInput
   extends RenkuConfigPathOptions {
   projectName?: string;
+  sceneId?: string;
   takeId: string;
 }
 
@@ -1365,6 +1371,7 @@ export interface ListSceneShotVideoTakesInput
 
 export interface ShotVideoTakeContextInput extends RenkuConfigPathOptions {
   projectName?: string;
+  sceneId?: string;
   takeId: string;
   idGenerator?: ProjectIdGenerator;
 }
@@ -1378,11 +1385,6 @@ export interface UpdateSceneShotVideoTakeProductionInput
   production: SceneShotVideoTakeProductionState;
 }
 
-export interface UpdateSceneShotVideoTakeStateInput
-  extends ShotVideoTakeContextInput {
-  statePatch: Partial<SceneShotVideoTakeState>;
-}
-
 export interface UpdateSceneShotVideoTakeShotDesignInput
   extends ShotVideoTakeContextInput {
   shotId: string;
@@ -1392,6 +1394,42 @@ export interface UpdateSceneShotVideoTakeShotDesignInput
 export interface UpdateSceneShotVideoTakeShotsInput
   extends ShotVideoTakeContextInput {
   shotIds: string[];
+}
+
+export interface UpdateSceneShotVideoTakeCharacterSheetSelectionInput
+  extends ShotVideoTakeContextInput {
+  castMemberId: string;
+  assetId: string | null;
+}
+
+export interface UpdateSceneShotVideoTakeLocationSheetSelectionInput
+  extends ShotVideoTakeContextInput {
+  locationId: string;
+  assetId: string | null;
+}
+
+export interface UpdateSceneShotVideoTakeLocationViewSelectionInput
+  extends ShotVideoTakeContextInput {
+  locationId: string;
+  assetId: string;
+  viewIds: LocationAzimuthViewId[];
+}
+
+export interface UpdateSceneShotVideoTakeLookbookSheetSelectionInput
+  extends ShotVideoTakeContextInput {
+  lookbookSheetId: string | null;
+}
+
+export interface UpdateSceneShotVideoTakeDialogueAudioSelectionInput
+  extends ShotVideoTakeContextInput {
+  dialogueId: string;
+  dialogueAudioTakeId: string | null;
+}
+
+export interface UpdateSceneShotVideoTakeReferenceInclusionInput
+  extends ShotVideoTakeContextInput {
+  dependencyId: string;
+  inclusion: 'include' | 'exclude' | null;
 }
 
 export interface PreviewShotVideoTakeProductionInput
@@ -1618,6 +1656,8 @@ export interface ResolvedProjectAssetFile {
 export interface ResolveShotVideoTakeInputFileInput
   extends RenkuConfigPathOptions {
   projectName: string;
+  sceneId: string;
+  takeId: string;
   inputId: string;
   assetFileId: string;
 }

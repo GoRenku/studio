@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProjectDataService } from '../index.js';
@@ -120,6 +121,51 @@ describe('migrate database command', () => {
           'scene_shot_video_take_output_selected_idx'
         )
       ).toMatchObject({ isUnique: 1 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('fails the legacy take id rewrite preflight when a mapped id already exists', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        create table scene_shot_video_take (
+          id text primary key not null
+        );
+        insert into scene_shot_video_take (id)
+        values
+          ('scene_shot_video_take_generation_collision'),
+          ('scene_shot_video_take_collision');
+      `);
+      const migration = await fs.readFile(
+        path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          '..',
+          '..',
+          '..',
+          'drizzle',
+          '0032_remove_take_legacy.sql'
+        ),
+        'utf8'
+      );
+      const preflightStatements = migration
+        .split('--> statement-breakpoint')
+        .slice(0, 4)
+        .map((statement) => statement.trim())
+        .filter(Boolean);
+
+      expect(() => {
+        preflightStatements.forEach((statement) => sqlite.exec(statement));
+      }).toThrow(/UNIQUE constraint failed/);
+
+      expect(
+        sqlite
+          .prepare(
+            "select id from scene_shot_video_take where id = 'scene_shot_video_take_generation_collision'"
+          )
+          .get()
+      ).toBeTruthy();
     } finally {
       sqlite.close();
     }

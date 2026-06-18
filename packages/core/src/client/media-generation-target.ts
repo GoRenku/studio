@@ -37,7 +37,6 @@ export interface SceneShotVideoTakeRequestTarget {
   id?: string;
   sceneId: string;
   takeId: string;
-  shotIds: string[];
 }
 
 export type MediaGenerationTarget =

@@ -11,6 +11,9 @@ import {
   requiredFlag,
   writeJson,
 } from './structured-command.js';
+import {
+  parseSceneTarget,
+} from './studio-target-parsing.js';
 
 export async function runGenerationPlanCommand(options: {
   input: string[];
@@ -40,9 +43,14 @@ export async function runGenerationPlanCommand(options: {
     '--intent'
   ) as ShotVideoTakeInputModeId;
   const modelChoice = requiredFlag(options.flags.model, '--model') as ShotVideoTakeModelChoice;
+  const sceneId = parseSceneTarget(
+    requiredFlag(options.flags.target, '--target'),
+    'Shot Video Take plan'
+  );
   const plan = await service.planShotVideoTakeProduction({
     projectName: options.flags.project,
     homeDir: options.homeDir,
+    sceneId,
     takeId: requiredFlag(options.flags.take, '--take'),
     production: {
       inputModeId,

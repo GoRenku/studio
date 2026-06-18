@@ -26,6 +26,8 @@ export async function readShotVideoTakeInputFileResponse(
   projectData: ProjectsRouteProjectData,
   input: {
     projectName: string;
+    sceneId: string;
+    takeId: string;
     inputId: string;
     assetFileId: string;
   }

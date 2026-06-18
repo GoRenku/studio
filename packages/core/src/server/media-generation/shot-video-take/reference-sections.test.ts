@@ -24,6 +24,7 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
     await projectData.updateSceneShotVideoTakeProduction({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: written.take.takeId,
       production: {
         inputModeId: 'text-only',
@@ -33,6 +34,7 @@ describe('shot video take preflight and validation', () => {
 
     const defaultReport = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
     const storyboardChoice = defaultReport.references.general.find(
@@ -43,21 +45,17 @@ describe('shot video take preflight and validation', () => {
       required: false,
     });
 
-    await projectData.updateSceneShotVideoTakeState({
+    await projectData.updateSceneShotVideoTakeReferenceInclusion({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: written.take.takeId,
-      statePatch: {
-        referenceSelections: {
-          ...written.take.state.referenceSelections,
-          dependencyInclusions: {
-            [storyboardChoice!.card.dependencyId!]: 'exclude',
-          },
-        },
-      },
+      dependencyId: storyboardChoice!.card.dependencyId!,
+      inclusion: 'exclude',
     });
 
     const excludedReport = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
 
@@ -75,6 +73,30 @@ describe('shot video take preflight and validation', () => {
         }),
       ])
     );
+  });
+
+  it('rejects unknown reference inclusion dependencies without persisting them', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await expect(
+      projectData.updateSceneShotVideoTakeReferenceInclusion({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        dependencyId: 'reference-image:shot:shot_missing',
+        inclusion: 'exclude',
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA432',
+    });
+
+    const take = await projectData.readSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+    });
+    expect(take.state.referenceSelections.dependencyInclusions).toEqual({});
   });
 
   it('reports an active Lookbook reference as needed when no reference image exists', async () => {
@@ -297,15 +319,11 @@ describe('shot video take preflight and validation', () => {
       title: 'Sheet B',
     });
 
-    await projectData.updateSceneShotVideoTakeState({
+    await projectData.updateSceneShotVideoTakeLookbookSheetSelection({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: written.take.takeId,
-      statePatch: {
-        referenceSelections: {
-          ...written.take.state.referenceSelections,
-          selectedLookbookSheetIds: [sheetB.imported.id],
-        },
-      },
+      lookbookSheetId: sheetB.imported.id,
     });
 
     const production = {
@@ -423,30 +441,27 @@ describe('shot video take preflight and validation', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
 
-    await projectData.updateSceneShotVideoTakeState({
+    const production = {
+      inputModeId: 'first-frame' as const,
+      modelChoice: 'fal-ai/bytedance/seedance-2.0' as const,
+    };
+    await projectData.updateSceneShotVideoTakeProduction({
       homeDir,
+      sceneId: ids.sceneId,
       takeId: written.take.takeId,
-      statePatch: {
-        referenceSelections: {
-          ...written.take.state.referenceSelections,
-          dependencyInclusions: {
-            [`first-frame:take:${written.take.takeId}`]: 'exclude',
-          },
-        },
-      },
+      production,
     });
 
     await expect(
-      projectData.readShotVideoTakeProductionPlan({
+      projectData.updateSceneShotVideoTakeReferenceInclusion({
         homeDir,
+        sceneId: ids.sceneId,
         takeId: written.take.takeId,
-        production: {
-          inputModeId: 'first-frame',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-        },
+        dependencyId: `first-frame:take:${written.take.takeId}`,
+        inclusion: 'exclude',
       })
     ).rejects.toMatchObject({
-      code: 'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
+      code: 'PROJECT_DATA433',
     });
   });
 

@@ -114,7 +114,7 @@ Options
   --dialogue           Scene dialogue id
   --take               Scene Dialogue Audio take id or Shot Video Take id
   --shot-list          Scene Shot List id
-  --shots              Comma-separated shot ids for Shot Video Take commands
+  --shots              Comma-separated shot ids for take creation or storyboard imports
   --intent             Shot video take input mode id
   --input              Shot video take reusable input id
   --kind               Shot video take input kind

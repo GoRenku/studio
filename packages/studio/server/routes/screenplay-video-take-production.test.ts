@@ -9,6 +9,15 @@ const TAKE_PATH =
   `/constantinople/screenplay/scenes/scene_opening/takes/${TAKE_ID}`;
 const PRODUCTION = { inputModeId: 'text-only' as const };
 
+function sceneOwnershipError() {
+  return createStructuredError({
+    code: 'PROJECT_DATA423',
+    message: 'Scene Shot Video Take does not belong to the requested scene.',
+    issues: [],
+    suggestion: 'Refresh the take context.',
+  });
+}
+
 function mount(overrides: Partial<ReturnType<typeof fakeProjectDataService>> = {}) {
   return new Hono().route(
     '/:projectName',
@@ -80,6 +89,7 @@ describe('shot video take routes', () => {
     expect(readSceneShotVideoTakeEditContext).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
       })
     );
@@ -94,22 +104,21 @@ describe('shot video take routes', () => {
   });
 
   it('GET edit-context rejects a take from another scene', async () => {
-    const readSceneShotVideoTakeEditContext = vi.fn(async () => ({
-      ...await fakeProjectDataService().readSceneShotVideoTakeEditContext({
-        takeId: TAKE_ID,
-      }),
-      scene: {
-        id: 'scene_elsewhere',
-        title: 'Elsewhere',
-        setting: { locationIds: [] },
-        storyFunction: [],
-      },
-    }));
+    const readSceneShotVideoTakeEditContext = vi.fn(async () => {
+      throw sceneOwnershipError();
+    });
     const app = mount({ readSceneShotVideoTakeEditContext });
     const response = await app.request(`${TAKE_PATH}/edit-context`);
     expect(response.status).toBe(400);
+    expect(readSceneShotVideoTakeEditContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
+        takeId: TAKE_ID,
+      })
+    );
     const body = await response.json();
-    expect(body.error.code).toBe('STUDIO_SERVER352');
+    expect(body.error.code).toBe('PROJECT_DATA423');
   });
 
   it('PATCH rejects unknown top-level fields', async () => {
@@ -138,6 +147,7 @@ describe('shot video take routes', () => {
     expect(updateSceneShotVideoTakeProduction).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         production: PRODUCTION,
       })
@@ -160,6 +170,7 @@ describe('shot video take routes', () => {
     expect(updateSceneShotVideoTakeShots).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         shotIds: ['shot_001', 'shot_002'],
       })
@@ -183,6 +194,7 @@ describe('shot video take routes', () => {
     expect(updateSceneShotVideoTakeShotDesign).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         shotId: 'shot_001',
         shotDesign: { shotSize: 'close-up' },
@@ -210,6 +222,7 @@ describe('shot video take routes', () => {
     expect(readShotVideoTakeProductionPlan).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         production: PRODUCTION,
         inputPolicy: {
@@ -220,6 +233,27 @@ describe('shot video take routes', () => {
     );
     const body = await response.json();
     expect(body.report.plan.planId).toBe('shot_video_take_plan_fake');
+  });
+
+  it('plan rejects invalid inputPolicy through shared core validation', async () => {
+    const readShotVideoTakeProductionPlan = vi.fn(
+      fakeProjectDataService().readShotVideoTakeProductionPlan
+    );
+    const app = mount({ readShotVideoTakeProductionPlan });
+    const response = await app.request(`${TAKE_PATH}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        production: PRODUCTION,
+        inputPolicy: {
+          defaultMode: 'reuse-ish',
+        },
+      }),
+    });
+    expect(response.status).toBe(400);
+    expect(readShotVideoTakeProductionPlan).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.error.code).toBe('PROJECT_DATA434');
   });
 
   it('estimate delegates to core and returns an estimate report', async () => {
@@ -236,6 +270,7 @@ describe('shot video take routes', () => {
     expect(estimateShotVideoTakeProduction).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         production: PRODUCTION,
       })
@@ -269,6 +304,7 @@ describe('shot video take routes', () => {
     expect(selectShotVideoTakeInput).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         inputId: 'input_001',
       })
@@ -286,6 +322,8 @@ describe('shot video take routes', () => {
     expect(clearResponse.status).toBe(200);
     expect(clearShotVideoTakeInputSelection).toHaveBeenCalledWith(
       expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         kind: 'first-frame',
         subjectKind: 'shot',
@@ -304,61 +342,152 @@ describe('shot video take routes', () => {
     expect(deleteResponse.status).toBe(200);
     expect(deleteShotVideoTakeInput).toHaveBeenCalledWith(
       expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
         inputId: 'input_001',
       })
     );
   });
 
+  for (const routeCase of [
+    {
+      name: 'production update',
+      path: TAKE_PATH,
+      request: {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ production: PRODUCTION }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        updateSceneShotVideoTakeProduction: handler,
+      }),
+    },
+    {
+      name: 'shot membership update',
+      path: `${TAKE_PATH}/shots`,
+      request: {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shotIds: ['shot_001'] }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        updateSceneShotVideoTakeShots: handler,
+      }),
+    },
+    {
+      name: 'shot design update',
+      path: `${TAKE_PATH}/shots/shot_001/design`,
+      request: {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shotDesign: { shotSize: 'close-up' } }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        updateSceneShotVideoTakeShotDesign: handler,
+      }),
+    },
+    {
+      name: 'production plan',
+      path: `${TAKE_PATH}/plan`,
+      request: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ production: PRODUCTION }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        readShotVideoTakeProductionPlan: handler,
+      }),
+    },
+    {
+      name: 'production estimate',
+      path: `${TAKE_PATH}/estimate`,
+      request: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ production: PRODUCTION }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        estimateShotVideoTakeProduction: handler,
+      }),
+    },
+    {
+      name: 'input selection',
+      path: `${TAKE_PATH}/inputs/select`,
+      request: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inputId: 'input_001' }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        selectShotVideoTakeInput: handler,
+      }),
+    },
+    {
+      name: 'input clear',
+      path: `${TAKE_PATH}/inputs/clear`,
+      request: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'first-frame',
+          subjectKind: 'shot',
+          subjectId: 'shot_001',
+        }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        clearShotVideoTakeInputSelection: handler,
+      }),
+    },
+    {
+      name: 'input delete',
+      path: `${TAKE_PATH}/inputs/input_001`,
+      request: {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+      override: (handler: () => Promise<never>) => ({
+        deleteShotVideoTakeInput: handler,
+      }),
+    },
+    {
+      name: 'input file serving',
+      path: `${TAKE_PATH}/inputs/input_001/files/file_001`,
+      request: { method: 'GET' },
+      override: (handler: () => Promise<never>) => ({
+        resolveShotVideoTakeInputFile: handler,
+      }),
+    },
+  ]) {
+    it(`returns core scene ownership errors for ${routeCase.name}`, async () => {
+      const handler = vi.fn(async () => {
+        throw sceneOwnershipError();
+      });
+      const app = mount(routeCase.override(handler));
 
+      const response = await app.request(routeCase.path, routeCase.request);
+
+      expect(response.status).toBe(400);
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectName: 'constantinople',
+          sceneId: 'scene_opening',
+          takeId: TAKE_ID,
+        })
+      );
+      const body = await response.json();
+      expect(body.error.code).toBe('PROJECT_DATA423');
+    });
+  }
 
   it('reference inclusion PATCH delegates take-owned shot state updates to core', async () => {
     const fakeProjectData = fakeProjectDataService();
-    const updateSceneShotVideoTakeState = vi.fn(
-      fakeProjectData.updateSceneShotVideoTakeState
+    const updateSceneShotVideoTakeReferenceInclusion = vi.fn(
+      fakeProjectData.updateSceneShotVideoTakeReferenceInclusion
     );
     const app = mount({
-      updateSceneShotVideoTakeState,
-      buildShotVideoTakeContext: async (input) => {
-        const context = await fakeProjectData.buildShotVideoTakeContext(input);
-        return {
-          ...context,
-          take: {
-            ...context.take,
-            shotIds: ['shot_001', 'shot_002'],
-          },
-          shots: [
-            {
-              shotId: 'shot_001',
-              title: 'Shot 1',
-              storyBeat: 'Beat 1',
-              narrativePurpose: 'Open the exchange.',
-              description: 'First shot.',
-              shotType: 'Medium shot',
-              subject: 'Commander',
-              action: 'Turns toward the door.',
-              dialogue: [],
-              coveredBlockIndexes: [0],
-              locationIds: [],
-              castMemberIds: [],
-            },
-            {
-              shotId: 'shot_002',
-              title: 'Shot 2',
-              storyBeat: 'Beat 2',
-              narrativePurpose: 'Answer the exchange.',
-              description: 'Second shot.',
-              shotType: 'Close-up',
-              subject: 'Messenger',
-              action: 'Nods once.',
-              dialogue: [],
-              coveredBlockIndexes: [1],
-              locationIds: [],
-              castMemberIds: [],
-            },
-          ],
-        };
-      },
+      updateSceneShotVideoTakeReferenceInclusion,
     });
 
     const response = await app.request(
@@ -374,18 +503,14 @@ describe('shot video take routes', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(updateSceneShotVideoTakeState).toHaveBeenCalledOnce();
-    expect(updateSceneShotVideoTakeState).toHaveBeenCalledWith(
+    expect(updateSceneShotVideoTakeReferenceInclusion).toHaveBeenCalledOnce();
+    expect(updateSceneShotVideoTakeReferenceInclusion).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
-        statePatch: {
-          referenceSelections: expect.objectContaining({
-            dependencyInclusions: {
-              'reference-image:shot:shot_001': 'exclude',
-            },
-          }),
-        },
+        dependencyId: 'reference-image:shot:shot_001',
+        inclusion: 'exclude',
       })
     );
     await expect(response.json()).resolves.toMatchObject({
@@ -408,29 +533,11 @@ describe('shot video take routes', () => {
 
   it('reference inclusion PATCH deletes take-owned dependency overrides', async () => {
     const fakeProjectData = fakeProjectDataService();
-    const updateSceneShotVideoTakeState = vi.fn(
-      fakeProjectData.updateSceneShotVideoTakeState
+    const updateSceneShotVideoTakeReferenceInclusion = vi.fn(
+      fakeProjectData.updateSceneShotVideoTakeReferenceInclusion
     );
     const app = mount({
-      updateSceneShotVideoTakeState,
-      buildShotVideoTakeContext: async (input) => {
-        const context = await fakeProjectData.buildShotVideoTakeContext(input);
-        return {
-          ...context,
-          take: {
-            ...context.take,
-            state: {
-              ...context.take.state,
-              referenceSelections: {
-                ...context.take.state.referenceSelections,
-                dependencyInclusions: {
-                  'reference-image:shot:shot_001': 'include',
-                },
-              },
-            },
-          },
-        };
-      },
+      updateSceneShotVideoTakeReferenceInclusion,
     });
 
     const response = await app.request(
@@ -446,15 +553,13 @@ describe('shot video take routes', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(updateSceneShotVideoTakeState).toHaveBeenCalledWith(
+    expect(updateSceneShotVideoTakeReferenceInclusion).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
+        sceneId: 'scene_opening',
         takeId: TAKE_ID,
-        statePatch: {
-          referenceSelections: expect.objectContaining({
-            dependencyInclusions: {},
-          }),
-        },
+        dependencyId: 'reference-image:shot:shot_001',
+        inclusion: null,
       })
     );
     await expect(response.json()).resolves.toMatchObject({
@@ -471,20 +576,11 @@ describe('shot video take routes', () => {
   });
 
   it('rejects group reference inclusion when the URL scene does not own the take', async () => {
-    const updateSceneShotVideoTakeState = vi.fn(
-      fakeProjectDataService().updateSceneShotVideoTakeState
-    );
+    const updateSceneShotVideoTakeReferenceInclusion = vi.fn(async () => {
+      throw sceneOwnershipError();
+    });
     const app = mount({
-      updateSceneShotVideoTakeState,
-      buildShotVideoTakeContext: async (input) => ({
-        ...(await fakeProjectDataService().buildShotVideoTakeContext(input)),
-        scene: {
-          id: 'scene_from_take',
-          title: 'Different Scene',
-          setting: { locationIds: [] },
-          storyFunction: [],
-        },
-      }),
+      updateSceneShotVideoTakeReferenceInclusion,
     });
 
     const response = await app.request(
@@ -500,9 +596,14 @@ describe('shot video take routes', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(updateSceneShotVideoTakeState).not.toHaveBeenCalled();
+    expect(updateSceneShotVideoTakeReferenceInclusion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sceneId: 'scene_opening',
+        takeId: TAKE_ID,
+      })
+    );
     const body = await response.json();
-    expect(body.error.code).toBe('STUDIO_SERVER350');
+    expect(body.error.code).toBe('PROJECT_DATA423');
   });
 
   it('serializes structured errors from core', async () => {

@@ -7,7 +7,6 @@ import {
   listSceneShotVideoTakesForScene,
   requireSceneShotVideoTake,
   updateSceneShotVideoTakeProductionRecord,
-  updateSceneShotVideoTakeStateRecord,
   updateSceneShotVideoTakeShotDesignRecord,
   updateSceneShotVideoTakeShotMembershipRecord,
 } from '../../database/access/scene-shot-video-takes.js';
@@ -15,12 +14,14 @@ import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
 } from '../../entity-ids.js';
+import {
+  ProjectDataError,
+} from '../../project-data-error.js';
 import type {
   CreateSceneShotVideoTakeInput,
   ListSceneShotVideoTakesInput,
   ReadSceneShotVideoTakeInput,
   UpdateSceneShotVideoTakeProductionInput,
-  UpdateSceneShotVideoTakeStateInput,
   UpdateSceneShotVideoTakeShotDesignInput,
   UpdateSceneShotVideoTakeShotsInput,
 } from '../../project-data-service-contracts.js';
@@ -61,10 +62,21 @@ export async function readSceneShotVideoTake(
 ): Promise<SceneShotVideoTake> {
   return withShotProjectSession(input, ({ session }) => {
     const screenplay = requireScreenplayDocument(session);
-    return requireSceneShotVideoTake(session, {
+    const take = requireSceneShotVideoTake(session, {
       takeId: input.takeId,
       screenplay,
     });
+    if (input.sceneId && take.sceneId !== input.sceneId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA423',
+        'Scene Shot Video Take does not belong to the requested scene.',
+        {
+          suggestion:
+            'Refresh the take context and retry the operation from the scene that owns this take.',
+        }
+      );
+    }
+    return take;
   });
 }
 
@@ -87,18 +99,18 @@ export async function updateSceneShotVideoTakeProduction(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const current = requireSceneShotVideoTake(session, {
-      takeId: input.takeId,
-      screenplay,
+    const prepared = prepareSceneShotVideoTakeInSession({
+      session,
+      input,
     });
-    assertEditableSceneShotVideoTake(current);
+    assertEditableSceneShotVideoTake(prepared.take);
     updateSceneShotVideoTakeProductionRecord(session, {
       takeId: input.takeId,
       production: input.production,
       screenplay,
       now: new Date().toISOString(),
     });
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const refreshed = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
@@ -106,7 +118,7 @@ export async function updateSceneShotVideoTakeProduction(
       session,
       projectFolder,
       project,
-      prepared,
+      prepared: refreshed,
     });
   });
 }
@@ -116,11 +128,11 @@ export async function updateSceneShotVideoTakeShotDesign(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const current = requireSceneShotVideoTake(session, {
-      takeId: input.takeId,
-      screenplay,
+    const prepared = prepareSceneShotVideoTakeInSession({
+      session,
+      input,
     });
-    assertEditableSceneShotVideoTake(current);
+    assertEditableSceneShotVideoTake(prepared.take);
     updateSceneShotVideoTakeShotDesignRecord(session, {
       takeId: input.takeId,
       shotId: input.shotId,
@@ -128,7 +140,7 @@ export async function updateSceneShotVideoTakeShotDesign(
       screenplay,
       now: new Date().toISOString(),
     });
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const refreshed = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
@@ -136,39 +148,7 @@ export async function updateSceneShotVideoTakeShotDesign(
       session,
       projectFolder,
       project,
-      prepared,
-    });
-  });
-}
-
-export async function updateSceneShotVideoTakeState(
-  input: UpdateSceneShotVideoTakeStateInput
-): Promise<ShotVideoTakeProductionContext> {
-  return withShotProjectSession(input, ({ session, projectFolder, project }) => {
-    const screenplay = requireScreenplayDocument(session);
-    const current = requireSceneShotVideoTake(session, {
-      takeId: input.takeId,
-      screenplay,
-    });
-    assertEditableSceneShotVideoTake(current);
-    updateSceneShotVideoTakeStateRecord(session, {
-      takeId: input.takeId,
-      state: mergeSceneShotVideoTakeStatePatch({
-        current: current.state,
-        patch: input.statePatch,
-      }),
-      screenplay,
-      now: new Date().toISOString(),
-    });
-    const prepared = prepareSceneShotVideoTakeInSession({
-      session,
-      input,
-    });
-    return buildContextFromPrepared({
-      session,
-      projectFolder,
-      project,
-      prepared,
+      prepared: refreshed,
     });
   });
 }
@@ -178,18 +158,18 @@ export async function updateSceneShotVideoTakeShots(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const current = requireSceneShotVideoTake(session, {
-      takeId: input.takeId,
-      screenplay,
+    const prepared = prepareSceneShotVideoTakeInSession({
+      session,
+      input,
     });
-    assertEditableSceneShotVideoTake(current);
+    assertEditableSceneShotVideoTake(prepared.take);
     updateSceneShotVideoTakeShotMembershipRecord(session, {
       takeId: input.takeId,
       shotIds: input.shotIds,
       screenplay,
       now: new Date().toISOString(),
     });
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const refreshed = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
@@ -197,53 +177,7 @@ export async function updateSceneShotVideoTakeShots(
       session,
       projectFolder,
       project,
-      prepared,
+      prepared: refreshed,
     });
   });
-}
-
-function mergeSceneShotVideoTakeStatePatch(input: {
-  current: SceneShotVideoTake['state'];
-  patch: UpdateSceneShotVideoTakeStateInput['statePatch'];
-}): SceneShotVideoTake['state'] {
-  return {
-    ...input.current,
-    ...input.patch,
-    version: 1,
-    shotDesignByShotId: {
-      ...input.current.shotDesignByShotId,
-      ...input.patch.shotDesignByShotId,
-    },
-    referenceSelections: {
-      ...input.current.referenceSelections,
-      ...input.patch.referenceSelections,
-      dependencyInclusions: {
-        ...(input.patch.referenceSelections?.dependencyInclusions ??
-          input.current.referenceSelections.dependencyInclusions),
-      },
-      selectedCharacterSheetAssetIds: {
-        ...(input.patch.referenceSelections?.selectedCharacterSheetAssetIds ??
-          input.current.referenceSelections.selectedCharacterSheetAssetIds),
-      },
-      selectedLocationSheetAssetIds: {
-        ...(input.patch.referenceSelections?.selectedLocationSheetAssetIds ??
-          input.current.referenceSelections.selectedLocationSheetAssetIds),
-      },
-      selectedLocationViewIds: {
-        ...(input.patch.referenceSelections?.selectedLocationViewIds ??
-          input.current.referenceSelections.selectedLocationViewIds),
-      },
-      selectedLookbookSheetIds:
-        input.patch.referenceSelections?.selectedLookbookSheetIds ??
-        input.current.referenceSelections.selectedLookbookSheetIds,
-      selectedDialogueAudioTakeIds: {
-        ...(input.patch.referenceSelections?.selectedDialogueAudioTakeIds ??
-          input.current.referenceSelections.selectedDialogueAudioTakeIds),
-      },
-    },
-    production: {
-      ...input.current.production,
-      ...input.patch.production,
-    },
-  };
 }

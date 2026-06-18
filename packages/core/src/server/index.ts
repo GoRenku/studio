@@ -48,6 +48,9 @@ export type {
 export {
   createProjectDataService,
 } from './project-data-service.js';
+export {
+  validateShotVideoTakeInputPolicy,
+} from './media-generation/shot-video-take/input-policy.js';
 export type {
   ChangeAssetSelectInput,
   ClearActiveLookbookInput,
@@ -177,7 +180,14 @@ export type {
   ReadSceneShotVideoTakeInput,
   ListSceneShotVideoTakesInput,
   UpdateSceneShotVideoTakeProductionInput,
+  UpdateSceneShotVideoTakeShotDesignInput,
   UpdateSceneShotVideoTakeShotsInput,
+  UpdateSceneShotVideoTakeCharacterSheetSelectionInput,
+  UpdateSceneShotVideoTakeLocationSheetSelectionInput,
+  UpdateSceneShotVideoTakeLocationViewSelectionInput,
+  UpdateSceneShotVideoTakeLookbookSheetSelectionInput,
+  UpdateSceneShotVideoTakeDialogueAudioSelectionInput,
+  UpdateSceneShotVideoTakeReferenceInclusionInput,
   ValidateInspirationAnalysisInput,
   ValidateLookbookImageGenerationSpecInput,
   ValidateLookbookSheetGenerationSpecInput,

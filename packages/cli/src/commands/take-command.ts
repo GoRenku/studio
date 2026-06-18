@@ -2,7 +2,6 @@ import { createProjectDataService } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { RenkuCliIo } from '../cli.js';
 import {
-  readJsonFile,
   requiredFlag,
   writeJson,
   type CliCommandRuntime,
@@ -71,6 +70,7 @@ async function runTakeCommandPath(input: {
     case 'show':
       return input.runtime.projectDataService.readSceneShotVideoTake({
         ...takeProjectInput(input.runtime),
+        sceneId: input.flags.scene,
         takeId: requiredFlag(input.flags.take, '--take'),
       });
     case 'create':
@@ -79,12 +79,6 @@ async function runTakeCommandPath(input: {
         sceneId: requiredFlag(input.flags.scene, '--scene'),
         shotListId: requiredFlag(input.flags.shotList, '--shot-list'),
         shotIds: parseShots(requiredFlag(input.flags.shots, '--shots')),
-      });
-    case 'update':
-      return input.runtime.projectDataService.updateSceneShotVideoTakeState({
-        ...takeProjectInput(input.runtime),
-        takeId: requiredFlag(input.flags.take, '--take'),
-        statePatch: (await readJsonFile(requiredFlag(input.flags.file, '--file'))) as never,
       });
     default:
       throw unknownTakeCommand(input.commandPath);
@@ -130,7 +124,7 @@ function unknownTakeCommand(commandPath: readonly string[]): StructuredError {
     code: 'CLI107',
     message: `Unknown take command: ${commandPath.join(' ') || '(none)'}.`,
     suggestion:
-      'Use take list, take show, take create, or take update.',
+      'Use take list, take show, or take create.',
   });
 }
 

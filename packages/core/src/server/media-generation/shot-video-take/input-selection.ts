@@ -70,7 +70,17 @@ export async function resolveShotVideoTakeInputFile(
   input: ResolveShotVideoTakeInputFileInput
 ): Promise<ResolvedShotVideoTakeInputFile> {
   return withShotProjectSession(input, ({ session, projectFolder }) => {
+    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
     const shotInput = requireShotVideoTakeInput(session, input.inputId);
+    if (
+      shotInput.takeId !== prepared.take.takeId ||
+      !sameShotIds(shotInput.shotIds, prepared.orderedShotIds)
+    ) {
+      throw new ProjectDataError(
+        'PROJECT_DATA362',
+        'Shot video take input belongs to a different Shot Video Take.'
+      );
+    }
     if (shotInput.assetFileId !== input.assetFileId) {
       throw new ProjectDataError(
         'PROJECT_DATA409',

@@ -89,6 +89,47 @@ describe('core server architecture', () => {
     }
   });
 
+  it('does not expose generic shot video take state patching through ProjectDataService', async () => {
+    const source = await fs.readFile(
+      path.join(projectSourceRoot, 'project-data-service-contracts.ts'),
+      'utf8'
+    );
+    const forbiddenNeedles = [
+      {
+        needle: 'updateSceneShotVideoTakeState',
+        reason:
+          'adapter-facing contracts must expose focused take commands instead of a generic metadata patch method',
+      },
+      {
+        needle: 'UpdateSceneShotVideoTakeStateInput',
+        reason:
+          'generic take-state patch input must not be part of the public service contract',
+      },
+      {
+        needle: 'statePatch: Partial<SceneShotVideoTakeState>',
+        reason:
+          'callers must not be able to construct arbitrary durable take-state maps',
+      },
+    ];
+    const offenders = forbiddenNeedles.flatMap(({ needle, reason }) =>
+      findNeedleLines(source, needle).map((line) => ({
+        file: 'project-data-service-contracts.ts',
+        line,
+        needle,
+        reason,
+      }))
+    );
+
+    expect(
+      offenders,
+      [
+        'ProjectDataService is the adapter-facing core contract for Studio server and CLI.',
+        'It must not expose generic shot video take state patching as a metadata escape hatch.',
+        'Resolve this during 0077 by adding focused core commands that validate ownership, scene membership, and dependency scope before writing durable take state.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
   it('keeps re-export facades limited to index files', async () => {
     const files = await listTypeScriptFiles(coreSourceRoot);
     const offenders: string[] = [];
@@ -311,4 +352,10 @@ async function listTypeScriptFiles(root: string): Promise<string[]> {
     })
   );
   return files.flat();
+}
+
+function findNeedleLines(source: string, needle: string): number[] {
+  return source
+    .split('\n')
+    .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
 }

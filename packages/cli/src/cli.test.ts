@@ -2313,52 +2313,6 @@ describe('renku CLI', () => {
       },
     });
 
-    const publicTakeStatePatchPath = path.join(homeDir, 'shot-take-state-patch.json');
-    await fs.writeFile(
-      publicTakeStatePatchPath,
-      JSON.stringify(
-        {
-          production: {
-            inputModeId: 'text-only',
-            modelChoice: 'fal-ai/bytedance/seedance-2.0',
-            parameterValues: {},
-          },
-        },
-        null,
-        2
-      ),
-      'utf8'
-    );
-
-    stdout = [];
-    stderr = [];
-    const publicTakeUpdateExitCode = await runRenkuCli(
-      [
-        'take',
-        'update',
-        '--take',
-        take.takeId,
-        '--file',
-        publicTakeStatePatchPath,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(publicTakeUpdateExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      target: {
-        takeId: take.takeId,
-      },
-      take: {
-        state: {
-          production: {
-            inputModeId: 'text-only',
-            modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          },
-        },
-      },
-    });
-
     stdout = [];
     stderr = [];
     const productionUpdateExitCode = await runRenkuCli(
@@ -2398,8 +2352,6 @@ describe('renku CLI', () => {
         `scene:${sceneId}`,
         '--take',
         take.takeId,
-        '--shots',
-        'shot_001',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -2408,6 +2360,7 @@ describe('renku CLI', () => {
     const shotContext = JSON.parse(stdout.join('\n'));
     expect(shotContext).toMatchObject({
       target: {
+        sceneId,
         takeId: take.takeId,
         shotIds: ['shot_001'],
       },
@@ -2418,12 +2371,33 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
+    const wrongSceneContextExitCode = await runRenkuCli(
+      [
+        'generation',
+        'context',
+        '--purpose',
+        'shot.video-take',
+        '--target',
+        'scene:scene_wrong',
+        '--take',
+        take.takeId,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(wrongSceneContextExitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('PROJECT_DATA423');
+
+    stdout = [];
+    stderr = [];
     const shotPlanExitCode = await runRenkuCli(
       [
         'generation',
         'plan',
         '--purpose',
         'shot.video-take',
+        '--target',
+        `scene:${sceneId}`,
         '--take',
         take.takeId,
         '--intent',
@@ -2452,8 +2426,6 @@ describe('renku CLI', () => {
         `scene:${sceneId}`,
         '--take',
         take.takeId,
-        '--shots',
-        'shot_001',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }

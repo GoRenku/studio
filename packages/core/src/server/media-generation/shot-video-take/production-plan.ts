@@ -46,6 +46,9 @@ import {
   issue,
 } from './diagnostics.js';
 import {
+  validateShotVideoTakeInputPolicy,
+} from './input-policy.js';
+import {
   defaultModelChoiceForInputMode,
   modelFamilyLabel,
 } from './model-list.js';
@@ -172,7 +175,9 @@ export async function planShotVideoTakeProduction(
       )
     );
   });
-  const inputPolicy = input.inputPolicy ?? { defaultMode: 'auto' as const };
+  const inputPolicy = input.inputPolicy === undefined
+    ? { defaultMode: 'auto' as const }
+    : validateShotVideoTakeInputPolicy(input.inputPolicy);
   const { dependencyInventory } = await withShotProjectSession(
     input,
     async ({ session }) => {

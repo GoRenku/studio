@@ -9,7 +9,6 @@ import {
   parseLookbookTarget,
   parseSceneDialogueTarget,
   parseSceneTarget,
-  parseShots,
 } from './studio-target-parsing.js';
 import { requiredFlag } from './structured-command.js';
 
@@ -103,13 +102,11 @@ function parseSceneShotGroupTarget(input: {
 }): MediaGenerationRequestTarget {
   const sceneId = parseSceneTarget(input.target, 'Shot media generation');
   const takeId = requiredFlag(input.takeId, '--take');
-  const shotIds = parseShots(requiredFlag(input.shots, '--shots'));
   return {
     kind: 'sceneShotVideoTake',
     id: takeId,
     sceneId,
     takeId,
-    shotIds,
   };
 }
 

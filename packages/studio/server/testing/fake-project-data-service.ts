@@ -1039,51 +1039,52 @@ export function fakeProjectDataService(): NonNullable<
     async updateSceneShotVideoTakeProduction(input) {
       return makeShotVideoTakeContext(input, input.production);
     },
-    async updateSceneShotVideoTakeState(input) {
-      const context = makeShotVideoTakeContext(input, input.statePatch.production);
-      const referenceSelections = input.statePatch.referenceSelections
-        ? {
-            ...context.take.state.referenceSelections,
-            ...input.statePatch.referenceSelections,
-            dependencyInclusions:
-              input.statePatch.referenceSelections.dependencyInclusions ??
-              context.take.state.referenceSelections.dependencyInclusions,
-            selectedCharacterSheetAssetIds:
-              input.statePatch.referenceSelections.selectedCharacterSheetAssetIds ??
-              context.take.state.referenceSelections.selectedCharacterSheetAssetIds,
-            selectedLocationSheetAssetIds:
-              input.statePatch.referenceSelections.selectedLocationSheetAssetIds ??
-              context.take.state.referenceSelections.selectedLocationSheetAssetIds,
-            selectedLocationViewIds:
-              input.statePatch.referenceSelections.selectedLocationViewIds ??
-              context.take.state.referenceSelections.selectedLocationViewIds,
-            selectedLookbookSheetIds:
-              input.statePatch.referenceSelections.selectedLookbookSheetIds ??
-              context.take.state.referenceSelections.selectedLookbookSheetIds,
-            selectedDialogueAudioTakeIds:
-              input.statePatch.referenceSelections.selectedDialogueAudioTakeIds ??
-              context.take.state.referenceSelections.selectedDialogueAudioTakeIds,
-          }
-        : context.take.state.referenceSelections;
-      return {
-        ...context,
-        take: {
-          ...context.take,
-          state: {
-            ...context.take.state,
-            ...input.statePatch,
-            referenceSelections,
-            production:
-              input.statePatch.production ?? context.take.state.production,
-          },
-        },
-      };
-    },
     async updateSceneShotVideoTakeShotDesign(input) {
       return makeShotVideoTakeContext(input);
     },
     async updateSceneShotVideoTakeShots(input) {
       return makeShotVideoTakeContext(input, undefined, input.shotIds);
+    },
+    async updateSceneShotVideoTakeCharacterSheetSelection(input) {
+      return makeShotVideoTakeContext(input, undefined, undefined, {
+        selectedCharacterSheetAssetIds: input.assetId
+          ? { [input.castMemberId]: input.assetId }
+          : {},
+      });
+    },
+    async updateSceneShotVideoTakeLocationSheetSelection(input) {
+      return makeShotVideoTakeContext(input, undefined, undefined, {
+        selectedLocationSheetAssetIds: input.assetId
+          ? { [input.locationId]: input.assetId }
+          : {},
+      });
+    },
+    async updateSceneShotVideoTakeLocationViewSelection(input) {
+      return makeShotVideoTakeContext(input, undefined, undefined, {
+        selectedLocationSheetAssetIds: { [input.locationId]: input.assetId },
+        selectedLocationViewIds: { [input.locationId]: input.viewIds },
+      });
+    },
+    async updateSceneShotVideoTakeLookbookSheetSelection(input) {
+      return makeShotVideoTakeContext(input, undefined, undefined, {
+        selectedLookbookSheetIds: input.lookbookSheetId
+          ? [input.lookbookSheetId]
+          : [],
+      });
+    },
+    async updateSceneShotVideoTakeDialogueAudioSelection(input) {
+      return makeShotVideoTakeContext(input, undefined, undefined, {
+        selectedDialogueAudioTakeIds: input.dialogueAudioTakeId
+          ? { [input.dialogueId]: input.dialogueAudioTakeId }
+          : {},
+      });
+    },
+    async updateSceneShotVideoTakeReferenceInclusion(input) {
+      return makeShotVideoTakeContext(input, undefined, undefined, {
+        dependencyInclusions: input.inclusion
+          ? { [input.dependencyId]: input.inclusion }
+          : {},
+      });
     },
     async planShotVideoTakeProduction(input) {
       return makeShotVideoTakePlan(input);
@@ -1287,11 +1288,15 @@ function makeShotVideoTakeContext(
     takeId: string;
   },
   production?: SceneShotVideoTakeProductionState,
-  shotIds?: string[]
+  shotIds?: string[],
+  referenceSelections?: Partial<
+    SceneShotVideoTake['state']['referenceSelections']
+  >
 ): ShotVideoTakeProductionContext {
   const take = makeSceneShotVideoTake({
     takeId: input.takeId,
     shotIds,
+    referenceSelections,
   });
   const target = makeShotVideoTakeTarget(input);
   return {
@@ -1377,6 +1382,7 @@ function makeSceneShotVideoTake(
     shotIds?: string[];
     title?: string;
     production?: SceneShotVideoTakeProductionState;
+    referenceSelections?: Partial<SceneShotVideoTake['state']['referenceSelections']>;
   } = {}
 ): SceneShotVideoTake {
   const shotIds = input.shotIds ?? ['shot_001'];
@@ -1397,6 +1403,7 @@ function makeSceneShotVideoTake(
         selectedLocationViewIds: {},
         selectedLookbookSheetIds: [],
         selectedDialogueAudioTakeIds: {},
+        ...input.referenceSelections,
       },
       production: input.production ?? {},
     },

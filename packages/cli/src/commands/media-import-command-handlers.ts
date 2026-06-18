@@ -346,6 +346,7 @@ async function importShotVideoTake(
   const singleFile = await readSingleFileImport(input.flags);
   return input.runtime.projectDataService.importShotVideoTake({
     ...mediaImportProjectInput(input.runtime),
+    sceneId: parseSceneTarget(input.target, 'Shot Video Take media import'),
     takeId: requiredFlag(input.flags.take, '--take'),
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
@@ -364,6 +365,7 @@ async function importShotInputMedia(
   const singleFile = await readSingleFileImport(input.flags);
   return importMedia({
     ...mediaImportProjectInput(input.runtime),
+    sceneId: parseSceneTarget(input.target, 'Shot Video Take input import'),
     takeId: requiredFlag(input.flags.take, '--take'),
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,

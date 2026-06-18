@@ -1359,7 +1359,8 @@ lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
 scene:<scene-id>
-scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]>
+scene:<scene-id> --shot-list <shot-list-id>
+scene:<scene-id> --take <take-id>
 ```
 
 Read context and available model choices:
@@ -1379,26 +1380,26 @@ renku generation context --purpose location.environment-sheet --target location:
 renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
-renku generation context --purpose shot.first-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.first-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.last-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.last-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.reference-image --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.reference-image --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation model list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --intent <input-mode-id> --json
+renku generation context --purpose shot.first-frame --target scene:<scene-id> --take <take-id> --json
+renku generation model list --purpose shot.first-frame --target scene:<scene-id> --take <take-id> --json
+renku generation context --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
+renku generation model list --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
+renku generation context --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
+renku generation model list --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
+renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation context --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
+renku generation model list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --intent <input-mode-id> --json
 ```
 
 Shot video take production planning:
 
 ```bash
-renku generation production update --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
-renku generation preflight --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --file <shot-video-production-json> --json
-renku generation input list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --json
-renku generation input select --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --input <input-id> --json
-renku generation input clear --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --production-group <production-group-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
+renku generation production update --purpose shot.video-take --target scene:<scene-id> --take <take-id> --file <shot-video-production-json> --json
+renku generation preflight --purpose shot.video-take --target scene:<scene-id> --take <take-id> --file <shot-video-production-json> --json
+renku generation input list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
+renku generation input select --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
+renku generation input clear --purpose shot.video-take --target scene:<scene-id> --take <take-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
 ```
 
 `generation preflight` is the agent-facing dependency checklist before final
@@ -1422,11 +1423,11 @@ renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-
 renku generation spec list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
-renku generation spec list --purpose shot.first-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.last-frame --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.reference-image --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation spec list --purpose shot.video-take --target scene:<scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
+renku generation spec list --purpose shot.first-frame --target scene:<scene-id> --take <take-id> --json
+renku generation spec list --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
+renku generation spec list --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
+renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation spec list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
 ```
 
 Estimate and run:
@@ -1651,8 +1652,7 @@ Shot media import:
 renku media import \
   --purpose shot.first-frame \
   --target scene:<scene-id> \
-  --shot-list <shot-list-id> \
-  --shots <shot-id[,shot-id...]> \
+  --take <take-id> \
   --source <project-relative-path> \
   --selection select \
   --receipt <generation-run-json> \
@@ -1661,8 +1661,7 @@ renku media import \
 renku media import \
   --purpose shot.reference-image \
   --target scene:<scene-id> \
-  --shot-list <shot-list-id> \
-  --shots <shot-id[,shot-id...]> \
+  --take <take-id> \
   --source <project-relative-path> \
   --title <reference-intent-title> \
   --selection select \
@@ -1672,8 +1671,7 @@ renku media import \
 renku media import \
   --purpose shot.multi-shot-storyboard-sheet \
   --target scene:<scene-id> \
-  --shot-list <shot-list-id> \
-  --shots <shot-id[,shot-id...]> \
+  --take <take-id> \
   --source <project-relative-path> \
   --title <group-sheet-title> \
   --selection select \
@@ -1683,8 +1681,7 @@ renku media import \
 renku media import \
   --purpose shot.video-take \
   --target scene:<scene-id> \
-  --shot-list <shot-list-id> \
-  --shots <shot-id[,shot-id...]> \
+  --take <take-id> \
   --source <project-relative-path> \
   --receipt <generation-run-json> \
   --json
@@ -1728,10 +1725,11 @@ Options:
   and must be paired with exactly one `--shots` id.
 - `--file`: grouped import JSON for `location.environment-sheet` and
   multi-shot `scene.storyboard-sheet` image imports.
-- `--shot-list`: required when importing `scene.storyboard-sheet` and shot
-  media purposes.
-- `--shots`: comma-separated shot ids for shot media purposes. For single-file
-  `scene.storyboard-sheet` imports, it must contain exactly one shot id.
+- `--shot-list`: required when importing `scene.storyboard-sheet`.
+- `--shots`: for single-file `scene.storyboard-sheet` imports, it must contain
+  exactly one shot id.
+- `--take`: required when importing shot media and final `shot.video-take`
+  media; the take owns ordered shot membership.
 - `--selection`: optional shot image import selection, either `select` or
   `take`.
 - `--sections`: optional comma-separated Lookbook section keys.

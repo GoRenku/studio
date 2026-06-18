@@ -4,6 +4,9 @@ import type {
   ShotVideoTakeInputPolicy,
 } from '@gorenku/studio-core/client';
 import {
+  validateShotVideoTakeInputPolicy,
+} from '@gorenku/studio-core/server';
+import {
   buildDiagnosticResult,
   createDiagnosticError,
   createStructuredError,
@@ -153,7 +156,10 @@ export function readShotVideoTakeProductionPlanRequest(
   finishOrThrow(issues);
   return {
     ...(production ? { production } : {}),
-    inputPolicy: record.inputPolicy as ShotVideoTakeInputPolicy | undefined,
+    inputPolicy:
+      record.inputPolicy === undefined
+        ? undefined
+        : validateShotVideoTakeInputPolicy(record.inputPolicy),
   };
 }
 
