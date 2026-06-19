@@ -22,7 +22,10 @@ import {
   useDebouncedAutosave,
   type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
-import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
+import {
+  matchesProjectInformationResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import {
   DropdownMenu,
@@ -172,9 +175,7 @@ export function ProjectInformationPanel({
 
   useStudioResourceRefresh({
     projectName: project.identity.name,
-    matches: (resourceKeys) =>
-      resourceKeys.includes('project-information') ||
-      resourceKeys.includes('project-shell'),
+    matches: matchesProjectInformationResource,
     onRefresh: () => setResourceRevision((current) => current + 1),
   });
 

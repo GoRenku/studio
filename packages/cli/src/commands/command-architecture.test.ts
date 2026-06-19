@@ -76,4 +76,112 @@ describe('CLI command architecture', () => {
       'media-generation/purpose-registry'
     );
   });
+
+  it('does not expose arbitrary shot-video take state patching from CLI commands', async () => {
+    const commandSources = await readCommandSources();
+    const forbiddenNeedles = [
+      {
+        needle: 'updateSceneShotVideoTakeState',
+        reason:
+          'CLI commands must call focused core commands instead of generic take-state patching',
+      },
+      {
+        needle: 'statePatch',
+        reason:
+          'CLI commands must not accept or assemble arbitrary durable take-state patches',
+      },
+    ];
+    const findings = findForbiddenNeedles(commandSources, forbiddenNeedles);
+
+    expect(
+      findings,
+      [
+        'The CLI is a thin adapter over current core commands.',
+        'It may parse flags and typed JSON files, but it must not expose raw take-state JSON patching.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
+  it('keeps CLI commands away from project database internals', async () => {
+    const commandSources = await readCommandSources();
+    const forbiddenNeedles = [
+      {
+        needle: 'database/access',
+        reason:
+          'CLI commands must call core services instead of database access modules',
+      },
+      {
+        needle: 'schema/',
+        reason:
+          'CLI commands must not import Drizzle schema modules',
+      },
+      {
+        needle: 'drizzle-orm',
+        reason:
+          'CLI commands must not use Drizzle directly',
+      },
+      {
+        needle: 'better-sqlite3',
+        reason:
+          'CLI commands must not use SQLite drivers directly',
+      },
+    ];
+    const findings = findForbiddenNeedles(commandSources, forbiddenNeedles);
+
+    expect(
+      findings,
+      [
+        'The CLI owns command parsing and output formatting.',
+        'Project database access, schema imports, and durable mutation rules belong in packages/core.',
+      ].join(' ')
+    ).toEqual([]);
+  });
 });
+
+async function readCommandSources(): Promise<Array<{ file: string; source: string }>> {
+  const files = (await listTypeScriptFiles(commandDir)).filter(
+    (file) => !file.endsWith('.test.ts')
+  );
+  return Promise.all(
+    files.map(async (file) => ({
+      file: path.relative(commandDir, file).split(path.sep).join('/'),
+      source: await fs.readFile(file, 'utf8'),
+    }))
+  );
+}
+
+async function listTypeScriptFiles(root: string): Promise<string[]> {
+  const entries = await fs.readdir(root, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const absolutePath = path.join(root, entry.name);
+      if (entry.isDirectory()) {
+        return listTypeScriptFiles(absolutePath);
+      }
+      return entry.isFile() && entry.name.endsWith('.ts') ? [absolutePath] : [];
+    })
+  );
+  return files.flat();
+}
+
+function findForbiddenNeedles(
+  sources: Array<{ file: string; source: string }>,
+  forbiddenNeedles: Array<{ needle: string; reason: string }>
+): Array<{ file: string; line: number; needle: string; reason: string }> {
+  return sources.flatMap(({ file, source }) =>
+    forbiddenNeedles.flatMap((forbiddenNeedle) =>
+      findNeedleLines(source, forbiddenNeedle.needle).map((line) => ({
+        file,
+        line,
+        needle: forbiddenNeedle.needle,
+        reason: forbiddenNeedle.reason,
+      }))
+    )
+  );
+}
+
+function findNeedleLines(source: string, needle: string): number[] {
+  return source
+    .split('\n')
+    .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
+}

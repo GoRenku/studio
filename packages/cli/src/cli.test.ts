@@ -2342,6 +2342,28 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
+    const wrongSceneProductionUpdateExitCode = await runRenkuCli(
+      [
+        'generation',
+        'production',
+        'update',
+        '--purpose',
+        'shot.video-take',
+        '--target',
+        'scene:scene_wrong',
+        '--take',
+        take.takeId,
+        '--file',
+        shotProductionPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(wrongSceneProductionUpdateExitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('PROJECT_DATA423');
+
+    stdout = [];
+    stderr = [];
     const shotContextExitCode = await runRenkuCli(
       [
         'generation',

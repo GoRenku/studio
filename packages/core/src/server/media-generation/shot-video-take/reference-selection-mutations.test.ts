@@ -3,6 +3,8 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
+import { createDeterministicIdGenerator } from '../../index.js';
+import type { ProjectRelativePath } from '../../../client/index.js';
 
 describe('shot video take reference selection mutations', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -39,6 +41,41 @@ describe('shot video take reference selection mutations', () => {
     expect(take.state.referenceSelections.selectedCharacterSheetAssetIds).toEqual({});
   });
 
+  it('rejects character sheet assets from another Cast Member before writing take state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/narrator-character-sheet.png',
+      'narrator sheet'
+    );
+    const narratorSheet = await projectData.importCastCharacterSheetMedia({
+      homeDir,
+      castMemberId: ids.narratorCastMemberId,
+      sourceProjectRelativePath: 'generated/media/narrator-character-sheet.png',
+    });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeCharacterSheetSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        castMemberId: ids.castMemberId,
+        assetId: narratorSheet.imported.assetId,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA425',
+      issues: [
+        expect.objectContaining({
+          location: expect.objectContaining({ path: ['assetId'] }),
+        }),
+      ],
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedCharacterSheetAssetIds: {},
+    });
+  });
+
   it('rejects blank location sheet asset ids without persisting them', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
@@ -63,6 +100,82 @@ describe('shot video take reference selection mutations', () => {
     expect(take.state.referenceSelections.selectedLocationSheetAssetIds).toEqual({});
   });
 
+  it('rejects location sheets from another Location before writing take state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    await projectData.applyLocationOperations({
+      homeDir,
+      document: {
+        kind: 'locationOperations',
+        operations: [
+          {
+            operation: 'location.add',
+            location: {
+              key: 'wrong-sheet-location',
+              handle: 'wrong-sheet-location',
+              name: 'Wrong Sheet Location',
+              description: 'A different location used for stale sheet tests.',
+            },
+          },
+        ],
+      },
+      idGenerator: {
+        next(prefix) {
+          return prefix === 'location'
+            ? 'location_wrong_sheet_0079'
+            : `${prefix}_wrong_sheet_0079`;
+        },
+      },
+    });
+    const projectResource = await projectData.readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const otherLocationId = projectResource.locations.find(
+      (location) => location.handle === 'wrong-sheet-location'
+    )?.id;
+    if (!otherLocationId) {
+      throw new Error('Expected wrong-sheet test location to exist.');
+    }
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const project = await projectData.readCurrentProject({ homeDir });
+    if (!project) {
+      throw new Error('Expected current project to exist.');
+    }
+    const sheetFiles = await shotVideoTakeProject.writeLocationSheetImportFiles(
+      project.projectFolder,
+      'wrong-location-sheet'
+    );
+    const otherLocationSheet =
+      await projectData.importLocationEnvironmentSheetMedia({
+        homeDir,
+        locationId: otherLocationId,
+        files: sheetFiles,
+        title: 'Wrong location sheet',
+      });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeLocationSheetSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        locationId: ids.locationId,
+        assetId: otherLocationSheet.imported.assetId,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA427',
+      issues: [
+        expect.objectContaining({
+          location: expect.objectContaining({ path: ['assetId'] }),
+        }),
+      ],
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedLocationSheetAssetIds: {},
+      selectedLocationViewIds: {},
+    });
+  });
+
   it('rejects blank lookbook sheet ids without persisting them', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
@@ -84,6 +197,61 @@ describe('shot video take reference selection mutations', () => {
       takeId: written.take.takeId,
     });
     expect(take.state.referenceSelections.selectedLookbookSheetIds).toEqual([]);
+  });
+
+  it('rejects Lookbook sheets outside the active Lookbook before writing take state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const lookbookIds = createDeterministicIdGenerator();
+    const activeLookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Active Lookbook',
+      document: shotVideoTakeProject.lookbookDocument(),
+      idGenerator: lookbookIds,
+    });
+    const inactiveLookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Inactive Lookbook',
+      document: shotVideoTakeProject.lookbookDocument(),
+      idGenerator: lookbookIds,
+    });
+    await projectData.setActiveLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: activeLookbook.lookbook.id,
+    });
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/inactive-lookbook-sheet.png',
+      'inactive sheet'
+    );
+    const inactiveSheet = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: inactiveLookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/inactive-lookbook-sheet.png',
+      title: 'Inactive sheet',
+    });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeLookbookSheetSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        lookbookSheetId: inactiveSheet.imported.id,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA429',
+      issues: [
+        expect.objectContaining({
+          location: expect.objectContaining({ path: ['lookbookSheetId'] }),
+        }),
+      ],
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedLookbookSheetIds: [],
+    });
   });
 
   it('rejects blank dialogue audio take ids without persisting them', async () => {
@@ -131,4 +299,131 @@ describe('shot video take reference selection mutations', () => {
     });
     expect(take.state.referenceSelections.selectedDialogueAudioTakeIds).toEqual({});
   });
+
+  it('rejects dialogue audio takes from another dialogue before writing take state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/audio/urban-sample.mp3',
+      'voice sample bytes'
+    );
+    const voice = await projectData.attachCastVoice({
+      homeDir,
+      document: {
+        kind: 'castVoiceAttachment',
+        castMemberId: ids.castMemberId,
+        name: 'urban-primary',
+        provider: 'elevenlabs',
+        model: 'eleven_v3',
+        voiceId: 'voice_urban_primary',
+        purpose: 'Primary speaking voice for dialogue reference tests',
+        sample: {
+          sourceProjectRelativePath:
+            'generated/audio/urban-sample.mp3' as ProjectRelativePath,
+          title: 'Urban primary voice sample',
+        },
+      },
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const sourceDialogueId = 'dialogue_reference_source';
+    const targetDialogueId = 'dialogue_reference_target';
+    await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: ids.sceneId,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...scene,
+          blocks: [
+            ...scene.blocks,
+            {
+              type: 'dialogue',
+              dialogueId: sourceDialogueId,
+              castMemberId: ids.castMemberId,
+              lines: ['The walls remember every hammer.'],
+            },
+            {
+              type: 'dialogue',
+              dialogueId: targetDialogueId,
+              castMemberId: ids.castMemberId,
+              lines: ['Then we teach them a new sound.'],
+            },
+          ],
+        },
+      },
+    });
+    const audio = await projectData.generateSceneDialogueAudioTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      dialogueId: sourceDialogueId,
+      setup: {
+        modelChoice: 'elevenlabs/eleven_v3',
+        castVoiceId: voice.voice.id,
+        plainText: 'The walls remember every hammer.',
+        v3Text: 'The walls remember every hammer.',
+        outputFormat: 'mp3_44100_128',
+        languageCode: 'en',
+      },
+      simulate: true,
+    });
+    const generatedAudio = audio.context.audioByDialogueId[sourceDialogueId];
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await expect(
+      projectData.updateSceneShotVideoTakeDialogueAudioSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        dialogueId: targetDialogueId,
+        dialogueAudioTakeId: generatedAudio!.pickedTakeId!,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA431',
+      issues: [
+        expect.objectContaining({
+          location: expect.objectContaining({ path: ['takeId'] }),
+        }),
+      ],
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedDialogueAudioTakeIds: {},
+    });
+  });
+
+  it('rejects unknown dependency inclusion ids before writing take state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await expect(
+      projectData.updateSceneShotVideoTakeReferenceInclusion({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        dependencyId: 'reference-image:shot:shot_missing',
+        inclusion: 'exclude',
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA432',
+      issues: [
+        expect.objectContaining({
+          location: expect.objectContaining({ path: ['dependencyId'] }),
+        }),
+      ],
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      dependencyInclusions: {},
+    });
+  });
+
+  async function readReferenceSelections(takeId: string) {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const take = await projectData.readSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId,
+    });
+    return take.state.referenceSelections;
+  }
 });

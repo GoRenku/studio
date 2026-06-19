@@ -48,6 +48,13 @@ export function matchesProjectShellResource(resourceKeys: string[]): boolean {
   );
 }
 
+export function matchesProjectInformationResource(resourceKeys: string[]): boolean {
+  return resourceKeys.some(
+    (resourceKey) =>
+      resourceKey === 'project-information' || resourceKey === 'project-shell'
+  );
+}
+
 export function matchesProjectLibraryResource(resourceKeys: string[]): boolean {
   return resourceKeys.includes('project-library');
 }

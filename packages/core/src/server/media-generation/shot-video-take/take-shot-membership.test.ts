@@ -169,6 +169,75 @@ describe('Shot Video Take shot membership', () => {
     });
   });
 
+  it('rejects wrong-scene production updates before writing take state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await projectData.updateSceneShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      },
+    });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeProduction({
+        homeDir,
+        sceneId: 'scene_wrong',
+        takeId: written.take.takeId,
+        production: {
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/kling-video/v3/pro',
+        },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA423' });
+
+    const take = await projectData.readSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+    });
+    expect(take.state.production).toMatchObject({
+      inputModeId: 'reference',
+      modelChoice: 'fal-ai/bytedance/seedance-2.0',
+    });
+  });
+
+  it('rejects wrong-scene shot-design updates before writing take state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await projectData.updateSceneShotVideoTakeShotDesign({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+      shotId: 'shot_001',
+      shotDesign: { composition: { shotSize: 'wide-shot' } },
+    });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeShotDesign({
+        homeDir,
+        sceneId: 'scene_wrong',
+        takeId: written.take.takeId,
+        shotId: 'shot_001',
+        shotDesign: { composition: { shotSize: 'close-up' } },
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA423' });
+
+    const take = await projectData.readSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+    });
+    expect(
+      take.state.shotDesignByShotId.shot_001?.composition?.shotSize
+    ).toBe('wide-shot');
+  });
+
 
 
   it('keeps a take editable after the active shot list changes', async () => {

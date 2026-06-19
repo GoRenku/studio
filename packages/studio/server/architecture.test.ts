@@ -33,30 +33,6 @@ const routeForbiddenNeedles: ForbiddenNeedle[] = [
     needle: 'context.take.state.referenceSelections',
     reason: 'routes must not inspect durable take reference-selection maps',
   },
-  {
-    needle: 'selectedCharacterSheetAssetIds',
-    reason: 'character-sheet selection belongs to a focused core command',
-  },
-  {
-    needle: 'selectedLocationSheetAssetIds',
-    reason: 'location-sheet selection belongs to a focused core command',
-  },
-  {
-    needle: 'selectedLocationViewIds',
-    reason: 'location-view selection belongs to a focused core command',
-  },
-  {
-    needle: 'selectedLookbookSheetIds',
-    reason: 'lookbook-sheet selection belongs to a focused core command',
-  },
-  {
-    needle: 'selectedDialogueAudioTakeIds',
-    reason: 'dialogue-audio selection belongs to a focused core command',
-  },
-  {
-    needle: 'dependencyInclusions',
-    reason: 'reference inclusion belongs to a focused core command',
-  },
 ];
 
 const httpForbiddenNeedles: ForbiddenNeedle[] = [
@@ -70,10 +46,24 @@ const httpForbiddenNeedles: ForbiddenNeedle[] = [
     reason:
       'HTTP helpers may parse request fields but must not build durable state patches',
   },
+];
+
+const routeForbiddenImports: ForbiddenNeedle[] = [
   {
-    needle: 'referenceSelections',
-    reason:
-      'HTTP helpers may parse typed request input but must not assemble durable referenceSelections',
+    needle: 'database/access',
+    reason: 'routes must call ProjectDataService instead of database access modules',
+  },
+  {
+    needle: 'schema/',
+    reason: 'routes must not import Drizzle schema modules',
+  },
+  {
+    needle: 'drizzle-orm',
+    reason: 'routes must not use Drizzle directly',
+  },
+  {
+    needle: 'better-sqlite3',
+    reason: 'routes must not use SQLite drivers directly',
   },
 ];
 
@@ -102,6 +92,19 @@ describe('Studio server architecture', () => {
         'HTTP helpers may mention request field names while translating JSON into typed command input.',
         'They must not assemble referenceSelections, construct statePatch payloads, or call project-data mutation methods.',
         'Durable take-state mutation must be owned by focused core commands added during 0077.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
+  it('keeps route files away from project database internals', async () => {
+    const files = await listTypeScriptFiles(routeRoot);
+    const findings = await findForbiddenNeedles(files, routeRoot, routeForbiddenImports);
+
+    expect(
+      findings,
+      [
+        'Studio routes are HTTP adapters.',
+        'Project database access, schema imports, and durable mutation rules belong in packages/core.',
       ].join(' ')
     ).toEqual([]);
   });

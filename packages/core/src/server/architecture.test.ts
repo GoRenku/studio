@@ -130,6 +130,35 @@ describe('core server architecture', () => {
     ).toEqual([]);
   });
 
+  it('keeps low-level take-state writers inside core-owned command modules', async () => {
+    const files = await listTypeScriptFiles(projectSourceRoot);
+    const offenders: string[] = [];
+
+    for (const file of files) {
+      const relativePath = path.relative(projectSourceRoot, file);
+      if (
+        relativePath === 'architecture.test.ts' ||
+        relativePath.endsWith('.test.ts') ||
+        relativePath === path.join('database', 'access', 'scene-shot-video-takes.ts') ||
+        relativePath.startsWith(path.join('media-generation', 'shot-video-take'))
+      ) {
+        continue;
+      }
+      const source = await fs.readFile(file, 'utf8');
+      if (source.includes('updateSceneShotVideoTakeStateRecord')) {
+        offenders.push(relativePath);
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Durable take-state map writes must stay behind focused core commands.',
+        'Adapters and broad wiring modules must not import the low-level state writer directly.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
   it('keeps re-export facades limited to index files', async () => {
     const files = await listTypeScriptFiles(coreSourceRoot);
     const offenders: string[] = [];
@@ -198,36 +227,25 @@ describe('core server architecture', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('keeps client domain contract files as real owners, not re-export stubs', async () => {
-    const domainFiles = [
-      'assets.ts',
-      'cast-members.ts',
-      'diagnostics.ts',
-      'screenplay.ts',
-      'production-export.ts',
-      'project-languages.ts',
-      'project-library.ts',
-      'project.ts',
-      'resources.ts',
-      'visual-language.ts',
-    ];
+  it('keeps client contract modules as real owners, not re-export stubs', async () => {
+    const files = (await listTypeScriptFiles(clientSourceRoot)).filter(
+      (file) => path.basename(file) !== 'index.ts' && !file.endsWith('.test.ts')
+    );
     const offenders: string[] = [];
 
-    for (const domainFile of domainFiles) {
-      const source = await fs.readFile(path.join(clientSourceRoot, domainFile), 'utf8');
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
       const significantLines = source
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line && !line.startsWith('//'));
-      const ownsContract =
-        significantLines.some((line) => line.startsWith('export interface ')) ||
-        significantLines.some((line) => line.startsWith('export type '));
+      const ownsExport = significantLines.some(isOwningExportLine);
       const onlyReExports = significantLines.every(
         (line) => line.startsWith('export ') && line.includes(' from ')
       );
 
-      if (!ownsContract || onlyReExports) {
-        offenders.push(domainFile);
+      if (!ownsExport || onlyReExports) {
+        offenders.push(path.relative(clientSourceRoot, file));
       }
     }
 
@@ -358,4 +376,16 @@ function findNeedleLines(source: string, needle: string): number[] {
   return source
     .split('\n')
     .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
+}
+
+function isOwningExportLine(line: string): boolean {
+  return (
+    line.startsWith('export interface ') ||
+    line.startsWith('export type ') ||
+    line.startsWith('export const ') ||
+    line.startsWith('export function ') ||
+    line.startsWith('export async function ') ||
+    line.startsWith('export class ') ||
+    line.startsWith('export enum ')
+  );
 }
