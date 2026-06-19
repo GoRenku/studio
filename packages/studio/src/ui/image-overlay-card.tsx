@@ -10,6 +10,7 @@ interface ImageOverlayCardProps {
   description?: string;
   imageUrl: string | null;
   imageAlt: string;
+  previewContent?: ReactNode;
   aspectClassName?: string;
   aspectRatio?: number;
   detectImageAspectRatio?: boolean;
@@ -28,6 +29,7 @@ export function ImageOverlayCard({
   description,
   imageUrl,
   imageAlt,
+  previewContent,
   aspectClassName = 'aspect-[16/10]',
   aspectRatio = 16 / 10,
   detectImageAspectRatio = false,
@@ -64,7 +66,9 @@ export function ImageOverlayCard({
         className='absolute inset-0 h-full w-full overflow-hidden rounded-[inherit] p-0 text-left hover:bg-transparent'
         onClick={onOpen}
       >
-        {imageUrl ? (
+        {previewContent ? (
+          previewContent
+        ) : imageUrl ? (
           <img
             src={imageUrl}
             alt={imageAlt}

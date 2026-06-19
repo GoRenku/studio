@@ -109,6 +109,7 @@ function take(): SceneShotVideoTake {
     sourceShotListId: 'shot_list_hook',
     shotIds: ['shot_001', 'shot_002'],
     title: 'Shot Video Take 1',
+    picked: false,
     state: emptyTakeState(production),
     createdAt: '',
     updatedAt: '',

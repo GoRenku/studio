@@ -232,6 +232,13 @@
       "when": 1781787791112,
       "tag": "0032_remove_take_legacy",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1781884227796,
+      "tag": "0033_take-card-picks",
+      "breakpoints": true
     }
   ]
 }

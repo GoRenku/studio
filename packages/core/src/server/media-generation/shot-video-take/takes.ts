@@ -3,9 +3,11 @@ import type {
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
+  deleteSceneShotVideoTakeRecord,
   insertSceneShotVideoTakeRecord,
   listSceneShotVideoTakesForScene,
   requireSceneShotVideoTake,
+  updateSceneShotVideoTakePickRecord,
   updateSceneShotVideoTakeProductionRecord,
   updateSceneShotVideoTakeShotDesignRecord,
   updateSceneShotVideoTakeShotMembershipRecord,
@@ -19,8 +21,10 @@ import {
 } from '../../project-data-error.js';
 import type {
   CreateSceneShotVideoTakeInput,
+  DeleteSceneShotVideoTakeInput,
   ListSceneShotVideoTakesInput,
   ReadSceneShotVideoTakeInput,
+  UpdateSceneShotVideoTakePickInput,
   UpdateSceneShotVideoTakeProductionInput,
   UpdateSceneShotVideoTakeShotDesignInput,
   UpdateSceneShotVideoTakeShotsInput,
@@ -36,6 +40,7 @@ import {
   assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
+import { shotVideoTakeResourceKeys } from './resource-keys.js';
 
 export async function createSceneShotVideoTake(
   input: CreateSceneShotVideoTakeInput
@@ -90,6 +95,46 @@ export async function listSceneShotVideoTakes(
         sceneId: input.sceneId,
         screenplay,
       }),
+    };
+  });
+}
+
+export async function deleteSceneShotVideoTake(
+  input: DeleteSceneShotVideoTakeInput
+): Promise<{ resourceKeys: string[] }> {
+  return withShotProjectSession(input, ({ session }) => {
+    const prepared = prepareSceneShotVideoTakeInSession({
+      session,
+      input,
+    });
+    assertEditableSceneShotVideoTake(prepared.take);
+    const resourceKeys = shotVideoTakeResourceKeys(prepared);
+    deleteSceneShotVideoTakeRecord(session, {
+      takeId: input.takeId,
+    });
+    return { resourceKeys };
+  });
+}
+
+export async function updateSceneShotVideoTakePick(
+  input: UpdateSceneShotVideoTakePickInput
+): Promise<{ take: SceneShotVideoTake; resourceKeys: string[] }> {
+  return withShotProjectSession(input, ({ session }) => {
+    const screenplay = requireScreenplayDocument(session);
+    const prepared = prepareSceneShotVideoTakeInSession({
+      session,
+      input,
+    });
+    assertEditableSceneShotVideoTake(prepared.take);
+    const take = updateSceneShotVideoTakePickRecord(session, {
+      takeId: input.takeId,
+      picked: input.picked,
+      screenplay,
+      now: new Date().toISOString(),
+    });
+    return {
+      take,
+      resourceKeys: shotVideoTakeResourceKeys({ ...prepared, take }),
     };
   });
 }

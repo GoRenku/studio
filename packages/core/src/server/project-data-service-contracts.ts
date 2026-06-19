@@ -464,6 +464,8 @@ export interface ProjectDataService {
   createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<{ takes: SceneShotVideoTake[] }>;
+  deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<{ resourceKeys: string[] }>;
+  updateSceneShotVideoTakePick(input: UpdateSceneShotVideoTakePickInput): Promise<{ take: SceneShotVideoTake; resourceKeys: string[] }>;
   updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeShotDesign(input: UpdateSceneShotVideoTakeShotDesignInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeShots(input: UpdateSceneShotVideoTakeShotsInput): Promise<ShotVideoTakeProductionContext>;
@@ -1374,6 +1376,14 @@ export interface ShotVideoTakeContextInput extends RenkuConfigPathOptions {
   sceneId?: string;
   takeId: string;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface DeleteSceneShotVideoTakeInput
+  extends ShotVideoTakeContextInput {}
+
+export interface UpdateSceneShotVideoTakePickInput
+  extends ShotVideoTakeContextInput {
+  picked: boolean;
 }
 
 export interface ShotVideoTakeModelListInput extends ShotVideoTakeContextInput {

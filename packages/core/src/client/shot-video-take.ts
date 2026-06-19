@@ -127,6 +127,7 @@ export interface SceneShotVideoTake {
   sourceShotListId: string;
   title: string;
   shotIds: string[];
+  picked: boolean;
   state: SceneShotVideoTakeState;
   status: SceneShotVideoTakeStatus;
   createdAt: string;

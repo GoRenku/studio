@@ -12,7 +12,9 @@ import type { SceneShotListResourceResponse } from '@/services/studio-project-co
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
   createSceneShotVideoTake,
+  deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
+  updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
 } from '@/services/studio-shot-video-takes-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
@@ -39,6 +41,11 @@ import { SceneShotDetail } from './scene-shot-detail';
 import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
 import { SceneShotListEmpty } from './scene-shot-list-empty';
 import { shotLabel } from './scene-shot-labels';
+import {
+  SceneTakeCard,
+  TAKE_CARD_GRID_MIN_WIDTH_PX,
+  type SceneTakePreviewShot,
+} from './scene-take-card';
 import {
   createShotGroupDraftsFromTakes,
   cycleShotGroupMembership,
@@ -246,6 +253,51 @@ export function SceneTakesTab({
     [activeShotTab, onSelect, sceneId]
   );
 
+  const handleDeleteTake = useCallback(
+    async (deletedTakeId: string) => {
+      try {
+        await deleteSceneShotVideoTake(projectName, sceneId, deletedTakeId);
+        setTakes((current) =>
+          current.filter((candidate) => candidate.takeId !== deletedTakeId)
+        );
+      } catch (deleteError) {
+        setError(
+          deleteError instanceof Error
+            ? deleteError.message
+            : 'Unable to delete take.'
+        );
+      }
+    },
+    [projectName, sceneId]
+  );
+
+  const handleToggleTakePick = useCallback(
+    async (take: SceneShotVideoTake) => {
+      try {
+        const report = await updateSceneShotVideoTakePick(
+          projectName,
+          sceneId,
+          take.takeId,
+          !take.picked
+        );
+        setTakes((current) =>
+          orderSceneShotVideoTakes(
+            current.map((candidate) =>
+              candidate.takeId === report.take.takeId ? report.take : candidate
+            )
+          )
+        );
+      } catch (pickError) {
+        setError(
+          pickError instanceof Error
+            ? pickError.message
+            : 'Unable to update take pick.'
+        );
+      }
+    },
+    [projectName, sceneId]
+  );
+
   const handleCloseWorkspace = useCallback(() => {
     onSelect({
       type: 'scene',
@@ -433,7 +485,7 @@ export function SceneTakesTab({
       shotIds: [shots[0].shotId],
       title: shots[0].title,
     });
-    setTakes((current) => [...current, created]);
+    setTakes((current) => orderSceneShotVideoTakes([...current, created]));
     onSelect({
       type: 'scene',
       id: sceneId,
@@ -448,33 +500,34 @@ export function SceneTakesTab({
   if (workspaceMode === 'list') {
     return (
       <div className='min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel-bg p-4'>
-        <div className='grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3'>
+        <div
+          className='grid gap-3'
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${TAKE_CARD_GRID_MIN_WIDTH_PX}px, 1fr))`,
+          }}
+        >
           {takes.map((take) => {
             const firstShotIndex = shots.findIndex(
               (shot) => shot.shotId === take.shotIds[0]
             );
             const firstShot =
               firstShotIndex >= 0 ? shots[firstShotIndex] : null;
+            const title = firstShot?.title ?? take.title;
             return (
-              <Button
+              <SceneTakeCard
                 key={take.takeId}
-                type='button'
-                variant='ghost'
-                className='aspect-video h-auto min-w-0 flex-col items-stretch justify-end overflow-hidden rounded-md border border-border/40 bg-muted/30 p-0 text-left hover:border-border/70 hover:bg-muted/45'
-                onClick={() => handleOpenTake(take)}
-              >
-                <span className='flex min-h-0 flex-1 items-center justify-center bg-muted text-sm text-muted-foreground'>
-                  Take
-                </span>
-                <span className='w-full bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.72)_32%,rgba(0,0,0,0.86)_100%)] px-4 pb-3 pt-10'>
-                  <span className='block truncate text-sm font-semibold text-white'>
-                    {firstShot?.title ?? take.title}
-                  </span>
-                  <span className='mt-0.5 block truncate text-xs text-white/72'>
-                    {shotRangeLabel(shots, take.shotIds)}
-                  </span>
-                </span>
-              </Button>
+                title={title}
+                description={shotRangeLabel(shots, take.shotIds)}
+                picked={take.picked}
+                previewShots={takePreviewShots({
+                  shots,
+                  shotIds: take.shotIds,
+                  imagesByShotId: resource.storyboardImagesByShotId,
+                })}
+                onOpen={() => handleOpenTake(take)}
+                onDelete={() => handleDeleteTake(take.takeId)}
+                onTogglePicked={() => handleToggleTakePick(take)}
+              />
             );
           })}
           <Button
@@ -511,7 +564,7 @@ export function SceneTakesTab({
       shotIds: [selectedShot.shotId],
       title: selectedShot.title,
     });
-    setTakes((current) => [...current, created]);
+    setTakes((current) => orderSceneShotVideoTakes([...current, created]));
     onSelect({
       type: 'scene',
       id: sceneId,
@@ -638,4 +691,34 @@ function shotRangeLabel(
     return `Shot ${indexes[0] + 1}`;
   }
   return `Shots ${indexes[0] + 1}-${indexes[indexes.length - 1] + 1}`;
+}
+
+function takePreviewShots(input: {
+  shots: { shotId: string }[];
+  shotIds: string[];
+  imagesByShotId: SceneShotListResourceResponse['storyboardImagesByShotId'];
+}): SceneTakePreviewShot[] {
+  return input.shotIds.slice(0, 4).map((shotId) => {
+    const shotIndex = input.shots.findIndex((shot) => shot.shotId === shotId);
+    return {
+      shotId,
+      label: shotIndex >= 0 ? shotLabel(shotIndex) : 'Shot',
+      image: input.imagesByShotId[shotId] ?? null,
+    };
+  });
+}
+
+function orderSceneShotVideoTakes(
+  takes: SceneShotVideoTake[]
+): SceneShotVideoTake[] {
+  return [...takes].sort((left, right) => {
+    if (left.picked !== right.picked) {
+      return left.picked ? -1 : 1;
+    }
+    const updatedAt = right.updatedAt.localeCompare(left.updatedAt);
+    if (updatedAt !== 0) {
+      return updatedAt;
+    }
+    return right.takeId.localeCompare(left.takeId);
+  });
 }

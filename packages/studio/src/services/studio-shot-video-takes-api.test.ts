@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SceneShotVideoTakeProductionState } from '@gorenku/studio-core/client';
 import {
   clearShotVideoTakeInput,
+  deleteSceneShotVideoTake,
   estimateShotVideoTakeProduction,
   planShotVideoTakeProduction,
   readSceneShotVideoTakeEditContext,
@@ -13,6 +14,7 @@ import {
   updateTakeDialogueAudioSelection,
   updateTakeLocationSheetSelection,
   updateTakeLocationViewSelection,
+  updateSceneShotVideoTakePick,
   updateShotVideoTakeProduction,
   updateSceneShotVideoTakeShotDesign,
 } from './studio-shot-video-takes-api';
@@ -74,6 +76,37 @@ describe('studio-shot-video-takes-api', () => {
     expect(String(url)).toContain(`/takes/${TAKE_ID}`);
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({ production: PRODUCTION });
+  });
+
+  it('deletes a scene shot video take', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ resourceKeys: [] })
+    );
+    await deleteSceneShotVideoTake('constantinople', 'scene_hook', TAKE_ID);
+    const [url, init] = lastCall();
+    expect(String(url)).toBe(
+      `/studio-api/projects/constantinople/screenplay/scenes/scene_hook/takes/${TAKE_ID}`
+    );
+    expect((init as RequestInit).method).toBe('DELETE');
+    expect(lastBody()).toEqual({});
+  });
+
+  it('updates a scene shot video take pick', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ take: {}, resourceKeys: [] })
+    );
+    await updateSceneShotVideoTakePick(
+      'constantinople',
+      'scene_hook',
+      TAKE_ID,
+      true
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toBe(
+      `/studio-api/projects/constantinople/screenplay/scenes/scene_hook/takes/${TAKE_ID}/pick`
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({ picked: true });
   });
 
   it('reads the take edit context', async () => {

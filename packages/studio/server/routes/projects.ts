@@ -59,6 +59,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'createSceneShotVideoTake'
   | 'readSceneShotVideoTake'
   | 'listSceneShotVideoTakes'
+  | 'deleteSceneShotVideoTake'
+  | 'updateSceneShotVideoTakePick'
   | 'buildShotVideoTakeContext'
   | 'readSceneShotVideoTakeEditContext'
   | 'listShotVideoTakeModels'

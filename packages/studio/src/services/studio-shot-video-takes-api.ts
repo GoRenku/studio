@@ -49,6 +49,15 @@ export interface SceneShotVideoTakesRead {
   takes: SceneShotVideoTake[];
 }
 
+export interface SceneShotVideoTakeMutation {
+  take: SceneShotVideoTake;
+  resourceKeys: string[];
+}
+
+export interface SceneShotVideoTakeDeleteMutation {
+  resourceKeys: string[];
+}
+
 export async function listSceneShotVideoTakes(
   projectName: string,
   sceneId: string
@@ -77,6 +86,31 @@ export async function createSceneShotVideoTake(
     take: SceneShotVideoTake;
   };
   return body.take;
+}
+
+export async function deleteSceneShotVideoTake(
+  projectName: string,
+  sceneId: string,
+  takeId: string
+): Promise<SceneShotVideoTakeDeleteMutation> {
+  return sendMutation<SceneShotVideoTakeDeleteMutation>(
+    productionPath(projectName, sceneId, takeId),
+    'DELETE',
+    {}
+  );
+}
+
+export async function updateSceneShotVideoTakePick(
+  projectName: string,
+  sceneId: string,
+  takeId: string,
+  picked: boolean
+): Promise<SceneShotVideoTakeMutation> {
+  return sendMutation<SceneShotVideoTakeMutation>(
+    `${productionPath(projectName, sceneId, takeId)}/pick`,
+    'PATCH',
+    { picked }
+  );
 }
 
 export async function updateSceneShotVideoTakeShots(

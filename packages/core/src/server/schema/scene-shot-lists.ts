@@ -93,6 +93,9 @@ export const sceneShotVideoTakes = sqliteTable(
       .default(
         '{"version":1,"shotDesignByShotId":{},"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{},"selectedLocationViewIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{}}'
       ),
+    isPicked: integer('is_picked', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     historySnapshot: text('history_snapshot_json').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

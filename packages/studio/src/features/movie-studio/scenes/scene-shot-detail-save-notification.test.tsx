@@ -42,6 +42,7 @@ const TAKE: SceneShotVideoTake = {
   sourceShotListId: 'shot_list_hook',
   shotIds: ['shot_001'],
   title: 'Shot 1 Shot Video Take',
+  picked: false,
   state: emptyTakeState(),
   createdAt: '',
   updatedAt: '',

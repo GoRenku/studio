@@ -79,6 +79,50 @@ describe('shot video take routes', () => {
     expect(body.models.models.length).toBeGreaterThan(0);
   });
 
+  it('DELETE delegates take deletion to core', async () => {
+    const deleteSceneShotVideoTake = vi.fn(
+      fakeProjectDataService().deleteSceneShotVideoTake
+    );
+    const app = mount({ deleteSceneShotVideoTake });
+    const response = await app.request(TAKE_PATH, {
+      method: 'DELETE',
+    });
+    expect(response.status).toBe(200);
+    expect(deleteSceneShotVideoTake).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
+        takeId: TAKE_ID,
+      })
+    );
+    const body = await response.json();
+    expect(body.resourceKeys.length).toBeGreaterThan(0);
+  });
+
+  it('pick PATCH delegates take pick state to core', async () => {
+    const updateSceneShotVideoTakePick = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakePick
+    );
+    const app = mount({ updateSceneShotVideoTakePick });
+    const response = await app.request(`${TAKE_PATH}/pick`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ picked: true }),
+    });
+    expect(response.status).toBe(200);
+    expect(updateSceneShotVideoTakePick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
+        takeId: TAKE_ID,
+        picked: true,
+      })
+    );
+    const body = await response.json();
+    expect(body.take.picked).toBe(true);
+    expect(body.resourceKeys.length).toBeGreaterThan(0);
+  });
+
   it('GET edit-context returns the take-owned editing read model', async () => {
     const readSceneShotVideoTakeEditContext = vi.fn(
       fakeProjectDataService().readSceneShotVideoTakeEditContext

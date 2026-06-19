@@ -14,6 +14,7 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   assertHttpRequestFields,
+  readRequiredHttpBoolean,
   readHttpRequestRecord,
 } from './request-validation.js';
 
@@ -74,6 +75,10 @@ export interface SceneShotVideoTakeShotsRequest {
   shotIds: string[];
 }
 
+export interface SceneShotVideoTakePickRequest {
+  picked: boolean;
+}
+
 export function readSceneShotVideoTakeShotsRequest(
   input: unknown
 ): SceneShotVideoTakeShotsRequest {
@@ -104,6 +109,27 @@ export function readSceneShotVideoTakeShotsRequest(
   }
   finishOrThrow(issues);
   return { shotIds };
+}
+
+export function readSceneShotVideoTakePickRequest(
+  input: unknown
+): SceneShotVideoTakePickRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['picked'],
+    issues,
+    CONTEXT,
+    'Send only the picked field.'
+  );
+  const picked = readRequiredHttpBoolean(record, ['picked'], issues, CONTEXT);
+  finishOrThrow(issues);
+  return { picked: picked ?? false };
 }
 
 export function readSceneShotVideoTakeProductionRequest(

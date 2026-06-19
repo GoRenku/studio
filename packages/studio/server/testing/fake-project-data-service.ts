@@ -1005,6 +1005,31 @@ export function fakeProjectDataService(): NonNullable<
         ],
       };
     },
+    async deleteSceneShotVideoTake(input) {
+      return {
+        resourceKeys: [
+          `scene:${input.sceneId ?? 'scene_opening'}`,
+          `surface:scene:${input.sceneId ?? 'scene_opening'}:takes`,
+          `scene-shot-video-take:${input.takeId}`,
+        ],
+      };
+    },
+    async updateSceneShotVideoTakePick(input) {
+      return {
+        take: {
+          ...makeSceneShotVideoTake({
+            takeId: input.takeId,
+            sceneId: input.sceneId,
+          }),
+          picked: input.picked,
+        },
+        resourceKeys: [
+          `scene:${input.sceneId ?? 'scene_opening'}`,
+          `surface:scene:${input.sceneId ?? 'scene_opening'}:takes`,
+          `scene-shot-video-take:${input.takeId}`,
+        ],
+      };
+    },
     async buildShotVideoTakeContext(input) {
       return makeShotVideoTakeContext(input);
     },
@@ -1393,6 +1418,7 @@ function makeSceneShotVideoTake(
     sourceShotListId: input.sourceShotListId ?? 'shot_list_opening',
     title: input.title ?? 'Opening take',
     shotIds,
+    picked: false,
     state: {
       version: 1,
       shotDesignByShotId: {},

@@ -30,6 +30,7 @@ import {
   readShotLookbookReferenceRequest,
   readShotReferenceInclusionRequest,
   readSceneShotVideoTakeCreateRequest,
+  readSceneShotVideoTakePickRequest,
   readSceneShotVideoTakeProductionRequest,
   readSceneShotVideoTakeShotsRequest,
   readTakeDialogueAudioSelectionRequest,
@@ -449,6 +450,48 @@ export function createScreenplayRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .delete(
+      '/screenplay/scenes/:sceneId/takes/:takeId',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const report = await projectData.deleteSceneShotVideoTake({
+            projectName,
+            sceneId,
+            takeId,
+          });
+          return c.json(report);
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/takes/:takeId/pick',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const request = readSceneShotVideoTakePickRequest(
+            await c.req.json()
+          );
+          const report = await projectData.updateSceneShotVideoTakePick({
+            projectName,
+            sceneId,
+            takeId,
+            picked: request.picked,
+          });
+          return c.json(report);
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .get(
       '/screenplay/scenes/:sceneId/takes/:takeId/edit-context',
       async (c) => {

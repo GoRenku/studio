@@ -325,6 +325,7 @@ function take(): SceneShotVideoTake {
     sourceShotListId: 'shot_list_hook',
     shotIds: ['shot_001'],
     title: 'Shot Video Take hook',
+    picked: false,
     state: emptyTakeState({ inputModeId: 'text-only' }),
     createdAt: '',
     updatedAt: '',
