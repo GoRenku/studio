@@ -1,4 +1,4 @@
-import { asc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { PageResponse } from '../../../client/index.js';
 import { inspirationFolders } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -38,7 +38,9 @@ export function readInspirationFolderRecord(
     session.db
       .select()
       .from(inspirationFolders)
-      .where(eq(inspirationFolders.id, folderId))
+      .where(
+        and(eq(inspirationFolders.id, folderId), isNull(inspirationFolders.discardedAt))
+      )
       .get() ?? null
   );
 }
@@ -55,7 +57,12 @@ export function listInspirationFolderRecords(
   const rows = session.db
     .select()
     .from(inspirationFolders)
-    .where(cursor ? gt(inspirationFolders.position, cursor.position) : undefined)
+    .where(
+      and(
+        isNull(inspirationFolders.discardedAt),
+        cursor ? gt(inspirationFolders.position, cursor.position) : undefined
+      )
+    )
     .orderBy(asc(inspirationFolders.position), asc(inspirationFolders.id))
     .limit(limit + 1)
     .all();
@@ -77,6 +84,7 @@ export function listAllInspirationFolderRecords(
   return session.db
     .select()
     .from(inspirationFolders)
+    .where(isNull(inspirationFolders.discardedAt))
     .orderBy(asc(inspirationFolders.position), asc(inspirationFolders.id))
     .all();
 }
@@ -85,6 +93,7 @@ export function nextInspirationFolderPosition(session: DatabaseSession): number 
   const row = session.db
     .select({ maxPosition: sql<number | null>`max(${inspirationFolders.position})` })
     .from(inspirationFolders)
+    .where(isNull(inspirationFolders.discardedAt))
     .get();
   return (row?.maxPosition ?? 0) + 1;
 }

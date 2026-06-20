@@ -309,14 +309,52 @@ export function updateAssetRelationshipReferenceMetadata(
     .run();
 }
 
-export function deleteAssetRelationshipRecord(
+export function discardAssetRelationshipRecord(
   session: DatabaseSession,
-  input: { target: AssetTarget; assetId: string }
+  input: {
+    target: AssetTarget;
+    assetId: string;
+    operationId: string;
+    now: string;
+  }
 ): void {
   const config = assetRelationshipTableConfig(input.target);
   const table = config.table;
   session.db
-    .delete(table)
+    .update(table)
+    .set({
+      discardedAt: input.now,
+      discardOperationId: input.operationId,
+      restoredAt: null,
+      updatedAt: input.now,
+    })
+    .where(
+      and(
+        eq(table.assetId, input.assetId),
+        ...assetRelationshipConditions(config, { target: input.target })
+      )
+    )
+    .run();
+}
+
+export function restoreAssetRelationshipRecord(
+  session: DatabaseSession,
+  input: {
+    target: AssetTarget;
+    assetId: string;
+    now: string;
+  }
+): void {
+  const config = assetRelationshipTableConfig(input.target);
+  const table = config.table;
+  session.db
+    .update(table)
+    .set({
+      discardedAt: null,
+      discardOperationId: null,
+      restoredAt: input.now,
+      updatedAt: input.now,
+    })
     .where(
       and(
         eq(table.assetId, input.assetId),
@@ -333,6 +371,7 @@ export function nextAssetRelationshipSortOrder(
   const config = assetRelationshipTableConfig(input.target);
   const table = config.table;
   const conditions = [
+    isNull(table.discardedAt),
     eq(table.role, input.role),
     input.localeId === null
       ? isNull(table.localeId)
@@ -356,6 +395,7 @@ export function nextAssetSelectionOrder(
   const config = assetRelationshipTableConfig(input.target);
   const table = config.table;
   const conditions = [
+    isNull(table.discardedAt),
     eq(table.role, input.role),
     eq(table.selection, 'select'),
     input.localeId === null
@@ -379,7 +419,7 @@ export function countAssetRelationshipsByRole(
 ): Array<{ role: string; selectedCount: number; takeCount: number }> {
   const config = assetRelationshipTableConfig(target);
   const table = config.table;
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [isNull(table.discardedAt)];
   if (config.targetColumn && config.targetId) {
     conditions.push(eq(config.targetColumn, config.targetId));
   }
@@ -445,7 +485,9 @@ function selectAssetRelationshipRows(
     })
     .from(table)
     .innerJoin(assets, eq(assets.id, table.assetId))
-    .where(input.conditions.length ? and(...input.conditions) : undefined)
+    .where(
+      and(...input.conditions, isNull(table.discardedAt), isNull(assets.discardedAt))
+    )
     .orderBy(
       asc(selectionRank),
       asc(selectionOrderRank),
@@ -507,7 +549,12 @@ function readAssetFileRows(
       durationSeconds: assetFiles.durationSeconds,
     })
     .from(assetFiles)
-    .where(or(...assetIds.map((assetId) => eq(assetFiles.assetId, assetId))))
+    .where(
+      and(
+        or(...assetIds.map((assetId) => eq(assetFiles.assetId, assetId))),
+        isNull(assetFiles.discardedAt)
+      )
+    )
     .orderBy(asc(assetFiles.role), asc(assetFiles.id))
     .all();
   for (const row of rows) {
@@ -610,7 +657,7 @@ function readProjectAssetOwnerTargets(
   const rows = session.db
     .select({ assetId: config.table.assetId })
     .from(config.table)
-    .where(eq(config.table.assetId, assetId))
+    .where(and(eq(config.table.assetId, assetId), isNull(config.table.discardedAt)))
     .all();
   return rows.length > 0 ? [{ kind: 'project' }] : [];
 }
@@ -633,7 +680,7 @@ function readScopedAssetOwnerTargets(
   const rows = session.db
     .select({ targetId: config.targetColumn })
     .from(table)
-    .where(eq(table.assetId, assetId))
+    .where(and(eq(table.assetId, assetId), isNull(table.discardedAt)))
     .all();
   return rows.map((row) => targetFromKind(kind, String(row.targetId)));
 }

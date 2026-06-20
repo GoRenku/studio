@@ -12,6 +12,7 @@ import type {
   SceneShotVideoTakeProductionState,
   ShotVideoTakeProductionPlanReport,
   SceneShotVideoTakeEditContext,
+  RecoverableMutationReport,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
@@ -30,11 +31,13 @@ export interface ShotVideoTakeProductionRead {
 interface TakeMutationResponse {
   context: ShotVideoTakeProductionContext;
   resourceKeys: string[];
+  recovery?: RecoverableMutationReport['recovery'];
 }
 
 export interface ShotVideoTakeProductionMutation {
   context: ShotVideoTakeProductionContext;
   resourceKeys: string[];
+  recovery?: RecoverableMutationReport['recovery'];
 }
 
 export interface ShotVideoTakePlanRead {
@@ -56,6 +59,7 @@ export interface SceneShotVideoTakeMutation {
 
 export interface SceneShotVideoTakeDeleteMutation {
   resourceKeys: string[];
+  recovery: RecoverableMutationReport['recovery'];
 }
 
 export async function listSceneShotVideoTakes(

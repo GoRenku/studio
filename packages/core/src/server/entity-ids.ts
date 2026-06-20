@@ -41,7 +41,9 @@ export type EntityIdPrefix =
   | 'scene_shot_video_take_media_input'
   | 'scene_shot_video_take_output'
   | 'scene_dialogue_audio'
-  | 'scene_dialogue_audio_take';
+  | 'scene_dialogue_audio_take'
+  | 'trash_operation'
+  | 'trash_item';
 
 export interface ProjectIdGenerator {
   next(prefix: EntityIdPrefix): string;

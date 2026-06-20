@@ -106,6 +106,7 @@ describe('scene shot video takes', () => {
         `scene-shot-video-take:${written.take.takeId}`,
       ])
     );
+    expect(report.recovery.trashItemIds).toHaveLength(1);
     await expect(
       projectData.readSceneShotVideoTake({
         homeDir,
@@ -113,5 +114,61 @@ describe('scene shot video takes', () => {
         takeId: written.take.takeId,
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA419' });
+  });
+
+  it('restores a previously picked take as unpicked when another active take is picked', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    await projectData.updateSceneShotVideoTakePick({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+      picked: true,
+    });
+    const discarded = await projectData.deleteSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+    });
+    const replacement = await projectData.createSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_002'],
+      title: 'Replacement picked take',
+    });
+    await projectData.updateSceneShotVideoTakePick({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: replacement.takeId,
+      picked: true,
+    });
+
+    const restored = await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: discarded.recovery.restoreCommand.trashItemId,
+    });
+
+    expect(restored.warnings).toEqual([
+      expect.objectContaining({
+        code: 'PROJECT_DATA279',
+        severity: 'warning',
+      }),
+    ]);
+    await expect(
+      projectData.readSceneShotVideoTake({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+      })
+    ).resolves.toMatchObject({ picked: false });
+    await expect(
+      projectData.readSceneShotVideoTake({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: replacement.takeId,
+      })
+    ).resolves.toMatchObject({ picked: true });
   });
 });

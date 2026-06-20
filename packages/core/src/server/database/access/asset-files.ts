@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { assetFiles } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
@@ -28,7 +28,11 @@ export function insertAssetFileRecord(
 }
 
 export function listAssetFileRecords(session: DatabaseSession): AssetFileRecord[] {
-  return session.db.select().from(assetFiles).all();
+  return session.db
+    .select()
+    .from(assetFiles)
+    .where(isNull(assetFiles.discardedAt))
+    .all();
 }
 
 export function listAssetFileRecordsForAsset(
@@ -38,7 +42,7 @@ export function listAssetFileRecordsForAsset(
   return session.db
     .select()
     .from(assetFiles)
-    .where(eq(assetFiles.assetId, assetId))
+    .where(and(eq(assetFiles.assetId, assetId), isNull(assetFiles.discardedAt)))
     .all();
 }
 
@@ -53,7 +57,8 @@ export function readAssetFileRecord(
       .where(
         and(
           eq(assetFiles.assetId, input.assetId),
-          eq(assetFiles.id, input.assetFileId)
+          eq(assetFiles.id, input.assetFileId),
+          isNull(assetFiles.discardedAt)
         )
       )
       .get() ?? null

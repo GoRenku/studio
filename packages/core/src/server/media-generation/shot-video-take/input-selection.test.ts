@@ -274,11 +274,12 @@ describe('shot video take preflight and validation', () => {
       selection: 'take',
     });
 
-    await projectData.deleteShotVideoTakeInput({
+    const deleted = await projectData.deleteShotVideoTakeInput({
       homeDir,
       takeId: written.take.takeId,
       inputId: selected.mediaInput.inputId,
     });
+    expect(deleted.recovery?.trashItemIds).toHaveLength(1);
 
     const inputs = await projectData.listShotVideoTakeInputs({
       homeDir,
@@ -290,7 +291,60 @@ describe('shot video take preflight and validation', () => {
       selected: true,
     });
     await expect(shotVideoTakeProject.projectFileExists('generated/media/reference-a.png')).resolves.toBe(
-      false
+      true
+    );
+  });
+
+  it('restores a selected input as unselected when another active input owns the selection', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    await shotVideoTakeProject.writeProjectFile('generated/media/restore-reference-a.png', 'reference a');
+    await shotVideoTakeProject.writeProjectFile('generated/media/restore-reference-b.png', 'reference b');
+    const selected = await projectData.importShotReferenceImage({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/restore-reference-a.png',
+      selection: 'select',
+    });
+    const promoted = await projectData.importShotReferenceImage({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/restore-reference-b.png',
+      selection: 'take',
+    });
+
+    const discarded = await projectData.deleteShotVideoTakeInput({
+      homeDir,
+      takeId: written.take.takeId,
+      inputId: selected.mediaInput.inputId,
+    });
+    const restored = await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: discarded.recovery!.restoreCommand.trashItemId,
+    });
+
+    expect(restored.warnings).toEqual([
+      expect.objectContaining({
+        code: 'PROJECT_DATA279',
+        severity: 'warning',
+      }),
+    ]);
+    const inputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+    expect(inputs.inputs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          inputId: selected.mediaInput.inputId,
+          selected: false,
+        }),
+        expect.objectContaining({
+          inputId: promoted.mediaInput.inputId,
+          selected: true,
+        }),
+      ])
     );
   });
 });

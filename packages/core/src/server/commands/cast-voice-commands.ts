@@ -7,7 +7,6 @@ import {
   fetchElevenLabsVoiceSampleAudio,
 } from '@gorenku/studio-engines';
 import type {
-  Asset,
   CastVoice,
   CastVoiceAttachmentCommandDocument,
   CastVoiceAttachmentReport,
@@ -27,12 +26,10 @@ import type {
 } from '../../client/index.js';
 import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
 import {
-  deleteAssetFileRecordsForAsset,
   insertAssetFileRecord,
 } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
-  deleteAssetRelationshipRecord,
   insertAssetRelationshipRecord,
   nextAssetRelationshipSortOrder,
   readAssetRelationship,
@@ -42,8 +39,6 @@ import { readProjectRecord } from '../database/access/project.js';
 import {
   castVoiceNameExists,
   deleteCastVoiceProviderRegistrationRecord,
-  deleteCastVoiceProviderRegistrationRecords,
-  deleteCastVoiceRecord,
   insertCastVoiceRecord,
   insertCastVoiceProviderRegistrationRecord,
   listCastVoiceProviderRegistrationRecords,
@@ -55,7 +50,6 @@ import {
   type CastVoiceProviderRegistrationRecord,
   type CastVoiceRecord,
 } from '../database/access/cast-voices.js';
-import { deleteAssetRecord } from '../database/access/assets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -73,6 +67,7 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
+import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
 const DIRECT_ELEVENLABS_TTS_MODELS = new Set([
   'eleven_v3',
@@ -328,7 +323,7 @@ export async function attachCastVoice(
 export async function removeCastVoice(
   input: CastVoiceLookupInput
 ): Promise<CastVoiceRemoveReport> {
-  return withCastVoiceProjectSession(input, async ({ currentProject, projectFolder, session }) => {
+  return withCastVoiceProjectSession(input, ({ currentProject, projectFolder, session }) => {
     requireCastMember(session, input.castMemberId);
     const record = requireCastVoiceRecord(session, input);
     const target = { kind: 'castMember' as const, castMemberId: input.castMemberId };
@@ -342,20 +337,23 @@ export async function removeCastVoice(
         `Cast Voice sample asset is missing: ${record.sampleAssetId}.`
       );
     }
-    await deleteAssetFiles(projectFolder, sample);
-    session.db.transaction((tx) => {
-      const txSession = { ...session, db: tx };
-      deleteCastVoiceProviderRegistrationRecords(txSession, record.id);
-      deleteCastVoiceRecord(txSession, {
-        castMemberId: input.castMemberId,
-        voiceId: record.id,
-      });
-      deleteAssetRelationshipRecord(txSession, {
-        target,
-        assetId: record.sampleAssetId,
-      });
-      deleteAssetFileRecordsForAsset(txSession, record.sampleAssetId);
-      deleteAssetRecord(txSession, record.sampleAssetId);
+    const report = discardTrashObject({
+      session,
+      project: {
+        id: currentProject.projectId,
+        name: currentProject.projectName,
+      },
+      projectFolder,
+      itemKind: 'castVoice',
+      itemId: record.id,
+      commandName: 'castVoice.discard',
+      changes: [
+        {
+          type: 'castVoice.removed',
+          castMemberId: input.castMemberId,
+          voiceId: record.id,
+        },
+      ],
     });
     return {
       project: {
@@ -374,6 +372,7 @@ export async function removeCastVoice(
           voiceId: record.id,
         },
       ],
+      recovery: report.recovery,
       resourceKeys: studioResourceKeysForAssetTarget(target),
     };
   });
@@ -1140,15 +1139,6 @@ async function probeMediaDurationSeconds(
 
 function hashBuffer(buffer: Buffer): string {
   return `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
-}
-
-async function deleteAssetFiles(projectFolder: string, asset: Asset): Promise<void> {
-  for (const file of asset.files) {
-    const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
-    const absolutePath = resolveProjectRelativePath(projectFolder, projectRelativePath);
-    assertResolvedPathInsideProject(projectFolder, absolutePath);
-    await fs.rm(absolutePath, { force: true });
-  }
 }
 
 async function withCastVoiceProjectSession<T>(

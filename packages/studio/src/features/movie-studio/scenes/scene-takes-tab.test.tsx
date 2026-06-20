@@ -16,6 +16,7 @@ import {
   updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
 } from '@/services/studio-shot-video-takes-api';
+import { restoreTrashItem } from '@/services/studio-trash-api';
 import type { StudioSelection } from '../movie-studio-selection';
 import { SceneTakesTab } from './scene-takes-tab';
 
@@ -29,6 +30,17 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
   deleteSceneShotVideoTake: vi.fn(),
   updateSceneShotVideoTakePick: vi.fn(),
   updateSceneShotVideoTakeShots: vi.fn(),
+}));
+
+vi.mock('@/services/studio-trash-api', () => ({
+  restoreTrashItem: vi.fn(),
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
 }));
 
 describe('SceneTakesTab', () => {
@@ -55,7 +67,19 @@ describe('SceneTakesTab', () => {
     vi.mocked(createSceneShotVideoTake).mockReset();
     vi.mocked(createSceneShotVideoTake).mockResolvedValue(take());
     vi.mocked(deleteSceneShotVideoTake).mockReset();
-    vi.mocked(deleteSceneShotVideoTake).mockResolvedValue({ resourceKeys: [] });
+    vi.mocked(deleteSceneShotVideoTake).mockResolvedValue({
+      recovery: {
+        operationId: 'trash_operation_test0001',
+        trashItemIds: ['trash_item_test0001'],
+        restorable: true,
+        restoreCommand: {
+          name: 'trash.restore',
+          trashItemId: 'trash_item_test0001',
+        },
+      },
+      resourceKeys: [],
+    });
+    vi.mocked(restoreTrashItem).mockReset();
     vi.mocked(updateSceneShotVideoTakePick).mockReset();
     vi.mocked(updateSceneShotVideoTakePick).mockImplementation(
       async (_projectName, _sceneId, takeId, picked) => ({

@@ -1,5 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { ProjectRelativePath } from './project.js';
+import type { RecoverableMutationReport } from './trash.js';
 
 export interface InspirationFolder {
   id: string;
@@ -211,6 +212,7 @@ export interface VisualLanguageCommandReport {
   warnings: DiagnosticIssue[];
   project: VisualLanguageProjectReport;
   changes?: VisualLanguageChange[];
+  recovery?: RecoverableMutationReport['recovery'];
   resourceKeys: string[];
 }
 

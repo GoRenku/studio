@@ -730,6 +730,7 @@ export function createScreenplayRoute({
           });
           return c.json({
             context,
+            recovery: context.recovery,
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {

@@ -20,6 +20,7 @@ import { createNavigationRoute } from './navigation.js';
 import { createProductionExportsRoute } from './production-exports.js';
 import { createProjectInformationRoute } from './project-information.js';
 import { createScreenplayRoute } from './screenplay.js';
+import { createTrashRoute } from './trash.js';
 import { createVisualLanguageRoute } from './visual-language.js';
 
 export interface CreateProjectsRouteOptions {
@@ -87,7 +88,11 @@ export type ProjectsRouteProjectData = Pick<
   | 'listAssets'
   | 'createAssetSelect'
   | 'removeAssetSelect'
-  | 'deleteAsset'
+  | 'discardAsset'
+  | 'listTrash'
+  | 'restoreTrashItem'
+  | 'previewGarbageCollection'
+  | 'emptyTrash'
   | 'listCastVoices'
   | 'readCastVoice'
   | 'removeCastVoice'
@@ -193,6 +198,7 @@ export function createProjectsRoute(
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
+    .route('/:projectName', createTrashRoute({ projectData, requireToken }))
     .route(
       '/:projectName',
       createProjectInformationRoute({ projectData, requireToken })

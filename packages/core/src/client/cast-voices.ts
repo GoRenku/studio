@@ -161,5 +161,6 @@ export interface CastVoiceRemoveReport {
     sampleAssetId: string;
   };
   changes: Array<{ type: 'castVoice.removed'; castMemberId: string; voiceId: string }>;
+  recovery?: import('./trash.js').RecoverableMutationReport['recovery'];
   resourceKeys: string[];
 }

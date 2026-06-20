@@ -47,6 +47,8 @@ Use this page as the map:
 - `reference/project-files-and-assets.md` explains assets, files, takes, selects, and
   production exports.
 - `reference/project-relative-paths.md` defines the stored path contract.
+- `reference/recoverable-discard-and-trash.md` defines recoverable discard,
+  restore conflicts, Empty Trash blockers, and replacement-flow audit results.
 - `reference/visual-language.md` defines current Inspiration Analysis,
   Lookbook, source Inspiration, and Lookbook image rules.
 - `reference/media-generation.md` defines current persisted generation spec,

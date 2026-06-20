@@ -19,7 +19,6 @@ import {
   type ProjectRecord,
 } from '../database/access/project.js';
 import {
-  deleteInspirationFolderRecord,
   listAllInspirationFolderRecords,
   insertInspirationFolderRecord,
   listInspirationFolderRecords,
@@ -28,6 +27,7 @@ import {
   updateInspirationFolderPositions,
   updateInspirationFolderRecord,
 } from '../database/access/inspiration-folders.js';
+import { listActiveTrashItemOriginalProjectRelativePaths } from '../database/access/trash.js';
 import {
   readInspirationAnalysisRecord,
   toInspirationAnalysis,
@@ -77,6 +77,8 @@ import {
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
+import { inspirationImageTrashItemId } from '../trash/trash-object-registry.js';
 
 const inspirationResourceKeys = (folderId: string): string[] => [
   studioVisualLanguageInspirationResourceKey(),
@@ -103,7 +105,11 @@ export async function readInspirationFolder(
     const analysis = readInspirationAnalysisRecord(session, input.folderId);
     return {
       folder: toInspirationFolder(folder),
-      images: await listInspirationImagesFromFolder(projectFolder, folder),
+      images: await listActiveInspirationImagesFromFolder({
+        session,
+        projectFolder,
+        folder,
+      }),
       analysis: analysis ? toInspirationAnalysis(analysis) : null,
     };
   });
@@ -255,22 +261,22 @@ function assertCompleteInspirationFolderReorder(
 export async function deleteInspirationFolder(
   input: DeleteInspirationFolderInput
 ): Promise<InspirationFolderDeleteReport> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const projectRelativePath = normalizeProjectRelativePath(folder.projectRelativePath);
     assertProjectRelativeChildPath({ parent: INSPIRATION_ROOT, child: projectRelativePath });
-    await fs.rm(resolveProjectRelativePath(projectFolder, projectRelativePath), {
-      recursive: true,
-      force: true,
+    const report = discardTrashObject({
+      session,
+      project,
+      projectFolder,
+      itemKind: 'inspirationFolder',
+      itemId: input.folderId,
+      commandName: 'inspiration.folder.discard',
+      changes: [{ type: 'inspirationFolder.discarded', folderId: input.folderId }],
     });
-    deleteInspirationFolderRecord(session, input.folderId);
     return {
-      valid: true,
-      warnings: [],
-      project: toProjectReport(project, projectFolder),
-      changes: [{ type: 'inspirationFolder.deleted', folderId: input.folderId }],
+      ...report,
       folderId: input.folderId,
-      resourceKeys: inspirationResourceKeys(input.folderId),
     };
   });
 }
@@ -321,18 +327,23 @@ export async function deleteInspirationImage(
     const folderPath = normalizeProjectRelativePath(folder.projectRelativePath);
     const imagePath = joinProjectRelativePath(folderPath, fileName);
     assertProjectRelativeChildPath({ parent: folderPath, child: imagePath });
-    await fs.rm(resolveProjectRelativePath(projectFolder, imagePath), { force: true });
-    return {
-      valid: true,
-      warnings: [],
-      project: toProjectReport(project, projectFolder),
+    const report = discardTrashObject({
+      session,
+      project,
+      projectFolder,
+      itemKind: 'inspirationImage',
+      itemId: inspirationImageTrashItemId({ folderId: input.folderId, fileName }),
+      commandName: 'inspiration.image.discard',
       changes: [
         {
-          type: 'inspirationImage.deleted',
+          type: 'inspirationImage.discarded',
           folderId: input.folderId,
           fileName,
         },
       ],
+    });
+    return {
+      ...report,
       resource: await readInspirationFolder({
         projectName: input.projectName,
         homeDir: input.homeDir,
@@ -469,6 +480,27 @@ async function readFolderImageFileNames(
     (await listInspirationImagesFromFolder(projectFolder, folder)).map(
       (image) => image.fileName
     )
+  );
+}
+
+async function listActiveInspirationImagesFromFolder(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  folder: ReturnType<typeof requireInspirationFolderRecord>;
+}) {
+  const discardedPaths = new Set(
+    listActiveTrashItemOriginalProjectRelativePaths(input.session, {
+      itemKind: 'inspirationImage',
+      ownerKind: 'inspirationFolder',
+      ownerId: input.folder.id,
+    })
+  );
+  const images = await listInspirationImagesFromFolder(
+    input.projectFolder,
+    input.folder
+  );
+  return images.filter(
+    (image) => !discardedPaths.has(image.projectRelativePath)
   );
 }
 

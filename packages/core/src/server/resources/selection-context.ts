@@ -36,6 +36,7 @@ import {
   studioSequenceScenesNavigationResourceKey,
   studioSequenceSurfaceResourceKey,
   studioStoryArcSurfaceResourceKey,
+  studioTrashResourceKey,
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
@@ -100,6 +101,13 @@ export function readStudioSelectionContextProjection(
             }
           : selectionNotFound(input.selection);
       }
+      case 'trash':
+        return {
+          valid: true,
+          selection: input.selection,
+          context: { surface: 'trash' },
+          resourceKeys: [studioTrashResourceKey()],
+        };
       case 'cast':
         return {
           valid: true,

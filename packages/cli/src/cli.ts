@@ -25,6 +25,7 @@ import { runProductionDesignCommand } from './commands/production-design-command
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCommand } from './commands/studio-command.js';
 import { runTakeCommand } from './commands/take-command.js';
+import { runTrashCommand } from './commands/trash-command.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -80,6 +81,7 @@ Commands
   studio current       Show current Studio focus and context
   studio server status Show canonical local Studio server status
   take                 List, show, create, and update shot video takes
+  trash                List, restore, preview, and empty Trash
 
 Options
   --file               JSON input file for screenplay commands
@@ -128,6 +130,9 @@ Options
   --folder             Inspiration folder id
   --lookbook           Lookbook id
   --image              Lookbook image id
+  --trash-item         Trash item id to restore
+  --confirmation-token Empty Trash confirmation token from preview
+  --older-than-iso     ISO timestamp cutoff for Empty Trash preview/run
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
   --all-locales        Export every locale with production selects
@@ -298,6 +303,15 @@ function createCliFlags() {
       type: 'string',
     },
     image: {
+      type: 'string',
+    },
+    trashItem: {
+      type: 'string',
+    },
+    confirmationToken: {
+      type: 'string',
+    },
+    olderThanIso: {
       type: 'string',
     },
     name: {
@@ -676,6 +690,20 @@ export async function runRenkuCli(
             shots: cli.flags.shots,
             take: cli.flags.take,
             file: cli.flags.file,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'trash':
+        return await runTrashCommand({
+          input,
+          flags: {
+            confirmationToken: cli.flags.confirmationToken,
+            dryRun: cli.flags.dryRun,
+            olderThanIso: cli.flags.olderThanIso,
+            project: cli.flags.project,
+            trashItem: cli.flags.trashItem,
           },
           json: cli.flags.json,
           io,

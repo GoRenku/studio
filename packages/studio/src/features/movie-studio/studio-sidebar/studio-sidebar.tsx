@@ -445,6 +445,14 @@ export function StudioSidebar({
               ))
             : null}
         </StudioSidebarSection>
+
+        <StudioSidebarButton
+          active={selection.type === 'trash'}
+          icon={<Trash2 className='h-4 w-4' />}
+          label='Trash'
+          detail='Discarded items'
+          onClick={() => onSelect({ type: 'trash' })}
+        />
       </div>
     </aside>
   );

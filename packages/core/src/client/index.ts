@@ -72,6 +72,7 @@ export type {
   ProductionExportVariant,
   ProductionExportVariantSummary,
 } from './production-export.js';
+export type * from './trash.js';
 export type * from './media-generation-purpose.js';
 export type * from './media-generation-target.js';
 export type * from './media-generation-dependency.js';

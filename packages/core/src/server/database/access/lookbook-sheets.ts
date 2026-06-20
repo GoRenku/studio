@@ -1,4 +1,4 @@
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type {
   LookbookSheet,
   LookbookSheetAsset,
@@ -51,7 +51,7 @@ export function nextLookbookSheetSortOrder(
   const row = session.db
     .select({ maxSortOrder: sql<number | null>`max(${lookbookSheets.sortOrder})` })
     .from(lookbookSheets)
-    .where(eq(lookbookSheets.lookbookId, lookbookId))
+    .where(and(eq(lookbookSheets.lookbookId, lookbookId), isNull(lookbookSheets.discardedAt)))
     .get();
   return (row?.maxSortOrder ?? 0) + 1;
 }
@@ -87,7 +87,7 @@ export function readLookbookSheetRecord(
     session.db
       .select()
       .from(lookbookSheets)
-      .where(eq(lookbookSheets.id, sheetId))
+      .where(and(eq(lookbookSheets.id, sheetId), isNull(lookbookSheets.discardedAt)))
       .get() ?? null
   );
 }
@@ -149,7 +149,7 @@ export function listLookbookSheets(
     })
     .from(lookbookSheets)
     .innerJoin(assets, eq(assets.id, lookbookSheets.assetId))
-    .where(eq(lookbookSheets.lookbookId, lookbookId))
+    .where(and(eq(lookbookSheets.lookbookId, lookbookId), isNull(lookbookSheets.discardedAt)))
     .orderBy(asc(lookbookSheets.sortOrder), asc(lookbookSheets.id))
     .all() as LookbookSheetAssetRow[];
 
@@ -181,7 +181,7 @@ export function readLookbookSheet(
     })
     .from(lookbookSheets)
     .innerJoin(assets, eq(assets.id, lookbookSheets.assetId))
-    .where(eq(lookbookSheets.id, sheetId))
+    .where(and(eq(lookbookSheets.id, sheetId), isNull(lookbookSheets.discardedAt)))
     .get() as LookbookSheetAssetRow | undefined;
   if (!row) {
     return null;

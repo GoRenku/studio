@@ -122,7 +122,7 @@ export async function runLookbookCommand(options: {
     return 0;
   }
 
-  if (action === 'delete') {
+  if (action === 'discard') {
     const report = await service.deleteLookbook({
       projectName,
       homeDir: options.homeDir,
@@ -131,7 +131,7 @@ export async function runLookbookCommand(options: {
     await appendStudioResourceChangedEvent({
       runtime: cliRuntime(options, service),
       report,
-      command: 'lookbook delete',
+      command: 'lookbook discard',
     });
     writeJson(options.io, report);
     return 0;
@@ -182,7 +182,7 @@ export async function runLookbookCommand(options: {
     return 0;
   }
 
-  if (action === 'image' && nested === 'delete') {
+  if (action === 'image' && nested === 'discard') {
     const report = await service.deleteLookbookImage({
       projectName,
       homeDir: options.homeDir,
@@ -191,7 +191,7 @@ export async function runLookbookCommand(options: {
     await appendStudioResourceChangedEvent({
       runtime: cliRuntime(options, service),
       report,
-      command: 'lookbook image delete',
+      command: 'lookbook image discard',
     });
     writeJson(options.io, report);
     return 0;
@@ -267,7 +267,7 @@ export async function runLookbookCommand(options: {
         'CLI095',
         'Unknown lookbook command.',
         { path: ['lookbook', action ?? '', nested ?? '', operation ?? ''] },
-        'Use list/show/validate/create/update/rename/delete/set-active/clear-active, image set-sections/delete, card-image set/clear, or inspiration list/set.'
+        'Use list/show/validate/create/update/rename/discard/set-active/clear-active, image set-sections/discard, card-image set/clear, or inspiration list/set.'
       ),
     ],
     suggestion: 'Use a supported lookbook command.',

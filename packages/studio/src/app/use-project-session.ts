@@ -337,6 +337,17 @@ function readStudioRoute(): StudioRoute {
     };
   }
 
+  const trashRoute = /^\/projects\/([^/]+)\/trash\/?$/.exec(
+    window.location.pathname
+  );
+  if (trashRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(trashRoute[1]),
+      selection: { type: 'trash' },
+    };
+  }
+
   const sequenceRoute = /^\/projects\/([^/]+)\/sequences\/([^/]+)\/?$/.exec(
     window.location.pathname
   );
@@ -552,6 +563,8 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Lookbooks';
     case 'lookbook':
       return 'Visual language';
+    case 'trash':
+      return 'Trash';
     case 'cast':
       return 'Cast';
     case 'locations':
@@ -620,6 +633,9 @@ function studioSelectionRoutePath(
   }
   if (selection.type === 'lookbook') {
     return `${projectRoutePath(projectName)}/visual-language/lookbooks/${encodeURIComponent(selection.lookbookId)}`;
+  }
+  if (selection.type === 'trash') {
+    return `${projectRoutePath(projectName)}/trash`;
   }
   if (selection.type === 'storyArc') {
     return `${projectRoutePath(projectName)}/acts`;

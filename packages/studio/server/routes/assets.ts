@@ -136,7 +136,7 @@ export function createAssetsRoute({
         const projectName = c.req.param('projectName') as string;
         const castMemberId = c.req.param('castMemberId') as string;
         const assetId = c.req.param('assetId') as string;
-        await projectData.deleteAsset({
+        const report = await projectData.discardAsset({
           projectName,
           target: { kind: 'castMember', castMemberId },
           assetId,
@@ -145,7 +145,7 @@ export function createAssetsRoute({
           kind: 'castMember',
           castMemberId,
         });
-        return c.json({ assetId, resourceKeys });
+        return c.json({ assetId, recovery: report.recovery, resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -223,7 +223,7 @@ export function createAssetsRoute({
         const projectName = c.req.param('projectName') as string;
         const locationId = c.req.param('locationId') as string;
         const assetId = c.req.param('assetId') as string;
-        await projectData.deleteAsset({
+        const report = await projectData.discardAsset({
           projectName,
           target: { kind: 'location', locationId },
           assetId,
@@ -232,7 +232,7 @@ export function createAssetsRoute({
           kind: 'location',
           locationId,
         });
-        return c.json({ assetId, resourceKeys });
+        return c.json({ assetId, recovery: report.recovery, resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

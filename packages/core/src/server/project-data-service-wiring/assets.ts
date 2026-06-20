@@ -3,8 +3,9 @@ import {
   removeAssetSelect,
   updateAssetSelect,
 } from '../commands/change-asset-selection.js';
-import { deleteAsset } from '../commands/delete-asset.js';
+import { discardAsset } from '../commands/discard-asset.js';
 import { registerAsset } from '../commands/register-asset.js';
+import { restoreAsset } from '../commands/restore-asset.js';
 import { updateAssetReference } from '../commands/update-asset-reference.js';
 import { exportProductionAssets } from '../production-export/export-production-assets.js';
 import {
@@ -25,7 +26,8 @@ export function createAssetServiceWiring(): Pick<
   | 'createAssetSelect'
   | 'updateAssetSelect'
   | 'removeAssetSelect'
-  | 'deleteAsset'
+  | 'discardAsset'
+  | 'restoreAsset'
   | 'listAssetSelects'
   | 'exportProductionAssets'
 > {
@@ -38,7 +40,8 @@ export function createAssetServiceWiring(): Pick<
     createAssetSelect,
     updateAssetSelect,
     removeAssetSelect,
-    deleteAsset,
+    discardAsset,
+    restoreAsset,
     listAssetSelects,
     exportProductionAssets,
   };

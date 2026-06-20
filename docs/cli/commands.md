@@ -356,10 +356,11 @@ Behavior:
   registration command. Shot-video generation creates or reuses transient Kling
   `voice_id` values internally when selected dialogue audio is bound to a
   supported video-backed Kling element.
-- `remove` deletes the Cast Voice, its provider registrations, the linked
-  sample asset record, its asset file records, and the copied audio file.
-- Generic asset deletion fails for Cast Voice sample assets. Remove the Cast
-  Voice instead.
+- `remove` discards the Cast Voice, its provider registrations, and linked
+  sample asset metadata into Trash. The copied audio file remains in place until
+  Empty Trash runs.
+- Generic asset discard fails for Cast Voice sample assets. Remove the Cast
+  Voice instead, then restore through `renku trash restore` if needed.
 - The current direct ElevenLabs models are `eleven_v3`,
   `eleven_multilingual_v2`, and `eleven_turbo_v2_5`.
 - Successful mutations emit Studio resource keys for the affected Cast Member
@@ -1058,7 +1059,7 @@ renku inspiration create --name <name> --json
 renku inspiration show --folder <folder-id> --json
 renku inspiration rename --folder <folder-id> --name <name> --json
 renku inspiration reorder --file <folder-order-json> --json
-renku inspiration delete --folder <folder-id> --json
+renku inspiration discard --folder <folder-id> --json
 ```
 
 Options:
@@ -1193,7 +1194,7 @@ renku lookbook validate --file <lookbook-json> --json
 renku lookbook create --name <name> --file <lookbook-json> --json
 renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
 renku lookbook rename --lookbook <lookbook-id> --name <name> --json
-renku lookbook delete --lookbook <lookbook-id> --json
+renku lookbook discard --lookbook <lookbook-id> --json
 renku lookbook set-active --lookbook <lookbook-id> --json
 renku lookbook clear-active --json
 ```
@@ -1291,7 +1292,7 @@ Edit generated or imported Lookbook image relationships.
 
 ```bash
 renku lookbook image set-sections --image <lookbook-image-id> --sections camera,texture --json
-renku lookbook image delete --image <lookbook-image-id> --json
+renku lookbook image discard --image <lookbook-image-id> --json
 renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
 renku lookbook card-image clear --lookbook <lookbook-id> --json
 ```
@@ -1893,6 +1894,40 @@ Options:
 - `--project`: required project name.
 - `--target`: required asset target.
 - `--locale`: optional locale id.
+
+## `renku trash`
+
+List, restore, preview, and empty recoverable discarded project content.
+
+```bash
+renku trash list --project <project-name> --json
+renku trash restore --project <project-name> --trash-item <trash-item-id> --json
+renku trash empty preview --project <project-name> --json
+renku trash empty run --project <project-name> --confirmation-token <token> --json
+```
+
+Options:
+
+- `--project`: required project name.
+- `--trash-item`: required for `restore`; pass a Trash item id from
+  `renku trash list`.
+- `--confirmation-token`: required for `empty run`; pass the token returned by
+  `renku trash empty preview`.
+- `--older-than-iso`: optional ISO timestamp cutoff for Empty Trash preview and
+  run.
+- `--dry-run`: validate an Empty Trash run and write its report without moving
+  files.
+
+Behavior:
+
+- Discard commands keep content recoverable in Trash. Restore with
+  `renku trash restore`.
+- Empty Trash stages files into `.renku/trash/emptied/<operation-id>/`; ordinary
+  discard commands do not move or remove project media files.
+- Agents must not run `renku trash empty run` unless the user explicitly asks to
+  empty Trash after reviewing the preview.
+- Restore can return structured warnings when content is restored but an active
+  selected or picked replacement remains in place.
 
 ## `renku production export`
 

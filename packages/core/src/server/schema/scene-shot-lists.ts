@@ -7,6 +7,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 import { assetFiles, assets } from './assets.js';
+import { discardLifecycleColumns } from './lifecycle-columns.js';
 import { mediaGenerationRuns } from './media-generation.js';
 import { scenes } from './scenes.js';
 
@@ -64,6 +65,7 @@ export const sceneShotStoryboardImages = sqliteTable(
     shotContentFingerprint: text('shot_content_fingerprint').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('scene_shot_storyboard_image_scene_idx').on(table.sceneId),
@@ -99,6 +101,7 @@ export const sceneShotVideoTakes = sqliteTable(
     historySnapshot: text('history_snapshot_json').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('scene_shot_video_take_scene_idx').on(
@@ -130,6 +133,7 @@ export const sceneShotVideoTakeShots = sqliteTable(
     storyboardContentFingerprint: text(
       'storyboard_content_fingerprint'
     ).notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     uniqueIndex('scene_shot_video_take_shot_idx').on(
@@ -171,6 +175,7 @@ export const sceneShotVideoTakeMediaInputs = sqliteTable(
     selection: text('selection').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('scene_shot_video_take_media_input_take_idx').on(
@@ -188,7 +193,7 @@ export const sceneShotVideoTakeMediaInputs = sqliteTable(
         table.subjectKind,
         table.subjectId
       )
-      .where(sql`${table.selection} = 'select'`),
+      .where(sql`${table.selection} = 'select' and ${table.discardedAt} is null`),
   ],
 );
 
@@ -200,6 +205,7 @@ export const sceneShotVideoTakeMediaInputShots = sqliteTable(
       .references(() => sceneShotVideoTakeMediaInputs.id, { onDelete: 'cascade' }),
     shotId: text('shot_id').notNull(),
     shotOrder: integer('shot_order').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     uniqueIndex('scene_shot_video_take_media_input_shot_idx').on(
@@ -238,6 +244,7 @@ export const sceneShotVideoTakeOutputs = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
     isSelected: integer('is_selected', { mode: 'boolean' }).notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('scene_shot_video_take_output_take_idx').on(
@@ -249,7 +256,7 @@ export const sceneShotVideoTakeOutputs = sqliteTable(
     index('scene_shot_video_take_output_asset_idx').on(table.assetId),
     uniqueIndex('scene_shot_video_take_output_selected_idx')
       .on(table.sceneId, table.takeId)
-      .where(sql`${table.isSelected} = 1`),
+      .where(sql`${table.isSelected} = 1 and ${table.discardedAt} is null`),
   ],
 );
 
@@ -261,6 +268,7 @@ export const sceneShotVideoTakeOutputShots = sqliteTable(
       .references(() => sceneShotVideoTakeOutputs.id, { onDelete: 'cascade' }),
     shotId: text('shot_id').notNull(),
     shotOrder: integer('shot_order').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     uniqueIndex('scene_shot_video_take_output_shot_idx').on(

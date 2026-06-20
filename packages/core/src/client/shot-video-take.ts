@@ -6,6 +6,7 @@ import type { SceneShot, LocationAzimuthViewId, ShotVideoTakePromptDraft, ShotVi
 import type { MediaGenerationDependencyKind, MediaGenerationDependencyInventory, MediaGenerationDependencyPricing, MediaGenerationPlanLine } from './media-generation-dependency.js';
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
 import type { SceneShotVideoTakeTarget } from './media-generation-target.js';
+import type { RecoverableMutationReport } from './trash.js';
 import { SHOT_FIRST_FRAME_GENERATION_PURPOSE, SHOT_LAST_FRAME_GENERATION_PURPOSE, SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE, SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from './media-generation-purpose.js';
 
 export type ShotVideoTakeInputModelChoice =
@@ -255,6 +256,7 @@ export interface ShotVideoTakeProductionContext {
   mediaInputs: SceneShotVideoTakeMediaInput[];
   outputs: SceneShotVideoTakeOutput[];
   defaults: ShotVideoTakeDefaults;
+  recovery?: RecoverableMutationReport['recovery'];
   resourceKeys: string[];
 }
 

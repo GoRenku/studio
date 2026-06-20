@@ -2,6 +2,7 @@ import { index, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { assetFiles, assets } from './assets.js';
 import { castMembers } from './cast-members.js';
 import { castVoices } from './cast-voices.js';
+import { discardLifecycleColumns } from './lifecycle-columns.js';
 import { mediaGenerationRuns } from './media-generation.js';
 import { scenes } from './scenes.js';
 
@@ -74,6 +75,7 @@ export const sceneDialogueAudioTakes = sqliteTable(
     languageCode: text('language_code'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('scene_dialogue_audio_take_audio_idx').on(

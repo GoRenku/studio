@@ -29,8 +29,12 @@ renku inspiration create --name <name> --json
 renku inspiration show --folder <folder-id> --json
 renku inspiration rename --folder <folder-id> --name <name> --json
 renku inspiration reorder --file <folder-order-json> --json
-renku inspiration delete --folder <folder-id> --json
+renku inspiration discard --folder <folder-id> --json
 ```
+
+`discard` moves the folder into the project Trash ledger without moving the
+folder bytes. Restore through `renku trash restore`; do not empty Trash unless
+the user explicitly asks for that after reviewing an Empty Trash preview.
 
 `show` returns folder metadata, the project-relative folder path, a resolved
 absolute folder path for agent inspection, any existing analysis, and resource
@@ -93,10 +97,14 @@ renku lookbook validate --file <lookbook-json> --json
 renku lookbook create --name <name> --file <lookbook-json> --json
 renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
 renku lookbook rename --lookbook <lookbook-id> --name <name> --json
-renku lookbook delete --lookbook <lookbook-id> --json
+renku lookbook discard --lookbook <lookbook-id> --json
 renku lookbook set-active --lookbook <lookbook-id> --json
 renku lookbook clear-active --json
 ```
+
+`discard` records a recoverable Trash item for the Lookbook. Restore through
+`renku trash restore`; emptying Trash is a separate explicit user-approved
+operation.
 
 The input document is tagged:
 
@@ -171,10 +179,12 @@ Editing existing Lookbook image relationships stays Lookbook-specific:
 
 ```bash
 renku lookbook image set-sections --image <lookbook-image-id> --sections camera,texture --json
-renku lookbook image delete --image <lookbook-image-id> --json
+renku lookbook image discard --image <lookbook-image-id> --json
 renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
 renku lookbook card-image clear --lookbook <lookbook-id> --json
 ```
+
+`image discard` keeps the underlying media recoverable until Trash is emptied.
 
 Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
 Valid section keys are `thesis`, `palette`, `tone_mood`, `composition`,
@@ -191,4 +201,3 @@ Do not restore these obsolete shapes:
 - bare-section Lookbook JSON;
 - `imageFiles` in Lookbook JSON;
 - per-image Inspiration asset rows or image manifests.
-

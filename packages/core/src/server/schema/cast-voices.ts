@@ -1,6 +1,8 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 import { assets } from './assets.js';
 import { castMembers } from './cast-members.js';
+import { discardLifecycleColumns } from './lifecycle-columns.js';
 
 export const castVoices = sqliteTable(
   'cast_voice',
@@ -21,6 +23,7 @@ export const castVoices = sqliteTable(
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('cast_voice_cast_order_idx').on(
@@ -28,8 +31,12 @@ export const castVoices = sqliteTable(
       table.sortOrder,
       table.id
     ),
-    uniqueIndex('cast_voice_sample_asset_idx').on(table.sampleAssetId),
-    uniqueIndex('cast_voice_cast_name_idx').on(table.castMemberId, table.name),
+    uniqueIndex('cast_voice_sample_asset_idx')
+      .on(table.sampleAssetId)
+      .where(sql`${table.discardedAt} is null`),
+    uniqueIndex('cast_voice_cast_name_idx')
+      .on(table.castMemberId, table.name)
+      .where(sql`${table.discardedAt} is null`),
   ],
 );
 
@@ -47,6 +54,7 @@ export const castVoiceProviderRegistrations = sqliteTable(
     sourceSampleAssetId: text('source_sample_asset_id').references(() => assets.id),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('cast_voice_provider_registration_voice_idx').on(

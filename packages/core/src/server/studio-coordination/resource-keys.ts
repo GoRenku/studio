@@ -12,6 +12,10 @@ export function studioProjectInformationResourceKey(): string {
   return 'project-information';
 }
 
+export function studioTrashResourceKey(): string {
+  return 'trash:list';
+}
+
 export function studioCastNavigationResourceKey(): string {
   return 'navigation:cast';
 }

@@ -1,4 +1,4 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import type {
   SceneShot,
   SceneShotListDocument,
@@ -19,10 +19,6 @@ import {
   serializeSceneShotVideoTakeState,
 } from '../../shot-video-take-json/validator.js';
 import {
-  assetFiles,
-  assets,
-  sceneShotVideoTakeMediaInputs,
-  sceneShotVideoTakeOutputs,
   sceneShotVideoTakeShots,
   sceneShotVideoTakes,
 } from '../../schema/index.js';
@@ -122,7 +118,7 @@ export function requireSceneShotVideoTake(
     session.db
       .select()
       .from(sceneShotVideoTakes)
-      .where(eq(sceneShotVideoTakes.id, input.takeId))
+      .where(and(eq(sceneShotVideoTakes.id, input.takeId), isNull(sceneShotVideoTakes.discardedAt)))
       .get() ?? null;
   if (!row) {
     throw new ProjectDataError(
@@ -143,7 +139,7 @@ export function listSceneShotVideoTakesForScene(
   return session.db
     .select()
     .from(sceneShotVideoTakes)
-    .where(eq(sceneShotVideoTakes.sceneId, input.sceneId))
+    .where(and(eq(sceneShotVideoTakes.sceneId, input.sceneId), isNull(sceneShotVideoTakes.discardedAt)))
     .orderBy(
       desc(sceneShotVideoTakes.isPicked),
       desc(sceneShotVideoTakes.updatedAt),
@@ -345,21 +341,6 @@ export function updateSceneShotVideoTakePickRecord(
   });
 }
 
-export function deleteSceneShotVideoTakeRecord(
-  session: DatabaseSession,
-  input: { takeId: string }
-): void {
-  const assetIds = listTakeOwnedAssetIds(session, input.takeId);
-  session.db
-    .delete(sceneShotVideoTakes)
-    .where(eq(sceneShotVideoTakes.id, input.takeId))
-    .run();
-  for (const assetId of assetIds) {
-    session.db.delete(assetFiles).where(eq(assetFiles.assetId, assetId)).run();
-    session.db.delete(assets).where(eq(assets.id, assetId)).run();
-  }
-}
-
 export function listSceneShotVideoTakeShotIds(
   session: DatabaseSession,
   takeId: string
@@ -526,26 +507,6 @@ function projectSceneShotVideoTakeStatus(
           : 'This take matches its recorded history snapshot.',
     },
   };
-}
-
-function listTakeOwnedAssetIds(
-  session: DatabaseSession,
-  takeId: string
-): string[] {
-  const assetIds = new Set<string>();
-  session.db
-    .select({ assetId: sceneShotVideoTakeMediaInputs.assetId })
-    .from(sceneShotVideoTakeMediaInputs)
-    .where(eq(sceneShotVideoTakeMediaInputs.takeId, takeId))
-    .all()
-    .forEach((row) => assetIds.add(row.assetId));
-  session.db
-    .select({ assetId: sceneShotVideoTakeOutputs.assetId })
-    .from(sceneShotVideoTakeOutputs)
-    .where(eq(sceneShotVideoTakeOutputs.takeId, takeId))
-    .all()
-    .forEach((row) => assetIds.add(row.assetId));
-  return [...assetIds];
 }
 
 function currentSceneShotVideoTakeState(

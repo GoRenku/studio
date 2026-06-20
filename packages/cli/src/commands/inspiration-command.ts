@@ -97,7 +97,7 @@ export async function runInspirationCommand(options: {
     return 0;
   }
 
-  if (action === 'delete') {
+  if (action === 'discard') {
     const report = await service.deleteInspirationFolder({
       projectName,
       homeDir: options.homeDir,
@@ -106,7 +106,7 @@ export async function runInspirationCommand(options: {
     await appendStudioResourceChangedEvent({
       runtime: cliRuntime(options, service),
       report,
-      command: 'inspiration delete',
+      command: 'inspiration discard',
     });
     writeJson(options.io, report);
     return 0;
@@ -167,7 +167,7 @@ export async function runInspirationCommand(options: {
         'CLI092',
         'Unknown inspiration command.',
         { path: ['inspiration', action ?? '', nested ?? ''] },
-        'Use list/create/show/rename/reorder/delete or analysis show/validate/write.'
+        'Use list/create/show/rename/reorder/discard or analysis show/validate/write.'
       ),
     ],
     suggestion: 'Use a supported inspiration command.',

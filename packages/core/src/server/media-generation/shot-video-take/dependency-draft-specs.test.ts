@@ -128,6 +128,7 @@ function testContext(
       sourceShotListId: 'shot_list_a',
       shotIds: ['shot_001'],
       title: 'Shot Video Take A',
+      picked: false,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
       status: {

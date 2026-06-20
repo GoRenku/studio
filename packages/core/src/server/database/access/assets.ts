@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, isNull } from 'drizzle-orm';
 import { assets } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
@@ -24,7 +24,11 @@ export function insertAssetRecord(
 }
 
 export function listAssetRecords(session: DatabaseSession): AssetRecord[] {
-  return session.db.select().from(assets).all();
+  return session.db
+    .select()
+    .from(assets)
+    .where(isNull(assets.discardedAt))
+    .all();
 }
 
 export function readAssetRecord(

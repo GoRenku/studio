@@ -104,7 +104,7 @@ describe('Cast Voice commands', () => {
     });
 
     await expect(
-      projectData.deleteAsset({
+      projectData.discardAsset({
         projectName: 'constantinople',
         homeDir,
         target: { kind: 'castMember', castMemberId },
@@ -122,9 +122,10 @@ describe('Cast Voice commands', () => {
       voiceId: attached.voice.id,
       sampleAssetId: attached.voice.sample.assetId,
     });
+    expect(removed.recovery?.trashItemIds).toHaveLength(1);
     await expect(
       fs.access(path.join(projectPath, 'cast/mehmed-ii/voice-samples/normal.mp3'))
-    ).rejects.toThrow();
+    ).resolves.toBeUndefined();
     await expect(
       projectData.listCastVoices({
         projectName: 'constantinople',
@@ -132,6 +133,16 @@ describe('Cast Voice commands', () => {
         castMemberId,
       })
     ).resolves.toEqual({ voices: [] });
+    await expect(
+      projectData.listTrash({ projectName: 'constantinople', homeDir })
+    ).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          itemKind: 'castVoice',
+          itemId: attached.voice.id,
+        }),
+      ],
+    });
   });
 
   it('rejects duplicate Cast Voice reference names', async () => {

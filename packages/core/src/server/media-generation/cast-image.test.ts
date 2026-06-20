@@ -194,12 +194,13 @@ describe('Cast image import', () => {
       },
     });
 
-    await projectData.deleteAsset({
+    const deleted = await projectData.discardAsset({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'castMember', castMemberId: castMember!.id },
       assetId: profile.imported.assetId,
     });
+    expect(deleted.recovery.trashItemIds).toHaveLength(1);
     await expect(
       fs.access(
         path.join(
@@ -207,7 +208,7 @@ describe('Cast image import', () => {
           'cast/mehmed-ii/profiles/mehmed-profile.png'
         )
       )
-    ).rejects.toThrow();
+    ).resolves.toBeUndefined();
     await expect(
       projectData.readCastOverviewResource({
         projectName: 'constantinople',

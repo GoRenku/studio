@@ -411,6 +411,7 @@ export type StudioSelection =
   | { type: 'inspiration'; folderId?: string }
   | { type: 'lookbooks' }
   | { type: 'lookbook'; lookbookId: string }
+  | { type: 'trash' }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
   | { type: 'locations' }
@@ -430,6 +431,7 @@ export type StudioSelection =
 
 export type StudioSelectionContext =
   | { surface: 'project-information' }
+  | { surface: 'trash' }
   | { surface: 'visual-language-inspiration' }
   | { surface: 'visual-language-lookbooks' }
   | { surface: 'visual-language-lookbook' }

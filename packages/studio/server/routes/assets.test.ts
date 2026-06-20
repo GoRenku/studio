@@ -122,7 +122,22 @@ describe('assets Hono route', () => {
 
   it('lists, selects, unselects, deletes, and serves grouped location environment sheet files through ProjectDataService', async () => {
     vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('location bytes'));
-    const deleteAsset = vi.fn(async () => undefined);
+    const discardAsset = vi.fn(async () => ({
+      valid: true as const,
+      warnings: [],
+      project: { id: 'project_test0001', name: 'constantinople' },
+      changes: [{ type: 'asset.discarded', assetId: 'asset_location_reference' }],
+      recovery: {
+        operationId: 'trash_operation_test0001',
+        trashItemIds: ['trash_item_test0001'],
+        restorable: true,
+        restoreCommand: {
+          name: 'trash.restore' as const,
+          trashItemId: 'trash_item_test0001',
+        },
+      },
+      resourceKeys: [],
+    }));
     const locationAsset = {
       ...makeAsset('asset_location_reference'),
       relationshipId: 'location_asset_test0001',
@@ -176,7 +191,7 @@ describe('assets Hono route', () => {
             });
             return locationAsset;
           },
-          deleteAsset,
+          discardAsset,
           async resolveProjectAssetFile(input) {
             expect(input.target).toEqual({
               kind: 'location',
@@ -242,7 +257,7 @@ describe('assets Hono route', () => {
       asset: { selection: { kind: 'take' } },
     });
     expect(deleted.status).toBe(200);
-    expect(deleteAsset).toHaveBeenCalledWith({
+    expect(discardAsset).toHaveBeenCalledWith({
       projectName: 'constantinople',
       target: { kind: 'location', locationId: 'location_gate' },
       assetId: 'asset_location_reference',

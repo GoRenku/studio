@@ -1,4 +1,4 @@
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type {
   LookbookImage,
   LookbookImageAsset,
@@ -54,7 +54,7 @@ export function nextLookbookImageSortOrder(
   const row = session.db
     .select({ maxSortOrder: sql<number | null>`max(${lookbookImages.sortOrder})` })
     .from(lookbookImages)
-    .where(eq(lookbookImages.lookbookId, lookbookId))
+    .where(and(eq(lookbookImages.lookbookId, lookbookId), isNull(lookbookImages.discardedAt)))
     .get();
   return (row?.maxSortOrder ?? 0) + 1;
 }
@@ -90,7 +90,7 @@ export function readLookbookImageRecord(
     session.db
       .select()
       .from(lookbookImages)
-      .where(eq(lookbookImages.id, imageId))
+      .where(and(eq(lookbookImages.id, imageId), isNull(lookbookImages.discardedAt)))
       .get() ?? null
   );
 }
@@ -174,7 +174,7 @@ export function listLookbookImages(
     })
     .from(lookbookImages)
     .innerJoin(assets, eq(assets.id, lookbookImages.assetId))
-    .where(eq(lookbookImages.lookbookId, lookbookId))
+    .where(and(eq(lookbookImages.lookbookId, lookbookId), isNull(lookbookImages.discardedAt)))
     .orderBy(asc(lookbookImages.sortOrder), asc(lookbookImages.id))
     .all() as LookbookImageAssetRow[];
 
@@ -208,7 +208,7 @@ export function readLookbookImage(
     })
     .from(lookbookImages)
     .innerJoin(assets, eq(assets.id, lookbookImages.assetId))
-    .where(eq(lookbookImages.id, imageId))
+    .where(and(eq(lookbookImages.id, imageId), isNull(lookbookImages.discardedAt)))
     .get() as LookbookImageAssetRow | undefined;
   if (!row) {
     return null;

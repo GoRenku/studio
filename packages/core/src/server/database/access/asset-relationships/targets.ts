@@ -38,6 +38,9 @@ export type AssetRelationshipTable = SQLiteTable & {
   sortOrder: RelationshipNumberColumn;
   selection: RelationshipTextColumn;
   selectionOrder: NullableRelationshipNumberColumn;
+  discardedAt: NullableRelationshipTextColumn;
+  discardOperationId: NullableRelationshipTextColumn;
+  restoredAt: NullableRelationshipTextColumn;
   updatedAt: RelationshipTextColumn;
 };
 

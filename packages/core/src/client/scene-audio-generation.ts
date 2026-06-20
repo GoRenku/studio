@@ -118,6 +118,7 @@ export interface SceneDialogueAudioContext {
 
 export interface SceneDialogueAudioMutationReport {
   context: SceneDialogueAudioContext;
+  recovery?: import('./trash.js').RecoverableMutationReport['recovery'];
   resourceKeys: string[];
 }
 

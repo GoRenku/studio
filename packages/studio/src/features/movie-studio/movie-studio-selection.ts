@@ -13,6 +13,7 @@ export type StudioSelection =
   | { type: 'inspiration'; folderId?: string }
   | { type: 'lookbooks' }
   | { type: 'lookbook'; lookbookId: string }
+  | { type: 'trash' }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
   | { type: 'locations' }
@@ -126,6 +127,8 @@ export function resolveStudioSelection(
       return valid('Lookbooks', 'Generated visual language options.');
     case 'lookbook':
       return valid('Lookbook', 'Generated visual language guide.');
+    case 'trash':
+      return valid('Trash', 'Discarded project items.');
     case 'cast':
       return valid('Cast', 'Cast members loaded from screenplay data.');
     case 'locations':

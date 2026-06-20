@@ -414,8 +414,54 @@ export function fakeProjectDataService(): NonNullable<
     async removeAssetSelect(input) {
       return makeAsset(input.assetId);
     },
-    async deleteAsset() {
-      return undefined;
+    async discardAsset(input) {
+      return makeRecoverableMutationReport({
+        changeType: 'asset.discarded',
+        itemId: input.assetId,
+        resourceKeys: [],
+      });
+    },
+    async listTrash() {
+      return {
+        valid: true as const,
+        warnings: [],
+        project: { id: project.identity.id, name: project.identity.name },
+        items: [],
+        resourceKeys: ['trash:list'],
+      };
+    },
+    async restoreTrashItem(input) {
+      return makeRecoverableMutationReport({
+        changeType: 'trash.restored',
+        itemId: input.trashItemId,
+        resourceKeys: ['trash:list'],
+      });
+    },
+    async previewGarbageCollection() {
+      return {
+        valid: true as const,
+        warnings: [],
+        project: { id: project.identity.id, name: project.identity.name },
+        confirmationToken: 'sha256:test',
+        items: [],
+        files: [],
+        resourceKeys: ['trash:list'],
+      };
+    },
+    async emptyTrash() {
+      return {
+        valid: true as const,
+        warnings: [],
+        project: { id: project.identity.id, name: project.identity.name },
+        confirmationToken: 'sha256:test',
+        items: [],
+        files: [],
+        dryRun: false,
+        operationId: 'trash_operation_test0001',
+        manifestProjectRelativePath:
+          '.renku/trash/emptied/trash_operation_test0001/manifest.json',
+        resourceKeys: ['trash:list'],
+      };
     },
     async exportProductionAssets() {
       return {
@@ -1006,13 +1052,15 @@ export function fakeProjectDataService(): NonNullable<
       };
     },
     async deleteSceneShotVideoTake(input) {
-      return {
+      return makeRecoverableMutationReport({
+        changeType: 'sceneShotVideoTake.discarded',
+        itemId: input.takeId,
         resourceKeys: [
           `scene:${input.sceneId ?? 'scene_opening'}`,
           `surface:scene:${input.sceneId ?? 'scene_opening'}:takes`,
           `scene-shot-video-take:${input.takeId}`,
         ],
-      };
+      });
     },
     async updateSceneShotVideoTakePick(input) {
       return {
@@ -1628,6 +1676,32 @@ function makeVisualLanguageCommandReport(type: string) {
     project: { name: 'test-project' },
     changes: [{ type }],
     resourceKeys: [],
+  };
+}
+
+function makeRecoverableMutationReport(input: {
+  changeType: string;
+  itemId: string;
+  resourceKeys: string[];
+}) {
+  return {
+    valid: true as const,
+    warnings: [],
+    project: {
+      id: 'project_test0001',
+      name: 'constantinople',
+    },
+    changes: [{ type: input.changeType, itemId: input.itemId }],
+    recovery: {
+      operationId: 'trash_operation_test0001',
+      trashItemIds: ['trash_item_test0001'],
+      restorable: true,
+      restoreCommand: {
+        name: 'trash.restore' as const,
+        trashItemId: 'trash_item_test0001',
+      },
+    },
+    resourceKeys: input.resourceKeys,
   };
 }
 

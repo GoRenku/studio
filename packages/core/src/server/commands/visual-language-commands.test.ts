@@ -101,14 +101,18 @@ describe('visual language commands', () => {
       projectData.listInspirationFolders({ projectName: 'constantinople', homeDir })
     ).resolves.toMatchObject({ items: [{ id: renamed.id }, { id: first.id }] });
 
-    await projectData.deleteInspirationFolder({
+    const deleted = await projectData.deleteInspirationFolder({
       projectName: 'constantinople',
       homeDir,
       folderId: first.id,
     });
+    expect(deleted.recovery?.trashItemIds).toHaveLength(1);
     await expect(
       fs.access(path.join(created.projectPath, first.projectRelativePath))
-    ).rejects.toThrow();
+    ).resolves.toBeUndefined();
+    await expect(
+      projectData.listInspirationFolders({ projectName: 'constantinople', homeDir })
+    ).resolves.toMatchObject({ items: [{ id: renamed.id }] });
   });
 
   it('reads Inspiration images from the filesystem and validates analysis image references', async () => {
@@ -232,12 +236,13 @@ describe('visual language commands', () => {
       issues: [expect.objectContaining({ code: 'PROJECT_DATA232' })],
     });
 
-    await projectData.deleteInspirationImage({
+    const deleted = await projectData.deleteInspirationImage({
       projectName: 'constantinople',
       homeDir,
       folderId: folder.id,
       fileName: 'frame-001.png',
     });
+    expect(deleted.recovery?.trashItemIds).toHaveLength(1);
     await expect(
       fs.access(
         path.join(
@@ -245,7 +250,14 @@ describe('visual language commands', () => {
           'visual-language/inspiration/roger-deakins/frame-001.png'
         )
       )
-    ).rejects.toThrow();
+    ).resolves.toBeUndefined();
+    await expect(
+      projectData.readInspirationFolder({
+        projectName: 'constantinople',
+        homeDir,
+        folderId: folder.id,
+      })
+    ).resolves.toMatchObject({ images: [] });
   });
 
   it('creates multiple Lookbooks, tracks active state, card images, and deletion', async () => {
@@ -369,23 +381,25 @@ describe('visual language commands', () => {
     });
     expect(updated.image?.sections).toEqual(['camera', 'texture']);
 
-    await projectData.deleteLookbookImage({
+    const deletedImage = await projectData.deleteLookbookImage({
       projectName: 'constantinople',
       homeDir,
       imageId: image.imported.id,
     });
+    expect(deletedImage.recovery?.trashItemIds).toHaveLength(1);
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look.png'))
-    ).rejects.toThrow();
+    ).resolves.toBeUndefined();
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look-2.png'))
     ).resolves.toBeUndefined();
 
-    await projectData.deleteLookbook({
+    const deletedLookbook = await projectData.deleteLookbook({
       projectName: 'constantinople',
       homeDir,
       lookbookId: lookbook.lookbook.id,
     });
+    expect(deletedLookbook.recovery?.trashItemIds).toHaveLength(1);
     await expect(
       projectData.listLookbooks({ projectName: 'constantinople', homeDir })
     ).resolves.toMatchObject({
@@ -394,7 +408,81 @@ describe('visual language commands', () => {
     });
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look-2.png'))
-    ).rejects.toThrow();
+    ).resolves.toBeUndefined();
+  });
+
+  it('keeps independently discarded Lookbook children discarded when restoring the parent Lookbook', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Nested Restore',
+      document: lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const firstGeneratedPath = 'generated/lookbook/nested-restore-a.png';
+    const secondGeneratedPath = 'generated/lookbook/nested-restore-b.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, firstGeneratedPath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, firstGeneratedPath), 'first image');
+    await fs.writeFile(path.join(created.projectPath, secondGeneratedPath), 'second image');
+
+    const imageIds = createDeterministicIdGenerator();
+    const independentlyDeleted = await projectData.importLookbookImageMedia({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: firstGeneratedPath,
+      sections: ['palette'],
+      idGenerator: imageIds,
+    });
+    const parentDeletedChild = await projectData.importLookbookImageMedia({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: secondGeneratedPath,
+      sections: ['palette'],
+      idGenerator: imageIds,
+    });
+
+    const discardedImage = await projectData.deleteLookbookImage({
+      projectName: 'constantinople',
+      homeDir,
+      imageId: independentlyDeleted.imported.id,
+    });
+    const discardedLookbook = await projectData.deleteLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: discardedLookbook.recovery!.restoreCommand.trashItemId,
+    });
+
+    const restored = await projectData.readLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+    const restoredImageIds = Object.values(restored.imagesBySection)
+      .flat()
+      .map((image) => image.id);
+    expect(restoredImageIds).not.toContain(independentlyDeleted.imported.id);
+    expect(restoredImageIds).toContain(parentDeletedChild.imported.id);
+
+    const trash = await projectData.listTrash({ projectName: 'constantinople', homeDir });
+    expect(trash.items.map((item) => item.id)).toContain(
+      discardedImage.recovery!.restoreCommand.trashItemId
+    );
   });
 
   it('rejects invalid Lookbook JSON on write and malformed stored JSON on read', async () => {

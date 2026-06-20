@@ -28,6 +28,7 @@ import { ScenePanel } from './scenes/scene-panel';
 import { SequencePanel } from './sequences/sequence-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
+import { TrashPanel } from './trash/trash-panel';
 import { useScreenplayNavigation } from './use-screenplay-navigation';
 import { useStudioSelectionResolution } from './use-movie-studio-selection-resolution';
 import type { StudioSelection } from './movie-studio-selection';
@@ -387,6 +388,8 @@ export function MovieStudioScreen({
                 />
               ) : selection.type === 'storyArc' ? (
                 <StoryArcPanel projectName={project.identity.name} />
+              ) : selection.type === 'trash' ? (
+                <TrashPanel projectName={project.identity.name} />
               ) : selection.type === 'sequence' ? (
                 <SequencePanel
                   key={selection.id}
@@ -436,6 +439,7 @@ function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean 
     selectionType === 'inspiration' ||
     selectionType === 'location' ||
     selectionType === 'lookbook' ||
+    selectionType === 'trash' ||
     selectionType === 'scene'
   );
 }

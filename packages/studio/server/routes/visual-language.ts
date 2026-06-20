@@ -86,7 +86,11 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const folderId = c.req.param('folderId') as string;
         const report = await projectData.deleteInspirationFolder({ projectName, folderId });
-        return c.json({ ok: true, resourceKeys: report.resourceKeys });
+        return c.json({
+          ok: true,
+          recovery: report.recovery,
+          resourceKeys: report.resourceKeys,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -161,6 +165,7 @@ export function createVisualLanguageRoute({
           });
           return c.json({
             resource: report.resource,
+            recovery: report.recovery,
             resourceKeys: report.resourceKeys,
           });
         } catch (error) {
@@ -244,7 +249,11 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const report = await projectData.clearActiveLookbook({ projectName });
-        return c.json({ ok: true, resourceKeys: report.resourceKeys });
+        return c.json({
+          ok: true,
+          recovery: report.recovery,
+          resourceKeys: report.resourceKeys,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -254,7 +263,11 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
         const report = await projectData.deleteLookbook({ projectName, lookbookId });
-        return c.json({ ok: true, resourceKeys: report.resourceKeys });
+        return c.json({
+          ok: true,
+          recovery: report.recovery,
+          resourceKeys: report.resourceKeys,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -264,7 +277,11 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
         const report = await projectData.setActiveLookbook({ projectName, lookbookId });
-        return c.json({ ok: true, resourceKeys: report.resourceKeys });
+        return c.json({
+          ok: true,
+          recovery: report.recovery,
+          resourceKeys: report.resourceKeys,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -429,7 +446,11 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const imageId = c.req.param('imageId') as string;
         const report = await projectData.deleteLookbookImage({ projectName, imageId });
-        return c.json({ ok: true, resourceKeys: report.resourceKeys });
+        return c.json({
+          ok: true,
+          recovery: report.recovery,
+          resourceKeys: report.resourceKeys,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

@@ -5,7 +5,9 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 import { assets } from './assets.js';
+import { discardLifecycleColumns } from './lifecycle-columns.js';
 
 export const inspirationFolders = sqliteTable(
   'inspiration_folder',
@@ -16,6 +18,7 @@ export const inspirationFolders = sqliteTable(
     position: integer('position').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('inspiration_folder_position_id_idx').on(table.position, table.id),
@@ -35,6 +38,7 @@ export const inspirationAnalysis = sqliteTable('inspiration_analysis', {
   inspiredBy: text('inspired_by').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  ...discardLifecycleColumns(),
 });
 
 export const lookbook = sqliteTable('lookbook', {
@@ -49,6 +53,7 @@ export const lookbook = sqliteTable('lookbook', {
   camera: text('camera').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  ...discardLifecycleColumns(),
 });
 
 export const lookbookInspirations = sqliteTable(
@@ -64,16 +69,21 @@ export const lookbookInspirations = sqliteTable(
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
-    uniqueIndex('lookbook_inspiration_folder_unique_idx').on(
+    uniqueIndex('lookbook_inspiration_folder_unique_idx')
+      .on(
       table.lookbookId,
       table.inspirationFolderId
-    ),
-    uniqueIndex('lookbook_inspiration_order_unique_idx').on(
+      )
+      .where(sql`${table.discardedAt} is null`),
+    uniqueIndex('lookbook_inspiration_order_unique_idx')
+      .on(
       table.lookbookId,
       table.sortOrder
-    ),
+      )
+      .where(sql`${table.discardedAt} is null`),
     index('lookbook_inspiration_lookup_idx').on(
       table.inspirationFolderId,
       table.lookbookId
@@ -103,6 +113,7 @@ export const lookbookImages = sqliteTable(
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('lookbook_image_order_idx').on(
@@ -124,6 +135,7 @@ export const lookbookImageSections = sqliteTable(
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('lookbook_image_section_order_idx').on(
@@ -148,6 +160,7 @@ export const lookbookSheets = sqliteTable(
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('lookbook_sheet_order_idx').on(
@@ -167,4 +180,5 @@ export const lookbookCardImages = sqliteTable('lookbook_card_image', {
     .references(() => lookbookImages.id, { onDelete: 'cascade' }),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  ...discardLifecycleColumns(),
 });

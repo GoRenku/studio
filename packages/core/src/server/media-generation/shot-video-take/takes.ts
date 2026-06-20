@@ -1,9 +1,9 @@
 import type {
+  RecoverableMutationReport,
   SceneShotVideoTake,
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
-  deleteSceneShotVideoTakeRecord,
   insertSceneShotVideoTakeRecord,
   listSceneShotVideoTakesForScene,
   requireSceneShotVideoTake,
@@ -41,6 +41,7 @@ import {
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
 import { shotVideoTakeResourceKeys } from './resource-keys.js';
+import { discardTrashObject } from '../../trash/trash-lifecycle-service.js';
 
 export async function createSceneShotVideoTake(
   input: CreateSceneShotVideoTakeInput
@@ -101,18 +102,29 @@ export async function listSceneShotVideoTakes(
 
 export async function deleteSceneShotVideoTake(
   input: DeleteSceneShotVideoTakeInput
-): Promise<{ resourceKeys: string[] }> {
-  return withShotProjectSession(input, ({ session }) => {
+): Promise<RecoverableMutationReport> {
+  return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const prepared = prepareSceneShotVideoTakeInSession({
       session,
       input,
     });
     assertEditableSceneShotVideoTake(prepared.take);
     const resourceKeys = shotVideoTakeResourceKeys(prepared);
-    deleteSceneShotVideoTakeRecord(session, {
-      takeId: input.takeId,
+    return discardTrashObject({
+      session,
+      project,
+      projectFolder,
+      itemKind: 'sceneShotVideoTake',
+      itemId: input.takeId,
+      commandName: 'sceneShotVideoTake.delete',
+      changes: [
+        {
+          type: 'sceneShotVideoTake.discarded',
+          takeId: input.takeId,
+        },
+      ],
+      resourceKeys,
     });
-    return { resourceKeys };
   });
 }
 

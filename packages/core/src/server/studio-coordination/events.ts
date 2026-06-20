@@ -53,6 +53,7 @@ export type StudioSelection =
   | { type: 'inspiration'; folderId?: string }
   | { type: 'lookbooks' }
   | { type: 'lookbook'; lookbookId: string }
+  | { type: 'trash' }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
   | { type: 'locations' }

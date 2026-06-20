@@ -738,6 +738,7 @@ describe('App', () => {
       { type: 'lookbooks' },
       '/projects/constantinople/visual-language/lookbooks',
     ],
+    ['Trash', { type: 'trash' }, '/projects/constantinople/trash'],
     ['Story Arc', { type: 'storyArc' }, '/projects/constantinople/acts'],
     [
       'Sequence',

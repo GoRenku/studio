@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import type {
   LookbookImage,
   LookbookImageMutationReport,
@@ -10,11 +9,8 @@ import type {
   VisualLanguageCommandReport,
   VisualLanguageProjectReport,
 } from '../../client/index.js';
-import { deleteAssetFileRecordsForAsset } from '../database/access/asset-files.js';
-import { deleteAssetRecord } from '../database/access/assets.js';
 import {
   clearLookbookCardImageRecord,
-  deleteLookbookRecord,
   insertLookbookRecord,
   readActiveLookbookId,
   readLookbookRecordById,
@@ -29,14 +25,11 @@ import {
   replaceLookbookInspirationRecords,
 } from '../database/access/lookbook-inspirations.js';
 import {
-  deleteLookbookImageRecord,
-  listLookbookImages,
   readLookbookImage,
   requireLookbookImageRecord,
   setLookbookImageSectionRecords,
 } from '../database/access/lookbook-images.js';
 import {
-  deleteLookbookSheetRecord,
   listLookbookSheets,
   readLookbookSheet,
   requireLookbookSheetRecord,
@@ -84,13 +77,10 @@ import {
   validateLookbookSourceInspirationsDocument,
 } from '../visual-language-json/validator.js';
 import {
-  assertProjectRelativeChildPath,
-  LOOKBOOK_ROOT,
-} from '../visual-language-paths.js';
-import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
 const lookbookIndexResourceKey = studioVisualLanguageLookbooksResourceKey();
 
@@ -233,45 +223,17 @@ export async function renameLookbook(
 export async function deleteLookbook(
   input: DeleteLookbookInput
 ): Promise<VisualLanguageCommandReport> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     requireLookbookRecordById(session, input.lookbookId);
-    const images = listLookbookImages(session, input.lookbookId);
-    const sheets = listLookbookSheets(session, input.lookbookId);
-
-    for (const image of images) {
-      await deleteLookbookImageFiles(projectFolder, image);
-    }
-    for (const sheet of sheets) {
-      await deleteLookbookSheetFiles(projectFolder, sheet);
-    }
-
-    session.db.transaction((tx) => {
-      const txSession = { ...session, db: tx };
-      if (readActiveLookbookId(txSession) === input.lookbookId) {
-        setActiveLookbookRecord(txSession, {
-          lookbookId: null,
-          now: new Date().toISOString(),
-        });
-      }
-      for (const image of images) {
-        deleteLookbookImageRecord(txSession, image.id);
-        deleteAssetFileRecordsForAsset(txSession, image.asset.assetId);
-        deleteAssetRecord(txSession, image.asset.assetId);
-      }
-      for (const sheet of sheets) {
-        deleteLookbookSheetRecord(txSession, sheet.id);
-        deleteAssetFileRecordsForAsset(txSession, sheet.asset.assetId);
-        deleteAssetRecord(txSession, sheet.asset.assetId);
-      }
-      deleteLookbookRecord(txSession, input.lookbookId);
+    return discardTrashObject({
+      session,
+      project,
+      projectFolder,
+      itemKind: 'lookbook',
+      itemId: input.lookbookId,
+      commandName: 'lookbook.discard',
+      changes: [{ type: 'lookbook.discarded', lookbookId: input.lookbookId }],
     });
-    return {
-      valid: true,
-      warnings: [],
-      project: toProjectReport(project, projectFolder),
-      changes: [{ type: 'lookbook.deleted', lookbookId: input.lookbookId }],
-      resourceKeys: lookbookResourceKeys(input.lookbookId),
-    };
   });
 }
 
@@ -449,56 +411,46 @@ export async function setLookbookImageSections(
 export async function deleteLookbookImage(
   input: DeleteLookbookImageInput
 ): Promise<LookbookImageMutationReport> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const image = requireLookbookImageRecord(session, input.imageId);
-    const lookbookImage = readLookbookImage(session, input.imageId);
-    if (!lookbookImage) {
-      throw new ProjectDataError(
-        'PROJECT_DATA237',
-        `Lookbook image was not found: ${input.imageId}.`
-      );
-    }
-    await deleteLookbookImageFiles(projectFolder, lookbookImage);
-    session.db.transaction((tx) => {
-      const txSession = { ...session, db: tx };
-      deleteLookbookImageRecord(txSession, image.id);
-      deleteAssetFileRecordsForAsset(txSession, image.assetId);
-      deleteAssetRecord(txSession, image.assetId);
-    });
-    return imageMutationReport({
+    const report = discardTrashObject({
+      session,
       project,
       projectFolder,
-      lookbookId: image.lookbookId,
-      changeType: 'lookbook.imageDeleted',
+      itemKind: 'lookbookImage',
+      itemId: input.imageId,
+      commandName: 'lookbook.image.discard',
+      changes: [
+        { type: 'lookbook.imageDiscarded', lookbookId: image.lookbookId },
+      ],
     });
+    return {
+      ...report,
+      lookbookId: image.lookbookId,
+    };
   });
 }
 
 export async function deleteLookbookSheet(
   input: DeleteLookbookSheetInput
 ): Promise<LookbookSheetMutationReport> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
+  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const sheet = requireLookbookSheetRecord(session, input.sheetId);
-    const lookbookSheet = readLookbookSheet(session, input.sheetId);
-    if (!lookbookSheet) {
-      throw new ProjectDataError(
-        'PROJECT_DATA412',
-        `Lookbook sheet was not found: ${input.sheetId}.`
-      );
-    }
-    await deleteLookbookSheetFiles(projectFolder, lookbookSheet);
-    session.db.transaction((tx) => {
-      const txSession = { ...session, db: tx };
-      deleteLookbookSheetRecord(txSession, sheet.id);
-      deleteAssetFileRecordsForAsset(txSession, sheet.assetId);
-      deleteAssetRecord(txSession, sheet.assetId);
-    });
-    return sheetMutationReport({
+    const report = discardTrashObject({
+      session,
       project,
       projectFolder,
-      lookbookId: sheet.lookbookId,
-      changeType: 'lookbook.sheetDeleted',
+      itemKind: 'lookbookSheet',
+      itemId: input.sheetId,
+      commandName: 'lookbook.sheet.discard',
+      changes: [
+        { type: 'lookbook.sheetDiscarded', lookbookId: sheet.lookbookId },
+      ],
     });
+    return {
+      ...report,
+      lookbookId: sheet.lookbookId,
+    };
   });
 }
 
@@ -539,38 +491,6 @@ export async function setDefaultLookbookSheet(
       changeType: 'lookbook.defaultSheetSet',
     });
   });
-}
-
-async function deleteLookbookImageFiles(
-  projectFolder: string,
-  image: LookbookImage
-): Promise<void> {
-  for (const file of image.asset.files) {
-    const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
-    assertProjectRelativeChildPath({
-      parent: LOOKBOOK_ROOT,
-      child: projectRelativePath,
-    });
-    await fs.rm(resolveProjectRelativePath(projectFolder, projectRelativePath), {
-      force: true,
-    });
-  }
-}
-
-async function deleteLookbookSheetFiles(
-  projectFolder: string,
-  sheet: LookbookSheet
-): Promise<void> {
-  for (const file of sheet.asset.files) {
-    const projectRelativePath = normalizeProjectRelativePath(file.projectRelativePath);
-    assertProjectRelativeChildPath({
-      parent: LOOKBOOK_ROOT,
-      child: projectRelativePath,
-    });
-    await fs.rm(resolveProjectRelativePath(projectFolder, projectRelativePath), {
-      force: true,
-    });
-  }
 }
 
 function normalizeLookbookName(name: string): string {

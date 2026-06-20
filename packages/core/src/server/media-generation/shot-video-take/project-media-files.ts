@@ -2,29 +2,11 @@ import type {
   ProjectRelativePath,
 } from '../../../client/index.js';
 import {
-  normalizeProjectRelativePath,
-  resolveProjectRelativePath,
-} from '../../files/project-relative-paths.js';
-import {
   ProjectDataError,
 } from '../../project-data-error.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-
-
-
-export async function deleteProjectRelativeFile(
-  projectFolder: string,
-  projectRelativePath: ProjectRelativePath
-): Promise<void> {
-  const normalizedPath = normalizeProjectRelativePath(projectRelativePath);
-  const absolutePath = resolveProjectRelativePath(projectFolder, normalizedPath);
-  assertResolvedPathInsideProject(projectFolder, absolutePath);
-  await fs.rm(absolutePath, { force: true });
-}
-
-
 
 export async function statExistingFile(filePath: string): Promise<{ size: number; isFile(): boolean }> {
   try {

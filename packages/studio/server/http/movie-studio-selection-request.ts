@@ -169,6 +169,7 @@ function isStudioSelectionType(
     type === 'inspiration' ||
     type === 'lookbooks' ||
     type === 'lookbook' ||
+    type === 'trash' ||
     type === 'cast' ||
     type === 'locations' ||
     type === 'storyArc' ||
@@ -222,6 +223,7 @@ function studioSelectionFromRequest(
     case 'cast':
     case 'locations':
     case 'storyArc':
+    case 'trash':
       return { type };
   }
 }

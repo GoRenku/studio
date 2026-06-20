@@ -261,7 +261,8 @@ describe('core server architecture', () => {
       if (
         relativePath.startsWith(`schema${path.sep}`) ||
         relativePath.startsWith(path.join('database', 'access')) ||
-        relativePath.startsWith(path.join('database', 'lifecycle'))
+        relativePath.startsWith(path.join('database', 'lifecycle')) ||
+        relativePath.startsWith(`trash${path.sep}`)
       ) {
         continue;
       }
@@ -303,6 +304,40 @@ describe('core server architecture', () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it('keeps recoverable deletion flows behind the trash lifecycle service', async () => {
+    const files = [
+      ...(await listTypeScriptFiles(path.join(projectSourceRoot, 'commands'))),
+      ...(await listTypeScriptFiles(path.join(projectSourceRoot, 'media-generation'))),
+    ].filter((file) => !file.endsWith('.test.ts'));
+    const transientCleanupFiles = new Set([
+      path.join('commands', 'cast-voice-commands.ts'),
+      path.join('media-generation', 'scene-dialogue-audio.ts'),
+    ]);
+    const offenders: Array<{ file: string; needle: string }> = [];
+
+    for (const file of files) {
+      const relativePath = path.relative(projectSourceRoot, file);
+      const source = await fs.readFile(file, 'utf8');
+      const forbiddenNeedles = ['.delete(', 'deleteProjectRelativeFile'];
+      if (!transientCleanupFiles.has(relativePath)) {
+        forbiddenNeedles.push('fs.rm(', 'fs.unlink(');
+      }
+      forbiddenNeedles.forEach((needle) => {
+        if (source.includes(needle)) {
+          offenders.push({ file: relativePath, needle });
+        }
+      });
+    }
+
+    expect(
+      offenders,
+      [
+        'Recoverable user-facing deletions must call the trash lifecycle service.',
+        'Do not hard-delete rows, unlink files, or route around the core trash registry from command/media modules.',
+      ].join(' ')
+    ).toEqual([]);
   });
 
   it('keeps raw asset relationship table config inside database access', async () => {

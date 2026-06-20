@@ -42,7 +42,6 @@ import {
 } from '../database/access/media-generation.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
-  deleteSceneDialogueAudioTakeRecord,
   insertSceneDialogueAudioTakeRecord,
   listSceneDialogueAudioRecords,
   listSceneDialogueAudioTakeRecords,
@@ -72,6 +71,7 @@ import {
   estimateDraftMediaGenerationSpec,
   runMediaGenerationSpec,
 } from './shared-generation-service.js';
+import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
 const MODEL_CHOICES = new Set<SceneDialogueAudioModelChoice>([
   'elevenlabs/eleven_v3',
@@ -596,19 +596,38 @@ export async function pickSceneDialogueAudioTake(
 export async function deleteSceneDialogueAudioTake(
   input: DeleteSceneDialogueAudioTakeInput,
 ): Promise<SceneDialogueAudioMutationReport> {
-  await withSceneDialogueAudioProjectSession(input, ({ session }) => {
-    const audio = requireAudioForDialogue(
+  const recoveryReport = await withSceneDialogueAudioProjectSession(input, ({ session, projectFolder }) => {
+    requireAudioForDialogue(
       session,
       input.sceneId,
       input.dialogueId,
     );
-    deleteSceneDialogueAudioTakeRecord(session, {
-      sceneDialogueAudioId: audio.id,
-      takeId: input.takeId,
-      updatedAt: new Date().toISOString(),
+    const project = readProjectRecord(session);
+    if (!project) {
+      throw new ProjectDataError(
+        'PROJECT_DATA021',
+        `Project database has no project row: ${session.databasePath}.`
+      );
+    }
+    return discardTrashObject({
+      session,
+      project,
+      projectFolder,
+      itemKind: 'sceneDialogueAudioTake',
+      itemId: input.takeId,
+      commandName: 'sceneDialogueAudio.take.discard',
+      changes: [
+        {
+          type: 'sceneDialogueAudioTake.discarded',
+          takeId: input.takeId,
+        },
+      ],
     });
   });
-  return mutationReport(input);
+  return {
+    ...(await mutationReport(input)),
+    recovery: recoveryReport.recovery,
+  };
 }
 
 export async function runSceneDialogueAudioSpec(): Promise<never> {

@@ -11,6 +11,7 @@ import { createScreenplayServiceWiring } from './project-data-service-wiring/scr
 import { createSharedMediaGenerationServiceWiring } from './project-data-service-wiring/shared-media-generation.js';
 import { createSceneDialogueAudioServiceWiring } from './project-data-service-wiring/scene-dialogue-audio.js';
 import { createShotVideoTakeServiceWiring } from './project-data-service-wiring/shot-video-take.js';
+import { createTrashServiceWiring } from './project-data-service-wiring/trash.js';
 import type { ProjectDataService } from './project-data-service-contracts.js';
 
 export function createProjectDataService(): ProjectDataService {
@@ -24,6 +25,7 @@ export function createProjectDataService(): ProjectDataService {
     ...createScreenplayServiceWiring(),
     ...createInspirationServiceWiring(),
     ...createLookbookServiceWiring(),
+    ...createTrashServiceWiring(),
     ...createSharedMediaGenerationServiceWiring(),
     ...createMediaGenerationServiceWiring(),
     ...createSceneDialogueAudioServiceWiring(),

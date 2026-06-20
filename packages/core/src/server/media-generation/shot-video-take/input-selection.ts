@@ -10,7 +10,6 @@ import {
   requireShotVideoTakeInput,
   selectShotVideoTakeInputRecord,
   clearShotVideoTakeInputRecordSelection,
-  deleteShotVideoTakeInputRecord,
   listShotVideoTakeInputs as listShotVideoTakeInputRecords,
 } from '../../database/access/shot-video-takes.js';
 import type {
@@ -36,7 +35,6 @@ import {
 } from './context.js';
 import {
   assertResolvedPathInsideProject,
-  deleteProjectRelativeFile,
 } from './project-media-files.js';
 import {
   withShotProjectSession,
@@ -53,6 +51,7 @@ import {
 import {
   requireScreenplayDocument,
 } from './project-session.js';
+import { discardTrashObject } from '../../trash/trash-lifecycle-service.js';
 
 
 
@@ -209,8 +208,20 @@ export async function deleteShotVideoTakeInput(
       );
     }
 
-    await deleteProjectRelativeFile(projectFolder, deleting.projectRelativePath);
-    deleteShotVideoTakeInputRecord(session, input.inputId);
+    const discardReport = discardTrashObject({
+      session,
+      project,
+      projectFolder,
+      itemKind: 'shotVideoTakeInput',
+      itemId: input.inputId,
+      commandName: 'shotVideoTake.input.discard',
+      changes: [
+        {
+          type: 'shotVideoTakeInput.discarded',
+          inputId: input.inputId,
+        },
+      ],
+    });
 
     if (deleting.selected) {
       const replacement = listShotVideoTakeInputRecords(session, {
@@ -246,7 +257,10 @@ export async function deleteShotVideoTakeInput(
       }
     }
 
-    return buildContextFromPrepared({ session, projectFolder, project, prepared });
+    return {
+      ...buildContextFromPrepared({ session, projectFolder, project, prepared }),
+      recovery: discardReport.recovery,
+    };
   });
 }
 

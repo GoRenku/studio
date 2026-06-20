@@ -150,6 +150,10 @@ import type {
   StoryArcResource,
   ActStoryboardResource,
   SceneShotListResource,
+  GarbageCollectionPreview,
+  GarbageCollectionReport,
+  RecoverableMutationReport,
+  TrashListReport,
   VisualLanguageCommandReport,
 } from '../client/index.js';
 import type {
@@ -251,7 +255,14 @@ export interface ProjectDataService {
   createAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
   updateAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
   removeAssetSelect(input: RemoveAssetSelectInput): Promise<Asset>;
-  deleteAsset(input: DeleteAssetInput): Promise<void>;
+  discardAsset(input: DiscardAssetInput): Promise<RecoverableMutationReport>;
+  restoreAsset(input: RestoreAssetInput): Promise<RecoverableMutationReport>;
+  listTrash(input: ListTrashInput): Promise<TrashListReport>;
+  restoreTrashItem(input: RestoreTrashItemInput): Promise<RecoverableMutationReport>;
+  previewGarbageCollection(
+    input: PreviewGarbageCollectionInput
+  ): Promise<GarbageCollectionPreview>;
+  emptyTrash(input: EmptyTrashInput): Promise<GarbageCollectionReport>;
   listAssetSelects(input: ListAssetsInput): Promise<Asset[]>;
   exportProductionAssets(
     input: ProductionExportInput & RenkuConfigPathOptions
@@ -464,7 +475,7 @@ export interface ProjectDataService {
   createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<{ takes: SceneShotVideoTake[] }>;
-  deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<{ resourceKeys: string[] }>;
+  deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<RecoverableMutationReport>;
   updateSceneShotVideoTakePick(input: UpdateSceneShotVideoTakePickInput): Promise<{ take: SceneShotVideoTake; resourceKeys: string[] }>;
   updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeShotDesign(input: UpdateSceneShotVideoTakeShotDesignInput): Promise<ShotVideoTakeProductionContext>;
@@ -544,6 +555,25 @@ export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
 
 export interface MigrateProjectDatabaseInput extends RenkuConfigPathOptions {
   projectName: string;
+}
+
+export interface ListTrashInput extends RenkuConfigPathOptions {
+  projectName: string;
+}
+
+export interface RestoreTrashItemInput extends RenkuConfigPathOptions {
+  projectName: string;
+  trashItemId: string;
+}
+
+export interface PreviewGarbageCollectionInput extends RenkuConfigPathOptions {
+  projectName: string;
+  olderThanIso?: string;
+}
+
+export interface EmptyTrashInput extends PreviewGarbageCollectionInput {
+  confirmationToken: string;
+  dryRun?: boolean;
 }
 
 export interface OpenCurrentProjectInput extends RenkuConfigPathOptions {
@@ -1697,7 +1727,13 @@ export interface RemoveAssetSelectInput extends RenkuConfigPathOptions {
   assetId: string;
 }
 
-export interface DeleteAssetInput extends RenkuConfigPathOptions {
+export interface DiscardAssetInput extends RenkuConfigPathOptions {
+  projectName: string;
+  target: AssetTarget;
+  assetId: string;
+}
+
+export interface RestoreAssetInput extends RenkuConfigPathOptions {
   projectName: string;
   target: AssetTarget;
   assetId: string;

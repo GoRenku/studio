@@ -14,4 +14,5 @@ export * from './scenes.js';
 export * from './screenplay-analysis.js';
 export * from './screenplay.js';
 export * from './sequences.js';
+export * from './trash.js';
 export * from './visual-language.js';

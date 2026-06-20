@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import type {
   ProjectRelativePath,
   SceneShotVideoTakeState,
@@ -110,7 +110,10 @@ export function listShotVideoTakeInputs(
         eq(
           sceneShotVideoTakeMediaInputs.takeId,
           input.takeId
-        )
+        ),
+        isNull(sceneShotVideoTakeMediaInputs.discardedAt),
+        isNull(assetFiles.discardedAt),
+        isNull(assets.discardedAt)
       )
     )
     .orderBy(
@@ -147,7 +150,14 @@ export function requireShotVideoTakeInput(
     .from(sceneShotVideoTakeMediaInputs)
     .innerJoin(assetFiles, eq(sceneShotVideoTakeMediaInputs.assetFileId, assetFiles.id))
     .innerJoin(assets, eq(sceneShotVideoTakeMediaInputs.assetId, assets.id))
-    .where(eq(sceneShotVideoTakeMediaInputs.id, inputId))
+    .where(
+      and(
+        eq(sceneShotVideoTakeMediaInputs.id, inputId),
+        isNull(sceneShotVideoTakeMediaInputs.discardedAt),
+        isNull(assetFiles.discardedAt),
+        isNull(assets.discardedAt)
+      )
+    )
     .get();
   if (!row) {
     throw new ProjectDataError(
@@ -213,19 +223,6 @@ export function clearShotVideoTakeInputRecordSelection(
     .run();
 }
 
-export function deleteShotVideoTakeInputRecord(
-  session: DatabaseSession,
-  inputId: string
-): void {
-  const row = requireShotVideoTakeInputRecord(session, inputId);
-  session.db
-    .delete(sceneShotVideoTakeMediaInputs)
-    .where(eq(sceneShotVideoTakeMediaInputs.id, inputId))
-    .run();
-  session.db.delete(assetFiles).where(eq(assetFiles.assetId, row.assetId)).run();
-  session.db.delete(assets).where(eq(assets.id, row.assetId)).run();
-}
-
 export function assertAssetNotReferencedByShotVideoTakeRecords(
   session: DatabaseSession,
   assetId: string
@@ -233,7 +230,17 @@ export function assertAssetNotReferencedByShotVideoTakeRecords(
   const mediaInput = session.db
     .select({ id: sceneShotVideoTakeMediaInputs.id })
     .from(sceneShotVideoTakeMediaInputs)
-    .where(eq(sceneShotVideoTakeMediaInputs.assetId, assetId))
+    .innerJoin(
+      sceneShotVideoTakes,
+      eq(sceneShotVideoTakeMediaInputs.takeId, sceneShotVideoTakes.id)
+    )
+    .where(
+      and(
+        eq(sceneShotVideoTakeMediaInputs.assetId, assetId),
+        isNull(sceneShotVideoTakeMediaInputs.discardedAt),
+        isNull(sceneShotVideoTakes.discardedAt)
+      )
+    )
     .get();
   if (mediaInput) {
     throw takeAssetReferenceError(assetId, [
@@ -244,7 +251,17 @@ export function assertAssetNotReferencedByShotVideoTakeRecords(
   const output = session.db
     .select({ id: sceneShotVideoTakeOutputs.id })
     .from(sceneShotVideoTakeOutputs)
-    .where(eq(sceneShotVideoTakeOutputs.assetId, assetId))
+    .innerJoin(
+      sceneShotVideoTakes,
+      eq(sceneShotVideoTakeOutputs.takeId, sceneShotVideoTakes.id)
+    )
+    .where(
+      and(
+        eq(sceneShotVideoTakeOutputs.assetId, assetId),
+        isNull(sceneShotVideoTakeOutputs.discardedAt),
+        isNull(sceneShotVideoTakes.discardedAt)
+      )
+    )
     .get();
   if (output) {
     throw takeAssetReferenceError(assetId, [
@@ -258,6 +275,7 @@ export function assertAssetNotReferencedByShotVideoTakeRecords(
       stateJson: sceneShotVideoTakes.stateJson,
     })
     .from(sceneShotVideoTakes)
+    .where(isNull(sceneShotVideoTakes.discardedAt))
     .all()) {
     const state = parseSceneShotVideoTakeState({ value: row.stateJson });
     if (sceneShotVideoTakeStateReferencesAsset(state, assetId)) {

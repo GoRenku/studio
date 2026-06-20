@@ -7,9 +7,11 @@ import {
   type ReactNode,
 } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import type { SceneShotVideoTake } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
+import { restoreTrashItem } from '@/services/studio-trash-api';
 import {
   createSceneShotVideoTake,
   deleteSceneShotVideoTake,
@@ -256,10 +258,37 @@ export function SceneTakesTab({
   const handleDeleteTake = useCallback(
     async (deletedTakeId: string) => {
       try {
-        await deleteSceneShotVideoTake(projectName, sceneId, deletedTakeId);
+        const report = await deleteSceneShotVideoTake(
+          projectName,
+          sceneId,
+          deletedTakeId
+        );
         setTakes((current) =>
           current.filter((candidate) => candidate.takeId !== deletedTakeId)
         );
+        toast.success('Take moved to Trash', {
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              void restoreTrashItem(
+                projectName,
+                report.recovery.restoreCommand.trashItemId
+              )
+                .then(() => {
+                  loadResource();
+                  toast.success('Take restored');
+                })
+                .catch((restoreError) => {
+                  toast.error('Take could not be restored', {
+                    description:
+                      restoreError instanceof Error
+                        ? restoreError.message
+                        : 'Restore failed.',
+                  });
+                });
+            },
+          },
+        });
       } catch (deleteError) {
         setError(
           deleteError instanceof Error
@@ -268,7 +297,7 @@ export function SceneTakesTab({
         );
       }
     },
-    [projectName, sceneId]
+    [loadResource, projectName, sceneId]
   );
 
   const handleToggleTakePick = useCallback(

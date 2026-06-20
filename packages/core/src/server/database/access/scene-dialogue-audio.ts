@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import type {
   SceneDialogueAudio,
   SceneDialogueAudioModelChoice,
@@ -146,7 +146,12 @@ export function listSceneDialogueAudioTakeRecords(
   return session.db
     .select()
     .from(sceneDialogueAudioTakes)
-    .where(eq(sceneDialogueAudioTakes.sceneDialogueAudioId, sceneDialogueAudioId))
+    .where(
+      and(
+        eq(sceneDialogueAudioTakes.sceneDialogueAudioId, sceneDialogueAudioId),
+        isNull(sceneDialogueAudioTakes.discardedAt)
+      )
+    )
     .orderBy(desc(sceneDialogueAudioTakes.createdAt), desc(sceneDialogueAudioTakes.id))
     .all();
 }
@@ -203,7 +208,8 @@ export function readSceneDialogueAudioTakeRecord(
       .where(
         and(
           eq(sceneDialogueAudioTakes.sceneDialogueAudioId, input.sceneDialogueAudioId),
-          eq(sceneDialogueAudioTakes.id, input.takeId)
+          eq(sceneDialogueAudioTakes.id, input.takeId),
+          isNull(sceneDialogueAudioTakes.discardedAt)
         )
       )
       .get() ?? null
@@ -244,7 +250,13 @@ export function deleteSceneDialogueAudioTakeRecord(
     );
   }
   session.db
-    .delete(sceneDialogueAudioTakes)
+    .update(sceneDialogueAudioTakes)
+    .set({
+      discardedAt: input.updatedAt,
+      discardOperationId: null,
+      restoredAt: null,
+      updatedAt: input.updatedAt,
+    })
     .where(eq(sceneDialogueAudioTakes.id, input.takeId))
     .run();
   if (audio.pickedTakeId !== input.takeId) {

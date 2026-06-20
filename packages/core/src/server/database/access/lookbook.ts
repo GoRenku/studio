@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Lookbook } from '../../../client/index.js';
 import {
   lookbook,
@@ -22,6 +22,7 @@ export function listLookbookRecords(session: DatabaseSession): LookbookRecord[] 
   return session.db
     .select()
     .from(lookbook)
+    .where(isNull(lookbook.discardedAt))
     .orderBy(asc(lookbook.updatedAt), asc(lookbook.id))
     .all();
 }
@@ -31,7 +32,11 @@ export function readLookbookRecordById(
   lookbookId: string
 ): LookbookRecord | null {
   return (
-    session.db.select().from(lookbook).where(eq(lookbook.id, lookbookId)).get() ??
+    session.db
+      .select()
+      .from(lookbook)
+      .where(and(eq(lookbook.id, lookbookId), isNull(lookbook.discardedAt)))
+      .get() ??
     null
   );
 }
@@ -162,7 +167,12 @@ export function readLookbookCardImageId(
     session.db
       .select({ imageId: lookbookCardImages.imageId })
       .from(lookbookCardImages)
-      .where(eq(lookbookCardImages.lookbookId, lookbookId))
+      .where(
+        and(
+          eq(lookbookCardImages.lookbookId, lookbookId),
+          isNull(lookbookCardImages.discardedAt)
+        )
+      )
       .get()?.imageId ?? null
   );
 }
@@ -170,7 +180,11 @@ export function readLookbookCardImageId(
 export function listLookbookCardImageIds(
   session: DatabaseSession
 ): Map<string, string> {
-  const rows = session.db.select().from(lookbookCardImages).all();
+  const rows = session.db
+    .select()
+    .from(lookbookCardImages)
+    .where(isNull(lookbookCardImages.discardedAt))
+    .all();
   return new Map(rows.map((row) => [row.lookbookId, row.imageId]));
 }
 

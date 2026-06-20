@@ -1,4 +1,4 @@
-import { and, asc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 import { castVoiceProviderRegistrations, castVoices } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
@@ -47,7 +47,7 @@ export function listCastVoiceRecords(
   return session.db
     .select()
     .from(castVoices)
-    .where(eq(castVoices.castMemberId, castMemberId))
+    .where(and(eq(castVoices.castMemberId, castMemberId), isNull(castVoices.discardedAt)))
     .orderBy(asc(castVoices.sortOrder), asc(castVoices.name), asc(castVoices.id))
     .all();
 }
@@ -66,7 +66,12 @@ export function listCastVoiceProviderRegistrationRecords(
   return session.db
     .select()
     .from(castVoiceProviderRegistrations)
-    .where(eq(castVoiceProviderRegistrations.castVoiceId, castVoiceId))
+    .where(
+      and(
+        eq(castVoiceProviderRegistrations.castVoiceId, castVoiceId),
+        isNull(castVoiceProviderRegistrations.discardedAt)
+      )
+    )
     .orderBy(
       asc(castVoiceProviderRegistrations.provider),
       asc(castVoiceProviderRegistrations.registrationModel),
@@ -86,7 +91,8 @@ export function readCastVoiceProviderRegistrationRecord(
       .where(
         and(
           eq(castVoiceProviderRegistrations.castVoiceId, input.castVoiceId),
-          eq(castVoiceProviderRegistrations.id, input.registrationId)
+          eq(castVoiceProviderRegistrations.id, input.registrationId),
+          isNull(castVoiceProviderRegistrations.discardedAt)
         )
       )
       .get() ?? null
@@ -129,6 +135,7 @@ export function readCastVoiceRecord(
       .where(
         and(
           eq(castVoices.castMemberId, input.castMemberId),
+          isNull(castVoices.discardedAt),
           or(
             eq(castVoices.id, input.voiceIdOrName),
             eq(castVoices.name, input.voiceIdOrName)
@@ -147,7 +154,7 @@ export function readCastVoiceRecordBySampleAssetId(
     session.db
       .select()
       .from(castVoices)
-      .where(eq(castVoices.sampleAssetId, sampleAssetId))
+      .where(and(eq(castVoices.sampleAssetId, sampleAssetId), isNull(castVoices.discardedAt)))
       .get() ?? null
   );
 }
@@ -162,6 +169,7 @@ export function castVoiceNameExists(
     .where(
       and(
         eq(castVoices.castMemberId, input.castMemberId),
+        isNull(castVoices.discardedAt),
         eq(castVoices.name, input.name)
       )
     )
@@ -176,7 +184,7 @@ export function nextCastVoiceSortOrder(
   const row = session.db
     .select({ maxSortOrder: sql<number | null>`max(${castVoices.sortOrder})` })
     .from(castVoices)
-    .where(eq(castVoices.castMemberId, castMemberId))
+    .where(and(eq(castVoices.castMemberId, castMemberId), isNull(castVoices.discardedAt)))
     .get();
   return (row?.maxSortOrder ?? 0) + 1;
 }

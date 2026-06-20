@@ -11,6 +11,7 @@ import { locations } from './locations.js';
 import { projectLocales } from './project-locales.js';
 import { scenes } from './scenes.js';
 import { sequences } from './sequences.js';
+import { discardLifecycleColumns } from './lifecycle-columns.js';
 
 export const assets = sqliteTable('asset', {
   id: text('id').primaryKey(),
@@ -22,6 +23,7 @@ export const assets = sqliteTable('asset', {
   availability: text('availability').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  ...discardLifecycleColumns(),
 });
 
 export const assetFiles = sqliteTable(
@@ -42,6 +44,7 @@ export const assetFiles = sqliteTable(
     durationSeconds: real('duration_seconds'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [index('asset_file_asset_role_idx').on(table.assetId, table.role)],
 );
@@ -62,6 +65,7 @@ export const projectAssets = sqliteTable(
     selectionOrder: integer('selection_order'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('project_asset_filter_order_idx').on(
@@ -93,6 +97,7 @@ export const castAssets = sqliteTable(
     selectionOrder: integer('selection_order'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('cast_asset_filter_order_idx').on(
@@ -125,6 +130,7 @@ export const locationAssets = sqliteTable(
     selectionOrder: integer('selection_order'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('location_asset_filter_order_idx').on(
@@ -153,6 +159,7 @@ export const locationEnvironmentSheets = sqliteTable(
       .references(() => assetFiles.id),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     uniqueIndex('location_environment_sheet_asset_idx').on(table.assetId),
@@ -178,6 +185,7 @@ export const locationEnvironmentSheetViews = sqliteTable(
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     uniqueIndex('location_environment_sheet_view_azimuth_idx').on(
@@ -211,6 +219,7 @@ export const sequenceAssets = sqliteTable(
     selectionOrder: integer('selection_order'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('sequence_asset_filter_order_idx').on(
@@ -243,6 +252,7 @@ export const sceneAssets = sqliteTable(
     selectionOrder: integer('selection_order'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
   },
   (table) => [
     index('scene_asset_filter_order_idx').on(
