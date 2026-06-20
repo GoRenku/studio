@@ -37,10 +37,11 @@ operational companions that teach agents how to use those contracts.
 
 `lookbook-designer`
 
-- Creates or revises durable Visual Language Lookbooks.
+- Creates or revises durable Movie Lookbooks and Storyboard Lookbooks.
 - Uses Inspiration folders, existing analyses, named references, screenplay
   context, and user direction as source context.
-- Writes validated `kind: "lookbook"` JSON through the CLI.
+- Writes validated `kind: "movieLookbook"` or `kind: "storyboardLookbook"`
+  JSON through the CLI.
 - Hands generated image requests to `media-producer`.
 
 `screenplay-analyst`
@@ -100,11 +101,12 @@ operational companions that teach agents how to use those contracts.
 
 - Designs and persists Scene Shot Lists for individual screenplay scenes.
 - Uses `renku screenplay shot-list context` to read screenplay blocks,
-  referenced cast, referenced locations, active Lookbook text, and active shot
-  list history.
+  referenced cast, referenced locations, selected Movie Lookbook guidance, and
+  active shot list history.
 - Writes validated `kind: "sceneShotList"` JSON through the CLI.
 - Hands storyboard image requests to `media-producer` after a valid Scene Shot
-  List exists. The media-producer skill owns `scene.storyboard-sheet` generation
+  List and selected Storyboard Lookbook exist. The media-producer skill owns
+  Storyboard Lookbook sheet readiness, `scene.storyboard-sheet` generation
   specs, visual inspection, slicing, and per-shot storyboard image import.
 
 ## Skill Rules

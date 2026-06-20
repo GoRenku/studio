@@ -571,6 +571,7 @@ describe('scene shot list commands', () => {
       document: shotList,
       idGenerator: createDeterministicIdGenerator(),
     });
+    await createSelectedStoryboardLookbook();
 
     const context = await projectData.buildSceneStoryboardSheetContext({
       homeDir,
@@ -740,6 +741,32 @@ describe('scene shot list commands', () => {
         })),
       },
       idGenerator: createDeterministicIdGenerator(),
+    });
+  }
+
+  async function createSelectedStoryboardLookbook() {
+    const lookbook = await projectData.createLookbook({
+      homeDir,
+      document: {
+        kind: 'storyboardLookbook',
+        storyboardLookbook: {
+          name: 'Graphite Storyboard',
+          styleBrief: { text: 'Graphite storyboard frames with clear staging.' },
+          lineAndFinish: { text: 'Loose pencil construction with crisp ink accents.' },
+          valueAndAccent: { text: 'Soft gray values with restrained warm accents.' },
+          panelAndNotation: { text: 'Clean panels and sparse camera notes outside image content.' },
+          continuityAndClarity: { text: 'Maintain geography and character identity across panels.' },
+          guardrails: { text: 'Avoid photoreal stills and decorative text inside panels.' },
+        },
+        sourceMovieLookbookIds: [],
+        sourceInspirationFolderIds: [],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.selectLookbookForType({
+      homeDir,
+      type: 'storyboard',
+      lookbookId: lookbook.lookbook.id,
     });
   }
 });

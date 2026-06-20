@@ -16,6 +16,7 @@ import renkuLogo from '@/assets/renku-logo.svg';
 import type {
   ActNavigationRow,
   InspirationResource,
+  LookbookListItemWithSources,
   SceneNavigationRow,
   SequenceNavigationRow,
   LookbooksResource,
@@ -335,11 +336,7 @@ export function StudioSidebar({
                 active={selection.type === 'lookbooks'}
                 icon={<Palette className='h-4 w-4' />}
                 label='Lookbooks'
-                detail={
-                  lookbooksResource?.activeLookbookId
-                    ? 'Active look selected'
-                    : 'No active lookbook'
-                }
+                detail={lookbookSelectionSummary(lookbooksResource)}
                 compact
                 onClick={() => onSelect({ type: 'lookbooks' })}
               />
@@ -352,7 +349,7 @@ export function StudioSidebar({
                     }
                     icon={<Palette className='h-4 w-4' />}
                     label={item.lookbook.name}
-                    detail={item.isActive ? 'Active' : 'Lookbook'}
+                    detail={lookbookRowDetail(item)}
                     compact
                     onClick={() =>
                       onSelect({
@@ -488,6 +485,27 @@ function subtractValues<T>(current: Set<T>, values: ReadonlySet<T>): Set<T> {
     }
   }
   return changed ? next : current;
+}
+
+function lookbookSelectionSummary(
+  resource: LookbooksResource | null
+): string {
+  const selected = resource?.selectedLookbookIdsByType ?? {};
+  if (selected.movie && selected.storyboard) {
+    return 'Movie and Storyboard selected';
+  }
+  if (selected.movie) {
+    return 'Storyboard missing';
+  }
+  if (selected.storyboard) {
+    return 'Movie missing';
+  }
+  return 'Movie and Storyboard missing';
+}
+
+function lookbookRowDetail(item: LookbookListItemWithSources): string {
+  const label = item.lookbook.type === 'movie' ? 'Movie' : 'Storyboard';
+  return item.isSelectedForType ? `${label} selected` : label;
 }
 
 function ProjectCard({

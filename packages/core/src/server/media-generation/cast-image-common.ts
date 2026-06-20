@@ -27,7 +27,7 @@ import {
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import {
   listLookbookCardImageIds,
-  readActiveLookbookId,
+  readSelectedMovieLookbookId,
   requireLookbookRecordById,
   toLookbook,
 } from '../database/access/lookbook.js';
@@ -241,14 +241,18 @@ export function requireCastMemberForContext(
 export function readActiveLookbookContext(
   session: DatabaseSession
 ): CastGenerationLookbookContext | null {
-  const activeLookbookId = readActiveLookbookId(session);
+  const activeLookbookId = readSelectedMovieLookbookId(session);
   if (!activeLookbookId) {
     return null;
   }
   const row = requireLookbookRecordById(session, activeLookbookId);
+  const lookbook = toLookbook(row);
+  if (lookbook.type !== 'movie') {
+    return null;
+  }
   const cardImageId = listLookbookCardImageIds(session).get(row.id);
   return {
-    lookbook: toLookbook(row),
+    lookbook,
     cardImage: cardImageId
       ? readLookbookImage(session, cardImageId)
       : listLookbookImages(session, row.id)[0] ?? null,
@@ -263,10 +267,10 @@ export function requireActiveLookbookContext(
   if (!activeLookbook) {
     throw new ProjectDataError(
       'PROJECT_DATA275',
-      'Cast character sheet generation requires an active Lookbook.',
+      'Cast character sheet generation requires a selected Movie Lookbook.',
       {
         suggestion:
-          'Create or set an active Lookbook before generating a character sheet.',
+          'Create or select a Movie Lookbook before generating a character sheet.',
       }
     );
   }

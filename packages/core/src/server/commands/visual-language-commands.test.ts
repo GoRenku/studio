@@ -302,16 +302,17 @@ describe('visual language commands', () => {
     await expect(
       projectData.listLookbooks({ projectName: 'constantinople', homeDir })
     ).resolves.toMatchObject({
-      activeLookbookId: null,
+      selectedLookbookIdsByType: {},
       lookbooks: [
-        { lookbook: { name: 'Siege Steel' }, isActive: false },
-        { lookbook: { name: 'Ivory Fog' }, isActive: false },
+        { lookbook: { name: 'Siege Steel' }, isSelectedForType: false },
+        { lookbook: { name: 'Ivory Fog' }, isSelectedForType: false },
       ],
     });
 
-    await projectData.setActiveLookbook({
+    await projectData.selectLookbookForType({
       projectName: 'constantinople',
       homeDir,
+      type: 'movie',
       lookbookId: lookbook.lookbook.id,
     });
 
@@ -367,7 +368,7 @@ describe('visual language commands', () => {
       secondSource.id,
       firstSource.id,
     ]);
-    expect(resource.isActive).toBe(true);
+    expect(resource.isSelectedForType).toBe(true);
     expect(resource.cardImage?.id).toBe(image.imported.id);
     expect(resource.imagesBySection.palette).toHaveLength(2);
     expect(resource.imagesBySection.lighting).toHaveLength(1);
@@ -403,8 +404,8 @@ describe('visual language commands', () => {
     await expect(
       projectData.listLookbooks({ projectName: 'constantinople', homeDir })
     ).resolves.toMatchObject({
-      activeLookbookId: null,
-      lookbooks: [{ lookbook: { name: 'Ivory Fog' }, isActive: false }],
+      selectedLookbookIdsByType: {},
+      lookbooks: [{ lookbook: { name: 'Ivory Fog' }, isSelectedForType: false }],
     });
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look-2.png'))
@@ -499,8 +500,9 @@ describe('visual language commands', () => {
         name: 'Invalid Lookbook',
         document: {
           ...lookbookDocument(),
-          lookbook: {
+          movieLookbook: {
             ...lookbookSections(),
+            name: 'Invalid Lookbook',
             thesis: { statement: 'Missing principles' },
           },
         } as never,
@@ -532,7 +534,7 @@ describe('visual language commands', () => {
 
     const sqlite = new Database(created.databasePath);
     try {
-      sqlite.prepare("update lookbook set thesis = '{ bad json'").run();
+      sqlite.prepare("update lookbook set definition_json = '{ bad json'").run();
     } finally {
       sqlite.close();
     }
@@ -631,8 +633,11 @@ function lookbookSections() {
 
 function lookbookDocument(sourceInspirationFolderIds: string[] = []) {
   return {
-    kind: 'lookbook' as const,
-    lookbook: lookbookSections(),
+    kind: 'movieLookbook' as const,
+    movieLookbook: {
+      name: 'Siege Steel',
+      ...lookbookSections(),
+    },
     sourceInspirationFolderIds,
   };
 }

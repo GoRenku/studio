@@ -9,6 +9,7 @@ import type {
   PaletteSection,
   Pattern,
   PatternSection,
+  StoryboardLookbookDefinition,
   TextureSection,
   ThesisSection,
   ToneMoodSection,
@@ -45,16 +46,7 @@ interface VisualLanguageReportProps {
   headerMeta?: ReactNode;
   action?: ReactNode;
   onDeleteLookbookImage?: (imageId: string) => Promise<void>;
-  sections: {
-    thesis: ThesisSection;
-    palette: PaletteSection;
-    toneMood: ToneMoodSection;
-    composition: PatternSection;
-    lighting: PatternSection;
-    texture: TextureSection;
-    camera?: CameraSection;
-    inspiredBy?: InspiredBySection;
-  };
+  sections: MovieVisualLanguageSections | StoryboardLookbookDefinition;
   source:
     | {
         kind: 'inspiration';
@@ -64,6 +56,17 @@ interface VisualLanguageReportProps {
         kind: 'lookbook';
         imagesBySection: Record<LookbookSection, LookbookImage[]>;
       };
+}
+
+interface MovieVisualLanguageSections {
+    thesis: ThesisSection;
+    palette: PaletteSection;
+    toneMood: ToneMoodSection;
+    composition: PatternSection;
+    lighting: PatternSection;
+    texture: TextureSection;
+    camera?: CameraSection;
+    inspiredBy?: InspiredBySection;
 }
 
 export function VisualLanguageReport({
@@ -82,6 +85,123 @@ export function VisualLanguageReport({
   const canDeleteLookbookImages =
     source.kind === 'lookbook' && Boolean(onDeleteLookbookImage);
   const hasHeader = Boolean(title || headerMeta || action);
+  if (isStoryboardSections(sections)) {
+    return (
+      <article
+        className={cn(
+          'min-h-full bg-panel-bg px-4 text-foreground',
+          hasHeader ? 'py-5' : 'py-0'
+        )}
+      >
+        {hasHeader ? (
+          <header className='flex flex-col gap-5 pb-8'>
+            <div className='flex flex-wrap items-end justify-between gap-5'>
+              <div className='min-w-0'>
+                {title ? (
+                  <h1 className='max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
+                    {title}
+                  </h1>
+                ) : null}
+              </div>
+              {action ? <div className='shrink-0'>{action}</div> : null}
+            </div>
+            {headerMeta ? <div>{headerMeta}</div> : null}
+          </header>
+        ) : null}
+        <StoryboardDefinitionSection
+          number='01'
+          sectionKey='styleBrief'
+          title='Style Brief'
+          text={sections.styleBrief.text}
+          projectName={projectName}
+          source={source}
+          onOpenImage={setPreviewImage}
+          onRequestDeleteImage={
+            canDeleteLookbookImages ? setDeleteImage : undefined
+          }
+        />
+        <StoryboardDefinitionSection
+          number='02'
+          sectionKey='lineAndFinish'
+          title='Line And Finish'
+          text={sections.lineAndFinish.text}
+          projectName={projectName}
+          source={source}
+          onOpenImage={setPreviewImage}
+          onRequestDeleteImage={
+            canDeleteLookbookImages ? setDeleteImage : undefined
+          }
+        />
+        <StoryboardDefinitionSection
+          number='03'
+          sectionKey='valueAndAccent'
+          title='Value And Accent'
+          text={sections.valueAndAccent.text}
+          projectName={projectName}
+          source={source}
+          onOpenImage={setPreviewImage}
+          onRequestDeleteImage={
+            canDeleteLookbookImages ? setDeleteImage : undefined
+          }
+        />
+        <StoryboardDefinitionSection
+          number='04'
+          sectionKey='panelAndNotation'
+          title='Panel And Notation'
+          text={sections.panelAndNotation.text}
+          projectName={projectName}
+          source={source}
+          onOpenImage={setPreviewImage}
+          onRequestDeleteImage={
+            canDeleteLookbookImages ? setDeleteImage : undefined
+          }
+        />
+        <StoryboardDefinitionSection
+          number='05'
+          sectionKey='continuityAndClarity'
+          title='Continuity And Clarity'
+          text={sections.continuityAndClarity.text}
+          projectName={projectName}
+          source={source}
+          onOpenImage={setPreviewImage}
+          onRequestDeleteImage={
+            canDeleteLookbookImages ? setDeleteImage : undefined
+          }
+        />
+        <StoryboardDefinitionSection
+          number='06'
+          sectionKey='guardrails'
+          title='Guardrails'
+          text={sections.guardrails.text}
+          projectName={projectName}
+          source={source}
+          onOpenImage={setPreviewImage}
+          onRequestDeleteImage={
+            canDeleteLookbookImages ? setDeleteImage : undefined
+          }
+        />
+        <ImagePreviewDialog
+          images={previewImage ? [previewImage] : []}
+          currentIndex={0}
+          onOpenChange={(open) => !open && setPreviewImage(null)}
+        />
+        <DeleteConfirmDialog
+          open={Boolean(deleteImage)}
+          onOpenChange={(open) => !open && setDeleteImage(null)}
+          title='Delete Image?'
+          message='Remove this image from the lookbook. This cannot be undone.'
+          onDelete={async () => {
+            if (!deleteImage?.lookbookImageId || !onDeleteLookbookImage) return;
+            await onDeleteLookbookImage(deleteImage.lookbookImageId);
+            setDeleteImage(null);
+            if (previewImage?.src === deleteImage.src) {
+              setPreviewImage(null);
+            }
+          }}
+        />
+      </article>
+    );
+  }
   const themeColors = sections.palette.colors.map((color) => color.hex);
   const thesisImages = imagesForSection(
     projectName,
@@ -92,7 +212,7 @@ export function VisualLanguageReport({
   const toneImages = imagesForSection(
     projectName,
     source,
-    'tone_mood',
+    'toneMood',
     sections.toneMood.imageFiles
   );
 
@@ -360,6 +480,12 @@ export function VisualLanguageReport({
   );
 }
 
+function isStoryboardSections(
+  sections: MovieVisualLanguageSections | StoryboardLookbookDefinition
+): sections is StoryboardLookbookDefinition {
+  return 'styleBrief' in sections;
+}
+
 function ReportSection({
   number,
   kicker,
@@ -489,6 +615,44 @@ function PatternReportSection({
             onRequestDeleteImage={onRequestDeleteImage}
           />
         </div>
+      </SectionWideContent>
+    </>
+  );
+}
+
+function StoryboardDefinitionSection({
+  number,
+  sectionKey,
+  title,
+  text,
+  projectName,
+  source,
+  onOpenImage,
+  onRequestDeleteImage,
+}: {
+  number: string;
+  sectionKey: LookbookSection;
+  title: string;
+  text: string;
+  projectName: string;
+  source: VisualLanguageReportProps['source'];
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
+}) {
+  return (
+    <>
+      <ReportSection number={number} kicker='Storyboard' title={title}>
+        <p className='max-w-[860px] text-base font-semibold leading-8 text-foreground lg:text-lg'>
+          {text}
+        </p>
+      </ReportSection>
+      <SectionWideContent>
+        <EvidenceGrid
+          images={imagesForSection(projectName, source, sectionKey)}
+          size='feature'
+          onOpenImage={onOpenImage}
+          onRequestDeleteImage={onRequestDeleteImage}
+        />
       </SectionWideContent>
     </>
   );
@@ -761,7 +925,7 @@ function imagesForSection(
       title: fileName,
     }));
   }
-  return source.imagesBySection[section].flatMap((image) => {
+  return (source.imagesBySection[section] ?? []).flatMap((image) => {
     const file = image.asset.files[0];
     if (!file) return [];
     return [

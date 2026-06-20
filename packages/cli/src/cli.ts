@@ -129,6 +129,7 @@ Options
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
   --lookbook           Lookbook id
+  --type               Lookbook type: movie or storyboard
   --image              Lookbook image id
   --trash-item         Trash item id to restore
   --confirmation-token Empty Trash confirmation token from preview
@@ -605,6 +606,7 @@ export async function runRenkuCli(
             name: cli.flags.name,
             project: cli.flags.project,
             sections: cli.flags.sections,
+            type: cli.flags.type,
           },
           json: cli.flags.json,
           io,

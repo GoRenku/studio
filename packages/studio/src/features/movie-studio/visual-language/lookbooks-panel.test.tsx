@@ -9,7 +9,7 @@ import type {
 import {
   deleteLookbook,
   listLookbooks,
-  setActiveLookbook,
+  selectLookbookForType,
 } from '@/services/studio-visual-language-api';
 import { LookbooksPanel } from './lookbooks-panel';
 
@@ -22,14 +22,14 @@ vi.mock('sonner', () => ({
 vi.mock('@/services/studio-visual-language-api', () => ({
   deleteLookbook: vi.fn(),
   listLookbooks: vi.fn(),
-  setActiveLookbook: vi.fn(),
+  selectLookbookForType: vi.fn(),
 }));
 
 describe('LookbooksPanel', () => {
   beforeEach(() => {
     vi.mocked(deleteLookbook).mockReset();
     vi.mocked(listLookbooks).mockReset();
-    vi.mocked(setActiveLookbook).mockReset();
+    vi.mocked(selectLookbookForType).mockReset();
   });
 
   it('refreshes the Lookbooks grid when a Studio resource event reports changed Lookbooks', async () => {
@@ -71,13 +71,13 @@ function lookbooksResource(name: string): LookbooksResource {
     warnings: [],
     project: { name: 'constantinople' },
     resourceKeys: [],
-    activeLookbookId: null,
+    selectedLookbookIdsByType: {},
     lookbooks: [
       {
         lookbook: lookbook(name),
         sourceInspirationFolders: [],
         cardImage: null,
-        isActive: false,
+        isSelectedForType: false,
       },
     ],
   };
@@ -87,37 +87,40 @@ function lookbook(name: string): Lookbook {
   return {
     id: 'lookbook_test0001',
     name,
-    thesis: {
-      statement: 'The visual thesis.',
-      principles: ['Keep contrast legible.'],
-    },
-    palette: {
-      description: 'Muted color with clear accents.',
-      colors: [],
-      observations: [],
-    },
-    toneMood: {
-      tone: 'restrained',
-      moodTags: ['quiet'],
-      description: 'Controlled and grounded.',
-    },
-    composition: {
-      description: 'Frames are composed with clear subject priority.',
-      patterns: [],
-    },
-    lighting: {
-      description: 'Light is motivated and directional.',
-      patterns: [],
-    },
-    texture: {
-      description: 'Surfaces are tactile.',
-      observations: [],
-    },
-    camera: {
-      description: 'Camera language is patient.',
-      movement: [],
-      motion: [],
-      framing: [],
+    type: 'movie',
+    definition: {
+      thesis: {
+        statement: 'The visual thesis.',
+        principles: ['Keep contrast legible.'],
+      },
+      palette: {
+        description: 'Muted color with clear accents.',
+        colors: [],
+        observations: [],
+      },
+      toneMood: {
+        tone: 'restrained',
+        moodTags: ['quiet'],
+        description: 'Controlled and grounded.',
+      },
+      composition: {
+        description: 'Frames are composed with clear subject priority.',
+        patterns: [],
+      },
+      lighting: {
+        description: 'Light is motivated and directional.',
+        patterns: [],
+      },
+      texture: {
+        description: 'Surfaces are tactile.',
+        observations: [],
+      },
+      camera: {
+        description: 'Camera language is patient.',
+        movement: [],
+        motion: [],
+        framing: [],
+      },
     },
   };
 }

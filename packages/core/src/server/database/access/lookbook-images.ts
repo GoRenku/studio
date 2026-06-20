@@ -4,12 +4,14 @@ import type {
   LookbookImageAsset,
   LookbookImageAssetFile,
   LookbookSection,
+  LookbookType,
 } from '../../../client/index.js';
 import {
   assetFiles,
   assets,
   lookbookImages,
   lookbookImageSections,
+  lookbook,
 } from '../../schema/index.js';
 import { normalizeProjectRelativePath } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -23,6 +25,7 @@ interface LookbookImageAssetRow {
   lookbookId: string;
   assetId: string;
   sortOrder: number;
+  lookbookType: LookbookType;
   type: string;
   mediaKind: string;
   title: string;
@@ -163,6 +166,7 @@ export function listLookbookImages(
       lookbookId: lookbookImages.lookbookId,
       assetId: lookbookImages.assetId,
       sortOrder: lookbookImages.sortOrder,
+      lookbookType: lookbook.type,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -174,6 +178,7 @@ export function listLookbookImages(
     })
     .from(lookbookImages)
     .innerJoin(assets, eq(assets.id, lookbookImages.assetId))
+    .innerJoin(lookbook, eq(lookbook.id, lookbookImages.lookbookId))
     .where(and(eq(lookbookImages.lookbookId, lookbookId), isNull(lookbookImages.discardedAt)))
     .orderBy(asc(lookbookImages.sortOrder), asc(lookbookImages.id))
     .all() as LookbookImageAssetRow[];
@@ -182,6 +187,8 @@ export function listLookbookImages(
   const sectionsByImageId = readSectionsForRows(session, rows);
   return rows.map((row) => ({
     id: row.id,
+    lookbookId: row.lookbookId,
+    lookbookType: row.lookbookType,
     asset: toLookbookImageAsset(row, assetFilesByAssetId),
     sections: sectionsByImageId.get(row.id) ?? [],
   }));
@@ -197,6 +204,7 @@ export function readLookbookImage(
       lookbookId: lookbookImages.lookbookId,
       assetId: lookbookImages.assetId,
       sortOrder: lookbookImages.sortOrder,
+      lookbookType: lookbook.type,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -208,6 +216,7 @@ export function readLookbookImage(
     })
     .from(lookbookImages)
     .innerJoin(assets, eq(assets.id, lookbookImages.assetId))
+    .innerJoin(lookbook, eq(lookbook.id, lookbookImages.lookbookId))
     .where(and(eq(lookbookImages.id, imageId), isNull(lookbookImages.discardedAt)))
     .get() as LookbookImageAssetRow | undefined;
   if (!row) {
@@ -216,6 +225,8 @@ export function readLookbookImage(
   const rows = [row];
   return {
     id: row.id,
+    lookbookId: row.lookbookId,
+    lookbookType: row.lookbookType,
     asset: toLookbookImageAsset(row, readAssetFilesForRows(session, rows)),
     sections: readSectionsForRows(session, rows).get(row.id) ?? [],
   };

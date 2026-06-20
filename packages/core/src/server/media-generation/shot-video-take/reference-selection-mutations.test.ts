@@ -217,9 +217,10 @@ describe('shot video take reference selection mutations', () => {
       document: shotVideoTakeProject.lookbookDocument(),
       idGenerator: lookbookIds,
     });
-    await projectData.setActiveLookbook({
+    await projectData.selectLookbookForType({
       projectName: 'constantinople',
       homeDir,
+      type: 'movie',
       lookbookId: activeLookbook.lookbook.id,
     });
     await shotVideoTakeProject.writeProjectFile(

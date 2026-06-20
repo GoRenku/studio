@@ -57,9 +57,11 @@ Use the focused documents below for current direction.
   `renku cast` and `renku location`. Screenplay JSON references existing Cast
   Members and Locations by durable ids; it does not create or update those fact
   records.
-- Lookbooks are durable SQLite-owned project direction. Source Inspiration
-  folders and Lookbook image placement are relationships, not embedded section
-  JSON.
+- Lookbooks are durable SQLite-owned project direction. Movie Lookbooks and
+  Storyboard Lookbooks share one Lookbook asset model but have typed
+  definitions and one explicit selected Lookbook per type. Source Inspiration
+  folders, Storyboard source Movie Lookbooks, and Lookbook image placement are
+  relationships, not embedded section JSON.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
   attaches them as assets.

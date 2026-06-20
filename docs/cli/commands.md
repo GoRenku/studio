@@ -226,11 +226,11 @@ Behavior:
 - Requires a current authoring project and fails with `PROJECT_DATA202` when
   none is open.
 - Summarizes screenplay, active Screenplay Analysis, Inspiration folders,
-  Lookbooks, selected cast visuals, selected location environment sheets, and
-  selected-scene shot readiness.
+  selected Movie and Storyboard Lookbooks, selected cast visuals, selected
+  location environment sheets, and selected-scene shot readiness.
 - Reports structured director diagnostics for missing screenplay state, missing
-  active Lookbook, missing selected visual media, missing active shot lists, and
-  missing storyboard images.
+  selected Movie or Storyboard Lookbooks, missing selected visual media, missing
+  active shot lists, and missing storyboard images.
 - Returns ordered `nextSteps` such as `draft-screenplay`, `analyze-screenplay`,
   `create-lookbook`, `design-cast`, `design-production`, `design-shot-list`,
   `generate-storyboards`, and `generate-shot-video`.
@@ -421,8 +421,8 @@ Behavior:
 
 - Requires a current authoring project and an existing Cast Member.
 - `context` returns the Cast Member facts, screenplay appearances, active Cast
-  Design when present, selected cast media, active Lookbook summary, and media
-  generation readiness.
+  Design when present, selected cast media, selected Movie Lookbook summary,
+  and media generation readiness.
 - `validate` checks a tagged `kind: "castDesign"` document without writing.
 - `write` creates a Cast Member-owned design history row and makes it active.
 - `set-active` changes only the active Cast Design pointer.
@@ -452,8 +452,8 @@ Behavior:
 
 - Requires a current authoring project.
 - `context` returns the Location, scenes that use it, active Location Design
-  summary, selected environment-sheet media, asset role counts, active Lookbook
-  summary, and generation readiness for `location.environment-sheet`.
+  summary, selected environment-sheet media, asset role counts, selected Movie
+  Lookbook summary, and generation readiness for `location.environment-sheet`.
 - `validate` checks a tagged `kind: "locationOperations"` document without
   writing.
 - `apply` creates, updates, deletes, or moves Location facts through the
@@ -507,8 +507,8 @@ Behavior:
 - Location Design is location-level production design: spatial thesis,
   architecture, set dressing, materials, atmosphere, props, continuity, and
   environment-sheet guidance.
-- `context` commands return the relevant screenplay hierarchy, active Lookbook
-  summary, active design summary when present, selected media, and
+- `context` commands return the relevant screenplay hierarchy, selected Movie
+  Lookbook summary, active design summary when present, selected media, and
   downstream readiness signals.
 - `validate` checks tagged `kind: "locationDesign"` documents without writing.
 - `write` creates a history row and makes it active.
@@ -797,8 +797,8 @@ Behavior:
 
 - Requires a current authoring project and existing screenplay data.
 - `context` returns the scene hierarchy, scene blocks, referenced cast and
-  locations, project default aspect ratio, active Lookbook text, and active shot
-  list summary.
+  locations, project default aspect ratio, selected Movie Lookbook text, and
+  active shot list summary.
 - `validate` checks a tagged `kind: "sceneShotList"` document without writing.
 - `write` creates a new scene-owned shot-list history row and makes it active.
 - `validate-operations` checks a tagged `kind: "sceneShotListOperations"`
@@ -1195,16 +1195,19 @@ renku lookbook create --name <name> --file <lookbook-json> --json
 renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
 renku lookbook rename --lookbook <lookbook-id> --name <name> --json
 renku lookbook discard --lookbook <lookbook-id> --json
-renku lookbook set-active --lookbook <lookbook-id> --json
-renku lookbook clear-active --json
+renku lookbook select --type movie --lookbook <lookbook-id> --json
+renku lookbook select --type storyboard --lookbook <lookbook-id> --json
+renku lookbook clear-selection --type movie --json
+renku lookbook clear-selection --type storyboard --json
 ```
 
-Input JSON:
+Movie Lookbook input JSON:
 
 ```json
 {
-  "kind": "lookbook",
-  "lookbook": {
+  "kind": "movieLookbook",
+  "movieLookbook": {
+    "name": "Project visual language",
     "thesis": {
       "statement": "Project visual-language thesis.",
       "principles": ["Repeatable visual principle."]
@@ -1273,16 +1276,37 @@ Input JSON:
 }
 ```
 
+Storyboard Lookbook input JSON:
+
+```json
+{
+  "kind": "storyboardLookbook",
+  "storyboardLookbook": {
+    "name": "Storyboard drawing language",
+    "styleBrief": { "text": "Graphite storyboard frames with clear staging." },
+    "lineAndFinish": { "text": "Loose pencil construction with crisp ink accents." },
+    "valueAndAccent": { "text": "Soft gray values with restrained warm accents." },
+    "panelAndNotation": { "text": "Clean panels and sparse camera notes outside image content." },
+    "continuityAndClarity": { "text": "Maintain geography and character identity across panels." },
+    "guardrails": { "text": "Avoid photoreal stills and decorative text inside panels." }
+  },
+  "sourceMovieLookbookIds": [],
+  "sourceInspirationFolderIds": []
+}
+```
+
 Behavior:
 
-- The input must be a tagged `kind: "lookbook"` document with all required
-  Lookbook sections.
+- The input must be a tagged `kind: "movieLookbook"` or
+  `kind: "storyboardLookbook"` document with all required sections for that
+  type.
 - `sourceInspirationFolderIds` is optional. When present on create or update,
   every folder id must exist and duplicates are rejected.
 - Lookbook JSON must not contain `imageFiles`; generated examples are attached
   through Lookbook image commands.
-- `lookbook create` does not set the Lookbook active by default. Use
-  `lookbook set-active` when the new Lookbook should become project direction.
+- `lookbook create` does not select the Lookbook by default. Use
+  `lookbook select --type movie` for cinematic generation and
+  `lookbook select --type storyboard` for scene storyboard generation.
 - The old `renku visual-language lookbook ...` command surface is not kept as a
   compatibility alias.
 
@@ -1457,6 +1481,12 @@ Lookbook Image spec shape:
 }
 ```
 
+`focusSections` must use section names valid for the target Lookbook type.
+Movie Lookbooks use `thesis`, `palette`, `toneMood`, `composition`,
+`lighting`, `texture`, and `camera`. Storyboard Lookbooks use `styleBrief`,
+`lineAndFinish`, `valueAndAccent`, `panelAndNotation`,
+`continuityAndClarity`, and `guardrails`.
+
 Location Environment Sheet spec shape:
 
 ```json
@@ -1500,6 +1530,9 @@ Behavior:
 - The persisted spec is the source of truth for estimate and run.
 - Agents must not override user-selected model choice, take count, seed, image
   frames, selected shot ids, detail, or output format.
+- `scene.storyboard-sheet` requires a selected Storyboard Lookbook and a
+  Storyboard Lookbook sheet. Run `renku media import --purpose lookbook.sheet`
+  or generate/import that sheet before creating the scene storyboard spec.
 - Final provider payloads are validated against the provider model JSON Schema
   before estimate or execution.
 - Live generation requires an approval token from `generation estimate`.
@@ -1733,7 +1766,8 @@ Options:
   media; the take owns ordered shot membership.
 - `--selection`: optional shot image import selection, either `select` or
   `take`.
-- `--sections`: optional comma-separated Lookbook section keys.
+- `--sections`: optional comma-separated Lookbook section keys valid for the
+  owning Lookbook type.
 - `--reference-name`: required for `cast.character-sheet`; a stable
   relationship-scoped Renku reference name such as `standard-sheet`.
 - `--reference-purpose`: required for `cast.character-sheet`; the purpose for

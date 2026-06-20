@@ -304,17 +304,25 @@ export async function buildLookbookSheetDependencyDraftSpec(
     homeDir: input.homeDir,
     lookbookId: input.dependencyTarget.id,
   });
+  const prompt =
+    context.lookbook.type === 'storyboard'
+      ? [
+          `Create a Storyboard Lookbook sheet for ${context.lookbook.name}.`,
+          input.reason,
+          'Make it a concise reference image for storyboard line quality, panel finish, tonal range, notation behavior, continuity discipline, and drawing guardrails.',
+        ].join(' ')
+      : [
+          `Create a Movie Lookbook sheet for ${context.lookbook.name}.`,
+          input.reason,
+          'Summarize the selected movie visual language as a direct reference image for downstream generation.',
+        ].join(' ');
   return {
     purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
     spec: {
       purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
       target: input.dependencyTarget,
       modelChoice: 'fal-ai/openai/gpt-image-2',
-      prompt: [
-        `Create a production lookbook sheet for ${context.lookbook.name}.`,
-        input.reason,
-        'Summarize the active visual language as a direct reference image for downstream generation.',
-      ].join(' '),
+      prompt,
       takeCount: 1,
       seed: null,
       sheetFrame: 'project',
@@ -616,7 +624,7 @@ function buildGptImage2Payload(
     model: 'openai/gpt-image-2',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookSheetPrompt(spec, context),
       num_images: takeCount,
       image_size: mapPresetFrame(resolveFrame(spec, context), 'gpt-image-2'),
       quality: mapGptQuality(requireDetail(spec)),
@@ -636,7 +644,7 @@ function buildNanoBanana2Payload(
     model: 'nano-banana-2',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookSheetPrompt(spec, context),
       num_images: takeCount,
       seed: spec.seed,
       aspect_ratio: resolveFrame(spec, context),
@@ -670,7 +678,7 @@ function buildGrokImaginePayload(
     model: 'xai/grok-imagine-image',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookSheetPrompt(spec, context),
       num_images: takeCount,
       aspect_ratio: frame,
       output_format: requireOutputFormat(spec),
@@ -695,7 +703,7 @@ function buildSeedreamV5Payload(
     model: 'bytedance/seedream/v5/lite/text-to-image',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookSheetPrompt(spec, context),
       num_images: takeCount,
       max_images: 1,
       seed: spec.seed,
@@ -788,6 +796,68 @@ function toGenerationRequest(
       outputNames: outputNames(spec, plan.outputCount),
     },
   };
+}
+
+function buildLookbookSheetPrompt(
+  spec: LookbookSheetGenerationSpec,
+  context: LookbookSheetGenerationContext
+): string {
+  return context.lookbook.type === 'storyboard'
+    ? storyboardLookbookSheetPrompt(spec, context)
+    : movieLookbookSheetPrompt(spec, context);
+}
+
+function movieLookbookSheetPrompt(
+  spec: LookbookSheetGenerationSpec,
+  context: LookbookSheetGenerationContext
+): string {
+  const lookbook = context.lookbook;
+  if (lookbook.type !== 'movie') {
+    throw new ProjectDataError(
+      'CORE_LOOKBOOK_TYPE_MISMATCH',
+      `Movie Lookbook sheet prompt received a ${lookbook.type} Lookbook.`
+    );
+  }
+  const definition = lookbook.definition;
+  return [
+    spec.prompt.trim(),
+    '',
+    `Create a cohesive Movie Lookbook sheet for ${lookbook.name}.`,
+    `Thesis: ${definition.thesis.statement}`,
+    `Palette: ${definition.palette.description}`,
+    `Tone and mood: ${definition.toneMood.tone}; ${definition.toneMood.description}`,
+    `Composition: ${definition.composition.description}`,
+    `Lighting: ${definition.lighting.description}`,
+    `Texture: ${definition.texture.description}`,
+    `Camera: ${definition.camera.description}`,
+    'The sheet should read as a cinematic visual-language reference, not a storyboard or sequential panel board.',
+  ].join('\n');
+}
+
+function storyboardLookbookSheetPrompt(
+  spec: LookbookSheetGenerationSpec,
+  context: LookbookSheetGenerationContext
+): string {
+  const lookbook = context.lookbook;
+  if (lookbook.type !== 'storyboard') {
+    throw new ProjectDataError(
+      'CORE_LOOKBOOK_TYPE_MISMATCH',
+      `Storyboard Lookbook sheet prompt received a ${lookbook.type} Lookbook.`
+    );
+  }
+  const definition = lookbook.definition;
+  return [
+    spec.prompt.trim(),
+    '',
+    `Create a cohesive Storyboard Lookbook sheet for ${lookbook.name}.`,
+    `Style brief: ${definition.styleBrief.text}`,
+    `Line and finish: ${definition.lineAndFinish.text}`,
+    `Value and accent: ${definition.valueAndAccent.text}`,
+    `Panel and notation: ${definition.panelAndNotation.text}`,
+    `Continuity and clarity: ${definition.continuityAndClarity.text}`,
+    `Guardrails: ${definition.guardrails.text}`,
+    'The sheet should be a production drawing-style reference: pencil/ink treatment, panel examples, annotations, value swatches, and do/don’t guardrails. Do not make photoreal cinematic stills.',
+  ].join('\n');
 }
 
 function requireTakeCount(spec: LookbookSheetGenerationSpec, max: number): number {

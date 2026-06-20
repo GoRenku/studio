@@ -13,7 +13,7 @@ import {
   deleteLookbookSheet,
   readLookbook,
   setDefaultLookbookSheet,
-  setActiveLookbook,
+  selectLookbookForType,
 } from '@/services/studio-visual-language-api';
 import { LookbookPanel } from './lookbook-panel';
 
@@ -28,7 +28,7 @@ vi.mock('@/services/studio-visual-language-api', () => ({
   deleteLookbookSheet: vi.fn(),
   readLookbook: vi.fn(),
   setDefaultLookbookSheet: vi.fn(),
-  setActiveLookbook: vi.fn(),
+  selectLookbookForType: vi.fn(),
 }));
 
 describe('LookbookPanel', () => {
@@ -37,7 +37,7 @@ describe('LookbookPanel', () => {
     vi.mocked(deleteLookbookSheet).mockReset();
     vi.mocked(readLookbook).mockReset();
     vi.mocked(setDefaultLookbookSheet).mockReset();
-    vi.mocked(setActiveLookbook).mockReset();
+    vi.mocked(selectLookbookForType).mockReset();
   });
 
   it('refreshes the open Lookbook when a Studio resource event reports an imported image', async () => {
@@ -209,17 +209,23 @@ function lookbookResource(
     lookbook: lookbook(name),
     sourceInspirationFolders: [],
     cardImage: null,
-    isActive: false,
+    isSelectedForType: false,
     sheets,
     images: includeImage ? [paletteImage] : [],
     imagesBySection: {
       thesis: [],
       palette: includeImage ? [paletteImage] : [],
-      tone_mood: [],
+      toneMood: [],
       composition: [],
       lighting: [],
       texture: [],
       camera: [],
+      styleBrief: [],
+      lineAndFinish: [],
+      valueAndAccent: [],
+      panelAndNotation: [],
+      continuityAndClarity: [],
+      guardrails: [],
     },
   };
 }
@@ -227,6 +233,8 @@ function lookbookResource(
 function lookbookImage(): LookbookImage {
   return {
     id: 'lookbook_image_test0001',
+    lookbookId: 'lookbook_test0001',
+    lookbookType: 'movie',
     sections: ['palette'],
     asset: {
       assetId: 'asset_test0001',
@@ -259,6 +267,8 @@ function lookbookImage(): LookbookImage {
 function lookbookSheet(id: string): LookbookSheet {
   return {
     id,
+    lookbookId: 'lookbook_test0001',
+    lookbookType: 'movie',
     asset: {
       assetId: `asset_${id}`,
       type: 'lookbook_sheet',
@@ -291,37 +301,40 @@ function lookbook(name: string): Lookbook {
   return {
     id: 'lookbook_test0001',
     name,
-    thesis: {
-      statement: 'The visual thesis.',
-      principles: ['Keep contrast legible.'],
-    },
-    palette: {
-      description: 'Muted color with clear accents.',
-      colors: [],
-      observations: [],
-    },
-    toneMood: {
-      tone: 'restrained',
-      moodTags: ['quiet'],
-      description: 'Controlled and grounded.',
-    },
-    composition: {
-      description: 'Frames are composed with clear subject priority.',
-      patterns: [],
-    },
-    lighting: {
-      description: 'Light is motivated and directional.',
-      patterns: [],
-    },
-    texture: {
-      description: 'Surfaces are tactile.',
-      observations: [],
-    },
-    camera: {
-      description: 'Camera language is patient.',
-      movement: [],
-      motion: [],
-      framing: [],
+    type: 'movie',
+    definition: {
+      thesis: {
+        statement: 'The visual thesis.',
+        principles: ['Keep contrast legible.'],
+      },
+      palette: {
+        description: 'Muted color with clear accents.',
+        colors: [],
+        observations: [],
+      },
+      toneMood: {
+        tone: 'restrained',
+        moodTags: ['quiet'],
+        description: 'Controlled and grounded.',
+      },
+      composition: {
+        description: 'Frames are composed with clear subject priority.',
+        patterns: [],
+      },
+      lighting: {
+        description: 'Light is motivated and directional.',
+        patterns: [],
+      },
+      texture: {
+        description: 'Surfaces are tactile.',
+        observations: [],
+      },
+      camera: {
+        description: 'Camera language is patient.',
+        movement: [],
+        motion: [],
+        framing: [],
+      },
     },
   };
 }

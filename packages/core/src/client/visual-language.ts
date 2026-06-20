@@ -36,9 +36,36 @@ export interface InspirationAnalysis {
   inspiredBy: InspiredBySection;
 }
 
-export interface Lookbook {
+export type LookbookType = 'movie' | 'storyboard';
+
+export interface MovieLookbook {
   id: string;
   name: string;
+  type: 'movie';
+  definition: MovieLookbookDefinition;
+}
+
+export interface StoryboardLookbook {
+  id: string;
+  name: string;
+  type: 'storyboard';
+  definition: StoryboardLookbookDefinition;
+  sourceMovieLookbookIds: string[];
+}
+
+export type Lookbook = MovieLookbook | StoryboardLookbook;
+
+export interface LookbookListItem {
+  lookbook: Lookbook;
+  cardImage: LookbookImage | null;
+  isSelectedForType: boolean;
+}
+
+export interface LookbookListItemWithSources extends LookbookListItem {
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+}
+
+export interface MovieLookbookDefinition {
   thesis: ThesisSection;
   palette: PaletteSection;
   toneMood: ToneMoodSection;
@@ -48,33 +75,60 @@ export interface Lookbook {
   camera: CameraSection;
 }
 
-export interface LookbookListItem {
-  lookbook: Lookbook;
-  cardImage: LookbookImage | null;
-  isActive: boolean;
+export interface StoryboardLookbookDefinition {
+  styleBrief: StoryboardLookbookTextSection;
+  lineAndFinish: StoryboardLookbookTextSection;
+  valueAndAccent: StoryboardLookbookTextSection;
+  panelAndNotation: StoryboardLookbookTextSection;
+  continuityAndClarity: StoryboardLookbookTextSection;
+  guardrails: StoryboardLookbookTextSection;
 }
 
-export interface LookbookListItemWithSources extends LookbookListItem {
-  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+export interface StoryboardLookbookTextSection {
+  text: string;
 }
 
-export type LookbookSection =
+export type MovieLookbookSection =
   | 'thesis'
   | 'palette'
-  | 'tone_mood'
+  | 'toneMood'
   | 'composition'
   | 'lighting'
   | 'texture'
   | 'camera';
 
+export type StoryboardLookbookSection =
+  | 'styleBrief'
+  | 'lineAndFinish'
+  | 'valueAndAccent'
+  | 'panelAndNotation'
+  | 'continuityAndClarity'
+  | 'guardrails';
+
+export type LookbookSection = MovieLookbookSection | StoryboardLookbookSection;
+
+export type LookbookSectionsByType = {
+  movie: MovieLookbookSection;
+  storyboard: StoryboardLookbookSection;
+};
+
+export type LookbookDefinitionByType = {
+  movie: MovieLookbookDefinition;
+  storyboard: StoryboardLookbookDefinition;
+};
+
 export interface LookbookImage {
   id: string;
+  lookbookId: string;
+  lookbookType: LookbookType;
   asset: LookbookImageAsset;
   sections: LookbookSection[];
 }
 
 export interface LookbookSheet {
   id: string;
+  lookbookId: string;
+  lookbookType: LookbookType;
   asset: LookbookSheetAsset;
 }
 
@@ -260,7 +314,7 @@ export interface InspirationAnalysisWriteReport
 }
 
 export interface LookbookListReport extends VisualLanguageCommandReport {
-  activeLookbookId: string | null;
+  selectedLookbookIdsByType: Partial<Record<LookbookType, string>>;
   lookbooks: LookbookListItemWithSources[];
 }
 
@@ -268,7 +322,7 @@ export interface LookbookShowReport extends VisualLanguageCommandReport {
   lookbook: Lookbook;
   sourceInspirationFolders: InspirationFolderWithResolvedPath[];
   cardImage: LookbookImage | null;
-  isActive: boolean;
+  isSelectedForType: boolean;
   images: LookbookImage[];
   sheets: LookbookSheet[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;

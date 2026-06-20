@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type {
   InspirationFolderWithResolvedPath,
+  LookbookType,
   LookbookResource,
 } from '@gorenku/studio-core/client';
 import {
@@ -9,13 +10,14 @@ import {
   deleteLookbookSheet,
   readLookbook,
   setDefaultLookbookSheet,
-  setActiveLookbook,
+  selectLookbookForType,
 } from '@/services/studio-visual-language-api';
 import {
   matchesVisualLanguageLookbookResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { EmptyState } from './empty-state';
 import { LookbookVisualContentTab } from './lookbook-visual-content-tab';
@@ -58,8 +60,8 @@ export function LookbookPanel({
     onRefresh: () => setResourceRevision((current) => current + 1),
   });
 
-  const makeActive = async () => {
-    await setActiveLookbook(projectName, lookbookId);
+  const selectForType = async (type: LookbookType) => {
+    await selectLookbookForType(projectName, type, lookbookId);
     await refreshLookbook();
     onLookbooksChange();
   };
@@ -111,32 +113,27 @@ export function LookbookPanel({
           projectName={projectName}
           title={resource.lookbook.name}
           headerMeta={
-            <SourceInspirationList
+            <LookbookHeaderMeta
+              type={resource.lookbook.type}
               sourceInspirationFolders={resource.sourceInspirationFolders}
             />
           }
           action={
-            !resource.isActive ? (
+            !resource.isSelectedForType ? (
               <Button
                 type='button'
                 variant='outline'
                 size='sm'
-                onClick={() => void makeActive()}
+                onClick={() => void selectForType(resource.lookbook.type)}
               >
-                Set active
+                {resource.lookbook.type === 'movie'
+                  ? 'Use for movie generation'
+                  : 'Use for storyboard images'}
               </Button>
             ) : null
           }
           source={{ kind: 'lookbook', imagesBySection: resource.imagesBySection }}
-          sections={{
-            thesis: resource.lookbook.thesis,
-            palette: resource.lookbook.palette,
-            toneMood: resource.lookbook.toneMood,
-            composition: resource.lookbook.composition,
-            lighting: resource.lookbook.lighting,
-            texture: resource.lookbook.texture,
-            camera: resource.lookbook.camera,
-          }}
+          sections={resource.lookbook.definition}
         />
       </LineTabsContent>
       <LineTabsContent value='visual'>
@@ -152,6 +149,23 @@ export function LookbookPanel({
   );
 }
 
+function LookbookHeaderMeta({
+  type,
+  sourceInspirationFolders,
+}: {
+  type: LookbookType;
+  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
+}) {
+  return (
+    <div className='flex flex-wrap items-center gap-2'>
+      <Badge variant='accent'>{type === 'movie' ? 'Movie' : 'Storyboard'}</Badge>
+      <SourceInspirationList
+        sourceInspirationFolders={sourceInspirationFolders}
+      />
+    </div>
+  );
+}
+
 function SourceInspirationList({
   sourceInspirationFolders,
 }: {
@@ -162,19 +176,16 @@ function SourceInspirationList({
   }
 
   return (
-    <div className='flex flex-wrap items-center gap-2'>
+    <>
       <span className='text-[11px] font-semibold uppercase text-muted-foreground'>
         Source Inspiration
       </span>
       {sourceInspirationFolders.map((folder) => (
-        <span
-          key={folder.id}
-          className='rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground/75'
-        >
+        <Badge key={folder.id}>
           {folder.name}
-        </span>
+        </Badge>
       ))}
-    </div>
+    </>
   );
 }
 

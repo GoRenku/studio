@@ -547,6 +547,8 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as SceneStoryboardSheetGenerationSpec,
       }),
+    declareDependencies:
+      sceneStoryboardSheet.declareSceneStoryboardSheetDependencies,
     runSpec: sceneStoryboardSheet.runSceneStoryboardSheetSpec,
   },
   {

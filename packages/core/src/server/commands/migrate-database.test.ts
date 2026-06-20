@@ -40,7 +40,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(25);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(26);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',

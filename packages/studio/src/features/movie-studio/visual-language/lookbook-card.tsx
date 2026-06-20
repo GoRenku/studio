@@ -10,7 +10,7 @@ interface LookbookCardProps {
   projectName: string;
   item: LookbookListItemWithSources;
   onOpen: () => void;
-  onToggleActive: () => Promise<void>;
+  onToggleSelection: () => Promise<void>;
   onDelete: () => Promise<void>;
 }
 
@@ -18,7 +18,7 @@ export function LookbookCard({
   projectName,
   item,
   onOpen,
-  onToggleActive,
+  onToggleSelection,
   onDelete,
 }: LookbookCardProps) {
   const file = item.cardImage?.asset.files[0];
@@ -29,21 +29,30 @@ export function LookbookCard({
   const sourceCount = item.sourceInspirationFolders.length;
   const sourceLabel =
     sourceCount === 1 ? '1 source' : `${sourceCount} sources`;
+  const typeLabel = item.lookbook.type === 'movie' ? 'Movie' : 'Storyboard';
+  const selectedLabel =
+    item.lookbook.type === 'movie'
+      ? 'Clear movie selection'
+      : 'Clear storyboard selection';
+  const unselectedLabel =
+    item.lookbook.type === 'movie'
+      ? 'Use for movie generation'
+      : 'Use for storyboard images';
 
   return (
     <ImageOverlayCard
       title={item.lookbook.name}
-      description={sourceLabel}
+      description={`${typeLabel} - ${sourceLabel}`}
       imageUrl={cardImageUrl}
       imageAlt={`${item.lookbook.name} lookbook card image`}
-      selected={item.isActive}
+      selected={item.isSelectedForType}
       onOpen={onOpen}
       topRightAction={
         <DeleteConfirmDialog
           title='Delete Lookbook?'
           message={
-            item.isActive
-              ? `Remove "${item.lookbook.name}". The project will have no active lookbook.`
+            item.isSelectedForType
+              ? `Remove "${item.lookbook.name}". The project will have no selected ${typeLabel.toLowerCase()} Lookbook.`
               : `Remove "${item.lookbook.name}". This cannot be undone.`
           }
           onDelete={onDelete}
@@ -52,20 +61,20 @@ export function LookbookCard({
               type='button'
               size='icon'
               variant='ghost'
-              className='h-7 w-7 text-white/75 hover:bg-destructive/80 hover:text-white'
+              className='size-7 text-white/75 hover:bg-destructive/80 hover:text-white'
               aria-label={`Delete ${item.lookbook.name}`}
             >
-              <Trash2 className='h-4 w-4' />
+              <Trash2 data-icon='only' />
             </Button>
           }
         />
       }
       bottomRightControl={
         <ImageSelectionControl
-          selected={item.isActive}
-          selectedLabel='Clear active lookbook'
-          unselectedLabel='Set active lookbook'
-          onToggleSelected={onToggleActive}
+          selected={item.isSelectedForType}
+          selectedLabel={selectedLabel}
+          unselectedLabel={unselectedLabel}
+          onToggleSelected={onToggleSelection}
         />
       }
     />

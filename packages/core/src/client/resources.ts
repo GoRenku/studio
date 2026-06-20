@@ -29,6 +29,7 @@ import type {
   LookbookListItemWithSources,
   LookbookSection,
   LookbookSheet,
+  LookbookType,
   VisualLanguageCommandReport,
 } from './visual-language.js';
 
@@ -259,14 +260,14 @@ export interface LookbookResource extends VisualLanguageCommandReport {
   lookbook: Lookbook;
   sourceInspirationFolders: InspirationFolderWithResolvedPath[];
   cardImage: LookbookImage | null;
-  isActive: boolean;
+  isSelectedForType: boolean;
   images: LookbookImage[];
   sheets: LookbookSheet[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;
 }
 
 export interface LookbooksResource extends VisualLanguageCommandReport {
-  activeLookbookId: string | null;
+  selectedLookbookIdsByType: Partial<Record<LookbookType, string>>;
   lookbooks: LookbookListItemWithSources[];
 }
 
@@ -315,8 +316,10 @@ export interface DirectorScreenplayReadiness {
 export interface DirectorVisualLanguageReadiness {
   inspirationFolderCount: number;
   lookbookCount: number;
-  activeLookbookId: string | null;
-  readyForGeneration: boolean;
+  selectedMovieLookbookId: string | null;
+  selectedStoryboardLookbookId: string | null;
+  movieLookbookReadyForGeneration: boolean;
+  storyboardLookbookReadyForGeneration: boolean;
 }
 
 export interface DirectorCastReadiness {
@@ -363,7 +366,8 @@ export interface DirectorSceneReadiness {
 export type DirectorNextStepId =
   | 'draft-screenplay'
   | 'analyze-screenplay'
-  | 'create-lookbook'
+  | 'select-movie-lookbook'
+  | 'select-storyboard-lookbook'
   | 'design-cast'
   | 'design-production'
   | 'design-shot-list'

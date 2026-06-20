@@ -291,7 +291,7 @@ The context includes:
 
 - purpose and target;
 - project name, title, and aspect ratio;
-- the Lookbook sections;
+- the Lookbook type and type-specific sections;
 - source Inspiration folders;
 - existing Lookbook images;
 - images by Lookbook section;
@@ -304,8 +304,8 @@ capability summaries, or an import contract.
 
 ## Cast Character Sheet Context
 
-`cast.character-sheet` context is built for one cast member and requires an
-active Lookbook. The context includes:
+`cast.character-sheet` context is built for one cast member and requires a
+selected Movie Lookbook. The context includes:
 
 - project title, summary, aspect ratio, and languages;
 - screenplay summary and major story signals when a screenplay exists;
@@ -316,14 +316,14 @@ active Lookbook. The context includes:
   signals suitable for prompt authoring;
 - time-period signals from screenplay history, cast-referenced scene settings,
   and referenced locations;
-- the active Lookbook and its card image;
+- the selected Movie Lookbook and its card image;
 - selected cast assets and existing character sheet/profile takes;
 - image file references for attached cast assets;
 - defaults for take count, seed, image frame, detail, and output format.
 
 Character sheet generation should create a full reusable design reference for
 the character. It should account for the story, the character, the period, and
-the active visual language. The best current model choices are:
+the selected movie visual language. The best current model choices are:
 
 - `fal-ai/openai/gpt-image-2`
 - `fal-ai/nano-banana-2`
@@ -397,11 +397,11 @@ provider execution.
 
 ## Location Environment Sheet Context
 
-`location.environment-sheet` context is built for one Location and requires an
-active Lookbook. The target Location must already exist in project facts. When
-a requested historical location is missing, core returns a structured error
-with a suggestion to add the Location first instead of generating against free
-text.
+`location.environment-sheet` context is built for one Location and requires a
+selected Movie Lookbook. The target Location must already exist in project
+facts. When a requested historical location is missing, core returns a
+structured error with a suggestion to add the Location first instead of
+generating against free text.
 
 The context includes:
 
@@ -415,7 +415,7 @@ The context includes:
   prompt authoring;
 - scene usage and compact setting/action signals for scenes that use the
   location;
-- the active Lookbook and its card image when available;
+- the selected Movie Lookbook and its card image when available;
 - selected location assets, existing environment sheet takes, reference assets,
   anti-reference assets, and image file references;
 - fixed defaults for the generated sheet frame, sliced view frame, detail, and
@@ -435,8 +435,8 @@ scenic view images locally before import.
 ## Scene Storyboard Sheet Context
 
 `scene.storyboard-sheet` context is built for one screenplay scene and one
-Scene Shot List. The target scene must exist, and the shot list must belong to
-that scene.
+Scene Shot List. The target scene must exist, the shot list must belong to
+that scene, and a Storyboard Lookbook must be selected.
 
 The context includes:
 
@@ -447,17 +447,26 @@ The context includes:
 - referenced cast and locations for the scene and shot list;
 - active Cast Design summaries for referenced Cast Members;
 - active Location Design summaries for referenced Locations;
-- active Lookbook text guidance when available;
+- the selected Storyboard Lookbook definition;
+- the selected Storyboard Lookbook sheet when one has been imported or
+  generated;
+- selected Movie Lookbook text guidance when available;
 - defaults for visualization style, take count, seed, image frame, detail, and
   output format.
 
+The selected Storyboard Lookbook sheet is a required `lookbook-sheet`
+dependency. Dependency planning creates a `lookbook.sheet` draft when the
+selected Storyboard Lookbook has no sheet. Final Scene storyboard sheet spec
+creation is blocked until that dependency is imported or generated. Prepared
+provider requests use the selected Storyboard Lookbook sheet as an image
+reference when it exists.
+
 The generated provider image is one temporary composite storyboard sheet for
-one to four selected shots, not one provider call per shot. The
-media-producer skill owns the grid generation spec, visual inspection, slicing,
-and per-shot import mapping after scene-shot-designer has supplied a valid Scene
-Shot List. Core does not store the temporary sheet as an Asset and does not
-store crop boxes, grid cells, extraction confidence, extraction methods, or
-slicing diagnostics.
+one to four selected shots, not one provider call per shot. The media-producer
+skill owns the grid generation spec, visual inspection, slicing, and per-shot
+import mapping after scene-shot-designer has supplied a valid Scene Shot List.
+Core does not store crop boxes, grid cells, extraction confidence, extraction
+methods, or slicing diagnostics.
 
 ## Lookbook Image Spec
 
@@ -767,6 +776,7 @@ renku media import \
 
 For Lookbook Images, import registers an asset, creates the Lookbook image
 relationship, stores section placement, and emits Lookbook resource keys.
+The `--sections` values must match the owning Lookbook type.
 
 For Lookbook Sheets, import registers an asset with type `lookbook_sheet`,
 attaches it to the Lookbook, and stores the file under

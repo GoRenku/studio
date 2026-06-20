@@ -53,6 +53,7 @@ import type {
   LookbookSourceInspirationsReport,
   LookbooksResource,
   LookbookSection,
+  LookbookType,
   LookbookValidationReport,
   LookbookWriteReport,
   LocationAzimuthViewId,
@@ -355,8 +356,8 @@ export interface ProjectDataService {
   updateLookbook(input: UpdateLookbookInput): Promise<LookbookWriteReport>;
   renameLookbook(input: RenameLookbookInput): Promise<LookbookWriteReport>;
   deleteLookbook(input: DeleteLookbookInput): Promise<VisualLanguageCommandReport>;
-  setActiveLookbook(input: SetActiveLookbookInput): Promise<VisualLanguageCommandReport>;
-  clearActiveLookbook(input: ClearActiveLookbookInput): Promise<VisualLanguageCommandReport>;
+  selectLookbookForType(input: SelectLookbookForTypeInput): Promise<VisualLanguageCommandReport>;
+  clearLookbookSelection(input: ClearLookbookSelectionInput): Promise<VisualLanguageCommandReport>;
   setLookbookSourceInspirations(input: SetLookbookSourceInspirationsInput): Promise<LookbookWriteReport>;
   listLookbookSourceInspirations(input: ListLookbookSourceInspirationsInput): Promise<LookbookSourceInspirationsReport>;
   setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImageMutationReport>;
@@ -940,7 +941,7 @@ export interface ReadLookbookInput extends VisualLanguageProjectInput {
 }
 
 export interface CreateLookbookInput extends VisualLanguageProjectInput {
-  name: string;
+  name?: string;
   document: LookbookDocument;
   filePath?: string;
   idGenerator?: ProjectIdGenerator;
@@ -968,11 +969,14 @@ export interface DeleteLookbookInput extends VisualLanguageProjectInput {
   lookbookId: string;
 }
 
-export interface SetActiveLookbookInput extends VisualLanguageProjectInput {
+export interface SelectLookbookForTypeInput extends VisualLanguageProjectInput {
+  type: LookbookType;
   lookbookId: string;
 }
 
-export interface ClearActiveLookbookInput extends VisualLanguageProjectInput {}
+export interface ClearLookbookSelectionInput extends VisualLanguageProjectInput {
+  type: LookbookType;
+}
 
 export interface SetLookbookSourceInspirationsInput extends VisualLanguageProjectInput {
   lookbookId: string;

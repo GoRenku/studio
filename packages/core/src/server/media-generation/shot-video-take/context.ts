@@ -6,7 +6,7 @@ import type {
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
-  readActiveLookbookId,
+  readSelectedMovieLookbookId,
   requireLookbookRecordById,
   toLookbook,
 } from '../../database/access/lookbook.js';
@@ -116,7 +116,7 @@ export function buildContextFromPrepared(input: {
     shots,
     narrativeScope,
   });
-  const activeLookbook = readActiveLookbookId(input.session);
+  const activeLookbook = readSelectedMovieLookbookId(input.session);
   const activeShotListId = readActiveSceneShotListId(input.session, input.prepared.sceneId);
   return {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
@@ -170,7 +170,14 @@ export function buildContextFromPrepared(input: {
       ? (() => {
           const row = requireLookbookRecordById(input.session, activeLookbook);
           const lookbook = toLookbook(row);
-          return { id: lookbook.id, name: lookbook.name, thesis: lookbook.thesis.statement };
+          if (lookbook.type !== 'movie') {
+            return null;
+          }
+          return {
+            id: lookbook.id,
+            name: lookbook.name,
+            thesis: lookbook.definition.thesis.statement,
+          };
         })()
       : null,
     storyboardImages: [],

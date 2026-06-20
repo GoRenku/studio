@@ -23,7 +23,9 @@ import {
   lookbookCardImages,
   lookbookImages,
   lookbookInspirations,
+  lookbookSelections,
   lookbookSheets,
+  storyboardLookbookSourceMovies,
   projectAssets,
   sceneAssets,
   sceneDialogueAudio,
@@ -35,7 +37,6 @@ import {
   sceneShotVideoTakeShots,
   sceneShotVideoTakes,
   sequenceAssets,
-  visualLanguageState,
 } from '../schema/index.js';
 import {
   studioVisualLanguageInspirationFolderResourceKey,
@@ -239,15 +240,13 @@ const lookbookDefinition: TrashObjectDefinition = {
         itemKind: 'lookbook',
         itemId: row.id,
         title: row.name,
-        restoreSnapshot: {
-          activeLookbookId: readActiveLookbookId(input),
-        },
+        restoreSnapshot: {},
       },
     ];
   },
   applyDiscard(input) {
     markLookbookTreeDiscarded(input);
-    clearActiveLookbookIfNeeded(input);
+    clearLookbookSelectionForDiscardedLookbook(input);
   },
   applyRestore(input) {
     restoreLookbookTree(input);
@@ -1009,23 +1008,23 @@ function unsupportedDefinition(kind: TrashItemKind): TrashObjectDefinition {
   };
 }
 
-function readActiveLookbookId(input: TrashObjectDiscardContext): string | null {
-  const state = input.session.db
-    .select({ activeLookbookId: visualLanguageState.activeLookbookId })
-    .from(visualLanguageState)
-    .limit(1)
+function clearLookbookSelectionForDiscardedLookbook(input: TrashObjectDiscardContext): void {
+  const row = input.session.db
+    .select({ type: lookbook.type })
+    .from(lookbook)
+    .where(eq(lookbook.id, input.itemId))
     .get();
-  return state?.activeLookbookId ?? null;
-}
-
-function clearActiveLookbookIfNeeded(input: TrashObjectDiscardContext): void {
-  const activeLookbookId = readActiveLookbookId(input);
-  if (activeLookbookId !== input.itemId) {
+  if (!row) {
     return;
   }
   input.session.db
-    .update(visualLanguageState)
-    .set({ activeLookbookId: null, updatedAt: input.now })
+    .delete(lookbookSelections)
+    .where(
+      and(
+        eq(lookbookSelections.lookbookType, row.type),
+        eq(lookbookSelections.lookbookId, input.itemId)
+      )
+    )
     .run();
 }
 
@@ -1067,6 +1066,20 @@ function markLookbookTreeDiscarded(input: TrashObjectDiscardContext): void {
     .where(and(eq(lookbookInspirations.lookbookId, input.itemId), isNull(lookbookInspirations.discardedAt)))
     .run();
   input.session.db
+    .update(storyboardLookbookSourceMovies)
+    .set({
+      discardedAt: input.now,
+      discardOperationId: input.operationId,
+      restoredAt: null,
+    })
+    .where(
+      and(
+        eq(storyboardLookbookSourceMovies.storyboardLookbookId, input.itemId),
+        isNull(storyboardLookbookSourceMovies.discardedAt)
+      )
+    )
+    .run();
+  input.session.db
     .update(lookbookCardImages)
     .set({
       discardedAt: input.now,
@@ -1100,16 +1113,20 @@ function restoreLookbookTree(input: TrashObjectRestoreContext): void {
     .where(and(eq(lookbookInspirations.lookbookId, lookbookId), eq(lookbookInspirations.discardOperationId, input.trashItem.operationId)))
     .run();
   input.session.db
+    .update(storyboardLookbookSourceMovies)
+    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
+    .where(
+      and(
+        eq(storyboardLookbookSourceMovies.storyboardLookbookId, lookbookId),
+        eq(storyboardLookbookSourceMovies.discardOperationId, input.trashItem.operationId)
+      )
+    )
+    .run();
+  input.session.db
     .update(lookbookCardImages)
     .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
     .where(and(eq(lookbookCardImages.lookbookId, lookbookId), eq(lookbookCardImages.discardOperationId, input.trashItem.operationId)))
     .run();
-  if (input.snapshot.activeLookbookId === lookbookId) {
-    input.session.db
-      .update(visualLanguageState)
-      .set({ activeLookbookId: lookbookId, updatedAt: input.now })
-      .run();
-  }
 }
 
 function markLookbookImageDiscarded(input: TrashObjectDiscardContext): void {

@@ -301,8 +301,9 @@ function sampleShotVideoTakeShotList(
 
 function shotVideoTakeLookbookDocument() {
   return {
-    kind: 'lookbook' as const,
-    lookbook: {
+    kind: 'movieLookbook' as const,
+    movieLookbook: {
+      name: 'Imperial Wound',
       thesis: {
         statement: 'The movie should feel rigorous and tense.',
         principles: ['Use negative space as pressure.'],

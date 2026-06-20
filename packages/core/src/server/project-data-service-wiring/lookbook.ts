@@ -1,5 +1,5 @@
 import {
-  clearActiveLookbook,
+  clearLookbookSelection,
   clearLookbookCardImage,
   createLookbook,
   deleteLookbook,
@@ -7,7 +7,7 @@ import {
   deleteLookbookSheet,
   listLookbookSourceInspirations,
   renameLookbook,
-  setActiveLookbook,
+  selectLookbookForType,
   setDefaultLookbookSheet,
   setLookbookCardImage,
   setLookbookImageSections,
@@ -30,8 +30,8 @@ export function createLookbookServiceWiring(): Pick<
   | 'updateLookbook'
   | 'renameLookbook'
   | 'deleteLookbook'
-  | 'setActiveLookbook'
-  | 'clearActiveLookbook'
+  | 'selectLookbookForType'
+  | 'clearLookbookSelection'
   | 'setLookbookSourceInspirations'
   | 'listLookbookSourceInspirations'
   | 'clearLookbookCardImage'
@@ -49,8 +49,8 @@ export function createLookbookServiceWiring(): Pick<
     updateLookbook,
     renameLookbook,
     deleteLookbook,
-    setActiveLookbook,
-    clearActiveLookbook,
+    selectLookbookForType,
+    clearLookbookSelection,
     setLookbookSourceInspirations,
     listLookbookSourceInspirations,
     clearLookbookCardImage,

@@ -48,7 +48,7 @@ import {
 } from '../database/access/department-design.js';
 import {
   listLookbookCardImageIds,
-  readActiveLookbookId,
+  readSelectedMovieLookbookId,
   requireLookbookRecordById,
   toLookbook,
 } from '../database/access/lookbook.js';
@@ -959,21 +959,28 @@ function requireLocationForContext(session: DatabaseSession, locationId: string)
 }
 
 function requireActiveLookbookContext(session: DatabaseSession) {
-  const activeLookbookId = readActiveLookbookId(session);
+  const activeLookbookId = readSelectedMovieLookbookId(session);
   if (!activeLookbookId) {
     throw new ProjectDataError(
       'PROJECT_DATA312',
-      'Location environment sheet generation requires an active Lookbook.',
+      'Location environment sheet generation requires a selected Movie Lookbook.',
       {
         suggestion:
-          'Create or set an active Lookbook before generating location environment sheets.',
+          'Create or select a Movie Lookbook before generating location environment sheets.',
       }
     );
   }
   const row = requireLookbookRecordById(session, activeLookbookId);
+  const lookbook = toLookbook(row);
+  if (lookbook.type !== 'movie') {
+    throw new ProjectDataError(
+      'CORE_LOOKBOOK_TYPE_MISMATCH',
+      `Selected Movie Lookbook ${activeLookbookId} is not a Movie Lookbook.`
+    );
+  }
   const cardImageId = listLookbookCardImageIds(session).get(row.id);
   return {
-    lookbook: toLookbook(row),
+    lookbook,
     cardImage: cardImageId
       ? readLookbookImage(session, cardImageId)
       : listLookbookImages(session, row.id)[0] ?? null,

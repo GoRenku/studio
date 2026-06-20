@@ -58,7 +58,7 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
-import { assertLookbookSections } from '../visual-language-json/validator.js';
+import { assertLookbookSectionsForType } from '../visual-language-json/validator.js';
 import {
   allocateProjectRelativeFilePath,
   assertResolvedPathInsideProject,
@@ -378,9 +378,12 @@ export async function importLookbookImageMedia(
   input: ImportLookbookImageMediaInput
 ): Promise<LookbookImageMediaImportReport> {
   return withProjectSession(input, async ({ session, projectFolder, project }) => {
-    requireLookbookRecordById(session, input.lookbookId);
+    const lookbook = requireLookbookRecordById(session, input.lookbookId);
     const now = new Date().toISOString();
-    const sections = assertLookbookSections(input.sections ?? []);
+    const sections = assertLookbookSectionsForType(
+      lookbook.type,
+      input.sections ?? []
+    );
     const imported = await importLookbookImageFile({
       session,
       projectFolder,
@@ -511,7 +514,6 @@ function normalizeSpec(
     );
   }
   assertLookbookImageModelChoice(spec.modelChoice);
-  assertLookbookSections(spec.focusSections);
   const takeCount = spec.takeCount ?? 1;
   if (!Number.isInteger(takeCount) || takeCount < 1) {
     throw new ProjectDataError(
@@ -549,7 +551,6 @@ function normalizeSpec(
   }
   return {
     ...spec,
-    focusSections: assertLookbookSections(spec.focusSections),
     takeCount,
     seed,
     imageFrame,
@@ -562,7 +563,7 @@ export function buildLookbookImageProviderPayload(
   spec: LookbookImageGenerationSpec,
   context: LookbookImageGenerationContext
 ): ProviderPlan {
-  assertLookbookSections(spec.focusSections);
+  assertLookbookSectionsForType(context.lookbook.type, spec.focusSections);
   switch (spec.modelChoice) {
     case 'fal-ai/openai/gpt-image-2':
       return buildGptImage2Payload(spec, context);
@@ -590,7 +591,7 @@ function buildGptImage2Payload(
     model: 'openai/gpt-image-2',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookImagePrompt(spec, context),
       num_images: takeCount,
       image_size: mapPresetFrame(resolveFrame(spec, context), 'gpt-image-2'),
       quality: mapGptQuality(requireDetail(spec)),
@@ -610,7 +611,7 @@ function buildNanoBanana2Payload(
     model: 'nano-banana-2',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookImagePrompt(spec, context),
       num_images: takeCount,
       seed: spec.seed,
       aspect_ratio: resolveFrame(spec, context),
@@ -644,7 +645,7 @@ function buildGrokImaginePayload(
     model: 'xai/grok-imagine-image',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookImagePrompt(spec, context),
       num_images: takeCount,
       aspect_ratio: frame,
       output_format: requireOutputFormat(spec),
@@ -669,7 +670,7 @@ function buildSeedreamV5Payload(
     model: 'bytedance/seedream/v5/lite/text-to-image',
     outputCount: takeCount,
     payload: {
-      prompt: spec.prompt,
+      prompt: buildLookbookImagePrompt(spec, context),
       num_images: takeCount,
       max_images: 1,
       seed: spec.seed,
@@ -679,6 +680,116 @@ function buildSeedreamV5Payload(
       sync_mode: false,
     },
   };
+}
+
+function buildLookbookImagePrompt(
+  spec: LookbookImageGenerationSpec,
+  context: LookbookImageGenerationContext
+): string {
+  return context.lookbook.type === 'storyboard'
+    ? storyboardLookbookImagePrompt(spec, context)
+    : movieLookbookImagePrompt(spec, context);
+}
+
+function movieLookbookImagePrompt(
+  spec: LookbookImageGenerationSpec,
+  context: LookbookImageGenerationContext
+): string {
+  const lookbook = context.lookbook;
+  if (lookbook.type !== 'movie') {
+    throw new ProjectDataError(
+      'CORE_LOOKBOOK_TYPE_MISMATCH',
+      `Movie Lookbook image prompt received a ${lookbook.type} Lookbook.`
+    );
+  }
+  const definition = lookbook.definition;
+  const sectionText = spec.focusSections
+    .map((section) => movieSectionPromptText(section, definition))
+    .join('\n');
+  return [
+    spec.prompt.trim(),
+    '',
+    `Create a Movie Lookbook image for ${lookbook.name}.`,
+    `Visual thesis: ${definition.thesis.statement}`,
+    sectionText,
+    'The image should be a cinematic visual-language sample, not a storyboard drawing, UI collage, or generic mood board.',
+  ].filter((line) => line.length > 0).join('\n');
+}
+
+function storyboardLookbookImagePrompt(
+  spec: LookbookImageGenerationSpec,
+  context: LookbookImageGenerationContext
+): string {
+  const lookbook = context.lookbook;
+  if (lookbook.type !== 'storyboard') {
+    throw new ProjectDataError(
+      'CORE_LOOKBOOK_TYPE_MISMATCH',
+      `Storyboard Lookbook image prompt received a ${lookbook.type} Lookbook.`
+    );
+  }
+  const definition = lookbook.definition;
+  const sectionText = spec.focusSections
+    .map((section) => storyboardSectionPromptText(section, definition))
+    .join('\n');
+  return [
+    spec.prompt.trim(),
+    '',
+    `Create a Storyboard Lookbook image for ${lookbook.name}.`,
+    sectionText,
+    'The image should be a storyboard style sample: drawing treatment, panel discipline, notation behavior, value strategy, or continuity clarity. Do not render a photoreal final film still.',
+  ].filter((line) => line.length > 0).join('\n');
+}
+
+function movieSectionPromptText(
+  section: LookbookImageGenerationSpec['focusSections'][number],
+  definition: LookbookImageGenerationContext['lookbook']['definition']
+): string {
+  if ('styleBrief' in definition) {
+    return '';
+  }
+  switch (section) {
+    case 'thesis':
+      return `Thesis: ${definition.thesis.statement}`;
+    case 'palette':
+      return `Palette: ${definition.palette.description}`;
+    case 'toneMood':
+      return `Tone and mood: ${definition.toneMood.tone}; ${definition.toneMood.description}`;
+    case 'composition':
+      return `Composition: ${definition.composition.description}`;
+    case 'lighting':
+      return `Lighting: ${definition.lighting.description}`;
+    case 'texture':
+      return `Texture: ${definition.texture.description}`;
+    case 'camera':
+      return `Camera: ${definition.camera.description}`;
+    default:
+      return '';
+  }
+}
+
+function storyboardSectionPromptText(
+  section: LookbookImageGenerationSpec['focusSections'][number],
+  definition: LookbookImageGenerationContext['lookbook']['definition']
+): string {
+  if ('thesis' in definition) {
+    return '';
+  }
+  switch (section) {
+    case 'styleBrief':
+      return `Style brief: ${definition.styleBrief.text}`;
+    case 'lineAndFinish':
+      return `Line and finish: ${definition.lineAndFinish.text}`;
+    case 'valueAndAccent':
+      return `Value and accent: ${definition.valueAndAccent.text}`;
+    case 'panelAndNotation':
+      return `Panel and notation: ${definition.panelAndNotation.text}`;
+    case 'continuityAndClarity':
+      return `Continuity and clarity: ${definition.continuityAndClarity.text}`;
+    case 'guardrails':
+      return `Guardrails: ${definition.guardrails.text}`;
+    default:
+      return '';
+  }
 }
 
 function resolveFrame(

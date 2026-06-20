@@ -98,28 +98,54 @@ renku lookbook create --name <name> --file <lookbook-json> --json
 renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
 renku lookbook rename --lookbook <lookbook-id> --name <name> --json
 renku lookbook discard --lookbook <lookbook-id> --json
-renku lookbook set-active --lookbook <lookbook-id> --json
-renku lookbook clear-active --json
+renku lookbook select --type movie --lookbook <lookbook-id> --json
+renku lookbook select --type storyboard --lookbook <lookbook-id> --json
+renku lookbook clear-selection --type movie --json
+renku lookbook clear-selection --type storyboard --json
 ```
 
 `discard` records a recoverable Trash item for the Lookbook. Restore through
 `renku trash restore`; emptying Trash is a separate explicit user-approved
 operation.
 
-The input document is tagged:
+Movie Lookbooks and Storyboard Lookbooks are different typed documents.
+Movie Lookbooks steer cinematic generation. Storyboard Lookbooks steer
+storyboard drawing style, panel treatment, notation, and continuity clarity.
+
+Movie Lookbook input:
 
 ```json
 {
-  "kind": "lookbook",
-  "lookbook": {
-    "thesis": {},
-    "palette": {},
-    "toneMood": {},
-    "composition": {},
-    "lighting": {},
-    "texture": {},
-    "camera": {}
+  "kind": "movieLookbook",
+  "movieLookbook": {
+    "name": "Movie visual language",
+    "thesis": { "statement": "", "principles": [] },
+    "palette": { "description": "", "colors": [], "observations": [] },
+    "toneMood": { "tone": "", "moodTags": [], "description": "" },
+    "composition": { "description": "", "patterns": [] },
+    "lighting": { "description": "", "patterns": [] },
+    "texture": { "description": "", "observations": [] },
+    "camera": { "description": "", "movement": [], "motion": [], "framing": [] }
   },
+  "sourceInspirationFolderIds": []
+}
+```
+
+Storyboard Lookbook input:
+
+```json
+{
+  "kind": "storyboardLookbook",
+  "storyboardLookbook": {
+    "name": "Storyboard drawing language",
+    "styleBrief": { "text": "Graphite storyboard frames with clear staging." },
+    "lineAndFinish": { "text": "Loose construction lines with crisp ink accents." },
+    "valueAndAccent": { "text": "Soft gray values with restrained warm accents." },
+    "panelAndNotation": { "text": "Clean panels and sparse camera notes outside image content." },
+    "continuityAndClarity": { "text": "Maintain geography and character identity across panels." },
+    "guardrails": { "text": "Avoid photoreal stills and decorative text inside panels." }
+  },
+  "sourceMovieLookbookIds": [],
   "sourceInspirationFolderIds": []
 }
 ```
@@ -133,9 +159,11 @@ Rules:
   relationships.
 - Providing an empty array clears source relationships.
 - Lookbook JSON must not contain `imageFiles`.
-- `lookbook create` does not set the Lookbook active by default.
-- Use `lookbook set-active` only when the user wants that Lookbook to become the
-  project direction.
+- `lookbook create` does not select the Lookbook by default.
+- Use `lookbook select --type movie` for movie/cinematic generation.
+- Use `lookbook select --type storyboard` for scene storyboard sheet generation.
+- Lookbook image section placement must use section names valid for the owning
+  Lookbook type.
 
 ## Lookbook Source Inspirations
 

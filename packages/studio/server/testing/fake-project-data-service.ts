@@ -596,7 +596,7 @@ export function fakeProjectDataService(): NonNullable<
         valid: true,
         warnings: [],
         project: { name: 'test-project' },
-        activeLookbookId: null,
+        selectedLookbookIdsByType: {},
         lookbooks: [],
         resourceKeys: [],
       };
@@ -609,28 +609,30 @@ export function fakeProjectDataService(): NonNullable<
         lookbook: makeLookbook(input.lookbookId),
         sourceInspirationFolders: [],
         cardImage: null,
-        isActive: false,
+        isSelectedForType: false,
         images: [],
         sheets: [makeLookbookSheet('lookbook_sheet_test0001')],
         imagesBySection: {
           thesis: [],
           palette: [],
-          tone_mood: [],
+          toneMood: [],
           composition: [],
           lighting: [],
           texture: [],
           camera: [],
+          styleBrief: [],
+          lineAndFinish: [],
+          valueAndAccent: [],
+          panelAndNotation: [],
+          continuityAndClarity: [],
+          guardrails: [],
         },
         resourceKeys: [],
       };
     },
     async createLookbook(input) {
       return makeLookbookWriteReport({
-        lookbook: {
-          id: 'lookbook_test0001',
-          ...input.document.lookbook,
-          name: input.name,
-        },
+        lookbook: makeLookbook('lookbook_test0001', input.name),
       });
     },
     async updateLookbook(input) {
@@ -655,11 +657,11 @@ export function fakeProjectDataService(): NonNullable<
     async deleteLookbook() {
       return makeVisualLanguageCommandReport('lookbook.deleted');
     },
-    async setActiveLookbook() {
-      return makeVisualLanguageCommandReport('lookbook.activeSet');
+    async selectLookbookForType() {
+      return makeVisualLanguageCommandReport('lookbook.selectedForType');
     },
-    async clearActiveLookbook() {
-      return makeVisualLanguageCommandReport('lookbook.activeCleared');
+    async clearLookbookSelection() {
+      return makeVisualLanguageCommandReport('lookbook.selectionCleared');
     },
     async setLookbookSourceInspirations(input) {
       return makeLookbookWriteReport({
@@ -698,11 +700,17 @@ export function fakeProjectDataService(): NonNullable<
         imagesBySection: {
           thesis: [],
           palette: [],
-          tone_mood: [],
+          toneMood: [],
           composition: [],
           lighting: [],
           texture: [],
           camera: [],
+          styleBrief: [],
+          lineAndFinish: [],
+          valueAndAccent: [],
+          panelAndNotation: [],
+          continuityAndClarity: [],
+          guardrails: [],
         },
         cardImage: null,
         defaults: {
@@ -1585,37 +1593,40 @@ function makeLookbook(id: string, name = 'Lookbook') {
   return {
     id,
     name,
-    thesis: {
-      statement: 'The movie favors pressure over spectacle.',
-      principles: ['Use negative space as pressure.'],
-    },
-    palette: {
-      description: 'Steel and ember tones.',
-      colors: [{ hex: '#334455', name: 'Siege steel', meaning: 'Pressure.' }],
-      observations: [{ text: 'Warmth appears near human labor.' }],
-    },
-    toneMood: {
-      tone: 'controlled dread',
-      moodTags: ['tense'],
-      description: 'Held shadows and practical highlights.',
-    },
-    composition: {
-      description: 'Orderly compositions tighten around decisions.',
-      patterns: [{ name: 'Map pressure', description: 'Tables compress depth.' }],
-    },
-    lighting: {
-      description: 'Practical pools of warm light.',
-      patterns: [{ name: 'Lamp islands', description: 'Oil lamps isolate faces.' }],
-    },
-    texture: {
-      description: 'Stone, smoke, and worn metal.',
-      observations: [{ text: 'Fine surface texture stays visible.' }],
-    },
-    camera: {
-      description: 'Patient and observant.',
-      movement: [{ name: 'Slow push', description: 'Push in when decisions harden.' }],
-      motion: [{ name: 'Held labor', description: 'Blocking moves with weight.' }],
-      framing: [{ name: 'Measured distance', description: 'Close-ups are earned.' }],
+    type: 'movie' as const,
+    definition: {
+      thesis: {
+        statement: 'The movie favors pressure over spectacle.',
+        principles: ['Use negative space as pressure.'],
+      },
+      palette: {
+        description: 'Steel and ember tones.',
+        colors: [{ hex: '#334455', name: 'Siege steel', meaning: 'Pressure.' }],
+        observations: [{ text: 'Warmth appears near human labor.' }],
+      },
+      toneMood: {
+        tone: 'controlled dread',
+        moodTags: ['tense'],
+        description: 'Held shadows and practical highlights.',
+      },
+      composition: {
+        description: 'Orderly compositions tighten around decisions.',
+        patterns: [{ name: 'Map pressure', description: 'Tables compress depth.' }],
+      },
+      lighting: {
+        description: 'Practical pools of warm light.',
+        patterns: [{ name: 'Lamp islands', description: 'Oil lamps isolate faces.' }],
+      },
+      texture: {
+        description: 'Stone, smoke, and worn metal.',
+        observations: [{ text: 'Fine surface texture stays visible.' }],
+      },
+      camera: {
+        description: 'Patient and observant.',
+        movement: [{ name: 'Slow push', description: 'Push in when decisions harden.' }],
+        motion: [{ name: 'Held labor', description: 'Blocking moves with weight.' }],
+        framing: [{ name: 'Measured distance', description: 'Close-ups are earned.' }],
+      },
     },
   };
 }
@@ -1623,6 +1634,8 @@ function makeLookbook(id: string, name = 'Lookbook') {
 function makeLookbookImage(id: string) {
   return {
     id,
+    lookbookId: 'lookbook_test0001',
+    lookbookType: 'movie' as const,
     asset: {
       assetId: 'asset_lookbook_image',
       type: 'lookbook_image',
@@ -1641,6 +1654,8 @@ function makeLookbookImage(id: string) {
 function makeLookbookSheet(id: string) {
   return {
     id,
+    lookbookId: 'lookbook_test0001',
+    lookbookType: 'movie' as const,
     asset: {
       assetId: 'asset_lookbook_sheet',
       type: 'lookbook_sheet',

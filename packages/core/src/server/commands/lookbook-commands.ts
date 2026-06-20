@@ -11,11 +11,14 @@ import type {
 } from '../../client/index.js';
 import {
   clearLookbookCardImageRecord,
+  clearLookbookSelectionRecord,
   insertLookbookRecord,
-  readActiveLookbookId,
+  listStoryboardSourceMovieIdsByLookbookId,
+  readSelectedLookbookId,
   readLookbookRecordById,
   requireLookbookRecordById,
-  setActiveLookbookRecord,
+  replaceStoryboardLookbookSourceMovieRecords,
+  setLookbookSelectionRecord,
   setLookbookCardImageRecord,
   toLookbook,
   updateLookbookRecord,
@@ -54,14 +57,14 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import type {
-  ClearActiveLookbookInput,
+  ClearLookbookSelectionInput,
   CreateLookbookInput,
   DeleteLookbookImageInput,
   DeleteLookbookSheetInput,
   DeleteLookbookInput,
   ListLookbookSourceInspirationsInput,
   RenameLookbookInput,
-  SetActiveLookbookInput,
+  SelectLookbookForTypeInput,
   SetLookbookCardImageInput,
   SetDefaultLookbookSheetInput,
   SetLookbookImageSectionsInput,
@@ -71,7 +74,8 @@ import type {
 } from '../project-data-service-contracts.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
-  assertLookbookSections,
+  assertLookbookSectionsForType,
+  lookbookTypeFromDocument,
   serializeLookbookDocument,
   validateLookbookDocument,
   validateLookbookSourceInspirationsDocument,
@@ -97,6 +101,12 @@ export async function validateLookbook(
     const sourceInspirationFolderIds =
       input.document.sourceInspirationFolderIds ?? [];
     assertExistingUniqueInspirationFolderIds(session, sourceInspirationFolderIds);
+    if (input.document.kind === 'storyboardLookbook') {
+      assertExistingUniqueSourceMovieLookbookIds(
+        session,
+        input.document.sourceMovieLookbookIds ?? []
+      );
+    }
     return {
       valid: true,
       warnings: [],
@@ -117,21 +127,25 @@ export async function createLookbook(
 ): Promise<LookbookWriteReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-    const sections = serializeLookbookDocument({
+    const document = serializeLookbookDocument({
       document: input.document,
       filePath: input.filePath,
     });
-    const sourceInspirationFolderIds =
-      input.document.sourceInspirationFolderIds ?? [];
+    const sourceInspirationFolderIds = document.sourceInspirationFolderIds;
     assertExistingUniqueInspirationFolderIds(session, sourceInspirationFolderIds);
+    assertExistingUniqueSourceMovieLookbookIds(
+      session,
+      document.sourceMovieLookbookIds
+    );
     const now = new Date().toISOString();
     const lookbookId = ids('lookbook');
     session.db.transaction((tx) => {
       const txSession = { ...session, db: tx };
       insertLookbookRecord(txSession, {
         id: lookbookId,
-        name: normalizeLookbookName(input.name),
-        sections,
+        name: normalizeLookbookName(input.name ?? document.name),
+        type: document.type,
+        definitionJson: document.definitionJson,
         now,
       });
       replaceLookbookInspirationRecords(txSession, {
@@ -140,6 +154,13 @@ export async function createLookbook(
         nextId: () => ids('lookbook_inspiration'),
         now,
       });
+      if (document.type === 'storyboard') {
+        replaceStoryboardLookbookSourceMovieRecords(txSession, {
+          storyboardLookbookId: lookbookId,
+          movieLookbookIds: document.sourceMovieLookbookIds,
+          now,
+        });
+      }
     });
     const row = readLookbookRecordById(session, lookbookId);
     if (!row) {
@@ -150,7 +171,10 @@ export async function createLookbook(
       warnings: [],
       project: toProjectReport(project, projectFolder),
       changes: [{ type: 'lookbook.created', lookbookId }],
-      lookbook: toLookbook(row),
+      lookbook: toLookbook(row, {
+        sourceMovieLookbookIds:
+          document.type === 'storyboard' ? document.sourceMovieLookbookIds : [],
+      }),
       sourceInspirationFolders: listLookbookSourceInspirationFolders(session, {
         projectFolder,
         lookbookId,
@@ -164,25 +188,41 @@ export async function updateLookbook(
   input: UpdateLookbookInput
 ): Promise<LookbookWriteReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
-    requireLookbookRecordById(session, input.lookbookId);
+    const row = requireLookbookRecordById(session, input.lookbookId);
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-    const sections = input.document
+    const document = input.document
       ? serializeLookbookDocument({
           document: input.document,
           filePath: input.filePath,
         })
       : undefined;
-    const sourceInspirationFolderIds = input.document?.sourceInspirationFolderIds;
+    if (input.document && lookbookTypeFromDocument(input.document) !== row.type) {
+      throw new ProjectDataError(
+        'CORE_LOOKBOOK_TYPE_MISMATCH',
+        `Cannot update ${row.type} Lookbook ${input.lookbookId} with a ${lookbookTypeFromDocument(input.document)} Lookbook document.`
+      );
+    }
+    const sourceInspirationFolderIds = document?.sourceInspirationFolderIds;
     if (sourceInspirationFolderIds) {
       assertExistingUniqueInspirationFolderIds(session, sourceInspirationFolderIds);
+    }
+    if (document?.sourceMovieLookbookIds) {
+      assertExistingUniqueSourceMovieLookbookIds(
+        session,
+        document.sourceMovieLookbookIds
+      );
     }
     const now = new Date().toISOString();
     session.db.transaction((tx) => {
       const txSession = { ...session, db: tx };
       updateLookbookRecord(txSession, {
         lookbookId: input.lookbookId,
-        name: input.name ? normalizeLookbookName(input.name) : undefined,
-        sections,
+        name: input.name
+          ? normalizeLookbookName(input.name)
+          : document
+            ? normalizeLookbookName(document.name)
+            : undefined,
+        definitionJson: document?.definitionJson,
         now,
       });
       if (sourceInspirationFolderIds) {
@@ -193,13 +233,28 @@ export async function updateLookbook(
           now,
         });
       }
+      if (document && row.type === 'storyboard') {
+        replaceStoryboardLookbookSourceMovieRecords(txSession, {
+          storyboardLookbookId: input.lookbookId,
+          movieLookbookIds: document.sourceMovieLookbookIds,
+          now,
+        });
+      }
     });
+    const sourceMovieIds =
+      row.type === 'storyboard'
+        ? listStoryboardSourceMovieIdsByLookbookId(session, [
+            input.lookbookId,
+          ]).get(input.lookbookId) ?? []
+        : [];
     return {
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
       changes: [{ type: 'lookbook.updated', lookbookId: input.lookbookId }],
-      lookbook: toLookbook(requireLookbookRecordById(session, input.lookbookId)),
+      lookbook: toLookbook(requireLookbookRecordById(session, input.lookbookId), {
+        sourceMovieLookbookIds: sourceMovieIds,
+      }),
       sourceInspirationFolders: listLookbookSourceInspirationFolders(session, {
         projectFolder,
         lookbookId: input.lookbookId,
@@ -237,12 +292,19 @@ export async function deleteLookbook(
   });
 }
 
-export async function setActiveLookbook(
-  input: SetActiveLookbookInput
+export async function selectLookbookForType(
+  input: SelectLookbookForTypeInput
 ): Promise<VisualLanguageCommandReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
-    requireLookbookRecordById(session, input.lookbookId);
-    setActiveLookbookRecord(session, {
+    const row = requireLookbookRecordById(session, input.lookbookId);
+    if (row.type !== input.type) {
+      throw new ProjectDataError(
+        'CORE_LOOKBOOK_TYPE_MISMATCH',
+        `Cannot select ${row.type} Lookbook ${input.lookbookId} for ${input.type} generation.`
+      );
+    }
+    setLookbookSelectionRecord(session, {
+      type: input.type,
       lookbookId: input.lookbookId,
       now: new Date().toISOString(),
     });
@@ -250,28 +312,31 @@ export async function setActiveLookbook(
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
-      changes: [{ type: 'lookbook.activeSet', lookbookId: input.lookbookId }],
+      changes: [
+        {
+          type: 'lookbook.selectedForType',
+          lookbookId: input.lookbookId,
+          lookbookType: input.type,
+        },
+      ],
       resourceKeys: lookbookResourceKeys(input.lookbookId),
     };
   });
 }
 
-export async function clearActiveLookbook(
-  input: ClearActiveLookbookInput
+export async function clearLookbookSelection(
+  input: ClearLookbookSelectionInput
 ): Promise<VisualLanguageCommandReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
-    const activeLookbookId = readActiveLookbookId(session);
-    setActiveLookbookRecord(session, {
-      lookbookId: null,
-      now: new Date().toISOString(),
-    });
+    const selectedLookbookId = readSelectedLookbookId(session, input.type);
+    clearLookbookSelectionRecord(session, input.type);
     return {
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
-      changes: [{ type: 'lookbook.activeCleared' }],
-      resourceKeys: activeLookbookId
-        ? lookbookResourceKeys(activeLookbookId)
+      changes: [{ type: 'lookbook.selectionCleared', lookbookType: input.type }],
+      resourceKeys: selectedLookbookId
+        ? lookbookResourceKeys(selectedLookbookId)
         : [lookbookIndexResourceKey],
     };
   });
@@ -301,7 +366,15 @@ export async function setLookbookSourceInspirations(
       changes: [
         { type: 'lookbook.sourceInspirationsSet', lookbookId: input.lookbookId },
       ],
-      lookbook: toLookbook(requireLookbookRecordById(session, input.lookbookId)),
+      lookbook: toLookbook(
+        requireLookbookRecordById(session, input.lookbookId),
+        {
+          sourceMovieLookbookIds:
+            listStoryboardSourceMovieIdsByLookbookId(session, [
+              input.lookbookId,
+            ]).get(input.lookbookId) ?? [],
+        }
+      ),
       sourceInspirationFolders: listLookbookSourceInspirationFolders(session, {
         projectFolder,
         lookbookId: input.lookbookId,
@@ -384,10 +457,11 @@ export async function setLookbookImageSections(
 ): Promise<LookbookImageMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const imageRecord = requireLookbookImageRecord(session, input.imageId);
+    const lookbookRecord = requireLookbookRecordById(session, imageRecord.lookbookId);
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     setLookbookImageSectionRecords(session, {
       imageId: input.imageId,
-      sections: assertLookbookSections(input.sections),
+      sections: assertLookbookSectionsForType(lookbookRecord.type, input.sections),
       nextId: () => ids('lookbook_image_section'),
       now: new Date().toISOString(),
     });
@@ -549,6 +623,29 @@ function assertExistingUniqueInspirationFolderIds(
   }
   for (const folderId of folderIds) {
     requireInspirationFolderRecord(session, folderId);
+  }
+}
+
+function assertExistingUniqueSourceMovieLookbookIds(
+  session: DatabaseSession,
+  lookbookIds: string[]
+): void {
+  const seen = new Set<string>();
+  for (const lookbookId of lookbookIds) {
+    if (seen.has(lookbookId)) {
+      throw new ProjectDataError(
+        'PROJECT_DATA246',
+        `Duplicate source Movie Lookbook id: ${lookbookId}.`
+      );
+    }
+    seen.add(lookbookId);
+    const row = requireLookbookRecordById(session, lookbookId);
+    if (row.type !== 'movie') {
+      throw new ProjectDataError(
+        'CORE_LOOKBOOK_TYPE_MISMATCH',
+        `Storyboard Lookbook source ${lookbookId} must be a Movie Lookbook.`
+      );
+    }
   }
 }
 

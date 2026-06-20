@@ -541,12 +541,20 @@ function lookbook(): Lookbook {
   return {
     id: 'lookbook_test',
     name: 'Test Lookbook',
-    thesis: { statement: 'Precise period naturalism.', principles: [] },
-    palette: { description: 'Muted city color.', colors: [], observations: [] },
-    toneMood: { tone: 'tense', moodTags: [], description: 'Investigative.' },
-    composition: { description: 'Balanced portraits.', patterns: [] },
-    lighting: { description: 'Soft practical light.', patterns: [] },
-    texture: { description: 'Fine film grain.', observations: [] },
-    camera: { description: 'Still portrait framing.', movement: [], motion: [], framing: [] },
+    type: 'movie',
+    definition: {
+      thesis: { statement: 'Precise period naturalism.', principles: [] },
+      palette: { description: 'Muted city color.', colors: [], observations: [] },
+      toneMood: { tone: 'tense', moodTags: [], description: 'Investigative.' },
+      composition: { description: 'Balanced portraits.', patterns: [] },
+      lighting: { description: 'Soft practical light.', patterns: [] },
+      texture: { description: 'Fine film grain.', observations: [] },
+      camera: {
+        description: 'Still portrait framing.',
+        movement: [],
+        motion: [],
+        framing: [],
+      },
+    },
   };
 }

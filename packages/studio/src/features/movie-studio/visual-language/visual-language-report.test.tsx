@@ -97,11 +97,17 @@ describe('VisualLanguageReport', () => {
           imagesBySection: {
             thesis: [],
             palette: [],
-            tone_mood: [],
+            toneMood: [],
             composition: [],
             lighting: [],
             texture: [],
             camera: [],
+            styleBrief: [],
+            lineAndFinish: [],
+            valueAndAccent: [],
+            panelAndNotation: [],
+            continuityAndClarity: [],
+            guardrails: [],
           },
         }}
         sections={{

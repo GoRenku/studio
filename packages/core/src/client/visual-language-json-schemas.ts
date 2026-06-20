@@ -208,7 +208,7 @@ export const cameraSectionSchema = {
 } as const;
 
 export const lookbookSectionsSchema = {
-  $id: 'https://schemas.gorenku.com/studio/lookbook-sections.schema.json',
+  $id: 'https://schemas.gorenku.com/studio/movie-lookbook-sections.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
   required: [
@@ -232,20 +232,118 @@ export const lookbookSectionsSchema = {
   additionalProperties: false,
 } as const;
 
+const storyboardLookbookTextSection = {
+  type: 'object',
+  required: ['text'],
+  properties: {
+    text: trimmedString,
+    imageFiles,
+  },
+  additionalProperties: false,
+} as const;
+
+export const storyboardLookbookSectionsSchema = {
+  $id: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: [
+    'styleBrief',
+    'lineAndFinish',
+    'valueAndAccent',
+    'panelAndNotation',
+    'continuityAndClarity',
+    'guardrails',
+  ],
+  properties: {
+    styleBrief: storyboardLookbookTextSection,
+    lineAndFinish: storyboardLookbookTextSection,
+    valueAndAccent: storyboardLookbookTextSection,
+    panelAndNotation: storyboardLookbookTextSection,
+    continuityAndClarity: storyboardLookbookTextSection,
+    guardrails: storyboardLookbookTextSection,
+  },
+  additionalProperties: false,
+} as const;
+
 export const lookbookDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/lookbook-document.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  type: 'object',
-  required: ['kind', 'lookbook'],
-  properties: {
-    kind: { const: 'lookbook' },
-    lookbook: { $ref: lookbookSectionsSchema.$id },
-    sourceInspirationFolderIds: {
-      type: 'array',
-      items: trimmedString,
+  oneOf: [
+    {
+      type: 'object',
+      required: ['kind', 'movieLookbook'],
+      properties: {
+        kind: { const: 'movieLookbook' },
+        movieLookbook: {
+          type: 'object',
+          properties: {
+            name: trimmedString,
+            thesis: { $ref: thesisSectionSchema.$id },
+            palette: { $ref: paletteSectionSchema.$id },
+            toneMood: { $ref: toneMoodSectionSchema.$id },
+            composition: { $ref: patternSectionSchema.$id },
+            lighting: { $ref: patternSectionSchema.$id },
+            texture: { $ref: textureSectionSchema.$id },
+            camera: { $ref: cameraSectionSchema.$id },
+          },
+          required: [
+            'name',
+            'thesis',
+            'palette',
+            'toneMood',
+            'composition',
+            'lighting',
+            'texture',
+            'camera',
+          ],
+          additionalProperties: false,
+        },
+        sourceInspirationFolderIds: {
+          type: 'array',
+          items: trimmedString,
+        },
+      },
+      additionalProperties: false,
     },
-  },
-  additionalProperties: false,
+    {
+      type: 'object',
+      required: ['kind', 'storyboardLookbook'],
+      properties: {
+        kind: { const: 'storyboardLookbook' },
+        storyboardLookbook: {
+          type: 'object',
+          required: [
+            'name',
+            'styleBrief',
+            'lineAndFinish',
+            'valueAndAccent',
+            'panelAndNotation',
+            'continuityAndClarity',
+            'guardrails',
+          ],
+          properties: {
+            name: trimmedString,
+            styleBrief: storyboardLookbookTextSection,
+            lineAndFinish: storyboardLookbookTextSection,
+            valueAndAccent: storyboardLookbookTextSection,
+            panelAndNotation: storyboardLookbookTextSection,
+            continuityAndClarity: storyboardLookbookTextSection,
+            guardrails: storyboardLookbookTextSection,
+          },
+          additionalProperties: false,
+        },
+        sourceInspirationFolderIds: {
+          type: 'array',
+          items: trimmedString,
+        },
+        sourceMovieLookbookIds: {
+          type: 'array',
+          items: trimmedString,
+        },
+      },
+      additionalProperties: false,
+    },
+  ],
 } as const;
 
 export const lookbookSourceInspirationsDocumentSchema = {

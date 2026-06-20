@@ -15,6 +15,7 @@ import type {
   SceneStoryboardSheetModelChoiceReport,
   SceneStoryboardSheetModelListReport,
   SceneStoryboardSheetOutputFormat,
+  MediaGenerationDependencySlot,
 } from '../../client/index.js';
 import {
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -40,10 +41,12 @@ import {
   updateMediaGenerationSpec,
 } from '../database/access/media-generation.js';
 import {
-  readActiveLookbookId,
+  readSelectedMovieLookbookId,
+  readSelectedStoryboardLookbookId,
   requireLookbookRecordById,
   toLookbook,
 } from '../database/access/lookbook.js';
+import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import { readProjectRecord, type ProjectRecord } from '../database/access/project.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
@@ -80,6 +83,10 @@ import {
   CAST_IMAGE_FRAMES,
 } from './cast-image-common.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { lookbookSheetDependencySlot } from './dependency-slot-definitions.js';
+import type {
+  MediaGenerationDependencyDeclarationInput,
+} from './purpose-registry.js';
 
 const STORYBOARD_SHEET_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2',
@@ -96,8 +103,9 @@ const OUTPUT_FORMATS = new Set<SceneStoryboardSheetOutputFormat>([
 interface SceneStoryboardSheetProviderPlan {
   provider: 'fal-ai' | 'elevenlabs';
   model: string;
-  mode: 'text-to-image';
+  mode: 'text-to-image' | 'image-edit';
   payload: Record<string, unknown>;
+  inputFiles?: PreparedMediaGeneration['generation']['request']['inputFiles'];
   outputCount: 1;
 }
 
@@ -115,7 +123,10 @@ export async function buildSceneStoryboardSheetContext(
     const shotList = readSceneShotListDocument({ row: shotListRow, screenplay });
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const references = collectShotListReferences(shotList, screenplay);
-    const activeLookbook = readActiveLookbookContext(session);
+    const storyboardLookbook = requireSelectedStoryboardLookbookContext(session);
+    const selectedMovieLookbook = readSelectedMovieLookbookContext(session);
+    const selectedStoryboardLookbookSheet =
+      listLookbookSheets(session, storyboardLookbook.id)[0] ?? null;
     return {
       purpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
       target: { kind: 'scene', id: input.sceneId },
@@ -155,7 +166,9 @@ export async function buildSceneStoryboardSheetContext(
       },
       cast: references.cast,
       locations: references.locations,
-      activeLookbook,
+      selectedStoryboardLookbook: storyboardLookbook,
+      selectedStoryboardLookbookSheet,
+      selectedMovieLookbook,
       shotList,
       shotListSummary: {
         id: shotListRow.id,
@@ -194,6 +207,29 @@ export async function listSceneStoryboardSheetModels(
     shotListId: input.shotListId,
     models: modelChoices(),
   };
+}
+
+export async function declareSceneStoryboardSheetDependencies(
+  input: MediaGenerationDependencyDeclarationInput
+): Promise<MediaGenerationDependencySlot[]> {
+  const context = await buildSceneStoryboardSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: requireSceneTarget(input.target).id,
+    shotListId: requireShotListId(input),
+  });
+  return [
+    lookbookSheetDependencySlot({
+      lookbookId: context.selectedStoryboardLookbook.id,
+      lookbookName: context.selectedStoryboardLookbook.name,
+      ...(context.selectedStoryboardLookbookSheet
+        ? { lookbookSheetId: context.selectedStoryboardLookbookSheet.id }
+        : {}),
+      required: true,
+      reason:
+        'Scene storyboard sheet generation uses the selected Storyboard Lookbook sheet as the style reference image.',
+    }),
+  ];
 }
 
 export async function validateSceneStoryboardSheetSpec(
@@ -645,6 +681,25 @@ function buildGptImage2Payload(
   if (spec.seed !== null && spec.seed !== undefined) {
     unsupported('GPT Image 2 does not support generation seed.');
   }
+  const referencePath = selectedStoryboardLookbookSheetPath(context);
+  if (referencePath) {
+    return {
+      provider: 'fal-ai',
+      model: 'openai/gpt-image-2/edit',
+      mode: 'image-edit',
+      outputCount: 1,
+      inputFiles: storyboardLookbookSheetInputFiles(referencePath),
+      payload: {
+        prompt: buildProviderPrompt(spec, context),
+        image_urls: [logicalInputUrl(referencePath)],
+        num_images: 1,
+        image_size: mapPresetFrame(resolvedSheetFrame(spec)),
+        quality: mapGptQuality(spec.detail ?? 'standard'),
+        output_format: spec.outputFormat ?? 'png',
+        sync_mode: false,
+      },
+    };
+  }
   return {
     provider: 'fal-ai',
     model: 'openai/gpt-image-2',
@@ -665,6 +720,29 @@ function buildNanoBanana2Payload(
   spec: SceneStoryboardSheetGenerationSpec,
   context: SceneStoryboardSheetGenerationContext
 ): SceneStoryboardSheetProviderPlan {
+  const referencePath = selectedStoryboardLookbookSheetPath(context);
+  if (referencePath) {
+    return {
+      provider: 'fal-ai',
+      model: 'nano-banana-2/edit',
+      mode: 'image-edit',
+      outputCount: 1,
+      inputFiles: storyboardLookbookSheetInputFiles(referencePath),
+      payload: {
+        prompt: buildProviderPrompt(spec, context),
+        image_urls: [logicalInputUrl(referencePath)],
+        num_images: 1,
+        seed: spec.seed ?? null,
+        aspect_ratio: resolvedSheetFrame(spec),
+        resolution: mapNanoBananaResolution(spec.detail ?? 'standard'),
+        output_format: spec.outputFormat ?? 'png',
+        safety_tolerance: '4',
+        limit_generations: true,
+        enable_web_search: false,
+        sync_mode: false,
+      },
+    };
+  }
   return {
     provider: 'fal-ai',
     model: 'nano-banana-2',
@@ -694,6 +772,23 @@ function buildGrokImaginePayload(
   }
   if ((spec.detail ?? 'standard') !== 'standard') {
     unsupported('Grok Imagine supports only standard detail.');
+  }
+  const referencePath = selectedStoryboardLookbookSheetPath(context);
+  if (referencePath) {
+    return {
+      provider: 'fal-ai',
+      model: 'xai/grok-imagine-image/edit',
+      mode: 'image-edit',
+      outputCount: 1,
+      inputFiles: storyboardLookbookSheetInputFiles(referencePath),
+      payload: {
+        prompt: buildProviderPrompt(spec, context),
+        image_urls: [logicalInputUrl(referencePath)],
+        num_images: 1,
+        output_format: spec.outputFormat ?? 'png',
+        sync_mode: false,
+      },
+    };
   }
   return {
     provider: 'fal-ai',
@@ -725,6 +820,7 @@ function toGenerationRequest(
     },
     request: {
       prompt: typeof prompt === 'string' ? prompt : spec.prompt,
+      ...(plan.inputFiles ? { inputFiles: plan.inputFiles } : {}),
       parameters,
       outputNames: [
         `${slugify(titleForSpec(spec, 'Scene storyboard sheet'))}${extensionForOutputFormat(spec.outputFormat ?? 'png')}`,
@@ -873,25 +969,39 @@ function collectShotListReferences(
   };
 }
 
-function readActiveLookbookContext(
+function requireSelectedStoryboardLookbookContext(
   session: DatabaseSession
-): SceneStoryboardSheetGenerationContext['activeLookbook'] {
-  const activeLookbookId = readActiveLookbookId(session);
-  if (!activeLookbookId) {
+): SceneStoryboardSheetGenerationContext['selectedStoryboardLookbook'] {
+  const lookbookId = readSelectedStoryboardLookbookId(session);
+  if (!lookbookId) {
+    throw new ProjectDataError(
+      'CORE_STORYBOARD_LOOKBOOK_SELECTION_REQUIRED',
+      'Scene storyboard sheet generation requires a selected Storyboard Lookbook.',
+      {
+        suggestion:
+          'Create or select a Storyboard Lookbook before generating storyboard sheets.',
+      }
+    );
+  }
+  const lookbook = toLookbook(requireLookbookRecordById(session, lookbookId));
+  if (lookbook.type !== 'storyboard') {
+    throw new ProjectDataError(
+      'CORE_LOOKBOOK_TYPE_MISMATCH',
+      `Selected Storyboard Lookbook ${lookbookId} is not a Storyboard Lookbook.`
+    );
+  }
+  return lookbook;
+}
+
+function readSelectedMovieLookbookContext(
+  session: DatabaseSession
+): SceneStoryboardSheetGenerationContext['selectedMovieLookbook'] {
+  const lookbookId = readSelectedMovieLookbookId(session);
+  if (!lookbookId) {
     return null;
   }
-  const lookbook = toLookbook(requireLookbookRecordById(session, activeLookbookId));
-  return {
-    id: lookbook.id,
-    name: lookbook.name,
-    thesis: JSON.stringify(lookbook.thesis),
-    palette: JSON.stringify(lookbook.palette),
-    camera: JSON.stringify(lookbook.camera),
-    toneMood: JSON.stringify(lookbook.toneMood),
-    texture: JSON.stringify(lookbook.texture),
-    composition: JSON.stringify(lookbook.composition),
-    lighting: JSON.stringify(lookbook.lighting),
-  };
+  const lookbook = toLookbook(requireLookbookRecordById(session, lookbookId));
+  return lookbook.type === 'movie' ? lookbook : null;
 }
 
 function validateSceneTarget(
@@ -903,6 +1013,35 @@ function validateSceneTarget(
       `Scene storyboard sheet generation requires target.kind "scene". Received: ${target.kind}.`
     );
   }
+}
+
+function requireSceneTarget(
+  target: MediaGenerationDependencyDeclarationInput['target']
+): SceneStoryboardSheetGenerationSpec['target'] {
+  if (target.kind !== 'scene') {
+    throw new ProjectDataError(
+      'PROJECT_DATA329',
+      `Scene storyboard sheet generation requires target.kind "scene". Received: ${target.kind}.`
+    );
+  }
+  return target;
+}
+
+function requireShotListId(input: MediaGenerationDependencyDeclarationInput): string {
+  if (!input.request || input.request.kind !== 'media-generation-spec') {
+    throw new ProjectDataError(
+      'PROJECT_DATA389',
+      'Scene storyboard sheet dependency planning requires a media-generation-spec request.'
+    );
+  }
+  const spec = input.request.spec as SceneStoryboardSheetGenerationSpec | undefined;
+  if (spec?.purpose !== SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE || !spec.shotListId) {
+    throw new ProjectDataError(
+      'PROJECT_DATA389',
+      'Scene storyboard sheet dependency planning requires shotListId on the root spec.'
+    );
+  }
+  return spec.shotListId;
 }
 
 function assertModelChoice(
@@ -1008,10 +1147,46 @@ function buildProviderPrompt(
           .map((location) => `${location.name} (${location.id})`)
           .join(', ')}`
       : 'Referenced locations: none specified for these shots.',
-    context.activeLookbook
-      ? `Active Lookbook notes: palette ${context.activeLookbook.palette}; texture ${context.activeLookbook.texture}; lighting ${context.activeLookbook.lighting}; composition ${context.activeLookbook.composition}.`
-      : 'Active Lookbook notes: none available.',
+    context.selectedStoryboardLookbookSheet
+      ? 'Use the attached Storyboard Lookbook sheet as the primary visual reference for line quality, panel finish, tonal range, notation behavior, and drawing discipline.'
+      : 'No Storyboard Lookbook sheet image is attached yet; follow the textual Storyboard Lookbook definition exactly.',
+    `Storyboard Lookbook style: ${context.selectedStoryboardLookbook.definition.styleBrief.text}`,
+    `Storyboard line and finish: ${context.selectedStoryboardLookbook.definition.lineAndFinish.text}`,
+    `Storyboard value and accent: ${context.selectedStoryboardLookbook.definition.valueAndAccent.text}`,
+    `Storyboard panel and notation: ${context.selectedStoryboardLookbook.definition.panelAndNotation.text}`,
+    `Storyboard continuity and clarity: ${context.selectedStoryboardLookbook.definition.continuityAndClarity.text}`,
+    `Storyboard guardrails: ${context.selectedStoryboardLookbook.definition.guardrails.text}`,
+    context.selectedMovieLookbook
+      ? `Movie Lookbook context: palette ${JSON.stringify(context.selectedMovieLookbook.definition.palette)}; lighting ${JSON.stringify(context.selectedMovieLookbook.definition.lighting)}; composition ${JSON.stringify(context.selectedMovieLookbook.definition.composition)}.`
+      : 'Movie Lookbook context: none selected.',
   ].join('\n');
+}
+
+function selectedStoryboardLookbookSheetPath(
+  context: SceneStoryboardSheetGenerationContext
+): ProjectRelativePath | null {
+  const file = context.selectedStoryboardLookbookSheet?.asset.files.find(
+    (candidate) => candidate.mediaKind === 'image'
+  );
+  return file?.projectRelativePath ?? null;
+}
+
+function storyboardLookbookSheetInputFiles(
+  projectRelativePath: ProjectRelativePath
+): NonNullable<SceneStoryboardSheetProviderPlan['inputFiles']> {
+  return [
+    {
+      field: 'image_urls',
+      projectRelativePath,
+      mediaKind: 'image',
+      asArray: true,
+      required: true,
+    },
+  ];
+}
+
+function logicalInputUrl(projectRelativePath: ProjectRelativePath): string {
+  return `renku-input://${encodeURI(projectRelativePath)}`;
 }
 
 function selectedShotsForSpec(

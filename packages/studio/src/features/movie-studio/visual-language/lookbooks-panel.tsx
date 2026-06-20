@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import type { LookbooksResource } from '@gorenku/studio-core/client';
+import type { LookbookType, LookbooksResource } from '@gorenku/studio-core/client';
 import {
-  clearActiveLookbook,
+  clearLookbookSelection,
   deleteLookbook,
   listLookbooks,
-  setActiveLookbook,
+  selectLookbookForType,
 } from '@/services/studio-visual-language-api';
 import {
   matchesVisualLanguageLookbooksResource,
@@ -45,14 +45,18 @@ export function LookbooksPanel({
       .catch((error) => toast.error(errorMessage(error)));
   }, [projectName, resourceRevision]);
 
-  const toggleActive = async (lookbookId: string, isActive: boolean) => {
+  const toggleSelection = async (
+    lookbookId: string,
+    type: LookbookType,
+    isSelectedForType: boolean
+  ) => {
     try {
-      if (isActive) {
-        await clearActiveLookbook(projectName);
-        toast.success('Active lookbook cleared.');
+      if (isSelectedForType) {
+        await clearLookbookSelection(projectName, type);
+        toast.success(`${lookbookTypeLabel(type)} Lookbook selection cleared.`);
       } else {
-        await setActiveLookbook(projectName, lookbookId);
-        toast.success('Active lookbook updated.');
+        await selectLookbookForType(projectName, type, lookbookId);
+        toast.success(`${lookbookTypeLabel(type)} Lookbook selected.`);
       }
       await reload();
       onLookbooksChange();
@@ -84,13 +88,23 @@ export function LookbooksPanel({
             projectName={projectName}
             item={item}
             onOpen={() => onOpenLookbook(item.lookbook.id)}
-            onToggleActive={() => toggleActive(item.lookbook.id, item.isActive)}
+            onToggleSelection={() =>
+              toggleSelection(
+                item.lookbook.id,
+                item.lookbook.type,
+                item.isSelectedForType
+              )
+            }
             onDelete={() => removeLookbook(item.lookbook.id)}
           />
         ))}
       </LookbookCardGrid>
     </div>
   );
+}
+
+function lookbookTypeLabel(type: LookbookType): string {
+  return type === 'movie' ? 'Movie' : 'Storyboard';
 }
 
 function errorMessage(error: unknown): string {

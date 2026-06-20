@@ -37,7 +37,7 @@ import {
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import {
-  readActiveLookbookId,
+  readSelectedMovieLookbookId,
   requireLookbookRecordById,
   toLookbook,
 } from '../database/access/lookbook.js';
@@ -953,23 +953,27 @@ function collectSceneReferences(
 }
 
 function readActiveLookbookContext(
-  session: Parameters<typeof readActiveLookbookId>[0]
+  session: Parameters<typeof readSelectedMovieLookbookId>[0]
 ): SceneShotListContextReport['activeLookbook'] {
-  const activeLookbookId = readActiveLookbookId(session);
+  const activeLookbookId = readSelectedMovieLookbookId(session);
   if (!activeLookbookId) {
     return null;
   }
   const lookbook = toLookbook(requireLookbookRecordById(session, activeLookbookId));
+  if (lookbook.type !== 'movie') {
+    return null;
+  }
+  const definition = lookbook.definition;
   return {
     id: lookbook.id,
     name: lookbook.name,
-    thesis: JSON.stringify(lookbook.thesis),
-    palette: JSON.stringify(lookbook.palette),
-    camera: JSON.stringify(lookbook.camera),
-    toneMood: JSON.stringify(lookbook.toneMood),
-    texture: JSON.stringify(lookbook.texture),
-    composition: JSON.stringify(lookbook.composition),
-    lighting: JSON.stringify(lookbook.lighting),
+    thesis: JSON.stringify(definition.thesis),
+    palette: JSON.stringify(definition.palette),
+    camera: JSON.stringify(definition.camera),
+    toneMood: JSON.stringify(definition.toneMood),
+    texture: JSON.stringify(definition.texture),
+    composition: JSON.stringify(definition.composition),
+    lighting: JSON.stringify(definition.lighting),
   };
 }
 

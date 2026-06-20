@@ -117,7 +117,7 @@ describe('Location environment sheet import', () => {
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA312',
       suggestion:
-        'Create or set an active Lookbook before generating location environment sheets.',
+        'Create or select a Movie Lookbook before generating location environment sheets.',
     });
   });
 
@@ -413,9 +413,10 @@ async function createConfiguredProject() {
     document: lookbookDocument(),
     idGenerator: createDeterministicIdGenerator(),
   });
-  await fixture.projectData.setActiveLookbook({
+  await fixture.projectData.selectLookbookForType({
     projectName: 'constantinople',
     homeDir: fixture.homeDir,
+    type: 'movie',
     lookbookId: lookbook.lookbook.id,
   });
   return fixture;
@@ -501,25 +502,29 @@ function lookbook(): Lookbook {
   return {
     id: 'lookbook_test',
     name: 'Test Lookbook',
-    thesis: { statement: 'Precise period naturalism.', principles: [] },
-    palette: { description: 'Muted city color.', colors: [], observations: [] },
-    toneMood: { tone: 'tense', moodTags: [], description: 'Investigative.' },
-    composition: { description: 'Balanced views.', patterns: [] },
-    lighting: { description: 'Soft practical light.', patterns: [] },
-    texture: { description: 'Fine film grain.', observations: [] },
-    camera: {
-      description: 'Still framing.',
-      movement: [],
-      motion: [],
-      framing: [],
+    type: 'movie',
+    definition: {
+      thesis: { statement: 'Precise period naturalism.', principles: [] },
+      palette: { description: 'Muted city color.', colors: [], observations: [] },
+      toneMood: { tone: 'tense', moodTags: [], description: 'Investigative.' },
+      composition: { description: 'Balanced views.', patterns: [] },
+      lighting: { description: 'Soft practical light.', patterns: [] },
+      texture: { description: 'Fine film grain.', observations: [] },
+      camera: {
+        description: 'Still framing.',
+        movement: [],
+        motion: [],
+        framing: [],
+      },
     },
   };
 }
 
 function lookbookDocument() {
   return {
-    kind: 'lookbook' as const,
-    lookbook: {
+    kind: 'movieLookbook' as const,
+    movieLookbook: {
+      name: 'Siege Steel',
       thesis: {
         statement: 'The movie should feel rigorous and tense.',
         principles: ['Use negative space as pressure.'],

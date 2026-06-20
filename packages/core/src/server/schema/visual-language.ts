@@ -1,6 +1,7 @@
 import {
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -44,13 +45,8 @@ export const inspirationAnalysis = sqliteTable('inspiration_analysis', {
 export const lookbook = sqliteTable('lookbook', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  thesis: text('thesis').notNull(),
-  palette: text('palette').notNull(),
-  toneMood: text('tone_mood').notNull(),
-  composition: text('composition').notNull(),
-  lighting: text('lighting').notNull(),
-  texture: text('texture').notNull(),
-  camera: text('camera').notNull(),
+  type: text('type', { enum: ['movie', 'storyboard'] }).notNull(),
+  definitionJson: text('definition_json').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   ...discardLifecycleColumns(),
@@ -91,14 +87,48 @@ export const lookbookInspirations = sqliteTable(
   ]
 );
 
-export const visualLanguageState = sqliteTable('visual_language_state', {
-  id: text('id').primaryKey(),
-  activeLookbookId: text('active_lookbook_id').references(() => lookbook.id, {
-    onDelete: 'set null',
-  }),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-});
+export const lookbookSelections = sqliteTable(
+  'lookbook_selection',
+  {
+    lookbookType: text('lookbook_type', { enum: ['movie', 'storyboard'] })
+      .primaryKey()
+      .notNull(),
+    lookbookId: text('lookbook_id')
+      .notNull()
+      .references(() => lookbook.id, { onDelete: 'cascade' }),
+    selectedAt: text('selected_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('lookbook_selection_lookbook_idx').on(table.lookbookId),
+  ]
+);
+
+export const storyboardLookbookSourceMovies = sqliteTable(
+  'storyboard_lookbook_source_movie',
+  {
+    storyboardLookbookId: text('storyboard_lookbook_id')
+      .notNull()
+      .references(() => lookbook.id, { onDelete: 'cascade' }),
+    movieLookbookId: text('movie_lookbook_id')
+      .notNull()
+      .references(() => lookbook.id, { onDelete: 'cascade' }),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.storyboardLookbookId, table.movieLookbookId],
+    }),
+    index('storyboard_lookbook_source_movie_order_idx').on(
+      table.storyboardLookbookId,
+      table.sortOrder
+    ),
+    index('storyboard_lookbook_source_movie_movie_idx').on(table.movieLookbookId),
+  ]
+);
 
 export const lookbookImages = sqliteTable(
   'lookbook_image',

@@ -100,6 +100,84 @@ describe('media generation dependency inventory estimates integration', () => {
     });
   });
 
+  it('requires the selected Storyboard Lookbook sheet before planning Scene storyboard sheet creation', async () => {
+    const ids = await sampleIds(projectData, homeDir);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: sampleShotList(ids),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const storyboardLookbook = await createSelectedStoryboardLookbook(
+      projectData,
+      homeDir
+    );
+    const spec = sceneStoryboardSheetSpec({
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+    });
+
+    const planWithoutSheet = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec,
+    });
+
+    expect(planWithoutSheet.dependencyInventory.rootGeneration).toMatchObject({
+      canCreateSpec: false,
+      blockedReason:
+        'Generate, import, or author required dependencies before creating the final generation.',
+    });
+    expect(planWithoutSheet.dependencyInventory.dependencies).toEqual([
+      expect.objectContaining({
+        dependencyId: `lookbook-sheet:${storyboardLookbook.lookbook.id}`,
+        dependencyKind: 'lookbook-sheet',
+        required: true,
+        availability: { state: 'missing-generated' },
+        generationDraft: expect.objectContaining({
+          state: 'authored',
+          draftGenerationSpec: expect.objectContaining({
+            purpose: 'lookbook.sheet',
+            spec: expect.objectContaining({
+              target: { kind: 'lookbook', id: storyboardLookbook.lookbook.id },
+            }),
+          }),
+        }),
+      }),
+    ]);
+
+    await writeProjectFile(
+      projectData,
+      homeDir,
+      'generated/media/storyboard-lookbook-sheet.png',
+      'sheet bytes'
+    );
+    const importedSheet = await projectData.importLookbookSheetMedia({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: storyboardLookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/storyboard-lookbook-sheet.png',
+      title: 'Storyboard style sheet',
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    const planWithSheet = await projectData.planMediaGenerationDependencies({
+      projectName: 'constantinople',
+      homeDir,
+      spec,
+    });
+
+    expect(planWithSheet.dependencyInventory.rootGeneration.canCreateSpec).toBe(true);
+    expect(planWithSheet.dependencyInventory.dependencies).toEqual([
+      expect.objectContaining({
+        dependencyId: `lookbook-sheet:${storyboardLookbook.lookbook.id}`,
+        availability: { state: 'satisfied' },
+        selectedAsset: expect.objectContaining({
+          assetId: importedSheet.imported.asset.assetId,
+        }),
+      }),
+    ]);
+  });
+
   it('prices shot reference video plus cast, location, and Lookbook dependency lines from the inventory', async () => {
     const ids = await sampleIds(projectData, homeDir);
     const lookbook = await createActiveLookbook(projectData, homeDir);
@@ -1441,12 +1519,53 @@ async function createActiveLookbook(
     document: lookbookDocument(),
     idGenerator: createDeterministicIdGenerator(),
   });
-  await projectData.setActiveLookbook({
+  await projectData.selectLookbookForType({
     projectName: 'constantinople',
     homeDir,
+    type: 'movie',
     lookbookId: lookbook.lookbook.id,
   });
   return lookbook;
+}
+
+async function createSelectedStoryboardLookbook(
+  projectData: ReturnType<typeof createProjectDataService>,
+  homeDir: string
+) {
+  const lookbook = await projectData.createLookbook({
+    projectName: 'constantinople',
+    homeDir,
+    document: storyboardLookbookDocument(),
+    idGenerator: createDeterministicIdGenerator(),
+  });
+  await projectData.selectLookbookForType({
+    projectName: 'constantinople',
+    homeDir,
+    type: 'storyboard',
+    lookbookId: lookbook.lookbook.id,
+  });
+  return lookbook;
+}
+
+function sceneStoryboardSheetSpec(input: {
+  sceneId: string;
+  shotListId: string;
+}) {
+  return {
+    purpose: 'scene.storyboard-sheet' as const,
+    target: { kind: 'scene' as const, id: input.sceneId },
+    shotListId: input.shotListId,
+    shotIds: ['shot_001'],
+    modelChoice: 'fal-ai/openai/gpt-image-2' as const,
+    prompt: 'Create the storyboard sheet for the selected shot.',
+    takeCount: 1 as const,
+    seed: null,
+    sheetFrame: '4:3' as const,
+    shotFrame: 'project' as const,
+    detail: 'standard' as const,
+    outputFormat: 'png' as const,
+    title: 'Storyboard sheet',
+  };
 }
 
 async function writeProjectFile(
@@ -1561,8 +1680,9 @@ function sampleShotList(
 
 function lookbookDocument() {
   return {
-    kind: 'lookbook' as const,
-    lookbook: {
+    kind: 'movieLookbook' as const,
+    movieLookbook: {
+      name: 'Imperial Wound',
       thesis: {
         statement: 'The movie should feel rigorous and tense.',
         principles: ['Use negative space as pressure.'],
@@ -1596,6 +1716,35 @@ function lookbookDocument() {
         framing: [{ name: 'Measured distance', description: 'Close-ups are rare and earned.' }],
       },
     },
+    sourceInspirationFolderIds: [],
+  };
+}
+
+function storyboardLookbookDocument() {
+  return {
+    kind: 'storyboardLookbook' as const,
+    storyboardLookbook: {
+      name: 'Storyboard Graphite',
+      styleBrief: {
+        text: 'Graphite storyboard panels with production-board clarity.',
+      },
+      lineAndFinish: {
+        text: 'Loose construction lines remain visible under confident ink accents.',
+      },
+      valueAndAccent: {
+        text: 'Muted gray value blocks with one restrained warm accent.',
+      },
+      panelAndNotation: {
+        text: 'Clean panels, quiet gutters, and sparse camera notes outside image content.',
+      },
+      continuityAndClarity: {
+        text: 'Characters and spatial geography remain legible from panel to panel.',
+      },
+      guardrails: {
+        text: 'Avoid photoreal stills, decorative title text, and over-rendered noir contrast.',
+      },
+    },
+    sourceMovieLookbookIds: [],
     sourceInspirationFolderIds: [],
   };
 }

@@ -4,7 +4,7 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import type { LookbookDocument, LookbookSheet } from '@gorenku/studio-core/server';
+import type { LookbookSheet, LookbookType } from '@gorenku/studio-core/server';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -203,21 +203,6 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .post('/visual-language/lookbooks', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const body = readLookbookRequestBody(await c.req.json<unknown>());
-        rejectUnsupportedLookbookSectionsField(body);
-        const report = await projectData.createLookbook({
-          projectName,
-          name: readLookbookName(body) ?? '',
-          document: readRequiredLookbookDocument(body),
-        });
-        return c.json({ lookbook: report.lookbook, resourceKeys: report.resourceKeys });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
     .get('/visual-language/lookbooks/:lookbookId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
@@ -228,27 +213,11 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .patch('/visual-language/lookbooks/:lookbookId', async (c) => {
+    .delete('/visual-language/lookbooks/selection/:type', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const lookbookId = c.req.param('lookbookId') as string;
-        const body = readLookbookRequestBody(await c.req.json<unknown>());
-        rejectUnsupportedLookbookSectionsField(body);
-        const report = await projectData.updateLookbook({
-          projectName,
-          lookbookId,
-          name: readLookbookName(body),
-          document: readOptionalLookbookDocument(body),
-        });
-        return c.json({ lookbook: report.lookbook, resourceKeys: report.resourceKeys });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .delete('/visual-language/lookbooks/active-selection', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const report = await projectData.clearActiveLookbook({ projectName });
+        const type = readLookbookSelectionType(c.req.param('type'));
+        const report = await projectData.clearLookbookSelection({ projectName, type });
         return c.json({
           ok: true,
           recovery: report.recovery,
@@ -272,11 +241,16 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .put('/visual-language/lookbooks/:lookbookId/active', async (c) => {
+    .put('/visual-language/lookbooks/selection/:type', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const lookbookId = c.req.param('lookbookId') as string;
-        const report = await projectData.setActiveLookbook({ projectName, lookbookId });
+        const type = readLookbookSelectionType(c.req.param('type'));
+        const body = await c.req.json<{ lookbookId?: string }>();
+        const report = await projectData.selectLookbookForType({
+          projectName,
+          type,
+          lookbookId: requiredBodyString(body.lookbookId, 'lookbookId'),
+        });
         return c.json({
           ok: true,
           recovery: report.recovery,
@@ -509,70 +483,26 @@ function contentTypeForPath(projectRelativePath: string): string {
   return 'image/png';
 }
 
-function readLookbookRequestBody(body: unknown): Record<string, unknown> {
-  if (isJsonObject(body)) {
-    return body;
+function readLookbookSelectionType(value: string | undefined): LookbookType {
+  if (value === 'movie' || value === 'storyboard') {
+    return value;
   }
-
   throwInvalidLookbookDocumentRequest(
-    [],
-    'Lookbook request body must be a JSON object.',
-    'Send a JSON object with a document field.'
+    ['type'],
+    'Lookbook selection type must be movie or storyboard.',
+    'Use /visual-language/lookbooks/selection/movie or /visual-language/lookbooks/selection/storyboard.'
   );
 }
 
-function readLookbookName(body: Record<string, unknown>): string | undefined {
-  return typeof body.name === 'string' ? body.name : undefined;
-}
-
-function readRequiredLookbookDocument(
-  body: Record<string, unknown>
-): LookbookDocument {
-  return readLookbookDocument(body.document);
-}
-
-function readOptionalLookbookDocument(
-  body: Record<string, unknown>
-): LookbookDocument | undefined {
-  if (!Object.prototype.hasOwnProperty.call(body, 'document')) {
-    return undefined;
+function requiredBodyString(value: unknown, field: string): string {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
   }
-
-  return readLookbookDocument(body.document);
-}
-
-function readLookbookDocument(document: unknown): LookbookDocument {
-  if (
-    isJsonObject(document) &&
-    document.kind === 'lookbook' &&
-    Object.prototype.hasOwnProperty.call(document, 'lookbook')
-  ) {
-    return document as unknown as LookbookDocument;
-  }
-
   throwInvalidLookbookDocumentRequest(
-    ['document'],
-    'document must contain kind: lookbook and a lookbook payload.',
-    'Send the Lookbook content as { document: { kind: "lookbook", lookbook: ... } }.'
+    [field],
+    `${field} is required.`,
+    `Send ${field} as a non-empty string.`
   );
-}
-
-function rejectUnsupportedLookbookSectionsField(
-  body: Record<string, unknown>
-): void {
-  if (!Object.prototype.hasOwnProperty.call(body, 'sections')) {
-    return;
-  }
-
-  throwInvalidLookbookDocumentRequest(
-    ['sections'],
-    'sections is not a supported Lookbook request field.',
-    'Send the Lookbook content under document.lookbook.'
-  );
-}
-
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function throwInvalidLookbookDocumentRequest(

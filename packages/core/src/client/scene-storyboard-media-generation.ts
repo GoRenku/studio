@@ -1,6 +1,7 @@
 import type { SceneShotListContextReport, SceneShotListDocument, SceneShotListSummary } from './scene-shot-list.js';
 import type { SceneMediaGenerationTarget } from './media-generation-target.js';
 import type { LookbookImageDetail, LookbookImageFrame, LookbookImageOutputFormat } from './lookbook-media-generation.js';
+import type { LookbookSheet, MovieLookbook, StoryboardLookbook } from './visual-language.js';
 import { SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE } from './media-generation-purpose.js';
 
 export type SceneStoryboardSheetModelChoice =
@@ -27,7 +28,9 @@ export interface SceneStoryboardSheetGenerationContext {
   scene: SceneShotListContextReport['scene'];
   cast: SceneShotListContextReport['cast'];
   locations: SceneShotListContextReport['locations'];
-  activeLookbook: SceneShotListContextReport['activeLookbook'];
+  selectedStoryboardLookbook: StoryboardLookbook;
+  selectedStoryboardLookbookSheet: LookbookSheet | null;
+  selectedMovieLookbook: MovieLookbook | null;
   shotList: SceneShotListDocument;
   shotListSummary: SceneShotListSummary;
   defaults: {

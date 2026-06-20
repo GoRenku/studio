@@ -8,6 +8,7 @@ import {
   type LookbookDocument,
   type LookbookSection,
   type LookbookSourceInspirationsDocument,
+  type LookbookType,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
@@ -21,6 +22,7 @@ export async function runLookbookCommand(options: {
     name?: string;
     project?: string;
     sections?: string;
+    type?: string;
   };
   json: boolean;
   io: RenkuCliIo;
@@ -71,7 +73,7 @@ export async function runLookbookCommand(options: {
     const report = await service.createLookbook({
       projectName,
       homeDir: options.homeDir,
-      name: requiredFlag(options.flags.name, '--name'),
+      name: options.flags.name,
       document: document as LookbookDocument,
       filePath: filePath !== '-' ? filePath : undefined,
     });
@@ -137,30 +139,34 @@ export async function runLookbookCommand(options: {
     return 0;
   }
 
-  if (action === 'set-active') {
-    const report = await service.setActiveLookbook({
+  if (action === 'select') {
+    const type = parseLookbookType(options.flags.type);
+    const report = await service.selectLookbookForType({
       projectName,
       homeDir: options.homeDir,
+      type,
       lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
     });
     await appendStudioResourceChangedEvent({
       runtime: cliRuntime(options, service),
       report,
-      command: 'lookbook set-active',
+      command: 'lookbook select',
     });
     writeJson(options.io, report);
     return 0;
   }
 
-  if (action === 'clear-active') {
-    const report = await service.clearActiveLookbook({
+  if (action === 'clear-selection') {
+    const type = parseLookbookType(options.flags.type);
+    const report = await service.clearLookbookSelection({
       projectName,
       homeDir: options.homeDir,
+      type,
     });
     await appendStudioResourceChangedEvent({
       runtime: cliRuntime(options, service),
       report,
-      command: 'lookbook clear-active',
+      command: 'lookbook clear-selection',
     });
     writeJson(options.io, report);
     return 0;
@@ -267,7 +273,7 @@ export async function runLookbookCommand(options: {
         'CLI095',
         'Unknown lookbook command.',
         { path: ['lookbook', action ?? '', nested ?? '', operation ?? ''] },
-        'Use list/show/validate/create/update/rename/discard/set-active/clear-active, image set-sections/discard, card-image set/clear, or inspiration list/set.'
+        'Use list/show/validate/create/update/rename/discard/select/clear-selection, image set-sections/discard, card-image set/clear, or inspiration list/set.'
       ),
     ],
     suggestion: 'Use a supported lookbook command.',
@@ -348,6 +354,26 @@ function parseSections(input?: string): LookbookSection[] {
     .split(',')
     .map((section) => section.trim())
     .filter(Boolean) as LookbookSection[];
+}
+
+function parseLookbookType(input?: string): LookbookType {
+  const value = requiredFlag(input, '--type');
+  if (value === 'movie' || value === 'storyboard') {
+    return value;
+  }
+  throw new StructuredError({
+    code: 'CLI096',
+    message: 'Unsupported Lookbook type.',
+    issues: [
+      createDiagnosticError(
+        'CLI096',
+        `Unsupported Lookbook type: ${value}.`,
+        { path: ['--type'], context: 'renku CLI arguments' },
+        'Use movie or storyboard.'
+      ),
+    ],
+    suggestion: 'Use --type movie or --type storyboard.',
+  });
 }
 
 function cliRuntime(

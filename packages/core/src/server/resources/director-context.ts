@@ -22,7 +22,8 @@ import { listCastMemberRecords } from '../database/access/cast-members.js';
 import { listInspirationFolderRecords } from '../database/access/inspiration-folders.js';
 import {
   listLookbookRecords,
-  readActiveLookbookId,
+  readSelectedMovieLookbookId,
+  readSelectedStoryboardLookbookId,
 } from '../database/access/lookbook.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import {
@@ -144,14 +145,17 @@ function readScreenplayReadiness(
 function readVisualLanguageReadiness(
   session: DatabaseSession
 ): DirectorVisualLanguageReadiness {
-  const activeLookbookId = readActiveLookbookId(session);
+  const selectedMovieLookbookId = readSelectedMovieLookbookId(session);
+  const selectedStoryboardLookbookId = readSelectedStoryboardLookbookId(session);
   return {
     inspirationFolderCount: listInspirationFolderRecords(session, {
       limit: MAX_RESOURCE_PAGE_LIMIT,
     }).items.length,
     lookbookCount: listLookbookRecords(session).length,
-    activeLookbookId,
-    readyForGeneration: activeLookbookId !== null,
+    selectedMovieLookbookId,
+    selectedStoryboardLookbookId,
+    movieLookbookReadyForGeneration: selectedMovieLookbookId !== null,
+    storyboardLookbookReadyForGeneration: selectedStoryboardLookbookId !== null,
   };
 }
 
@@ -398,13 +402,23 @@ function readinessDiagnostics(input: {
       )
     );
   }
-  if (!input.visualLanguage.activeLookbookId) {
+  if (!input.visualLanguage.selectedMovieLookbookId) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT004',
-        'The current project does not have an active Lookbook.',
-        ['visualLanguage', 'activeLookbookId'],
-        'Create or activate a Lookbook before visual generation.'
+        'The current project does not have a selected Movie Lookbook.',
+        ['visualLanguage', 'selectedMovieLookbookId'],
+        'Create or select a Movie Lookbook before production visual generation.'
+      )
+    );
+  }
+  if (!input.visualLanguage.selectedStoryboardLookbookId) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT013',
+        'The current project does not have a selected Storyboard Lookbook.',
+        ['visualLanguage', 'selectedStoryboardLookbookId'],
+        'Create or select a Storyboard Lookbook before storyboard image generation.'
       )
     );
   }
@@ -481,13 +495,23 @@ function buildNextSteps(input: {
       command: 'renku screenplay analyze context --json',
     });
   }
-  if (!input.visualLanguage.activeLookbookId) {
+  if (!input.visualLanguage.selectedMovieLookbookId) {
     steps.push({
-      id: 'create-lookbook',
-      title: 'Create or activate a Lookbook',
+      id: 'select-movie-lookbook',
+      title: 'Create or select a Movie Lookbook',
       specialistSkill: 'lookbook-designer',
-      reason: 'Visual generation should use an explicit visual language source.',
-      command: 'renku lookbook list --json',
+      reason: 'Production visual generation should use an explicit movie visual-language source.',
+      command: 'renku lookbook select --type movie --lookbook <lookbook-id> --json',
+    });
+  }
+  if (!input.visualLanguage.selectedStoryboardLookbookId) {
+    steps.push({
+      id: 'select-storyboard-lookbook',
+      title: 'Create or select a Storyboard Lookbook',
+      specialistSkill: 'lookbook-designer',
+      reason: 'Storyboard image generation should use a dedicated graphic-language source.',
+      command:
+        'renku lookbook select --type storyboard --lookbook <lookbook-id> --json',
     });
   }
   if (!input.cast.everyCastMemberHasSelectedVisualReference) {

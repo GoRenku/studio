@@ -645,7 +645,8 @@ describe('renku CLI', () => {
       changes: [{ type: 'lookbook.created' }],
       lookbook: {
         name: 'Contaminated Tenderness',
-        palette: { colors: [{ hex: '#39FF75' }] },
+        type: 'movie',
+        definition: { palette: { colors: [{ hex: '#39FF75' }] } },
       },
       sourceInspirationFolders: [{ id: folder.id }],
       resourceKeys: expect.arrayContaining([
@@ -655,11 +656,19 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const setActiveLookbookExitCode = await runRenkuCli(
-      ['lookbook', 'set-active', '--lookbook', report.lookbook.id, '--json'],
+    const selectMovieLookbookExitCode = await runRenkuCli(
+      [
+        'lookbook',
+        'select',
+        '--type',
+        'movie',
+        '--lookbook',
+        report.lookbook.id,
+        '--json',
+      ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(setActiveLookbookExitCode).toBe(0);
+    expect(selectMovieLookbookExitCode).toBe(0);
 
     stdout = [];
     stderr = [];
@@ -2196,6 +2205,75 @@ describe('renku CLI', () => {
       activeShotListId: writeReport.activeShotListId,
     });
 
+    const storyboardLookbookPath = path.join(homeDir, 'storyboard-lookbook.json');
+    await fs.writeFile(
+      storyboardLookbookPath,
+      JSON.stringify(storyboardLookbookJson(), null, 2),
+      'utf8'
+    );
+    stdout = [];
+    stderr = [];
+    const createStoryboardLookbookExitCode = await runRenkuCli(
+      [
+        'lookbook',
+        'create',
+        '--file',
+        storyboardLookbookPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(createStoryboardLookbookExitCode).toBe(0);
+    const storyboardLookbookReport = JSON.parse(stdout.join('\n'));
+
+    stdout = [];
+    stderr = [];
+    const selectStoryboardLookbookExitCode = await runRenkuCli(
+      [
+        'lookbook',
+        'select',
+        '--type',
+        'storyboard',
+        '--lookbook',
+        storyboardLookbookReport.lookbook.id,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(selectStoryboardLookbookExitCode).toBe(0);
+
+    const storyboardLookbookSheetPath =
+      'generated/media/graphite-storyboard-lookbook-sheet.png';
+    await fs.mkdir(
+      path.dirname(path.join(storageRoot, 'constantinople', storyboardLookbookSheetPath)),
+      { recursive: true }
+    );
+    await fs.writeFile(
+      path.join(storageRoot, 'constantinople', storyboardLookbookSheetPath),
+      'storyboard sheet bytes'
+    );
+    stdout = [];
+    stderr = [];
+    const storyboardSheetImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'lookbook.sheet',
+        '--target',
+        `lookbook:${storyboardLookbookReport.lookbook.id}`,
+        '--source',
+        storyboardLookbookSheetPath,
+        '--title',
+        'Graphite Storyboard sheet',
+        '--summary',
+        'Storyboard style reference guide.',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(storyboardSheetImportExitCode).toBe(0);
+
     stdout = [];
     stderr = [];
     const generationContextExitCode = await runRenkuCli(
@@ -3523,8 +3601,9 @@ function inspirationAnalysisJson(imageFile: string) {
 
 function lookbookJson(sourceInspirationFolderIds: string[] = []) {
   return {
-    kind: 'lookbook',
-    lookbook: {
+    kind: 'movieLookbook',
+    movieLookbook: {
+      name: 'Contaminated Tenderness',
       thesis: {
         statement:
           'The movie should feel tender and contaminated at once. Beauty is never clean, and threat is never purely hostile.',
@@ -3592,6 +3671,23 @@ function lookbookJson(sourceInspirationFolderIds: string[] = []) {
       },
     },
     sourceInspirationFolderIds,
+  };
+}
+
+function storyboardLookbookJson() {
+  return {
+    kind: 'storyboardLookbook',
+    storyboardLookbook: {
+      name: 'Graphite Storyboard',
+      styleBrief: { text: 'Graphite storyboard frames with clear staging.' },
+      lineAndFinish: { text: 'Loose pencil construction with crisp ink accents.' },
+      valueAndAccent: { text: 'Soft gray values with restrained warm accents.' },
+      panelAndNotation: { text: 'Clean panels and sparse camera notes outside image content.' },
+      continuityAndClarity: { text: 'Maintain geography and character identity across panels.' },
+      guardrails: { text: 'Avoid photoreal stills and decorative text inside panels.' },
+    },
+    sourceMovieLookbookIds: [],
+    sourceInspirationFolderIds: [],
   };
 }
 

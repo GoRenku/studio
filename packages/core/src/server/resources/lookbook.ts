@@ -13,7 +13,8 @@ import {
 import {
   listLookbookCardImageIds,
   listLookbookRecords,
-  readActiveLookbookId,
+  listSelectedLookbookIdsByType,
+  listStoryboardSourceMovieIdsByLookbookId,
   requireLookbookRecordById,
   toLookbook,
 } from '../database/access/lookbook.js';
@@ -38,14 +39,19 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { lookbookSectionsForType } from '../visual-language-json/validator.js';
 
 export async function listLookbooksResource(
   input: ListLookbooksInput
 ): Promise<LookbooksResource> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
-    const activeLookbookId = readActiveLookbookId(session);
+    const selectedLookbookIdsByType = listSelectedLookbookIdsByType(session);
     const cardImageIds = listLookbookCardImageIds(session);
     const rows = listLookbookRecords(session);
+    const sourceMovieIdsByLookbookId = listStoryboardSourceMovieIdsByLookbookId(
+      session,
+      rows.map((row) => row.id)
+    );
     const sourceFoldersByLookbookId = listLookbookSourceFoldersByLookbookId(
       session,
       {
@@ -54,16 +60,18 @@ export async function listLookbooksResource(
       }
     );
     const lookbooks: LookbookListItemWithSources[] = rows.map((row) => ({
-      lookbook: toLookbook(row),
+      lookbook: toLookbook(row, {
+        sourceMovieLookbookIds: sourceMovieIdsByLookbookId.get(row.id) ?? [],
+      }),
       cardImage: readCardImage(session, cardImageIds.get(row.id), row.id),
-      isActive: activeLookbookId === row.id,
+      isSelectedForType: selectedLookbookIdsByType[row.type] === row.id,
       sourceInspirationFolders: sourceFoldersByLookbookId.get(row.id) ?? [],
     }));
     return {
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
-      activeLookbookId,
+      selectedLookbookIdsByType,
       lookbooks,
       resourceKeys: [studioVisualLanguageLookbooksResourceKey()],
     };
@@ -78,20 +86,24 @@ export async function readLookbookResource(
     const images = listLookbookImages(session, row.id);
     const sheets = listLookbookSheets(session, row.id);
     const cardImageIds = listLookbookCardImageIds(session);
+    const sourceMovieLookbookIds =
+      listStoryboardSourceMovieIdsByLookbookId(session, [row.id]).get(row.id) ??
+      [];
+    const selectedLookbookIdsByType = listSelectedLookbookIdsByType(session);
     return {
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
-      lookbook: toLookbook(row),
+      lookbook: toLookbook(row, { sourceMovieLookbookIds }),
       sourceInspirationFolders: listLookbookSourceInspirationFolders(session, {
         projectFolder,
         lookbookId: row.id,
       }),
       cardImage: readCardImage(session, cardImageIds.get(row.id), row.id),
-      isActive: readActiveLookbookId(session) === row.id,
+      isSelectedForType: selectedLookbookIdsByType[row.type] === row.id,
       images,
       sheets,
-      imagesBySection: buildImagesBySection(images),
+      imagesBySection: buildImagesBySection(row.type, images),
       resourceKeys: [
         studioVisualLanguageLookbooksResourceKey(),
         studioVisualLanguageLookbookResourceKey(row.id),
@@ -101,17 +113,12 @@ export async function readLookbookResource(
 }
 
 export function buildImagesBySection(
+  lookbookType: import('../../client/index.js').LookbookType,
   images: LookbookImage[]
 ): Record<LookbookSection, LookbookImage[]> {
-  const grouped: Record<LookbookSection, LookbookImage[]> = {
-    thesis: [],
-    palette: [],
-    tone_mood: [],
-    composition: [],
-    lighting: [],
-    texture: [],
-    camera: [],
-  };
+  const grouped = Object.fromEntries(
+    lookbookSectionsForType(lookbookType).map((section) => [section, []])
+  ) as unknown as Record<LookbookSection, LookbookImage[]>;
   for (const image of images) {
     for (const section of image.sections) {
       grouped[section].push(image);

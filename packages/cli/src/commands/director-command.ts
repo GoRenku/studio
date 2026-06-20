@@ -132,9 +132,9 @@ function writeDirectorContextSummary(
     }`
   );
   io.stdout.log(
-    `Visual language: ${report.visualLanguage.lookbookCount} lookbook(s); active: ${
-      report.visualLanguage.activeLookbookId ?? 'none'
-    }`
+    `Visual language: ${report.visualLanguage.lookbookCount} lookbook(s); movie: ${
+      report.visualLanguage.selectedMovieLookbookId ?? 'none'
+    }; storyboard: ${report.visualLanguage.selectedStoryboardLookbookId ?? 'none'}`
   );
   if (report.selectedScene) {
     io.stdout.log(

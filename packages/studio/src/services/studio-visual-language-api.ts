@@ -7,6 +7,7 @@ import type {
   LookbookSheetResponse,
   LookbooksResourceResponse,
 } from './studio-project-contracts';
+import type { LookbookType } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
 interface InspirationResourceApiResponse {
@@ -142,20 +143,24 @@ export async function readLookbook(
   return body.resource;
 }
 
-export async function setActiveLookbook(
+export async function selectLookbookForType(
   projectName: string,
+  type: LookbookType,
   lookbookId: string
 ): Promise<void> {
   await writeJson(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/${encodeURIComponent(lookbookId)}/active`,
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/selection/${encodeURIComponent(type)}`,
     'PUT',
-    {}
+    { lookbookId }
   );
 }
 
-export async function clearActiveLookbook(projectName: string): Promise<void> {
+export async function clearLookbookSelection(
+  projectName: string,
+  type: LookbookType
+): Promise<void> {
   await writeJson(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/active-selection`,
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/selection/${encodeURIComponent(type)}`,
     'DELETE',
     {}
   );

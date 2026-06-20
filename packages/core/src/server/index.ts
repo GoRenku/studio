@@ -53,7 +53,6 @@ export {
 } from './media-generation/shot-video-take/input-policy.js';
 export type {
   ChangeAssetSelectInput,
-  ClearActiveLookbookInput,
   ClearLookbookCardImageInput,
   CreateMovieProjectInput,
   CastMediaGenerationContextInput,
@@ -161,7 +160,6 @@ export type {
   SetActiveCastDesignInput,
   SetActiveLocationDesignInput,
   SetActiveScreenplayAnalysisInput,
-  SetActiveLookbookInput,
   SetLookbookCardImageInput,
   UpdateProjectInformationInput,
   UpdateSceneDialogueAudioGenerationSpecInput,
@@ -248,7 +246,7 @@ export type {
   InspirationAnalysisDocument,
   InspirationAnalysisSections,
   LookbookDocument,
-  LookbookSections,
+  MovieLookbookSections,
   LookbookSourceInspirationsDocument,
   VisualLanguageStoredSectionKind,
 } from './visual-language-json/validator.js';
@@ -313,6 +311,7 @@ export type {
   InspiredByItem,
   InspiredBySection,
   Lookbook,
+  LookbookType,
   LookbookImage,
   LookbookImageAsset,
   LookbookImageAssetFile,

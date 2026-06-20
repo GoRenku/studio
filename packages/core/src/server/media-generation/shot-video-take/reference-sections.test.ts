@@ -109,9 +109,10 @@ describe('shot video take preflight and validation', () => {
       document: shotVideoTakeProject.lookbookDocument(),
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.setActiveLookbook({
+    await projectData.selectLookbookForType({
       projectName: 'constantinople',
       homeDir,
+      type: 'movie',
       lookbookId: lookbook.lookbook.id,
     });
 
@@ -167,9 +168,10 @@ describe('shot video take preflight and validation', () => {
       document: shotVideoTakeProject.lookbookDocument(),
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.setActiveLookbook({
+    await projectData.selectLookbookForType({
       projectName: 'constantinople',
       homeDir,
+      type: 'movie',
       lookbookId: lookbook.lookbook.id,
     });
 
@@ -299,9 +301,10 @@ describe('shot video take preflight and validation', () => {
       document: shotVideoTakeProject.lookbookDocument(),
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.setActiveLookbook({
+    await projectData.selectLookbookForType({
       projectName: 'constantinople',
       homeDir,
+      type: 'movie',
       lookbookId: lookbook.lookbook.id,
     });
     await shotVideoTakeProject.writeProjectFile('generated/media/lookbook-sheet-a.png', 'sheet a');

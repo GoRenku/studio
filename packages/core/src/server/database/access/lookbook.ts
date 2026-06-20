@@ -1,21 +1,19 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
-import type { Lookbook } from '../../../client/index.js';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import type { Lookbook, LookbookType } from '../../../client/index.js';
 import {
   lookbook,
   lookbookCardImages,
-  visualLanguageState,
+  lookbookSelections,
+  storyboardLookbookSourceMovies,
 } from '../../schema/index.js';
 import {
-  parseStoredVisualLanguageSection,
-  type LookbookSections,
+  parseStoredLookbookDefinition,
 } from '../../visual-language-json/validator.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
-export const VISUAL_LANGUAGE_STATE_ID = 'visual_language_state';
-
 export type LookbookRecord = typeof lookbook.$inferSelect;
-export type VisualLanguageStateRecord = typeof visualLanguageState.$inferSelect;
+export type LookbookSelectionRecord = typeof lookbookSelections.$inferSelect;
 export type LookbookCardImageRecord = typeof lookbookCardImages.$inferSelect;
 
 export function listLookbookRecords(session: DatabaseSession): LookbookRecord[] {
@@ -60,7 +58,8 @@ export function insertLookbookRecord(
   input: {
     id: string;
     name: string;
-    sections: Record<keyof LookbookSections, string>;
+    type: LookbookType;
+    definitionJson: string;
     now: string;
   }
 ): void {
@@ -69,13 +68,8 @@ export function insertLookbookRecord(
     .values({
       id: input.id,
       name: input.name,
-      thesis: input.sections.thesis,
-      palette: input.sections.palette,
-      toneMood: input.sections.toneMood,
-      composition: input.sections.composition,
-      lighting: input.sections.lighting,
-      texture: input.sections.texture,
-      camera: input.sections.camera,
+      type: input.type,
+      definitionJson: input.definitionJson,
       createdAt: input.now,
       updatedAt: input.now,
     })
@@ -87,7 +81,7 @@ export function updateLookbookRecord(
   input: {
     lookbookId: string;
     name?: string;
-    sections?: Record<keyof LookbookSections, string>;
+    definitionJson?: string;
     now: string;
   }
 ): void {
@@ -96,13 +90,7 @@ export function updateLookbookRecord(
     .update(lookbook)
     .set({
       name: input.name ?? row.name,
-      thesis: input.sections?.thesis ?? row.thesis,
-      palette: input.sections?.palette ?? row.palette,
-      toneMood: input.sections?.toneMood ?? row.toneMood,
-      composition: input.sections?.composition ?? row.composition,
-      lighting: input.sections?.lighting ?? row.lighting,
-      texture: input.sections?.texture ?? row.texture,
-      camera: input.sections?.camera ?? row.camera,
+      definitionJson: input.definitionJson ?? row.definitionJson,
       updatedAt: input.now,
     })
     .where(eq(lookbook.id, input.lookbookId))
@@ -116,47 +104,151 @@ export function deleteLookbookRecord(
   session.db.delete(lookbook).where(eq(lookbook.id, lookbookId)).run();
 }
 
-export function readVisualLanguageStateRecord(
+export function listSelectedLookbookIdsByType(
   session: DatabaseSession
-): VisualLanguageStateRecord | null {
+): Partial<Record<LookbookType, string>> {
+  const selections = session.db.select().from(lookbookSelections).all();
+  return Object.fromEntries(
+    selections.map((selection) => [selection.lookbookType, selection.lookbookId])
+  ) as Partial<Record<LookbookType, string>>;
+}
+
+export function readSelectedLookbookId(
+  session: DatabaseSession,
+  type: LookbookType
+): string | null {
   return (
     session.db
-      .select()
-      .from(visualLanguageState)
-      .where(eq(visualLanguageState.id, VISUAL_LANGUAGE_STATE_ID))
-      .get() ?? null
+      .select({ lookbookId: lookbookSelections.lookbookId })
+      .from(lookbookSelections)
+      .where(eq(lookbookSelections.lookbookType, type))
+      .get()?.lookbookId ?? null
   );
 }
 
-export function readActiveLookbookId(session: DatabaseSession): string | null {
-  return readVisualLanguageStateRecord(session)?.activeLookbookId ?? null;
+export function readSelectedMovieLookbookId(
+  session: DatabaseSession
+): string | null {
+  return readSelectedLookbookId(session, 'movie');
 }
 
-export function setActiveLookbookRecord(
+export function readSelectedStoryboardLookbookId(
+  session: DatabaseSession
+): string | null {
+  return readSelectedLookbookId(session, 'storyboard');
+}
+
+export function setLookbookSelectionRecord(
   session: DatabaseSession,
-  input: { lookbookId: string | null; now: string }
+  input: { type: LookbookType; lookbookId: string; now: string }
 ): void {
-  const existing = readVisualLanguageStateRecord(session);
+  const existing = readSelectedLookbookId(session, input.type);
   if (existing) {
     session.db
-      .update(visualLanguageState)
+      .update(lookbookSelections)
       .set({
-        activeLookbookId: input.lookbookId,
+        lookbookId: input.lookbookId,
         updatedAt: input.now,
       })
-      .where(eq(visualLanguageState.id, VISUAL_LANGUAGE_STATE_ID))
+      .where(eq(lookbookSelections.lookbookType, input.type))
       .run();
     return;
   }
   session.db
-    .insert(visualLanguageState)
+    .insert(lookbookSelections)
     .values({
-      id: VISUAL_LANGUAGE_STATE_ID,
-      activeLookbookId: input.lookbookId,
-      createdAt: input.now,
+      lookbookType: input.type,
+      lookbookId: input.lookbookId,
+      selectedAt: input.now,
       updatedAt: input.now,
     })
     .run();
+}
+
+export function clearLookbookSelectionRecord(
+  session: DatabaseSession,
+  type: LookbookType
+): void {
+  session.db
+    .delete(lookbookSelections)
+    .where(eq(lookbookSelections.lookbookType, type))
+    .run();
+}
+
+export function clearLookbookSelectionForLookbookRecord(
+  session: DatabaseSession,
+  input: { lookbookId: string; type: LookbookType }
+): void {
+  session.db
+    .delete(lookbookSelections)
+    .where(
+      and(
+        eq(lookbookSelections.lookbookType, input.type),
+        eq(lookbookSelections.lookbookId, input.lookbookId)
+      )
+    )
+    .run();
+}
+
+export function replaceStoryboardLookbookSourceMovieRecords(
+  session: DatabaseSession,
+  input: {
+    storyboardLookbookId: string;
+    movieLookbookIds: string[];
+    now: string;
+  }
+): void {
+  session.db
+    .delete(storyboardLookbookSourceMovies)
+    .where(
+      eq(
+        storyboardLookbookSourceMovies.storyboardLookbookId,
+        input.storyboardLookbookId
+      )
+    )
+    .run();
+  input.movieLookbookIds.forEach((movieLookbookId, index) => {
+    session.db
+      .insert(storyboardLookbookSourceMovies)
+      .values({
+        storyboardLookbookId: input.storyboardLookbookId,
+        movieLookbookId,
+        sortOrder: index + 1,
+        createdAt: input.now,
+        updatedAt: input.now,
+      })
+      .run();
+  });
+}
+
+export function listStoryboardSourceMovieIdsByLookbookId(
+  session: DatabaseSession,
+  lookbookIds: string[]
+): Map<string, string[]> {
+  const sourceIdsByLookbookId = new Map<string, string[]>();
+  if (lookbookIds.length === 0) {
+    return sourceIdsByLookbookId;
+  }
+  const rows = session.db
+    .select()
+    .from(storyboardLookbookSourceMovies)
+    .where(
+      and(
+        inArray(storyboardLookbookSourceMovies.storyboardLookbookId, lookbookIds),
+        isNull(storyboardLookbookSourceMovies.discardedAt)
+      )
+    )
+    .orderBy(
+      asc(storyboardLookbookSourceMovies.storyboardLookbookId),
+      asc(storyboardLookbookSourceMovies.sortOrder)
+    )
+    .all();
+  for (const row of rows) {
+    const existing = sourceIdsByLookbookId.get(row.storyboardLookbookId) ?? [];
+    existing.push(row.movieLookbookId);
+    sourceIdsByLookbookId.set(row.storyboardLookbookId, existing);
+  }
+  return sourceIdsByLookbookId;
 }
 
 export function readLookbookCardImageId(
@@ -222,44 +314,29 @@ export function clearLookbookCardImageRecord(
     .run();
 }
 
-export function toLookbook(row: LookbookRecord): Lookbook {
+export function toLookbook(
+  row: LookbookRecord,
+  input?: { sourceMovieLookbookIds?: string[] }
+): Lookbook {
+  if (row.type === 'movie') {
+    return {
+      id: row.id,
+      name: row.name,
+      type: 'movie',
+      definition: parseStoredLookbookDefinition({
+        type: 'movie',
+        value: row.definitionJson,
+      }),
+    };
+  }
   return {
     id: row.id,
     name: row.name,
-    thesis: parseStoredVisualLanguageSection({
-      value: row.thesis,
-      section: 'thesis',
-      path: ['thesis'],
+    type: 'storyboard',
+    definition: parseStoredLookbookDefinition({
+      type: 'storyboard',
+      value: row.definitionJson,
     }),
-    palette: parseStoredVisualLanguageSection({
-      value: row.palette,
-      section: 'palette',
-      path: ['palette'],
-    }),
-    toneMood: parseStoredVisualLanguageSection({
-      value: row.toneMood,
-      section: 'toneMood',
-      path: ['toneMood'],
-    }),
-    composition: parseStoredVisualLanguageSection({
-      value: row.composition,
-      section: 'composition',
-      path: ['composition'],
-    }),
-    lighting: parseStoredVisualLanguageSection({
-      value: row.lighting,
-      section: 'lighting',
-      path: ['lighting'],
-    }),
-    texture: parseStoredVisualLanguageSection({
-      value: row.texture,
-      section: 'texture',
-      path: ['texture'],
-    }),
-    camera: parseStoredVisualLanguageSection({
-      value: row.camera,
-      section: 'camera',
-      path: ['camera'],
-    }),
+    sourceMovieLookbookIds: input?.sourceMovieLookbookIds ?? [],
   };
 }

@@ -7,8 +7,13 @@ import {
 } from '@gorenku/studio-diagnostics';
 import type {
   InspirationAnalysis,
-  Lookbook,
+  LookbookDefinitionByType,
   LookbookSection,
+  LookbookType,
+  MovieLookbookDefinition,
+  MovieLookbookSection,
+  StoryboardLookbookDefinition,
+  StoryboardLookbookSection,
 } from '../../client/index.js';
 import {
   cameraSectionSchema,
@@ -20,6 +25,7 @@ import {
   lookbookSourceInspirationsDocumentSchema,
   paletteSectionSchema,
   patternSectionSchema,
+  storyboardLookbookSectionsSchema,
   textureSectionSchema,
   thesisSectionSchema,
   toneMoodSectionSchema,
@@ -34,6 +40,12 @@ const schemaIds = {
   texture: 'https://schemas.gorenku.com/studio/visual-language-texture-section.schema.json',
   inspiredBy: 'https://schemas.gorenku.com/studio/visual-language-inspired-by-section.schema.json',
   camera: 'https://schemas.gorenku.com/studio/visual-language-camera-section.schema.json',
+  styleBrief: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
+  lineAndFinish: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
+  valueAndAccent: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
+  panelAndNotation: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
+  continuityAndClarity: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
+  guardrails: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
 } as const;
 
 const ajv = new Ajv2020({
@@ -55,11 +67,13 @@ ajv.addSchema(cameraSectionSchema);
 ajv.addSchema(inspirationAnalysisSectionsSchema);
 ajv.addSchema(inspirationAnalysisDocumentSchema);
 ajv.addSchema(lookbookSectionsSchema);
+ajv.addSchema(storyboardLookbookSectionsSchema);
 ajv.addSchema(lookbookDocumentSchema);
 ajv.addSchema(lookbookSourceInspirationsDocumentSchema);
 
 export type InspirationAnalysisSections = Omit<InspirationAnalysis, 'folderId'>;
-export type LookbookSections = Omit<Lookbook, 'id' | 'name'>;
+export type MovieLookbookSections = MovieLookbookDefinition;
+export type LookbookDefinition = LookbookDefinitionByType[LookbookType];
 export type VisualLanguageStoredSectionKind = keyof typeof schemaIds;
 
 export interface InspirationAnalysisDocument {
@@ -67,11 +81,20 @@ export interface InspirationAnalysisDocument {
   analysis: InspirationAnalysisSections;
 }
 
-export interface LookbookDocument {
-  kind: 'lookbook';
-  lookbook: LookbookSections;
+export interface MovieLookbookDocument {
+  kind: 'movieLookbook';
+  movieLookbook: MovieLookbookDefinition & { name: string };
   sourceInspirationFolderIds?: string[];
 }
+
+export interface StoryboardLookbookDocument {
+  kind: 'storyboardLookbook';
+  storyboardLookbook: StoryboardLookbookDefinition & { name: string };
+  sourceInspirationFolderIds?: string[];
+  sourceMovieLookbookIds?: string[];
+}
+
+export type LookbookDocument = MovieLookbookDocument | StoryboardLookbookDocument;
 
 export interface LookbookSourceInspirationsDocument {
   kind: 'lookbookSourceInspirations';
@@ -147,23 +170,43 @@ export function serializeInspirationAnalysisDocument(input: {
   return serializeSections(input.document.analysis);
 }
 
-export function serializeLookbookSections(input: {
-  sections: LookbookSections;
+export function serializeLookbookDefinition(input: {
+  type: LookbookType;
+  definition: LookbookDefinition;
   filePath?: string;
-}): Record<keyof LookbookSections, string> {
-  validateLookbookSections(input);
-  return serializeSections(input.sections);
+}): string {
+  validateLookbookDefinition(input);
+  return JSON.stringify(input.definition);
 }
 
 export function serializeLookbookDocument(input: {
   document: LookbookDocument;
   filePath?: string;
-}): Record<keyof LookbookSections, string> {
+}): {
+  type: LookbookType;
+  name: string;
+  definitionJson: string;
+  sourceInspirationFolderIds: string[];
+  sourceMovieLookbookIds: string[];
+} {
   validateLookbookDocument({
     document: input.document,
     filePath: input.filePath,
   });
-  return serializeSections(input.document.lookbook);
+  const type = lookbookTypeFromDocument(input.document);
+  const { name, definition } = lookbookNameAndDefinitionFromDocument(
+    input.document
+  );
+  return {
+    type,
+    name,
+    definitionJson: JSON.stringify(definition),
+    sourceInspirationFolderIds: input.document.sourceInspirationFolderIds ?? [],
+    sourceMovieLookbookIds:
+      input.document.kind === 'storyboardLookbook'
+        ? input.document.sourceMovieLookbookIds ?? []
+        : [],
+  };
 }
 
 export function validateInspirationAnalysisSections(input: {
@@ -216,21 +259,23 @@ export function validateInspirationAnalysisDocument(input: {
   );
 }
 
-export function validateLookbookSections(input: {
-  sections: LookbookSections;
+export function validateLookbookDefinition(input: {
+  type: LookbookType;
+  definition: LookbookDefinition;
   filePath?: string;
 }): void {
-  const issues = [
-    ...validateSection(input.sections.thesis, 'thesis', ['thesis'], input.filePath),
-    ...validateSection(input.sections.palette, 'palette', ['palette'], input.filePath),
-    ...validateSection(input.sections.toneMood, 'toneMood', ['toneMood'], input.filePath),
-    ...validateSection(input.sections.composition, 'composition', ['composition'], input.filePath),
-    ...validateSection(input.sections.lighting, 'lighting', ['lighting'], input.filePath),
-    ...validateSection(input.sections.texture, 'texture', ['texture'], input.filePath),
-    ...validateSection(input.sections.camera, 'camera', ['camera'], input.filePath),
-  ];
+  const issues =
+    input.type === 'movie'
+      ? validateMovieLookbookDefinition(
+          input.definition as MovieLookbookDefinition,
+          input.filePath
+        )
+      : validateStoryboardLookbookDefinition(
+          input.definition as StoryboardLookbookDefinition,
+          input.filePath
+        );
   if (issues.length === 0) {
-    issues.push(...rejectLookbookImageFileReferences(input.sections, input.filePath));
+    issues.push(...rejectLookbookImageFileReferences(input.definition, input.filePath));
   }
   throwVisualLanguageValidationIssues(issues, 'Visual Language JSON failed validation.');
 }
@@ -246,11 +291,13 @@ export function validateLookbookDocument(input: {
   if (shapeIssues.length > 0) {
     return;
   }
-  const imageIssues = rejectLookbookImageFileReferences(
-    input.document.lookbook,
-    input.filePath,
-    ['lookbook']
-  );
+  const payload =
+    input.document.kind === 'movieLookbook'
+      ? input.document.movieLookbook
+      : input.document.storyboardLookbook;
+  const imageIssues = rejectLookbookImageFileReferences(payload, input.filePath, [
+    input.document.kind === 'movieLookbook' ? 'movieLookbook' : 'storyboardLookbook',
+  ]);
   throwVisualLanguageValidationIssues(
     imageIssues,
     'Visual Language JSON failed validation.'
@@ -302,31 +349,144 @@ export function parseStoredVisualLanguageSection<T>(input: {
   return parsed as T;
 }
 
-export function assertLookbookSections(sections: string[]): LookbookSection[] {
-  const allowed = new Set<LookbookSection>([
+export function parseStoredLookbookDefinition<T extends LookbookType>(input: {
+  type: T;
+  value: string;
+}): LookbookDefinitionByType[T] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input.value);
+  } catch {
+    throwVisualLanguageValidationIssues(
+      [
+        createDiagnosticError(
+          'PROJECT_DATA201',
+          'Stored Lookbook definition must be valid JSON.',
+          { path: ['definitionJson'] },
+          'Repair the stored Lookbook definition JSON.'
+        ),
+      ],
+      'Stored Visual Language JSON failed validation.'
+    );
+  }
+  validateLookbookDefinition({
+    type: input.type,
+    definition: parsed as LookbookDefinition,
+  });
+  return parsed as LookbookDefinitionByType[T];
+}
+
+export const movieLookbookSections = [
     'thesis',
     'palette',
-    'tone_mood',
+    'toneMood',
     'composition',
     'lighting',
     'texture',
     'camera',
-  ]);
+  ] as const satisfies readonly MovieLookbookSection[];
+
+export const storyboardLookbookSections = [
+  'styleBrief',
+  'lineAndFinish',
+  'valueAndAccent',
+  'panelAndNotation',
+  'continuityAndClarity',
+  'guardrails',
+] as const satisfies readonly StoryboardLookbookSection[];
+
+export function lookbookSectionsForType(type: LookbookType): readonly LookbookSection[] {
+  return type === 'movie' ? movieLookbookSections : storyboardLookbookSections;
+}
+
+export function assertLookbookSectionsForType(
+  type: LookbookType,
+  sections: string[]
+): LookbookSection[] {
+  const allowed = new Set<LookbookSection>(lookbookSectionsForType(type));
   const invalid = sections.filter((section) => !allowed.has(section as LookbookSection));
   if (invalid.length > 0) {
     throwVisualLanguageValidationIssues(
       invalid.map((section) =>
         createDiagnosticError(
-          'PROJECT_DATA234',
-          `Unsupported Lookbook section: ${section}.`,
+          'CORE_LOOKBOOK_SECTION_INVALID_FOR_TYPE',
+          `Unsupported ${type} Lookbook section: ${section}.`,
           { path: ['sections'] },
-          'Use thesis, palette, tone_mood, composition, lighting, texture, or camera.'
+          `Use ${lookbookSectionsForType(type).join(', ')}.`
         )
       ),
       'Lookbook image sections failed validation.'
     );
   }
   return sections as LookbookSection[];
+}
+
+export function lookbookTypeFromDocument(document: LookbookDocument): LookbookType {
+  return document.kind === 'movieLookbook' ? 'movie' : 'storyboard';
+}
+
+export function lookbookNameAndDefinitionFromDocument(
+  document: LookbookDocument
+): {
+  name: string;
+  definition: LookbookDefinition;
+} {
+  if (document.kind === 'movieLookbook') {
+    const { name, ...definition } = document.movieLookbook;
+    return { name, definition };
+  }
+  const { name, ...definition } = document.storyboardLookbook;
+  return { name, definition };
+}
+
+export function assertLookbookType(value: string): LookbookType {
+  if (value === 'movie' || value === 'storyboard') {
+    return value;
+  }
+  throwVisualLanguageValidationIssues(
+    [
+      createDiagnosticError(
+        'CORE_LOOKBOOK_TYPE_REQUIRED',
+        `Unsupported Lookbook type: ${value}.`,
+        { path: ['type'] },
+        'Use movie or storyboard.'
+      ),
+    ],
+    'Lookbook type failed validation.'
+  );
+  throw new Error('Unreachable Lookbook type validation state.');
+}
+
+function validateMovieLookbookDefinition(
+  definition: MovieLookbookDefinition,
+  filePath?: string
+): DiagnosticIssue[] {
+  return [
+    ...validateSection(definition.thesis, 'thesis', ['thesis'], filePath),
+    ...validateSection(definition.palette, 'palette', ['palette'], filePath),
+    ...validateSection(definition.toneMood, 'toneMood', ['toneMood'], filePath),
+    ...validateSection(
+      definition.composition,
+      'composition',
+      ['composition'],
+      filePath
+    ),
+    ...validateSection(definition.lighting, 'lighting', ['lighting'], filePath),
+    ...validateSection(definition.texture, 'texture', ['texture'], filePath),
+    ...validateSection(definition.camera, 'camera', ['camera'], filePath),
+  ];
+}
+
+function validateStoryboardLookbookDefinition(
+  definition: StoryboardLookbookDefinition,
+  filePath?: string
+): DiagnosticIssue[] {
+  const validator = ajv.getSchema(storyboardLookbookSectionsSchema.$id);
+  if (!validator) {
+    throw new Error('Storyboard Lookbook JSON schema was not registered.');
+  }
+  const valid = validator(definition);
+  return valid ? [] : mapAjvErrors(validator.errors ?? [], [], filePath);
 }
 
 function validateSection(

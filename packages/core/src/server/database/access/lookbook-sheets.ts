@@ -3,10 +3,12 @@ import type {
   LookbookSheet,
   LookbookSheetAsset,
   LookbookSheetAssetFile,
+  LookbookType,
 } from '../../../client/index.js';
 import {
   assetFiles,
   assets,
+  lookbook,
   lookbookSheets,
 } from '../../schema/index.js';
 import { normalizeProjectRelativePath } from '../../files/project-relative-paths.js';
@@ -20,6 +22,7 @@ interface LookbookSheetAssetRow {
   lookbookId: string;
   assetId: string;
   sortOrder: number;
+  lookbookType: LookbookType;
   type: string;
   mediaKind: string;
   title: string;
@@ -138,6 +141,7 @@ export function listLookbookSheets(
       lookbookId: lookbookSheets.lookbookId,
       assetId: lookbookSheets.assetId,
       sortOrder: lookbookSheets.sortOrder,
+      lookbookType: lookbook.type,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -149,6 +153,7 @@ export function listLookbookSheets(
     })
     .from(lookbookSheets)
     .innerJoin(assets, eq(assets.id, lookbookSheets.assetId))
+    .innerJoin(lookbook, eq(lookbook.id, lookbookSheets.lookbookId))
     .where(and(eq(lookbookSheets.lookbookId, lookbookId), isNull(lookbookSheets.discardedAt)))
     .orderBy(asc(lookbookSheets.sortOrder), asc(lookbookSheets.id))
     .all() as LookbookSheetAssetRow[];
@@ -156,6 +161,8 @@ export function listLookbookSheets(
   const assetFilesByAssetId = readAssetFilesForRows(session, rows);
   return rows.map((row) => ({
     id: row.id,
+    lookbookId: row.lookbookId,
+    lookbookType: row.lookbookType,
     asset: toLookbookSheetAsset(row, assetFilesByAssetId),
   }));
 }
@@ -170,6 +177,7 @@ export function readLookbookSheet(
       lookbookId: lookbookSheets.lookbookId,
       assetId: lookbookSheets.assetId,
       sortOrder: lookbookSheets.sortOrder,
+      lookbookType: lookbook.type,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -181,6 +189,7 @@ export function readLookbookSheet(
     })
     .from(lookbookSheets)
     .innerJoin(assets, eq(assets.id, lookbookSheets.assetId))
+    .innerJoin(lookbook, eq(lookbook.id, lookbookSheets.lookbookId))
     .where(and(eq(lookbookSheets.id, sheetId), isNull(lookbookSheets.discardedAt)))
     .get() as LookbookSheetAssetRow | undefined;
   if (!row) {
@@ -188,6 +197,8 @@ export function readLookbookSheet(
   }
   return {
     id: row.id,
+    lookbookId: row.lookbookId,
+    lookbookType: row.lookbookType,
     asset: toLookbookSheetAsset(row, readAssetFilesForRows(session, [row])),
   };
 }

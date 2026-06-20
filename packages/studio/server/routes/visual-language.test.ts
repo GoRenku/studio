@@ -15,13 +15,13 @@ function createMountedVisualLanguageRoute(
 }
 
 describe('visual language Hono route', () => {
-  it('routes active Lookbook clearing before parameterized Lookbook deletes', async () => {
-    let clearActiveCalled = false;
+  it('routes typed Lookbook selection clearing before parameterized Lookbook deletes', async () => {
+    let clearSelectionCalled = false;
     let deletedLookbookId: string | null = null;
     const app = createMountedVisualLanguageRoute({
       ...fakeProjectDataService(),
-      async clearActiveLookbook() {
-        clearActiveCalled = true;
+      async clearLookbookSelection() {
+        clearSelectionCalled = true;
         return {
           valid: true,
           warnings: [],
@@ -41,12 +41,12 @@ describe('visual language Hono route', () => {
     });
 
     const response = await app.request(
-      '/constantinople/visual-language/lookbooks/active-selection',
+      '/constantinople/visual-language/lookbooks/selection/movie',
       { method: 'DELETE' }
     );
 
     expect(response.status).toBe(200);
-    expect(clearActiveCalled).toBe(true);
+    expect(clearSelectionCalled).toBe(true);
     expect(deletedLookbookId).toBeNull();
   });
 
@@ -104,15 +104,8 @@ describe('visual language Hono route', () => {
     expect(body.image.image).toBeUndefined();
   });
 
-  it('requires a tagged Lookbook document when creating Lookbooks', async () => {
-    let createCalled = false;
-    const app = createMountedVisualLanguageRoute({
-      ...fakeProjectDataService(),
-      async createLookbook(input) {
-        createCalled = true;
-        return fakeProjectDataService().createLookbook(input);
-      },
-    });
+  it('does not expose Studio Lookbook creation', async () => {
+    const app = createMountedVisualLanguageRoute(fakeProjectDataService());
 
     const response = await app.request(
       '/constantinople/visual-language/lookbooks',
@@ -125,14 +118,7 @@ describe('visual language Hono route', () => {
       }
     );
 
-    expect(response.status).toBe(400);
-    expect(createCalled).toBe(false);
-    await expect(response.json()).resolves.toMatchObject({
-      error: {
-        code: 'STUDIO_SERVER039',
-        issues: [{ code: 'STUDIO_SERVER039', location: { path: ['document'] } }],
-      },
-    });
+    expect(response.status).toBe(404);
   });
 
   it('returns Inspiration folder mutation resource keys', async () => {
@@ -179,116 +165,20 @@ describe('visual language Hono route', () => {
     });
   });
 
-  it('returns Lookbook mutation resource keys', async () => {
-    const document = makeLookbookDocument();
-    const app = createMountedVisualLanguageRoute({
-      ...fakeProjectDataService(),
-      async createLookbook(input) {
-        return {
-          valid: true,
-          warnings: [],
-          project: { name: 'constantinople' },
-          changes: [{ type: 'lookbook.created' as const }],
-          lookbook: {
-            id: 'lookbook_test0001',
-            ...input.document.lookbook,
-            name: input.name,
-          },
-          sourceInspirationFolders: [],
-          resourceKeys: [
-            'surface:visual-language:lookbooks',
-            'surface:visual-language:lookbook:lookbook_test0001',
-          ],
-        };
-      },
-    });
-
-    const response = await app.request(
-      '/constantinople/visual-language/lookbooks',
-      {
-        method: 'POST',
-        body: JSON.stringify({ name: 'Noir', document }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      lookbook: { id: 'lookbook_test0001', name: 'Noir' },
-      resourceKeys: [
-        'surface:visual-language:lookbooks',
-        'surface:visual-language:lookbook:lookbook_test0001',
-      ],
-    });
-  });
-
-  it('updates Lookbooks from a tagged document body', async () => {
-    const document = makeLookbookDocument();
-    let receivedDocument: unknown = null;
-    const app = createMountedVisualLanguageRoute({
-      ...fakeProjectDataService(),
-      async updateLookbook(input) {
-        receivedDocument = input.document;
-        return fakeProjectDataService().updateLookbook(input);
-      },
-    });
+  it('does not expose Studio Lookbook updates', async () => {
+    const app = createMountedVisualLanguageRoute(fakeProjectDataService());
 
     const response = await app.request(
       '/constantinople/visual-language/lookbooks/lookbook_test0001',
       {
         method: 'PATCH',
-        body: JSON.stringify({ document }),
+        body: JSON.stringify({ name: 'Noir' }),
         headers: {
           'Content-Type': 'application/json',
         },
       }
     );
 
-    expect(response.status).toBe(200);
-    expect(receivedDocument).toEqual(document);
+    expect(response.status).toBe(404);
   });
 });
-
-function makeLookbookDocument() {
-  const pattern = { name: 'Frames within frames', description: 'Precise blocking.' };
-
-  return {
-    kind: 'lookbook',
-    lookbook: {
-      thesis: {
-        statement: 'Formal tension with restrained warmth.',
-        principles: ['Composed frames', 'Controlled contrast'],
-      },
-      palette: {
-        description: 'Low-saturation jewel tones.',
-        colors: [{ hex: '#112233', name: 'Ink blue', meaning: 'Restraint' }],
-        observations: [],
-      },
-      toneMood: {
-        tone: 'Measured',
-        moodTags: ['elegant'],
-        description: 'Calm surfaces with pressure underneath.',
-      },
-      composition: {
-        description: 'Balanced geometry.',
-        patterns: [pattern],
-      },
-      lighting: {
-        description: 'Soft directional pools.',
-        patterns: [pattern],
-      },
-      texture: {
-        description: 'Matte, tactile finishes.',
-        observations: [],
-      },
-      camera: {
-        description: 'Stillness broken by exact movement.',
-        movement: [pattern],
-        motion: [pattern],
-        framing: [pattern],
-      },
-    },
-  };
-}
