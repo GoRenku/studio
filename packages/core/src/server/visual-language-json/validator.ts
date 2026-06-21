@@ -43,8 +43,6 @@ const schemaIds = {
   styleBrief: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
   lineAndFinish: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
   valueAndAccent: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
-  panelAndNotation: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
-  continuityAndClarity: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
   guardrails: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
 } as const;
 
@@ -377,21 +375,19 @@ export function parseStoredLookbookDefinition<T extends LookbookType>(input: {
 }
 
 export const movieLookbookSections = [
-    'thesis',
-    'palette',
-    'toneMood',
-    'composition',
-    'lighting',
-    'texture',
-    'camera',
-  ] as const satisfies readonly MovieLookbookSection[];
+  'thesis',
+  'palette',
+  'toneMood',
+  'composition',
+  'lighting',
+  'texture',
+  'camera',
+] as const satisfies readonly MovieLookbookSection[];
 
 export const storyboardLookbookSections = [
   'styleBrief',
   'lineAndFinish',
   'valueAndAccent',
-  'panelAndNotation',
-  'continuityAndClarity',
   'guardrails',
 ] as const satisfies readonly StoryboardLookbookSection[];
 

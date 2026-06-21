@@ -203,8 +203,6 @@ function context(): LookbookImageGenerationContext {
       styleBrief: [],
       lineAndFinish: [],
       valueAndAccent: [],
-      panelAndNotation: [],
-      continuityAndClarity: [],
       guardrails: [],
     },
     cardImage: null,

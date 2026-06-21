@@ -76,16 +76,49 @@ export interface MovieLookbookDefinition {
 }
 
 export interface StoryboardLookbookDefinition {
-  styleBrief: StoryboardLookbookTextSection;
-  lineAndFinish: StoryboardLookbookTextSection;
-  valueAndAccent: StoryboardLookbookTextSection;
-  panelAndNotation: StoryboardLookbookTextSection;
-  continuityAndClarity: StoryboardLookbookTextSection;
-  guardrails: StoryboardLookbookTextSection;
+  styleBrief: StoryboardStyleBriefSection;
+  lineAndFinish: StoryboardLineAndFinishSection;
+  valueAndAccent: StoryboardValueAndAccentSection;
+  guardrails: StoryboardGuardrailsSection;
 }
 
 export interface StoryboardLookbookTextSection {
   text: string;
+}
+
+/**
+ * Style brief: the overall medium, substrate, and palette. `text` is the
+ * prompt-facing source of truth; the optional fields drive the section widgets
+ * and are style-agnostic (graphite, realistic, cartoon, full colour, ...).
+ */
+export interface StoryboardStyleBriefSection extends StoryboardLookbookTextSection {
+  styleKind?: string;
+  palette?: ColorSwatch[];
+  tags?: string[];
+}
+
+export interface StoryboardLineAndFinishSection
+  extends StoryboardLookbookTextSection {
+  marks?: StoryboardMark[];
+  hatching?: string;
+}
+
+export interface StoryboardMark {
+  label: string;
+  thickness: number;
+}
+
+export interface StoryboardValueAndAccentSection
+  extends StoryboardLookbookTextSection {
+  valueSteps?: string[];
+  contrast?: string;
+  accents?: ColorSwatch[];
+}
+
+export interface StoryboardGuardrailsSection
+  extends StoryboardLookbookTextSection {
+  forbidden?: string[];
+  favored?: string[];
 }
 
 export type MovieLookbookSection =
@@ -101,8 +134,6 @@ export type StoryboardLookbookSection =
   | 'styleBrief'
   | 'lineAndFinish'
   | 'valueAndAccent'
-  | 'panelAndNotation'
-  | 'continuityAndClarity'
   | 'guardrails';
 
 export type LookbookSection = MovieLookbookSection | StoryboardLookbookSection;

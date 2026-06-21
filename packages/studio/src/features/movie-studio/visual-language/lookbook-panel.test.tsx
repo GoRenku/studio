@@ -223,8 +223,6 @@ function lookbookResource(
       styleBrief: [],
       lineAndFinish: [],
       valueAndAccent: [],
-      panelAndNotation: [],
-      continuityAndClarity: [],
       guardrails: [],
     },
   };

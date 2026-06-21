@@ -412,6 +412,72 @@ describe('visual language commands', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('discards and restores Storyboard source links when deleting a source Movie Lookbook', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+
+    const ids = createDeterministicIdGenerator();
+    const movie = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Source Movie Lookbook',
+      document: lookbookDocument(),
+      idGenerator: ids,
+    });
+    const storyboard = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Storyboard Lookbook',
+      document: storyboardLookbookDocument([movie.lookbook.id]),
+      idGenerator: ids,
+    });
+
+    await expect(
+      projectData.readLookbook({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: storyboard.lookbook.id,
+      })
+    ).resolves.toMatchObject({
+      lookbook: { sourceMovieLookbookIds: [movie.lookbook.id] },
+    });
+
+    const deletedMovie = await projectData.deleteLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: movie.lookbook.id,
+    });
+
+    await expect(
+      projectData.readLookbook({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: storyboard.lookbook.id,
+      })
+    ).resolves.toMatchObject({
+      lookbook: { sourceMovieLookbookIds: [] },
+    });
+
+    await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: deletedMovie.recovery!.restoreCommand.trashItemId,
+    });
+
+    await expect(
+      projectData.readLookbook({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: storyboard.lookbook.id,
+      })
+    ).resolves.toMatchObject({
+      lookbook: { sourceMovieLookbookIds: [movie.lookbook.id] },
+    });
+  });
+
   it('keeps independently discarded Lookbook children discarded when restoring the parent Lookbook', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
@@ -639,5 +705,20 @@ function lookbookDocument(sourceInspirationFolderIds: string[] = []) {
       ...lookbookSections(),
     },
     sourceInspirationFolderIds,
+  };
+}
+
+function storyboardLookbookDocument(sourceMovieLookbookIds: string[] = []) {
+  return {
+    kind: 'storyboardLookbook' as const,
+    storyboardLookbook: {
+      name: 'Storyboard Boards',
+      styleBrief: { text: 'Graphite storyboard frames with clear staging.' },
+      lineAndFinish: { text: 'Loose pencil construction with crisp ink accents.' },
+      valueAndAccent: { text: 'Soft gray values with restrained warm accents.' },
+      guardrails: { text: 'Avoid photoreal stills and decorative text inside panels.' },
+    },
+    sourceInspirationFolderIds: [],
+    sourceMovieLookbookIds,
   };
 }

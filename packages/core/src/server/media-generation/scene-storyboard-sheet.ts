@@ -1153,8 +1153,6 @@ function buildProviderPrompt(
     `Storyboard Lookbook style: ${context.selectedStoryboardLookbook.definition.styleBrief.text}`,
     `Storyboard line and finish: ${context.selectedStoryboardLookbook.definition.lineAndFinish.text}`,
     `Storyboard value and accent: ${context.selectedStoryboardLookbook.definition.valueAndAccent.text}`,
-    `Storyboard panel and notation: ${context.selectedStoryboardLookbook.definition.panelAndNotation.text}`,
-    `Storyboard continuity and clarity: ${context.selectedStoryboardLookbook.definition.continuityAndClarity.text}`,
     `Storyboard guardrails: ${context.selectedStoryboardLookbook.definition.guardrails.text}`,
     context.selectedMovieLookbook
       ? `Movie Lookbook context: palette ${JSON.stringify(context.selectedMovieLookbook.definition.palette)}; lighting ${JSON.stringify(context.selectedMovieLookbook.definition.lighting)}; composition ${JSON.stringify(context.selectedMovieLookbook.definition.composition)}.`

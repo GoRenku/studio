@@ -37,6 +37,17 @@ SET
 		',"texture":' || `texture` ||
 		',"camera":' || `camera` ||
 		'}';--> statement-breakpoint
+UPDATE `lookbook_image_section`
+SET `section` = 'toneMood'
+WHERE `section` = 'tone_mood';--> statement-breakpoint
+UPDATE `media_generation_spec`
+SET `spec_json` = replace(`spec_json`, '"tone_mood"', '"toneMood"')
+WHERE `purpose` = 'lookbook.image'
+	AND `spec_json` LIKE '%"tone_mood"%';--> statement-breakpoint
+UPDATE `media_generation_run`
+SET `spec_snapshot_json` = replace(`spec_snapshot_json`, '"tone_mood"', '"toneMood"')
+WHERE `purpose` = 'lookbook.image'
+	AND `spec_snapshot_json` LIKE '%"tone_mood"%';--> statement-breakpoint
 INSERT INTO `lookbook_selection` (`lookbook_type`, `lookbook_id`, `selected_at`, `updated_at`)
 SELECT 'movie', `active_lookbook_id`, `updated_at`, `updated_at`
 FROM `visual_language_state`

@@ -1734,12 +1734,6 @@ function storyboardLookbookDocument() {
       valueAndAccent: {
         text: 'Muted gray value blocks with one restrained warm accent.',
       },
-      panelAndNotation: {
-        text: 'Clean panels, quiet gutters, and sparse camera notes outside image content.',
-      },
-      continuityAndClarity: {
-        text: 'Characters and spatial geography remain legible from panel to panel.',
-      },
       guardrails: {
         text: 'Avoid photoreal stills, decorative title text, and over-rendered noir contrast.',
       },

@@ -853,10 +853,8 @@ function storyboardLookbookSheetPrompt(
     `Style brief: ${definition.styleBrief.text}`,
     `Line and finish: ${definition.lineAndFinish.text}`,
     `Value and accent: ${definition.valueAndAccent.text}`,
-    `Panel and notation: ${definition.panelAndNotation.text}`,
-    `Continuity and clarity: ${definition.continuityAndClarity.text}`,
     `Guardrails: ${definition.guardrails.text}`,
-    'The sheet should be a production drawing-style reference: pencil/ink treatment, panel examples, annotations, value swatches, and do/don’t guardrails. Do not make photoreal cinematic stills.',
+    'The sheet should be a cohesive style reference for the storyboard medium: medium and mark-making samples, value swatches, palette/accent swatches, and do/don’t guardrails, matching the declared style rather than assuming pencil or photoreal.',
   ].join('\n');
 }
 

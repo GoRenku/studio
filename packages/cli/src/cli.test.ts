@@ -3682,8 +3682,6 @@ function storyboardLookbookJson() {
       styleBrief: { text: 'Graphite storyboard frames with clear staging.' },
       lineAndFinish: { text: 'Loose pencil construction with crisp ink accents.' },
       valueAndAccent: { text: 'Soft gray values with restrained warm accents.' },
-      panelAndNotation: { text: 'Clean panels and sparse camera notes outside image content.' },
-      continuityAndClarity: { text: 'Maintain geography and character identity across panels.' },
       guardrails: { text: 'Avoid photoreal stills and decorative text inside panels.' },
     },
     sourceMovieLookbookIds: [],

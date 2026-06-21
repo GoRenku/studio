@@ -232,12 +232,78 @@ export const lookbookSectionsSchema = {
   additionalProperties: false,
 } as const;
 
-const storyboardLookbookTextSection = {
+const hexColor = { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' } as const;
+
+const colorSwatch = {
+  type: 'object',
+  required: ['hex', 'name', 'meaning'],
+  properties: {
+    hex: hexColor,
+    name: trimmedString,
+    meaning: trimmedString,
+  },
+  additionalProperties: false,
+} as const;
+
+// Each storyboard section keeps `text` (the prompt-facing source of truth) and
+// adds optional, style-agnostic fields that drive the section widgets.
+const storyboardStyleBriefSection = {
   type: 'object',
   required: ['text'],
   properties: {
     text: trimmedString,
     imageFiles,
+    styleKind: trimmedString,
+    palette: { type: 'array', items: colorSwatch },
+    tags: { type: 'array', items: trimmedString },
+  },
+  additionalProperties: false,
+} as const;
+
+const storyboardLineAndFinishSection = {
+  type: 'object',
+  required: ['text'],
+  properties: {
+    text: trimmedString,
+    imageFiles,
+    marks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['label', 'thickness'],
+        properties: {
+          label: trimmedString,
+          thickness: { type: 'number', exclusiveMinimum: 0 },
+        },
+        additionalProperties: false,
+      },
+    },
+    hatching: trimmedString,
+  },
+  additionalProperties: false,
+} as const;
+
+const storyboardValueAndAccentSection = {
+  type: 'object',
+  required: ['text'],
+  properties: {
+    text: trimmedString,
+    imageFiles,
+    valueSteps: { type: 'array', items: hexColor },
+    contrast: trimmedString,
+    accents: { type: 'array', items: colorSwatch },
+  },
+  additionalProperties: false,
+} as const;
+
+const storyboardGuardrailsSection = {
+  type: 'object',
+  required: ['text'],
+  properties: {
+    text: trimmedString,
+    imageFiles,
+    forbidden: { type: 'array', items: trimmedString },
+    favored: { type: 'array', items: trimmedString },
   },
   additionalProperties: false,
 } as const;
@@ -246,21 +312,12 @@ export const storyboardLookbookSectionsSchema = {
   $id: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: [
-    'styleBrief',
-    'lineAndFinish',
-    'valueAndAccent',
-    'panelAndNotation',
-    'continuityAndClarity',
-    'guardrails',
-  ],
+  required: ['styleBrief', 'lineAndFinish', 'valueAndAccent', 'guardrails'],
   properties: {
-    styleBrief: storyboardLookbookTextSection,
-    lineAndFinish: storyboardLookbookTextSection,
-    valueAndAccent: storyboardLookbookTextSection,
-    panelAndNotation: storyboardLookbookTextSection,
-    continuityAndClarity: storyboardLookbookTextSection,
-    guardrails: storyboardLookbookTextSection,
+    styleBrief: storyboardStyleBriefSection,
+    lineAndFinish: storyboardLineAndFinishSection,
+    valueAndAccent: storyboardValueAndAccentSection,
+    guardrails: storyboardGuardrailsSection,
   },
   additionalProperties: false,
 } as const;
@@ -317,18 +374,14 @@ export const lookbookDocumentSchema = {
             'styleBrief',
             'lineAndFinish',
             'valueAndAccent',
-            'panelAndNotation',
-            'continuityAndClarity',
             'guardrails',
           ],
           properties: {
             name: trimmedString,
-            styleBrief: storyboardLookbookTextSection,
-            lineAndFinish: storyboardLookbookTextSection,
-            valueAndAccent: storyboardLookbookTextSection,
-            panelAndNotation: storyboardLookbookTextSection,
-            continuityAndClarity: storyboardLookbookTextSection,
-            guardrails: storyboardLookbookTextSection,
+            styleBrief: storyboardStyleBriefSection,
+            lineAndFinish: storyboardLineAndFinishSection,
+            valueAndAccent: storyboardValueAndAccentSection,
+            guardrails: storyboardGuardrailsSection,
           },
           additionalProperties: false,
         },

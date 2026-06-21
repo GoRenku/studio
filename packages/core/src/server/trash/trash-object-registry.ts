@@ -3,7 +3,7 @@ import {
   createDiagnosticWarning,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
-import { and, desc, eq, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, isNull, ne, or } from 'drizzle-orm';
 import type { AssetTarget, TrashItemKind } from '../../client/index.js';
 import {
   discardAssetRelationshipRecord,
@@ -1074,7 +1074,10 @@ function markLookbookTreeDiscarded(input: TrashObjectDiscardContext): void {
     })
     .where(
       and(
-        eq(storyboardLookbookSourceMovies.storyboardLookbookId, input.itemId),
+        or(
+          eq(storyboardLookbookSourceMovies.storyboardLookbookId, input.itemId),
+          eq(storyboardLookbookSourceMovies.movieLookbookId, input.itemId)
+        ),
         isNull(storyboardLookbookSourceMovies.discardedAt)
       )
     )
@@ -1117,7 +1120,10 @@ function restoreLookbookTree(input: TrashObjectRestoreContext): void {
     .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
     .where(
       and(
-        eq(storyboardLookbookSourceMovies.storyboardLookbookId, lookbookId),
+        or(
+          eq(storyboardLookbookSourceMovies.storyboardLookbookId, lookbookId),
+          eq(storyboardLookbookSourceMovies.movieLookbookId, lookbookId)
+        ),
         eq(storyboardLookbookSourceMovies.discardOperationId, input.trashItem.operationId)
       )
     )

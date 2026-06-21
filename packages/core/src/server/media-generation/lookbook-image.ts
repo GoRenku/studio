@@ -781,10 +781,6 @@ function storyboardSectionPromptText(
       return `Line and finish: ${definition.lineAndFinish.text}`;
     case 'valueAndAccent':
       return `Value and accent: ${definition.valueAndAccent.text}`;
-    case 'panelAndNotation':
-      return `Panel and notation: ${definition.panelAndNotation.text}`;
-    case 'continuityAndClarity':
-      return `Continuity and clarity: ${definition.continuityAndClarity.text}`;
     case 'guardrails':
       return `Guardrails: ${definition.guardrails.text}`;
     default:

@@ -126,6 +126,133 @@ describe('migrate database command', () => {
     }
   });
 
+  it('rewrites persisted Lookbook tone section keys during the typed Lookbook migration', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        create table lookbook (
+          id text primary key not null,
+          name text not null,
+          thesis text not null,
+          palette text not null,
+          tone_mood text not null,
+          composition text not null,
+          lighting text not null,
+          texture text not null,
+          camera text not null,
+          created_at text not null,
+          updated_at text not null
+        );
+        create table visual_language_state (
+          id integer primary key not null,
+          active_lookbook_id text,
+          updated_at text not null
+        );
+        create table lookbook_image_section (
+          id text primary key not null,
+          image_id text not null,
+          section text not null,
+          sort_order integer not null,
+          created_at text not null,
+          updated_at text not null
+        );
+        create table media_generation_spec (
+          id text primary key not null,
+          purpose text not null,
+          target_kind text not null,
+          target_id text not null,
+          model_choice text not null,
+          title text not null,
+          spec_json text not null,
+          created_at text not null,
+          updated_at text not null
+        );
+        create table media_generation_run (
+          id text primary key not null,
+          spec_id text not null,
+          purpose text not null,
+          target_kind text not null,
+          target_id text not null,
+          model_choice text not null,
+          spec_snapshot_json text not null,
+          provider text not null,
+          model text not null,
+          provider_payload_json text not null,
+          estimate_snapshot_json text not null,
+          approval_token text,
+          simulated integer not null,
+          status text not null,
+          outputs_json text not null,
+          diagnostics_json text not null,
+          started_at text not null,
+          completed_at text
+        );
+
+        insert into lookbook (
+          id, name, thesis, palette, tone_mood, composition, lighting, texture, camera, created_at, updated_at
+        ) values (
+          'lookbook_movie',
+          'Movie Lookbook',
+          '{"statement":"Thesis","principles":["Clear"]}',
+          '{"description":"Palette","colors":[{"hex":"#ffffff","name":"White","meaning":"Light"}],"observations":[]}',
+          '{"tone":"calm","moodTags":["clear"],"description":"Soft mood"}',
+          '{"description":"Composition","patterns":[{"name":"Centered","description":"Stable"}]}',
+          '{"description":"Lighting","patterns":[{"name":"Soft","description":"Diffuse"}]}',
+          '{"description":"Texture","observations":[]}',
+          '{"description":"Camera","movement":[{"name":"Still","description":"Held"}],"motion":[{"name":"None","description":"Calm"}],"framing":[{"name":"Wide","description":"Readable"}]}',
+          '2026-06-20T00:00:00.000Z',
+          '2026-06-20T00:00:00.000Z'
+        );
+        insert into visual_language_state (id, active_lookbook_id, updated_at)
+        values (1, 'lookbook_movie', '2026-06-20T00:00:00.000Z');
+        insert into lookbook_image_section (id, image_id, section, sort_order, created_at, updated_at)
+        values ('lookbook_image_section_tone', 'lookbook_image_1', 'tone_mood', 1, '2026-06-20T00:00:00.000Z', '2026-06-20T00:00:00.000Z');
+        insert into media_generation_spec (id, purpose, target_kind, target_id, model_choice, title, spec_json, created_at, updated_at)
+        values ('media_generation_spec_1', 'lookbook.image', 'lookbook', 'lookbook_movie', 'model', 'Tone image', '{"purpose":"lookbook.image","focusSections":["tone_mood"]}', '2026-06-20T00:00:00.000Z', '2026-06-20T00:00:00.000Z');
+        insert into media_generation_run (
+          id, spec_id, purpose, target_kind, target_id, model_choice, spec_snapshot_json, provider, model, provider_payload_json, estimate_snapshot_json, simulated, status, outputs_json, diagnostics_json, started_at
+        ) values (
+          'media_generation_run_1',
+          'media_generation_spec_1',
+          'lookbook.image',
+          'lookbook',
+          'lookbook_movie',
+          'model',
+          '{"purpose":"lookbook.image","focusSections":["tone_mood"]}',
+          'provider',
+          'model',
+          '{}',
+          '{}',
+          1,
+          'completed',
+          '[]',
+          '[]',
+          '2026-06-20T00:00:00.000Z'
+        );
+      `);
+
+      const migrationSql = await fs.readFile(
+        path.join(process.cwd(), 'drizzle', '0035_typed_lookbooks.sql'),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(
+        sqlite.prepare('select section from lookbook_image_section').get()
+      ).toEqual({ section: 'toneMood' });
+      expect(sqlite.prepare('select spec_json as specJson from media_generation_spec').get()).toEqual({
+        specJson: '{"purpose":"lookbook.image","focusSections":["toneMood"]}',
+      });
+      expect(
+        sqlite.prepare('select spec_snapshot_json as specSnapshotJson from media_generation_run').get()
+      ).toEqual({
+        specSnapshotJson: '{"purpose":"lookbook.image","focusSections":["toneMood"]}',
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it('fails the legacy take id rewrite preflight when a mapped id already exists', async () => {
     const sqlite = new Database(':memory:');
     try {
