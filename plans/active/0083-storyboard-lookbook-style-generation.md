@@ -107,17 +107,13 @@ image, it should not be a first-class section.
   accent color rules. This is where the user decides whether accents are never
   used, used only for fire/blood/important props, or used as small directional
   emphasis.
-- `panelAndNotation`: the frame, gutters, labels, captions, arrows, camera
-  move symbols, action lines, and whether notes sit inside or outside the image
-  area.
-- `continuityAndClarity`: the practical readability rules that keep images
-  coherent across a sequence: screen direction, relative character scale,
-  recurring location anchors, prop continuity, silhouette readability, and
-  repeated spatial relationships.
 - `guardrails`: forbidden modes and common mistakes to avoid, such as
   photorealism, finished-film stills, heavy noir grading unless requested,
   modern UI text, random typography, crop marks inside panels, debug overlays,
   or over-rendered concept art.
+
+Panel notation, continuity, and clarity guidance should be included inside
+these four sections rather than modeled as separate top-level sections.
 
 The default taste can remain close to the current good style: expressive
 graphite, ink, warm off-white paper, mostly black and white, restrained accents
@@ -175,12 +171,10 @@ Storyboard Lookbook it should show:
 
 - Lookbook name, `Storyboard` type, selection state, source inspiration chips,
   and source Movie Lookbook chips when present.
-- The six practical sections in a stable order:
+- The four practical sections in a stable order:
   - `styleBrief`
   - `lineAndFinish`
   - `valueAndAccent`
-  - `panelAndNotation`
-  - `continuityAndClarity`
   - `guardrails`
 - Each section as an editorial row similar to the current movie Lookbook
   definition rows: section number, section title, the authored text, and any
@@ -195,7 +189,7 @@ evidence. For a Storyboard Lookbook it should group images by the same practical
 sections rather than by movie visual-language sections. The expected content is:
 
 - Section-attached sample storyboard frames for `lineAndFinish`,
-  `valueAndAccent`, `panelAndNotation`, and `continuityAndClarity`.
+  `valueAndAccent`, and `guardrails`.
 - Optional sample images for `styleBrief` when the user wants a broad hero
   example.
 - Optional guardrail examples only when they help the agent avoid a common
@@ -225,7 +219,7 @@ renku generation context --purpose lookbook.image --target lookbook:<storyboard-
 renku generation spec create --file storyboard-lookbook-image-spec.json
 renku generation run --spec <media-generation-spec-id>
 renku media import --purpose lookbook.image --target lookbook:<storyboard-lookbook-id> --source <project-relative-output-path> --sections lineAndFinish,valueAndAccent --title "Graphite line and accent sample"
-renku lookbook image set-sections --image <lookbook-image-id> --sections panelAndNotation,continuityAndClarity
+renku lookbook image set-sections --image <lookbook-image-id> --sections styleBrief,guardrails
 renku lookbook card-image set --lookbook <storyboard-lookbook-id> --image <lookbook-image-id>
 ```
 
@@ -341,8 +335,6 @@ contracts:
     "styleBrief": "...",
     "lineAndFinish": "...",
     "valueAndAccent": "...",
-    "panelAndNotation": "...",
-    "continuityAndClarity": "...",
     "guardrails": "..."
   },
   "sourceInspirationFolderIds": ["inspiration_folder_..."],
@@ -500,10 +492,9 @@ reference sheet. It should include:
 - `lineAndFinish` samples for medium, paper, line weight, and finish level.
 - `valueAndAccent` samples for grayscale range, wash behavior, highlights, and
   accent color policy.
-- `panelAndNotation` samples for frames, gutters, shot labels, captions,
-  arrows, camera move symbols, and action lines.
-- `continuityAndClarity` samples for character scale, screen direction,
-  silhouette readability, spatial anchors, and prop continuity.
+- `styleBrief` and `guardrails` notes that keep panel notation, continuity,
+  character scale, screen direction, silhouettes, spatial anchors, and prop
+  continuity usable for downstream storyboard generation.
 - A small "avoid" area showing forbidden artifacts only if the provider route
   can handle that instruction without copying the forbidden content.
 
@@ -562,7 +553,7 @@ Required UI updates:
 - Lookbook image section editing uses the section list for the owning Lookbook
   type.
 - The Storyboard Lookbook `Definition` tab uses the same editorial rhythm as
-  movie Lookbooks while rendering the six practical storyboard sections.
+  movie Lookbooks while rendering the four practical storyboard sections.
 - The Storyboard Lookbook `Visual Content` tab groups sample storyboard images
   by Storyboard Lookbook section and makes the canonical Storyboard Lookbook
   sheet visible as the generation dependency source.
@@ -770,8 +761,7 @@ in `docs/` rather than leaving this active plan as the only source of truth.
 - [x] Add `LookbookType` with current values `movie` and `storyboard`.
 - [x] Add `MovieLookbookDefinition` with movie visual-language sections.
 - [x] Add `StoryboardLookbookDefinition` with `styleBrief`, `lineAndFinish`,
-      `valueAndAccent`, `panelAndNotation`, `continuityAndClarity`, and
-      `guardrails`.
+      `valueAndAccent`, and `guardrails`.
 - [x] Replace the public `Lookbook` contract with a discriminated union.
 - [x] Replace `LookbookListItem.isActive` with type-specific selection fields.
 - [x] Replace `LookbookListReport.activeLookbookId` with type-keyed selected
@@ -896,8 +886,8 @@ in `docs/` rather than leaving this active plan as the only source of truth.
       editorial design language as movie Lookbooks while showing the practical
       storyboard sections.
 - [x] Update Storyboard Lookbook Visual Content tab rendering so sample images
-      are grouped by `styleBrief`, `lineAndFinish`, `valueAndAccent`,
-      `panelAndNotation`, `continuityAndClarity`, and `guardrails`.
+      are grouped by `styleBrief`, `lineAndFinish`, `valueAndAccent`, and
+      `guardrails`.
 - [x] Surface the canonical Storyboard Lookbook sheet in Visual Content as the
       reference dependency for storyboard generation.
 - [x] Support attaching generated/imported `lookbook.image` assets to one or
@@ -927,8 +917,7 @@ in `docs/` rather than leaving this active plan as the only source of truth.
       Lookbooks.
 - [x] Add or update Lookbook authoring contract references for both types.
 - [x] Add Storyboard Lookbook design guidance for `styleBrief`,
-      `lineAndFinish`, `valueAndAccent`, `panelAndNotation`,
-      `continuityAndClarity`, and `guardrails`.
+      `lineAndFinish`, `valueAndAccent`, and `guardrails`.
 - [x] Teach skills to reject overly theoretical Storyboard Lookbook prose that
       cannot be turned into image-generation instructions.
 - [x] Replace `set-active` skill guidance with typed selection commands.

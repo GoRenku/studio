@@ -50,8 +50,9 @@ Movie Lookbooks keep the cinematic sections: thesis, palette, tone and mood,
 composition, lighting, texture, and camera.
 
 Storyboard Lookbooks own the storyboard drawing sections: style brief, line and
-finish, value and accent, panel and notation, continuity and clarity, and
-guardrails.
+finish, value and accent, and guardrails. Panel notation, continuity, and
+clarity guidance belongs inside those four sections rather than separate
+top-level sections.
 
 Selection is type-specific. A project may have one selected Movie Lookbook and
 one selected Storyboard Lookbook. Selection uses:

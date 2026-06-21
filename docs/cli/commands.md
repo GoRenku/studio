@@ -1286,8 +1286,6 @@ Storyboard Lookbook input JSON:
     "styleBrief": { "text": "Graphite storyboard frames with clear staging." },
     "lineAndFinish": { "text": "Loose pencil construction with crisp ink accents." },
     "valueAndAccent": { "text": "Soft gray values with restrained warm accents." },
-    "panelAndNotation": { "text": "Clean panels and sparse camera notes outside image content." },
-    "continuityAndClarity": { "text": "Maintain geography and character identity across panels." },
     "guardrails": { "text": "Avoid photoreal stills and decorative text inside panels." }
   },
   "sourceMovieLookbookIds": [],
@@ -1484,8 +1482,7 @@ Lookbook Image spec shape:
 `focusSections` must use section names valid for the target Lookbook type.
 Movie Lookbooks use `thesis`, `palette`, `toneMood`, `composition`,
 `lighting`, `texture`, and `camera`. Storyboard Lookbooks use `styleBrief`,
-`lineAndFinish`, `valueAndAccent`, `panelAndNotation`,
-`continuityAndClarity`, and `guardrails`.
+`lineAndFinish`, `valueAndAccent`, and `guardrails`.
 
 Location Environment Sheet spec shape:
 
