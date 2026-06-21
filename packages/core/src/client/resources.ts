@@ -264,6 +264,8 @@ export interface LookbookResource extends VisualLanguageCommandReport {
   images: LookbookImage[];
   sheets: LookbookSheet[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;
+  /** Images anchored to a specific point (pattern/observation), keyed by point id. */
+  imagesByPoint: Record<string, LookbookImage[]>;
 }
 
 export interface LookbooksResource extends VisualLanguageCommandReport {

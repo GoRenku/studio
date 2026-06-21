@@ -162,6 +162,7 @@ export const lookbookImageSections = sqliteTable(
       .notNull()
       .references(() => lookbookImages.id, { onDelete: 'cascade' }),
     section: text('section').notNull(),
+    pointId: text('point_id'),
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

@@ -253,6 +253,13 @@
       "when": 1781958539991,
       "tag": "0035_typed_lookbooks",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1782042789264,
+      "tag": "0036_robust_joseph",
+      "breakpoints": true
     }
   ]
 }

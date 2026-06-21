@@ -80,6 +80,11 @@ export function parseSections(value: string | undefined): string[] | undefined {
     .filter(Boolean);
 }
 
+export function parseAnchor(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 function parseKindedTarget(
   value: string,
   expectedKind: 'lookbook' | 'cast' | 'location' | 'scene',

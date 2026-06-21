@@ -23,20 +23,27 @@ export type LookbookReportSource =
   | {
       kind: 'lookbook';
       imagesBySection: Record<LookbookSection, LookbookImage[]>;
+      imagesByPoint: Record<string, LookbookImage[]>;
     };
 
 export function imagesForNestedReferences(
   projectName: string,
   source: LookbookReportSource,
-  imageFiles: string[] = []
+  point: { id?: string; imageFiles?: string[] }
 ): ReportImage[] {
-  if (source.kind !== 'inspiration') return [];
-  return imageFiles.map((fileName) => ({
-    id: fileName,
-    src: inspirationImageUrl(projectName, source.folderId, fileName),
-    alt: `${fileName} inspiration grab`,
-    title: fileName,
-  }));
+  if (source.kind === 'inspiration') {
+    return (point.imageFiles ?? []).map((fileName) => ({
+      id: fileName,
+      src: inspirationImageUrl(projectName, source.folderId, fileName),
+      alt: `${fileName} inspiration grab`,
+      title: fileName,
+    }));
+  }
+  if (!point.id) return [];
+  return lookbookImagesToReportImages(
+    projectName,
+    source.imagesByPoint[point.id] ?? []
+  );
 }
 
 export function imagesForSection(
@@ -53,7 +60,17 @@ export function imagesForSection(
       title: fileName,
     }));
   }
-  return (source.imagesBySection[section] ?? []).flatMap((image) => {
+  return lookbookImagesToReportImages(
+    projectName,
+    source.imagesBySection[section] ?? []
+  );
+}
+
+function lookbookImagesToReportImages(
+  projectName: string,
+  images: LookbookImage[]
+): ReportImage[] {
+  return images.flatMap((image) => {
     const file = image.asset.files[0];
     if (!file) return [];
     return [

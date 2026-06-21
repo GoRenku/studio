@@ -153,7 +153,10 @@ export interface LookbookImage {
   lookbookId: string;
   lookbookType: LookbookType;
   asset: LookbookImageAsset;
+  /** Sections this image is section-level evidence for (un-anchored placements). */
   sections: LookbookSection[];
+  /** Point ids this image is anchored to (e.g. a specific pattern or observation). */
+  points?: string[];
 }
 
 export interface LookbookSheet {
@@ -234,6 +237,7 @@ export interface ColorSwatch {
 }
 
 export interface Observation {
+  id?: string;
   text: string;
   imageFiles?: string[];
 }
@@ -251,6 +255,7 @@ export interface PatternSection {
 }
 
 export interface Pattern {
+  id?: string;
   name: string;
   description: string;
   imageFiles?: string[];

@@ -380,36 +380,71 @@ function PatternDeck({
   onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
   if (!patterns.length) return null;
+  const cards = patterns.map((pattern) => ({
+    pattern,
+    images: imagesForNestedReferences(projectName, source, pattern),
+  }));
+  const deckHasImages = cards.some((card) => card.images.length > 0);
   return (
     <div className='space-y-4'>
       {title ? (
         <h3 className='text-sm font-black uppercase text-muted-foreground'>{title}</h3>
       ) : null}
-      <div className='grid gap-4'>
-        {patterns.map((pattern) => (
-          <div
+      <div className={deckHasImages ? 'grid gap-4' : 'grid gap-4 lg:grid-cols-2'}>
+        {cards.map(({ pattern, images }) => (
+          <PatternCard
             key={`${title ?? 'pattern'}-${pattern.name}`}
-            className='rounded-md border border-border/40 bg-card/92 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.22)]'
-          >
-            <div className='grid gap-5 xl:grid-cols-[minmax(0,0.82fr)_minmax(260px,0.68fr)]'>
-              <div>
-                <h3 className='text-xl font-black leading-tight text-foreground'>
-                  {pattern.name}
-                </h3>
-                <p className='mt-3 text-sm leading-7 text-foreground/75'>
-                  {pattern.description}
-                </p>
-              </div>
-              <EvidenceGrid
-                images={imagesForNestedReferences(projectName, source, pattern.imageFiles)}
-                size='compact'
-                onOpenImage={onOpenImage}
-                onRequestDeleteImage={onRequestDeleteImage}
-              />
-            </div>
-          </div>
+            pattern={pattern}
+            images={images}
+            onOpenImage={onOpenImage}
+            onRequestDeleteImage={onRequestDeleteImage}
+          />
         ))}
       </div>
+    </div>
+  );
+}
+
+function PatternCard({
+  pattern,
+  images,
+  onOpenImage,
+  onRequestDeleteImage,
+}: {
+  pattern: Pattern;
+  images: ReportImage[];
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
+}) {
+  return (
+    <div className='rounded-md border border-border/40 bg-card/92 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.22)]'>
+      {images.length ? (
+        <div className='grid gap-5 xl:grid-cols-[minmax(0,0.82fr)_minmax(260px,0.68fr)]'>
+          <div>
+            <h3 className='text-xl font-black leading-tight text-foreground'>
+              {pattern.name}
+            </h3>
+            <p className='mt-3 text-sm leading-7 text-foreground/75'>
+              {pattern.description}
+            </p>
+          </div>
+          <EvidenceGrid
+            images={images}
+            size='compact'
+            onOpenImage={onOpenImage}
+            onRequestDeleteImage={onRequestDeleteImage}
+          />
+        </div>
+      ) : (
+        <>
+          <h3 className='text-xl font-black leading-tight text-foreground'>
+            {pattern.name}
+          </h3>
+          <p className='mt-3 text-sm leading-7 text-foreground/75'>
+            {pattern.description}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -439,7 +474,7 @@ function ObservationDeck({
             {observation.text}
           </p>
           <EvidenceGrid
-            images={imagesForNestedReferences(projectName, source, observation.imageFiles)}
+            images={imagesForNestedReferences(projectName, source, observation)}
             size='compact'
             className='mt-4'
             onOpenImage={onOpenImage}
@@ -485,7 +520,7 @@ function LineageGrid({
           </h3>
           <p className='mt-3 text-sm leading-7 text-foreground/75'>{item.why}</p>
           <EvidenceGrid
-            images={imagesForNestedReferences(projectName, source, item.imageFiles)}
+            images={imagesForNestedReferences(projectName, source, item)}
             size='compact'
             className='mt-4'
             onOpenImage={onOpenImage}

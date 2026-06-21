@@ -104,6 +104,7 @@ export async function readLookbookResource(
       images,
       sheets,
       imagesBySection: buildImagesBySection(row.type, images),
+      imagesByPoint: buildImagesByPoint(images),
       resourceKeys: [
         studioVisualLanguageLookbooksResourceKey(),
         studioVisualLanguageLookbookResourceKey(row.id),
@@ -122,6 +123,18 @@ export function buildImagesBySection(
   for (const image of images) {
     for (const section of image.sections) {
       grouped[section].push(image);
+    }
+  }
+  return grouped;
+}
+
+export function buildImagesByPoint(
+  images: LookbookImage[]
+): Record<string, LookbookImage[]> {
+  const grouped: Record<string, LookbookImage[]> = {};
+  for (const image of images) {
+    for (const pointId of image.points ?? []) {
+      (grouped[pointId] ??= []).push(image);
     }
   }
   return grouped;

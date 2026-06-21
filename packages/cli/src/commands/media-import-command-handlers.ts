@@ -23,6 +23,7 @@ import {
 import {
   parseCastTarget,
   parseLocationTarget,
+  parseAnchor,
   parseLookbookTarget,
   parseSceneTarget,
   parseSections,
@@ -46,6 +47,7 @@ export interface MediaCommandFlags {
   referenceName?: string;
   referencePurpose?: string;
   sections?: string;
+  anchor?: string;
   receipt?: string;
   shotList?: string;
   shots?: string;
@@ -166,6 +168,7 @@ async function importLookbookImage(
     title: input.flags.title,
     oneLineSummary: input.flags.summary,
     sections: parseSections(input.flags.sections),
+    anchorPointId: parseAnchor(input.flags.anchor),
     receipt: singleFile.receipt,
   });
 }

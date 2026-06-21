@@ -412,6 +412,105 @@ describe('visual language commands', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('validates anchored Lookbook image imports against the Lookbook definition', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+
+    const document = lookbookDocument();
+    document.movieLookbook.palette.observations = [
+      {
+        id: 'palette_warmth',
+        text: 'Warmth appears only near human labor.',
+      },
+    ];
+    document.movieLookbook.lighting.patterns = [
+      {
+        id: 'lighting_lamps',
+        name: 'Lamp islands',
+        description: 'Oil lamps isolate decision makers.',
+      },
+    ];
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Anchored Lookbook',
+      document,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const sourcePath = 'visual-language/tmp/anchored/generated-look.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, sourcePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, sourcePath), 'image bytes');
+
+    const imported = await projectData.importLookbookImageMedia({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: sourcePath,
+      sections: ['palette'],
+      anchorPointId: 'palette_warmth',
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    expect(imported.imported.sections).toEqual([]);
+    expect(imported.imported.points).toEqual(['palette_warmth']);
+
+    const resource = await projectData.readLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+    expect(resource.imagesByPoint.palette_warmth).toEqual([
+      expect.objectContaining({ id: imported.imported.id }),
+    ]);
+
+    await expect(
+      projectData.importLookbookImageMedia({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: lookbook.lookbook.id,
+        sourceProjectRelativePath: sourcePath,
+        sections: ['palette'],
+        anchorPointId: 'missing_point',
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA391' });
+
+    await expect(
+      projectData.importLookbookImageMedia({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: lookbook.lookbook.id,
+        sourceProjectRelativePath: sourcePath,
+        sections: ['palette'],
+        anchorPointId: 'lighting_lamps',
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA393' });
+
+    await expect(
+      projectData.importLookbookImageMedia({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: lookbook.lookbook.id,
+        sourceProjectRelativePath: sourcePath,
+        sections: ['palette', 'lighting'],
+        anchorPointId: 'palette_warmth',
+      })
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA296' });
+
+    await expect(
+      projectData.readLookbook({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: lookbook.lookbook.id,
+      })
+    ).resolves.toMatchObject({
+      images: [{ id: imported.imported.id }],
+    });
+  });
+
   it('discards and restores Storyboard source links when deleting a source Movie Lookbook', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });

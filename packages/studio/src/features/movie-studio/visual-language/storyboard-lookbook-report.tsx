@@ -92,22 +92,32 @@ export function StoryboardLookbookReport({
         ) : null}
       </StoryboardSection>
       <StoryboardSection number='02' title='Line and finish'>
-        <StoryboardWidgetAndProof
-          widget={<LineAndFinishWidget section={sections.lineAndFinish} />}
+        <StoryboardSpecimenBody
+          widget={
+            sections.lineAndFinish.marks?.length ||
+            sections.lineAndFinish.hatching ? (
+              <LineAndFinishWidget section={sections.lineAndFinish} />
+            ) : null
+          }
+          text={sections.lineAndFinish.text}
           images={lineAndFinishImages}
           onOpenImage={onOpenImage}
           onRequestDeleteImage={onRequestDeleteImage}
         />
-        <StoryboardProse className='mt-5' text={sections.lineAndFinish.text} />
       </StoryboardSection>
       <StoryboardSection number='03' title='Value and accent'>
-        <StoryboardWidgetAndProof
-          widget={<ValueAndAccentWidget section={sections.valueAndAccent} />}
+        <StoryboardSpecimenBody
+          widget={
+            sections.valueAndAccent.valueSteps?.length ||
+            sections.valueAndAccent.accents?.length ? (
+              <ValueAndAccentWidget section={sections.valueAndAccent} />
+            ) : null
+          }
+          text={sections.valueAndAccent.text}
           images={valueAndAccentImages}
           onOpenImage={onOpenImage}
           onRequestDeleteImage={onRequestDeleteImage}
         />
-        <StoryboardProse className='mt-5' text={sections.valueAndAccent.text} />
       </StoryboardSection>
       <StoryboardSection number='04' title='Guardrails'>
         <GuardrailChips
@@ -171,42 +181,39 @@ function StoryboardProse({
   );
 }
 
-function StoryboardWidgetAndProof({
+function StoryboardSpecimenBody({
   widget,
+  text,
   images,
   onOpenImage,
   onRequestDeleteImage,
 }: {
-  widget: ReactNode;
+  widget: ReactNode | null;
+  text: string;
   images: ReportImage[];
   onOpenImage: (image: PreviewImage) => void;
   onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
-  if (!images.length) {
-    return <>{widget}</>;
-  }
-  if (!widget) {
-    return (
-      <EvidenceGrid
-        images={images}
-        size='feature'
-        onOpenImage={onOpenImage}
-        onRequestDeleteImage={onRequestDeleteImage}
-      />
-    );
-  }
   return (
-    <div className='grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'>
-      <div>{widget}</div>
-      <div>
+    <>
+      {widget ? (
+        <div className='grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-8'>
+          <div>{widget}</div>
+          <StoryboardProse text={text} />
+        </div>
+      ) : (
+        <StoryboardProse text={text} />
+      )}
+      {images.length ? (
         <EvidenceGrid
           images={images}
           size='feature'
+          className='mt-6'
           onOpenImage={onOpenImage}
           onRequestDeleteImage={onRequestDeleteImage}
         />
-      </div>
-    </div>
+      ) : null}
+    </>
   );
 }
 
@@ -230,11 +237,11 @@ function StoryboardHero({
         className='block h-auto w-full rounded-none p-0 hover:bg-transparent'
         onClick={onOpen}
       >
-        <span className='block aspect-[16/7]'>
+        <span className='block'>
           <img
             src={image.src}
             alt={image.alt}
-            className='h-full w-full object-cover'
+            className='block h-auto w-full'
           />
         </span>
       </Button>

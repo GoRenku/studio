@@ -18,6 +18,7 @@ const observation = {
   type: 'object',
   required: ['text'],
   properties: {
+    id: trimmedString,
     text: trimmedString,
     imageFiles,
   },
@@ -28,6 +29,7 @@ const pattern = {
   type: 'object',
   required: ['name', 'description'],
   properties: {
+    id: trimmedString,
     name: trimmedString,
     description: trimmedString,
     imageFiles,

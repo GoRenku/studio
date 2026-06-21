@@ -17,6 +17,7 @@ describe('Storyboard Lookbook report', () => {
         source={{
           kind: 'lookbook',
           imagesBySection: emptyLookbookImagesBySection(),
+          imagesByPoint: {},
         }}
         sections={{
           styleBrief: {
@@ -78,6 +79,7 @@ describe('Storyboard Lookbook report', () => {
             valueAndAccent: [valueImage],
             guardrails: [guardrailImage],
           },
+          imagesByPoint: {},
         }}
         sections={{
           styleBrief: { text: 'Graphite boards.' },

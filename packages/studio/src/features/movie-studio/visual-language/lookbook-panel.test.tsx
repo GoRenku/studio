@@ -225,6 +225,7 @@ function lookbookResource(
       valueAndAccent: [],
       guardrails: [],
     },
+    imagesByPoint: {},
   };
 }
 

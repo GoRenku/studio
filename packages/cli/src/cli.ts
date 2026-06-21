@@ -136,6 +136,7 @@ Options
   --older-than-iso     ISO timestamp cutoff for Empty Trash preview/run
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
+  --anchor             Movie Lookbook point id to anchor an imported image to
   --all-locales        Export every locale with production selects
   --all                Apply command to all eligible items
   --dry-run            Report production export operations without writing
@@ -319,6 +320,9 @@ function createCliFlags() {
       type: 'string',
     },
     sections: {
+      type: 'string',
+    },
+    anchor: {
       type: 'string',
     },
     allLocales: {
@@ -626,6 +630,7 @@ export async function runRenkuCli(
             referenceName: cli.flags.referenceName,
             referencePurpose: cli.flags.referencePurpose,
             sections: cli.flags.sections,
+            anchor: cli.flags.anchor,
             receipt: cli.flags.receipt,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,

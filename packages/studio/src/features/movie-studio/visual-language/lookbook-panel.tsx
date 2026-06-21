@@ -132,7 +132,11 @@ export function LookbookPanel({
               </Button>
             ) : null
           }
-          source={{ kind: 'lookbook', imagesBySection: resource.imagesBySection }}
+          source={{
+            kind: 'lookbook',
+            imagesBySection: resource.imagesBySection,
+            imagesByPoint: resource.imagesByPoint,
+          }}
           sections={resource.lookbook.definition}
         />
       </LineTabsContent>

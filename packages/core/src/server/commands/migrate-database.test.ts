@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProjectDataService } from '../index.js';
+import { closeProjectStore } from '../database/lifecycle/store.js';
 import {
   createSampleMovieProject,
   writeConfig,
@@ -40,7 +41,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(26);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(27);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -68,6 +69,9 @@ describe('migrate database command', () => {
           'scene_dialogue_audio_take',
           'cast_voice_provider_registration',
         ])
+      );
+      expect(readColumnNames(sqlite, 'lookbook_image_section')).toEqual(
+        expect.arrayContaining(['point_id'])
       );
       expect(readTableNames(sqlite)).not.toEqual(
         expect.arrayContaining([
@@ -123,6 +127,52 @@ describe('migrate database command', () => {
       ).toMatchObject({ isUnique: 1 });
     } finally {
       sqlite.close();
+    }
+  });
+
+  it('auto-migrates generation 26 Lookbook image placement databases before reads', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+
+    closeProjectStore({ projectFolder: created.projectPath });
+    const databasePath = path.join(
+      created.projectPath,
+      '.renku',
+      'project.sqlite'
+    );
+    const setup = new Database(databasePath);
+    try {
+      setup
+        .prepare(
+          'delete from __drizzle_migrations where created_at = (select max(created_at) from __drizzle_migrations)'
+        )
+        .run();
+      setup.exec('alter table lookbook_image_section drop column point_id');
+      setup.pragma('user_version = 26');
+      expect(readColumnNames(setup, 'lookbook_image_section')).not.toContain(
+        'point_id'
+      );
+    } finally {
+      setup.close();
+    }
+
+    await expect(
+      projectData.readProject({ projectName: 'constantinople', homeDir })
+    ).resolves.toMatchObject({
+      identity: { name: 'constantinople' },
+    });
+
+    const migrated = new Database(databasePath);
+    try {
+      expect(migrated.pragma('user_version', { simple: true })).toBe(27);
+      expect(readColumnNames(migrated, 'lookbook_image_section')).toContain(
+        'point_id'
+      );
+    } finally {
+      migrated.close();
     }
   });
 

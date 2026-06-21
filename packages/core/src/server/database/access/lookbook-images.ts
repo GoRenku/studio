@@ -123,11 +123,16 @@ export function deleteLookbookImageRecord(
   session.db.delete(lookbookImages).where(eq(lookbookImages.id, imageId)).run();
 }
 
+export interface LookbookImagePlacement {
+  section: LookbookSection;
+  pointId: string | null;
+}
+
 export function setLookbookImageSectionRecords(
   session: DatabaseSession,
   input: {
     imageId: string;
-    sections: LookbookSection[];
+    placements: LookbookImagePlacement[];
     nextId: () => string;
     now: string;
   }
@@ -136,13 +141,14 @@ export function setLookbookImageSectionRecords(
     .delete(lookbookImageSections)
     .where(eq(lookbookImageSections.imageId, input.imageId))
     .run();
-  input.sections.forEach((section, index) => {
+  input.placements.forEach((placement, index) => {
     session.db
       .insert(lookbookImageSections)
       .values({
         id: input.nextId(),
         imageId: input.imageId,
-        section,
+        section: placement.section,
+        pointId: placement.pointId,
         sortOrder: index + 1,
         createdAt: input.now,
         updatedAt: input.now,
@@ -184,14 +190,18 @@ export function listLookbookImages(
     .all() as LookbookImageAssetRow[];
 
   const assetFilesByAssetId = readAssetFilesForRows(session, rows);
-  const sectionsByImageId = readSectionsForRows(session, rows);
-  return rows.map((row) => ({
-    id: row.id,
-    lookbookId: row.lookbookId,
-    lookbookType: row.lookbookType,
-    asset: toLookbookImageAsset(row, assetFilesByAssetId),
-    sections: sectionsByImageId.get(row.id) ?? [],
-  }));
+  const placementsByImageId = readPlacementsForRows(session, rows);
+  return rows.map((row) => {
+    const placements = placementsByImageId.get(row.id) ?? [];
+    return {
+      id: row.id,
+      lookbookId: row.lookbookId,
+      lookbookType: row.lookbookType,
+      asset: toLookbookImageAsset(row, assetFilesByAssetId),
+      sections: sectionLevelSections(placements),
+      points: anchoredPointIds(placements),
+    };
+  });
 }
 
 export function readLookbookImage(
@@ -223,12 +233,14 @@ export function readLookbookImage(
     return null;
   }
   const rows = [row];
+  const placements = readPlacementsForRows(session, rows).get(row.id) ?? [];
   return {
     id: row.id,
     lookbookId: row.lookbookId,
     lookbookType: row.lookbookType,
     asset: toLookbookImageAsset(row, readAssetFilesForRows(session, rows)),
-    sections: readSectionsForRows(session, rows).get(row.id) ?? [],
+    sections: sectionLevelSections(placements),
+    points: anchoredPointIds(placements),
   };
 }
 
@@ -267,13 +279,13 @@ function readAssetFilesForRows(
   return filesByAssetId;
 }
 
-function readSectionsForRows(
+function readPlacementsForRows(
   session: DatabaseSession,
   rows: LookbookImageAssetRow[]
-): Map<string, LookbookSection[]> {
-  const sectionsByImageId = new Map<string, LookbookSection[]>();
+): Map<string, LookbookImagePlacement[]> {
+  const placementsByImageId = new Map<string, LookbookImagePlacement[]>();
   if (rows.length === 0) {
-    return sectionsByImageId;
+    return placementsByImageId;
   }
   const rowIds = rows.map((row) => row.id);
   const sectionRows = session.db
@@ -287,11 +299,36 @@ function readSectionsForRows(
     )
     .all();
   for (const row of sectionRows) {
-    const existing = sectionsByImageId.get(row.imageId) ?? [];
-    existing.push(row.section as LookbookSection);
-    sectionsByImageId.set(row.imageId, existing);
+    const existing = placementsByImageId.get(row.imageId) ?? [];
+    existing.push({
+      section: row.section as LookbookSection,
+      pointId: row.pointId ?? null,
+    });
+    placementsByImageId.set(row.imageId, existing);
   }
-  return sectionsByImageId;
+  return placementsByImageId;
+}
+
+function sectionLevelSections(
+  placements: LookbookImagePlacement[]
+): LookbookSection[] {
+  const sections: LookbookSection[] = [];
+  for (const placement of placements) {
+    if (placement.pointId === null && !sections.includes(placement.section)) {
+      sections.push(placement.section);
+    }
+  }
+  return sections;
+}
+
+function anchoredPointIds(placements: LookbookImagePlacement[]): string[] {
+  const points: string[] = [];
+  for (const placement of placements) {
+    if (placement.pointId !== null && !points.includes(placement.pointId)) {
+      points.push(placement.pointId);
+    }
+  }
+  return points;
 }
 
 function toLookbookImageAsset(

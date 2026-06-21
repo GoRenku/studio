@@ -2,6 +2,10 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type {
+  LookbookImage,
+  ProjectRelativePath,
+} from '@gorenku/studio-core/client';
 import { VisualLanguageReport } from './visual-language-report';
 
 describe('Movie Lookbook report', () => {
@@ -109,6 +113,7 @@ describe('Movie Lookbook report', () => {
             valueAndAccent: [],
             guardrails: [],
           },
+          imagesByPoint: {},
         }}
         sections={{
           ...sharedMovieSections(),
@@ -126,6 +131,38 @@ describe('Movie Lookbook report', () => {
     expect(screen.getByText('Movement')).not.toBeNull();
     expect(screen.getByText('Motion')).not.toBeNull();
     expect(screen.getByText('Framing')).not.toBeNull();
+  });
+
+  it('renders Movie Lookbook images anchored to a specific point', () => {
+    const sections = sharedMovieSections();
+
+    render(
+      <VisualLanguageReport
+        projectName='constantinople'
+        source={{
+          kind: 'lookbook',
+          imagesBySection: emptyImagesBySection(),
+          imagesByPoint: {
+            'comp-map-pressure': [lookbookImage('Composition board')],
+          },
+        }}
+        sections={{
+          ...sections,
+          composition: {
+            description: sections.composition.description,
+            patterns: [
+              {
+                id: 'comp-map-pressure',
+                name: 'Map pressure',
+                description: 'Tables compress depth.',
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    expect(screen.getByAltText('Composition board')).not.toBeNull();
   });
 });
 
@@ -156,6 +193,58 @@ function sharedMovieSections() {
     texture: {
       description: 'Stone, smoke, and worn metal.',
       observations: [{ text: 'Fine surface texture stays visible.' }],
+    },
+  };
+}
+
+function emptyImagesBySection() {
+  return {
+    thesis: [],
+    palette: [],
+    toneMood: [],
+    composition: [],
+    lighting: [],
+    texture: [],
+    camera: [],
+    styleBrief: [],
+    lineAndFinish: [],
+    valueAndAccent: [],
+    guardrails: [],
+  };
+}
+
+function lookbookImage(title: string): LookbookImage {
+  return {
+    id: 'lookbook_image_comp',
+    lookbookId: 'lookbook_test0001',
+    lookbookType: 'movie',
+    sections: [],
+    points: ['comp-map-pressure'],
+    asset: {
+      assetId: 'asset_comp',
+      type: 'lookbook_image',
+      mediaKind: 'image',
+      title,
+      oneLineSummary: 'A movie lookbook frame.',
+      origin: 'generated',
+      availability: 'available',
+      createdAt: '2026-06-20T00:00:00.000Z',
+      updatedAt: '2026-06-20T00:00:00.000Z',
+      files: [
+        {
+          id: 'asset_file_comp',
+          role: 'primary',
+          mediaKind: 'image',
+          projectRelativePath:
+            'visual-language/lookbook/comp-board.png' as ProjectRelativePath,
+          mimeType: 'image/png',
+          sizeBytes: 123,
+          contentHash: null,
+          width: 1280,
+          height: 720,
+          durationSeconds: null,
+        },
+      ],
     },
   };
 }

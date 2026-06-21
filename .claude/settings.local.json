@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(find /Users/keremk/Projects/aitinkerbox/studio-skills/skills -type f -o -type d | head -100)",
+      "Bash(grep -rn \"lookbookSectionsForType\" packages/core/src --include=\"*.ts\" | grep -v \"/dist/\" | head; echo \"=== definition shape \\(movie/storyboard\\) ===\"; sed -n '/export interface MovieLookbookDefinition/,/^}/p;/export interface StoryboardLookbookDefinition/,/^}/p' packages/core/src/client/visual-language.ts)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(npx eslint *)",
+      "Bash(echo \"---exit:$?---\")",
+      "Bash(echo \"---core tsc exit:$?---\")"
     ]
   }
 }

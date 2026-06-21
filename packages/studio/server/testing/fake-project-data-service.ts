@@ -625,6 +625,7 @@ export function fakeProjectDataService(): NonNullable<
           valueAndAccent: [],
           guardrails: [],
         },
+        imagesByPoint: {},
         resourceKeys: [],
       };
     },

@@ -1069,6 +1069,7 @@ export interface ImportLookbookImageMediaInput extends RenkuConfigPathOptions {
   title?: string;
   oneLineSummary?: string;
   sections?: string[];
+  anchorPointId?: string;
   receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
 }

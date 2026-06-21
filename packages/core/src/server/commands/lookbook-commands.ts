@@ -461,7 +461,10 @@ export async function setLookbookImageSections(
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     setLookbookImageSectionRecords(session, {
       imageId: input.imageId,
-      sections: assertLookbookSectionsForType(lookbookRecord.type, input.sections),
+      placements: assertLookbookSectionsForType(
+        lookbookRecord.type,
+        input.sections
+      ).map((section) => ({ section, pointId: null })),
       nextId: () => ids('lookbook_image_section'),
       now: new Date().toISOString(),
     });
