@@ -50,18 +50,18 @@ describe('visual language Hono route', () => {
     expect(deletedLookbookId).toBeNull();
   });
 
-  it('rejects Lookbook image section updates without a sections array', async () => {
-    let sectionUpdateCalled = false;
+  it('rejects Lookbook image placement updates without a sections array', async () => {
+    let placementUpdateCalled = false;
     const app = createMountedVisualLanguageRoute({
       ...fakeProjectDataService(),
-      async setLookbookImageSections(input) {
-        sectionUpdateCalled = true;
-        return fakeProjectDataService().setLookbookImageSections(input);
+      async setLookbookImagePlacement(input) {
+        placementUpdateCalled = true;
+        return fakeProjectDataService().setLookbookImagePlacement(input);
       },
     });
 
     const response = await app.request(
-      '/constantinople/visual-language/lookbooks/images/lookbook_image_test0001/sections',
+      '/constantinople/visual-language/lookbooks/images/lookbook_image_test0001/placement',
       {
         method: 'PUT',
         body: JSON.stringify({}),
@@ -72,7 +72,7 @@ describe('visual language Hono route', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(sectionUpdateCalled).toBe(false);
+    expect(placementUpdateCalled).toBe(false);
     await expect(response.json()).resolves.toMatchObject({
       error: {
         code: 'STUDIO_SERVER035',
@@ -81,14 +81,24 @@ describe('visual language Hono route', () => {
     });
   });
 
-  it('returns the updated image from Lookbook image section updates', async () => {
-    const app = createMountedVisualLanguageRoute();
+  it('returns the updated image from Lookbook image placement updates', async () => {
+    let placementAnchorPointId: string | undefined;
+    const app = createMountedVisualLanguageRoute({
+      ...fakeProjectDataService(),
+      async setLookbookImagePlacement(input) {
+        placementAnchorPointId = input.anchorPointId;
+        return fakeProjectDataService().setLookbookImagePlacement(input);
+      },
+    });
 
     const response = await app.request(
-      '/constantinople/visual-language/lookbooks/images/lookbook_image_test0001/sections',
+      '/constantinople/visual-language/lookbooks/images/lookbook_image_test0001/placement',
       {
         method: 'PUT',
-        body: JSON.stringify({ sections: ['camera'] }),
+        body: JSON.stringify({
+          sections: ['camera'],
+          anchorPointId: 'camera-clinical-insert',
+        }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -96,6 +106,7 @@ describe('visual language Hono route', () => {
     );
 
     expect(response.status).toBe(200);
+    expect(placementAnchorPointId).toBe('camera-clinical-insert');
     const body = (await response.json()) as {
       image: { id: string; sections: string[]; image?: unknown };
     };

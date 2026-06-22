@@ -54,6 +54,10 @@ export function discardTrashObject(
       `Trash object was not found: ${input.itemKind} ${input.itemId}.`
     );
   }
+  const primaryDraft =
+    drafts.find(
+      (draft) => draft.itemKind === input.itemKind && draft.itemId === input.itemId
+    ) ?? drafts[0];
   let trashItemIds: string[] = [];
   input.session.db.transaction((tx) => {
     const txSession = { ...input.session, db: tx };
@@ -93,7 +97,13 @@ export function discardTrashObject(
     operationId,
     trashItemIds,
     changes: input.changes,
-    resourceKeys: input.resourceKeys ?? definition.resourceKeys({ itemId: input.itemId }),
+    resourceKeys:
+      input.resourceKeys ??
+      definition.resourceKeys({
+        itemId: input.itemId,
+        ownerKind: primaryDraft?.ownerKind ?? null,
+        ownerId: primaryDraft?.ownerId ?? null,
+      }),
   });
 }
 
@@ -176,7 +186,11 @@ function restoreTrashItemRow(input: TrashProjectContext & {
     operationId: item.operationId,
     trashItemIds: [item.id],
     changes: definition.restoredChanges({ itemId: item.itemId }),
-    resourceKeys: definition.resourceKeys({ itemId: item.itemId }),
+    resourceKeys: definition.resourceKeys({
+      itemId: item.itemId,
+      ownerKind: item.ownerKind,
+      ownerId: item.ownerId,
+    }),
     warnings,
   });
 }

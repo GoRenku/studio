@@ -204,13 +204,16 @@ renku media import \
 Editing existing Lookbook image relationships stays Lookbook-specific:
 
 ```bash
-renku lookbook image set-sections --image <lookbook-image-id> --sections camera,texture --json
+renku lookbook image set-placement --image <lookbook-image-id> --sections camera,texture --json
+renku lookbook image set-placement --image <lookbook-image-id> --sections camera --anchor <lookbook-point-id> --json
 renku lookbook image discard --image <lookbook-image-id> --json
 renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
 renku lookbook card-image clear --lookbook <lookbook-id> --json
 ```
 
-`image discard` keeps the underlying media recoverable until Trash is emptied.
+Use `image set-placement` to retag or anchor an existing image. `image discard`
+is only for intentional removal from the Lookbook, and keeps the underlying
+media recoverable until Trash is emptied.
 
 Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
 Valid section keys are `thesis`, `palette`, `tone_mood`, `composition`,

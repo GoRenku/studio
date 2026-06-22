@@ -155,7 +155,7 @@ export type {
   RunMediaGenerationSpecInput,
   ScreenplayAnalysisProjectInput,
   SceneShotListProjectInput,
-  SetLookbookImageSectionsInput,
+  SetLookbookImagePlacementInput,
   SetActiveSceneShotListInput,
   SetActiveCastDesignInput,
   SetActiveLocationDesignInput,

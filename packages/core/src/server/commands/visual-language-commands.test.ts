@@ -373,7 +373,7 @@ describe('visual language commands', () => {
     expect(resource.imagesBySection.palette).toHaveLength(2);
     expect(resource.imagesBySection.lighting).toHaveLength(1);
 
-    const updated = await projectData.setLookbookImageSections({
+    const updated = await projectData.setLookbookImagePlacement({
       projectName: 'constantinople',
       homeDir,
       imageId: image.imported.id,
@@ -388,6 +388,15 @@ describe('visual language commands', () => {
       imageId: image.imported.id,
     });
     expect(deletedImage.recovery?.trashItemIds).toHaveLength(1);
+    expect(deletedImage.resourceKeys).toEqual(
+      expect.arrayContaining([
+        'surface:visual-language:lookbooks',
+        `surface:visual-language:lookbook:${lookbook.lookbook.id}`,
+      ])
+    );
+    expect(deletedImage.resourceKeys).not.toContain(
+      'surface:visual-language:lookbook:'
+    );
     await expect(
       fs.access(path.join(created.projectPath, 'visual-language/lookbook/generated-look.png'))
     ).resolves.toBeUndefined();
@@ -458,12 +467,23 @@ describe('visual language commands', () => {
     expect(imported.imported.sections).toEqual([]);
     expect(imported.imported.points).toEqual(['palette_warmth']);
 
+    const moved = await projectData.setLookbookImagePlacement({
+      projectName: 'constantinople',
+      homeDir,
+      imageId: imported.imported.id,
+      sections: ['lighting'],
+      anchorPointId: 'lighting_lamps',
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    expect(moved.image?.sections).toEqual([]);
+    expect(moved.image?.points).toEqual(['lighting_lamps']);
+
     const resource = await projectData.readLookbook({
       projectName: 'constantinople',
       homeDir,
       lookbookId: lookbook.lookbook.id,
     });
-    expect(resource.imagesByPoint.palette_warmth).toEqual([
+    expect(resource.imagesByPoint.lighting_lamps).toEqual([
       expect.objectContaining({ id: imported.imported.id }),
     ]);
 

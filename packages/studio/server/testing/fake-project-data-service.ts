@@ -1028,7 +1028,7 @@ export function fakeProjectDataService(): NonNullable<
         makeLookbookSheet(input.sheetId)
       );
     },
-    async setLookbookImageSections(input) {
+    async setLookbookImagePlacement(input) {
       return makeLookbookImageMutationReport('lookbook_test0001', {
         ...makeLookbookImage(input.imageId),
         sections: input.sections,

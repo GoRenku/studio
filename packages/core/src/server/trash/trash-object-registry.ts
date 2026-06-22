@@ -39,6 +39,7 @@ import {
   sequenceAssets,
 } from '../schema/index.js';
 import {
+  studioCastMemberAssetsResourceKey,
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbookResourceKey,
@@ -50,6 +51,7 @@ import type {
   TrashObjectDefinition,
   TrashObjectDiscardContext,
   TrashObjectGarbageCollectionContext,
+  TrashObjectResourceKeyContext,
   TrashObjectRestoreContext,
 } from './trash-object-definition.js';
 
@@ -84,6 +86,19 @@ export function getTrashObjectDefinition(
     );
   }
   return definition;
+}
+
+function requireTrashOwnerId(
+  input: TrashObjectResourceKeyContext,
+  itemKind: TrashItemKind
+): string {
+  if (input.ownerId) {
+    return input.ownerId;
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA435',
+    `Trash ${itemKind} ${input.itemId} is missing its owner id.`
+  );
 }
 
 const inspirationFolderDefinition: TrashObjectDefinition = {
@@ -305,7 +320,7 @@ const lookbookImageDefinition: TrashObjectDefinition = {
     return [
       studioVisualLanguageLookbooksResourceKey(),
       studioVisualLanguageLookbookResourceKey(
-        String(input.itemId).startsWith('lookbook_image_') ? '' : input.itemId
+        requireTrashOwnerId(input, 'lookbookImage')
       ),
     ];
   },
@@ -350,8 +365,13 @@ const lookbookSheetDefinition: TrashObjectDefinition = {
     const snapshot = requireAssetSnapshot(input.snapshot, input.trashItem.id);
     return collectAssetFiles(input, snapshot.assetId);
   },
-  resourceKeys() {
-    return [studioVisualLanguageLookbooksResourceKey()];
+  resourceKeys(input) {
+    return [
+      studioVisualLanguageLookbooksResourceKey(),
+      studioVisualLanguageLookbookResourceKey(
+        requireTrashOwnerId(input, 'lookbookSheet')
+      ),
+    ];
   },
   restoredChanges(input) {
     return [{ type: 'lookbook.sheetRestored', sheetId: input.itemId }];
@@ -555,7 +575,9 @@ const castVoiceDefinition: TrashObjectDefinition = {
     return collectAssetFiles(input, snapshot.sampleAssetId);
   },
   resourceKeys(input) {
-    return [`assets:castMember:${input.itemId}`];
+    return [
+      studioCastMemberAssetsResourceKey(requireTrashOwnerId(input, 'castVoice')),
+    ];
   },
   restoredChanges(input) {
     return [{ type: 'castVoice.restored', voiceId: input.itemId }];

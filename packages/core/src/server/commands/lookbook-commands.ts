@@ -67,19 +67,19 @@ import type {
   SelectLookbookForTypeInput,
   SetLookbookCardImageInput,
   SetDefaultLookbookSheetInput,
-  SetLookbookImageSectionsInput,
+  SetLookbookImagePlacementInput,
   SetLookbookSourceInspirationsInput,
   UpdateLookbookInput,
   ValidateLookbookInput,
 } from '../project-data-service-contracts.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
-  assertLookbookSectionsForType,
   lookbookTypeFromDocument,
   serializeLookbookDocument,
   validateLookbookDocument,
   validateLookbookSourceInspirationsDocument,
 } from '../visual-language-json/validator.js';
+import { resolveLookbookImagePlacements } from '../visual-language-json/lookbook-image-placement.js';
 import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
@@ -452,8 +452,8 @@ export async function clearLookbookCardImage(
   });
 }
 
-export async function setLookbookImageSections(
-  input: SetLookbookImageSectionsInput
+export async function setLookbookImagePlacement(
+  input: SetLookbookImagePlacementInput
 ): Promise<LookbookImageMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const imageRecord = requireLookbookImageRecord(session, input.imageId);
@@ -461,10 +461,11 @@ export async function setLookbookImageSections(
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     setLookbookImageSectionRecords(session, {
       imageId: input.imageId,
-      placements: assertLookbookSectionsForType(
-        lookbookRecord.type,
-        input.sections
-      ).map((section) => ({ section, pointId: null })),
+      placements: resolveLookbookImagePlacements({
+        lookbook: lookbookRecord,
+        sections: input.sections,
+        anchorPointId: input.anchorPointId,
+      }),
       nextId: () => ids('lookbook_image_section'),
       now: new Date().toISOString(),
     });
@@ -480,7 +481,7 @@ export async function setLookbookImageSections(
       projectFolder,
       lookbookId: imageRecord.lookbookId,
       image,
-      changeType: 'lookbook.imageSectionsSet',
+      changeType: 'lookbook.imagePlacementSet',
     });
   });
 }

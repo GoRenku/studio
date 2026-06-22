@@ -11,11 +11,13 @@ import {
   type LookbookType,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
+import { parseAnchor } from './studio-target-parsing.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runLookbookCommand(options: {
   input: string[];
   flags: {
+    anchor?: string;
     file?: string;
     image?: string;
     lookbook?: string;
@@ -172,17 +174,18 @@ export async function runLookbookCommand(options: {
     return 0;
   }
 
-  if (action === 'image' && nested === 'set-sections') {
-    const report = await service.setLookbookImageSections({
+  if (action === 'image' && nested === 'set-placement') {
+    const report = await service.setLookbookImagePlacement({
       projectName,
       homeDir: options.homeDir,
       imageId: requiredFlag(options.flags.image, '--image'),
       sections: parseSections(options.flags.sections),
+      anchorPointId: parseAnchor(options.flags.anchor),
     });
     await appendStudioResourceChangedEvent({
       runtime: cliRuntime(options, service),
       report,
-      command: 'lookbook image set-sections',
+      command: 'lookbook image set-placement',
     });
     writeJson(options.io, report);
     return 0;
@@ -273,7 +276,7 @@ export async function runLookbookCommand(options: {
         'CLI095',
         'Unknown lookbook command.',
         { path: ['lookbook', action ?? '', nested ?? '', operation ?? ''] },
-        'Use list/show/validate/create/update/rename/discard/select/clear-selection, image set-sections/discard, card-image set/clear, or inspiration list/set.'
+        'Use list/show/validate/create/update/rename/discard/select/clear-selection, image set-placement/discard, card-image set/clear, or inspiration list/set.'
       ),
     ],
     suggestion: 'Use a supported lookbook command.',

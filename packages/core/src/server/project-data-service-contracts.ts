@@ -365,7 +365,7 @@ export interface ProjectDataService {
   deleteLookbookImage(input: DeleteLookbookImageInput): Promise<LookbookImageMutationReport>;
   deleteLookbookSheet(input: DeleteLookbookSheetInput): Promise<LookbookSheetMutationReport>;
   setDefaultLookbookSheet(input: SetDefaultLookbookSheetInput): Promise<LookbookSheetMutationReport>;
-  setLookbookImageSections(input: SetLookbookImageSectionsInput): Promise<LookbookImageMutationReport>;
+  setLookbookImagePlacement(input: SetLookbookImagePlacementInput): Promise<LookbookImageMutationReport>;
   buildLookbookImageContext(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageGenerationContext>;
   listLookbookImageModels(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageModelListReport>;
   validateLookbookImageSpec(input: ValidateLookbookImageGenerationSpecInput): Promise<{ valid: true; spec: LookbookImageGenerationSpec; providerPayload: Record<string, unknown> }>;
@@ -1010,9 +1010,10 @@ export interface SetDefaultLookbookSheetInput extends VisualLanguageProjectInput
   sheetId: string;
 }
 
-export interface SetLookbookImageSectionsInput extends VisualLanguageProjectInput {
+export interface SetLookbookImagePlacementInput extends VisualLanguageProjectInput {
   imageId: string;
   sections: LookbookSection[];
+  anchorPointId?: string;
   idGenerator?: ProjectIdGenerator;
 }
 

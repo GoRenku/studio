@@ -136,7 +136,7 @@ Options
   --older-than-iso     ISO timestamp cutoff for Empty Trash preview/run
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
-  --anchor             Movie Lookbook point id to anchor an imported image to
+  --anchor             Movie Lookbook point id for Lookbook image placement
   --all-locales        Export every locale with production selects
   --all                Apply command to all eligible items
   --dry-run            Report production export operations without writing
@@ -604,6 +604,7 @@ export async function runRenkuCli(
         return await runLookbookCommand({
           input,
           flags: {
+            anchor: cli.flags.anchor,
             file: cli.flags.file,
             image: cli.flags.image,
             lookbook: cli.flags.lookbook,

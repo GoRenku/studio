@@ -399,16 +399,17 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .put('/visual-language/lookbooks/images/:imageId/sections', async (c) => {
+    .put('/visual-language/lookbooks/images/:imageId/placement', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const imageId = c.req.param('imageId') as string;
         const body = await c.req.json<unknown>();
-        const sections = readLookbookImageSectionsRequest(body);
-        const report = await projectData.setLookbookImageSections({
+        const placement = readLookbookImagePlacementRequest(body);
+        const report = await projectData.setLookbookImagePlacement({
           projectName,
           imageId,
-          sections: sections as never,
+          sections: placement.sections as never,
+          anchorPointId: placement.anchorPointId,
         });
         return c.json({ image: report.image, resourceKeys: report.resourceKeys });
       } catch (error) {
@@ -525,27 +526,44 @@ function throwInvalidLookbookDocumentRequest(
   });
 }
 
-function readLookbookImageSectionsRequest(body: unknown): string[] {
+function readLookbookImagePlacementRequest(body: unknown): {
+  sections: string[];
+  anchorPointId?: string;
+} {
   const sections =
     typeof body === 'object' && body !== null && !Array.isArray(body)
       ? (body as { sections?: unknown }).sections
       : undefined;
+  const anchorPointId =
+    typeof body === 'object' && body !== null && !Array.isArray(body)
+      ? (body as { anchorPointId?: unknown }).anchorPointId
+      : undefined;
 
   if (Array.isArray(sections)) {
-    return sections as string[];
+    if (anchorPointId === undefined) {
+      return { sections: sections as string[] };
+    }
+    if (typeof anchorPointId === 'string') {
+      const trimmed = anchorPointId.trim();
+      return {
+        sections: sections as string[],
+        ...(trimmed ? { anchorPointId: trimmed } : {}),
+      };
+    }
   }
 
   throw createStructuredError({
     code: 'STUDIO_SERVER035',
-    message: 'Lookbook image sections request is invalid.',
+    message: 'Lookbook image placement request is invalid.',
     issues: [
       createDiagnosticError(
         'STUDIO_SERVER035',
-        'sections must be an array.',
-        { path: ['sections'], context: 'Lookbook image sections request body' },
-        'Send a JSON object with a sections array.'
+        'sections must be an array and anchorPointId must be a string when present.',
+        { path: ['sections'], context: 'Lookbook image placement request body' },
+        'Send a JSON object with a sections array and optional anchorPointId string.'
       ),
     ],
-    suggestion: 'Send a JSON object with a sections array.',
+    suggestion:
+      'Send a JSON object with a sections array and optional anchorPointId string.',
   });
 }

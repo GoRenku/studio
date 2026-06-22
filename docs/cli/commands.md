@@ -1313,7 +1313,8 @@ Behavior:
 Edit generated or imported Lookbook image relationships.
 
 ```bash
-renku lookbook image set-sections --image <lookbook-image-id> --sections camera,texture --json
+renku lookbook image set-placement --image <lookbook-image-id> --sections camera,texture --json
+renku lookbook image set-placement --image <lookbook-image-id> --sections camera --anchor <lookbook-point-id> --json
 renku lookbook image discard --image <lookbook-image-id> --json
 renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
 renku lookbook card-image clear --lookbook <lookbook-id> --json
@@ -1322,6 +1323,9 @@ renku lookbook card-image clear --lookbook <lookbook-id> --json
 Behavior:
 
 - `--image` is always a Lookbook image id.
+- Use `image set-placement` to retag or anchor an existing image. Do not discard
+  and re-import an image just to change its Lookbook section or point placement.
+- `image discard` is only for intentional removal from the Lookbook.
 - Valid section keys are `thesis`, `palette`, `tone_mood`, `composition`,
   `lighting`, `texture`, and `camera`.
 - Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.

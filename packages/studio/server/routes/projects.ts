@@ -148,7 +148,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'deleteLookbookImage'
   | 'deleteLookbookSheet'
   | 'setDefaultLookbookSheet'
-  | 'setLookbookImageSections'
+  | 'setLookbookImagePlacement'
 > & {
   resolveProjectAssetFile(input: {
     projectName: string;

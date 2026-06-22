@@ -44,6 +44,12 @@ export interface TrashObjectGarbageCollectionContext extends TrashProjectContext
   snapshot: Record<string, unknown>;
 }
 
+export interface TrashObjectResourceKeyContext {
+  itemId: string;
+  ownerKind?: string | null;
+  ownerId?: string | null;
+}
+
 export interface TrashFileDraft {
   trashItemId: string;
   originalProjectRelativePath: string;
@@ -55,6 +61,6 @@ export interface TrashObjectDefinition {
   applyDiscard(input: TrashObjectDiscardContext): void;
   applyRestore(input: TrashObjectRestoreContext): DiagnosticIssue[] | void;
   collectFiles(input: TrashObjectGarbageCollectionContext): TrashFileDraft[];
-  resourceKeys(input: { itemId: string }): string[];
+  resourceKeys(input: TrashObjectResourceKeyContext): string[];
   restoredChanges(input: { itemId: string }): RecoverableMutationReport['changes'];
 }

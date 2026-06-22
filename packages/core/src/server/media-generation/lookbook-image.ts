@@ -11,8 +11,6 @@ import type {
   LookbookImageModelChoiceReport,
   LookbookImageModelListReport,
   LookbookImageOutputFormat,
-  LookbookSection,
-  MovieLookbookDefinition,
   MediaGenerationEstimateReport,
   PreparedMediaGeneration,
   MediaGenerationRunReport,
@@ -31,7 +29,6 @@ import {
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import {
   insertLookbookImageRecord,
-  type LookbookImagePlacement,
   nextLookbookImageSortOrder,
   readLookbookImage,
   setLookbookImageSectionRecords,
@@ -56,6 +53,7 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import { readLookbookResource } from '../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { resolveLookbookImagePlacements } from '../visual-language-json/lookbook-image-placement.js';
 import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
@@ -63,7 +61,6 @@ import {
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import {
   assertLookbookSectionsForType,
-  parseStoredLookbookDefinition,
 } from '../visual-language-json/validator.js';
 import {
   allocateProjectRelativeFilePath,
@@ -387,13 +384,9 @@ export async function importLookbookImageMedia(
   return withProjectSession(input, async ({ session, projectFolder, project }) => {
     const lookbook = requireLookbookRecordById(session, input.lookbookId);
     const now = new Date().toISOString();
-    const sections = assertLookbookSectionsForType(
-      lookbook.type,
-      input.sections ?? []
-    );
-    const placements = assertLookbookImagePlacements({
+    const placements = resolveLookbookImagePlacements({
       lookbook,
-      sections,
+      sections: input.sections ?? [],
       anchorPointId: input.anchorPointId,
     });
     const imported = await importLookbookImageFile({
@@ -442,107 +435,6 @@ export async function importLookbookImageMedia(
       ],
     };
   });
-}
-
-function assertLookbookImagePlacements(input: {
-  lookbook: ReturnType<typeof requireLookbookRecordById>;
-  sections: LookbookSection[];
-  anchorPointId: string | undefined;
-}): LookbookImagePlacement[] {
-  const { lookbook, sections, anchorPointId } = input;
-  if (!anchorPointId) {
-    return sections.map((section) => ({ section, pointId: null }));
-  }
-  const [section] = sections;
-  if (!section || sections.length !== 1) {
-    throw new ProjectDataError(
-      'PROJECT_DATA296',
-      'Anchoring a Lookbook image to a point requires exactly one --sections value.'
-    );
-  }
-  const matches = lookbookAnchorPoints(lookbook).filter(
-    (point) => point.id === anchorPointId
-  );
-  if (matches.length === 0) {
-    throw new ProjectDataError(
-      'PROJECT_DATA391',
-      `Lookbook image anchor point was not found: ${anchorPointId}.`,
-      {
-        suggestion:
-          'Use an id from the selected Lookbook section pattern or observation.',
-      }
-    );
-  }
-  if (matches.length > 1) {
-    throw new ProjectDataError(
-      'PROJECT_DATA392',
-      `Lookbook image anchor point is ambiguous: ${anchorPointId}.`,
-      {
-        suggestion:
-          'Use a Lookbook point id that appears exactly once in the Lookbook definition.',
-      }
-    );
-  }
-  const [match] = matches;
-  if (match.section !== section) {
-    throw new ProjectDataError(
-      'PROJECT_DATA393',
-      `Lookbook image anchor point ${anchorPointId} belongs to ${match.section}, not ${section}.`,
-      {
-        suggestion:
-          'Use the section that owns the anchor point, or use a point id from the selected section.',
-      }
-    );
-  }
-  return [{ section, pointId: anchorPointId }];
-}
-
-interface LookbookAnchorPoint {
-  id: string;
-  section: LookbookSection;
-}
-
-function lookbookAnchorPoints(
-  lookbook: ReturnType<typeof requireLookbookRecordById>
-): LookbookAnchorPoint[] {
-  if (lookbook.type !== 'movie') {
-    parseStoredLookbookDefinition({
-      type: lookbook.type,
-      value: lookbook.definitionJson,
-    });
-    return [];
-  }
-  const definition = parseStoredLookbookDefinition({
-    type: lookbook.type,
-    value: lookbook.definitionJson,
-  });
-  return movieLookbookAnchorPoints(definition);
-}
-
-function movieLookbookAnchorPoints(
-  definition: MovieLookbookDefinition
-): LookbookAnchorPoint[] {
-  const points: LookbookAnchorPoint[] = [];
-  appendAnchorPoints(points, 'palette', definition.palette.observations);
-  appendAnchorPoints(points, 'composition', definition.composition.patterns);
-  appendAnchorPoints(points, 'lighting', definition.lighting.patterns);
-  appendAnchorPoints(points, 'texture', definition.texture.observations);
-  appendAnchorPoints(points, 'camera', definition.camera.movement);
-  appendAnchorPoints(points, 'camera', definition.camera.motion);
-  appendAnchorPoints(points, 'camera', definition.camera.framing);
-  return points;
-}
-
-function appendAnchorPoints(
-  points: LookbookAnchorPoint[],
-  section: LookbookSection,
-  candidates: { id?: string }[]
-): void {
-  for (const candidate of candidates) {
-    if (candidate.id) {
-      points.push({ id: candidate.id, section });
-    }
-  }
 }
 
 function modelChoices(
