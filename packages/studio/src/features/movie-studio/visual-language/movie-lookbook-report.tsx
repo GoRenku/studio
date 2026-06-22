@@ -12,6 +12,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import type { PreviewImage } from '@/ui/image-preview-dialog';
 import {
+  EvidenceFeatureCard,
   EvidenceGrid,
   LookbookReportProse,
   LookbookReportSection,
@@ -260,6 +261,16 @@ export function MovieLookbookReport({
   );
 }
 
+const LookbookEvidenceDisplayLimit = 10;
+type EvidenceLayout = 'text' | 'single' | 'grid' | 'dense';
+
+function evidenceLayoutForCount(count: number): EvidenceLayout {
+  if (count === 0) return 'text';
+  if (count === 1) return 'single';
+  if (count <= 4) return 'grid';
+  return 'dense';
+}
+
 function PrincipleList({ principles }: { principles: string[] }) {
   return (
     <ol className='grid gap-3 lg:grid-cols-2'>
@@ -384,13 +395,13 @@ function PatternDeck({
     pattern,
     images: imagesForNestedReferences(projectName, source, pattern),
   }));
-  const deckHasImages = cards.some((card) => card.images.length > 0);
+  const hasDenseCards = cards.some((card) => card.images.length > 4);
   return (
     <div className='space-y-4'>
       {title ? (
         <h3 className='text-sm font-black uppercase text-muted-foreground'>{title}</h3>
       ) : null}
-      <div className={deckHasImages ? 'grid gap-4' : 'grid gap-4 lg:grid-cols-2'}>
+      <div className={hasDenseCards ? 'grid gap-4' : 'grid gap-4 lg:grid-cols-2'}>
         {cards.map(({ pattern, images }) => (
           <PatternCard
             key={`${title ?? 'pattern'}-${pattern.name}`}
@@ -416,10 +427,32 @@ function PatternCard({
   onOpenImage: (image: PreviewImage) => void;
   onRequestDeleteImage?: (image: ReportImage) => void;
 }) {
+  const displayImages = images.slice(0, LookbookEvidenceDisplayLimit);
+  const layout = evidenceLayoutForCount(displayImages.length);
+  if (layout === 'single') {
+    return (
+      <EvidenceFeatureCard
+        image={displayImages[0]}
+        title={pattern.name}
+        description={pattern.description}
+        onOpenImage={onOpenImage}
+        onRequestDeleteImage={onRequestDeleteImage}
+      />
+    );
+  }
   return (
-    <div className='rounded-md border border-border/40 bg-card/92 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.22)]'>
-      {images.length ? (
-        <div className='grid gap-5 xl:grid-cols-[minmax(0,0.82fr)_minmax(260px,0.68fr)]'>
+    <div
+      className='rounded-md border border-border/40 bg-card/92 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.22)]'
+      data-lookbook-evidence-layout={layout}
+    >
+      {displayImages.length ? (
+        <div
+          className={
+            layout === 'dense'
+              ? 'grid gap-5 xl:grid-cols-[minmax(280px,0.56fr)_minmax(0,1fr)]'
+              : 'space-y-4'
+          }
+        >
           <div>
             <h3 className='text-xl font-black leading-tight text-foreground'>
               {pattern.name}
@@ -429,7 +462,7 @@ function PatternCard({
             </p>
           </div>
           <EvidenceGrid
-            images={images}
+            images={displayImages}
             size='compact'
             onOpenImage={onOpenImage}
             onRequestDeleteImage={onRequestDeleteImage}
@@ -466,22 +499,67 @@ function ObservationDeck({
   return (
     <div className='grid gap-4 lg:grid-cols-2'>
       {observations.map((observation) => (
-        <div
+        <ObservationCard
           key={observation.text}
-          className='rounded-md border border-border/40 bg-card/92 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.2)]'
-        >
-          <p className='text-sm font-semibold leading-7 text-foreground/85'>
-            {observation.text}
-          </p>
-          <EvidenceGrid
-            images={imagesForNestedReferences(projectName, source, observation)}
-            size='compact'
-            className='mt-4'
-            onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
-          />
-        </div>
+          observation={observation}
+          images={imagesForNestedReferences(projectName, source, observation)}
+          onOpenImage={onOpenImage}
+          onRequestDeleteImage={onRequestDeleteImage}
+        />
       ))}
+    </div>
+  );
+}
+
+function ObservationCard({
+  observation,
+  images,
+  onOpenImage,
+  onRequestDeleteImage,
+}: {
+  observation: Observation;
+  images: ReportImage[];
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
+}) {
+  const displayImages = images.slice(0, LookbookEvidenceDisplayLimit);
+  const layout = evidenceLayoutForCount(displayImages.length);
+  if (layout === 'single') {
+    return (
+      <EvidenceFeatureCard
+        image={displayImages[0]}
+        description={observation.text}
+        onOpenImage={onOpenImage}
+        onRequestDeleteImage={onRequestDeleteImage}
+      />
+    );
+  }
+  return (
+    <div
+      className={
+        layout === 'dense'
+          ? 'rounded-md border border-border/40 bg-card/92 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.2)] lg:col-span-2'
+          : 'rounded-md border border-border/40 bg-card/92 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.2)]'
+      }
+      data-lookbook-evidence-layout={layout}
+    >
+      <div
+        className={
+          layout === 'dense'
+            ? 'grid gap-5 xl:grid-cols-[minmax(280px,0.56fr)_minmax(0,1fr)]'
+            : 'space-y-4'
+        }
+      >
+        <p className='text-sm font-semibold leading-7 text-foreground/85'>
+          {observation.text}
+        </p>
+        <EvidenceGrid
+          images={displayImages}
+          size='compact'
+          onOpenImage={onOpenImage}
+          onRequestDeleteImage={onRequestDeleteImage}
+        />
+      </div>
     </div>
   );
 }

@@ -164,6 +164,92 @@ describe('Movie Lookbook report', () => {
 
     expect(screen.getByAltText('Composition board')).not.toBeNull();
   });
+
+  it('renders Movie Lookbook thesis section images under the thesis', () => {
+    render(
+      <VisualLanguageReport
+        projectName='constantinople'
+        source={{
+          kind: 'lookbook',
+          imagesBySection: {
+            ...emptyImagesBySection(),
+            thesis: [lookbookImage('Urban s cannon drawing')],
+          },
+          imagesByPoint: {},
+        }}
+        sections={sharedMovieSections()}
+      />
+    );
+
+    expect(screen.getByAltText('Urban s cannon drawing')).not.toBeNull();
+  });
+
+  it('uses adaptive layouts for point evidence image counts', () => {
+    const sections = sharedMovieSections();
+
+    render(
+      <VisualLanguageReport
+        projectName='constantinople'
+        source={{
+          kind: 'lookbook',
+          imagesBySection: emptyImagesBySection(),
+          imagesByPoint: {
+            'comp-single': [lookbookImage('Single board', 'single')],
+            'comp-grid': [
+              lookbookImage('Grid board 1', 'grid-1'),
+              lookbookImage('Grid board 2', 'grid-2'),
+              lookbookImage('Grid board 3', 'grid-3'),
+            ],
+            'comp-dense': Array.from({ length: 6 }, (_, index) =>
+              lookbookImage(`Dense board ${index + 1}`, `dense-${index + 1}`)
+            ),
+          },
+        }}
+        sections={{
+          ...sections,
+          composition: {
+            description: sections.composition.description,
+            patterns: [
+              {
+                id: 'comp-single',
+                name: 'Single pressure',
+                description: 'One image carries the full point.',
+              },
+              {
+                id: 'comp-grid',
+                name: 'Grid pressure',
+                description: 'A few images compare variations.',
+              },
+              {
+                id: 'comp-dense',
+                name: 'Dense pressure',
+                description: 'Many images need a wide grid.',
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    expect(
+      screen
+        .getByText('Single pressure')
+        .closest('[data-lookbook-evidence-layout]')
+        ?.getAttribute('data-lookbook-evidence-layout')
+    ).toBe('single');
+    expect(
+      screen
+        .getByText('Grid pressure')
+        .closest('[data-lookbook-evidence-layout]')
+        ?.getAttribute('data-lookbook-evidence-layout')
+    ).toBe('grid');
+    expect(
+      screen
+        .getByText('Dense pressure')
+        .closest('[data-lookbook-evidence-layout]')
+        ?.getAttribute('data-lookbook-evidence-layout')
+    ).toBe('dense');
+  });
 });
 
 function sharedMovieSections() {
@@ -213,15 +299,15 @@ function emptyImagesBySection() {
   };
 }
 
-function lookbookImage(title: string): LookbookImage {
+function lookbookImage(title: string, id: string = 'comp'): LookbookImage {
   return {
-    id: 'lookbook_image_comp',
+    id: `lookbook_image_${id}`,
     lookbookId: 'lookbook_test0001',
     lookbookType: 'movie',
     sections: [],
     points: ['comp-map-pressure'],
     asset: {
-      assetId: 'asset_comp',
+      assetId: `asset_${id}`,
       type: 'lookbook_image',
       mediaKind: 'image',
       title,
@@ -232,7 +318,7 @@ function lookbookImage(title: string): LookbookImage {
       updatedAt: '2026-06-20T00:00:00.000Z',
       files: [
         {
-          id: 'asset_file_comp',
+          id: `asset_file_${id}`,
           role: 'primary',
           mediaKind: 'image',
           projectRelativePath:

@@ -53,6 +53,10 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import { readLookbookResource } from '../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import {
+  assertLookbookImagePlacementCapacity,
+  replaceSingleLookbookImagePlacementSlots,
+} from '../lookbook-image-placement-service.js';
 import { resolveLookbookImagePlacements } from '../visual-language-json/lookbook-image-placement.js';
 import {
   studioVisualLanguageLookbookResourceKey,
@@ -389,6 +393,10 @@ export async function importLookbookImageMedia(
       sections: input.sections ?? [],
       anchorPointId: input.anchorPointId,
     });
+    assertLookbookImagePlacementCapacity(session, {
+      lookbookId: input.lookbookId,
+      placements,
+    });
     const imported = await importLookbookImageFile({
       session,
       projectFolder,
@@ -405,6 +413,12 @@ export async function importLookbookImageMedia(
       lookbookId: input.lookbookId,
       assetId: imported.assetId,
       sortOrder: nextLookbookImageSortOrder(session, input.lookbookId),
+      now,
+    });
+    replaceSingleLookbookImagePlacementSlots(session, {
+      lookbookId: input.lookbookId,
+      imageId,
+      placements,
       now,
     });
     setLookbookImageSectionRecords(session, {

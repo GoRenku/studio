@@ -1315,6 +1315,7 @@ Edit generated or imported Lookbook image relationships.
 ```bash
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera,texture --json
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera --anchor <lookbook-point-id> --json
+renku lookbook image set-placement --image <lookbook-image-id> --sections thesis,texture --anchor <texture-point-id> --json
 renku lookbook image discard --image <lookbook-image-id> --json
 renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
 renku lookbook card-image clear --lookbook <lookbook-id> --json
@@ -1325,8 +1326,19 @@ Behavior:
 - `--image` is always a Lookbook image id.
 - Use `image set-placement` to retag or anchor an existing image. Do not discard
   and re-import an image just to change its Lookbook section or point placement.
+- `--anchor` pins the section that owns the point id. Additional `--sections`
+  values remain section-level placements, so `--sections thesis,texture
+  --anchor texture-cannon-material-states` shows the same image under Thesis
+  and beside that Texture point.
+- `thesis` is a single-image Movie Lookbook slot. Importing or placing another
+  image with `--sections thesis` replaces the previous Thesis placement without
+  discarding the previous image or removing its other placements.
+- Other Movie section and point placements append images until the placement
+  slot has 10 images. Move or discard an existing Lookbook image before adding
+  another image to a full slot.
+- `thesis` and `toneMood` have no point ids; tag them with `--sections` only.
 - `image discard` is only for intentional removal from the Lookbook.
-- Valid section keys are `thesis`, `palette`, `tone_mood`, `composition`,
+- Valid section keys are `thesis`, `palette`, `toneMood`, `composition`,
   `lighting`, `texture`, and `camera`.
 - Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
 - Use `renku media import --purpose lookbook.image` to attach a new generated,
@@ -1589,6 +1601,15 @@ renku media import \
   --receipt <generation-run-json> \
   --json
 ```
+
+For Movie Lookbook images, `--sections thesis` places an image under The
+Thesis. To also pin that same image beside a specific point, include the
+point-owning section and `--anchor`, for example `--sections thesis,texture
+--anchor texture-cannon-material-states`.
+The Thesis placement is single-image: importing a new image with `--sections
+thesis` replaces the previous Thesis placement without discarding that previous
+image or removing its other placements. Other Movie section and point placements
+append images until the placement slot has 10 images.
 
 Lookbook Sheet import:
 

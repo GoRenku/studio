@@ -155,6 +155,74 @@ export function EvidenceGrid({
   );
 }
 
+export function EvidenceFeatureCard({
+  image,
+  title,
+  description,
+  onOpenImage,
+  onRequestDeleteImage,
+}: {
+  image: ReportImage;
+  title?: string;
+  description: string;
+  onOpenImage: (image: PreviewImage) => void;
+  onRequestDeleteImage?: (image: ReportImage) => void;
+}) {
+  return (
+    <figure
+      className='group relative min-h-[320px] overflow-hidden rounded-md border border-border/40 bg-card shadow-[0_18px_45px_rgba(0,0,0,0.32)]'
+      title={image.title}
+      data-lookbook-evidence-layout='single'
+    >
+      <Button
+        type='button'
+        variant='ghost'
+        className='block h-full min-h-[320px] w-full rounded-none p-0 hover:bg-transparent'
+        onClick={() =>
+          onOpenImage({
+            src: image.src,
+            alt: image.alt,
+            title: readableImageTitle(image),
+          })
+        }
+      >
+        <img
+          src={image.src}
+          alt={image.alt}
+          className='h-full min-h-[320px] w-full object-cover'
+        />
+      </Button>
+      <figcaption className='pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/62 to-transparent px-5 pb-5 pt-20 text-white'>
+        {title ? (
+          <h3 className='text-lg font-black leading-tight text-white'>{title}</h3>
+        ) : null}
+        <p className='mt-2 max-w-[720px] text-sm font-semibold leading-6 text-white/82'>
+          {description}
+        </p>
+      </figcaption>
+      {onRequestDeleteImage && image.lookbookImageId ? (
+        <span className='absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type='button'
+                size='icon'
+                variant='ghost'
+                className='h-7 w-7 bg-black/50 text-white shadow-sm hover:bg-destructive hover:text-destructive-foreground'
+                aria-label={`Delete ${readableImageTitle(image)}`}
+                onClick={() => onRequestDeleteImage(image)}
+              >
+                <Trash2 className='h-3.5 w-3.5' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete image</TooltipContent>
+          </Tooltip>
+        </span>
+      ) : null}
+    </figure>
+  );
+}
+
 function EvidenceImage({
   image,
   size,

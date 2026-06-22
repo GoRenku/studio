@@ -128,6 +128,59 @@ export interface LookbookImagePlacement {
   pointId: string | null;
 }
 
+export function countLookbookImagePlacementSlotImages(
+  session: DatabaseSession,
+  input: {
+    lookbookId: string;
+    placement: LookbookImagePlacement;
+    excludeImageId?: string;
+  }
+): number {
+  const rows = readPlacementSlotImageIds(session, {
+    lookbookId: input.lookbookId,
+    placement: input.placement,
+  });
+  return new Set(
+    rows
+      .map((row) => row.imageId)
+      .filter((imageId) => imageId !== input.excludeImageId)
+  ).size;
+}
+
+export function deleteOtherLookbookImagePlacementSlotRecords(
+  session: DatabaseSession,
+  input: {
+    lookbookId: string;
+    imageId: string;
+    placements: LookbookImagePlacement[];
+    now: string;
+  }
+): void {
+  const affectedImageIds = new Set<string>();
+  for (const placement of input.placements) {
+    const rows = readPlacementSlotImageIds(session, {
+      lookbookId: input.lookbookId,
+      placement,
+    }).filter((row) => row.imageId !== input.imageId);
+    if (rows.length === 0) {
+      continue;
+    }
+    session.db
+      .delete(lookbookImageSections)
+      .where(inArray(lookbookImageSections.id, rows.map((row) => row.sectionId)))
+      .run();
+    rows.forEach((row) => affectedImageIds.add(row.imageId));
+  }
+  if (affectedImageIds.size === 0) {
+    return;
+  }
+  session.db
+    .update(lookbookImages)
+    .set({ updatedAt: input.now })
+    .where(inArray(lookbookImages.id, Array.from(affectedImageIds)))
+    .run();
+}
+
 export function setLookbookImageSectionRecords(
   session: DatabaseSession,
   input: {
@@ -160,6 +213,36 @@ export function setLookbookImageSectionRecords(
     .set({ updatedAt: input.now })
     .where(eq(lookbookImages.id, input.imageId))
     .run();
+}
+
+function readPlacementSlotImageIds(
+  session: DatabaseSession,
+  input: {
+    lookbookId: string;
+    placement: LookbookImagePlacement;
+  }
+): { imageId: string; sectionId: string }[] {
+  const pointCondition =
+    input.placement.pointId === null
+      ? isNull(lookbookImageSections.pointId)
+      : eq(lookbookImageSections.pointId, input.placement.pointId);
+  return session.db
+    .select({
+      imageId: lookbookImageSections.imageId,
+      sectionId: lookbookImageSections.id,
+    })
+    .from(lookbookImageSections)
+    .innerJoin(lookbookImages, eq(lookbookImages.id, lookbookImageSections.imageId))
+    .where(
+      and(
+        eq(lookbookImages.lookbookId, input.lookbookId),
+        isNull(lookbookImages.discardedAt),
+        isNull(lookbookImageSections.discardedAt),
+        eq(lookbookImageSections.section, input.placement.section),
+        pointCondition
+      )
+    )
+    .all();
 }
 
 export function listLookbookImages(

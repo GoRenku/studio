@@ -11,6 +11,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import type { MovieLookbookDocument } from '../visual-language-json/validator.js';
 
 describe('visual language commands', () => {
   let homeDir: string;
@@ -471,11 +472,11 @@ describe('visual language commands', () => {
       projectName: 'constantinople',
       homeDir,
       imageId: imported.imported.id,
-      sections: ['lighting'],
+      sections: ['thesis', 'lighting'],
       anchorPointId: 'lighting_lamps',
       idGenerator: createDeterministicIdGenerator(),
     });
-    expect(moved.image?.sections).toEqual([]);
+    expect(moved.image?.sections).toEqual(['thesis']);
     expect(moved.image?.points).toEqual(['lighting_lamps']);
 
     const resource = await projectData.readLookbook({
@@ -484,6 +485,34 @@ describe('visual language commands', () => {
       lookbookId: lookbook.lookbook.id,
     });
     expect(resource.imagesByPoint.lighting_lamps).toEqual([
+      expect.objectContaining({ id: imported.imported.id }),
+    ]);
+    expect(resource.imagesBySection.thesis).toEqual([
+      expect.objectContaining({ id: imported.imported.id }),
+    ]);
+
+    const replacementSourcePath =
+      'visual-language/tmp/anchored/replacement-thesis.png';
+    await fs.writeFile(
+      path.join(created.projectPath, replacementSourcePath),
+      'replacement image bytes'
+    );
+    const replacement = await projectData.importLookbookImageMedia({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: replacementSourcePath,
+      sections: ['thesis'],
+    });
+    const replacedResource = await projectData.readLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+    expect(replacedResource.imagesBySection.thesis).toEqual([
+      expect.objectContaining({ id: replacement.imported.id }),
+    ]);
+    expect(replacedResource.imagesByPoint.lighting_lamps).toEqual([
       expect.objectContaining({ id: imported.imported.id }),
     ]);
 
@@ -509,26 +538,68 @@ describe('visual language commands', () => {
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA393' });
 
+    const mixedImport = await projectData.importLookbookImageMedia({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: sourcePath,
+      sections: ['palette', 'lighting'],
+      anchorPointId: 'palette_warmth',
+    });
+    expect(mixedImport.imported.sections).toEqual(['lighting']);
+    expect(mixedImport.imported.points).toEqual(['palette_warmth']);
+
+    const finalResource = await projectData.readLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+    });
+    expect(finalResource.images).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: imported.imported.id }),
+        expect.objectContaining({ id: mixedImport.imported.id }),
+      ])
+    );
+  });
+
+  it('enforces the Lookbook image placement slot limit', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Capacity Lookbook',
+      document: lookbookDocument(),
+    });
+    const sourcePath = 'visual-language/tmp/capacity/lookbook-frame.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, sourcePath)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, sourcePath), 'image bytes');
+
+    for (let index = 0; index < 10; index += 1) {
+      await projectData.importLookbookImageMedia({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: lookbook.lookbook.id,
+        sourceProjectRelativePath: sourcePath,
+        sections: ['palette'],
+      });
+    }
+
     await expect(
       projectData.importLookbookImageMedia({
         projectName: 'constantinople',
         homeDir,
         lookbookId: lookbook.lookbook.id,
         sourceProjectRelativePath: sourcePath,
-        sections: ['palette', 'lighting'],
-        anchorPointId: 'palette_warmth',
+        sections: ['palette'],
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA296' });
-
-    await expect(
-      projectData.readLookbook({
-        projectName: 'constantinople',
-        homeDir,
-        lookbookId: lookbook.lookbook.id,
-      })
-    ).resolves.toMatchObject({
-      images: [{ id: imported.imported.id }],
-    });
+    ).rejects.toMatchObject({ code: 'PROJECT_DATA394' });
   });
 
   it('discards and restores Storyboard source links when deleting a source Movie Lookbook', async () => {
@@ -816,7 +887,9 @@ function lookbookSections() {
   };
 }
 
-function lookbookDocument(sourceInspirationFolderIds: string[] = []) {
+function lookbookDocument(
+  sourceInspirationFolderIds: string[] = []
+): MovieLookbookDocument {
   return {
     kind: 'movieLookbook' as const,
     movieLookbook: {

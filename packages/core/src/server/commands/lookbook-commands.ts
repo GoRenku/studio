@@ -79,6 +79,10 @@ import {
   validateLookbookDocument,
   validateLookbookSourceInspirationsDocument,
 } from '../visual-language-json/validator.js';
+import {
+  assertLookbookImagePlacementCapacity,
+  replaceSingleLookbookImagePlacementSlots,
+} from '../lookbook-image-placement-service.js';
 import { resolveLookbookImagePlacements } from '../visual-language-json/lookbook-image-placement.js';
 import {
   studioVisualLanguageLookbookResourceKey,
@@ -459,15 +463,28 @@ export async function setLookbookImagePlacement(
     const imageRecord = requireLookbookImageRecord(session, input.imageId);
     const lookbookRecord = requireLookbookRecordById(session, imageRecord.lookbookId);
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
+    const now = new Date().toISOString();
+    const placements = resolveLookbookImagePlacements({
+      lookbook: lookbookRecord,
+      sections: input.sections,
+      anchorPointId: input.anchorPointId,
+    });
+    assertLookbookImagePlacementCapacity(session, {
+      lookbookId: imageRecord.lookbookId,
+      imageId: input.imageId,
+      placements,
+    });
+    replaceSingleLookbookImagePlacementSlots(session, {
+      lookbookId: imageRecord.lookbookId,
+      imageId: input.imageId,
+      placements,
+      now,
+    });
     setLookbookImageSectionRecords(session, {
       imageId: input.imageId,
-      placements: resolveLookbookImagePlacements({
-        lookbook: lookbookRecord,
-        sections: input.sections,
-        anchorPointId: input.anchorPointId,
-      }),
+      placements,
       nextId: () => ids('lookbook_image_section'),
-      now: new Date().toISOString(),
+      now,
     });
     const image = readLookbookImage(session, input.imageId);
     if (!image) {

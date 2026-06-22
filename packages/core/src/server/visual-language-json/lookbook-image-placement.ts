@@ -23,13 +23,12 @@ export function resolveLookbookImagePlacements(input: {
   );
   const anchorPointId = input.anchorPointId;
   if (!anchorPointId) {
-    return sections.map((section) => ({ section, pointId: null }));
+    return uniqueSections(sections).map((section) => ({ section, pointId: null }));
   }
-  const [section] = sections;
-  if (!section || sections.length !== 1) {
+  if (sections.length === 0) {
     throw new ProjectDataError(
       'PROJECT_DATA296',
-      'Anchoring a Lookbook image to a point requires exactly one --sections value.'
+      'Anchoring a Lookbook image to a point requires --sections to include the section that owns the point.'
     );
   }
   const matches = lookbookAnchorPoints(input.lookbook).filter(
@@ -56,17 +55,30 @@ export function resolveLookbookImagePlacements(input: {
     );
   }
   const [match] = matches;
-  if (match.section !== section) {
+  if (!sections.includes(match.section)) {
     throw new ProjectDataError(
       'PROJECT_DATA393',
-      `Lookbook image anchor point ${anchorPointId} belongs to ${match.section}, not ${section}.`,
+      `Lookbook image anchor point ${anchorPointId} belongs to ${match.section}.`,
       {
         suggestion:
-          'Use the section that owns the anchor point, or use a point id from the selected section.',
+          'Include the section that owns the anchor point in --sections, or use a point id from one of the selected sections.',
       }
     );
   }
-  return [{ section, pointId: anchorPointId }];
+  return uniqueSections(sections).map((section) => ({
+    section,
+    pointId: section === match.section ? anchorPointId : null,
+  }));
+}
+
+function uniqueSections(sections: LookbookSection[]): LookbookSection[] {
+  const unique: LookbookSection[] = [];
+  for (const section of sections) {
+    if (!unique.includes(section)) {
+      unique.push(section);
+    }
+  }
+  return unique;
 }
 
 interface LookbookAnchorPoint {

@@ -777,6 +777,14 @@ renku media import \
 For Lookbook Images, import registers an asset, creates the Lookbook image
 relationship, stores section placement, and emits Lookbook resource keys.
 The `--sections` values must match the owning Lookbook type.
+For Movie Lookbook images, `--sections thesis` places an image under The Thesis.
+To also pin that same image beside a specific point, include the point-owning
+section and `--anchor`, for example `--sections thesis,texture --anchor
+texture-cannon-material-states`.
+The Thesis placement is single-image: importing a new image with `--sections
+thesis` replaces the previous Thesis placement without discarding that previous
+image or removing its other placements. Other Movie section and point placements
+append images until the placement slot has 10 images.
 
 For Lookbook Sheets, import registers an asset with type `lookbook_sheet`,
 attaches it to the Lookbook, and stores the file under

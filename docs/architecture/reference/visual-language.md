@@ -201,11 +201,17 @@ renku media import \
   --json
 ```
 
+For a Movie thesis image, use `--sections thesis`. If the same image should
+also sit beside a point-level Movie Lookbook pattern or observation, include the
+point-owning section and `--anchor`, for example `--sections thesis,texture
+--anchor texture-cannon-material-states`.
+
 Editing existing Lookbook image relationships stays Lookbook-specific:
 
 ```bash
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera,texture --json
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera --anchor <lookbook-point-id> --json
+renku lookbook image set-placement --image <lookbook-image-id> --sections thesis,texture --anchor <texture-point-id> --json
 renku lookbook image discard --image <lookbook-image-id> --json
 renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
 renku lookbook card-image clear --lookbook <lookbook-id> --json
@@ -216,7 +222,17 @@ is only for intentional removal from the Lookbook, and keeps the underlying
 media recoverable until Trash is emptied.
 
 Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
-Valid section keys are `thesis`, `palette`, `tone_mood`, `composition`,
+Point anchors are also stored there. When `--anchor` is present, the owning
+section for that point becomes point-level evidence and any additional
+`--sections` values remain section-level evidence. For example, `--sections
+thesis,texture --anchor texture-cannon-material-states` makes one image appear
+under Thesis and beside that Texture point. `thesis` and `toneMood` have no point
+ids and use section-level placement only.
+`thesis` is a single-image Movie Lookbook slot. Adding a new Thesis placement
+replaces the previous Thesis placement without discarding the previous image or
+removing its other placements. Other Movie section and point placements append
+images until the placement slot has 10 images.
+Valid section keys are `thesis`, `palette`, `toneMood`, `composition`,
 `lighting`, `texture`, and `camera`.
 
 ## Obsolete Shapes

@@ -850,6 +850,56 @@ describe('renku CLI', () => {
       },
     });
 
+    stdout = [];
+    stderr = [];
+    const placementExitCode = await runRenkuCli(
+      [
+        'lookbook',
+        'image',
+        'set-placement',
+        '--image',
+        mediaImportReport.imported.id,
+        '--sections',
+        'thesis,lighting',
+        '--anchor',
+        'lighting-contaminated-practicals',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(placementExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      image: {
+        id: mediaImportReport.imported.id,
+        sections: ['thesis'],
+        points: ['lighting-contaminated-practicals'],
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const lookbookReadExitCode = await runRenkuCli(
+      [
+        'lookbook',
+        'show',
+        '--lookbook',
+        report.lookbook.id,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(lookbookReadExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      imagesBySection: {
+        thesis: [expect.objectContaining({ id: mediaImportReport.imported.id })],
+      },
+      imagesByPoint: {
+        'lighting-contaminated-practicals': [
+          expect.objectContaining({ id: mediaImportReport.imported.id }),
+        ],
+      },
+    });
+
     const generatedSheetPath = 'generated/media/imperial-wound-lookbook-sheet.png';
     await fs.writeFile(
       path.join(storageRoot, 'constantinople', generatedSheetPath),
@@ -3630,6 +3680,7 @@ function lookbookJson(sourceInspirationFolderIds: string[] = []) {
         description: 'Faces and bodies press into symmetrical frames.',
         patterns: [
           {
+            id: 'composition-clinical-symmetry',
             name: 'Clinical symmetry',
             description: 'Use centered frames when a body becomes an argument.',
           },
@@ -3639,6 +3690,7 @@ function lookbookJson(sourceInspirationFolderIds: string[] = []) {
         description: 'High-key institutional light breaks into colored threat.',
         patterns: [
           {
+            id: 'lighting-contaminated-practicals',
             name: 'Contaminated practicals',
             description: 'Let green sources corrupt otherwise clean environments.',
           },
@@ -3646,7 +3698,12 @@ function lookbookJson(sourceInspirationFolderIds: string[] = []) {
       },
       texture: {
         description: 'Skin, gloss, condensation, and plastic carry the image.',
-        observations: [{ text: 'Texture should make clean rooms feel biological.' }],
+        observations: [
+          {
+            id: 'texture-biological-clean-rooms',
+            text: 'Texture should make clean rooms feel biological.',
+          },
+        ],
       },
       camera: {
         description: 'The camera is precise until bodily pressure breaks composure.',
