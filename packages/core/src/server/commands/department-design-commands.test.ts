@@ -137,6 +137,33 @@ describe('department design commands', () => {
     });
   });
 
+  it('reports voice-over cast members as profile-ready without requiring character sheets', async () => {
+    await createSampleMovieProject({ homeDir, projectData });
+
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const narratorId = screenplay.screenplay?.cast.find(
+      (castMember) => castMember.isVoiceOver
+    )?.id as string;
+
+    await expect(
+      projectData.readCastContext({ homeDir, castMemberId: narratorId })
+    ).resolves.toMatchObject({
+      castMember: {
+        id: narratorId,
+        isVoiceOver: true,
+      },
+      generationReadiness: {
+        characterSheet: false,
+        profile: true,
+        notes: expect.arrayContaining([
+          'Voice-over Cast Members do not require visual character sheets.',
+          'Use cast.profile for a symbolic navigation image only; it must not be treated as a physical character reference.',
+          'Use Cast Voice records for durable voice identity and samples.',
+        ]),
+      },
+    });
+  });
+
   it('rejects cast member deletes when assets or Cast Designs depend on the member', async () => {
     const created = await createBlankMovieProject({ homeDir, projectData });
     if (!created) {

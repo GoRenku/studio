@@ -227,6 +227,72 @@ describe('Cast image import', () => {
       },
     });
   });
+
+  it('imports voice-over profile media without requiring a character sheet', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-cast-voice-over-profile-test-'));
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const project = await projectData.readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const narrator = project.cast.find((member) => member.isVoiceOver);
+    expect(narrator).toBeDefined();
+
+    const profileSource = 'generated/media/narrator-voice-over-profile.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, profileSource)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, profileSource), 'profile bytes');
+
+    const profile = await projectData.importCastProfileMedia({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: narrator!.id,
+      sourceProjectRelativePath: profileSource,
+      title: 'Narrator voice-over profile',
+      oneLineSummary: 'Symbolic navigation profile for a voice-only cast role.',
+    });
+    expect(profile).toMatchObject({
+      purpose: 'cast.profile',
+      imported: {
+        type: 'cast_profile',
+        role: 'profile',
+        files: [
+          {
+            role: 'primary',
+            projectRelativePath:
+              'cast/narrator/profiles/narrator-voice-over-profile.png',
+          },
+        ],
+      },
+    });
+
+    await expect(
+      projectData.readCastOverviewResource({
+        projectName: 'constantinople',
+        homeDir,
+      })
+    ).resolves.toMatchObject({
+      cast: {
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            id: narrator!.id,
+            isVoiceOver: true,
+            firstImage: expect.objectContaining({
+              assetId: profile.imported.assetId,
+            }),
+          }),
+        ]),
+      },
+    });
+  });
 });
 
 describe('Cast profile model discovery', () => {

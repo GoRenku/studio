@@ -375,9 +375,11 @@ function castGenerationReadiness(
   if (castMember.isVoiceOver) {
     return {
       characterSheet: false,
-      profile: false,
+      profile: true,
       notes: [
-        'Voice-over Cast Members use Cast Voice records and do not require visual character sheets or profile images.',
+        'Voice-over Cast Members do not require visual character sheets.',
+        'Use cast.profile for a symbolic navigation image only; it must not be treated as a physical character reference.',
+        'Use Cast Voice records for durable voice identity and samples.',
       ],
     };
   }
