@@ -423,6 +423,18 @@ export function SceneTakesTab({
     sceneId,
   ]);
 
+  const handleTakeChange = useCallback((updatedTake: SceneShotVideoTake) => {
+    setTakes((current) =>
+      orderSceneShotVideoTakes(
+        current.map((candidate) =>
+          candidate.takeId === updatedTake.takeId
+            ? updatedTake
+            : candidate
+        )
+      )
+    );
+  }, []);
+
   const reportDetailSaveNotification = useCallback(
     (status: SaveNotificationStatus) => {
       setDetailSaveNotification((current) => {
@@ -697,6 +709,7 @@ export function SceneTakesTab({
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
             onCreateTake={handleCreateTake}
+            onTakeChange={handleTakeChange}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import type {
   LocationResourceResponse,
@@ -44,7 +44,7 @@ export function LocationDetailsTab({
   return (
     <>
       <article className='min-h-full bg-panel-bg px-4 py-5 text-foreground'>
-        <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(360px,520px)_minmax(0,1fr)] lg:gap-8'>
+        <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(260px,390px)_minmax(0,1fr)] lg:gap-8'>
           <LocationFeatureImage
             image={heroPreview}
             aspectRatio={heroAspectRatio}
@@ -67,20 +67,20 @@ export function LocationDetailsTab({
                 {location.description}
               </p>
             ) : null}
+            {location.visualNotes ? (
+              <dl className='mt-7 grid gap-3 sm:grid-cols-2'>
+                <div className='border-t border-border/40 pt-4'>
+                  <dt className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
+                    Visual Notes
+                  </dt>
+                  <dd className='mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/78'>
+                    {location.visualNotes}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
           </div>
         </header>
-
-        {location.visualNotes ? (
-          <LocationReportSection
-            number='01'
-            kicker='Location Direction'
-            title='Visual Notes'
-          >
-            <p className='max-w-[820px] whitespace-pre-wrap text-sm leading-7 text-foreground/78'>
-              {location.visualNotes}
-            </p>
-          </LocationReportSection>
-        ) : null}
       </article>
       <ImagePreviewDialog
         images={previewImage ? [previewImage] : []}
@@ -88,32 +88,6 @@ export function LocationDetailsTab({
         onOpenChange={(open) => !open && setPreviewImage(null)}
       />
     </>
-  );
-}
-
-function LocationReportSection({
-  number,
-  kicker,
-  title,
-  children,
-}: {
-  number: string;
-  kicker: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className='grid gap-6 border-t border-border/40 py-8 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)] lg:gap-8'>
-      <div>
-        <p className='font-mono text-xs uppercase text-muted-foreground'>
-          {number} - {kicker}
-        </p>
-        <h2 className='mt-4 text-4xl font-black leading-none text-foreground sm:text-5xl xl:text-6xl'>
-          {title}
-        </h2>
-      </div>
-      <div className='min-w-0'>{children}</div>
-    </section>
   );
 }
 

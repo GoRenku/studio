@@ -20,7 +20,7 @@ interface TakeShotDesignProviderProps {
   sceneId: string;
   shot: SceneShot;
   take?: SceneShotVideoTake | null;
-  onSaved?: () => void;
+  onSaved?: (take: SceneShotVideoTake) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   children: ReactNode;
 }
@@ -46,7 +46,7 @@ export function TakeShotDesignProvider({
     takeId: take?.takeId,
     shotId: shot.shotId,
     initial,
-    onSaved,
+    onSaved: (result) => onSaved?.(result.context.take),
   });
 
   useEffect(() => {

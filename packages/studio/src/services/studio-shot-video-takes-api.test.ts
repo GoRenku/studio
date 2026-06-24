@@ -13,6 +13,7 @@ import {
   updateTakeCharacterSheetSelection,
   updateTakeDialogueAudioSelection,
   updateTakeLocationSheetSelection,
+  updateTakeLookbookSheetSelection,
   updateSceneShotVideoTakePick,
   updateShotVideoTakeProduction,
   updateSceneShotVideoTakeShotDesign,
@@ -267,6 +268,26 @@ describe('studio-shot-video-takes-api', () => {
     expect(lastBody()).toEqual({
       locationId: 'loc_chamber',
       assetIds: ['asset_environment_001'],
+    });
+  });
+
+  it('updates the take Lookbook sheet selection', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ context: {}, resourceKeys: [] })
+    );
+    await updateTakeLookbookSheetSelection(
+      'constantinople',
+      'scene_hook',
+      TAKE_ID,
+      'lookbook_sheet_001'
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      `/screenplay/scenes/scene_hook/takes/${TAKE_ID}/reference-selections/lookbook-sheets`
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      lookbookSheetId: 'lookbook_sheet_001',
     });
   });
 

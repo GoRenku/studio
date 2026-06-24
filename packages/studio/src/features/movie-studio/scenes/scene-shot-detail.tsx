@@ -44,6 +44,7 @@ interface SceneShotDetailProps {
   locationLabels: Record<string, string>;
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onCreateTake?: () => Promise<void>;
+  onTakeChange?: (take: SceneShotVideoTake) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -68,6 +69,7 @@ export function SceneShotDetail({
   locationLabels,
   onTabChange = () => {},
   onCreateTake,
+  onTakeChange,
   onSaveNotificationChange,
 }: SceneShotDetailProps) {
   const saveNotificationSequenceRef = useRef(0);
@@ -157,6 +159,7 @@ export function SceneShotDetail({
             sceneId={sceneId}
             shot={shot}
             take={take}
+            onSaved={onTakeChange}
             onSaveNotificationChange={handleShotDesignSaveNotificationChange}
           >
             <LineTabs

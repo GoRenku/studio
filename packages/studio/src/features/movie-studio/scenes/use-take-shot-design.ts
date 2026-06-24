@@ -4,7 +4,10 @@ import {
   useDebouncedAutosave,
   type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
-import { updateSceneShotVideoTakeShotDesign } from '@/services/studio-shot-video-takes-api';
+import {
+  updateSceneShotVideoTakeShotDesign,
+  type ShotVideoTakeProductionMutation,
+} from '@/services/studio-shot-video-takes-api';
 
 export interface UseTakeShotDesignInput {
   projectName: string;
@@ -12,7 +15,7 @@ export interface UseTakeShotDesignInput {
   takeId?: string | null;
   shotId: string;
   initial: SceneShotVideoTakeShotDesign | undefined;
-  onSaved?: () => void;
+  onSaved?: (result: ShotVideoTakeProductionMutation) => void;
 }
 
 export interface UseTakeShotDesignResult {
@@ -30,7 +33,7 @@ export function useTakeShotDesign(
   const save = useCallback(
     (value: SceneShotVideoTakeShotDesign) => {
       if (!takeId) {
-        return Promise.resolve();
+        return Promise.resolve(null);
       }
       return updateSceneShotVideoTakeShotDesign(
         projectName,
@@ -38,7 +41,7 @@ export function useTakeShotDesign(
         takeId,
         shotId,
         isEmptyShotDesign(value) ? null : value
-      ).then(() => undefined);
+      );
     },
     [projectName, sceneId, takeId, shotId]
   );
@@ -47,8 +50,13 @@ export function useTakeShotDesign(
     value: shotDesign,
     save,
     failureMessage: 'Shot settings could not be saved.',
+    flushOnUnmount: true,
     isReady: () => Boolean(takeId),
-    onSaved,
+    onSaved: (result) => {
+      if (result) {
+        onSaved?.(result);
+      }
+    },
   });
 
   return { shotDesign, update: setShotDesign, status };
