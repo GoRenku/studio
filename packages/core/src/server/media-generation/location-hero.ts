@@ -185,6 +185,7 @@ export async function buildLocationHeroContext(
       sourceLocationSheetAsset,
       imageFiles: locationImageFileReferences(projectFolder, [
         ...assets.environmentSheetTakes,
+        ...(sourceLocationSheetAsset ? [sourceLocationSheetAsset] : []),
         ...assets.heroTakes,
         ...assets.selectedHeroes,
       ]),

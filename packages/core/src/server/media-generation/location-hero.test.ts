@@ -65,7 +65,7 @@ describe('Location hero generation and import', () => {
     });
   });
 
-  it('generates a hero from the chosen source sheet and marks it current', async () => {
+  it('generates a hero from the requested source sheet and marks it current', async () => {
     const fixture = await createConfiguredProject();
     const sourceSheet = await importSourceSheet(fixture);
 
@@ -109,6 +109,45 @@ describe('Location hero generation and import', () => {
     await expect(
       fs.access(path.join(fixture.created.projectPath, heroFile.projectRelativePath))
     ).resolves.toBeUndefined();
+  });
+
+  it('generates a hero from a selected Location Sheet asset requested by id', async () => {
+    const fixture = await createConfiguredProject();
+    const sourceSheet = await importSourceSheet(fixture);
+    await fixture.projectData.createAssetSelect({
+      projectName: 'constantinople',
+      homeDir: fixture.homeDir,
+      target: { kind: 'location', locationId: fixture.location.id },
+      assetId: sourceSheet.imported.assetId,
+    });
+
+    const report = await fixture.projectData.generateLocationHeroFromSheet({
+      projectName: 'constantinople',
+      homeDir: fixture.homeDir,
+      locationId: fixture.location.id,
+      sourceLocationSheetAssetId: sourceSheet.imported.assetId,
+      simulate: true,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    expect(report).toMatchObject({
+      spec: {
+        spec: {
+          sourceLocationSheetAssetId: sourceSheet.imported.assetId,
+        },
+      },
+      run: {
+        simulated: true,
+      },
+      importReport: {
+        sourceLocationSheetAssetId: sourceSheet.imported.assetId,
+        imported: {
+          type: 'location_hero',
+          role: 'hero',
+          selection: { kind: 'select', order: 1 },
+        },
+      },
+    });
   });
 
   it('clears the previous current hero when a new hero is imported', async () => {

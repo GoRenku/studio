@@ -7,7 +7,6 @@ import type {
 } from '@/services/studio-project-contracts';
 import {
   deleteLocationAsset,
-  generateLocationHeroFromSheet,
   readLocationAssets,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
@@ -77,15 +76,6 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
     }
   };
 
-  const generateHero = async (asset: StudioAssetResponse) => {
-    try {
-      await generateLocationHeroFromSheet(projectName, locationId, asset.assetId);
-      await refreshLocation();
-    } catch (generateError) {
-      toast.error(errorMessage(generateError));
-    }
-  };
-
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
   }
@@ -115,7 +105,6 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
           locationId={locationId}
           assets={assets}
           onDeleteAsset={removeAsset}
-          onGenerateHero={generateHero}
         />
       </LineTabsContent>
     </LineTabs>

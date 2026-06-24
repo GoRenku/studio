@@ -85,7 +85,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'updateProjectInformation'
   | 'resolveCoverImage'
   | 'listAssets'
-  | 'generateLocationHeroFromSheet'
   | 'createAssetSelect'
   | 'removeAssetSelect'
   | 'discardAsset'

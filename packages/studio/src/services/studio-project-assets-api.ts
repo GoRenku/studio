@@ -23,10 +23,6 @@ interface StudioAssetDeleteResponse {
   resourceKeys?: string[];
 }
 
-interface StudioLocationHeroGenerateResponse {
-  assets: StudioAssetResponse[];
-}
-
 interface StudioCastVoiceDeleteResponse {
   removed: {
     castMemberId: string;
@@ -297,30 +293,6 @@ export async function deleteLocationAsset(
   return body.assetId;
 }
 
-export async function generateLocationHeroFromSheet(
-  projectName: string,
-  locationId: string,
-  sourceLocationSheetAssetId: string
-): Promise<StudioAssetResponse[]> {
-  const response = await fetch(locationHeroGenerateUrl(projectName, locationId), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Renku-Studio-Token': readStudioApiToken(),
-    },
-    body: JSON.stringify({
-      sourceLocationSheetAssetId,
-      simulate: true,
-    }),
-  });
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-
-  const body = (await response.json()) as StudioLocationHeroGenerateResponse;
-  return body.assets;
-}
-
 export function castAssetFileUrl(
   projectName: string,
   castMemberId: string,
@@ -395,10 +367,6 @@ function locationAssetUrl(
   assetId: string
 ): string {
   return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}`;
-}
-
-function locationHeroGenerateUrl(projectName: string, locationId: string): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/locations/${encodeURIComponent(locationId)}/heroes/generate`;
 }
 
 function castAssetSelectUrl(

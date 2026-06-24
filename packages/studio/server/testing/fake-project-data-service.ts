@@ -1,5 +1,4 @@
 import type {
-  Asset,
   MediaGenerationSpec,
   LookbookSection,
   MediaGenerationSpecRecord,
@@ -101,87 +100,6 @@ export function fakeProjectDataService(): NonNullable<
     },
     async listAssets() {
       return [makeAsset('asset_cast_reference')];
-    },
-    async generateLocationHeroFromSheet(input) {
-      const sheet = makeLocationAsset({
-        assetId: input.sourceLocationSheetAssetId,
-        type: 'location_environment_sheet',
-        role: 'environment_sheet',
-        title: 'Location Sheet',
-        selected: false,
-        width: 1536,
-        height: 1152,
-      });
-      const hero = makeLocationAsset({
-        assetId: 'asset_location_hero',
-        type: 'location_hero',
-        role: 'hero',
-        title: 'Location hero image',
-        selected: true,
-        width: 1600,
-        height: 900,
-      });
-      const spec = {
-        purpose: 'location.hero' as const,
-        target: { kind: 'location' as const, id: input.locationId },
-        sourceLocationSheetAssetId: input.sourceLocationSheetAssetId,
-        modelChoice: 'fal-ai/nano-banana-2/edit' as const,
-        prompt: 'Create a Location Hero Image from the selected Location Sheet.',
-        takeCount: 1 as const,
-        seed: null,
-        heroFrame: '16:9' as const,
-        detail: 'standard' as const,
-        outputFormat: 'png' as const,
-        title: 'Location hero image',
-        description: 'Representative hero image for this Location.',
-      };
-      return {
-        spec: makeMediaGenerationSpecRecord(
-          'media_generation_spec_location_hero',
-          spec
-        ),
-        run: {
-          id: 'media_generation_run_location_hero',
-          specId: 'media_generation_spec_location_hero',
-          purpose: 'location.hero',
-          target: { kind: 'location', id: input.locationId },
-          modelChoice: 'fal-ai/nano-banana-2/edit',
-          provider: 'fal-ai',
-          model: 'nano-banana-2/edit',
-          specSnapshot: spec,
-          providerPayload: {},
-          estimateSnapshot: {},
-          simulated: Boolean(input.simulate),
-          status: input.simulate ? 'simulated' : 'completed',
-          outputs: [
-            {
-              projectRelativePath: 'generated/media/location-hero.png',
-              mimeType: 'image/png',
-            },
-          ],
-          diagnostics: {},
-          startedAt: '2026-05-22T00:00:00.000Z',
-          completedAt: '2026-05-22T00:00:00.000Z',
-        },
-        importReport: {
-          valid: true,
-          warnings: [],
-          project: { name: 'test-project' },
-          purpose: 'location.hero',
-          target: { kind: 'location', id: input.locationId },
-          imported: hero,
-          sourceLocationSheetAssetId: input.sourceLocationSheetAssetId,
-          files: [
-            {
-              role: 'primary',
-              projectRelativePath:
-                'locations/location/heroes/location-hero/hero.png' as ProjectRelativePath,
-            },
-          ],
-          resourceKeys: [`assets:location:${input.locationId}`],
-        },
-        assets: [sheet, hero],
-      };
     },
     async listCastVoices() {
       return { voices: [] };
@@ -1658,40 +1576,6 @@ function makeMediaGenerationSpecRecord(
     spec,
     createdAt: '2026-05-22T00:00:00.000Z',
     updatedAt: '2026-05-22T00:00:00.000Z',
-  };
-}
-
-function makeLocationAsset(input: {
-  assetId: string;
-  type: string;
-  role: string;
-  title: string;
-  selected: boolean;
-  width: number;
-  height: number;
-}): Asset {
-  const asset = makeAsset(input.assetId);
-  return {
-    ...asset,
-    relationshipId: `${input.assetId}_relationship`,
-    target: { kind: 'location', locationId: 'location_test0001' },
-    type: input.type,
-    selection: input.selected ? { kind: 'select', order: 1 } : { kind: 'take' },
-    title: input.title,
-    oneLineSummary: input.title,
-    role: input.role,
-    sortOrder: input.selected ? 0 : 1,
-    files: [
-      {
-        ...asset.files[0]!,
-        id: `${input.assetId}_primary`,
-        role: 'primary',
-        projectRelativePath:
-          `locations/location/${input.assetId}.png` as ProjectRelativePath,
-        width: input.width,
-        height: input.height,
-      },
-    ],
   };
 }
 

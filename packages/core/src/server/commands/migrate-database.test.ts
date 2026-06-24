@@ -331,6 +331,261 @@ describe('migrate database command', () => {
     }
   });
 
+  it('rewrites flexible Location Sheet migration data without duplicating primary sheet files', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        create table asset_file (
+          id text primary key not null,
+          asset_id text not null,
+          role text not null,
+          project_relative_path text not null,
+          mime_type text,
+          media_kind text not null,
+          size_bytes integer,
+          content_hash text,
+          width integer,
+          height integer,
+          duration_seconds real,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+        create table location_environment_sheet (
+          id text primary key not null,
+          asset_id text not null,
+          composite_file_id text not null
+        );
+        create table location_environment_sheet_view (
+          id text primary key not null,
+          sheet_id text not null,
+          asset_file_id text not null
+        );
+        create table location_asset (
+          id text primary key not null,
+          location_id text not null,
+          asset_id text not null,
+          role text not null,
+          sort_order integer not null,
+          selection text not null,
+          selection_order integer
+        );
+        create table scene_shot_video_take (
+          id text primary key not null,
+          scene_id text not null,
+          source_shot_list_id text not null,
+          title text not null,
+          state_json text not null,
+          is_picked integer not null,
+          history_snapshot_json text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        insert into asset_file (
+          id,
+          asset_id,
+          role,
+          project_relative_path,
+          media_kind,
+          created_at,
+          updated_at
+        ) values
+          (
+            'asset_file_composite_only',
+            'asset_sheet_composite_only',
+            'composite',
+            'locations/chamber/sheets/composite.png',
+            'image',
+            '2026-06-23T00:00:00.000Z',
+            '2026-06-23T00:00:00.000Z'
+          ),
+          (
+            'asset_file_existing_primary',
+            'asset_sheet_already_fixed',
+            'primary',
+            'locations/chamber/sheets/primary.png',
+            'image',
+            '2026-06-23T00:00:00.000Z',
+            '2026-06-23T00:00:00.000Z'
+          ),
+          (
+            'asset_file_existing_composite',
+            'asset_sheet_already_fixed',
+            'composite',
+            'locations/chamber/sheets/composite-copy.png',
+            'image',
+            '2026-06-23T00:00:00.000Z',
+            '2026-06-23T00:00:00.000Z'
+          ),
+          (
+            'asset_file_view',
+            'asset_sheet_composite_only',
+            'view',
+            'locations/chamber/sheets/view-north.png',
+            'image',
+            '2026-06-23T00:00:00.000Z',
+            '2026-06-23T00:00:00.000Z'
+          );
+        insert into location_environment_sheet (id, asset_id, composite_file_id)
+        values
+          ('location_environment_sheet_1', 'asset_sheet_composite_only', 'asset_file_composite_only'),
+          ('location_environment_sheet_2', 'asset_sheet_already_fixed', 'asset_file_existing_composite');
+        insert into location_environment_sheet_view (id, sheet_id, asset_file_id)
+        values ('location_environment_sheet_view_1', 'location_environment_sheet_1', 'asset_file_view');
+        insert into location_asset (
+          id,
+          location_id,
+          asset_id,
+          role,
+          sort_order,
+          selection,
+          selection_order
+        ) values
+          (
+            'location_asset_selected_sheet',
+            'location_a',
+            'asset_sheet_composite_only',
+            'environment_sheet',
+            1,
+            'select',
+            1
+          ),
+          (
+            'location_asset_hero',
+            'location_a',
+            'asset_hero',
+            'hero',
+            2,
+            'select',
+            1
+          );
+        insert into scene_shot_video_take (
+          id,
+          scene_id,
+          source_shot_list_id,
+          title,
+          state_json,
+          is_picked,
+          history_snapshot_json,
+          created_at,
+          updated_at
+        ) values
+          (
+            'scene_shot_video_take_legacy',
+            'scene_a',
+            'scene_shot_list_a',
+            'Legacy take',
+            '{"version":1,"shotDesignByShotId":{},"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{"location_a":"asset_sheet_composite_only","location_b":"asset_sheet_b"},"selectedLocationViewIds":{"location_a":["view_north"]},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{}}',
+            0,
+            '{}',
+            '2026-06-23T00:00:00.000Z',
+            '2026-06-23T00:00:00.000Z'
+          ),
+          (
+            'scene_shot_video_take_already_fixed',
+            'scene_a',
+            'scene_shot_list_a',
+            'Already fixed take',
+            '{"version":1,"shotDesignByShotId":{},"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"referencedLocationSheetAssetIds":{"location_a":["asset_sheet_already_fixed","asset_sheet_extra"]},"selectedLocationSheetAssetIds":{"location_a":"asset_should_not_win"},"selectedLocationViewIds":{"location_a":["view_legacy"]},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{}}',
+            0,
+            '{}',
+            '2026-06-23T00:00:00.000Z',
+            '2026-06-23T00:00:00.000Z'
+          );
+      `);
+
+      const migrationSql = await fs.readFile(
+        path.join(process.cwd(), 'drizzle', '0037_flexible_location_sheets.sql'),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(28);
+      expect(readTableNames(sqlite)).not.toContain('location_environment_sheet');
+      expect(readTableNames(sqlite)).not.toContain('location_environment_sheet_view');
+      expect(
+        sqlite
+          .prepare('select role from asset_file where id = ?')
+          .get('asset_file_composite_only')
+      ).toEqual({ role: 'primary' });
+      expect(
+        sqlite
+          .prepare('select role from asset_file where id = ?')
+          .get('asset_file_existing_composite')
+      ).toEqual({ role: 'composite' });
+      expect(
+        sqlite.prepare(`
+          select count(*) as primaryCount
+          from asset_file
+          where asset_id = 'asset_sheet_already_fixed'
+            and role = 'primary'
+            and media_kind = 'image'
+        `).get()
+      ).toEqual({ primaryCount: 1 });
+
+      const legacyState = JSON.parse(
+        (
+          sqlite
+            .prepare('select state_json as stateJson from scene_shot_video_take where id = ?')
+            .get('scene_shot_video_take_legacy') as { stateJson: string }
+        ).stateJson
+      );
+      expect(legacyState.referenceSelections).toMatchObject({
+        referencedLocationSheetAssetIds: {
+          location_a: ['asset_sheet_composite_only'],
+          location_b: ['asset_sheet_b'],
+        },
+      });
+      expect(
+        sqlite
+          .prepare(
+            'select selection, selection_order as selectionOrder from location_asset where id = ?'
+          )
+          .get('location_asset_selected_sheet')
+      ).toEqual({ selection: 'take', selectionOrder: null });
+      expect(
+        sqlite
+          .prepare(
+            'select selection, selection_order as selectionOrder from location_asset where id = ?'
+          )
+          .get('location_asset_hero')
+      ).toEqual({ selection: 'select', selectionOrder: 1 });
+      expect(legacyState.referenceSelections).not.toHaveProperty(
+        'selectedLocationSheetAssetIds'
+      );
+      expect(legacyState.referenceSelections).not.toHaveProperty(
+        'selectedLocationViewIds'
+      );
+
+      const fixedState = JSON.parse(
+        (
+          sqlite
+            .prepare('select state_json as stateJson from scene_shot_video_take where id = ?')
+            .get('scene_shot_video_take_already_fixed') as { stateJson: string }
+        ).stateJson
+      );
+      expect(fixedState.referenceSelections).toMatchObject({
+        referencedLocationSheetAssetIds: {
+          location_a: ['asset_sheet_already_fixed', 'asset_sheet_extra'],
+        },
+      });
+      expect(fixedState.referenceSelections).not.toHaveProperty(
+        'selectedLocationSheetAssetIds'
+      );
+      expect(fixedState.referenceSelections).not.toHaveProperty(
+        'selectedLocationViewIds'
+      );
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it('preserves legacy storyboard crop rows when removing sheet storage', async () => {
     const databasePath = path.join(homeDir, 'legacy-storyboards.sqlite');
     const sqlite = new Database(databasePath);

@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { Button } from '@/ui/button';
 import { ImageCollectionSection } from '@/ui/image-collection-section';
 import {
   ImagePreviewDialog,
@@ -19,7 +17,6 @@ interface LocationVisualContentTabProps {
   locationId: string;
   assets: StudioAssetResponse[];
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
-  onGenerateHero: (asset: StudioAssetResponse) => Promise<void>;
 }
 
 export function LocationVisualContentTab({
@@ -27,13 +24,9 @@ export function LocationVisualContentTab({
   locationId,
   assets,
   onDeleteAsset,
-  onGenerateHero,
 }: LocationVisualContentTabProps) {
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const [generatingHeroAssetId, setGeneratingHeroAssetId] = useState<string | null>(
-    null
-  );
   const sheetAssets = locationEnvironmentSheetAssets(assets);
 
   const openSheetPreview = (asset: StudioAssetResponse) => {
@@ -58,26 +51,6 @@ export function LocationVisualContentTab({
       detectImageAspectRatio: true,
       imageClassName: 'object-contain',
       onOpen: () => openSheetPreview(asset),
-      bottomRightControl: (
-        <Button
-          type='button'
-          size='icon'
-          variant='secondary'
-          className='h-8 w-8 bg-white/90 text-foreground shadow-sm hover:bg-white'
-          aria-label='Generate hero image from this sheet'
-          disabled={generatingHeroAssetId !== null}
-          onClick={async () => {
-            setGeneratingHeroAssetId(asset.assetId);
-            try {
-              await onGenerateHero(asset);
-            } finally {
-              setGeneratingHeroAssetId(null);
-            }
-          }}
-        >
-          <Sparkles className='h-4 w-4' />
-        </Button>
-      ),
       deleteAction: {
         label: 'Delete location sheet',
         title: 'Delete Location Sheet?',

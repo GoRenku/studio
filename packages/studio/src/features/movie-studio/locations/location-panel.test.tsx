@@ -8,7 +8,6 @@ import type {
 } from '@/services/studio-project-contracts';
 import {
   deleteLocationAsset,
-  generateLocationHeroFromSheet,
   readLocationAssets,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
@@ -22,7 +21,6 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/services/studio-project-assets-api', () => ({
   deleteLocationAsset: vi.fn(),
-  generateLocationHeroFromSheet: vi.fn(),
   locationAssetFileUrl: vi.fn(
     (
       projectName: string,
@@ -42,7 +40,6 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 describe('LocationPanel', () => {
   beforeEach(() => {
     vi.mocked(deleteLocationAsset).mockReset();
-    vi.mocked(generateLocationHeroFromSheet).mockReset();
     vi.mocked(readLocationAssets).mockReset();
     vi.mocked(readLocationResource).mockReset();
   });
@@ -108,45 +105,6 @@ describe('LocationPanel', () => {
     expect(screen.queryByRole('button', { name: 'Show next image' })).toBeNull();
   });
 
-  it('generates a Location Hero Image from the chosen Location Sheet', async () => {
-    vi.mocked(readLocationResource).mockResolvedValue(locationResource());
-    vi.mocked(readLocationAssets)
-      .mockResolvedValueOnce([locationSheetAsset()])
-      .mockResolvedValueOnce([locationSheetAsset(), locationHeroAsset({ selected: true })]);
-    vi.mocked(generateLocationHeroFromSheet).mockResolvedValue([
-      locationSheetAsset(),
-      locationHeroAsset({ selected: true }),
-    ]);
-
-    render(
-      <LocationPanel projectName='constantinople' locationId='location_gate' />
-    );
-
-    await openVisualContentTab();
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: 'Generate hero image from this sheet',
-      })
-    );
-
-    await waitFor(() => {
-      expect(generateLocationHeroFromSheet).toHaveBeenCalledWith(
-        'constantinople',
-        'location_gate',
-        'asset_location_sheet'
-      );
-    });
-    await waitFor(() => {
-      expect(readLocationAssets).toHaveBeenCalledTimes(2);
-    });
-    expect(
-      screen.queryByRole('button', { name: 'Set active location sheet' })
-    ).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: 'Clear active location sheet' })
-    ).toBeNull();
-  });
-
   it('does not show a Location-level pick control for Location Sheets', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
     vi.mocked(readLocationAssets).mockResolvedValue(
@@ -164,6 +122,11 @@ describe('LocationPanel', () => {
     ).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Clear active location sheet' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Generate location hero image from this sheet',
+      })
     ).toBeNull();
   });
 

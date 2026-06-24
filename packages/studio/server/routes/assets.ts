@@ -3,7 +3,6 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readAssetPageRequest } from '../http/asset-request.js';
 import { readAssetFileResponse } from '../http/asset-file-response.js';
-import { readLocationHeroGenerateRequest } from '../http/location-hero-request.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
@@ -196,21 +195,6 @@ export function createAssetsRoute({
           locationId,
         });
         return c.json({ asset, resourceKeys });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .post('/locations/:locationId/heroes/generate', requireToken, async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const locationId = c.req.param('locationId') as string;
-        const request = readLocationHeroGenerateRequest(await c.req.json());
-        const report = await projectData.generateLocationHeroFromSheet({
-          projectName,
-          locationId,
-          ...request,
-        });
-        return c.json(report);
       } catch (error) {
         return projectErrorResponse(c, error);
       }
