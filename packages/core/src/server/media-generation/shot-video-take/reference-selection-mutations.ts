@@ -1,13 +1,8 @@
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
-  LocationAzimuthViewId,
   SceneShotVideoTakeReferenceSelections,
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
-import {
-  readLocationEnvironmentSheetByAssetId,
-  listLocationEnvironmentSheetViews,
-} from '../../database/access/location-environment-sheets.js';
 import {
   readLookbookSheetRecord,
 } from '../../database/access/lookbook-sheets.js';
@@ -28,13 +23,10 @@ import type {
   UpdateSceneShotVideoTakeCharacterSheetSelectionInput,
   UpdateSceneShotVideoTakeDialogueAudioSelectionInput,
   UpdateSceneShotVideoTakeLocationSheetSelectionInput,
-  UpdateSceneShotVideoTakeLocationViewSelectionInput,
   UpdateSceneShotVideoTakeLookbookSheetSelectionInput,
   UpdateSceneShotVideoTakeReferenceInclusionInput,
 } from '../../project-data-service-contracts.js';
 import {
-  locationAzimuthViewId,
-  requireLocationAzimuthDegrees,
   assetsForTarget,
 } from './reference-card-plans.js';
 import {
@@ -79,43 +71,17 @@ export async function updateSceneShotVideoTakeLocationSheetSelection(
 ): Promise<ShotVideoTakeProductionContext> {
   return updateSceneShotVideoTakeReferenceSelections(input, ({ session, context }) => {
     assertSceneLocation(session, context, input.locationId);
-    if (input.assetId !== null) {
-      assertLocationEnvironmentSheetAsset(session, input.locationId, input.assetId);
+    const assetIds = uniqueStringList(input.assetIds);
+    for (const assetId of assetIds) {
+      assertLocationEnvironmentSheetAsset(session, input.locationId, assetId);
     }
     return {
       ...context.take.state.referenceSelections,
-      selectedLocationSheetAssetIds: withRecordSelection(
-        context.take.state.referenceSelections.selectedLocationSheetAssetIds,
+      referencedLocationSheetAssetIds: withArrayRecordSelection(
+        context.take.state.referenceSelections.referencedLocationSheetAssetIds,
         input.locationId,
-        input.assetId
+        assetIds
       ),
-      selectedLocationViewIds: input.assetId !== null
-        ? context.take.state.referenceSelections.selectedLocationViewIds
-        : withoutRecordKey(
-            context.take.state.referenceSelections.selectedLocationViewIds,
-            input.locationId
-          ),
-    };
-  });
-}
-
-export async function updateSceneShotVideoTakeLocationViewSelection(
-  input: UpdateSceneShotVideoTakeLocationViewSelectionInput
-): Promise<ShotVideoTakeProductionContext> {
-  return updateSceneShotVideoTakeReferenceSelections(input, ({ session, context }) => {
-    assertSceneLocation(session, context, input.locationId);
-    assertLocationEnvironmentSheetAsset(session, input.locationId, input.assetId);
-    assertLocationViewIds(session, input.assetId, input.viewIds);
-    return {
-      ...context.take.state.referenceSelections,
-      selectedLocationSheetAssetIds: {
-        ...context.take.state.referenceSelections.selectedLocationSheetAssetIds,
-        [input.locationId]: input.assetId,
-      },
-      selectedLocationViewIds: {
-        ...context.take.state.referenceSelections.selectedLocationViewIds,
-        [input.locationId]: input.viewIds,
-      },
     };
   });
 }
@@ -184,7 +150,6 @@ async function updateSceneShotVideoTakeReferenceSelections(
   input:
     | UpdateSceneShotVideoTakeCharacterSheetSelectionInput
     | UpdateSceneShotVideoTakeLocationSheetSelectionInput
-    | UpdateSceneShotVideoTakeLocationViewSelectionInput
     | UpdateSceneShotVideoTakeLookbookSheetSelectionInput
     | UpdateSceneShotVideoTakeDialogueAudioSelectionInput
     | UpdateSceneShotVideoTakeReferenceInclusionInput,
@@ -295,8 +260,11 @@ function assertLocationEnvironmentSheetAsset(
   locationId: string,
   assetId: string
 ): void {
-  const sheet = readLocationEnvironmentSheetByAssetId(session, assetId);
-  if (sheet?.locationId === locationId) {
+  const assets = assetsForTarget(session, {
+    target: { kind: 'location', locationId },
+    role: 'environment_sheet',
+  });
+  if (assets.some((asset) => asset.assetId === assetId)) {
     return;
   }
   throwReferenceSelectionError({
@@ -305,32 +273,6 @@ function assertLocationEnvironmentSheetAsset(
     path: ['assetId'],
     suggestion:
       'Refresh the location sheet choices and select an environment sheet attached to this Location.',
-  });
-}
-
-function assertLocationViewIds(
-  session: DatabaseSession,
-  assetId: string,
-  viewIds: LocationAzimuthViewId[]
-): void {
-  const sheet = readLocationEnvironmentSheetByAssetId(session, assetId);
-  const available = new Set(
-    sheet
-      ? listLocationEnvironmentSheetViews(session, sheet.id).map((view) =>
-          locationAzimuthViewId(requireLocationAzimuthDegrees(view.azimuthDegrees))
-        )
-      : []
-  );
-  const invalid = viewIds.filter((viewId) => !available.has(viewId));
-  if (invalid.length === 0) {
-    return;
-  }
-  throwReferenceSelectionError({
-    code: 'PROJECT_DATA428',
-    message: `Location view ids are not available on the selected Location sheet: ${invalid.join(', ')}.`,
-    path: ['viewIds'],
-    suggestion:
-      'Refresh the location view choices and select views generated for this environment sheet.',
   });
 }
 
@@ -456,6 +398,30 @@ function withoutRecordKey<T>(
   const next = { ...record };
   delete next[key];
   return next;
+}
+
+function withArrayRecordSelection(
+  record: Record<string, string[]>,
+  key: string,
+  value: string[]
+): Record<string, string[]> {
+  if (value.length === 0) {
+    return withoutRecordKey(record, key);
+  }
+  return { ...record, [key]: value };
+}
+
+function uniqueStringList(values: string[]): string[] {
+  if (values.some((value) => value.trim().length === 0)) {
+    throwReferenceSelectionError({
+      code: 'PROJECT_DATA427',
+      message: 'Location Sheet asset id cannot be blank.',
+      path: ['assetIds'],
+      suggestion: 'Choose an existing Location Sheet asset for this Location.',
+    });
+  }
+  const unique = [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+  return unique;
 }
 
 function throwReferenceSelectionError(input: {

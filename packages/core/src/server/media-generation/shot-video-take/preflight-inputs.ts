@@ -14,6 +14,10 @@ import type {
 import {
   readAssetFileRecord,
 } from '../../database/access/asset-files.js';
+import {
+  listAssetRelationshipPage,
+  MAX_RESOURCE_PAGE_LIMIT,
+} from '../../database/access/asset-relationships/index.js';
 import { readScreenplaySceneFromSession } from '../../database/access/screenplay-resource.js';
 import {
   listLookbookSheets,
@@ -281,9 +285,82 @@ export function preparedInputsForContext(
     });
   return [
     ...inputs.filter((input): input is ShotVideoTakePreflightInput => Boolean(input)),
+    ...locationSheetInputsForContext(context, session, issues),
     ...lookbookSheetInputsForContext(context, session, issues),
     ...dialogueAudioInputsForContext(context, session, issues),
   ];
+}
+
+export function locationSheetInputsForContext(
+  context: ShotVideoTakeProductionContext,
+  session: DatabaseSession,
+  issues: DiagnosticIssue[]
+): ShotVideoTakePreflightInput[] {
+  const inputs: ShotVideoTakePreflightInput[] = [];
+  for (const location of context.referencedLocations) {
+    const referencedAssetIds =
+      context.take.state.referenceSelections.referencedLocationSheetAssetIds[
+        location.id
+      ] ?? [];
+    const assets = listAssetRelationshipPage(session, {
+      target: { kind: 'location', locationId: location.id },
+      role: 'environment_sheet',
+      mediaKind: 'image',
+      limit: MAX_RESOURCE_PAGE_LIMIT,
+    }).items;
+    const assetsById = new Map(assets.map((asset) => [asset.assetId, asset]));
+    for (const assetId of referencedAssetIds) {
+      const asset = assetsById.get(assetId);
+      if (!asset) {
+        issues.push(
+          issue(
+            'PROJECT_DATA418',
+            'Referenced Location Sheet does not belong to the selected Location.',
+            [
+              'take',
+              'state',
+              'referenceSelections',
+              'referencedLocationSheetAssetIds',
+              location.id,
+            ],
+            'Choose a Location Sheet attached to this Location.'
+          )
+        );
+        continue;
+      }
+      const file = asset.files.find(
+        (candidate) => candidate.mediaKind === 'image' && candidate.role === 'primary'
+      );
+      if (!file) {
+        issues.push(
+          issue(
+            'PROJECT_DATA419',
+            'Referenced Location Sheet has no primary image file.',
+            [
+              'take',
+              'state',
+              'referenceSelections',
+              'referencedLocationSheetAssetIds',
+              location.id,
+            ],
+            'Regenerate or import the Location Sheet with one primary image file.'
+          )
+        );
+        continue;
+      }
+      inputs.push({
+        kind: 'location-sheet',
+        assetId: asset.assetId,
+        assetFileId: file.id,
+        role: file.role,
+        mediaKind: 'image',
+        projectRelativePath: file.projectRelativePath,
+        subjectKind: 'location',
+        subjectId: location.id,
+      });
+    }
+  }
+  return inputs;
 }
 
 export function dialogueAudioInputsForContext(

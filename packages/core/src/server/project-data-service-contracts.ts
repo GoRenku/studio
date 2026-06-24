@@ -56,7 +56,6 @@ import type {
   LookbookType,
   LookbookValidationReport,
   LookbookWriteReport,
-  LocationAzimuthViewId,
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
@@ -79,6 +78,10 @@ import type {
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
   LocationEnvironmentSheetModelListReport,
+  LocationHeroGenerationContext,
+  LocationHeroGenerationSpec,
+  LocationHeroMediaImportReport,
+  LocationHeroModelListReport,
   MediaGenerationPurpose,
   SceneStoryboardSheetGenerationContext,
   SceneStoryboardSheetGenerationSpec,
@@ -448,6 +451,19 @@ export interface ProjectDataService {
   runLocationEnvironmentSheetSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   recordLocationEnvironmentSheetRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
   importLocationEnvironmentSheetMedia(input: ImportLocationEnvironmentSheetMediaInput): Promise<LocationEnvironmentSheetMediaImportReport>;
+  buildLocationHeroContext(input: LocationHeroGenerationContextInput): Promise<LocationHeroGenerationContext>;
+  listLocationHeroModels(input: LocationHeroGenerationContextInput): Promise<LocationHeroModelListReport>;
+  validateLocationHeroSpec(input: ValidateLocationHeroGenerationSpecInput): Promise<{ valid: true; spec: LocationHeroGenerationSpec; providerPayload: Record<string, unknown> }>;
+  createLocationHeroSpec(input: CreateLocationHeroGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  updateLocationHeroSpec(input: UpdateLocationHeroGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readLocationHeroSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  listLocationHeroSpecs(input: LocationMediaGenerationContextInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
+  prepareLocationHeroSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  estimateLocationHeroSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
+  runLocationHeroSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
+  recordLocationHeroRun(input: RecordMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
+  importLocationHeroMedia(input: ImportLocationHeroMediaInput): Promise<LocationHeroMediaImportReport>;
+  generateLocationHeroFromSheet(input: GenerateLocationHeroFromSheetInput): Promise<LocationHeroMutationReport>;
   buildSceneStoryboardSheetContext(input: ReadSceneStoryboardSheetGenerationContextInput): Promise<SceneStoryboardSheetGenerationContext>;
   listSceneStoryboardSheetModels(input: ReadSceneStoryboardSheetGenerationContextInput): Promise<SceneStoryboardSheetModelListReport>;
   validateSceneStoryboardSheetSpec(input: ValidateSceneStoryboardSheetGenerationSpecInput): Promise<{ valid: true; spec: SceneStoryboardSheetGenerationSpec; providerPayload: Record<string, unknown> }>;
@@ -483,7 +499,6 @@ export interface ProjectDataService {
   updateSceneShotVideoTakeShots(input: UpdateSceneShotVideoTakeShotsInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeCharacterSheetSelection(input: UpdateSceneShotVideoTakeCharacterSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeLocationSheetSelection(input: UpdateSceneShotVideoTakeLocationSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
-  updateSceneShotVideoTakeLocationViewSelection(input: UpdateSceneShotVideoTakeLocationViewSelectionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeLookbookSheetSelection(input: UpdateSceneShotVideoTakeLookbookSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeDialogueAudioSelection(input: UpdateSceneShotVideoTakeDialogueAudioSelectionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeReferenceInclusion(input: UpdateSceneShotVideoTakeReferenceInclusionInput): Promise<ShotVideoTakeProductionContext>;
@@ -1319,6 +1334,11 @@ export interface LocationMediaGenerationContextInput extends RenkuConfigPathOpti
   locationId: string;
 }
 
+export interface LocationHeroGenerationContextInput
+  extends LocationMediaGenerationContextInput {
+  sourceLocationSheetAssetId?: string;
+}
+
 export interface ValidateLocationEnvironmentSheetGenerationSpecInput
   extends RenkuConfigPathOptions {
   projectName?: string;
@@ -1335,20 +1355,59 @@ export interface UpdateLocationEnvironmentSheetGenerationSpecInput
   specId: string;
 }
 
+export interface ValidateLocationHeroGenerationSpecInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  spec: LocationHeroGenerationSpec;
+}
+
+export interface CreateLocationHeroGenerationSpecInput
+  extends ValidateLocationHeroGenerationSpecInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface UpdateLocationHeroGenerationSpecInput
+  extends ValidateLocationHeroGenerationSpecInput {
+  specId: string;
+}
+
 export interface ImportLocationEnvironmentSheetMediaInput
   extends RenkuConfigPathOptions {
   projectName?: string;
   locationId: string;
-  files: {
-    composite: string;
-    view_front: string;
-    view_right: string;
-    view_back: string;
-    view_left: string;
-  };
+  sourceProjectRelativePath: string;
   title?: string;
-  oneLineSummary?: string;
+  description: string;
+  receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface ImportLocationHeroMediaInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  locationId: string;
+  sourceProjectRelativePath: string;
+  sourceLocationSheetAssetId: string;
+  title?: string;
+  description: string;
+  receipt?: unknown;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface GenerateLocationHeroFromSheetInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  locationId: string;
+  sourceLocationSheetAssetId: string;
+  approvalToken?: string;
+  simulate?: boolean;
+  allowUnpricedCost?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface LocationHeroMutationReport {
+  spec: MediaGenerationSpecRecord;
+  run: MediaGenerationRunReport['run'];
+  importReport: LocationHeroMediaImportReport;
+  assets: Asset[];
 }
 
 export interface ReadSceneStoryboardSheetGenerationContextInput
@@ -1451,14 +1510,7 @@ export interface UpdateSceneShotVideoTakeCharacterSheetSelectionInput
 export interface UpdateSceneShotVideoTakeLocationSheetSelectionInput
   extends ShotVideoTakeContextInput {
   locationId: string;
-  assetId: string | null;
-}
-
-export interface UpdateSceneShotVideoTakeLocationViewSelectionInput
-  extends ShotVideoTakeContextInput {
-  locationId: string;
-  assetId: string;
-  viewIds: LocationAzimuthViewId[];
+  assetIds: string[];
 }
 
 export interface UpdateSceneShotVideoTakeLookbookSheetSelectionInput

@@ -496,7 +496,7 @@ function sceneShotVideoTakeStateReferencesAsset(
 ): boolean {
   const selectedReferenceAssets = [
     ...Object.values(state.referenceSelections.selectedCharacterSheetAssetIds),
-    ...Object.values(state.referenceSelections.selectedLocationSheetAssetIds),
+    ...Object.values(state.referenceSelections.referencedLocationSheetAssetIds).flat(),
   ];
   if (selectedReferenceAssets.includes(assetId)) {
     return true;
@@ -504,7 +504,7 @@ function sceneShotVideoTakeStateReferencesAsset(
   return Object.values(state.shotDesignByShotId).some((shotDesign) => {
     const shotReferenceAssets = [
       ...Object.values(shotDesign.cast?.characterSheetAssetIds ?? {}),
-      shotDesign.location?.environmentSheetAssetId,
+      ...(shotDesign.location?.environmentSheetAssetIds ?? []),
       shotDesign.lookbook?.lookbookSheetId,
       ...shotDesign.dialogue?.map((dialogue) => dialogue.assetId) ?? [],
     ].filter((candidate): candidate is string => Boolean(candidate));

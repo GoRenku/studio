@@ -59,6 +59,7 @@ export type MediaGenerationDependencySelectorInput =
   | {
       kind: 'asset-relationship';
       target: import('./assets.js').AssetTarget;
+      assetId?: string;
       role: string;
       mediaKind: MediaKind;
       fileRole?: string;

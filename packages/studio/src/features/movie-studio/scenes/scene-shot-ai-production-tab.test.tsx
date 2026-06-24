@@ -142,8 +142,7 @@ function emptyTakeState(production = {}) {
     referenceSelections: {
       dependencyInclusions: {},
       selectedCharacterSheetAssetIds: {},
-      selectedLocationSheetAssetIds: {},
-      selectedLocationViewIds: {},
+      referencedLocationSheetAssetIds: {},
       selectedLookbookSheetIds: [],
       selectedDialogueAudioTakeIds: {},
     },

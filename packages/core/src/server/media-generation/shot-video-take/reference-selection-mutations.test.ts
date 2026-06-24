@@ -86,7 +86,7 @@ describe('shot video take reference selection mutations', () => {
         sceneId: ids.sceneId,
         takeId: written.take.takeId,
         locationId: ids.locationId,
-        assetId: '',
+        assetIds: [''],
       })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA427',
@@ -97,7 +97,7 @@ describe('shot video take reference selection mutations', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    expect(take.state.referenceSelections.selectedLocationSheetAssetIds).toEqual({});
+    expect(take.state.referenceSelections.referencedLocationSheetAssetIds).toEqual({});
   });
 
   it('rejects location sheets from another Location before writing take state', async () => {
@@ -149,8 +149,9 @@ describe('shot video take reference selection mutations', () => {
       await projectData.importLocationEnvironmentSheetMedia({
         homeDir,
         locationId: otherLocationId,
-        files: sheetFiles,
+        sourceProjectRelativePath: sheetFiles.primary,
         title: 'Wrong location sheet',
+        description: 'A sheet attached to the wrong Location.',
       });
 
     await expect(
@@ -159,7 +160,7 @@ describe('shot video take reference selection mutations', () => {
         sceneId: ids.sceneId,
         takeId: written.take.takeId,
         locationId: ids.locationId,
-        assetId: otherLocationSheet.imported.assetId,
+        assetIds: [otherLocationSheet.imported.assetId],
       })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA427',
@@ -171,8 +172,7 @@ describe('shot video take reference selection mutations', () => {
     });
 
     await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
-      selectedLocationSheetAssetIds: {},
-      selectedLocationViewIds: {},
+      referencedLocationSheetAssetIds: {},
     });
   });
 

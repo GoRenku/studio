@@ -110,8 +110,7 @@ function emptyReferenceSelections(): SceneShotVideoTakeReferenceSelections {
   return {
     dependencyInclusions: {},
     selectedCharacterSheetAssetIds: {},
-    selectedLocationSheetAssetIds: {},
-    selectedLocationViewIds: {},
+    referencedLocationSheetAssetIds: {},
     selectedLookbookSheetIds: [],
     selectedDialogueAudioTakeIds: {},
   };

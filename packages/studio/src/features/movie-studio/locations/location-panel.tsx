@@ -7,16 +7,14 @@ import type {
 } from '@/services/studio-project-contracts';
 import {
   deleteLocationAsset,
+  generateLocationHeroFromSheet,
   readLocationAssets,
-  selectLocationAsset,
-  unselectLocationAsset,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
 import {
   matchesLocationResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { LOCATION_ENVIRONMENT_SHEET_ROLE } from './location-assets';
 import { LocationDetailsTab } from './location-details-tab';
 import { LocationVisualContentTab } from './location-visual-content-tab';
 
@@ -70,38 +68,21 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
     onRefresh: () => setResourceRevision((current) => current + 1),
   });
 
-  const toggleActive = async (asset: StudioAssetResponse) => {
-    try {
-      if (asset.selection.kind === 'select') {
-        await unselectLocationAsset(projectName, locationId, asset.assetId);
-        await refreshLocation();
-        return;
-      }
-
-      const selectedEnvironmentSheets = assets.filter(
-        (candidate) =>
-          candidate.role === LOCATION_ENVIRONMENT_SHEET_ROLE &&
-          candidate.assetId !== asset.assetId &&
-          candidate.selection.kind === 'select'
-      );
-      await selectLocationAsset(projectName, locationId, asset.assetId);
-      await Promise.all(
-        selectedEnvironmentSheets.map((candidate) =>
-          unselectLocationAsset(projectName, locationId, candidate.assetId)
-        )
-      );
-      await refreshLocation();
-    } catch (selectError) {
-      toast.error(errorMessage(selectError));
-    }
-  };
-
   const removeAsset = async (asset: StudioAssetResponse) => {
     try {
       await deleteLocationAsset(projectName, locationId, asset.assetId);
       await refreshLocation();
     } catch (deleteError) {
       toast.error(errorMessage(deleteError));
+    }
+  };
+
+  const generateHero = async (asset: StudioAssetResponse) => {
+    try {
+      await generateLocationHeroFromSheet(projectName, locationId, asset.assetId);
+      await refreshLocation();
+    } catch (generateError) {
+      toast.error(errorMessage(generateError));
     }
   };
 
@@ -133,8 +114,8 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
           projectName={projectName}
           locationId={locationId}
           assets={assets}
-          onToggleActive={toggleActive}
           onDeleteAsset={removeAsset}
+          onGenerateHero={generateHero}
         />
       </LineTabsContent>
     </LineTabs>

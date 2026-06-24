@@ -140,6 +140,60 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
+  it('shows a planned Location Sheet reference when a selected shot location has no sheets', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: shotVideoTakeProject.lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.selectLookbookForType({
+      projectName: 'constantinople',
+      homeDir,
+      type: 'movie',
+      lookbookId: lookbook.lookbook.id,
+    });
+
+    const report = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      takeId: written.take.takeId,
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 6 },
+      },
+    });
+
+    const locationReference = report.references.locations.find(
+      (location) => location.locationId === ids.locationId
+    );
+
+    expect(locationReference?.environmentSheets).toEqual([
+      expect.objectContaining({
+        assetId: null,
+        title: `${locationReference?.name} Location Sheet`,
+        referenced: false,
+        card: expect.objectContaining({
+          state: 'selected-planned',
+          dependencyId: `location-environment-sheet:${ids.locationId}`,
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+      }),
+    ]);
+    expect(report.plan.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:location-environment-sheet:${ids.locationId}`,
+          availability: { state: 'missing-generated' },
+          dependencyKind: 'location-environment-sheet',
+        }),
+      ])
+    );
+  });
+
   it('shows scene cast choices without planning unselected character-sheet dependencies', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const extraCastMemberId = await shotVideoTakeProject.addVisualExtraCastMember();

@@ -1235,7 +1235,6 @@ describe('renku CLI', () => {
       target: { kind: 'location', id: locationId },
       defaults: {
         sheetFrame: '4:3',
-        viewFrame: '16:9',
       },
       activeLookbook: { lookbook: { id: report.lookbook.id } },
     });
@@ -1273,11 +1272,12 @@ describe('renku CLI', () => {
           purpose: 'location.environment-sheet',
           target: { kind: 'location', id: locationId },
           modelChoice: 'fal-ai/nano-banana-2',
-          prompt: 'A simulated four-view environment sheet for the council chamber.',
+          prompt: 'A simulated full-image Location Sheet for the council chamber.',
+          description:
+            'Council chamber production reference showing table layout, torchlight, and wall texture.',
           takeCount: 1,
           seed: null,
           sheetFrame: '4:3',
-          viewFrame: '16:9',
           detail: 'draft',
           outputFormat: 'png',
           title: 'Council Chamber Environment Sheet',
@@ -1323,41 +1323,6 @@ describe('renku CLI', () => {
       },
     });
 
-    const locationImportFilePath = path.join(
-      homeDir,
-      'location-environment-sheet-import.json'
-    );
-    const locationViewFiles = {
-      view_front: 'generated/media/council-chamber-front.png',
-      view_right: 'generated/media/council-chamber-right.png',
-      view_back: 'generated/media/council-chamber-back.png',
-      view_left: 'generated/media/council-chamber-left.png',
-    };
-    await fs.mkdir(path.join(storageRoot, 'constantinople', 'generated/media'), {
-      recursive: true,
-    });
-    for (const [role, projectRelativePath] of Object.entries(locationViewFiles)) {
-      await fs.writeFile(
-        path.join(storageRoot, 'constantinople', projectRelativePath),
-        role
-      );
-    }
-    await fs.writeFile(
-      locationImportFilePath,
-      JSON.stringify(
-        {
-          title: 'Council Chamber Environment Sheet',
-          files: {
-            composite: locationRun.run.outputs[0]!.projectRelativePath,
-            ...locationViewFiles,
-          },
-        },
-        null,
-        2
-      ),
-      'utf8'
-    );
-
     stdout = [];
     stderr = [];
     const locationImportExitCode = await runRenkuCli(
@@ -1368,8 +1333,12 @@ describe('renku CLI', () => {
         'location.environment-sheet',
         '--target',
         `location:${locationId}`,
-        '--file',
-        locationImportFilePath,
+        '--source',
+        locationRun.run.outputs[0]!.projectRelativePath,
+        '--title',
+        'Council Chamber Environment Sheet',
+        '--summary',
+        'Council chamber production reference showing table layout, torchlight, and wall texture.',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -1380,24 +1349,138 @@ describe('renku CLI', () => {
       purpose: 'location.environment-sheet',
       imported: {
         role: 'environment_sheet',
-        files: expect.arrayContaining([
-          expect.objectContaining({ role: 'composite' }),
-          expect.objectContaining({ role: 'view_front' }),
-          expect.objectContaining({ role: 'view_right' }),
-          expect.objectContaining({ role: 'view_back' }),
-          expect.objectContaining({ role: 'view_left' }),
-        ]),
+        oneLineSummary:
+          'Council chamber production reference showing table layout, torchlight, and wall texture.',
+        files: [expect.objectContaining({ role: 'primary' })],
       },
-      files: [
-        expect.objectContaining({ role: 'composite' }),
-        expect.objectContaining({ role: 'view_front' }),
-        expect.objectContaining({ role: 'view_right' }),
-        expect.objectContaining({ role: 'view_back' }),
-        expect.objectContaining({ role: 'view_left' }),
-      ],
+      files: [expect.objectContaining({ role: 'primary' })],
     });
     expect(JSON.stringify(locationImportReport)).not.toContain('crop');
     expect(JSON.stringify(locationImportReport)).not.toContain('extraction');
+    const locationSheetFile = locationImportReport.imported.files[0]!;
+    expect(locationSheetFile.projectRelativePath).toMatch(
+      /^locations\/foundry\/environment-sheets\/.+\/sheet\.png$/
+    );
+    await expect(
+      fs.access(
+        path.join(
+          storageRoot,
+          'constantinople',
+          locationSheetFile.projectRelativePath
+        )
+      )
+    ).resolves.toBeUndefined();
+
+    const locationHeroSpecPath = path.join(homeDir, 'location-hero-spec.json');
+    await fs.writeFile(
+      locationHeroSpecPath,
+      JSON.stringify(
+        {
+          purpose: 'location.hero',
+          target: { kind: 'location', id: locationId },
+          sourceLocationSheetAssetId: locationImportReport.imported.assetId,
+          modelChoice: 'fal-ai/nano-banana-2/edit',
+          prompt:
+            'Create a simulated wide Location Hero Image from the council chamber sheet.',
+          takeCount: 1,
+          seed: null,
+          heroFrame: '16:9',
+          detail: 'draft',
+          outputFormat: 'png',
+          title: 'Council Chamber Hero Image',
+          description:
+            'Council chamber representative image for overview cards and the detail header.',
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const locationHeroCreateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'create', '--file', locationHeroSpecPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationHeroCreateExitCode).toBe(0);
+    const locationHeroSpec = JSON.parse(stdout.join('\n')) as { id: string };
+
+    stdout = [];
+    stderr = [];
+    const locationHeroRunExitCode = await runRenkuCli(
+      ['generation', 'run', '--spec', locationHeroSpec.id, '--simulate', '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationHeroRunExitCode).toBe(0);
+    const locationHeroRun = JSON.parse(stdout.join('\n')) as {
+      run: {
+        outputs: Array<{ projectRelativePath: string }>;
+      };
+    };
+    expect(locationHeroRun).toMatchObject({
+      run: {
+        provider: 'fal-ai',
+        model: 'nano-banana-2/edit',
+        simulated: true,
+        purpose: 'location.hero',
+        outputs: [
+          expect.objectContaining({
+            projectRelativePath: 'generated/media/council-chamber-hero-image.png',
+          }),
+        ],
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const locationHeroImportExitCode = await runRenkuCli(
+      [
+        'media',
+        'import',
+        '--purpose',
+        'location.hero',
+        '--target',
+        `location:${locationId}`,
+        '--source',
+        locationHeroRun.run.outputs[0]!.projectRelativePath,
+        '--source-sheet',
+        locationImportReport.imported.assetId,
+        '--title',
+        'Council Chamber Hero Image',
+        '--summary',
+        'Council chamber representative image for overview cards and the detail header.',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(locationHeroImportExitCode).toBe(0);
+    const locationHeroImportReport = JSON.parse(stdout.join('\n'));
+    expect(locationHeroImportReport).toMatchObject({
+      purpose: 'location.hero',
+      sourceLocationSheetAssetId: locationImportReport.imported.assetId,
+      imported: {
+        type: 'location_hero',
+        role: 'hero',
+        selection: { kind: 'select', order: 1 },
+        oneLineSummary:
+          'Council chamber representative image for overview cards and the detail header.',
+        files: [expect.objectContaining({ role: 'primary' })],
+      },
+      files: [expect.objectContaining({ role: 'primary' })],
+    });
+    const locationHeroFile = locationHeroImportReport.imported.files[0]!;
+    expect(locationHeroFile.projectRelativePath).toMatch(
+      /^locations\/foundry\/heroes\/.+\/hero\.png$/
+    );
+    expect(locationHeroFile.projectRelativePath).not.toBe(
+      locationHeroRun.run.outputs[0]!.projectRelativePath
+    );
+    await expect(
+      fs.access(
+        path.join(storageRoot, 'constantinople', locationHeroFile.projectRelativePath)
+      )
+    ).resolves.toBeUndefined();
   });
 
   it('registers and selects a scene asset through the asset command', async () => {

@@ -2,7 +2,6 @@ import type {
   CameraAngleId,
   FocusId,
   LensId,
-  LocationAzimuthViewId,
   MoveDirectionId,
   MoveTrackId,
   RigId,
@@ -104,13 +103,6 @@ export const FOCUS_LABELS: Record<FocusId, string> = {
   'shallow-focus': 'Shallow Focus',
   'rack-focus': 'Rack Focus',
   'tilt-shift': 'Tilt-Shift',
-};
-
-export const LOCATION_AZIMUTH_VIEW_LABELS: Record<LocationAzimuthViewId, string> = {
-  front: 'Front',
-  right: 'Right',
-  back: 'Back',
-  left: 'Left',
 };
 
 /**

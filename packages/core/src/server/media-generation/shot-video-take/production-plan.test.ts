@@ -274,8 +274,9 @@ describe('shot video take preflight and validation', () => {
         projectName: 'constantinople',
         homeDir,
         locationId: scopedLocationId,
-        files: locationSheetFiles,
+        sourceProjectRelativePath: locationSheetFiles.primary,
         title: 'Scoped generated location sheet',
+        description: 'Scoped Location Sheet used as an explicit shot reference.',
       });
     const written = await projectData.writeSceneShotList({
       homeDir,
@@ -296,13 +297,12 @@ describe('shot video take preflight and validation', () => {
       shotIds: ['shot_001'],
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.updateSceneShotVideoTakeLocationViewSelection({
+    await projectData.updateSceneShotVideoTakeLocationSheetSelection({
       homeDir,
       sceneId: ids.sceneId,
       takeId: take.takeId,
       locationId: scopedLocationId,
-      assetId: scopedLocationSheet.imported.assetId,
-      viewIds: ['front'],
+      assetIds: [scopedLocationSheet.imported.assetId],
     });
     const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
@@ -329,44 +329,36 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    const defaultLocation = report.references.locations.find(
-      (location) => location.locationId === ids.locationId
-    );
     const scopedLocation = report.references.locations.find(
       (location) => location.locationId === scopedLocationId
     );
 
-    expect(defaultLocation?.environmentSheets[0]?.card).toEqual(
-      expect.objectContaining({
-        state: 'selected-ready',
-        dependencyLineId: `dependency:location-environment-sheet:${ids.locationId}`,
-        pricing: { state: 'priced', estimatedUsd: 0 },
-      })
-    );
     expect(scopedLocation?.environmentSheets[0]?.card).toEqual(
       expect.objectContaining({
         state: 'selected-ready',
-        dependencyLineId: `dependency:location-environment-sheet:${scopedLocationId}`,
+        dependencyLineId: `dependency:location-environment-sheet:${scopedLocationId}:${scopedLocationSheet.imported.assetId}`,
         pricing: { state: 'priced', estimatedUsd: 0 },
       })
     );
     expect(report.plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `dependency:location-environment-sheet:${ids.locationId}`,
+          id: `dependency:location-environment-sheet:${scopedLocationId}:${scopedLocationSheet.imported.assetId}`,
           availability: { state: 'satisfied' },
           selectedAsset: expect.objectContaining({
             assetId: scopedLocationSheet.imported.assetId,
           }),
           pricing: { state: 'priced', estimatedUsd: 0 },
         }),
+      ])
+    );
+    expect(report.plan.dependencyInventory.dependencies).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `dependency:location-environment-sheet:${ids.locationId}`,
+        }),
         expect.objectContaining({
           id: `dependency:location-environment-sheet:${scopedLocationId}`,
-          availability: { state: 'satisfied' },
-          selectedAsset: expect.objectContaining({
-            assetId: scopedLocationSheet.imported.assetId,
-          }),
-          pricing: { state: 'priced', estimatedUsd: 0 },
         }),
       ])
     );

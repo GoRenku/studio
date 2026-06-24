@@ -12,7 +12,6 @@ import {
   MAX_RESOURCE_PAGE_LIMIT,
 } from '../database/access/asset-relationships/index.js';
 import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
-import { readLocationEnvironmentSheetByAssetId } from '../database/access/location-environment-sheets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 
@@ -42,11 +41,12 @@ export function resolveMediaGenerationDependencySelection(input: {
     return shotVideoInputAssetFromRequest(input.request, input.slot);
   }
   if (input.slot.selector.kind === 'asset-relationship') {
-    return selectedAssetForTarget(input.session, {
-      target: input.slot.selector.target,
-      role: input.slot.selector.role,
-      mediaKind: input.slot.selector.mediaKind,
-      slot: input.slot,
+      return selectedAssetForTarget(input.session, {
+        target: input.slot.selector.target,
+        assetId: input.slot.selector.assetId,
+        role: input.slot.selector.role,
+        mediaKind: input.slot.selector.mediaKind,
+        slot: input.slot,
       fileRole: input.slot.selector.fileRole,
       selectionPolicy: input.slot.selector.selectionPolicy,
     });
@@ -163,6 +163,7 @@ function selectedAssetForTarget(
   session: DatabaseSession,
   input: {
     target: Parameters<typeof listAssetRelationshipPage>[1]['target'];
+    assetId?: string;
     role: string;
     mediaKind: string;
     slot: MediaGenerationDependencySlot;
@@ -170,6 +171,44 @@ function selectedAssetForTarget(
     selectionPolicy: 'selected-only' | 'selected-or-default';
   }
 ): MediaGenerationDependencySelectorResult {
+  if (input.assetId) {
+    const asset = listAssetRelationshipPage(session, {
+      target: input.target,
+      role: input.role,
+      mediaKind: input.mediaKind,
+      limit: MAX_RESOURCE_PAGE_LIMIT,
+    }).items.find((candidate) => candidate.assetId === input.assetId);
+    if (!asset) {
+      return invalidSelection(
+        input.slot,
+        'CORE_MEDIA_DEPENDENCY_REFERENCED_ASSET_NOT_AVAILABLE',
+        `Referenced asset is not available for ${input.slot.label}: ${input.assetId}.`,
+        'Choose an asset attached to the target with the expected role and media kind.'
+      );
+    }
+    const fileResult = dependencyFile(asset, input.mediaKind, input.fileRole);
+    if (fileResult.state === 'invalid') {
+      return invalidSelection(
+        input.slot,
+        fileResult.code,
+        fileResult.message,
+        fileResult.suggestion
+      );
+    }
+    if (!fileResult.file) {
+      return invalidSelection(
+        input.slot,
+        'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
+        `Referenced asset has no required ${input.mediaKind} file for ${input.slot.label}: ${asset.assetId}.`,
+        'Import or regenerate the referenced asset before using it as a dependency.'
+      );
+    }
+    return withAsset({
+      assetId: asset.assetId,
+      assetFileId: fileResult.file.id,
+      projectRelativePath: fileResult.file.projectRelativePath,
+    });
+  }
   const selectedAssets = listAssetRelationshipPage(session, {
     target: input.target,
     role: input.role,
@@ -198,7 +237,7 @@ function selectedAssetForTarget(
   if (!asset) {
     return noAsset();
   }
-  const fileResult = dependencyFile(session, asset, input.mediaKind, input.fileRole);
+  const fileResult = dependencyFile(asset, input.mediaKind, input.fileRole);
   if (fileResult.state === 'invalid') {
     return invalidSelection(
       input.slot,
@@ -240,7 +279,6 @@ function selectLookbookSheet(input: {
 }
 
 function dependencyFile(
-  session: DatabaseSession,
   asset: Asset,
   mediaKind: string,
   fileRole?: string
@@ -252,46 +290,13 @@ function dependencyFile(
       message: string;
       suggestion: string;
     } {
-  if (fileRole === 'composite') {
-    const sheet = readLocationEnvironmentSheetByAssetId(session, asset.assetId);
-    if (!sheet) {
-      return {
-        state: 'invalid',
-        code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_METADATA_MISSING',
-        message: `Selected location environment sheet is missing metadata: ${asset.assetId}.`,
-        suggestion:
-          'Regenerate or reimport the location environment sheet so its composite metadata is recorded.',
-      };
-    }
-    if (!sheet.compositeFileId) {
-      return {
-        state: 'invalid',
-        code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_COMPOSITE_FILE_MISSING',
-        message: `Selected location environment sheet has no composite file id: ${asset.assetId}.`,
-        suggestion:
-          'Regenerate the location environment sheet so the composite image can be selected.',
-      };
-    }
-    const compositeFile = asset.files.find(
-      (candidate) =>
-        candidate.id === sheet.compositeFileId &&
-        candidate.role === 'composite' &&
-        candidate.mediaKind === mediaKind
-    );
-    if (!compositeFile) {
-      return {
-        state: 'invalid',
-        code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_COMPOSITE_FILE_RECORD_MISSING',
-        message: `Selected location environment sheet composite file record is missing: ${asset.assetId}.`,
-        suggestion:
-          'Regenerate or reimport the location environment sheet so the composite file record exists.',
-      };
-    }
-    return { state: 'valid', file: compositeFile };
-  }
   return {
     state: 'valid',
-    file: asset.files.find((candidate) => candidate.mediaKind === mediaKind),
+    file: asset.files.find(
+      (candidate) =>
+        candidate.mediaKind === mediaKind &&
+        (fileRole === undefined || candidate.role === fileRole)
+    ),
   };
 }
 

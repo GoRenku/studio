@@ -1,6 +1,7 @@
 import {
   type CastMediaImportReport,
   type LocationEnvironmentSheetMediaImportReport,
+  type LocationHeroMediaImportReport,
   type LookbookImageMediaImportReport,
   type LookbookSheetMediaImportReport,
   type SceneStoryboardImagesImportReport,
@@ -12,7 +13,6 @@ import {
   createDiagnosticWarning,
 } from '@gorenku/studio-diagnostics';
 import {
-  readLocationEnvironmentSheetImportDocument,
   readReceipt,
   readSceneStoryboardImagesImportDocument,
 } from './media-import-documents.js';
@@ -49,6 +49,7 @@ export interface MediaCommandFlags {
   sections?: string;
   anchor?: string;
   receipt?: string;
+  sourceSheet?: string;
   shotList?: string;
   shots?: string;
   take?: string;
@@ -60,6 +61,7 @@ type MediaImportReport =
   | LookbookSheetMediaImportReport
   | CastMediaImportReport
   | LocationEnvironmentSheetMediaImportReport
+  | LocationHeroMediaImportReport
   | SceneStoryboardImagesImportReport
   | ShotVideoTakeInputMediaImportReport
   | ShotVideoTakeMediaImportReport;
@@ -114,6 +116,10 @@ const MEDIA_IMPORT_PURPOSE_HANDLERS = [
   {
     purpose: 'location.environment-sheet',
     run: importLocationEnvironmentSheet,
+  },
+  {
+    purpose: 'location.hero',
+    run: importLocationHero,
   },
   {
     purpose: 'scene.storyboard-sheet',
@@ -233,27 +239,32 @@ async function importCastProfile(
 async function importLocationEnvironmentSheet(
   input: MediaImportPurposeHandlerInput
 ): Promise<LocationEnvironmentSheetMediaImportReport> {
-  rejectGroupedImportSourceAndReceipt(input.flags, {
-    sourceMessage: 'Location environment sheet import does not accept --source.',
-    sourceSuggestion:
-      'Use --file with a JSON document that lists composite, view_front, view_right, view_back, and view_left.',
-    receiptMessage:
-      'Location environment sheet import does not accept --receipt.',
-    receiptSuggestion:
-      'The generation receipt stays with the composite generation run; import only the grouped image files.',
-  });
-  const document = await readLocationEnvironmentSheetImportDocument(
-    requiredFlag(input.flags.file, '--file')
-  );
+  const singleFile = await readSingleFileImport(input.flags);
   return input.runtime.projectDataService.importLocationEnvironmentSheetMedia({
     ...mediaImportProjectInput(input.runtime),
     locationId: parseLocationTarget(
       input.target,
       'Location environment sheet import'
     ),
-    files: document.files,
-    title: input.flags.title ?? document.title,
-    oneLineSummary: input.flags.summary ?? document.oneLineSummary,
+    sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
+    title: input.flags.title,
+    description: requiredFlag(input.flags.summary, '--summary'),
+    receipt: singleFile.receipt,
+  });
+}
+
+async function importLocationHero(
+  input: MediaImportPurposeHandlerInput
+): Promise<LocationHeroMediaImportReport> {
+  const singleFile = await readSingleFileImport(input.flags);
+  return input.runtime.projectDataService.importLocationHeroMedia({
+    ...mediaImportProjectInput(input.runtime),
+    locationId: parseLocationTarget(input.target, 'Location hero import'),
+    sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
+    sourceLocationSheetAssetId: requiredFlag(input.flags.sourceSheet, '--source-sheet'),
+    title: input.flags.title,
+    description: requiredFlag(input.flags.summary, '--summary'),
+    receipt: singleFile.receipt,
   });
 }
 
@@ -387,31 +398,6 @@ async function readSingleFileImport(flags: MediaCommandFlags): Promise<{
   };
 }
 
-function rejectGroupedImportSourceAndReceipt(
-  flags: MediaCommandFlags,
-  messages: {
-    sourceMessage: string;
-    sourceSuggestion: string;
-    receiptMessage: string;
-    receiptSuggestion: string;
-  }
-): void {
-  if (flags.source) {
-    throw new StructuredError({
-      code: 'CLI027',
-      message: messages.sourceMessage,
-      suggestion: messages.sourceSuggestion,
-    });
-  }
-  if (flags.receipt) {
-    throw new StructuredError({
-      code: 'CLI028',
-      message: messages.receiptMessage,
-      suggestion: messages.receiptSuggestion,
-    });
-  }
-}
-
 function rejectReceipt(
   flags: MediaCommandFlags,
   messages: {
@@ -448,6 +434,6 @@ function unsupportedMediaPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
   });
 }

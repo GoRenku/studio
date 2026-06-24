@@ -92,6 +92,7 @@ Options
   --reference-name     Relationship-scoped Renku reference name
   --reference-purpose  Relationship-scoped asset purpose text
   --source             Project-relative source file for media import
+  --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
   --media-kind         Asset media kind
   --provider           Generation provider
@@ -216,6 +217,9 @@ function createCliFlags() {
       default: false,
     },
     receipt: {
+      type: 'string',
+    },
+    sourceSheet: {
       type: 'string',
     },
     role: {
@@ -633,6 +637,7 @@ export async function runRenkuCli(
             sections: cli.flags.sections,
             anchor: cli.flags.anchor,
             receipt: cli.flags.receipt,
+            sourceSheet: cli.flags.sourceSheet,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
             take: cli.flags.take,

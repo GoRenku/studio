@@ -22,6 +22,8 @@ interface SceneShotReferenceCardProps {
   detectImageAspectRatio?: boolean;
   onOpen?: () => void;
   onToggleSelected?: () => Promise<void>;
+  selectedActionLabel?: string;
+  unselectedActionLabel?: string;
 }
 
 export function SceneShotReferenceCard({
@@ -38,16 +40,20 @@ export function SceneShotReferenceCard({
   detectImageAspectRatio = false,
   onOpen,
   onToggleSelected,
+  selectedActionLabel,
+  unselectedActionLabel,
 }: SceneShotReferenceCardProps) {
   const needsGeneration = card.state === 'selected-planned';
   const selectedLabel =
-    controlMode === 'inclusion'
+    selectedActionLabel ??
+    (controlMode === 'inclusion'
       ? `Exclude ${title ?? 'reference'}`
-      : `Clear ${title ?? 'reference'} pick`;
+      : `Clear ${title ?? 'reference'} pick`);
   const unselectedLabel =
-    controlMode === 'inclusion'
+    unselectedActionLabel ??
+    (controlMode === 'inclusion'
       ? `Include ${title ?? 'reference'}`
-      : `Set ${title ?? 'reference'} pick`;
+      : `Set ${title ?? 'reference'} pick`);
 
   return (
     <ImageOverlayCard

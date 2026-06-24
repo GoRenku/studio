@@ -26,7 +26,6 @@ import { readCastMemberVoiceOverRequest } from '../http/cast-member-request.js';
 import {
   readShotCastCharacterSheetReferenceRequest,
   readShotLocationSheetReferenceRequest,
-  readShotLocationViewReferencesRequest,
   readShotLookbookReferenceRequest,
   readShotReferenceInclusionRequest,
   readSceneShotVideoTakeCreateRequest,
@@ -781,34 +780,7 @@ export function createScreenplayRoute({
               sceneId,
               takeId,
               locationId: request.locationId,
-              assetId: request.assetId,
-            });
-          return c.json({
-            context,
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/location-views',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readShotLocationViewReferencesRequest(await c.req.json());
-          const context =
-            await projectData.updateSceneShotVideoTakeLocationViewSelection({
-              projectName,
-              sceneId,
-              takeId,
-              locationId: request.locationId,
-              assetId: request.assetId,
-              viewIds: request.viewIds,
+              assetIds: request.assetIds,
             });
           return c.json({
             context,

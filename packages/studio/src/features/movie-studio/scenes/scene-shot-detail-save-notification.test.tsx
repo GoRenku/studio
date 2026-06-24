@@ -74,8 +74,7 @@ function emptyTakeState() {
     referenceSelections: {
       dependencyInclusions: {},
       selectedCharacterSheetAssetIds: {},
-      selectedLocationSheetAssetIds: {},
-      selectedLocationViewIds: {},
+      referencedLocationSheetAssetIds: {},
       selectedLookbookSheetIds: [],
       selectedDialogueAudioTakeIds: {},
     },

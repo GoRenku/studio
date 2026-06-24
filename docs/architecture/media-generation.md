@@ -13,9 +13,9 @@ context while preserving user choices, cost approval, and project metadata
 boundaries.
 
 The implemented purposes are `lookbook.image`, `cast.character-sheet`,
-`cast.profile`, `location.environment-sheet`, `scene.storyboard-sheet`, the
-shot-video input purposes, and `shot.video-take`. Precise contracts live in
-`reference/media-generation.md`.
+`cast.profile`, `location.environment-sheet`, `location.hero`,
+`scene.storyboard-sheet`, the shot-video input purposes, and `shot.video-take`.
+Precise contracts live in `reference/media-generation.md`.
 
 ## Current Shape
 
@@ -104,8 +104,9 @@ Selectors must state their defaulting policy explicitly. `selected-only`
 selectors use only a concrete selected asset or sheet. `selected-or-default`
 selectors may fall back to the purpose-owned default only when that behavior is
 part of the selector contract. Unknown selector kinds, wrong request shapes,
-invalid selected targets, missing selected files, and broken environment-sheet
-metadata are structured dependency diagnostics, not quiet missing states.
+invalid selected targets, missing selected files, unavailable referenced
+Location Sheet assets, and missing primary image files are structured
+dependency diagnostics, not quiet missing states.
 
 There is one pricing meaning. Generated node prices come from provider
 estimates in `@gorenku/studio-engines`; reused existing assets contribute
@@ -134,13 +135,18 @@ every required provider input resolves to a real project asset.
 A generated file still does not become project metadata until an explicit media
 import succeeds.
 
-Location environment sheets add an agent-owned post-processing step after
-generation. Core asks the selected text-to-image model for a four-azimuth
-contact sheet. The media-producer agent then inspects the returned composite,
-crops four view files, and imports the composite plus the already-sliced views.
-SQLite stores the grouped asset and azimuth relationships; it does not store
-crop boxes, extraction confidence, extraction methods, or extraction
-diagnostics.
+Location Sheets are full-image production reference boards. Core asks the
+selected image model for one Location Sheet, and import stores one image asset
+with one `primary` file plus a concise persisted description. Location Sheets
+do not have Location-level pick/default selection, fixed view files, or azimuth
+metadata. Shot/take workflows reference exact Location Sheet asset ids when a
+sheet is useful for a specific generation.
+
+Location Hero Images are separate display assets generated or imported from an
+explicit source Location Sheet. They use asset type `location_hero`, Location
+asset role `hero`, and one `primary` file. The selected hero image drives
+Location overview/detail display only; it is never a hidden shot-generation
+reference.
 
 ## Related References
 
@@ -152,3 +158,4 @@ diagnostics.
 - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 - `../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
+- `../decisions/0036-use-unsliced-location-sheets.md`

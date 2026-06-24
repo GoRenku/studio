@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type {
-  LocationAzimuthViewId,
   ShotVideoTakeGeneralReferenceChoice,
   ShotVideoTakeProductionPlanReport,
   ShotVideoTakeReferenceImagePreview,
@@ -13,7 +12,7 @@ import {
 import {
   updateShotGroupReferenceInclusion,
   updateTakeCharacterSheetSelection,
-  updateTakeLocationViewSelection,
+  updateTakeLocationSheetSelection,
   type ShotVideoTakeProductionMutation,
 } from '@/services/studio-shot-video-takes-api';
 import {
@@ -184,7 +183,7 @@ export function SceneShotReferencesTab({
         </SceneShotReferenceSection>
 
         <SceneShotReferenceSection
-          title='Location Sheets And Views'
+          title='Location Sheets'
           defaultOpen={Boolean(references?.locations.length)}
         >
           {references?.locations.length ? (
@@ -197,24 +196,26 @@ export function SceneShotReferencesTab({
                   projectName={projectName}
                   group={group}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
-                  onToggleInclusion={async (dependencyId, inclusion) => {
-                    await updateReferenceInclusion(dependencyId, inclusion);
-                  }}
-                  onToggleView={async (locationId, assetId, viewId, selected) => {
+                  onToggleSheet={async (locationId, assetId, referenced) => {
                     const take = productionPlan?.take;
                     if (!take) {
                       return;
                     }
-                    const nextViewIds = nextLocationViewIds(
-                      group.selectedViewIds,
-                      viewId,
-                      selected
-                    );
-                    const result = await updateTakeLocationViewSelection(
+                    const nextAssetIds = referenced
+                      ? group.referencedEnvironmentSheetAssetIds.filter(
+                          (candidate) => candidate !== assetId
+                        )
+                      : [
+                          ...new Set([
+                            ...group.referencedEnvironmentSheetAssetIds,
+                            assetId,
+                          ]),
+                        ];
+                    const result = await updateTakeLocationSheetSelection(
                       projectName,
                       sceneId,
                       take.takeId,
-                      { locationId, assetId, viewIds: nextViewIds }
+                      { locationId, assetIds: nextAssetIds }
                     );
                     await refreshAfterMutation(result);
                   }}
@@ -330,15 +331,4 @@ function generalReferenceImageUrl(
     return preview.url;
   }
   return sceneAssetFileUrl(projectName, sceneId, preview.assetId, preview.assetFileId);
-}
-
-function nextLocationViewIds(
-  selectedViewIds: LocationAzimuthViewId[],
-  viewId: LocationAzimuthViewId,
-  selected: boolean
-): LocationAzimuthViewId[] {
-  if (selected) {
-    return selectedViewIds.filter((candidate) => candidate !== viewId);
-  }
-  return [...new Set([...selectedViewIds, viewId])];
 }

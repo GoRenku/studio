@@ -19,6 +19,7 @@ export const SUPPORTED_GENERATION_PURPOSES = [
   'cast.profile',
   'cast.voice-sample',
   'location.environment-sheet',
+  'location.hero',
   'scene.storyboard-sheet',
   'scene.dialogue-audio',
   'shot.first-frame',
@@ -56,7 +57,7 @@ export function parseGenerationTarget(input: {
       id: parseCastTarget(input.target, 'Cast image generation'),
     };
   }
-  if (purpose === 'location.environment-sheet') {
+  if (purpose === 'location.environment-sheet' || purpose === 'location.hero') {
     return {
       kind: 'location',
       id: parseLocationTarget(input.target, 'Location image generation'),
@@ -91,7 +92,7 @@ export function unsupportedGenerationPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose scene.storyboard-sheet, --purpose scene.dialogue-audio, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose scene.dialogue-audio, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
   });
 }
 

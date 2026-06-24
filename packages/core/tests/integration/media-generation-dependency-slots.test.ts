@@ -18,6 +18,9 @@ const target: SceneShotVideoTakeTarget = {
 const selectedCast = [{ id: 'cast-a', name: 'Ada' }];
 const selectedLocations = [{ id: 'location-a', name: 'Archive' }];
 const activeLookbook = { id: 'lookbook-a', name: 'Nocturne' };
+const referencedLocationSheetAssetIds = {
+  'location-a': ['asset-location-sheet-a'],
+};
 
 describe('media generation dependency slot declarations', () => {
   it('declares no required frame-input slots for shot video text-only mode', () => {
@@ -28,6 +31,7 @@ describe('media generation dependency slot declarations', () => {
       selectedLocations,
       activeLookbook,
       customReferenceInputs: [],
+      referencedLocationSheetAssetIds,
     });
 
     expect(slots.filter((slot) => slot.required)).toEqual([]);
@@ -41,10 +45,11 @@ describe('media generation dependency slot declarations', () => {
           }),
         }),
         expect.objectContaining({
-          dependencyId: 'location-environment-sheet:location-a',
+          dependencyId: 'location-environment-sheet:location-a:asset-location-sheet-a',
           required: false,
           selector: expect.objectContaining({
-            selectionPolicy: 'selected-or-default',
+            assetId: 'asset-location-sheet-a',
+            selectionPolicy: 'selected-only',
           }),
         }),
         expect.objectContaining({
@@ -66,6 +71,7 @@ describe('media generation dependency slot declarations', () => {
       selectedLocations,
       activeLookbook,
       customReferenceInputs: [],
+      referencedLocationSheetAssetIds,
     });
 
     expect(slots).toEqual(
@@ -88,6 +94,7 @@ describe('media generation dependency slot declarations', () => {
       selectedLocations,
       activeLookbook: null,
       customReferenceInputs: [],
+      referencedLocationSheetAssetIds,
     });
 
     expect(slots).toEqual(
@@ -101,7 +108,7 @@ describe('media generation dependency slot declarations', () => {
           required: false,
         }),
         expect.objectContaining({
-          dependencyId: 'location-environment-sheet:location-a',
+          dependencyId: 'location-environment-sheet:location-a:asset-location-sheet-a',
           required: false,
         }),
       ])
@@ -123,6 +130,7 @@ describe('media generation dependency slot declarations', () => {
       selectedLocations,
       activeLookbook,
       customReferenceInputs: [],
+      referencedLocationSheetAssetIds,
     });
 
     expect(slots.filter((slot) => slot.required).map((slot) => slot.dependencyKind)).toEqual([
@@ -139,6 +147,7 @@ describe('media generation dependency slot declarations', () => {
       selectedLocations,
       activeLookbook,
       customReferenceInputs: [{ id: 'reference-a', title: 'Map table reference' }],
+      referencedLocationSheetAssetIds,
     });
 
     expect(slots).toEqual(
@@ -156,7 +165,7 @@ describe('media generation dependency slot declarations', () => {
           required: false,
         }),
         expect.objectContaining({
-          dependencyId: 'location-environment-sheet:location-a',
+          dependencyId: 'location-environment-sheet:location-a:asset-location-sheet-a',
           required: false,
         }),
       ])
@@ -175,6 +184,7 @@ describe('media generation dependency slot declarations', () => {
         selectedSheetId: 'lookbook-a-sheet',
       },
       customReferenceInputs: [],
+      referencedLocationSheetAssetIds: {},
       requestedInputs: [
         {
           kind: 'lookbook-sheet',

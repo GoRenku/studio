@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type {
-  LocationAzimuthViewId,
   ShotVideoTakeEnvironmentSheetReferenceChoice,
   ShotVideoTakeLocationReferenceGroup,
 } from '@gorenku/studio-core/client';
@@ -17,23 +16,18 @@ import { previewImageUrl } from './scene-shot-reference-card-images';
 import { SceneShotReferenceCard } from './scene-shot-reference-card';
 import { SceneShotReferenceCardGrid } from './scene-shot-reference-card-grid';
 import {
-  SHOT_LOCATION_VIEW_DIALOG_CARD_MIN_WIDTH,
-  SHOT_LOCATION_VIEW_DIALOG_CLASS,
+  SHOT_LOCATION_SHEET_DIALOG_CARD_MIN_WIDTH,
+  SHOT_LOCATION_SHEET_DIALOG_CLASS,
 } from './scene-shot-reference-layout';
 
 interface SceneShotLocationReferenceRowProps {
   projectName: string;
   group: ShotVideoTakeLocationReferenceGroup;
   onPreview: (images: PreviewImage[]) => void;
-  onToggleInclusion: (
-    dependencyId: string,
-    inclusion: 'include' | 'exclude' | null
-  ) => Promise<void>;
-  onToggleView: (
+  onToggleSheet: (
     locationId: string,
     assetId: string,
-    viewId: LocationAzimuthViewId,
-    selected: boolean
+    referenced: boolean
   ) => Promise<void>;
 }
 
@@ -41,152 +35,150 @@ export function SceneShotLocationReferenceRow({
   projectName,
   group,
   onPreview,
-  onToggleInclusion,
-  onToggleView,
+  onToggleSheet,
 }: SceneShotLocationReferenceRowProps) {
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const selectedSheet =
-    group.environmentSheets.find((sheet) => sheet.selected) ??
+  const [sheetDialogOpen, setSheetDialogOpen] = useState(false);
+  const displayedSheet =
+    group.environmentSheets.find((sheet) => sheet.referenced) ??
     group.environmentSheets[0] ??
     null;
 
-  if (!selectedSheet) {
+  if (!displayedSheet) {
     return null;
   }
 
-  const sheetPreview = selectedSheet.card.previews[0];
-  const sheetImageUrl = locationReferenceImageUrl(
+  const hasSheetAlternatives = group.environmentSheets.length > 1;
+  const preview = displayedSheet.card.previews[0];
+  const imageUrl = locationReferenceImageUrl(
     projectName,
     group.locationId,
-    selectedSheet,
-    sheetPreview
+    displayedSheet,
+    preview
   );
+  const previewImages = previewImageUrl(preview, imageUrl);
+  const title = hasSheetAlternatives ? group.name : displayedSheet.title;
+  const selected = displayedSheet.assetId
+    ? displayedSheet.referenced
+    : displayedSheet.card.included;
 
   return (
     <>
       <SceneShotReferenceCard
-        title={group.name}
-        imageUrl={sheetImageUrl}
-        imageAlt={group.name}
-        card={selectedSheet.card}
-        selected={selectedSheet.card.included}
-        controlMode='inclusion'
+        title={title}
+        description={displayedSheet.description ?? undefined}
+        imageUrl={imageUrl}
+        imageAlt={preview?.alt ?? displayedSheet.title}
+        card={displayedSheet.card}
+        selected={selected}
+        selectable={Boolean(displayedSheet.assetId)}
+        selectedActionLabel={`Stop referencing ${displayedSheet.title}`}
+        unselectedActionLabel={`Reference ${displayedSheet.title}`}
         aspectRatio={4 / 3}
         aspectClassName='aspect-[4/3]'
-        onOpen={() => setViewDialogOpen(true)}
+        onOpen={() => {
+          if (hasSheetAlternatives) {
+            setSheetDialogOpen(true);
+            return;
+          }
+          if (previewImages.length) {
+            onPreview(previewImages);
+          }
+        }}
         onToggleSelected={() =>
-          selectedSheet.card.dependencyId
-            ? onToggleInclusion(
-                selectedSheet.card.dependencyId,
-                nextReferenceInclusion(selectedSheet.card)
+          displayedSheet.assetId
+            ? onToggleSheet(
+                group.locationId,
+                displayedSheet.assetId,
+                displayedSheet.referenced
               )
             : Promise.resolve()
         }
       />
-      <LocationViewDialog
-        projectName={projectName}
-        group={group}
-        sheet={selectedSheet}
-        open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
-        onPreview={onPreview}
-        onToggleView={onToggleView}
-      />
+      {hasSheetAlternatives ? (
+        <LocationSheetDialog
+          projectName={projectName}
+          group={group}
+          open={sheetDialogOpen}
+          onOpenChange={setSheetDialogOpen}
+          onPreview={onPreview}
+          onToggleSheet={onToggleSheet}
+        />
+      ) : null}
     </>
   );
 }
 
-function nextReferenceInclusion(card: {
-  defaultIncluded: boolean;
-  included: boolean;
-}): 'include' | 'exclude' | null {
-  if (card.included) {
-    return card.defaultIncluded ? 'exclude' : null;
-  }
-  return card.defaultIncluded ? null : 'include';
-}
-
-function LocationViewDialog({
+function LocationSheetDialog({
   projectName,
   group,
-  sheet,
   open,
   onOpenChange,
   onPreview,
-  onToggleView,
+  onToggleSheet,
 }: {
   projectName: string;
   group: ShotVideoTakeLocationReferenceGroup;
-  sheet: ShotVideoTakeEnvironmentSheetReferenceChoice;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPreview: (images: PreviewImage[]) => void;
-  onToggleView: (
+  onToggleSheet: (
     locationId: string,
     assetId: string,
-    viewId: LocationAzimuthViewId,
-    selected: boolean
+    referenced: boolean
   ) => Promise<void>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={SHOT_LOCATION_VIEW_DIALOG_CLASS}>
+      <DialogContent className={SHOT_LOCATION_SHEET_DIALOG_CLASS}>
         <DialogHeader>
           <DialogTitle className='truncate text-base normal-case leading-6 tracking-normal'>
             {group.name}
           </DialogTitle>
           <DialogDescription className='sr-only'>
-            Select location views for this shot.
+            Select a Location Sheet for this location.
           </DialogDescription>
         </DialogHeader>
         <div className='max-h-[60vh] overflow-y-auto px-5 py-5'>
-          {sheet.views.length ? (
-            <SceneShotReferenceCardGrid
-              minCardWidth={SHOT_LOCATION_VIEW_DIALOG_CARD_MIN_WIDTH}
-            >
-              {sheet.views.map((view) => {
-                const preview = view.card.previews[0];
-                const imageUrl = locationReferenceImageUrl(
-                  projectName,
-                  group.locationId,
-                  sheet,
-                  preview
-                );
-                const previewImages = previewImageUrl(preview, imageUrl);
-                return (
-                  <SceneShotReferenceCard
-                    key={view.id}
-                    title={view.label}
-                    imageUrl={imageUrl}
-                    imageAlt={preview?.alt ?? view.label}
-                    card={view.card}
-                    selected={view.selected}
-                    aspectRatio={16 / 9}
-                    aspectClassName='aspect-video'
-                    onOpen={() => {
-                      if (previewImages.length) {
-                        onPreview(previewImages);
-                      }
-                    }}
-                    onToggleSelected={() =>
-                      sheet.assetId
-                        ? onToggleView(
-                            group.locationId,
-                            sheet.assetId,
-                            view.viewId,
-                            view.selected
-                          )
-                        : Promise.resolve()
+          <SceneShotReferenceCardGrid
+            minCardWidth={SHOT_LOCATION_SHEET_DIALOG_CARD_MIN_WIDTH}
+          >
+            {group.environmentSheets.map((sheet) => {
+              const preview = sheet.card.previews[0];
+              const imageUrl = locationReferenceImageUrl(
+                projectName,
+                group.locationId,
+                sheet,
+                preview
+              );
+              const previewImages = previewImageUrl(preview, imageUrl);
+              return (
+                <SceneShotReferenceCard
+                  key={sheet.id}
+                  title={sheet.title}
+                  description={sheet.description ?? undefined}
+                  imageUrl={imageUrl}
+                  imageAlt={preview?.alt ?? sheet.title}
+                  card={sheet.card}
+                  selected={sheet.referenced}
+                  selectable={Boolean(sheet.assetId)}
+                  selectedActionLabel={`Stop referencing ${sheet.title}`}
+                  unselectedActionLabel={`Reference ${sheet.title}`}
+                  aspectRatio={4 / 3}
+                  aspectClassName='aspect-[4/3]'
+                  onOpen={() => {
+                    if (previewImages.length) {
+                      onPreview(previewImages);
                     }
-                  />
-                );
-              })}
-            </SceneShotReferenceCardGrid>
-          ) : (
-            <p className='text-sm text-muted-foreground'>
-              No location views are available for this sheet.
-            </p>
-          )}
+                  }}
+                  onToggleSelected={() =>
+                    sheet.assetId
+                      ? onToggleSheet(group.locationId, sheet.assetId, sheet.referenced)
+                      : Promise.resolve()
+                  }
+                />
+              );
+            })}
+          </SceneShotReferenceCardGrid>
         </div>
       </DialogContent>
     </Dialog>

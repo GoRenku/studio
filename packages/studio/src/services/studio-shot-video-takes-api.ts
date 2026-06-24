@@ -1,5 +1,4 @@
 import type {
-  LocationAzimuthViewId,
   ShotVideoTakeProductionContext,
   ShotVideoTakeInputPolicy,
   ShotVideoTakeInputKind,
@@ -252,27 +251,10 @@ export async function updateTakeLocationSheetSelection(
   projectName: string,
   sceneId: string,
   takeId: string,
-  input: { locationId: string; assetId: string | null }
+  input: { locationId: string; assetIds: string[] }
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-selections/location-sheets`,
-    'PATCH',
-    input
-  );
-}
-
-export async function updateTakeLocationViewSelection(
-  projectName: string,
-  sceneId: string,
-  takeId: string,
-  input: {
-    locationId: string;
-    assetId: string;
-    viewIds: LocationAzimuthViewId[];
-  }
-): Promise<ShotVideoTakeProductionMutation> {
-  return sendTakeMutation(
-    `${productionPath(projectName, sceneId, takeId)}/reference-selections/location-views`,
     'PATCH',
     input
   );

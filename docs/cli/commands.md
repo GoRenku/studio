@@ -1507,14 +1507,14 @@ Location Environment Sheet spec shape:
   "purpose": "location.environment-sheet",
   "target": { "kind": "location", "id": "location_sea_walls" },
   "modelChoice": "fal-ai/nano-banana-2",
-  "prompt": "A four-view environment sheet for the sea walls location...",
+  "prompt": "A flexible Location Sheet for the sea walls location, combining siege-facing field scale, wall material, gate depth, and city-edge context...",
   "takeCount": 1,
   "seed": null,
   "sheetFrame": "4:3",
-  "viewFrame": "16:9",
   "detail": "standard",
   "outputFormat": "png",
-  "title": "Sea walls environment sheet"
+  "title": "Sea walls siege-facing sheet",
+  "description": "Sea-wall material, gate, tower, field, and city-edge reference for shot planning."
 }
 ```
 
@@ -1662,25 +1662,25 @@ Location Environment Sheet import:
 renku media import \
   --purpose location.environment-sheet \
   --target location:<location-id> \
-  --file location-environment-sheet-import.json \
+  --source generated/media/sea-walls-sheet.png \
   --title <title> \
   --summary <one-line-summary> \
+  --receipt <generation-run-json> \
   --json
 ```
 
-The import JSON must explicitly list the composite and four sliced view files:
+Location Hero Image import:
 
-```json
-{
-  "title": "Sea walls environment sheet",
-  "files": {
-    "composite": "generated/media/sea-walls-sheet.png",
-    "view_front": "generated/media/sea-walls-front.png",
-    "view_right": "generated/media/sea-walls-right.png",
-    "view_back": "generated/media/sea-walls-back.png",
-    "view_left": "generated/media/sea-walls-left.png"
-  }
-}
+```bash
+renku media import \
+  --purpose location.hero \
+  --target location:<location-id> \
+  --source generated/media/sea-walls-hero.png \
+  --source-sheet <location-sheet-asset-id> \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
 ```
 
 Scene Storyboard Sheet image import:
@@ -1770,8 +1770,8 @@ Options:
 
 - `--purpose`: required media purpose. Current supported values are
   `lookbook.image`, `lookbook.sheet`, `cast.character-sheet`, `cast.profile`,
-  `location.environment-sheet`, `scene.storyboard-sheet`, `shot.first-frame`,
-  `shot.last-frame`, `shot.reference-image`,
+  `location.environment-sheet`, `location.hero`, `scene.storyboard-sheet`,
+  `shot.first-frame`, `shot.last-frame`, `shot.reference-image`,
   `shot.multi-shot-storyboard-sheet`, and `shot.video-take`.
 - `--target`: required target. Current supported shapes are
   `lookbook:<lookbook-id>`, `cast:<cast-member-id>`,
@@ -1779,8 +1779,10 @@ Options:
 - `--source`: required project-relative media source path for single-file
   imports. For `scene.storyboard-sheet`, this imports one cropped shot image
   and must be paired with exactly one `--shots` id.
-- `--file`: grouped import JSON for `location.environment-sheet` and
-  multi-shot `scene.storyboard-sheet` image imports.
+- `--file`: grouped import JSON for multi-shot `scene.storyboard-sheet` image
+  imports.
+- `--source-sheet`: required when importing `location.hero`; it must be the
+  source Location Sheet asset id for the same Location.
 - `--shot-list`: required when importing `scene.storyboard-sheet`.
 - `--shots`: for single-file `scene.storyboard-sheet` imports, it must contain
   exactly one shot id.
@@ -1797,7 +1799,8 @@ Options:
 - `--title`: optional title for the imported media.
 - `--summary`: optional one-line summary.
 - `--receipt`: optional generation run or receipt JSON for single-file imports.
-  Location environment sheet import does not accept receipts.
+  Omit it when the source file came from Codex built-in image generation,
+  another tool, a manual upload, or any non-Renku generation source.
 
 Behavior:
 
@@ -1810,12 +1813,13 @@ Behavior:
   events.
 - For Lookbook Sheets, import registers a Lookbook sheet asset, stores it under
   `visual-language/lookbook/`, and appends Studio resource refresh events.
-- For Location Environment Sheets, import registers one grouped asset, copies
-  the composite plus `view_front`, `view_right`, `view_back`, and `view_left`
-  files under `locations/<handle>/environment-sheets/<sheet-slug>/`, and stores
-  only the grouped asset and azimuth relationships. It does not accept or store
-  crop coordinates, extraction methods, extraction confidence, or extraction
-  diagnostics.
+- For Location Sheets, import registers one image asset, copies one `primary`
+  image file under `locations/<handle>/environment-sheets/<sheet-slug>/`, and
+  stores the required summary as the asset description shown in Studio.
+- For Location Hero Images, import registers one `location_hero` image asset,
+  copies one `primary` image file under `locations/<handle>/heroes/<hero-slug>/`,
+  validates the `--source-sheet` Location Sheet when supplied, and selects the
+  newest hero image for overview/detail display.
 - For Scene Storyboard Sheets, import registers one `scene_storyboard_image`
   asset per shot, copies only cropped shot images under
   `screenplay/storyboards/<scene-label>/<import-title>/`, attaches each image to

@@ -17,7 +17,6 @@ import {
 } from '../../src/server/index.js';
 import { updateAssetRelationshipSelection } from '../../src/server/database/access/asset-relationships/index.js';
 import { deleteAssetFileRecordsForAsset } from '../../src/server/database/access/asset-files.js';
-import { deleteLocationEnvironmentSheetByAssetId } from '../../src/server/database/access/location-environment-sheets.js';
 import { openProjectSession } from '../../src/server/database/lifecycle/active-session.js';
 import { planMediaGenerationDependencyInventory } from '../../src/server/media-generation/dependency-inventory.js';
 import { resolveMediaGenerationDependencySelection } from '../../src/server/media-generation/dependency-selectors.js';
@@ -227,12 +226,6 @@ describe('media generation dependency inventory estimates integration', () => {
         }),
         expect.objectContaining({
           kind: 'dependency-generation',
-          dependencyKind: 'location-environment-sheet',
-          purpose: 'location.environment-sheet',
-          pricing: expect.objectContaining({ state: 'priced' }),
-        }),
-        expect.objectContaining({
-          kind: 'dependency-generation',
           dependencyKind: 'lookbook-sheet',
           purpose: 'lookbook.sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
@@ -260,13 +253,6 @@ describe('media generation dependency inventory estimates integration', () => {
           dependencyLineId: `dependency:cast-character-sheet:${ids.castMemberId}`,
           title: 'Mehmed II',
           caption: 'Character sheet',
-          status: 'needed',
-          pricing: expect.objectContaining({ state: 'priced' }),
-        }),
-        expect.objectContaining({
-          dependencyLineId: `dependency:location-environment-sheet:${ids.locationId}`,
-          title: "Mehmed's council chamber",
-          caption: 'Location sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
@@ -377,7 +363,6 @@ describe('media generation dependency inventory estimates integration', () => {
         }),
         expect.objectContaining({
           dependencyLineId: locationLineId,
-          title: "Mehmed's council chamber",
           caption: 'Location sheet',
           status: 'needed',
           pricing: expect.objectContaining({ state: 'priced', estimatedUsd: 0.037 }),
@@ -455,7 +440,6 @@ describe('media generation dependency inventory estimates integration', () => {
       (line) => line.dependencyKind === 'first-frame'
     );
     const characterLineId = `dependency:cast-character-sheet:${ids.castMemberId}`;
-    const locationLineId = `dependency:location-environment-sheet:${ids.locationId}`;
     const lookbookLineId = `dependency:lookbook-sheet:${lookbook.lookbook.id}`;
 
     expect(firstFrameLine).toMatchObject({
@@ -472,7 +456,6 @@ describe('media generation dependency inventory estimates integration', () => {
     expect(preflight.plan?.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: characterLineId }),
-        expect.objectContaining({ id: locationLineId }),
         expect.objectContaining({ id: lookbookLineId }),
       ])
     );
@@ -645,10 +628,6 @@ describe('media generation dependency inventory estimates integration', () => {
       expect.arrayContaining([
         expect.objectContaining({
           dependencyKind: 'cast-character-sheet',
-          pricing: expect.objectContaining({ state: 'priced' }),
-        }),
-        expect.objectContaining({
-          dependencyKind: 'location-environment-sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
@@ -1154,27 +1133,32 @@ describe('media generation dependency inventory estimates integration', () => {
     });
   });
 
-  it('reports selected location environment sheets with missing metadata as structured selector diagnostics', async () => {
+  it('reports referenced Location Sheets with missing primary files as structured selector diagnostics', async () => {
     const ids = await sampleIds(projectData, homeDir);
-    const files = await writeLocationSheetImportFiles(projectData, homeDir);
+    const sourceProjectRelativePath = await writeLocationSheetImportFile(
+      projectData,
+      homeDir
+    );
     const imported = await projectData.importLocationEnvironmentSheetMedia({
       projectName: 'constantinople',
       homeDir,
       locationId: ids.locationId,
-      files,
+      sourceProjectRelativePath,
       title: 'Council chamber environment sheet',
+      description: 'Council chamber sheet used to verify missing primary file diagnostics.',
     });
     const { session } = await openProjectSession({
       projectName: 'constantinople',
       homeDir,
     });
-    deleteLocationEnvironmentSheetByAssetId(session, imported.imported.assetId);
+    deleteAssetFileRecordsForAsset(session, imported.imported.assetId);
 
     const result = resolveMediaGenerationDependencySelection({
       session,
       slot: locationEnvironmentSheetDependencySlot({
         locationId: ids.locationId,
         locationName: "Mehmed's council chamber",
+        assetId: imported.imported.assetId,
         required: true,
         reason: 'Selected location environment sheet is required.',
       }),
@@ -1185,7 +1169,7 @@ describe('media generation dependency inventory estimates integration', () => {
       asset: null,
       diagnostics: [
         expect.objectContaining({
-          code: 'CORE_MEDIA_DEPENDENCY_ENVIRONMENT_SHEET_METADATA_MISSING',
+          code: 'CORE_MEDIA_DEPENDENCY_SELECTED_ASSET_FILE_MISSING',
           severity: 'error',
         }),
       ],
@@ -1583,33 +1567,19 @@ async function writeProjectFile(
   await fs.writeFile(absolutePath, contents);
 }
 
-async function writeLocationSheetImportFiles(
+async function writeLocationSheetImportFile(
   projectData: ReturnType<typeof createProjectDataService>,
   homeDir: string
-): Promise<{
-  composite: string;
-  view_front: string;
-  view_right: string;
-  view_back: string;
-  view_left: string;
-}> {
+): Promise<string> {
   const project = await projectData.readCurrentProject({ homeDir });
   if (!project) {
     throw new Error('Expected current project to exist.');
   }
   const folder = 'generated/media/location-sheet-selector-test';
   await fs.mkdir(path.join(project.projectFolder, folder), { recursive: true });
-  const files = {
-    composite: `${folder}/composite.png`,
-    view_front: `${folder}/front.png`,
-    view_right: `${folder}/right.png`,
-    view_back: `${folder}/back.png`,
-    view_left: `${folder}/left.png`,
-  };
-  for (const [role, projectRelativePath] of Object.entries(files)) {
-    await fs.writeFile(path.join(project.projectFolder, projectRelativePath), role);
-  }
-  return files;
+  const projectRelativePath = `${folder}/sheet.png`;
+  await fs.writeFile(path.join(project.projectFolder, projectRelativePath), 'sheet');
+  return projectRelativePath;
 }
 
 function generationInputFromAvailable(

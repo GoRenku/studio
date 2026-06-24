@@ -1,5 +1,4 @@
 import type {
-  LocationAzimuthViewId,
   SceneShotVideoTakeProductionState,
   ShotVideoTakeInputPolicy,
 } from '@gorenku/studio-core/client';
@@ -221,7 +220,7 @@ export function readShotCastCharacterSheetReferenceRequest(
 
 export interface ShotLocationSheetReferenceRequest {
   locationId: string;
-  assetId: string | null;
+  assetIds: string[];
 }
 
 export function readShotLocationSheetReferenceRequest(
@@ -235,47 +234,15 @@ export function readShotLocationSheetReferenceRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['locationId', 'assetId'],
+    ['locationId', 'assetIds'],
     issues,
     CONTEXT,
-    'Send only the locationId and assetId fields.'
+    'Send only the locationId and assetIds fields.'
   );
   const locationId = readStringValue(record.locationId, ['locationId'], issues);
-  const assetId =
-    record.assetId === null
-      ? null
-      : readStringValue(record.assetId, ['assetId'], issues);
+  const assetIds = readStringArray(record.assetIds, ['assetIds'], issues);
   finishOrThrow(issues);
-  return { locationId, assetId };
-}
-
-export interface ShotLocationViewReferencesRequest {
-  locationId: string;
-  assetId: string;
-  viewIds: LocationAzimuthViewId[];
-}
-
-export function readShotLocationViewReferencesRequest(
-  input: unknown
-): ShotLocationViewReferencesRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['locationId', 'assetId', 'viewIds'],
-    issues,
-    CONTEXT,
-    'Send only the locationId, assetId, and viewIds fields.'
-  );
-  const locationId = readStringValue(record.locationId, ['locationId'], issues);
-  const assetId = readStringValue(record.assetId, ['assetId'], issues);
-  const viewIds = readLocationAzimuthViewArray(record.viewIds, ['viewIds'], issues);
-  finishOrThrow(issues);
-  return { locationId, assetId, viewIds };
+  return { locationId, assetIds };
 }
 
 export interface ShotLookbookReferenceRequest {
@@ -454,51 +421,6 @@ function readReferenceInclusionValue(
     )
   );
   return null;
-}
-
-function readLocationAzimuthView(
-  value: unknown,
-  path: string[],
-  issues: DiagnosticIssue[]
-): LocationAzimuthViewId {
-  if (
-    value === 'front' ||
-    value === 'right' ||
-    value === 'back' ||
-    value === 'left'
-  ) {
-    return value;
-  }
-  issues.push(
-    createDiagnosticError(
-      'STUDIO_SERVER348',
-      `${path.join('.')} must be front, right, back, or left.`,
-      { path, context: CONTEXT },
-      'Send supported location view ids.'
-    )
-  );
-  return 'front';
-}
-
-function readLocationAzimuthViewArray(
-  value: unknown,
-  path: string[],
-  issues: DiagnosticIssue[]
-): LocationAzimuthViewId[] {
-  if (!Array.isArray(value)) {
-    issues.push(
-      createDiagnosticError(
-        'STUDIO_SERVER342',
-        `${path.join('.')} must be an array.`,
-        { path, context: CONTEXT },
-        'Send an array of location view ids.'
-      )
-    );
-    return [];
-  }
-  return value.map((item, index) =>
-    readLocationAzimuthView(item, [...path, String(index)], issues)
-  );
 }
 
 function finishOrThrow(issues: DiagnosticIssue[]): void {

@@ -10,7 +10,7 @@ import { SceneShotReferencesTab } from './scene-shot-references-tab';
 
 const mutationMocks = vi.hoisted(() => ({
   updateTakeCharacterSheetSelection: vi.fn(),
-  updateTakeLocationViewSelection: vi.fn(),
+  updateTakeLocationSheetSelection: vi.fn(),
   updateShotGroupReferenceInclusion: vi.fn(),
 }));
 
@@ -53,8 +53,8 @@ vi.mock('@/services/studio-project-assets-api', () => ({
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
   updateTakeCharacterSheetSelection:
     mutationMocks.updateTakeCharacterSheetSelection,
-  updateTakeLocationViewSelection:
-    mutationMocks.updateTakeLocationViewSelection,
+  updateTakeLocationSheetSelection:
+    mutationMocks.updateTakeLocationSheetSelection,
   updateShotGroupReferenceInclusion:
     mutationMocks.updateShotGroupReferenceInclusion,
 }));
@@ -84,7 +84,7 @@ describe('SceneShotReferencesTab', () => {
       screen.getByRole('button', { name: 'Expand Cast Character Sheets' })
     ).not.toBeNull();
     expect(
-      screen.getByRole('button', { name: 'Expand Location Sheets And Views' })
+      screen.getByRole('button', { name: 'Expand Location Sheets' })
     ).not.toBeNull();
     expect(
       screen.getByRole('img', { name: 'First Frame' }).getAttribute('src')
@@ -117,6 +117,34 @@ describe('SceneShotReferencesTab', () => {
 
     expect(screen.getByRole('heading', { name: 'Missing First Frame' })).toBeTruthy();
     expect(screen.getByText('$0.04')).toBeTruthy();
+  });
+
+  it('shows a planned Location Sheet placeholder with its estimate', () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        productionPlan={withTake(productionPlanWithPlannedLocationSheetEstimate())}
+        {...handlers}
+      />
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Theodosian Walls Location Sheet' })
+    ).toBeTruthy();
+    expect(screen.getByText('$0.04')).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Theodosian Walls Location Sheet' })
+    );
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Reference Theodosian Walls Location Sheet',
+      })
+    ).toBeNull();
   });
 
   it('does not show generation estimates for selected ready dependency references', () => {
@@ -293,7 +321,7 @@ describe('SceneShotReferencesTab', () => {
     });
   });
 
-  it('selects location views from the location dialog using the shot persistence API', async () => {
+  it('references Location Sheets using the shot persistence API', async () => {
     const handlers = referenceHandlers();
     render(
       <SceneShotReferencesTab
@@ -304,25 +332,105 @@ describe('SceneShotReferencesTab', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Theodosian Walls' }));
-
-    const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: 'Theodosian Walls' })).toBeTruthy();
-
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Set Front pick' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Reference Theodosian Walls Location Sheet',
+      })
+    );
 
     await waitFor(() => {
-      expect(mutationMocks.updateTakeLocationViewSelection).toHaveBeenCalledWith(
+      expect(mutationMocks.updateTakeLocationSheetSelection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
         {
           locationId: 'location_walls',
-          assetId: 'asset_walls_sheet',
-          viewIds: ['front'],
+          assetIds: ['asset_walls_sheet'],
         }
       );
     });
+  });
+
+  it('opens a single Location Sheet in the shared image preview dialog', () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        productionPlan={withTake(productionPlanWithLocationReferences())}
+        {...handlers}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Theodosian Walls Location Sheet' })
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog)
+        .getByRole('img', { name: 'Theodosian Walls location sheet' })
+        .getAttribute('src')
+    ).toBe('/location-assets/constantinople/location_walls/walls-sheet/file_walls-sheet');
+  });
+
+  it('opens a Location Sheet picker for multiple sheets and previews dialog cards', async () => {
+    const handlers = referenceHandlers();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        productionPlan={withTake(productionPlanWithMultipleLocationReferences())}
+        {...handlers}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Theodosian Walls' })).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', { name: 'Night Repair Location Sheet' })
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Theodosian Walls' }));
+
+    const pickerDialog = screen.getByRole('dialog');
+    expect(
+      within(pickerDialog).getByRole('heading', {
+        name: 'Siege-Facing Location Sheet',
+      })
+    ).toBeTruthy();
+    expect(
+      within(pickerDialog).getByRole('heading', {
+        name: 'Night Repair Location Sheet',
+      })
+    ).toBeTruthy();
+
+    fireEvent.click(
+      within(pickerDialog).getByRole('button', {
+        name: 'Reference Night Repair Location Sheet',
+      })
+    );
+
+    await waitFor(() => {
+      expect(mutationMocks.updateTakeLocationSheetSelection).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        {
+          locationId: 'location_walls',
+          assetIds: ['asset_walls_siege', 'asset_walls_night'],
+        }
+      );
+    });
+
+    fireEvent.click(
+      within(pickerDialog).getByRole('button', {
+        name: 'Night Repair Location Sheet',
+      })
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: 'Night repair location sheet' })
+    ).toBeTruthy();
   });
 });
 
@@ -507,6 +615,50 @@ function productionPlanWithReadyReferenceEstimate(): ShotVideoTakeProductionPlan
   } as unknown as ShotVideoTakeProductionPlanReport;
 }
 
+function productionPlanWithPlannedLocationSheetEstimate(): ShotVideoTakeProductionPlanReport {
+  return {
+    references: {
+      general: [],
+      lookbook: [],
+      castMembers: [],
+      locations: [
+        {
+          locationId: 'location_walls',
+          name: 'Theodosian Walls',
+          selectedForShot: true,
+          defaultSelectedForShot: true,
+          referencedEnvironmentSheetAssetIds: [],
+          diagnostics: [],
+          environmentSheets: [
+            {
+              id: 'location_walls:planned-environment-sheet',
+              locationId: 'location_walls',
+              assetId: null,
+              title: 'Theodosian Walls Location Sheet',
+              description: null,
+              referenced: false,
+              card: {
+                state: 'selected-planned',
+                mediaKind: 'image',
+                dependencyId: 'location-environment-sheet:location_walls',
+                dependencyLineId: 'dependency:location-environment-sheet:location_walls',
+                defaultIncluded: true,
+                included: true,
+                required: false,
+                inclusionOverride: null,
+                pricing: { state: 'priced', estimatedUsd: 0.04 },
+                previews: [],
+                diagnostics: [],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    diagnostics: [],
+  } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
 function productionPlanWithCastReferences(): ShotVideoTakeProductionPlanReport {
   return {
     references: {
@@ -546,9 +698,7 @@ function productionPlanWithLocationReferences(): ShotVideoTakeProductionPlanRepo
           name: 'Theodosian Walls',
           selectedForShot: true,
           defaultSelectedForShot: true,
-          selectedEnvironmentSheetAssetId: 'asset_walls_sheet',
-          defaultEnvironmentSheetAssetId: 'asset_walls_sheet',
-          selectedViewIds: [],
+          referencedEnvironmentSheetAssetIds: [],
           diagnostics: [],
           environmentSheets: [
             {
@@ -556,25 +706,56 @@ function productionPlanWithLocationReferences(): ShotVideoTakeProductionPlanRepo
               locationId: 'location_walls',
               assetId: 'asset_walls_sheet',
               title: 'Theodosian Walls Location Sheet',
-              selected: true,
-              defaultSelected: true,
+              description: 'Siege-facing walls and approach field reference.',
+              referenced: false,
               card: referenceCard('walls-sheet', 'Theodosian Walls location sheet'),
-              views: [
-                {
-                  id: 'front',
-                  viewId: 'front',
-                  label: 'Front',
-                  selected: false,
-                  card: referenceCard('walls-front', 'Front'),
-                },
-                {
-                  id: 'right',
-                  viewId: 'right',
-                  label: 'Right',
-                  selected: false,
-                  card: referenceCard('walls-right', 'Right'),
-                },
-              ],
+            },
+          ],
+        },
+      ],
+    },
+    diagnostics: [],
+  } as unknown as ShotVideoTakeProductionPlanReport;
+}
+
+function productionPlanWithMultipleLocationReferences(): ShotVideoTakeProductionPlanReport {
+  return {
+    references: {
+      general: [],
+      lookbook: [],
+      castMembers: [],
+      locations: [
+        {
+          locationId: 'location_walls',
+          name: 'Theodosian Walls',
+          selectedForShot: true,
+          defaultSelectedForShot: true,
+          referencedEnvironmentSheetAssetIds: ['asset_walls_siege'],
+          diagnostics: [],
+          environmentSheets: [
+            {
+              id: 'asset_walls_siege',
+              locationId: 'location_walls',
+              assetId: 'asset_walls_siege',
+              title: 'Siege-Facing Location Sheet',
+              description: 'Ottoman field, wall face, and city depth.',
+              referenced: true,
+              card: referenceCard(
+                'asset_walls_siege',
+                'Siege-facing location sheet'
+              ),
+            },
+            {
+              id: 'asset_walls_night',
+              locationId: 'location_walls',
+              assetId: 'asset_walls_night',
+              title: 'Night Repair Location Sheet',
+              description: 'Torch-lit wall repair texture and damaged masonry.',
+              referenced: false,
+              card: referenceCard(
+                'asset_walls_night',
+                'Night repair location sheet'
+              ),
             },
           ],
         },
@@ -700,8 +881,7 @@ function emptyTakeState() {
     referenceSelections: {
       dependencyInclusions: {},
       selectedCharacterSheetAssetIds: {},
-      selectedLocationSheetAssetIds: {},
-      selectedLocationViewIds: {},
+      referencedLocationSheetAssetIds: {},
       selectedLookbookSheetIds: [],
       selectedDialogueAudioTakeIds: {},
     },

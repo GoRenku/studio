@@ -65,6 +65,13 @@ Use the focused documents below for current direction.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
   attaches them as assets.
+- Location Sheets are durable image assets attached to Locations with role
+  `environment_sheet`. Each sheet has one `primary` image file and a concise
+  persisted description. Shot/take state references exact Location Sheet asset
+  ids when those sheets are needed for generation.
+- Location Hero Images are separate display assets attached to Locations with
+  role `hero`. The selected hero asset drives overview/detail imagery and does
+  not become a shot-generation reference.
 - Scene dialogue audio takes are durable scene dialogue media assets. Shot
   video generation references them through the public `scene-dialogue` subject
   kind and resolves the current picked take at generation-request time.
@@ -117,6 +124,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0025-use-shared-media-generation-purpose-architecture.md`
 - `docs/decisions/0028-use-durable-department-design-documents.md`
 - `docs/decisions/0029-use-cast-voice-as-durable-project-data.md`
+- `docs/decisions/0036-use-unsliced-location-sheets.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

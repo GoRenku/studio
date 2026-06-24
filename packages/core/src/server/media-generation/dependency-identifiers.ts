@@ -54,8 +54,13 @@ export function castCharacterSheetDependencyId(castMemberId: string): string {
   return `cast-character-sheet:${castMemberId}`;
 }
 
-export function locationEnvironmentSheetDependencyId(locationId: string): string {
-  return `location-environment-sheet:${locationId}`;
+export function locationEnvironmentSheetDependencyId(
+  locationId: string,
+  assetId?: string
+): string {
+  return assetId
+    ? `location-environment-sheet:${locationId}:${assetId}`
+    : `location-environment-sheet:${locationId}`;
 }
 
 export function lookbookSheetDependencyId(lookbookId: string): string {

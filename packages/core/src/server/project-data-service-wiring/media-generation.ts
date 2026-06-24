@@ -1,6 +1,7 @@
 import * as characterSheet from '../media-generation/cast-character-sheet.js';
 import * as castProfile from '../media-generation/cast-profile.js';
 import * as castVoiceSample from '../media-generation/cast-voice-sample.js';
+import * as locationHero from '../media-generation/location-hero.js';
 import * as locationSheet from '../media-generation/location-environment-sheet.js';
 import * as lookbookImage from '../media-generation/lookbook-image.js';
 import * as lookbookSheet from '../media-generation/lookbook-sheet.js';
@@ -38,18 +39,12 @@ export function createMediaGenerationServiceWiring() {
     listCastCharacterSheetSpecs: characterSheet.listCastCharacterSheetSpecs, prepareCastCharacterSheetSpec: sharedGeneration.prepareMediaGenerationSpec,
     estimateCastCharacterSheetSpec: sharedGeneration.estimateMediaGenerationSpec, runCastCharacterSheetSpec: sharedGeneration.runMediaGenerationSpec,
     recordCastCharacterSheetRun: characterSheet.recordCastCharacterSheetRun, importCastCharacterSheetMedia: characterSheet.importCastCharacterSheetMedia,
-    buildCastProfileContext: castProfile.buildCastProfileContext,
-    listCastProfileModels: castProfile.listCastProfileModels,
-    validateCastProfileSpec: castProfile.validateCastProfileSpec,
-    createCastProfileSpec: sharedGeneration.createMediaGenerationSpec,
-    updateCastProfileSpec: sharedGeneration.updateMediaGenerationSpec,
-    readCastProfileSpec: sharedGeneration.readMediaGenerationSpec,
-    listCastProfileSpecs: castProfile.listCastProfileSpecs,
-    prepareCastProfileSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateCastProfileSpec: sharedGeneration.estimateMediaGenerationSpec,
-    runCastProfileSpec: sharedGeneration.runMediaGenerationSpec,
-    recordCastProfileRun: castProfile.recordCastProfileRun,
-    importCastProfileMedia: castProfile.importCastProfileMedia,
+    buildCastProfileContext: castProfile.buildCastProfileContext, listCastProfileModels: castProfile.listCastProfileModels,
+    validateCastProfileSpec: castProfile.validateCastProfileSpec, createCastProfileSpec: sharedGeneration.createMediaGenerationSpec,
+    updateCastProfileSpec: sharedGeneration.updateMediaGenerationSpec, readCastProfileSpec: sharedGeneration.readMediaGenerationSpec,
+    listCastProfileSpecs: castProfile.listCastProfileSpecs, prepareCastProfileSpec: sharedGeneration.prepareMediaGenerationSpec,
+    estimateCastProfileSpec: sharedGeneration.estimateMediaGenerationSpec, runCastProfileSpec: sharedGeneration.runMediaGenerationSpec,
+    recordCastProfileRun: castProfile.recordCastProfileRun, importCastProfileMedia: castProfile.importCastProfileMedia,
     buildCastVoiceSampleContext: castVoiceSample.buildCastVoiceSampleContext,
     listCastVoiceSampleModels: castVoiceSample.listCastVoiceSampleModels,
     validateCastVoiceSampleSpec: castVoiceSample.validateCastVoiceSampleSpec,
@@ -72,6 +67,19 @@ export function createMediaGenerationServiceWiring() {
     runLocationEnvironmentSheetSpec: sharedGeneration.runMediaGenerationSpec,
     recordLocationEnvironmentSheetRun: locationSheet.recordLocationEnvironmentSheetRun,
     importLocationEnvironmentSheetMedia: locationSheet.importLocationEnvironmentSheetMedia,
+    buildLocationHeroContext: locationHero.buildLocationHeroContext,
+    listLocationHeroModels: locationHero.listLocationHeroModels,
+    validateLocationHeroSpec: locationHero.validateLocationHeroSpec,
+    createLocationHeroSpec: sharedGeneration.createMediaGenerationSpec,
+    updateLocationHeroSpec: sharedGeneration.updateMediaGenerationSpec,
+    readLocationHeroSpec: sharedGeneration.readMediaGenerationSpec,
+    listLocationHeroSpecs: locationHero.listLocationHeroSpecs,
+    prepareLocationHeroSpec: sharedGeneration.prepareMediaGenerationSpec,
+    estimateLocationHeroSpec: sharedGeneration.estimateMediaGenerationSpec,
+    runLocationHeroSpec: sharedGeneration.runMediaGenerationSpec,
+    recordLocationHeroRun: locationHero.recordLocationHeroRun,
+    importLocationHeroMedia: locationHero.importLocationHeroMedia,
+    generateLocationHeroFromSheet: locationHero.generateLocationHeroFromSheet,
     buildSceneStoryboardSheetContext: sceneStoryboardSheet.buildSceneStoryboardSheetContext,
     listSceneStoryboardSheetModels: sceneStoryboardSheet.listSceneStoryboardSheetModels,
     validateSceneStoryboardSheetSpec: sceneStoryboardSheet.validateSceneStoryboardSheetSpec,

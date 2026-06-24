@@ -33,8 +33,6 @@ export type EntityIdPrefix =
   | 'scene_asset'
   | 'media_generation_spec'
   | 'media_generation_run'
-  | 'location_environment_sheet'
-  | 'location_environment_sheet_view'
   | 'scene_shot_list'
   | 'scene_shot_storyboard_image'
   | 'scene_shot_video_take'

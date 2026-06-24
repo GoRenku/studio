@@ -13,6 +13,10 @@ import type {
   LocationEnvironmentSheetGenerationSpec,
   LocationEnvironmentSheetMediaImportReport,
   LocationEnvironmentSheetModelListReport,
+  LocationHeroGenerationContext,
+  LocationHeroGenerationSpec,
+  LocationHeroMediaImportReport,
+  LocationHeroModelListReport,
   LookbookImageGenerationContext,
   LookbookImageGenerationSpec,
   LookbookImageMediaImportReport,
@@ -51,6 +55,7 @@ import {
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOCATION_HERO_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -67,6 +72,7 @@ import type {
   CreateCastCharacterSheetGenerationSpecInput,
   CreateCastProfileGenerationSpecInput,
   CreateLocationEnvironmentSheetGenerationSpecInput,
+  CreateLocationHeroGenerationSpecInput,
   CreateLookbookImageGenerationSpecInput,
   CreateLookbookSheetGenerationSpecInput,
   CreateSceneStoryboardSheetGenerationSpecInput,
@@ -74,6 +80,7 @@ import type {
   CreateShotVideoTakeInputGenerationSpecInput,
   ImportCastMediaInput,
   ImportLocationEnvironmentSheetMediaInput,
+  ImportLocationHeroMediaInput,
   ImportLookbookImageMediaInput,
   ImportLookbookSheetMediaInput,
   ImportSceneStoryboardImagesMediaInput,
@@ -89,6 +96,7 @@ import type {
   UpdateCastCharacterSheetGenerationSpecInput,
   UpdateCastProfileGenerationSpecInput,
   UpdateLocationEnvironmentSheetGenerationSpecInput,
+  UpdateLocationHeroGenerationSpecInput,
   UpdateLookbookImageGenerationSpecInput,
   UpdateLookbookSheetGenerationSpecInput,
   UpdateSceneStoryboardSheetGenerationSpecInput,
@@ -98,6 +106,7 @@ import type {
   ValidateCastProfileGenerationSpecInput,
   ValidateCastVoiceSampleGenerationSpecInput,
   ValidateLocationEnvironmentSheetGenerationSpecInput,
+  ValidateLocationHeroGenerationSpecInput,
   ValidateLookbookSheetGenerationSpecInput,
   ValidateSceneStoryboardSheetGenerationSpecInput,
   ValidateSceneDialogueAudioGenerationSpecInput,
@@ -108,6 +117,7 @@ import * as characterSheet from './cast-character-sheet.js';
 import * as castProfile from './cast-profile.js';
 import * as castVoiceSample from './cast-voice-sample.js';
 import * as locationSheet from './location-environment-sheet.js';
+import * as locationHero from './location-hero.js';
 import * as lookbookImage from './lookbook-image.js';
 import * as lookbookSheet from './lookbook-sheet.js';
 import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
@@ -133,6 +143,7 @@ export type MediaGenerationContextReport =
   | CastVoiceSampleGenerationContext
   | SceneDialogueAudioContext
   | LocationEnvironmentSheetGenerationContext
+  | LocationHeroGenerationContext
   | SceneStoryboardSheetGenerationContext
   | ShotVideoTakeProductionContext;
 
@@ -144,6 +155,7 @@ export type MediaGenerationModelListReport =
   | CastVoiceSampleModelListReport
   | SceneDialogueAudioModelListReport
   | LocationEnvironmentSheetModelListReport
+  | LocationHeroModelListReport
   | SceneStoryboardSheetModelListReport
   | ShotVideoTakeInputModelListReport
   | ShotVideoTakeModelListReport;
@@ -153,6 +165,7 @@ export type MediaGenerationImportReport =
   | LookbookSheetMediaImportReport
   | CastMediaImportReport
   | LocationEnvironmentSheetMediaImportReport
+  | LocationHeroMediaImportReport
   | SceneStoryboardImagesImportReport
   | ShotVideoTakeInputMediaImportReport
   | ShotVideoTakeMediaImportReport;
@@ -512,6 +525,44 @@ const DEFINITIONS = [
     runSpec: locationSheet.runLocationEnvironmentSheetSpec,
   },
   {
+    purpose: LOCATION_HERO_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'location',
+    buildContext: (input) =>
+      locationHero.buildLocationHeroContext(toLocationHeroInput(input)),
+    listModels: (input) =>
+      locationHero.listLocationHeroModels(toLocationHeroInput(input)),
+    validateSpec: (input) =>
+      locationHero.validateLocationHeroSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LocationHeroGenerationSpec,
+      } satisfies ValidateLocationHeroGenerationSpecInput),
+    createSpec: (input) =>
+      locationHero.createLocationHeroSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LocationHeroGenerationSpec,
+        idGenerator: input.idGenerator,
+      } satisfies CreateLocationHeroGenerationSpecInput),
+    updateSpec: (input) =>
+      locationHero.updateLocationHeroSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as LocationHeroGenerationSpec,
+      } satisfies UpdateLocationHeroGenerationSpecInput),
+    listSpecs: (input) => locationHero.listLocationHeroSpecs(toLocationInput(input)),
+    prepareSpec: locationHero.prepareLocationHeroSpec,
+    prepareDraftSpec: (input) =>
+      locationHero.prepareLocationHeroDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as LocationHeroGenerationSpec,
+      }),
+    runSpec: locationHero.runLocationHeroSpec,
+  },
+  {
     purpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'scene',
@@ -765,6 +816,17 @@ function toLocationInput(
   return { projectName: input.projectName, homeDir: input.homeDir, locationId: target.id };
 }
 
+function toLocationHeroInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): locationHero.LocationHeroTargetInput {
+  const target = requireTargetKind(input, 'location');
+  return {
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    locationId: target.id,
+  };
+}
+
 function toSceneInput(
   input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
 ): ReadSceneStoryboardSheetGenerationContextInput {
@@ -842,6 +904,7 @@ export async function importMediaGenerationByPurpose(input:
   | ({ purpose: typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE } & ImportCastMediaInput)
   | ({ purpose: typeof CAST_PROFILE_GENERATION_PURPOSE } & ImportCastMediaInput)
   | ({ purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE } & ImportLocationEnvironmentSheetMediaInput)
+  | ({ purpose: typeof LOCATION_HERO_GENERATION_PURPOSE } & ImportLocationHeroMediaInput)
   | ({ purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportSceneStoryboardImagesMediaInput)
   | ({ purpose: typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_LAST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
@@ -860,6 +923,8 @@ export async function importMediaGenerationByPurpose(input:
       return castProfile.importCastProfileMedia(input);
     case LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE:
       return locationSheet.importLocationEnvironmentSheetMedia(input);
+    case LOCATION_HERO_GENERATION_PURPOSE:
+      return locationHero.importLocationHeroMedia(input);
     case SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE:
       return sceneStoryboardSheet.importSceneStoryboardImagesMedia(input);
     case SHOT_FIRST_FRAME_GENERATION_PURPOSE:

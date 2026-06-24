@@ -402,8 +402,7 @@ function emptyTakeState(production = {}) {
     referenceSelections: {
       dependencyInclusions: {},
       selectedCharacterSheetAssetIds: {},
-      selectedLocationSheetAssetIds: {},
-      selectedLocationViewIds: {},
+      referencedLocationSheetAssetIds: {},
       selectedLookbookSheetIds: [],
       selectedDialogueAudioTakeIds: {},
     },
@@ -526,17 +525,15 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
           name: 'Council Chamber',
           selectedForShot: true,
           defaultSelectedForShot: true,
-          selectedEnvironmentSheetAssetId: null,
-          defaultEnvironmentSheetAssetId: null,
-          selectedViewIds: [],
+          referencedEnvironmentSheetAssetIds: [],
           environmentSheets: [
             {
               id: 'loc_chamber:planned-environment-sheet',
               locationId: 'loc_chamber',
               assetId: null,
               title: 'Council Chamber',
-              selected: true,
-              defaultSelected: true,
+              description: null,
+              referenced: true,
               card: {
                 state: 'selected-planned',
                 mediaKind: 'image',
@@ -548,7 +545,6 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
                 previews: [],
                 diagnostics: [],
               },
-              views: [],
             },
           ],
           diagnostics: [],

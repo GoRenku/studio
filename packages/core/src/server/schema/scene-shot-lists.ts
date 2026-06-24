@@ -93,7 +93,7 @@ export const sceneShotVideoTakes = sqliteTable(
     stateJson: text('state_json')
       .notNull()
       .default(
-        '{"version":1,"shotDesignByShotId":{},"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{},"selectedLocationViewIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{}}'
+        '{"version":1,"shotDesignByShotId":{},"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"referencedLocationSheetAssetIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{}}'
       ),
     isPicked: integer('is_picked', { mode: 'boolean' })
       .notNull()

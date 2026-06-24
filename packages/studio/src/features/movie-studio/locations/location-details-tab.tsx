@@ -12,9 +12,9 @@ import {
 } from '@/ui/image-preview-dialog';
 import { cn } from '@/lib/utils';
 import {
+  currentLocationHeroAsset,
   locationEnvironmentSheetAspectRatio,
   locationEnvironmentSheetPreviewImages,
-  preferredLocationEnvironmentSheetAsset,
 } from './location-assets';
 
 interface LocationDetailsTabProps {
@@ -32,29 +32,23 @@ export function LocationDetailsTab({
 }: LocationDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const location = resource.location;
-  const sheetAsset = preferredLocationEnvironmentSheetAsset(assets);
-  const sheetPreview = sheetAsset
-    ? locationEnvironmentSheetPreviewImages(projectName, locationId, sheetAsset)[0] ??
+  const heroAsset = currentLocationHeroAsset(assets);
+  const heroPreview = heroAsset
+    ? locationEnvironmentSheetPreviewImages(projectName, locationId, heroAsset)[0] ??
       null
-    : resource.firstImage
-      ? {
-          src: resource.firstImage.url,
-          alt: `${location.name} location sheet`,
-          title: location.name,
-        }
-      : null;
-  const sheetAspectRatio = sheetAsset
-    ? locationEnvironmentSheetAspectRatio(sheetAsset, 4 / 3)
-    : 4 / 3;
+    : null;
+  const heroAspectRatio = heroAsset
+    ? locationEnvironmentSheetAspectRatio(heroAsset, 16 / 9)
+    : 16 / 9;
 
   return (
     <>
       <article className='min-h-full bg-panel-bg px-4 py-5 text-foreground'>
         <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(360px,520px)_minmax(0,1fr)] lg:gap-8'>
           <LocationFeatureImage
-            image={sheetPreview}
-            aspectRatio={sheetAspectRatio}
-            emptyLabel='No location sheet yet'
+            image={heroPreview}
+            aspectRatio={heroAspectRatio}
+            emptyLabel='No location hero image yet'
             onOpenImage={setPreviewImage}
           />
           <div className='flex min-w-0 flex-col justify-end'>
@@ -153,7 +147,7 @@ function LocationFeatureImage({
           <img
             src={image.src}
             alt={image.alt}
-            className={cn('h-full w-full object-contain')}
+            className={cn('h-full w-full object-cover')}
             onLoad={onImageLoad}
           />
         </Button>

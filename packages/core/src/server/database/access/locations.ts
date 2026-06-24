@@ -1,9 +1,8 @@
-import { asc, eq, notInArray } from 'drizzle-orm';
+import { and, asc, eq, notInArray } from 'drizzle-orm';
 import {
   locationAssets,
   locationDesigns,
   locationDesignState,
-  locationEnvironmentSheets,
   locations,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
@@ -110,9 +109,14 @@ export function readLocationDeleteDependencySummary(
       .where(eq(locationDesignState.locationId, locationId))
       .all().length,
     environmentSheetCount: session.db
-      .select({ id: locationEnvironmentSheets.id })
-      .from(locationEnvironmentSheets)
-      .where(eq(locationEnvironmentSheets.locationId, locationId))
+      .select({ id: locationAssets.id })
+      .from(locationAssets)
+      .where(
+        and(
+          eq(locationAssets.locationId, locationId),
+          eq(locationAssets.role, 'environment_sheet')
+        )
+      )
       .all().length,
   };
 }

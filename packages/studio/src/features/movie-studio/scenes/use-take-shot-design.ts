@@ -112,8 +112,7 @@ function hasLocation(
   if (!location) return false;
   return Boolean(
     location.locationId?.trim() ||
-      location.environmentSheetAssetId?.trim() ||
-      location.viewIds?.length
+      location.environmentSheetAssetIds?.length
   );
 }
 

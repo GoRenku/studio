@@ -41,7 +41,7 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(27);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(28);
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -51,8 +51,6 @@ describe('migrate database command', () => {
           'lookbook_image_section',
           'media_generation_spec',
           'media_generation_run',
-          'location_environment_sheet',
-          'location_environment_sheet_view',
           'screenplay_analysis',
           'screenplay_analysis_state',
           'screenplay_revision',
@@ -79,29 +77,8 @@ describe('migrate database command', () => {
           'visual_language',
           'visual_language_asset',
           'scene_shot_storyboard_sheet',
-        ])
-      );
-      expect(readColumnNames(sqlite, 'location_environment_sheet')).not.toEqual(
-        expect.arrayContaining([
-          'layout_template',
-          'grid_layout',
-          'extraction_confidence',
-          'extraction_method',
-          'extraction_diagnostics_json',
-          'sheet_frame',
-          'view_frame',
-        ])
-      );
-      expect(
-        readColumnNames(sqlite, 'location_environment_sheet_view')
-      ).not.toEqual(
-        expect.arrayContaining([
-          'crop_x',
-          'crop_y',
-          'crop_width',
-          'crop_height',
-          'extraction_confidence',
-          'extraction_method',
+          'location_environment_sheet',
+          'location_environment_sheet_view',
         ])
       );
       expect(
@@ -147,7 +124,13 @@ describe('migrate database command', () => {
     try {
       setup
         .prepare(
-          'delete from __drizzle_migrations where created_at = (select max(created_at) from __drizzle_migrations)'
+          `delete from __drizzle_migrations
+           where created_at in (
+             select created_at
+             from __drizzle_migrations
+             order by created_at desc
+             limit 2
+           )`
         )
         .run();
       setup.exec('alter table lookbook_image_section drop column point_id');
@@ -167,7 +150,7 @@ describe('migrate database command', () => {
 
     const migrated = new Database(databasePath);
     try {
-      expect(migrated.pragma('user_version', { simple: true })).toBe(27);
+      expect(migrated.pragma('user_version', { simple: true })).toBe(28);
       expect(readColumnNames(migrated, 'lookbook_image_section')).toContain(
         'point_id'
       );

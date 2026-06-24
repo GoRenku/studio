@@ -3,25 +3,22 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   Asset,
-  LocationEnvironmentSheetGenerationContext,
-  LocationEnvironmentSheetGenerationSpec,
-  LocationEnvironmentSheetMediaImportReport,
-  LocationEnvironmentSheetModelChoice,
-  LocationEnvironmentSheetModelChoiceReport,
-  LocationEnvironmentSheetModelListReport,
-  LocationEnvironmentSheetOutputFormat,
   LocationGenerationAssetFileReference,
-  LocationGenerationScreenplayContext,
+  LocationHeroGenerationContext,
+  LocationHeroGenerationSpec,
+  LocationHeroMediaImportReport,
+  LocationHeroModelChoice,
+  LocationHeroModelChoiceReport,
+  LocationHeroModelListReport,
+  LocationHeroOutputFormat,
   MediaGenerationEstimateReport,
+  MediaGenerationRun,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
   ProjectRelativePath,
 } from '../../client/index.js';
-import {
-  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
-} from '../../client/index.js';
-import type { Block, Scene } from '../../client/screenplay.js';
+import { LOCATION_HERO_GENERATION_PURPOSE } from '../../client/index.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
@@ -29,7 +26,12 @@ import {
   listAssetRelationshipPage,
   nextAssetRelationshipSortOrder,
   readAssetRelationship,
+  updateAssetRelationshipSelection,
 } from '../database/access/asset-relationships/index.js';
+import {
+  readActiveLocationDesignDocument,
+  toLocationDesignSummary,
+} from '../database/access/department-design.js';
 import {
   insertMediaGenerationRun,
   insertMediaGenerationSpec,
@@ -37,10 +39,7 @@ import {
   requireMediaGenerationSpec,
   updateMediaGenerationSpec,
 } from '../database/access/media-generation.js';
-import {
-  readActiveLocationDesignDocument,
-  toLocationDesignSummary,
-} from '../database/access/department-design.js';
+import { readLocationRecord } from '../database/access/locations.js';
 import {
   listLookbookCardImageIds,
   readSelectedMovieLookbookId,
@@ -48,7 +47,6 @@ import {
   toLookbook,
 } from '../database/access/lookbook.js';
 import { listLookbookImages, readLookbookImage } from '../database/access/lookbook-images.js';
-import { readLocationRecord } from '../database/access/locations.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import { readProjectRecord, type ProjectRecord } from '../database/access/project.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
@@ -68,71 +66,65 @@ import {
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
-import { draftMediaGenerationSpecRecord } from './draft-generation.js';
-import type {
-  MediaGenerationDependencyDraftSpec,
-  MediaGenerationDependencyDraftSpecInput,
-} from './dependency-draft-specs.js';
+import type { LocationHeroMutationReport } from '../project-data-service-contracts.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import {
   mapGptQuality,
   mapNanoBananaResolution,
 } from './cast-image-common.js';
+import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 
-const LOCATION_ENVIRONMENT_SHEET_MODELS = new Set<string>([
-  'fal-ai/openai/gpt-image-2',
-  'fal-ai/nano-banana-2',
-  'fal-ai/xai/grok-imagine-image',
+const LOCATION_HERO_MODELS = new Set<string>([
+  'fal-ai/openai/gpt-image-2/edit',
+  'fal-ai/nano-banana-2/edit',
+  'fal-ai/xai/grok-imagine-image/edit',
 ]);
 
-const OUTPUT_FORMATS = new Set<LocationEnvironmentSheetOutputFormat>([
+const OUTPUT_FORMATS = new Set<LocationHeroOutputFormat>([
   'png',
   'jpeg',
   'webp',
 ]);
 
-interface LocationProviderPlan {
-  provider: 'fal-ai' | 'elevenlabs';
+interface LocationHeroProviderPlan {
+  provider: 'fal-ai';
   model: string;
-  mode: 'text-to-image';
+  mode: 'image-edit';
   payload: Record<string, unknown>;
+  inputFiles: PreparedMediaGeneration['generation']['request']['inputFiles'];
   outputCount: 1;
 }
 
-export interface LocationEnvironmentSheetProjectInput extends RenkuConfigPathOptions {
+export interface LocationHeroProjectInput extends RenkuConfigPathOptions {
   projectName?: string;
 }
 
-export interface LocationEnvironmentSheetTargetInput
-  extends LocationEnvironmentSheetProjectInput {
+export interface LocationHeroTargetInput extends LocationHeroProjectInput {
   locationId: string;
+  sourceLocationSheetAssetId?: string;
 }
 
-export interface LocationEnvironmentSheetSpecFileInput
-  extends LocationEnvironmentSheetProjectInput {
-  spec: LocationEnvironmentSheetGenerationSpec;
+export interface LocationHeroSpecFileInput extends LocationHeroProjectInput {
+  spec: LocationHeroGenerationSpec;
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface LocationEnvironmentSheetSpecIdInput
-  extends LocationEnvironmentSheetProjectInput {
+export interface LocationHeroSpecIdInput extends LocationHeroProjectInput {
   specId: string;
 }
 
-export interface UpdateLocationEnvironmentSheetSpecInput
-  extends LocationEnvironmentSheetSpecIdInput {
-  spec: LocationEnvironmentSheetGenerationSpec;
+export interface UpdateLocationHeroSpecInput extends LocationHeroSpecIdInput {
+  spec: LocationHeroGenerationSpec;
 }
 
-export interface RunLocationEnvironmentSheetSpecInput
-  extends LocationEnvironmentSheetSpecIdInput {
+export interface RunLocationHeroSpecInput extends LocationHeroSpecIdInput {
   approvalToken?: string;
   simulate?: boolean;
+  allowUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface RecordLocationEnvironmentSheetRunInput
-  extends LocationEnvironmentSheetSpecIdInput {
+export interface RecordLocationHeroRunInput extends LocationHeroSpecIdInput {
   provider: 'fal-ai' | 'elevenlabs';
   model: string;
   providerPayload: Record<string, unknown>;
@@ -145,26 +137,39 @@ export interface RecordLocationEnvironmentSheetRunInput
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface ImportLocationEnvironmentSheetMediaInput
-  extends LocationEnvironmentSheetTargetInput {
+export interface ImportLocationHeroMediaInput extends LocationHeroTargetInput {
   sourceProjectRelativePath: string;
+  sourceLocationSheetAssetId: string;
   title?: string;
   description: string;
   receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
 }
 
-export async function buildLocationEnvironmentSheetContext(
-  input: LocationEnvironmentSheetTargetInput
-): Promise<LocationEnvironmentSheetGenerationContext> {
+export interface GenerateLocationHeroFromSheetInput extends LocationHeroTargetInput {
+  sourceLocationSheetAssetId: string;
+  approvalToken?: string;
+  simulate?: boolean;
+  allowUnpricedCost?: boolean;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export async function buildLocationHeroContext(
+  input: LocationHeroTargetInput
+): Promise<LocationHeroGenerationContext> {
   const projectContext = await readLocationProjectContext(input);
   return withLocationProjectSession(input, ({ session, projectFolder }) => {
     const location = requireLocationForContext(session, input.locationId);
-    const activeLookbook = requireActiveLookbookContext(session);
     const activeLocationDesign = readActiveLocationDesignDocument(session, input.locationId);
     const assets = readLocationAssetsByRole(session, input.locationId);
+    const sourceLocationSheetAsset = input.sourceLocationSheetAssetId
+      ? requireSourceLocationSheetAsset(session, {
+          locationId: input.locationId,
+          sourceLocationSheetAssetId: input.sourceLocationSheetAssetId,
+        }).asset
+      : null;
     return {
-      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+      purpose: LOCATION_HERO_GENERATION_PURPOSE,
       target: { kind: 'location', id: input.locationId },
       project: projectContext,
       screenplay: buildLocationScreenplayContext(session),
@@ -175,29 +180,20 @@ export async function buildLocationEnvironmentSheetContext(
             document: activeLocationDesign.document,
           })
         : null,
-      usage: buildLocationUsageContext(session, input.locationId),
-      activeLookbook,
-      selectedAssets: assets.selectedAssets,
+      activeLookbook: requireActiveLookbookContext(session),
       environmentSheetTakes: assets.environmentSheetTakes,
-      referenceAssets: assets.referenceAssets,
+      sourceLocationSheetAsset,
       imageFiles: locationImageFileReferences(projectFolder, [
-        ...assets.selectedAssets,
         ...assets.environmentSheetTakes,
-        ...assets.referenceAssets,
+        ...assets.heroTakes,
+        ...assets.selectedHeroes,
       ]),
       defaults: {
         takeCount: 1,
         seed: null,
-        sheetFrame: '4:3',
+        heroFrame: '16:9',
         detail: 'standard',
         outputFormat: 'png',
-      },
-      historicalGuardrailInputs: {
-        timePeriod: location.timePeriod ?? null,
-        historicalBasis: projectContextFromScreenplay(session, 'historicalBasis'),
-        dramatizedElements: projectContextFromScreenplay(session, 'dramatizedElements'),
-        researchSources: projectContextFromScreenplay(session, 'researchSources'),
-        assumptionsMade: projectContextFromScreenplay(session, 'assumptionsMade'),
       },
       resourceKeys: studioResourceKeysForAssetTarget({
         kind: 'location',
@@ -207,41 +203,42 @@ export async function buildLocationEnvironmentSheetContext(
   });
 }
 
-export async function listLocationEnvironmentSheetModels(
-  input: LocationEnvironmentSheetTargetInput
-): Promise<LocationEnvironmentSheetModelListReport> {
-  const context = await buildLocationEnvironmentSheetContext(input);
+export async function listLocationHeroModels(
+  input: LocationHeroTargetInput
+): Promise<LocationHeroModelListReport> {
+  const context = await buildLocationHeroContext(input);
   return {
-    purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+    purpose: LOCATION_HERO_GENERATION_PURPOSE,
     target: context.target,
-    models: modelChoices(),
+    models: modelChoices(context),
   };
 }
 
-export async function validateLocationEnvironmentSheetSpec(input: {
+export async function validateLocationHeroSpec(input: {
   projectName?: string;
   homeDir?: string;
-  spec: LocationEnvironmentSheetGenerationSpec;
+  spec: LocationHeroGenerationSpec;
 }): Promise<{
   valid: true;
-  spec: LocationEnvironmentSheetGenerationSpec;
+  spec: LocationHeroGenerationSpec;
   providerPayload: Record<string, unknown>;
 }> {
   const normalized = await normalizeSpec(input);
-  const context = await buildLocationEnvironmentSheetContext({
+  const context = await buildLocationHeroContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
     locationId: normalized.target.id,
+    sourceLocationSheetAssetId: normalized.sourceLocationSheetAssetId,
   });
-  const plan = buildLocationEnvironmentSheetProviderPayload(normalized, context);
+  const plan = buildLocationHeroProviderPayload(normalized, context);
   return { valid: true, spec: normalized, providerPayload: plan.payload };
 }
 
-export async function createLocationEnvironmentSheetSpec(
-  input: LocationEnvironmentSheetSpecFileInput
+export async function createLocationHeroSpec(
+  input: LocationHeroSpecFileInput
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = await normalizeSpec(input);
-  await validateLocationEnvironmentSheetSpec({
+  await validateLocationHeroSpec({
     projectName: input.projectName,
     homeDir: input.homeDir,
     spec: normalized,
@@ -251,17 +248,17 @@ export async function createLocationEnvironmentSheetSpec(
     return insertMediaGenerationSpec(session, {
       id: ids('media_generation_spec'),
       spec: normalized,
-      title: titleForSpec(normalized, 'Location environment sheet'),
+      title: titleForSpec(normalized, 'Location hero image'),
       now: new Date().toISOString(),
     });
   });
 }
 
-export async function updateLocationEnvironmentSheetSpec(
-  input: UpdateLocationEnvironmentSheetSpecInput
+export async function updateLocationHeroSpec(
+  input: UpdateLocationHeroSpecInput
 ): Promise<MediaGenerationSpecRecord> {
   const normalized = await normalizeSpec(input);
-  await validateLocationEnvironmentSheetSpec({
+  await validateLocationHeroSpec({
     projectName: input.projectName,
     homeDir: input.homeDir,
     spec: normalized,
@@ -270,46 +267,44 @@ export async function updateLocationEnvironmentSheetSpec(
     updateMediaGenerationSpec(session, {
       id: input.specId,
       spec: normalized,
-      title: titleForSpec(normalized, 'Location environment sheet'),
+      title: titleForSpec(normalized, 'Location hero image'),
       now: new Date().toISOString(),
     })
   );
 }
 
-export async function readLocationEnvironmentSheetSpec(
-  input: LocationEnvironmentSheetSpecIdInput
+export async function readLocationHeroSpec(
+  input: LocationHeroSpecIdInput
 ): Promise<MediaGenerationSpecRecord> {
   return withLocationProjectSession(input, ({ session }) =>
     requireMediaGenerationSpec(session, input.specId)
   );
 }
 
-export async function listLocationEnvironmentSheetSpecs(
-  input: LocationEnvironmentSheetTargetInput
+export async function listLocationHeroSpecs(
+  input: LocationHeroTargetInput
 ): Promise<{ specs: MediaGenerationSpecRecord[] }> {
   return withLocationProjectSession(input, ({ session }) => ({
     specs: listMediaGenerationSpecs(session, {
-      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+      purpose: LOCATION_HERO_GENERATION_PURPOSE,
       targetKind: 'location',
       targetId: input.locationId,
     }),
   }));
 }
 
-export async function prepareLocationEnvironmentSheetSpec(
-  input: LocationEnvironmentSheetSpecIdInput
+export async function prepareLocationHeroSpec(
+  input: LocationHeroSpecIdInput
 ): Promise<PreparedMediaGeneration> {
-  const specRecord = await readLocationEnvironmentSheetSpec(input);
-  assertLocationEnvironmentSheetSpec(specRecord.spec);
-  const context = await buildLocationEnvironmentSheetContext({
+  const specRecord = await readLocationHeroSpec(input);
+  assertLocationHeroSpec(specRecord.spec);
+  const context = await buildLocationHeroContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
     locationId: specRecord.spec.target.id,
+    sourceLocationSheetAssetId: specRecord.spec.sourceLocationSheetAssetId,
   });
-  const plan = buildLocationEnvironmentSheetProviderPayload(
-    specRecord.spec,
-    context
-  );
+  const plan = buildLocationHeroProviderPayload(specRecord.spec, context);
   return {
     spec: specRecord,
     providerPayload: plan.payload,
@@ -317,18 +312,19 @@ export async function prepareLocationEnvironmentSheetSpec(
   };
 }
 
-export async function prepareLocationEnvironmentSheetDraftSpec(input: {
+export async function prepareLocationHeroDraftSpec(input: {
   projectName?: string;
   homeDir?: string;
-  spec: LocationEnvironmentSheetGenerationSpec;
+  spec: LocationHeroGenerationSpec;
 }): Promise<PreparedMediaGeneration> {
   const normalized = await normalizeSpec(input);
-  const context = await buildLocationEnvironmentSheetContext({
+  const context = await buildLocationHeroContext({
     projectName: input.projectName,
     homeDir: input.homeDir,
     locationId: normalized.target.id,
+    sourceLocationSheetAssetId: normalized.sourceLocationSheetAssetId,
   });
-  const plan = buildLocationEnvironmentSheetProviderPayload(normalized, context);
+  const plan = buildLocationHeroProviderPayload(normalized, context);
   return {
     spec: draftMediaGenerationSpecRecord(normalized),
     providerPayload: plan.payload,
@@ -336,68 +332,35 @@ export async function prepareLocationEnvironmentSheetDraftSpec(input: {
   };
 }
 
-export async function buildLocationEnvironmentSheetDependencyDraftSpec(
-  input: MediaGenerationDependencyDraftSpecInput
-): Promise<MediaGenerationDependencyDraftSpec> {
-  if (input.dependencyTarget.kind !== 'location') {
-    throw new ProjectDataError(
-      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
-      `location.environment-sheet dependency requires a location target. Received: ${input.dependencyTarget.kind}.`
-    );
-  }
-  const context = await buildLocationEnvironmentSheetContext({
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    locationId: input.dependencyTarget.id,
-  });
-  return {
-    purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
-    spec: {
-      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
-      target: input.dependencyTarget,
-      modelChoice: 'fal-ai/openai/gpt-image-2',
-      prompt: [
-        `Create a production environment sheet for ${context.location.name}.`,
-        input.reason,
-        'Use the active visual language and location design context. Make the sheet useful as a video reference image.',
-      ].join(' '),
-      takeCount: 1,
-      seed: null,
-      sheetFrame: '4:3',
-      detail: 'standard',
-      outputFormat: 'png',
-      title: input.label,
-      description: input.reason,
-    },
-    materializationState: 'generatable',
-  };
-}
-
-export async function estimateLocationEnvironmentSheetSpec(
-  input: LocationEnvironmentSheetSpecIdInput
+export async function estimateLocationHeroSpec(
+  input: LocationHeroSpecIdInput
 ): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareLocationEnvironmentSheetSpec(input);
+  const prepared = await prepareLocationHeroSpec(input);
   const { estimateGeneration } = await loadGenerationEngines();
   const estimate = await estimateGeneration(prepared.generation);
   if (estimate.estimatedCostUsd === null) {
     throw new ProjectDataError(
       'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Location environment sheet model.'
+      'Generation estimate is unknown for the selected Location hero model.'
     );
   }
   return { ...prepared, estimate };
 }
 
-export async function runLocationEnvironmentSheetSpec(
-  input: RunLocationEnvironmentSheetSpecInput
+export async function runLocationHeroSpec(
+  input: RunLocationHeroSpecInput
 ): Promise<MediaGenerationRunReport> {
-  const prepared = await prepareLocationEnvironmentSheetSpec(input);
+  const prepared = await prepareLocationHeroSpec(input);
   const { estimateGeneration, runGeneration } = await loadGenerationEngines();
   const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
+  if (estimate.estimatedCostUsd === null && !input.simulate && !input.allowUnpricedCost) {
     throw new ProjectDataError(
       'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Location environment sheet model.'
+      'Generation estimate is unknown for the selected Location hero model.',
+      {
+        suggestion:
+          'Approve an explicit unpriced-cost override before running this Location hero generation.',
+      }
     );
   }
   const outputPaths = await resolveLocationGenerationOutputPaths(input);
@@ -409,14 +372,19 @@ export async function runLocationEnvironmentSheetSpec(
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
   });
-  return recordLocationEnvironmentSheetRun({
+  return recordLocationHeroRun({
     projectName: input.projectName,
     homeDir: input.homeDir,
     specId: input.specId,
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate,
+    estimate: {
+      ...estimate,
+      ...(estimate.estimatedCostUsd === null && input.allowUnpricedCost
+        ? { unpricedCostOverride: true }
+        : {}),
+    },
     approvalToken: estimate.approvalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
@@ -426,11 +394,63 @@ export async function runLocationEnvironmentSheetSpec(
   });
 }
 
-export async function recordLocationEnvironmentSheetRun(
-  input: RecordLocationEnvironmentSheetRunInput
+export async function generateLocationHeroFromSheet(
+  input: GenerateLocationHeroFromSheetInput
+): Promise<LocationHeroMutationReport> {
+  const context = await buildLocationHeroContext(input);
+  const sourceSheet = context.sourceLocationSheetAsset;
+  if (!sourceSheet) {
+    throw new ProjectDataError(
+      'PROJECT_DATA316',
+      `Location Hero source sheet is not attached to Location ${input.locationId}: ${input.sourceLocationSheetAssetId}.`
+    );
+  }
+  const spec = await createLocationHeroSpec({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    idGenerator: input.idGenerator,
+    spec: specForSourceSheet(context, sourceSheet),
+  });
+  const runReport = await runLocationHeroSpec({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    specId: spec.id,
+    approvalToken: input.approvalToken,
+    simulate: input.simulate,
+    allowUnpricedCost: input.allowUnpricedCost,
+    idGenerator: input.idGenerator,
+  });
+  const output = firstImageOutput(runReport.run.outputs);
+  const importReport = await importLocationHeroMedia({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    locationId: input.locationId,
+    sourceLocationSheetAssetId: input.sourceLocationSheetAssetId,
+    sourceProjectRelativePath: output.projectRelativePath,
+    title: titleForSpec(spec.spec as LocationHeroGenerationSpec, 'Location hero image'),
+    description: (spec.spec as LocationHeroGenerationSpec).description,
+    receipt: {
+      mediaGenerationRunId: runReport.run.id,
+      provider: runReport.run.provider,
+      model: runReport.run.model,
+      simulated: runReport.run.simulated,
+    },
+    idGenerator: input.idGenerator,
+  });
+  const assets = await withLocationProjectSession(input, ({ session }) =>
+    listAssetRelationshipPage(session, {
+      target: { kind: 'location', locationId: input.locationId },
+      limit: 200,
+    }).items
+  );
+  return { spec, run: runReport.run, importReport, assets };
+}
+
+export async function recordLocationHeroRun(
+  input: RecordLocationHeroRunInput
 ): Promise<MediaGenerationRunReport> {
-  const specRecord = await readLocationEnvironmentSheetSpec(input);
-  assertLocationEnvironmentSheetSpec(specRecord.spec);
+  const specRecord = await readLocationHeroSpec(input);
+  assertLocationHeroSpec(specRecord.spec);
   const now = new Date().toISOString();
   const run = await withLocationProjectSession(input, ({ session }) => {
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
@@ -454,31 +474,32 @@ export async function recordLocationEnvironmentSheetRun(
   return { run };
 }
 
-export async function importLocationEnvironmentSheetMedia(
-  input: ImportLocationEnvironmentSheetMediaInput
-): Promise<LocationEnvironmentSheetMediaImportReport> {
+export async function importLocationHeroMedia(
+  input: ImportLocationHeroMediaInput
+): Promise<LocationHeroMediaImportReport> {
   return withLocationProjectSession(input, async ({ session, projectFolder, project }) => {
     const location = requireLocationForContext(session, input.locationId);
+    requireSourceLocationSheetAsset(session, {
+      locationId: input.locationId,
+      sourceLocationSheetAssetId: input.sourceLocationSheetAssetId,
+    });
     const sourceProjectRelativePath = normalizeProjectRelativePath(
       input.sourceProjectRelativePath
     );
     await validateImportSourceFile(projectFolder, sourceProjectRelativePath);
-    const description = requiredTrimmed(
-      input.description,
-      'Location Sheet description'
-    );
+    const description = requiredTrimmed(input.description, 'Location hero description');
     const now = new Date().toISOString();
-    const destinationFolder = await allocateLocationEnvironmentSheetFolder({
+    const destinationFolder = await allocateLocationHeroFolder({
       projectFolder,
       locationHandle: location.handle,
       title: input.title ?? path.parse(sourceProjectRelativePath).name,
     });
-    const importedFile = await copyLocationEnvironmentSheetFile({
+    const importedFile = await copyLocationHeroFile({
       projectFolder,
       sourceProjectRelativePath,
       destinationFolder,
     });
-    const imported = await insertImportedLocationEnvironmentSheet({
+    const imported = await insertImportedLocationHero({
       session,
       locationId: input.locationId,
       destinationFolder,
@@ -490,10 +511,7 @@ export async function importLocationEnvironmentSheetMedia(
       now,
     });
     const target = { kind: 'location' as const, locationId: input.locationId };
-    const asset = readAssetRelationship(session, {
-      target,
-      assetId: imported.assetId,
-    });
+    const asset = readAssetRelationship(session, { target, assetId: imported.assetId });
     if (!asset) {
       throw new ProjectDataError(
         'PROJECT_DATA078',
@@ -504,39 +522,30 @@ export async function importLocationEnvironmentSheetMedia(
     return {
       valid: true,
       warnings: [],
-      project: {
-        id: project.id,
-        name: project.name,
-        projectFolder,
-      },
-      changes: [
-        { type: 'location.environmentSheetImported', locationId: input.locationId },
-      ],
-      purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+      project: { id: project.id, name: project.name, projectFolder },
+      changes: [{ type: 'location.heroImported', locationId: input.locationId }],
+      purpose: LOCATION_HERO_GENERATION_PURPOSE,
       target: { kind: 'location', id: input.locationId },
       imported: asset,
-      files: [
-        {
-          role: 'primary',
-          projectRelativePath: importedFile.projectRelativePath,
-        },
-      ],
+      sourceLocationSheetAssetId: input.sourceLocationSheetAssetId,
+      files: [{ role: 'primary', projectRelativePath: importedFile.projectRelativePath }],
       resourceKeys,
     };
   });
 }
 
-export function buildLocationEnvironmentSheetProviderPayload(
-  spec: LocationEnvironmentSheetGenerationSpec,
-  _context: LocationEnvironmentSheetGenerationContext
-): LocationProviderPlan {
+export function buildLocationHeroProviderPayload(
+  spec: LocationHeroGenerationSpec,
+  context: LocationHeroGenerationContext
+): LocationHeroProviderPlan {
+  const sourcePath = resolveSourcePath(spec, context);
   switch (spec.modelChoice) {
-    case 'fal-ai/openai/gpt-image-2':
-      return buildGptImage2Payload(spec);
-    case 'fal-ai/nano-banana-2':
-      return buildNanoBanana2Payload(spec);
-    case 'fal-ai/xai/grok-imagine-image':
-      return buildGrokImaginePayload(spec);
+    case 'fal-ai/openai/gpt-image-2/edit':
+      return buildGptImage2EditPayload(spec, sourcePath);
+    case 'fal-ai/nano-banana-2/edit':
+      return buildNanoBanana2EditPayload(spec, sourcePath);
+    case 'fal-ai/xai/grok-imagine-image/edit':
+      return buildGrokImagineEditPayload(spec, sourcePath);
     default:
       throw unsupportedModel(spec.modelChoice);
   }
@@ -545,9 +554,9 @@ export function buildLocationEnvironmentSheetProviderPayload(
 async function normalizeSpec(input: {
   projectName?: string;
   homeDir?: string;
-  spec: LocationEnvironmentSheetGenerationSpec;
-}): Promise<LocationEnvironmentSheetGenerationSpec> {
-  if (input.spec.purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE) {
+  spec: LocationHeroGenerationSpec;
+}): Promise<LocationHeroGenerationSpec> {
+  if (input.spec.purpose !== LOCATION_HERO_GENERATION_PURPOSE) {
     throw new ProjectDataError(
       'PROJECT_DATA263',
       `Unsupported generation purpose: ${input.spec.purpose}.`
@@ -556,77 +565,82 @@ async function normalizeSpec(input: {
   assertAllowedSpecFields(input.spec);
   validateLocationTarget(input.spec.target);
   assertModelChoice(input.spec.modelChoice);
-  if (input.spec.prompt.trim().length === 0) {
-    throw new ProjectDataError(
-      'PROJECT_DATA301',
-      'Location environment sheet prompt cannot be empty.'
-    );
-  }
+  const sourceLocationSheetAssetId = requiredTrimmed(
+    input.spec.sourceLocationSheetAssetId,
+    'sourceLocationSheetAssetId'
+  );
+  const prompt = requiredTrimmed(input.spec.prompt, 'Location hero prompt');
   const description = requiredTrimmed(
     input.spec.description,
-    'Location environment sheet description'
+    'Location hero description'
   );
   const takeCount = input.spec.takeCount ?? 1;
   if (takeCount !== 1) {
     throw new ProjectDataError(
       'PROJECT_DATA302',
-      'Location environment sheet takeCount must be exactly 1.'
+      'Location hero takeCount must be exactly 1.'
     );
   }
   const seed = input.spec.seed ?? null;
   if (seed !== null && (!Number.isInteger(seed) || seed < 0)) {
     throw new ProjectDataError(
       'PROJECT_DATA303',
-      'Location environment sheet seed must be a non-negative integer or null.'
+      'Location hero seed must be a non-negative integer or null.'
     );
   }
-  const sheetFrame = input.spec.sheetFrame ?? '4:3';
-  if (sheetFrame !== '4:3') {
+  const heroFrame = input.spec.heroFrame ?? '16:9';
+  if (heroFrame !== '16:9') {
     throw new ProjectDataError(
       'PROJECT_DATA304',
-      `Unsupported location environment sheet frame: ${sheetFrame}.`
+      `Unsupported location hero frame: ${heroFrame}.`
     );
   }
   const detail = input.spec.detail ?? 'standard';
   if (detail !== 'draft' && detail !== 'standard' && detail !== 'high') {
     throw new ProjectDataError(
       'PROJECT_DATA305',
-      `Unsupported location environment sheet detail: ${detail}.`
+      `Unsupported location hero detail: ${detail}.`
     );
   }
   const outputFormat = input.spec.outputFormat ?? 'png';
   if (!OUTPUT_FORMATS.has(outputFormat)) {
     throw new ProjectDataError(
       'PROJECT_DATA306',
-      `Unsupported location environment sheet output format: ${outputFormat}.`
+      `Unsupported location hero output format: ${outputFormat}.`
     );
   }
   await withLocationProjectSession(input, ({ session }) => {
     requireLocationForContext(session, input.spec.target.id);
+    requireSourceLocationSheetAsset(session, {
+      locationId: input.spec.target.id,
+      sourceLocationSheetAssetId,
+    });
     requireActiveLookbookContext(session);
   });
   return {
     ...input.spec,
-    prompt: input.spec.prompt.trim(),
+    sourceLocationSheetAssetId,
+    prompt,
     takeCount: 1,
     seed,
-    sheetFrame,
+    heroFrame,
     detail,
     outputFormat,
     description,
   };
 }
 
-function assertAllowedSpecFields(spec: LocationEnvironmentSheetGenerationSpec): void {
+function assertAllowedSpecFields(spec: LocationHeroGenerationSpec): void {
   const record = spec as unknown as Record<string, unknown>;
   const allowed = new Set([
     'purpose',
     'target',
+    'sourceLocationSheetAssetId',
     'modelChoice',
     'prompt',
     'takeCount',
     'seed',
-    'sheetFrame',
+    'heroFrame',
     'detail',
     'outputFormat',
     'title',
@@ -636,26 +650,29 @@ function assertAllowedSpecFields(spec: LocationEnvironmentSheetGenerationSpec): 
   if (unexpected.length) {
     throw new ProjectDataError(
       'PROJECT_DATA307',
-      `Location environment sheet spec contains unsupported fields: ${unexpected.join(', ')}.`
+      `Location hero spec contains unsupported fields: ${unexpected.join(', ')}.`
     );
   }
 }
 
-function buildGptImage2Payload(
-  spec: LocationEnvironmentSheetGenerationSpec
-): LocationProviderPlan {
+function buildGptImage2EditPayload(
+  spec: LocationHeroGenerationSpec,
+  sourcePath: string
+): LocationHeroProviderPlan {
   if (spec.seed !== null && spec.seed !== undefined) {
-    unsupported('GPT Image 2 does not support generation seed.');
+    unsupported('GPT Image 2 edit does not support generation seed.');
   }
   return {
     provider: 'fal-ai',
-    model: 'openai/gpt-image-2',
-    mode: 'text-to-image',
+    model: 'openai/gpt-image-2/edit',
+    mode: 'image-edit',
     outputCount: 1,
+    inputFiles: sourceInputFiles(sourcePath),
     payload: {
       prompt: spec.prompt,
+      image_urls: sourceLogicalInput(sourcePath),
       num_images: 1,
-      image_size: 'landscape_4_3',
+      image_size: 'landscape_16_9',
       quality: mapGptQuality(spec.detail ?? 'standard'),
       output_format: spec.outputFormat ?? 'png',
       sync_mode: false,
@@ -663,19 +680,22 @@ function buildGptImage2Payload(
   };
 }
 
-function buildNanoBanana2Payload(
-  spec: LocationEnvironmentSheetGenerationSpec
-): LocationProviderPlan {
+function buildNanoBanana2EditPayload(
+  spec: LocationHeroGenerationSpec,
+  sourcePath: string
+): LocationHeroProviderPlan {
   return {
     provider: 'fal-ai',
-    model: 'nano-banana-2',
-    mode: 'text-to-image',
+    model: 'nano-banana-2/edit',
+    mode: 'image-edit',
     outputCount: 1,
+    inputFiles: sourceInputFiles(sourcePath),
     payload: {
       prompt: spec.prompt,
+      image_urls: sourceLogicalInput(sourcePath),
       num_images: 1,
       seed: spec.seed ?? null,
-      aspect_ratio: '4:3',
+      aspect_ratio: '16:9',
       resolution: mapNanoBananaResolution(spec.detail ?? 'standard'),
       output_format: spec.outputFormat ?? 'png',
       safety_tolerance: '4',
@@ -686,33 +706,76 @@ function buildNanoBanana2Payload(
   };
 }
 
-function buildGrokImaginePayload(
-  spec: LocationEnvironmentSheetGenerationSpec
-): LocationProviderPlan {
+function buildGrokImagineEditPayload(
+  spec: LocationHeroGenerationSpec,
+  sourcePath: string
+): LocationHeroProviderPlan {
   if (spec.seed !== null && spec.seed !== undefined) {
-    unsupported('Grok Imagine does not support generation seed.');
+    unsupported('Grok Imagine edit does not support generation seed.');
   }
   if ((spec.detail ?? 'standard') !== 'standard') {
     unsupported('Grok Imagine supports only standard detail.');
   }
   return {
     provider: 'fal-ai',
-    model: 'xai/grok-imagine-image',
-    mode: 'text-to-image',
+    model: 'xai/grok-imagine-image/edit',
+    mode: 'image-edit',
     outputCount: 1,
+    inputFiles: sourceInputFiles(sourcePath),
     payload: {
       prompt: spec.prompt,
+      image_urls: sourceLogicalInput(sourcePath),
       num_images: 1,
-      aspect_ratio: '4:3',
       output_format: spec.outputFormat ?? 'png',
       sync_mode: false,
     },
   };
 }
 
+function specForSourceSheet(
+  context: LocationHeroGenerationContext,
+  sourceSheet: Asset
+): LocationHeroGenerationSpec {
+  const locationName = context.location.name.trim() || 'Location';
+  const sheetDescription = sourceSheet.oneLineSummary?.trim();
+  const title = `${locationName} hero image`;
+  const description = sheetDescription
+    ? `${locationName} representative hero image derived from ${sheetDescription}`
+    : `${locationName} representative hero image derived from the selected Location Sheet.`;
+  const promptParts = [
+    `Create a clean 16:9 representative Location Hero Image for ${locationName}.`,
+    'Use the supplied Location Sheet as the source of environment identity, materials, lighting, period detail, mood, and spatial continuity.',
+    'Do not make a multi-panel sheet, contact sheet, labels, captions, diagrams, borders, or production annotations.',
+    'Compose one cinematic, readable wide image suitable for a location overview card and detail header.',
+  ];
+  if (sheetDescription) {
+    promptParts.push(`Source Location Sheet description: ${sheetDescription}.`);
+  }
+  if (context.location.description) {
+    promptParts.push(`Location description: ${context.location.description}.`);
+  }
+  if (context.location.visualNotes) {
+    promptParts.push(`Location visual notes: ${context.location.visualNotes}.`);
+  }
+  return {
+    purpose: LOCATION_HERO_GENERATION_PURPOSE,
+    target: context.target,
+    sourceLocationSheetAssetId: sourceSheet.assetId,
+    modelChoice: 'fal-ai/nano-banana-2/edit',
+    prompt: promptParts.join(' '),
+    takeCount: 1,
+    seed: null,
+    heroFrame: '16:9',
+    detail: 'standard',
+    outputFormat: 'png',
+    title,
+    description,
+  };
+}
+
 function toGenerationRequest(
-  plan: LocationProviderPlan,
-  spec: LocationEnvironmentSheetGenerationSpec
+  plan: LocationHeroProviderPlan,
+  spec: LocationHeroGenerationSpec
 ): PreparedMediaGeneration['generation'] {
   const { prompt, ...parameters } = plan.payload;
   return {
@@ -725,51 +788,61 @@ function toGenerationRequest(
     },
     request: {
       prompt: typeof prompt === 'string' ? prompt : spec.prompt,
+      inputFiles: plan.inputFiles,
       parameters,
       outputNames: [
-        `${slugify(titleForSpec(spec, 'Location environment sheet'))}${extensionForOutputFormat(spec.outputFormat ?? 'png')}`,
+        `${slugify(titleForSpec(spec, 'Location hero image'))}${extensionForOutputFormat(spec.outputFormat ?? 'png')}`,
       ],
     },
   };
 }
 
-function modelChoices(): LocationEnvironmentSheetModelChoiceReport[] {
+function modelChoices(
+  context: LocationHeroGenerationContext
+): LocationHeroModelChoiceReport[] {
+  const hasSource = Boolean(context.sourceLocationSheetAsset);
+  const sourceUnavailable = hasSource
+    ? {}
+    : { unavailableReason: 'Choose a source Location Sheet before generating a Location Hero Image.' };
   return [
     {
-      modelChoice: 'fal-ai/openai/gpt-image-2',
-      label: 'GPT Image 2',
-      available: true,
+      modelChoice: 'fal-ai/openai/gpt-image-2/edit',
+      label: 'GPT Image 2 Edit',
+      available: hasSource,
       supportsSeed: false,
       takeCount: { min: 1, max: 1, default: 1 },
-      supportedSheetFrames: ['4:3'],
+      supportedHeroFrames: ['16:9'],
       supportedDetails: ['draft', 'standard', 'high'],
       supportedOutputFormats: ['png', 'jpeg', 'webp'],
+      ...sourceUnavailable,
     },
     {
-      modelChoice: 'fal-ai/nano-banana-2',
-      label: 'Nano Banana 2',
-      available: true,
+      modelChoice: 'fal-ai/nano-banana-2/edit',
+      label: 'Nano Banana 2 Edit',
+      available: hasSource,
       supportsSeed: true,
       takeCount: { min: 1, max: 1, default: 1 },
-      supportedSheetFrames: ['4:3'],
+      supportedHeroFrames: ['16:9'],
       supportedDetails: ['draft', 'standard', 'high'],
       supportedOutputFormats: ['png', 'jpeg', 'webp'],
+      ...sourceUnavailable,
     },
     {
-      modelChoice: 'fal-ai/xai/grok-imagine-image',
-      label: 'Grok Imagine',
-      available: true,
+      modelChoice: 'fal-ai/xai/grok-imagine-image/edit',
+      label: 'Grok Imagine Edit',
+      available: hasSource,
       supportsSeed: false,
       takeCount: { min: 1, max: 1, default: 1 },
-      supportedSheetFrames: ['4:3'],
+      supportedHeroFrames: ['16:9'],
       supportedDetails: ['standard'],
       supportedOutputFormats: ['png', 'jpeg', 'webp'],
+      ...sourceUnavailable,
     },
   ];
 }
 
 async function withLocationProjectSession<T>(
-  input: LocationEnvironmentSheetProjectInput,
+  input: LocationHeroProjectInput,
   fn: (handle: {
     projectFolder: string;
     project: Pick<ProjectRecord, 'id' | 'name'>;
@@ -796,9 +869,7 @@ async function withLocationProjectSession<T>(
   );
 }
 
-async function readLocationProjectContext(
-  input: LocationEnvironmentSheetProjectInput
-) {
+async function readLocationProjectContext(input: LocationHeroProjectInput) {
   return withLocationProjectSession(input, ({ session, project }) => {
     const info = readProjectInformationResourceFromDatabase(session);
     return {
@@ -813,9 +884,7 @@ async function readLocationProjectContext(
   });
 }
 
-function buildLocationScreenplayContext(
-  session: DatabaseSession
-): LocationGenerationScreenplayContext | null {
+function buildLocationScreenplayContext(session: DatabaseSession) {
   const document = readScreenplayDocumentFromSession(session);
   if (!document) {
     return null;
@@ -840,77 +909,12 @@ function buildLocationScreenplayContext(
   };
 }
 
-function buildLocationUsageContext(session: DatabaseSession, locationId: string) {
-  const document = readScreenplayDocumentFromSession(session);
-  if (!document) {
-    return { scenes: [] };
-  }
-  const scenes: LocationEnvironmentSheetGenerationContext['usage']['scenes'] = [];
-  for (const act of document.acts) {
-    for (const sequence of act.sequences) {
-      for (const scene of sequence.scenes) {
-        if (!scene.id || !sceneReferencesLocation(scene, locationId)) {
-          continue;
-        }
-        scenes.push({
-          sceneId: scene.id,
-          title: scene.title,
-          setting: scene.setting,
-          storyFunction: scene.storyFunction,
-          excerpts: scene.blocks
-            .filter((block) => blockReferencesLocation(block, locationId))
-            .flatMap(blockExcerpt)
-            .slice(0, 4),
-        });
-      }
-    }
-  }
-  return { scenes };
-}
-
-function sceneReferencesLocation(scene: Scene, locationId: string): boolean {
-  return (
-    scene.setting.locationIds?.includes(locationId) === true ||
-    scene.blocks.some((block) => blockReferencesLocation(block, locationId))
-  );
-}
-
-function blockReferencesLocation(block: Block, locationId: string): boolean {
-  return block.locationIds?.includes(locationId) === true;
-}
-
-function blockExcerpt(block: Block): string[] {
-  if ('text' in block && block.text) {
-    return [block.text];
-  }
-  if ('lines' in block) {
-    return block.lines;
-  }
-  return [];
-}
-
-function projectContextFromScreenplay(
-  session: DatabaseSession,
-  field:
-    | 'historicalBasis'
-    | 'dramatizedElements'
-    | 'researchSources'
-    | 'assumptionsMade'
-): string[] {
-  const document = readScreenplayDocumentFromSession(session);
-  return document?.screenplay[field] ?? [];
-}
-
 function requireLocationForContext(session: DatabaseSession, locationId: string) {
   const row = readLocationRecord(session, locationId);
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA311',
-      `Location environment sheet generation requires a screenplay location, but the requested location was not found: ${locationId}.`,
-      {
-        suggestion:
-          'Add the historical location to the screenplay locations list, including its time period and visual notes, then generate the location environment sheet.',
-      }
+      `Location hero generation requires a screenplay location, but the requested location was not found: ${locationId}.`
     );
   }
   return {
@@ -928,10 +932,10 @@ function requireActiveLookbookContext(session: DatabaseSession) {
   if (!activeLookbookId) {
     throw new ProjectDataError(
       'PROJECT_DATA312',
-      'Location environment sheet generation requires a selected Movie Lookbook.',
+      'Location hero generation requires a selected Movie Lookbook.',
       {
         suggestion:
-          'Create or select a Movie Lookbook before generating location environment sheets.',
+          'Create or select a Movie Lookbook before generating location hero images.',
       }
     );
   }
@@ -957,26 +961,30 @@ function readLocationAssetsByRole(
   session: DatabaseSession,
   locationId: string
 ): {
-  selectedAssets: Asset[];
   environmentSheetTakes: Asset[];
-  referenceAssets: Asset[];
+  heroTakes: Asset[];
+  selectedHeroes: Asset[];
 } {
   const target = { kind: 'location' as const, locationId };
-  const selectedAssets = listAssetRelationshipPage(session, {
-    target,
-    selection: 'select',
-    limit: 200,
-  }).items;
-  const environmentSheetTakes = listAssetRelationshipPage(session, {
-    target,
-    role: 'environment_sheet',
-    selection: 'take',
-    limit: 200,
-  }).items;
   return {
-    selectedAssets,
-    environmentSheetTakes,
-    referenceAssets: selectedAssets.filter((asset) => asset.role !== 'environment_sheet'),
+    environmentSheetTakes: listAssetRelationshipPage(session, {
+      target,
+      role: 'environment_sheet',
+      selection: 'take',
+      limit: 200,
+    }).items,
+    heroTakes: listAssetRelationshipPage(session, {
+      target,
+      role: 'hero',
+      selection: 'take',
+      limit: 200,
+    }).items,
+    selectedHeroes: listAssetRelationshipPage(session, {
+      target,
+      role: 'hero',
+      selection: 'select',
+      limit: 200,
+    }).items,
   };
 }
 
@@ -997,10 +1005,7 @@ function locationImageFileReferences(
         assetFileId: file.id,
         role: file.role,
         projectRelativePath: file.projectRelativePath,
-        absolutePath: resolveProjectRelativePath(
-          projectFolder,
-          file.projectRelativePath
-        ),
+        absolutePath: resolveProjectRelativePath(projectFolder, file.projectRelativePath),
         mediaKind: file.mediaKind,
         mimeType: file.mimeType,
       });
@@ -1009,21 +1014,74 @@ function locationImageFileReferences(
   return references;
 }
 
-function validateLocationTarget(
-  target: LocationEnvironmentSheetGenerationSpec['target']
-): void {
+function requireSourceLocationSheetAsset(
+  session: DatabaseSession,
+  input: { locationId: string; sourceLocationSheetAssetId: string }
+): { asset: Asset; projectRelativePath: ProjectRelativePath } {
+  const target = { kind: 'location' as const, locationId: input.locationId };
+  const asset = readAssetRelationship(session, {
+    target,
+    assetId: input.sourceLocationSheetAssetId,
+  });
+  if (!asset) {
+    throw new ProjectDataError(
+      'PROJECT_DATA316',
+      `Location Hero source sheet is not attached to Location ${input.locationId}: ${input.sourceLocationSheetAssetId}.`
+    );
+  }
+  if (asset.role !== 'environment_sheet') {
+    throw new ProjectDataError(
+      'PROJECT_DATA317',
+      `Location Hero source asset must use location asset role "environment_sheet". Received: ${asset.role}.`
+    );
+  }
+  if (asset.type !== 'location_environment_sheet' || asset.mediaKind !== 'image') {
+    throw new ProjectDataError(
+      'PROJECT_DATA318',
+      `Location Hero source asset must be a Location Sheet image: ${input.sourceLocationSheetAssetId}.`
+    );
+  }
+  const file = asset.files.find(
+    (candidate) => candidate.role === 'primary' && candidate.mediaKind === 'image'
+  );
+  if (!file) {
+    throw new ProjectDataError(
+      'PROJECT_DATA319',
+      `Location Hero source sheet has no primary image file: ${input.sourceLocationSheetAssetId}.`
+    );
+  }
+  return { asset, projectRelativePath: file.projectRelativePath };
+}
+
+function resolveSourcePath(
+  spec: LocationHeroGenerationSpec,
+  context: LocationHeroGenerationContext
+): string {
+  const file = context.imageFiles.find(
+    (candidate) =>
+      candidate.assetId === spec.sourceLocationSheetAssetId &&
+      candidate.role === 'primary'
+  );
+  if (!file) {
+    throw new ProjectDataError(
+      'PROJECT_DATA319',
+      `Location Hero source sheet has no primary image file: ${spec.sourceLocationSheetAssetId}.`
+    );
+  }
+  return file.projectRelativePath;
+}
+
+function validateLocationTarget(target: LocationHeroGenerationSpec['target']): void {
   if (target.kind !== 'location') {
     throw new ProjectDataError(
       'PROJECT_DATA313',
-      `Location environment sheet generation requires target.kind "location". Received: ${target.kind}.`
+      `Location hero generation requires target.kind "location". Received: ${target.kind}.`
     );
   }
 }
 
-function assertModelChoice(
-  modelChoice: string
-): asserts modelChoice is LocationEnvironmentSheetModelChoice {
-  if (!LOCATION_ENVIRONMENT_SHEET_MODELS.has(modelChoice)) {
+function assertModelChoice(modelChoice: string): asserts modelChoice is LocationHeroModelChoice {
+  if (!LOCATION_HERO_MODELS.has(modelChoice)) {
     throw unsupportedModel(modelChoice);
   }
 }
@@ -1031,7 +1089,7 @@ function assertModelChoice(
 function unsupportedModel(modelChoice: string): ProjectDataError {
   return new ProjectDataError(
     'PROJECT_DATA314',
-    `Unsupported Location environment sheet model: ${modelChoice}.`
+    `Unsupported Location hero model: ${modelChoice}.`
   );
 }
 
@@ -1039,10 +1097,10 @@ function unsupported(message: string): never {
   throw new ProjectDataError('PROJECT_DATA272', message);
 }
 
-function assertLocationEnvironmentSheetSpec(
+function assertLocationHeroSpec(
   spec: MediaGenerationSpecRecord['spec']
-): asserts spec is LocationEnvironmentSheetGenerationSpec {
-  if (spec.purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE) {
+): asserts spec is LocationHeroGenerationSpec {
+  if (spec.purpose !== LOCATION_HERO_GENERATION_PURPOSE) {
     throw new ProjectDataError(
       'PROJECT_DATA262',
       `Unsupported media generation spec purpose: ${spec.purpose}.`
@@ -1050,9 +1108,7 @@ function assertLocationEnvironmentSheetSpec(
   }
 }
 
-async function resolveLocationGenerationOutputPaths(
-  input: LocationEnvironmentSheetProjectInput
-) {
+async function resolveLocationGenerationOutputPaths(input: LocationHeroProjectInput) {
   return withLocationProjectSession(input, ({ projectFolder }) => {
     const projectRelativeRoot = 'generated/media';
     return {
@@ -1075,7 +1131,7 @@ async function validateImportSourceFile(
   }
 }
 
-async function copyLocationEnvironmentSheetFile(input: {
+async function copyLocationHeroFile(input: {
   projectFolder: string;
   sourceProjectRelativePath: ProjectRelativePath;
   destinationFolder: ProjectRelativePath;
@@ -1091,7 +1147,7 @@ async function copyLocationEnvironmentSheetFile(input: {
   );
   const destinationProjectRelativePath = joinProjectRelativePath(
     input.destinationFolder,
-    `sheet${extensionForSource(input.sourceProjectRelativePath)}`
+    `hero${extensionForSource(input.sourceProjectRelativePath)}`
   );
   const destinationPath = resolveProjectRelativePath(
     input.projectFolder,
@@ -1111,7 +1167,7 @@ async function copyLocationEnvironmentSheetFile(input: {
   };
 }
 
-async function insertImportedLocationEnvironmentSheet(input: {
+async function insertImportedLocationHero(input: {
   session: DatabaseSession;
   locationId: string;
   destinationFolder: ProjectRelativePath;
@@ -1133,7 +1189,7 @@ async function insertImportedLocationEnvironmentSheet(input: {
     const txSession = { ...input.session, db: tx };
     insertAssetRecord(txSession, {
       id: assetId,
-      type: 'location_environment_sheet',
+      type: 'location_hero',
       mediaKind: 'image',
       title: input.title?.trim() || path.basename(input.destinationFolder),
       oneLineSummary: input.description,
@@ -1155,33 +1211,50 @@ async function insertImportedLocationEnvironmentSheet(input: {
       updatedAt: input.now,
     });
     const target = { kind: 'location' as const, locationId: input.locationId };
+    for (const hero of listAssetRelationshipPage(txSession, {
+      target,
+      role: 'hero',
+      selection: 'select',
+      limit: 200,
+    }).items) {
+      updateAssetRelationshipSelection(txSession, {
+        target,
+        assetId: hero.assetId,
+        selection: 'take',
+        selectionOrder: null,
+        updatedAt: input.now,
+      });
+    }
     insertAssetRelationshipRecord(txSession, target, {
       relationshipId: ids('location_asset'),
       assetId,
       localeId: null,
-      role: 'environment_sheet',
+      role: 'hero',
       sortOrder: nextAssetRelationshipSortOrder(txSession, {
         target,
-        role: 'environment_sheet',
+        role: 'hero',
         localeId: null,
       }),
       now: input.now,
+    });
+    updateAssetRelationshipSelection(txSession, {
+      target,
+      assetId,
+      selection: 'select',
+      selectionOrder: 1,
+      updatedAt: input.now,
     });
   });
   return { assetId };
 }
 
-async function allocateLocationEnvironmentSheetFolder(input: {
+async function allocateLocationHeroFolder(input: {
   projectFolder: string;
   locationHandle: string;
   title: string;
 }): Promise<ProjectRelativePath> {
-  const parent = joinProjectRelativePath(
-    LOCATIONS_ROOT,
-    input.locationHandle,
-    'environment-sheets'
-  );
-  const base = slugify(input.title) || 'environment-sheet';
+  const parent = joinProjectRelativePath(LOCATIONS_ROOT, input.locationHandle, 'heroes');
+  const base = slugify(input.title) || 'hero';
   for (let index = 0; index < 1000; index += 1) {
     const candidate = joinProjectRelativePath(
       parent,
@@ -1195,8 +1268,26 @@ async function allocateLocationEnvironmentSheetFolder(input: {
   }
   throw new ProjectDataError(
     'PROJECT_DATA315',
-    `Could not allocate a unique location environment sheet folder for ${input.title}.`
+    `Could not allocate a unique location hero folder for ${input.title}.`
   );
+}
+
+function sourceInputFiles(
+  sourcePath: string
+): PreparedMediaGeneration['generation']['request']['inputFiles'] {
+  return [
+    {
+      field: 'image_urls',
+      projectRelativePath: sourcePath,
+      mediaKind: 'image',
+      asArray: true,
+      required: true,
+    },
+  ];
+}
+
+function sourceLogicalInput(sourcePath: string): string[] {
+  return [`renku-input://${encodeURI(sourcePath)}`];
 }
 
 function inferImportOrigin(sourceProjectRelativePath: ProjectRelativePath): string {
@@ -1205,11 +1296,53 @@ function inferImportOrigin(sourceProjectRelativePath: ProjectRelativePath): stri
     : 'imported';
 }
 
-function titleForSpec(
-  spec: LocationEnvironmentSheetGenerationSpec,
-  fallback: string
-): string {
+function titleForSpec(spec: LocationHeroGenerationSpec, fallback: string): string {
   return spec.title?.trim() || spec.prompt.trim().slice(0, 80) || fallback;
+}
+
+function firstImageOutput(outputs: MediaGenerationRun['outputs']): {
+  projectRelativePath: ProjectRelativePath;
+  mimeType?: string | null;
+} {
+  const candidates = Array.isArray(outputs)
+    ? outputs
+    : typeof outputs === 'object' && outputs !== null
+      ? Object.values(outputs)
+      : [];
+  const output = candidates.find(isImageOutput) as
+    | { projectRelativePath: ProjectRelativePath; mimeType?: string | null }
+    | undefined;
+  if (!output) {
+    throw new ProjectDataError(
+      'PROJECT_DATA308',
+      'Location hero generation did not produce an image output.',
+      {
+        suggestion:
+          'Run the Location Hero generation again and confirm the provider returned an image file.',
+      }
+    );
+  }
+  return output;
+}
+
+function isImageOutput(output: unknown): output is {
+  projectRelativePath: ProjectRelativePath;
+  mimeType?: string | null;
+} {
+  if (!output || typeof output !== 'object') {
+    return false;
+  }
+  const record = output as {
+    projectRelativePath?: unknown;
+    mimeType?: unknown;
+  };
+  return (
+    typeof record.projectRelativePath === 'string' &&
+    /\.(jpe?g|png|webp)$/i.test(record.projectRelativePath) &&
+    (record.mimeType === undefined ||
+      record.mimeType === null ||
+      typeof record.mimeType === 'string')
+  );
 }
 
 function requiredTrimmed(input: string | null | undefined, fieldName: string): string {
@@ -1225,10 +1358,10 @@ function slugify(input: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || 'location-environment-sheet';
+  return slug || 'location-hero';
 }
 
-function extensionForOutputFormat(format: LocationEnvironmentSheetOutputFormat): string {
+function extensionForOutputFormat(format: LocationHeroOutputFormat): string {
   return format === 'jpeg' ? '.jpg' : `.${format}`;
 }
 
@@ -1265,7 +1398,7 @@ function mimeTypeForPath(filePath: string): string {
 function unsupportedImportImagePath(filePath: string): ProjectDataError {
   return new ProjectDataError(
     'PROJECT_DATA310',
-    `Location environment sheet import file must be a png, jpg, jpeg, or webp image: ${filePath}.`
+    `Location hero import file must be a png, jpg, jpeg, or webp image: ${filePath}.`
   );
 }
 

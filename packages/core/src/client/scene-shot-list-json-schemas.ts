@@ -74,13 +74,6 @@ const FOCUS_IDS = [
   'tilt-shift',
 ] as const;
 
-const LOCATION_AZIMUTH_VIEW_IDS = [
-  'front',
-  'right',
-  'back',
-  'left',
-] as const;
-
 const SHOT_VIDEO_TAKE_INPUT_MODE_IDS = [
   'text-only',
   'first-frame',
@@ -372,8 +365,7 @@ export const sceneShotVideoTakeStateSchema = {
       required: [
         'dependencyInclusions',
         'selectedCharacterSheetAssetIds',
-        'selectedLocationSheetAssetIds',
-        'selectedLocationViewIds',
+        'referencedLocationSheetAssetIds',
         'selectedLookbookSheetIds',
         'selectedDialogueAudioTakeIds',
       ],
@@ -386,15 +378,11 @@ export const sceneShotVideoTakeStateSchema = {
           type: 'object',
           additionalProperties: nonEmptyString(),
         },
-        selectedLocationSheetAssetIds: {
-          type: 'object',
-          additionalProperties: nonEmptyString(),
-        },
-        selectedLocationViewIds: {
+        referencedLocationSheetAssetIds: {
           type: 'object',
           additionalProperties: {
             type: 'array',
-            items: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
+            items: nonEmptyString(),
           },
         },
         selectedLookbookSheetIds: {
@@ -524,10 +512,9 @@ function sceneShotVideoTakeShotDesignSchema(): Record<string, unknown> {
         type: 'object',
         properties: {
           locationId: nonEmptyString(),
-          environmentSheetAssetId: nonEmptyString(),
-          viewIds: {
+          environmentSheetAssetIds: {
             type: 'array',
-            items: enumValue(LOCATION_AZIMUTH_VIEW_IDS),
+            items: nonEmptyString(),
           },
         },
         additionalProperties: false,

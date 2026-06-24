@@ -17,6 +17,7 @@ Decision history:
 - `../../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
 - `../../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+- `../../decisions/0036-use-unsliced-location-sheets.md`
 
 ## Asset Vocabulary
 
@@ -73,12 +74,15 @@ samples are all stored under `cast/<handle>/voice-samples/` after attachment.
 The Cast Voice record, not the filename, supplies the provider voice identity,
 reference name, purpose, and structured `sampleSource` provenance.
 
-A **Location Environment Sheet** is a grouped image asset attached to a
-location with the `environment_sheet` role. It contains one composite sheet and
-four derived azimuth view files for 0, 90, 180, and 270 degrees. SQLite stores
-the grouping, asset-file roles, azimuth ownership, and display order. The agent
-owns visual inspection and slicing decisions; Studio does not store crop boxes,
-extraction methods, extraction confidence, or extraction diagnostics.
+A **Location Sheet** is a full-image production reference board attached to a
+location with the `environment_sheet` role. It has one primary image file and a
+persisted description. A Location can have many Location Sheets; shot/take
+workflows reference the specific sheet assets they need.
+
+A **Location Hero Image** is a compact representative image attached to a
+location with the `hero` role. It uses asset type `location_hero` and one
+primary image file. The current selected hero image drives overview and detail
+display only; it is not a hidden default shot reference.
 
 ## Working Assets Versus Production Assets
 
@@ -165,8 +169,9 @@ Folder responsibilities:
   sample outputs, or existing ElevenLabs provider samples fetched during
   `renku cast voice attach`.
 - `locations/<handle>/environment-sheets/<sheet-slug>/` contains imported or
-  generated Location Environment Sheets: one composite file and four azimuth
-  view files.
+  generated Location Sheets as one full primary image file per sheet.
+- `locations/<handle>/heroes/<hero-slug>/` contains imported or generated
+  Location Hero Images as one primary image file per hero.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
   those folders are not per-image assets unless a future command explicitly
   registers one.
@@ -287,13 +292,12 @@ The folder structure is for humans.
 
 SQLite owns identity and relationships.
 
-Do not infer IDs, owners, languages, selects, clips, bindings, azimuths, or
+Do not infer IDs, owners, languages, selects, clips, bindings, or
 grouped asset membership from file names or folder names.
 
-For Location Environment Sheets, paths such as `front.png` are readable storage
-names only. Runtime code must read explicit asset-file roles such as
-`view_front`, `view_right`, `view_back`, and `view_left` to know which file
-belongs to which azimuth.
+For Location Sheets, paths such as `sheet.png` are readable storage names only.
+Runtime code must use the asset relationship, asset type, and `primary` asset
+file role instead of parsing names or inferring meaning from folders.
 
 The same rule applies to Visual Language folders. A folder name may be a useful
 creative hint for an agent, but Renku relationships come from SQLite rows and

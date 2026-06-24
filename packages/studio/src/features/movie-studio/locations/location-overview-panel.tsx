@@ -60,10 +60,10 @@ export function LocationOverviewPanel({
           title={location.name}
           description={location.timePeriod}
           imageUrl={location.firstImage?.url ?? null}
-          imageAlt={`${location.name} location sheet`}
+          imageAlt={`${location.name} location hero image`}
           aspectClassName='aspect-[4/3]'
           aspectRatio={4 / 3}
-          imageClassName='object-contain'
+          imageClassName='object-cover'
           onOpen={() => onSelect({ type: 'location', id: location.id })}
         />
       ))}

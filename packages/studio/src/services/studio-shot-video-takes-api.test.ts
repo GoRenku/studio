@@ -13,7 +13,6 @@ import {
   updateTakeCharacterSheetSelection,
   updateTakeDialogueAudioSelection,
   updateTakeLocationSheetSelection,
-  updateTakeLocationViewSelection,
   updateSceneShotVideoTakePick,
   updateShotVideoTakeProduction,
   updateSceneShotVideoTakeShotDesign,
@@ -258,7 +257,7 @@ describe('studio-shot-video-takes-api', () => {
       'constantinople',
       'scene_hook',
       TAKE_ID,
-      { locationId: 'loc_chamber', assetId: 'asset_environment_001' }
+      { locationId: 'loc_chamber', assetIds: ['asset_environment_001'] }
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
@@ -267,33 +266,7 @@ describe('studio-shot-video-takes-api', () => {
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
       locationId: 'loc_chamber',
-      assetId: 'asset_environment_001',
-    });
-  });
-
-  it('updates the take location view selection', async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      okResponse({ context: {}, resourceKeys: [] })
-    );
-    await updateTakeLocationViewSelection(
-      'constantinople',
-      'scene_hook',
-      TAKE_ID,
-      {
-        locationId: 'loc_chamber',
-        assetId: 'asset_environment_001',
-        viewIds: ['front', 'right'],
-      }
-    );
-    const [url, init] = lastCall();
-    expect(String(url)).toContain(
-      `/screenplay/scenes/scene_hook/takes/${TAKE_ID}/reference-selections/location-views`
-    );
-    expect((init as RequestInit).method).toBe('PATCH');
-    expect(lastBody()).toEqual({
-      locationId: 'loc_chamber',
-      assetId: 'asset_environment_001',
-      viewIds: ['front', 'right'],
+      assetIds: ['asset_environment_001'],
     });
   });
 

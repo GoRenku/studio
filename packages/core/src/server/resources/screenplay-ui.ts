@@ -481,27 +481,13 @@ function firstPreferredImageAsset(
     );
   }
   if (target.kind === 'location') {
-    return (
-      listAssetRelationshipPage(session, {
-        target,
-        role: 'environment_sheet',
-        mediaKind: 'image',
-        selection: 'select',
-        limit: 1,
-      }).items[0] ??
-      listAssetRelationshipPage(session, {
-        target,
-        mediaKind: 'image',
-        selection: 'select',
-        limit: 1,
-      }).items[0] ??
-      listAssetRelationshipPage(session, {
-        target,
-        mediaKind: 'image',
-        selection: 'take',
-        limit: 1,
-      }).items[0]
-    );
+    return listAssetRelationshipPage(session, {
+      target,
+      role: 'hero',
+      mediaKind: 'image',
+      selection: 'select',
+      limit: 1,
+    }).items[0];
   }
   return listAssetRelationshipPage(session, {
     target,
@@ -511,7 +497,10 @@ function firstPreferredImageAsset(
 }
 
 function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | undefined {
-  const file = asset?.files.find((candidate) => candidate.mediaKind === 'image');
+  const file =
+    asset?.files.find(
+      (candidate) => candidate.role === 'primary' && candidate.mediaKind === 'image'
+    ) ?? asset?.files.find((candidate) => candidate.mediaKind === 'image');
   if (!asset || !file) {
     return undefined;
   }

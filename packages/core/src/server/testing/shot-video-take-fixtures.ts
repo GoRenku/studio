@@ -22,11 +22,7 @@ export interface ShotVideoTakeSampleIds {
 }
 
 export interface ShotVideoTakeLocationSheetFiles {
-  composite: string;
-  view_front: string;
-  view_right: string;
-  view_back: string;
-  view_left: string;
+  primary: string;
 }
 
 export interface ShotVideoTakeTestProject {
@@ -205,11 +201,7 @@ export async function createShotVideoTakeTestProject(): Promise<ShotVideoTakeTes
       const folder = `generated/media/${folderName}`;
       await fs.mkdir(path.join(projectPath, folder), { recursive: true });
       const files = {
-        composite: `${folder}/composite.png`,
-        view_front: `${folder}/front.png`,
-        view_right: `${folder}/right.png`,
-        view_back: `${folder}/back.png`,
-        view_left: `${folder}/left.png`,
+        primary: `${folder}/sheet.png`,
       };
       for (const [role, projectRelativePath] of Object.entries(files)) {
         await fs.writeFile(path.join(projectPath, projectRelativePath), role);

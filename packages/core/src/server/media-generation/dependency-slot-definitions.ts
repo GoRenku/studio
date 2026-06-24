@@ -37,21 +37,26 @@ export function castCharacterSheetDependencySlot(input: {
 export function locationEnvironmentSheetDependencySlot(input: {
   locationId: string;
   locationName: string;
+  assetId?: string;
+  assetTitle?: string;
   required: boolean;
   reason: string;
 }): MediaGenerationDependencySlot {
   return {
-    dependencyId: locationEnvironmentSheetDependencyId(input.locationId),
+    dependencyId: locationEnvironmentSheetDependencyId(input.locationId, input.assetId),
     dependencyKind: 'location-environment-sheet',
-    label: `${input.locationName} location sheet`,
+    label: input.assetTitle
+      ? `${input.locationName} Location Sheet: ${input.assetTitle}`
+      : `${input.locationName} Location Sheet`,
     dependencyTarget: { kind: 'location', id: input.locationId },
     selector: {
       kind: 'asset-relationship',
       target: { kind: 'location', locationId: input.locationId },
+      ...(input.assetId ? { assetId: input.assetId } : {}),
       role: 'environment_sheet',
       mediaKind: 'image',
-      fileRole: 'composite',
-      selectionPolicy: 'selected-or-default',
+      fileRole: 'primary',
+      selectionPolicy: 'selected-only',
     },
     required: input.required,
     reason: input.reason,

@@ -1,5 +1,4 @@
 import type {
-  LocationAzimuthViewId,
   SceneShot,
   SceneShotVideoTakeState,
 } from '../../../client/index.js';
@@ -95,18 +94,9 @@ export function selectedCharacterSheetAssetIdForTakeState(
 
 
 
-export function selectedEnvironmentSheetAssetIdForTakeState(
+export function referencedEnvironmentSheetAssetIdsForTakeState(
   state: SceneShotVideoTakeState,
   locationId: string
-): string | null {
-  return state.referenceSelections.selectedLocationSheetAssetIds[locationId] ?? null;
-}
-
-
-
-export function selectedLocationViewIdsForTakeState(
-  state: SceneShotVideoTakeState,
-  locationId: string
-): LocationAzimuthViewId[] {
-  return state.referenceSelections.selectedLocationViewIds[locationId] ?? ['front'];
+): string[] {
+  return state.referenceSelections.referencedLocationSheetAssetIds[locationId] ?? [];
 }

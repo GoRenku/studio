@@ -19,6 +19,7 @@ Decision history:
 - `../../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 - `../../decisions/0026-use-thin-structured-cli-command-handlers.md`
 - `../../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
+- `../../decisions/0036-use-unsliced-location-sheets.md`
 
 ## Current Purposes
 
@@ -31,6 +32,7 @@ cast.character-sheet
 cast.profile
 cast.voice-sample
 location.environment-sheet
+location.hero
 scene.dialogue-audio
 scene.storyboard-sheet
 shot.first-frame
@@ -94,6 +96,7 @@ renku generation context --purpose cast.character-sheet --target cast:<id> --jso
 renku generation context --purpose cast.profile --target cast:<id> --json
 renku generation context --purpose cast.voice-sample --target cast:<id> --json
 renku generation context --purpose location.environment-sheet --target location:<id> --json
+renku generation context --purpose location.hero --target location:<id> --json
 renku generation context --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku take create --scene <scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
@@ -109,6 +112,7 @@ renku generation model list --purpose cast.character-sheet --target cast:<id> --
 renku generation model list --purpose cast.profile --target cast:<id> --json
 renku generation model list --purpose cast.voice-sample --target cast:<id> --json
 renku generation model list --purpose location.environment-sheet --target location:<id> --json
+renku generation model list --purpose location.hero --target location:<id> --json
 renku generation model list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation model list --purpose shot.first-frame --target scene:<id> --take <take-id> --json
@@ -133,6 +137,7 @@ renku generation spec list --purpose lookbook.sheet --target lookbook:<id> --jso
 renku generation spec list --purpose cast.character-sheet --target cast:<id> --json
 renku generation spec list --purpose cast.profile --target cast:<id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<id> --json
+renku generation spec list --purpose location.hero --target location:<id> --json
 renku generation spec list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku generation spec list --purpose shot.first-frame --target scene:<id> --take <take-id> --json
@@ -235,9 +240,9 @@ Selectors must name their selection policy:
 
 Selector failures are structured diagnostics. Unknown selector kinds, malformed
 shot-video selector requests, invalid purpose requests, invalid Lookbook sheet
-ids, missing selected files, missing location environment sheet metadata,
-missing composite file ids, and missing composite file records must not be
-converted into quiet missing dependencies.
+ids, missing selected files, unavailable referenced Location Sheet assets, and
+missing primary image files must not be converted into quiet missing
+dependencies.
 
 Generated dependency prices come only from engines estimates. Existing assets
 are represented as satisfied dependency lines priced at `$0.00`. Manual
@@ -395,7 +400,7 @@ using an edit model, the generated request carries a logical `image_urls` file
 input. The engine resolves that project-relative source file immediately before
 provider execution.
 
-## Location Environment Sheet Context
+## Location Sheet Context
 
 `location.environment-sheet` context is built for one Location and requires a
 selected Movie Lookbook. The target Location must already exist in project
@@ -416,21 +421,19 @@ The context includes:
 - scene usage and compact setting/action signals for scenes that use the
   location;
 - the selected Movie Lookbook and its card image when available;
-- selected location assets, existing environment sheet takes, reference assets,
+- selected location assets, existing Location Sheet takes, reference assets,
   anti-reference assets, and image file references;
-- fixed defaults for the generated sheet frame, sliced view frame, detail, and
-  output format;
-- the fixed view file roles: `view_front`, `view_right`, `view_back`, and
-  `view_left`.
+- fixed defaults for the generated sheet frame, detail, and output format.
 
 Core returns factual context only. Prompt guardrails are written by the
 media-producer skill from those facts. Historical prompts should include
 concrete exclusions when the context calls for them, such as avoiding telegraph
 poles, electrical wires, asphalt roads, or modern signage in a 1400s setting.
 
-The generated provider image is one composite sheet, not four provider calls.
-The media-producer agent inspects that composite with vision and slices the four
-scenic view images locally before import.
+The generated provider image is one full Location Sheet. It is imported as one
+image asset with one `primary` file. Core does not slice Location Sheets into
+fixed views, store azimuth metadata, or infer shot references from the first
+available sheet.
 
 ## Scene Storyboard Sheet Context
 
@@ -589,21 +592,21 @@ Profile text-to-image models must not include `sourceAssetId`. Profile edit
 models must include `sourceAssetId`, and that asset must be an image attached to
 the cast member with the `character_sheet` role.
 
-## Location Environment Sheet Spec
+## Location Sheet Spec
 
 ```json
 {
   "purpose": "location.environment-sheet",
   "target": { "kind": "location", "id": "location_sea_walls" },
   "modelChoice": "fal-ai/nano-banana-2",
-  "prompt": "A four-view environment sheet for the Constantinople sea walls...",
+  "prompt": "A full-image Location Sheet for the Constantinople sea walls...",
+  "description": "Sea-wall material, gate, tower, field, and city-edge reference for shot planning.",
   "takeCount": 1,
   "seed": null,
   "sheetFrame": "4:3",
-  "viewFrame": "16:9",
   "detail": "standard",
   "outputFormat": "png",
-  "title": "Constantinople sea walls environment sheet"
+  "title": "Constantinople sea walls Location Sheet"
 }
 ```
 
@@ -612,10 +615,10 @@ Binding fields:
 - `modelChoice`
 - `seed`
 - `sheetFrame`
-- `viewFrame`
 - `detail`
 - `outputFormat`
 - `prompt`
+- `description`
 - `title`
 
 `takeCount` is always `1` for this purpose.
@@ -630,26 +633,33 @@ Supported sheet frames:
 
 - `4:3`
 
-Supported sliced view frames:
+Location Sheets are direct text-to-image reference boards. Core does not create
+or send a visual template, mask, fiducial markers, labeled cells, bottom
+guideline strip, or fixed azimuth layout. The prompt should ask for the
+Location-specific reference board the production needs.
 
-- `16:9`
+## Location Hero Image Spec
 
-Location environment sheets are direct text-to-image contact sheets. Core does
-not create or send a visual template, mask, fiducial markers, labeled cells, or
-bottom guideline strip. Instead, the provider prompt asks for one cinematic
-four-panel location sheet with panels ordered by azimuth.
+```json
+{
+  "purpose": "location.hero",
+  "target": { "kind": "location", "id": "location_sea_walls" },
+  "sourceLocationSheetAssetId": "asset_sea_walls_sheet",
+  "modelChoice": "fal-ai/nano-banana-2/edit",
+  "prompt": "Create a wide representative hero image for the sea walls from the supplied Location Sheet...",
+  "description": "Wide visual identity image grounded in the sea-wall Location Sheet.",
+  "takeCount": 1,
+  "seed": null,
+  "heroFrame": "16:9",
+  "outputFormat": "png",
+  "title": "Constantinople sea walls hero"
+}
+```
 
-### Agent-Sliced Views
-
-Core does not crop the generated composite. After generation, the
-media-producer agent uses vision to identify the four scenic image blocks in the
-composite and writes local sliced files for `view_front`, `view_right`,
-`view_back`, and `view_left`.
-
-If the generated composite does not have four clean scenic view blocks, the
-agent shows the composite to the user, says the generation is not good enough to
-slice cleanly, and asks for regeneration instead of importing a broken grouped
-asset.
+Location Hero Images are generated from an explicit source Location Sheet asset
+owned by the same Location. The source sheet must have a `primary` image file.
+Hero images are display media for overview and detail surfaces; they never act
+as hidden shot-generation defaults.
 
 ## Scene Storyboard Sheet Spec
 
@@ -724,8 +734,9 @@ Generation runs store:
 - diagnostics;
 - start and completion timestamps.
 
-For `location.environment-sheet`, run outputs contain the single provider
-composite image. Generation does not import the asset automatically.
+For `location.environment-sheet`, run outputs contain the single provider image.
+For `location.hero`, run outputs contain the single hero image derived from the
+source Location Sheet. Generation does not import assets automatically.
 
 ## Persistence
 
@@ -746,17 +757,9 @@ even after the spec is edited.
 revised prompts, imported asset ids, and per-take metadata for now. Do not add a
 separate output table until a concrete UI or query needs it.
 
-Location Environment Sheet imports also use purpose-specific grouping tables:
-
-```text
-location_environment_sheet
-location_environment_sheet_view
-```
-
-Those rows connect the imported composite to its four direction-specific view
-files. The current import path uses agent-provided slices, so Core stores the
-grouping, azimuth ownership, and display order without running image extraction
-or storing crop/extraction metadata itself.
+Location Sheet and Location Hero Image imports use ordinary asset rows, asset
+file rows, and Location asset relationships. There are no purpose-specific
+Location Sheet grouping tables.
 
 ## Media Import
 
@@ -799,39 +802,38 @@ For Cast Profiles, import registers an image asset with type `cast_profile`,
 attaches it to the cast member with role `profile`, and stores the file under
 `cast/<handle>/profiles/`.
 
-For Location Environment Sheets, import registers one image asset with type
+For Location Sheets, import registers one image asset with type
 `location_environment_sheet`, attaches it to the location with role
-`environment_sheet`, stores the composite and four azimuth view files under
-`locations/<handle>/environment-sheets/<sheet-slug>/`, and records those files
-with explicit asset-file roles: `composite`, `view_front`, `view_right`,
-`view_back`, and `view_left`. Import also writes the purpose-owned grouping
-rows in `location_environment_sheet` and `location_environment_sheet_view` so
-runtime code can read the composite-to-view relationship from SQLite instead of
-inferring it from filenames.
+`environment_sheet`, stores the image under
+`locations/<handle>/environment-sheets/<sheet-slug>/`, records one `primary`
+asset file, and persists the required description as the asset summary.
 
 ```bash
 renku media import \
   --purpose location.environment-sheet \
   --target location:<location-id> \
-  --file location-environment-sheet-import.json \
+  --source generated/media/sea-walls-sheet.png \
   --title <title> \
   --summary <one-line-summary> \
+  --receipt <generation-run-json> \
   --json
 ```
 
-Location Environment Sheet import file:
+For Location Hero Images, import registers one image asset with type
+`location_hero`, attaches it to the location with role `hero`, records one
+`primary` asset file, and selects the newest hero image as the current display
+image for the Location. Generated hero imports must pass the source sheet:
 
-```json
-{
-  "title": "Constantinople sea walls environment sheet",
-  "files": {
-    "composite": "generated/media/sea-walls-sheet.png",
-    "view_front": "generated/media/sea-walls-front.png",
-    "view_right": "generated/media/sea-walls-right.png",
-    "view_back": "generated/media/sea-walls-back.png",
-    "view_left": "generated/media/sea-walls-left.png"
-  }
-}
+```bash
+renku media import \
+  --purpose location.hero \
+  --target location:<location-id> \
+  --source generated/media/sea-walls-hero.png \
+  --source-sheet <location-sheet-asset-id> \
+  --title <title> \
+  --summary <one-line-summary> \
+  --receipt <generation-run-json> \
+  --json
 ```
 
 ```bash

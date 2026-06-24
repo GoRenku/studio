@@ -8,7 +8,6 @@ import type {
   MediaGenerationPlanLine,
   ShotVideoTakeCharacterSheetReferenceChoice,
   ShotVideoTakeLocationReferenceGroup,
-  LocationAzimuthViewId,
   ShotVideoTakeEnvironmentSheetReferenceChoice,
   ShotVideoTakeLookbookReferenceChoice,
   ShotVideoTakeGeneralReferenceChoice,
@@ -42,7 +41,6 @@ import type {
 import {
   assetsForTarget,
   dependencyLineById,
-  locationViewChoices,
   planLineForDependencyLine,
   previewImagesForAsset,
   previewImagesForDependencyLine,
@@ -63,9 +61,8 @@ import {
   effectiveScopedLocationSelectionForShots,
   selectedCastIdsForShots,
   selectedCharacterSheetAssetIdForTakeState,
-  selectedEnvironmentSheetAssetIdForTakeState,
+  referencedEnvironmentSheetAssetIdsForTakeState,
   selectedLocationIdsForShots,
-  selectedLocationViewIdsForTakeState,
   selectedLookbookSheetIdsForTakeState,
 } from './reference-selection.js';
 import {
@@ -388,8 +385,6 @@ export function buildLocationReferenceGroup(input: {
   name: string;
   useDefaultSelectionWhenNoScopedSelection: boolean;
 }): ShotVideoTakeLocationReferenceGroup {
-  const dependencyId = locationEnvironmentSheetDependencyId(input.locationId);
-  const line = dependencyLineById(input.plan, dependencyId);
   const assets = assetsForTarget(input.session, {
     target: { kind: 'location', locationId: input.locationId },
     role: 'environment_sheet',
@@ -402,42 +397,47 @@ export function buildLocationReferenceGroup(input: {
   const selected =
     explicitSelected ||
     (input.useDefaultSelectionWhenNoScopedSelection && defaultSelected);
-  const inclusion = referenceInclusionForDependencyId(
-    input.context,
-    dependencyId,
-    selected
-  );
-  const defaultEnvironmentSheetAssetId = assets[0]?.assetId ?? null;
-  const selectedEnvironmentSheetAssetId =
-    selectedEnvironmentSheetAssetIdForTakeState(input.context.take.state, input.locationId) ??
-    defaultEnvironmentSheetAssetId;
-  const selectedViewIds = selectedLocationViewIdsForTakeState(
+  const referencedEnvironmentSheetAssetIds = referencedEnvironmentSheetAssetIdsForTakeState(
     input.context.take.state,
     input.locationId
   );
   const environmentSheets = assets.map((asset, index) =>
     buildEnvironmentSheetReferenceChoice({
-      session: input.session,
       locationId: input.locationId,
       locationName: input.name,
       asset,
-      selectedAssetId: selectedEnvironmentSheetAssetId,
-      defaultAssetId: defaultEnvironmentSheetAssetId,
-      selectedViewIds,
-      line,
-      planLine: planLineForDependencyLine(input.plan, line),
-      inclusion,
+      referencedAssetIds: referencedEnvironmentSheetAssetIds,
+      context: input.context,
+      plan: input.plan,
       index,
     })
   );
   if (environmentSheets.length === 0) {
+    const dependencyId = locationEnvironmentSheetDependencyId(input.locationId);
+    const line = dependencyLineById(input.plan, dependencyId);
+    if (!line) {
+      return {
+        locationId: input.locationId,
+        name: input.name,
+        selectedForShot: selected,
+        defaultSelectedForShot: defaultSelected,
+        referencedEnvironmentSheetAssetIds,
+        environmentSheets,
+        diagnostics: [],
+      };
+    }
+    const inclusion = referenceInclusionForDependencyId(
+      input.context,
+      dependencyId,
+      selected
+    );
     environmentSheets.push({
       id: `${input.locationId}:planned-environment-sheet`,
       locationId: input.locationId,
       assetId: null,
       title: `${input.name} Location Sheet`,
-      selected,
-      defaultSelected,
+      description: null,
+      referenced: false,
       card: referenceCardPlan({
         selected: selected && inclusion.included,
         mediaKind: 'image',
@@ -447,7 +447,6 @@ export function buildLocationReferenceGroup(input: {
         inclusion,
         previews: [],
       }),
-      views: [],
     });
   }
   return {
@@ -455,9 +454,7 @@ export function buildLocationReferenceGroup(input: {
     name: input.name,
     selectedForShot: selected,
     defaultSelectedForShot: defaultSelected,
-    selectedEnvironmentSheetAssetId,
-    defaultEnvironmentSheetAssetId,
-    selectedViewIds,
+    referencedEnvironmentSheetAssetIds,
     environmentSheets,
     diagnostics: [],
   };
@@ -466,19 +463,25 @@ export function buildLocationReferenceGroup(input: {
 
 
 export function buildEnvironmentSheetReferenceChoice(input: {
-  session: DatabaseSession;
   locationId: string;
   locationName: string;
   asset: Asset;
-  selectedAssetId: string | null;
-  defaultAssetId: string | null;
-  selectedViewIds: LocationAzimuthViewId[];
-  line: MediaGenerationDependencyLine | null;
-  planLine: MediaGenerationPlanLine | null;
-  inclusion: ReferenceInclusionResolution;
+  referencedAssetIds: string[];
+  context: ShotVideoTakeProductionContext;
+  plan: ShotVideoTakeOutputGenerationPlan;
   index: number;
 }): ShotVideoTakeEnvironmentSheetReferenceChoice {
-  const selected = input.asset.assetId === input.selectedAssetId;
+  const referenced = input.referencedAssetIds.includes(input.asset.assetId);
+  const dependencyId = locationEnvironmentSheetDependencyId(
+    input.locationId,
+    input.asset.assetId
+  );
+  const line = dependencyLineById(input.plan, dependencyId);
+  const inclusion = referenceInclusionForDependencyId(
+    input.context,
+    dependencyId,
+    referenced
+  );
   const title =
     humanReadableAssetTitle(input.asset.title, `${input.locationName} Location Sheet`) ||
     `${input.locationName} Location Sheet`;
@@ -487,26 +490,23 @@ export function buildEnvironmentSheetReferenceChoice(input: {
     locationId: input.locationId,
     assetId: input.asset.assetId,
     title: input.index === 0 ? title : `${title} ${input.index + 1}`,
-    selected,
-    defaultSelected: input.asset.assetId === input.defaultAssetId,
+    description: input.asset.oneLineSummary,
+    referenced,
     card: referenceCardPlan({
-      selected: selected && input.inclusion.included,
+      selected: referenced && inclusion.included,
       mediaKind: 'image',
-      dependencyId: selected
-        ? locationEnvironmentSheetDependencyId(input.locationId)
+      dependencyId: referenced
+        ? dependencyId
         : undefined,
-      line: selected ? input.line : undefined,
-      planLine: selected ? input.planLine : undefined,
-      inclusion: input.inclusion,
+      line: referenced ? line : undefined,
+      planLine: referenced ? planLineForDependencyLine(input.plan, line) : undefined,
+      inclusion,
       previews: previewImagesForAsset(
         input.asset,
         title,
         `${input.locationName} location sheet`
       ),
     }),
-    views: selected
-      ? locationViewChoices(input.session, input.asset, input.selectedViewIds)
-      : [],
   };
 }
 

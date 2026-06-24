@@ -121,7 +121,7 @@ describe('Location environment sheet import', () => {
     });
   });
 
-  it('exposes the current single-sheet defaults and view file roles', async () => {
+  it('exposes the current single-sheet defaults', async () => {
     const fixture = await createConfiguredProject();
 
     await expect(
@@ -134,14 +134,7 @@ describe('Location environment sheet import', () => {
       purpose: 'location.environment-sheet',
       defaults: {
         sheetFrame: '4:3',
-        viewFrame: '16:9',
       },
-      azimuths: [
-        { azimuthDegrees: 0, direction: 'front', fileRole: 'view_front' },
-        { azimuthDegrees: 90, direction: 'right', fileRole: 'view_right' },
-        { azimuthDegrees: 180, direction: 'back', fileRole: 'view_back' },
-        { azimuthDegrees: 270, direction: 'left', fileRole: 'view_left' },
-      ],
       resourceKeys: expect.arrayContaining([
         `assets:location:${fixture.location.id}`,
         `surface:location:${fixture.location.id}`,
@@ -149,16 +142,19 @@ describe('Location environment sheet import', () => {
     });
   });
 
-  it('imports a grouped composite and four agent-sliced views for a location', async () => {
+  it('imports one full primary Location Sheet image for a location', async () => {
     const fixture = await createConfiguredProject();
-    const files = await writeSheetImportFiles(fixture.created.projectPath);
+    const sourceProjectRelativePath = await writeSheetImportFile(
+      fixture.created.projectPath
+    );
 
     const imported = await fixture.projectData.importLocationEnvironmentSheetMedia({
       projectName: 'constantinople',
       homeDir: fixture.homeDir,
       locationId: fixture.location.id,
-      files,
+      sourceProjectRelativePath,
       title: 'Council chamber environment sheet',
+      description: 'Council chamber spatial reference with table, torchlight, and wall texture.',
     });
 
     expect(imported).toMatchObject({
@@ -166,24 +162,14 @@ describe('Location environment sheet import', () => {
       imported: {
         type: 'location_environment_sheet',
         role: 'environment_sheet',
-        files: expect.arrayContaining([
-          expect.objectContaining({ role: 'composite' }),
-          expect.objectContaining({ role: 'view_front' }),
-          expect.objectContaining({ role: 'view_right' }),
-          expect.objectContaining({ role: 'view_back' }),
-          expect.objectContaining({ role: 'view_left' }),
-        ]),
+        oneLineSummary:
+          'Council chamber spatial reference with table, torchlight, and wall texture.',
+        files: [expect.objectContaining({ role: 'primary' })],
       },
-      files: [
-        expect.objectContaining({ role: 'composite' }),
-        expect.objectContaining({ role: 'view_front' }),
-        expect.objectContaining({ role: 'view_right' }),
-        expect.objectContaining({ role: 'view_back' }),
-        expect.objectContaining({ role: 'view_left' }),
-      ],
+      files: [expect.objectContaining({ role: 'primary' })],
     });
 
-    expect(imported.imported.files).toHaveLength(5);
+    expect(imported.imported.files).toHaveLength(1);
     expect(JSON.stringify(imported)).not.toContain('crop');
     expect(JSON.stringify(imported)).not.toContain('extraction');
     for (const file of imported.imported.files) {
@@ -213,86 +199,38 @@ describe('Location environment sheet import', () => {
       path.join(fixture.created.projectPath, '.renku', 'project.sqlite')
     );
     try {
-      const sheet = sqlite
-        .prepare(
-          'select id, asset_id, location_id, composite_file_id from location_environment_sheet where asset_id = ?'
-        )
-        .get(imported.imported.assetId) as
-        | {
-            id: string;
-            asset_id: string;
-            location_id: string;
-            composite_file_id: string;
-          }
-        | undefined;
-      expect(sheet).toMatchObject({
-        asset_id: imported.imported.assetId,
-        location_id: fixture.location.id,
-      });
-      expect(
-        imported.imported.files.some((file) => file.id === sheet?.composite_file_id)
-      ).toBe(true);
-      expect(readTableColumns(sqlite, 'location_environment_sheet')).not.toEqual(
+      expect(readTableNames(sqlite)).not.toEqual(
         expect.arrayContaining([
-          'layout_template',
-          'grid_layout',
-          'extraction_confidence',
-          'extraction_method',
-          'extraction_diagnostics_json',
-          'sheet_frame',
-          'view_frame',
+          'location_environment_sheet',
+          'location_environment_sheet_view',
         ])
       );
-      expect(
-        readTableColumns(sqlite, 'location_environment_sheet_view')
-      ).not.toEqual(
-        expect.arrayContaining([
-          'crop_x',
-          'crop_y',
-          'crop_width',
-          'crop_height',
-          'extraction_confidence',
-          'extraction_method',
-        ])
-      );
-
-      const views = sqlite
-        .prepare(
-          'select azimuth_degrees from location_environment_sheet_view where sheet_id = ? order by sort_order'
-        )
-        .all(sheet?.id) as Array<{ azimuth_degrees: number }>;
-      expect(views.map((view) => view.azimuth_degrees)).toEqual([
-        0,
-        90,
-        180,
-        270,
-      ]);
     } finally {
       sqlite.close();
     }
   });
 
-  it('rejects source files reused across grouped import roles', async () => {
+  it('rejects Location Sheet imports without a description', async () => {
     const fixture = await createConfiguredProject();
-    const files = await writeSheetImportFiles(fixture.created.projectPath);
+    const sourceProjectRelativePath = await writeSheetImportFile(
+      fixture.created.projectPath
+    );
 
     await expect(
       fixture.projectData.importLocationEnvironmentSheetMedia({
         projectName: 'constantinople',
         homeDir: fixture.homeDir,
         locationId: fixture.location.id,
-        files: {
-          ...files,
-          view_left: files.view_right,
-        },
+        sourceProjectRelativePath,
         title: 'Duplicate file sheet',
+        description: '   ',
       })
     ).rejects.toMatchObject({
-      code: 'PROJECT_DATA309',
+      code: 'PROJECT_DATA081',
     });
   });
 
-  it('rejects obsolete template fields in generation specs', async () => {
+  it('rejects unknown generation spec fields', async () => {
     const fixture = await createConfiguredProject();
 
     await expect(
@@ -364,18 +302,20 @@ function spec(
     target: { kind: 'location', id: 'location_test' },
     modelChoice: 'fal-ai/nano-banana-2',
     prompt: 'A location environment sheet.',
+    description: 'A concise Location Sheet description.',
     takeCount: 1,
     seed: null,
     sheetFrame: '4:3',
-    viewFrame: '16:9',
     detail: 'standard',
     outputFormat: 'png',
     ...overrides,
   };
 }
 
-function readTableColumns(sqlite: Database.Database, tableName: string): string[] {
-  const rows = sqlite.pragma(`table_info(${tableName})`) as Array<{ name: string }>;
+function readTableNames(sqlite: Database.Database): string[] {
+  const rows = sqlite
+    .prepare("select name from sqlite_master where type = 'table'")
+    .all() as Array<{ name: string }>;
   return rows.map((row) => row.name);
 }
 
@@ -422,26 +362,12 @@ async function createConfiguredProject() {
   return fixture;
 }
 
-async function writeSheetImportFiles(projectPath: string): Promise<{
-  composite: string;
-  view_front: string;
-  view_right: string;
-  view_back: string;
-  view_left: string;
-}> {
-  const folder = 'generated/media/location-sheet-slices';
+async function writeSheetImportFile(projectPath: string): Promise<ProjectRelativePath> {
+  const folder = 'generated/media/location-sheets';
   await fs.mkdir(path.join(projectPath, folder), { recursive: true });
-  const files = {
-    composite: `${folder}/composite.png`,
-    view_front: `${folder}/front.png`,
-    view_right: `${folder}/right.png`,
-    view_back: `${folder}/back.png`,
-    view_left: `${folder}/left.png`,
-  };
-  for (const [role, projectRelativePath] of Object.entries(files)) {
-    await fs.writeFile(path.join(projectPath, projectRelativePath), role);
-  }
-  return files;
+  const projectRelativePath = `${folder}/council-chamber.png` as ProjectRelativePath;
+  await fs.writeFile(path.join(projectPath, projectRelativePath), 'sheet image');
+  return projectRelativePath;
 }
 
 function context(): LocationEnvironmentSheetGenerationContext {
@@ -477,16 +403,9 @@ function context(): LocationEnvironmentSheetGenerationContext {
       takeCount: 1,
       seed: null,
       sheetFrame: '4:3',
-      viewFrame: '16:9',
       detail: 'standard',
       outputFormat: 'png',
     },
-    azimuths: [
-      { azimuthDegrees: 0, direction: 'front', fileRole: 'view_front' },
-      { azimuthDegrees: 90, direction: 'right', fileRole: 'view_right' },
-      { azimuthDegrees: 180, direction: 'back', fileRole: 'view_back' },
-      { azimuthDegrees: 270, direction: 'left', fileRole: 'view_left' },
-    ],
     historicalGuardrailInputs: {
       timePeriod: null,
       historicalBasis: [],

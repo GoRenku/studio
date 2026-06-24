@@ -1,8 +1,5 @@
 import type {
   Asset,
-  LocationAzimuthViewId,
-  ShotVideoTakeLocationViewReferenceChoice,
-  ProjectRelativePath,
   ShotVideoTakeReferenceImagePreview,
   ShotVideoTakeProductionContext,
   MediaGenerationDependencyLine,
@@ -12,16 +9,9 @@ import type {
   ShotVideoTakeReferenceChoiceState,
 } from '../../../client/index.js';
 import {
-  readAssetFileRecord,
-} from '../../database/access/asset-files.js';
-import {
   listAssetRelationshipPage,
   MAX_RESOURCE_PAGE_LIMIT,
 } from '../../database/access/asset-relationships/index.js';
-import {
-  readLocationEnvironmentSheetByAssetId,
-  listLocationEnvironmentSheetViews,
-} from '../../database/access/location-environment-sheets.js';
 import {
   listLookbookSheets,
 } from '../../database/access/lookbook-sheets.js';
@@ -29,108 +19,12 @@ import type {
   DatabaseSession,
 } from '../../database/lifecycle/store.js';
 import {
-  ProjectDataError,
-} from '../../project-data-error.js';
-import {
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
 import {
   ReferenceInclusionResolution,
   referenceInclusionForLine,
 } from './reference-inclusions.js';
-
-
-
-export function locationViewChoices(
-  session: DatabaseSession,
-  environmentSheet: Asset,
-  selectedViewIds: LocationAzimuthViewId[]
-): ShotVideoTakeLocationViewReferenceChoice[] {
-  const sheet = readLocationEnvironmentSheetByAssetId(
-    session,
-    environmentSheet.assetId
-  );
-  if (!sheet) {
-    return [];
-  }
-  const selectedViewIdSet = new Set(selectedViewIds);
-  return listLocationEnvironmentSheetViews(session, sheet.id).map((view) => {
-    const viewId = locationAzimuthViewId(
-      requireLocationAzimuthDegrees(view.azimuthDegrees)
-    );
-    const assetFile = readAssetFileRecord(session, {
-      assetId: sheet.assetId,
-      assetFileId: view.assetFileId,
-    });
-    return {
-      id: `${sheet.assetId}:${viewId}`,
-      viewId,
-      label: locationAzimuthViewLabel(viewId),
-      selected: selectedViewIdSet.has(viewId),
-      card: referenceCardPlan({
-        selected: selectedViewIdSet.has(viewId),
-        mediaKind: 'image',
-        previews: assetFile
-          ? [
-              {
-                assetId: sheet.assetId,
-                assetFileId: assetFile.id,
-                projectRelativePath:
-                  assetFile.projectRelativePath as ProjectRelativePath,
-                title: locationAzimuthViewLabel(viewId),
-                alt: locationAzimuthViewLabel(viewId),
-              },
-            ]
-          : [],
-      }),
-    };
-  });
-}
-
-
-
-export function requireLocationAzimuthDegrees(value: number): 0 | 90 | 180 | 270 {
-  if (value === 0 || value === 90 || value === 180 || value === 270) {
-    return value;
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA403',
-    `Unsupported location environment sheet azimuth: ${value}.`,
-    { suggestion: 'Regenerate the location environment sheet views.' }
-  );
-}
-
-
-
-export function locationAzimuthViewId(
-  azimuthDegrees: 0 | 90 | 180 | 270
-): LocationAzimuthViewId {
-  if (azimuthDegrees === 90) {
-    return 'right';
-  }
-  if (azimuthDegrees === 180) {
-    return 'back';
-  }
-  if (azimuthDegrees === 270) {
-    return 'left';
-  }
-  return 'front';
-}
-
-
-
-export function locationAzimuthViewLabel(viewId: LocationAzimuthViewId): string {
-  if (viewId === 'right') {
-    return 'Right';
-  }
-  if (viewId === 'back') {
-    return 'Back';
-  }
-  if (viewId === 'left') {
-    return 'Left';
-  }
-  return 'Front';
-}
 
 
 

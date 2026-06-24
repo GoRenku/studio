@@ -148,17 +148,10 @@ describe('assets Hono route', () => {
       files: [
         {
           ...makeAsset('asset_location_reference').files[0]!,
-          id: 'asset_file_location_composite',
-          role: 'composite',
+          id: 'asset_file_location_primary',
+          role: 'primary',
           projectRelativePath:
-            'locations/gate/environment-sheets/gate/composite.png' as Asset['files'][number]['projectRelativePath'],
-        },
-        {
-          ...makeAsset('asset_location_reference').files[0]!,
-          id: 'asset_file_location_view_front',
-          role: 'view_front',
-          projectRelativePath:
-            'locations/gate/environment-sheets/gate/front.png' as Asset['files'][number]['projectRelativePath'],
+            'locations/gate/environment-sheets/gate/sheet.png' as Asset['files'][number]['projectRelativePath'],
         },
       ],
     };
@@ -199,9 +192,9 @@ describe('assets Hono route', () => {
             });
             return {
               asset: locationAsset,
-              file: locationAsset.files[1]!,
+              file: locationAsset.files[0]!,
               absolutePath:
-                '/tmp/renku/constantinople/locations/gate/environment-sheets/gate/front.png',
+                '/tmp/renku/constantinople/locations/gate/environment-sheets/gate/sheet.png',
             };
           },
         },
@@ -227,7 +220,7 @@ describe('assets Hono route', () => {
       { method: 'DELETE' }
     );
     const file = await app.request(
-      '/constantinople/locations/location_gate/assets/asset_location_reference/files/asset_file_location_view_front'
+      '/constantinople/locations/location_gate/assets/asset_location_reference/files/asset_file_location_primary'
     );
 
     expect(listed.status).toBe(200);
@@ -237,10 +230,7 @@ describe('assets Hono route', () => {
           type: 'location_environment_sheet',
           role: 'environment_sheet',
           target: { kind: 'location', locationId: 'location_gate' },
-          files: [
-            { role: 'composite' },
-            { role: 'view_front' },
-          ],
+          files: [{ role: 'primary' }],
         },
       ],
     });

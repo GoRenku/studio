@@ -21,6 +21,10 @@ import {
   readScreenplaySceneFromSession,
 } from '../../database/access/screenplay-resource.js';
 import {
+  listAssetRelationshipPage,
+  MAX_RESOURCE_PAGE_LIMIT,
+} from '../../database/access/asset-relationships/index.js';
+import {
   ProjectDataError,
 } from '../../project-data-error.js';
 import {
@@ -48,7 +52,7 @@ import type {
   ShotVideoRoute,
 } from '@gorenku/studio-engines';
 import {
-  buildShotVideoTakeContext,
+  buildContextFromPrepared,
 } from './context.js';
 import {
   ShotVideoTakeDependencyRequest,
@@ -86,7 +90,11 @@ import {
 } from './reference-selection.js';
 import {
   requireScreenplayDocument,
+  withShotProjectSession,
 } from './project-session.js';
+import {
+  prepareSceneShotVideoTakeInSession,
+} from './take-context.js';
 
 
 
@@ -120,6 +128,7 @@ export async function buildShotVideoTakeDependencyInventory(input: {
   );
   const requiredSlots = [
     ...shotVideoTakeDependencySlotsForContext({
+      session: input.session,
       context: input.context,
       inputModeId: input.inputModeId,
       route: input.route,
@@ -211,9 +220,10 @@ export async function buildShotVideoTakeDependencyInventory(input: {
     },
     declareDependencies: async ({ purpose }) =>
       isShotInputPurpose(purpose)
-        ? shotVideoTakeReferenceDependencySlotsForContext(input.context).filter((slot) =>
-            referenceDependencySlotIncluded(input.context, slot)
-          )
+        ? shotVideoTakeReferenceDependencySlotsForContext({
+            session: input.session,
+            context: input.context,
+          }).filter((slot) => referenceDependencySlotIncluded(input.context, slot))
         : [],
     estimateRoot: async (): Promise<MediaGenerationDependencyRootEstimate> => {
       const finalPricing = await estimateFinalPlanLine({
@@ -279,6 +289,7 @@ function validateSelectedAudioReferencesSupportedByRoute(input: {
 
 
 export function shotVideoTakeDependencySlotsForContext(input: {
+  session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
   inputModeId: ShotVideoTakeInputModeId;
   route: ShotVideoRoute;
@@ -310,6 +321,12 @@ export function shotVideoTakeDependencySlotsForContext(input: {
         id: mediaInput.subjectId || mediaInput.assetId,
         title: mediaInput.title,
       })),
+    referencedLocationSheetAssetIds:
+      input.context.take.state.referenceSelections.referencedLocationSheetAssetIds,
+    availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
+      session: input.session,
+      locations: input.context.referencedLocations,
+    }),
     requestedInputs: input.context.take.state.production.requestedInputs,
     requiresMultiShotStoryboardSheet: input.context.shotGroupMode === 'multi-shot',
   });
@@ -322,28 +339,38 @@ export function shotVideoTakeDependencySlotsForContext(input: {
 
 
 export function shotVideoTakeReferenceDependencySlotsForContext(
-  context: ShotVideoTakeProductionContext
+  input: {
+    session: DatabaseSession;
+    context: ShotVideoTakeProductionContext;
+  }
 ): MediaGenerationDependencySlot[] {
   return declareShotVideoTakeDependencySlots({
-    target: context.target,
+    target: input.context.target,
     inputModeId: 'text-only',
-    selectedCast: context.referencedCast.map((castMember) => ({
+    selectedCast: input.context.referencedCast.map((castMember) => ({
       id: castMember.id,
       name: castMember.name,
       isVoiceOver: castMember.isVoiceOver,
     })),
-    selectedLocations: context.referencedLocations.map((location) => ({
+    selectedLocations: input.context.referencedLocations.map((location) => ({
       id: location.id,
       name: location.name,
     })),
-    activeLookbook: context.activeLookbook
+    activeLookbook: input.context.activeLookbook
       ? {
-          id: context.activeLookbook.id,
-          name: context.activeLookbook.name,
-          selectedSheetId: [...selectedLookbookSheetIdsForTakeState(context.take.state)][0] ?? null,
+          id: input.context.activeLookbook.id,
+          name: input.context.activeLookbook.name,
+          selectedSheetId:
+            [...selectedLookbookSheetIdsForTakeState(input.context.take.state)][0] ?? null,
         }
       : null,
     customReferenceInputs: [],
+    referencedLocationSheetAssetIds:
+      input.context.take.state.referenceSelections.referencedLocationSheetAssetIds,
+    availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
+      session: input.session,
+      locations: input.context.referencedLocations,
+    }),
     requestedInputs: [],
   });
 }
@@ -400,38 +427,75 @@ export async function declareShotVideoTakeDependencies(
       'shot.video-take dependencies require a shot video take output generation spec.'
     );
   }
-  const context = await buildShotVideoTakeContext({
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    takeId: input.target.takeId,
-  });
-  return declareShotVideoTakeDependencySlots({
-    target: context.target,
-    inputModeId: spec.inputModeId,
-    selectedCast: context.referencedCast.map((castMember) => ({
-      id: castMember.id,
-      name: castMember.name,
-      isVoiceOver: castMember.isVoiceOver,
-    })),
-    selectedLocations: context.referencedLocations.map((location) => ({
-      id: location.id,
-      name: location.name,
-    })),
-    activeLookbook: context.activeLookbook
-      ? {
-          id: context.activeLookbook.id,
-          name: context.activeLookbook.name,
-          selectedSheetId: [...selectedLookbookSheetIdsForTakeState(context.take.state)][0] ?? null,
-        }
-      : null,
-    customReferenceInputs: spec.inputs
-      .filter((generationInput) => generationInput.kind === 'reference-image')
-      .map((generationInput) => ({
-        id: generationInput.subjectId ?? generationInput.assetId,
-        title: generationInput.role || 'Reference image',
+  const target = input.target;
+  return withShotProjectSession(input, ({ session, projectFolder, project }) => {
+    const prepared = prepareSceneShotVideoTakeInSession({
+      session,
+      input: {
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        sceneId: target.sceneId,
+        takeId: target.takeId,
+      },
+    });
+    const context = buildContextFromPrepared({
+      session,
+      projectFolder,
+      project,
+      prepared,
+    });
+    return declareShotVideoTakeDependencySlots({
+      target: context.target,
+      inputModeId: spec.inputModeId,
+      selectedCast: context.referencedCast.map((castMember) => ({
+        id: castMember.id,
+        name: castMember.name,
+        isVoiceOver: castMember.isVoiceOver,
       })),
-    requiresMultiShotStoryboardSheet: context.shotGroupMode === 'multi-shot',
+      selectedLocations: context.referencedLocations.map((location) => ({
+        id: location.id,
+        name: location.name,
+      })),
+      activeLookbook: context.activeLookbook
+        ? {
+            id: context.activeLookbook.id,
+            name: context.activeLookbook.name,
+            selectedSheetId:
+              [...selectedLookbookSheetIdsForTakeState(context.take.state)][0] ?? null,
+          }
+        : null,
+      customReferenceInputs: spec.inputs
+        .filter((generationInput) => generationInput.kind === 'reference-image')
+        .map((generationInput) => ({
+          id: generationInput.subjectId ?? generationInput.assetId,
+          title: generationInput.role || 'Reference image',
+        })),
+      referencedLocationSheetAssetIds:
+        context.take.state.referenceSelections.referencedLocationSheetAssetIds,
+      availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
+        session,
+        locations: context.referencedLocations,
+      }),
+      requiresMultiShotStoryboardSheet: context.shotGroupMode === 'multi-shot',
+    });
   });
+}
+
+function availableLocationSheetAssetIdsByLocation(input: {
+  session: DatabaseSession;
+  locations: Array<{ id: string }>;
+}): Record<string, string[]> {
+  return Object.fromEntries(
+    input.locations.map((location) => [
+      location.id,
+      listAssetRelationshipPage(input.session, {
+        target: { kind: 'location', locationId: location.id },
+        role: 'environment_sheet',
+        mediaKind: 'image',
+        limit: MAX_RESOURCE_PAGE_LIMIT,
+      }).items.map((asset) => asset.assetId),
+    ])
+  );
 }
 
 

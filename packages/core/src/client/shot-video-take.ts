@@ -2,7 +2,7 @@ import type { GenerationEstimate } from '@gorenku/studio-engines';
 import type { Asset } from './assets.js';
 import type { ProjectRelativePath } from './project.js';
 import type { SceneSetting } from './screenplay.js';
-import type { SceneShot, LocationAzimuthViewId, ShotVideoTakePromptDraft, ShotVideoTakeDependencyKind, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, SceneShotVideoTakeProductionState, ShotSizeId, SubjectFramingId, CameraAngleId, ShotLensSpecs, ShotMovementId, MoveDirectionId, MoveTrackId, RigId } from './scene-shot-list.js';
+import type { SceneShot, ShotVideoTakePromptDraft, ShotVideoTakeDependencyKind, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, SceneShotVideoTakeProductionState, ShotSizeId, SubjectFramingId, CameraAngleId, ShotLensSpecs, ShotMovementId, MoveDirectionId, MoveTrackId, RigId } from './scene-shot-list.js';
 import type { MediaGenerationDependencyKind, MediaGenerationDependencyInventory, MediaGenerationDependencyPricing, MediaGenerationPlanLine } from './media-generation-dependency.js';
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
 import type { SceneShotVideoTakeTarget } from './media-generation-target.js';
@@ -166,8 +166,7 @@ export interface SceneShotVideoTakeShotDesign {
   };
   location?: {
     locationId?: string;
-    environmentSheetAssetId?: string;
-    viewIds?: LocationAzimuthViewId[];
+    environmentSheetAssetIds?: string[];
   };
   lookbook?: {
     lookbookId?: string;
@@ -188,8 +187,7 @@ export interface SceneShotVideoTakeShotDesign {
 export interface SceneShotVideoTakeReferenceSelections {
   dependencyInclusions: Record<string, 'include' | 'exclude'>;
   selectedCharacterSheetAssetIds: Record<string, string>;
-  selectedLocationSheetAssetIds: Record<string, string>;
-  selectedLocationViewIds: Record<string, LocationAzimuthViewId[]>;
+  referencedLocationSheetAssetIds: Record<string, string[]>;
   selectedLookbookSheetIds: string[];
   selectedDialogueAudioTakeIds: Record<string, string>;
 }
@@ -623,9 +621,7 @@ export interface ShotVideoTakeLocationReferenceGroup {
   name: string;
   selectedForShot: boolean;
   defaultSelectedForShot: boolean;
-  selectedEnvironmentSheetAssetId: string | null;
-  defaultEnvironmentSheetAssetId: string | null;
-  selectedViewIds: LocationAzimuthViewId[];
+  referencedEnvironmentSheetAssetIds: string[];
   environmentSheets: ShotVideoTakeEnvironmentSheetReferenceChoice[];
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
@@ -635,17 +631,8 @@ export interface ShotVideoTakeEnvironmentSheetReferenceChoice {
   locationId: string;
   assetId: string | null;
   title: string;
-  selected: boolean;
-  defaultSelected: boolean;
-  card: ShotVideoTakeReferenceCardPlan;
-  views: ShotVideoTakeLocationViewReferenceChoice[];
-}
-
-export interface ShotVideoTakeLocationViewReferenceChoice {
-  id: string;
-  viewId: LocationAzimuthViewId;
-  label: string;
-  selected: boolean;
+  description: string | null;
+  referenced: boolean;
   card: ShotVideoTakeReferenceCardPlan;
 }
 

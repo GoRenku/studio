@@ -18,6 +18,8 @@ export interface ShotVideoTakeDependencySlotInput {
   selectedLocations: Array<{ id: string; name: string }>;
   activeLookbook: { id: string; name: string; selectedSheetId?: string | null } | null;
   customReferenceInputs: Array<{ id: string; title: string }>;
+  referencedLocationSheetAssetIds: Record<string, string[]>;
+  availableLocationSheetAssetIds?: Record<string, string[]>;
   requestedInputs?: ShotVideoTakeRequestedInput[];
   requiresMultiShotStoryboardSheet?: boolean;
 }
@@ -137,14 +139,33 @@ function shotVideoReferenceContextSlots(
           reason: contextReason,
         })
       ),
-    ...input.selectedLocations.map((location) =>
-      locationEnvironmentSheetDependencySlot({
-        locationId: location.id,
-        locationName: location.name,
-        required: false,
-        reason: contextReason,
-      })
-    ),
+    ...input.selectedLocations.flatMap((location) => {
+      const referencedAssetIds =
+        input.referencedLocationSheetAssetIds[location.id] ?? [];
+      if (referencedAssetIds.length > 0) {
+        return referencedAssetIds.map((assetId) =>
+          locationEnvironmentSheetDependencySlot({
+            locationId: location.id,
+            locationName: location.name,
+            assetId,
+            required: false,
+            reason: contextReason,
+          })
+        );
+      }
+      const availableAssetIds =
+        input.availableLocationSheetAssetIds?.[location.id] ?? [];
+      return availableAssetIds.length > 0
+        ? []
+        : [
+            locationEnvironmentSheetDependencySlot({
+              locationId: location.id,
+              locationName: location.name,
+              required: false,
+              reason: contextReason,
+            }),
+          ];
+    }),
   ];
 }
 

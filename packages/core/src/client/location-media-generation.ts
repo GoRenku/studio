@@ -6,9 +6,10 @@ import type { ProjectRelativePath } from './project.js';
 import type { SceneSetting } from './screenplay.js';
 import type { Lookbook, LookbookImage } from './visual-language.js';
 import type { LocationMediaGenerationTarget } from './media-generation-target.js';
-import { LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE } from './media-generation-purpose.js';
-
-export type LocationEnvironmentViewFrame = '16:9';
+import {
+  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOCATION_HERO_GENERATION_PURPOSE,
+} from './media-generation-purpose.js';
 
 export type LocationEnvironmentSheetFrame = '4:3';
 
@@ -16,17 +17,21 @@ export type LocationEnvironmentSheetDetail = 'draft' | 'standard' | 'high';
 
 export type LocationEnvironmentSheetOutputFormat = 'png' | 'jpeg' | 'webp';
 
-export type LocationEnvironmentSheetFileRole =
-  | 'composite'
-  | 'view_front'
-  | 'view_right'
-  | 'view_back'
-  | 'view_left';
+export type LocationHeroFrame = '16:9';
+
+export type LocationHeroDetail = 'draft' | 'standard' | 'high';
+
+export type LocationHeroOutputFormat = 'png' | 'jpeg' | 'webp';
 
 export type LocationEnvironmentSheetModelChoice =
   | 'fal-ai/openai/gpt-image-2'
   | 'fal-ai/nano-banana-2'
   | 'fal-ai/xai/grok-imagine-image';
+
+export type LocationHeroModelChoice =
+  | 'fal-ai/openai/gpt-image-2/edit'
+  | 'fal-ai/nano-banana-2/edit'
+  | 'fal-ai/xai/grok-imagine-image/edit';
 
 export interface LocationGenerationProjectContext {
   id?: string;
@@ -99,19 +104,9 @@ export interface LocationEnvironmentSheetGenerationContext {
     takeCount: 1;
     seed: null;
     sheetFrame: '4:3';
-    viewFrame: '16:9';
     detail: 'standard';
     outputFormat: 'png';
   };
-  azimuths: Array<{
-    azimuthDegrees: 0 | 90 | 180 | 270;
-    direction: 'front' | 'right' | 'back' | 'left';
-    fileRole:
-      | 'view_front'
-      | 'view_right'
-      | 'view_back'
-      | 'view_left';
-  }>;
   historicalGuardrailInputs: {
     timePeriod: string | null;
     historicalBasis: string[];
@@ -130,10 +125,10 @@ export interface LocationEnvironmentSheetGenerationSpec {
   takeCount?: 1;
   seed?: number | null;
   sheetFrame?: LocationEnvironmentSheetFrame;
-  viewFrame?: LocationEnvironmentViewFrame;
   detail?: LocationEnvironmentSheetDetail;
   outputFormat?: LocationEnvironmentSheetOutputFormat;
   title?: string;
+  description: string;
 }
 
 export interface LocationEnvironmentSheetModelChoiceReport {
@@ -148,7 +143,6 @@ export interface LocationEnvironmentSheetModelChoiceReport {
     default: 1;
   };
   supportedSheetFrames: LocationEnvironmentSheetFrame[];
-  supportedViewFrames: LocationEnvironmentViewFrame[];
   supportedDetails: LocationEnvironmentSheetDetail[];
   supportedOutputFormats: LocationEnvironmentSheetOutputFormat[];
 }
@@ -172,7 +166,85 @@ export interface LocationEnvironmentSheetMediaImportReport {
   target: LocationMediaGenerationTarget;
   imported: Asset;
   files: Array<{
-    role: LocationEnvironmentSheetFileRole;
+    role: 'primary';
+    projectRelativePath: ProjectRelativePath;
+  }>;
+  resourceKeys: string[];
+}
+
+export interface LocationHeroGenerationContext {
+  purpose: typeof LOCATION_HERO_GENERATION_PURPOSE;
+  target: LocationMediaGenerationTarget;
+  project: LocationGenerationProjectContext;
+  screenplay: LocationGenerationScreenplayContext | null;
+  location: Location;
+  activeLocationDesign: LocationDesignSummary | null;
+  activeLookbook: LocationGenerationLookbookContext;
+  environmentSheetTakes: Asset[];
+  sourceLocationSheetAsset: Asset | null;
+  imageFiles: LocationGenerationAssetFileReference[];
+  defaults: {
+    takeCount: 1;
+    seed: null;
+    heroFrame: '16:9';
+    detail: 'standard';
+    outputFormat: 'png';
+  };
+  resourceKeys: string[];
+}
+
+export interface LocationHeroGenerationSpec {
+  purpose: typeof LOCATION_HERO_GENERATION_PURPOSE;
+  target: LocationMediaGenerationTarget;
+  sourceLocationSheetAssetId: string;
+  modelChoice: LocationHeroModelChoice;
+  prompt: string;
+  takeCount?: 1;
+  seed?: number | null;
+  heroFrame?: LocationHeroFrame;
+  detail?: LocationHeroDetail;
+  outputFormat?: LocationHeroOutputFormat;
+  title?: string;
+  description: string;
+}
+
+export interface LocationHeroModelChoiceReport {
+  modelChoice: LocationHeroModelChoice;
+  label: string;
+  available: boolean;
+  unavailableReason?: string;
+  supportsSeed: boolean;
+  takeCount: {
+    min: 1;
+    max: 1;
+    default: 1;
+  };
+  supportedHeroFrames: LocationHeroFrame[];
+  supportedDetails: LocationHeroDetail[];
+  supportedOutputFormats: LocationHeroOutputFormat[];
+}
+
+export interface LocationHeroModelListReport {
+  purpose: typeof LOCATION_HERO_GENERATION_PURPOSE;
+  target: LocationMediaGenerationTarget;
+  models: LocationHeroModelChoiceReport[];
+}
+
+export interface LocationHeroMediaImportReport {
+  valid: true;
+  warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  project: {
+    name: string;
+    id?: string;
+    projectFolder?: string;
+  };
+  changes?: Array<{ type: string; [key: string]: string }>;
+  purpose: typeof LOCATION_HERO_GENERATION_PURPOSE;
+  target: LocationMediaGenerationTarget;
+  imported: Asset;
+  sourceLocationSheetAssetId: string;
+  files: Array<{
+    role: 'primary';
     projectRelativePath: ProjectRelativePath;
   }>;
   resourceKeys: string[];

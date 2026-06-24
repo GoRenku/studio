@@ -5,25 +5,8 @@ import { locationAssetFileUrl } from '@/services/studio-project-assets-api';
 
 export const LOCATION_ENVIRONMENT_SHEET_ROLE = 'environment_sheet';
 export const LOCATION_ENVIRONMENT_SHEET_TYPE = 'location_environment_sheet';
-
-export const LOCATION_ENVIRONMENT_SHEET_FILE_ROLES = [
-  'composite',
-  'view_front',
-  'view_right',
-  'view_back',
-  'view_left',
-] as const;
-
-type LocationEnvironmentSheetFileRole =
-  (typeof LOCATION_ENVIRONMENT_SHEET_FILE_ROLES)[number];
-
-const PREVIEW_FILE_LABELS: Record<LocationEnvironmentSheetFileRole, string> = {
-  composite: 'Location sheet',
-  view_front: 'Front view',
-  view_right: 'Right view',
-  view_back: 'Back view',
-  view_left: 'Left view',
-};
+export const LOCATION_HERO_ROLE = 'hero';
+export const LOCATION_HERO_TYPE = 'location_hero';
 
 export function locationEnvironmentSheetAssets(
   assets: StudioAssetResponse[]
@@ -33,39 +16,37 @@ export function locationEnvironmentSheetAssets(
       (asset) =>
         asset.type === LOCATION_ENVIRONMENT_SHEET_TYPE &&
         asset.role === LOCATION_ENVIRONMENT_SHEET_ROLE &&
-        Boolean(locationEnvironmentSheetFile(asset, 'composite'))
+        Boolean(primaryImageFile(asset))
     )
   );
 }
 
-export function selectedLocationEnvironmentSheetAsset(
+export function locationHeroAssets(
   assets: StudioAssetResponse[]
-): StudioAssetResponse | null {
-  return (
-    locationEnvironmentSheetAssets(assets).find(
-      (asset) => asset.selection.kind === 'select'
-    ) ?? null
+): StudioAssetResponse[] {
+  return sortLocationAssets(
+    assets.filter(
+      (asset) =>
+        asset.type === LOCATION_HERO_TYPE &&
+        asset.role === LOCATION_HERO_ROLE &&
+        Boolean(primaryImageFile(asset))
+    )
   );
 }
 
-export function preferredLocationEnvironmentSheetAsset(
+export function currentLocationHeroAsset(
   assets: StudioAssetResponse[]
 ): StudioAssetResponse | null {
-  const sheets = locationEnvironmentSheetAssets(assets);
+  const heroes = locationHeroAssets(assets);
   return (
-    sheets.find((asset) => asset.selection.kind === 'select') ??
-    sheets[0] ??
-    null
+    heroes.find((asset) => asset.selection.kind === 'select') ?? null
   );
 }
 
-export function locationEnvironmentSheetFile(
-  asset: StudioAssetResponse,
-  role: LocationEnvironmentSheetFileRole
-) {
+export function primaryImageFile(asset: StudioAssetResponse) {
   return (
     asset.files.find(
-      (file) => file.role === role && file.mediaKind === 'image'
+      (file) => file.role === 'primary' && file.mediaKind === 'image'
     ) ?? null
   );
 }
@@ -75,7 +56,7 @@ export function locationEnvironmentSheetCompositeUrl(
   locationId: string,
   asset: StudioAssetResponse
 ): string | null {
-  const file = locationEnvironmentSheetFile(asset, 'composite');
+  const file = primaryImageFile(asset);
   return file
     ? locationAssetFileUrl(projectName, locationId, asset.assetId, file.id)
     : null;
@@ -85,7 +66,7 @@ export function locationEnvironmentSheetAspectRatio(
   asset: StudioAssetResponse,
   fallbackAspectRatio: number
 ): number {
-  const file = locationEnvironmentSheetFile(asset, 'composite');
+  const file = primaryImageFile(asset);
   return imageAspectRatioFromDimensions(
     file?.width,
     file?.height,
@@ -98,18 +79,15 @@ export function locationEnvironmentSheetPreviewImages(
   locationId: string,
   asset: StudioAssetResponse
 ): PreviewImage[] {
-  return LOCATION_ENVIRONMENT_SHEET_FILE_ROLES.flatMap((role) => {
-    const file = locationEnvironmentSheetFile(asset, role);
-    if (!file) return [];
-    return {
+  const file = primaryImageFile(asset);
+  if (!file) return [];
+  return [
+    {
       src: locationAssetFileUrl(projectName, locationId, asset.assetId, file.id),
-      alt: `${readableLocationSheetTitle(asset)} ${PREVIEW_FILE_LABELS[role]}`,
-      title:
-        role === 'composite'
-          ? readableLocationSheetTitle(asset)
-          : PREVIEW_FILE_LABELS[role],
-    };
-  });
+      alt: readableLocationSheetTitle(asset),
+      title: readableLocationSheetTitle(asset),
+    },
+  ];
 }
 
 export function readableLocationSheetTitle(asset: StudioAssetResponse): string {

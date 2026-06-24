@@ -3,7 +3,7 @@ import type { MediaGenerationPurpose } from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
 import type { LookbookImageGenerationSpec, LookbookImageModelChoice, LookbookSheetGenerationSpec, LookbookSheetModelChoice } from './lookbook-media-generation.js';
 import type { CastCharacterSheetGenerationSpec, CastCharacterSheetModelChoice, CastProfileGenerationSpec, CastProfileModelChoice, CastVoiceSampleGenerationSpec, CastVoiceSampleModelChoice } from './cast-media-generation.js';
-import type { LocationEnvironmentSheetGenerationSpec, LocationEnvironmentSheetModelChoice } from './location-media-generation.js';
+import type { LocationEnvironmentSheetGenerationSpec, LocationEnvironmentSheetModelChoice, LocationHeroGenerationSpec, LocationHeroModelChoice } from './location-media-generation.js';
 import type { SceneDialogueAudioGenerationSpec, SceneDialogueAudioModelChoice } from './scene-audio-generation.js';
 import type { SceneStoryboardSheetGenerationSpec, SceneStoryboardSheetModelChoice } from './scene-storyboard-media-generation.js';
 import type { ShotVideoTakeOutputGenerationSpec, ShotVideoTakeInputGenerationSpec, ShotVideoTakeInputModelChoice } from './shot-video-take.js';
@@ -17,6 +17,7 @@ export type MediaGenerationSpec =
   | CastVoiceSampleGenerationSpec
   | SceneDialogueAudioGenerationSpec
   | LocationEnvironmentSheetGenerationSpec
+  | LocationHeroGenerationSpec
   | SceneStoryboardSheetGenerationSpec
   | ShotVideoTakeInputGenerationSpec
   | ShotVideoTakeOutputGenerationSpec;
@@ -33,6 +34,7 @@ export interface MediaGenerationSpecRecord {
     | CastVoiceSampleModelChoice
     | SceneDialogueAudioModelChoice
     | LocationEnvironmentSheetModelChoice
+    | LocationHeroModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice
     | ShotVideoTakeModelChoice;
@@ -55,6 +57,7 @@ export interface MediaGenerationRun {
     | CastVoiceSampleModelChoice
     | SceneDialogueAudioModelChoice
     | LocationEnvironmentSheetModelChoice
+    | LocationHeroModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice
     | ShotVideoTakeModelChoice;

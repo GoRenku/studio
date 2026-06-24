@@ -298,12 +298,6 @@ export type FocusId =
   | 'rack-focus'
   | 'tilt-shift';
 
-export type LocationAzimuthViewId =
-  | 'front'
-  | 'right'
-  | 'back'
-  | 'left';
-
 export interface ShotMovementSpecs {
   movement?: ShotMovementId;
   secondary?: ShotMovementId;
