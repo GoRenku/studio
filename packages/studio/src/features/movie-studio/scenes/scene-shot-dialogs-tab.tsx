@@ -8,6 +8,7 @@ import type {
 import type {
   SceneShotListResourceResponse,
 } from '@/services/studio-project-contracts';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
   deleteSceneDialogueAudioTake,
   readSceneDialogueAudioContext,
@@ -38,8 +39,10 @@ import {
   formatSceneDialogueAudioDuration,
   sceneDialogueAudioTakeLabels,
 } from './scene-dialogue-audio-take-format';
+import { idleSaveNotification } from '../detail-save-notification';
 import { useSceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
+import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
 
 interface SceneShotDialogsTabProps {
   projectName: string;
@@ -47,6 +50,7 @@ interface SceneShotDialogsTabProps {
   castMemberImages: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
   onPlanRefresh?: () => Promise<void>;
+  onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
 export function SceneShotDialogsTab({
@@ -55,10 +59,14 @@ export function SceneShotDialogsTab({
   castMemberImages,
   productionPlan,
   onPlanRefresh,
+  onSaveNotificationChange,
 }: SceneShotDialogsTabProps) {
   const [dialogueAudioContext, setDialogueAudioContext] =
     useState<SceneDialogueAudioContextWithUrls | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const mutationStatus = useTakeEditorMutationStatus({
+    failureMessage: 'Dialogue choices could not be saved.',
+  });
   const player = useSceneDialogueAudioPlayer();
   const choices = useMemo(
     () => productionPlan?.references.dialogueAudio ?? [],
@@ -93,6 +101,10 @@ export function SceneShotDialogsTab({
   }, [projectName, sceneId]);
 
   useEffect(() => loadDialogueAudio(), [loadDialogueAudio, dialogueAudioReloadKey]);
+  useEffect(() => {
+    onSaveNotificationChange?.(mutationStatus.status);
+    return () => onSaveNotificationChange?.(idleSaveNotification);
+  }, [mutationStatus.status, onSaveNotificationChange]);
 
   const updateReferenceInclusion = async (
     dependencyId: string,
@@ -102,18 +114,20 @@ export function SceneShotDialogsTab({
     if (!take) {
       return;
     }
-    const result: ShotVideoTakeProductionMutation =
-      await updateShotGroupReferenceInclusion(
-        projectName,
-        sceneId,
-        take.takeId,
-        {
-          dependencyId,
-          inclusion,
-        }
-      );
-    void result;
-    await onPlanRefresh?.();
+    await mutationStatus.runTakeEditorMutation(async () => {
+      const result: ShotVideoTakeProductionMutation =
+        await updateShotGroupReferenceInclusion(
+          projectName,
+          sceneId,
+          take.takeId,
+          {
+            dependencyId,
+            inclusion,
+          }
+        );
+      void result;
+      await onPlanRefresh?.();
+    });
   };
 
   const pickTake = async (dialogueId: string, takeId: string) => {
@@ -123,18 +137,20 @@ export function SceneShotDialogsTab({
     }
     setActionBusy(true);
     try {
-      await updateTakeDialogueAudioSelection(
-        projectName,
-        sceneId,
-        take.takeId,
-        { dialogueId, takeId }
-      );
-      const context = await readSceneDialogueAudioContext(
-        projectName,
-        sceneId
-      );
-      setDialogueAudioContext(context);
-      await onPlanRefresh?.();
+      await mutationStatus.runTakeEditorMutation(async () => {
+        await updateTakeDialogueAudioSelection(
+          projectName,
+          sceneId,
+          take.takeId,
+          { dialogueId, takeId }
+        );
+        const context = await readSceneDialogueAudioContext(
+          projectName,
+          sceneId
+        );
+        setDialogueAudioContext(context);
+        await onPlanRefresh?.();
+      });
     } finally {
       setActionBusy(false);
     }

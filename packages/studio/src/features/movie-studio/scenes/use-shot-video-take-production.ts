@@ -162,6 +162,7 @@ export function useShotVideoTakeProduction(
       return save(production);
     },
     failureMessage: 'AI Production settings could not be saved.',
+    flushOnUnmount: true,
     isReady: () =>
       hasUserEditedRef.current &&
       take !== null &&

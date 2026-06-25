@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type {
   ShotVideoTakeGeneralReferenceChoice,
   ShotVideoTakeProductionPlanReport,
   ShotVideoTakeReferenceImagePreview,
 } from '@gorenku/studio-core/client';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
+import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
   sceneAssetFileUrl,
   shotVideoTakeInputFileUrl,
@@ -19,6 +20,7 @@ import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
+import { idleSaveNotification } from '../detail-save-notification';
 import { lookbookSheetFileUrl } from '../visual-language/visual-language-image-urls';
 import { SceneShotCastReferenceCard } from './scene-shot-cast-reference-card';
 import { previewImageUrl } from './scene-shot-reference-card-images';
@@ -30,12 +32,14 @@ import {
   SHOT_REFERENCE_LOCATION_CARD_MIN_WIDTH,
 } from './scene-shot-reference-layout';
 import { SceneShotReferenceSection } from './scene-shot-reference-section';
+import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
 
 interface SceneShotReferencesTabProps {
   projectName: string;
   sceneId: string;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
   onPlanRefresh?: () => Promise<void>;
+  onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
 export function SceneShotReferencesTab({
@@ -43,8 +47,12 @@ export function SceneShotReferencesTab({
   sceneId,
   productionPlan,
   onPlanRefresh,
+  onSaveNotificationChange,
 }: SceneShotReferencesTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
+  const mutationStatus = useTakeEditorMutationStatus({
+    failureMessage: 'References could not be saved.',
+  });
   const references = productionPlan?.references;
   const referenceIssues =
     productionPlan?.diagnostics.filter(isReferenceDiagnosticIssue) ?? [];
@@ -52,6 +60,11 @@ export function SceneShotReferencesTab({
   const refreshAfterMutation = async (_result: ShotVideoTakeProductionMutation) => {
     await onPlanRefresh?.();
   };
+  useEffect(() => {
+    onSaveNotificationChange?.(mutationStatus.status);
+    return () => onSaveNotificationChange?.(idleSaveNotification);
+  }, [mutationStatus.status, onSaveNotificationChange]);
+
   const updateReferenceInclusion = async (
     dependencyId: string,
     inclusion: 'include' | 'exclude' | null
@@ -60,8 +73,8 @@ export function SceneShotReferencesTab({
     if (!take) {
       return;
     }
-    const result =
-      await updateShotGroupReferenceInclusion(
+    await mutationStatus.runTakeEditorMutation(async () => {
+      const result = await updateShotGroupReferenceInclusion(
         projectName,
         sceneId,
         take.takeId,
@@ -70,7 +83,8 @@ export function SceneShotReferencesTab({
           inclusion,
         }
       );
-    await refreshAfterMutation(result);
+      await refreshAfterMutation(result);
+    });
   };
 
   return (
@@ -129,7 +143,10 @@ export function SceneShotReferencesTab({
                       if (!choice.card.dependencyId) {
                         return;
                       }
-                      await updateReferenceInclusion(choice.card.dependencyId, nextReferenceInclusion(choice.card));
+                      await updateReferenceInclusion(
+                        choice.card.dependencyId,
+                        nextReferenceInclusion(choice.card)
+                      );
                     }}
                   />
                 );
@@ -162,17 +179,19 @@ export function SceneShotReferencesTab({
                     if (!take) {
                       return;
                     }
-                    const sheetResult =
-                      await updateTakeCharacterSheetSelection(
-                        projectName,
-                        sceneId,
-                        take.takeId,
-                        {
-                          castMemberId,
-                          assetId,
-                        }
-                      );
-                    await refreshAfterMutation(sheetResult);
+                    await mutationStatus.runTakeEditorMutation(async () => {
+                      const sheetResult =
+                        await updateTakeCharacterSheetSelection(
+                          projectName,
+                          sceneId,
+                          take.takeId,
+                          {
+                            castMemberId,
+                            assetId,
+                          }
+                        );
+                      await refreshAfterMutation(sheetResult);
+                    });
                   }}
                 />
               ))}
@@ -211,13 +230,15 @@ export function SceneShotReferencesTab({
                             assetId,
                           ]),
                         ];
-                    const result = await updateTakeLocationSheetSelection(
-                      projectName,
-                      sceneId,
-                      take.takeId,
-                      { locationId, assetIds: nextAssetIds }
-                    );
-                    await refreshAfterMutation(result);
+                    await mutationStatus.runTakeEditorMutation(async () => {
+                      const result = await updateTakeLocationSheetSelection(
+                        projectName,
+                        sceneId,
+                        take.takeId,
+                        { locationId, assetIds: nextAssetIds }
+                      );
+                      await refreshAfterMutation(result);
+                    });
                   }}
                 />
               ))}

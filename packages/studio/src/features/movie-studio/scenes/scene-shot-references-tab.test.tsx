@@ -6,6 +6,7 @@ import type {
   SceneShotVideoTake,
   ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
+import { idleSaveNotification } from '../detail-save-notification';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 
 const mutationMocks = vi.hoisted(() => ({
@@ -198,6 +199,78 @@ describe('SceneShotReferencesTab', () => {
         }
       );
     });
+  });
+
+  it('reports reference save status around successful mutations', async () => {
+    const mutation = deferredMutation();
+    mutationMocks.updateShotGroupReferenceInclusion.mockReturnValueOnce(
+      mutation.promise
+    );
+    const onSaveNotificationChange = vi.fn();
+    render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        productionPlan={withTake(productionPlanWithReferenceImages())}
+        onPlanRefresh={vi.fn(async () => undefined)}
+        onSaveNotificationChange={onSaveNotificationChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Include Blade glint insert' }));
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledWith({
+        state: 'saving',
+        message: 'Saving',
+      });
+    });
+    expect(onSaveNotificationChange).not.toHaveBeenCalledWith({
+      state: 'saved',
+      message: 'Saved',
+    });
+
+    mutation.resolve();
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledWith({
+        state: 'saved',
+        message: 'Saved',
+      });
+    });
+  });
+
+  it('clears reference save status when unmounted during a mutation', async () => {
+    const mutation = deferredMutation();
+    mutationMocks.updateShotGroupReferenceInclusion.mockReturnValueOnce(
+      mutation.promise
+    );
+    const onSaveNotificationChange = vi.fn();
+    const { unmount } = render(
+      <SceneShotReferencesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        productionPlan={withTake(productionPlanWithReferenceImages())}
+        onPlanRefresh={vi.fn(async () => undefined)}
+        onSaveNotificationChange={onSaveNotificationChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Include Blade glint insert' }));
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledWith({
+        state: 'saving',
+        message: 'Saving',
+      });
+    });
+
+    unmount();
+
+    expect(onSaveNotificationChange).toHaveBeenLastCalledWith(
+      idleSaveNotification
+    );
+    mutation.resolve();
   });
 
   it('updates reference inclusion across the Shot Video Take for multi-shot plans', async () => {
@@ -437,6 +510,17 @@ describe('SceneShotReferencesTab', () => {
 function referenceHandlers() {
   return {
     onPlanRefresh: vi.fn(async () => undefined),
+  };
+}
+
+function deferredMutation() {
+  let resolve: (value: typeof SCENE_SHOT_LIST_RESOURCE) => void = () => {};
+  const promise = new Promise<typeof SCENE_SHOT_LIST_RESOURCE>((settle) => {
+    resolve = settle;
+  });
+  return {
+    promise,
+    resolve: () => resolve(SCENE_SHOT_LIST_RESOURCE),
   };
 }
 

@@ -6,6 +6,7 @@ import type {
   ScreenplayImageReferenceWithHttp,
   ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
+import { idleSaveNotification } from '../detail-save-notification';
 import { SceneShotDialogsTab } from './scene-shot-dialogs-tab';
 
 const serviceMocks = vi.hoisted(() => ({
@@ -14,6 +15,7 @@ const serviceMocks = vi.hoisted(() => ({
   deleteSceneDialogueAudioTake: vi.fn(),
   updateShotGroupReferenceInclusion: vi.fn(),
   updateShotReferenceInclusion: vi.fn(),
+  updateTakeDialogueAudioSelection: vi.fn(),
 }));
 
 vi.mock('@/services/studio-scene-dialogue-audio-api', () => ({
@@ -26,6 +28,8 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
   updateShotGroupReferenceInclusion:
     serviceMocks.updateShotGroupReferenceInclusion,
   updateShotReferenceInclusion: serviceMocks.updateShotReferenceInclusion,
+  updateTakeDialogueAudioSelection:
+    serviceMocks.updateTakeDialogueAudioSelection,
 }));
 
 class ResizeObserverStub {
@@ -301,6 +305,86 @@ describe('SceneShotDialogsTab', () => {
     });
     expect(serviceMocks.updateShotReferenceInclusion).not.toHaveBeenCalled();
   });
+
+  it('reports dialogue save status around successful mutations', async () => {
+    const mutation = deferredMutation();
+    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
+    serviceMocks.updateShotGroupReferenceInclusion.mockReturnValueOnce(
+      mutation.promise
+    );
+    const onSaveNotificationChange = vi.fn();
+    render(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        productionPlan={dialogueProductionPlan(1, ['shot_001', 'shot_002'])}
+        onPlanRefresh={vi.fn(async () => undefined)}
+        onSaveNotificationChange={onSaveNotificationChange}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', {
+      name: /Exclude Urban dialogue audio/,
+    }));
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledWith({
+        state: 'saving',
+        message: 'Saving',
+      });
+    });
+    expect(onSaveNotificationChange).not.toHaveBeenCalledWith({
+      state: 'saved',
+      message: 'Saved',
+    });
+
+    mutation.resolve();
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledWith({
+        state: 'saved',
+        message: 'Saved',
+      });
+    });
+  });
+
+  it('clears dialogue save status when unmounted during a mutation', async () => {
+    const mutation = deferredMutation();
+    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
+    serviceMocks.updateShotGroupReferenceInclusion.mockReturnValueOnce(
+      mutation.promise
+    );
+    const onSaveNotificationChange = vi.fn();
+    const { unmount } = render(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        productionPlan={dialogueProductionPlan(1, ['shot_001', 'shot_002'])}
+        onPlanRefresh={vi.fn(async () => undefined)}
+        onSaveNotificationChange={onSaveNotificationChange}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', {
+      name: /Exclude Urban dialogue audio/,
+    }));
+
+    await waitFor(() => {
+      expect(onSaveNotificationChange).toHaveBeenCalledWith({
+        state: 'saving',
+        message: 'Saving',
+      });
+    });
+
+    unmount();
+
+    expect(onSaveNotificationChange).toHaveBeenLastCalledWith(
+      idleSaveNotification
+    );
+    mutation.resolve();
+  });
 });
 
 function dialogueAudioContext() {
@@ -353,6 +437,17 @@ function profileImage(): ScreenplayImageReferenceWithHttp {
     width: 512,
     height: 512,
     url: '/profile.png',
+  };
+}
+
+function deferredMutation() {
+  let resolve: (value: unknown) => void = () => {};
+  const promise = new Promise<unknown>((settle) => {
+    resolve = settle;
+  });
+  return {
+    promise,
+    resolve: () => resolve({ resourceKeys: [] }),
   };
 }
 

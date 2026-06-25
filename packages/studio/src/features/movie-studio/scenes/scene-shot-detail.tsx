@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import type {
   SceneShot,
   SceneShotVideoTake,
@@ -9,13 +9,8 @@ import type {
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { SceneShotDetailTab } from '../movie-studio-selection';
-import {
-  chooseDetailSaveNotification,
-  idleSaveNotification,
-  idleSaveNotificationSlot,
-  saveNotificationStatusesEqual,
-  type DetailSaveNotificationSlot,
-} from '../detail-save-notification';
+import { idleSaveNotification } from '../detail-save-notification';
+import { useDetailSaveNotificationSlots } from '../detail-save-notification-slots';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -72,11 +67,10 @@ export function SceneShotDetail({
   onTakeChange,
   onSaveNotificationChange,
 }: SceneShotDetailProps) {
-  const saveNotificationSequenceRef = useRef(0);
-  const [shotDesignSaveNotification, setShotDesignSaveNotification] =
-    useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
-  const [productionSaveNotification, setProductionSaveNotification] =
-    useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
+  const {
+    saveNotification,
+    setDetailSaveNotificationSlot,
+  } = useDetailSaveNotificationSlots();
   const takeTag = useMemo(
     () =>
       take && take.shotIds.length > 1
@@ -91,39 +85,26 @@ export function SceneShotDetail({
   });
   const handleShotDesignSaveNotificationChange = useCallback(
     (status: SaveNotificationStatus) => {
-      setShotDesignSaveNotification((current) => {
-        if (saveNotificationStatusesEqual(current.status, status)) {
-          return current;
-        }
-        return {
-          status,
-          sequence: ++saveNotificationSequenceRef.current,
-        };
-      });
+      setDetailSaveNotificationSlot('shot-design', status);
     },
-    []
+    [setDetailSaveNotificationSlot]
+  );
+  const handleDialogsSaveNotificationChange = useCallback(
+    (status: SaveNotificationStatus) => {
+      setDetailSaveNotificationSlot('dialogs', status);
+    },
+    [setDetailSaveNotificationSlot]
+  );
+  const handleReferencesSaveNotificationChange = useCallback(
+    (status: SaveNotificationStatus) => {
+      setDetailSaveNotificationSlot('references', status);
+    },
+    [setDetailSaveNotificationSlot]
   );
 
   useEffect(() => {
-    setProductionSaveNotification((current) => {
-      if (saveNotificationStatusesEqual(current.status, production.autosave)) {
-        return current;
-      }
-      return {
-        status: production.autosave,
-        sequence: ++saveNotificationSequenceRef.current,
-      };
-    });
-  }, [production.autosave]);
-
-  const saveNotification = useMemo(
-    () =>
-      chooseDetailSaveNotification([
-        shotDesignSaveNotification,
-        productionSaveNotification,
-      ]),
-    [productionSaveNotification, shotDesignSaveNotification]
-  );
+    setDetailSaveNotificationSlot('ai-production', production.autosave);
+  }, [production.autosave, setDetailSaveNotificationSlot]);
 
   useEffect(() => {
     onSaveNotificationChange?.(saveNotification);
@@ -197,6 +178,7 @@ export function SceneShotDetail({
                     castMemberImages={castMemberImages}
                     productionPlan={production.productionPlan}
                     onPlanRefresh={production.refreshProductionPlan}
+                    onSaveNotificationChange={handleDialogsSaveNotificationChange}
                   />
                 </LineTabsContent>
                 <LineTabsContent value='references'>
@@ -205,6 +187,7 @@ export function SceneShotDetail({
                     sceneId={sceneId}
                     productionPlan={production.productionPlan}
                     onPlanRefresh={production.refreshProductionPlan}
+                    onSaveNotificationChange={handleReferencesSaveNotificationChange}
                   />
                 </LineTabsContent>
                 <LineTabsContent value='ai-production' className='h-full'>
