@@ -55,25 +55,6 @@ export async function createMinimalMovieProject(input: {
     projectName: input.projectName,
     homeDir: input.runtime.homeDir,
   });
-  await projectData.updateProjectInformation({
-    projectName: input.projectName,
-    homeDir: input.runtime.homeDir,
-    information: {
-      title: input.title,
-      aspectRatio: '16:9',
-      logline: 'A deterministic browser E2E project.',
-      summary: 'Created through core-owned project commands for Playwright tests.',
-      languages: [
-        {
-          localeTag: 'en-US',
-          displayName: 'English',
-          isBase: true,
-          supportsAudio: true,
-          supportsSubtitles: true,
-        },
-      ],
-    },
-  });
 
   return {
     projectName: input.projectName,

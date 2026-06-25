@@ -7,7 +7,7 @@ import {
   createDeterministicIdGenerator,
   createProjectDataService,
 } from '../index.js';
-import { insertProjectLocaleRecords } from '../database/access/project-locales.js';
+import { replaceProjectLocaleRecords } from '../database/access/project-locales.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
 
 type ProjectDataService = ReturnType<typeof createProjectDataService>;
@@ -218,7 +218,7 @@ function seedProjectInformationTables(projectFolder: string): void {
   try {
     session.db.transaction((tx) => {
       const transactionSession = { ...session, db: tx };
-      insertProjectLocaleRecords(transactionSession, [
+      replaceProjectLocaleRecords(transactionSession, [
         {
           id: 'locale_test0001',
           localeTag: 'en-US',

@@ -24,6 +24,10 @@ tests isolated from the normal Studio dev server on `5173`. Playwright owns the
 E2E server process and shuts it down after the run. If `5174` is already in use,
 the run fails instead of reusing an existing server.
 
+The E2E scripts build `packages/core` before Playwright starts because the
+browser fixtures import `@gorenku/studio-core/server` through the package export,
+which resolves to `packages/core/dist`.
+
 Playwright results and HTML reports are written under the same run directory:
 
 ```text
@@ -52,3 +56,9 @@ AI tools may draft scenario specs, propose locators, inspect traces, and explain
 failures. Committed tests must remain deterministic Playwright code with
 explicit assertions. The default E2E gate must not depend on a live LLM deciding
 clicks, assertions, or pass/fail status.
+
+## Deferred Coverage
+
+Production Export is intentionally skipped in the browser E2E suite until the
+product behavior is respecified. The skipped test is kept as an explicit marker
+so the suite does not silently treat export as covered.

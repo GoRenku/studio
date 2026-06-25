@@ -419,8 +419,8 @@ Rules:
 
 - If `languages` is present, `studio-core` should create basic language metadata
   for those entries.
-- If `languages` is missing, creation should still succeed and the user can
-  configure language later.
+- If `languages` is missing, creation should still succeed and `studio-core`
+  must create `en-US` as the base language with display name `English`.
 - If `languages` is present and no item has `isBase: true`, creation should
   still succeed and the user can configure the base language later.
 - Detailed localization levels beyond audio/subtitle availability are out of

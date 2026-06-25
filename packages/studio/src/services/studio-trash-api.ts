@@ -77,10 +77,11 @@ function jsonHeaders(): Record<string, string> {
 }
 
 function readStudioApiToken(): string {
-  const token = document
-    .querySelector<HTMLMetaElement>('meta[name="renku-studio-token"]')
-    ?.getAttribute('content');
-  return token ?? '';
+  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
+  if (!token) {
+    throw new Error('Studio API token is not available.');
+  }
+  return token;
 }
 
 function trashPath(projectName: string): string {

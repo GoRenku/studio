@@ -19,6 +19,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import { resolveRenkuStorageRoot } from '../renku-config.js';
 import type { CreateMovieProjectInput } from '../project-data-service-contracts.js';
 import { DEFAULT_MOVIE_PROJECT_ASPECT_RATIO } from '../database/access/project-information.js';
+import { insertProjectLocaleRecords } from '../database/access/project-locales.js';
 
 export async function createMovieProject(
   input: CreateMovieProjectInput
@@ -51,8 +52,9 @@ export async function createMovieProject(
   try {
     const now = new Date().toISOString();
     session.db.transaction((tx) => {
+      const transactionSession = { ...session, db: tx };
       insertProjectRecord(
-        { ...session, db: tx },
+        transactionSession,
         {
           id: ids('project'),
           name: input.projectName,
@@ -65,6 +67,17 @@ export async function createMovieProject(
           updatedAt: now,
         }
       );
+      insertProjectLocaleRecords(transactionSession, [
+        {
+          id: ids('locale'),
+          localeTag: 'en-US',
+          displayName: 'English',
+          isBase: true,
+          supportsAudio: true,
+          supportsSubtitles: true,
+          position: 0,
+        },
+      ]);
     });
 
     return {
@@ -82,7 +95,7 @@ export async function createMovieProject(
 
 function emptyMovieCounts(): ProjectCounts {
   return {
-    languages: 0,
+    languages: 1,
     castMembers: 0,
     locations: 0,
     acts: 0,

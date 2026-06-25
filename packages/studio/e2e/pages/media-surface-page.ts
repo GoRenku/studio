@@ -70,12 +70,60 @@ export class MediaSurfacePage {
     ).toBeVisible();
   }
 
-  async expectDiscardedTakeVisible(): Promise<void> {
-    await expect(this.page.getByText('Trash restore candidate')).toBeVisible();
+  async expectDiscardedTakeVisible(
+    title = 'Trash restore candidate'
+  ): Promise<void> {
+    await expect(this.page.getByText(title)).toBeVisible();
     await expect(this.page.getByRole('button', { name: 'Restore', exact: true }))
       .toBeVisible();
     await expect(
       this.page.getByRole('button', { name: 'Preview Empty Trash', exact: true })
     ).toBeEnabled();
+  }
+
+  async restoreDiscardedTake(title = 'Trash restore candidate'): Promise<void> {
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes('/trash/restore') &&
+        response.request().method() === 'POST'
+    );
+
+    await this.page.getByRole('button', { name: 'Restore', exact: true }).click();
+
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+    await expect(this.page.getByText(title)).toBeHidden();
+    await expect(this.page.getByText('Trash is empty.')).toBeVisible();
+  }
+
+  async previewAndEmptyTrash(): Promise<void> {
+    const previewResponsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes('/trash/empty/preview') &&
+        response.request().method() === 'POST'
+    );
+
+    await this.page
+      .getByRole('button', { name: 'Preview Empty Trash', exact: true })
+      .click();
+
+    const previewResponse = await previewResponsePromise;
+    expect(previewResponse.ok()).toBeTruthy();
+    await expect(
+      this.page.getByText(/items and .* files are ready to package/)
+    ).toBeVisible();
+
+    const runResponsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes('/trash/empty/run') &&
+        response.request().method() === 'POST'
+    );
+
+    await this.page.getByRole('button', { name: 'Empty Trash', exact: true }).click();
+
+    const runResponse = await runResponsePromise;
+    expect(runResponse.ok()).toBeTruthy();
+    await expect(this.page.getByText('Trash restore candidate')).toBeHidden();
+    await expect(this.page.getByText('Trash is empty.')).toBeVisible();
   }
 }

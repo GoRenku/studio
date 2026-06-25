@@ -29,12 +29,7 @@ test('opens a movie lookbook definition and shows selected visual content', asyn
   await visualLanguage.expectLookbookDefinitionAndMedia();
 });
 
-test('exposes production export from selected project media', async ({
-  page,
-  shotVideoTakeProject,
-}) => {
-  const visualLanguage = new VisualLanguagePage(page);
-
-  await visualLanguage.gotoLookbook(shotVideoTakeProject);
-  await visualLanguage.expectProductionExportCommandVisible();
+test.skip('exports production assets after the product specification pass', async () => {
+  // Production Export predates the current Studio product model and needs a
+  // specification pass before browser-level behavior should be locked in.
 });

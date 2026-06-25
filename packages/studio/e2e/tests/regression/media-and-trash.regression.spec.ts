@@ -28,7 +28,7 @@ test('previews location media and refreshes after a resource change', async ({
   );
 });
 
-test('lists a discarded take in Trash with available lifecycle controls', async ({
+test('restores a discarded take from Trash', async ({
   page,
   trashProject,
   studioE2eRuntime,
@@ -41,4 +41,21 @@ test('lists a discarded take in Trash with available lifecycle controls', async 
   });
   await mediaSurface.gotoTrash(trashProject);
   await mediaSurface.expectDiscardedTakeVisible();
+  await mediaSurface.restoreDiscardedTake();
+});
+
+test('previews and empties Trash for a discarded take', async ({
+  page,
+  trashProject,
+  studioE2eRuntime,
+}) => {
+  const mediaSurface = new MediaSurfacePage(page);
+
+  await createDiscardedTakeForTrash({
+    runtime: studioE2eRuntime,
+    project: trashProject,
+  });
+  await mediaSurface.gotoTrash(trashProject);
+  await mediaSurface.expectDiscardedTakeVisible();
+  await mediaSurface.previewAndEmptyTrash();
 });

@@ -377,9 +377,9 @@ add in priority order.
 | 16 | Lookbook flow opens a movie lookbook, edits durable sections, selects it for the movie, and shows selected media. | `mediaSurfaceProject` | Lookbook document save, selection, and visual content tab regressions. |
 | 17 | Cast media surface displays profile and character sheet assets, previews images, and updates active/picked state. | `mediaSurfaceProject` | Cast asset relationship, media grid, preview, and pick-control regressions. |
 | 18 | Location media surface displays hero and environment sheet assets, previews images, and updates active/picked state. | `mediaSurfaceProject` | Location asset relationship, aspect ratio, preview, and pick-control regressions. |
-| 19 | Trash flow discards an asset, restores it, discards it again, and verifies Empty Trash blockers for selected assets. | `trashProject` | Recoverable discard, restore conflict, selected-asset blocker, and trash UI regressions. |
+| 19 | Trash flow deletes a take from its source surface, restores it from Trash, then separately previews and empties Trash for a discarded take. | `trashProject` | Recoverable discard, restore, Empty Trash preview/run, Studio API token, and trash UI refresh regressions. |
 | 20 | External project change while Studio is open triggers browser refresh through Studio coordination events. | `mediaSurfaceProject` | CLI/agent to server to browser resource-refresh regressions. |
-| 21 | Production export creates an export from selected project assets and exposes the result in the UI. | `mediaSurfaceProject` | Export route, selected-asset gathering, and production export surface regressions. |
+| 21 | Deferred: Production export creates an export from selected project assets and exposes the result in the UI after the product specification pass. | `mediaSurfaceProject` | Export route, selected-asset gathering, and production export surface regressions. This remains out of browser gating until the product behavior is respecified. |
 | 22 | Error path: invalid or stale reference selection returns a structured error and the UI does not show Saved. | `takeEditorProject` | False-positive save notifications or lost structured diagnostics. |
 
 ## AI-Assisted Test Authoring Plan
@@ -432,6 +432,8 @@ the default gate.
       with the canonical `5173` dev server.
 - [x] Add package scripts for `test:e2e`, `test:e2e:smoke`,
       `test:e2e:headed`, and `test:e2e:ui`.
+- [x] Build `packages/core` before Studio E2E scripts so browser fixtures do
+      not execute stale compiled package exports.
 - [x] Add root convenience scripts for Studio E2E commands.
 
 ### E2E Fixture Infrastructure
@@ -500,14 +502,15 @@ the default gate.
 - [x] Add Lookbook coverage.
 - [x] Add Cast media surface coverage.
 - [x] Add Location media surface coverage.
-- [x] Add Trash listing and lifecycle-control exposure coverage. Restore and
-      Empty Trash button dispatch remain deferred from browser gating because
-      the current controls did not produce route requests reliably under
-      Playwright.
+- [x] Add Trash source-surface delete, Trash listing, restore, Empty Trash
+      preview, and Empty Trash run browser coverage.
+- [x] Add focused Trash service/component coverage for Studio API token usage,
+      restore dispatch, preview dispatch, empty dispatch, and refreshed empty
+      state.
 - [x] Add Studio coordination resource-refresh coverage.
-- [x] Add Production Export command exposure coverage. The server/core export
-      behavior remains covered below the browser tier until the sidebar click
-      path is stable enough for E2E gating.
+- [x] Mark Production Export browser coverage as explicitly skipped pending a
+      product specification pass, instead of keeping a weak command-exposure
+      test.
 - [x] Add structured-error UI coverage.
 
 ### Documentation
