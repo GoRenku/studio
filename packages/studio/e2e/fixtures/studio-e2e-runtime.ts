@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { STUDIO_E2E_SERVER_URL } from '../../server/studio-dev-server';
 
 export interface StudioE2eRuntime {
   packageRoot: string;
@@ -35,7 +36,7 @@ export function prepareStudioE2eRuntime(input: {
     runRoot,
     homeDir,
     storageRoot,
-    serverUrl: 'http://localhost:5173',
+    serverUrl: STUDIO_E2E_SERVER_URL,
     keepArtifacts: process.env.RENKU_STUDIO_E2E_KEEP_ARTIFACTS === '1',
   };
 
@@ -68,7 +69,7 @@ export function readStudioE2eRuntime(): StudioE2eRuntime {
     runRoot,
     homeDir,
     storageRoot,
-    serverUrl: 'http://localhost:5173',
+    serverUrl: STUDIO_E2E_SERVER_URL,
     keepArtifacts: process.env.RENKU_STUDIO_E2E_KEEP_ARTIFACTS === '1',
   };
 }

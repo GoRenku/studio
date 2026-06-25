@@ -17,6 +17,10 @@ export const STUDIO_DEV_SERVER_LOG_PATH = path.join(
   'tmp',
   'studio-dev-server.log'
 );
+export const STUDIO_E2E_SERVER_HOST = STUDIO_DEV_SERVER_HOST;
+export const STUDIO_E2E_SERVER_PORT = 5174 as const;
+export const STUDIO_E2E_SERVER_URL =
+  `http://${STUDIO_E2E_SERVER_HOST}:${STUDIO_E2E_SERVER_PORT}` as const;
 
 export type ClaimStudioRuntimeDescriptor = (
   input: ClaimStudioRuntimeDescriptorInput

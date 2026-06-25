@@ -8,7 +8,7 @@ Install Playwright browser binaries before the first local run if they are not
 already present:
 
 ```bash
-pnpm --dir packages/studio exec playwright install chromium
+sfw pnpm --dir packages/studio test:e2e:install-browsers
 ```
 
 ```bash
@@ -18,8 +18,11 @@ pnpm --dir packages/studio test:e2e:headed
 pnpm --dir packages/studio test:e2e:ui
 ```
 
-The suite starts a real Studio dev server on the canonical Studio dev port and
-uses a temporary E2E Renku home under `tmp/studio-e2e/`.
+The suite starts a real Studio browser-test server on the fixed E2E port
+`5174` and uses a temporary E2E Renku home under `tmp/studio-e2e/`. This keeps
+tests isolated from the normal Studio dev server on `5173`. Playwright owns the
+E2E server process and shuts it down after the run. If `5174` is already in use,
+the run fails instead of reusing an existing server.
 
 Playwright results and HTML reports are written under the same run directory:
 

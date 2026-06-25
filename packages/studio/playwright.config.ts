@@ -37,6 +37,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'pnpm dev',
+    cwd: packageRoot,
     url: `${runtime.serverUrl}/studio-api/health`,
     timeout: 120_000,
     reuseExistingServer: false,
@@ -46,6 +47,7 @@ export default defineConfig({
       ...process.env,
       HOME: runtime.homeDir,
       RENKU_MOVIE_STUDIO_ROOT: runtime.storageRoot,
+      RENKU_STUDIO_E2E: '1',
     },
   },
 });
@@ -53,4 +55,3 @@ export default defineConfig({
 if (!fs.existsSync(runtime.storageRoot)) {
   throw new Error(`Expected Studio E2E storage root to exist: ${runtime.storageRoot}`);
 }
-

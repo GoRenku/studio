@@ -11,6 +11,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   appendStudioDevServerLog,
   claimRequiredStudioDevRuntime,
+  STUDIO_E2E_SERVER_HOST,
+  STUDIO_E2E_SERVER_PORT,
 } from './studio-dev-server.js';
 import viteConfig from '../vite.config.js';
 
@@ -73,6 +75,29 @@ describe('Studio dev server runtime', () => {
       port: STUDIO_DEV_SERVER_PORT,
       strictPort: true,
     });
+  });
+
+  it('configures Vite E2E mode to use the isolated browser-test port', async () => {
+    const previous = process.env.RENKU_STUDIO_E2E;
+    process.env.RENKU_STUDIO_E2E = '1';
+    try {
+      const config =
+        typeof viteConfig === 'function'
+          ? await viteConfig({ command: 'serve', mode: 'development' })
+          : viteConfig;
+
+      expect(config.server).toMatchObject({
+        host: STUDIO_E2E_SERVER_HOST,
+        port: STUDIO_E2E_SERVER_PORT,
+        strictPort: true,
+      });
+    } finally {
+      if (previous === undefined) {
+        delete process.env.RENKU_STUDIO_E2E;
+      } else {
+        process.env.RENKU_STUDIO_E2E = previous;
+      }
+    }
   });
 
   it('closes the dev server when the runtime descriptor cannot be claimed', async () => {

@@ -19,6 +19,9 @@ import {
 import {
   appendStudioDevServerLog,
   claimRequiredStudioDevRuntime,
+  STUDIO_E2E_SERVER_HOST,
+  STUDIO_E2E_SERVER_PORT,
+  STUDIO_E2E_SERVER_URL,
 } from './server/studio-dev-server';
 
 const expandPath = (input: string | null | undefined) => {
@@ -41,6 +44,16 @@ export default defineConfig(({ mode }) => {
   const projectRoot = expandPath(
     env.RENKU_MOVIE_STUDIO_ROOT ?? process.env.RENKU_MOVIE_STUDIO_ROOT
   );
+  const e2eServer = env.RENKU_STUDIO_E2E === '1';
+  const studioServerHost = e2eServer
+    ? STUDIO_E2E_SERVER_HOST
+    : STUDIO_DEV_SERVER_HOST;
+  const studioServerPort = e2eServer
+    ? STUDIO_E2E_SERVER_PORT
+    : STUDIO_DEV_SERVER_PORT;
+  const studioServerUrl = e2eServer
+    ? STUDIO_E2E_SERVER_URL
+    : STUDIO_DEV_SERVER_URL;
   const studioRuntimeToken = createStudioRuntimeToken();
 
   return {
@@ -67,7 +80,7 @@ export default defineConfig(({ mode }) => {
           let heartbeat: ReturnType<typeof setInterval> | null = null;
           const cliNotificationToken = createStudioCliNotificationToken();
           void appendStudioDevServerLog(
-            `starting Studio dev server url=${STUDIO_DEV_SERVER_URL} pid=${process.pid}`
+            `starting Studio dev server url=${studioServerUrl} pid=${process.pid}`
           );
 
           server.httpServer?.once('listening', () => {
@@ -77,8 +90,14 @@ export default defineConfig(({ mode }) => {
             }
             const port = (address as AddressInfo).port;
             void appendStudioDevServerLog(
-              `listening Studio dev server url=${STUDIO_DEV_SERVER_URL} actualPort=${port} pid=${process.pid}`
+              `listening Studio dev server url=${studioServerUrl} actualPort=${port} pid=${process.pid}`
             );
+            if (e2eServer) {
+              void appendStudioDevServerLog(
+                `skipping runtime descriptor claim for Studio E2E server url=${studioServerUrl} pid=${process.pid}`
+              );
+              return;
+            }
             void claimRequiredStudioDevRuntime({
               port,
               cliNotificationToken,
@@ -131,7 +150,7 @@ export default defineConfig(({ mode }) => {
               });
             }
             void appendStudioDevServerLog(
-              `closed Studio dev server url=${STUDIO_DEV_SERVER_URL} pid=${process.pid}`
+              `closed Studio dev server url=${studioServerUrl} pid=${process.pid}`
             );
           });
 
@@ -156,8 +175,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: STUDIO_DEV_SERVER_HOST,
-      port: STUDIO_DEV_SERVER_PORT,
+      host: studioServerHost,
+      port: studioServerPort,
       strictPort: true,
       fs: {
         allow: [
