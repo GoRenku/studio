@@ -125,6 +125,11 @@ surfaces use the shared refresh system.
 Renku Studio is a desktop-first app. Unless a task explicitly asks for mobile
 support, frontend verification should use desktop browser sizes only.
 
+Browser E2E coverage is owned by `packages/studio` and uses Playwright Test
+according to ADR 0037. E2E fixtures must create project data through core-owned
+commands and services, not through route-local shortcuts, React-local state, or
+direct SQLite writes.
+
 For media surfaces, verification should check:
 
 - card aspect ratios match the asset role;
@@ -147,3 +152,5 @@ For media surfaces, verification should check:
   details header as the single placement for save notifications.
 - `../decisions/0030-use-unified-studio-resource-refresh-components.md` defines
   the shared resource-refresh system used by browser surfaces.
+- `../decisions/0037-use-playwright-for-studio-browser-e2e.md` defines the
+  Studio browser E2E test infrastructure and AI-assisted testing boundaries.

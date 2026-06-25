@@ -37,6 +37,8 @@
     "test:core": "pnpm --filter @gorenku/studio-core test",
     "test:cli": "pnpm --filter @gorenku/studio-cli test",
     "test:engines": "pnpm --filter @gorenku/studio-engines test",
+    "test:e2e:studio": "pnpm --filter @gorenku/studio test:e2e",
+    "test:e2e:studio:smoke": "pnpm --filter @gorenku/studio test:e2e:smoke",
     "test:studio": "pnpm --filter @gorenku/studio test",
     "test:typecheck": "pnpm --filter @gorenku/studio-diagnostics test:typecheck && pnpm --filter @gorenku/studio-engines test:typecheck && pnpm --filter @gorenku/studio-core test:typecheck && pnpm --filter @gorenku/studio-cli test:typecheck && pnpm --filter @gorenku/studio test:typecheck",
     "test:typecheck:diagnostics": "pnpm --filter @gorenku/studio-diagnostics test:typecheck",

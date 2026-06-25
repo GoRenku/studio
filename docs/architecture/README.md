@@ -103,6 +103,9 @@ Use this page as the map:
   - `../decisions/0027-use-details-header-for-save-notifications.md`
     for the details-header placement and shared UI primitive requirement for
     save notifications.
+  - `../decisions/0037-use-playwright-for-studio-browser-e2e.md`
+    for browser E2E ownership, Playwright infrastructure, fixture isolation,
+    cleanup, and AI-assisted testing boundaries.
 
 ## Diagnostics, Naming, CLI, And Contracts
 

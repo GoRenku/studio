@@ -7,7 +7,7 @@ import tailwind from 'eslint-plugin-tailwindcss'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'server-dist']),
+  globalIgnores(['dist', 'server-dist', 'playwright-report', 'test-results']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -58,6 +58,17 @@ export default defineConfig([
       'tailwindcss/classnames-order': 'off',
       'tailwindcss/no-contradicting-classname': 'off',
       'tailwindcss/no-unnecessary-arbitrary-value': 'off',
+    },
+  },
+  {
+    files: ['playwright.config.ts', 'e2e/**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      globals: globals.node,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'react-refresh/only-export-components': 'off',
     },
   },
   {
