@@ -184,7 +184,6 @@ Implementation planning for this storage update is split across:
 - `plans/active/0007-production-asset-materialization.md`
 - `plans/active/0008-create-from-narrative-starter.md`
 - `plans/active/0009-studio-text-asset-editing.md`
-- `plans/active/0010-development-sample-project-skill.md`
 
 ## Exploration
 

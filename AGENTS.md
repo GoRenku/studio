@@ -145,6 +145,24 @@ legacy Renku timeline/export producers, Remotion, FFmpeg final-render producers,
 or old execution-plan bridge code unless the user explicitly decides to redesign
 those concepts for Studio.
 
+## Local Companion Projects
+
+This machine has two local projects that are relevant when working on Renku
+Studio:
+
+- `$HOME/Projects/aitinkerbox/studio-skills/` is the sister project for
+  defining and maintaining Studio agent skills. When a change affects skill
+  contracts, workflows, examples, or agent-facing instructions, check that
+  project instead of assuming all skill guidance lives in this repository.
+- `$HOME/renku-movies/urban-basilica` is the real sample movie project
+  being built alongside Studio. Use it for debugging and verification when a
+  bug or workflow needs realistic project data.
+
+The old in-repository `sample-project/` directory and `sample-project.yaml`
+file are no longer current. Do not use them as examples, fixtures, fallback
+formats, or debugging targets. Any current instructions that point to those
+paths are stale and should be removed or replaced with the real project above.
+
 ## Build and Test Commands
 
 Use root commands for the new Studio workspace only:
