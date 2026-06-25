@@ -282,6 +282,16 @@ export async function writeSceneShotList(
       screenplay,
       filePath: input.filePath,
     });
+    const baseShotListId = input.document.baseShotListId ?? null;
+    const preservedShotIds = baseShotListId
+      ? readPreservedShotIdsForReplacement({
+          session,
+          screenplay,
+          sceneId: input.document.sceneId,
+          baseShotListId,
+          nextDocument: input.document,
+        })
+      : [];
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     const shotListId = ids('scene_shot_list');
     const now = new Date().toISOString();
@@ -295,6 +305,18 @@ export async function writeSceneShotList(
         now,
         filePath: input.filePath,
       });
+      if (baseShotListId) {
+        carryForwardStoryboardImages({
+          session: txSession,
+          baseShotListId,
+          createdShotListId: shotListId,
+          sceneId: input.document.sceneId,
+          shots: input.document.shots,
+          preservedShotIds,
+          ids,
+          now,
+        });
+      }
       setActiveSceneShotListRecord(txSession, {
         sceneId: input.document.sceneId,
         shotListId,
@@ -334,6 +356,36 @@ export async function writeSceneShotList(
       ],
     };
   });
+}
+
+function readPreservedShotIdsForReplacement(input: {
+  session: Parameters<typeof readActiveSceneShotListId>[0];
+  screenplay: ScreenplayDocument;
+  sceneId: string;
+  baseShotListId: string;
+  nextDocument: SceneShotListDocument;
+}): string[] {
+  const baseRow = requireSceneShotListForScene({
+    session: input.session,
+    sceneId: input.sceneId,
+    shotListId: input.baseShotListId,
+  });
+  const baseDocument = readSceneShotListDocument({
+    row: baseRow,
+    screenplay: input.screenplay,
+  });
+  const baseFingerprints = new Map(
+    baseDocument.shots.map((shot) => [
+      shot.shotId,
+      shotContentFingerprint(shot),
+    ])
+  );
+  return input.nextDocument.shots
+    .filter(
+      (shot) =>
+        baseFingerprints.get(shot.shotId) === shotContentFingerprint(shot)
+    )
+    .map((shot) => shot.shotId);
 }
 
 export async function setActiveSceneShotList(

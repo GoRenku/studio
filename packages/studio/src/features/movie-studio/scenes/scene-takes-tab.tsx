@@ -8,7 +8,12 @@ import {
 } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { SceneShotVideoTake } from '@gorenku/studio-core/client';
+import type {
+  SceneShot,
+  SceneShotVideoTake,
+  SceneShotVideoTakeEditContext,
+  ShotVideoTakeProductionContext,
+} from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import { restoreTrashItem } from '@/services/studio-trash-api';
@@ -16,6 +21,7 @@ import {
   createSceneShotVideoTake,
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
+  readSceneShotVideoTakeEditContext,
   updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
 } from '@/services/studio-shot-video-takes-api';
@@ -80,6 +86,13 @@ interface SceneTakesTabProps {
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
+interface TakeEditingShotListContext {
+  takeId: string;
+  take: SceneShotVideoTake;
+  sourceShotListId: string;
+  displayShots: SceneShot[];
+}
+
 export function SceneTakesTab({
   projectName,
   sceneId,
@@ -96,6 +109,8 @@ export function SceneTakesTab({
   const [takes, setTakes] = useState<
     SceneShotVideoTake[]
   >([]);
+  const [takeEditingContext, setTakeEditingContext] =
+    useState<TakeEditingShotListContext | null>(null);
   const [draftGroupEdit, setDraftGroupEdit] = useState<{
     takeId: string | null;
     groups: TakeScopedShotGroupDraft[];
@@ -151,7 +166,7 @@ export function SceneTakesTab({
     },
   });
 
-  const shots = useMemo(
+  const activeShotListShots = useMemo(
     () => resource?.activeShotList?.shots ?? [],
     [resource]
   );
@@ -170,17 +185,70 @@ export function SceneTakesTab({
     }
     return takes[0] ?? null;
   }, [takeId, takes, workspaceMode]);
+  const activeTakeKey = activeTake?.takeId ?? null;
+  const activeTakeUpdatedAt = activeTake?.updatedAt ?? null;
+
+  useEffect(() => {
+    if (workspaceMode !== 'edit' || !activeTakeKey) {
+      return;
+    }
+
+    let cancelled = false;
+    void readSceneShotVideoTakeEditContext(
+      projectName,
+      sceneId,
+      activeTakeKey
+    )
+      .then((editContext) => {
+        if (!cancelled) {
+          setTakeEditingContext(
+            takeEditingContextFromEditContext(editContext)
+          );
+        }
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'Unable to load take editing context.'
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeTakeKey,
+    activeTakeUpdatedAt,
+    projectName,
+    sceneId,
+    workspaceMode,
+  ]);
+
+  const currentTakeEditingContext =
+    takeEditingContext?.takeId === activeTakeKey ? takeEditingContext : null;
+  const displayedActiveTake = currentTakeEditingContext?.take ?? activeTake;
+  const displayedActiveTakeKey = displayedActiveTake?.takeId ?? null;
+  const requiresTakeEditingContext =
+    workspaceMode === 'edit' && Boolean(activeTake);
+  const shots = useMemo(
+    () =>
+      requiresTakeEditingContext
+        ? currentTakeEditingContext?.displayShots ?? []
+        : activeShotListShots,
+    [activeShotListShots, currentTakeEditingContext, requiresTakeEditingContext]
+  );
 
   const persistedGroups = useMemo(
     () =>
       createShotGroupDraftsFromTakes(
-        activeTake ? [activeTake] : []
+        displayedActiveTake ? [displayedActiveTake] : []
       ),
-    [activeTake]
+    [displayedActiveTake]
   );
-  const activeTakeKey = activeTake?.takeId ?? null;
   const draftGroups =
-    draftGroupEdit?.takeId === activeTakeKey
+    draftGroupEdit?.takeId === displayedActiveTakeKey
       ? draftGroupEdit.groups
       : persistedGroups;
 
@@ -203,12 +271,12 @@ export function SceneTakesTab({
     if (shotId && shots.some((shot) => shot.shotId === shotId)) {
       return shotId;
     }
-    const takeShotId = activeTake?.shotIds[0];
+    const takeShotId = displayedActiveTake?.shotIds[0];
     if (takeShotId && shots.some((shot) => shot.shotId === takeShotId)) {
       return takeShotId;
     }
     return shots[0]?.shotId ?? null;
-  }, [activeTake, shots, shotId]);
+  }, [displayedActiveTake, shots, shotId]);
 
   const handleSelectShot = useCallback(
     (nextShotId: string) => {
@@ -216,13 +284,13 @@ export function SceneTakesTab({
         type: 'scene',
         id: sceneId,
         sceneTab: 'takes',
-        takeWorkspaceMode: activeTake ? 'edit' : 'new',
-        takeId: activeTake?.takeId,
+        takeWorkspaceMode: displayedActiveTake ? 'edit' : 'new',
+        takeId: displayedActiveTake?.takeId,
         shotId: nextShotId,
         shotTab: activeShotTab,
       });
     },
-    [activeShotTab, activeTake, onSelect, sceneId]
+    [activeShotTab, displayedActiveTake, onSelect, sceneId]
   );
 
   const handleSelectShotTab = useCallback(
@@ -231,13 +299,13 @@ export function SceneTakesTab({
         type: 'scene',
         id: sceneId,
         sceneTab: 'takes',
-        takeWorkspaceMode: activeTake ? 'edit' : 'new',
-        takeId: activeTake?.takeId,
+        takeWorkspaceMode: displayedActiveTake ? 'edit' : 'new',
+        takeId: displayedActiveTake?.takeId,
         shotId: selectedShotId ?? undefined,
         shotTab: nextShotTab,
       });
     },
-    [activeTake, onSelect, sceneId, selectedShotId]
+    [displayedActiveTake, onSelect, sceneId, selectedShotId]
   );
 
   const handleOpenTake = useCallback(
@@ -338,23 +406,23 @@ export function SceneTakesTab({
 
   const handleCycleShotGroup = useCallback(
     (clickedShotId: string) => {
-      if (!activeTake) {
+      if (!displayedActiveTake) {
         return;
       }
       handleSelectShot(clickedShotId);
       setDraftGroupEdit((currentDraftGroupEdit) => {
         const currentDraftGroups =
-          currentDraftGroupEdit?.takeId === activeTakeKey
+          currentDraftGroupEdit?.takeId === displayedActiveTakeKey
             ? currentDraftGroupEdit.groups
             : persistedGroups;
         return {
-          takeId: activeTakeKey,
+          takeId: displayedActiveTakeKey,
           groups: cycleShotGroupMembership({
             shots,
             draftGroups: currentDraftGroups.length
               ? currentDraftGroups
               : createShotGroupDraftsFromTakes([
-                  activeTake,
+                  displayedActiveTake,
                 ]),
             clickedShotId,
           }),
@@ -362,8 +430,8 @@ export function SceneTakesTab({
       });
     },
     [
-      activeTake,
-      activeTakeKey,
+      displayedActiveTake,
+      displayedActiveTakeKey,
       handleSelectShot,
       persistedGroups,
       shots,
@@ -377,11 +445,11 @@ export function SceneTakesTab({
   }, []);
 
   const handleApplyGroupingChanges = useCallback(async () => {
-    if (!activeTake || groupApplyPending) {
+    if (!displayedActiveTake || groupApplyPending) {
       return;
     }
     const openDraft = draftGroups.find(
-      (group) => group.takeId === activeTake.takeId
+      (group) => group.takeId === displayedActiveTake.takeId
     );
     if (!openDraft || openDraft.shotIds.length === 0) {
       setGroupApplyError('The current take must keep at least one shot.');
@@ -393,7 +461,7 @@ export function SceneTakesTab({
       const result = await updateSceneShotVideoTakeShots(
         projectName,
         sceneId,
-        activeTake.takeId,
+        displayedActiveTake.takeId,
         openDraft.shotIds
       );
       const updatedTake = result.context.take;
@@ -403,6 +471,9 @@ export function SceneTakesTab({
             ? updatedTake
             : candidate
         )
+      );
+      setTakeEditingContext(
+        takeEditingContextFromProductionContext(result.context)
       );
       setDraftGroupEdit(null);
       setGroupReviewOpen(false);
@@ -416,7 +487,7 @@ export function SceneTakesTab({
       setGroupApplyPending(false);
     }
   }, [
-    activeTake,
+    displayedActiveTake,
     draftGroups,
     groupApplyPending,
     projectName,
@@ -513,6 +584,13 @@ export function SceneTakesTab({
       </div>
     );
   }
+  if (requiresTakeEditingContext && !currentTakeEditingContext) {
+    return (
+      <div className='flex flex-1 items-center justify-center p-6'>
+        <p className='text-sm text-muted-foreground'>Loading takes...</p>
+      </div>
+    );
+  }
   if (!resource.activeShotList || !shots.length) {
     return <SceneShotListEmpty />;
   }
@@ -591,7 +669,7 @@ export function SceneTakesTab({
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
   const selectedTake =
-    activeTake ??
+    displayedActiveTake ??
     takes.find((candidate) =>
       selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
     ) ??
@@ -716,6 +794,28 @@ export function SceneTakesTab({
       </ResizablePanelGroup>
     </div>
   );
+}
+
+function takeEditingContextFromEditContext(
+  editContext: SceneShotVideoTakeEditContext
+): TakeEditingShotListContext {
+  return {
+    takeId: editContext.take.takeId,
+    take: editContext.take,
+    sourceShotListId: editContext.sourceShotList.id,
+    displayShots: editContext.displayShots,
+  };
+}
+
+function takeEditingContextFromProductionContext(
+  context: ShotVideoTakeProductionContext
+): TakeEditingShotListContext {
+  return {
+    takeId: context.take.takeId,
+    take: context.take,
+    sourceShotListId: context.shotList.id,
+    displayShots: context.displayShots,
+  };
 }
 
 function shotRangeLabel(

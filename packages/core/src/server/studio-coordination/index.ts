@@ -72,6 +72,7 @@ export type {
   ProjectInformationRefreshField,
   ReadStudioEventsInput,
   StudioBrowserSessionActiveEvent,
+  StudioBrowserSessionActivityKind,
   StudioCurrent,
   StudioCurrentContext,
   StudioCurrentProject,

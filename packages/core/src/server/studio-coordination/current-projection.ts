@@ -28,12 +28,12 @@ import type {
   StudioCurrentContext,
   StudioCurrentShotTabSelections,
   StudioEvent,
-  StudioFocusChangedEvent,
+  StudioFocus,
   StudioFocusRequestedEvent,
   StudioProjectRef,
 } from './events.js';
 
-const BROWSER_SESSION_STALE_AFTER_MS = 45_000;
+const BROWSER_SESSION_STALE_AFTER_MS = 120_000;
 const FOCUS_REQUEST_STALE_AFTER_MS = 5 * 60_000;
 
 export interface ProjectStudioCurrentInput extends RenkuConfigPathOptions {
@@ -51,7 +51,7 @@ export async function projectStudioCurrent(
     runtime && isStudioRuntimeDescriptorUsable(runtime, now)
   );
   const sessionActivity = new Map<string, StudioBrowserSessionActiveEvent>();
-  const sessionFocus = new Map<string, StudioFocusChangedEvent>();
+  const sessionFocus = new Map<string, StudioSessionFocusCandidate>();
   const appliedRequests = new Set<string>();
   const failedRequests = new Set<string>();
   let latestFocusRequest: StudioFocusRequestedEvent | null = null;
@@ -59,17 +59,27 @@ export async function projectStudioCurrent(
   for (const event of input.events) {
     if (event.type === 'studio.browserSessionActive') {
       sessionActivity.set(event.browserSessionId, event);
+      if (event.focus) {
+        sessionFocus.set(event.browserSessionId, {
+          browserSessionId: event.browserSessionId,
+          createdAt: event.createdAt,
+          focus: event.focus,
+          projectRef: event.projectRef,
+          activityKind: event.activityKind,
+        });
+      }
     }
     if (event.type === 'studio.focusChanged') {
       const browserSessionId = event.source.kind === 'studio'
         ? event.source.browserSessionId
         : undefined;
       if (browserSessionId) {
-        sessionFocus.set(browserSessionId, event);
-        sessionActivity.set(browserSessionId, {
-          ...event,
-          type: 'studio.browserSessionActive',
+        sessionFocus.set(browserSessionId, {
           browserSessionId,
+          createdAt: event.createdAt,
+          focus: event.focus,
+          projectRef: event.projectRef,
+          activityKind: 'focused',
         });
       }
       if (event.appliedRequestId) {
@@ -144,19 +154,39 @@ export async function projectStudioCurrent(
   if (!currentSessionId) {
     return base;
   }
-  const focusEvent = sessionFocus.get(currentSessionId);
-  if (!focusEvent || focusEvent.focus.screen !== 'movieStudio' || !focusEvent.projectRef) {
+  const currentFocus = findCurrentLiveSessionFocus({
+    activity: sessionActivity,
+    focus: sessionFocus,
+    now,
+  });
+  if (
+    !currentFocus ||
+    currentFocus.focus.screen !== 'movieStudio' ||
+    !currentFocus.projectRef
+  ) {
     return base;
   }
 
-  const enriched = await enrichMovieStudioFocus(focusEvent.projectRef, focusEvent.focus.selection, input);
+  const enriched = await enrichMovieStudioFocus(
+    currentFocus.projectRef,
+    currentFocus.focus.selection,
+    input
+  );
   return {
     ...base,
     project: enriched.project,
-    selection: focusEvent.focus.selection,
+    selection: currentFocus.focus.selection,
     context: enriched.context,
     warnings: [...base.warnings, ...enriched.warnings],
   };
+}
+
+interface StudioSessionFocusCandidate {
+  browserSessionId: string;
+  createdAt: string;
+  focus: StudioFocus;
+  projectRef?: StudioProjectRef;
+  activityKind?: StudioBrowserSessionActiveEvent['activityKind'];
 }
 
 function findMostRecentLiveSessionId(
@@ -173,6 +203,74 @@ function findMostRecentLiveSessionId(
     }
   }
   return result?.browserSessionId ?? null;
+}
+
+function findCurrentLiveSessionFocus(input: {
+  activity: Map<string, StudioBrowserSessionActiveEvent>;
+  focus: Map<string, StudioSessionFocusCandidate>;
+  now: Date;
+}): StudioSessionFocusCandidate | null {
+  let result: StudioSessionFocusCandidate | null = null;
+  for (const candidate of input.focus.values()) {
+    const activity = input.activity.get(candidate.browserSessionId);
+    if (
+      !activity ||
+      input.now.getTime() - Date.parse(activity.createdAt) >
+        BROWSER_SESSION_STALE_AFTER_MS
+    ) {
+      continue;
+    }
+    if (
+      !result ||
+      compareSessionFocusCandidates({
+        left: candidate,
+        right: result,
+        activity: input.activity,
+      }) >= 0
+    ) {
+      result = candidate;
+    }
+  }
+  return result;
+}
+
+function compareSessionFocusCandidates(input: {
+  left: StudioSessionFocusCandidate;
+  right: StudioSessionFocusCandidate;
+  activity: Map<string, StudioBrowserSessionActiveEvent>;
+}): number {
+  const leftActivity = input.activity.get(input.left.browserSessionId);
+  const rightActivity = input.activity.get(input.right.browserSessionId);
+  const activityRankDiff =
+    activityKindRank(leftActivity?.activityKind ?? input.left.activityKind) -
+    activityKindRank(rightActivity?.activityKind ?? input.right.activityKind);
+  if (activityRankDiff !== 0) {
+    return activityRankDiff;
+  }
+  const focusTimeDiff =
+    Date.parse(input.left.createdAt) - Date.parse(input.right.createdAt);
+  if (focusTimeDiff !== 0) {
+    return focusTimeDiff;
+  }
+  return (
+    Date.parse(leftActivity?.createdAt ?? input.left.createdAt) -
+    Date.parse(rightActivity?.createdAt ?? input.right.createdAt)
+  );
+}
+
+function activityKindRank(
+  activityKind: StudioBrowserSessionActiveEvent['activityKind']
+): number {
+  if (activityKind === 'focused') {
+    return 3;
+  }
+  if (activityKind === 'visible') {
+    return 2;
+  }
+  if (activityKind === 'heartbeat') {
+    return 1;
+  }
+  return 0;
 }
 
 async function enrichMovieStudioFocus(

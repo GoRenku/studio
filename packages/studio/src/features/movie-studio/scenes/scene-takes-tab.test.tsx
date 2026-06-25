@@ -6,6 +6,8 @@ import type {
   SceneShot,
   SceneShotListDocument,
   SceneShotVideoTake,
+  SceneShotVideoTakeEditContext,
+  ShotVideoTakeProductionContext,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
@@ -13,6 +15,7 @@ import {
   createSceneShotVideoTake,
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
+  readSceneShotVideoTakeEditContext,
   updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
 } from '@/services/studio-shot-video-takes-api';
@@ -28,6 +31,7 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
   listSceneShotVideoTakes: vi.fn(),
   createSceneShotVideoTake: vi.fn(),
   deleteSceneShotVideoTake: vi.fn(),
+  readSceneShotVideoTakeEditContext: vi.fn(),
   updateSceneShotVideoTakePick: vi.fn(),
   updateSceneShotVideoTakeShots: vi.fn(),
 }));
@@ -42,6 +46,13 @@ vi.mock('sonner', () => ({
     success: vi.fn(),
   },
 }));
+
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= ResizeObserverStub;
 
 describe('SceneTakesTab', () => {
   beforeEach(() => {
@@ -79,6 +90,19 @@ describe('SceneTakesTab', () => {
       },
       resourceKeys: [],
     });
+    vi.mocked(readSceneShotVideoTakeEditContext).mockReset();
+    vi.mocked(readSceneShotVideoTakeEditContext).mockResolvedValue(
+      takeEditContext({
+        take: take({
+          takeId: 'take_reaction',
+          title: 'Reaction take',
+          shotIds: ['shot_002'],
+          updatedAt: '2026-06-18T11:00:00.000Z',
+        }),
+        sourceShotListId: 'shot_list_hook',
+        displayShots: shotList().shots,
+      })
+    );
     vi.mocked(restoreTrashItem).mockReset();
     vi.mocked(updateSceneShotVideoTakePick).mockReset();
     vi.mocked(updateSceneShotVideoTakePick).mockImplementation(
@@ -167,30 +191,142 @@ describe('SceneTakesTab', () => {
       expect(screen.queryByRole('button', { name: 'Map study' })).toBeNull()
     );
   });
+
+  it('groups an existing take against its source shot list after the active shot list changes', async () => {
+    const sourceTake = take({
+      takeId: 'take_reaction',
+      title: 'Reaction take',
+      sourceShotListId: 'shot_list_source',
+      shotIds: ['shot_002'],
+      updatedAt: '2026-06-18T11:00:00.000Z',
+    });
+    const sourceShots = shotList().shots;
+    const activeShots = [
+      shot('shot_001', 'Map study'),
+      shot('shot_001b', 'Inserted wall crossing'),
+      shot('shot_002', 'Council reaction'),
+    ];
+
+    vi.mocked(readSceneShotListResource).mockResolvedValue({
+      ...resource(),
+      activeShotListId: 'shot_list_expanded',
+      activeShotList: {
+        ...shotList(),
+        summary: 'Three shots.',
+        shots: activeShots,
+      },
+      storyboardImagesByShotId: {
+        shot_001: storyboardImage(
+          'asset_001',
+          'file_001',
+          '/storyboards/shot-001.png'
+        ),
+        shot_001b: storyboardImage(
+          'asset_001b',
+          'file_001b',
+          '/storyboards/shot-001b.png'
+        ),
+        shot_002: storyboardImage(
+          'asset_002',
+          'file_002',
+          '/storyboards/shot-002.png'
+        ),
+      },
+    });
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+      takes: [sourceTake],
+    });
+    vi.mocked(readSceneShotVideoTakeEditContext).mockResolvedValue(
+      takeEditContext({
+        take: sourceTake,
+        sourceShotListId: 'shot_list_source',
+        displayShots: sourceShots,
+      })
+    );
+    vi.mocked(updateSceneShotVideoTakeShots).mockResolvedValue({
+      context: takeProductionContext({
+        take: {
+          ...sourceTake,
+          shotIds: ['shot_001', 'shot_002'],
+          updatedAt: '2026-06-18T12:00:00.000Z',
+        },
+        shotListId: 'shot_list_source',
+        displayShots: sourceShots,
+      }),
+      resourceKeys: [],
+    });
+
+    render(
+      <SceneTakesTabHarness
+        initialSelection={{
+          type: 'scene',
+          id: 'scene_hook',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: 'take_reaction',
+          shotId: 'shot_002',
+        }}
+      />
+    );
+
+    expect(
+      await screen.findByRole('button', { name: /Shot 1.*Map study/ })
+    ).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: /Shot 2.*Council reaction/ })
+    ).not.toBeNull();
+    expect(screen.queryByText('Inserted wall crossing')).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Cycle grouping for Shot 1' })
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Review Groups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(updateSceneShotVideoTakeShots).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_reaction',
+        ['shot_001', 'shot_002']
+      )
+    );
+  });
 });
 
-function SceneTakesTabHarness() {
-  const [selection, setSelection] = React.useState<
-    Extract<StudioSelection, { type: 'scene' }>
-  >({
+function SceneTakesTabHarness({
+  initialSelection = {
     type: 'scene',
     id: 'scene_hook',
     sceneTab: 'takes',
-  });
+  },
+}: {
+  initialSelection?: Extract<StudioSelection, { type: 'scene' }>;
+}) {
+  const [selection, setSelection] = React.useState<
+    Extract<StudioSelection, { type: 'scene' }>
+  >(initialSelection);
+  const [headerAction, setHeaderAction] =
+    React.useState<React.ReactNode | null>(null);
+  const handleSelect = React.useCallback((nextSelection: StudioSelection) => {
+    if (nextSelection.type === 'scene') {
+      setSelection(nextSelection);
+    }
+  }, []);
   return (
-    <SceneTakesTab
-      projectName='constantinople'
-      sceneId='scene_hook'
-      takeWorkspaceMode={selection.takeWorkspaceMode}
-      takeId={selection.takeId}
-      shotId={selection.shotId}
-      shotTab={selection.shotTab}
-      onSelect={(nextSelection) => {
-        if (nextSelection.type === 'scene') {
-          setSelection(nextSelection);
-        }
-      }}
-    />
+    <>
+      {headerAction}
+      <SceneTakesTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        takeWorkspaceMode={selection.takeWorkspaceMode}
+        takeId={selection.takeId}
+        shotId={selection.shotId}
+        shotTab={selection.shotTab}
+        onHeaderActionChange={setHeaderAction}
+        onSelect={handleSelect}
+      />
+    </>
   );
 }
 
@@ -256,6 +392,44 @@ function resource(): SceneShotListResourceResponse {
     castMemberImages: {},
     locationLabels: {},
   };
+}
+
+function takeEditContext(input: {
+  take: SceneShotVideoTake;
+  sourceShotListId: string;
+  displayShots: SceneShot[];
+}): SceneShotVideoTakeEditContext {
+  return {
+    take: input.take,
+    sourceShotList: {
+      id: input.sourceShotListId,
+      title: 'Source shot list',
+      summary: 'Source shot coverage.',
+      createdAt: '2026-06-18T09:00:00.000Z',
+      updatedAt: '2026-06-18T09:00:00.000Z',
+      isActive: false,
+    },
+    displayShots: input.displayShots,
+  } as SceneShotVideoTakeEditContext;
+}
+
+function takeProductionContext(input: {
+  take: SceneShotVideoTake;
+  shotListId: string;
+  displayShots: SceneShot[];
+}): ShotVideoTakeProductionContext {
+  return {
+    take: input.take,
+    shotList: {
+      id: input.shotListId,
+      title: 'Source shot list',
+      summary: 'Source shot coverage.',
+      createdAt: '2026-06-18T09:00:00.000Z',
+      updatedAt: '2026-06-18T09:00:00.000Z',
+      isActive: false,
+    },
+    displayShots: input.displayShots,
+  } as ShotVideoTakeProductionContext;
 }
 
 function storyboardImage(assetId: string, assetFileId: string, url: string) {

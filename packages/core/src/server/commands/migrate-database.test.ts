@@ -129,7 +129,7 @@ describe('migrate database command', () => {
              select created_at
              from __drizzle_migrations
              order by created_at desc
-             limit 2
+             limit 3
            )`
         )
         .run();
@@ -781,6 +781,153 @@ describe('migrate database command', () => {
           shotContentFingerprint: 'legacy:asset_file_shot_001',
         },
       ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('repairs persisted storyboard image fingerprints from shot-list documents', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      const shot = {
+        shotId: 'shot_001',
+        title: 'Map study',
+        storyBeat: 'Mehmed studies the city map before the siege plan hardens.',
+        narrativePurpose: 'Establish the strategic obsession driving the scene.',
+        description: 'Wide static shot of Mehmed at the table with the map visible.',
+        shotType: 'wide',
+        cameraAngle: 'eye level',
+        cameraMovement: 'static',
+        framing: 'centered table composition',
+        lensIntent: 'moderate wide lens feel',
+        aspectRatio: '16:9',
+        subject: 'Mehmed and the city map',
+        action: 'Mehmed studies the map in silence.',
+        dialogue: [],
+        coveredBlockIndexes: [0],
+        castMemberIds: ['cast_mehmed'],
+        locationIds: ['location_council'],
+        audioNotes: 'Quiet room tone and paper movement.',
+        productionNotes: 'Keep warm lamplight restrained.',
+      };
+      const document = {
+        kind: 'sceneShotList',
+        sceneId: 'scene_bombardment',
+        title: 'Bombardment coverage',
+        summary: 'A compact shot list.',
+        coverageStrategy: 'Preserve the existing opening images.',
+        shots: [shot],
+      };
+      sqlite.exec(`
+        create table scene_shot_list (
+          id text primary key not null,
+          scene_id text not null,
+          title text not null,
+          document text not null,
+          created_at text not null,
+          updated_at text not null
+        );
+        create table scene_shot_storyboard_image (
+          id text primary key not null,
+          scene_id text not null,
+          shot_list_id text not null,
+          shot_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          source_purpose text not null,
+          shot_content_fingerprint text not null,
+          created_at text not null,
+          updated_at text not null
+        );
+      `);
+      sqlite
+        .prepare(
+          `insert into scene_shot_list (
+             id,
+             scene_id,
+             title,
+             document,
+             created_at,
+             updated_at
+           ) values (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'scene_shot_list_bombardment',
+          'scene_bombardment',
+          'Bombardment coverage',
+          JSON.stringify(document),
+          '2026-06-07T10:00:00.000Z',
+          '2026-06-07T10:00:00.000Z'
+        );
+      sqlite
+        .prepare(
+          `insert into scene_shot_storyboard_image (
+             id,
+             scene_id,
+             shot_list_id,
+             shot_id,
+             asset_id,
+             asset_file_id,
+             source_purpose,
+             shot_content_fingerprint,
+             created_at,
+             updated_at
+           ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'storyboard_image_shot_001',
+          'scene_bombardment',
+          'scene_shot_list_bombardment',
+          'shot_001',
+          'asset_sheet',
+          'asset_file_shot_001',
+          'scene.storyboard-sheet',
+          'legacy:repaired:asset_file_shot_001',
+          '2026-06-07T10:01:00.000Z',
+          '2026-06-07T10:01:00.000Z'
+        );
+
+      const migrationSql = await fs.readFile(
+        path.join(
+          process.cwd(),
+          'drizzle',
+          '0038_repair_storyboard_image_fingerprints.sql'
+        ),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      const row = sqlite
+        .prepare(
+          `select shot_content_fingerprint as shotContentFingerprint
+           from scene_shot_storyboard_image
+           where id = ?`
+        )
+        .get('storyboard_image_shot_001') as {
+        shotContentFingerprint: string;
+      };
+      expect(row.shotContentFingerprint).toBe(
+        JSON.stringify({
+          title: shot.title,
+          storyBeat: shot.storyBeat,
+          narrativePurpose: shot.narrativePurpose,
+          description: shot.description,
+          shotType: shot.shotType,
+          cameraAngle: shot.cameraAngle,
+          cameraMovement: shot.cameraMovement,
+          framing: shot.framing,
+          lensIntent: shot.lensIntent,
+          aspectRatio: shot.aspectRatio,
+          subject: shot.subject,
+          action: shot.action,
+          dialogue: shot.dialogue,
+          coveredBlockIndexes: shot.coveredBlockIndexes,
+          castMemberIds: shot.castMemberIds,
+          locationIds: shot.locationIds,
+          audioNotes: shot.audioNotes,
+          productionNotes: shot.productionNotes,
+        })
+      );
     } finally {
       sqlite.close();
     }

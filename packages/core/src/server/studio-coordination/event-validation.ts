@@ -109,6 +109,24 @@ export function collectStudioEventIssues(value: unknown) {
       break;
     case 'studio.browserSessionActive':
       requireString(record, 'browserSessionId', issues);
+      if (
+        record.activityKind !== undefined &&
+        record.activityKind !== 'focused' &&
+        record.activityKind !== 'visible' &&
+        record.activityKind !== 'heartbeat'
+      ) {
+        issues.push(
+          issue(
+            'STUDIO_COORDINATION005',
+            'Unsupported browser session activity kind.',
+            ['activityKind']
+          )
+        );
+      }
+      validateOptionalProjectRef(record.projectRef, ['projectRef'], issues);
+      if (record.focus !== undefined) {
+        validateFocus(record.focus, ['focus'], issues);
+      }
       break;
     default:
       issues.push(issue('STUDIO_COORDINATION005', 'Unsupported Studio coordination event type.', ['type']));

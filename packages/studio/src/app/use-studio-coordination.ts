@@ -11,6 +11,7 @@ import {
   validateStudioFocusRequest,
 } from '@/services/studio-events-api';
 import type {
+  StudioBrowserSessionActivityKind,
   StudioFocus,
   StudioEvent,
   StudioFocusRequestedEvent,
@@ -49,24 +50,43 @@ export function useStudioCoordination(input: {
   const [focusReportVersion, setFocusReportVersion] = useState(0);
   const projectSessionRef = useRef(projectSession);
   const currentProjectRef = useRef<ProjectShellWithHttp | null>(projectSession.project);
+  const selection = studioSelection?.selection ?? null;
+  const currentSelectionRef = useRef<StudioSelection | null>(selection);
   const requestFocusReportRef = useRef(() => {
     setFocusReportVersion((version) => version + 1);
   });
-  const selection = studioSelection?.selection ?? null;
 
   useEffect(() => {
     projectSessionRef.current = projectSession;
     currentProjectRef.current = projectSession.project;
   }, [projectSession]);
 
-  const reportActivity = useCallback(async () => {
+  useEffect(() => {
+    currentSelectionRef.current = selection;
+  }, [selection]);
+
+  const reportActivity = useCallback(async (
+    activityKind: StudioBrowserSessionActivityKind,
+    options: { force?: boolean } = {}
+  ) => {
     const now = Date.now();
-    if (now - lastActivityRef.current < ACTIVITY_DEBOUNCE_MS) {
+    if (!options.force && now - lastActivityRef.current < ACTIVITY_DEBOUNCE_MS) {
       return;
     }
     lastActivityRef.current = now;
+    const project = currentProjectRef.current;
+    const currentSelection = currentSelectionRef.current;
+    const projectRef = project && currentSelection ? toProjectRef(project) : undefined;
+    const focus: StudioFocus = project && currentSelection
+      ? { screen: 'movieStudio', selection: currentSelection }
+      : { screen: 'projectLibrary' };
     try {
-      await reportBrowserSessionActive(browserSessionId);
+      await reportBrowserSessionActive({
+        browserSessionId,
+        activityKind,
+        projectRef,
+        focus,
+      });
     } catch {
       // Browser activity is best-effort local coordination.
     }
@@ -114,7 +134,7 @@ export function useStudioCoordination(input: {
   }, [processEventBatch]);
 
   useEffect(() => {
-    void reportActivity();
+    void reportActivity(readDocumentActivityKind(), { force: true });
     requestPoll();
     const interval = window.setInterval(() => {
       requestPoll();
@@ -125,7 +145,7 @@ export function useStudioCoordination(input: {
   useEffect(() => {
     const reportVisibleActivity = () => {
       if (document.visibilityState === 'visible') {
-        void reportActivity();
+        void reportActivity(readDocumentActivityKind(), { force: true });
         requestPoll();
       }
     };
@@ -133,7 +153,7 @@ export function useStudioCoordination(input: {
     document.addEventListener('visibilitychange', reportVisibleActivity);
     const heartbeat = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        void reportActivity();
+        void reportActivity(readDocumentActivityKind());
       }
     }, VISIBLE_HEARTBEAT_MS);
     return () => {
@@ -478,6 +498,16 @@ function readBrowserSessionId(): string {
   const browserSessionId = `studio_browser_${crypto.randomUUID()}`;
   window.sessionStorage.setItem(BROWSER_SESSION_KEY, browserSessionId);
   return browserSessionId;
+}
+
+function readDocumentActivityKind(): StudioBrowserSessionActivityKind {
+  if (document.hasFocus()) {
+    return 'focused';
+  }
+  if (document.visibilityState === 'visible') {
+    return 'visible';
+  }
+  return 'heartbeat';
 }
 
 function toProjectRef(project: ProjectShellWithHttp): StudioProjectRef {

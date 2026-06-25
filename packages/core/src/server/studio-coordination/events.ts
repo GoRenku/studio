@@ -133,9 +133,17 @@ export interface StudioFocusRequestFailedEvent extends StudioEventBase {
   diagnostics: DiagnosticIssue[];
 }
 
+export type StudioBrowserSessionActivityKind =
+  | 'focused'
+  | 'visible'
+  | 'heartbeat';
+
 export interface StudioBrowserSessionActiveEvent extends StudioEventBase {
   type: 'studio.browserSessionActive';
   browserSessionId: string;
+  activityKind?: StudioBrowserSessionActivityKind;
+  projectRef?: StudioProjectRef;
+  focus?: StudioFocus;
 }
 
 export type StudioEvent =

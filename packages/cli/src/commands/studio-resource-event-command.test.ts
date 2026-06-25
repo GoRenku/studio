@@ -72,6 +72,7 @@ describe('Studio resource event command', () => {
           message:
             'Project mutation succeeded, but the running Studio app could not be notified.',
           detail: expect.stringContaining('http://127.0.0.1:1'),
+          suggestion: expect.stringContaining('local network access'),
         },
       ],
     });

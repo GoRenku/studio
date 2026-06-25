@@ -587,6 +587,7 @@ export type {
   ProjectInformationRefreshField,
   ReadStudioEventsInput,
   StudioBrowserSessionActiveEvent,
+  StudioBrowserSessionActivityKind,
   StudioCoordinationService,
   StudioCurrent,
   StudioCurrentContext,

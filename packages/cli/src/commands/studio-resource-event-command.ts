@@ -54,6 +54,8 @@ function writeStudioResourceChangedWarning(
   failure: { serverUrl: string; detail: string }
 ): void {
   const detail = `${failure.serverUrl}: ${failure.detail}`;
+  const suggestion =
+    'If this command ran in Codex or another sandbox, run future Renku mutations with local network access so the localhost Studio notification can be delivered. Do not rerun non-idempotent mutations only to refresh Studio; read back state and refresh Studio manually if needed.';
   if (runtime.json) {
     runtime.io.stderr.error(
       JSON.stringify(
@@ -64,6 +66,7 @@ function writeStudioResourceChangedWarning(
               message:
                 'Project mutation succeeded, but the running Studio app could not be notified.',
               detail,
+              suggestion,
             },
           ],
         },
@@ -74,6 +77,6 @@ function writeStudioResourceChangedWarning(
     return;
   }
   runtime.io.stderr.error(
-    `[CLI026] WARNING Project mutation succeeded, but the running Studio app could not be notified: ${detail}`
+    `[CLI026] WARNING Project mutation succeeded, but the running Studio app could not be notified: ${detail}\nSuggestion: ${suggestion}`
   );
 }

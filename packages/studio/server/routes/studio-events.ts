@@ -6,6 +6,7 @@ import {
   type ScenePanelTab,
   type SceneShotDetailTab,
   type StudioSelection,
+  type StudioBrowserSessionActivityKind,
   type ProjectDataService,
   type StudioCoordinationService,
   type StudioFocusRequest,
@@ -184,10 +185,20 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
     })
     .post('/browser-sessions/active', requireToken, async (c) => {
       try {
-        const body = (await c.req.json()) as { browserSessionId?: string };
+        const body = (await c.req.json()) as {
+          browserSessionId?: string;
+          activityKind?: string;
+          projectRef?: unknown;
+          focus?: unknown;
+        };
         const event = await coordination.appendStudioEvent({
           type: 'studio.browserSessionActive',
           browserSessionId: body.browserSessionId ?? '',
+          activityKind: body.activityKind as
+            | StudioBrowserSessionActivityKind
+            | undefined,
+          projectRef: body.projectRef as StudioProjectRef | undefined,
+          focus: body.focus as StudioFocusRequest | undefined,
           source: {
             kind: 'studio',
             serverInstanceId: options.serverInstanceId,

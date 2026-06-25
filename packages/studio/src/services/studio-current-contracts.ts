@@ -6,6 +6,11 @@ export interface StudioProjectRef {
   storageRoot: string;
 }
 
+export type StudioBrowserSessionActivityKind =
+  | 'focused'
+  | 'visible'
+  | 'heartbeat';
+
 export type StudioFocus =
   | { screen: 'projectLibrary' }
   | { screen: 'movieStudio'; selection: StudioSelection };

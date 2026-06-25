@@ -1,5 +1,6 @@
 import { readStudioApiError } from './studio-api-errors';
 import type {
+  StudioBrowserSessionActivityKind,
   StudioCurrentResponse,
   StudioEventsResponse,
   StudioFocus,
@@ -24,11 +25,14 @@ export async function readStudioCurrent(): Promise<StudioCurrentResponse> {
   return (await response.json()) as StudioCurrentResponse;
 }
 
-export async function reportBrowserSessionActive(
-  browserSessionId: string
-): Promise<void> {
+export async function reportBrowserSessionActive(input: {
+  browserSessionId: string;
+  activityKind: StudioBrowserSessionActivityKind;
+  projectRef?: StudioProjectRef;
+  focus?: StudioFocus;
+}): Promise<void> {
   await postStudioEvent('/studio-api/studio/events/browser-sessions/active', {
-    browserSessionId,
+    ...input,
   });
 }
 

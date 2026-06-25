@@ -164,6 +164,7 @@ export function matchesSceneShotsResource(input: {
   return input.resourceKeys.some(
     (resourceKey) =>
       resourceKey === `scene:${input.sceneId}` ||
+      resourceKey === 'scene-shot-list' ||
       resourceKey === `surface:scene:${input.sceneId}:shots` ||
       resourceKey === `surface:scene:${input.sceneId}:dialogue-audio` ||
       resourceKey.startsWith('scene-dialogue-audio:') ||
@@ -221,7 +222,10 @@ function matchesStoryboardSceneResource(
   resourceKey: string,
   sceneIds: Set<string>
 ): boolean {
-  if (resourceKey.startsWith('scene-shot-list:')) {
+  if (
+    resourceKey === 'scene-shot-list' ||
+    resourceKey.startsWith('scene-shot-list:')
+  ) {
     return true;
   }
   for (const sceneId of sceneIds) {

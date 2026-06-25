@@ -266,6 +266,57 @@ describe('scene shot list commands', () => {
     ]);
   });
 
+  it('carries forward unchanged storyboard images for full replacements with an explicit base', async () => {
+    const ids = await sampleIds();
+    const baseDocument = sampleShotList(ids, 'Base coverage', 3);
+    const idGenerator = createDeterministicIdGenerator();
+    const base = await projectData.writeSceneShotList({
+      homeDir,
+      document: baseDocument,
+      idGenerator,
+    });
+    await importStoryboardImages(ids.sceneId, base.shotList.id, [
+      'shot_001',
+      'shot_002',
+      'shot_003',
+    ]);
+
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: {
+        ...baseDocument,
+        baseShotListId: base.shotList.id,
+        title: 'Replacement coverage with an insert',
+        shots: [
+          baseDocument.shots[0]!,
+          {
+            ...baseDocument.shots[0]!,
+            shotId: 'shot_inserted',
+            title: 'Inserted strategic detail',
+            description: 'A new insert shot that needs new storyboard art.',
+          },
+          {
+            ...baseDocument.shots[1]!,
+            title: 'Changed map study alternate',
+          },
+          baseDocument.shots[2]!,
+        ],
+      },
+    });
+
+    const status = await projectData.readSceneShotListStoryboardStatus({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+    });
+
+    expect(status.readyShotIds.sort()).toEqual(['shot_001', 'shot_003']);
+    expect(status.missingShotIds.sort()).toEqual([
+      'shot_002',
+      'shot_inserted',
+    ]);
+  });
+
   it('imports per-shot storyboard image assets', async () => {
     const ids = await sampleIds();
     const written = await projectData.writeSceneShotList({

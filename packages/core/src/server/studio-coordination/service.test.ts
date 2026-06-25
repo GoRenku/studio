@@ -305,6 +305,161 @@ describe('StudioCoordinationService', () => {
     });
   });
 
+  it('uses browser activity focus reports as current Studio selection', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+    const projectData = createProjectDataService();
+    await createSampleMovieProject({
+      homeDir,
+      projectData,
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const coordination = createStudioCoordinationService({ homeDir });
+
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_scene',
+      activityKind: 'focused',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'scene',
+          id: scene.id as string,
+          sceneTab: 'shots',
+        },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_scene',
+      },
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.studio.running).toBe(true);
+    expect(current.selection).toEqual({
+      type: 'scene',
+      id: scene.id,
+      sceneTab: 'shots',
+    });
+    expect(current.context).toMatchObject({
+      kind: 'scene',
+      id: scene.id,
+      sceneTab: {
+        id: 'shots',
+        label: 'Shots',
+      },
+    });
+  });
+
+  it('keeps the newest live focus when another session reports a later heartbeat', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+    const projectData = createProjectDataService();
+    await createSampleMovieProject({
+      homeDir,
+      projectData,
+    });
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const coordination = createStudioCoordinationService({ homeDir });
+    const now = Date.now();
+
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: { type: 'projectInformation' },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_old',
+      },
+      createdAt: new Date(now - 5_000).toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'scene',
+          id: scene.id as string,
+          sceneTab: 'shots',
+        },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_scene',
+      },
+      createdAt: new Date(now - 3_000).toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_scene',
+      activityKind: 'focused',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'scene',
+          id: scene.id as string,
+          sceneTab: 'shots',
+        },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_scene',
+      },
+      createdAt: new Date(now - 3_000).toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_old',
+      activityKind: 'heartbeat',
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_old',
+      },
+      createdAt: new Date(now - 1_000).toISOString(),
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.selection).toEqual({
+      type: 'scene',
+      id: scene.id,
+      sceneTab: 'shots',
+    });
+    expect(current.context).toMatchObject({
+      kind: 'scene',
+      id: scene.id,
+      sceneTab: {
+        id: 'shots',
+        label: 'Shots',
+      },
+    });
+  });
+
   it('enriches current scene shot focus with the active shot tab selections', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);
