@@ -82,7 +82,11 @@ const FIRST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const LAST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const DEFAULT_LOOKBOOK_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
-const DEFAULT_LOOKBOOK_DEPENDENCY_LINE_COUNT = 1;
+const DEFAULT_LOCATION_SHEET_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD;
+const DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_COST_USD =
+  DEFAULT_LOOKBOOK_DEPENDENCY_COST_USD +
+  DEFAULT_LOCATION_SHEET_DEPENDENCY_COST_USD;
+const DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_LINE_COUNT = 2;
 const REFERENCE_BUNDLE_DEPENDENCY_COST_USD =
   GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD +
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
@@ -252,17 +256,20 @@ describe('shot video take estimate integration matrix', () => {
     const lastFrameLine = dependencyLines.find(
       (line) => line.dependencyKind === 'last-frame'
     );
+    const locationSheetLine = dependencyLines.find(
+      (line) => line.dependencyKind === 'location-environment-sheet'
+    );
 
     expect(estimate.issues).toEqual([]);
     expect(estimate.plan?.estimate).toMatchObject({
       state: 'complete',
-      pricedLineCount: 5,
+      pricedLineCount: 6,
       unpricedLineCount: 0,
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.7716, 6);
-    expect(dependencyLines).toHaveLength(3);
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8086, 6);
+    expect(dependencyLines).toHaveLength(4);
     expect(firstFrameLine).toMatchObject({
       pricing: { state: 'priced', estimatedUsd: 0.005 },
       materializationState: 'missing-input',
@@ -273,6 +280,13 @@ describe('shot video take estimate integration matrix', () => {
       materializationState: 'missing-input',
     });
     expect(lastFrameLine).not.toHaveProperty('draftGenerationSpec');
+    expect(locationSheetLine).toMatchObject({
+      pricing: {
+        state: 'priced',
+        estimatedUsd: DEFAULT_LOCATION_SHEET_DEPENDENCY_COST_USD,
+      },
+      materializationState: 'generatable',
+    });
     expect(estimate.plan?.finalEstimate?.estimatedCostUsd).toBeCloseTo(2.7216, 6);
     assertNoObsoleteEstimateFields(estimate);
   });
@@ -306,16 +320,19 @@ describe('shot video take estimate integration matrix', () => {
     const lastFrameLine = report.plan.lines.find(
       (line) => line.dependencyKind === 'last-frame'
     );
+    const locationSheetLine = report.plan.lines.find(
+      (line) => line.dependencyKind === 'location-environment-sheet'
+    );
 
     expect(report.diagnostics).toEqual([]);
     expect(report.plan.estimate).toMatchObject({
       state: 'complete',
-      pricedLineCount: 5,
+      pricedLineCount: 6,
       unpricedLineCount: 0,
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(2.7716, 6);
+    expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(2.8086, 6);
     expect(firstFrameLine).toMatchObject({
       kind: 'dependency-generation',
       materializationState: 'missing-input',
@@ -328,6 +345,14 @@ describe('shot video take estimate integration matrix', () => {
       pricing: { state: 'priced', estimatedUsd: 0.005 },
     });
     expect(lastFrameLine).not.toHaveProperty('draftGenerationSpec');
+    expect(locationSheetLine).toMatchObject({
+      kind: 'dependency-generation',
+      materializationState: 'generatable',
+      pricing: {
+        state: 'priced',
+        estimatedUsd: DEFAULT_LOCATION_SHEET_DEPENDENCY_COST_USD,
+      },
+    });
     assertNoObsoleteEstimateFields(report);
   });
 
@@ -1299,7 +1324,7 @@ function baseReferenceDependencyCostForRoute(input: {
 }): number {
   return input.inputModeId === 'reference'
     ? REFERENCE_BUNDLE_DEPENDENCY_COST_USD
-    : DEFAULT_LOOKBOOK_DEPENDENCY_COST_USD;
+    : DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_COST_USD;
 }
 
 function baseReferenceDependencyLineCountForRoute(input: {
@@ -1307,7 +1332,7 @@ function baseReferenceDependencyLineCountForRoute(input: {
 }): number {
   return input.inputModeId === 'reference'
     ? REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT
-    : DEFAULT_LOOKBOOK_DEPENDENCY_LINE_COUNT;
+    : DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_LINE_COUNT;
 }
 
 function requiresMultiShotStoryboard(input: {

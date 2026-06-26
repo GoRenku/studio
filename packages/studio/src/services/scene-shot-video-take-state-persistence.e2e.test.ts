@@ -12,7 +12,7 @@ import {
   updateShotVideoTakeGrouping,
   type ShotVideoTakeReferenceSelectionFixture,
   type ShotVideoTakeStateE2eFixture,
-} from './testing/shot-video-take-state-e2e-fixture';
+} from './testing/shot-video-take-state-e2e.test-fixture';
 import {
   updateSceneShotVideoTakeShotDesign,
   planShotVideoTakeProduction,

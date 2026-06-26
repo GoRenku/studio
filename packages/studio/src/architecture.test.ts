@@ -211,7 +211,9 @@ function isTestFile(file: string): boolean {
     file.endsWith('.test.ts') ||
     file.endsWith('.test.tsx') ||
     file.endsWith('.e2e.test.ts') ||
-    file.endsWith('.e2e.test.tsx')
+    file.endsWith('.e2e.test.tsx') ||
+    file.endsWith('.test-fixture.ts') ||
+    file.endsWith('.test-fixture.tsx')
   );
 }
 
