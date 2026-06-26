@@ -19,6 +19,9 @@ import {
   toLocationResourceResponse,
   toSceneNarrativeResourceResponse,
   toSceneShotListResourceResponse,
+  toSceneShotVideoTakeEditContextResponse,
+  toSceneShotVideoTakeListReportResponse,
+  toShotVideoTakeProductionContextResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
 import { readSceneShotDesignRequest } from '../http/scene-shot-design-request.js';
@@ -394,7 +397,7 @@ export function createScreenplayRoute({
           projectName,
           sceneId,
         });
-        return c.json(report);
+        return c.json(toSceneShotVideoTakeListReportResponse(projectName, report));
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -444,7 +447,10 @@ export function createScreenplayRoute({
             context.take.state.production.inputModeId ??
             context.defaults.inputModeId,
         });
-        return c.json({ context, models });
+        return c.json({
+          context: toShotVideoTakeProductionContextResponse(projectName, context),
+          models,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -503,7 +509,12 @@ export function createScreenplayRoute({
             sceneId,
             takeId: takeId,
           });
-          return c.json({ editContext });
+          return c.json({
+            editContext: toSceneShotVideoTakeEditContextResponse(
+              projectName,
+              editContext
+            ),
+          });
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -528,7 +539,10 @@ export function createScreenplayRoute({
               production,
             });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -554,7 +568,10 @@ export function createScreenplayRoute({
             shotIds: request.shotIds,
           });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -581,7 +598,10 @@ export function createScreenplayRoute({
               shotDesign,
             });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -675,7 +695,10 @@ export function createScreenplayRoute({
             inputId: request.inputId,
           });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -703,7 +726,10 @@ export function createScreenplayRoute({
             subjectId: request.subjectId!,
           });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -728,7 +754,10 @@ export function createScreenplayRoute({
             inputId,
           });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             recovery: context.recovery,
             resourceKeys: context.resourceKeys,
           });
@@ -757,7 +786,10 @@ export function createScreenplayRoute({
               assetId: request.assetId,
             });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -783,7 +815,10 @@ export function createScreenplayRoute({
               assetIds: request.assetIds,
             });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -808,7 +843,10 @@ export function createScreenplayRoute({
               lookbookSheetId: request.lookbookSheetId,
             });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -834,7 +872,10 @@ export function createScreenplayRoute({
               dialogueAudioTakeId: request.takeId,
             });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {
@@ -859,7 +900,10 @@ export function createScreenplayRoute({
             inclusion: request.inclusion,
           });
           return c.json({
-            context,
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
             resourceKeys: context.resourceKeys,
           });
         } catch (error) {

@@ -32,6 +32,7 @@ interface SceneShotDetailProps {
   sceneId: string;
   shot: SceneShot;
   take: SceneShotVideoTake | null;
+  isShotEditable: boolean;
   label: string;
   activeTab?: SceneShotDetailTab;
   castMemberLabels: Record<string, string>;
@@ -57,6 +58,7 @@ export function SceneShotDetail({
   sceneId,
   shot,
   take,
+  isShotEditable,
   label,
   activeTab = 'description',
   castMemberLabels,
@@ -71,17 +73,22 @@ export function SceneShotDetail({
     saveNotification,
     setDetailSaveNotificationSlot,
   } = useDetailSaveNotificationSlots();
+  const editableTake = isShotEditable ? take : null;
+  const visibleTabs = isShotEditable
+    ? DESIGN_TABS
+    : DESIGN_TABS.filter((tab) => tab.value === 'description');
+  const visibleActiveTab = isShotEditable ? activeTab : 'description';
   const takeTag = useMemo(
     () =>
-      take && take.shotIds.length > 1
-        ? `${take.shotIds.length} shots`
+      editableTake && editableTake.shotIds.length > 1
+        ? `${editableTake.shotIds.length} shots`
         : null,
-    [take]
+    [editableTake]
   );
   const production = useShotVideoTakeProduction({
     projectName,
     sceneId,
-    takeId: take?.takeId,
+    takeId: editableTake?.takeId,
   });
   const handleShotDesignSaveNotificationChange = useCallback(
     (status: SaveNotificationStatus) => {
@@ -111,6 +118,12 @@ export function SceneShotDetail({
     return () => onSaveNotificationChange?.(idleSaveNotification);
   }, [onSaveNotificationChange, saveNotification]);
 
+  useEffect(() => {
+    if (!isShotEditable && activeTab !== 'description') {
+      onTabChange('description');
+    }
+  }, [activeTab, isShotEditable, onTabChange]);
+
   return (
     <section className='flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
       <ResizablePanelGroup
@@ -135,19 +148,19 @@ export function SceneShotDetail({
           className='min-h-0'
         >
           <TakeShotDesignProvider
-            key={`${take?.takeId ?? 'shot-list'}:${shot.shotId}`}
+            key={`${editableTake?.takeId ?? 'shot-list'}:${shot.shotId}`}
             projectName={projectName}
             sceneId={sceneId}
             shot={shot}
-            take={take}
+            take={editableTake}
             onSaved={onTakeChange}
             onSaveNotificationChange={handleShotDesignSaveNotificationChange}
           >
             <LineTabs
-              value={activeTab}
+              value={visibleActiveTab}
               onValueChange={(value) => onTabChange(value as SceneShotDetailTab)}
               className='flex h-full min-h-0 min-w-0 flex-col gap-0'
-              items={DESIGN_TABS.map((tab) => ({ ...tab }))}
+              items={visibleTabs.map((tab) => ({ ...tab }))}
               trailing={
                 takeTag ? (
                   <SceneShotAiProductionTakeTag
@@ -165,37 +178,41 @@ export function SceneShotDetail({
                     locationLabels={locationLabels}
                   />
                 </LineTabsContent>
-                <LineTabsContent value='composition'>
-                  <SceneShotCompositionTab />
-                </LineTabsContent>
-                <LineTabsContent value='motion'>
-                  <SceneShotCameraMotionTab />
-                </LineTabsContent>
-                <LineTabsContent value='dialogs'>
-                  <SceneShotDialogsTab
-                    projectName={projectName}
-                    sceneId={sceneId}
-                    castMemberImages={castMemberImages}
-                    productionPlan={production.productionPlan}
-                    onPlanRefresh={production.refreshProductionPlan}
-                    onSaveNotificationChange={handleDialogsSaveNotificationChange}
-                  />
-                </LineTabsContent>
-                <LineTabsContent value='references'>
-                  <SceneShotReferencesTab
-                    projectName={projectName}
-                    sceneId={sceneId}
-                    productionPlan={production.productionPlan}
-                    onPlanRefresh={production.refreshProductionPlan}
-                    onSaveNotificationChange={handleReferencesSaveNotificationChange}
-                  />
-                </LineTabsContent>
-                <LineTabsContent value='ai-production' className='h-full'>
-                  <SceneShotAiProductionTab
-                    production={production}
-                    onCreateTake={onCreateTake}
-                  />
-                </LineTabsContent>
+                {isShotEditable ? (
+                  <>
+                    <LineTabsContent value='composition'>
+                      <SceneShotCompositionTab />
+                    </LineTabsContent>
+                    <LineTabsContent value='motion'>
+                      <SceneShotCameraMotionTab />
+                    </LineTabsContent>
+                    <LineTabsContent value='dialogs'>
+                      <SceneShotDialogsTab
+                        projectName={projectName}
+                        sceneId={sceneId}
+                        castMemberImages={castMemberImages}
+                        productionPlan={production.productionPlan}
+                        onPlanRefresh={production.refreshProductionPlan}
+                        onSaveNotificationChange={handleDialogsSaveNotificationChange}
+                      />
+                    </LineTabsContent>
+                    <LineTabsContent value='references'>
+                      <SceneShotReferencesTab
+                        projectName={projectName}
+                        sceneId={sceneId}
+                        productionPlan={production.productionPlan}
+                        onPlanRefresh={production.refreshProductionPlan}
+                        onSaveNotificationChange={handleReferencesSaveNotificationChange}
+                      />
+                    </LineTabsContent>
+                    <LineTabsContent value='ai-production' className='h-full'>
+                      <SceneShotAiProductionTab
+                        production={production}
+                        onCreateTake={onCreateTake}
+                      />
+                    </LineTabsContent>
+                  </>
+                ) : null}
               </div>
             </LineTabs>
           </TakeShotDesignProvider>

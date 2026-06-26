@@ -20,6 +20,8 @@
   --item-hover-bg: hsl(60 35% 87%);
   --item-active-bg: hsl(45 44% 83%);
   --item-active-border: hsl(42 60% 48% / 0.4);
+  --take-shot-selected-bg: hsl(128 34% 82%);
+  --take-shot-selected-border: hsl(135 36% 42% / 0.55);
 
   /* Primary Text & Accents */
   --foreground: hsl(45 62% 21%);
@@ -133,6 +135,8 @@
   --item-hover-bg: hsl(0 0% 32%);
   --item-active-bg: hsl(42 65% 45% / 0.2);
   --item-active-border: hsl(42 65% 45% / 0.5);
+  --take-shot-selected-bg: hsl(142 35% 31% / 0.32);
+  --take-shot-selected-border: hsl(142 48% 54% / 0.55);
 
   /* Primary Text & Accents */
   --foreground: hsl(60 51% 91%);
@@ -258,6 +262,8 @@
   --color-item-hover-bg: var(--item-hover-bg);
   --color-item-active-bg: var(--item-active-bg);
   --color-item-active-border: var(--item-active-border);
+  --color-take-shot-selected-bg: var(--take-shot-selected-bg);
+  --color-take-shot-selected-border: var(--take-shot-selected-border);
 
   --color-editor-bg: var(--editor-bg);
   --color-editor-fg: var(--editor-fg);

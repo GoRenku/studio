@@ -1,8 +1,18 @@
 import type {
   RecoverableMutationReport,
   SceneShotVideoTake,
+  SceneShotVideoTakeListReport,
+  SceneShotVideoTakeOverview,
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
+import type {
+  ScreenplayDocument,
+} from '../../../client/screenplay.js';
+import {
+  readActiveSceneShotListId,
+  requireSceneShotListForScene,
+  readSceneShotListDocument,
+} from '../../database/access/scene-shot-lists.js';
 import {
   insertSceneShotVideoTakeRecord,
   listSceneShotVideoTakesForScene,
@@ -16,6 +26,9 @@ import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
 } from '../../entity-ids.js';
+import type {
+  DatabaseSession,
+} from '../../database/lifecycle/store.js';
 import {
   ProjectDataError,
 } from '../../project-data-error.js';
@@ -40,7 +53,13 @@ import {
   assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
+import {
+  applyTakeStateToShot,
+} from './take-state.js';
 import { shotVideoTakeResourceKeys } from './resource-keys.js';
+import {
+  listShotVideoTakeStoryboardImages,
+} from './storyboard-images.js';
 import { discardTrashObject } from '../../trash/trash-lifecycle-service.js';
 
 export async function createSceneShotVideoTake(
@@ -88,16 +107,65 @@ export async function readSceneShotVideoTake(
 
 export async function listSceneShotVideoTakes(
   input: ListSceneShotVideoTakesInput
-): Promise<{ takes: SceneShotVideoTake[] }> {
+): Promise<SceneShotVideoTakeListReport> {
   return withShotProjectSession(input, ({ session }) => {
     const screenplay = requireScreenplayDocument(session);
+    const activeShotListId = readActiveSceneShotListId(session, input.sceneId);
     return {
       takes: listSceneShotVideoTakesForScene(session, {
         sceneId: input.sceneId,
         screenplay,
-      }),
+      }).map((take) =>
+        toSceneShotVideoTakeOverview({
+          session,
+          sceneId: input.sceneId,
+          take,
+          activeShotListId,
+          screenplay,
+        })
+      ),
     };
   });
+}
+
+function toSceneShotVideoTakeOverview(input: {
+  session: DatabaseSession;
+  sceneId: string;
+  take: SceneShotVideoTake;
+  activeShotListId: string | null;
+  screenplay: ScreenplayDocument;
+}): SceneShotVideoTakeOverview {
+  const sourceShotListRow = requireSceneShotListForScene({
+    session: input.session,
+    sceneId: input.sceneId,
+    shotListId: input.take.sourceShotListId,
+  });
+  const sourceShotList = readSceneShotListDocument({
+    row: sourceShotListRow,
+    screenplay: input.screenplay,
+  });
+  return {
+    take: input.take,
+    sourceShotList: {
+      id: sourceShotListRow.id,
+      title: sourceShotList.title,
+      summary: sourceShotList.summary,
+      createdAt: sourceShotListRow.createdAt,
+      updatedAt: sourceShotListRow.updatedAt,
+      isActive: sourceShotListRow.id === input.activeShotListId,
+    },
+    displayShots: sourceShotList.shots.map((shot) =>
+      applyTakeStateToShot({
+        shot,
+        state: input.take.state,
+      })
+    ),
+    storyboardImages: listShotVideoTakeStoryboardImages({
+      session: input.session,
+      sceneId: input.sceneId,
+      shotListId: sourceShotListRow.id,
+    }),
+  };
 }
 
 export async function deleteSceneShotVideoTake(

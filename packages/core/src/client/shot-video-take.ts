@@ -68,7 +68,14 @@ export interface ShotVideoTakeLookbookReference {
 export interface ShotVideoTakeStoryboardImageReference {
   shotId: string;
   assetId: string;
+  relationshipId: string;
   assetFileId: string;
+  title: string;
+  fileRole: string;
+  mediaKind: string;
+  mimeType: string | null;
+  width: number | null;
+  height: number | null;
   projectRelativePath: ProjectRelativePath;
 }
 
@@ -133,6 +140,17 @@ export interface SceneShotVideoTake {
   status: SceneShotVideoTakeStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SceneShotVideoTakeOverview {
+  take: SceneShotVideoTake;
+  sourceShotList: ShotVideoTakeShotListContext;
+  displayShots: SceneShot[];
+  storyboardImages: ShotVideoTakeStoryboardImageReference[];
+}
+
+export interface SceneShotVideoTakeListReport {
+  takes: SceneShotVideoTakeOverview[];
 }
 
 export interface SceneShotVideoTakeState {

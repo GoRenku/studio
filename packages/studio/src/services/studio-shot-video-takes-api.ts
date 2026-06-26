@@ -12,8 +12,44 @@ import type {
   ShotVideoTakeProductionPlanReport,
   SceneShotVideoTakeEditContext,
   RecoverableMutationReport,
+  SceneShotVideoTakeListReport,
+  SceneShotVideoTakeOverview,
+  ShotVideoTakeStoryboardImageReference,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
+
+export type ShotVideoTakeStoryboardImageReferenceWithHttp =
+  ShotVideoTakeStoryboardImageReference & {
+    url: string;
+  };
+
+export type SceneShotVideoTakeOverviewResponse = Omit<
+  SceneShotVideoTakeOverview,
+  'storyboardImages'
+> & {
+  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
+};
+
+export type SceneShotVideoTakeListReportResponse = Omit<
+  SceneShotVideoTakeListReport,
+  'takes'
+> & {
+  takes: SceneShotVideoTakeOverviewResponse[];
+};
+
+export type ShotVideoTakeProductionContextResponse = Omit<
+  ShotVideoTakeProductionContext,
+  'storyboardImages'
+> & {
+  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
+};
+
+export type SceneShotVideoTakeEditContextResponse = Omit<
+  SceneShotVideoTakeEditContext,
+  'storyboardImages'
+> & {
+  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
+};
 
 /** The dependency input slot the reuse/regenerate controls act on (0041). */
 export interface ShotVideoTakeInputSlot {
@@ -23,18 +59,18 @@ export interface ShotVideoTakeInputSlot {
 }
 
 export interface ShotVideoTakeProductionRead {
-  context: ShotVideoTakeProductionContext;
+  context: ShotVideoTakeProductionContextResponse;
   models: ShotVideoTakeModelListReport;
 }
 
 interface TakeMutationResponse {
-  context: ShotVideoTakeProductionContext;
+  context: ShotVideoTakeProductionContextResponse;
   resourceKeys: string[];
   recovery?: RecoverableMutationReport['recovery'];
 }
 
 export interface ShotVideoTakeProductionMutation {
-  context: ShotVideoTakeProductionContext;
+  context: ShotVideoTakeProductionContextResponse;
   resourceKeys: string[];
   recovery?: RecoverableMutationReport['recovery'];
 }
@@ -44,12 +80,10 @@ export interface ShotVideoTakePlanRead {
 }
 
 export interface SceneShotVideoTakeEditContextRead {
-  editContext: SceneShotVideoTakeEditContext;
+  editContext: SceneShotVideoTakeEditContextResponse;
 }
 
-export interface SceneShotVideoTakesRead {
-  takes: SceneShotVideoTake[];
-}
+export type SceneShotVideoTakesRead = SceneShotVideoTakeListReportResponse;
 
 export interface SceneShotVideoTakeMutation {
   take: SceneShotVideoTake;
@@ -133,7 +167,7 @@ export async function readSceneShotVideoTakeEditContext(
   projectName: string,
   sceneId: string,
   takeId: string
-): Promise<SceneShotVideoTakeEditContext> {
+): Promise<SceneShotVideoTakeEditContextResponse> {
   const response = await fetch(
     `${productionPath(projectName, sceneId, takeId)}/edit-context`
   );

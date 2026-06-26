@@ -60,12 +60,15 @@ describe('scene shot video takes', () => {
       homeDir,
       sceneId: ids.sceneId,
     });
-    expect(report.takes[0]).toMatchObject({
+    expect(report.takes[0]?.take).toMatchObject({
       takeId: pickedTake.takeId,
       picked: true,
     });
-    expect(report.takes.find((take) => take.takeId === written.take.takeId))
-      .toMatchObject({ picked: false });
+    expect(
+      report.takes.find(
+        (overview) => overview.take.takeId === written.take.takeId
+      )?.take
+    ).toMatchObject({ picked: false });
   });
 
   it('rejects wrong-scene take pick updates before changing the take', async () => {

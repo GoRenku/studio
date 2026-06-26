@@ -16,6 +16,7 @@ import {
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
   readSceneShotVideoTakeEditContext,
+  type SceneShotVideoTakeOverviewResponse,
   updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
 } from '@/services/studio-shot-video-takes-api';
@@ -61,18 +62,22 @@ describe('SceneTakesTab', () => {
     vi.mocked(listSceneShotVideoTakes).mockReset();
     vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
       takes: [
-        take({
-          takeId: 'take_reaction',
-          title: 'Reaction take',
-          shotIds: ['shot_002'],
-          updatedAt: '2026-06-18T11:00:00.000Z',
-        }),
-        take({
-          takeId: 'take_map',
-          title: 'Map study take',
-          shotIds: ['shot_001'],
-          updatedAt: '2026-06-18T10:00:00.000Z',
-        }),
+        takeOverview(
+          take({
+            takeId: 'take_reaction',
+            title: 'Reaction take',
+            shotIds: ['shot_002'],
+            updatedAt: '2026-06-18T11:00:00.000Z',
+          })
+        ),
+        takeOverview(
+          take({
+            takeId: 'take_map',
+            title: 'Map study take',
+            shotIds: ['shot_001'],
+            updatedAt: '2026-06-18T10:00:00.000Z',
+          })
+        ),
       ],
     });
     vi.mocked(createSceneShotVideoTake).mockReset();
@@ -192,7 +197,7 @@ describe('SceneTakesTab', () => {
     );
   });
 
-  it('groups an existing take against its source shot list after the active shot list changes', async () => {
+  it('selects shots for an existing take against its source shot list after the active shot list changes', async () => {
     const sourceTake = take({
       takeId: 'take_reaction',
       title: 'Reaction take',
@@ -234,13 +239,46 @@ describe('SceneTakesTab', () => {
       },
     });
     vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
-      takes: [sourceTake],
+      takes: [
+        takeOverview(sourceTake, {
+          sourceShotListId: 'shot_list_source',
+          displayShots: sourceShots,
+          storyboardImages: [
+            sourceStoryboardImage(
+              'shot_001',
+              'asset_old_001',
+              'file_old_001',
+              '/storyboards/source-shot-001.png'
+            ),
+            sourceStoryboardImage(
+              'shot_002',
+              'asset_old_002',
+              'file_old_002',
+              '/storyboards/source-shot-002.png'
+            ),
+          ],
+        }),
+      ],
     });
     vi.mocked(readSceneShotVideoTakeEditContext).mockResolvedValue(
       takeEditContext({
         take: sourceTake,
         sourceShotListId: 'shot_list_source',
         displayShots: sourceShots,
+        storyboardImages: [
+          sourceStoryboardImage(
+            'shot_001',
+            'asset_old_001',
+            'file_old_001',
+            '/storyboards/source-shot-001.png'
+          ),
+          sourceStoryboardImage(
+            'shot_002',
+            'asset_old_002',
+            'file_old_002',
+            '/storyboards/source-shot-002.png'
+          ),
+        ],
       })
     );
     vi.mocked(updateSceneShotVideoTakeShots).mockResolvedValue({
@@ -252,6 +290,20 @@ describe('SceneTakesTab', () => {
         },
         shotListId: 'shot_list_source',
         displayShots: sourceShots,
+        storyboardImages: [
+          sourceStoryboardImage(
+            'shot_001',
+            'asset_old_001',
+            'file_old_001',
+            '/storyboards/source-shot-001.png'
+          ),
+          sourceStoryboardImage(
+            'shot_002',
+            'asset_old_002',
+            'file_old_002',
+            '/storyboards/source-shot-002.png'
+          ),
+        ],
       }),
       resourceKeys: [],
     });
@@ -276,11 +328,16 @@ describe('SceneTakesTab', () => {
       screen.getByRole('button', { name: /Shot 2.*Council reaction/ })
     ).not.toBeNull();
     expect(screen.queryByText('Inserted wall crossing')).toBeNull();
+    expect(
+      screen
+        .getByRole('img', { name: 'Shot 1 — Map study' })
+        .getAttribute('src')
+    ).toBe('/storyboards/source-shot-001.png');
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Cycle grouping for Shot 1' })
+      screen.getByRole('button', { name: 'Expand Select for Shot 1' })
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Review Groups' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Mode' }));
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
     await waitFor(() =>
@@ -291,6 +348,215 @@ describe('SceneTakesTab', () => {
         ['shot_001', 'shot_002']
       )
     );
+  });
+
+  it('replaces the selected take shots when a non-contiguous shot is selected', async () => {
+    configureFiveShotEditTake(['shot_001', 'shot_002', 'shot_003']);
+
+    render(
+      <SceneTakesTabHarness
+        initialSelection={{
+          type: 'scene',
+          id: 'scene_hook',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: 'take_reaction',
+          shotId: 'shot_003',
+        }}
+      />
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Select Shot for Shot 5' })
+    );
+
+    expect(selectedForEditLabels()).toEqual(['Shot 5 — The machine is fed']);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Mode' }));
+    expect(
+      screen.getByText('Deselect Shot 1-3 and select Shot 5.')
+    ).not.toBeNull();
+    expect(screen.getByText('1 prompt draft will be refreshed.')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(updateSceneShotVideoTakeShots).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_reaction',
+        ['shot_005']
+      )
+    );
+  });
+
+  it('deselects an interior shot without keeping later shots selected', async () => {
+    configureFiveShotEditTake([
+      'shot_001',
+      'shot_002',
+      'shot_003',
+      'shot_004',
+    ]);
+
+    render(
+      <SceneTakesTabHarness
+        initialSelection={{
+          type: 'scene',
+          id: 'scene_hook',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: 'take_reaction',
+          shotId: 'shot_003',
+        }}
+      />
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Stop Select for Shot 3' })
+    );
+
+    expect(selectedForEditLabels()).toEqual([
+      'Shot 1 — Walls in smoke',
+      'Shot 2 — Bronze mouth',
+    ]);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Mode' }));
+    expect(
+      screen.getByText('Change selection from Shot 1-4 to Shot 1-2.')
+    ).not.toBeNull();
+    expect(screen.queryByText('Select Shot 4.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(updateSceneShotVideoTakeShots).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_reaction',
+        ['shot_001', 'shot_002']
+      )
+    );
+  });
+
+  it('keeps only the new shot after deselecting bottom then top edge shots', async () => {
+    configureFiveShotEditTake(['shot_001', 'shot_002']);
+
+    render(
+      <SceneTakesTabHarness
+        initialSelection={{
+          type: 'scene',
+          id: 'scene_hook',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: 'take_reaction',
+          shotId: 'shot_002',
+        }}
+      />
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Stop Select for Shot 2' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Stop Select for Shot 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select Shot for Shot 4' }));
+
+    expect(selectedForEditLabels()).toEqual([
+      'Shot 4 — Mara and Urban divided by bronze',
+    ]);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Mode' }));
+    expect(
+      screen.getByText('Deselect Shot 1-2 and select Shot 4.')
+    ).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(updateSceneShotVideoTakeShots).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_reaction',
+        ['shot_004']
+      )
+    );
+  });
+
+  it('keeps only the new shot after deselecting top then remaining edge shots', async () => {
+    configureFiveShotEditTake(['shot_001', 'shot_002']);
+
+    render(
+      <SceneTakesTabHarness
+        initialSelection={{
+          type: 'scene',
+          id: 'scene_hook',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: 'take_reaction',
+          shotId: 'shot_001',
+        }}
+      />
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Stop Select for Shot 1' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Stop Select for Shot 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Select Shot for Shot 4' }));
+
+    expect(selectedForEditLabels()).toEqual([
+      'Shot 4 — Mara and Urban divided by bronze',
+    ]);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Mode' }));
+    expect(
+      screen.getByText('Deselect Shot 1-2 and select Shot 4.')
+    ).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(updateSceneShotVideoTakeShots).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_reaction',
+        ['shot_004']
+      )
+    );
+  });
+
+  it('shows only Description when a focused source-list shot is not selected in the open take', async () => {
+    const sourceTake = take({
+      takeId: 'take_reaction',
+      title: 'Reaction take',
+      shotIds: ['shot_002'],
+      updatedAt: '2026-06-18T11:00:00.000Z',
+    });
+
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+      takes: [takeOverview(sourceTake)],
+    });
+    vi.mocked(readSceneShotVideoTakeEditContext).mockResolvedValue(
+      takeEditContext({
+        take: sourceTake,
+        sourceShotListId: 'shot_list_hook',
+        displayShots: shotList().shots,
+      })
+    );
+
+    render(
+      <SceneTakesTabHarness
+        initialSelection={{
+          type: 'scene',
+          id: 'scene_hook',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: 'take_reaction',
+          shotId: 'shot_001',
+          shotTab: 'composition',
+        }}
+      />
+    );
+
+    expect(await screen.findByRole('tab', { name: 'Description' })).not.toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Composition' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Motion' })).toBeNull();
+    expect(screen.queryByText('Map study description.')).not.toBeNull();
   });
 });
 
@@ -361,6 +627,83 @@ function shotList(): SceneShotListDocument {
   };
 }
 
+function fiveShotList(): SceneShotListDocument {
+  return {
+    kind: 'sceneShotList',
+    sceneId: 'scene_hook',
+    title: 'Bombardment source coverage',
+    summary: 'Five shots.',
+    coverageStrategy: 'Move from the wall to the machine.',
+    shots: [
+      shot('shot_001', 'Walls in smoke'),
+      shot('shot_002', 'Bronze mouth'),
+      shot('shot_003', 'Urban reads the metal'),
+      shot('shot_004', 'Mara and Urban divided by bronze'),
+      shot('shot_005', 'The machine is fed'),
+    ],
+  };
+}
+
+function configureFiveShotEditTake(shotIds: string[]) {
+  const sourceShots = fiveShotList().shots;
+  const sourceTake = take({
+    takeId: 'take_reaction',
+    title: 'Reaction take',
+    sourceShotListId: 'shot_list_source',
+    shotIds,
+    updatedAt: '2026-06-18T11:00:00.000Z',
+  });
+  const storyboardImages = sourceShots.map((sourceShot, index) =>
+    sourceStoryboardImage(
+      sourceShot.shotId,
+      `asset_old_${index + 1}`,
+      `file_old_${index + 1}`,
+      `/storyboards/source-shot-${index + 1}.png`
+    )
+  );
+
+  vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+    takes: [
+      takeOverview(sourceTake, {
+        sourceShotListId: 'shot_list_source',
+        displayShots: sourceShots,
+        storyboardImages,
+      }),
+    ],
+  });
+  vi.mocked(readSceneShotVideoTakeEditContext).mockResolvedValue(
+    takeEditContext({
+      take: sourceTake,
+      sourceShotListId: 'shot_list_source',
+      displayShots: sourceShots,
+      storyboardImages,
+    })
+  );
+  vi.mocked(updateSceneShotVideoTakeShots).mockImplementation(
+    async (_projectName, _sceneId, _takeId, nextShotIds) => ({
+      context: takeProductionContext({
+        take: {
+          ...sourceTake,
+          shotIds: nextShotIds,
+          updatedAt: '2026-06-18T12:00:00.000Z',
+        },
+        shotListId: 'shot_list_source',
+        displayShots: sourceShots,
+        storyboardImages,
+      }),
+      resourceKeys: [],
+    })
+  );
+}
+
+function selectedForEditLabels(): string[] {
+  return Array.from(
+    document.querySelectorAll('[data-selected-for-edit="true"]')
+  )
+    .map((element) => element.getAttribute('aria-label'))
+    .filter((label): label is string => Boolean(label));
+}
+
 function resource(): SceneShotListResourceResponse {
   return {
     scene: {
@@ -398,6 +741,7 @@ function takeEditContext(input: {
   take: SceneShotVideoTake;
   sourceShotListId: string;
   displayShots: SceneShot[];
+  storyboardImages?: ReturnType<typeof sourceStoryboardImage>[];
 }): SceneShotVideoTakeEditContext {
   return {
     take: input.take,
@@ -410,6 +754,7 @@ function takeEditContext(input: {
       isActive: false,
     },
     displayShots: input.displayShots,
+    storyboardImages: input.storyboardImages ?? [],
   } as SceneShotVideoTakeEditContext;
 }
 
@@ -417,6 +762,7 @@ function takeProductionContext(input: {
   take: SceneShotVideoTake;
   shotListId: string;
   displayShots: SceneShot[];
+  storyboardImages?: ReturnType<typeof sourceStoryboardImage>[];
 }): ShotVideoTakeProductionContext {
   return {
     take: input.take,
@@ -429,7 +775,41 @@ function takeProductionContext(input: {
       isActive: false,
     },
     displayShots: input.displayShots,
+    storyboardImages: input.storyboardImages ?? [],
   } as ShotVideoTakeProductionContext;
+}
+
+function takeOverview(
+  value: SceneShotVideoTake,
+  overrides: Partial<SceneShotVideoTakeOverviewResponse> = {}
+): SceneShotVideoTakeOverviewResponse {
+  return {
+    take: value,
+    sourceShotList: {
+      id: value.sourceShotListId,
+      title: 'Source shot list',
+      summary: 'Source shot coverage.',
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
+      isActive: value.sourceShotListId === 'shot_list_hook',
+    },
+    displayShots: shotList().shots,
+    storyboardImages: [
+      sourceStoryboardImage(
+        'shot_001',
+        'asset_001',
+        'file_001',
+        '/storyboards/shot-001.png'
+      ),
+      sourceStoryboardImage(
+        'shot_002',
+        'asset_002',
+        'file_002',
+        '/storyboards/shot-002.png'
+      ),
+    ],
+    ...overrides,
+  };
 }
 
 function storyboardImage(assetId: string, assetFileId: string, url: string) {
@@ -444,6 +824,19 @@ function storyboardImage(assetId: string, assetFileId: string, url: string) {
     width: 1280,
     height: 720,
     url,
+  };
+}
+
+function sourceStoryboardImage(
+  shotId: string,
+  assetId: string,
+  assetFileId: string,
+  url: string
+) {
+  return {
+    ...storyboardImage(assetId, assetFileId, url),
+    shotId,
+    projectRelativePath: `screenplay/storyboards/${shotId}.png`,
   };
 }
 

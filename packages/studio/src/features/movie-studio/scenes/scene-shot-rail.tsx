@@ -8,28 +8,23 @@ import { SCENE_SHOT_LAYOUT } from './scene-shot-layout';
 import { SceneShotRailRow } from './scene-shot-rail-row';
 import { shotLabel } from './scene-shot-labels';
 import {
-  buildShotGroupingProjection,
-  type TakeScopedShotGroupDraft,
-} from './shot-video-take-grouping';
+  buildTakeShotSelectionProjection,
+  findTakeShotSelectionForShot,
+  type TakeShotSelectionDraft,
+} from './shot-video-take-selection';
 
 interface SceneShotRailProps {
   shots: SceneShot[];
   imagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
   selectedShotId: string | null;
-  railGroups?: TakeScopedShotGroupDraft[];
+  railSelections?: TakeShotSelectionDraft[];
   onSelectShot: (shotId: string) => void;
-  onCycleShotGroup?: (shotId: string) => void;
+  onChangeShotSelection?: (shotId: string) => void;
 }
-
-const GROUP_VARIANT_CLASS: Record<0 | 1, string> = {
-  0: 'bg-primary/10',
-  1: 'bg-accent/35',
-};
 
 interface RailSegment {
   key: string;
-  groupId: string | null;
-  variant: 0 | 1 | null;
+  selectionId: string | null;
   rows: Array<{ shot: SceneShot; index: number }>;
 }
 
@@ -37,9 +32,9 @@ export function SceneShotRail({
   shots,
   imagesByShotId,
   selectedShotId,
-  railGroups = [],
+  railSelections = [],
   onSelectShot,
-  onCycleShotGroup,
+  onChangeShotSelection,
 }: SceneShotRailProps) {
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
@@ -50,25 +45,24 @@ export function SceneShotRail({
   }, [selectedShotId]);
 
   const segments = useMemo<RailSegment[]>(() => {
-    const projection = buildShotGroupingProjection(shots, railGroups);
+    const projection = buildTakeShotSelectionProjection(shots, railSelections);
     const result: RailSegment[] = [];
     shots.forEach((shot, index) => {
       const entry = projection.entries[index];
-      const groupId = entry.takeId;
+      const selectionId = entry.takeId;
       const previous = result[result.length - 1];
-      if (groupId && previous && previous.groupId === groupId) {
+      if (selectionId && previous && previous.selectionId === selectionId) {
         previous.rows.push({ shot, index });
         return;
       }
       result.push({
-        key: groupId ?? `single-${shot.shotId}`,
-        groupId,
-        variant: entry.variant,
+        key: selectionId ?? `single-${shot.shotId}`,
+        selectionId,
         rows: [{ shot, index }],
       });
     });
     return result;
-  }, [railGroups, shots]);
+  }, [railSelections, shots]);
 
   return (
     <aside
@@ -79,13 +73,8 @@ export function SceneShotRail({
         {segments.map((segment) => (
           <li key={segment.key}>
             <div
-              className={cn(
-                'flex flex-col gap-1 rounded-lg',
-                segment.groupId && segment.variant !== null
-                  ? cn('p-1', GROUP_VARIANT_CLASS[segment.variant])
-                  : ''
-              )}
-              data-group-id={segment.groupId ?? undefined}
+              className={cn('flex flex-col gap-1 rounded-lg')}
+              data-selection-id={segment.selectionId ?? undefined}
             >
               {segment.rows.map(({ shot, index }) => (
                 <div
@@ -102,11 +91,19 @@ export function SceneShotRail({
                     label={shotLabel(index)}
                     title={shot.title}
                     image={imagesByShotId[shot.shotId]}
-                    selected={shot.shotId === selectedShotId}
+                    focused={shot.shotId === selectedShotId}
+                    selectedForEdit={Boolean(
+                      findTakeShotSelectionForShot(railSelections, shot.shotId)
+                    )}
+                    selectionActionLabel={shotSelectionActionLabel({
+                      shots,
+                      selections: railSelections,
+                      shotId: shot.shotId,
+                    })}
                     onSelect={() => onSelectShot(shot.shotId)}
-                    onCycleGroup={
-                      onCycleShotGroup
-                        ? () => onCycleShotGroup(shot.shotId)
+                    onChangeSelection={
+                      onChangeShotSelection
+                        ? () => onChangeShotSelection(shot.shotId)
                         : undefined
                     }
                   />
@@ -118,4 +115,25 @@ export function SceneShotRail({
       </ul>
     </aside>
   );
+}
+
+function shotSelectionActionLabel(input: {
+  shots: SceneShot[];
+  selections: TakeShotSelectionDraft[];
+  shotId: string;
+}): 'Select Shot' | 'Expand Select' | 'Stop Select' {
+  if (findTakeShotSelectionForShot(input.selections, input.shotId)) {
+    return 'Stop Select';
+  }
+  const index = input.shots.findIndex((shot) => shot.shotId === input.shotId);
+  const previousShotId = input.shots[index - 1]?.shotId;
+  const nextShotId = input.shots[index + 1]?.shotId;
+  if (
+    (previousShotId &&
+      findTakeShotSelectionForShot(input.selections, previousShotId)) ||
+    (nextShotId && findTakeShotSelectionForShot(input.selections, nextShotId))
+  ) {
+    return 'Expand Select';
+  }
+  return 'Select Shot';
 }

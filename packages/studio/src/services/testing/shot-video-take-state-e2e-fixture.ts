@@ -201,11 +201,11 @@ export async function readPersistedShotVideoTake(
     fixture.projectName,
     fixture.ids.sceneId
   );
-  const take = reloaded.takes.find((candidate) => candidate.takeId === takeId);
-  if (!take) {
+  const overview = reloaded.takes.find((candidate) => candidate.take.takeId === takeId);
+  if (!overview) {
     throw new Error(`Persisted take ${takeId} was not found.`);
   }
-  return take;
+  return overview.take;
 }
 
 export async function updateShotVideoTakeGrouping(

@@ -11,8 +11,6 @@ import { toast } from 'sonner';
 import type {
   SceneShot,
   SceneShotVideoTake,
-  SceneShotVideoTakeEditContext,
-  ShotVideoTakeProductionContext,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
@@ -24,6 +22,10 @@ import {
   readSceneShotVideoTakeEditContext,
   updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
+  type SceneShotVideoTakeEditContextResponse,
+  type SceneShotVideoTakeOverviewResponse,
+  type ShotVideoTakeProductionContextResponse,
+  type ShotVideoTakeStoryboardImageReferenceWithHttp,
 } from '@/services/studio-shot-video-takes-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { Button } from '@/ui/button';
@@ -55,12 +57,12 @@ import {
   type SceneTakePreviewShot,
 } from './scene-take-card';
 import {
-  createShotGroupDraftsFromTakes,
-  cycleShotGroupMembership,
-  shotGroupDraftsEqual,
-  summarizeShotGroupChanges,
-  type TakeScopedShotGroupDraft,
-} from './shot-video-take-grouping';
+  createTakeShotSelectionDraftsFromTakes,
+  cycleTakeShotSelection,
+  takeShotSelectionDraftsEqual,
+  summarizeTakeShotSelectionChanges,
+  type TakeShotSelectionDraft,
+} from './shot-video-take-selection';
 import type {
   SceneShotDetailTab,
   SceneTakeWorkspaceMode,
@@ -91,6 +93,10 @@ interface TakeEditingShotListContext {
   take: SceneShotVideoTake;
   sourceShotListId: string;
   displayShots: SceneShot[];
+  storyboardImagesByShotId: Record<
+    string,
+    ShotVideoTakeStoryboardImageReferenceWithHttp
+  >;
 }
 
 export function SceneTakesTab({
@@ -106,18 +112,18 @@ export function SceneTakesTab({
 }: SceneTakesTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
-  const [takes, setTakes] = useState<
-    SceneShotVideoTake[]
+  const [takeOverviews, setTakeOverviews] = useState<
+    SceneShotVideoTakeOverviewResponse[]
   >([]);
   const [takeEditingContext, setTakeEditingContext] =
     useState<TakeEditingShotListContext | null>(null);
-  const [draftGroupEdit, setDraftGroupEdit] = useState<{
+  const [draftSelectionEdit, setDraftSelectionEdit] = useState<{
     takeId: string | null;
-    groups: TakeScopedShotGroupDraft[];
+    selections: TakeShotSelectionDraft[];
   } | null>(null);
-  const [groupReviewOpen, setGroupReviewOpen] = useState(false);
-  const [groupApplyPending, setGroupApplyPending] = useState(false);
-  const [groupApplyError, setGroupApplyError] = useState<string | null>(null);
+  const [selectionReviewOpen, setSelectionReviewOpen] = useState(false);
+  const [selectionApplyPending, setSelectionApplyPending] = useState(false);
+  const [selectionApplyError, setSelectionApplyError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const saveNotificationSequenceRef = useRef(0);
   const [detailSaveNotification, setDetailSaveNotification] =
@@ -134,7 +140,7 @@ export function SceneTakesTab({
       .then(([nextResource, takeReport]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setTakes(takeReport.takes);
+          setTakeOverviews(takeReport.takes);
         }
       })
       .catch((loadError) => {
@@ -173,18 +179,18 @@ export function SceneTakesTab({
 
   const activeTake = useMemo(() => {
     if (takeId) {
-      const selected = takes.find(
-        (candidate) => candidate.takeId === takeId
+      const selected = takeOverviews.find(
+        (candidate) => candidate.take.takeId === takeId
       );
       if (selected) {
-        return selected;
+        return selected.take;
       }
     }
     if (workspaceMode === 'new') {
       return null;
     }
-    return takes[0] ?? null;
-  }, [takeId, takes, workspaceMode]);
+    return takeOverviews[0]?.take ?? null;
+  }, [takeId, takeOverviews, workspaceMode]);
   const activeTakeKey = activeTake?.takeId ?? null;
   const activeTakeUpdatedAt = activeTake?.updatedAt ?? null;
 
@@ -240,31 +246,31 @@ export function SceneTakesTab({
     [activeShotListShots, currentTakeEditingContext, requiresTakeEditingContext]
   );
 
-  const persistedGroups = useMemo(
+  const persistedSelections = useMemo(
     () =>
-      createShotGroupDraftsFromTakes(
+      createTakeShotSelectionDraftsFromTakes(
         displayedActiveTake ? [displayedActiveTake] : []
       ),
     [displayedActiveTake]
   );
-  const draftGroups =
-    draftGroupEdit?.takeId === displayedActiveTakeKey
-      ? draftGroupEdit.groups
-      : persistedGroups;
+  const draftSelections =
+    draftSelectionEdit?.takeId === displayedActiveTakeKey
+      ? draftSelectionEdit.selections
+      : persistedSelections;
 
-  const hasGroupingChanges = useMemo(
-    () => !shotGroupDraftsEqual(persistedGroups, draftGroups),
-    [draftGroups, persistedGroups]
+  const hasSelectionChanges = useMemo(
+    () => !takeShotSelectionDraftsEqual(persistedSelections, draftSelections),
+    [draftSelections, persistedSelections]
   );
 
-  const groupingChangeSummary = useMemo(
+  const selectionChangeSummary = useMemo(
     () =>
-      summarizeShotGroupChanges({
+      summarizeTakeShotSelectionChanges({
         shots,
-        persistedDraftGroups: persistedGroups,
-        draftGroups,
+        persistedDraftSelections: persistedSelections,
+        draftSelections,
       }),
-    [draftGroups, persistedGroups, shots]
+    [draftSelections, persistedSelections, shots]
   );
 
   const selectedShotId = useMemo(() => {
@@ -331,8 +337,8 @@ export function SceneTakesTab({
           sceneId,
           deletedTakeId
         );
-        setTakes((current) =>
-          current.filter((candidate) => candidate.takeId !== deletedTakeId)
+        setTakeOverviews((current) =>
+          current.filter((candidate) => candidate.take.takeId !== deletedTakeId)
         );
         toast.success('Take moved to Trash', {
           action: {
@@ -377,10 +383,12 @@ export function SceneTakesTab({
           take.takeId,
           !take.picked
         );
-        setTakes((current) =>
-          orderSceneShotVideoTakes(
+        setTakeOverviews((current) =>
+          orderSceneShotVideoTakeOverviews(
             current.map((candidate) =>
-              candidate.takeId === report.take.takeId ? report.take : candidate
+              candidate.take.takeId === report.take.takeId
+                ? { ...candidate, take: report.take }
+                : candidate
             )
           )
         );
@@ -404,26 +412,22 @@ export function SceneTakesTab({
     });
   }, [onSelect, sceneId]);
 
-  const handleCycleShotGroup = useCallback(
+  const handleChangeShotSelection = useCallback(
     (clickedShotId: string) => {
       if (!displayedActiveTake) {
         return;
       }
       handleSelectShot(clickedShotId);
-      setDraftGroupEdit((currentDraftGroupEdit) => {
-        const currentDraftGroups =
-          currentDraftGroupEdit?.takeId === displayedActiveTakeKey
-            ? currentDraftGroupEdit.groups
-            : persistedGroups;
+      setDraftSelectionEdit((currentDraftSelectionEdit) => {
+        const currentDraftSelections =
+          currentDraftSelectionEdit?.takeId === displayedActiveTakeKey
+            ? currentDraftSelectionEdit.selections
+            : persistedSelections;
         return {
           takeId: displayedActiveTakeKey,
-          groups: cycleShotGroupMembership({
+          selections: cycleTakeShotSelection({
             shots,
-            draftGroups: currentDraftGroups.length
-              ? currentDraftGroups
-              : createShotGroupDraftsFromTakes([
-                  displayedActiveTake,
-                ]),
+            draftSelections: currentDraftSelections,
             clickedShotId,
           }),
         };
@@ -433,30 +437,30 @@ export function SceneTakesTab({
       displayedActiveTake,
       displayedActiveTakeKey,
       handleSelectShot,
-      persistedGroups,
+      persistedSelections,
       shots,
     ]
   );
 
-  const handleDiscardGroupingChanges = useCallback(() => {
-    setDraftGroupEdit(null);
-    setGroupReviewOpen(false);
-    setGroupApplyError(null);
+  const handleDiscardSelectionChanges = useCallback(() => {
+    setDraftSelectionEdit(null);
+    setSelectionReviewOpen(false);
+    setSelectionApplyError(null);
   }, []);
 
-  const handleApplyGroupingChanges = useCallback(async () => {
-    if (!displayedActiveTake || groupApplyPending) {
+  const handleApplySelectionChanges = useCallback(async () => {
+    if (!displayedActiveTake || selectionApplyPending) {
       return;
     }
-    const openDraft = draftGroups.find(
-      (group) => group.takeId === displayedActiveTake.takeId
+    const openDraft = draftSelections.find(
+      (selection) => selection.takeId === displayedActiveTake.takeId
     );
     if (!openDraft || openDraft.shotIds.length === 0) {
-      setGroupApplyError('The current take must keep at least one shot.');
+      setSelectionApplyError('The current take must keep at least one shot.');
       return;
     }
-    setGroupApplyPending(true);
-    setGroupApplyError(null);
+    setSelectionApplyPending(true);
+    setSelectionApplyError(null);
     try {
       const result = await updateSceneShotVideoTakeShots(
         projectName,
@@ -465,41 +469,41 @@ export function SceneTakesTab({
         openDraft.shotIds
       );
       const updatedTake = result.context.take;
-      setTakes((current) =>
+      setTakeOverviews((current) =>
         current.map((candidate) =>
-          candidate.takeId === updatedTake.takeId
-            ? updatedTake
+          candidate.take.takeId === updatedTake.takeId
+            ? overviewFromProductionContext(result.context)
             : candidate
         )
       );
       setTakeEditingContext(
         takeEditingContextFromProductionContext(result.context)
       );
-      setDraftGroupEdit(null);
-      setGroupReviewOpen(false);
+      setDraftSelectionEdit(null);
+      setSelectionReviewOpen(false);
     } catch (applyError) {
-      setGroupApplyError(
+      setSelectionApplyError(
         applyError instanceof Error
           ? applyError.message
-          : 'Unable to apply grouping changes.'
+          : 'Unable to apply selection changes.'
       );
     } finally {
-      setGroupApplyPending(false);
+      setSelectionApplyPending(false);
     }
   }, [
     displayedActiveTake,
-    draftGroups,
-    groupApplyPending,
+    draftSelections,
+    selectionApplyPending,
     projectName,
     sceneId,
   ]);
 
   const handleTakeChange = useCallback((updatedTake: SceneShotVideoTake) => {
-    setTakes((current) =>
-      orderSceneShotVideoTakes(
+    setTakeOverviews((current) =>
+      orderSceneShotVideoTakeOverviews(
         current.map((candidate) =>
-          candidate.takeId === updatedTake.takeId
-            ? updatedTake
+          candidate.take.takeId === updatedTake.takeId
+            ? { ...candidate, take: updatedTake }
             : candidate
         )
       )
@@ -538,14 +542,14 @@ export function SceneTakesTab({
     if (workspaceMode === 'edit' || workspaceMode === 'new') {
       onHeaderActionChange(
         <div className='flex items-center gap-2'>
-          {hasGroupingChanges ? (
+          {hasSelectionChanges ? (
             <Button
               type='button'
               variant='secondary'
               size='sm'
-              onClick={() => setGroupReviewOpen(true)}
+              onClick={() => setSelectionReviewOpen(true)}
             >
-              Review Groups
+              Edit Mode
             </Button>
           ) : null}
           <Button
@@ -565,7 +569,7 @@ export function SceneTakesTab({
     return () => onHeaderActionChange(null);
   }, [
     handleCloseWorkspace,
-    hasGroupingChanges,
+    hasSelectionChanges,
     onHeaderActionChange,
     workspaceMode,
   ]);
@@ -604,7 +608,16 @@ export function SceneTakesTab({
       shotIds: [shots[0].shotId],
       title: shots[0].title,
     });
-    setTakes((current) => orderSceneShotVideoTakes([...current, created]));
+    setTakeOverviews((current) =>
+      orderSceneShotVideoTakeOverviews([
+        ...current,
+        overviewFromActiveShotList({
+          take: created,
+          resource,
+          shots,
+        }),
+      ])
+    );
     onSelect({
       type: 'scene',
       id: sceneId,
@@ -625,27 +638,33 @@ export function SceneTakesTab({
             gridTemplateColumns: `repeat(auto-fill, minmax(${TAKE_CARD_GRID_MIN_WIDTH_PX}px, 1fr))`,
           }}
         >
-          {takes.map((take) => {
-            const firstShotIndex = shots.findIndex(
-              (shot) => shot.shotId === take.shotIds[0]
+          {takeOverviews.map((overview) => {
+            const previewImagesByShotId = storyboardImagesByShotId(
+              overview.storyboardImages
+            );
+            const firstShotIndex = overview.displayShots.findIndex(
+              (shot) => shot.shotId === overview.take.shotIds[0]
             );
             const firstShot =
-              firstShotIndex >= 0 ? shots[firstShotIndex] : null;
-            const title = firstShot?.title ?? take.title;
+              firstShotIndex >= 0 ? overview.displayShots[firstShotIndex] : null;
+            const title = firstShot?.title ?? overview.take.title;
             return (
               <SceneTakeCard
-                key={take.takeId}
+                key={overview.take.takeId}
                 title={title}
-                description={shotRangeLabel(shots, take.shotIds)}
-                picked={take.picked}
+                description={shotRangeLabel(
+                  overview.displayShots,
+                  overview.take.shotIds
+                )}
+                picked={overview.take.picked}
                 previewShots={takePreviewShots({
-                  shots,
-                  shotIds: take.shotIds,
-                  imagesByShotId: resource.storyboardImagesByShotId,
+                  shots: overview.displayShots,
+                  shotIds: overview.take.shotIds,
+                  imagesByShotId: previewImagesByShotId,
                 })}
-                onOpen={() => handleOpenTake(take)}
-                onDelete={() => handleDeleteTake(take.takeId)}
-                onTogglePicked={() => handleToggleTakePick(take)}
+                onOpen={() => handleOpenTake(overview.take)}
+                onDelete={() => handleDeleteTake(overview.take.takeId)}
+                onTogglePicked={() => handleToggleTakePick(overview.take)}
               />
             );
           })}
@@ -668,12 +687,15 @@ export function SceneTakesTab({
   );
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
+  const isFocusedShotEditable = Boolean(
+    displayedActiveTake &&
+      selectedShot &&
+      displayedActiveTake.shotIds.includes(selectedShot.shotId)
+  );
   const selectedTake =
-    displayedActiveTake ??
-    takes.find((candidate) =>
-      selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
-    ) ??
-    null;
+    isFocusedShotEditable && displayedActiveTake
+      ? displayedActiveTake
+      : null;
   const handleCreateTake = async () => {
     if (!resource.activeShotListId || !selectedShot) {
       return;
@@ -683,7 +705,16 @@ export function SceneTakesTab({
       shotIds: [selectedShot.shotId],
       title: selectedShot.title,
     });
-    setTakes((current) => orderSceneShotVideoTakes([...current, created]));
+    setTakeOverviews((current) =>
+      orderSceneShotVideoTakeOverviews([
+        ...current,
+        overviewFromActiveShotList({
+          take: created,
+          resource,
+          shots,
+        }),
+      ])
+    );
     onSelect({
       type: 'scene',
       id: sceneId,
@@ -697,48 +728,48 @@ export function SceneTakesTab({
 
   return (
     <div className='flex min-h-0 min-w-0 flex-1 overflow-hidden bg-panel-bg p-3'>
-      <Dialog open={groupReviewOpen} onOpenChange={setGroupReviewOpen}>
+      <Dialog open={selectionReviewOpen} onOpenChange={setSelectionReviewOpen}>
         <DialogContent className='max-w-lg gap-0 overflow-hidden p-0'>
           <DialogHeader>
-            <DialogTitle>Review Take Groups</DialogTitle>
+            <DialogTitle>Edit Mode</DialogTitle>
             <DialogDescription>
-              Apply these shot membership changes to the current take.
+              Apply which shots are selected for editing in the current take.
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-3 px-6 py-4'>
             <div className='rounded-md border border-border/50 bg-muted/20 p-3'>
               <p className='text-sm font-medium text-foreground'>
-                {groupingChangeSummary.changedPromptCount} prompt{' '}
-                {groupingChangeSummary.changedPromptCount === 1
+                {selectionChangeSummary.changedPromptCount} prompt{' '}
+                {selectionChangeSummary.changedPromptCount === 1
                   ? 'draft'
                   : 'drafts'}{' '}
                 will be refreshed.
               </p>
               <ul className='mt-2 space-y-1 text-sm text-muted-foreground'>
-                {groupingChangeSummary.messages.map((message) => (
+                {selectionChangeSummary.messages.map((message) => (
                   <li key={message}>{message}</li>
                 ))}
               </ul>
             </div>
-            {groupApplyError ? (
-              <p className='text-sm text-destructive'>{groupApplyError}</p>
+            {selectionApplyError ? (
+              <p className='text-sm text-destructive'>{selectionApplyError}</p>
             ) : null}
           </div>
           <DialogFooter>
             <Button
               type='button'
               variant='ghost'
-              onClick={handleDiscardGroupingChanges}
-              disabled={groupApplyPending}
+              onClick={handleDiscardSelectionChanges}
+              disabled={selectionApplyPending}
             >
               Discard
             </Button>
             <Button
               type='button'
-              onClick={handleApplyGroupingChanges}
-              disabled={groupApplyPending || !hasGroupingChanges}
+              onClick={handleApplySelectionChanges}
+              disabled={selectionApplyPending || !hasSelectionChanges}
             >
-              {groupApplyPending ? (
+              {selectionApplyPending ? (
                 <Loader2 data-icon='inline-start' className='animate-spin' />
               ) : null}
               Apply
@@ -761,11 +792,14 @@ export function SceneTakesTab({
         >
           <SceneShotRail
             shots={shots}
-            imagesByShotId={resource.storyboardImagesByShotId}
+            imagesByShotId={
+              currentTakeEditingContext?.storyboardImagesByShotId ??
+              resource.storyboardImagesByShotId
+            }
             selectedShotId={selectedShot.shotId}
-            railGroups={draftGroups}
+            railSelections={draftSelections}
             onSelectShot={handleSelectShot}
-            onCycleShotGroup={handleCycleShotGroup}
+            onChangeShotSelection={handleChangeShotSelection}
           />
         </ResizablePanel>
         <ResizableHandle withHandle />
@@ -780,6 +814,7 @@ export function SceneTakesTab({
             sceneId={sceneId}
             shot={selectedShot}
             take={selectedTake}
+            isShotEditable={isFocusedShotEditable}
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}
@@ -797,25 +832,68 @@ export function SceneTakesTab({
 }
 
 function takeEditingContextFromEditContext(
-  editContext: SceneShotVideoTakeEditContext
+  editContext: SceneShotVideoTakeEditContextResponse
 ): TakeEditingShotListContext {
   return {
     takeId: editContext.take.takeId,
     take: editContext.take,
     sourceShotListId: editContext.sourceShotList.id,
     displayShots: editContext.displayShots,
+    storyboardImagesByShotId: storyboardImagesByShotId(
+      editContext.storyboardImages
+    ),
   };
 }
 
 function takeEditingContextFromProductionContext(
-  context: ShotVideoTakeProductionContext
+  context: ShotVideoTakeProductionContextResponse
 ): TakeEditingShotListContext {
   return {
     takeId: context.take.takeId,
     take: context.take,
     sourceShotListId: context.shotList.id,
     displayShots: context.displayShots,
+    storyboardImagesByShotId: storyboardImagesByShotId(
+      context.storyboardImages
+    ),
   };
+}
+
+function overviewFromProductionContext(
+  context: ShotVideoTakeProductionContextResponse
+): SceneShotVideoTakeOverviewResponse {
+  return {
+    take: context.take,
+    sourceShotList: context.shotList,
+    displayShots: context.displayShots,
+    storyboardImages: context.storyboardImages,
+  };
+}
+
+function overviewFromActiveShotList(input: {
+  take: SceneShotVideoTake;
+  resource: SceneShotListResourceResponse;
+  shots: SceneShot[];
+}): SceneShotVideoTakeOverviewResponse {
+  return {
+    take: input.take,
+    sourceShotList: {
+      id: input.resource.activeShotListId ?? input.take.sourceShotListId,
+      title: input.resource.activeShotList?.title ?? input.take.title,
+      summary: input.resource.activeShotList?.summary ?? '',
+      createdAt: input.take.createdAt,
+      updatedAt: input.take.updatedAt,
+      isActive: true,
+    },
+    displayShots: input.shots,
+    storyboardImages: [],
+  };
+}
+
+function storyboardImagesByShotId(
+  images: ShotVideoTakeStoryboardImageReferenceWithHttp[]
+): Record<string, ShotVideoTakeStoryboardImageReferenceWithHttp> {
+  return Object.fromEntries(images.map((image) => [image.shotId, image]));
 }
 
 function shotRangeLabel(
@@ -850,17 +928,17 @@ function takePreviewShots(input: {
   });
 }
 
-function orderSceneShotVideoTakes(
-  takes: SceneShotVideoTake[]
-): SceneShotVideoTake[] {
-  return [...takes].sort((left, right) => {
-    if (left.picked !== right.picked) {
-      return left.picked ? -1 : 1;
+function orderSceneShotVideoTakeOverviews(
+  overviews: SceneShotVideoTakeOverviewResponse[]
+): SceneShotVideoTakeOverviewResponse[] {
+  return [...overviews].sort((left, right) => {
+    if (left.take.picked !== right.take.picked) {
+      return left.take.picked ? -1 : 1;
     }
-    const updatedAt = right.updatedAt.localeCompare(left.updatedAt);
+    const updatedAt = right.take.updatedAt.localeCompare(left.take.updatedAt);
     if (updatedAt !== 0) {
       return updatedAt;
     }
-    return right.takeId.localeCompare(left.takeId);
+    return right.take.takeId.localeCompare(left.take.takeId);
   });
 }

@@ -6,12 +6,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { SceneShotVideoTake } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
   createSceneShotVideoTake,
   listSceneShotVideoTakes,
+  type SceneShotVideoTakeOverviewResponse,
 } from '@/services/studio-shot-video-takes-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
@@ -61,8 +61,8 @@ export function SceneShotsTab({
 }: SceneShotsTabProps) {
   const [resource, setResource] =
     useState<SceneShotListResourceResponse | null>(null);
-  const [takes, setTakes] = useState<
-    SceneShotVideoTake[]
+  const [takeOverviews, setTakeOverviews] = useState<
+    SceneShotVideoTakeOverviewResponse[]
   >([]);
   const [error, setError] = useState<string | null>(null);
   const saveNotificationSequenceRef = useRef(0);
@@ -79,7 +79,7 @@ export function SceneShotsTab({
       .then(([nextResource, takeReport]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setTakes(takeReport.takes);
+          setTakeOverviews(takeReport.takes);
         }
       })
       .catch((loadError) => {
@@ -206,9 +206,9 @@ export function SceneShotsTab({
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
   const selectedTake =
-    takes.find((candidate) =>
-      selectedShot ? candidate.shotIds.includes(selectedShot.shotId) : false
-    ) ?? null;
+    takeOverviews.find((candidate) =>
+      selectedShot ? candidate.take.shotIds.includes(selectedShot.shotId) : false
+    )?.take ?? null;
   const handleCreateTake = async () => {
     if (!resource.activeShotListId || !selectedShot) {
       return;
@@ -218,7 +218,22 @@ export function SceneShotsTab({
       shotIds: [selectedShot.shotId],
       title: selectedShot.title,
     });
-    setTakes((current) => [...current, created]);
+    setTakeOverviews((current) => [
+      ...current,
+      {
+        take: created,
+        sourceShotList: {
+          id: resource.activeShotListId,
+          title: resource.activeShotList.title,
+          summary: resource.activeShotList.summary,
+          createdAt: created.createdAt,
+          updatedAt: created.updatedAt,
+          isActive: true,
+        },
+        displayShots: shots,
+        storyboardImages: [],
+      },
+    ]);
   };
 
   return (
@@ -255,6 +270,7 @@ export function SceneShotsTab({
             sceneId={sceneId}
             shot={selectedShot}
             take={selectedTake}
+            isShotEditable={true}
             label={selectedShotLabel}
             activeTab={activeShotTab}
             castMemberLabels={resource.castMemberLabels}

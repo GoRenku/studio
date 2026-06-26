@@ -1050,9 +1050,11 @@ export function fakeProjectDataService(): NonNullable<
     async listSceneShotVideoTakes(input) {
       return {
         takes: [
-          makeSceneShotVideoTake({
-            sceneId: input.sceneId,
-          }),
+          makeSceneShotVideoTakeOverview(
+            makeSceneShotVideoTake({
+              sceneId: input.sceneId,
+            })
+          ),
         ],
       };
     },
@@ -1412,6 +1414,18 @@ function makeShotVideoTakeContext(
       `surface:scene:${take.sceneId}:takes`,
       `scene-shot-video-take:${take.takeId}`,
     ],
+  };
+}
+
+function makeSceneShotVideoTakeOverview(take: SceneShotVideoTake) {
+  const context = makeShotVideoTakeContext({
+    takeId: take.takeId,
+  });
+  return {
+    take,
+    sourceShotList: context.shotList,
+    displayShots: context.displayShots,
+    storyboardImages: context.storyboardImages,
   };
 }
 

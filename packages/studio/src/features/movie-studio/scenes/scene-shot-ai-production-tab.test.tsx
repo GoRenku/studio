@@ -19,6 +19,7 @@ import {
   listSceneShotVideoTakes,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
+  type SceneShotVideoTakeOverviewResponse,
 } from '@/services/studio-shot-video-takes-api';
 import type {
   SceneShotDetailTab,
@@ -132,6 +133,24 @@ function take(): SceneShotVideoTake {
       archive: { state: 'active', message: 'This take is active.' },
       history: { differences: [], message: 'This take matches its recorded history snapshot.' },
     },
+  };
+}
+
+function takeOverview(
+  value: SceneShotVideoTake
+): SceneShotVideoTakeOverviewResponse {
+  return {
+    take: value,
+    sourceShotList: {
+      id: value.sourceShotListId,
+      title: 'Coverage',
+      summary: '',
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
+      isActive: true,
+    },
+    displayShots: SHOTS,
+    storyboardImages: [],
   };
 }
 
@@ -373,7 +392,7 @@ describe('AI Production tab', () => {
     vi.mocked(readSceneShotListResource).mockReset().mockResolvedValue(resource());
     vi.mocked(listSceneShotVideoTakes)
       .mockReset()
-      .mockResolvedValue({ takes: [take()] });
+      .mockResolvedValue({ takes: [takeOverview(take())] });
     vi.mocked(createSceneShotVideoTake)
       .mockReset()
       .mockResolvedValue(take());

@@ -9,10 +9,15 @@ import type {
   LocationResource,
   SceneNarrativeResource,
   SceneShotListResource,
+  SceneShotVideoTakeEditContext,
+  SceneShotVideoTakeListReport,
+  SceneShotVideoTakeOverview,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
   SequenceResource,
   SequenceSceneRow,
+  ShotVideoTakeProductionContext,
+  ShotVideoTakeStoryboardImageReference,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
 
@@ -92,6 +97,39 @@ export type SceneShotListResourceResponse = Omit<
 > & {
   storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
+};
+
+export type ShotVideoTakeStoryboardImageReferenceWithHttp =
+  ShotVideoTakeStoryboardImageReference & {
+    url: string;
+  };
+
+export type SceneShotVideoTakeOverviewResponse = Omit<
+  SceneShotVideoTakeOverview,
+  'storyboardImages'
+> & {
+  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
+};
+
+export type SceneShotVideoTakeListReportResponse = Omit<
+  SceneShotVideoTakeListReport,
+  'takes'
+> & {
+  takes: SceneShotVideoTakeOverviewResponse[];
+};
+
+export type ShotVideoTakeProductionContextResponse = Omit<
+  ShotVideoTakeProductionContext,
+  'storyboardImages'
+> & {
+  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
+};
+
+export type SceneShotVideoTakeEditContextResponse = Omit<
+  SceneShotVideoTakeEditContext,
+  'storyboardImages'
+> & {
+  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
 };
 
 export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {
@@ -230,6 +268,57 @@ export function toSceneShotListResourceResponse(
   };
 }
 
+export function toSceneShotVideoTakeListReportResponse(
+  projectName: string,
+  report: SceneShotVideoTakeListReport
+): SceneShotVideoTakeListReportResponse {
+  return {
+    takes: report.takes.map((overview) =>
+      toSceneShotVideoTakeOverviewResponse(projectName, overview)
+    ),
+  };
+}
+
+export function toSceneShotVideoTakeOverviewResponse(
+  projectName: string,
+  overview: SceneShotVideoTakeOverview
+): SceneShotVideoTakeOverviewResponse {
+  return {
+    ...overview,
+    storyboardImages: overview.storyboardImages.map((image) =>
+      withShotVideoTakeStoryboardImageUrl(
+        projectName,
+        overview.take.sceneId,
+        image
+      )
+    ),
+  };
+}
+
+export function toShotVideoTakeProductionContextResponse(
+  projectName: string,
+  context: ShotVideoTakeProductionContext
+): ShotVideoTakeProductionContextResponse {
+  return {
+    ...context,
+    storyboardImages: context.storyboardImages.map((image) =>
+      withShotVideoTakeStoryboardImageUrl(projectName, context.scene.id, image)
+    ),
+  };
+}
+
+export function toSceneShotVideoTakeEditContextResponse(
+  projectName: string,
+  context: SceneShotVideoTakeEditContext
+): SceneShotVideoTakeEditContextResponse {
+  return {
+    ...context,
+    storyboardImages: context.storyboardImages.map((image) =>
+      withShotVideoTakeStoryboardImageUrl(projectName, context.scene.id, image)
+    ),
+  };
+}
+
 export function toSceneNarrativeResourceResponse(
   projectName: string,
   resource: SceneNarrativeResource
@@ -298,6 +387,17 @@ function withSceneImageUrl(
   sceneId: string,
   image: ScreenplayImageReference
 ): ScreenplayImageReferenceWithHttp {
+  return {
+    ...image,
+    url: `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
+  };
+}
+
+function withShotVideoTakeStoryboardImageUrl(
+  projectName: string,
+  sceneId: string,
+  image: ShotVideoTakeStoryboardImageReference
+): ShotVideoTakeStoryboardImageReferenceWithHttp {
   return {
     ...image,
     url: `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,

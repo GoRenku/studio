@@ -47,6 +47,9 @@ import {
   shotVideoTakeResourceKeys,
 } from './resource-keys.js';
 import {
+  listShotVideoTakeStoryboardImages,
+} from './storyboard-images.js';
+import {
   PreparedSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
   requireShot,
@@ -180,7 +183,11 @@ export function buildContextFromPrepared(input: {
           };
         })()
       : null,
-    storyboardImages: [],
+    storyboardImages: listShotVideoTakeStoryboardImages({
+      session: input.session,
+      sceneId: input.prepared.sceneId,
+      shotListId: input.prepared.sourceShotListId,
+    }),
     mediaInputs: listShotVideoTakeInputRecords(input.session, {
       sceneId: input.prepared.sceneId,
       takeId: input.prepared.take.takeId,

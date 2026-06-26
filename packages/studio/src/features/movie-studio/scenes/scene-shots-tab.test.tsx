@@ -20,6 +20,7 @@ import {
   listSceneShotVideoTakes,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
+  type SceneShotVideoTakeOverviewResponse,
 } from '@/services/studio-shot-video-takes-api';
 import { SaveNotification } from '@/ui/save-notification';
 import type {
@@ -72,7 +73,7 @@ describe('SceneShotsTab', () => {
     vi.mocked(readLocationAssets).mockResolvedValue([]);
     vi.mocked(listSceneShotVideoTakes)
       .mockReset()
-      .mockResolvedValue({ takes: [take()] });
+      .mockResolvedValue({ takes: [takeOverview(take())] });
     vi.mocked(createSceneShotVideoTake)
       .mockReset()
       .mockResolvedValue(take());
@@ -348,6 +349,24 @@ function take(): SceneShotVideoTake {
       archive: { state: 'active', message: 'This take is active.' },
       history: { differences: [], message: 'This take matches its recorded history snapshot.' },
     },
+  };
+}
+
+function takeOverview(
+  value: SceneShotVideoTake
+): SceneShotVideoTakeOverviewResponse {
+  return {
+    take: value,
+    sourceShotList: {
+      id: value.sourceShotListId,
+      title: 'Council chamber coverage',
+      summary: 'A restrained coverage plan.',
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
+      isActive: true,
+    },
+    displayShots: shotList().shots,
+    storyboardImages: [],
   };
 }
 
