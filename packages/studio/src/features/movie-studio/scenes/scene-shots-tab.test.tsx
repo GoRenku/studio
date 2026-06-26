@@ -6,7 +6,6 @@ import type {
   SceneShot,
   SceneShotListDocument,
   SceneShotVideoTake,
-  ShotVideoTakeProductionContext,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
@@ -21,6 +20,7 @@ import {
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
   type SceneShotVideoTakeOverviewResponse,
+  type ShotVideoTakeProductionContextResponse,
 } from '@/services/studio-shot-video-takes-api';
 import { SaveNotification } from '@/ui/save-notification';
 import type {
@@ -76,7 +76,7 @@ describe('SceneShotsTab', () => {
       .mockResolvedValue({ takes: [takeOverview(take())] });
     vi.mocked(createSceneShotVideoTake)
       .mockReset()
-      .mockResolvedValue(take());
+      .mockResolvedValue(takeCreateReport(take()));
     vi.mocked(readShotVideoTakeProduction)
       .mockReset()
       .mockResolvedValue({ context: productionContext(), models: productionModels() });
@@ -370,7 +370,14 @@ function takeOverview(
   };
 }
 
-function productionContext(): ShotVideoTakeProductionContext {
+function takeCreateReport(value: SceneShotVideoTake) {
+  return {
+    overview: takeOverview(value),
+    resourceKeys: [],
+  };
+}
+
+function productionContext(): ShotVideoTakeProductionContextResponse {
   return {
     purpose: 'shot.video-take',
     target: {

@@ -124,6 +124,8 @@ export function SceneTakesTab({
   const [selectionReviewOpen, setSelectionReviewOpen] = useState(false);
   const [selectionApplyPending, setSelectionApplyPending] = useState(false);
   const [selectionApplyError, setSelectionApplyError] = useState<string | null>(null);
+  const createTakePendingRef = useRef(false);
+  const [createTakePending, setCreateTakePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saveNotificationSequenceRef = useRef(0);
   const [detailSaveNotification, setDetailSaveNotification] =
@@ -600,33 +602,46 @@ export function SceneTakesTab({
   }
 
   const createNewTake = async () => {
-    if (!resource.activeShotListId || !shots[0]) {
+    if (
+      !resource.activeShotListId ||
+      !shots[0] ||
+      createTakePendingRef.current
+    ) {
       return;
     }
-    const created = await createSceneShotVideoTake(projectName, sceneId, {
-      shotListId: resource.activeShotListId,
-      shotIds: [shots[0].shotId],
-      title: shots[0].title,
-    });
-    setTakeOverviews((current) =>
-      orderSceneShotVideoTakeOverviews([
-        ...current,
-        overviewFromActiveShotList({
-          take: created,
-          resource,
-          shots,
-        }),
-      ])
-    );
-    onSelect({
-      type: 'scene',
-      id: sceneId,
-      sceneTab: 'takes',
-      takeWorkspaceMode: 'new',
-      takeId: created.takeId,
-      shotId: shots[0].shotId,
-      shotTab: activeShotTab,
-    });
+    createTakePendingRef.current = true;
+    setCreateTakePending(true);
+    try {
+      const report = await createSceneShotVideoTake(projectName, sceneId, {
+        shotListId: resource.activeShotListId,
+        shotIds: [shots[0].shotId],
+        title: shots[0].title,
+      });
+      setTakeOverviews((current) =>
+        orderSceneShotVideoTakeOverviews([
+          ...current,
+          report.overview,
+        ])
+      );
+      onSelect({
+        type: 'scene',
+        id: sceneId,
+        sceneTab: 'takes',
+        takeWorkspaceMode: 'new',
+        takeId: report.overview.take.takeId,
+        shotId: shots[0].shotId,
+        shotTab: activeShotTab,
+      });
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : 'Unable to create take.'
+      );
+    } finally {
+      createTakePendingRef.current = false;
+      setCreateTakePending(false);
+    }
   };
 
   if (workspaceMode === 'list') {
@@ -673,8 +688,13 @@ export function SceneTakesTab({
             variant='outline'
             className='aspect-video h-auto min-w-0 flex-col gap-2 rounded-md border-dashed bg-muted/20'
             onClick={createNewTake}
+            disabled={createTakePending}
           >
-            <Plus className='h-5 w-5' />
+            {createTakePending ? (
+              <Loader2 className='h-5 w-5 animate-spin' />
+            ) : (
+              <Plus className='h-5 w-5' />
+            )}
             <span className='text-sm font-medium'>New Take</span>
           </Button>
         </div>
@@ -697,33 +717,46 @@ export function SceneTakesTab({
       ? displayedActiveTake
       : null;
   const handleCreateTake = async () => {
-    if (!resource.activeShotListId || !selectedShot) {
+    if (
+      !resource.activeShotListId ||
+      !selectedShot ||
+      createTakePendingRef.current
+    ) {
       return;
     }
-    const created = await createSceneShotVideoTake(projectName, sceneId, {
-      shotListId: resource.activeShotListId,
-      shotIds: [selectedShot.shotId],
-      title: selectedShot.title,
-    });
-    setTakeOverviews((current) =>
-      orderSceneShotVideoTakeOverviews([
-        ...current,
-        overviewFromActiveShotList({
-          take: created,
-          resource,
-          shots,
-        }),
-      ])
-    );
-    onSelect({
-      type: 'scene',
-      id: sceneId,
-      sceneTab: 'takes',
-      takeWorkspaceMode: 'edit',
-      takeId: created.takeId,
-      shotId: selectedShot.shotId,
-      shotTab: activeShotTab,
-    });
+    createTakePendingRef.current = true;
+    setCreateTakePending(true);
+    try {
+      const report = await createSceneShotVideoTake(projectName, sceneId, {
+        shotListId: resource.activeShotListId,
+        shotIds: [selectedShot.shotId],
+        title: selectedShot.title,
+      });
+      setTakeOverviews((current) =>
+        orderSceneShotVideoTakeOverviews([
+          ...current,
+          report.overview,
+        ])
+      );
+      onSelect({
+        type: 'scene',
+        id: sceneId,
+        sceneTab: 'takes',
+        takeWorkspaceMode: 'edit',
+        takeId: report.overview.take.takeId,
+        shotId: selectedShot.shotId,
+        shotTab: activeShotTab,
+      });
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : 'Unable to create take.'
+      );
+    } finally {
+      createTakePendingRef.current = false;
+      setCreateTakePending(false);
+    }
   };
 
   return (
@@ -822,6 +855,7 @@ export function SceneTakesTab({
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
             onCreateTake={handleCreateTake}
+            createTakePending={createTakePending}
             onTakeChange={handleTakeChange}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
@@ -867,26 +901,6 @@ function overviewFromProductionContext(
     sourceShotList: context.shotList,
     displayShots: context.displayShots,
     storyboardImages: context.storyboardImages,
-  };
-}
-
-function overviewFromActiveShotList(input: {
-  take: SceneShotVideoTake;
-  resource: SceneShotListResourceResponse;
-  shots: SceneShot[];
-}): SceneShotVideoTakeOverviewResponse {
-  return {
-    take: input.take,
-    sourceShotList: {
-      id: input.resource.activeShotListId ?? input.take.sourceShotListId,
-      title: input.resource.activeShotList?.title ?? input.take.title,
-      summary: input.resource.activeShotList?.summary ?? '',
-      createdAt: input.take.createdAt,
-      updatedAt: input.take.updatedAt,
-      isActive: true,
-    },
-    displayShots: input.shots,
-    storyboardImages: [],
   };
 }
 

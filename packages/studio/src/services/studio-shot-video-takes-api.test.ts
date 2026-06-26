@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SceneShotVideoTakeProductionState } from '@gorenku/studio-core/client';
 import {
   clearShotVideoTakeInput,
+  createSceneShotVideoTake,
   deleteSceneShotVideoTake,
   estimateShotVideoTakeProduction,
   planShotVideoTakeProduction,
@@ -60,6 +61,40 @@ describe('studio-shot-video-takes-api', () => {
     expect(String(url)).toBe(
       `/studio-api/projects/constantinople/screenplay/scenes/scene_hook/takes/${TAKE_ID}`
     );
+  });
+
+  it('creates a take and returns the overview report', async () => {
+    const createReport = {
+      overview: {
+        take: { takeId: TAKE_ID },
+        displayShots: [],
+        storyboardImages: [{ shotId: 'shot_001', url: '/storyboards/shot.png' }],
+      },
+      resourceKeys: [`scene-shot-video-take:${TAKE_ID}`],
+    };
+    vi.mocked(global.fetch).mockResolvedValue(okResponse(createReport));
+
+    const result = await createSceneShotVideoTake(
+      'constantinople',
+      'scene_hook',
+      {
+        shotListId: 'shot_list_hook',
+        shotIds: ['shot_001'],
+        title: 'Shot 1 take',
+      }
+    );
+
+    const [url, init] = lastCall();
+    expect(String(url)).toBe(
+      '/studio-api/projects/constantinople/screenplay/scenes/scene_hook/takes'
+    );
+    expect((init as RequestInit).method).toBe('POST');
+    expect(lastBody()).toEqual({
+      shotListId: 'shot_list_hook',
+      shotIds: ['shot_001'],
+      title: 'Shot 1 take',
+    });
+    expect(result).toEqual(createReport);
   });
 
   it('autosaves take production', async () => {

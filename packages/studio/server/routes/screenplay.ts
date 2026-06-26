@@ -19,6 +19,7 @@ import {
   toLocationResourceResponse,
   toSceneNarrativeResourceResponse,
   toSceneShotListResourceResponse,
+  toSceneShotVideoTakeCreateReportResponse,
   toSceneShotVideoTakeEditContextResponse,
   toSceneShotVideoTakeListReportResponse,
   toShotVideoTakeProductionContextResponse,
@@ -412,14 +413,16 @@ export function createScreenplayRoute({
           const request = readSceneShotVideoTakeCreateRequest(
             await c.req.json()
           );
-          const take = await projectData.createSceneShotVideoTake({
+          const report = await projectData.createSceneShotVideoTake({
             projectName,
             sceneId,
             shotListId: request.shotListId,
             shotIds: request.shotIds,
             title: request.title,
           });
-          return c.json({ take });
+          return c.json(
+            toSceneShotVideoTakeCreateReportResponse(projectName, report)
+          );
         } catch (error) {
           return projectErrorResponse(c, error);
         }

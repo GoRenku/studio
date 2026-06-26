@@ -498,12 +498,13 @@ describe('StudioCoordinationService', () => {
         shots: [shot],
       } satisfies SceneShotListDocument,
     });
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
     });
+    const take = takeReport.overview.take;
     await projectData.updateSceneShotVideoTakeShotDesign({
       homeDir,
       takeId: take.takeId,
@@ -627,12 +628,13 @@ describe('StudioCoordinationService', () => {
         })),
       } satisfies SceneShotListDocument,
     });
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId,
       shotListId: shotList.shotList.id,
       shotIds: ['shot_001', 'shot_002'],
     });
+    const take = takeReport.overview.take;
     const coordination = createStudioCoordinationService({ homeDir });
     const now = new Date();
     await claimStudioRuntimeDescriptor({

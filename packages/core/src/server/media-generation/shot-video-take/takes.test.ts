@@ -3,6 +3,7 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
+import { createDeterministicIdGenerator } from '../../index.js';
 
 describe('scene shot video takes', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -41,13 +42,20 @@ describe('scene shot video takes', () => {
   it('lists picked takes before unpicked takes', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
-    const pickedTake = await projectData.createSceneShotVideoTake({
+    const pickedTakeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_002'],
       title: 'Picked take',
     });
+    const pickedTake = pickedTakeReport.overview.take;
+    expect(pickedTakeReport.resourceKeys).toEqual(
+      expect.arrayContaining([
+        `surface:scene:${ids.sceneId}:takes`,
+        `scene-shot-video-take:${pickedTake.takeId}`,
+      ])
+    );
 
     await projectData.updateSceneShotVideoTakePick({
       homeDir,
@@ -69,6 +77,66 @@ describe('scene shot video takes', () => {
         (overview) => overview.take.takeId === written.take.takeId
       )?.take
     ).toMatchObject({ picked: false });
+  });
+
+  it('returns source shot list storyboard images when creating a take', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/shot-001-storyboard.png',
+      'shot one storyboard'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/shot-002-storyboard.png',
+      'shot two storyboard'
+    );
+    await projectData.importSceneStoryboardImagesMedia({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      document: {
+        kind: 'sceneStoryboardImagesImport',
+        shotListId: written.shotList.id,
+        shots: [
+          {
+            shotId: 'shot_001',
+            source: 'generated/media/shot-001-storyboard.png',
+          },
+          {
+            shotId: 'shot_002',
+            source: 'generated/media/shot-002-storyboard.png',
+          },
+        ],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    const report = await projectData.createSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      title: 'Storyboard-backed take',
+    });
+
+    expect(report.overview.take).toMatchObject({
+      title: 'Storyboard-backed take',
+      sourceShotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+    });
+    expect(report.overview.sourceShotList.id).toBe(written.shotList.id);
+    expect(report.overview.displayShots.map((shot) => shot.shotId)).toEqual([
+      'shot_001',
+      'shot_002',
+    ]);
+    expect(report.overview.storyboardImages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          shotId: 'shot_001',
+          mediaKind: 'image',
+        }),
+      ])
+    );
   });
 
   it('rejects wrong-scene take pick updates before changing the take', async () => {
@@ -133,13 +201,14 @@ describe('scene shot video takes', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    const replacement = await projectData.createSceneShotVideoTake({
+    const replacementReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_002'],
       title: 'Replacement picked take',
     });
+    const replacement = replacementReport.overview.take;
     await projectData.updateSceneShotVideoTakePick({
       homeDir,
       sceneId: ids.sceneId,

@@ -4,13 +4,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShotVideoTake,
-  ShotVideoTakeProductionContext,
 } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import {
   estimateShotVideoTakeProduction,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
+  type ShotVideoTakeProductionContextResponse,
   type ShotVideoTakeProductionRead,
   updateShotVideoTakeProduction,
 } from '@/services/studio-shot-video-takes-api';
@@ -156,13 +156,13 @@ function productionRead(
 
 function productionContext(
   take: SceneShotVideoTake
-): ShotVideoTakeProductionContext {
+): ShotVideoTakeProductionContextResponse {
   return {
     take,
     defaults: {
       inputModeId: 'text-only',
     },
-  } as ShotVideoTakeProductionContext;
+  } as unknown as ShotVideoTakeProductionContextResponse;
 }
 
 function initialTake(): SceneShotVideoTake {

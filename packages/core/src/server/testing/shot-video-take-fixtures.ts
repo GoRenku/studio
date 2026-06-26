@@ -180,13 +180,14 @@ export async function createShotVideoTakeTestProject(): Promise<ShotVideoTakeTes
         document,
         idGenerator: createDeterministicIdGenerator(),
       });
-      const take = await projectData.createSceneShotVideoTake({
+      const takeReport = await projectData.createSceneShotVideoTake({
         homeDir,
         sceneId: ids.sceneId,
         shotListId: report.shotList.id,
         shotIds: document.shots.map((shot) => shot.shotId),
         idGenerator: createDeterministicIdGenerator(),
       });
+      const take = takeReport.overview.take;
       return { ...report, take };
     },
     writeProjectFile(projectRelativePath, contents) {

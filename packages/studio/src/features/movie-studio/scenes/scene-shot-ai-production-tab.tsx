@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Loader2 } from 'lucide-react';
 import type {
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
@@ -19,11 +20,13 @@ import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-pro
 interface SceneShotAiProductionTabProps {
   production: UseShotVideoTakeProductionResult;
   onCreateTake?: () => Promise<void>;
+  createTakePending?: boolean;
 }
 
 export function SceneShotAiProductionTab({
   production,
   onCreateTake,
+  createTakePending = false,
 }: SceneShotAiProductionTabProps) {
   const {
     loadState,
@@ -82,7 +85,14 @@ export function SceneShotAiProductionTab({
   if (!take || !models) {
     return (
       <div className='flex h-full items-center justify-center py-8'>
-        <Button type='button' onClick={() => void onCreateTake?.()}>
+        <Button
+          type='button'
+          onClick={() => void onCreateTake?.()}
+          disabled={createTakePending}
+        >
+          {createTakePending ? (
+            <Loader2 data-icon='inline-start' className='animate-spin' />
+          ) : null}
           Create Take
         </Button>
       </div>

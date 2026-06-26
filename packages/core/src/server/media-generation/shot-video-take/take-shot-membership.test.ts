@@ -141,12 +141,13 @@ describe('Shot Video Take shot membership', () => {
   it('keeps open Shot Video Take settings when membership expands like a merge', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 5);
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_001', 'shot_002'],
     });
+    const take = takeReport.overview.take;
 
     await projectData.updateSceneShotVideoTakeProduction({
       homeDir,
@@ -314,12 +315,13 @@ describe('Shot Video Take shot membership', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const firstTakeId = written.take.takeId;
-    const secondTake = await projectData.createSceneShotVideoTake({
+    const secondTakeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
     });
+    const secondTake = secondTakeReport.overview.take;
 
     const firstContext =
       await projectData.updateSceneShotVideoTakeShotDesign({

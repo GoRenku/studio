@@ -65,6 +65,8 @@ export function SceneShotsTab({
     SceneShotVideoTakeOverviewResponse[]
   >([]);
   const [error, setError] = useState<string | null>(null);
+  const createTakePendingRef = useRef(false);
+  const [createTakePending, setCreateTakePending] = useState(false);
   const saveNotificationSequenceRef = useRef(0);
   const [detailSaveNotification, setDetailSaveNotification] =
     useState<DetailSaveNotificationSlot>(idleSaveNotificationSlot);
@@ -210,30 +212,35 @@ export function SceneShotsTab({
       selectedShot ? candidate.take.shotIds.includes(selectedShot.shotId) : false
     )?.take ?? null;
   const handleCreateTake = async () => {
-    if (!resource.activeShotListId || !selectedShot) {
+    if (
+      !resource.activeShotListId ||
+      !selectedShot ||
+      createTakePendingRef.current
+    ) {
       return;
     }
-    const created = await createSceneShotVideoTake(projectName, sceneId, {
-      shotListId: resource.activeShotListId,
-      shotIds: [selectedShot.shotId],
-      title: selectedShot.title,
-    });
-    setTakeOverviews((current) => [
-      ...current,
-      {
-        take: created,
-        sourceShotList: {
-          id: resource.activeShotListId,
-          title: resource.activeShotList.title,
-          summary: resource.activeShotList.summary,
-          createdAt: created.createdAt,
-          updatedAt: created.updatedAt,
-          isActive: true,
-        },
-        displayShots: shots,
-        storyboardImages: [],
-      },
-    ]);
+    createTakePendingRef.current = true;
+    setCreateTakePending(true);
+    try {
+      const report = await createSceneShotVideoTake(projectName, sceneId, {
+        shotListId: resource.activeShotListId,
+        shotIds: [selectedShot.shotId],
+        title: selectedShot.title,
+      });
+      setTakeOverviews((current) => [
+        ...current,
+        report.overview,
+      ]);
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : 'Unable to create take.'
+      );
+    } finally {
+      createTakePendingRef.current = false;
+      setCreateTakePending(false);
+    }
   };
 
   return (
@@ -278,6 +285,7 @@ export function SceneShotsTab({
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
             onCreateTake={handleCreateTake}
+            createTakePending={createTakePending}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>

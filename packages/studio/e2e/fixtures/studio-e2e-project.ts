@@ -123,7 +123,7 @@ export async function createShotVideoTakeMovieProject(input: {
     document: sampleShotList(ids),
     idGenerator: createDeterministicIdGenerator(),
   });
-  const take = await projectData.createSceneShotVideoTake({
+  const takeReport = await projectData.createSceneShotVideoTake({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
     sceneId: ids.sceneId,
@@ -132,6 +132,7 @@ export async function createShotVideoTakeMovieProject(input: {
     title: 'Gate pressure',
     idGenerator: createDeterministicIdGenerator(),
   });
+  const take = takeReport.overview.take;
 
   const mediaIds = await seedTakeReferenceMedia({
     runtime: input.runtime,
@@ -245,7 +246,7 @@ export async function createDiscardedTakeForTrash(input: {
   project: StudioE2eShotVideoTakeProject;
 }): Promise<void> {
   const projectData = createProjectDataService();
-  const take = await projectData.createSceneShotVideoTake({
+  const takeReport = await projectData.createSceneShotVideoTake({
     homeDir: input.runtime.homeDir,
     projectName: input.project.projectName,
     sceneId: input.project.sceneId,
@@ -254,6 +255,7 @@ export async function createDiscardedTakeForTrash(input: {
     title: 'Trash restore candidate',
     idGenerator: createRandomIdGenerator(),
   });
+  const take = takeReport.overview.take;
   await projectData.deleteSceneShotVideoTake({
     homeDir: input.runtime.homeDir,
     projectName: input.project.projectName,

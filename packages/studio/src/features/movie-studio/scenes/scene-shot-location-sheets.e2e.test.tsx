@@ -66,11 +66,12 @@ describe('Scene Shot Location Sheets E2E', () => {
   });
 
   it('shows a planned Location Sheet placeholder after selected shots are updated through the Studio API', async () => {
-    const take = await createSceneShotVideoTake(PROJECT_NAME, ids.sceneId, {
+    const takeReport = await createSceneShotVideoTake(PROJECT_NAME, ids.sceneId, {
       shotListId,
       shotIds: ['shot_001'],
       title: 'Shot membership repair path',
     });
+    const take = takeReport.overview.take;
 
     const mutation = await updateSceneShotVideoTakeShots(
       PROJECT_NAME,

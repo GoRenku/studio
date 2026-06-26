@@ -18,12 +18,13 @@ describe('shot video take preflight and validation', () => {
   it('validates selected input ownership before mutating another Shot Video Take selection', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
-    const otherTake = await projectData.createSceneShotVideoTake({
+    const otherTakeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_002'],
     });
+    const otherTake = otherTakeReport.overview.take;
     await shotVideoTakeProject.writeProjectFile('generated/media/group-two-a.png', 'first frame a');
     await shotVideoTakeProject.writeProjectFile('generated/media/group-two-b.png', 'first frame b');
     const selected = await projectData.importShotFirstFrame({
@@ -209,12 +210,13 @@ describe('shot video take preflight and validation', () => {
   it('preserves input shot membership when the Shot Video Take shot ids change', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
     });
+    const take = takeReport.overview.take;
     await shotVideoTakeProject.writeProjectFile(
       'generated/media/shot-one-first-frame.png',
       'shot one first frame'

@@ -208,13 +208,14 @@ describe('shot video take preflight and validation', () => {
       document: shotList,
       idGenerator: createDeterministicIdGenerator(),
     });
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       idGenerator: createDeterministicIdGenerator(),
     });
+    const take = takeReport.overview.take;
     const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',
       homeDir,
@@ -635,13 +636,14 @@ describe('shot video take preflight and validation', () => {
       document: shotList,
       idGenerator: createDeterministicIdGenerator(),
     });
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       idGenerator: createDeterministicIdGenerator(),
     });
+    const take = takeReport.overview.take;
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,

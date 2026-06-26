@@ -40,6 +40,7 @@ interface SceneShotDetailProps {
   locationLabels: Record<string, string>;
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onCreateTake?: () => Promise<void>;
+  createTakePending?: boolean;
   onTakeChange?: (take: SceneShotVideoTake) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
@@ -66,6 +67,7 @@ export function SceneShotDetail({
   locationLabels,
   onTabChange = () => {},
   onCreateTake,
+  createTakePending = false,
   onTakeChange,
   onSaveNotificationChange,
 }: SceneShotDetailProps) {
@@ -209,6 +211,7 @@ export function SceneShotDetail({
                       <SceneShotAiProductionTab
                         production={production}
                         onCreateTake={onCreateTake}
+                        createTakePending={createTakePending}
                       />
                     </LineTabsContent>
                   </>

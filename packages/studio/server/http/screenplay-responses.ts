@@ -9,6 +9,7 @@ import type {
   LocationResource,
   SceneNarrativeResource,
   SceneShotListResource,
+  SceneShotVideoTakeCreateReport,
   SceneShotVideoTakeEditContext,
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeOverview,
@@ -116,6 +117,13 @@ export type SceneShotVideoTakeListReportResponse = Omit<
   'takes'
 > & {
   takes: SceneShotVideoTakeOverviewResponse[];
+};
+
+export type SceneShotVideoTakeCreateReportResponse = Omit<
+  SceneShotVideoTakeCreateReport,
+  'overview'
+> & {
+  overview: SceneShotVideoTakeOverviewResponse;
 };
 
 export type ShotVideoTakeProductionContextResponse = Omit<
@@ -275,6 +283,19 @@ export function toSceneShotVideoTakeListReportResponse(
   return {
     takes: report.takes.map((overview) =>
       toSceneShotVideoTakeOverviewResponse(projectName, overview)
+    ),
+  };
+}
+
+export function toSceneShotVideoTakeCreateReportResponse(
+  projectName: string,
+  report: SceneShotVideoTakeCreateReport
+): SceneShotVideoTakeCreateReportResponse {
+  return {
+    ...report,
+    overview: toSceneShotVideoTakeOverviewResponse(
+      projectName,
+      report.overview
     ),
   };
 }

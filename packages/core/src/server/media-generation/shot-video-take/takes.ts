@@ -1,6 +1,7 @@
 import type {
   RecoverableMutationReport,
   SceneShotVideoTake,
+  SceneShotVideoTakeCreateReport,
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeOverview,
   ShotVideoTakeProductionContext,
@@ -56,7 +57,10 @@ import {
 import {
   applyTakeStateToShot,
 } from './take-state.js';
-import { shotVideoTakeResourceKeys } from './resource-keys.js';
+import {
+  sceneShotVideoTakeResourceKeys,
+  shotVideoTakeResourceKeys,
+} from './resource-keys.js';
 import {
   listShotVideoTakeStoryboardImages,
 } from './storyboard-images.js';
@@ -64,13 +68,13 @@ import { discardTrashObject } from '../../trash/trash-lifecycle-service.js';
 
 export async function createSceneShotVideoTake(
   input: CreateSceneShotVideoTakeInput
-): Promise<SceneShotVideoTake> {
+): Promise<SceneShotVideoTakeCreateReport> {
   return withShotProjectSession(input, ({ session }) => {
     const screenplay = requireScreenplayDocument(session);
     const ids = createUniqueIdAllocator(
       input.idGenerator ?? createRandomIdGenerator()
     );
-    return insertSceneShotVideoTakeRecord(session, {
+    const take = insertSceneShotVideoTakeRecord(session, {
       id: ids('scene_shot_video_take'),
       sceneId: input.sceneId,
       shotListId: input.shotListId,
@@ -79,6 +83,20 @@ export async function createSceneShotVideoTake(
       screenplay,
       now: new Date().toISOString(),
     });
+    const activeShotListId = readActiveSceneShotListId(session, input.sceneId);
+    return {
+      overview: toSceneShotVideoTakeOverview({
+        session,
+        sceneId: input.sceneId,
+        take,
+        activeShotListId,
+        screenplay,
+      }),
+      resourceKeys: sceneShotVideoTakeResourceKeys({
+        sceneId: input.sceneId,
+        takeId: take.takeId,
+      }),
+    };
   });
 }
 

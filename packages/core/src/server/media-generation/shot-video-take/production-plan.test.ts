@@ -290,13 +290,14 @@ describe('shot video take preflight and validation', () => {
         ],
       },
     });
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: ids.sceneId,
       shotListId: written.shotList.id,
       shotIds: ['shot_001'],
       idGenerator: createDeterministicIdGenerator(),
     });
+    const take = takeReport.overview.take;
     await projectData.updateSceneShotVideoTakeLocationSheetSelection({
       homeDir,
       sceneId: ids.sceneId,

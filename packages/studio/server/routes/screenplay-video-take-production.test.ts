@@ -57,6 +57,17 @@ describe('shot video take routes', () => {
       }
     );
     expect(createResponse.status).toBe(200);
+    const createBody = await createResponse.json();
+    expect(createBody.overview.take).toMatchObject({
+      sceneId: 'scene_opening',
+      sourceShotListId: 'shot_list_opening',
+      shotIds: ['shot_001'],
+      title: 'Manual video take',
+    });
+    expect(createBody.overview.storyboardImages).toEqual(expect.any(Array));
+    expect(createBody.resourceKeys).toEqual(
+      expect.arrayContaining(['surface:scene:scene_opening:takes'])
+    );
     expect(createSceneShotVideoTake).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',

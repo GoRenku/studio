@@ -1454,18 +1454,20 @@ async function createMatrixProjectSetup(
   const shotListIds = createDeterministicIdGenerator();
   const singleShotList = await writeShotList(projectData, homeDir, ids, 1, shotListIds);
   const multiShotList = await writeShotList(projectData, homeDir, ids, 2, shotListIds);
-  const singleTake = await projectData.createSceneShotVideoTake({
+  const singleTakeReport = await projectData.createSceneShotVideoTake({
     homeDir,
     sceneId: ids.sceneId,
     shotListId: singleShotList.shotList.id,
     shotIds: ['shot_001'],
   });
-  const multiTake = await projectData.createSceneShotVideoTake({
+  const multiTakeReport = await projectData.createSceneShotVideoTake({
     homeDir,
     sceneId: ids.sceneId,
     shotListId: multiShotList.shotList.id,
     shotIds: ['shot_001', 'shot_002'],
   });
+  const singleTake = singleTakeReport.overview.take;
+  const multiTake = multiTakeReport.overview.take;
   const activeLookbook = await createActiveLookbook(projectData, homeDir);
   await writeProjectFile(projectData, homeDir, 'generated/media/first-frame.png', 'first frame');
   await writeProjectFile(projectData, homeDir, 'generated/media/last-frame.png', 'last frame');

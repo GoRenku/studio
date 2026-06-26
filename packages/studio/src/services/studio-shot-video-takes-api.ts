@@ -7,6 +7,7 @@ import type {
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   SceneShotVideoTake,
+  SceneShotVideoTakeCreateReport,
   SceneShotVideoTakeShotDesign,
   SceneShotVideoTakeProductionState,
   ShotVideoTakeProductionPlanReport,
@@ -35,6 +36,13 @@ export type SceneShotVideoTakeListReportResponse = Omit<
   'takes'
 > & {
   takes: SceneShotVideoTakeOverviewResponse[];
+};
+
+export type SceneShotVideoTakeCreateReportResponse = Omit<
+  SceneShotVideoTakeCreateReport,
+  'overview'
+> & {
+  overview: SceneShotVideoTakeOverviewResponse;
 };
 
 export type ShotVideoTakeProductionContextResponse = Omit<
@@ -110,7 +118,7 @@ export async function createSceneShotVideoTake(
   projectName: string,
   sceneId: string,
   input: { shotListId: string; shotIds: string[]; title?: string }
-): Promise<SceneShotVideoTake> {
+): Promise<SceneShotVideoTakeCreateReportResponse> {
   const response = await fetch(takesPath(projectName, sceneId), {
     method: 'POST',
     headers: jsonHeaders(),
@@ -119,10 +127,7 @@ export async function createSceneShotVideoTake(
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  const body = (await response.json()) as {
-    take: SceneShotVideoTake;
-  };
-  return body.take;
+  return (await response.json()) as SceneShotVideoTakeCreateReportResponse;
 }
 
 export async function deleteSceneShotVideoTake(

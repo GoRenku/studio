@@ -92,6 +92,7 @@ import type {
   SceneDialogueAudioMutationReport,
   SceneShotVideoTakeMediaInput,
   SceneShotVideoTake,
+  SceneShotVideoTakeCreateReport,
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeEditContext,
   SceneShotVideoTakeShotDesign,
@@ -490,7 +491,7 @@ export interface ProjectDataService {
   estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
   runMediaGenerationSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
-  createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
+  createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTakeCreateReport>;
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<SceneShotVideoTakeListReport>;
   deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<RecoverableMutationReport>;

@@ -1453,13 +1453,14 @@ async function createSampleTake(input: {
   shotListId: string;
   shotIds: string[];
 }) {
-  return input.projectData.createSceneShotVideoTake({
+  const report = await input.projectData.createSceneShotVideoTake({
     homeDir: input.homeDir,
     sceneId: input.sceneId,
     shotListId: input.shotListId,
     shotIds: input.shotIds,
     idGenerator: createDeterministicIdGenerator(),
   });
+  return report.overview.take;
 }
 
 function lookbookSheetSpec(lookbookId: string): LookbookSheetGenerationSpec {

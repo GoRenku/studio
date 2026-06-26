@@ -149,6 +149,11 @@ export interface SceneShotVideoTakeOverview {
   storyboardImages: ShotVideoTakeStoryboardImageReference[];
 }
 
+export interface SceneShotVideoTakeCreateReport {
+  overview: SceneShotVideoTakeOverview;
+  resourceKeys: string[];
+}
+
 export interface SceneShotVideoTakeListReport {
   takes: SceneShotVideoTakeOverview[];
 }

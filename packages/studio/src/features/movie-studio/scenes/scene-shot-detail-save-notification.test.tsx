@@ -124,6 +124,7 @@ describe('SceneShotDetail save notifications', () => {
         sceneId='scene_hook'
         shot={SHOT}
         take={TAKE}
+        isShotEditable
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}
@@ -152,6 +153,7 @@ describe('SceneShotDetail save notifications', () => {
         sceneId='scene_hook'
         shot={SHOT}
         take={TAKE}
+        isShotEditable
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}
@@ -170,6 +172,7 @@ describe('SceneShotDetail save notifications', () => {
         sceneId='scene_hook'
         shot={SHOT}
         take={TAKE}
+        isShotEditable
         label='Shot 1'
         activeTab='ai-production'
         castMemberLabels={{}}

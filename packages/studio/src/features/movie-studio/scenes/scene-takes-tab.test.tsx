@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
+  ProjectRelativePath,
   SceneShot,
   SceneShotListDocument,
   SceneShotVideoTake,
-  SceneShotVideoTakeEditContext,
-  ShotVideoTakeProductionContext,
 } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
@@ -16,7 +15,10 @@ import {
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
   readSceneShotVideoTakeEditContext,
+  type SceneShotVideoTakeEditContextResponse,
   type SceneShotVideoTakeOverviewResponse,
+  type ShotVideoTakeProductionContextResponse,
+  type ShotVideoTakeStoryboardImageReferenceWithHttp,
   updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
 } from '@/services/studio-shot-video-takes-api';
@@ -81,7 +83,9 @@ describe('SceneTakesTab', () => {
       ],
     });
     vi.mocked(createSceneShotVideoTake).mockReset();
-    vi.mocked(createSceneShotVideoTake).mockResolvedValue(take());
+    vi.mocked(createSceneShotVideoTake).mockResolvedValue(
+      takeCreateReport(take())
+    );
     vi.mocked(deleteSceneShotVideoTake).mockReset();
     vi.mocked(deleteSceneShotVideoTake).mockResolvedValue({
       recovery: {
@@ -137,6 +141,72 @@ describe('SceneTakesTab', () => {
     });
     expect(image.getAttribute('src')).toBe('/storyboards/shot-001.png');
     expect(screen.queryByText(/^Take$/)).toBeNull();
+  });
+
+  it('keeps the storyboard preview on a locally created take card', async () => {
+    const createdTake = take({
+      takeId: 'take_created',
+      title: 'Map study take',
+      shotIds: ['shot_001'],
+      updatedAt: '2026-06-18T12:00:00.000Z',
+    });
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({ takes: [] });
+    vi.mocked(createSceneShotVideoTake).mockResolvedValue(
+      takeCreateReport(createdTake)
+    );
+
+    render(<SceneTakesTabHarness />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'New Take' }));
+
+    await waitFor(() =>
+      expect(createSceneShotVideoTake).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        {
+          shotListId: 'shot_list_hook',
+          shotIds: ['shot_001'],
+          title: 'Map study',
+        }
+      )
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Close take workspace' })
+    );
+
+    const image = await screen.findByRole('img', {
+      name: 'Storyboard image for Shot 1',
+    });
+    expect(image.getAttribute('src')).toBe('/storyboards/shot-001.png');
+  });
+
+  it('ignores repeated New Take clicks while creation is pending', async () => {
+    const createdTake = take({
+      takeId: 'take_created',
+      title: 'Map study take',
+      shotIds: ['shot_001'],
+      updatedAt: '2026-06-18T12:00:00.000Z',
+    });
+    let resolveCreate!: (report: ReturnType<typeof takeCreateReport>) => void;
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({ takes: [] });
+    vi.mocked(createSceneShotVideoTake).mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve;
+      })
+    );
+
+    render(<SceneTakesTabHarness />);
+
+    const createButton = await screen.findByRole('button', { name: 'New Take' });
+    fireEvent.click(createButton);
+    fireEvent.click(createButton);
+
+    expect(createSceneShotVideoTake).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveCreate(takeCreateReport(createdTake));
+    });
+    await screen.findByRole('button', { name: 'Close take workspace' });
   });
 
   it('updates pick state and orders the picked take first', async () => {
@@ -241,7 +311,6 @@ describe('SceneTakesTab', () => {
     vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
       takes: [
         takeOverview(sourceTake, {
-          sourceShotListId: 'shot_list_source',
           displayShots: sourceShots,
           storyboardImages: [
             sourceStoryboardImage(
@@ -665,7 +734,6 @@ function configureFiveShotEditTake(shotIds: string[]) {
   vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
     takes: [
       takeOverview(sourceTake, {
-        sourceShotListId: 'shot_list_source',
         displayShots: sourceShots,
         storyboardImages,
       }),
@@ -742,7 +810,7 @@ function takeEditContext(input: {
   sourceShotListId: string;
   displayShots: SceneShot[];
   storyboardImages?: ReturnType<typeof sourceStoryboardImage>[];
-}): SceneShotVideoTakeEditContext {
+}): SceneShotVideoTakeEditContextResponse {
   return {
     take: input.take,
     sourceShotList: {
@@ -755,7 +823,7 @@ function takeEditContext(input: {
     },
     displayShots: input.displayShots,
     storyboardImages: input.storyboardImages ?? [],
-  } as SceneShotVideoTakeEditContext;
+  } as unknown as SceneShotVideoTakeEditContextResponse;
 }
 
 function takeProductionContext(input: {
@@ -763,7 +831,7 @@ function takeProductionContext(input: {
   shotListId: string;
   displayShots: SceneShot[];
   storyboardImages?: ReturnType<typeof sourceStoryboardImage>[];
-}): ShotVideoTakeProductionContext {
+}): ShotVideoTakeProductionContextResponse {
   return {
     take: input.take,
     shotList: {
@@ -776,7 +844,7 @@ function takeProductionContext(input: {
     },
     displayShots: input.displayShots,
     storyboardImages: input.storyboardImages ?? [],
-  } as ShotVideoTakeProductionContext;
+  } as unknown as ShotVideoTakeProductionContextResponse;
 }
 
 function takeOverview(
@@ -812,6 +880,13 @@ function takeOverview(
   };
 }
 
+function takeCreateReport(value: SceneShotVideoTake) {
+  return {
+    overview: takeOverview(value),
+    resourceKeys: [],
+  };
+}
+
 function storyboardImage(assetId: string, assetFileId: string, url: string) {
   return {
     assetId,
@@ -832,11 +907,11 @@ function sourceStoryboardImage(
   assetId: string,
   assetFileId: string,
   url: string
-) {
+): ShotVideoTakeStoryboardImageReferenceWithHttp {
   return {
     ...storyboardImage(assetId, assetFileId, url),
     shotId,
-    projectRelativePath: `screenplay/storyboards/${shotId}.png`,
+    projectRelativePath: `screenplay/storyboards/${shotId}.png` as ProjectRelativePath,
   };
 }
 

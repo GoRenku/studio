@@ -1035,12 +1035,21 @@ export function fakeProjectDataService(): NonNullable<
       });
     },
     async createSceneShotVideoTake(input) {
-      return makeSceneShotVideoTake({
+      const take = makeSceneShotVideoTake({
         sceneId: input.sceneId,
         sourceShotListId: input.shotListId,
         shotIds: input.shotIds,
         title: input.title,
       });
+      return {
+        overview: makeSceneShotVideoTakeOverview(take),
+        resourceKeys: [
+          `scene:${take.sceneId}`,
+          `surface:scene:${take.sceneId}:shots`,
+          `surface:scene:${take.sceneId}:takes`,
+          `scene-shot-video-take:${take.takeId}`,
+        ],
+      };
     },
     async readSceneShotVideoTake(input) {
       return makeSceneShotVideoTake({

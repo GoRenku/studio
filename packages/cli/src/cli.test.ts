@@ -2937,12 +2937,13 @@ describe('renku CLI', () => {
         ],
       },
     });
-    const take = await projectData.createSceneShotVideoTake({
+    const takeReport = await projectData.createSceneShotVideoTake({
       homeDir,
       sceneId: scene.id as string,
       shotListId: writtenShotList.shotList.id,
       shotIds: ['shot_001'],
     });
+    const take = takeReport.overview.take;
     await projectData.updateSceneShotVideoTakeShotDesign({
       homeDir,
       takeId: take.takeId,

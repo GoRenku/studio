@@ -73,8 +73,8 @@ export async function createShotVideoTakeStateE2eFixture(): Promise<
     projectName: SHOT_VIDEO_TAKE_STATE_E2E_PROJECT_NAME,
     ids,
     shotListId: shotList.shotList.id,
-    createTake(input) {
-      return createSceneShotVideoTake(
+    async createTake(input) {
+      const report = await createSceneShotVideoTake(
         SHOT_VIDEO_TAKE_STATE_E2E_PROJECT_NAME,
         ids.sceneId,
         {
@@ -83,6 +83,7 @@ export async function createShotVideoTakeStateE2eFixture(): Promise<
           title: input.title,
         }
       );
+      return report.overview.take;
     },
     restoreFetch() {
       global.fetch = originalFetch;
