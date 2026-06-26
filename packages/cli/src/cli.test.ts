@@ -2491,9 +2491,46 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(takeCreateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    const take = JSON.parse(stdout.join('\n')) as {
-      takeId: string;
+    const takeCreateReport = JSON.parse(stdout.join('\n')) as {
+      overview: {
+        take: {
+          takeId: string;
+        };
+        sourceShotList: {
+          id: string;
+        };
+        displayShots: Array<{
+          shotId: string;
+        }>;
+      };
+      resourceKeys: string[];
     };
+    expect(takeCreateReport).toMatchObject({
+      overview: {
+        take: {
+          sceneId,
+          sourceShotListId: writeReport.activeShotListId,
+          shotIds: ['shot_001'],
+          state: {
+            version: 1,
+          },
+        },
+        sourceShotList: {
+          id: writeReport.activeShotListId,
+        },
+        displayShots: expect.arrayContaining([
+          expect.objectContaining({
+            shotId: 'shot_001',
+          }),
+        ]),
+      },
+      resourceKeys: expect.arrayContaining([
+        `scene:${sceneId}`,
+        `surface:scene:${sceneId}:shots`,
+        `surface:scene:${sceneId}:takes`,
+      ]),
+    });
+    const take = takeCreateReport.overview.take;
 
     stdout = [];
     stderr = [];
@@ -2505,7 +2542,12 @@ describe('renku CLI', () => {
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       takes: expect.arrayContaining([
         expect.objectContaining({
-          takeId: take.takeId,
+          take: expect.objectContaining({
+            takeId: take.takeId,
+          }),
+          sourceShotList: expect.objectContaining({
+            id: writeReport.activeShotListId,
+          }),
         }),
       ]),
     });

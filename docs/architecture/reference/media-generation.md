@@ -151,6 +151,11 @@ renku generation run --spec <spec-id> --approval-token <token> --json
 renku generation run --spec <spec-id> --simulate --json
 ```
 
+`renku take create --json` returns a `SceneShotVideoTakeCreateReport`.
+Use `overview.take.takeId` as the durable take id for later `--take` commands.
+`renku take list --json` returns `SceneShotVideoTakeOverview` entries, while
+`renku take show --json` returns the raw `SceneShotVideoTake`.
+
 For `shot.video-take`, `generation preflight` is the authoritative dependency
 check before final generation. Agents should read `inputsToCreate`,
 `inputPlanItems`, `plan.dependencyInventory`, `prompts`, and
