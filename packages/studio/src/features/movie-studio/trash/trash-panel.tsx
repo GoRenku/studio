@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArchiveX, RotateCcw, Trash2 } from 'lucide-react';
+import { ArchiveX, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import type {
-  GarbageCollectionPreview,
-  TrashItem,
-  TrashListReport,
-} from '@gorenku/studio-core/client';
+import type { TrashItem, TrashListReport } from '@gorenku/studio-core/client';
 import {
   listTrash,
   previewEmptyTrash,
@@ -13,6 +9,7 @@ import {
   runEmptyTrash,
 } from '@/services/studio-trash-api';
 import { Button } from '@/ui/button';
+import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 
 interface TrashPanelProps {
   projectName: string;
@@ -20,10 +17,10 @@ interface TrashPanelProps {
 
 export function TrashPanel({ projectName }: TrashPanelProps) {
   const [report, setReport] = useState<TrashListReport | null>(null);
-  const [preview, setPreview] = useState<GarbageCollectionPreview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [isEmptyingTrash, setIsEmptyingTrash] = useState(false);
+  const [isEmptyTrashDialogOpen, setIsEmptyTrashDialogOpen] = useState(false);
 
   const refreshTrash = useCallback(async () => {
     setIsLoading(true);
@@ -65,15 +62,12 @@ export function TrashPanel({ projectName }: TrashPanelProps) {
 
   const items = report?.items ?? [];
   const hasItems = items.length > 0;
-  const previewFileCount = preview?.files.length ?? 0;
-  const previewItemCount = preview?.items.length ?? 0;
 
   const handleRestore = useCallback(
     async (item: TrashItem) => {
       setBusyItemId(item.id);
       try {
         await restoreTrashItem(projectName, item.id);
-        setPreview(null);
         await refreshTrash();
         toast.success('Item restored');
       } catch (error) {
@@ -87,27 +81,12 @@ export function TrashPanel({ projectName }: TrashPanelProps) {
     [projectName, refreshTrash]
   );
 
-  const handlePreviewEmptyTrash = useCallback(async () => {
-    setIsEmptyingTrash(true);
-    try {
-      setPreview(await previewEmptyTrash(projectName));
-    } catch (error) {
-      toast.error('Empty Trash preview failed', {
-        description: readErrorMessage(error),
-      });
-    } finally {
-      setIsEmptyingTrash(false);
-    }
-  }, [projectName]);
-
   const handleRunEmptyTrash = useCallback(async () => {
-    if (!preview) {
-      return;
-    }
     setIsEmptyingTrash(true);
     try {
+      const preview = await previewEmptyTrash(projectName);
       const report = await runEmptyTrash(projectName, preview.confirmationToken);
-      setPreview(null);
+      setIsEmptyTrashDialogOpen(false);
       await refreshTrash();
       toast.success('Trash emptied', {
         description: `Moved ${report.files.length} files into the trash package.`,
@@ -119,7 +98,7 @@ export function TrashPanel({ projectName }: TrashPanelProps) {
     } finally {
       setIsEmptyingTrash(false);
     }
-  }, [preview, projectName, refreshTrash]);
+  }, [projectName, refreshTrash]);
 
   const actionLabel = useMemo(() => {
     if (isLoading) {
@@ -141,36 +120,27 @@ export function TrashPanel({ projectName }: TrashPanelProps) {
           </p>
         </div>
         <div className='flex shrink-0 items-center gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            disabled={!hasItems || isEmptyingTrash}
-            onClick={() => void handlePreviewEmptyTrash()}
-          >
-            <Trash2 className='h-4 w-4' />
-            Preview Empty Trash
-          </Button>
-          <Button
-            type='button'
-            variant='destructive'
-            size='sm'
-            disabled={!preview || previewItemCount === 0 || isEmptyingTrash}
-            onClick={() => void handleRunEmptyTrash()}
-          >
-            <ArchiveX className='h-4 w-4' />
-            Empty Trash
-          </Button>
+          <DeleteConfirmDialog
+            open={isEmptyTrashDialogOpen}
+            onOpenChange={setIsEmptyTrashDialogOpen}
+            title='Empty Trash?'
+            message='This will permanently delete every discarded item and empty the Trash for this project. This cannot be undone.'
+            onDelete={handleRunEmptyTrash}
+            trigger={
+              <Button
+                type='button'
+                variant='destructive'
+                size='sm'
+                className='gap-1.5'
+                disabled={!hasItems || isEmptyingTrash}
+              >
+                <ArchiveX className='h-4 w-4' />
+                Empty
+              </Button>
+            }
+          />
         </div>
       </div>
-
-      {preview ? (
-        <div className='shrink-0 border-b border-border/40 bg-muted/25 px-4 py-3 text-sm'>
-          <span className='font-medium'>{previewItemCount}</span> items and{' '}
-          <span className='font-medium'>{previewFileCount}</span> files are ready
-          to package.
-        </div>
-      ) : null}
 
       <div className='min-h-0 flex-1 overflow-y-auto p-4'>
         {isLoading ? (
@@ -182,7 +152,7 @@ export function TrashPanel({ projectName }: TrashPanelProps) {
             Trash is empty.
           </div>
         ) : (
-          <div className='space-y-2'>
+          <div className='flex flex-col gap-2'>
             {items.map((item) => (
               <TrashItemRow
                 key={item.id}
@@ -229,6 +199,7 @@ function TrashItemRow({
         size='sm'
         disabled={busy}
         onClick={() => onRestore(item)}
+        className='gap-1.5'
       >
         <RotateCcw className='h-4 w-4' />
         Restore

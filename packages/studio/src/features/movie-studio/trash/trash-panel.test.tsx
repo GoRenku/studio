@@ -63,7 +63,7 @@ describe('TrashPanel', () => {
     expect(listTrash).toHaveBeenCalledTimes(2);
   });
 
-  it('previews and empties Trash through the Trash API', async () => {
+  it('empties Trash after confirmation through the Trash API', async () => {
     const item = trashItem();
     vi.mocked(listTrash)
       .mockResolvedValueOnce(trashListReport([item]))
@@ -73,22 +73,19 @@ describe('TrashPanel', () => {
 
     render(<TrashPanel projectName='constantinople' />);
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Preview Empty Trash' })
-    );
+    await screen.findByRole('button', { name: 'Restore' });
+    expect(
+      screen.getAllByRole('button').map((button) => button.textContent)
+    ).toEqual(['Empty', 'Restore']);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Empty' }));
+    expect(screen.getByRole('dialog', { name: 'Empty Trash?' })).toBeTruthy();
+    expect(previewEmptyTrash).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
     await waitFor(() => {
       expect(previewEmptyTrash).toHaveBeenCalledWith('constantinople');
-    });
-    expect(
-      await screen.findByText(
-        (_content, element) =>
-          element?.textContent === '1 items and 1 files are ready to package.'
-      )
-    ).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Empty Trash' }));
-
-    await waitFor(() => {
       expect(runEmptyTrash).toHaveBeenCalledWith(
         'constantinople',
         'trash_confirmation_token'

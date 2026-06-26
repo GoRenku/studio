@@ -44,7 +44,7 @@ test('restores a discarded take from Trash', async ({
   await mediaSurface.restoreDiscardedTake();
 });
 
-test('previews and empties Trash for a discarded take', async ({
+test('empties Trash for a discarded take after confirmation', async ({
   page,
   trashProject,
   studioE2eRuntime,
@@ -57,5 +57,5 @@ test('previews and empties Trash for a discarded take', async ({
   });
   await mediaSurface.gotoTrash(trashProject);
   await mediaSurface.expectDiscardedTakeVisible();
-  await mediaSurface.previewAndEmptyTrash();
+  await mediaSurface.emptyTrash();
 });
