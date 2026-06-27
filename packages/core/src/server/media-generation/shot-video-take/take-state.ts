@@ -119,7 +119,40 @@ function emptyReferenceSelections(): SceneShotVideoTakeReferenceSelections {
 function pruneTakeShotDesign(
   design: SceneShotVideoTakeShotDesign
 ): SceneShotVideoTakeShotDesign {
-  return JSON.parse(JSON.stringify(design)) as SceneShotVideoTakeShotDesign;
+  const pruned = JSON.parse(
+    JSON.stringify(design)
+  ) as SceneShotVideoTakeShotDesign;
+  pruneCustomString(pruned.composition, 'customComposition');
+  if (
+    pruned.composition?.lens &&
+    Object.keys(pruned.composition.lens).length === 0
+  ) {
+    delete pruned.composition.lens;
+  }
+  if (pruned.composition && Object.keys(pruned.composition).length === 0) {
+    delete pruned.composition;
+  }
+  pruneCustomString(pruned.motion, 'customMotion');
+  if (pruned.motion && Object.keys(pruned.motion).length === 0) {
+    delete pruned.motion;
+  }
+  return pruned;
+}
+
+function pruneCustomString(
+  owner: Record<string, unknown> | undefined,
+  key: string
+): void {
+  if (!owner) {
+    return;
+  }
+  const values = owner as Record<string, string | undefined>;
+  const trimmed = values[key]?.trim();
+  if (trimmed) {
+    values[key] = trimmed;
+  } else {
+    delete values[key];
+  }
 }
 
 function setOptionalString<K extends keyof SceneShot>(
