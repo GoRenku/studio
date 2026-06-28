@@ -81,6 +81,9 @@ Use this page as the map:
   - `../decisions/0038-use-scoped-shot-video-take-reference-projections.md`
     for editor-direction versus generation-direction Shot Video Take reference
     projection.
+  - `../decisions/0039-use-uniform-shot-video-take-sheet-reference-selection.md`
+    for singular per-direction Character Sheet and Location Sheet selections
+    with asset-scoped selected dependency ids.
 
 ## Studio App, Server, Routes, And Coordination
 

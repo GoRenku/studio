@@ -16,6 +16,7 @@ export interface ParsedShotVideoInputDependencyIdentifier {
   kind: ShotVideoTakeInputKind;
   subjectKind?: ShotVideoTakeInputSubjectKind;
   subjectId?: string;
+  assetId?: string;
 }
 
 export type ShotVideoInputDependencyIdentifierParseResult =
@@ -121,6 +122,7 @@ export function parseShotVideoInputDependencyId(
   if (extraParts.length > 1) {
     return { ok: false, reason: 'malformed' };
   }
+  const assetId = extraParts[0];
 
   if (dependencyKind === 'cast-character-sheet' && dependencySubjectId) {
     return {
@@ -129,6 +131,7 @@ export function parseShotVideoInputDependencyId(
         kind: 'character-sheet',
         subjectKind: 'cast-member',
         subjectId: dependencySubjectId,
+        ...(assetId ? { assetId } : {}),
       },
     };
   }
@@ -139,6 +142,7 @@ export function parseShotVideoInputDependencyId(
         kind: 'location-sheet',
         subjectKind: 'location',
         subjectId: dependencySubjectId,
+        ...(assetId ? { assetId } : {}),
       },
     };
   }

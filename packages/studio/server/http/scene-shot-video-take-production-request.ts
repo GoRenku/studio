@@ -266,7 +266,7 @@ export function readShotCastCharacterSheetReferenceRequest(
 export interface ShotLocationSheetReferenceRequest {
   shotId?: string;
   locationId: string;
-  assetIds: string[];
+  assetId: string | null;
 }
 
 export function readShotLocationSheetReferenceRequest(
@@ -280,19 +280,22 @@ export function readShotLocationSheetReferenceRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['shotId', 'locationId', 'assetIds'],
+    ['shotId', 'locationId', 'assetId'],
     issues,
     CONTEXT,
-    'Send only the shotId, locationId, and assetIds fields.'
+    'Send only the shotId, locationId, and assetId fields.'
   );
   const shotId =
     record.shotId === undefined
       ? undefined
       : readStringValue(record.shotId, ['shotId'], issues);
   const locationId = readStringValue(record.locationId, ['locationId'], issues);
-  const assetIds = readStringArray(record.assetIds, ['assetIds'], issues);
+  const assetId =
+    record.assetId === null
+      ? null
+      : readStringValue(record.assetId, ['assetId'], issues);
   finishOrThrow(issues);
-  return { ...(shotId ? { shotId } : {}), locationId, assetIds };
+  return { ...(shotId ? { shotId } : {}), locationId, assetId };
 }
 
 export interface ShotLookbookReferenceRequest {

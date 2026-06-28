@@ -72,7 +72,7 @@ function emptyDirection(): SceneShotVideoTakeDirection {
     referenceSelections: {
       dependencyInclusions: {},
       selectedCharacterSheetAssetIds: {},
-      referencedLocationSheetAssetIds: {},
+      selectedLocationSheetAssetIds: {},
       selectedLookbookSheetIds: [],
       selectedDialogueAudioTakeIds: {},
     },

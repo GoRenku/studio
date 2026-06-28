@@ -44,7 +44,7 @@ import {
   generationReferenceInclusionForDependencyId,
 } from './reference-inclusions.js';
 import {
-  referencedEnvironmentSheetAssetIdsForGenerationTakeState,
+  selectedLocationSheetAssetIdsForGenerationTakeState,
   selectedLookbookSheetIdsForGenerationTakeState,
 } from './reference-selection.js';
 import {
@@ -162,11 +162,11 @@ export function inputItemTitle(
 ): string {
   const target = dependencyTargetForLine(context, line);
   if (target?.kind === 'castMember') {
-    return context.referencedCast.find((castMember) => castMember.id === target.id)?.name ??
+    return context.selectedCast.find((castMember) => castMember.id === target.id)?.name ??
       line.label;
   }
   if (target?.kind === 'location') {
-    return context.referencedLocations.find((location) => location.id === target.id)?.name ??
+    return context.selectedLocations.find((location) => location.id === target.id)?.name ??
       line.label;
   }
   if (target?.kind === 'lookbook') {
@@ -298,8 +298,8 @@ export function locationSheetInputsForContext(
   issues: DiagnosticIssue[]
 ): ShotVideoTakePreflightInput[] {
   const inputs: ShotVideoTakePreflightInput[] = [];
-  for (const location of context.referencedLocations) {
-    const referencedAssetIds = referencedEnvironmentSheetAssetIdsForGenerationTakeState(
+  for (const location of context.selectedLocations) {
+    const selectedAssetIds = selectedLocationSheetAssetIdsForGenerationTakeState(
       context.take.state,
       context.take.shotIds,
       location.id
@@ -311,18 +311,18 @@ export function locationSheetInputsForContext(
       limit: MAX_RESOURCE_PAGE_LIMIT,
     }).items;
     const assetsById = new Map(assets.map((asset) => [asset.assetId, asset]));
-    for (const assetId of referencedAssetIds) {
+    for (const assetId of selectedAssetIds) {
       const asset = assetsById.get(assetId);
       if (!asset) {
         issues.push(
           issue(
             'PROJECT_DATA418',
-            'Referenced Location Sheet does not belong to the selected Location.',
+            'Selected Location Sheet does not belong to the referenced Location.',
             [
               'take',
               'state',
               'structure',
-              'referencedLocationSheetAssetIds',
+              'selectedLocationSheetAssetIds',
               location.id,
             ],
             'Choose a Location Sheet attached to this Location.'
@@ -337,12 +337,12 @@ export function locationSheetInputsForContext(
         issues.push(
           issue(
             'PROJECT_DATA419',
-            'Referenced Location Sheet has no primary image file.',
+            'Selected Location Sheet has no primary image file.',
             [
               'take',
               'state',
               'structure',
-              'referencedLocationSheetAssetIds',
+              'selectedLocationSheetAssetIds',
               location.id,
             ],
             'Regenerate or import the Location Sheet with one primary image file.'

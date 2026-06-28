@@ -246,7 +246,7 @@ Editor projection resolves exactly one direction:
 - in multi-cut mode, the editor reads
   `directionsByShotId[selectedShotId]`;
 - multi-cut editor reads require a selected shot id that belongs to the take;
-- selected Character Sheets, referenced Location Sheets, selected Lookbook
+- selected Character Sheets, selected Location Sheets, selected Lookbook
   Sheets, selected Dialogue Audio takes, and include/exclude card state must
   come from that one resolved editor direction.
 
@@ -258,6 +258,9 @@ Generation projection resolves the whole take:
 - dependency inventory, preflight input preparation, final provider payloads,
   estimates, and whole-take validation may aggregate references across that
   ordered generation direction set.
+- selected Character Sheet and Location Sheet assets are singular in each
+  editor direction, then aggregated and de-duplicated only after
+  direction-scoped inclusion state is applied.
 
 Core helpers must name this distinction directly. A helper that scans every
 direction is a generation or whole-take dependency helper. A helper that

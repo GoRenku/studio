@@ -549,7 +549,7 @@ function sceneShotVideoTakeReferenceSelectionsSchema(): Record<string, unknown> 
     required: [
       'dependencyInclusions',
       'selectedCharacterSheetAssetIds',
-      'referencedLocationSheetAssetIds',
+      'selectedLocationSheetAssetIds',
       'selectedLookbookSheetIds',
       'selectedDialogueAudioTakeIds',
     ],
@@ -562,12 +562,9 @@ function sceneShotVideoTakeReferenceSelectionsSchema(): Record<string, unknown> 
         type: 'object',
         additionalProperties: nonEmptyString(),
       },
-      referencedLocationSheetAssetIds: {
+      selectedLocationSheetAssetIds: {
         type: 'object',
-        additionalProperties: {
-          type: 'array',
-          items: nonEmptyString(),
-        },
+        additionalProperties: nonEmptyString(),
       },
       selectedLookbookSheetIds: {
         type: 'array',

@@ -92,7 +92,11 @@ export function assertEditableSceneShotVideoTake(
   }
   throw new ProjectDataError(
     'PROJECT_DATA420',
-    `Scene Shot Video Take is read-only: ${take.takeId}.`
+    `Scene Shot Video Take is read-only: ${take.takeId}.`,
+    {
+      issues: take.status.editability.diagnostics,
+      suggestion: take.status.editability.message,
+    }
   );
 }
 

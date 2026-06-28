@@ -105,7 +105,7 @@ selectors use only a concrete selected asset or sheet. `selected-or-default`
 selectors may fall back to the purpose-owned default only when that behavior is
 part of the selector contract. Unknown selector kinds, wrong request shapes,
 invalid selected targets, missing selected files, unavailable referenced
-Location Sheet assets, and missing primary image files are structured
+or selected sheet assets, and missing primary image files are structured
 dependency diagnostics, not quiet missing states.
 
 There is one pricing meaning. Generated node prices come from provider
@@ -140,7 +140,9 @@ selected image model for one Location Sheet, and import stores one image asset
 with one `primary` file plus a concise persisted description. Location Sheets
 do not have Location-level pick/default selection, fixed view files, or azimuth
 metadata. Shot/take workflows reference exact Location Sheet asset ids when a
-sheet is useful for a specific generation.
+sheet is selected for a specific generation direction. Shot-video take
+references do not use hidden first-sheet defaults; available sheets remain
+choices until a take direction stores the selected asset id.
 
 Location Hero Images are separate display assets generated or imported from an
 explicit source Location Sheet. They use asset type `location_hero`, Location

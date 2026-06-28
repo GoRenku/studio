@@ -180,7 +180,7 @@ describe('shot video take preflight and validation', () => {
       expect.objectContaining({
         assetId: null,
         title: `${locationReference?.name} Location Sheet`,
-        referenced: false,
+        selected: true,
         card: expect.objectContaining({
           state: 'selected-planned',
           dependencyId: `location-environment-sheet:${ids.locationId}`,
@@ -623,10 +623,10 @@ describe('shot video take preflight and validation', () => {
       (block) => block.type === 'dialogue'
     );
     const dialogueBlock = scene.blocks[dialogueBlockIndex]!;
-    const unreferencedDialogueBlock = scene.blocks[dialogueBlockIndex + 1]!;
+    const unselectedDialogueBlock = scene.blocks[dialogueBlockIndex + 1]!;
     if (
       dialogueBlock.type !== 'dialogue' ||
-      unreferencedDialogueBlock.type !== 'dialogue'
+      unselectedDialogueBlock.type !== 'dialogue'
     ) {
       throw new Error('Expected sample scene to contain dialogue.');
     }
@@ -684,10 +684,10 @@ describe('shot video take preflight and validation', () => {
       }),
       expect.objectContaining({
         dependencyId: sceneDialogueAudioDependencyId(
-          unreferencedDialogueBlock.dialogueId
+          unselectedDialogueBlock.dialogueId
         ),
-        dialogueId: unreferencedDialogueBlock.dialogueId,
-        plainText: unreferencedDialogueBlock.lines.join('\n'),
+        dialogueId: unselectedDialogueBlock.dialogueId,
+        plainText: unselectedDialogueBlock.lines.join('\n'),
         pickedTake: null,
         takeCount: 0,
         audioState: 'not-generated',
@@ -934,7 +934,7 @@ describe('shot video take preflight and validation', () => {
       takeId: take.takeId,
       shotId: 'shot_001',
       locationId: ids.locationId,
-      assetIds: [locationSheetA.imported.assetId],
+      assetId: locationSheetA.imported.assetId,
     });
     await projectData.updateSceneShotVideoTakeLocationSheetSelection({
       homeDir,
@@ -942,7 +942,7 @@ describe('shot video take preflight and validation', () => {
       takeId: take.takeId,
       shotId: 'shot_002',
       locationId: ids.locationId,
-      assetIds: [locationSheetB.imported.assetId],
+      assetId: locationSheetB.imported.assetId,
     });
     await projectData.updateSceneShotVideoTakeLookbookSheetSelection({
       homeDir,
@@ -1026,13 +1026,13 @@ describe('shot video take preflight and validation', () => {
     expect(
       shotOneReport.references.locations.find(
         (group) => group.locationId === ids.locationId
-      )?.referencedEnvironmentSheetAssetIds
-    ).toEqual([locationSheetA.imported.assetId]);
+      )?.selectedLocationSheetAssetId
+    ).toBe(locationSheetA.imported.assetId);
     expect(
       shotTwoReport.references.locations.find(
         (group) => group.locationId === ids.locationId
-      )?.referencedEnvironmentSheetAssetIds
-    ).toEqual([locationSheetB.imported.assetId]);
+      )?.selectedLocationSheetAssetId
+    ).toBe(locationSheetB.imported.assetId);
     expect(
       shotOneReport.references.lookbook.find((choice) => choice.selected)
         ?.lookbookSheetId

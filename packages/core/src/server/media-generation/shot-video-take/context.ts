@@ -152,7 +152,7 @@ export function buildContextFromPrepared(input: {
         state: input.prepared.take.state,
       })
     ),
-    referencedCast: orderedScreenplayItems(screenplay.cast, selectedCastMemberIds)
+    selectedCast: orderedScreenplayItems(screenplay.cast, selectedCastMemberIds)
       .map((castMember) => ({
         id: castMember.id as string,
         handle: castMember.handle,
@@ -161,7 +161,7 @@ export function buildContextFromPrepared(input: {
         isVoiceOver: castMember.isVoiceOver,
         description: castMember.description,
       })),
-    referencedLocations: scope.locations
+    selectedLocations: scope.locations
       .filter((location) => location.id && selectedLocationIds.has(location.id))
       .map((location) => ({
         id: location.id as string,
@@ -229,8 +229,8 @@ function shotVideoTakeEditContextFromProductionContext(
     sourceShots: context.shots,
     displayShots: context.displayShots,
     shotGroupMode: context.shotGroupMode,
-    referencedCast: context.referencedCast,
-    referencedLocations: context.referencedLocations,
+    selectedCast: context.selectedCast,
+    selectedLocations: context.selectedLocations,
     activeLookbook: context.activeLookbook,
     storyboardImages: context.storyboardImages,
     mediaInputs: context.mediaInputs,

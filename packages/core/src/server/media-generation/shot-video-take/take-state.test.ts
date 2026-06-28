@@ -48,7 +48,7 @@ describe('scene shot video take state', () => {
       referenceSelections: {
         dependencyInclusions: {},
         selectedCharacterSheetAssetIds: {},
-        referencedLocationSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
         selectedLookbookSheetIds: [],
         selectedDialogueAudioTakeIds: {},
       },
@@ -63,7 +63,7 @@ describe('scene shot video take state', () => {
         selectedCharacterSheetAssetIds: {
           cast_urban: 'asset_character_sheet_001',
         },
-        referencedLocationSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
         selectedLookbookSheetIds: [],
         selectedDialogueAudioTakeIds: {},
       },
@@ -82,7 +82,7 @@ describe('scene shot video take state', () => {
         selectedCharacterSheetAssetIds: {
           cast_urban: 'asset_character_sheet_001',
         },
-        referencedLocationSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
         selectedLookbookSheetIds: [],
         selectedDialogueAudioTakeIds: {},
       },
@@ -97,7 +97,7 @@ describe('scene shot video take state', () => {
         selectedCharacterSheetAssetIds: {
           cast_urban: 'asset_character_sheet_001',
         },
-        referencedLocationSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
         selectedLookbookSheetIds: [],
         selectedDialogueAudioTakeIds: {},
       },
@@ -112,7 +112,7 @@ describe('scene shot video take state', () => {
           selectedCharacterSheetAssetIds: {
             cast_urban: 'asset_unvalidated_replacement',
           },
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },
@@ -127,7 +127,7 @@ describe('scene shot video take state', () => {
       selectedCharacterSheetAssetIds: {
         cast_urban: 'asset_character_sheet_001',
       },
-      referencedLocationSheetAssetIds: {},
+      selectedLocationSheetAssetIds: {},
       selectedLookbookSheetIds: [],
       selectedDialogueAudioTakeIds: {},
     });
@@ -156,7 +156,7 @@ describe('scene shot video take state', () => {
         selectedCharacterSheetAssetIds: {
           cast_urban: 'asset_character_sheet_001',
         },
-        referencedLocationSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
         selectedLookbookSheetIds: [],
         selectedDialogueAudioTakeIds: {},
       },
@@ -224,7 +224,7 @@ describe('scene shot video take state', () => {
           referenceSelections: {
             dependencyInclusions: {},
             selectedCharacterSheetAssetIds: {},
-            referencedLocationSheetAssetIds: {},
+            selectedLocationSheetAssetIds: {},
             selectedLookbookSheetIds: [],
             selectedDialogueAudioTakeIds: {},
           },
@@ -234,7 +234,7 @@ describe('scene shot video take state', () => {
           referenceSelections: {
             dependencyInclusions: {},
             selectedCharacterSheetAssetIds: {},
-            referencedLocationSheetAssetIds: {},
+            selectedLocationSheetAssetIds: {},
             selectedLookbookSheetIds: [],
             selectedDialogueAudioTakeIds: {},
           },
@@ -304,7 +304,7 @@ describe('scene shot video take state', () => {
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },
@@ -332,7 +332,7 @@ describe('scene shot video take state', () => {
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },

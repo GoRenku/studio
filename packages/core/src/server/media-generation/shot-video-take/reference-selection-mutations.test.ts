@@ -90,7 +90,7 @@ describe('shot video take reference selection mutations', () => {
         sceneId: ids.sceneId,
         takeId: written.take.takeId,
         locationId: ids.locationId,
-        assetIds: [''],
+        assetId: '',
       })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA427',
@@ -101,7 +101,7 @@ describe('shot video take reference selection mutations', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    expect(takeReferenceSelections(take).referencedLocationSheetAssetIds).toEqual({});
+    expect(takeReferenceSelections(take).selectedLocationSheetAssetIds).toEqual({});
   });
 
   it('rejects location sheets from another Location before writing take state', async () => {
@@ -164,7 +164,7 @@ describe('shot video take reference selection mutations', () => {
         sceneId: ids.sceneId,
         takeId: written.take.takeId,
         locationId: ids.locationId,
-        assetIds: [otherLocationSheet.imported.assetId],
+        assetId: otherLocationSheet.imported.assetId,
       })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA427',
@@ -176,7 +176,7 @@ describe('shot video take reference selection mutations', () => {
     });
 
     await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
-      referencedLocationSheetAssetIds: {},
+      selectedLocationSheetAssetIds: {},
     });
   });
 

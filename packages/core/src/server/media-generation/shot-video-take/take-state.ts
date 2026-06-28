@@ -429,6 +429,15 @@ export function validateSceneShotVideoTakeStructure(input: {
   state: SceneShotVideoTakeState;
   shotIds: string[];
 }): void {
+  if (input.shotIds.length === 0) {
+    throwStructureError({
+      code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_MISSING_SHOT_MEMBERSHIP',
+      message: 'Shot video take state must have at least one grouped shot.',
+      path: ['take', 'shotIds'],
+      suggestion:
+        'Repair the take shot membership before editing or generating from this take.',
+    });
+  }
   const structure = input.state.structure;
   if (structure.mode === 'continuous') {
     if (!structure.sharedDirection) {
@@ -473,7 +482,7 @@ export function emptyReferenceSelections(): SceneShotVideoTakeReferenceSelection
   return {
     dependencyInclusions: {},
     selectedCharacterSheetAssetIds: {},
-    referencedLocationSheetAssetIds: {},
+    selectedLocationSheetAssetIds: {},
     selectedLookbookSheetIds: [],
     selectedDialogueAudioTakeIds: {},
   };

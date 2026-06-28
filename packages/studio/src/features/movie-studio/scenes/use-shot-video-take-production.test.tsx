@@ -257,7 +257,7 @@ function multiCutTake(): SceneShotVideoTake {
             referenceSelections: {
               dependencyInclusions: {},
               selectedCharacterSheetAssetIds: {},
-              referencedLocationSheetAssetIds: {},
+              selectedLocationSheetAssetIds: {},
               selectedLookbookSheetIds: [],
               selectedDialogueAudioTakeIds: {},
             },
@@ -266,7 +266,7 @@ function multiCutTake(): SceneShotVideoTake {
             referenceSelections: {
               dependencyInclusions: {},
               selectedCharacterSheetAssetIds: {},
-              referencedLocationSheetAssetIds: {},
+              selectedLocationSheetAssetIds: {},
               selectedLookbookSheetIds: [],
               selectedDialogueAudioTakeIds: {},
             },
@@ -295,7 +295,7 @@ function takeWithProduction(
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },

@@ -72,8 +72,9 @@ Use the focused documents below for current direction.
   attaches them as assets.
 - Location Sheets are durable image assets attached to Locations with role
   `environment_sheet`. Each sheet has one `primary` image file and a concise
-  persisted description. Shot/take state references exact Location Sheet asset
-  ids when those sheets are needed for generation.
+  persisted description. A Location can have many Location Sheets. A Shot
+  Video Take direction stores one selected Location Sheet asset id per
+  referenced Location when that sheet is needed for generation.
 - Location Hero Images are separate display assets attached to Locations with
   role `hero`. The selected hero asset drives overview/detail imagery and does
   not become a shot-generation reference.

@@ -27,7 +27,7 @@ interface SceneShotLocationReferenceRowProps {
   onToggleSheet: (
     locationId: string,
     assetId: string,
-    referenced: boolean
+    selected: boolean
   ) => Promise<void>;
 }
 
@@ -39,7 +39,8 @@ export function SceneShotLocationReferenceRow({
 }: SceneShotLocationReferenceRowProps) {
   const [sheetDialogOpen, setSheetDialogOpen] = useState(false);
   const displayedSheet =
-    group.environmentSheets.find((sheet) => sheet.referenced) ??
+    group.environmentSheets.find((sheet) => sheet.selected && sheet.assetId) ??
+    group.environmentSheets.find((sheet) => sheet.assetId) ??
     group.environmentSheets[0] ??
     null;
 
@@ -58,7 +59,7 @@ export function SceneShotLocationReferenceRow({
   const previewImages = previewImageUrl(preview, imageUrl);
   const title = hasSheetAlternatives ? group.name : displayedSheet.title;
   const selected = displayedSheet.assetId
-    ? displayedSheet.referenced
+    ? displayedSheet.selected
     : displayedSheet.card.included;
 
   return (
@@ -71,8 +72,8 @@ export function SceneShotLocationReferenceRow({
         card={displayedSheet.card}
         selected={selected}
         selectable={Boolean(displayedSheet.assetId)}
-        selectedActionLabel={`Stop referencing ${displayedSheet.title}`}
-        unselectedActionLabel={`Reference ${displayedSheet.title}`}
+        selectedActionLabel={`Clear ${displayedSheet.title} selection`}
+        unselectedActionLabel={`Select ${displayedSheet.title}`}
         aspectRatio={4 / 3}
         aspectClassName='aspect-[4/3]'
         onOpen={() => {
@@ -89,7 +90,7 @@ export function SceneShotLocationReferenceRow({
             ? onToggleSheet(
                 group.locationId,
                 displayedSheet.assetId,
-                displayedSheet.referenced
+                displayedSheet.selected
               )
             : Promise.resolve()
         }
@@ -124,7 +125,7 @@ function LocationSheetDialog({
   onToggleSheet: (
     locationId: string,
     assetId: string,
-    referenced: boolean
+    selected: boolean
   ) => Promise<void>;
 }) {
   return (
@@ -159,10 +160,10 @@ function LocationSheetDialog({
                   imageUrl={imageUrl}
                   imageAlt={preview?.alt ?? sheet.title}
                   card={sheet.card}
-                  selected={sheet.referenced}
+                  selected={sheet.selected}
                   selectable={Boolean(sheet.assetId)}
-                  selectedActionLabel={`Stop referencing ${sheet.title}`}
-                  unselectedActionLabel={`Reference ${sheet.title}`}
+                  selectedActionLabel={`Clear ${sheet.title} selection`}
+                  unselectedActionLabel={`Select ${sheet.title}`}
                   aspectRatio={4 / 3}
                   aspectClassName='aspect-[4/3]'
                   onOpen={() => {
@@ -172,7 +173,7 @@ function LocationSheetDialog({
                   }}
                   onToggleSelected={() =>
                     sheet.assetId
-                      ? onToggleSheet(group.locationId, sheet.assetId, sheet.referenced)
+                      ? onToggleSheet(group.locationId, sheet.assetId, sheet.selected)
                       : Promise.resolve()
                   }
                 />

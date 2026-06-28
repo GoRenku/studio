@@ -24,6 +24,7 @@ import {
   sceneShotVideoTakes,
 } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
+import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import {
   readActiveSceneShotListId,
@@ -474,7 +475,16 @@ function toSceneShotVideoTake(
     session,
     input.row.id
   );
-  validateSceneShotVideoTakeStructure({ state, shotIds });
+  const structureIssues = validateSceneShotVideoTakeStructureForStatus({
+    state,
+    shotIds,
+  });
+  const status = projectSceneShotVideoTakeStatus(session, {
+    row: input.row,
+    snapshot,
+    shotIds,
+    screenplay: input.screenplay,
+  });
   return {
     takeId: input.row.id,
     sceneId: input.row.sceneId,
@@ -483,14 +493,54 @@ function toSceneShotVideoTake(
     shotIds,
     picked: input.row.isPicked,
     state,
-    status: projectSceneShotVideoTakeStatus(session, {
-      row: input.row,
-      snapshot,
-      shotIds,
-      screenplay: input.screenplay,
-    }),
+    status: statusWithStructureIssues(status, structureIssues),
     createdAt: input.row.createdAt,
     updatedAt: input.row.updatedAt,
+  };
+}
+
+function validateSceneShotVideoTakeStructureForStatus(input: {
+  state: SceneShotVideoTakeState;
+  shotIds: string[];
+}): DiagnosticIssue[] {
+  try {
+    validateSceneShotVideoTakeStructure(input);
+    return [];
+  } catch (error) {
+    if (
+      error instanceof ProjectDataError &&
+      error.code.startsWith('CORE_SHOT_VIDEO_TAKE_STRUCTURE_')
+    ) {
+      return error.issues;
+    }
+    throw error;
+  }
+}
+
+function statusWithStructureIssues(
+  status: SceneShotVideoTakeStatus,
+  structureIssues: DiagnosticIssue[]
+): SceneShotVideoTakeStatus {
+  if (structureIssues.length === 0) {
+    return status;
+  }
+  return {
+    ...status,
+    editability: {
+      state: 'read-only',
+      diagnostics: structureIssues,
+      message: 'This take needs shot structure repair before editing.',
+    },
+    resolvability: {
+      state: 'missing-references',
+      diagnostics: structureIssues,
+      message: 'This take has invalid shot structure.',
+    },
+    runnability: {
+      state: 'blocked',
+      diagnostics: structureIssues,
+      message: 'Repair this take shot structure before generation.',
+    },
   };
 }
 

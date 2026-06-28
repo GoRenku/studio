@@ -149,14 +149,15 @@ describe('scene shot video take state persistence e2e', () => {
       shotIds: ['shot_001'],
       title: 'Reference selection take',
     });
-    const inclusionDependencyId = `cast-character-sheet:${fixture.ids.castMemberId}`;
+    const inclusionDependencyId =
+      `cast-character-sheet:${fixture.ids.castMemberId}:${referenceFixture.characterSheetAssetId}`;
     const expectedReferenceSelections: SceneShotVideoTakeReferenceSelections = {
       ...takeReferenceSelections(take),
       selectedCharacterSheetAssetIds: {
         [fixture.ids.castMemberId]: referenceFixture.characterSheetAssetId,
       },
-      referencedLocationSheetAssetIds: {
-        [fixture.ids.locationId]: [referenceFixture.locationSheetAssetId],
+      selectedLocationSheetAssetIds: {
+        [fixture.ids.locationId]: referenceFixture.locationSheetAssetId,
       },
       selectedLookbookSheetIds: [referenceFixture.lookbookSheetId],
       dependencyInclusions: {
@@ -179,7 +180,7 @@ describe('scene shot video take state persistence e2e', () => {
       take.takeId,
       {
         locationId: fixture.ids.locationId,
-        assetIds: [referenceFixture.locationSheetAssetId],
+        assetId: referenceFixture.locationSheetAssetId,
       }
     );
     await updateTakeLookbookSheetSelection(
@@ -461,7 +462,7 @@ function emptyReferenceSelections(): SceneShotVideoTakeReferenceSelections {
   return {
     dependencyInclusions: {},
     selectedCharacterSheetAssetIds: {},
-    referencedLocationSheetAssetIds: {},
+    selectedLocationSheetAssetIds: {},
     selectedLookbookSheetIds: [],
     selectedDialogueAudioTakeIds: {},
   };

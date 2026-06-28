@@ -1522,7 +1522,7 @@ export interface UpdateSceneShotVideoTakeLocationSheetSelectionInput
   extends ShotVideoTakeContextInput {
   shotId?: string;
   locationId: string;
-  assetIds: string[];
+  assetId: string | null;
 }
 
 export interface UpdateSceneShotVideoTakeLookbookSheetSelectionInput

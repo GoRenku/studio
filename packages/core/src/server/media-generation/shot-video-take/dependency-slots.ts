@@ -15,12 +15,11 @@ export interface ShotVideoTakeDependencySlotInput {
   target: SceneShotVideoTakeTarget;
   inputModeId: ShotVideoTakeInputModeId;
   selectedCast: Array<{ id: string; name: string; isVoiceOver?: boolean }>;
-  selectedCharacterSheetAssetIds: Record<string, string[]>;
+  selectedCharacterSheetAssetIdsByCastMember: Record<string, string[]>;
   selectedLocations: Array<{ id: string; name: string }>;
   activeLookbook: { id: string; name: string; selectedSheetId?: string | null } | null;
   customReferenceInputs: Array<{ id: string; title: string }>;
-  referencedLocationSheetAssetIds: Record<string, string[]>;
-  availableLocationSheetAssetIds?: Record<string, string[]>;
+  selectedLocationSheetAssetIdsByLocation: Record<string, string[]>;
   requestedInputs?: ShotVideoTakeRequestedInput[];
   requiresMultiShotStoryboardSheet?: boolean;
 }
@@ -134,13 +133,14 @@ function shotVideoReferenceContextSlots(
       .filter((castMember) => !castMember.isVoiceOver)
       .flatMap((castMember) => {
         const selectedAssetIds =
-          input.selectedCharacterSheetAssetIds[castMember.id] ?? [];
+          input.selectedCharacterSheetAssetIdsByCastMember[castMember.id] ?? [];
         if (selectedAssetIds.length > 0) {
           return selectedAssetIds.map((assetId) =>
             castCharacterSheetDependencySlot({
               castMemberId: castMember.id,
               castMemberName: castMember.name,
               assetId,
+              selectionPolicy: 'selected-only',
               required: false,
               reason: contextReason,
             })
@@ -150,16 +150,17 @@ function shotVideoReferenceContextSlots(
           castCharacterSheetDependencySlot({
             castMemberId: castMember.id,
             castMemberName: castMember.name,
+            selectionPolicy: 'selected-only',
             required: false,
             reason: contextReason,
           }),
         ];
       }),
     ...input.selectedLocations.flatMap((location) => {
-      const referencedAssetIds =
-        input.referencedLocationSheetAssetIds[location.id] ?? [];
-      if (referencedAssetIds.length > 0) {
-        return referencedAssetIds.map((assetId) =>
+      const selectedAssetIds =
+        input.selectedLocationSheetAssetIdsByLocation[location.id] ?? [];
+      if (selectedAssetIds.length > 0) {
+        return selectedAssetIds.map((assetId) =>
           locationEnvironmentSheetDependencySlot({
             locationId: location.id,
             locationName: location.name,
@@ -169,18 +170,14 @@ function shotVideoReferenceContextSlots(
           })
         );
       }
-      const availableAssetIds =
-        input.availableLocationSheetAssetIds?.[location.id] ?? [];
-      return availableAssetIds.length > 0
-        ? []
-        : [
-            locationEnvironmentSheetDependencySlot({
-              locationId: location.id,
-              locationName: location.name,
-              required: false,
-              reason: contextReason,
-            }),
-          ];
+      return [
+        locationEnvironmentSheetDependencySlot({
+          locationId: location.id,
+          locationName: location.name,
+          required: false,
+          reason: contextReason,
+        }),
+      ];
     }),
   ];
 }
@@ -207,6 +204,7 @@ function requestedShotVideoInputSlot(input: {
     return castCharacterSheetDependencySlot({
       castMemberId: input.requestedInput.subjectId,
       castMemberName: castMember?.name ?? input.requestedInput.subjectId,
+      selectionPolicy: 'selected-only',
       required: false,
       reason,
     });

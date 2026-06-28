@@ -21,10 +21,6 @@ import {
   readScreenplaySceneFromSession,
 } from '../../database/access/screenplay-resource.js';
 import {
-  listAssetRelationshipPage,
-  MAX_RESOURCE_PAGE_LIMIT,
-} from '../../database/access/asset-relationships/index.js';
-import {
   ProjectDataError,
 } from '../../project-data-error.js';
 import {
@@ -86,7 +82,7 @@ import {
   validateRequiredReferenceInclusions,
 } from './reference-inclusions.js';
 import {
-  referencedEnvironmentSheetAssetIdsForGenerationTakeState,
+  selectedLocationSheetAssetIdsForGenerationTakeState,
   selectedCharacterSheetAssetIdsForGenerationTakeState,
   selectedLookbookSheetIdsForGenerationTakeState,
 } from './reference-selection.js';
@@ -300,15 +296,15 @@ export function shotVideoTakeDependencySlotsForContext(input: {
   const slots = declareShotVideoTakeDependencySlots({
     target: input.context.target,
     inputModeId: input.inputModeId,
-    selectedCast: input.context.referencedCast.map((castMember) => ({
+    selectedCast: input.context.selectedCast.map((castMember) => ({
       id: castMember.id,
       name: castMember.name,
       isVoiceOver: castMember.isVoiceOver,
     })),
-    selectedCharacterSheetAssetIds: selectedCharacterSheetAssetIdsByCastMember(
+    selectedCharacterSheetAssetIdsByCastMember: selectedCharacterSheetAssetIdsByCastMember(
       input.context
     ),
-    selectedLocations: input.context.referencedLocations.map((location) => ({
+    selectedLocations: input.context.selectedLocations.map((location) => ({
       id: location.id,
       name: location.name,
     })),
@@ -329,13 +325,9 @@ export function shotVideoTakeDependencySlotsForContext(input: {
         id: mediaInput.subjectId || mediaInput.assetId,
         title: mediaInput.title,
       })),
-    referencedLocationSheetAssetIds: referencedLocationSheetAssetIdsByLocation(
+    selectedLocationSheetAssetIdsByLocation: selectedLocationSheetAssetIdsByLocation(
       input.context
     ),
-    availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
-      session: input.session,
-      locations: input.context.referencedLocations,
-    }),
     requestedInputs: input.context.take.state.production.requestedInputs,
     requiresMultiShotStoryboardSheet: input.context.shotGroupMode === 'multi-shot',
   });
@@ -356,15 +348,15 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
   return declareShotVideoTakeDependencySlots({
     target: input.context.target,
     inputModeId: 'text-only',
-    selectedCast: input.context.referencedCast.map((castMember) => ({
+    selectedCast: input.context.selectedCast.map((castMember) => ({
       id: castMember.id,
       name: castMember.name,
       isVoiceOver: castMember.isVoiceOver,
     })),
-    selectedCharacterSheetAssetIds: selectedCharacterSheetAssetIdsByCastMember(
+    selectedCharacterSheetAssetIdsByCastMember: selectedCharacterSheetAssetIdsByCastMember(
       input.context
     ),
-    selectedLocations: input.context.referencedLocations.map((location) => ({
+    selectedLocations: input.context.selectedLocations.map((location) => ({
       id: location.id,
       name: location.name,
     })),
@@ -380,13 +372,9 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
         }
       : null,
     customReferenceInputs: [],
-    referencedLocationSheetAssetIds: referencedLocationSheetAssetIdsByLocation(
+    selectedLocationSheetAssetIdsByLocation: selectedLocationSheetAssetIdsByLocation(
       input.context
     ),
-    availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
-      session: input.session,
-      locations: input.context.referencedLocations,
-    }),
     requestedInputs: [],
   });
 }
@@ -463,15 +451,15 @@ export async function declareShotVideoTakeDependencies(
     return declareShotVideoTakeDependencySlots({
       target: context.target,
       inputModeId: spec.inputModeId,
-      selectedCast: context.referencedCast.map((castMember) => ({
+      selectedCast: context.selectedCast.map((castMember) => ({
         id: castMember.id,
         name: castMember.name,
         isVoiceOver: castMember.isVoiceOver,
       })),
-      selectedCharacterSheetAssetIds: selectedCharacterSheetAssetIdsByCastMember(
+      selectedCharacterSheetAssetIdsByCastMember: selectedCharacterSheetAssetIdsByCastMember(
         context
       ),
-      selectedLocations: context.referencedLocations.map((location) => ({
+      selectedLocations: context.selectedLocations.map((location) => ({
         id: location.id,
         name: location.name,
       })),
@@ -492,42 +480,21 @@ export async function declareShotVideoTakeDependencies(
           id: generationInput.subjectId ?? generationInput.assetId,
           title: generationInput.role || 'Reference image',
         })),
-      referencedLocationSheetAssetIds: referencedLocationSheetAssetIdsByLocation(
+      selectedLocationSheetAssetIdsByLocation: selectedLocationSheetAssetIdsByLocation(
         context
       ),
-      availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
-        session,
-        locations: context.referencedLocations,
-      }),
       requiresMultiShotStoryboardSheet: context.shotGroupMode === 'multi-shot',
     });
   });
 }
 
-function availableLocationSheetAssetIdsByLocation(input: {
-  session: DatabaseSession;
-  locations: Array<{ id: string }>;
-}): Record<string, string[]> {
-  return Object.fromEntries(
-    input.locations.map((location) => [
-      location.id,
-      listAssetRelationshipPage(input.session, {
-        target: { kind: 'location', locationId: location.id },
-        role: 'environment_sheet',
-        mediaKind: 'image',
-        limit: MAX_RESOURCE_PAGE_LIMIT,
-      }).items.map((asset) => asset.assetId),
-    ])
-  );
-}
-
-function referencedLocationSheetAssetIdsByLocation(
+function selectedLocationSheetAssetIdsByLocation(
   context: ShotVideoTakeProductionContext
 ): Record<string, string[]> {
   return Object.fromEntries(
-    context.referencedLocations.map((location) => [
+    context.selectedLocations.map((location) => [
       location.id,
-      referencedEnvironmentSheetAssetIdsForGenerationTakeState(
+      selectedLocationSheetAssetIdsForGenerationTakeState(
         context.take.state,
         context.take.shotIds,
         location.id
@@ -540,7 +507,7 @@ function selectedCharacterSheetAssetIdsByCastMember(
   context: ShotVideoTakeProductionContext
 ): Record<string, string[]> {
   return Object.fromEntries(
-    context.referencedCast.map((castMember) => [
+    context.selectedCast.map((castMember) => [
       castMember.id,
       selectedCharacterSheetAssetIdsForGenerationTakeState(
         context.take.state,

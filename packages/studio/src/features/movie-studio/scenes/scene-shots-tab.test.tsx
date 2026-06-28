@@ -366,6 +366,7 @@ function takeOverview(
       isActive: true,
     },
     displayShots: shotList().shots,
+    overviewShotIds: [...value.shotIds],
     storyboardImages: [],
   };
 }
@@ -405,8 +406,8 @@ function productionContext(): ShotVideoTakeProductionContextResponse {
     take: take(),
     shots: [shot('shot_001', 'Map study', 'Beat one.')],
     displayShots: [shot('shot_001', 'Map study', 'Beat one.')],
-    referencedCast: [],
-    referencedLocations: [],
+    selectedCast: [],
+    selectedLocations: [],
     activeLookbook: null,
     storyboardImages: [],
     mediaInputs: [],
@@ -430,7 +431,7 @@ function emptyTakeState(production = {}) {
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },
@@ -555,7 +556,7 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
           name: 'Council Chamber',
           selectedForShot: true,
           defaultSelectedForShot: true,
-          referencedEnvironmentSheetAssetIds: [],
+          selectedLocationSheetAssetId: null,
           environmentSheets: [
             {
               id: 'loc_chamber:planned-environment-sheet',
@@ -563,7 +564,7 @@ function productionPlan(): ShotVideoTakeProductionPlanReport {
               assetId: null,
               title: 'Council Chamber',
               description: null,
-              referenced: true,
+              selected: true,
               card: {
                 state: 'selected-planned',
                 mediaKind: 'image',

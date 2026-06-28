@@ -337,7 +337,7 @@ describe('studio-shot-video-takes-api', () => {
       'constantinople',
       'scene_hook',
       TAKE_ID,
-      { locationId: 'loc_chamber', assetIds: ['asset_environment_001'] }
+      { locationId: 'loc_chamber', assetId: 'asset_environment_001' }
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
@@ -346,7 +346,7 @@ describe('studio-shot-video-takes-api', () => {
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
       locationId: 'loc_chamber',
-      assetIds: ['asset_environment_001'],
+      assetId: 'asset_environment_001',
     });
   });
 

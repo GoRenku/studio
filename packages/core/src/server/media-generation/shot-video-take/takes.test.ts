@@ -1,3 +1,5 @@
+import Database from 'better-sqlite3';
+import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   createShotVideoTakeTestProject,
@@ -137,6 +139,75 @@ describe('scene shot video takes', () => {
         }),
       ])
     );
+  });
+
+  it('lists takes with broken shot membership as read-only instead of failing the scene list', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const takeId = written.take.takeId;
+
+    await projectData.updateSceneShotVideoTakeStructureMode({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId,
+      mode: 'multi-cut',
+    });
+
+    const project = await projectData.readCurrentProject({ homeDir });
+    if (!project) {
+      throw new Error('Expected current project to exist.');
+    }
+    const db = new Database(
+      path.join(project.projectFolder, '.renku', 'project.sqlite')
+    );
+    try {
+      db.prepare(
+        'delete from scene_shot_video_take_shot where take_id = ?'
+      ).run(takeId);
+    } finally {
+      db.close();
+    }
+
+    const report = await projectData.listSceneShotVideoTakes({
+      homeDir,
+      sceneId: ids.sceneId,
+    });
+    const listedTake = report.takes.find(
+      (overview) => overview.take.takeId === takeId
+    )?.take;
+
+    expect(listedTake).toMatchObject({
+      takeId,
+      shotIds: [],
+      status: {
+        editability: {
+          state: 'read-only',
+          diagnostics: [
+            expect.objectContaining({
+              code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_MISSING_SHOT_MEMBERSHIP',
+            }),
+          ],
+        },
+        runnability: {
+          state: 'blocked',
+        },
+      },
+    });
+    await expect(
+      projectData.updateSceneShotVideoTakePick({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId,
+        picked: true,
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_DATA420',
+      issues: [
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_MISSING_SHOT_MEMBERSHIP',
+        }),
+      ],
+    });
   });
 
   it('rejects wrong-scene take pick updates before changing the take', async () => {

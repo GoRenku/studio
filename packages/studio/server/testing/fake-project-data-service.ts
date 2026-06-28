@@ -1147,8 +1147,8 @@ export function fakeProjectDataService(): NonNullable<
     },
     async updateSceneShotVideoTakeLocationSheetSelection(input) {
       return makeShotVideoTakeContext(input, undefined, undefined, {
-        referencedLocationSheetAssetIds: input.assetIds.length
-          ? { [input.locationId]: input.assetIds }
+        selectedLocationSheetAssetIds: input.assetId
+          ? { [input.locationId]: input.assetId }
           : {},
       });
     },
@@ -1412,8 +1412,8 @@ function makeShotVideoTakeContext(
     shotGroupMode: take.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
     shots: [],
     displayShots: [],
-    referencedCast: [],
-    referencedLocations: [],
+    selectedCast: [],
+    selectedLocations: [],
     activeLookbook: null,
     storyboardImages: [],
     mediaInputs: [],
@@ -1438,6 +1438,7 @@ function makeSceneShotVideoTakeOverview(take: SceneShotVideoTake) {
     take,
     sourceShotList: context.shotList,
     displayShots: context.displayShots,
+    overviewShotIds: [...take.shotIds],
     storyboardImages: context.storyboardImages,
   };
 }
@@ -1456,8 +1457,8 @@ function makeSceneShotVideoTakeEditContext(input: {
     sourceShots: context.shots,
     displayShots: context.displayShots,
     shotGroupMode: context.shotGroupMode,
-    referencedCast: context.referencedCast,
-    referencedLocations: context.referencedLocations,
+    selectedCast: context.selectedCast,
+    selectedLocations: context.selectedLocations,
     activeLookbook: context.activeLookbook,
     storyboardImages: context.storyboardImages,
     mediaInputs: context.mediaInputs,
@@ -1501,7 +1502,7 @@ function makeSceneShotVideoTake(
           referenceSelections: {
             dependencyInclusions: {},
             selectedCharacterSheetAssetIds: {},
-            referencedLocationSheetAssetIds: {},
+            selectedLocationSheetAssetIds: {},
             selectedLookbookSheetIds: [],
             selectedDialogueAudioTakeIds: {},
             ...input.referenceSelections,

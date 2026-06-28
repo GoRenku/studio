@@ -119,7 +119,7 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
-  it('resolves prepared cast sheet inputs without a shot video take input row', async () => {
+  it('keeps missing take-reference sheet selections visible beside prepared cast sheet inputs', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const sheetSource = 'generated/media/cast-sheet.png';
@@ -156,7 +156,7 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    expect(preflight.inputsToCreate).not.toEqual(
+    expect(preflight.inputsToCreate).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           outputInputKind: 'character-sheet',

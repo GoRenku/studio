@@ -138,19 +138,17 @@ export function selectedCharacterSheetAssetIdsForGenerationTakeState(
 
 
 
-export function referencedEnvironmentSheetAssetIdsForEditorDirection(
+export function selectedLocationSheetAssetIdForEditorDirection(
   direction: SceneShotVideoTakeDirection,
   locationId: string
-): string[] {
-  return [
-    ...new Set(
-      sceneShotVideoTakeDirectionReferenceSelections(direction)
-        .referencedLocationSheetAssetIds[locationId] ?? []
-    ),
-  ];
+): string | null {
+  return (
+    sceneShotVideoTakeDirectionReferenceSelections(direction)
+      .selectedLocationSheetAssetIds[locationId] ?? null
+  );
 }
 
-export function referencedEnvironmentSheetAssetIdsForGenerationTakeState(
+export function selectedLocationSheetAssetIdsForGenerationTakeState(
   state: SceneShotVideoTakeState,
   shotIds: string[],
   locationId: string
@@ -161,9 +159,11 @@ export function referencedEnvironmentSheetAssetIdsForGenerationTakeState(
         structure: state.structure,
         shotIds,
       }).flatMap(
-        (direction) =>
-          sceneShotVideoTakeDirectionReferenceSelections(direction)
-            .referencedLocationSheetAssetIds[locationId] ?? []
+        (direction) => {
+          const selected = sceneShotVideoTakeDirectionReferenceSelections(direction)
+            .selectedLocationSheetAssetIds[locationId];
+          return selected ? [selected] : [];
+        }
       )
     ),
   ];

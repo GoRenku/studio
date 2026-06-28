@@ -91,7 +91,7 @@ describe('useTakeShotDesign', () => {
             selectedCharacterSheetAssetIds: {
               cast_urban: 'asset_character_sheet_001',
             },
-            referencedLocationSheetAssetIds: {},
+            selectedLocationSheetAssetIds: {},
             selectedLookbookSheetIds: [],
             selectedDialogueAudioTakeIds: {},
           },
@@ -128,7 +128,7 @@ function TakeShotDesignHarness({
         selectedCharacterSheetAssetIds: {
           cast_urban: 'asset_character_sheet_001',
         },
-        referencedLocationSheetAssetIds: {},
+        selectedLocationSheetAssetIds: {},
         selectedLookbookSheetIds: [],
         selectedDialogueAudioTakeIds: {},
       },

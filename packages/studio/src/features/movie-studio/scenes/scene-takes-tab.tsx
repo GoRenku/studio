@@ -658,7 +658,7 @@ export function SceneTakesTab({
               overview.storyboardImages
             );
             const firstShotIndex = overview.displayShots.findIndex(
-              (shot) => shot.shotId === overview.take.shotIds[0]
+              (shot) => shot.shotId === overview.overviewShotIds[0]
             );
             const firstShot =
               firstShotIndex >= 0 ? overview.displayShots[firstShotIndex] : null;
@@ -669,12 +669,12 @@ export function SceneTakesTab({
                 title={title}
                 description={shotRangeLabel(
                   overview.displayShots,
-                  overview.take.shotIds
+                  overview.overviewShotIds
                 )}
                 picked={overview.take.picked}
                 previewShots={takePreviewShots({
                   shots: overview.displayShots,
-                  shotIds: overview.take.shotIds,
+                  shotIds: overview.overviewShotIds,
                   imagesByShotId: previewImagesByShotId,
                 })}
                 onOpen={() => handleOpenTake(overview.take)}
@@ -900,6 +900,7 @@ function overviewFromProductionContext(
     take: context.take,
     sourceShotList: context.shotList,
     displayShots: context.displayShots,
+    overviewShotIds: [...context.take.shotIds],
     storyboardImages: context.storyboardImages,
   };
 }

@@ -15,6 +15,7 @@ export function castCharacterSheetDependencySlot(input: {
   castMemberId: string;
   castMemberName: string;
   assetId?: string;
+  selectionPolicy: 'selected-only' | 'selected-or-default';
   required: boolean;
   reason: string;
 }): MediaGenerationDependencySlot {
@@ -29,7 +30,7 @@ export function castCharacterSheetDependencySlot(input: {
       ...(input.assetId ? { assetId: input.assetId } : {}),
       role: 'character_sheet',
       mediaKind: 'image',
-      selectionPolicy: input.assetId ? 'selected-only' : 'selected-or-default',
+      selectionPolicy: input.selectionPolicy,
     },
     required: input.required,
     reason: input.reason,

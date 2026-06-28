@@ -256,7 +256,7 @@ Selectors must name their selection policy:
 
 Selector failures are structured diagnostics. Unknown selector kinds, malformed
 shot-video selector requests, invalid purpose requests, invalid Lookbook sheet
-ids, missing selected files, unavailable referenced Location Sheet assets, and
+ids, missing selected files, unavailable or stale selected sheet assets, and
 missing primary image files must not be converted into quiet missing
 dependencies.
 

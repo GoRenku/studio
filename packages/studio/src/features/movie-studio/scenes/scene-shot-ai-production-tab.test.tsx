@@ -150,6 +150,7 @@ function takeOverview(
       isActive: true,
     },
     displayShots: SHOTS,
+    overviewShotIds: [...value.shotIds],
     storyboardImages: [],
   };
 }
@@ -170,7 +171,7 @@ function emptyTakeState(production = {}) {
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },
@@ -203,8 +204,8 @@ function context(): ShotVideoTakeProductionContextResponse {
     take: take(),
     shots: SHOTS,
     displayShots: SHOTS,
-    referencedCast: [],
-    referencedLocations: [],
+    selectedCast: [],
+    selectedLocations: [],
     activeLookbook: null,
     storyboardImages: [],
     mediaInputs: [],

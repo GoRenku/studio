@@ -313,7 +313,7 @@ export async function updateTakeLocationSheetSelection(
   projectName: string,
   sceneId: string,
   takeId: string,
-  input: { locationId: string; assetIds: string[]; shotId?: string }
+  input: { locationId: string; assetId: string | null; shotId?: string }
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-selections/location-sheets`,

@@ -9,6 +9,7 @@ export function declareCastProfileDependencySlots(input: {
     castCharacterSheetDependencySlot({
       castMemberId: input.castMemberId,
       castMemberName: input.castMemberName,
+      selectionPolicy: 'selected-or-default',
       required: true,
       reason:
         'A cast profile must be grounded in the selected character sheet.',

@@ -4,6 +4,12 @@ Date: 2026-06-23
 
 Status: accepted
 
+Amended by:
+
+- `0039-use-uniform-shot-video-take-sheet-reference-selection.md` makes Shot
+  Video Take Location Sheet selection singular per editor direction while
+  preserving unsliced Location Sheet assets.
+
 ## Context
 
 Location Sheets were previously modeled as a rigid grouped asset with one

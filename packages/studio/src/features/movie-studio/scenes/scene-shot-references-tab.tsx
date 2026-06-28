@@ -224,21 +224,11 @@ export function SceneShotReferencesTab({
                   projectName={projectName}
                   group={group}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
-                  onToggleSheet={async (locationId, assetId, referenced) => {
+                  onToggleSheet={async (locationId, assetId, selected) => {
                     const take = productionPlan?.take;
                     if (!take) {
                       return;
                     }
-                    const nextAssetIds = referenced
-                      ? group.referencedEnvironmentSheetAssetIds.filter(
-                          (candidate) => candidate !== assetId
-                        )
-                      : [
-                          ...new Set([
-                            ...group.referencedEnvironmentSheetAssetIds,
-                            assetId,
-                          ]),
-                        ];
                     await mutationStatus.runTakeEditorMutation(async () => {
                       const result = await updateTakeLocationSheetSelection(
                         projectName,
@@ -247,7 +237,7 @@ export function SceneShotReferencesTab({
                         {
                           ...(mutationShotId ? { shotId: mutationShotId } : {}),
                           locationId,
-                          assetIds: nextAssetIds,
+                          assetId: selected ? null : assetId,
                         }
                       );
                       await refreshAfterMutation(result);

@@ -77,17 +77,16 @@ export async function updateSceneShotVideoTakeLocationSheetSelection(
 ): Promise<ShotVideoTakeProductionContext> {
   return updateSceneShotVideoTakeReferenceSelections(input, ({ session, context }) => {
     assertSceneLocation(session, context, input.locationId);
-    const assetIds = uniqueStringList(input.assetIds);
-    for (const assetId of assetIds) {
-      assertLocationEnvironmentSheetAsset(session, input.locationId, assetId);
+    if (input.assetId !== null) {
+      assertLocationEnvironmentSheetAsset(session, input.locationId, input.assetId);
     }
     const referenceSelections = referenceSelectionsForMutation(context, input.shotId);
     return {
       ...referenceSelections,
-      referencedLocationSheetAssetIds: withArrayRecordSelection(
-        referenceSelections.referencedLocationSheetAssetIds,
+      selectedLocationSheetAssetIds: withRecordSelection(
+        referenceSelections.selectedLocationSheetAssetIds,
         input.locationId,
-        assetIds
+        input.assetId
       ),
     };
   });
@@ -426,30 +425,6 @@ function withoutRecordKey<T>(
   const next = { ...record };
   delete next[key];
   return next;
-}
-
-function withArrayRecordSelection(
-  record: Record<string, string[]>,
-  key: string,
-  value: string[]
-): Record<string, string[]> {
-  if (value.length === 0) {
-    return withoutRecordKey(record, key);
-  }
-  return { ...record, [key]: value };
-}
-
-function uniqueStringList(values: string[]): string[] {
-  if (values.some((value) => value.trim().length === 0)) {
-    throwReferenceSelectionError({
-      code: 'PROJECT_DATA427',
-      message: 'Location Sheet asset id cannot be blank.',
-      path: ['assetIds'],
-      suggestion: 'Choose an existing Location Sheet asset for this Location.',
-    });
-  }
-  const unique = [...new Set(values.map((value) => value.trim()).filter(Boolean))];
-  return unique;
 }
 
 function throwReferenceSelectionError(input: {

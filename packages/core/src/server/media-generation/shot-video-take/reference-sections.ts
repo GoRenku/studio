@@ -5,7 +5,6 @@ import type {
   ShotVideoTakeCastMemberReferenceGroup,
   Asset,
   MediaGenerationDependencyLine,
-  MediaGenerationPlanLine,
   ShotVideoTakeCharacterSheetReferenceChoice,
   ShotVideoTakeLocationReferenceGroup,
   ShotVideoTakeEnvironmentSheetReferenceChoice,
@@ -63,7 +62,7 @@ import {
   effectiveScopedLocationSelectionForShots,
   selectedCastIdsForShots,
   selectedCharacterSheetAssetIdForEditorDirection,
-  referencedEnvironmentSheetAssetIdsForEditorDirection,
+  selectedLocationSheetAssetIdForEditorDirection,
   selectedLocationIdsForShots,
   selectedLookbookSheetIdForEditorDirection,
 } from './reference-selection.js';
@@ -279,20 +278,12 @@ export function buildCastMemberReferenceGroup(input: {
   name: string;
   role: string | null;
 }): ShotVideoTakeCastMemberReferenceGroup {
-  const dependencyId = castCharacterSheetDependencyId(input.castMemberId);
-  const line = dependencyLineById(input.plan, dependencyId);
   const assets = assetsForTarget(input.session, {
     target: { kind: 'castMember', castMemberId: input.castMemberId },
     role: 'character_sheet',
   });
   const selected = selectedCastIdsForShots(input.editorShots).has(
     input.castMemberId
-  );
-  const inclusion = editorReferenceInclusionForDependencyId(
-    input.editorDirection,
-    dependencyId,
-    selected,
-    line
   );
   const defaultSelected = defaultCastIdsForShots(input.editorShots).has(
     input.castMemberId
@@ -302,8 +293,15 @@ export function buildCastMemberReferenceGroup(input: {
     selectedCharacterSheetAssetIdForEditorDirection(
       input.editorDirection,
       input.castMemberId
-    ) ??
-    defaultCharacterSheetAssetId;
+    );
+  const missingDependencyId = castCharacterSheetDependencyId(input.castMemberId);
+  const missingLine = dependencyLineById(input.plan, missingDependencyId);
+  const missingInclusion = editorReferenceInclusionForDependencyId(
+    input.editorDirection,
+    missingDependencyId,
+    selected,
+    missingLine
+  );
   const characterSheets = assets.map((asset, index) =>
     buildCharacterSheetReferenceChoice({
       castMemberId: input.castMemberId,
@@ -311,12 +309,30 @@ export function buildCastMemberReferenceGroup(input: {
       asset,
       selectedAssetId: selectedCharacterSheetAssetId,
       defaultAssetId: defaultCharacterSheetAssetId,
-      line,
-      planLine: planLineForDependencyLine(input.plan, line),
-      inclusion,
+      editorDirection: input.editorDirection,
+      plan: input.plan,
       index,
     })
   );
+  if (characterSheets.length > 0 && selected && !selectedCharacterSheetAssetId) {
+    characterSheets.unshift({
+      id: `${input.castMemberId}:character-sheet-selection-required`,
+      castMemberId: input.castMemberId,
+      assetId: null,
+      title: `${input.name} Character Sheet`,
+      selected: true,
+      defaultSelected,
+      card: referenceCardPlan({
+        selected: selected && missingInclusion.included,
+        mediaKind: 'image',
+        dependencyId: missingDependencyId,
+        line: missingLine,
+        planLine: planLineForDependencyLine(input.plan, missingLine),
+        inclusion: missingInclusion,
+        previews: [],
+      }),
+    });
+  }
   if (characterSheets.length === 0) {
     characterSheets.push({
       id: `${input.castMemberId}:character-sheet-placeholder`,
@@ -326,12 +342,12 @@ export function buildCastMemberReferenceGroup(input: {
       selected,
       defaultSelected,
       card: referenceCardPlan({
-        selected: selected && inclusion.included,
+        selected: selected && missingInclusion.included,
         mediaKind: 'image',
-        dependencyId,
-        line,
-        planLine: planLineForDependencyLine(input.plan, line),
-        inclusion,
+        dependencyId: missingDependencyId,
+        line: missingLine,
+        planLine: planLineForDependencyLine(input.plan, missingLine),
+        inclusion: missingInclusion,
         previews: [],
       }),
     });
@@ -357,12 +373,22 @@ export function buildCharacterSheetReferenceChoice(input: {
   asset: Asset;
   selectedAssetId: string | null;
   defaultAssetId: string | null;
-  line: MediaGenerationDependencyLine | null;
-  planLine: MediaGenerationPlanLine | null;
-  inclusion: ReferenceInclusionResolution;
+  editorDirection: SceneShotVideoTakeDirection;
+  plan: ShotVideoTakeOutputGenerationPlan;
   index: number;
 }): ShotVideoTakeCharacterSheetReferenceChoice {
   const selected = input.asset.assetId === input.selectedAssetId;
+  const dependencyId = castCharacterSheetDependencyId(
+    input.castMemberId,
+    input.asset.assetId
+  );
+  const line = dependencyLineById(input.plan, dependencyId);
+  const inclusion = editorReferenceInclusionForDependencyId(
+    input.editorDirection,
+    dependencyId,
+    selected,
+    line
+  );
   const title =
     humanReadableAssetTitle(input.asset.title, `${input.castMemberName} Character Sheet`) ||
     `${input.castMemberName} Character Sheet`;
@@ -374,14 +400,12 @@ export function buildCharacterSheetReferenceChoice(input: {
     selected,
     defaultSelected: input.asset.assetId === input.defaultAssetId,
     card: referenceCardPlan({
-      selected: selected && input.inclusion.included,
+      selected: selected && inclusion.included,
       mediaKind: 'image',
-      dependencyId: selected
-        ? castCharacterSheetDependencyId(input.castMemberId)
-        : undefined,
-      line: selected ? input.line : undefined,
-      planLine: selected ? input.planLine : undefined,
-      inclusion: input.inclusion,
+      dependencyId: selected ? dependencyId : undefined,
+      line: selected ? line : undefined,
+      planLine: selected ? planLineForDependencyLine(input.plan, line) : undefined,
+      inclusion,
       previews: previewImagesForAsset(
         input.asset,
         title,
@@ -415,55 +439,75 @@ export function buildLocationReferenceGroup(input: {
   const selected =
     explicitSelected ||
     (input.useDefaultSelectionWhenNoScopedSelection && defaultSelected);
-  const referencedEnvironmentSheetAssetIds = referencedEnvironmentSheetAssetIdsForEditorDirection(
+  const selectedLocationSheetAssetId = selectedLocationSheetAssetIdForEditorDirection(
     input.editorDirection,
     input.locationId
+  );
+  const missingDependencyId = locationEnvironmentSheetDependencyId(input.locationId);
+  const missingLine = dependencyLineById(input.plan, missingDependencyId);
+  const missingInclusion = editorReferenceInclusionForDependencyId(
+    input.editorDirection,
+    missingDependencyId,
+    selected,
+    missingLine
   );
   const environmentSheets = assets.map((asset, index) =>
     buildEnvironmentSheetReferenceChoice({
       locationId: input.locationId,
       locationName: input.name,
       asset,
-      referencedAssetIds: referencedEnvironmentSheetAssetIds,
+      selectedAssetId: selectedLocationSheetAssetId,
       editorDirection: input.editorDirection,
       context: input.context,
       plan: input.plan,
       index,
     })
   );
+  if (environmentSheets.length > 0 && selected && !selectedLocationSheetAssetId) {
+    environmentSheets.unshift({
+      id: `${input.locationId}:location-sheet-selection-required`,
+      locationId: input.locationId,
+      assetId: null,
+      title: `${input.name} Location Sheet`,
+      description: null,
+      selected: true,
+      card: referenceCardPlan({
+        selected: selected && missingInclusion.included,
+        mediaKind: 'image',
+        dependencyId: missingDependencyId,
+        line: missingLine,
+        planLine: planLineForDependencyLine(input.plan, missingLine),
+        inclusion: missingInclusion,
+        previews: [],
+      }),
+    });
+  }
   if (environmentSheets.length === 0) {
-    const dependencyId = locationEnvironmentSheetDependencyId(input.locationId);
-    const line = dependencyLineById(input.plan, dependencyId);
-    if (!line) {
+    if (!missingLine) {
       return {
         locationId: input.locationId,
         name: input.name,
         selectedForShot: selected,
         defaultSelectedForShot: defaultSelected,
-        referencedEnvironmentSheetAssetIds,
+        selectedLocationSheetAssetId,
         environmentSheets,
         diagnostics: [],
       };
     }
-    const inclusion = editorReferenceInclusionForDependencyId(
-      input.editorDirection,
-      dependencyId,
-      selected
-    );
     environmentSheets.push({
       id: `${input.locationId}:planned-environment-sheet`,
       locationId: input.locationId,
       assetId: null,
       title: `${input.name} Location Sheet`,
       description: null,
-      referenced: false,
+      selected,
       card: referenceCardPlan({
-        selected: selected && inclusion.included,
+        selected: selected && missingInclusion.included,
         mediaKind: 'image',
-        dependencyId,
-        line,
-        planLine: planLineForDependencyLine(input.plan, line),
-        inclusion,
+        dependencyId: missingDependencyId,
+        line: missingLine,
+        planLine: planLineForDependencyLine(input.plan, missingLine),
+        inclusion: missingInclusion,
         previews: [],
       }),
     });
@@ -473,7 +517,7 @@ export function buildLocationReferenceGroup(input: {
     name: input.name,
     selectedForShot: selected,
     defaultSelectedForShot: defaultSelected,
-    referencedEnvironmentSheetAssetIds,
+    selectedLocationSheetAssetId,
     environmentSheets,
     diagnostics: [],
   };
@@ -485,13 +529,13 @@ export function buildEnvironmentSheetReferenceChoice(input: {
   locationId: string;
   locationName: string;
   asset: Asset;
-  referencedAssetIds: string[];
+  selectedAssetId: string | null;
   editorDirection: SceneShotVideoTakeDirection;
   context: ShotVideoTakeProductionContext;
   plan: ShotVideoTakeOutputGenerationPlan;
   index: number;
 }): ShotVideoTakeEnvironmentSheetReferenceChoice {
-  const referenced = input.referencedAssetIds.includes(input.asset.assetId);
+  const selected = input.asset.assetId === input.selectedAssetId;
   const dependencyId = locationEnvironmentSheetDependencyId(
     input.locationId,
     input.asset.assetId
@@ -500,7 +544,7 @@ export function buildEnvironmentSheetReferenceChoice(input: {
   const inclusion = editorReferenceInclusionForDependencyId(
     input.editorDirection,
     dependencyId,
-    referenced
+    selected
   );
   const title =
     humanReadableAssetTitle(input.asset.title, `${input.locationName} Location Sheet`) ||
@@ -511,15 +555,15 @@ export function buildEnvironmentSheetReferenceChoice(input: {
     assetId: input.asset.assetId,
     title: input.index === 0 ? title : `${title} ${input.index + 1}`,
     description: input.asset.oneLineSummary,
-    referenced,
+    selected,
     card: referenceCardPlan({
-      selected: referenced && inclusion.included,
+      selected: selected && inclusion.included,
       mediaKind: 'image',
-      dependencyId: referenced
+      dependencyId: selected
         ? dependencyId
         : undefined,
-      line: referenced ? line : undefined,
-      planLine: referenced ? planLineForDependencyLine(input.plan, line) : undefined,
+      line: selected ? line : undefined,
+      planLine: selected ? planLineForDependencyLine(input.plan, line) : undefined,
       inclusion,
       previews: previewImagesForAsset(
         input.asset,

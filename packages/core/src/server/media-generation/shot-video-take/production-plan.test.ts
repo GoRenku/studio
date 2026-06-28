@@ -303,7 +303,7 @@ describe('shot video take preflight and validation', () => {
       sceneId: ids.sceneId,
       takeId: take.takeId,
       locationId: scopedLocationId,
-      assetIds: [scopedLocationSheet.imported.assetId],
+      assetId: scopedLocationSheet.imported.assetId,
     });
     const lookbook = await projectData.createLookbook({
       projectName: 'constantinople',

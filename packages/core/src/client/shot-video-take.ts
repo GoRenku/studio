@@ -146,6 +146,7 @@ export interface SceneShotVideoTakeOverview {
   take: SceneShotVideoTake;
   sourceShotList: ShotVideoTakeShotListContext;
   displayShots: SceneShot[];
+  overviewShotIds: string[];
   storyboardImages: ShotVideoTakeStoryboardImageReference[];
 }
 
@@ -222,7 +223,7 @@ export interface SceneShotVideoTakeDirection {
 export interface SceneShotVideoTakeReferenceSelections {
   dependencyInclusions: Record<string, 'include' | 'exclude'>;
   selectedCharacterSheetAssetIds: Record<string, string>;
-  referencedLocationSheetAssetIds: Record<string, string[]>;
+  selectedLocationSheetAssetIds: Record<string, string>;
   selectedLookbookSheetIds: string[];
   selectedDialogueAudioTakeIds: Record<string, string>;
 }
@@ -367,9 +368,7 @@ function hasReferenceSelections(
   return (
     Object.keys(referenceSelections.dependencyInclusions).length > 0 ||
     Object.keys(referenceSelections.selectedCharacterSheetAssetIds).length > 0 ||
-    Object.values(referenceSelections.referencedLocationSheetAssetIds).some(
-      (assetIds) => assetIds.length > 0
-    ) ||
+    Object.keys(referenceSelections.selectedLocationSheetAssetIds).length > 0 ||
     referenceSelections.selectedLookbookSheetIds.length > 0 ||
     Object.keys(referenceSelections.selectedDialogueAudioTakeIds).length > 0
   );
@@ -430,8 +429,8 @@ export interface ShotVideoTakeProductionContext {
   shotGroupMode: ShotVideoTakeShotGroupMode;
   shots: SceneShot[];
   displayShots: SceneShot[];
-  referencedCast: ShotVideoTakeCastReference[];
-  referencedLocations: ShotVideoTakeLocationReference[];
+  selectedCast: ShotVideoTakeCastReference[];
+  selectedLocations: ShotVideoTakeLocationReference[];
   activeLookbook: ShotVideoTakeLookbookReference | null;
   storyboardImages: ShotVideoTakeStoryboardImageReference[];
   mediaInputs: SceneShotVideoTakeMediaInput[];
@@ -458,8 +457,8 @@ export interface SceneShotVideoTakeEditContext {
   sourceShots: SceneShot[];
   displayShots: SceneShot[];
   shotGroupMode: ShotVideoTakeShotGroupMode;
-  referencedCast: ShotVideoTakeCastReference[];
-  referencedLocations: ShotVideoTakeLocationReference[];
+  selectedCast: ShotVideoTakeCastReference[];
+  selectedLocations: ShotVideoTakeLocationReference[];
   activeLookbook: ShotVideoTakeLookbookReference | null;
   storyboardImages: ShotVideoTakeStoryboardImageReference[];
   mediaInputs: SceneShotVideoTakeMediaInput[];
@@ -804,7 +803,7 @@ export interface ShotVideoTakeLocationReferenceGroup {
   name: string;
   selectedForShot: boolean;
   defaultSelectedForShot: boolean;
-  referencedEnvironmentSheetAssetIds: string[];
+  selectedLocationSheetAssetId: string | null;
   environmentSheets: ShotVideoTakeEnvironmentSheetReferenceChoice[];
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
@@ -815,7 +814,7 @@ export interface ShotVideoTakeEnvironmentSheetReferenceChoice {
   assetId: string | null;
   title: string;
   description: string | null;
-  referenced: boolean;
+  selected: boolean;
   card: ShotVideoTakeReferenceCardPlan;
 }
 

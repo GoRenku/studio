@@ -143,7 +143,7 @@ describe('SceneShotReferencesTab', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
       screen.queryByRole('button', {
-        name: 'Reference Theodosian Walls Location Sheet',
+        name: 'Select Theodosian Walls Location Sheet',
       })
     ).toBeNull();
   });
@@ -407,7 +407,7 @@ describe('SceneShotReferencesTab', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Reference Theodosian Walls Location Sheet',
+        name: 'Select Theodosian Walls Location Sheet',
       })
     );
 
@@ -418,7 +418,7 @@ describe('SceneShotReferencesTab', () => {
         'take_001',
         {
           locationId: 'location_walls',
-          assetIds: ['asset_walls_sheet'],
+          assetId: 'asset_walls_sheet',
         }
       );
     });
@@ -479,7 +479,7 @@ describe('SceneShotReferencesTab', () => {
 
     fireEvent.click(
       within(pickerDialog).getByRole('button', {
-        name: 'Reference Night Repair Location Sheet',
+        name: 'Select Night Repair Location Sheet',
       })
     );
 
@@ -490,7 +490,7 @@ describe('SceneShotReferencesTab', () => {
         'take_001',
         {
           locationId: 'location_walls',
-          assetIds: ['asset_walls_siege', 'asset_walls_night'],
+          assetId: 'asset_walls_night',
         }
       );
     });
@@ -711,7 +711,7 @@ function productionPlanWithPlannedLocationSheetEstimate(): ShotVideoTakeProducti
           name: 'Theodosian Walls',
           selectedForShot: true,
           defaultSelectedForShot: true,
-          referencedEnvironmentSheetAssetIds: [],
+          selectedLocationSheetAssetId: null,
           diagnostics: [],
           environmentSheets: [
             {
@@ -720,7 +720,7 @@ function productionPlanWithPlannedLocationSheetEstimate(): ShotVideoTakeProducti
               assetId: null,
               title: 'Theodosian Walls Location Sheet',
               description: null,
-              referenced: false,
+              selected: true,
               card: {
                 state: 'selected-planned',
                 mediaKind: 'image',
@@ -782,7 +782,7 @@ function productionPlanWithLocationReferences(): ShotVideoTakeProductionPlanRepo
           name: 'Theodosian Walls',
           selectedForShot: true,
           defaultSelectedForShot: true,
-          referencedEnvironmentSheetAssetIds: [],
+          selectedLocationSheetAssetId: null,
           diagnostics: [],
           environmentSheets: [
             {
@@ -791,7 +791,7 @@ function productionPlanWithLocationReferences(): ShotVideoTakeProductionPlanRepo
               assetId: 'asset_walls_sheet',
               title: 'Theodosian Walls Location Sheet',
               description: 'Siege-facing walls and approach field reference.',
-              referenced: false,
+              selected: false,
               card: referenceCard('walls-sheet', 'Theodosian Walls location sheet'),
             },
           ],
@@ -814,7 +814,7 @@ function productionPlanWithMultipleLocationReferences(): ShotVideoTakeProduction
           name: 'Theodosian Walls',
           selectedForShot: true,
           defaultSelectedForShot: true,
-          referencedEnvironmentSheetAssetIds: ['asset_walls_siege'],
+          selectedLocationSheetAssetId: 'asset_walls_siege',
           diagnostics: [],
           environmentSheets: [
             {
@@ -823,7 +823,7 @@ function productionPlanWithMultipleLocationReferences(): ShotVideoTakeProduction
               assetId: 'asset_walls_siege',
               title: 'Siege-Facing Location Sheet',
               description: 'Ottoman field, wall face, and city depth.',
-              referenced: true,
+              selected: true,
               card: referenceCard(
                 'asset_walls_siege',
                 'Siege-facing location sheet'
@@ -835,7 +835,7 @@ function productionPlanWithMultipleLocationReferences(): ShotVideoTakeProduction
               assetId: 'asset_walls_night',
               title: 'Night Repair Location Sheet',
               description: 'Torch-lit wall repair texture and damaged masonry.',
-              referenced: false,
+              selected: false,
               card: referenceCard(
                 'asset_walls_night',
                 'Night repair location sheet'
@@ -967,7 +967,7 @@ function emptyTakeState() {
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },

@@ -108,7 +108,7 @@ function emptyTakeState() {
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },
@@ -122,7 +122,7 @@ function emptyReferenceSelections() {
   return {
     dependencyInclusions: {},
     selectedCharacterSheetAssetIds: {},
-    referencedLocationSheetAssetIds: {},
+    selectedLocationSheetAssetIds: {},
     selectedLookbookSheetIds: [],
     selectedDialogueAudioTakeIds: {},
   };

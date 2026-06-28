@@ -880,7 +880,7 @@ export function createScreenplayRoute({
               takeId,
               shotId: request.shotId,
               locationId: request.locationId,
-              assetIds: request.assetIds,
+              assetId: request.assetId,
             });
           return c.json({
             context: toShotVideoTakeProductionContextResponse(

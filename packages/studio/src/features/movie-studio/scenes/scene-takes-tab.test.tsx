@@ -143,6 +143,32 @@ describe('SceneTakesTab', () => {
     expect(screen.queryByText(/^Take$/)).toBeNull();
   });
 
+  it('uses overview shot ids for read-only take card storyboard previews', async () => {
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+      takes: [
+        takeOverview(
+          take({
+            takeId: 'take_broken_membership',
+            title: 'Broken membership take',
+            shotIds: [],
+            status: readOnlyTakeStatus(),
+          }),
+          {
+            overviewShotIds: ['shot_001'],
+          }
+        ),
+      ],
+    });
+
+    render(<SceneTakesTabHarness />);
+
+    const image = await screen.findByRole('img', {
+      name: 'Storyboard image for Shot 1',
+    });
+    expect(image.getAttribute('src')).toBe('/storyboards/shot-001.png');
+    expect(screen.getByText('Shot 1')).not.toBeNull();
+  });
+
   it('keeps the storyboard preview on a locally created take card', async () => {
     const createdTake = take({
       takeId: 'take_created',
@@ -862,6 +888,7 @@ function takeOverview(
       isActive: value.sourceShotListId === 'shot_list_hook',
     },
     displayShots: shotList().shots,
+    overviewShotIds: [...value.shotIds],
     storyboardImages: [
       sourceStoryboardImage(
         'shot_001',
@@ -954,6 +981,40 @@ function take(
   };
 }
 
+function readOnlyTakeStatus(): SceneShotVideoTake['status'] {
+  return {
+    editability: {
+      state: 'read-only',
+      diagnostics: [
+        {
+          code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_MISSING_SHOT_MEMBERSHIP',
+          message: 'Shot video take state must have at least one grouped shot.',
+          severity: 'error',
+          location: { path: ['take', 'shotIds'] },
+          suggestion:
+            'Repair the take shot membership before editing or generating from this take.',
+        },
+      ],
+      message: 'This take needs shot structure repair before editing.',
+    },
+    resolvability: {
+      state: 'missing-references',
+      diagnostics: [],
+      message: 'This take has invalid shot structure.',
+    },
+    runnability: {
+      state: 'blocked',
+      diagnostics: [],
+      message: 'Repair this take shot structure before generation.',
+    },
+    archive: { state: 'active', message: 'This take is active.' },
+    history: {
+      differences: [],
+      message: 'This take matches its recorded history snapshot.',
+    },
+  };
+}
+
 function emptyTakeState() {
   return {
     version: 2 as const,
@@ -963,7 +1024,7 @@ function emptyTakeState() {
         referenceSelections: {
           dependencyInclusions: {},
           selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
+          selectedLocationSheetAssetIds: {},
           selectedLookbookSheetIds: [],
           selectedDialogueAudioTakeIds: {},
         },

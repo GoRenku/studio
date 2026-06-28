@@ -1133,7 +1133,7 @@ describe('media generation dependency inventory estimates integration', () => {
     });
   });
 
-  it('reports referenced Location Sheets with missing primary files as structured selector diagnostics', async () => {
+  it('reports selected Location Sheets with missing primary files as structured selector diagnostics', async () => {
     const ids = await sampleIds(projectData, homeDir);
     const sourceProjectRelativePath = await writeLocationSheetImportFile(
       projectData,

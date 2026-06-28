@@ -81,16 +81,19 @@ const GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD = 0.04;
 const FIRST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const LAST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
+const DEFAULT_CHARACTER_SHEET_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
 const DEFAULT_LOOKBOOK_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
 const DEFAULT_LOCATION_SHEET_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD;
 const DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_COST_USD =
+  DEFAULT_CHARACTER_SHEET_DEPENDENCY_COST_USD +
   DEFAULT_LOOKBOOK_DEPENDENCY_COST_USD +
   DEFAULT_LOCATION_SHEET_DEPENDENCY_COST_USD;
-const DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_LINE_COUNT = 2;
+const DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_LINE_COUNT = 3;
 const REFERENCE_BUNDLE_DEPENDENCY_COST_USD =
+  DEFAULT_CHARACTER_SHEET_DEPENDENCY_COST_USD +
   GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD +
   GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
-const REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT = 2;
+const REFERENCE_BUNDLE_DEPENDENCY_LINE_COUNT = 3;
 const INPUT_MODES: ShotVideoTakeInputModeId[] = [
   'text-only',
   'first-frame',
@@ -268,8 +271,8 @@ describe('shot video take estimate integration matrix', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8086, 6);
-    expect(dependencyLines).toHaveLength(4);
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8486, 6);
+    expect(dependencyLines).toHaveLength(5);
     expect(firstFrameLine).toMatchObject({
       pricing: { state: 'priced', estimatedUsd: 0.005 },
       materializationState: 'missing-input',
@@ -332,7 +335,7 @@ describe('shot video take estimate integration matrix', () => {
       missingLineCount: 0,
       requiresPriceOverride: false,
     });
-    expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(2.8086, 6);
+    expect(report.plan.estimate.estimatedTotalUsd).toBeCloseTo(2.8486, 6);
     expect(firstFrameLine).toMatchObject({
       kind: 'dependency-generation',
       materializationState: 'missing-input',

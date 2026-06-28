@@ -281,6 +281,20 @@
       "when": 1782583891410,
       "tag": "0039_shot-video-take-structure-modes",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1782643348243,
+      "tag": "0040_uniform_take_sheet_selection",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1782647100000,
+      "tag": "0041_brief_puff_adder",
+      "breakpoints": true
     }
   ]
 }

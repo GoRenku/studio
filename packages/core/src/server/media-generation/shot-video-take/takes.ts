@@ -1,5 +1,6 @@
 import type {
   RecoverableMutationReport,
+  SceneShot,
   SceneShotVideoTake,
   SceneShotVideoTakeCreateReport,
   SceneShotVideoTakeListReport,
@@ -180,12 +181,33 @@ function toSceneShotVideoTakeOverview(input: {
         state: input.take.state,
       })
     ),
+    overviewShotIds: sceneShotVideoTakeOverviewShotIds({
+      take: input.take,
+      sourceShots: sourceShotList.shots,
+    }),
     storyboardImages: listShotVideoTakeStoryboardImages({
       session: input.session,
       sceneId: input.sceneId,
       shotListId: sourceShotListRow.id,
     }),
   };
+}
+
+function sceneShotVideoTakeOverviewShotIds(input: {
+  take: SceneShotVideoTake;
+  sourceShots: SceneShot[];
+}): string[] {
+  if (input.take.shotIds.length > 0) {
+    return input.take.shotIds;
+  }
+  const sourceShotIds = input.sourceShots.map((shot) => shot.shotId);
+  if (input.take.state.structure.mode === 'multi-cut') {
+    const directionShotIds = new Set(
+      Object.keys(input.take.state.structure.directionsByShotId)
+    );
+    return sourceShotIds.filter((shotId) => directionShotIds.has(shotId));
+  }
+  return sourceShotIds.slice(0, 1);
 }
 
 export async function deleteSceneShotVideoTake(

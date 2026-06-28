@@ -506,7 +506,7 @@ function sceneShotVideoTakeStateReferencesAsset(
     ),
     ...Object.values(
       sceneShotVideoTakeDirectionReferenceSelections(direction)
-        .referencedLocationSheetAssetIds
+        .selectedLocationSheetAssetIds
     ).flat(),
   ]);
   if (selectedReferenceAssets.includes(assetId)) {
@@ -529,7 +529,7 @@ function takeAssetReferenceError(
 ): ProjectDataError {
   return new ProjectDataError(
     'PROJECT_DATA421',
-    `Asset ${assetId} is referenced by a Shot Video Take and cannot be deleted.`,
+    `Asset ${assetId} is selected by a Shot Video Take and cannot be deleted.`,
     {
       issues: [
         {

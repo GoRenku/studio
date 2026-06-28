@@ -134,7 +134,7 @@ describe('migrate database command', () => {
              select created_at
              from __drizzle_migrations
              order by created_at desc
-             limit 4
+             limit 6
            )`
         )
         .run();
@@ -272,7 +272,7 @@ describe('migrate database command', () => {
           'scene_a',
           'shot_list_a',
           'Legacy take',
-          '{"version":1,"shotDesignByShotId":{"shot_001":{"composition":{"shotSize":"wide-shot"}}},"referenceSelections":{"dependencyInclusions":{"reference-image:shot:shot_001":"exclude"},"selectedCharacterSheetAssetIds":{"cast_a":"asset_character"},"referencedLocationSheetAssetIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{"inputModeId":"reference"},"promptState":{"status":"dirty"}}',
+          '{"version":1,"shotDesignByShotId":{"shot_001":{"composition":{"shotSize":"wide-shot"}}},"referenceSelections":{"dependencyInclusions":{"reference-image:shot:shot_001":"exclude"},"selectedCharacterSheetAssetIds":{"cast_a":"asset_character"},"selectedLocationSheetAssetIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{"inputModeId":"reference"},"promptState":{"status":"dirty"}}',
           0,
           '{}',
           '2026-06-27T00:00:00.000Z',
@@ -289,9 +289,7 @@ describe('migrate database command', () => {
       );
       sqlite.exec(migrationSql);
 
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(
-        currentProjectStoreSchemaGeneration()
-      );
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(29);
       const row = sqlite
         .prepare('select state_json as stateJson from scene_shot_video_take where id = ?')
         .get('take_legacy') as { stateJson: string };
@@ -309,7 +307,7 @@ describe('migrate database command', () => {
                 selectedCharacterSheetAssetIds: {
                   cast_a: 'asset_character',
                 },
-                referencedLocationSheetAssetIds: {},
+                selectedLocationSheetAssetIds: {},
                 selectedLookbookSheetIds: [],
                 selectedDialogueAudioTakeIds: {},
               },
@@ -322,7 +320,7 @@ describe('migrate database command', () => {
                 selectedCharacterSheetAssetIds: {
                   cast_a: 'asset_character',
                 },
-                referencedLocationSheetAssetIds: {},
+                selectedLocationSheetAssetIds: {},
                 selectedLookbookSheetIds: [],
                 selectedDialogueAudioTakeIds: {},
               },
@@ -336,6 +334,464 @@ describe('migrate database command', () => {
           status: 'dirty',
         },
       });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('preserves take-owned child rows during the uniform take sheet selection migration', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.pragma('foreign_keys = ON');
+      sqlite.exec(`
+        pragma user_version = 29;
+
+        create table scene (
+          id text primary key not null
+        );
+
+        create table scene_shot_list (
+          id text primary key not null,
+          scene_id text not null
+        );
+
+        create table scene_shot_video_take (
+          id text primary key not null,
+          scene_id text not null,
+          source_shot_list_id text not null,
+          title text not null,
+          state_json text not null,
+          is_picked integer default false not null,
+          history_snapshot_json text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text,
+          foreign key (scene_id) references scene(id) on delete cascade,
+          foreign key (source_shot_list_id) references scene_shot_list(id) on delete cascade
+        );
+
+        create table scene_shot_video_take_shot (
+          take_id text not null references scene_shot_video_take(id) on delete cascade,
+          shot_id text not null,
+          shot_order integer not null,
+          shot_content_fingerprint text not null,
+          storyboard_image_id text,
+          storyboard_asset_file_id text,
+          storyboard_content_fingerprint text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_media_input (
+          id text primary key not null,
+          scene_id text not null,
+          take_id text not null references scene_shot_video_take(id) on delete cascade,
+          input_kind text not null,
+          subject_kind text not null,
+          subject_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          media_generation_run_id text,
+          selection text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_media_input_shot (
+          input_id text not null references scene_shot_video_take_media_input(id) on delete cascade,
+          shot_id text not null,
+          shot_order integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_output (
+          id text primary key not null,
+          scene_id text not null,
+          take_id text not null references scene_shot_video_take(id) on delete cascade,
+          asset_id text not null,
+          asset_file_id text not null,
+          media_generation_run_id text,
+          created_at text not null,
+          updated_at text not null,
+          is_selected integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_output_shot (
+          output_id text not null references scene_shot_video_take_output(id) on delete cascade,
+          shot_id text not null,
+          shot_order integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        insert into scene (id) values ('scene_a');
+        insert into scene_shot_list (id, scene_id) values ('shot_list_a', 'scene_a');
+        insert into scene_shot_video_take (
+          id,
+          scene_id,
+          source_shot_list_id,
+          title,
+          state_json,
+          is_picked,
+          history_snapshot_json,
+          created_at,
+          updated_at
+        ) values (
+          'take_a',
+          'scene_a',
+          'shot_list_a',
+          'Take A',
+          '{"version":2,"structure":{"mode":"continuous","sharedDirection":{"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"referencedLocationSheetAssetIds":{"location_a":["asset_location_a","asset_location_b"]},"selectedLocationViewIds":{"location_a":"view_a"},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}}}},"production":{}}',
+          0,
+          '{"selectedShotIds":["shot_001"]}',
+          '2026-06-27T00:00:00.000Z',
+          '2026-06-27T00:00:00.000Z'
+        );
+        insert into scene_shot_video_take_shot values (
+          'take_a',
+          'shot_001',
+          0,
+          'shot-fingerprint',
+          'storyboard_image_a',
+          'asset_file_a',
+          '{"id":"storyboard_image_a"}',
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_media_input values (
+          'input_a',
+          'scene_a',
+          'take_a',
+          'reference-image',
+          'shot',
+          'shot_001',
+          'asset_input_a',
+          'asset_file_input_a',
+          null,
+          'select',
+          '2026-06-27T00:00:00.000Z',
+          '2026-06-27T00:00:00.000Z',
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_media_input_shot values (
+          'input_a',
+          'shot_001',
+          0,
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_output values (
+          'output_a',
+          'scene_a',
+          'take_a',
+          'asset_output_a',
+          'asset_file_output_a',
+          null,
+          '2026-06-27T00:00:00.000Z',
+          '2026-06-27T00:00:00.000Z',
+          1,
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_output_shot values (
+          'output_a',
+          'shot_001',
+          0,
+          null,
+          null,
+          null
+        );
+      `);
+
+      const migrationSql = await fs.readFile(
+        path.join(
+          process.cwd(),
+          'drizzle',
+          '0040_uniform_take_sheet_selection.sql'
+        ),
+        'utf8'
+      );
+      sqlite.transaction(() => sqlite.exec(migrationSql))();
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(30);
+      expect(readTableCount(sqlite, 'scene_shot_video_take_shot')).toBe(1);
+      expect(readTableCount(sqlite, 'scene_shot_video_take_media_input')).toBe(1);
+      expect(readTableCount(sqlite, 'scene_shot_video_take_media_input_shot')).toBe(1);
+      expect(readTableCount(sqlite, 'scene_shot_video_take_output')).toBe(1);
+      expect(readTableCount(sqlite, 'scene_shot_video_take_output_shot')).toBe(1);
+      const state = JSON.parse(
+        (
+          sqlite
+            .prepare(
+              `select state_json as stateJson
+               from scene_shot_video_take
+               where id = ?`
+            )
+            .get('take_a') as { stateJson: string }
+        ).stateJson
+      );
+      expect(
+        state.structure.sharedDirection.referenceSelections
+      ).toMatchObject({
+        selectedLocationSheetAssetIds: {
+          location_a: 'asset_location_a',
+        },
+      });
+      expect(
+        state.structure.sharedDirection.referenceSelections
+      ).not.toHaveProperty('referencedLocationSheetAssetIds');
+      expect(
+        state.structure.sharedDirection.referenceSelections
+      ).not.toHaveProperty('selectedLocationViewIds');
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('repairs missing take shot memberships from history snapshots', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      const firstShot = shotFixture({
+        shotId: 'shot_001',
+        title: 'City smoke',
+      });
+      const secondShot = shotFixture({
+        shotId: 'shot_002',
+        title: 'Wall smoke',
+      });
+      sqlite.exec(`
+        pragma user_version = 30;
+
+        create table scene (
+          id text primary key not null
+        );
+
+        create table scene_shot_list (
+          id text primary key not null,
+          scene_id text not null,
+          title text not null,
+          document text not null,
+          created_at text not null,
+          updated_at text not null
+        );
+
+        create table scene_shot_storyboard_image (
+          id text primary key not null,
+          scene_id text not null,
+          shot_list_id text not null,
+          shot_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          source_purpose text not null,
+          shot_content_fingerprint text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take (
+          id text primary key not null,
+          scene_id text not null,
+          source_shot_list_id text not null,
+          title text not null,
+          state_json text not null,
+          is_picked integer default false not null,
+          history_snapshot_json text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_shot (
+          take_id text not null,
+          shot_id text not null,
+          shot_order integer not null,
+          shot_content_fingerprint text not null,
+          storyboard_image_id text,
+          storyboard_asset_file_id text,
+          storyboard_content_fingerprint text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        insert into scene (id) values ('scene_a');
+      `);
+      sqlite
+        .prepare(
+          `insert into scene_shot_list (
+             id,
+             scene_id,
+             title,
+             document,
+             created_at,
+             updated_at
+           ) values (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'shot_list_a',
+          'scene_a',
+          'Shot List A',
+          JSON.stringify({
+            kind: 'sceneShotList',
+            sceneId: 'scene_a',
+            title: 'Shot List A',
+            summary: 'Two shots.',
+            coverageStrategy: 'Hold the selected group.',
+            shots: [firstShot, secondShot],
+          }),
+          '2026-06-27T00:00:00.000Z',
+          '2026-06-27T00:00:00.000Z'
+        );
+      sqlite
+        .prepare(
+          `insert into scene_shot_storyboard_image (
+             id,
+             scene_id,
+             shot_list_id,
+             shot_id,
+             asset_id,
+             asset_file_id,
+             source_purpose,
+             shot_content_fingerprint,
+             created_at,
+             updated_at
+           ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'storyboard_image_old',
+          'scene_a',
+          'shot_list_a',
+          'shot_001',
+          'asset_old',
+          'asset_file_old',
+          'scene.storyboard-sheet',
+          'old-fingerprint',
+          '2026-06-27T00:00:00.000Z',
+          '2026-06-27T00:00:00.000Z'
+        );
+      sqlite
+        .prepare(
+          `insert into scene_shot_storyboard_image (
+             id,
+             scene_id,
+             shot_list_id,
+             shot_id,
+             asset_id,
+             asset_file_id,
+             source_purpose,
+             shot_content_fingerprint,
+             created_at,
+             updated_at
+           ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'storyboard_image_new',
+          'scene_a',
+          'shot_list_a',
+          'shot_001',
+          'asset_new',
+          'asset_file_new',
+          'scene.storyboard-sheet',
+          'new-fingerprint',
+          '2026-06-27T00:01:00.000Z',
+          '2026-06-27T00:01:00.000Z'
+        );
+      sqlite
+        .prepare(
+          `insert into scene_shot_video_take (
+             id,
+             scene_id,
+             source_shot_list_id,
+             title,
+             state_json,
+             is_picked,
+             history_snapshot_json,
+             created_at,
+             updated_at
+           ) values (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          'take_missing_membership',
+          'scene_a',
+          'shot_list_a',
+          'Missing Membership',
+          '{"version":2,"structure":{"mode":"continuous","sharedDirection":{"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}}}},"production":{}}',
+          0,
+          JSON.stringify({ selectedShotIds: ['shot_001', 'shot_002'] }),
+          '2026-06-27T00:00:00.000Z',
+          '2026-06-27T00:00:00.000Z'
+        );
+
+      const migrationSql = await fs.readFile(
+        path.join(
+          process.cwd(),
+          'drizzle',
+          '0041_brief_puff_adder.sql'
+        ),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(31);
+      expect(
+        sqlite
+          .prepare(
+            `select
+               shot_id as shotId,
+               shot_order as shotOrder,
+               shot_content_fingerprint as shotContentFingerprint,
+               storyboard_image_id as storyboardImageId,
+               storyboard_asset_file_id as storyboardAssetFileId,
+               storyboard_content_fingerprint as storyboardContentFingerprint
+             from scene_shot_video_take_shot
+             where take_id = ?
+             order by shot_order`
+          )
+          .all('take_missing_membership')
+      ).toEqual([
+        {
+          shotId: 'shot_001',
+          shotOrder: 0,
+          shotContentFingerprint: shotFingerprintFixture(firstShot),
+          storyboardImageId: 'storyboard_image_new',
+          storyboardAssetFileId: 'asset_file_new',
+          storyboardContentFingerprint: JSON.stringify({
+            id: 'storyboard_image_new',
+            assetFileId: 'asset_file_new',
+            shotContentFingerprint: 'new-fingerprint',
+          }),
+        },
+        {
+          shotId: 'shot_002',
+          shotOrder: 1,
+          shotContentFingerprint: shotFingerprintFixture(secondShot),
+          storyboardImageId: null,
+          storyboardAssetFileId: null,
+          storyboardContentFingerprint: 'null',
+        },
+      ]);
     } finally {
       sqlite.close();
     }
@@ -1138,4 +1594,84 @@ function readIndexForTable(
       `select name, il."unique" as isUnique from pragma_index_list('${tableName}') as il where name = ?`
     )
     .get(indexName) as { name: string; isUnique: number } | undefined;
+}
+
+function readTableCount(
+  sqlite: Database.Database,
+  tableName: string
+): number {
+  return (
+    sqlite
+      .prepare(`select count(*) as count from ${tableName}`)
+      .get() as { count: number }
+  ).count;
+}
+
+interface ShotFixture {
+  shotId: string;
+  title: string;
+  storyBeat: string;
+  narrativePurpose: string;
+  description: string;
+  shotType: string;
+  cameraAngle: string;
+  cameraMovement: string;
+  framing: string;
+  lensIntent: string;
+  aspectRatio: string;
+  subject: string;
+  action: string;
+  dialogue: unknown[];
+  coveredBlockIndexes: number[];
+  castMemberIds: string[];
+  locationIds: string[];
+  audioNotes: string;
+  productionNotes: string;
+}
+
+function shotFixture(input: { shotId: string; title: string }): ShotFixture {
+  return {
+    shotId: input.shotId,
+    title: input.title,
+    storyBeat: `${input.title} story beat.`,
+    narrativePurpose: `${input.title} narrative purpose.`,
+    description: `${input.title} description.`,
+    shotType: 'wide',
+    cameraAngle: 'eye level',
+    cameraMovement: 'static',
+    framing: 'center frame',
+    lensIntent: 'moderate wide lens feel',
+    aspectRatio: '16:9',
+    subject: `${input.title} subject`,
+    action: `${input.title} action.`,
+    dialogue: [],
+    coveredBlockIndexes: [0],
+    castMemberIds: ['cast_a'],
+    locationIds: ['location_a'],
+    audioNotes: `${input.title} audio.`,
+    productionNotes: `${input.title} production.`,
+  };
+}
+
+function shotFingerprintFixture(shot: ShotFixture): string {
+  return JSON.stringify({
+    title: shot.title,
+    storyBeat: shot.storyBeat,
+    narrativePurpose: shot.narrativePurpose,
+    description: shot.description,
+    shotType: shot.shotType,
+    cameraAngle: shot.cameraAngle,
+    cameraMovement: shot.cameraMovement,
+    framing: shot.framing,
+    lensIntent: shot.lensIntent,
+    aspectRatio: shot.aspectRatio,
+    subject: shot.subject,
+    action: shot.action,
+    dialogue: shot.dialogue,
+    coveredBlockIndexes: shot.coveredBlockIndexes,
+    castMemberIds: shot.castMemberIds,
+    locationIds: shot.locationIds,
+    audioNotes: shot.audioNotes,
+    productionNotes: shot.productionNotes,
+  });
 }
