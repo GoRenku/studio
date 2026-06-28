@@ -47,6 +47,7 @@ import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
 interface SceneShotDialogsTabProps {
   projectName: string;
   sceneId: string;
+  selectedShotId?: string;
   castMemberImages: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
   onPlanRefresh?: () => Promise<void>;
@@ -56,6 +57,7 @@ interface SceneShotDialogsTabProps {
 export function SceneShotDialogsTab({
   projectName,
   sceneId,
+  selectedShotId,
   castMemberImages,
   productionPlan,
   onPlanRefresh,
@@ -73,6 +75,11 @@ export function SceneShotDialogsTab({
     [productionPlan?.references.dialogueAudio]
   );
   const capability = productionPlan?.references.dialogueAudioCapability ?? null;
+  const scopedShotId = selectedShotId ?? productionPlan?.take.shotIds[0];
+  const mutationShotId =
+    productionPlan?.take.state.structure.mode === 'multi-cut'
+      ? scopedShotId
+      : undefined;
   const dialogueAudioReloadKey = useMemo(
     () =>
       choices
@@ -123,6 +130,7 @@ export function SceneShotDialogsTab({
           {
             dependencyId,
             inclusion,
+            ...(mutationShotId ? { shotId: mutationShotId } : {}),
           }
         );
       void result;
@@ -142,7 +150,11 @@ export function SceneShotDialogsTab({
           projectName,
           sceneId,
           take.takeId,
-          { dialogueId, takeId }
+          {
+            ...(mutationShotId ? { shotId: mutationShotId } : {}),
+            dialogueId,
+            takeId,
+          }
         );
         const context = await readSceneDialogueAudioContext(
           projectName,

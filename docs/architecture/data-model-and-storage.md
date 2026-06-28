@@ -48,7 +48,12 @@ Use the focused documents below for current direction.
   scene, a scene shot list, an explicit ordered shot selection, take
   production settings, and status for shot-video planning. The
   Scene Shot List remains the ordered coverage source of truth; take
-  generations own selected-shot membership for a video take attempt.
+  generations own selected-shot membership for a video take attempt. Shot Video
+  Take state is versioned JSON: `version: 2` stores an explicit `structure`
+  mode, either `continuous` with one `sharedDirection` for the grouped move or
+  `multi-cut` with one `SceneShotVideoTakeDirection` per grouped shot id.
+  Reference selections live inside the relevant direction scope. AI Production
+  remains take-level in both modes.
 - Cast Design and Location Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
   `cast_design` and `location_design`, with one active document per owner
@@ -162,6 +167,9 @@ direction is superseded by ADR 0017.
 - `docs/architecture/reference/media-generation.md`
   Defines persisted generation specs, generation runs, and separate media
   import for the current media purposes.
+
+- `docs/architecture/shot-video-take-structure-modes.md`
+  Defines the current continuous and multi-cut Shot Video Take structure modes.
 
 - `docs/architecture/json-storage-validation.md`
   Defines the AJV and JSON Schema validation rule for SQLite JSON columns.

@@ -1,5 +1,6 @@
 import type {
   SceneShotVideoTakeProductionState,
+  SceneShotVideoTakeStructureMode,
   ShotVideoTakeInputPolicy,
 } from '@gorenku/studio-core/client';
 import {
@@ -74,6 +75,11 @@ export interface SceneShotVideoTakeShotsRequest {
   shotIds: string[];
 }
 
+export interface SceneShotVideoTakeStructureModeRequest {
+  mode: SceneShotVideoTakeStructureMode;
+  sourceShotId?: string;
+}
+
 export interface SceneShotVideoTakePickRequest {
   picked: boolean;
 }
@@ -129,6 +135,34 @@ export function readSceneShotVideoTakePickRequest(
   const picked = readRequiredHttpBoolean(record, ['picked'], issues, CONTEXT);
   finishOrThrow(issues);
   return { picked: picked ?? false };
+}
+
+export function readSceneShotVideoTakeStructureModeRequest(
+  input: unknown
+): SceneShotVideoTakeStructureModeRequest {
+  const issues: DiagnosticIssue[] = [];
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) {
+    throwRequestError(issues);
+  }
+  assertHttpRequestFields(
+    record,
+    [],
+    ['mode', 'sourceShotId'],
+    issues,
+    CONTEXT,
+    'Send only mode and sourceShotId.'
+  );
+  const mode = readStructureModeValue(record.mode, ['mode'], issues);
+  const sourceShotId =
+    record.sourceShotId === undefined
+      ? undefined
+      : readStringValue(record.sourceShotId, ['sourceShotId'], issues);
+  finishOrThrow(issues);
+  return {
+    mode,
+    ...(sourceShotId ? { sourceShotId } : {}),
+  };
 }
 
 export function readSceneShotVideoTakeProductionRequest(
@@ -189,6 +223,7 @@ export function readShotVideoTakeProductionPlanRequest(
 }
 
 export interface ShotCastCharacterSheetReferenceRequest {
+  shotId?: string;
   castMemberId: string;
   assetId: string | null;
 }
@@ -204,21 +239,26 @@ export function readShotCastCharacterSheetReferenceRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['castMemberId', 'assetId'],
+    ['shotId', 'castMemberId', 'assetId'],
     issues,
     CONTEXT,
-    'Send only the castMemberId and assetId fields.'
+    'Send only the shotId, castMemberId, and assetId fields.'
   );
+  const shotId =
+    record.shotId === undefined
+      ? undefined
+      : readStringValue(record.shotId, ['shotId'], issues);
   const castMemberId = readStringValue(record.castMemberId, ['castMemberId'], issues);
   const assetId =
     record.assetId === null
       ? null
       : readStringValue(record.assetId, ['assetId'], issues);
   finishOrThrow(issues);
-  return { castMemberId, assetId };
+  return { ...(shotId ? { shotId } : {}), castMemberId, assetId };
 }
 
 export interface ShotLocationSheetReferenceRequest {
+  shotId?: string;
   locationId: string;
   assetIds: string[];
 }
@@ -234,18 +274,23 @@ export function readShotLocationSheetReferenceRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['locationId', 'assetIds'],
+    ['shotId', 'locationId', 'assetIds'],
     issues,
     CONTEXT,
-    'Send only the locationId and assetIds fields.'
+    'Send only the shotId, locationId, and assetIds fields.'
   );
+  const shotId =
+    record.shotId === undefined
+      ? undefined
+      : readStringValue(record.shotId, ['shotId'], issues);
   const locationId = readStringValue(record.locationId, ['locationId'], issues);
   const assetIds = readStringArray(record.assetIds, ['assetIds'], issues);
   finishOrThrow(issues);
-  return { locationId, assetIds };
+  return { ...(shotId ? { shotId } : {}), locationId, assetIds };
 }
 
 export interface ShotLookbookReferenceRequest {
+  shotId?: string;
   lookbookSheetId: string | null;
 }
 
@@ -260,20 +305,25 @@ export function readShotLookbookReferenceRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['lookbookSheetId'],
+    ['shotId', 'lookbookSheetId'],
     issues,
     CONTEXT,
-    'Send only the lookbookSheetId field.'
+    'Send only the shotId and lookbookSheetId fields.'
   );
+  const shotId =
+    record.shotId === undefined
+      ? undefined
+      : readStringValue(record.shotId, ['shotId'], issues);
   const lookbookSheetId =
     record.lookbookSheetId === null
       ? null
       : readStringValue(record.lookbookSheetId, ['lookbookSheetId'], issues);
   finishOrThrow(issues);
-  return { lookbookSheetId };
+  return { ...(shotId ? { shotId } : {}), lookbookSheetId };
 }
 
 export interface ShotReferenceInclusionRequest {
+  shotId?: string;
   dependencyId: string;
   inclusion: 'include' | 'exclude' | null;
 }
@@ -289,11 +339,15 @@ export function readShotReferenceInclusionRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['dependencyId', 'inclusion'],
+    ['shotId', 'dependencyId', 'inclusion'],
     issues,
     CONTEXT,
-    'Send only the dependencyId and inclusion fields.'
+    'Send only the shotId, dependencyId, and inclusion fields.'
   );
+  const shotId =
+    record.shotId === undefined
+      ? undefined
+      : readStringValue(record.shotId, ['shotId'], issues);
   const dependencyId = readStringValue(record.dependencyId, ['dependencyId'], issues);
   const inclusion = readReferenceInclusionValue(
     record.inclusion,
@@ -301,10 +355,11 @@ export function readShotReferenceInclusionRequest(
     issues
   );
   finishOrThrow(issues);
-  return { dependencyId, inclusion };
+  return { ...(shotId ? { shotId } : {}), dependencyId, inclusion };
 }
 
 export interface TakeDialogueAudioSelectionRequest {
+  shotId?: string;
   dialogueId: string;
   takeId: string | null;
 }
@@ -320,18 +375,22 @@ export function readTakeDialogueAudioSelectionRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['dialogueId', 'takeId'],
+    ['shotId', 'dialogueId', 'takeId'],
     issues,
     CONTEXT,
-    'Send only the dialogueId and takeId fields.'
+    'Send only the shotId, dialogueId, and takeId fields.'
   );
+  const shotId =
+    record.shotId === undefined
+      ? undefined
+      : readStringValue(record.shotId, ['shotId'], issues);
   const dialogueId = readStringValue(record.dialogueId, ['dialogueId'], issues);
   const takeId =
     record.takeId === null
       ? null
       : readStringValue(record.takeId, ['takeId'], issues);
   finishOrThrow(issues);
-  return { dialogueId, takeId };
+  return { ...(shotId ? { shotId } : {}), dialogueId, takeId };
 }
 
 function readProductionValue(
@@ -351,6 +410,25 @@ function readProductionValue(
     throwRequestError(issues);
   }
   return value as SceneShotVideoTakeProductionState;
+}
+
+function readStructureModeValue(
+  value: unknown,
+  path: string[],
+  issues: DiagnosticIssue[]
+): SceneShotVideoTakeStructureMode {
+  if (value === 'continuous' || value === 'multi-cut') {
+    return value;
+  }
+  issues.push(
+    createDiagnosticError(
+      'STUDIO_SERVER352',
+      'mode must be continuous or multi-cut.',
+      { path, context: CONTEXT },
+      'Send continuous or multi-cut.'
+    )
+  );
+  return 'continuous';
 }
 
 function readStringArray(

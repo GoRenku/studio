@@ -25,7 +25,7 @@ import {
   toShotVideoTakeProductionContextResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
-import { readSceneShotDesignRequest } from '../http/scene-shot-design-request.js';
+import { readSceneShotVideoTakeDirectionRequest } from '../http/scene-shot-direction-request.js';
 import { readCastMemberVoiceOverRequest } from '../http/cast-member-request.js';
 import {
   readShotCastCharacterSheetReferenceRequest,
@@ -36,6 +36,7 @@ import {
   readSceneShotVideoTakePickRequest,
   readSceneShotVideoTakeProductionRequest,
   readSceneShotVideoTakeShotsRequest,
+  readSceneShotVideoTakeStructureModeRequest,
   readTakeDialogueAudioSelectionRequest,
   readShotVideoTakeProductionPlanRequest,
 } from '../http/scene-shot-video-take-production-request.js';
@@ -583,7 +584,36 @@ export function createScreenplayRoute({
       }
     )
     .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/shots/:shotId/design',
+      '/screenplay/scenes/:sceneId/takes/:takeId/direction',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const direction = readSceneShotVideoTakeDirectionRequest(
+            await c.req.json()
+          );
+          const context = await projectData.updateSceneShotVideoTakeDirection({
+            projectName,
+            sceneId,
+            takeId: takeId,
+            direction,
+          });
+          return c.json({
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
+            resourceKeys: context.resourceKeys,
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/takes/:takeId/shots/:shotId/direction',
       requireToken,
       async (c) => {
         try {
@@ -591,14 +621,47 @@ export function createScreenplayRoute({
           const sceneId = c.req.param('sceneId') as string;
           const takeId = c.req.param('takeId') as string;
           const shotId = c.req.param('shotId') as string;
-          const shotDesign = readSceneShotDesignRequest(await c.req.json());
+          const direction = readSceneShotVideoTakeDirectionRequest(
+            await c.req.json()
+          );
           const context =
-            await projectData.updateSceneShotVideoTakeShotDesign({
+            await projectData.updateSceneShotVideoTakeDirection({
               projectName,
               sceneId,
               takeId: takeId,
               shotId,
-              shotDesign,
+              direction,
+            });
+          return c.json({
+            context: toShotVideoTakeProductionContextResponse(
+              projectName,
+              context
+            ),
+            resourceKeys: context.resourceKeys,
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/takes/:takeId/structure',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const request = readSceneShotVideoTakeStructureModeRequest(
+            await c.req.json()
+          );
+          const context =
+            await projectData.updateSceneShotVideoTakeStructureMode({
+              projectName,
+              sceneId,
+              takeId: takeId,
+              mode: request.mode,
+              sourceShotId: request.sourceShotId,
             });
           return c.json({
             context: toShotVideoTakeProductionContextResponse(
@@ -785,6 +848,7 @@ export function createScreenplayRoute({
               projectName,
               sceneId,
               takeId,
+              shotId: request.shotId,
               castMemberId: request.castMemberId,
               assetId: request.assetId,
             });
@@ -814,6 +878,7 @@ export function createScreenplayRoute({
               projectName,
               sceneId,
               takeId,
+              shotId: request.shotId,
               locationId: request.locationId,
               assetIds: request.assetIds,
             });
@@ -843,6 +908,7 @@ export function createScreenplayRoute({
               projectName,
               sceneId,
               takeId,
+              shotId: request.shotId,
               lookbookSheetId: request.lookbookSheetId,
             });
           return c.json({
@@ -871,6 +937,7 @@ export function createScreenplayRoute({
               projectName,
               sceneId,
               takeId,
+              shotId: request.shotId,
               dialogueId: request.dialogueId,
               dialogueAudioTakeId: request.takeId,
             });
@@ -899,6 +966,7 @@ export function createScreenplayRoute({
             projectName,
             sceneId,
             takeId,
+            shotId: request.shotId,
             dependencyId: request.dependencyId,
             inclusion: request.inclusion,
           });

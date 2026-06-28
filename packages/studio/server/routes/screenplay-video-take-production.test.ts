@@ -232,27 +232,74 @@ describe('shot video take routes', () => {
     );
   });
 
-  it('shot design PATCH delegates take-owned shot design to core', async () => {
-    const updateSceneShotVideoTakeShotDesign = vi.fn(
-      fakeProjectDataService().updateSceneShotVideoTakeShotDesign
+  it('shared direction PATCH delegates take-owned continuous direction to core', async () => {
+    const updateSceneShotVideoTakeDirection = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakeDirection
     );
-    const app = mount({ updateSceneShotVideoTakeShotDesign });
-    const response = await app.request(
-      `${TAKE_PATH}/shots/shot_001/design`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shotDesign: { shotSize: 'close-up' } }),
-      }
-    );
+    const app = mount({ updateSceneShotVideoTakeDirection });
+    const response = await app.request(`${TAKE_PATH}/direction`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        direction: { composition: { shotSize: 'close-up' } },
+      }),
+    });
     expect(response.status).toBe(200);
-    expect(updateSceneShotVideoTakeShotDesign).toHaveBeenCalledWith(
+    expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
+        takeId: TAKE_ID,
+        direction: { composition: { shotSize: 'close-up' } },
+      })
+    );
+  });
+
+  it('shot direction PATCH delegates multi-cut shot direction to core', async () => {
+    const updateSceneShotVideoTakeDirection = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakeDirection
+    );
+    const app = mount({ updateSceneShotVideoTakeDirection });
+    const response = await app.request(`${TAKE_PATH}/shots/shot_001/direction`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        direction: { composition: { shotSize: 'close-up' } },
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
         sceneId: 'scene_opening',
         takeId: TAKE_ID,
         shotId: 'shot_001',
-        shotDesign: { shotSize: 'close-up' },
+        direction: { composition: { shotSize: 'close-up' } },
+      })
+    );
+  });
+
+  it('structure PATCH delegates take structure mode to core', async () => {
+    const updateSceneShotVideoTakeStructureMode = vi.fn(
+      fakeProjectDataService().updateSceneShotVideoTakeStructureMode
+    );
+    const app = mount({ updateSceneShotVideoTakeStructureMode });
+    const response = await app.request(`${TAKE_PATH}/structure`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'continuous',
+        sourceShotId: 'shot_001',
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(updateSceneShotVideoTakeStructureMode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        sceneId: 'scene_opening',
+        takeId: TAKE_ID,
+        mode: 'continuous',
+        sourceShotId: 'shot_001',
       })
     );
   });
@@ -431,15 +478,43 @@ describe('shot video take routes', () => {
       }),
     },
     {
-      name: 'shot design update',
-      path: `${TAKE_PATH}/shots/shot_001/design`,
+      name: 'shared direction update',
+      path: `${TAKE_PATH}/direction`,
       request: {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shotDesign: { shotSize: 'close-up' } }),
+        body: JSON.stringify({
+          direction: { composition: { shotSize: 'close-up' } },
+        }),
       },
       override: (handler: () => Promise<never>) => ({
-        updateSceneShotVideoTakeShotDesign: handler,
+        updateSceneShotVideoTakeDirection: handler,
+      }),
+    },
+    {
+      name: 'shot direction update',
+      path: `${TAKE_PATH}/shots/shot_001/direction`,
+      request: {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          direction: { composition: { shotSize: 'close-up' } },
+        }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        updateSceneShotVideoTakeDirection: handler,
+      }),
+    },
+    {
+      name: 'structure update',
+      path: `${TAKE_PATH}/structure`,
+      request: {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'multi-cut' }),
+      },
+      override: (handler: () => Promise<never>) => ({
+        updateSceneShotVideoTakeStructureMode: handler,
       }),
     },
     {
@@ -575,9 +650,13 @@ describe('shot video take routes', () => {
         },
         take: {
           state: {
-            referenceSelections: {
-              dependencyInclusions: {
-                'reference-image:shot:shot_001': 'exclude',
+            structure: {
+              sharedDirection: {
+                referenceSelections: {
+                  dependencyInclusions: {
+                    'reference-image:shot:shot_001': 'exclude',
+                  },
+                },
               },
             },
           },
@@ -621,8 +700,12 @@ describe('shot video take routes', () => {
       context: {
         take: {
           state: {
-            referenceSelections: {
-              dependencyInclusions: {},
+            structure: {
+              sharedDirection: {
+                referenceSelections: {
+                  dependencyInclusions: {},
+                },
+              },
             },
           },
         },

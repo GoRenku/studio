@@ -7,6 +7,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createProjectDataService } from '../index.js';
 import { closeProjectStore } from '../database/lifecycle/store.js';
 import {
+  currentProjectStoreSchemaGeneration,
+} from '../database/lifecycle/project-store-schema-generation.js';
+import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
@@ -41,7 +44,9 @@ describe('migrate database command', () => {
 
     const sqlite = new Database(report.databasePath);
     try {
-      expect(sqlite.pragma('user_version', { simple: true })).toBe(28);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(
+        currentProjectStoreSchemaGeneration()
+      );
       expect(readTableNames(sqlite)).toEqual(
         expect.arrayContaining([
           'inspiration_folder',
@@ -129,7 +134,7 @@ describe('migrate database command', () => {
              select created_at
              from __drizzle_migrations
              order by created_at desc
-             limit 3
+             limit 4
            )`
         )
         .run();
@@ -150,12 +155,189 @@ describe('migrate database command', () => {
 
     const migrated = new Database(databasePath);
     try {
-      expect(migrated.pragma('user_version', { simple: true })).toBe(28);
+      expect(migrated.pragma('user_version', { simple: true })).toBe(
+        currentProjectStoreSchemaGeneration()
+      );
       expect(readColumnNames(migrated, 'lookbook_image_section')).toContain(
         'point_id'
       );
     } finally {
       migrated.close();
+    }
+  });
+
+  it('converts legacy shot video take state into structure mode state', async () => {
+    const databasePath = path.join(homeDir, 'structure-modes.sqlite');
+    const sqlite = new Database(databasePath);
+    try {
+      sqlite.exec(`
+        pragma user_version = 28;
+
+        create table scene (
+          id text primary key not null
+        );
+
+        create table scene_shot_list (
+          id text primary key not null,
+          scene_id text not null
+        );
+
+        create table scene_shot_video_take (
+          id text primary key not null,
+          scene_id text not null,
+          source_shot_list_id text not null,
+          title text not null,
+          state_json text not null,
+          is_picked integer default false not null,
+          history_snapshot_json text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_shot (
+          take_id text not null,
+          shot_id text not null,
+          sort_order integer not null,
+          primary key (take_id, shot_id)
+        );
+
+        create table scene_shot_video_take_media_input (
+          id text primary key not null,
+          scene_id text not null,
+          take_id text not null,
+          input_kind text not null,
+          subject_kind text not null,
+          subject_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          media_generation_run_id text,
+          selection text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_media_input_shot (
+          input_id text not null,
+          shot_id text not null,
+          sort_order integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_output (
+          id text primary key not null,
+          scene_id text not null,
+          take_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          media_generation_run_id text,
+          created_at text not null,
+          updated_at text not null,
+          is_selected integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        create table scene_shot_video_take_output_shot (
+          output_id text not null,
+          shot_id text not null,
+          sort_order integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+
+        insert into scene (id) values ('scene_a');
+        insert into scene_shot_list (id, scene_id) values ('shot_list_a', 'scene_a');
+        insert into scene_shot_video_take (
+          id,
+          scene_id,
+          source_shot_list_id,
+          title,
+          state_json,
+          is_picked,
+          history_snapshot_json,
+          created_at,
+          updated_at
+        ) values (
+          'take_legacy',
+          'scene_a',
+          'shot_list_a',
+          'Legacy take',
+          '{"version":1,"shotDesignByShotId":{"shot_001":{"composition":{"shotSize":"wide-shot"}}},"referenceSelections":{"dependencyInclusions":{"reference-image:shot:shot_001":"exclude"},"selectedCharacterSheetAssetIds":{"cast_a":"asset_character"},"referencedLocationSheetAssetIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}},"production":{"inputModeId":"reference"},"promptState":{"status":"dirty"}}',
+          0,
+          '{}',
+          '2026-06-27T00:00:00.000Z',
+          '2026-06-27T00:00:00.000Z'
+        );
+        insert into scene_shot_video_take_shot (take_id, shot_id, sort_order) values
+          ('take_legacy', 'shot_001', 0),
+          ('take_legacy', 'shot_002', 1);
+      `);
+
+      const migrationSql = await fs.readFile(
+        path.join(process.cwd(), 'drizzle', '0039_shot-video-take-structure-modes.sql'),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(
+        currentProjectStoreSchemaGeneration()
+      );
+      const row = sqlite
+        .prepare('select state_json as stateJson from scene_shot_video_take where id = ?')
+        .get('take_legacy') as { stateJson: string };
+      expect(JSON.parse(row.stateJson)).toEqual({
+        version: 2,
+        structure: {
+          mode: 'multi-cut',
+          directionsByShotId: {
+            shot_001: {
+              composition: { shotSize: 'wide-shot' },
+              referenceSelections: {
+                dependencyInclusions: {
+                  'reference-image:shot:shot_001': 'exclude',
+                },
+                selectedCharacterSheetAssetIds: {
+                  cast_a: 'asset_character',
+                },
+                referencedLocationSheetAssetIds: {},
+                selectedLookbookSheetIds: [],
+                selectedDialogueAudioTakeIds: {},
+              },
+            },
+            shot_002: {
+              referenceSelections: {
+                dependencyInclusions: {
+                  'reference-image:shot:shot_001': 'exclude',
+                },
+                selectedCharacterSheetAssetIds: {
+                  cast_a: 'asset_character',
+                },
+                referencedLocationSheetAssetIds: {},
+                selectedLookbookSheetIds: [],
+                selectedDialogueAudioTakeIds: {},
+              },
+            },
+          },
+        },
+        production: {
+          inputModeId: 'reference',
+        },
+        promptState: {
+          status: 'dirty',
+        },
+      });
+    } finally {
+      sqlite.close();
     }
   });
 

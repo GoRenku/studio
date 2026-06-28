@@ -5,8 +5,9 @@ import type {
   ScenePanelTab,
   SceneShot,
   SceneShotDetailTab,
-  SceneShotVideoTakeShotDesign,
+  SceneShotVideoTakeDirection,
 } from '../../client/index.js';
+import { sceneShotVideoTakeDirectionForShot } from '../media-generation/shot-video-take/take-state.js';
 import {
   CAMERA_ANGLE_LABELS,
   FOCUS_LABELS,
@@ -479,9 +480,14 @@ async function shotTabSelections(input: {
         homeDir: input.homeDir,
       })
     : null;
-  const shotDesign = take?.state.shotDesignByShotId[input.shot.shotId];
-  const composition = shotDesign?.composition;
-  const motion = shotDesign?.motion;
+  const direction = take
+    ? sceneShotVideoTakeDirectionForShot({
+        state: take.state,
+        shotId: input.shot.shotId,
+      })
+    : undefined;
+  const composition = direction?.composition;
+  const motion = direction?.motion;
   switch (input.shotTab) {
     case 'composition':
       return {
@@ -508,7 +514,7 @@ async function shotTabSelections(input: {
             }
           : {}),
         ...(composition?.dutch ? { dutch: composition.dutch } : {}),
-          ...compositionLens(shotDesign),
+          ...compositionLens(direction),
           ...(composition?.customComposition?.trim()
             ? { customComposition: composition.customComposition.trim() }
             : {}),
@@ -563,7 +569,7 @@ async function shotTabSelections(input: {
       };
     case 'cast': {
       const castMemberIds =
-        shotDesign?.cast?.castMemberIds ?? input.shot.castMemberIds;
+        direction?.cast?.castMemberIds ?? input.shot.castMemberIds;
       return {
         selections: {
           kind: 'cast',
@@ -576,8 +582,8 @@ async function shotTabSelections(input: {
       };
     }
     case 'location': {
-      const locationIds = shotDesign?.location?.locationId
-        ? [shotDesign.location.locationId]
+      const locationIds = direction?.location?.locationId
+        ? [direction.location.locationId]
         : input.shot.locationIds;
       return {
         selections: {
@@ -651,8 +657,8 @@ async function shotTabSelections(input: {
   }
 }
 
-function compositionLens(shotDesign: SceneShotVideoTakeShotDesign | undefined) {
-  const lens = shotDesign?.composition?.lens;
+function compositionLens(direction: SceneShotVideoTakeDirection | undefined) {
+  const lens = direction?.composition?.lens;
   if (!lens?.type && !lens?.focus && lens?.millimeters === undefined) {
     return {};
   }

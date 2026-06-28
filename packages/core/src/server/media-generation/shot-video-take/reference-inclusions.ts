@@ -8,6 +8,10 @@ import type {
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { shotVideoInputDependencyId } from '../dependency-identifiers.js';
+import {
+  sceneShotVideoTakeDirectionReferenceSelections,
+  sceneShotVideoTakeStructureDirections,
+} from './take-state.js';
 
 
 
@@ -34,7 +38,7 @@ export function validateRequiredReferenceInclusions(input: {
           'CORE_SHOT_REFERENCE_REQUIRED_EXCLUDED',
           `Required reference cannot be excluded: ${slot.label}.`,
           {
-            path: ['take', 'state', 'referenceSelections', 'dependencyInclusions', slot.dependencyId],
+            path: ['take', 'state', 'structure', 'dependencyInclusions', slot.dependencyId],
             context: `dependencyId=${slot.dependencyId}`,
           },
           'Clear the exclusion or choose a generation route where this reference is optional.'
@@ -95,7 +99,13 @@ export function referenceInclusionOverride(
   context: ShotVideoTakeProductionContext,
   dependencyId: string
 ): 'include' | 'exclude' | null {
-  return context.take.state.referenceSelections.dependencyInclusions[dependencyId] ?? null;
+  return groupReferenceInclusionOverride(
+    sceneShotVideoTakeStructureDirections(context.take.state.structure).map(
+      (direction) =>
+        sceneShotVideoTakeDirectionReferenceSelections(direction)
+          .dependencyInclusions[dependencyId] ?? null
+    )
+  );
 }
 
 export function groupReferenceInclusionOverride(

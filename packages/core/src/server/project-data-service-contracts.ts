@@ -95,7 +95,8 @@ import type {
   SceneShotVideoTakeCreateReport,
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeEditContext,
-  SceneShotVideoTakeShotDesign,
+  SceneShotVideoTakeDirection,
+  SceneShotVideoTakeStructureMode,
   ShotVideoTakeProductionContext,
   SceneShotVideoTakeProductionState,
   ShotVideoTakeOutputGenerationPlan,
@@ -497,7 +498,8 @@ export interface ProjectDataService {
   deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<RecoverableMutationReport>;
   updateSceneShotVideoTakePick(input: UpdateSceneShotVideoTakePickInput): Promise<{ take: SceneShotVideoTake; resourceKeys: string[] }>;
   updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionContext>;
-  updateSceneShotVideoTakeShotDesign(input: UpdateSceneShotVideoTakeShotDesignInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeDirection(input: UpdateSceneShotVideoTakeDirectionInput): Promise<ShotVideoTakeProductionContext>;
+  updateSceneShotVideoTakeStructureMode(input: UpdateSceneShotVideoTakeStructureModeInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeShots(input: UpdateSceneShotVideoTakeShotsInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeCharacterSheetSelection(input: UpdateSceneShotVideoTakeCharacterSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeLocationSheetSelection(input: UpdateSceneShotVideoTakeLocationSheetSelectionInput): Promise<ShotVideoTakeProductionContext>;
@@ -1492,10 +1494,16 @@ export interface UpdateSceneShotVideoTakeProductionInput
   production: SceneShotVideoTakeProductionState;
 }
 
-export interface UpdateSceneShotVideoTakeShotDesignInput
+export interface UpdateSceneShotVideoTakeDirectionInput
   extends ShotVideoTakeContextInput {
-  shotId: string;
-  shotDesign: SceneShotVideoTakeShotDesign | null;
+  shotId?: string;
+  direction: SceneShotVideoTakeDirection | null;
+}
+
+export interface UpdateSceneShotVideoTakeStructureModeInput
+  extends ShotVideoTakeContextInput {
+  mode: SceneShotVideoTakeStructureMode;
+  sourceShotId?: string;
 }
 
 export interface UpdateSceneShotVideoTakeShotsInput
@@ -1505,29 +1513,34 @@ export interface UpdateSceneShotVideoTakeShotsInput
 
 export interface UpdateSceneShotVideoTakeCharacterSheetSelectionInput
   extends ShotVideoTakeContextInput {
+  shotId?: string;
   castMemberId: string;
   assetId: string | null;
 }
 
 export interface UpdateSceneShotVideoTakeLocationSheetSelectionInput
   extends ShotVideoTakeContextInput {
+  shotId?: string;
   locationId: string;
   assetIds: string[];
 }
 
 export interface UpdateSceneShotVideoTakeLookbookSheetSelectionInput
   extends ShotVideoTakeContextInput {
+  shotId?: string;
   lookbookSheetId: string | null;
 }
 
 export interface UpdateSceneShotVideoTakeDialogueAudioSelectionInput
   extends ShotVideoTakeContextInput {
+  shotId?: string;
   dialogueId: string;
   dialogueAudioTakeId: string | null;
 }
 
 export interface UpdateSceneShotVideoTakeReferenceInclusionInput
   extends ShotVideoTakeContextInput {
+  shotId?: string;
   dependencyId: string;
   inclusion: 'include' | 'exclude' | null;
 }

@@ -7,6 +7,9 @@ import {
   closeProjectStore,
   openProjectStore,
 } from './store.js';
+import {
+  currentProjectStoreSchemaGeneration,
+} from './project-store-schema-generation.js';
 
 describe('openProjectStore', () => {
   it('keeps project-lifetime SQLite sessions open until explicitly closed', async () => {
@@ -126,7 +129,10 @@ function projectDatabasePath(projectFolder: string): string {
 }
 
 function createCurrentProjectDatabase(projectFolder: string): void {
-  createProjectDatabaseWithSchemaGeneration(projectFolder, 28);
+  createProjectDatabaseWithSchemaGeneration(
+    projectFolder,
+    currentProjectStoreSchemaGeneration()
+  );
 }
 
 function createProjectDatabaseWithSchemaGeneration(

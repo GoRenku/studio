@@ -7,11 +7,11 @@ import {
   screen,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SceneShotVideoTakeShotDesign } from '@gorenku/studio-core/client';
+import type { SceneShotVideoTakeDirection } from '@gorenku/studio-core/client';
 import { SceneShotCameraMotionTab } from './scene-shot-camera-motion-tab';
 import { SceneShotCompositionTab } from './scene-shot-composition-tab';
 
-let currentShotDesign: SceneShotVideoTakeShotDesign = {};
+let currentShotDesign: SceneShotVideoTakeDirection = {};
 let updateShotDesign = vi.fn();
 
 vi.mock('./take-shot-design-context', () => ({
@@ -109,9 +109,9 @@ describe('Scene shot design tabs', () => {
     },
   ] satisfies Array<{
     name: string;
-    initial?: SceneShotVideoTakeShotDesign;
+    initial?: SceneShotVideoTakeDirection;
     action: () => void;
-    expected: SceneShotVideoTakeShotDesign;
+    expected: SceneShotVideoTakeDirection;
   }>)('writes composition $name into take shot design state', ({ initial, action, expected }) => {
     renderComposition(initial);
 
@@ -167,9 +167,9 @@ describe('Scene shot design tabs', () => {
     },
   ] satisfies Array<{
     name: string;
-    initial?: SceneShotVideoTakeShotDesign;
+    initial?: SceneShotVideoTakeDirection;
     action: () => void;
-    expected: SceneShotVideoTakeShotDesign;
+    expected: SceneShotVideoTakeDirection;
   }>)('writes motion $name into take shot design state', ({ initial, action, expected }) => {
     renderMotion(initial);
 
@@ -179,13 +179,13 @@ describe('Scene shot design tabs', () => {
   });
 });
 
-function renderComposition(initial: SceneShotVideoTakeShotDesign = {}) {
+function renderComposition(initial: SceneShotVideoTakeDirection = {}) {
   currentShotDesign = initial;
   updateShotDesign = vi.fn();
   render(<SceneShotCompositionTab />);
 }
 
-function renderMotion(initial: SceneShotVideoTakeShotDesign = {}) {
+function renderMotion(initial: SceneShotVideoTakeDirection = {}) {
   currentShotDesign = initial;
   updateShotDesign = vi.fn();
   render(<SceneShotCameraMotionTab />);

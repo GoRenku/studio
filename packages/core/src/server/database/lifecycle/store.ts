@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { ProjectDataError } from '../../project-data-error.js';
 import { resolveProjectDatabasePath } from '../../files/project-paths.js';
 import { migrateProjectDatabase } from './migrator.js';
+import { currentProjectStoreSchemaGeneration } from './project-store-schema-generation.js';
 
 export interface DatabaseSession {
   databasePath: string;
@@ -17,7 +18,6 @@ interface SqliteDatabaseSession extends DatabaseSession {
 
 type DatabaseSessionLifetime = 'operation' | 'project';
 
-const PROJECT_STORE_SCHEMA_GENERATION = 28;
 const DRIZZLE_MIGRATIONS_TABLE = '__drizzle_migrations';
 
 const projectSessions = new Map<string, SqliteDatabaseSession>();
@@ -140,11 +140,12 @@ function assertProjectStoreSchema(
     const schemaGeneration = sqlite.pragma('user_version', {
       simple: true,
     });
-    if (schemaGeneration !== PROJECT_STORE_SCHEMA_GENERATION) {
+    const currentGeneration = currentProjectStoreSchemaGeneration();
+    if (schemaGeneration !== currentGeneration) {
       throw invalidSchema(
         `Project database schema generation ${String(
           schemaGeneration
-        )} is not supported by this Renku Studio runtime; expected ${PROJECT_STORE_SCHEMA_GENERATION}`
+        )} is not supported by this Renku Studio runtime; expected ${currentGeneration}`
       );
     }
 
@@ -166,13 +167,14 @@ function canAutoMigrateProjectStore(sqlite: Database.Database): boolean {
     const schemaGeneration = sqlite.pragma('user_version', {
       simple: true,
     });
+    const currentGeneration = currentProjectStoreSchemaGeneration();
     return Boolean(
       migrationRow &&
         projectRow &&
         typeof schemaGeneration === 'number' &&
         Number.isInteger(schemaGeneration) &&
         schemaGeneration > 0 &&
-        schemaGeneration < PROJECT_STORE_SCHEMA_GENERATION
+        schemaGeneration < currentGeneration
     );
   } catch {
     return false;

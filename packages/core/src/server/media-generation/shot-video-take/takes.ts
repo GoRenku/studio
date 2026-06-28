@@ -20,8 +20,9 @@ import {
   requireSceneShotVideoTake,
   updateSceneShotVideoTakePickRecord,
   updateSceneShotVideoTakeProductionRecord,
-  updateSceneShotVideoTakeShotDesignRecord,
+  updateSceneShotVideoTakeDirectionRecord,
   updateSceneShotVideoTakeShotMembershipRecord,
+  updateSceneShotVideoTakeStructureModeRecord,
 } from '../../database/access/scene-shot-video-takes.js';
 import {
   createRandomIdGenerator,
@@ -40,8 +41,9 @@ import type {
   ReadSceneShotVideoTakeInput,
   UpdateSceneShotVideoTakePickInput,
   UpdateSceneShotVideoTakeProductionInput,
-  UpdateSceneShotVideoTakeShotDesignInput,
+  UpdateSceneShotVideoTakeDirectionInput,
   UpdateSceneShotVideoTakeShotsInput,
+  UpdateSceneShotVideoTakeStructureModeInput,
 } from '../../project-data-service-contracts.js';
 import {
   buildContextFromPrepared,
@@ -266,8 +268,8 @@ export async function updateSceneShotVideoTakeProduction(
   });
 }
 
-export async function updateSceneShotVideoTakeShotDesign(
-  input: UpdateSceneShotVideoTakeShotDesignInput
+export async function updateSceneShotVideoTakeDirection(
+  input: UpdateSceneShotVideoTakeDirectionInput
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
@@ -276,10 +278,40 @@ export async function updateSceneShotVideoTakeShotDesign(
       input,
     });
     assertEditableSceneShotVideoTake(prepared.take);
-    updateSceneShotVideoTakeShotDesignRecord(session, {
+    updateSceneShotVideoTakeDirectionRecord(session, {
       takeId: input.takeId,
       shotId: input.shotId,
-      shotDesign: input.shotDesign,
+      direction: input.direction,
+      screenplay,
+      now: new Date().toISOString(),
+    });
+    const refreshed = prepareSceneShotVideoTakeInSession({
+      session,
+      input,
+    });
+    return buildContextFromPrepared({
+      session,
+      projectFolder,
+      project,
+      prepared: refreshed,
+    });
+  });
+}
+
+export async function updateSceneShotVideoTakeStructureMode(
+  input: UpdateSceneShotVideoTakeStructureModeInput
+): Promise<ShotVideoTakeProductionContext> {
+  return withShotProjectSession(input, ({ session, projectFolder, project }) => {
+    const screenplay = requireScreenplayDocument(session);
+    const prepared = prepareSceneShotVideoTakeInSession({
+      session,
+      input,
+    });
+    assertEditableSceneShotVideoTake(prepared.take);
+    updateSceneShotVideoTakeStructureModeRecord(session, {
+      takeId: input.takeId,
+      mode: input.mode,
+      sourceShotId: input.sourceShotId,
       screenplay,
       now: new Date().toISOString(),
     });

@@ -2512,7 +2512,7 @@ describe('renku CLI', () => {
           sourceShotListId: writeReport.activeShotListId,
           shotIds: ['shot_001'],
           state: {
-            version: 1,
+            version: 2,
           },
         },
         sourceShotList: {
@@ -2562,7 +2562,7 @@ describe('renku CLI', () => {
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       takeId: take.takeId,
       state: {
-        version: 1,
+        version: 2,
       },
     });
 
@@ -2940,152 +2940,205 @@ describe('renku CLI', () => {
     });
   });
 
-  it('reports current scene shot tab focus through studio current', async () => {
-    await initializeStorageRoot();
-    const createExitCode = await createProject();
-    if (isMissingSqliteBindings(createExitCode, stderr)) {
-      return;
-    }
-    await openProjectAndCreateScreenplay();
+  for (const scenario of [
+    {
+      name: 'continuous shared direction',
+      mode: 'continuous',
+      focusedShotId: 'shot_002',
+      focusedShotLabel: 'Shot 2',
+      shotSize: 'medium-close-up',
+      shotSizeLabel: 'Medium Close-Up',
+      cameraAngle: 'low-angle',
+      cameraAngleLabel: 'Low Angle',
+    },
+    {
+      name: 'multi-cut shot direction',
+      mode: 'multi-cut',
+      focusedShotId: 'shot_002',
+      focusedShotLabel: 'Shot 2',
+      shotSize: 'close-up',
+      shotSizeLabel: 'Close-Up',
+      cameraAngle: 'high-angle',
+      cameraAngleLabel: 'High Angle',
+    },
+  ] as const) {
+    it(`reports current scene shot tab focus through studio current for ${scenario.name}`, async () => {
+      await initializeStorageRoot();
+      const createExitCode = await createProject();
+      if (isMissingSqliteBindings(createExitCode, stderr)) {
+        return;
+      }
+      await openProjectAndCreateScreenplay();
 
-    const projectData = createProjectDataService();
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
-    const castMember = screenplay.screenplay!.cast[0]!;
-    const location = screenplay.screenplay!.locations[0]!;
-    const writtenShotList = await projectData.writeSceneShotList({
-      homeDir,
-      document: {
-        kind: 'sceneShotList',
+      const projectData = createProjectDataService();
+      const screenplay = await projectData.readScreenplay({ homeDir });
+      const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+      const castMember = screenplay.screenplay!.cast[0]!;
+      const location = screenplay.screenplay!.locations[0]!;
+      const writtenShotList = await projectData.writeSceneShotList({
+        homeDir,
+        document: {
+          kind: 'sceneShotList',
+          sceneId: scene.id as string,
+          title: 'Opening coverage',
+          summary: 'A focused two-shot setup.',
+          coverageStrategy: 'Compare the shared move with per-shot coverage.',
+          shots: [
+            {
+              shotId: 'shot_001',
+              title: 'Urban studies the bronze',
+              storyBeat: 'Urban reads the cannon before anyone else does.',
+              narrativePurpose: 'Show expertise before consequence.',
+              description: 'Urban leans close to the bronze seam.',
+              shotType: 'Medium Close-Up',
+              subject: 'Urban and the bronze cannon',
+              action: 'Urban studies the metal in silence.',
+              dialogue: [],
+              coveredBlockIndexes: [0],
+              castMemberIds: [castMember.id as string],
+              locationIds: [location.id as string],
+            },
+            {
+              shotId: 'shot_002',
+              title: 'Urban catches the reaction',
+              storyBeat: 'Urban sees how the room responds.',
+              narrativePurpose: 'Show the counter angle in the same take.',
+              description: 'Urban turns from the bronze to the room.',
+              shotType: 'Medium Close-Up',
+              subject: 'Urban and the watching officials',
+              action: 'Urban reads the room in silence.',
+              dialogue: [],
+              coveredBlockIndexes: [0],
+              castMemberIds: [castMember.id as string],
+              locationIds: [location.id as string],
+            },
+          ],
+        },
+      });
+      const takeReport = await projectData.createSceneShotVideoTake({
+        homeDir,
         sceneId: scene.id as string,
-        title: 'Opening coverage',
-        summary: 'A focused first shot.',
-        coverageStrategy: 'Hold one readable setup.',
-        shots: [
-          {
-            shotId: 'shot_001',
-            title: 'Urban studies the bronze',
-            storyBeat: 'Urban reads the cannon before anyone else does.',
-            narrativePurpose: 'Show expertise before consequence.',
-            description: 'Urban leans close to the bronze seam.',
-            shotType: 'Medium Close-Up',
-            subject: 'Urban and the bronze cannon',
-            action: 'Urban studies the metal in silence.',
-            dialogue: [],
-            coveredBlockIndexes: [0],
-            castMemberIds: [castMember.id as string],
-            locationIds: [location.id as string],
-          },
-        ],
-      },
-    });
-    const takeReport = await projectData.createSceneShotVideoTake({
-      homeDir,
-      sceneId: scene.id as string,
-      shotListId: writtenShotList.shotList.id,
-      shotIds: ['shot_001'],
-    });
-    const take = takeReport.overview.take;
-    await projectData.updateSceneShotVideoTakeShotDesign({
-      homeDir,
-      takeId: take.takeId,
-      shotId: 'shot_001',
-      shotDesign: {
-        composition: {
-          shotSize: 'medium-close-up',
-          subjectFraming: ['single'],
-          cameraAngle: 'low-angle',
-        },
-      },
-    });
-    const project = await projectData.readProject({
-      homeDir,
-      projectName: 'constantinople',
-    });
-    const coordination = createStudioCoordinationService({ homeDir });
-    const now = new Date();
-    await claimStudioRuntimeDescriptor({
-      homeDir,
-      host: '127.0.0.1',
-      port: 5173,
-      serverUrl: 'http://127.0.0.1:5173',
-      now,
-    });
-    await coordination.appendStudioEvent({
-      type: 'studio.browserSessionActive',
-      browserSessionId: 'studio_browser_test',
-      source: { kind: 'studio', browserSessionId: 'studio_browser_test' },
-      createdAt: now.toISOString(),
-    });
-    await coordination.appendStudioEvent({
-      type: 'studio.focusChanged',
-      projectRef: {
-        name: project.identity.name,
-        id: project.identity.id,
-        storageRoot: path.join(homeDir, 'movies'),
-      },
-      focus: {
-        screen: 'movieStudio',
-        selection: {
-          type: 'scene',
-          id: scene.id as string,
-          sceneTab: 'takes',
-          takeWorkspaceMode: 'edit',
+        shotListId: writtenShotList.shotList.id,
+        shotIds: ['shot_001', 'shot_002'],
+      });
+      const take = takeReport.overview.take;
+      if (scenario.mode === 'multi-cut') {
+        await projectData.updateSceneShotVideoTakeStructureMode({
+          homeDir,
+          sceneId: scene.id as string,
           takeId: take.takeId,
-          shotId: 'shot_001',
-          shotTab: 'composition',
+          mode: 'multi-cut',
+        });
+      }
+      await projectData.updateSceneShotVideoTakeDirection({
+        homeDir,
+        takeId: take.takeId,
+        ...(scenario.mode === 'multi-cut'
+          ? { shotId: scenario.focusedShotId }
+          : {}),
+        direction: {
+          composition: {
+            shotSize: scenario.shotSize,
+            subjectFraming: ['single'],
+            cameraAngle: scenario.cameraAngle,
+          },
         },
-      },
-      source: { kind: 'studio', browserSessionId: 'studio_browser_test' },
-      createdAt: now.toISOString(),
-    });
-
-    stdout = [];
-    stderr = [];
-    const jsonExitCode = await runRenkuCli(['studio', 'current', '--json'], {
-      homeDir,
-      io: captureIo(stdout, stderr),
-    });
-
-    expect(jsonExitCode).toBe(0);
-    const current = JSON.parse(stdout.join('\n'));
-    expect(current.selection).toMatchObject({
-      type: 'scene',
-      sceneTab: 'takes',
-      takeWorkspaceMode: 'edit',
-      takeId: take.takeId,
-      shotId: 'shot_001',
-      shotTab: 'composition',
-    });
-    expect(current.context).toMatchObject({
-      kind: 'scene',
-      sceneTab: { id: 'takes', label: 'Takes' },
-      shot: {
-        id: 'shot_001',
-        activeTab: { id: 'composition', label: 'Composition' },
-        currentTabSelections: {
-          kind: 'composition',
-          shotSize: { id: 'medium-close-up', label: 'Medium Close-Up' },
-          subjectFraming: [{ id: 'single', label: 'Single' }],
-          cameraAngle: { id: 'low-angle', label: 'Low Angle' },
+      });
+      const project = await projectData.readProject({
+        homeDir,
+        projectName: 'constantinople',
+      });
+      const coordination = createStudioCoordinationService({ homeDir });
+      const now = new Date();
+      await claimStudioRuntimeDescriptor({
+        homeDir,
+        host: '127.0.0.1',
+        port: 5173,
+        serverUrl: 'http://127.0.0.1:5173',
+        now,
+      });
+      await coordination.appendStudioEvent({
+        type: 'studio.browserSessionActive',
+        browserSessionId: 'studio_browser_test',
+        source: { kind: 'studio', browserSessionId: 'studio_browser_test' },
+        createdAt: now.toISOString(),
+      });
+      await coordination.appendStudioEvent({
+        type: 'studio.focusChanged',
+        projectRef: {
+          name: project.identity.name,
+          id: project.identity.id,
+          storageRoot: path.join(homeDir, 'movies'),
         },
-      },
-    });
+        focus: {
+          screen: 'movieStudio',
+          selection: {
+            type: 'scene',
+            id: scene.id as string,
+            sceneTab: 'takes',
+            takeWorkspaceMode: 'edit',
+            takeId: take.takeId,
+            shotId: scenario.focusedShotId,
+            shotTab: 'composition',
+          },
+        },
+        source: { kind: 'studio', browserSessionId: 'studio_browser_test' },
+        createdAt: now.toISOString(),
+      });
 
-    stdout = [];
-    stderr = [];
-    const textExitCode = await runRenkuCli(['studio', 'current'], {
-      homeDir,
-      io: captureIo(stdout, stderr),
-    });
+      stdout = [];
+      stderr = [];
+      const jsonExitCode = await runRenkuCli(['studio', 'current', '--json'], {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      });
 
-    expect(textExitCode).toBe(0);
-    expect(stdout).toContain('Current Studio project: constantinople');
-    expect(stdout).toContain(
-      `Focus: Scene ${scene.title} > Takes > Shot 1 > Composition`
-    );
-    expect(stderr).toEqual([]);
-  });
+      expect(jsonExitCode).toBe(0);
+      const current = JSON.parse(stdout.join('\n'));
+      expect(current.selection).toMatchObject({
+        type: 'scene',
+        sceneTab: 'takes',
+        takeWorkspaceMode: 'edit',
+        takeId: take.takeId,
+        shotId: scenario.focusedShotId,
+        shotTab: 'composition',
+      });
+      expect(current.context).toMatchObject({
+        kind: 'scene',
+        sceneTab: { id: 'takes', label: 'Takes' },
+        shot: {
+          id: scenario.focusedShotId,
+          activeTab: { id: 'composition', label: 'Composition' },
+          currentTabSelections: {
+            kind: 'composition',
+            shotSize: {
+              id: scenario.shotSize,
+              label: scenario.shotSizeLabel,
+            },
+            subjectFraming: [{ id: 'single', label: 'Single' }],
+            cameraAngle: {
+              id: scenario.cameraAngle,
+              label: scenario.cameraAngleLabel,
+            },
+          },
+        },
+      });
+
+      stdout = [];
+      stderr = [];
+      const textExitCode = await runRenkuCli(['studio', 'current'], {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      });
+
+      expect(textExitCode).toBe(0);
+      expect(stdout).toContain('Current Studio project: constantinople');
+      expect(stdout).toContain(
+        `Focus: Scene ${scene.title} > Takes > ${scenario.focusedShotLabel} > Composition`
+      );
+      expect(stderr).toEqual([]);
+    });
+  }
 
   it('reports missing Studio dev server status for agents', async () => {
     const exitCode = await runRenkuCli(

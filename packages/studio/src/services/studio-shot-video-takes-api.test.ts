@@ -17,7 +17,8 @@ import {
   updateTakeLookbookSheetSelection,
   updateSceneShotVideoTakePick,
   updateShotVideoTakeProduction,
-  updateSceneShotVideoTakeShotDesign,
+  updateSceneShotVideoTakeDirection,
+  updateSceneShotVideoTakeStructureMode,
 } from './studio-shot-video-takes-api';
 
 const TAKE_ID = 'scene_shot_video_take_001';
@@ -158,24 +159,64 @@ describe('studio-shot-video-takes-api', () => {
     expect(init).toBeUndefined();
   });
 
-  it('autosaves take-owned shot design', async () => {
+  it('autosaves the shared continuous direction', async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       okResponse({ context: {}, resourceKeys: [] })
     );
-    await updateSceneShotVideoTakeShotDesign(
+    await updateSceneShotVideoTakeDirection(
       'constantinople',
       'scene_hook',
       TAKE_ID,
-      'shot_001',
       { composition: { shotSize: 'close-up' } }
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(
-      `/takes/${TAKE_ID}/shots/shot_001/design`
+      `/takes/${TAKE_ID}/direction`
     );
     expect((init as RequestInit).method).toBe('PATCH');
     expect(lastBody()).toEqual({
-      shotDesign: { composition: { shotSize: 'close-up' } },
+      direction: { composition: { shotSize: 'close-up' } },
+    });
+  });
+
+  it('autosaves a multi-cut shot direction', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ context: {}, resourceKeys: [] })
+    );
+    await updateSceneShotVideoTakeDirection(
+      'constantinople',
+      'scene_hook',
+      TAKE_ID,
+      { composition: { shotSize: 'close-up' } },
+      'shot_001'
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(
+      `/takes/${TAKE_ID}/shots/shot_001/direction`
+    );
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      direction: { composition: { shotSize: 'close-up' } },
+    });
+  });
+
+  it('updates the take structure mode', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      okResponse({ context: {}, resourceKeys: [] })
+    );
+    await updateSceneShotVideoTakeStructureMode(
+      'constantinople',
+      'scene_hook',
+      TAKE_ID,
+      'continuous',
+      'shot_001'
+    );
+    const [url, init] = lastCall();
+    expect(String(url)).toContain(`/takes/${TAKE_ID}/structure`);
+    expect((init as RequestInit).method).toBe('PATCH');
+    expect(lastBody()).toEqual({
+      mode: 'continuous',
+      sourceShotId: 'shot_001',
     });
   });
 

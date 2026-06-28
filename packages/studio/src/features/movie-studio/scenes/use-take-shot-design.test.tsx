@@ -2,16 +2,16 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SceneShotVideoTakeShotDesign } from '@gorenku/studio-core/client';
+import type { SceneShotVideoTakeDirection } from '@gorenku/studio-core/client';
 import {
-  updateSceneShotVideoTakeShotDesign,
+  updateSceneShotVideoTakeDirection,
   type ShotVideoTakeProductionMutation,
 } from '@/services/studio-shot-video-takes-api';
 import { Button } from '@/ui/button';
 import { useTakeShotDesign } from './use-take-shot-design';
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  updateSceneShotVideoTakeShotDesign: vi.fn(),
+  updateSceneShotVideoTakeDirection: vi.fn(),
 }));
 
 const SAVED_MUTATION = {
@@ -19,8 +19,11 @@ const SAVED_MUTATION = {
     take: {
       takeId: 'take_001',
       state: {
-        shotDesignByShotId: {
-          shot_001: { composition: { shotSize: 'close-up' } },
+        structure: {
+          mode: 'multi-cut',
+          directionsByShotId: {
+            shot_001: { composition: { shotSize: 'close-up' } },
+          },
         },
       },
     },
@@ -31,8 +34,8 @@ const SAVED_MUTATION = {
 describe('useTakeShotDesign', () => {
   beforeEach(() => {
     vi.useRealTimers();
-    vi.mocked(updateSceneShotVideoTakeShotDesign).mockReset();
-    vi.mocked(updateSceneShotVideoTakeShotDesign).mockResolvedValue(
+    vi.mocked(updateSceneShotVideoTakeDirection).mockReset();
+    vi.mocked(updateSceneShotVideoTakeDirection).mockResolvedValue(
       SAVED_MUTATION
     );
   });
@@ -44,12 +47,12 @@ describe('useTakeShotDesign', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Set close-up' }));
 
     await waitFor(() =>
-      expect(updateSceneShotVideoTakeShotDesign).toHaveBeenCalledWith(
+      expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
-        'shot_001',
-        { composition: { shotSize: 'close-up' } }
+        { composition: { shotSize: 'close-up' } },
+        'shot_001'
       )
     );
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(SAVED_MUTATION));
@@ -62,12 +65,38 @@ describe('useTakeShotDesign', () => {
     unmount();
 
     await waitFor(() =>
-      expect(updateSceneShotVideoTakeShotDesign).toHaveBeenCalledWith(
+      expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
-        'shot_001',
-        { composition: { shotSize: 'close-up' } }
+        { composition: { shotSize: 'close-up' } },
+        'shot_001'
+      )
+    );
+  });
+
+  it('saves reference-only direction state instead of clearing it', async () => {
+    render(<TakeShotDesignHarness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set reference' }));
+
+    await waitFor(() =>
+      expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        {
+          referenceSelections: {
+            dependencyInclusions: {},
+            selectedCharacterSheetAssetIds: {
+              cast_urban: 'asset_character_sheet_001',
+            },
+            referencedLocationSheetAssetIds: {},
+            selectedLookbookSheetIds: [],
+            selectedDialogueAudioTakeIds: {},
+          },
+        },
+        'shot_001'
       )
     );
   });
@@ -87,14 +116,33 @@ function TakeShotDesignHarness({
     onSaved,
   });
   const setCloseUp = () => {
-    const shotDesign: SceneShotVideoTakeShotDesign = {
+    const direction: SceneShotVideoTakeDirection = {
       composition: { shotSize: 'close-up' },
     };
-    update(shotDesign);
+    update(direction);
+  };
+  const setReference = () => {
+    const direction: SceneShotVideoTakeDirection = {
+      referenceSelections: {
+        dependencyInclusions: {},
+        selectedCharacterSheetAssetIds: {
+          cast_urban: 'asset_character_sheet_001',
+        },
+        referencedLocationSheetAssetIds: {},
+        selectedLookbookSheetIds: [],
+        selectedDialogueAudioTakeIds: {},
+      },
+    };
+    update(direction);
   };
   return (
-    <Button type='button' onClick={setCloseUp}>
-      Set close-up
-    </Button>
+    <>
+      <Button type='button' onClick={setCloseUp}>
+        Set close-up
+      </Button>
+      <Button type='button' onClick={setReference}>
+        Set reference
+      </Button>
+    </>
   );
 }

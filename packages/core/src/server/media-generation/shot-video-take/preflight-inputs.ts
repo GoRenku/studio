@@ -44,6 +44,7 @@ import {
   referenceInclusionForDependencyId,
 } from './reference-inclusions.js';
 import {
+  referencedEnvironmentSheetAssetIdsForTakeState,
   selectedLookbookSheetIdsForTakeState,
 } from './reference-selection.js';
 import {
@@ -298,10 +299,10 @@ export function locationSheetInputsForContext(
 ): ShotVideoTakePreflightInput[] {
   const inputs: ShotVideoTakePreflightInput[] = [];
   for (const location of context.referencedLocations) {
-    const referencedAssetIds =
-      context.take.state.referenceSelections.referencedLocationSheetAssetIds[
-        location.id
-      ] ?? [];
+    const referencedAssetIds = referencedEnvironmentSheetAssetIdsForTakeState(
+      context.take.state,
+      location.id
+    );
     const assets = listAssetRelationshipPage(session, {
       target: { kind: 'location', locationId: location.id },
       role: 'environment_sheet',
@@ -319,7 +320,7 @@ export function locationSheetInputsForContext(
             [
               'take',
               'state',
-              'referenceSelections',
+              'structure',
               'referencedLocationSheetAssetIds',
               location.id,
             ],
@@ -339,7 +340,7 @@ export function locationSheetInputsForContext(
             [
               'take',
               'state',
-              'referenceSelections',
+              'structure',
               'referencedLocationSheetAssetIds',
               location.id,
             ],
@@ -457,7 +458,7 @@ export function lookbookSheetInputForId(
       issue(
         'PROJECT_DATA412',
         'Selected lookbook sheet does not belong to the active lookbook.',
-        ['take', 'state', 'referenceSelections', 'selectedLookbookSheetIds'],
+        ['take', 'state', 'structure', 'selectedLookbookSheetIds'],
         'Choose a lookbook sheet from the active lookbook.'
       )
     );
@@ -470,7 +471,7 @@ export function lookbookSheetInputForId(
       issue(
         'PROJECT_DATA413',
         'Selected lookbook sheet has no image file.',
-        ['take', 'state', 'referenceSelections', 'selectedLookbookSheetIds'],
+        ['take', 'state', 'structure', 'selectedLookbookSheetIds'],
         'Regenerate or import a lookbook sheet with an image file.'
       )
     );

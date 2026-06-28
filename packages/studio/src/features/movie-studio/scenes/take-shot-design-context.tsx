@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import type {
   SceneShot,
+  SceneShotVideoTakeDirection,
   SceneShotVideoTake,
 } from '@gorenku/studio-core/client';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
@@ -26,11 +27,25 @@ interface TakeShotDesignProviderProps {
 }
 
 /**
- * Owns one shared take shot design state per shot so the Composition, Camera
- * Motion, and Location tabs edit the same object. Mount this keyed by `shot.shotId`
- * for a clean reset on shot switch.
+ * Owns one shared take shot design state per editable direction scope so the
+ * Composition, Camera Motion, and Location tabs edit the same object.
  */
 export function TakeShotDesignProvider({
+  take,
+  shot,
+  ...props
+}: TakeShotDesignProviderProps) {
+  return (
+    <TakeShotDesignScope
+      key={takeShotDesignScopeKey(take, shot.shotId)}
+      take={take}
+      shot={shot}
+      {...props}
+    />
+  );
+}
+
+function TakeShotDesignScope({
   projectName,
   sceneId,
   shot,
@@ -39,12 +54,12 @@ export function TakeShotDesignProvider({
   onSaveNotificationChange,
   children,
 }: TakeShotDesignProviderProps) {
-  const initial = take?.state.shotDesignByShotId[shot.shotId];
+  const initial = take ? directionForShot(take, shot.shotId) : undefined;
   const value = useTakeShotDesign({
     projectName,
     sceneId,
     takeId: take?.takeId,
-    shotId: shot.shotId,
+    shotId: take?.state.structure.mode === 'multi-cut' ? shot.shotId : undefined,
     initial,
     onSaved: (result) => onSaved?.(result.context.take),
   });
@@ -59,6 +74,29 @@ export function TakeShotDesignProvider({
       {children}
     </TakeShotDesignContext.Provider>
   );
+}
+
+function directionForShot(
+  take: SceneShotVideoTake,
+  shotId: string
+): SceneShotVideoTakeDirection | undefined {
+  if (take.state.structure.mode === 'continuous') {
+    return take.state.structure.sharedDirection;
+  }
+  return take.state.structure.directionsByShotId[shotId];
+}
+
+function takeShotDesignScopeKey(
+  take: SceneShotVideoTake | null | undefined,
+  shotId: string
+): string {
+  if (!take) {
+    return `shot-list:${shotId}`;
+  }
+  if (take.state.structure.mode === 'continuous') {
+    return `take:${take.takeId}:continuous`;
+  }
+  return `take:${take.takeId}:multi-cut:${shotId}`;
 }
 
 export function useTakeShotDesignContext(): UseTakeShotDesignResult {

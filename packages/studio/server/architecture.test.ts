@@ -30,8 +30,12 @@ const routeForbiddenNeedles: ForbiddenNeedle[] = [
     reason: 'routes must not assemble durable take state patches',
   },
   {
-    needle: 'context.take.state.referenceSelections',
+    needle: 'context.take.state.structure.sharedDirection.referenceSelections',
     reason: 'routes must not inspect durable take reference-selection maps',
+  },
+  {
+    needle: 'context.take.state.structure.directionsByShotId',
+    reason: 'routes must not inspect durable take direction maps',
   },
 ];
 

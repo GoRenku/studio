@@ -20,6 +20,10 @@ import { ProjectDataError } from '../../project-data-error.js';
 import {
   parseSceneShotVideoTakeState,
 } from '../../shot-video-take-json/validator.js';
+import {
+  sceneShotVideoTakeDirectionReferenceSelections,
+  sceneShotVideoTakeStructureDirections,
+} from '../../media-generation/shot-video-take/take-state.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type SceneShotVideoTakeInputRecord =
@@ -494,19 +498,26 @@ function sceneShotVideoTakeStateReferencesAsset(
   state: SceneShotVideoTakeState,
   assetId: string
 ): boolean {
-  const selectedReferenceAssets = [
-    ...Object.values(state.referenceSelections.selectedCharacterSheetAssetIds),
-    ...Object.values(state.referenceSelections.referencedLocationSheetAssetIds).flat(),
-  ];
+  const directions = sceneShotVideoTakeStructureDirections(state.structure);
+  const selectedReferenceAssets = directions.flatMap((direction) => [
+    ...Object.values(
+      sceneShotVideoTakeDirectionReferenceSelections(direction)
+        .selectedCharacterSheetAssetIds
+    ),
+    ...Object.values(
+      sceneShotVideoTakeDirectionReferenceSelections(direction)
+        .referencedLocationSheetAssetIds
+    ).flat(),
+  ]);
   if (selectedReferenceAssets.includes(assetId)) {
     return true;
   }
-  return Object.values(state.shotDesignByShotId).some((shotDesign) => {
+  return directions.some((direction) => {
     const shotReferenceAssets = [
-      ...Object.values(shotDesign.cast?.characterSheetAssetIds ?? {}),
-      ...(shotDesign.location?.environmentSheetAssetIds ?? []),
-      shotDesign.lookbook?.lookbookSheetId,
-      ...shotDesign.dialogue?.map((dialogue) => dialogue.assetId) ?? [],
+      ...Object.values(direction.cast?.characterSheetAssetIds ?? {}),
+      ...(direction.location?.environmentSheetAssetIds ?? []),
+      direction.lookbook?.lookbookSheetId,
+      ...direction.dialogue?.map((dialogue) => dialogue.assetId) ?? [],
     ].filter((candidate): candidate is string => Boolean(candidate));
     return shotReferenceAssets.includes(assetId);
   });

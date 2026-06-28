@@ -4,7 +4,11 @@ import {
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
 import { createDeterministicIdGenerator } from '../../index.js';
-import type { ProjectRelativePath } from '../../../client/index.js';
+import type {
+  ProjectRelativePath,
+  SceneShotVideoTake,
+  SceneShotVideoTakeReferenceSelections,
+} from '../../../client/index.js';
 
 describe('shot video take reference selection mutations', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -38,7 +42,7 @@ describe('shot video take reference selection mutations', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    expect(take.state.referenceSelections.selectedCharacterSheetAssetIds).toEqual({});
+    expect(takeReferenceSelections(take).selectedCharacterSheetAssetIds).toEqual({});
   });
 
   it('rejects character sheet assets from another Cast Member before writing take state', async () => {
@@ -97,7 +101,7 @@ describe('shot video take reference selection mutations', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    expect(take.state.referenceSelections.referencedLocationSheetAssetIds).toEqual({});
+    expect(takeReferenceSelections(take).referencedLocationSheetAssetIds).toEqual({});
   });
 
   it('rejects location sheets from another Location before writing take state', async () => {
@@ -196,7 +200,7 @@ describe('shot video take reference selection mutations', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    expect(take.state.referenceSelections.selectedLookbookSheetIds).toEqual([]);
+    expect(takeReferenceSelections(take).selectedLookbookSheetIds).toEqual([]);
   });
 
   it('rejects Lookbook sheets outside the active Lookbook before writing take state', async () => {
@@ -298,7 +302,7 @@ describe('shot video take reference selection mutations', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    expect(take.state.referenceSelections.selectedDialogueAudioTakeIds).toEqual({});
+    expect(takeReferenceSelections(take).selectedDialogueAudioTakeIds).toEqual({});
   });
 
   it('rejects dialogue audio takes from another dialogue before writing take state', async () => {
@@ -425,6 +429,16 @@ describe('shot video take reference selection mutations', () => {
       sceneId: ids.sceneId,
       takeId,
     });
-    return take.state.referenceSelections;
+    return takeReferenceSelections(take);
   }
 });
+
+function takeReferenceSelections(
+  take: SceneShotVideoTake
+): SceneShotVideoTakeReferenceSelections {
+  if (take.state.structure.mode === 'continuous') {
+    return take.state.structure.sharedDirection.referenceSelections!;
+  }
+  return take.state.structure.directionsByShotId[take.shotIds[0]!]!
+    .referenceSelections!;
+}

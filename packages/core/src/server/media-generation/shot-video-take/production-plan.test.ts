@@ -368,11 +368,10 @@ describe('shot video take preflight and validation', () => {
   it('excludes optional reference-image dependencies from shot video plans', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    await projectData.updateSceneShotVideoTakeShotDesign({
+    await projectData.updateSceneShotVideoTakeDirection({
       homeDir,
       takeId: written.take.takeId,
-      shotId: 'shot_001',
-      shotDesign: {},
+      direction: {},
     });
     const production = {
       inputModeId: 'text-only' as const,

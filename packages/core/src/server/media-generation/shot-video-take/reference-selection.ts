@@ -3,6 +3,10 @@ import type {
   SceneShotVideoTakeState,
 } from '../../../client/index.js';
 import type { SceneReferenceScope } from './reference-scope.js';
+import {
+  sceneShotVideoTakeDirectionReferenceSelections,
+  sceneShotVideoTakeStructureDirections,
+} from './take-state.js';
 
 export function selectedCastIdsForShots(
   shots: SceneShot[]
@@ -80,7 +84,13 @@ export function effectiveScopedLocationSelectionForShots(
 export function selectedLookbookSheetIdsForTakeState(
   state: SceneShotVideoTakeState
 ): Set<string> {
-  return new Set(state.referenceSelections.selectedLookbookSheetIds);
+  return new Set(
+    sceneShotVideoTakeStructureDirections(state.structure).flatMap(
+      (direction) =>
+        sceneShotVideoTakeDirectionReferenceSelections(direction)
+          .selectedLookbookSheetIds
+    )
+  );
 }
 
 
@@ -89,7 +99,14 @@ export function selectedCharacterSheetAssetIdForTakeState(
   state: SceneShotVideoTakeState,
   castMemberId: string
 ): string | null {
-  return state.referenceSelections.selectedCharacterSheetAssetIds[castMemberId] ?? null;
+  for (const direction of sceneShotVideoTakeStructureDirections(state.structure)) {
+    const selected = sceneShotVideoTakeDirectionReferenceSelections(direction)
+      .selectedCharacterSheetAssetIds[castMemberId];
+    if (selected) {
+      return selected;
+    }
+  }
+  return null;
 }
 
 
@@ -98,5 +115,13 @@ export function referencedEnvironmentSheetAssetIdsForTakeState(
   state: SceneShotVideoTakeState,
   locationId: string
 ): string[] {
-  return state.referenceSelections.referencedLocationSheetAssetIds[locationId] ?? [];
+  return [
+    ...new Set(
+      sceneShotVideoTakeStructureDirections(state.structure).flatMap(
+        (direction) =>
+          sceneShotVideoTakeDirectionReferenceSelections(direction)
+            .referencedLocationSheetAssetIds[locationId] ?? []
+      )
+    ),
+  ];
 }

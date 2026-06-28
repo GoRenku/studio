@@ -1,4 +1,4 @@
-import type { SceneShotVideoTakeShotDesign } from '@gorenku/studio-core/server';
+import type { SceneShotVideoTakeDirection } from '@gorenku/studio-core/server';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -10,11 +10,11 @@ import {
   readHttpRequestRecord,
 } from './request-validation.js';
 
-const CONTEXT = 'scene shot design request';
+const CONTEXT = 'scene shot video take direction request';
 
-export function readSceneShotDesignRequest(
+export function readSceneShotVideoTakeDirectionRequest(
   input: unknown
-): SceneShotVideoTakeShotDesign | null {
+): SceneShotVideoTakeDirection | null {
   const issues: DiagnosticIssue[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
@@ -23,13 +23,13 @@ export function readSceneShotDesignRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['shotDesign'],
+    ['direction'],
     issues,
     CONTEXT,
-    'Send only the shotDesign field.'
+    'Send only the direction field.'
   );
 
-  const value = record.shotDesign;
+  const value = record.direction;
   if (value === null || value === undefined) {
     finishOrThrow(issues);
     return null;
@@ -38,15 +38,15 @@ export function readSceneShotDesignRequest(
     issues.push(
       createDiagnosticError(
         'STUDIO_SERVER330',
-        'shotDesign must be an object or null.',
-        { path: ['shotDesign'], context: CONTEXT },
-        'Send the structured shot design object, or null to clear it.'
+        'direction must be an object or null.',
+        { path: ['direction'], context: CONTEXT },
+        'Send the structured direction object, or null to clear it.'
       )
     );
     throwRequestError(issues);
   }
   finishOrThrow(issues);
-  return value as SceneShotVideoTakeShotDesign;
+  return value as SceneShotVideoTakeDirection;
 }
 
 function finishOrThrow(issues: DiagnosticIssue[]): void {
@@ -59,8 +59,8 @@ function finishOrThrow(issues: DiagnosticIssue[]): void {
 function throwRequestError(issues: DiagnosticIssue[]): never {
   throw createStructuredError({
     code: 'STUDIO_SERVER331',
-    message: 'Scene shot design request failed validation.',
+    message: 'Scene shot video take direction request failed validation.',
     issues,
-    suggestion: 'Send a shotDesign object or null.',
+    suggestion: 'Send a direction object or null.',
   });
 }

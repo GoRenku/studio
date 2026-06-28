@@ -956,14 +956,18 @@ function take(
 
 function emptyTakeState() {
   return {
-    version: 1 as const,
-    shotDesignByShotId: {},
-    referenceSelections: {
-      dependencyInclusions: {},
-      selectedCharacterSheetAssetIds: {},
-      referencedLocationSheetAssetIds: {},
-      selectedLookbookSheetIds: [],
-      selectedDialogueAudioTakeIds: {},
+    version: 2 as const,
+    structure: {
+      mode: 'continuous' as const,
+      sharedDirection: {
+        referenceSelections: {
+          dependencyInclusions: {},
+          selectedCharacterSheetAssetIds: {},
+          referencedLocationSheetAssetIds: {},
+          selectedLookbookSheetIds: [],
+          selectedDialogueAudioTakeIds: {},
+        },
+      },
     },
     production: {},
   };

@@ -17,6 +17,10 @@ import {
 } from '../../database/access/scene-dialogue-audio.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { sceneDialogueAudioDependencyId } from '../dependency-identifiers.js';
+import {
+  sceneShotVideoTakeDirectionReferenceSelections,
+  sceneShotVideoTakeStructureDirections,
+} from './take-state.js';
 
 export interface ResolvedShotDialogueAudioReference {
   dependencyId: string;
@@ -108,10 +112,10 @@ export function resolveShotDialogueAudioReferences(input: {
   const references = dialogueBlocksInSceneOrder.map((dialogueBlock) => {
     const dialogueId = dialogueBlock.dialogueId;
     const audio = audioByDialogueId.get(dialogueId) ?? null;
-    const selectedTakeId =
-      input.context.take.state.referenceSelections.selectedDialogueAudioTakeIds[
-        dialogueId
-      ];
+    const selectedTakeId = selectedDialogueAudioTakeIdForContext(
+      input.context,
+      dialogueId
+    );
     const pickedTake =
       selectedTakeId && audio
         ? audio.takes.find((take) => take.takeId === selectedTakeId) ?? null
@@ -186,6 +190,22 @@ export function resolveShotDialogueAudioReferences(input: {
     references,
     diagnostics,
   };
+}
+
+function selectedDialogueAudioTakeIdForContext(
+  context: ShotVideoTakeProductionContext,
+  dialogueId: string
+): string | undefined {
+  for (const direction of sceneShotVideoTakeStructureDirections(
+    context.take.state.structure
+  )) {
+    const selected = sceneShotVideoTakeDirectionReferenceSelections(direction)
+      .selectedDialogueAudioTakeIds[dialogueId];
+    if (selected) {
+      return selected;
+    }
+  }
+  return undefined;
 }
 
 function takeLabels(takes: SceneDialogueAudioTake[]): Map<string, string> {

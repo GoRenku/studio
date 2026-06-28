@@ -7,6 +7,7 @@ import type {
   SceneDialogueAudioContext,
   SceneShotVideoTakeEditContext,
   SceneShotVideoTake,
+  SceneShotVideoTakeReferenceSelections,
   ShotVideoTakeProductionContext,
   ShotVideoTakeOutputGenerationPlan,
   SceneShotVideoTakeProductionState,
@@ -1128,7 +1129,10 @@ export function fakeProjectDataService(): NonNullable<
     async updateSceneShotVideoTakeProduction(input) {
       return makeShotVideoTakeContext(input, input.production);
     },
-    async updateSceneShotVideoTakeShotDesign(input) {
+    async updateSceneShotVideoTakeDirection(input) {
+      return makeShotVideoTakeContext(input);
+    },
+    async updateSceneShotVideoTakeStructureMode(input) {
       return makeShotVideoTakeContext(input);
     },
     async updateSceneShotVideoTakeShots(input) {
@@ -1373,7 +1377,7 @@ function makeShotVideoTakeContext(
   production?: SceneShotVideoTakeProductionState,
   shotIds?: string[],
   referenceSelections?: Partial<
-    SceneShotVideoTake['state']['referenceSelections']
+    SceneShotVideoTakeReferenceSelections
   >
 ): ShotVideoTakeProductionContext {
   const take = makeSceneShotVideoTake({
@@ -1477,7 +1481,7 @@ function makeSceneShotVideoTake(
     shotIds?: string[];
     title?: string;
     production?: SceneShotVideoTakeProductionState;
-    referenceSelections?: Partial<SceneShotVideoTake['state']['referenceSelections']>;
+    referenceSelections?: Partial<SceneShotVideoTakeReferenceSelections>;
   } = {}
 ): SceneShotVideoTake {
   const shotIds = input.shotIds ?? ['shot_001'];
@@ -1490,15 +1494,19 @@ function makeSceneShotVideoTake(
     shotIds,
     picked: false,
     state: {
-      version: 1,
-      shotDesignByShotId: {},
-      referenceSelections: {
-        dependencyInclusions: {},
-        selectedCharacterSheetAssetIds: {},
-        referencedLocationSheetAssetIds: {},
-        selectedLookbookSheetIds: [],
-        selectedDialogueAudioTakeIds: {},
-        ...input.referenceSelections,
+      version: 2,
+      structure: {
+        mode: 'continuous',
+        sharedDirection: {
+          referenceSelections: {
+            dependencyInclusions: {},
+            selectedCharacterSheetAssetIds: {},
+            referencedLocationSheetAssetIds: {},
+            selectedLookbookSheetIds: [],
+            selectedDialogueAudioTakeIds: {},
+            ...input.referenceSelections,
+          },
+        },
       },
       production: input.production ?? {},
     },

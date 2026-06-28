@@ -141,13 +141,12 @@ export async function createShotVideoTakeMovieProject(input: {
     ids,
     takeId: take.takeId,
   });
-  await projectData.updateSceneShotVideoTakeShotDesign({
+  await projectData.updateSceneShotVideoTakeDirection({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
     sceneId: ids.sceneId,
     takeId: take.takeId,
-    shotId: 'shot_001',
-    shotDesign: {
+    direction: {
       composition: {
         shotSize: 'close-up',
         subjectFraming: ['single'],

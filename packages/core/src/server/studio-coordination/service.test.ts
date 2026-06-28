@@ -505,11 +505,10 @@ describe('StudioCoordinationService', () => {
       shotIds: ['shot_001'],
     });
     const take = takeReport.overview.take;
-    await projectData.updateSceneShotVideoTakeShotDesign({
+    await projectData.updateSceneShotVideoTakeDirection({
       homeDir,
       takeId: take.takeId,
-      shotId: 'shot_001',
-      shotDesign: {
+      direction: {
         composition: {
           shotSize: 'medium-close-up',
           subjectFraming: ['single'],
@@ -548,7 +547,6 @@ describe('StudioCoordinationService', () => {
           type: 'scene',
           id: sceneId,
           sceneTab: 'shots',
-          shotId: 'shot_001',
           shotTab: 'composition',
           takeId: take.takeId,
         },
@@ -565,7 +563,6 @@ describe('StudioCoordinationService', () => {
     expect(current.selection).toMatchObject({
       type: 'scene',
       sceneTab: 'shots',
-      shotId: 'shot_001',
       shotTab: 'composition',
       takeId: take.takeId,
     });
@@ -666,7 +663,6 @@ describe('StudioCoordinationService', () => {
           type: 'scene',
           id: sceneId,
           sceneTab: 'takes',
-          shotId: 'shot_001',
           shotTab: 'ai-production',
           takeId: take.takeId,
         },

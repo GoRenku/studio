@@ -6,10 +6,11 @@ import type {
 } from '../../../client/scene-shot-list.js';
 import type {
   SceneShotVideoTake,
+  SceneShotVideoTakeDirection,
+  SceneShotVideoTakeReferenceSelections,
   SceneShotVideoTakeStatus,
   SceneShotVideoTakeHistorySnapshot,
   SceneShotVideoTakeHistoryDifference,
-  SceneShotVideoTakeShotDesign,
   SceneShotVideoTakeState,
 } from '../../../client/shot-video-take.js';
 import {
@@ -36,8 +37,11 @@ import type { ScreenplayDocument } from '../../../client/screenplay.js';
 import {
   buildSceneShotVideoTakeState,
   carrySceneShotVideoTakeStateForShotMembership,
+  setSceneShotVideoTakeStructureMode,
+  updateSceneShotVideoTakeDirectionReferenceSelections,
   updateSceneShotVideoTakeStateProduction,
-  updateSceneShotVideoTakeShotDesign,
+  updateSceneShotVideoTakeDirection,
+  validateSceneShotVideoTakeStructure,
 } from '../../media-generation/shot-video-take/take-state.js';
 
 export type SceneShotVideoTakeRecord =
@@ -256,12 +260,12 @@ export function updateSceneShotVideoTakeShotMembershipRecord(
   });
 }
 
-export function updateSceneShotVideoTakeShotDesignRecord(
+export function updateSceneShotVideoTakeDirectionRecord(
   session: DatabaseSession,
   input: {
     takeId: string;
-    shotId: string;
-    shotDesign: SceneShotVideoTakeShotDesign | null;
+    shotId?: string;
+    direction: SceneShotVideoTakeDirection | null;
     screenplay: ScreenplayDocument;
     now: string;
   }
@@ -270,16 +274,89 @@ export function updateSceneShotVideoTakeShotDesignRecord(
     takeId: input.takeId,
     screenplay: input.screenplay,
   });
-  if (!take.shotIds.includes(input.shotId)) {
+  if (input.shotId && !take.shotIds.includes(input.shotId)) {
     throw new ProjectDataError(
       'PROJECT_DATA422',
       `Shot id is not in the Scene Shot Video Take: ${input.shotId}.`
     );
   }
-  const state = updateSceneShotVideoTakeShotDesign({
+  const state = updateSceneShotVideoTakeDirection({
     state: take.state,
     shotId: input.shotId,
-    shotDesign: input.shotDesign,
+    direction: input.direction,
+  });
+  session.db
+    .update(sceneShotVideoTakes)
+    .set({
+      stateJson: serializeSceneShotVideoTakeState({ state }),
+      updatedAt: input.now,
+    })
+    .where(eq(sceneShotVideoTakes.id, input.takeId))
+    .run();
+  return requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+}
+
+export function updateSceneShotVideoTakeReferenceSelectionsRecord(
+  session: DatabaseSession,
+  input: {
+    takeId: string;
+    shotId?: string;
+    referenceSelections: SceneShotVideoTakeReferenceSelections;
+    screenplay: ScreenplayDocument;
+    now: string;
+  }
+): SceneShotVideoTake {
+  const take = requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+  if (input.shotId && !take.shotIds.includes(input.shotId)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA422',
+      `Shot id is not in the Scene Shot Video Take: ${input.shotId}.`
+    );
+  }
+  const state = updateSceneShotVideoTakeDirectionReferenceSelections({
+    state: take.state,
+    shotId: input.shotId,
+    referenceSelections: input.referenceSelections,
+  });
+  session.db
+    .update(sceneShotVideoTakes)
+    .set({
+      stateJson: serializeSceneShotVideoTakeState({ state }),
+      updatedAt: input.now,
+    })
+    .where(eq(sceneShotVideoTakes.id, input.takeId))
+    .run();
+  return requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+}
+
+export function updateSceneShotVideoTakeStructureModeRecord(
+  session: DatabaseSession,
+  input: {
+    takeId: string;
+    mode: SceneShotVideoTakeState['structure']['mode'];
+    sourceShotId?: string;
+    screenplay: ScreenplayDocument;
+    now: string;
+  }
+): SceneShotVideoTake {
+  const take = requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+  const state = setSceneShotVideoTakeStructureMode({
+    state: take.state,
+    shotIds: take.shotIds,
+    mode: input.mode,
+    sourceShotId: input.sourceShotId,
   });
   session.db
     .update(sceneShotVideoTakes)
@@ -397,6 +474,7 @@ function toSceneShotVideoTake(
     session,
     input.row.id
   );
+  validateSceneShotVideoTakeStructure({ state, shotIds });
   return {
     takeId: input.row.id,
     sceneId: input.row.sceneId,

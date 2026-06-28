@@ -1,13 +1,26 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   SceneShot,
   SceneShotVideoTake,
+  SceneShotVideoTakeStructureMode,
 } from '@gorenku/studio-core/client';
+import { Film, Route } from 'lucide-react';
+import { Button } from '@/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import type {
   SceneShotListResourceResponse,
 } from '@/services/studio-project-contracts';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
+import { updateSceneShotVideoTakeStructureMode } from '@/services/studio-shot-video-takes-api';
 import type { SceneShotDetailTab } from '../movie-studio-selection';
 import { idleSaveNotification } from '../detail-save-notification';
 import { useDetailSaveNotificationSlots } from '../detail-save-notification-slots';
@@ -92,6 +105,9 @@ export function SceneShotDetail({
     sceneId,
     takeId: editableTake?.takeId,
   });
+  const { refreshProductionPlan } = production;
+  const [structureDialogOpen, setStructureDialogOpen] = useState(false);
+  const [structureBusy, setStructureBusy] = useState(false);
   const handleShotDesignSaveNotificationChange = useCallback(
     (status: SaveNotificationStatus) => {
       setDetailSaveNotificationSlot('shot-design', status);
@@ -126,6 +142,53 @@ export function SceneShotDetail({
     }
   }, [activeTab, isShotEditable, onTabChange]);
 
+  const handleStructureModeChange = useCallback(
+    async (
+      mode: SceneShotVideoTakeStructureMode,
+      sourceShotId?: string
+    ) => {
+      if (!editableTake || editableTake.state.structure.mode === mode) {
+        return;
+      }
+      setStructureBusy(true);
+      try {
+        const result = await updateSceneShotVideoTakeStructureMode(
+          projectName,
+          sceneId,
+          editableTake.takeId,
+          mode,
+          sourceShotId
+        );
+        onTakeChange?.(result.context.take);
+        await refreshProductionPlan();
+        setStructureDialogOpen(false);
+      } catch (error) {
+        if (
+          mode === 'continuous' &&
+          error instanceof Error &&
+          error.message.includes(
+            'CORE_SHOT_VIDEO_TAKE_STRUCTURE_MISSING_SOURCE_SHOT'
+          )
+        ) {
+          setStructureDialogOpen(true);
+          return;
+        }
+        throw error;
+      } finally {
+        setStructureBusy(false);
+      }
+    },
+    [
+      editableTake,
+      onTakeChange,
+      projectName,
+      refreshProductionPlan,
+      sceneId,
+      setStructureDialogOpen,
+      setStructureBusy,
+    ]
+  );
+
   return (
     <section className='flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
       <ResizablePanelGroup
@@ -150,7 +213,6 @@ export function SceneShotDetail({
           className='min-h-0'
         >
           <TakeShotDesignProvider
-            key={`${editableTake?.takeId ?? 'shot-list'}:${shot.shotId}`}
             projectName={projectName}
             sceneId={sceneId}
             shot={shot}
@@ -165,9 +227,18 @@ export function SceneShotDetail({
               items={visibleTabs.map((tab) => ({ ...tab }))}
               trailing={
                 takeTag ? (
-                  <SceneShotAiProductionTakeTag
-                    label={takeTag}
-                  />
+                  <div className='flex items-center gap-2'>
+                    <SceneShotAiProductionTakeTag label={takeTag} />
+                    {editableTake ? (
+                      <ShotVideoTakeStructureToggle
+                        mode={editableTake.state.structure.mode}
+                        disabled={structureBusy}
+                        onChange={(mode) => {
+                          void handleStructureModeChange(mode);
+                        }}
+                      />
+                    ) : null}
+                  </div>
                 ) : null
               }
             >
@@ -192,9 +263,10 @@ export function SceneShotDetail({
                       <SceneShotDialogsTab
                         projectName={projectName}
                         sceneId={sceneId}
+                        selectedShotId={shot.shotId}
                         castMemberImages={castMemberImages}
                         productionPlan={production.productionPlan}
-                        onPlanRefresh={production.refreshProductionPlan}
+                        onPlanRefresh={refreshProductionPlan}
                         onSaveNotificationChange={handleDialogsSaveNotificationChange}
                       />
                     </LineTabsContent>
@@ -202,8 +274,9 @@ export function SceneShotDetail({
                       <SceneShotReferencesTab
                         projectName={projectName}
                         sceneId={sceneId}
+                        selectedShotId={shot.shotId}
                         productionPlan={production.productionPlan}
-                        onPlanRefresh={production.refreshProductionPlan}
+                        onPlanRefresh={refreshProductionPlan}
                         onSaveNotificationChange={handleReferencesSaveNotificationChange}
                       />
                     </LineTabsContent>
@@ -221,6 +294,113 @@ export function SceneShotDetail({
           </TakeShotDesignProvider>
         </ResizablePanel>
       </ResizablePanelGroup>
+      {editableTake ? (
+        <ShotVideoTakeStructureSourceDialog
+          open={structureDialogOpen}
+          busy={structureBusy}
+          take={editableTake}
+          onOpenChange={setStructureDialogOpen}
+          onChoose={(sourceShotId) => {
+            void handleStructureModeChange('continuous', sourceShotId);
+          }}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function ShotVideoTakeStructureToggle({
+  mode,
+  disabled,
+  onChange,
+}: {
+  mode: SceneShotVideoTakeStructureMode;
+  disabled: boolean;
+  onChange: (mode: SceneShotVideoTakeStructureMode) => void;
+}) {
+  return (
+    <div className='inline-flex h-7 items-center gap-0.5 rounded-md border border-border/50 bg-background/70 p-0.5'>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type='button'
+            size='icon'
+            variant={mode === 'continuous' ? 'secondary' : 'ghost'}
+            className='h-6 w-7 rounded-[5px]'
+            aria-label='Continuous Move'
+            disabled={disabled}
+            onClick={() => onChange('continuous')}
+          >
+            <Route className='h-3.5 w-3.5' aria-hidden='true' />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side='bottom'>Continuous Move</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type='button'
+            size='icon'
+            variant={mode === 'multi-cut' ? 'secondary' : 'ghost'}
+            className='h-6 w-7 rounded-[5px]'
+            aria-label='Multi-Cut Sequence'
+            disabled={disabled}
+            onClick={() => onChange('multi-cut')}
+          >
+            <Film className='h-3.5 w-3.5' aria-hidden='true' />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side='bottom'>Multi-Cut Sequence</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
+function ShotVideoTakeStructureSourceDialog({
+  open,
+  busy,
+  take,
+  onOpenChange,
+  onChoose,
+}: {
+  open: boolean;
+  busy: boolean;
+  take: SceneShotVideoTake;
+  onOpenChange: (open: boolean) => void;
+  onChoose: (sourceShotId: string) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='max-w-md'>
+        <DialogHeader>
+          <DialogTitle>Choose Continuous Move Direction</DialogTitle>
+          <DialogDescription>
+            This take has different settings per shot. Choose which shot should
+            become the shared Continuous Move direction.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className='flex-wrap gap-2 sm:justify-start'>
+          {take.shotIds.map((shotId, index) => (
+            <Button
+              key={shotId}
+              type='button'
+              variant='secondary'
+              disabled={busy}
+              onClick={() => onChoose(shotId)}
+            >
+              Use Shot {index + 1}
+            </Button>
+          ))}
+          <Button
+            type='button'
+            variant='ghost'
+            disabled={busy}
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

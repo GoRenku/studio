@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { deriveTakeShotDesignPromptStrings } from './shot-spec-labels.js';
+import { deriveTakeDirectionPromptStrings } from './shot-spec-labels.js';
 
-describe('deriveTakeShotDesignPromptStrings', () => {
+describe('deriveTakeDirectionPromptStrings', () => {
   it('returns no strings for empty or absent design', () => {
-    expect(deriveTakeShotDesignPromptStrings(undefined)).toEqual({});
-    expect(deriveTakeShotDesignPromptStrings({})).toEqual({
+    expect(deriveTakeDirectionPromptStrings(undefined)).toEqual({});
+    expect(deriveTakeDirectionPromptStrings({})).toEqual({
       shotType: undefined,
       cameraAngle: undefined,
       framing: undefined,
@@ -14,7 +14,7 @@ describe('deriveTakeShotDesignPromptStrings', () => {
   });
 
   it('derives shot size, angle + dutch, framing, lens, focus, and movement strings', () => {
-    const derived = deriveTakeShotDesignPromptStrings({
+    const derived = deriveTakeDirectionPromptStrings({
       composition: {
         shotSize: 'medium-close-up',
         subjectFraming: ['single', 'over-the-shoulder'],
@@ -46,14 +46,14 @@ describe('deriveTakeShotDesignPromptStrings', () => {
   });
 
   it('keeps a custom movement even without a structured movement object', () => {
-    const derived = deriveTakeShotDesignPromptStrings({
+    const derived = deriveTakeDirectionPromptStrings({
       motion: { customMotion: 'handheld drift' },
     });
     expect(derived.cameraMovement).toBe('handheld drift');
   });
 
   it('derives the establishing shot label from structured shot size design', () => {
-    const derived = deriveTakeShotDesignPromptStrings({
+    const derived = deriveTakeDirectionPromptStrings({
       composition: { shotSize: 'establishing-shot' },
     });
 

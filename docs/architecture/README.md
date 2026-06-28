@@ -38,6 +38,8 @@ Use this page as the map:
   project-native creative direction surfaces.
 - `media-generation.md` explains the current persisted media generation and
   separate media import architecture.
+- `shot-video-take-structure-modes.md` defines the continuous versus multi-cut
+  Shot Video Take structure model.
 - `drizzle-first-project-data.md` defines the Drizzle-first runtime query
   policy and raw SQL escape hatch.
 - `json-storage-validation.md` records the AJV and JSON Schema requirement for

@@ -122,8 +122,9 @@ When changing the project SQLite schema:
 
 4. If a new schema generation is required:
 
-   - increment the core runtime schema generation constant;
    - add `PRAGMA user_version = <generation>;` to the migration.
+   - choose the next generation after the latest `PRAGMA user_version` already
+     present in the ordered Drizzle migrations.
 
 5. Apply migrations to development projects:
 
@@ -168,10 +169,15 @@ This value is not the latest migration number. It records the breaking schema
 generation that the current runtime is written for:
 
 - breaking schema changes must increment the core runtime schema generation
-  constant and set `PRAGMA user_version = <new generation>` in the migration;
+  by setting `PRAGMA user_version = <new generation>` in the migration;
 - non-breaking migrations must not change `user_version`;
 - runtime project opens must check `user_version` and fail with a structured
   project data error when it does not match the current runtime generation.
+
+The ordered Drizzle migrations are the source of truth for the current runtime
+schema generation. Runtime code derives the expected generation from the latest
+migration that sets `PRAGMA user_version`; do not add a parallel hardcoded
+runtime constant or test fixture value.
 
 A schema change is breaking when current runtime reads or writes require the new
 shape to avoid raw SQLite errors or incorrect behavior. For example, renaming a

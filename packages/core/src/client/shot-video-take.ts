@@ -159,14 +159,25 @@ export interface SceneShotVideoTakeListReport {
 }
 
 export interface SceneShotVideoTakeState {
-  version: 1;
-  shotDesignByShotId: Record<string, SceneShotVideoTakeShotDesign>;
-  referenceSelections: SceneShotVideoTakeReferenceSelections;
+  version: 2;
+  structure: SceneShotVideoTakeStructure;
   production: SceneShotVideoTakeProductionState;
   promptState?: SceneShotVideoTakePromptState;
 }
 
-export interface SceneShotVideoTakeShotDesign {
+export type SceneShotVideoTakeStructureMode = 'continuous' | 'multi-cut';
+
+export type SceneShotVideoTakeStructure =
+  | {
+      mode: 'continuous';
+      sharedDirection: SceneShotVideoTakeDirection;
+    }
+  | {
+      mode: 'multi-cut';
+      directionsByShotId: Record<string, SceneShotVideoTakeDirection>;
+    };
+
+export interface SceneShotVideoTakeDirection {
   composition?: {
     shotSize?: ShotSizeId;
     subjectFraming?: SubjectFramingId[];
@@ -205,6 +216,7 @@ export interface SceneShotVideoTakeShotDesign {
     assetId?: string;
     assetFileId?: string;
   }[];
+  referenceSelections?: SceneShotVideoTakeReferenceSelections;
 }
 
 export interface SceneShotVideoTakeReferenceSelections {
@@ -213,6 +225,154 @@ export interface SceneShotVideoTakeReferenceSelections {
   referencedLocationSheetAssetIds: Record<string, string[]>;
   selectedLookbookSheetIds: string[];
   selectedDialogueAudioTakeIds: Record<string, string>;
+}
+
+export function sceneShotVideoTakeDirectionHasShotProjectionFields(
+  direction: SceneShotVideoTakeDirection | undefined
+): boolean {
+  if (!direction) {
+    return false;
+  }
+  return (
+    sceneShotVideoTakeDirectionHasPromptFields(direction) ||
+    hasCast(direction.cast) ||
+    hasLocation(direction.location)
+  );
+}
+
+export function sceneShotVideoTakeDirectionHasPromptFields(
+  direction: SceneShotVideoTakeDirection | undefined
+): boolean {
+  if (!direction) {
+    return false;
+  }
+  return (
+    hasComposition(direction.composition) ||
+    hasMotion(direction.motion)
+  );
+}
+
+export function sceneShotVideoTakeDirectionHasState(
+  direction: SceneShotVideoTakeDirection | undefined
+): boolean {
+  if (!direction) {
+    return false;
+  }
+  return (
+    sceneShotVideoTakeDirectionHasShotProjectionFields(direction) ||
+    hasLookbook(direction.lookbook) ||
+    hasReferenceImages(direction.referenceImages) ||
+    hasDialogue(direction.dialogue) ||
+    hasReferenceSelections(direction.referenceSelections)
+  );
+}
+
+function hasComposition(
+  composition: SceneShotVideoTakeDirection['composition']
+): boolean {
+  if (!composition) {
+    return false;
+  }
+  return Boolean(
+    composition.shotSize ||
+      composition.cameraAngle ||
+      composition.dutch ||
+      composition.subjectFraming?.length ||
+      hasLens(composition.lens) ||
+      composition.customComposition?.trim()
+  );
+}
+
+function hasLens(
+  lens: NonNullable<SceneShotVideoTakeDirection['composition']>['lens']
+): boolean {
+  if (!lens) {
+    return false;
+  }
+  return Boolean(
+    lens.type ||
+      lens.millimeters !== undefined ||
+      lens.focus
+  );
+}
+
+function hasMotion(
+  motion: SceneShotVideoTakeDirection['motion']
+): boolean {
+  if (!motion) {
+    return false;
+  }
+  return Boolean(
+    motion.movement ||
+      motion.secondary ||
+      motion.track ||
+      motion.rig ||
+      motion.directions?.length ||
+      motion.customMotion?.trim()
+  );
+}
+
+function hasCast(cast: SceneShotVideoTakeDirection['cast']): boolean {
+  if (!cast) {
+    return false;
+  }
+  return Boolean(
+    cast.castMemberIds?.length ||
+      Object.keys(cast.characterSheetAssetIds ?? {}).length
+  );
+}
+
+function hasLocation(
+  location: SceneShotVideoTakeDirection['location']
+): boolean {
+  if (!location) {
+    return false;
+  }
+  return Boolean(
+    location.locationId?.trim() ||
+      location.environmentSheetAssetIds?.length
+  );
+}
+
+function hasLookbook(
+  lookbook: SceneShotVideoTakeDirection['lookbook']
+): boolean {
+  if (!lookbook) {
+    return false;
+  }
+  return Boolean(lookbook.lookbookId?.trim() || lookbook.lookbookSheetId?.trim());
+}
+
+function hasReferenceImages(
+  referenceImages: SceneShotVideoTakeDirection['referenceImages']
+): boolean {
+  if (!referenceImages) {
+    return false;
+  }
+  return Boolean(referenceImages.customMediaInputIds?.length);
+}
+
+function hasDialogue(
+  dialogue: SceneShotVideoTakeDirection['dialogue']
+): boolean {
+  return Boolean(dialogue?.length);
+}
+
+function hasReferenceSelections(
+  referenceSelections: SceneShotVideoTakeReferenceSelections | undefined
+): boolean {
+  if (!referenceSelections) {
+    return false;
+  }
+  return (
+    Object.keys(referenceSelections.dependencyInclusions).length > 0 ||
+    Object.keys(referenceSelections.selectedCharacterSheetAssetIds).length > 0 ||
+    Object.values(referenceSelections.referencedLocationSheetAssetIds).some(
+      (assetIds) => assetIds.length > 0
+    ) ||
+    referenceSelections.selectedLookbookSheetIds.length > 0 ||
+    Object.keys(referenceSelections.selectedDialogueAudioTakeIds).length > 0
+  );
 }
 
 export interface SceneShotVideoTakePromptState {

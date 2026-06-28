@@ -348,54 +348,10 @@ export const sceneShotVideoTakeStateSchema = {
   $id: 'https://schemas.gorenku.com/studio/scene-shot-video-take-state.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: [
-    'version',
-    'shotDesignByShotId',
-    'referenceSelections',
-    'production',
-  ],
+  required: ['version', 'structure', 'production'],
   properties: {
-    version: { const: 1 },
-    shotDesignByShotId: {
-      type: 'object',
-      additionalProperties: sceneShotVideoTakeShotDesignSchema(),
-    },
-    referenceSelections: {
-      type: 'object',
-      required: [
-        'dependencyInclusions',
-        'selectedCharacterSheetAssetIds',
-        'referencedLocationSheetAssetIds',
-        'selectedLookbookSheetIds',
-        'selectedDialogueAudioTakeIds',
-      ],
-      properties: {
-        dependencyInclusions: {
-          type: 'object',
-          additionalProperties: enumValue(['include', 'exclude'] as const),
-        },
-        selectedCharacterSheetAssetIds: {
-          type: 'object',
-          additionalProperties: nonEmptyString(),
-        },
-        referencedLocationSheetAssetIds: {
-          type: 'object',
-          additionalProperties: {
-            type: 'array',
-            items: nonEmptyString(),
-          },
-        },
-        selectedLookbookSheetIds: {
-          type: 'array',
-          items: nonEmptyString(),
-        },
-        selectedDialogueAudioTakeIds: {
-          type: 'object',
-          additionalProperties: nonEmptyString(),
-        },
-      },
-      additionalProperties: false,
-    },
+    version: { const: 2 },
+    structure: sceneShotVideoTakeStructureSchema(),
     production: shotVideoTakeProductionSchemaProperties(),
     promptState: {
       type: 'object',
@@ -450,9 +406,38 @@ export const sceneShotVideoTakeHistorySnapshotSchema = {
   additionalProperties: false,
 } as const;
 
-function sceneShotVideoTakeShotDesignSchema(): Record<string, unknown> {
+function sceneShotVideoTakeStructureSchema(): Record<string, unknown> {
+  return {
+    oneOf: [
+      {
+        type: 'object',
+        required: ['mode', 'sharedDirection'],
+        properties: {
+          mode: { const: 'continuous' },
+          sharedDirection: sceneShotVideoTakeDirectionSchema(),
+        },
+        additionalProperties: false,
+      },
+      {
+        type: 'object',
+        required: ['mode', 'directionsByShotId'],
+        properties: {
+          mode: { const: 'multi-cut' },
+          directionsByShotId: {
+            type: 'object',
+            additionalProperties: sceneShotVideoTakeDirectionSchema(),
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
+  };
+}
+
+function sceneShotVideoTakeDirectionSchema(): Record<string, unknown> {
   return {
     type: 'object',
+    required: ['referenceSelections'],
     properties: {
       composition: {
         type: 'object',
@@ -551,6 +536,46 @@ function sceneShotVideoTakeShotDesignSchema(): Record<string, unknown> {
           },
           additionalProperties: false,
         },
+      },
+      referenceSelections: sceneShotVideoTakeReferenceSelectionsSchema(),
+    },
+    additionalProperties: false,
+  };
+}
+
+function sceneShotVideoTakeReferenceSelectionsSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    required: [
+      'dependencyInclusions',
+      'selectedCharacterSheetAssetIds',
+      'referencedLocationSheetAssetIds',
+      'selectedLookbookSheetIds',
+      'selectedDialogueAudioTakeIds',
+    ],
+    properties: {
+      dependencyInclusions: {
+        type: 'object',
+        additionalProperties: enumValue(['include', 'exclude'] as const),
+      },
+      selectedCharacterSheetAssetIds: {
+        type: 'object',
+        additionalProperties: nonEmptyString(),
+      },
+      referencedLocationSheetAssetIds: {
+        type: 'object',
+        additionalProperties: {
+          type: 'array',
+          items: nonEmptyString(),
+        },
+      },
+      selectedLookbookSheetIds: {
+        type: 'array',
+        items: nonEmptyString(),
+      },
+      selectedDialogueAudioTakeIds: {
+        type: 'object',
+        additionalProperties: nonEmptyString(),
       },
     },
     additionalProperties: false,

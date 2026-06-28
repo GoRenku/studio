@@ -3,6 +3,7 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
+import { sceneShotVideoTakeDirectionForShot } from './take-state.js';
 
 describe('Shot Video Take shot membership', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -211,21 +212,19 @@ describe('Shot Video Take shot membership', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
 
-    await projectData.updateSceneShotVideoTakeShotDesign({
+    await projectData.updateSceneShotVideoTakeDirection({
       homeDir,
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
-      shotId: 'shot_001',
-      shotDesign: { composition: { shotSize: 'wide-shot' } },
+      direction: { composition: { shotSize: 'wide-shot' } },
     });
 
     await expect(
-      projectData.updateSceneShotVideoTakeShotDesign({
+      projectData.updateSceneShotVideoTakeDirection({
         homeDir,
         sceneId: 'scene_wrong',
         takeId: written.take.takeId,
-        shotId: 'shot_001',
-        shotDesign: { composition: { shotSize: 'close-up' } },
+        direction: { composition: { shotSize: 'close-up' } },
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA423' });
 
@@ -235,7 +234,7 @@ describe('Shot Video Take shot membership', () => {
       takeId: written.take.takeId,
     });
     expect(
-      take.state.shotDesignByShotId.shot_001?.composition?.shotSize
+      sceneShotVideoTakeDirectionForShot({ state: take.state, shotId: 'shot_001' }).composition?.shotSize
     ).toBe('wide-shot');
   });
 
@@ -273,11 +272,10 @@ describe('Shot Video Take shot membership', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const takeId = written.take.takeId;
 
-    await projectData.updateSceneShotVideoTakeShotDesign({
+    await projectData.updateSceneShotVideoTakeDirection({
       homeDir,
       takeId,
-      shotId: 'shot_001',
-      shotDesign: { composition: { shotSize: 'close-up' } },
+      direction: { composition: { shotSize: 'close-up' } },
     });
     await projectData.writeSceneShotList({
       homeDir,
@@ -299,7 +297,10 @@ describe('Shot Video Take shot membership', () => {
       'shot_001',
     ]);
     expect(
-      editContext.take.state.shotDesignByShotId.shot_001?.composition?.shotSize
+      sceneShotVideoTakeDirectionForShot({
+        state: editContext.take.state,
+        shotId: 'shot_001',
+      }).composition?.shotSize
     ).toBe('close-up');
     expect(editContext.take.status.history.differences).toContain(
       'active-shot-list-changed'
@@ -324,27 +325,23 @@ describe('Shot Video Take shot membership', () => {
     const secondTake = secondTakeReport.overview.take;
 
     const firstContext =
-      await projectData.updateSceneShotVideoTakeShotDesign({
+      await projectData.updateSceneShotVideoTakeDirection({
         homeDir,
         takeId: firstTakeId,
-        shotId: 'shot_001',
-        shotDesign: { composition: { shotSize: 'close-up' } },
+        direction: { composition: { shotSize: 'close-up' } },
       });
     const secondContext =
-      await projectData.updateSceneShotVideoTakeShotDesign({
+      await projectData.updateSceneShotVideoTakeDirection({
         homeDir,
         takeId: secondTake.takeId,
-        shotId: 'shot_001',
-        shotDesign: { composition: { shotSize: 'wide-shot' } },
+        direction: { composition: { shotSize: 'wide-shot' } },
       });
 
     expect(
-      firstContext.take.state.shotDesignByShotId.shot_001?.composition
-        ?.shotSize
+      sceneShotVideoTakeDirectionForShot({ state: firstContext.take.state, shotId: 'shot_001' }).composition?.shotSize
     ).toBe('close-up');
     expect(
-      secondContext.take.state.shotDesignByShotId.shot_001?.composition
-        ?.shotSize
+      sceneShotVideoTakeDirectionForShot({ state: secondContext.take.state, shotId: 'shot_001' }).composition?.shotSize
     ).toBe('wide-shot');
 
     const rereadFirst = await projectData.readSceneShotVideoTake({
@@ -352,7 +349,7 @@ describe('Shot Video Take shot membership', () => {
       takeId: firstTakeId,
     });
     expect(
-      rereadFirst.state.shotDesignByShotId.shot_001?.composition?.shotSize
+      sceneShotVideoTakeDirectionForShot({ state: rereadFirst.state, shotId: 'shot_001' }).composition?.shotSize
     ).toBe('close-up');
   });
 
@@ -360,11 +357,10 @@ describe('Shot Video Take shot membership', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
 
-    await projectData.updateSceneShotVideoTakeShotDesign({
+    await projectData.updateSceneShotVideoTakeDirection({
       homeDir,
       takeId: written.take.takeId,
-      shotId: 'shot_001',
-      shotDesign: { composition: { shotSize: 'medium-close-up' } },
+      direction: { composition: { shotSize: 'medium-close-up' } },
     });
 
     const shotList = await projectData.readSceneShotList({

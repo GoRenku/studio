@@ -184,15 +184,19 @@ function takeWithProduction(
     title: 'Shot Video Take',
     picked: false,
     state: {
-      version: 1,
-      shotDesignByShotId: {},
-      referenceSelections: {
-        dependencyInclusions: {},
-        selectedCharacterSheetAssetIds: {},
-        referencedLocationSheetAssetIds: {},
-        selectedLookbookSheetIds: [],
-        selectedDialogueAudioTakeIds: {},
+      version: 2,
+    structure: {
+      mode: 'continuous',
+      sharedDirection: {
+        referenceSelections: {
+          dependencyInclusions: {},
+          selectedCharacterSheetAssetIds: {},
+          referencedLocationSheetAssetIds: {},
+          selectedLookbookSheetIds: [],
+          selectedDialogueAudioTakeIds: {},
+        },
       },
+    },
       production,
     },
     createdAt: '',

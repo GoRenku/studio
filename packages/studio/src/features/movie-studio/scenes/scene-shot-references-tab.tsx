@@ -37,6 +37,7 @@ import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
 interface SceneShotReferencesTabProps {
   projectName: string;
   sceneId: string;
+  selectedShotId?: string;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
   onPlanRefresh?: () => Promise<void>;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
@@ -45,6 +46,7 @@ interface SceneShotReferencesTabProps {
 export function SceneShotReferencesTab({
   projectName,
   sceneId,
+  selectedShotId,
   productionPlan,
   onPlanRefresh,
   onSaveNotificationChange,
@@ -54,6 +56,11 @@ export function SceneShotReferencesTab({
     failureMessage: 'References could not be saved.',
   });
   const references = productionPlan?.references;
+  const scopedShotId = selectedShotId ?? productionPlan?.take.shotIds[0];
+  const mutationShotId =
+    productionPlan?.take.state.structure.mode === 'multi-cut'
+      ? scopedShotId
+      : undefined;
   const referenceIssues =
     productionPlan?.diagnostics.filter(isReferenceDiagnosticIssue) ?? [];
 
@@ -81,6 +88,7 @@ export function SceneShotReferencesTab({
         {
           dependencyId,
           inclusion,
+          ...(mutationShotId ? { shotId: mutationShotId } : {}),
         }
       );
       await refreshAfterMutation(result);
@@ -186,6 +194,7 @@ export function SceneShotReferencesTab({
                           sceneId,
                           take.takeId,
                           {
+                            ...(mutationShotId ? { shotId: mutationShotId } : {}),
                             castMemberId,
                             assetId,
                           }
@@ -235,7 +244,11 @@ export function SceneShotReferencesTab({
                         projectName,
                         sceneId,
                         take.takeId,
-                        { locationId, assetIds: nextAssetIds }
+                        {
+                          ...(mutationShotId ? { shotId: mutationShotId } : {}),
+                          locationId,
+                          assetIds: nextAssetIds,
+                        }
                       );
                       await refreshAfterMutation(result);
                     });

@@ -3,6 +3,10 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
+import type {
+  SceneShotVideoTake,
+  SceneShotVideoTakeReferenceSelections,
+} from '../../../client/index.js';
 import { createDeterministicIdGenerator } from '../../index.js';
 import { sceneDialogueAudioDependencyId } from '../dependency-identifiers.js';
 import { buildDialogueAudioCapabilityReport } from './reference-sections.js';
@@ -96,7 +100,7 @@ describe('shot video take preflight and validation', () => {
       sceneId: ids.sceneId,
       takeId: written.take.takeId,
     });
-    expect(take.state.referenceSelections.dependencyInclusions).toEqual({});
+    expect(takeReferenceSelections(take).dependencyInclusions).toEqual({});
   });
 
   it('reports an active Lookbook reference as needed when no reference image exists', async () => {
@@ -279,11 +283,10 @@ describe('shot video take preflight and validation', () => {
       unselectedExtraCast?.characterSheets[0]?.card.dependencyLineId
     ).toBeUndefined();
 
-    await projectData.updateSceneShotVideoTakeShotDesign({
+    await projectData.updateSceneShotVideoTakeDirection({
       homeDir,
       takeId: take.takeId,
-      shotId: 'shot_001',
-      shotDesign: {
+      direction: {
         cast: { castMemberIds: [extraCastMemberId] },
       },
     });
@@ -806,6 +809,16 @@ describe('shot video take preflight and validation', () => {
     });
   });
 });
+
+function takeReferenceSelections(
+  take: SceneShotVideoTake
+): SceneShotVideoTakeReferenceSelections {
+  if (take.state.structure.mode === 'continuous') {
+    return take.state.structure.sharedDirection.referenceSelections!;
+  }
+  return take.state.structure.directionsByShotId[take.shotIds[0]!]!
+    .referenceSelections!;
+}
 
 function dialogueCapabilityPlan(input: {
   inputRoles: Array<{

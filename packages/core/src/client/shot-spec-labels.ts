@@ -9,7 +9,7 @@ import type {
   ShotSizeId,
   SubjectFramingId,
 } from './scene-shot-list.js';
-import type { SceneShotVideoTakeShotDesign } from './shot-video-take.js';
+import type { SceneShotVideoTakeDirection } from './shot-video-take.js';
 
 // Canonical display labels for the structured shot specs vocabularies (0036).
 // These are the single source of truth shared by the prompt-string derivation
@@ -106,13 +106,13 @@ export const FOCUS_LABELS: Record<FocusId, string> = {
 };
 
 /**
- * Human-readable contract strings derived from the structured take shot design
+ * Human-readable contract strings derived from the structured take direction
  * selection (0036). These keep the existing free-text `SceneShot` fields
  * populated — they remain the prompt-facing contract the skill already reads.
  * Each value is `undefined` when nothing is selected so callers can omit the
  * field (the schema requires non-empty strings).
  */
-export interface DerivedTakeShotDesignPromptStrings {
+export interface DerivedTakeDirectionPromptStrings {
   shotType?: string;
   cameraAngle?: string;
   framing?: string;
@@ -120,44 +120,44 @@ export interface DerivedTakeShotDesignPromptStrings {
   cameraMovement?: string;
 }
 
-export function deriveTakeShotDesignPromptStrings(
-  shotDesign: SceneShotVideoTakeShotDesign | undefined
-): DerivedTakeShotDesignPromptStrings {
-  if (!shotDesign) {
+export function deriveTakeDirectionPromptStrings(
+  direction: SceneShotVideoTakeDirection | undefined
+): DerivedTakeDirectionPromptStrings {
+  if (!direction) {
     return {};
   }
   return {
-    shotType: shotDesign.composition?.shotSize
-      ? SHOT_SIZE_LABELS[shotDesign.composition.shotSize]
+    shotType: direction.composition?.shotSize
+      ? SHOT_SIZE_LABELS[direction.composition.shotSize]
       : undefined,
-    cameraAngle: deriveCameraAngle(shotDesign),
-    framing: deriveFraming(shotDesign),
-    lensIntent: deriveLensIntent(shotDesign),
-    cameraMovement: deriveCameraMovement(shotDesign),
+    cameraAngle: deriveCameraAngle(direction),
+    framing: deriveFraming(direction),
+    lensIntent: deriveLensIntent(direction),
+    cameraMovement: deriveCameraMovement(direction),
   };
 }
 
 function deriveCameraAngle(
-  shotDesign: SceneShotVideoTakeShotDesign
+  direction: SceneShotVideoTakeDirection
 ): string | undefined {
   const parts: string[] = [];
-  if (shotDesign.composition?.cameraAngle) {
-    parts.push(CAMERA_ANGLE_LABELS[shotDesign.composition.cameraAngle]);
+  if (direction.composition?.cameraAngle) {
+    parts.push(CAMERA_ANGLE_LABELS[direction.composition.cameraAngle]);
   }
-  if (shotDesign.composition?.dutch) {
-    parts.push(`Dutch ${shotDesign.composition.dutch}`);
+  if (direction.composition?.dutch) {
+    parts.push(`Dutch ${direction.composition.dutch}`);
   }
   return parts.length ? parts.join(', ') : undefined;
 }
 
 function deriveFraming(
-  shotDesign: SceneShotVideoTakeShotDesign
+  direction: SceneShotVideoTakeDirection
 ): string | undefined {
   const parts: string[] = [];
-  for (const id of shotDesign.composition?.subjectFraming ?? []) {
+  for (const id of direction.composition?.subjectFraming ?? []) {
     parts.push(SUBJECT_FRAMING_LABELS[id]);
   }
-  const custom = shotDesign.composition?.customComposition?.trim();
+  const custom = direction.composition?.customComposition?.trim();
   if (custom) {
     parts.push(custom);
   }
@@ -165,9 +165,9 @@ function deriveFraming(
 }
 
 function deriveLensIntent(
-  shotDesign: SceneShotVideoTakeShotDesign
+  direction: SceneShotVideoTakeDirection
 ): string | undefined {
-  const lens = shotDesign.composition?.lens;
+  const lens = direction.composition?.lens;
   const parts: string[] = [];
   if (lens?.type) {
     const lensLabel = LENS_LABELS[lens.type];
@@ -184,9 +184,9 @@ function deriveLensIntent(
 }
 
 function deriveCameraMovement(
-  shotDesign: SceneShotVideoTakeShotDesign
+  direction: SceneShotVideoTakeDirection
 ): string | undefined {
-  const movement = shotDesign.motion;
+  const movement = direction.motion;
   const parts: string[] = [];
   if (movement?.movement) {
     parts.push(MOVEMENT_LABELS[movement.movement]);
@@ -207,7 +207,7 @@ function deriveCameraMovement(
   if (movement?.rig) {
     parts.push(`on ${RIG_LABELS[movement.rig].toLowerCase()}`);
   }
-  const custom = shotDesign.motion?.customMotion?.trim();
+  const custom = direction.motion?.customMotion?.trim();
   if (custom) {
     parts.push(custom);
   }

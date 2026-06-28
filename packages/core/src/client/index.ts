@@ -84,6 +84,11 @@ export type * from './scene-audio-generation.js';
 export type * from './scene-storyboard-media-generation.js';
 export type * from './shot-video-take.js';
 export {
+  sceneShotVideoTakeDirectionHasPromptFields,
+  sceneShotVideoTakeDirectionHasShotProjectionFields,
+  sceneShotVideoTakeDirectionHasState,
+} from './shot-video-take.js';
+export {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
@@ -252,9 +257,9 @@ export {
   RIG_LABELS,
   SHOT_SIZE_LABELS,
   SUBJECT_FRAMING_LABELS,
-  deriveTakeShotDesignPromptStrings,
+  deriveTakeDirectionPromptStrings,
 } from './shot-spec-labels.js';
-export type { DerivedTakeShotDesignPromptStrings } from './shot-spec-labels.js';
+export type { DerivedTakeDirectionPromptStrings } from './shot-spec-labels.js';
 export type {
   Project,
   ProjectCoverImage,

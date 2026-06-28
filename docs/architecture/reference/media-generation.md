@@ -180,6 +180,17 @@ dependency ids are stable by screenplay dialogue id, while preflight and final
 generation resolve the current picked dialogue audio take to the concrete audio
 asset file.
 
+Shot Video Takes persist an explicit structure mode in
+`SceneShotVideoTakeState.version: 2`. In `continuous` mode, grouped shot ids are
+ordered beats or keyframes in one unbroken generated move, and Composition,
+Motion, Dialogs, and References are stored in one `sharedDirection`. In
+`multi-cut` mode, the grouped shot ids are separate cuts, and each shot id owns
+one `SceneShotVideoTakeDirection` in `directionsByShotId`. Reference selections
+are nested inside the direction whose scope they affect. AI Production settings
+remain take-level in both modes, so model choice, input mode, route parameters,
+prompt drafts, provider payload preview, estimate, approval, and prepared inputs
+continue to apply to the whole generated take.
+
 Dialogue audio pricing is based on the selected model and dialogue text.
 Missing Cast Voice setup is reported as `missing-input` with the reason
 `Assign a Cast Voice before generating dialogue audio.`, while the dependency

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
   SceneShotVideoTakeProductionState,
   SceneShotVideoTakeReferenceSelections,
-  SceneShotVideoTakeShotDesign,
+  SceneShotVideoTakeDirection,
 } from '@gorenku/studio-core/client';
 import {
   createShotVideoTakeReferenceSelectionFixture,
@@ -14,7 +14,7 @@ import {
   type ShotVideoTakeStateE2eFixture,
 } from './testing/shot-video-take-state-e2e.test-fixture';
 import {
-  updateSceneShotVideoTakeShotDesign,
+  updateSceneShotVideoTakeDirection,
   planShotVideoTakeProduction,
   updateShotGroupReferenceInclusion,
   updateShotVideoTakeProduction,
@@ -22,11 +22,12 @@ import {
   updateTakeDialogueAudioSelection,
   updateTakeLocationSheetSelection,
   updateTakeLookbookSheetSelection,
+  updateSceneShotVideoTakeStructureMode,
 } from './studio-shot-video-takes-api';
 
 const SHOT_DESIGN_CASES: Array<{
   name: string;
-  design: SceneShotVideoTakeShotDesign;
+  design: SceneShotVideoTakeDirection;
 }> = [
   {
     name: 'composition choices',
@@ -113,18 +114,21 @@ describe('scene shot video take state persistence e2e', () => {
         title: 'Gate pressure take',
       });
 
-      const savedDesign = await updateSceneShotVideoTakeShotDesign(
+      const savedDesign = await updateSceneShotVideoTakeDirection(
         fixture.projectName,
         fixture.ids.sceneId,
         take.takeId,
-        'shot_001',
         design
       );
 
-      expect(
-        savedDesign.context.take.state.shotDesignByShotId.shot_001
-      ).toEqual(design);
-      await expectPersistedShotDesign(take.takeId, design);
+      const savedStructure = savedDesign.context.take.state.structure;
+      expect(savedStructure.mode).toBe('continuous');
+      if (savedStructure.mode === 'continuous') {
+        expect(savedStructure.sharedDirection).toEqual(
+          persistedDirection(design)
+        );
+      }
+      await expectPersistedSharedDirection(take.takeId, persistedDirection(design));
 
       await updateShotVideoTakeGrouping(fixture, take.takeId, [
         'shot_001',
@@ -133,7 +137,10 @@ describe('scene shot video take state persistence e2e', () => {
 
       const groupedTake = await readPersistedShotVideoTake(fixture, take.takeId);
       expect(groupedTake.shotIds).toEqual(['shot_001', 'shot_002']);
-      expect(groupedTake.state.shotDesignByShotId.shot_001).toEqual(design);
+      expect(groupedTake.state.structure).toEqual({
+        mode: 'continuous',
+        sharedDirection: persistedDirection(design),
+      });
     }
   );
 
@@ -144,7 +151,7 @@ describe('scene shot video take state persistence e2e', () => {
     });
     const inclusionDependencyId = `cast-character-sheet:${fixture.ids.castMemberId}`;
     const expectedReferenceSelections: SceneShotVideoTakeReferenceSelections = {
-      ...take.state.referenceSelections,
+      ...takeReferenceSelections(take),
       selectedCharacterSheetAssetIds: {
         [fixture.ids.castMemberId]: referenceFixture.characterSheetAssetId,
       },
@@ -261,11 +268,11 @@ describe('scene shot video take state persistence e2e', () => {
 
     let persisted = await readPersistedShotVideoTake(fixture, take.takeId);
     expect(
-      persisted.state.referenceSelections.selectedDialogueAudioTakeIds
+      takeReferenceSelections(persisted).selectedDialogueAudioTakeIds
     ).toEqual({
       [fixture.ids.dialogueId]: referenceFixture.dialogueAudioTakeId,
     });
-    expect(persisted.state.referenceSelections.dependencyInclusions).toEqual({
+    expect(takeReferenceSelections(persisted).dependencyInclusions).toEqual({
       [dialogueDependencyId!]: 'include',
     });
 
@@ -285,9 +292,9 @@ describe('scene shot video take state persistence e2e', () => {
 
     persisted = await readPersistedShotVideoTake(fixture, take.takeId);
     expect(
-      persisted.state.referenceSelections.selectedDialogueAudioTakeIds
+      takeReferenceSelections(persisted).selectedDialogueAudioTakeIds
     ).toEqual({});
-    expect(persisted.state.referenceSelections.dependencyInclusions).toEqual({
+    expect(takeReferenceSelections(persisted).dependencyInclusions).toEqual({
       [dialogueDependencyId!]: 'include',
     });
   });
@@ -326,41 +333,58 @@ describe('scene shot video take state persistence e2e', () => {
     await expectPersistedProduction(take.takeId, production);
   });
 
-  it('clears empty shot design and prunes designs for shots removed from the take', async () => {
+  it('clears empty multi-cut directions and prunes directions for removed shots', async () => {
     const take = await fixture.createTake({
       shotIds: ['shot_001', 'shot_002'],
-      title: 'Prune removed shot design take',
+      title: 'Prune removed direction take',
     });
 
-    await updateSceneShotVideoTakeShotDesign(
+    await updateSceneShotVideoTakeStructureMode(
       fixture.projectName,
       fixture.ids.sceneId,
       take.takeId,
-      'shot_001',
-      SHOT_DESIGN_CASES[0]!.design
+      'multi-cut'
     );
-    await updateSceneShotVideoTakeShotDesign(
+    await updateSceneShotVideoTakeDirection(
       fixture.projectName,
       fixture.ids.sceneId,
       take.takeId,
-      'shot_002',
-      SHOT_DESIGN_CASES[1]!.design
+      SHOT_DESIGN_CASES[0]!.design,
+      'shot_001'
+    );
+    await updateSceneShotVideoTakeDirection(
+      fixture.projectName,
+      fixture.ids.sceneId,
+      take.takeId,
+      SHOT_DESIGN_CASES[1]!.design,
+      'shot_002'
     );
 
-    const cleared = await updateSceneShotVideoTakeShotDesign(
+    const cleared = await updateSceneShotVideoTakeDirection(
       fixture.projectName,
       fixture.ids.sceneId,
       take.takeId,
-      'shot_002',
-      null
+      null,
+      'shot_002'
     );
-    expect(cleared.context.take.state.shotDesignByShotId.shot_002).toBeUndefined();
+    expect(cleared.context.take.state.structure).toEqual({
+      mode: 'multi-cut',
+      directionsByShotId: {
+        shot_001: persistedDirection(SHOT_DESIGN_CASES[0]!.design),
+        shot_002: { referenceSelections: emptyReferenceSelections() },
+      },
+    });
 
     await updateShotVideoTakeGrouping(fixture, take.takeId, ['shot_002']);
 
     const prunedTake = await readPersistedShotVideoTake(fixture, take.takeId);
     expect(prunedTake.shotIds).toEqual(['shot_002']);
-    expect(prunedTake.state.shotDesignByShotId).toEqual({});
+    expect(prunedTake.state.structure).toEqual({
+      mode: 'multi-cut',
+      directionsByShotId: {
+        shot_002: { referenceSelections: emptyReferenceSelections() },
+      },
+    });
   });
 
   it('returns a structured error and does not persist invalid reference ids', async () => {
@@ -385,16 +409,19 @@ describe('scene shot video take state persistence e2e', () => {
 
     const persisted = await readPersistedShotVideoTake(fixture, take.takeId);
     expect(
-      persisted.state.referenceSelections.selectedCharacterSheetAssetIds
+      takeReferenceSelections(persisted).selectedCharacterSheetAssetIds
     ).toEqual({});
   });
 
-  async function expectPersistedShotDesign(
+  async function expectPersistedSharedDirection(
     takeId: string,
-    design: SceneShotVideoTakeShotDesign
+    direction: SceneShotVideoTakeDirection
   ) {
     const persisted = await readPersistedShotVideoTake(fixture, takeId);
-    expect(persisted.state.shotDesignByShotId.shot_001).toEqual(design);
+    expect(persisted.state.structure).toEqual({
+      mode: 'continuous',
+      sharedDirection: direction,
+    });
   }
 
   async function expectPersistedReferenceSelections(
@@ -402,7 +429,7 @@ describe('scene shot video take state persistence e2e', () => {
     expected: SceneShotVideoTakeReferenceSelections
   ) {
     const persisted = await readPersistedShotVideoTake(fixture, takeId);
-    expect(persisted.state.referenceSelections).toEqual(expected);
+    expect(takeReferenceSelections(persisted)).toEqual(expected);
   }
 
   async function expectPersistedProduction(
@@ -413,3 +440,39 @@ describe('scene shot video take state persistence e2e', () => {
     expect(persisted.state.production).toEqual(production);
   }
 });
+
+function takeReferenceSelections(
+  take: Pick<Awaited<ReturnType<typeof readPersistedShotVideoTake>>, 'state' | 'shotIds'>
+): SceneShotVideoTakeReferenceSelections {
+  if (take.state.structure.mode === 'continuous') {
+    return (
+      take.state.structure.sharedDirection.referenceSelections ??
+      emptyReferenceSelections()
+    );
+  }
+  const firstShotId = take.shotIds[0]!;
+  return (
+    take.state.structure.directionsByShotId[firstShotId]?.referenceSelections ??
+    emptyReferenceSelections()
+  );
+}
+
+function emptyReferenceSelections(): SceneShotVideoTakeReferenceSelections {
+  return {
+    dependencyInclusions: {},
+    selectedCharacterSheetAssetIds: {},
+    referencedLocationSheetAssetIds: {},
+    selectedLookbookSheetIds: [],
+    selectedDialogueAudioTakeIds: {},
+  };
+}
+
+function persistedDirection(
+  direction: SceneShotVideoTakeDirection
+): SceneShotVideoTakeDirection {
+  return {
+    ...direction,
+    referenceSelections:
+      direction.referenceSelections ?? emptyReferenceSelections(),
+  };
+}

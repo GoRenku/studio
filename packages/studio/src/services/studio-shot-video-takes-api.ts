@@ -8,8 +8,9 @@ import type {
   ShotVideoTakeProductionEstimateReport,
   SceneShotVideoTake,
   SceneShotVideoTakeCreateReport,
-  SceneShotVideoTakeShotDesign,
+  SceneShotVideoTakeDirection,
   SceneShotVideoTakeProductionState,
+  SceneShotVideoTakeStructureMode,
   ShotVideoTakeProductionPlanReport,
   SceneShotVideoTakeEditContext,
   RecoverableMutationReport,
@@ -216,17 +217,34 @@ export async function updateShotVideoTakeProduction(
   );
 }
 
-export async function updateSceneShotVideoTakeShotDesign(
+export async function updateSceneShotVideoTakeDirection(
   projectName: string,
   sceneId: string,
   takeId: string,
-  shotId: string,
-  shotDesign: SceneShotVideoTakeShotDesign | null
+  direction: SceneShotVideoTakeDirection | null,
+  shotId?: string
+): Promise<ShotVideoTakeProductionMutation> {
+  const path = shotId
+    ? `${productionPath(projectName, sceneId, takeId)}/shots/${encodeURIComponent(shotId)}/direction`
+    : `${productionPath(projectName, sceneId, takeId)}/direction`;
+  return sendTakeMutation(
+    path,
+    'PATCH',
+    { direction }
+  );
+}
+
+export async function updateSceneShotVideoTakeStructureMode(
+  projectName: string,
+  sceneId: string,
+  takeId: string,
+  mode: SceneShotVideoTakeStructureMode,
+  sourceShotId?: string
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
-    `${productionPath(projectName, sceneId, takeId)}/shots/${encodeURIComponent(shotId)}/design`,
+    `${productionPath(projectName, sceneId, takeId)}/structure`,
     'PATCH',
-    { shotDesign }
+    { mode, ...(sourceShotId ? { sourceShotId } : {}) }
   );
 }
 
@@ -277,7 +295,7 @@ export async function updateTakeCharacterSheetSelection(
   projectName: string,
   sceneId: string,
   takeId: string,
-  input: { castMemberId: string; assetId: string | null }
+  input: { castMemberId: string; assetId: string | null; shotId?: string }
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-selections/character-sheets`,
@@ -290,7 +308,7 @@ export async function updateTakeLocationSheetSelection(
   projectName: string,
   sceneId: string,
   takeId: string,
-  input: { locationId: string; assetIds: string[] }
+  input: { locationId: string; assetIds: string[]; shotId?: string }
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-selections/location-sheets`,
@@ -303,12 +321,13 @@ export async function updateTakeLookbookSheetSelection(
   projectName: string,
   sceneId: string,
   takeId: string,
-  lookbookSheetId: string | null
+  lookbookSheetId: string | null,
+  shotId?: string
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-selections/lookbook-sheets`,
     'PATCH',
-    { lookbookSheetId }
+    { lookbookSheetId, ...(shotId ? { shotId } : {}) }
   );
 }
 
@@ -316,7 +335,7 @@ export async function updateTakeDialogueAudioSelection(
   projectName: string,
   sceneId: string,
   takeId: string,
-  input: { dialogueId: string; takeId: string | null }
+  input: { dialogueId: string; takeId: string | null; shotId?: string }
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-selections/dialogue-audio`,
@@ -329,7 +348,7 @@ export async function updateShotGroupReferenceInclusion(
   projectName: string,
   sceneId: string,
   takeId: string,
-  input: { dependencyId: string; inclusion: 'include' | 'exclude' | null }
+  input: { dependencyId: string; inclusion: 'include' | 'exclude' | null; shotId?: string }
 ): Promise<ShotVideoTakeProductionMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/reference-inclusions`,

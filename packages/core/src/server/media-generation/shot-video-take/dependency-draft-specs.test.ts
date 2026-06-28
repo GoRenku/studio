@@ -151,14 +151,18 @@ function testContext(
       history: { differences: [], message: 'This take matches its recorded history snapshot.' },
     },
       state: {
-        version: 1,
-        shotDesignByShotId: {},
-        referenceSelections: {
-          dependencyInclusions: {},
-          selectedCharacterSheetAssetIds: {},
-          referencedLocationSheetAssetIds: {},
-          selectedLookbookSheetIds: [],
-          selectedDialogueAudioTakeIds: {},
+        version: 2,
+        structure: {
+          mode: 'continuous',
+          sharedDirection: {
+            referenceSelections: {
+              dependencyInclusions: {},
+              selectedCharacterSheetAssetIds: {},
+              referencedLocationSheetAssetIds: {},
+              selectedLookbookSheetIds: [],
+              selectedDialogueAudioTakeIds: {},
+            },
+          },
         },
         production: {
           ...(dependencyDraft

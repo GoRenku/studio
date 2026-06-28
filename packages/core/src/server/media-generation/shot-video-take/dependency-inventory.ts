@@ -86,6 +86,7 @@ import {
   validateRequiredReferenceInclusions,
 } from './reference-inclusions.js';
 import {
+  referencedEnvironmentSheetAssetIdsForTakeState,
   selectedLookbookSheetIdsForTakeState,
 } from './reference-selection.js';
 import {
@@ -321,8 +322,9 @@ export function shotVideoTakeDependencySlotsForContext(input: {
         id: mediaInput.subjectId || mediaInput.assetId,
         title: mediaInput.title,
       })),
-    referencedLocationSheetAssetIds:
-      input.context.take.state.referenceSelections.referencedLocationSheetAssetIds,
+    referencedLocationSheetAssetIds: referencedLocationSheetAssetIdsByLocation(
+      input.context
+    ),
     availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
       session: input.session,
       locations: input.context.referencedLocations,
@@ -365,8 +367,9 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
         }
       : null,
     customReferenceInputs: [],
-    referencedLocationSheetAssetIds:
-      input.context.take.state.referenceSelections.referencedLocationSheetAssetIds,
+    referencedLocationSheetAssetIds: referencedLocationSheetAssetIdsByLocation(
+      input.context
+    ),
     availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
       session: input.session,
       locations: input.context.referencedLocations,
@@ -470,8 +473,9 @@ export async function declareShotVideoTakeDependencies(
           id: generationInput.subjectId ?? generationInput.assetId,
           title: generationInput.role || 'Reference image',
         })),
-      referencedLocationSheetAssetIds:
-        context.take.state.referenceSelections.referencedLocationSheetAssetIds,
+      referencedLocationSheetAssetIds: referencedLocationSheetAssetIdsByLocation(
+        context
+      ),
       availableLocationSheetAssetIds: availableLocationSheetAssetIdsByLocation({
         session,
         locations: context.referencedLocations,
@@ -494,6 +498,20 @@ function availableLocationSheetAssetIdsByLocation(input: {
         mediaKind: 'image',
         limit: MAX_RESOURCE_PAGE_LIMIT,
       }).items.map((asset) => asset.assetId),
+    ])
+  );
+}
+
+function referencedLocationSheetAssetIdsByLocation(
+  context: ShotVideoTakeProductionContext
+): Record<string, string[]> {
+  return Object.fromEntries(
+    context.referencedLocations.map((location) => [
+      location.id,
+      referencedEnvironmentSheetAssetIdsForTakeState(
+        context.take.state,
+        location.id
+      ),
     ])
   );
 }
