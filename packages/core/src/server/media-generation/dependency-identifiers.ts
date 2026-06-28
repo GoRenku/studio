@@ -50,8 +50,13 @@ const shotVideoInputSubjectKinds = new Set<ShotVideoTakeInputSubjectKind>([
   'scene-dialogue',
 ]);
 
-export function castCharacterSheetDependencyId(castMemberId: string): string {
-  return `cast-character-sheet:${castMemberId}`;
+export function castCharacterSheetDependencyId(
+  castMemberId: string,
+  assetId?: string
+): string {
+  return assetId
+    ? `cast-character-sheet:${castMemberId}:${assetId}`
+    : `cast-character-sheet:${castMemberId}`;
 }
 
 export function locationEnvironmentSheetDependencyId(

@@ -75,9 +75,9 @@ export function SceneShotDialogsTab({
     [productionPlan?.references.dialogueAudio]
   );
   const capability = productionPlan?.references.dialogueAudioCapability ?? null;
-  const scopedShotId = selectedShotId ?? productionPlan?.take.shotIds[0];
+  const scopedShotId = selectedShotId ?? productionPlan?.take?.shotIds[0];
   const mutationShotId =
-    productionPlan?.take.state.structure.mode === 'multi-cut'
+    productionPlan?.take?.state?.structure.mode === 'multi-cut'
       ? scopedShotId
       : undefined;
   const dialogueAudioReloadKey = useMemo(

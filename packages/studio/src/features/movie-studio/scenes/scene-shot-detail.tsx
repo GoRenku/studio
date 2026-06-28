@@ -104,6 +104,7 @@ export function SceneShotDetail({
     projectName,
     sceneId,
     takeId: editableTake?.takeId,
+    selectedShotId: shot.shotId,
   });
   const { refreshProductionPlan } = production;
   const [structureDialogOpen, setStructureDialogOpen] = useState(false);

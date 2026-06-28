@@ -422,6 +422,83 @@ describe('shot video take reference selection mutations', () => {
     });
   });
 
+  it('rejects continuous reference mutations that include a shot id', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await expect(
+      projectData.updateSceneShotVideoTakeCharacterSheetSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        shotId: 'shot_001',
+        castMemberId: ids.castMemberId,
+        assetId: null,
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_SCOPE_MISMATCH',
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedCharacterSheetAssetIds: {},
+    });
+  });
+
+  it('rejects multi-cut reference mutations missing a shot id', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    await projectData.updateSceneShotVideoTakeStructureMode({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+      mode: 'multi-cut',
+    });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeCharacterSheetSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        castMemberId: ids.castMemberId,
+        assetId: null,
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_SCOPE_MISMATCH',
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedCharacterSheetAssetIds: {},
+    });
+  });
+
+  it('rejects multi-cut reference mutations with a foreign shot id', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    await projectData.updateSceneShotVideoTakeStructureMode({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: written.take.takeId,
+      mode: 'multi-cut',
+    });
+
+    await expect(
+      projectData.updateSceneShotVideoTakeCharacterSheetSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        shotId: 'shot_foreign',
+        castMemberId: ids.castMemberId,
+        assetId: null,
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_SCOPE_MISMATCH',
+    });
+
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedCharacterSheetAssetIds: {},
+    });
+  });
+
   async function readReferenceSelections(takeId: string) {
     const ids = await shotVideoTakeProject.sampleIds();
     const take = await projectData.readSceneShotVideoTake({

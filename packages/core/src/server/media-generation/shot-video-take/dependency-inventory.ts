@@ -81,13 +81,14 @@ import {
 } from './purpose-config.js';
 import {
   filterPreparedInputsByReferenceInclusions,
-  referenceInclusionForDependencyId,
+  generationReferenceInclusionForDependencyId,
   referenceDependencySlotIncluded,
   validateRequiredReferenceInclusions,
 } from './reference-inclusions.js';
 import {
-  referencedEnvironmentSheetAssetIdsForTakeState,
-  selectedLookbookSheetIdsForTakeState,
+  referencedEnvironmentSheetAssetIdsForGenerationTakeState,
+  selectedCharacterSheetAssetIdsForGenerationTakeState,
+  selectedLookbookSheetIdsForGenerationTakeState,
 } from './reference-selection.js';
 import {
   requireScreenplayDocument,
@@ -252,7 +253,7 @@ function validateSelectedAudioReferencesSupportedByRoute(input: {
   diagnostics: DiagnosticIssue[];
 }): void {
   const selectedCount = input.references.filter((reference) =>
-    referenceInclusionForDependencyId(
+    generationReferenceInclusionForDependencyId(
       input.context,
       reference.dependencyId,
       reference.defaultIncluded
@@ -304,6 +305,9 @@ export function shotVideoTakeDependencySlotsForContext(input: {
       name: castMember.name,
       isVoiceOver: castMember.isVoiceOver,
     })),
+    selectedCharacterSheetAssetIds: selectedCharacterSheetAssetIdsByCastMember(
+      input.context
+    ),
     selectedLocations: input.context.referencedLocations.map((location) => ({
       id: location.id,
       name: location.name,
@@ -313,7 +317,10 @@ export function shotVideoTakeDependencySlotsForContext(input: {
           id: input.context.activeLookbook.id,
           name: input.context.activeLookbook.name,
           selectedSheetId:
-            [...selectedLookbookSheetIdsForTakeState(input.context.take.state)][0] ?? null,
+            [...selectedLookbookSheetIdsForGenerationTakeState(
+              input.context.take.state,
+              input.context.take.shotIds
+            )][0] ?? null,
         }
       : null,
     customReferenceInputs: input.context.mediaInputs
@@ -354,6 +361,9 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
       name: castMember.name,
       isVoiceOver: castMember.isVoiceOver,
     })),
+    selectedCharacterSheetAssetIds: selectedCharacterSheetAssetIdsByCastMember(
+      input.context
+    ),
     selectedLocations: input.context.referencedLocations.map((location) => ({
       id: location.id,
       name: location.name,
@@ -363,7 +373,10 @@ export function shotVideoTakeReferenceDependencySlotsForContext(
           id: input.context.activeLookbook.id,
           name: input.context.activeLookbook.name,
           selectedSheetId:
-            [...selectedLookbookSheetIdsForTakeState(input.context.take.state)][0] ?? null,
+            [...selectedLookbookSheetIdsForGenerationTakeState(
+              input.context.take.state,
+              input.context.take.shotIds
+            )][0] ?? null,
         }
       : null,
     customReferenceInputs: [],
@@ -455,6 +468,9 @@ export async function declareShotVideoTakeDependencies(
         name: castMember.name,
         isVoiceOver: castMember.isVoiceOver,
       })),
+      selectedCharacterSheetAssetIds: selectedCharacterSheetAssetIdsByCastMember(
+        context
+      ),
       selectedLocations: context.referencedLocations.map((location) => ({
         id: location.id,
         name: location.name,
@@ -464,7 +480,10 @@ export async function declareShotVideoTakeDependencies(
             id: context.activeLookbook.id,
             name: context.activeLookbook.name,
             selectedSheetId:
-              [...selectedLookbookSheetIdsForTakeState(context.take.state)][0] ?? null,
+              [...selectedLookbookSheetIdsForGenerationTakeState(
+                context.take.state,
+                context.take.shotIds
+              )][0] ?? null,
           }
         : null,
       customReferenceInputs: spec.inputs
@@ -508,9 +527,25 @@ function referencedLocationSheetAssetIdsByLocation(
   return Object.fromEntries(
     context.referencedLocations.map((location) => [
       location.id,
-      referencedEnvironmentSheetAssetIdsForTakeState(
+      referencedEnvironmentSheetAssetIdsForGenerationTakeState(
         context.take.state,
+        context.take.shotIds,
         location.id
+      ),
+    ])
+  );
+}
+
+function selectedCharacterSheetAssetIdsByCastMember(
+  context: ShotVideoTakeProductionContext
+): Record<string, string[]> {
+  return Object.fromEntries(
+    context.referencedCast.map((castMember) => [
+      castMember.id,
+      selectedCharacterSheetAssetIdsForGenerationTakeState(
+        context.take.state,
+        context.take.shotIds,
+        castMember.id
       ),
     ])
   );

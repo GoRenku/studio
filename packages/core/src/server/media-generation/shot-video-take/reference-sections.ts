@@ -15,6 +15,8 @@ import type {
   SceneShotVideoTakeMediaInput,
   ShotVideoTakeDialogueAudioReferenceChoice,
   ShotVideoTakeDialogueAudioCapabilityReport,
+  SceneShot,
+  SceneShotVideoTakeDirection,
 } from '../../../client/index.js';
 import {
   listLookbookSheets,
@@ -52,7 +54,7 @@ import {
 } from './dialogue-audio-references.js';
 import {
   ReferenceInclusionResolution,
-  referenceInclusionForDependencyId,
+  editorReferenceInclusionForDependencyId,
   requiredGeneralReferenceInclusion,
 } from './reference-inclusions.js';
 import {
@@ -60,10 +62,10 @@ import {
   defaultLocationIdsForShots,
   effectiveScopedLocationSelectionForShots,
   selectedCastIdsForShots,
-  selectedCharacterSheetAssetIdForTakeState,
-  referencedEnvironmentSheetAssetIdsForTakeState,
+  selectedCharacterSheetAssetIdForEditorDirection,
+  referencedEnvironmentSheetAssetIdsForEditorDirection,
   selectedLocationIdsForShots,
-  selectedLookbookSheetIdsForTakeState,
+  selectedLookbookSheetIdForEditorDirection,
 } from './reference-selection.js';
 import {
   requireScreenplayDocument,
@@ -99,6 +101,8 @@ export function buildShotVideoTakeReferenceSections(input: {
   plan: ShotVideoTakeOutputGenerationPlan;
   narrativeScope: ShotVideoTakeReferenceSectionScope;
   scope: ShotVideoTakeReferenceSectionScope;
+  editorDirection: SceneShotVideoTakeDirection;
+  editorShots: SceneShot[];
 }): ShotVideoTakeReferenceSections {
   const narrativeCastMemberIds = new Set(
     input.narrativeScope.castMembers.flatMap((castMember) =>
@@ -114,7 +118,7 @@ export function buildShotVideoTakeReferenceSections(input: {
     input.scope.locations.flatMap((location) => (location.id ? [location.id] : []))
   );
   const locationSelection = effectiveScopedLocationSelectionForShots(
-    input.context.shots,
+    input.editorShots,
     scopedLocationIds
   );
   const castMembers = input.narrativeScope.castMembers
@@ -125,6 +129,8 @@ export function buildShotVideoTakeReferenceSections(input: {
             buildCastMemberReferenceGroup({
               session: input.session,
               context: input.context,
+              editorDirection: input.editorDirection,
+              editorShots: input.editorShots,
               plan: input.plan,
               castMemberId: castMember.id,
               name: castMember.name,
@@ -140,6 +146,8 @@ export function buildShotVideoTakeReferenceSections(input: {
           buildLocationReferenceGroup({
             session: input.session,
             context: input.context,
+            editorDirection: input.editorDirection,
+            editorShots: input.editorShots,
             plan: input.plan,
             locationId: location.id,
             name: location.name,
@@ -152,6 +160,7 @@ export function buildShotVideoTakeReferenceSections(input: {
   const dialogueAudio = buildDialogueAudioReferenceChoices({
     session: input.session,
     context: input.context,
+    editorDirection: input.editorDirection,
     plan: input.plan,
   });
   const dialogueAudioCapability = buildDialogueAudioCapabilityReport({
@@ -173,11 +182,13 @@ export function buildShotVideoTakeReferenceSections(input: {
     references: {
       general: buildGeneralReferenceChoices({
         context: input.context,
+        editorDirection: input.editorDirection,
         plan: input.plan,
       }),
       lookbook: buildLookbookReferenceChoices({
         session: input.session,
         context: input.context,
+        editorDirection: input.editorDirection,
         plan: input.plan,
       }),
       dialogueAudio: dialogueAudio.choices,
@@ -261,6 +272,8 @@ export function buildDialogueAudioCapabilityReport(input: {
 export function buildCastMemberReferenceGroup(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
+  editorDirection: SceneShotVideoTakeDirection;
+  editorShots: SceneShot[];
   plan: ShotVideoTakeOutputGenerationPlan;
   castMemberId: string;
   name: string;
@@ -272,21 +285,24 @@ export function buildCastMemberReferenceGroup(input: {
     target: { kind: 'castMember', castMemberId: input.castMemberId },
     role: 'character_sheet',
   });
-  const selected = selectedCastIdsForShots(input.context.shots).has(
+  const selected = selectedCastIdsForShots(input.editorShots).has(
     input.castMemberId
   );
-  const inclusion = referenceInclusionForDependencyId(
-    input.context,
+  const inclusion = editorReferenceInclusionForDependencyId(
+    input.editorDirection,
     dependencyId,
     selected,
     line
   );
-  const defaultSelected = defaultCastIdsForShots(input.context.shots).has(
+  const defaultSelected = defaultCastIdsForShots(input.editorShots).has(
     input.castMemberId
   );
   const defaultCharacterSheetAssetId = assets[0]?.assetId ?? null;
   const selectedCharacterSheetAssetId =
-    selectedCharacterSheetAssetIdForTakeState(input.context.take.state, input.castMemberId) ??
+    selectedCharacterSheetAssetIdForEditorDirection(
+      input.editorDirection,
+      input.castMemberId
+    ) ??
     defaultCharacterSheetAssetId;
   const characterSheets = assets.map((asset, index) =>
     buildCharacterSheetReferenceChoice({
@@ -380,6 +396,8 @@ export function buildCharacterSheetReferenceChoice(input: {
 export function buildLocationReferenceGroup(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
+  editorDirection: SceneShotVideoTakeDirection;
+  editorShots: SceneShot[];
   plan: ShotVideoTakeOutputGenerationPlan;
   locationId: string;
   name: string;
@@ -389,16 +407,16 @@ export function buildLocationReferenceGroup(input: {
     target: { kind: 'location', locationId: input.locationId },
     role: 'environment_sheet',
   });
-  const selectedLocationIds = selectedLocationIdsForShots(input.context.shots);
+  const selectedLocationIds = selectedLocationIdsForShots(input.editorShots);
   const explicitSelected = selectedLocationIds.has(input.locationId);
-  const defaultSelected = defaultLocationIdsForShots(input.context.shots).has(
+  const defaultSelected = defaultLocationIdsForShots(input.editorShots).has(
     input.locationId
   );
   const selected =
     explicitSelected ||
     (input.useDefaultSelectionWhenNoScopedSelection && defaultSelected);
-  const referencedEnvironmentSheetAssetIds = referencedEnvironmentSheetAssetIdsForTakeState(
-    input.context.take.state,
+  const referencedEnvironmentSheetAssetIds = referencedEnvironmentSheetAssetIdsForEditorDirection(
+    input.editorDirection,
     input.locationId
   );
   const environmentSheets = assets.map((asset, index) =>
@@ -407,6 +425,7 @@ export function buildLocationReferenceGroup(input: {
       locationName: input.name,
       asset,
       referencedAssetIds: referencedEnvironmentSheetAssetIds,
+      editorDirection: input.editorDirection,
       context: input.context,
       plan: input.plan,
       index,
@@ -426,8 +445,8 @@ export function buildLocationReferenceGroup(input: {
         diagnostics: [],
       };
     }
-    const inclusion = referenceInclusionForDependencyId(
-      input.context,
+    const inclusion = editorReferenceInclusionForDependencyId(
+      input.editorDirection,
       dependencyId,
       selected
     );
@@ -467,6 +486,7 @@ export function buildEnvironmentSheetReferenceChoice(input: {
   locationName: string;
   asset: Asset;
   referencedAssetIds: string[];
+  editorDirection: SceneShotVideoTakeDirection;
   context: ShotVideoTakeProductionContext;
   plan: ShotVideoTakeOutputGenerationPlan;
   index: number;
@@ -477,8 +497,8 @@ export function buildEnvironmentSheetReferenceChoice(input: {
     input.asset.assetId
   );
   const line = dependencyLineById(input.plan, dependencyId);
-  const inclusion = referenceInclusionForDependencyId(
-    input.context,
+  const inclusion = editorReferenceInclusionForDependencyId(
+    input.editorDirection,
     dependencyId,
     referenced
   );
@@ -515,6 +535,7 @@ export function buildEnvironmentSheetReferenceChoice(input: {
 export function buildLookbookReferenceChoices(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
+  editorDirection: SceneShotVideoTakeDirection;
   plan: ShotVideoTakeOutputGenerationPlan;
 }): ShotVideoTakeLookbookReferenceChoice[] {
   if (!input.context.activeLookbook) {
@@ -524,15 +545,16 @@ export function buildLookbookReferenceChoices(input: {
     input.session,
     input.context.activeLookbook.id
   );
-  const selectedSheetId =
-    [...selectedLookbookSheetIdsForTakeState(input.context.take.state)][0] ?? null;
+  const selectedSheetId = selectedLookbookSheetIdForEditorDirection(
+    input.editorDirection
+  );
   const defaultSheetId = lookbookSheets[0]?.id ?? null;
   const selectedChoiceId = selectedSheetId ?? defaultSheetId;
   const dependencyId = lookbookSheetDependencyId(input.context.activeLookbook.id);
   const line = dependencyLineById(input.plan, dependencyId);
   const planLine = planLineForDependencyLine(input.plan, line);
-  const inclusion = referenceInclusionForDependencyId(
-    input.context,
+  const inclusion = editorReferenceInclusionForDependencyId(
+    input.editorDirection,
     dependencyId,
     true
   );
@@ -585,6 +607,7 @@ export function buildLookbookReferenceChoices(input: {
 export function buildDialogueAudioReferenceChoices(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
+  editorDirection: SceneShotVideoTakeDirection;
   plan: ShotVideoTakeOutputGenerationPlan;
 }): {
   choices: ShotVideoTakeDialogueAudioReferenceChoice[];
@@ -597,11 +620,12 @@ export function buildDialogueAudioReferenceChoices(input: {
     screenplay,
     scene,
     context: input.context,
+    editorDirection: input.editorDirection,
   });
   const choices = resolved.references.map((reference) => {
     const line = dependencyLineById(input.plan, reference.dependencyId);
-    const inclusion = referenceInclusionForDependencyId(
-      input.context,
+    const inclusion = editorReferenceInclusionForDependencyId(
+      input.editorDirection,
       reference.dependencyId,
       reference.defaultIncluded,
       line
@@ -648,6 +672,7 @@ export function buildDialogueAudioReferenceChoices(input: {
 
 export function buildGeneralReferenceChoices(input: {
   context: ShotVideoTakeProductionContext;
+  editorDirection: SceneShotVideoTakeDirection;
   plan: ShotVideoTakeOutputGenerationPlan;
 }): ShotVideoTakeGeneralReferenceChoice[] {
   const choicesByKey = new Map<string, ShotVideoTakeGeneralReferenceChoice>();
@@ -667,8 +692,8 @@ export function buildGeneralReferenceChoices(input: {
       line
     );
     const previews = previewImagesForDependencyLine(input.context, line);
-    const inclusion = referenceInclusionForDependencyId(
-      input.context,
+    const inclusion = editorReferenceInclusionForDependencyId(
+      input.editorDirection,
       line.dependencyId,
       true
     );
@@ -723,8 +748,8 @@ export function buildGeneralReferenceChoices(input: {
       if (choicesByKey.has(`planned:${dependencyId}`)) {
         return;
       }
-      const inclusion = referenceInclusionForDependencyId(
-        input.context,
+      const inclusion = editorReferenceInclusionForDependencyId(
+        input.editorDirection,
         dependencyId,
         true
       );
@@ -756,7 +781,10 @@ export function buildGeneralReferenceChoices(input: {
       });
     }
   );
-  excludedDefaultGeneralReferenceChoices(input.context).forEach((excludedChoice) => {
+  excludedDefaultGeneralReferenceChoices({
+    context: input.context,
+    editorDirection: input.editorDirection,
+  }).forEach((excludedChoice) => {
     const existingChoice = [...choicesByKey.values()].find(
       (choice) => choice.card.dependencyId === excludedChoice.dependencyId
     );
@@ -797,8 +825,8 @@ export function buildGeneralReferenceChoices(input: {
         : null;
     const referenceKind = generalReferenceKindForInputKind(referenceInputKind);
     const title = titleForAvailableImageReference(input.context, mediaInput);
-    const inclusion = referenceInclusionForDependencyId(
-      input.context,
+    const inclusion = editorReferenceInclusionForDependencyId(
+      input.editorDirection,
       dependencyId,
       mediaInput.selected,
       line
@@ -848,21 +876,28 @@ export function buildGeneralReferenceChoices(input: {
 
 
 export function excludedDefaultGeneralReferenceChoices(
-  context: ShotVideoTakeProductionContext
+  input: {
+    context: ShotVideoTakeProductionContext;
+    editorDirection: SceneShotVideoTakeDirection;
+  }
 ): Array<{
   dependencyId: string;
   kind: 'multi-shot-storyboard-sheet';
   title: string;
   inclusion: ReferenceInclusionResolution;
 }> {
-  if (context.shotGroupMode !== 'multi-shot') {
+  if (input.context.shotGroupMode !== 'multi-shot') {
     return [];
   }
   const dependencyId = shotVideoInputDependencyId({
     kind: 'multi-shot-storyboard-sheet',
-    target: context.target,
+    target: input.context.target,
   });
-  const inclusion = referenceInclusionForDependencyId(context, dependencyId, true);
+  const inclusion = editorReferenceInclusionForDependencyId(
+    input.editorDirection,
+    dependencyId,
+    true
+  );
   if (inclusion.included) {
     return [];
   }
@@ -870,7 +905,7 @@ export function excludedDefaultGeneralReferenceChoices(
     {
       dependencyId,
       kind: 'multi-shot-storyboard-sheet',
-      title: multiShotStoryboardSheetTitle(context),
+      title: multiShotStoryboardSheetTitle(input.context),
       inclusion,
     },
   ];

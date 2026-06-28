@@ -1,6 +1,5 @@
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
-  SceneShotVideoTakeDirection,
   SceneShotVideoTakeReferenceSelections,
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
@@ -48,9 +47,9 @@ import {
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
 import {
-  sceneShotVideoTakeDirectionForShot,
   sceneShotVideoTakeDirectionReferenceSelections,
-  sceneShotVideoTakeStructureDirections,
+  sceneShotVideoTakeGenerationDirections,
+  resolveSceneShotVideoTakeReferenceMutationScope,
 } from './take-state.js';
 
 export async function updateSceneShotVideoTakeCharacterSheetSelection(
@@ -61,10 +60,11 @@ export async function updateSceneShotVideoTakeCharacterSheetSelection(
     if (input.assetId !== null) {
       assertCastCharacterSheetAsset(session, input.castMemberId, input.assetId);
     }
+    const referenceSelections = referenceSelectionsForMutation(context, input.shotId);
     return {
-      ...referenceSelectionsForMutation(context, input.shotId),
+      ...referenceSelections,
       selectedCharacterSheetAssetIds: withRecordSelection(
-        referenceSelectionsForMutation(context, input.shotId).selectedCharacterSheetAssetIds,
+        referenceSelections.selectedCharacterSheetAssetIds,
         input.castMemberId,
         input.assetId
       ),
@@ -81,10 +81,11 @@ export async function updateSceneShotVideoTakeLocationSheetSelection(
     for (const assetId of assetIds) {
       assertLocationEnvironmentSheetAsset(session, input.locationId, assetId);
     }
+    const referenceSelections = referenceSelectionsForMutation(context, input.shotId);
     return {
-      ...referenceSelectionsForMutation(context, input.shotId),
+      ...referenceSelections,
       referencedLocationSheetAssetIds: withArrayRecordSelection(
-        referenceSelectionsForMutation(context, input.shotId).referencedLocationSheetAssetIds,
+        referenceSelections.referencedLocationSheetAssetIds,
         input.locationId,
         assetIds
       ),
@@ -99,8 +100,9 @@ export async function updateSceneShotVideoTakeLookbookSheetSelection(
     if (input.lookbookSheetId !== null) {
       assertActiveLookbookSheet(session, context, input.lookbookSheetId);
     }
+    const referenceSelections = referenceSelectionsForMutation(context, input.shotId);
     return {
-      ...referenceSelectionsForMutation(context, input.shotId),
+      ...referenceSelections,
       selectedLookbookSheetIds: input.lookbookSheetId ? [input.lookbookSheetId] : [],
     };
   });
@@ -119,10 +121,11 @@ export async function updateSceneShotVideoTakeDialogueAudioSelection(
         input.dialogueAudioTakeId
       );
     }
+    const referenceSelections = referenceSelectionsForMutation(context, input.shotId);
     return {
-      ...referenceSelectionsForMutation(context, input.shotId),
+      ...referenceSelections,
       selectedDialogueAudioTakeIds: withRecordSelection(
-        referenceSelectionsForMutation(context, input.shotId).selectedDialogueAudioTakeIds,
+        referenceSelections.selectedDialogueAudioTakeIds,
         input.dialogueId,
         input.dialogueAudioTakeId
       ),
@@ -141,10 +144,11 @@ export async function updateSceneShotVideoTakeReferenceInclusion(
       inclusion: input.inclusion,
       dependencyLines: plan.dependencyInventory.dependencies,
     });
+    const referenceSelections = referenceSelectionsForMutation(context, input.shotId);
     return {
-      ...referenceSelectionsForMutation(context, input.shotId),
+      ...referenceSelections,
       dependencyInclusions: withRecordSelection(
-        referenceSelectionsForMutation(context, input.shotId).dependencyInclusions,
+        referenceSelections.dependencyInclusions,
         input.dependencyId,
         input.inclusion
       ),
@@ -174,13 +178,15 @@ async function updateSceneShotVideoTakeReferenceSelections(
       project,
       prepared,
     });
+    const mutationScope = resolveSceneShotVideoTakeReferenceMutationScope({
+      state: context.take.state,
+      shotIds: context.take.shotIds,
+      shotId: input.shotId,
+    });
     const referenceSelections = buildReferenceSelections({ session, context });
     updateSceneShotVideoTakeReferenceSelectionsRecord(session, {
       takeId: prepared.take.takeId,
-      shotId:
-        prepared.take.state.structure.mode === 'multi-cut'
-          ? input.shotId
-          : undefined,
+      shotId: mutationScope.shotId,
       referenceSelections,
       screenplay,
       now: new Date().toISOString(),
@@ -195,42 +201,15 @@ async function updateSceneShotVideoTakeReferenceSelections(
   });
 }
 
-function directionForMutation(
-  context: ShotVideoTakeProductionContext,
-  shotId: string | undefined
-): SceneShotVideoTakeDirection {
-  if (context.take.state.structure.mode === 'continuous') {
-    return context.take.state.structure.sharedDirection;
-  }
-  if (!shotId) {
-    throwReferenceSelectionError({
-      code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_SCOPE_MISMATCH',
-      message: 'Multi-cut reference updates must specify a grouped shot id.',
-      path: ['shotId'],
-      suggestion: 'Refresh the selected shot and retry the reference update.',
-    });
-  }
-  if (!context.take.shotIds.includes(shotId)) {
-    throwReferenceSelectionError({
-      code: 'CORE_SHOT_VIDEO_TAKE_STRUCTURE_SCOPE_MISMATCH',
-      message: 'Reference update shot id is not in this Scene Shot Video Take.',
-      path: ['shotId'],
-      suggestion: 'Choose a shot from the grouped take.',
-    });
-  }
-  return sceneShotVideoTakeDirectionForShot({
-    state: context.take.state,
-    shotId,
-  });
-}
-
 function referenceSelectionsForMutation(
   context: ShotVideoTakeProductionContext,
   shotId: string | undefined
 ): SceneShotVideoTakeReferenceSelections {
-  return sceneShotVideoTakeDirectionReferenceSelections(
-    directionForMutation(context, shotId)
-  );
+  return resolveSceneShotVideoTakeReferenceMutationScope({
+    state: context.take.state,
+    shotIds: context.take.shotIds,
+    shotId,
+  }).referenceSelections;
 }
 
 function assertSceneCastMember(
@@ -401,9 +380,10 @@ function assertKnownDependencyInclusion(input: {
   const line = input.dependencyLines.find(
     (candidate) => candidate.dependencyId === input.dependencyId
   );
-  const alreadyStored = sceneShotVideoTakeStructureDirections(
-    input.context.take.state.structure
-  ).some(
+  const alreadyStored = sceneShotVideoTakeGenerationDirections({
+    structure: input.context.take.state.structure,
+    shotIds: input.context.take.shotIds,
+  }).some(
     (direction) =>
       sceneShotVideoTakeDirectionReferenceSelections(direction)
         .dependencyInclusions[input.dependencyId] !== undefined

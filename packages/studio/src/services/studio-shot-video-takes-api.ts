@@ -277,12 +277,17 @@ export async function planShotVideoTakeProduction(
   sceneId: string,
   takeId: string,
   production?: SceneShotVideoTakeProductionState,
-  inputPolicy: ShotVideoTakeInputPolicy = { defaultMode: 'auto' }
+  inputPolicy: ShotVideoTakeInputPolicy = { defaultMode: 'auto' },
+  selectedShotId?: string
 ): Promise<ShotVideoTakeProductionPlanReport> {
   const response = await fetch(`${productionPath(projectName, sceneId, takeId)}/plan`, {
     method: 'POST',
     headers: jsonHeaders(),
-    body: JSON.stringify({ ...(production ? { production } : {}), inputPolicy }),
+    body: JSON.stringify({
+      ...(production ? { production } : {}),
+      inputPolicy,
+      ...(selectedShotId ? { selectedShotId } : {}),
+    }),
   });
   if (!response.ok) {
     throw await readStudioApiError(response);

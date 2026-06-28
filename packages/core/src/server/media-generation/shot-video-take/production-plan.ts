@@ -75,6 +75,9 @@ import {
 import {
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
+import {
+  resolveSceneShotVideoTakeEditorDirection,
+} from './take-state.js';
 
 
 
@@ -270,6 +273,7 @@ export async function readShotVideoTakeProductionPlan(
         production: input.production,
       }),
       plan,
+      selectedShotId: input.selectedShotId,
     });
   });
 }
@@ -280,6 +284,7 @@ export function buildShotVideoTakeProductionPlanReport(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
   plan: ShotVideoTakeOutputGenerationPlan;
+  selectedShotId?: string;
 }): ShotVideoTakeProductionPlanReport {
   const screenplay = requireScreenplayDocument(input.session);
   const shotListRow = requireSceneShotListForScene({
@@ -298,12 +303,23 @@ export function buildShotVideoTakeProductionPlanReport(input: {
     narrativeScope,
     shotList,
   });
+  const editorDirection = resolveSceneShotVideoTakeEditorDirection({
+    state: input.context.take.state,
+    shotIds: input.context.take.shotIds,
+    selectedShotId: input.selectedShotId,
+  });
+  const editorShots =
+    input.context.take.state.structure.mode === 'multi-cut'
+      ? input.context.shots.filter((shot) => shot.shotId === input.selectedShotId)
+      : input.context.shots;
   const referenceSections = buildShotVideoTakeReferenceSections({
     session: input.session,
     context: input.context,
     plan: input.plan,
     narrativeScope,
     scope,
+    editorDirection,
+    editorShots,
   });
   const diagnostics = [
     ...input.plan.diagnostics,

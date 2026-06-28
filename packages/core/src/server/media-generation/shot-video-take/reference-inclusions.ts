@@ -2,6 +2,7 @@ import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
   MediaGenerationDependencyLine,
   MediaGenerationDependencySlot,
+  SceneShotVideoTakeDirection,
   ShotVideoTakeProductionContext,
   ShotVideoTakeInputKind,
   ShotVideoTakePreflightInput,
@@ -10,7 +11,7 @@ import { ProjectDataError } from '../../project-data-error.js';
 import { shotVideoInputDependencyId } from '../dependency-identifiers.js';
 import {
   sceneShotVideoTakeDirectionReferenceSelections,
-  sceneShotVideoTakeStructureDirections,
+  sceneShotVideoTakeGenerationDirections,
 } from './take-state.js';
 
 
@@ -28,7 +29,7 @@ export function validateRequiredReferenceInclusions(input: {
   slots: MediaGenerationDependencySlot[];
 }): void {
   const issues = input.slots.flatMap((slot) => {
-    const override = referenceInclusionOverride(
+    const override = generationReferenceInclusionOverride(
       input.context,
       slot.dependencyId
     );
@@ -67,7 +68,7 @@ export function referenceDependencySlotIncluded(
   if (slot.required) {
     return true;
   }
-  const override = referenceInclusionOverride(context, slot.dependencyId);
+  const override = generationReferenceInclusionOverride(context, slot.dependencyId);
   if (override === 'include') {
     return true;
   }
@@ -91,20 +92,33 @@ export function filterPreparedInputsByReferenceInclusions(
       subjectKind: preparedInput.subjectKind,
       subjectId: preparedInput.subjectId,
     });
-    return referenceInclusionOverride(context, dependencyId) !== 'exclude';
+    return generationReferenceInclusionOverride(context, dependencyId) !== 'exclude';
   });
 }
 
-export function referenceInclusionOverride(
+export function generationReferenceInclusionOverride(
   context: ShotVideoTakeProductionContext,
   dependencyId: string
 ): 'include' | 'exclude' | null {
   return groupReferenceInclusionOverride(
-    sceneShotVideoTakeStructureDirections(context.take.state.structure).map(
+    sceneShotVideoTakeGenerationDirections({
+      structure: context.take.state.structure,
+      shotIds: context.take.shotIds,
+    }).map(
       (direction) =>
         sceneShotVideoTakeDirectionReferenceSelections(direction)
           .dependencyInclusions[dependencyId] ?? null
     )
+  );
+}
+
+export function editorReferenceInclusionOverride(
+  direction: SceneShotVideoTakeDirection,
+  dependencyId: string
+): 'include' | 'exclude' | null {
+  return (
+    sceneShotVideoTakeDirectionReferenceSelections(direction)
+      .dependencyInclusions[dependencyId] ?? null
   );
 }
 
@@ -135,26 +149,56 @@ export function isReferencePreparedInput(kind: ShotVideoTakeInputKind): boolean 
 
 
 
-export function referenceInclusionForDependencyId(
+export function generationReferenceInclusionForDependencyId(
   context: ShotVideoTakeProductionContext,
   dependencyId: string,
   defaultIncluded: boolean,
   line?: MediaGenerationDependencyLine | null
 ): ReferenceInclusionResolution {
   const required = line?.required ?? false;
-  const inclusionOverride = referenceInclusionOverride(context, dependencyId);
-  return {
+  const inclusionOverride = generationReferenceInclusionOverride(context, dependencyId);
+  return referenceInclusionResolution({
     dependencyId,
     defaultIncluded,
     required,
     inclusionOverride,
-    included: required
+  });
+}
+
+export function editorReferenceInclusionForDependencyId(
+  direction: SceneShotVideoTakeDirection,
+  dependencyId: string,
+  defaultIncluded: boolean,
+  line?: MediaGenerationDependencyLine | null
+): ReferenceInclusionResolution {
+  const required = line?.required ?? false;
+  const inclusionOverride = editorReferenceInclusionOverride(direction, dependencyId);
+  return referenceInclusionResolution({
+    dependencyId,
+    defaultIncluded,
+    required,
+    inclusionOverride,
+  });
+}
+
+function referenceInclusionResolution(input: {
+  dependencyId: string;
+  defaultIncluded: boolean;
+  required: boolean;
+  inclusionOverride: 'include' | 'exclude' | null;
+}): ReferenceInclusionResolution {
+  return {
+    dependencyId: input.dependencyId,
+    defaultIncluded: input.defaultIncluded,
+    required: input.required,
+    inclusionOverride: input.inclusionOverride,
+    included: input.required
       ? true
-      : inclusionOverride === 'include'
+      : input.inclusionOverride === 'include'
         ? true
-        : inclusionOverride === 'exclude'
+        : input.inclusionOverride === 'exclude'
           ? false
-          : defaultIncluded,
+          : input.defaultIncluded,
   };
 }
 

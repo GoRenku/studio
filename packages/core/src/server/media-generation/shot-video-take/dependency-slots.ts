@@ -15,6 +15,7 @@ export interface ShotVideoTakeDependencySlotInput {
   target: SceneShotVideoTakeTarget;
   inputModeId: ShotVideoTakeInputModeId;
   selectedCast: Array<{ id: string; name: string; isVoiceOver?: boolean }>;
+  selectedCharacterSheetAssetIds: Record<string, string[]>;
   selectedLocations: Array<{ id: string; name: string }>;
   activeLookbook: { id: string; name: string; selectedSheetId?: string | null } | null;
   customReferenceInputs: Array<{ id: string; title: string }>;
@@ -131,14 +132,29 @@ function shotVideoReferenceContextSlots(
       : []),
     ...input.selectedCast
       .filter((castMember) => !castMember.isVoiceOver)
-      .map((castMember) =>
-        castCharacterSheetDependencySlot({
-          castMemberId: castMember.id,
-          castMemberName: castMember.name,
-          required: false,
-          reason: contextReason,
-        })
-      ),
+      .flatMap((castMember) => {
+        const selectedAssetIds =
+          input.selectedCharacterSheetAssetIds[castMember.id] ?? [];
+        if (selectedAssetIds.length > 0) {
+          return selectedAssetIds.map((assetId) =>
+            castCharacterSheetDependencySlot({
+              castMemberId: castMember.id,
+              castMemberName: castMember.name,
+              assetId,
+              required: false,
+              reason: contextReason,
+            })
+          );
+        }
+        return [
+          castCharacterSheetDependencySlot({
+            castMemberId: castMember.id,
+            castMemberName: castMember.name,
+            required: false,
+            reason: contextReason,
+          }),
+        ];
+      }),
     ...input.selectedLocations.flatMap((location) => {
       const referencedAssetIds =
         input.referencedLocationSheetAssetIds[location.id] ?? [];

@@ -226,7 +226,9 @@ describe('studio-shot-video-takes-api', () => {
       'constantinople',
       'scene_hook',
       TAKE_ID,
-      PRODUCTION
+      PRODUCTION,
+      { defaultMode: 'auto' },
+      'shot_002'
     );
     const [url, init] = lastCall();
     expect(String(url)).toContain(`/takes/${TAKE_ID}/plan`);
@@ -234,6 +236,7 @@ describe('studio-shot-video-takes-api', () => {
     expect(lastBody()).toEqual({
       production: PRODUCTION,
       inputPolicy: { defaultMode: 'auto' },
+      selectedShotId: 'shot_002',
     });
   });
 

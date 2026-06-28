@@ -56,9 +56,9 @@ export function SceneShotReferencesTab({
     failureMessage: 'References could not be saved.',
   });
   const references = productionPlan?.references;
-  const scopedShotId = selectedShotId ?? productionPlan?.take.shotIds[0];
+  const scopedShotId = selectedShotId ?? productionPlan?.take?.shotIds[0];
   const mutationShotId =
-    productionPlan?.take.state.structure.mode === 'multi-cut'
+    productionPlan?.take?.state?.structure.mode === 'multi-cut'
       ? scopedShotId
       : undefined;
   const referenceIssues =

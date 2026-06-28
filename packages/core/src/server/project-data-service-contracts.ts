@@ -1554,6 +1554,7 @@ export interface PlanShotVideoTakeProductionInput
   extends ShotVideoTakeContextInput {
   production?: SceneShotVideoTakeProductionState;
   inputPolicy?: ShotVideoTakeInputPolicy;
+  selectedShotId?: string;
 }
 
 export interface SelectShotVideoTakeInputInput

@@ -4,6 +4,7 @@ import {
   type ShotVideoTakeTestProject,
 } from '../../testing/shot-video-take-fixtures.js';
 import type {
+  ProjectRelativePath,
   SceneShotVideoTake,
   SceneShotVideoTakeReferenceSelections,
 } from '../../../client/index.js';
@@ -732,6 +733,361 @@ describe('shot video take preflight and validation', () => {
     );
     expect(report.plan.estimate.estimatedTotalUsd).toBeGreaterThanOrEqual(
       audioLine?.pricing.state === 'priced' ? audioLine.pricing.estimatedUsd : 0
+    );
+  });
+
+  it('reads multi-cut reference selections from the selected shot while generation aggregates the take', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const dialogueBlockIndex = scene.blocks.length;
+    const dialogueBlock = {
+      type: 'dialogue' as const,
+      dialogueId: 'dialogue_scoped_reference',
+      castMemberId: ids.castMemberId,
+      lines: ['Hold the western gate.'],
+    };
+    await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: ids.sceneId,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...scene,
+          blocks: [...scene.blocks, dialogueBlock],
+        },
+      },
+    });
+    const shotList = shotVideoTakeProject.sampleShotList(ids, 2);
+    shotList.shots = shotList.shots.map((shot) => ({
+      ...shot,
+      dialogue: [{ blockIndex: dialogueBlockIndex, purpose: 'spoken line' }],
+    }));
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: shotList,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const takeReport = await projectData.createSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001', 'shot_002'],
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const take = takeReport.overview.take;
+    await projectData.updateSceneShotVideoTakeStructureMode({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      mode: 'multi-cut',
+    });
+
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/cast-sheet-a.png',
+      'cast sheet a'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/cast-sheet-b.png',
+      'cast sheet b'
+    );
+    const characterSheetA = await projectData.importCastCharacterSheetMedia({
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: 'generated/media/cast-sheet-a.png',
+      title: 'Character Sheet A',
+    });
+    const characterSheetB = await projectData.importCastCharacterSheetMedia({
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: 'generated/media/cast-sheet-b.png',
+      title: 'Character Sheet B',
+    });
+
+    const project = await projectData.readCurrentProject({ homeDir });
+    if (!project) {
+      throw new Error('Expected current project to exist.');
+    }
+    const locationSheetFilesA =
+      await shotVideoTakeProject.writeLocationSheetImportFiles(
+        project.projectFolder,
+        'location-sheet-a'
+      );
+    const locationSheetFilesB =
+      await shotVideoTakeProject.writeLocationSheetImportFiles(
+        project.projectFolder,
+        'location-sheet-b'
+      );
+    const locationSheetA = await projectData.importLocationEnvironmentSheetMedia({
+      homeDir,
+      locationId: ids.locationId,
+      sourceProjectRelativePath: locationSheetFilesA.primary,
+      title: 'Location Sheet A',
+      description: 'Primary environment sheet for shot one.',
+    });
+    const locationSheetB = await projectData.importLocationEnvironmentSheetMedia({
+      homeDir,
+      locationId: ids.locationId,
+      sourceProjectRelativePath: locationSheetFilesB.primary,
+      title: 'Location Sheet B',
+      description: 'Primary environment sheet for shot two.',
+    });
+
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: shotVideoTakeProject.lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.selectLookbookForType({
+      projectName: 'constantinople',
+      homeDir,
+      type: 'movie',
+      lookbookId: lookbook.lookbook.id,
+    });
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/lookbook-sheet-a.png',
+      'lookbook sheet a'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/lookbook-sheet-b.png',
+      'lookbook sheet b'
+    );
+    const lookbookSheetA = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet-a.png',
+      title: 'Lookbook Sheet A',
+    });
+    const lookbookSheetB = await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId: lookbook.lookbook.id,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet-b.png',
+      title: 'Lookbook Sheet B',
+    });
+
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/audio/urban-sample.mp3',
+      'voice sample bytes'
+    );
+    const voice = await projectData.attachCastVoice({
+      homeDir,
+      document: {
+        kind: 'castVoiceAttachment',
+        castMemberId: ids.castMemberId,
+        name: 'urban-primary',
+        provider: 'elevenlabs',
+        model: 'eleven_v3',
+        voiceId: 'voice_urban_primary',
+        purpose: 'Primary speaking voice for scoped reference tests',
+        sample: {
+          sourceProjectRelativePath:
+            'generated/audio/urban-sample.mp3' as ProjectRelativePath,
+          title: 'Urban primary voice sample',
+        },
+      },
+    });
+    const audioInput = {
+      homeDir,
+      sceneId: ids.sceneId,
+      dialogueId: dialogueBlock.dialogueId,
+      setup: {
+        modelChoice: 'elevenlabs/eleven_v3' as const,
+        castVoiceId: voice.voice.id,
+        plainText: dialogueBlock.lines.join('\n'),
+        v3Text: dialogueBlock.lines.join('\n'),
+        outputFormat: 'mp3_44100_128' as const,
+        languageCode: 'en',
+      },
+      simulate: true,
+    };
+    const firstAudio = await projectData.generateSceneDialogueAudioTake(audioInput);
+    const secondAudio = await projectData.generateSceneDialogueAudioTake(audioInput);
+    const firstAudioTakeId =
+      firstAudio.context.audioByDialogueId[dialogueBlock.dialogueId]?.pickedTakeId;
+    const secondAudioTakeId =
+      secondAudio.context.audioByDialogueId[dialogueBlock.dialogueId]?.pickedTakeId;
+    if (!firstAudioTakeId || !secondAudioTakeId) {
+      throw new Error('Expected generated dialogue audio takes.');
+    }
+
+    await projectData.updateSceneShotVideoTakeCharacterSheetSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_001',
+      castMemberId: ids.castMemberId,
+      assetId: characterSheetA.imported.assetId,
+    });
+    await projectData.updateSceneShotVideoTakeCharacterSheetSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_002',
+      castMemberId: ids.castMemberId,
+      assetId: characterSheetB.imported.assetId,
+    });
+    await projectData.updateSceneShotVideoTakeLocationSheetSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_001',
+      locationId: ids.locationId,
+      assetIds: [locationSheetA.imported.assetId],
+    });
+    await projectData.updateSceneShotVideoTakeLocationSheetSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_002',
+      locationId: ids.locationId,
+      assetIds: [locationSheetB.imported.assetId],
+    });
+    await projectData.updateSceneShotVideoTakeLookbookSheetSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_001',
+      lookbookSheetId: lookbookSheetA.imported.id,
+    });
+    await projectData.updateSceneShotVideoTakeLookbookSheetSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_002',
+      lookbookSheetId: lookbookSheetB.imported.id,
+    });
+    await projectData.updateSceneShotVideoTakeDialogueAudioSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_001',
+      dialogueId: dialogueBlock.dialogueId,
+      dialogueAudioTakeId: firstAudioTakeId,
+    });
+    await projectData.updateSceneShotVideoTakeDialogueAudioSelection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_002',
+      dialogueId: dialogueBlock.dialogueId,
+      dialogueAudioTakeId: secondAudioTakeId,
+    });
+    const dependencyId = sceneDialogueAudioDependencyId(dialogueBlock.dialogueId);
+    await projectData.updateSceneShotVideoTakeReferenceInclusion({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_001',
+      dependencyId,
+      inclusion: 'exclude',
+    });
+    await projectData.updateSceneShotVideoTakeReferenceInclusion({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      shotId: 'shot_002',
+      dependencyId,
+      inclusion: 'include',
+    });
+
+    const shotOneReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      selectedShotId: 'shot_001',
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      },
+    });
+    const shotTwoReport = await projectData.readShotVideoTakeProductionPlan({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: take.takeId,
+      selectedShotId: 'shot_002',
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      },
+    });
+
+    expect(
+      shotOneReport.references.castMembers.find(
+        (group) => group.castMemberId === ids.castMemberId
+      )?.selectedCharacterSheetAssetId
+    ).toBe(characterSheetA.imported.assetId);
+    expect(
+      shotTwoReport.references.castMembers.find(
+        (group) => group.castMemberId === ids.castMemberId
+      )?.selectedCharacterSheetAssetId
+    ).toBe(characterSheetB.imported.assetId);
+    expect(
+      shotOneReport.references.locations.find(
+        (group) => group.locationId === ids.locationId
+      )?.referencedEnvironmentSheetAssetIds
+    ).toEqual([locationSheetA.imported.assetId]);
+    expect(
+      shotTwoReport.references.locations.find(
+        (group) => group.locationId === ids.locationId
+      )?.referencedEnvironmentSheetAssetIds
+    ).toEqual([locationSheetB.imported.assetId]);
+    expect(
+      shotOneReport.references.lookbook.find((choice) => choice.selected)
+        ?.lookbookSheetId
+    ).toBe(lookbookSheetA.imported.id);
+    expect(
+      shotTwoReport.references.lookbook.find((choice) => choice.selected)
+        ?.lookbookSheetId
+    ).toBe(lookbookSheetB.imported.id);
+    expect(
+      shotOneReport.references.dialogueAudio.find(
+        (choice) => choice.dialogueId === dialogueBlock.dialogueId
+      )?.pickedTake?.takeId
+    ).toBe(firstAudioTakeId);
+    expect(
+      shotTwoReport.references.dialogueAudio.find(
+        (choice) => choice.dialogueId === dialogueBlock.dialogueId
+      )?.pickedTake?.takeId
+    ).toBe(secondAudioTakeId);
+    expect(
+      shotOneReport.references.dialogueAudio.find(
+        (choice) => choice.dialogueId === dialogueBlock.dialogueId
+      )?.included
+    ).toBe(false);
+    expect(
+      shotTwoReport.references.dialogueAudio.find(
+        (choice) => choice.dialogueId === dialogueBlock.dialogueId
+      )?.included
+    ).toBe(true);
+    expect(shotOneReport.plan.dependencyInventory.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dependencyKind: 'cast-character-sheet',
+          selectedAsset: expect.objectContaining({
+            assetId: characterSheetA.imported.assetId,
+          }),
+        }),
+        expect.objectContaining({
+          dependencyKind: 'cast-character-sheet',
+          selectedAsset: expect.objectContaining({
+            assetId: characterSheetB.imported.assetId,
+          }),
+        }),
+        expect.objectContaining({
+          dependencyKind: 'location-environment-sheet',
+          selectedAsset: expect.objectContaining({
+            assetId: locationSheetA.imported.assetId,
+          }),
+        }),
+        expect.objectContaining({
+          dependencyKind: 'location-environment-sheet',
+          selectedAsset: expect.objectContaining({
+            assetId: locationSheetB.imported.assetId,
+          }),
+        }),
+      ])
     );
   });
 

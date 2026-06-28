@@ -6,6 +6,7 @@ import type {
   ScreenplayDocument,
 } from '../../../client/screenplay.js';
 import type {
+  SceneShotVideoTakeDirection,
   SceneDialogueAudioTake,
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
@@ -19,7 +20,7 @@ import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { sceneDialogueAudioDependencyId } from '../dependency-identifiers.js';
 import {
   sceneShotVideoTakeDirectionReferenceSelections,
-  sceneShotVideoTakeStructureDirections,
+  sceneShotVideoTakeGenerationDirections,
 } from './take-state.js';
 
 export interface ResolvedShotDialogueAudioReference {
@@ -46,6 +47,7 @@ export function resolveShotDialogueAudioReferences(input: {
   screenplay: ScreenplayDocument;
   scene: Scene;
   context: ShotVideoTakeProductionContext;
+  editorDirection?: SceneShotVideoTakeDirection;
 }): {
   references: ResolvedShotDialogueAudioReference[];
   diagnostics: DiagnosticIssue[];
@@ -112,10 +114,9 @@ export function resolveShotDialogueAudioReferences(input: {
   const references = dialogueBlocksInSceneOrder.map((dialogueBlock) => {
     const dialogueId = dialogueBlock.dialogueId;
     const audio = audioByDialogueId.get(dialogueId) ?? null;
-    const selectedTakeId = selectedDialogueAudioTakeIdForContext(
-      input.context,
-      dialogueId
-    );
+    const selectedTakeId = input.editorDirection
+      ? selectedDialogueAudioTakeIdForEditorDirection(input.editorDirection, dialogueId)
+      : selectedDialogueAudioTakeIdForGenerationContext(input.context, dialogueId);
     const pickedTake =
       selectedTakeId && audio
         ? audio.takes.find((take) => take.takeId === selectedTakeId) ?? null
@@ -192,13 +193,22 @@ export function resolveShotDialogueAudioReferences(input: {
   };
 }
 
-function selectedDialogueAudioTakeIdForContext(
+function selectedDialogueAudioTakeIdForEditorDirection(
+  direction: SceneShotVideoTakeDirection,
+  dialogueId: string
+): string | undefined {
+  return sceneShotVideoTakeDirectionReferenceSelections(direction)
+    .selectedDialogueAudioTakeIds[dialogueId];
+}
+
+function selectedDialogueAudioTakeIdForGenerationContext(
   context: ShotVideoTakeProductionContext,
   dialogueId: string
 ): string | undefined {
-  for (const direction of sceneShotVideoTakeStructureDirections(
-    context.take.state.structure
-  )) {
+  for (const direction of sceneShotVideoTakeGenerationDirections({
+    structure: context.take.state.structure,
+    shotIds: context.take.shotIds,
+  })) {
     const selected = sceneShotVideoTakeDirectionReferenceSelections(direction)
       .selectedDialogueAudioTakeIds[dialogueId];
     if (selected) {

@@ -236,6 +236,42 @@ Core planning must respect the final reviewed state:
 - selected and excluded references must be visible in authoring context and
   provider payload preview.
 
+### Reference Projection Scope
+
+Reference reads use different scopes depending on the caller.
+
+Editor projection resolves exactly one direction:
+
+- in continuous mode, the editor reads `sharedDirection`;
+- in multi-cut mode, the editor reads
+  `directionsByShotId[selectedShotId]`;
+- multi-cut editor reads require a selected shot id that belongs to the take;
+- selected Character Sheets, referenced Location Sheets, selected Lookbook
+  Sheets, selected Dialogue Audio takes, and include/exclude card state must
+  come from that one resolved editor direction.
+
+Generation projection resolves the whole take:
+
+- in continuous mode, generation reads `sharedDirection`;
+- in multi-cut mode, generation reads one direction per grouped shot id in
+  take order;
+- dependency inventory, preflight input preparation, final provider payloads,
+  estimates, and whole-take validation may aggregate references across that
+  ordered generation direction set.
+
+Core helpers must name this distinction directly. A helper that scans every
+direction is a generation or whole-take dependency helper. A helper that
+returns selected editor state is an editor-direction helper. Studio routes and
+React components must not repair or reinterpret this scope locally.
+
+Reference mutations use one validated write scope:
+
+- continuous reference mutations must reject any provided shot id;
+- multi-cut reference mutations must require a valid grouped shot id;
+- mutation wrappers must not drop shot ids before calling the core state
+  updater;
+- mismatches fail through `CORE_SHOT_VIDEO_TAKE_STRUCTURE_SCOPE_MISMATCH`.
+
 Voice readiness is separate. Missing Cast Voice blocks dialogue audio
 generation and should route the user to a casting or voice workflow with user
 consent. Shot-video generation must not silently assign voices.

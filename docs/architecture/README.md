@@ -78,6 +78,9 @@ Use this page as the map:
   - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
   - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
   - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
+  - `../decisions/0038-use-scoped-shot-video-take-reference-projections.md`
+    for editor-direction versus generation-direction Shot Video Take reference
+    projection.
 
 ## Studio App, Server, Routes, And Coordination
 

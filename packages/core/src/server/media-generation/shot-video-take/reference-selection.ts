@@ -1,11 +1,12 @@
 import type {
   SceneShot,
+  SceneShotVideoTakeDirection,
   SceneShotVideoTakeState,
 } from '../../../client/index.js';
 import type { SceneReferenceScope } from './reference-scope.js';
 import {
   sceneShotVideoTakeDirectionReferenceSelections,
-  sceneShotVideoTakeStructureDirections,
+  sceneShotVideoTakeGenerationDirections,
 } from './take-state.js';
 
 export function selectedCastIdsForShots(
@@ -81,11 +82,15 @@ export function effectiveScopedLocationSelectionForShots(
 
 
 
-export function selectedLookbookSheetIdsForTakeState(
-  state: SceneShotVideoTakeState
+export function selectedLookbookSheetIdsForGenerationTakeState(
+  state: SceneShotVideoTakeState,
+  shotIds: string[]
 ): Set<string> {
   return new Set(
-    sceneShotVideoTakeStructureDirections(state.structure).flatMap(
+    sceneShotVideoTakeGenerationDirections({
+      structure: state.structure,
+      shotIds,
+    }).flatMap(
       (direction) =>
         sceneShotVideoTakeDirectionReferenceSelections(direction)
           .selectedLookbookSheetIds
@@ -93,31 +98,69 @@ export function selectedLookbookSheetIdsForTakeState(
   );
 }
 
+export function selectedLookbookSheetIdForEditorDirection(
+  direction: SceneShotVideoTakeDirection
+): string | null {
+  return (
+    sceneShotVideoTakeDirectionReferenceSelections(direction)
+      .selectedLookbookSheetIds[0] ?? null
+  );
+}
 
-
-export function selectedCharacterSheetAssetIdForTakeState(
-  state: SceneShotVideoTakeState,
+export function selectedCharacterSheetAssetIdForEditorDirection(
+  direction: SceneShotVideoTakeDirection,
   castMemberId: string
 ): string | null {
-  for (const direction of sceneShotVideoTakeStructureDirections(state.structure)) {
-    const selected = sceneShotVideoTakeDirectionReferenceSelections(direction)
-      .selectedCharacterSheetAssetIds[castMemberId];
-    if (selected) {
-      return selected;
-    }
-  }
-  return null;
+  return (
+    sceneShotVideoTakeDirectionReferenceSelections(direction)
+      .selectedCharacterSheetAssetIds[castMemberId] ?? null
+  );
+}
+
+export function selectedCharacterSheetAssetIdsForGenerationTakeState(
+  state: SceneShotVideoTakeState,
+  shotIds: string[],
+  castMemberId: string
+): string[] {
+  return [
+    ...new Set(
+      sceneShotVideoTakeGenerationDirections({
+        structure: state.structure,
+        shotIds,
+      }).flatMap((direction) => {
+        const selected = sceneShotVideoTakeDirectionReferenceSelections(direction)
+          .selectedCharacterSheetAssetIds[castMemberId];
+        return selected ? [selected] : [];
+      })
+    ),
+  ];
 }
 
 
 
-export function referencedEnvironmentSheetAssetIdsForTakeState(
-  state: SceneShotVideoTakeState,
+export function referencedEnvironmentSheetAssetIdsForEditorDirection(
+  direction: SceneShotVideoTakeDirection,
   locationId: string
 ): string[] {
   return [
     ...new Set(
-      sceneShotVideoTakeStructureDirections(state.structure).flatMap(
+      sceneShotVideoTakeDirectionReferenceSelections(direction)
+        .referencedLocationSheetAssetIds[locationId] ?? []
+    ),
+  ];
+}
+
+export function referencedEnvironmentSheetAssetIdsForGenerationTakeState(
+  state: SceneShotVideoTakeState,
+  shotIds: string[],
+  locationId: string
+): string[] {
+  return [
+    ...new Set(
+      sceneShotVideoTakeGenerationDirections({
+        structure: state.structure,
+        shotIds,
+      }).flatMap(
         (direction) =>
           sceneShotVideoTakeDirectionReferenceSelections(direction)
             .referencedLocationSheetAssetIds[locationId] ?? []

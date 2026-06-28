@@ -189,6 +189,7 @@ export function readSceneShotVideoTakeProductionRequest(
 export interface ShotVideoTakeProductionPlanRequest {
   production?: SceneShotVideoTakeProductionState;
   inputPolicy?: ShotVideoTakeInputPolicy;
+  selectedShotId?: string;
 }
 
 export function readShotVideoTakeProductionPlanRequest(
@@ -202,19 +203,24 @@ export function readShotVideoTakeProductionPlanRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['production', 'inputPolicy'],
+    ['production', 'inputPolicy', 'selectedShotId'],
     issues,
     CONTEXT,
-    'Send only the production and inputPolicy fields.'
+    'Send only the production, inputPolicy, and selectedShotId fields.'
   );
 
   const production =
     record.production === undefined
       ? undefined
       : readProductionValue(record.production, ['production'], issues);
+  const selectedShotId =
+    record.selectedShotId === undefined
+      ? undefined
+      : readStringValue(record.selectedShotId, ['selectedShotId'], issues);
   finishOrThrow(issues);
   return {
     ...(production ? { production } : {}),
+    ...(selectedShotId ? { selectedShotId } : {}),
     inputPolicy:
       record.inputPolicy === undefined
         ? undefined

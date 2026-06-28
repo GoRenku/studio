@@ -683,15 +683,15 @@ export function createScreenplayRoute({
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
           const takeId = c.req.param('takeId') as string;
-          const { production, inputPolicy } = readShotVideoTakeProductionPlanRequest(
-            await c.req.json()
-          );
+          const { production, inputPolicy, selectedShotId } =
+            readShotVideoTakeProductionPlanRequest(await c.req.json());
           const report = await projectData.readShotVideoTakeProductionPlan({
             projectName,
             sceneId,
             takeId: takeId,
             production,
             inputPolicy,
+            selectedShotId,
           });
           return c.json({ report });
         } catch (error) {

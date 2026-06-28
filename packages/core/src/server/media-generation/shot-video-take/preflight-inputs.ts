@@ -41,11 +41,11 @@ import {
   resolveShotDialogueAudioReferences,
 } from './dialogue-audio-references.js';
 import {
-  referenceInclusionForDependencyId,
+  generationReferenceInclusionForDependencyId,
 } from './reference-inclusions.js';
 import {
-  referencedEnvironmentSheetAssetIdsForTakeState,
-  selectedLookbookSheetIdsForTakeState,
+  referencedEnvironmentSheetAssetIdsForGenerationTakeState,
+  selectedLookbookSheetIdsForGenerationTakeState,
 } from './reference-selection.js';
 import {
   requireScreenplayDocument,
@@ -299,8 +299,9 @@ export function locationSheetInputsForContext(
 ): ShotVideoTakePreflightInput[] {
   const inputs: ShotVideoTakePreflightInput[] = [];
   for (const location of context.referencedLocations) {
-    const referencedAssetIds = referencedEnvironmentSheetAssetIdsForTakeState(
+    const referencedAssetIds = referencedEnvironmentSheetAssetIdsForGenerationTakeState(
       context.take.state,
+      context.take.shotIds,
       location.id
     );
     const assets = listAssetRelationshipPage(session, {
@@ -380,7 +381,7 @@ export function dialogueAudioInputsForContext(
   issues.push(...resolved.diagnostics);
   const inputs = new Map<string, ShotVideoTakePreflightInput>();
   for (const reference of resolved.references) {
-    const inclusion = referenceInclusionForDependencyId(
+    const inclusion = generationReferenceInclusionForDependencyId(
       context,
       reference.dependencyId,
       reference.defaultIncluded
@@ -430,7 +431,10 @@ export function lookbookSheetInputsForContext(
   if (!context.activeLookbook) {
     return [];
   }
-  const selectedIds = selectedLookbookSheetIdsForTakeState(context.take.state);
+  const selectedIds = selectedLookbookSheetIdsForGenerationTakeState(
+    context.take.state,
+    context.take.shotIds
+  );
   if (selectedIds.size === 0) {
     const defaultSheet = listLookbookSheets(session, context.activeLookbook.id)[0];
     if (defaultSheet) {

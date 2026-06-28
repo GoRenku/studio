@@ -33,6 +33,7 @@ export interface UseShotVideoTakeProductionInput {
   projectName: string;
   sceneId: string;
   takeId?: string | null;
+  selectedShotId?: string;
 }
 
 export interface UseShotVideoTakeProductionResult {
@@ -63,7 +64,7 @@ export interface UseShotVideoTakeProductionResult {
 export function useShotVideoTakeProduction(
   input: UseShotVideoTakeProductionInput
 ): UseShotVideoTakeProductionResult {
-  const { projectName, sceneId, takeId } = input;
+  const { projectName, sceneId, takeId, selectedShotId } = input;
   const takeIdKey = takeId ?? '';
 
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
@@ -206,6 +207,8 @@ export function useShotVideoTakeProduction(
     );
   }, [context?.defaults.inputModeId, take]);
   const storedModelChoice = take?.state.production.modelChoice;
+  const editorPlanSelectedShotId =
+    take?.state.structure.mode === 'multi-cut' ? selectedShotId : undefined;
 
   const setInputMode = useCallback(
     (inputMode: ShotVideoTakeInputModeId) => {
@@ -348,7 +351,9 @@ export function useShotVideoTakeProduction(
         projectName,
         sceneId,
         takeId,
-        take?.state.production
+        take?.state.production,
+        { defaultMode: 'auto' },
+        editorPlanSelectedShotId
       );
       setProductionPlan(report);
       setEstimate({
@@ -370,7 +375,7 @@ export function useShotVideoTakeProduction(
       );
       setPlanState('error');
     }
-  }, [projectName, sceneId, take, takeId]);
+  }, [editorPlanSelectedShotId, projectName, sceneId, take, takeId]);
 
   useEffect(() => {
     if (!takeId) {
@@ -385,7 +390,9 @@ export function useShotVideoTakeProduction(
           projectName,
           sceneId,
           takeId,
-          take?.state.production
+          take?.state.production,
+          { defaultMode: 'auto' },
+          editorPlanSelectedShotId
         );
         if (cancelled) {
           return;
@@ -418,7 +425,13 @@ export function useShotVideoTakeProduction(
     return () => {
       cancelled = true;
     };
-  }, [projectName, sceneId, take?.state.production, takeId]);
+  }, [
+    editorPlanSelectedShotId,
+    projectName,
+    sceneId,
+    take?.state.production,
+    takeId,
+  ]);
 
   const applyMutationResult = useCallback((result: { context: ShotVideoTakeProductionContext }) => {
     hasUserEditedRef.current = false;

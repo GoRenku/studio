@@ -14,20 +14,22 @@ import {
 export function castCharacterSheetDependencySlot(input: {
   castMemberId: string;
   castMemberName: string;
+  assetId?: string;
   required: boolean;
   reason: string;
 }): MediaGenerationDependencySlot {
   return {
-    dependencyId: castCharacterSheetDependencyId(input.castMemberId),
+    dependencyId: castCharacterSheetDependencyId(input.castMemberId, input.assetId),
     dependencyKind: 'cast-character-sheet',
     label: `${input.castMemberName} character sheet`,
     dependencyTarget: { kind: 'castMember', id: input.castMemberId },
     selector: {
       kind: 'asset-relationship',
       target: { kind: 'castMember', castMemberId: input.castMemberId },
+      ...(input.assetId ? { assetId: input.assetId } : {}),
       role: 'character_sheet',
       mediaKind: 'image',
-      selectionPolicy: 'selected-or-default',
+      selectionPolicy: input.assetId ? 'selected-only' : 'selected-or-default',
     },
     required: input.required,
     reason: input.reason,

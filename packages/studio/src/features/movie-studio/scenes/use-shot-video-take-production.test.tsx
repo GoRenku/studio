@@ -115,13 +115,76 @@ describe('useShotVideoTakeProduction', () => {
       );
     });
   });
+
+  it('refreshes multi-cut production plans with the selected shot id', async () => {
+    vi.mocked(readShotVideoTakeProduction).mockResolvedValue(
+      productionRead(multiCutTake())
+    );
+    const { rerender } = render(
+      <ShotVideoTakeProductionHarness selectedShotId='shot_002' />
+    );
+
+    await waitFor(() => {
+      expect(planShotVideoTakeProduction).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        {
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: { duration: 6 },
+        },
+        { defaultMode: 'auto' },
+        'shot_002'
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Refresh plan' }));
+
+    await waitFor(() => {
+      expect(planShotVideoTakeProduction).toHaveBeenLastCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        {
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: { duration: 6 },
+        },
+        { defaultMode: 'auto' },
+        'shot_002'
+      );
+    });
+
+    rerender(<ShotVideoTakeProductionHarness selectedShotId='shot_001' />);
+
+    await waitFor(() => {
+      expect(planShotVideoTakeProduction).toHaveBeenLastCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        {
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: { duration: 6 },
+        },
+        { defaultMode: 'auto' },
+        'shot_001'
+      );
+    });
+  });
 });
 
-function ShotVideoTakeProductionHarness() {
+function ShotVideoTakeProductionHarness({
+  selectedShotId,
+}: {
+  selectedShotId?: string;
+}) {
   const production = useShotVideoTakeProduction({
     projectName: 'constantinople',
     sceneId: 'scene_hook',
     takeId: 'take_001',
+    selectedShotId,
   });
 
   if (production.loadState !== 'ready') {
@@ -133,6 +196,9 @@ function ShotVideoTakeProductionHarness() {
       <p>{`duration:${production.take?.state.production.parameterValues?.duration ?? 'none'}`}</p>
       <Button type='button' onClick={() => production.setParameter('duration', 9)}>
         Set duration
+      </Button>
+      <Button type='button' onClick={() => void production.refreshProductionPlan()}>
+        Refresh plan
       </Button>
     </div>
   );
@@ -171,6 +237,44 @@ function initialTake(): SceneShotVideoTake {
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
     parameterValues: { duration: 6 },
   });
+}
+
+function multiCutTake(): SceneShotVideoTake {
+  const take = takeWithProduction({
+    inputModeId: 'text-only',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0',
+    parameterValues: { duration: 6 },
+  });
+  return {
+    ...take,
+    shotIds: ['shot_001', 'shot_002'],
+    state: {
+      ...take.state,
+      structure: {
+        mode: 'multi-cut',
+        directionsByShotId: {
+          shot_001: {
+            referenceSelections: {
+              dependencyInclusions: {},
+              selectedCharacterSheetAssetIds: {},
+              referencedLocationSheetAssetIds: {},
+              selectedLookbookSheetIds: [],
+              selectedDialogueAudioTakeIds: {},
+            },
+          },
+          shot_002: {
+            referenceSelections: {
+              dependencyInclusions: {},
+              selectedCharacterSheetAssetIds: {},
+              referencedLocationSheetAssetIds: {},
+              selectedLookbookSheetIds: [],
+              selectedDialogueAudioTakeIds: {},
+            },
+          },
+        },
+      },
+    },
+  };
 }
 
 function takeWithProduction(
