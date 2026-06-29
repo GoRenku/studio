@@ -8,3 +8,12 @@ packages:
 blockExoticSubdeps: true
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
+minimumReleaseAgeExclude:
+  - '@playwright/test@1.61.1'
+  - playwright-core@1.61.1
+  - playwright@1.61.1
+allowBuilds:
+  better-sqlite3: true
+  bufferutil: true
+  esbuild: true
+  ffmpeg-static: true

@@ -45,7 +45,7 @@
     "queue"
   ],
   "author": "",
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@11.7.0",
   "dependencies": {
     "@gorenku/studio-diagnostics": "workspace:*",
     "@gorenku/studio-engines": "workspace:*",
