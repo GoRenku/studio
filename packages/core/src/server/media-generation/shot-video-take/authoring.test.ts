@@ -23,7 +23,6 @@ describe('Shot Video Take authoring documents', () => {
     const context = await projectData.readSceneShotVideoTakeAuthoringContext({
       homeDir,
       takeId,
-      selectedShotId: 'shot_001',
     });
 
     expect(context.kind).toBe('sceneShotVideoTakeAuthoringContext');
@@ -58,6 +57,24 @@ describe('Shot Video Take authoring documents', () => {
         takeId,
         shotIds: ['shot_001'],
       },
+      prior: {
+        document: {
+          takeId,
+          shotIds: ['shot_001', 'shot_002'],
+        },
+      },
+      current: {
+        document: {
+          takeId,
+          shotIds: ['shot_001'],
+        },
+        context: {
+          take: {
+            shotIds: ['shot_001'],
+          },
+          shotGroupMode: 'single-shot',
+        },
+      },
     });
 
     const applied = await projectData.applySceneShotVideoTakeAuthoringDocument({
@@ -70,6 +87,20 @@ describe('Shot Video Take authoring documents', () => {
         takeId,
         shotIds: ['shot_001'],
       },
+      project: {
+        name: 'constantinople',
+        projectFolder: expect.any(String),
+      },
+      prior: {
+        document: {
+          shotIds: ['shot_001', 'shot_002'],
+        },
+      },
+      current: {
+        document: {
+          shotIds: ['shot_001'],
+        },
+      },
       resourceKeys: expect.arrayContaining([
         `scene:${ids.sceneId}`,
         `surface:scene:${ids.sceneId}:takes`,
@@ -79,6 +110,145 @@ describe('Shot Video Take authoring documents', () => {
 
     const reread = await projectData.readSceneShotVideoTake({ homeDir, takeId });
     expect(reread.shotIds).toEqual(['shot_001']);
+  });
+
+  it('validation reports proposed production state instead of persisted production state', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const context = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+
+    const validation = await projectData.validateSceneShotVideoTakeAuthoringDocument({
+      homeDir,
+      document: {
+        ...context.document,
+        shotIds: ['shot_001'],
+        production: {
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/kling-video/v3/pro',
+        },
+      },
+    });
+
+    expect(validation.prior.preflight).toMatchObject({
+      inputModeId: 'first-frame',
+      shotGroupMode: 'multi-shot',
+    });
+    expect(validation.current.preflight).toMatchObject({
+      inputModeId: 'text-only',
+      modelChoice: 'fal-ai/kling-video/v3/pro',
+      shotGroupMode: 'single-shot',
+    });
+    expect(validation.current.productionPlan.plan.request).toMatchObject({
+      inputMode: 'text-only',
+      modelChoice: 'fal-ai/kling-video/v3/pro',
+      shotGroupMode: 'single-shot',
+    });
+  });
+
+  it('rejects unsupported route combinations with structured diagnostics', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const context = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+
+    await expect(
+      projectData.validateSceneShotVideoTakeAuthoringDocument({
+        homeDir,
+        document: {
+          ...context.document,
+          production: {
+            inputModeId: 'source-video-reference',
+            modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          },
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_INVALID_DOCUMENT',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_ROUTE_UNSUPPORTED',
+        }),
+      ]),
+    });
+  });
+
+  it('rejects non-contiguous authoring shot ids during validation', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 3);
+    const context = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+
+    await expect(
+      projectData.validateSceneShotVideoTakeAuthoringDocument({
+        homeDir,
+        document: {
+          ...context.document,
+          shotIds: ['shot_001', 'shot_003'],
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_INVALID_DOCUMENT',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_SHOTS_NOT_CONTIGUOUS',
+        }),
+      ]),
+    });
+  });
+
+  it('applies multi-cut documents without requiring caller-selected shot scope', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const takeId = written.take.takeId;
+    await projectData.updateSceneShotVideoTakeStructureMode({
+      homeDir,
+      takeId,
+      mode: 'multi-cut',
+    });
+    const context = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId,
+      selectedShotId: 'shot_002',
+    });
+
+    const applied = await projectData.applySceneShotVideoTakeAuthoringDocument({
+      homeDir,
+      document: {
+        ...context.document,
+        structure: {
+          mode: 'multi-cut',
+          directionsByShotId:
+            context.document.structure.mode === 'multi-cut'
+              ? {
+                  ...context.document.structure.directionsByShotId,
+                  shot_001: {
+                    ...context.document.structure.directionsByShotId.shot_001,
+                    composition: { shotSize: 'wide-shot' },
+                  },
+                  shot_002: {
+                    ...context.document.structure.directionsByShotId.shot_002,
+                    composition: { shotSize: 'close-up' },
+                  },
+                }
+              : {},
+        },
+      },
+    });
+
+    expect(applied.prior.document.structure.mode).toBe('multi-cut');
+    expect(applied.current.document.structure.mode).toBe('multi-cut');
+    expect(applied.current.productionPlan.take.shotIds).toEqual([
+      'shot_001',
+      'shot_002',
+    ]);
+    expect(applied.current.productionPlan.references).toBeDefined();
   });
 
   it('rejects stale authoring documents instead of overwriting newer take state', async () => {

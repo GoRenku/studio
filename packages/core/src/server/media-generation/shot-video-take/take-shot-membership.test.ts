@@ -382,7 +382,14 @@ describe('Shot Video Take shot membership', () => {
         takeId,
         shotIds: ['shot_001', 'shot_002', 'shot_002'],
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA380' });
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_INVALID_SHOT_MEMBERSHIP',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_SHOT_DUPLICATE',
+        }),
+      ]),
+    });
 
     await expect(
       projectData.updateSceneShotVideoTakeShots({
@@ -390,6 +397,13 @@ describe('Shot Video Take shot membership', () => {
         takeId,
         shotIds: ['shot_001', 'shot_003'],
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA381' });
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_INVALID_SHOT_MEMBERSHIP',
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_SHOTS_NOT_CONTIGUOUS',
+        }),
+      ]),
+    });
   });
 });

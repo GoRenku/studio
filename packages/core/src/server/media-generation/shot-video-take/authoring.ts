@@ -4,11 +4,11 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import type {
-  SceneShot,
   SceneShotVideoTake,
   SceneShotVideoTakeAuthoringApplyReport,
   SceneShotVideoTakeAuthoringContextReport,
   SceneShotVideoTakeAuthoringDocument,
+  SceneShotVideoTakeAuthoringSnapshot,
   SceneShotVideoTakeAuthoringValidationReport,
   SceneShotVideoTakeDirection,
   SceneShotVideoTakeState,
@@ -52,11 +52,11 @@ import {
 } from './final-specs.js';
 import {
   finalTakeSpecForPreflight,
-  previewShotVideoTakeProduction,
+  previewShotVideoTakeProductionForContext,
 } from './preflight-report.js';
 import {
+  buildShotVideoTakeProductionPlanReport,
   planShotVideoTakeProductionForContext,
-  readShotVideoTakeProductionPlan,
 } from './production-plan.js';
 import {
   requireScreenplayDocument,
@@ -67,9 +67,13 @@ import {
 } from './reference-scope.js';
 import {
   assertEditableSceneShotVideoTake,
+  type PreparedSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
   sceneShotVideoTakeTarget,
 } from './take-context.js';
+import {
+  normalizeSceneShotVideoTakeShotMembership,
+} from './take-shot-membership.js';
 import {
   sceneShotVideoTakeDirectionReferenceSelections,
   validateSceneShotVideoTakeStructure,
@@ -79,43 +83,34 @@ export async function readSceneShotVideoTakeAuthoringContext(
   input: ReadSceneShotVideoTakeAuthoringContextInput
 ): Promise<SceneShotVideoTakeAuthoringContextReport> {
   const context = await buildShotVideoTakeContext(input);
-  const selectedShotId =
-    context.take.state.structure.mode === 'multi-cut'
-      ? input.selectedShotId
-      : undefined;
-  const productionInput = { ...input, selectedShotId };
-  const productionPlan = await readShotVideoTakeProductionPlan({
-    ...productionInput,
+  const snapshot = await buildSceneShotVideoTakeAuthoringSnapshot({
+    input,
+    context,
+    selectedShotId: input.selectedShotId,
   });
-  const preflight = await previewShotVideoTakeProduction(productionInput);
   return {
     kind: 'sceneShotVideoTakeAuthoringContext',
-    document: authoringDocumentForTake(context.take),
-    context,
-    productionPlan,
-    preflight,
-    providerPreview: await previewProviderPayload({
-      input: productionInput,
-      context,
-      preflight,
-    }),
-    resourceKeys: context.resourceKeys,
+    ...snapshot,
   };
 }
 
 export async function validateSceneShotVideoTakeAuthoringDocument(
   input: ValidateSceneShotVideoTakeAuthoringDocumentInput
 ): Promise<SceneShotVideoTakeAuthoringValidationReport> {
-  const validated = await validateAuthoringDocument(input);
+  const proposal = await prepareSceneShotVideoTakeAuthoringProposal(input);
+  const prior = await buildSceneShotVideoTakeAuthoringSnapshot({
+    input,
+    context: proposal.priorContext,
+  });
+  const current = await buildSceneShotVideoTakeAuthoringSnapshot({
+    input,
+    context: proposal.currentContext,
+  });
   return {
     valid: true,
-    document: validated.document,
-    context: await readSceneShotVideoTakeAuthoringContext({
-      projectName: input.projectName,
-      homeDir: input.homeDir,
-      takeId: input.document.takeId,
-      sceneId: input.document.sceneId,
-    }),
+    document: current.document,
+    prior,
+    current,
     warnings: [],
   };
 }
@@ -123,22 +118,26 @@ export async function validateSceneShotVideoTakeAuthoringDocument(
 export async function applySceneShotVideoTakeAuthoringDocument(
   input: ApplySceneShotVideoTakeAuthoringDocumentInput
 ): Promise<SceneShotVideoTakeAuthoringApplyReport> {
-  const validated = await validateAuthoringDocument(input);
-  await withShotProjectSession(input, ({ session }) => {
+  const proposal = await prepareSceneShotVideoTakeAuthoringProposal(input);
+  const prior = await buildSceneShotVideoTakeAuthoringSnapshot({
+    input,
+    context: proposal.priorContext,
+  });
+  const applied = await withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
     const prepared = prepareSceneShotVideoTakeInSession({
       session,
       input: {
         projectName: input.projectName,
         homeDir: input.homeDir,
-        sceneId: validated.document.sceneId,
-        takeId: validated.document.takeId,
+        sceneId: proposal.document.sceneId,
+        takeId: proposal.document.takeId,
       },
     });
     assertEditableSceneShotVideoTake(prepared.take);
     if (
-      validated.document.baseTakeUpdatedAt &&
-      prepared.take.updatedAt !== validated.document.baseTakeUpdatedAt
+      proposal.document.baseTakeUpdatedAt &&
+      prepared.take.updatedAt !== proposal.document.baseTakeUpdatedAt
     ) {
       throwAuthoringError([
         issue(
@@ -149,40 +148,50 @@ export async function applySceneShotVideoTakeAuthoringDocument(
         ),
       ]);
     }
-    applySceneShotVideoTakeAuthoringRecord(session, {
-      takeId: validated.document.takeId,
-      shotIds: validated.document.shotIds,
-      state: {
-        version: 2,
-        structure: validated.document.structure,
-        production: validated.document.production,
-        ...(prepared.take.state.promptState
-          ? { promptState: prepared.take.state.promptState }
-          : {}),
-      },
+    const take = applySceneShotVideoTakeAuthoringRecord(session, {
+      takeId: proposal.document.takeId,
+      shotIds: proposal.document.shotIds,
+      state: proposal.state,
       screenplay,
       now: new Date().toISOString(),
     });
+    const currentPrepared = preparedTakeWithTake({ prepared, take });
+    return {
+      project: {
+        id: project.id,
+        name: project.name,
+        projectFolder,
+      },
+      context: buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: currentPrepared,
+      }),
+    };
   });
-  const context = await readSceneShotVideoTakeAuthoringContext({
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    takeId: validated.document.takeId,
-    sceneId: validated.document.sceneId,
+  const current = await buildSceneShotVideoTakeAuthoringSnapshot({
+    input,
+    context: applied.context,
   });
   return {
     valid: true,
-    document: context.document,
-    context,
-    resourceKeys: context.resourceKeys,
+    document: current.document,
+    project: applied.project,
+    prior,
+    current,
+    resourceKeys: current.resourceKeys,
   };
 }
 
-async function validateAuthoringDocument(
-  input: ValidateSceneShotVideoTakeAuthoringDocumentInput
+async function prepareSceneShotVideoTakeAuthoringProposal(
+  input:
+    | ValidateSceneShotVideoTakeAuthoringDocumentInput
+    | ApplySceneShotVideoTakeAuthoringDocumentInput
 ): Promise<{
   document: SceneShotVideoTakeAuthoringDocument;
-  context: ShotVideoTakeProductionContext;
+  priorContext: ShotVideoTakeProductionContext;
+  currentContext: ShotVideoTakeProductionContext;
   state: SceneShotVideoTakeState;
 }> {
   assertSceneShotVideoTakeAuthoringDocument({ document: input.document });
@@ -198,6 +207,16 @@ async function validateAuthoringDocument(
       },
     });
     const issues: DiagnosticIssue[] = [];
+    if (!document.baseTakeUpdatedAt) {
+      issues.push(
+        issue(
+          'CORE_SHOT_VIDEO_TAKE_AUTHORING_STALE_CONTEXT',
+          'Authoring document must include the base take updated timestamp.',
+          ['baseTakeUpdatedAt'],
+          'Read the authoring context and use its baseTakeUpdatedAt value before validating or applying a proposal.'
+        )
+      );
+    }
     if (document.sceneId !== prepared.take.sceneId) {
       issues.push(
         issue(
@@ -231,61 +250,72 @@ async function validateAuthoringDocument(
         )
       );
     }
-    validateShotIds({
-      document,
+    const normalizedMembership = normalizeSceneShotVideoTakeShotMembership({
       shots: prepared.shotList.shots,
-      issues,
+      shotIds: document.shotIds,
     });
+    issues.push(...normalizedMembership.issues);
+    const normalizedDocument: SceneShotVideoTakeAuthoringDocument = {
+      ...document,
+      shotIds:
+        normalizedMembership.issues.length === 0
+          ? normalizedMembership.shotIds
+          : [...document.shotIds],
+    };
     const state: SceneShotVideoTakeState = {
       version: 2,
-      structure: document.structure,
-      production: document.production,
+      structure: normalizedDocument.structure,
+      production: normalizedDocument.production,
       ...(prepared.take.state.promptState
         ? { promptState: prepared.take.state.promptState }
         : {}),
     };
-    validateStructure({ state, shotIds: document.shotIds, issues });
-    validateDirectionReferences({
-      session,
-      context: buildContextFromPrepared({
-        session,
-        projectFolder,
-        project,
-        prepared: proposedPreparedTake({
-          prepared,
-          document,
-          state,
-        }),
-      }),
-      document,
-      issues,
-    });
+    validateStructure({ state, shotIds: normalizedDocument.shotIds, issues });
     throwAuthoringError(issues);
-    const context = buildContextFromPrepared({
+    const priorContext = buildContextFromPrepared({
       session,
       projectFolder,
       project,
-      prepared: proposedPreparedTake({
-        prepared,
-        document,
-        state,
-      }),
+      prepared,
     });
+    const currentPrepared = proposedPreparedTake({
+      prepared,
+      document: normalizedDocument,
+      state,
+    });
+    const currentContext = buildContextFromPrepared({
+      session,
+      projectFolder,
+      project,
+      prepared: currentPrepared,
+    });
+    validateDirectionReferences({
+      session,
+      context: currentContext,
+      document: normalizedDocument,
+      issues,
+    });
+    throwAuthoringError(issues);
     await validateProductionPlan({
-      context,
+      context: currentContext,
       input,
       issues,
     });
     throwAuthoringError(issues);
-    return { document, context, state };
+    return {
+      document: normalizedDocument,
+      priorContext,
+      currentContext,
+      state,
+    };
   });
 }
 
 function proposedPreparedTake(input: {
-  prepared: ReturnType<typeof prepareSceneShotVideoTakeInSession>;
+  prepared: PreparedSceneShotVideoTake;
   document: SceneShotVideoTakeAuthoringDocument;
   state: SceneShotVideoTakeState;
-}): ReturnType<typeof prepareSceneShotVideoTakeInSession> {
+}): PreparedSceneShotVideoTake {
   const take: SceneShotVideoTake = {
     ...input.prepared.take,
     sceneId: input.document.sceneId,
@@ -298,6 +328,18 @@ function proposedPreparedTake(input: {
     take,
     orderedShotIds: [...input.document.shotIds],
     target: sceneShotVideoTakeTarget(take),
+  };
+}
+
+function preparedTakeWithTake(input: {
+  prepared: PreparedSceneShotVideoTake;
+  take: SceneShotVideoTake;
+}): PreparedSceneShotVideoTake {
+  return {
+    ...input.prepared,
+    take: input.take,
+    orderedShotIds: [...input.take.shotIds],
+    target: sceneShotVideoTakeTarget(input.take),
   };
 }
 
@@ -316,47 +358,81 @@ function authoringDocumentForTake(
   };
 }
 
-function validateShotIds(input: {
-  document: SceneShotVideoTakeAuthoringDocument;
-  shots: SceneShot[];
-  issues: DiagnosticIssue[];
-}): void {
-  if (input.document.shotIds.length === 0) {
-    input.issues.push(
-      issue(
-        'CORE_SHOT_VIDEO_TAKE_AUTHORING_SHOTS_MISSING',
-        'Authoring document must include at least one shot id.',
-        ['shotIds'],
-        'Use the ordered shot ids from the authoring context.'
-      )
-    );
-    return;
-  }
-  const valid = new Set(input.shots.map((shot) => shot.shotId));
-  const seen = new Set<string>();
-  input.document.shotIds.forEach((shotId, index) => {
-    if (!valid.has(shotId)) {
-      input.issues.push(
-        issue(
-          'CORE_SHOT_VIDEO_TAKE_AUTHORING_SHOT_UNKNOWN',
-          `Shot id is not in the source Scene Shot List: ${shotId}.`,
-          ['shotIds', String(index)],
-          'Use only shot ids from the source Scene Shot List.'
-        )
-      );
-    }
-    if (seen.has(shotId)) {
-      input.issues.push(
-        issue(
-          'CORE_SHOT_VIDEO_TAKE_AUTHORING_SHOT_DUPLICATE',
-          `Shot id is duplicated in the authoring document: ${shotId}.`,
-          ['shotIds', String(index)],
-          'List each grouped shot id once.'
-        )
-      );
-    }
-    seen.add(shotId);
+async function buildSceneShotVideoTakeAuthoringSnapshot(input: {
+  input:
+    | ReadSceneShotVideoTakeAuthoringContextInput
+    | ValidateSceneShotVideoTakeAuthoringDocumentInput
+    | ApplySceneShotVideoTakeAuthoringDocumentInput;
+  context: ShotVideoTakeProductionContext;
+  selectedShotId?: string;
+}): Promise<SceneShotVideoTakeAuthoringSnapshot> {
+  const selectedShotId = resolveAuthoringReportSelectedShotId({
+    context: input.context,
+    selectedShotId: input.selectedShotId,
   });
+  return withShotProjectSession(input.input, async ({ session }) => {
+    const plan = await planShotVideoTakeProductionForContext({
+      context: input.context,
+      projectName: input.input.projectName,
+      homeDir: input.input.homeDir,
+    });
+    const productionPlan = buildShotVideoTakeProductionPlanReport({
+      session,
+      context: input.context,
+      plan,
+      selectedShotId,
+    });
+    const preflight = await previewShotVideoTakeProductionForContext({
+      context: input.context,
+      projectName: input.input.projectName,
+      homeDir: input.input.homeDir,
+    });
+    return {
+      document: authoringDocumentForTake(input.context.take),
+      context: input.context,
+      productionPlan,
+      preflight,
+      providerPreview: await previewProviderPayload({
+        input: {
+          projectName: input.input.projectName,
+          homeDir: input.input.homeDir,
+          takeId: input.context.take.takeId,
+          sceneId: input.context.scene.id,
+          selectedShotId,
+        },
+        context: input.context,
+        preflight,
+      }),
+      resourceKeys: input.context.resourceKeys,
+    };
+  });
+}
+
+function resolveAuthoringReportSelectedShotId(input: {
+  context: ShotVideoTakeProductionContext;
+  selectedShotId?: string;
+}): string | undefined {
+  if (input.context.take.state.structure.mode === 'continuous') {
+    if (input.selectedShotId) {
+      throw new ProjectDataError(
+        'CORE_SHOT_VIDEO_TAKE_AUTHORING_SELECTED_SHOT_UNSUPPORTED',
+        'Continuous authoring reports do not use a selected shot.',
+        {
+          issues: [
+            issue(
+              'CORE_SHOT_VIDEO_TAKE_AUTHORING_SELECTED_SHOT_UNSUPPORTED',
+              'Continuous authoring reports do not use a selected shot.',
+              ['selectedShotId'],
+              'Omit selectedShotId for continuous takes.'
+            ),
+          ],
+          suggestion: 'Omit selectedShotId for continuous takes.',
+        }
+      );
+    }
+    return undefined;
+  }
+  return input.selectedShotId ?? input.context.take.shotIds[0];
 }
 
 function validateStructure(input: {
@@ -493,7 +569,9 @@ function validateDirectionReferences(input: {
 
 async function validateProductionPlan(input: {
   context: ShotVideoTakeProductionContext;
-  input: ValidateSceneShotVideoTakeAuthoringDocumentInput;
+  input:
+    | ValidateSceneShotVideoTakeAuthoringDocumentInput
+    | ApplySceneShotVideoTakeAuthoringDocumentInput;
   issues: DiagnosticIssue[];
 }): Promise<void> {
   try {

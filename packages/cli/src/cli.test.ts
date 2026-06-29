@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { createServer, type IncomingMessage } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import {
@@ -2695,8 +2696,6 @@ describe('renku CLI', () => {
         'context',
         '--take',
         take.takeId,
-        '--selected-shot',
-        'shot_001',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -2752,8 +2751,29 @@ describe('renku CLI', () => {
       document: {
         takeId: take.takeId,
       },
+      prior: {
+        document: {
+          takeId: take.takeId,
+        },
+      },
+      current: {
+        document: {
+          takeId: take.takeId,
+        },
+      },
     });
 
+    const notificationServer = await startCoordinationNotificationServer({
+      homeDir,
+      token: 'notification-token-test',
+    });
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: '127.0.0.1',
+      port: notificationServer.port,
+      serverUrl: notificationServer.url,
+      cliNotificationToken: 'notification-token-test',
+    });
     stdout = [];
     stderr = [];
     const takeAuthoringApplyExitCode = await runRenkuCli(
@@ -2773,9 +2793,45 @@ describe('renku CLI', () => {
       document: {
         takeId: take.takeId,
       },
+      project: {
+        name: 'constantinople',
+        projectFolder: expect.any(String),
+      },
+      prior: {
+        document: {
+          takeId: take.takeId,
+        },
+      },
+      current: {
+        document: {
+          takeId: take.takeId,
+        },
+      },
       resourceKeys: expect.arrayContaining([
         `scene:${sceneId}`,
         `surface:scene:${sceneId}:takes`,
+      ]),
+    });
+    expect(stderr).toEqual([]);
+    await notificationServer.close();
+    await expect(
+      createStudioCoordinationService({ homeDir }).readStudioEvents()
+    ).resolves.toMatchObject({
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'studio.projectResourcesChanged',
+          projectRef: expect.objectContaining({
+            name: 'constantinople',
+          }),
+          resourceKeys: expect.arrayContaining([
+            `scene:${sceneId}`,
+            `surface:scene:${sceneId}:takes`,
+          ]),
+          source: expect.objectContaining({
+            kind: 'cli',
+            command: 'take authoring apply',
+          }),
+        }),
       ]),
     });
 
@@ -3619,6 +3675,71 @@ function captureIo(stdout: string[], stderr: string[]) {
       },
     },
   };
+}
+
+async function startCoordinationNotificationServer(input: {
+  homeDir: string;
+  token: string;
+}): Promise<{ url: string; port: number; close: () => Promise<void> }> {
+  const coordination = createStudioCoordinationService({ homeDir: input.homeDir });
+  const server = createServer(async (request, response) => {
+    if (
+      request.method !== 'POST' ||
+      request.url !== '/studio-api/studio/events/project-resources-changed' ||
+      request.headers['x-renku-studio-notification-token'] !== input.token
+    ) {
+      response.statusCode = 403;
+      response.end(JSON.stringify({ error: { code: 'STUDIO_SERVER022' } }));
+      return;
+    }
+
+    const body = JSON.parse(await readRequestBody(request)) as {
+      projectRef: {
+        name: string;
+        id: string;
+        storageRoot: string;
+      };
+      resourceKeys: string[];
+      source: { kind: 'cli'; command: string };
+      operationId?: string;
+    };
+    const event = await coordination.appendStudioEvent({
+      type: 'studio.projectResourcesChanged',
+      projectRef: body.projectRef,
+      resourceKeys: body.resourceKeys,
+      source: body.source,
+      operationId: body.operationId,
+    });
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify({ event }));
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('Unable to determine notification server address.');
+  }
+
+  return {
+    url: `http://127.0.0.1:${address.port}`,
+    port: address.port,
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  };
+}
+
+async function readRequestBody(request: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 function minimalScreenplayJson(input: { castMemberId: string; locationId: string }) {

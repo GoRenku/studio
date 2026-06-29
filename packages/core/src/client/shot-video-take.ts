@@ -171,17 +171,33 @@ export interface SceneShotVideoTakeAuthoringContextReport {
   resourceKeys: string[];
 }
 
+export interface SceneShotVideoTakeAuthoringSnapshot {
+  document: SceneShotVideoTakeAuthoringDocument;
+  context: ShotVideoTakeProductionContext;
+  productionPlan: ShotVideoTakeProductionPlanReport;
+  preflight: ShotVideoTakePreflightReport;
+  providerPreview: ShotVideoTakeProviderPayloadPreview;
+  resourceKeys: string[];
+}
+
 export interface SceneShotVideoTakeAuthoringValidationReport {
   valid: true;
   document: SceneShotVideoTakeAuthoringDocument;
-  context: SceneShotVideoTakeAuthoringContextReport;
+  prior: SceneShotVideoTakeAuthoringSnapshot;
+  current: SceneShotVideoTakeAuthoringSnapshot;
   warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
 export interface SceneShotVideoTakeAuthoringApplyReport {
   valid: true;
   document: SceneShotVideoTakeAuthoringDocument;
-  context: SceneShotVideoTakeAuthoringContextReport;
+  project: {
+    id: string;
+    name: string;
+    projectFolder: string;
+  };
+  prior: SceneShotVideoTakeAuthoringSnapshot;
+  current: SceneShotVideoTakeAuthoringSnapshot;
   resourceKeys: string[];
 }
 

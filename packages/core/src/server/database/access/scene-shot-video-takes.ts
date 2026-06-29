@@ -44,6 +44,9 @@ import {
   updateSceneShotVideoTakeDirection,
   validateSceneShotVideoTakeStructure,
 } from '../../media-generation/shot-video-take/take-state.js';
+import {
+  requireNormalizedSceneShotVideoTakeShotMembership,
+} from '../../media-generation/shot-video-take/take-shot-membership.js';
 
 export type SceneShotVideoTakeRecord =
   typeof sceneShotVideoTakes.$inferSelect;
@@ -72,7 +75,10 @@ export function insertSceneShotVideoTakeRecord(
     row: shotListRow,
     screenplay: input.screenplay,
   });
-  const shotIds = normalizeShotIds(shotList.shots, input.shotIds);
+  const shotIds = requireNormalizedSceneShotVideoTakeShotMembership({
+    shots: shotList.shots,
+    shotIds: input.shotIds,
+  });
   const snapshot = buildSceneShotVideoTakeHistorySnapshot({
     session,
     sceneId: input.sceneId,
@@ -212,7 +218,10 @@ export function updateSceneShotVideoTakeShotMembershipRecord(
     row: shotListRow,
     screenplay: input.screenplay,
   });
-  const shotIds = normalizeShotIds(shotList.shots, input.shotIds);
+  const shotIds = requireNormalizedSceneShotVideoTakeShotMembership({
+    shots: shotList.shots,
+    shotIds: input.shotIds,
+  });
   const snapshot = buildSceneShotVideoTakeHistorySnapshot({
     session,
     sceneId: take.sceneId,
@@ -419,7 +428,10 @@ export function applySceneShotVideoTakeAuthoringRecord(
     row: shotListRow,
     screenplay: input.screenplay,
   });
-  const shotIds = normalizeShotIds(shotList.shots, input.shotIds);
+  const shotIds = requireNormalizedSceneShotVideoTakeShotMembership({
+    shots: shotList.shots,
+    shotIds: input.shotIds,
+  });
   validateSceneShotVideoTakeStructure({
     state: input.state,
     shotIds,
@@ -769,54 +781,6 @@ function shotsForIds(shots: SceneShot[], shotIds: string[]): SceneShot[] {
     }
     return shot;
   });
-}
-
-function normalizeShotIds(shots: SceneShot[], shotIds: string[]): string[] {
-  if (shotIds.length === 0) {
-    throw new ProjectDataError(
-      'PROJECT_DATA379',
-      'Shot Video Take requires at least one shot id.'
-    );
-  }
-  const valid = new Set(shots.map((shot) => shot.shotId));
-  const unique = new Set<string>();
-  for (const shotId of shotIds) {
-    if (!valid.has(shotId)) {
-      throw new ProjectDataError(
-        'PROJECT_DATA325',
-        `Shot id is not in the Scene Shot List: ${shotId}.`
-      );
-    }
-    if (unique.has(shotId)) {
-      throw new ProjectDataError(
-        'PROJECT_DATA380',
-        `Shot id is duplicated in the Shot Video Take: ${shotId}.`
-      );
-    }
-    unique.add(shotId);
-  }
-  const ordered = shots
-    .filter((shot) => unique.has(shot.shotId))
-    .map((shot) => shot.shotId);
-  if (!isContiguous(ordered, shots)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA381',
-      'Shot Video Takes must use contiguous shot ids.'
-    );
-  }
-  return ordered;
-}
-
-function isContiguous(shotIds: string[], shots: SceneShot[]): boolean {
-  if (shotIds.length < 2) {
-    return true;
-  }
-  const indexes = shotIds.map((shotId) =>
-    shots.findIndex((shot) => shot.shotId === shotId)
-  );
-  return indexes.every(
-    (index, position) => position === 0 || index === indexes[position - 1] + 1
-  );
 }
 
 function shotListContentFingerprint(shots: SceneShot[]): string {

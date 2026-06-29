@@ -40,6 +40,7 @@ import {
 } from './preflight-inputs.js';
 import {
   planShotVideoTakeProduction,
+  planShotVideoTakeProductionForContext,
 } from './production-plan.js';
 import {
   withShotProjectSession,
@@ -64,6 +65,21 @@ export async function previewShotVideoTakeProduction(
     context: await buildShotVideoTakeContext(input),
     production: input.production,
   });
+  return previewShotVideoTakeProductionForContext({
+    context,
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    input,
+  });
+}
+
+export async function previewShotVideoTakeProductionForContext(input: {
+  context: ShotVideoTakeProductionContext;
+  projectName?: string;
+  homeDir?: string;
+  input?: PreviewShotVideoTakeProductionInput;
+}): Promise<ShotVideoTakePreflightReport> {
+  const context = input.context;
   const issues = validatePreflight(context);
   const inputModeId = context.take.state.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
@@ -96,7 +112,13 @@ export async function previewShotVideoTakeProduction(
         ]
       : []),
   ];
-  const plan = await planShotVideoTakeProduction(input);
+  const plan = input.input
+    ? await planShotVideoTakeProduction(input.input)
+    : await planShotVideoTakeProductionForContext({
+        context,
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+      });
   const inputsToCreate = inputsToCreateFromDependencyInventory(plan.dependencyInventory);
   const inputPlanItems = buildShotVideoTakePreflightInputItems({
     context,
@@ -243,7 +265,7 @@ export function canonicalParameterValue(
 
 
 
-function contextWithProductionOverride(input: {
+export function contextWithProductionOverride(input: {
   context: ShotVideoTakeProductionContext;
   production?: SceneShotVideoTakeProductionState;
 }): ShotVideoTakeProductionContext {

@@ -83,6 +83,10 @@ operational companions that teach agents how to use those contracts.
 - Creates or updates persisted generation specs.
 - Estimates cost and runs only approved specs.
 - Imports finished files separately with `renku media import`.
+- For `shot.video-take`, reads take authoring context before proposing
+  changes, compares validation/apply `prior` and `current` snapshots, and
+  re-reads persisted authoring context before final generation so prompt
+  assumptions match the final Studio-reviewed state.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
   the output to `casting-director` for `renku cast voice attach`.
 

@@ -163,6 +163,19 @@ agent read contract. It returns the editable authoring document, production
 plan, reference sections, preflight readiness, estimate, structured diagnostics,
 and provider payload preview. Agents validate and apply a full
 `sceneShotVideoTakeAuthoring` document rather than patching take state directly.
+The authoring document is a complete proposal for the take-owned authoring
+fields. Validation returns `prior` for the persisted baseline and `current` for
+the proposed state. Apply returns `prior` for the pre-write state and `current`
+for the applied post-write state, plus top-level `project` and `resourceKeys`
+metadata for Studio refresh events. These reports are for comparison only; core
+does not merge stale agent proposals with newer Studio edits.
+
+Final `shot.video-take` spec creation and generation read the persisted take
+state, not a remembered apply response. This lets the user make final Studio
+edits after an agent applies a proposal. Agents must re-read authoring context
+immediately before paid generation and revise prompts when final persisted
+model, input mode, route parameters, selected references, composition, or motion
+no longer match the prompt assumptions.
 
 Core never synthesizes generic shot-video dependency prompts. First-frame,
 last-frame, ad hoc reference-image, and multi-shot storyboard sheet dependency

@@ -8,6 +8,9 @@ import type {
   ShotVideoTakePreflightInput,
   ShotVideoTakeShotGroupMode,
 } from '../../../client/index.js';
+import type {
+  DiagnosticIssue,
+} from '@gorenku/studio-diagnostics';
 import {
   ProjectDataError,
 } from '../../project-data-error.js';
@@ -19,6 +22,9 @@ import type {
   ShotVideoRoute,
   ShotVideoRouteInputSlot,
 } from '@gorenku/studio-engines';
+import {
+  issue,
+} from './diagnostics.js';
 
 
 
@@ -211,12 +217,57 @@ export function requireShotVideoTakeRoute(
   inputModeId: ShotVideoTakeInputModeId,
   shotGroupMode: ShotVideoTakeShotGroupMode
 ): ShotVideoRoute {
+  const issues = validateShotVideoTakeRouteCompatibility({
+    modelChoice,
+    inputModeId,
+    shotGroupMode,
+  });
+  if (issues.length > 0) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_TAKE_AUTHORING_ROUTE_UNSUPPORTED',
+      `Shot video take model does not support the selected input mode and shot group mode: ${modelChoice} / ${inputModeId} / ${shotGroupMode}.`,
+      {
+        issues,
+        suggestion:
+          'Choose a model and input mode combination that supports the current shot group.',
+      }
+    );
+  }
   const route = selectShotVideoRoute({ modelChoice, inputMode: inputModeId, shotGroupMode });
   if (!route) {
     throw new ProjectDataError(
-      'PROJECT_DATA386',
+      'CORE_SHOT_VIDEO_TAKE_AUTHORING_ROUTE_UNSUPPORTED',
       `Shot video take model does not support the selected input mode and shot group mode: ${modelChoice} / ${inputModeId} / ${shotGroupMode}.`
     );
   }
   return route;
+}
+
+export function validateShotVideoTakeRouteCompatibility(input: {
+  modelChoice: ShotVideoTakeModelChoice;
+  inputModeId: ShotVideoTakeInputModeId;
+  shotGroupMode: ShotVideoTakeShotGroupMode;
+}): DiagnosticIssue[] {
+  const route = selectShotVideoRoute({
+    modelChoice: input.modelChoice,
+    inputMode: input.inputModeId,
+    shotGroupMode: input.shotGroupMode,
+  });
+  if (route) {
+    return [];
+  }
+  return [
+    issue(
+      'CORE_SHOT_VIDEO_TAKE_AUTHORING_ROUTE_UNSUPPORTED',
+      `Shot video take model does not support the selected input mode and shot group mode: ${input.modelChoice} / ${input.inputModeId} / ${input.shotGroupMode}.`,
+      ['production', 'inputModeId'],
+      'Choose a model and input mode combination that supports the current shot group.'
+    ),
+    issue(
+      'CORE_SHOT_VIDEO_TAKE_AUTHORING_ROUTE_UNSUPPORTED',
+      `Shot video take input mode is unsupported by the selected model for this shot group: ${input.inputModeId}.`,
+      ['production', 'modelChoice'],
+      'Choose a model and input mode combination that supports the current shot group.'
+    ),
+  ];
 }

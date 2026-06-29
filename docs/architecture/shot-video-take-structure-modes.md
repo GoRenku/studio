@@ -29,6 +29,13 @@ the visual review, override, and instruction surface:
 - the agent re-reads the current state before generation;
 - final generation uses the user-reviewed state.
 
+Studio edits saved through core are durable user intent. An agent authoring
+document is therefore a complete proposal for the take-owned authoring fields,
+not a partial patch. If the agent wants to preserve a Studio-edited model,
+input mode, parameter, reference selection, or prompt draft, it must carry that
+choice forward in the submitted document. Core rejects stale writes instead of
+merging old agent state with newer Studio state.
+
 This means persistence must make the take structure explicit and deterministic.
 The implementation must not use UI-side "apply to all" copying, synchronized
 per-shot mirrors, generic take-state patches, or hidden adapter fallbacks.
@@ -318,6 +325,27 @@ renku take authoring validate --file <authoring-document.json> --json
 renku take authoring apply --file <authoring-document.json> --json
 ```
 
+Authoring reports use these state names:
+
+- Persisted Take: the durable `SceneShotVideoTake` stored in the project
+  database.
+- Prior Authoring State: the persisted take state immediately before
+  validation or apply.
+- Proposed Authoring State: the in-memory take state created from the submitted
+  `SceneShotVideoTakeAuthoringDocument`.
+- Current Authoring State: the state callers should treat as current in the
+  response. For `context` it is persisted state, for `validate` it is proposed
+  state, and for `apply` it is the post-write persisted state.
+- Final Generation State: the persisted take state read immediately before
+  final spec creation or generation.
+
+`take authoring validate --json` returns `prior` for the persisted baseline and
+`current` for the proposed in-memory state. `take authoring apply --json`
+returns `prior` for the persisted pre-write state and `current` for the applied
+post-write state, plus top-level `project` and `resourceKeys` mutation
+metadata. The prior/current comparison is informational. It is not an automatic
+merge, repair, or conflict-resolution layer.
+
 The response should include:
 
 - project, scene, shot list, take, and grouped shots;
@@ -334,9 +362,17 @@ The response should include:
 - current take revision/update token for stale-write protection.
 
 The authoring document contains the target take, ordered shot ids, structure,
-directions, references, and production state. The CLI should pass the document
-to core and print structured diagnostics. It should not expose separate
-commands for every current reference kind.
+directions, references, production state, and stale-write token. It is a
+complete replacement for the authoring fields it owns. The CLI should pass the
+document to core and print structured diagnostics. It should not expose
+separate commands for every current reference kind.
+
+Final `shot.video-take` generation reads the persisted take state as the source
+of truth. This is intentional: after an agent applies a proposal, the user can
+still adjust settings in Studio before approving a paid run. Agents must
+re-read the final persisted authoring context before generation and revise
+prompts when model, input mode, route parameters, selected references,
+composition, or motion changed prompt intent.
 
 The old `generation plan` command shape should be replaced and removed. Do not
 keep an alias or compatibility command.
