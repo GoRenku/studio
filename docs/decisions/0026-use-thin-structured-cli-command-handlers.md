@@ -62,7 +62,9 @@ contract. CLI package-boundary failures must use stable structured errors.
 - `runMediaCommand` and `runGenerationCommand` remain small command adapters.
 - Media import purpose routing lives in a focused CLI purpose handler registry,
   or in a deliberate core service contract if dispatch moves fully into core.
-- `generation plan` remains a focused shot-video planning adapter or handler.
+- Final shot-video take authoring uses focused `take authoring` handlers over
+  core-owned authoring document services; the old `generation plan` adapter is
+  not a supported command path.
 - Shared target parsing, shot-id parsing, required-flag checks, JSON file
   reading, and output helpers live in named CLI modules.
 - Scoped lint or static tests should prevent nested ternary dispatch,

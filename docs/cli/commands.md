@@ -1427,26 +1427,31 @@ renku generation context --purpose shot.reference-image --target scene:<scene-id
 renku generation model list --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
 renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
 renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
-renku generation context --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
+renku take authoring context --take <take-id> --json
+renku take authoring context --take <take-id> --selected-shot <shot-id> --json
 renku generation model list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --intent <input-mode-id> --json
 ```
 
-Shot video take production planning:
+Shot video take authoring and reusable inputs:
 
 ```bash
-renku generation production update --purpose shot.video-take --target scene:<scene-id> --take <take-id> --file <shot-video-production-json> --json
-renku generation preflight --purpose shot.video-take --target scene:<scene-id> --take <take-id> --file <shot-video-production-json> --json
+renku take authoring validate --file <scene-shot-video-take-authoring-json> --json
+renku take authoring apply --file <scene-shot-video-take-authoring-json> --json
 renku generation input list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
 renku generation input select --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
 renku generation input clear --purpose shot.video-take --target scene:<scene-id> --take <take-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
+renku generation input delete --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
 ```
 
-`generation preflight` is the agent-facing dependency checklist before final
-video generation. Read `inputsToCreate`, `inputPlanItems`,
-`plan.dependencyMap`, `prompts`, and `finalTake.canCreateSpec`.
+`take authoring context` is the agent-facing read contract for final shot-video
+take work. It returns the editable `sceneShotVideoTakeAuthoring` document,
+production plan, reference sections, preflight readiness, estimate, diagnostics,
+and provider payload preview. Agents should validate and apply a full authoring
+document instead of patching take state or writing separate reference-kind
+commands.
 
 Generated shot dependency drafts must be authored by the agent in
-`videoTakeProduction.agentProposal.dependencyDrafts[]`. The preflight report
+`production.agentProposal.dependencyDrafts[]` in the authoring document. Core
 blocks missing authored dependency drafts with structured diagnostics and does
 not synthesize generic image prompts for first frames, last frames, ad hoc
 reference images, or multi-shot storyboard sheets.

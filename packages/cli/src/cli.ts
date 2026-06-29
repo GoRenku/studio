@@ -12,7 +12,6 @@ import { runCastCommand } from './commands/cast-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runDirectorCommand } from './commands/director-command.js';
 import { runGenerationCommand } from './commands/generation-command.js';
-import { runGenerationPlanCommand } from './commands/generation-plan-command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
 import { runLookbookCommand } from './commands/lookbook-command.js';
@@ -118,6 +117,7 @@ Options
   --take               Scene Dialogue Audio take id or Shot Video Take id
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for take creation or storyboard imports
+  --selected-shot      Selected shot id for scoped take authoring reads
   --intent             Shot video take input mode id
   --input              Shot video take reusable input id
   --kind               Shot video take input kind
@@ -271,6 +271,9 @@ function createCliFlags() {
       type: 'string',
     },
     shots: {
+      type: 'string',
+    },
+    selectedShot: {
       type: 'string',
     },
     intent: {
@@ -561,22 +564,6 @@ export async function runRenkuCli(
           homeDir: options.homeDir,
         });
       case 'generation':
-        if (input[0] === 'plan') {
-          return await runGenerationPlanCommand({
-            input,
-            flags: {
-              project: cli.flags.project,
-              purpose: cli.flags.purpose,
-              target: cli.flags.target,
-              model: cli.flags.model,
-              take: cli.flags.take,
-              intent: cli.flags.intent,
-            },
-            json: cli.flags.json,
-            io,
-            homeDir: options.homeDir,
-          });
-        }
         return await runGenerationCommand({
           input,
           flags: {
@@ -590,6 +577,8 @@ export async function runRenkuCli(
             spec: cli.flags.spec,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
+            scene: cli.flags.scene,
+            dialogue: cli.flags.dialogue,
             take: cli.flags.take,
             intent: cli.flags.intent,
             input: cli.flags.input,
@@ -599,6 +588,7 @@ export async function runRenkuCli(
             approvalToken: cli.flags.approvalToken,
             allowUnpricedCost: cli.flags.allowUnpricedCost,
             simulate: cli.flags.simulate,
+            all: cli.flags.all,
           },
           json: cli.flags.json,
           io,
@@ -703,6 +693,7 @@ export async function runRenkuCli(
             shots: cli.flags.shots,
             take: cli.flags.take,
             file: cli.flags.file,
+            selectedShot: cli.flags.selectedShot,
           },
           json: cli.flags.json,
           io,

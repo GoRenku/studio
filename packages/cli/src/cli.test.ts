@@ -2665,7 +2665,7 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const shotPlanExitCode = await runRenkuCli(
+    const obsoleteShotPlanExitCode = await runRenkuCli(
       [
         'generation',
         'plan',
@@ -2683,10 +2683,101 @@ describe('renku CLI', () => {
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(shotPlanExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    const shotPlanJson = stdout.join('\n');
-    expect(shotPlanJson).toContain('shot.video-take');
-    expect(shotPlanJson).toContain(take.takeId);
+    expect(obsoleteShotPlanExitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('CLI019');
+
+    stdout = [];
+    stderr = [];
+    const takeAuthoringContextExitCode = await runRenkuCli(
+      [
+        'take',
+        'authoring',
+        'context',
+        '--take',
+        take.takeId,
+        '--selected-shot',
+        'shot_001',
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(takeAuthoringContextExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
+    const takeAuthoringContext = JSON.parse(stdout.join('\n')) as {
+      kind: string;
+      document: Record<string, unknown>;
+      context: { target: { takeId: string; shotIds: string[] } };
+      productionPlan: { plan: { request: { sceneId: string; takeId: string } } };
+      providerPreview: { available: boolean };
+    };
+    expect(takeAuthoringContext.kind).toBe('sceneShotVideoTakeAuthoringContext');
+    expect(takeAuthoringContext.document).toMatchObject({
+      kind: 'sceneShotVideoTakeAuthoring',
+      takeId: take.takeId,
+      sceneId,
+      shotIds: ['shot_001'],
+    });
+    expect(takeAuthoringContext.context.target).toMatchObject({
+      takeId: take.takeId,
+      shotIds: ['shot_001'],
+    });
+    expect(takeAuthoringContext.productionPlan.plan.request).toMatchObject({
+      sceneId,
+      takeId: take.takeId,
+    });
+    expect(typeof takeAuthoringContext.providerPreview.available).toBe('boolean');
+
+    const authoringDocumentPath = path.join(homeDir, 'take-authoring-document.json');
+    await fs.writeFile(
+      authoringDocumentPath,
+      JSON.stringify(takeAuthoringContext.document, null, 2),
+      'utf8'
+    );
+
+    stdout = [];
+    stderr = [];
+    const takeAuthoringValidateExitCode = await runRenkuCli(
+      [
+        'take',
+        'authoring',
+        'validate',
+        '--file',
+        authoringDocumentPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(takeAuthoringValidateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      document: {
+        takeId: take.takeId,
+      },
+    });
+
+    stdout = [];
+    stderr = [];
+    const takeAuthoringApplyExitCode = await runRenkuCli(
+      [
+        'take',
+        'authoring',
+        'apply',
+        '--file',
+        authoringDocumentPath,
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(takeAuthoringApplyExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      document: {
+        takeId: take.takeId,
+      },
+      resourceKeys: expect.arrayContaining([
+        `scene:${sceneId}`,
+        `surface:scene:${sceneId}:takes`,
+      ]),
+    });
 
     stdout = [];
     stderr = [];

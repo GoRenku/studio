@@ -554,10 +554,10 @@ function buildNextSteps(input: {
   } else if (input.selectedScene?.shotVideo.preflightAvailable) {
     steps.push({
       id: 'generate-shot-video',
-      title: 'Preflight selected shot video',
+      title: 'Author selected shot video take',
       specialistSkill: 'media-producer',
-      reason: 'The selected scene has an active shot list and can move into shot-video preflight.',
-      command: `renku generation preflight --purpose shot.video-take --target scene:${input.selectedScene.sceneId} --take <take-id> --json`,
+      reason: 'The selected scene has an active shot list and can move into shot-video take authoring.',
+      command: 'renku take authoring context --take <take-id> --json',
     });
   }
   return steps;

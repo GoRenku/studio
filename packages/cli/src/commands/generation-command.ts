@@ -60,6 +60,7 @@ export function generationResourceChangedReport(
     mutationPath !== 'production update' &&
     mutationPath !== 'input select' &&
     mutationPath !== 'input clear' &&
+    mutationPath !== 'input delete' &&
     mutationPath !== 'dialogue-audio generate' &&
     mutationPath !== 'dialogue-audio pick'
   ) {

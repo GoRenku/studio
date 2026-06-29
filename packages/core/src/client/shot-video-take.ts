@@ -142,6 +142,49 @@ export interface SceneShotVideoTake {
   updatedAt: string;
 }
 
+export interface SceneShotVideoTakeAuthoringDocument {
+  kind: 'sceneShotVideoTakeAuthoring';
+  takeId: string;
+  sceneId: string;
+  sourceShotListId: string;
+  baseTakeUpdatedAt?: string;
+  shotIds: string[];
+  structure: SceneShotVideoTakeStructure;
+  production: SceneShotVideoTakeProductionState;
+}
+
+export interface ShotVideoTakeProviderPayloadPreview {
+  available: boolean;
+  issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  spec?: ShotVideoTakeOutputGenerationSpec;
+  providerPayload?: Record<string, unknown>;
+  generation?: import('./media-generation-lifecycle.js').PreparedMediaGeneration['generation'];
+}
+
+export interface SceneShotVideoTakeAuthoringContextReport {
+  kind: 'sceneShotVideoTakeAuthoringContext';
+  document: SceneShotVideoTakeAuthoringDocument;
+  context: ShotVideoTakeProductionContext;
+  productionPlan: ShotVideoTakeProductionPlanReport;
+  preflight: ShotVideoTakePreflightReport;
+  providerPreview: ShotVideoTakeProviderPayloadPreview;
+  resourceKeys: string[];
+}
+
+export interface SceneShotVideoTakeAuthoringValidationReport {
+  valid: true;
+  document: SceneShotVideoTakeAuthoringDocument;
+  context: SceneShotVideoTakeAuthoringContextReport;
+  warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+}
+
+export interface SceneShotVideoTakeAuthoringApplyReport {
+  valid: true;
+  document: SceneShotVideoTakeAuthoringDocument;
+  context: SceneShotVideoTakeAuthoringContextReport;
+  resourceKeys: string[];
+}
+
 export interface SceneShotVideoTakeOverview {
   take: SceneShotVideoTake;
   sourceShotList: ShotVideoTakeShotListContext;

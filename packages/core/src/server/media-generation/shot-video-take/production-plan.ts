@@ -141,6 +141,21 @@ export async function planShotVideoTakeProduction(
       production: input.production,
     });
   });
+  return planShotVideoTakeProductionForContext({
+    context,
+    inputPolicy: input.inputPolicy,
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+  });
+}
+
+export async function planShotVideoTakeProductionForContext(input: {
+  context: ShotVideoTakeProductionContext;
+  inputPolicy?: ShotVideoTakeInputPolicy;
+  projectName?: string;
+  homeDir?: string;
+}): Promise<ShotVideoTakeOutputGenerationPlan> {
+  const context = input.context;
   const diagnostics = validatePreflight(context);
   const inputModeId = context.take.state.production.inputModeId ?? context.defaults.inputModeId;
   const modelChoice =
@@ -182,7 +197,10 @@ export async function planShotVideoTakeProduction(
     ? { defaultMode: 'auto' as const }
     : validateShotVideoTakeInputPolicy(input.inputPolicy);
   const { dependencyInventory } = await withShotProjectSession(
-    input,
+    {
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+    },
     async ({ session }) => {
       const preparedInputs = preparedInputsForContext(context, session, diagnostics);
       const dependencyInventory = await buildShotVideoTakeDependencyInventory({

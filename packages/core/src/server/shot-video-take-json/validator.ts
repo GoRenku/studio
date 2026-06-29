@@ -5,10 +5,12 @@ import {
   throwIfDiagnosticResultInvalid,
 } from '@gorenku/studio-diagnostics';
 import type {
+  SceneShotVideoTakeAuthoringDocument,
   SceneShotVideoTakeHistorySnapshot,
   SceneShotVideoTakeState,
 } from '../../client/shot-video-take.js';
 import {
+  sceneShotVideoTakeAuthoringDocumentSchema,
   sceneShotVideoTakeStateSchema,
   sceneShotVideoTakeHistorySnapshotSchema,
 } from '../../client/scene-shot-list-json-schemas.js';
@@ -24,6 +26,7 @@ const ajv = new Ajv2020({
 
 ajv.addSchema(sceneShotVideoTakeHistorySnapshotSchema);
 ajv.addSchema(sceneShotVideoTakeStateSchema);
+ajv.addSchema(sceneShotVideoTakeAuthoringDocumentSchema);
 
 export function serializeSceneShotVideoTakeState(input: {
   state: SceneShotVideoTakeState;
@@ -90,6 +93,20 @@ export function parseSceneShotVideoTakeHistorySnapshot(input: {
   return parsed as SceneShotVideoTakeHistorySnapshot;
 }
 
+export function assertSceneShotVideoTakeAuthoringDocument(input: {
+  document: unknown;
+}): asserts input is { document: SceneShotVideoTakeAuthoringDocument } {
+  assertJsonShape({
+    value: input.document,
+    schemaId: sceneShotVideoTakeAuthoringDocumentSchema.$id,
+    code: 'CORE_SHOT_VIDEO_TAKE_AUTHORING_INVALID_DOCUMENT',
+    message: 'Scene Shot Video Take authoring document failed validation.',
+    path: ['document'],
+    suggestion:
+      'Rewrite the authoring document using the current SceneShotVideoTakeAuthoringDocument schema.',
+  });
+}
+
 function parseStoredJson(
   value: string,
   error: { code: string; message: string; path: string[] }
@@ -107,6 +124,7 @@ function assertJsonShape(input: {
   code: string;
   message: string;
   path: string[];
+  suggestion?: string;
 }): void {
   const validator = ajv.getSchema(input.schemaId);
   if (!validator) {
@@ -119,6 +137,7 @@ function assertJsonShape(input: {
     code: input.code,
     message: input.message,
     path: input.path,
+    suggestion: input.suggestion,
   });
 }
 
@@ -126,20 +145,22 @@ function failJsonValidation(error: {
   code: string;
   message: string;
   path: string[];
+  suggestion?: string;
 }): never {
+  const suggestion = error.suggestion ?? 'Repair the stored Shot Video Take JSON.';
   throwIfDiagnosticResultInvalid(
     buildDiagnosticResult([
       createDiagnosticError(
         error.code,
         error.message,
         { path: error.path },
-        'Repair the stored Shot Video Take JSON.'
+        suggestion
       ),
     ]),
     {
       code: error.code,
       message: error.message,
-      suggestion: 'Repair the stored Shot Video Take JSON.',
+      suggestion,
     }
   );
   throw new Error('unreachable');

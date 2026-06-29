@@ -379,6 +379,32 @@ export const sceneShotVideoTakeStateSchema = {
   additionalProperties: false,
 } as const;
 
+export const sceneShotVideoTakeAuthoringDocumentSchema = {
+  $id: 'https://schemas.gorenku.com/studio/scene-shot-video-take-authoring-document.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: [
+    'kind',
+    'takeId',
+    'sceneId',
+    'sourceShotListId',
+    'shotIds',
+    'structure',
+    'production',
+  ],
+  properties: {
+    kind: { const: 'sceneShotVideoTakeAuthoring' },
+    takeId: nonEmptyString(),
+    sceneId: nonEmptyString(),
+    sourceShotListId: nonEmptyString(),
+    baseTakeUpdatedAt: nonEmptyString(),
+    shotIds: nonEmptyStringArraySchema({ minItems: 1 }),
+    structure: sceneShotVideoTakeStructureSchema(),
+    production: shotVideoTakeProductionSchemaProperties(),
+  },
+  additionalProperties: false,
+} as const;
+
 export const sceneShotVideoTakeHistorySnapshotSchema = {
   $id: 'https://schemas.gorenku.com/studio/scene-shot-video-take-history-snapshot.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',

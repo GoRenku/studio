@@ -104,7 +104,8 @@ renku generation context --purpose shot.first-frame --target scene:<id> --take <
 renku generation context --purpose shot.last-frame --target scene:<id> --take <take-id> --json
 renku generation context --purpose shot.reference-image --target scene:<id> --take <take-id> --json
 renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take <take-id> --json
-renku generation context --purpose shot.video-take --target scene:<id> --take <take-id> --json
+renku take authoring context --take <take-id> --json
+renku take authoring context --take <take-id> --selected-shot <shot-id> --json
 
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
 renku generation model list --purpose lookbook.sheet --target lookbook:<id> --json
@@ -121,11 +122,12 @@ renku generation model list --purpose shot.reference-image --target scene:<id> -
 renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take <take-id> --json
 renku generation model list --purpose shot.video-take --target scene:<id> --take <take-id> --intent <input-mode-id> --json
 
-renku generation production update --purpose shot.video-take --target scene:<id> --take <take-id> --file <shot-video-production-json> --json
-renku generation preflight --purpose shot.video-take --target scene:<id> --take <take-id> --file <shot-video-production-json> --json
+renku take authoring validate --file <scene-shot-video-take-authoring-json> --json
+renku take authoring apply --file <scene-shot-video-take-authoring-json> --json
 renku generation input list --purpose shot.video-take --target scene:<id> --take <take-id> --json
 renku generation input select --purpose shot.video-take --target scene:<id> --take <take-id> --input <input-id> --json
 renku generation input clear --purpose shot.video-take --target scene:<id> --take <take-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
+renku generation input delete --purpose shot.video-take --target scene:<id> --take <take-id> --input <input-id> --json
 
 renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
@@ -156,10 +158,11 @@ Use `overview.take.takeId` as the durable take id for later `--take` commands.
 `renku take list --json` returns `SceneShotVideoTakeOverview` entries, while
 `renku take show --json` returns the raw `SceneShotVideoTake`.
 
-For `shot.video-take`, `generation preflight` is the authoritative dependency
-check before final generation. Agents should read `inputsToCreate`,
-`inputPlanItems`, `plan.dependencyInventory`, `prompts`, and
-`finalTake.canCreateSpec`.
+For final `shot.video-take` work, `take authoring context` is the authoritative
+agent read contract. It returns the editable authoring document, production
+plan, reference sections, preflight readiness, estimate, structured diagnostics,
+and provider payload preview. Agents validate and apply a full
+`sceneShotVideoTakeAuthoring` document rather than patching take state directly.
 
 Core never synthesizes generic shot-video dependency prompts. First-frame,
 last-frame, ad hoc reference-image, and multi-shot storyboard sheet dependency

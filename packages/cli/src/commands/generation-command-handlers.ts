@@ -80,6 +80,10 @@ export const generationCommandHandlers = [
     run: runInputClear,
   },
   {
+    path: ['input', 'delete'],
+    run: runInputDelete,
+  },
+  {
     path: ['spec', 'validate'],
     run: runSpecValidate,
   },
@@ -171,6 +175,14 @@ async function runInputClear(input: GenerationCommandInput): Promise<unknown> {
       '--subject-kind',
     ) as never,
     subjectId: requiredFlag(input.flags.subjectId, '--subject-id'),
+  });
+}
+
+async function runInputDelete(input: GenerationCommandInput): Promise<unknown> {
+  assertShotVideoPurpose(input.flags);
+  return input.runtime.projectDataService.deleteShotVideoTakeInput({
+    ...readShotVideoContextInput(input),
+    inputId: requiredFlag(input.flags.input, '--input'),
   });
 }
 

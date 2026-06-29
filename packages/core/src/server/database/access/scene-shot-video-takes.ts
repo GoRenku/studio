@@ -396,6 +396,78 @@ export function updateSceneShotVideoTakeStateRecord(
   });
 }
 
+export function applySceneShotVideoTakeAuthoringRecord(
+  session: DatabaseSession,
+  input: {
+    takeId: string;
+    shotIds: string[];
+    state: SceneShotVideoTakeState;
+    screenplay: ScreenplayDocument;
+    now: string;
+  }
+): SceneShotVideoTake {
+  const take = requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+  const shotListRow = requireSceneShotListForScene({
+    session,
+    sceneId: take.sceneId,
+    shotListId: take.sourceShotListId,
+  });
+  const shotList = readSceneShotListDocument({
+    row: shotListRow,
+    screenplay: input.screenplay,
+  });
+  const shotIds = normalizeShotIds(shotList.shots, input.shotIds);
+  validateSceneShotVideoTakeStructure({
+    state: input.state,
+    shotIds,
+  });
+  const snapshot = buildSceneShotVideoTakeHistorySnapshot({
+    session,
+    sceneId: take.sceneId,
+    shotListId: take.sourceShotListId,
+    shotList,
+    shotIds,
+  });
+
+  session.db.transaction((tx) => {
+    const transactionSession = {
+      ...session,
+      db: tx as DatabaseSession['db'],
+    };
+    tx
+      .delete(sceneShotVideoTakeShots)
+      .where(eq(sceneShotVideoTakeShots.takeId, input.takeId))
+      .run();
+    insertTakeShotMembership({
+      session: transactionSession,
+      takeId: input.takeId,
+      shotListId: take.sourceShotListId,
+      shotList,
+      shotIds,
+    });
+    tx
+      .update(sceneShotVideoTakes)
+      .set({
+        stateJson: serializeSceneShotVideoTakeState({ state: input.state }),
+        historySnapshot:
+          serializeSceneShotVideoTakeHistorySnapshot({
+            snapshot,
+          }),
+        updatedAt: input.now,
+      })
+      .where(eq(sceneShotVideoTakes.id, input.takeId))
+      .run();
+  });
+
+  return requireSceneShotVideoTake(session, {
+    takeId: input.takeId,
+    screenplay: input.screenplay,
+  });
+}
+
 export function updateSceneShotVideoTakePickRecord(
   session: DatabaseSession,
   input: {

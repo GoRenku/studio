@@ -2,8 +2,11 @@ import { createProjectDataService } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { RenkuCliIo } from '../cli.js';
 import {
+  dispatchCliCommand,
+  readJsonFile,
   requiredFlag,
   writeJson,
+  type CliCommandHandler,
   type CliCommandRuntime,
 } from './structured-command.js';
 import { parseShots } from './studio-target-parsing.js';
@@ -19,6 +22,7 @@ export interface TakeCommandFlags {
   shots?: string;
   take?: string;
   file?: string;
+  selectedShot?: string;
 }
 
 export async function runTakeCommand(options: {
@@ -57,33 +61,94 @@ async function runTakeCommandPath(input: {
   flags: TakeCommandFlags;
   runtime: CliCommandRuntime;
 }): Promise<unknown> {
-  const [command, extra] = input.commandPath;
-  if (extra) {
-    throw unknownTakeCommand(input.commandPath);
-  }
-  switch (command) {
-    case 'list':
-      return input.runtime.projectDataService.listSceneShotVideoTakes({
-        ...takeProjectInput(input.runtime),
-        sceneId: requiredFlag(input.flags.scene, '--scene'),
-      });
-    case 'show':
-      return input.runtime.projectDataService.readSceneShotVideoTake({
-        ...takeProjectInput(input.runtime),
-        sceneId: input.flags.scene,
-        takeId: requiredFlag(input.flags.take, '--take'),
-      });
-    case 'create':
-      return input.runtime.projectDataService.createSceneShotVideoTake({
-        ...takeProjectInput(input.runtime),
-        sceneId: requiredFlag(input.flags.scene, '--scene'),
-        shotListId: requiredFlag(input.flags.shotList, '--shot-list'),
-        shotIds: parseShots(requiredFlag(input.flags.shots, '--shots')),
-      });
-    default:
-      throw unknownTakeCommand(input.commandPath);
-  }
+  return dispatchCliCommand({
+    commandPath: input.commandPath,
+    flags: input.flags,
+    runtime: input.runtime,
+    handlers: takeCommandHandlers,
+    unknownCommand: unknownTakeCommand,
+  });
 }
+
+export const takeCommandHandlers = [
+  {
+    path: ['list'],
+    run: runTakeList,
+  },
+  {
+    path: ['show'],
+    run: runTakeShow,
+  },
+  {
+    path: ['create'],
+    run: runTakeCreate,
+  },
+  {
+    path: ['authoring', 'context'],
+    run: runTakeAuthoringContext,
+  },
+  {
+    path: ['authoring', 'validate'],
+    run: runTakeAuthoringValidate,
+  },
+  {
+    path: ['authoring', 'apply'],
+    run: runTakeAuthoringApply,
+  },
+] satisfies CliCommandHandler<TakeCommandFlags>[];
+
+async function runTakeList(input: TakeCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.listSceneShotVideoTakes({
+    ...takeProjectInput(input.runtime),
+    sceneId: requiredFlag(input.flags.scene, '--scene'),
+  });
+}
+
+async function runTakeShow(input: TakeCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.readSceneShotVideoTake({
+    ...takeProjectInput(input.runtime),
+    sceneId: input.flags.scene,
+    takeId: requiredFlag(input.flags.take, '--take'),
+  });
+}
+
+async function runTakeCreate(input: TakeCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.createSceneShotVideoTake({
+    ...takeProjectInput(input.runtime),
+    sceneId: requiredFlag(input.flags.scene, '--scene'),
+    shotListId: requiredFlag(input.flags.shotList, '--shot-list'),
+    shotIds: parseShots(requiredFlag(input.flags.shots, '--shots')),
+  });
+}
+
+async function runTakeAuthoringContext(input: TakeCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.readSceneShotVideoTakeAuthoringContext({
+    ...takeProjectInput(input.runtime),
+    sceneId: input.flags.scene,
+    takeId: requiredFlag(input.flags.take, '--take'),
+    selectedShotId: input.flags.selectedShot,
+  });
+}
+
+async function runTakeAuthoringValidate(input: TakeCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.validateSceneShotVideoTakeAuthoringDocument({
+    ...takeProjectInput(input.runtime),
+    document: await readAuthoringDocument(input.flags),
+  });
+}
+
+async function runTakeAuthoringApply(input: TakeCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.applySceneShotVideoTakeAuthoringDocument({
+    ...takeProjectInput(input.runtime),
+    document: await readAuthoringDocument(input.flags),
+  });
+}
+
+async function readAuthoringDocument(flags: TakeCommandFlags) {
+  return (await readJsonFile(requiredFlag(flags.file, '--file'))) as never;
+}
+
+type TakeCommandInput = Parameters<CliCommandHandler<TakeCommandFlags>['run']>[0];
 
 function takeProjectInput(runtime: CliCommandRuntime): {
   projectName?: string;
@@ -104,12 +169,7 @@ function takeResourceChangedReport(
   const resourceKeys = Array.isArray(result.resourceKeys)
     ? result.resourceKeys.filter((key): key is string => typeof key === 'string')
     : [];
-  const projectName =
-    typeof result.projectName === 'string'
-      ? result.projectName
-      : isObject(result.project) && typeof result.project.name === 'string'
-        ? result.project.name
-        : undefined;
+  const projectName = projectNameForResourceChangedResult(result);
   if (!projectName || resourceKeys.length === 0) {
     return null;
   }
@@ -119,12 +179,24 @@ function takeResourceChangedReport(
   };
 }
 
+function projectNameForResourceChangedResult(
+  result: Record<string, unknown>
+): string | undefined {
+  if (typeof result.projectName === 'string') {
+    return result.projectName;
+  }
+  if (isObject(result.project) && typeof result.project.name === 'string') {
+    return result.project.name;
+  }
+  return undefined;
+}
+
 function unknownTakeCommand(commandPath: readonly string[]): StructuredError {
   return new StructuredError({
     code: 'CLI107',
     message: `Unknown take command: ${commandPath.join(' ') || '(none)'}.`,
     suggestion:
-      'Use take list, take show, or take create.',
+      'Use take list, take show, take create, or take authoring context/validate/apply.',
   });
 }
 

@@ -34,6 +34,7 @@ describe('CLI command architecture', () => {
       'input list',
       'input select',
       'input clear',
+      'input delete',
       'spec validate',
       'spec create',
       'spec update',

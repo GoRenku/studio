@@ -9,8 +9,8 @@ import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotRefe
 import { estimateShotVideoTakeSpec, prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
 import { runShotVideoTakeSpec } from '../media-generation/shot-video-take/generation-runs.js';
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
+import { applySceneShotVideoTakeAuthoringDocument, readSceneShotVideoTakeAuthoringContext, validateSceneShotVideoTakeAuthoringDocument } from '../media-generation/shot-video-take/authoring.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
-
 export function createShotVideoTakeServiceWiring() {
   return {
     createSceneShotVideoTake,
@@ -63,16 +63,14 @@ export function createShotVideoTakeServiceWiring() {
     prepareShotReferenceImageSpec: sharedGeneration.prepareMediaGenerationSpec,
     estimateShotReferenceImageSpec: sharedGeneration.estimateMediaGenerationSpec,
     runShotReferenceImageSpec: sharedGeneration.runMediaGenerationSpec,
-    validateShotMultiShotStoryboardSheetSpec:
-      validateShotMultiShotStoryboardSheetSpec,
+    validateShotMultiShotStoryboardSheetSpec,
     createShotMultiShotStoryboardSheetSpec:
       sharedGeneration.createMediaGenerationSpec,
     updateShotMultiShotStoryboardSheetSpec:
       sharedGeneration.updateMediaGenerationSpec,
     readShotMultiShotStoryboardSheetSpec:
       sharedGeneration.readMediaGenerationSpec,
-    listShotMultiShotStoryboardSheetSpecs:
-      listShotMultiShotStoryboardSheetSpecs,
+    listShotMultiShotStoryboardSheetSpecs,
     prepareShotMultiShotStoryboardSheetSpec:
       sharedGeneration.prepareMediaGenerationSpec,
     estimateShotMultiShotStoryboardSheetSpec:
@@ -87,11 +85,14 @@ export function createShotVideoTakeServiceWiring() {
     prepareShotVideoTakeSpec: prepareShotVideoTakeSpec,
     estimateShotVideoTakeSpec: estimateShotVideoTakeSpec,
     runShotVideoTakeSpec: runShotVideoTakeSpec,
-    importShotFirstFrame: importShotFirstFrame,
-    importShotLastFrame: importShotLastFrame,
-    importShotReferenceImage: importShotReferenceImage,
+    importShotFirstFrame,
+    importShotLastFrame,
+    importShotReferenceImage,
     importShotMultiShotStoryboardSheet:
       importShotMultiShotStoryboardSheet,
     importShotVideoTake: importShotVideoTake,
+    readSceneShotVideoTakeAuthoringContext,
+    validateSceneShotVideoTakeAuthoringDocument,
+    applySceneShotVideoTakeAuthoringDocument,
   };
 }

@@ -92,6 +92,10 @@ import type {
   SceneDialogueAudioMutationReport,
   SceneShotVideoTakeMediaInput,
   SceneShotVideoTake,
+  SceneShotVideoTakeAuthoringApplyReport,
+  SceneShotVideoTakeAuthoringContextReport,
+  SceneShotVideoTakeAuthoringDocument,
+  SceneShotVideoTakeAuthoringValidationReport,
   SceneShotVideoTakeCreateReport,
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeEditContext,
@@ -562,6 +566,9 @@ export interface ProjectDataService {
   importShotReferenceImage(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
   importShotMultiShotStoryboardSheet(input: ImportShotVideoTakeInputMediaInput): Promise<ShotVideoTakeInputMediaImportReport>;
   importShotVideoTake(input: ImportShotVideoTakeMediaInput): Promise<ShotVideoTakeMediaImportReport>;
+  readSceneShotVideoTakeAuthoringContext(input: ReadSceneShotVideoTakeAuthoringContextInput): Promise<SceneShotVideoTakeAuthoringContextReport>;
+  validateSceneShotVideoTakeAuthoringDocument(input: ValidateSceneShotVideoTakeAuthoringDocumentInput): Promise<SceneShotVideoTakeAuthoringValidationReport>;
+  applySceneShotVideoTakeAuthoringDocument(input: ApplySceneShotVideoTakeAuthoringDocumentInput): Promise<SceneShotVideoTakeAuthoringApplyReport>;
 }
 
 export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
@@ -1573,6 +1580,20 @@ export interface DeleteShotVideoTakeInputInput
   extends ShotVideoTakeContextInput {
   inputId: string;
 }
+
+export interface ReadSceneShotVideoTakeAuthoringContextInput
+  extends ShotVideoTakeContextInput {
+  selectedShotId?: string;
+}
+
+export interface ValidateSceneShotVideoTakeAuthoringDocumentInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  document: SceneShotVideoTakeAuthoringDocument;
+}
+
+export interface ApplySceneShotVideoTakeAuthoringDocumentInput
+  extends ValidateSceneShotVideoTakeAuthoringDocumentInput {}
 
 export interface ValidateShotVideoTakeInputGenerationSpecInput
   extends RenkuConfigPathOptions {

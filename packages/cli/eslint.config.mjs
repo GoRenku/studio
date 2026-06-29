@@ -97,7 +97,6 @@ const eslintConfig = [
     files: [
       'src/commands/generation-command.ts',
       'src/commands/generation-command-handlers.ts',
-      'src/commands/generation-plan-command.ts',
       'src/commands/generation-purpose-command-registry.ts',
       'src/commands/media-command.ts',
       'src/commands/media-import-command-handlers.ts',
@@ -105,6 +104,7 @@ const eslintConfig = [
       'src/commands/structured-command.ts',
       'src/commands/studio-resource-event-command.ts',
       'src/commands/studio-target-parsing.ts',
+      'src/commands/take-command.ts',
     ],
     rules: {
       complexity: ['error', { max: 8 }],
