@@ -2788,12 +2788,19 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(takeAuthoringApplyExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+    const takeAuthoringApplyReport = JSON.parse(stdout.join('\n')) as {
+      project: {
+        id: string;
+        name: string;
+      };
+    };
+    expect(takeAuthoringApplyReport).toMatchObject({
       valid: true,
       document: {
         takeId: take.takeId,
       },
       project: {
+        id: expect.any(String),
         name: 'constantinople',
         projectFolder: expect.any(String),
       },
@@ -2812,6 +2819,9 @@ describe('renku CLI', () => {
         `surface:scene:${sceneId}:takes`,
       ]),
     });
+    expect(takeAuthoringApplyReport.project.id).not.toBe(
+      takeAuthoringApplyReport.project.name
+    );
     expect(stderr).toEqual([]);
     await notificationServer.close();
     await expect(
@@ -2821,6 +2831,7 @@ describe('renku CLI', () => {
         expect.objectContaining({
           type: 'studio.projectResourcesChanged',
           projectRef: expect.objectContaining({
+            id: takeAuthoringApplyReport.project.id,
             name: 'constantinople',
           }),
           resourceKeys: expect.arrayContaining([

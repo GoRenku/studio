@@ -174,9 +174,23 @@ function takeResourceChangedReport(
     return null;
   }
   return {
-    project: { name: projectName },
+    project: projectForResourceChangedResult(result, projectName),
     resourceKeys,
   };
+}
+
+function projectForResourceChangedResult(
+  result: Record<string, unknown>,
+  projectName: string
+): StudioResourceChangedReport['project'] {
+  if (isObject(result.project)) {
+    const project = result.project;
+    return {
+      name: projectName,
+      ...(typeof project.id === 'string' ? { id: project.id } : {}),
+    };
+  }
+  return { name: projectName };
 }
 
 function projectNameForResourceChangedResult(
