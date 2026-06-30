@@ -1,9 +1,17 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { initRenkuConfig } from '@gorenku/studio-core/server';
-import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  createProjectDataService,
+  initRenkuConfig,
+} from '@gorenku/studio-core/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runStudioCommand } from './studio-command.js';
+import { notifyStudioProjectResourcesChanged } from './studio-notification-client.js';
+
+vi.mock('./studio-notification-client.js', () => ({
+  notifyStudioProjectResourcesChanged: vi.fn(),
+}));
 
 describe('studio command', () => {
   let homeDir: string;
@@ -15,9 +23,24 @@ describe('studio command', () => {
     await initRenkuConfig(path.join(homeDir, 'movies'), { homeDir });
     stdout = [];
     stderr = [];
+    vi.mocked(notifyStudioProjectResourcesChanged).mockReset();
+    vi.mocked(notifyStudioProjectResourcesChanged).mockResolvedValue({
+      status: 'notRunning',
+    });
   });
 
-  it('runs notify-refresh as a focused non-mutating Studio notification command', async () => {
+  it('runs notify-refresh with the resolved durable project identity id', async () => {
+    const projectData = createProjectDataService();
+    await projectData.createMovieProject({
+      projectName: 'constantinople',
+      title: 'Preparation of the Siege',
+      homeDir,
+    });
+    const project = await projectData.readProjectShell({
+      projectName: 'constantinople',
+      homeDir,
+    });
+
     await expect(
       runStudioCommand({
         input: ['notify-refresh'],
@@ -32,9 +55,25 @@ describe('studio command', () => {
     expect(stderr).toEqual([]);
     expect(JSON.parse(stdout.join('\n'))).toEqual({
       valid: true,
-      project: { name: 'constantinople' },
+      project: {
+        name: 'constantinople',
+        id: project.identity.id,
+      },
       resourceKeys: ['scene-shot-video-take:take_test0001'],
     });
+    expect(notifyStudioProjectResourcesChanged).toHaveBeenCalledWith(
+      expect.objectContaining({
+        homeDir,
+        notification: expect.objectContaining({
+          projectRef: expect.objectContaining({
+            name: 'constantinople',
+            id: project.identity.id,
+          }),
+          resourceKeys: ['scene-shot-video-take:take_test0001'],
+        }),
+      })
+    );
+    expect(project.identity.id).toMatch(/^project_/);
   });
 
   it('reports structured errors for missing notify-refresh resources', async () => {
@@ -50,6 +89,23 @@ describe('studio command', () => {
     ).rejects.toMatchObject({
       code: 'CLI143',
     });
+  });
+
+  it('fails fast when notify-refresh cannot resolve the requested project', async () => {
+    await expect(
+      runStudioCommand({
+        input: ['notify-refresh'],
+        project: 'missing-project',
+        resource: ['media'],
+        json: true,
+        io: ioFixture({ stdout, stderr }),
+        homeDir,
+      }),
+    ).rejects.toMatchObject({
+      code: expect.any(String),
+    });
+
+    expect(notifyStudioProjectResourcesChanged).not.toHaveBeenCalled();
   });
 });
 

@@ -90,6 +90,98 @@ describe('shot video take preflight and validation', () => {
       purpose: 'shot.video-take',
       target: preflight.target,
     });
+
+    await projectData.updateSceneShotVideoTakeProduction({
+      homeDir,
+      takeId: written.take.takeId,
+      production: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'character-sheet',
+            subjectKind: 'cast-member',
+            subjectId: ids.castMemberId,
+          },
+        ],
+        agentProposal: {
+          basedOnInputModeId: 'text-only',
+          basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+          dependencyDrafts: [],
+          finalPromptDraft: {
+            prompt: 'Generate the video take without optional visual references.',
+          },
+        },
+      },
+    });
+    const authoringContext = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+    expect(authoringContext.preflight.inputsToCreate).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          outputInputKind: 'character-sheet',
+          subjectKind: 'cast-member',
+          subjectId: ids.castMemberId,
+          required: false,
+        }),
+      ])
+    );
+    expect(authoringContext.takeGenerationReadiness.requiredBlockers).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'missing-dependency-draft',
+        }),
+      ])
+    );
+  });
+
+  it('reports missing route-required video prompt sheets as readiness blockers', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+
+    await projectData.updateSceneShotVideoTakeProduction({
+      homeDir,
+      takeId: written.take.takeId,
+      production: {
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        agentProposal: {
+          basedOnInputModeId: 'reference',
+          basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+          dependencyDrafts: [],
+          finalPromptDraft: {
+            prompt: 'Generate one continuous two-shot video take.',
+          },
+        },
+      },
+    });
+
+    const authoringContext = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+
+    expect(authoringContext.preflight.inputsToCreate).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          outputInputKind: 'video-prompt-sheet',
+          required: true,
+        }),
+      ])
+    );
+    expect(authoringContext.preflight.finalTake.canCreateSpec).toBe(false);
+    expect(authoringContext.takeGenerationReadiness).toMatchObject({
+      status: 'blocked',
+      requiredBlockers: expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'missing-video-prompt-sheet',
+          recommendedSpecialist: 'media-producer',
+          recommendedCommand: `renku generation context --purpose shot.video-prompt-sheet --target take:${written.take.takeId} --json`,
+        }),
+      ]),
+    });
   });
 
   it('preserves imported input file paths in preflight prepared inputs', async () => {

@@ -66,6 +66,9 @@ import {
   validateFinalPricingSpecAgainstContext,
 } from './final-specs.js';
 import {
+  requireShotVideoTakeRoute,
+} from './route-settings.js';
+import {
   finalTakeSpecForPreflight,
 } from './preflight-report.js';
 import {
@@ -330,6 +333,7 @@ export function shotVideoTakeDependencySlotsForContext(input: {
     ),
     requestedInputs: input.context.take.state.production.requestedInputs,
     requiresVideoPromptSheet: input.context.shotGroupMode === 'multi-shot',
+    videoPromptSheetRequired: routeRequiresVideoPromptSheet(input.route),
   });
   if (input.includeReferenceContext) {
     return slots;
@@ -484,8 +488,21 @@ export async function declareShotVideoTakeDependencies(
         context
       ),
       requiresVideoPromptSheet: context.shotGroupMode === 'multi-shot',
+      videoPromptSheetRequired: routeRequiresVideoPromptSheet(
+        requireShotVideoTakeRoute(
+          spec.modelChoice,
+          spec.inputModeId,
+          context.shotGroupMode
+        )
+      ),
     });
   });
+}
+
+function routeRequiresVideoPromptSheet(route: ShotVideoRoute): boolean {
+  return route.inputSlots.some(
+    (slot) => slot.kind === 'video-prompt-sheet' && slot.required
+  );
 }
 
 function selectedLocationSheetAssetIdsByLocation(

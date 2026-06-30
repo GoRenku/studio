@@ -131,23 +131,29 @@ async function runStudioNotifyRefreshCommand(
   if (resourceKeys.length === 0) {
     throw missingStudioFlag('--resource');
   }
+  const projectDataService = createProjectDataService();
+  const eventProject = await readStudioNotifyRefreshProject(
+    projectDataService,
+    project,
+    options.homeDir
+  );
   await appendStudioResourceChangedEvent({
     runtime: {
       projectName: project,
       homeDir: options.homeDir,
       json: options.json,
       io: options.io,
-      projectDataService: createProjectDataService(),
+      projectDataService,
     },
     report: {
-      project: { name: project },
+      project: eventProject,
       resourceKeys,
     },
     command: 'studio notify-refresh',
   });
   const report = {
     valid: true,
-    project: { name: project },
+    project: eventProject,
     resourceKeys,
   };
   if (options.json) {
@@ -156,6 +162,18 @@ async function runStudioNotifyRefreshCommand(
     options.io.stdout.log(`Requested Studio refresh for ${resourceKeys.length} resource(s).`);
   }
   return 0;
+}
+
+async function readStudioNotifyRefreshProject(
+  projectDataService: ReturnType<typeof createProjectDataService>,
+  projectName: string,
+  homeDir?: string
+): Promise<{ name: string; id: string }> {
+  const project = await projectDataService.readProjectShell({ projectName, homeDir });
+  return {
+    name: project.identity.name,
+    id: project.identity.id,
+  };
 }
 
 async function runStudioServerStatusCommand(

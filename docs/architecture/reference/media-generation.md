@@ -191,6 +191,17 @@ priced when the purpose has enough model and text or prompt information to
 estimate cost, but they are not runnable generation specs. `shot.reference-image`
 specs also require a title that names the reference intent shown in Studio.
 
+`shot.video-prompt-sheet` is a take-owned AI-video planning sheet for an
+existing Shot Video Take. It is grounded in `renku take authoring context`,
+uses one readable panel per ordered take shot, and preserves shot order,
+spatial continuity, motion continuity, visual references, and known spoken
+timing for downstream `shot.video-take` prompting. It is not a scene-owned
+storyboard sheet, not a moodboard, and not a replacement for the Scene Shot
+List. Agents must inspect the generated sheet before import and reject or
+revise sheets whose panel count, panel order, geography, movement direction,
+reference continuity, spoken timing, or label legibility contradicts the take
+authoring context.
+
 Image-generation context and model-list reports include `agentMedia`. The
 report exposes the configured image-generation default execution path and, for
 image purposes that an agent can create outside Renku, the external built-in

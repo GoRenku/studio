@@ -22,6 +22,7 @@ export interface ShotVideoTakeDependencySlotInput {
   selectedLocationSheetAssetIdsByLocation: Record<string, string[]>;
   requestedInputs?: ShotVideoTakeRequestedInput[];
   requiresVideoPromptSheet?: boolean;
+  videoPromptSheetRequired?: boolean;
 }
 
 export function declareShotVideoTakeDependencySlots(
@@ -34,9 +35,11 @@ export function declareShotVideoTakeDependencySlots(
             shotVideoInputDependencySlot({
               kind: 'video-prompt-sheet',
               target: input.target,
-              required: false,
+              required: input.videoPromptSheetRequired ?? false,
               reason:
-                'This generated video prompt sheet reference helps preserve continuity across the take.',
+                input.videoPromptSheetRequired
+                  ? 'The selected video model route requires a video prompt sheet input for this take.'
+                  : 'This generated video prompt sheet reference helps preserve continuity across the take.',
             }),
           ]
       : []),

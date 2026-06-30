@@ -1576,6 +1576,10 @@ Behavior:
   sheets are generated as shot video take inputs. Their specs must
   use authored prompts; `shot.reference-image` also requires a title that names
   the reference intent.
+- `shot.video-prompt-sheet` is a take-owned planning sheet with one readable
+  panel per ordered take shot. It must be derived from `take authoring context`
+  and inspected before import; do not treat it as a scene storyboard sheet,
+  moodboard, poster, or generic concept collage.
 - The Studio shot References tab displays imported/generated `first-frame`,
   `last-frame`, `reference-image`, and `video-prompt-sheet` inputs
   relevant to the selected shot or production group.
