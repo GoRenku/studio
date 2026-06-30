@@ -115,7 +115,7 @@ export type ShotVideoTakeInputKind =
   | 'character-sheet'
   | 'location-sheet'
   | 'lookbook-sheet'
-  | 'multi-shot-storyboard-sheet'
+  | 'video-prompt-sheet'
   | 'source-video'
   | 'audio';
 
@@ -133,7 +133,7 @@ export type ShotVideoTakeDependencyKind =
   | 'last-frame'
   | 'reference-image'
   | 'lookbook-sheet'
-  | 'multi-shot-storyboard-sheet'
+  | 'video-prompt-sheet'
   | 'reference-audio'
   | 'source-video-extract';
 

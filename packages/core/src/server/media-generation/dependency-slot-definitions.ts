@@ -94,7 +94,7 @@ export function shotVideoInputDependencySlot(input: {
     | 'first-frame'
     | 'last-frame'
     | 'reference-image'
-    | 'multi-shot-storyboard-sheet'
+    | 'video-prompt-sheet'
     | 'audio';
   target: SceneShotVideoTakeTarget;
   subjectKind?: ShotVideoTakeInputSubjectKind;
@@ -126,7 +126,7 @@ function shotInputDependencyKind(input: {
     | 'first-frame'
     | 'last-frame'
     | 'reference-image'
-    | 'multi-shot-storyboard-sheet'
+    | 'video-prompt-sheet'
     | 'audio';
   subjectKind?: ShotVideoTakeInputSubjectKind;
 }): MediaGenerationDependencySlot['dependencyKind'] {
@@ -146,7 +146,7 @@ function shotInputDependencyLabel(kind: string): string {
   if (kind === 'last-frame') {
     return 'Last frame';
   }
-  if (kind === 'multi-shot-storyboard-sheet') {
+  if (kind === 'video-prompt-sheet') {
     return 'Storyboard sheet';
   }
   if (kind === 'audio') {

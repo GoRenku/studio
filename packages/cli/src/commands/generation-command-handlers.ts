@@ -1,4 +1,7 @@
-import { type MediaGenerationSpec } from '@gorenku/studio-core/server';
+import {
+  type MediaGenerationRequestTarget,
+  type MediaGenerationSpec,
+} from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import {
   assertShotVideoTakePurpose,
@@ -115,13 +118,13 @@ export const generationCommandHandlers = [
 
 async function runContext(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.buildMediaGenerationContext(
-    readGenerationContextInput(input),
+    await readGenerationContextInput(input),
   );
 }
 
 async function runModelList(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.listMediaGenerationModels({
-    ...readGenerationContextInput(input),
+    ...(await readGenerationContextInput(input)),
     inputModeId: input.flags.intent,
   });
 }
@@ -134,7 +137,7 @@ async function runProductionUpdate(
     requiredFlag(input.flags.file, '--file'),
   );
   return input.runtime.projectDataService.updateSceneShotVideoTakeProduction({
-    ...readShotVideoContextInput(input),
+    ...(await readShotVideoContextInput(input)),
     production: production as never,
   });
 }
@@ -145,7 +148,7 @@ async function runPreflight(input: GenerationCommandInput): Promise<unknown> {
     ? ((await readJsonFile(input.flags.file)) as never)
     : undefined;
   return input.runtime.projectDataService.previewShotVideoTakeProduction({
-    ...readShotVideoContextInput(input),
+    ...(await readShotVideoContextInput(input)),
     production,
   });
 }
@@ -153,14 +156,14 @@ async function runPreflight(input: GenerationCommandInput): Promise<unknown> {
 async function runInputList(input: GenerationCommandInput): Promise<unknown> {
   assertShotVideoPurpose(input.flags);
   return input.runtime.projectDataService.listShotVideoTakeInputs(
-    readShotVideoContextInput(input),
+    await readShotVideoContextInput(input),
   );
 }
 
 async function runInputSelect(input: GenerationCommandInput): Promise<unknown> {
   assertShotVideoPurpose(input.flags);
   return input.runtime.projectDataService.selectShotVideoTakeInput({
-    ...readShotVideoContextInput(input),
+    ...(await readShotVideoContextInput(input)),
     inputId: requiredFlag(input.flags.input, '--input'),
   });
 }
@@ -168,7 +171,7 @@ async function runInputSelect(input: GenerationCommandInput): Promise<unknown> {
 async function runInputClear(input: GenerationCommandInput): Promise<unknown> {
   assertShotVideoPurpose(input.flags);
   return input.runtime.projectDataService.clearShotVideoTakeInputSelection({
-    ...readShotVideoContextInput(input),
+    ...(await readShotVideoContextInput(input)),
     kind: requiredFlag(input.flags.kind, '--kind') as never,
     subjectKind: requiredFlag(
       input.flags.subjectKind,
@@ -181,7 +184,7 @@ async function runInputClear(input: GenerationCommandInput): Promise<unknown> {
 async function runInputDelete(input: GenerationCommandInput): Promise<unknown> {
   assertShotVideoPurpose(input.flags);
   return input.runtime.projectDataService.deleteShotVideoTakeInput({
-    ...readShotVideoContextInput(input),
+    ...(await readShotVideoContextInput(input)),
     inputId: requiredFlag(input.flags.input, '--input'),
   });
 }
@@ -219,7 +222,7 @@ async function runSpecShow(input: GenerationCommandInput): Promise<unknown> {
 
 async function runSpecList(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.listMediaGenerationSpecs(
-    readGenerationContextInput(input),
+    await readGenerationContextInput(input),
   );
 }
 
@@ -433,15 +436,10 @@ type GenerationCommandInput = Parameters<
   CliCommandHandler<GenerationCommandFlags>['run']
 >[0];
 
-function readGenerationContextInput(input: GenerationCommandInput) {
+async function readGenerationContextInput(input: GenerationCommandInput) {
   const purpose = requiredFlag(input.flags.purpose, '--purpose');
   const target = requiredFlag(input.flags.target, '--target');
-  const parsedTarget = parseGenerationTarget({
-    purpose,
-    target,
-    shots: input.flags.shots,
-    takeId: input.flags.take,
-  });
+  const parsedTarget = await resolveGenerationTarget(input, purpose, target);
   return {
     ...generationProjectInput(input.runtime),
     purpose: parseGenerationPurpose(purpose),
@@ -454,13 +452,82 @@ function readGenerationContextInput(input: GenerationCommandInput) {
   };
 }
 
-function readShotVideoContextInput(input: GenerationCommandInput) {
+async function resolveGenerationTarget(
+  input: GenerationCommandInput,
+  purpose: string,
+  target: string
+): Promise<MediaGenerationRequestTarget> {
+  const takeId = parseTakeTarget(target);
+  if (!takeId) {
+    return parseGenerationTarget({
+      purpose,
+      target,
+      shots: input.flags.shots,
+      takeId: input.flags.take,
+    });
+  }
+  assertTakeTargetMatchesFlag({ targetTakeId: takeId, flagTakeId: input.flags.take });
+  const take = await input.runtime.projectDataService.readSceneShotVideoTake({
+    ...generationProjectInput(input.runtime),
+    takeId,
+  });
+  return {
+    kind: 'sceneShotVideoTake',
+    id: take.takeId,
+    sceneId: take.sceneId,
+    takeId: take.takeId,
+  };
+}
+
+async function readShotVideoContextInput(input: GenerationCommandInput) {
   const target = requiredFlag(input.flags.target, '--target');
+  const takeId = parseTakeTarget(target);
+  if (takeId) {
+    assertTakeTargetMatchesFlag({ targetTakeId: takeId, flagTakeId: input.flags.take });
+    const take = await input.runtime.projectDataService.readSceneShotVideoTake({
+      ...generationProjectInput(input.runtime),
+      takeId,
+    });
+    return {
+      ...generationProjectInput(input.runtime),
+      sceneId: take.sceneId,
+      takeId: take.takeId,
+    };
+  }
   return {
     ...generationProjectInput(input.runtime),
     sceneId: parseSceneTarget(target, 'Shot Video Take'),
     takeId: requiredFlag(input.flags.take, '--take'),
   };
+}
+
+function parseTakeTarget(value: string): string | null {
+  const [kind, id, extra] = value.split(':');
+  if (kind !== 'take') {
+    return null;
+  }
+  if (!id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI141',
+      message: `Shot Video Take target must use take:<take-id>. Received: ${value}.`,
+      suggestion: 'Use --target take:<take-id>.',
+    });
+  }
+  return id;
+}
+
+function assertTakeTargetMatchesFlag(input: {
+  targetTakeId: string;
+  flagTakeId?: string;
+}): void {
+  if (input.flagTakeId && input.flagTakeId !== input.targetTakeId) {
+    throw new StructuredError({
+      code: 'CLI142',
+      message: `--target take:${input.targetTakeId} conflicts with --take ${input.flagTakeId}.`,
+      suggestion:
+        'Omit --take when using --target take:<take-id>, or pass the same take id in both flags.',
+    });
+  }
 }
 
 async function readSpec(filePath: string): Promise<MediaGenerationSpec> {

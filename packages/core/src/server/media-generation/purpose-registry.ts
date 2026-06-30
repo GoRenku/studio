@@ -1,4 +1,5 @@
 import type {
+  AgentMediaReport,
   CastCharacterSheetGenerationContext,
   CastCharacterSheetGenerationSpec,
   CastCharacterSheetModelListReport,
@@ -62,7 +63,7 @@ import {
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../client/index.js';
@@ -124,12 +125,12 @@ import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
 import * as sceneDialogueAudio from './scene-dialogue-audio.js';
 import { buildShotVideoTakeContext } from './shot-video-take/context.js';
 import { listShotVideoTakeModels, listShotInputModels } from './shot-video-take/model-list.js';
-import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotMultiShotStoryboardSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotMultiShotStoryboardSheetSpec, prepareShotInputDraftSpec } from './shot-video-take/input-specs.js';
+import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotVideoPromptSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotVideoPromptSheetSpec, prepareShotInputDraftSpec } from './shot-video-take/input-specs.js';
 import { buildShotInputDependencyDraftSpec } from './shot-video-take/dependency-draft-specs.js';
 import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec, estimateShotVideoTakeSpec } from './shot-video-take/final-specs.js';
-import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotMultiShotStoryboardSheetSpec, runShotVideoTakeSpec } from './shot-video-take/generation-runs.js';
+import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotVideoPromptSheetSpec, runShotVideoTakeSpec } from './shot-video-take/generation-runs.js';
 import { declareShotVideoTakeDependencies } from './shot-video-take/dependency-inventory.js';
-import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from './shot-video-take/media-imports.js';
+import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from './shot-video-take/media-imports.js';
 import type {
   MediaGenerationDependencyDraftPlan,
   MediaGenerationDependencyDraftSpecInput,
@@ -147,6 +148,9 @@ export type MediaGenerationContextReport =
   | SceneStoryboardSheetGenerationContext
   | ShotVideoTakeProductionContext;
 
+export type AgentAwareMediaGenerationContextReport =
+  MediaGenerationContextReport & { agentMedia?: AgentMediaReport };
+
 export type MediaGenerationModelListReport =
   | LookbookImageModelListReport
   | LookbookSheetModelListReport
@@ -159,6 +163,9 @@ export type MediaGenerationModelListReport =
   | SceneStoryboardSheetModelListReport
   | ShotVideoTakeInputModelListReport
   | ShotVideoTakeModelListReport;
+
+export type AgentAwareMediaGenerationModelListReport =
+  MediaGenerationModelListReport & { agentMedia?: AgentMediaReport };
 
 export type MediaGenerationImportReport =
   | LookbookImageMediaImportReport
@@ -684,24 +691,24 @@ const DEFINITIONS = [
     runSpec: runShotReferenceImageSpec,
   },
   {
-    purpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+    purpose: SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotVideoTake',
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
         toShotInput(input),
-        SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
+        SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
       ),
     validateSpec: (input) =>
-      validateShotMultiShotStoryboardSheetSpec(toShotInputSpecValidation(input)),
+      validateShotVideoPromptSheetSpec(toShotInputSpecValidation(input)),
     createSpec: (input) =>
-      createShotMultiShotStoryboardSheetSpec(toShotInputSpecCreation(input)),
+      createShotVideoPromptSheetSpec(toShotInputSpecCreation(input)),
     updateSpec: (input) =>
-      updateShotMultiShotStoryboardSheetSpec(toShotInputSpecUpdate(input)),
+      updateShotVideoPromptSheetSpec(toShotInputSpecUpdate(input)),
     listSpecs: (input) =>
-      listShotMultiShotStoryboardSheetSpecs(toShotInput(input)),
-    prepareSpec: prepareShotMultiShotStoryboardSheetSpec,
+      listShotVideoPromptSheetSpecs(toShotInput(input)),
+    prepareSpec: prepareShotVideoPromptSheetSpec,
     prepareDraftSpec: (input) =>
       prepareShotInputDraftSpec({
         projectName: input.projectName,
@@ -709,7 +716,7 @@ const DEFINITIONS = [
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
     planDependencyDraft: buildShotInputDependencyDraftSpec,
-    runSpec: runShotMultiShotStoryboardSheetSpec,
+    runSpec: runShotVideoPromptSheetSpec,
   },
   {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
@@ -909,7 +916,7 @@ export async function importMediaGenerationByPurpose(input:
   | ({ purpose: typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_LAST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
-  | ({ purpose: typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
+  | ({ purpose: typeof SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE } & ImportShotVideoTakeMediaInput)
 ): Promise<MediaGenerationImportReport> {
   switch (input.purpose) {
@@ -933,8 +940,8 @@ export async function importMediaGenerationByPurpose(input:
       return importShotLastFrame(input);
     case SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE:
       return importShotReferenceImage(input);
-    case SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE:
-      return importShotMultiShotStoryboardSheet(input);
+    case SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE:
+      return importShotVideoPromptSheet(input);
     case SHOT_VIDEO_TAKE_GENERATION_PURPOSE:
       return importShotVideoTake(input);
     default:

@@ -32,7 +32,7 @@ export const readShotLastFrameSpec = readShotSpec;
 export const readShotReferenceImageSpec = readShotSpec;
 
 
-export const readShotMultiShotStoryboardSheetSpec = readShotSpec;
+export const readShotVideoPromptSheetSpec = readShotSpec;
 
 
 export const readShotVideoTakeSpec = readShotSpec;

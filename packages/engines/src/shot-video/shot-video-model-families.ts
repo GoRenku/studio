@@ -27,7 +27,7 @@ export type ShotVideoTakeInputKind =
   | 'character-sheet'
   | 'location-sheet'
   | 'lookbook-sheet'
-  | 'multi-shot-storyboard-sheet'
+  | 'video-prompt-sheet'
   | 'source-video'
   | 'audio';
 
@@ -200,9 +200,9 @@ const SOURCE_VIDEO_SLOT: ShotVideoRouteInputSlot = {
   mediaKind: 'video',
 };
 
-const MULTI_SHOT_STORYBOARD_SLOT: ShotVideoRouteInputSlot = {
-  id: 'multi-shot-storyboard-sheet',
-  kind: 'multi-shot-storyboard-sheet',
+const VIDEO_PROMPT_SHEET_SLOT: ShotVideoRouteInputSlot = {
+  id: 'video-prompt-sheet',
+  kind: 'video-prompt-sheet',
   providerField: 'image_urls',
   required: true,
   minCount: 1,
@@ -499,7 +499,7 @@ export const SHOT_VIDEO_MODEL_FAMILIES: ShotVideoModelFamily[] = [
     route('seedance', 'first-last-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
     route('seedance', 'first-last-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
     route('seedance', 'reference', 'single-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
-    route('seedance', 'reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, MULTI_SHOT_STORYBOARD_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
+    route('seedance', 'reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, VIDEO_PROMPT_SHEET_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
   ]),
   family('fal-ai/kling-video/v3/standard', 'Kling V3 Standard', '3.0', [
     ...klingV3Routes('standard'),

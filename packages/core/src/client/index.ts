@@ -73,6 +73,7 @@ export type {
   ProductionExportVariantSummary,
 } from './production-export.js';
 export type * from './trash.js';
+export type * from './agent-media.js';
 export type * from './media-generation-purpose.js';
 export type * from './media-generation-target.js';
 export type * from './media-generation-dependency.js';
@@ -100,7 +101,7 @@ export {
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from './media-generation-purpose.js';
@@ -145,6 +146,7 @@ export type {
   ProjectShell,
   ProjectShellNavigation,
   ScenePanelTab,
+  SceneTakeWorkspaceMode,
   SceneShotDetailTab,
   SceneNavigationRow,
   SequenceNavigationRow,

@@ -142,7 +142,7 @@ export function isReferencePreparedInput(kind: ShotVideoTakeInputKind): boolean 
     kind === 'character-sheet' ||
     kind === 'location-sheet' ||
     kind === 'lookbook-sheet' ||
-    kind === 'multi-shot-storyboard-sheet' ||
+    kind === 'video-prompt-sheet' ||
     kind === 'audio'
   );
 }
@@ -206,7 +206,7 @@ function referenceInclusionResolution(input: {
 
 export function requiredGeneralReferenceInclusion(input: {
   context: ShotVideoTakeProductionContext;
-  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet';
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet';
   selected: boolean;
   inclusion: ReferenceInclusionResolution;
 }): ReferenceInclusionResolution {
@@ -224,7 +224,7 @@ export function requiredGeneralReferenceInclusion(input: {
 
 export function routeRequiresGeneralReference(
   context: ShotVideoTakeProductionContext,
-  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet'
 ): boolean {
   const inputModeId =
     context.take.state.production.inputModeId ?? context.defaults.inputModeId;

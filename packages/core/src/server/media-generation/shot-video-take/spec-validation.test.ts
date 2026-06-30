@@ -16,7 +16,7 @@ describe('shot video take preflight and validation', () => {
     projectData = shotVideoTakeProject.projectData;
   });
 
-  it('rejects a multi-shot final spec without the required storyboard sheet', async () => {
+  it('rejects a multi-shot final spec without the required video prompt sheet', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
     const context = await projectData.buildShotVideoTakeContext({
@@ -39,7 +39,7 @@ describe('shot video take preflight and validation', () => {
       })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA384',
-      message: expect.stringContaining('multi-shot-storyboard-sheet'),
+      message: expect.stringContaining('video-prompt-sheet'),
     });
   });
 

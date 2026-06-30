@@ -8,7 +8,7 @@ import {
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
 } from '../../client/index.js';
@@ -40,12 +40,12 @@ const DEPENDENCY_KIND_DEFINITIONS = [
     generationPurpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   },
   {
-    dependencyKind: 'multi-shot-storyboard-sheet',
+    dependencyKind: 'video-prompt-sheet',
     mediaKind: 'image',
     cardinality: 'one',
     assetSelector: 'shot-video-input',
     missingInputBehavior: 'plan-generation',
-    generationPurpose: SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+    generationPurpose: SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   },
   {
     dependencyKind: 'reference-audio',

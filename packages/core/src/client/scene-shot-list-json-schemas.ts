@@ -89,7 +89,7 @@ const SHOT_VIDEO_TAKE_INPUT_KINDS = [
   'character-sheet',
   'location-sheet',
   'lookbook-sheet',
-  'multi-shot-storyboard-sheet',
+  'video-prompt-sheet',
   'source-video',
   'audio',
 ] as const;
@@ -109,7 +109,7 @@ const SHOT_VIDEO_TAKE_DEPENDENCY_KINDS = [
   'last-frame',
   'reference-image',
   'lookbook-sheet',
-  'multi-shot-storyboard-sheet',
+  'video-prompt-sheet',
   'reference-audio',
   'source-video-extract',
 ] as const;
@@ -118,7 +118,7 @@ const SHOT_VIDEO_TAKE_INPUT_PURPOSES = [
   'shot.first-frame',
   'shot.last-frame',
   'shot.reference-image',
-  'shot.multi-shot-storyboard-sheet',
+  'shot.video-prompt-sheet',
 ] as const;
 
 const SHOT_VIDEO_TAKE_INPUT_MODELS = [

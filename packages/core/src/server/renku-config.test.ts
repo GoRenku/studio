@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   RenkuConfigError,
   initRenkuConfig,
+  readAgentMediaExecutionPolicy,
   readRenkuConfig,
   resolveRenkuConfigDir,
   resolveRenkuConfigPath,
@@ -71,6 +72,82 @@ describe('Renku config', () => {
     await expect(resolveRenkuStorageRoot({ homeDir })).resolves.toBe(
       path.join(homeDir, 'library')
     );
+  });
+
+  it('reads agent media image execution policy from config', async () => {
+    const configPath = resolveRenkuConfigPath({ homeDir });
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(
+      configPath,
+      [
+        'version: 0.1.0',
+        `storageRoot: ${path.join(homeDir, 'library')}`,
+        'agentMedia:',
+        '  imageGeneration:',
+        '    defaultExecutionPath: codexBuiltInWhenAvailable',
+        '',
+      ].join('\n'),
+      'utf8'
+    );
+
+    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({
+      agentMedia: {
+        imageGeneration: {
+          defaultExecutionPath: 'codexBuiltInWhenAvailable',
+        },
+      },
+    });
+    await expect(readAgentMediaExecutionPolicy({ homeDir })).resolves.toEqual({
+      imageGeneration: {
+        defaultExecutionPath: 'codexBuiltInWhenAvailable',
+      },
+    });
+  });
+
+  it('defaults agent media image execution policy to ask', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await initRenkuConfig(storageRoot, { homeDir });
+
+    await expect(readAgentMediaExecutionPolicy({ homeDir })).resolves.toEqual({
+      imageGeneration: {
+        defaultExecutionPath: 'ask',
+      },
+    });
+  });
+
+  it('rejects invalid agent media image execution policy values', async () => {
+    const configPath = resolveRenkuConfigPath({ homeDir });
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(
+      configPath,
+      [
+        'version: 0.1.0',
+        `storageRoot: ${path.join(homeDir, 'library')}`,
+        'agentMedia:',
+        '  imageGeneration:',
+        '    defaultExecutionPath: falAiByDefault',
+        '',
+      ].join('\n'),
+      'utf8'
+    );
+
+    await expect(readRenkuConfig({ homeDir })).rejects.toMatchObject({
+      code: 'CONFIG012',
+    });
+  });
+
+  it('rejects unknown config keys', async () => {
+    const configPath = resolveRenkuConfigPath({ homeDir });
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(
+      configPath,
+      `version: 0.1.0\nstorageRoot: ${path.join(homeDir, 'movies')}\nproviderDefaults: {}\n`,
+      'utf8'
+    );
+
+    await expect(readRenkuConfig({ homeDir })).rejects.toMatchObject({
+      code: 'CONFIG013',
+    });
   });
 
   it('reports existing config without rewriting it', async () => {

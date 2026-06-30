@@ -80,7 +80,7 @@ const GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD = 0.037;
 const GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD = 0.04;
 const FIRST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const LAST_FRAME_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
-const MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
+const VIDEO_PROMPT_DEPENDENCY_COST_USD = GPT_IMAGE_2_LOW_1024_BY_768_COST_USD;
 const DEFAULT_CHARACTER_SHEET_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
 const DEFAULT_LOOKBOOK_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1920_BY_1080_COST_USD;
 const DEFAULT_LOCATION_SHEET_DEPENDENCY_COST_USD = GPT_IMAGE_2_MEDIUM_1024_BY_768_COST_USD;
@@ -124,7 +124,7 @@ interface MatrixProjectSetup {
     lastFrame: ShotVideoTakePreparedInput;
     multiShotFirstFrame: ShotVideoTakePreparedInput;
     multiShotLastFrame: ShotVideoTakePreparedInput;
-    storyboard: ShotVideoTakePreparedInput;
+    videoPromptSheet: ShotVideoTakePreparedInput;
     referenceBundle: ShotVideoTakePreparedInput[];
     sourceVideo: ShotVideoTakePreparedInput;
   };
@@ -1286,8 +1286,8 @@ function missingDependencyCostForRoute(input: {
   if (input.inputModeId === 'first-last-frame') {
     cost += FIRST_FRAME_DEPENDENCY_COST_USD + LAST_FRAME_DEPENDENCY_COST_USD;
   }
-  if (requiresMultiShotStoryboard(input)) {
-    cost += MULTI_SHOT_STORYBOARD_DEPENDENCY_COST_USD;
+  if (requiresVideoPromptSheet(input)) {
+    cost += VIDEO_PROMPT_DEPENDENCY_COST_USD;
   }
   return cost;
 }
@@ -1304,7 +1304,7 @@ function missingDependencyLineCountForRoute(input: {
   if (input.inputModeId === 'first-frame') {
     count += 1;
   }
-  if (requiresMultiShotStoryboard(input)) {
+  if (requiresVideoPromptSheet(input)) {
     count += 1;
   }
   return count;
@@ -1338,7 +1338,7 @@ function baseReferenceDependencyLineCountForRoute(input: {
     : DEFAULT_REFERENCE_CONTEXT_DEPENDENCY_LINE_COUNT;
 }
 
-function requiresMultiShotStoryboard(input: {
+function requiresVideoPromptSheet(input: {
   shotGroupMode: ShotVideoTakeShotGroupMode;
 }): boolean {
   return input.shotGroupMode === 'multi-shot';
@@ -1514,8 +1514,8 @@ async function createMatrixProjectSetup(
   await writeProjectFile(
     projectData,
     homeDir,
-    'generated/media/multi-shot-storyboard.png',
-    'multi-shot storyboard'
+    'generated/media/video-prompt-sheet.png',
+    'video prompt sheet'
   );
   await writeProjectFile(
     projectData,
@@ -1550,10 +1550,10 @@ async function createMatrixProjectSetup(
     takeId: multiTake.takeId,
     sourceProjectRelativePath: 'generated/media/multi-shot-last-frame.png',
   });
-  const storyboard = await projectData.importShotMultiShotStoryboardSheet({
+  const videoPromptSheet = await projectData.importShotVideoPromptSheet({
     homeDir,
     takeId: multiTake.takeId,
-    sourceProjectRelativePath: 'generated/media/multi-shot-storyboard.png',
+    sourceProjectRelativePath: 'generated/media/video-prompt-sheet.png',
   });
   const referenceImage = await projectData.importCastCharacterSheetMedia({
     homeDir,
@@ -1623,7 +1623,7 @@ async function createMatrixProjectSetup(
       lastFrame: preparedInputFromImported(lastFrame.mediaInput),
       multiShotFirstFrame: preparedInputFromImported(multiShotFirstFrame.mediaInput),
       multiShotLastFrame: preparedInputFromImported(multiShotLastFrame.mediaInput),
-      storyboard: preparedInputFromImported(storyboard.mediaInput),
+      videoPromptSheet: preparedInputFromImported(videoPromptSheet.mediaInput),
       referenceBundle,
       sourceVideo: {
         kind: 'source-video',
@@ -1749,13 +1749,13 @@ function dependencyDraftsForCase(
       title: `${input.label} last frame`,
     });
   }
-  if (requiresMultiShotStoryboard(input)) {
+  if (requiresVideoPromptSheet(input)) {
     drafts.push({
-      purpose: 'shot.multi-shot-storyboard-sheet',
-      dependencyKind: 'multi-shot-storyboard-sheet',
-      outputInputKind: 'multi-shot-storyboard-sheet',
-      prompt: `Author one ordered multi-shot storyboard planning sheet for ${input.label}, with one readable panel per selected shot and compact camera/action metadata.`,
-      title: `${input.label} storyboard sheet`,
+      purpose: 'shot.video-prompt-sheet',
+      dependencyKind: 'video-prompt-sheet',
+      outputInputKind: 'video-prompt-sheet',
+      prompt: `Author one ordered video prompt sheet planning sheet for ${input.label}, with one readable panel per selected shot and compact camera/action metadata.`,
+      title: `${input.label} video prompt sheet`,
     });
   }
   return drafts;
@@ -1787,26 +1787,26 @@ function preparedInputsForCase(
       : setup.preparedInputs.lastFrame;
 
   if (input.inputModeId === 'first-frame') {
-    return requiresMultiShotStoryboard(input)
-      ? [firstFrame, setup.preparedInputs.storyboard]
+    return requiresVideoPromptSheet(input)
+      ? [firstFrame, setup.preparedInputs.videoPromptSheet]
       : [firstFrame];
   }
   if (input.inputModeId === 'first-last-frame') {
-    return requiresMultiShotStoryboard(input)
-      ? [firstFrame, lastFrame, setup.preparedInputs.storyboard]
+    return requiresVideoPromptSheet(input)
+      ? [firstFrame, lastFrame, setup.preparedInputs.videoPromptSheet]
       : [firstFrame, lastFrame];
   }
   if (input.inputModeId === 'reference') {
-    return requiresMultiShotStoryboard(input)
-      ? [...setup.preparedInputs.referenceBundle, setup.preparedInputs.storyboard]
+    return requiresVideoPromptSheet(input)
+      ? [...setup.preparedInputs.referenceBundle, setup.preparedInputs.videoPromptSheet]
       : setup.preparedInputs.referenceBundle;
   }
   if (input.inputModeId === 'source-video-reference') {
-    return requiresMultiShotStoryboard(input)
-      ? [setup.preparedInputs.sourceVideo, setup.preparedInputs.storyboard]
+    return requiresVideoPromptSheet(input)
+      ? [setup.preparedInputs.sourceVideo, setup.preparedInputs.videoPromptSheet]
       : [setup.preparedInputs.sourceVideo];
   }
-  return requiresMultiShotStoryboard(input) ? [setup.preparedInputs.storyboard] : [];
+  return requiresVideoPromptSheet(input) ? [setup.preparedInputs.videoPromptSheet] : [];
 }
 
 function requestedInputsForCase(

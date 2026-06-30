@@ -4,6 +4,7 @@ import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../client/index.js';
 import type {
+  AgentMediaReport,
   MediaGenerationDependencyPlan,
   MediaGenerationEstimateReport,
   MediaGenerationRunReport,
@@ -27,7 +28,10 @@ import type {
   RunMediaGenerationSpecInput,
 } from '../project-data-service-contracts.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { readAgentMediaExecutionPolicy } from '../renku-config.js';
 import {
+  type AgentAwareMediaGenerationContextReport,
+  type AgentAwareMediaGenerationModelListReport,
   type CreateMediaGenerationSpecInput,
   type ListMediaGenerationSpecsInput,
   type MediaGenerationPurposeContextInput,
@@ -44,14 +48,70 @@ import { planLinesFromDependencyInventory } from './dependency-inventory-lines.j
 
 export async function buildMediaGenerationContext(
   input: MediaGenerationPurposeContextInput
-) {
-  return requireMediaGenerationPurposeDefinition(input.purpose).buildContext(input);
+): Promise<AgentAwareMediaGenerationContextReport> {
+  const definition = requireMediaGenerationPurposeDefinition(input.purpose);
+  const context = await definition.buildContext(input);
+  return decorateAgentMediaReport({
+    report: context,
+    input,
+    mediaKind: definition.mediaKind,
+  });
 }
 
 export async function listMediaGenerationModels(
   input: MediaGenerationPurposeContextInput
-) {
-  return requireMediaGenerationPurposeDefinition(input.purpose).listModels(input);
+): Promise<AgentAwareMediaGenerationModelListReport> {
+  const definition = requireMediaGenerationPurposeDefinition(input.purpose);
+  const report = await definition.listModels(input);
+  return decorateAgentMediaReport({
+    report,
+    input,
+    mediaKind: definition.mediaKind,
+  });
+}
+
+export async function buildAgentMediaReport(input: {
+  homeDir?: string;
+  mediaKind: 'image' | 'audio' | 'video' | 'text' | 'json';
+  renkuManagedAvailable?: boolean;
+}): Promise<AgentMediaReport> {
+  const policy = await readAgentMediaExecutionPolicy({
+    homeDir: input.homeDir,
+  });
+  const appliesToPurpose = input.mediaKind === 'image';
+  return {
+    imageGeneration: {
+      defaultExecutionPath: policy.imageGeneration.defaultExecutionPath,
+      appliesToPurpose,
+      renkuManagedAvailable:
+        appliesToPurpose && (input.renkuManagedAvailable ?? true),
+      externalBuiltInGeneration: {
+        preferred: appliesToPurpose ? 'codex.gpt-image-2' : null,
+        availableInRenku: false,
+        requiresHarnessTool: true,
+      },
+    },
+  };
+}
+
+async function decorateAgentMediaReport<
+  Report extends object,
+>(input: {
+  report: Report;
+  input: RenkuConfigPathOptions;
+  mediaKind: 'image' | 'audio' | 'video' | 'text' | 'json';
+}): Promise<Report & { agentMedia?: AgentMediaReport }> {
+  if (input.mediaKind !== 'image') {
+    return input.report;
+  }
+  return {
+    ...input.report,
+    agentMedia: await buildAgentMediaReport({
+      homeDir: input.input.homeDir,
+      mediaKind: input.mediaKind,
+      renkuManagedAvailable: true,
+    }),
+  } as Report & { agentMedia?: AgentMediaReport };
 }
 
 export async function validateMediaGenerationSpec(

@@ -13,6 +13,7 @@ import type {
   StudioSelection,
   StudioSelectionContextResult,
 } from '../../client/index.js';
+import type { ShotVideoTakeInputKind } from '../../client/scene-shot-list.js';
 import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
 import {
   listAssetRelationshipPage,
@@ -64,11 +65,14 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { readStudioSelectionContextProjection } from './selection-context.js';
+import { buildAgentMediaReport } from '../media-generation/shared-generation-service.js';
+import { buildShotVideoTakeContext } from '../media-generation/shot-video-take/context.js';
+import { previewShotVideoTakeProductionForContext } from '../media-generation/shot-video-take/preflight-report.js';
 
 export async function readDirectorContext(
   input: ReadDirectorContextInput = {}
 ): Promise<DirectorContextReport> {
-  return await withCurrentProjectSession(input, ({ currentProject, session }) => {
+  return await withCurrentProjectSession(input, async ({ currentProject, session }) => {
     const diagnostics: DiagnosticIssue[] = [...(input.studioCurrent?.warnings ?? [])];
     const projectInformation = readProjectInformationResourceFromDatabase(session);
     const screenplay = readScreenplayReadiness(session);
@@ -83,7 +87,13 @@ export async function readDirectorContext(
       diagnostics,
     });
     const selectedScene = currentSelection?.valid
-      ? readSelectedSceneReadiness(session, currentSelection.selection, diagnostics)
+      ? await readSelectedSceneReadiness({
+          session,
+          selection: currentSelection.selection,
+          currentProject,
+          homeDir: input.homeDir,
+          diagnostics,
+        })
       : null;
 
     diagnostics.push(
@@ -118,6 +128,10 @@ export async function readDirectorContext(
       cast,
       productionDesign,
       selectedScene,
+      agentMedia: await buildAgentMediaReport({
+        homeDir: input.homeDir,
+        mediaKind: 'image',
+      }),
       nextSteps,
       resourceKeys: directorResourceKeys(currentSelection, selectedScene),
       diagnostics,
@@ -287,11 +301,14 @@ function selectionFromStudioCurrent(input: {
   return current.selection;
 }
 
-function readSelectedSceneReadiness(
-  session: DatabaseSession,
-  selection: StudioSelection,
-  diagnostics: DiagnosticIssue[]
-): DirectorSceneReadiness | null {
+async function readSelectedSceneReadiness(input: {
+  session: DatabaseSession;
+  selection: StudioSelection;
+  currentProject: CurrentProject;
+  homeDir?: string;
+  diagnostics: DiagnosticIssue[];
+}): Promise<DirectorSceneReadiness | null> {
+  const { session, selection, diagnostics } = input;
   if (selection.type !== 'scene') {
     return null;
   }
@@ -304,12 +321,16 @@ function readSelectedSceneReadiness(
       activeShotListId: null,
       shotCount: 0,
       storyboardStatus: { available: false, missingShotIds: [] },
-    shotVideo: {
-      preflightAvailable: false,
-      selectedTakeId: null,
-      selectedShotIds: [],
-      selectedInputCount: 0,
-      selectedTakeCount: 0,
+      shotVideo: {
+        preflightAvailable: false,
+        selectedTakeId: null,
+        selectedTakeMode: null,
+        selectedShotIds: [],
+        missingPreparedInputKinds: [],
+        selectedInputCount: 0,
+        selectedTakeCount: 0,
+        recommendedSpecialist: null,
+        recommendedCommand: null,
       },
     };
   }
@@ -342,6 +363,14 @@ function readSelectedSceneReadiness(
     );
   }
 
+  const shotVideo = await readSelectedShotVideoReadiness({
+    selection,
+    selectedShotIds,
+    currentProject: input.currentProject,
+    homeDir: input.homeDir,
+    diagnostics,
+  });
+
   return {
     sceneId: selection.id,
     shotId: selection.shotId ?? null,
@@ -351,14 +380,80 @@ function readSelectedSceneReadiness(
       available: true,
       missingShotIds,
     },
-    shotVideo: {
-      preflightAvailable: selectedShotIds.length > 0,
-      selectedTakeId: null,
-      selectedShotIds,
-      selectedInputCount: 0,
-      selectedTakeCount: 0,
-    },
+    shotVideo,
   };
+}
+
+async function readSelectedShotVideoReadiness(input: {
+  selection: Extract<StudioSelection, { type: 'scene' }>;
+  selectedShotIds: string[];
+  currentProject: CurrentProject;
+  homeDir?: string;
+  diagnostics: DiagnosticIssue[];
+}): Promise<DirectorSceneReadiness['shotVideo']> {
+  const base: DirectorSceneReadiness['shotVideo'] = {
+    preflightAvailable: input.selectedShotIds.length > 0,
+    selectedTakeId: null,
+    selectedTakeMode: null,
+    selectedShotIds: input.selectedShotIds,
+    missingPreparedInputKinds: [] as ShotVideoTakeInputKind[],
+    selectedInputCount: 0,
+    selectedTakeCount: 0,
+    recommendedSpecialist: null,
+    recommendedCommand:
+      input.selectedShotIds.length > 0
+        ? 'renku take authoring context --take <take-id> --json'
+        : null,
+  };
+  if (!input.selection.takeId) {
+    return base;
+  }
+  try {
+    const context = await buildShotVideoTakeContext({
+      projectName: input.currentProject.projectName,
+      homeDir: input.homeDir,
+      sceneId: input.selection.id,
+      takeId: input.selection.takeId,
+    });
+    const preflight = await previewShotVideoTakeProductionForContext({
+      context,
+      projectName: input.currentProject.projectName,
+      homeDir: input.homeDir,
+    });
+    const selectedInputs = context.mediaInputs.filter((mediaInput) => mediaInput.selected);
+    return {
+      preflightAvailable: true,
+      selectedTakeId: context.take.takeId,
+      selectedTakeMode: context.take.state.structure.mode,
+      selectedShotIds: context.take.shotIds,
+      missingPreparedInputKinds: [
+        ...new Set(
+          preflight.inputsToCreate
+            .filter((dependency) => dependency.required)
+            .map((dependency) => dependency.outputInputKind)
+        ),
+      ],
+      selectedInputCount: selectedInputs.length,
+      selectedTakeCount: context.outputs.filter((output) => output.selected).length,
+      recommendedSpecialist: 'media-producer',
+      recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
+    };
+  } catch {
+    input.diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT014',
+        'The selected Shot Video Take could not be loaded for readiness.',
+        ['selectedScene', 'shotVideo', 'selectedTakeId'],
+        'Refresh Studio, confirm the take still exists, and run studio current again.'
+      )
+    );
+    return {
+      ...base,
+      selectedTakeId: input.selection.takeId,
+      recommendedSpecialist: 'media-producer',
+      recommendedCommand: `renku take authoring context --take ${input.selection.takeId} --json`,
+    };
+  }
 }
 
 function selectedShotIdsForScene(
@@ -532,7 +627,16 @@ function buildNextSteps(input: {
       command: 'renku generation context --purpose location.environment-sheet --target location:<location-id> --json',
     });
   }
-  if (input.selectedScene && !input.selectedScene.activeShotListId) {
+  if (input.selectedScene?.shotVideo.selectedTakeId) {
+    steps.push({
+      id: 'generate-shot-video',
+      title: 'Prepare the active shot video take',
+      specialistSkill: 'media-producer',
+      reason:
+        'Studio is focused on an existing Shot Video Take, so take-owned media and readiness work should start from the take authoring context.',
+      command: input.selectedScene.shotVideo.recommendedCommand,
+    });
+  } else if (input.selectedScene && !input.selectedScene.activeShotListId) {
     steps.push({
       id: 'design-shot-list',
       title: 'Design the selected scene shot list',

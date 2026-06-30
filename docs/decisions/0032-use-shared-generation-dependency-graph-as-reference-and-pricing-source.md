@@ -74,7 +74,7 @@ The shared implementation lives under
 - `dependency-plan-lines.ts`.
 
 The first dependency kinds are `first-frame`, `last-frame`, `reference-image`,
-`multi-shot-storyboard-sheet`, `cast-character-sheet`,
+`video-prompt-sheet`, `cast-character-sheet`,
 `location-environment-sheet`, `lookbook-sheet`, and `manual-attachment`.
 
 The first non-shot proof is `cast.profile`, which declares and plans a

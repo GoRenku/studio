@@ -36,7 +36,7 @@ const shotVideoInputKinds = new Set<ShotVideoTakeInputKind>([
   'character-sheet',
   'location-sheet',
   'lookbook-sheet',
-  'multi-shot-storyboard-sheet',
+  'video-prompt-sheet',
   'source-video',
   'audio',
 ]);
@@ -191,7 +191,7 @@ export function dependencyKindForShotVideoInput(
     kind === 'first-frame' ||
     kind === 'last-frame' ||
     kind === 'reference-image' ||
-    kind === 'multi-shot-storyboard-sheet'
+    kind === 'video-prompt-sheet'
   ) {
     return kind;
   }

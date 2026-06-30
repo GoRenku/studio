@@ -4,12 +4,15 @@ export {
   RENKU_CONFIG_VERSION,
   RenkuConfigError,
   initRenkuConfig,
+  readAgentMediaExecutionPolicy,
   readRenkuConfig,
   resolveRenkuConfigDir,
   resolveRenkuConfigPath,
   resolveRenkuStorageRoot,
 } from './renku-config.js';
 export type {
+  AgentMediaExecutionPolicy,
+  ImageGenerationExecutionPath,
   InitRenkuConfigOptions,
   InitRenkuConfigResult,
   ReadRenkuConfigOptions,

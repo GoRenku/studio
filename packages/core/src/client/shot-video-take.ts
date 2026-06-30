@@ -1,4 +1,5 @@
 import type { GenerationEstimate } from '@gorenku/studio-engines';
+import type { AgentMediaReport } from './agent-media.js';
 import type { Asset } from './assets.js';
 import type { ProjectRelativePath } from './project.js';
 import type { SceneSetting } from './screenplay.js';
@@ -7,7 +8,7 @@ import type { MediaGenerationDependencyKind, MediaGenerationDependencyInventory,
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
 import type { SceneShotVideoTakeTarget } from './media-generation-target.js';
 import type { RecoverableMutationReport } from './trash.js';
-import { SHOT_FIRST_FRAME_GENERATION_PURPOSE, SHOT_LAST_FRAME_GENERATION_PURPOSE, SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE, SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from './media-generation-purpose.js';
+import { SHOT_FIRST_FRAME_GENERATION_PURPOSE, SHOT_LAST_FRAME_GENERATION_PURPOSE, SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE, SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from './media-generation-purpose.js';
 
 export type ShotVideoTakeInputModelChoice =
   | 'fal-ai/openai/gpt-image-2'
@@ -18,7 +19,7 @@ export type ShotVideoTakeInputGenerationPurpose =
   | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
-  | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE;
+  | typeof SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE;
 
 export interface ShotVideoTakeProjectContext {
   id?: string;
@@ -167,6 +168,8 @@ export interface SceneShotVideoTakeAuthoringContextReport {
   context: ShotVideoTakeProductionContext;
   productionPlan: ShotVideoTakeProductionPlanReport;
   preflight: ShotVideoTakePreflightReport;
+  takeGenerationReadiness: ShotVideoTakeGenerationReadiness;
+  agentMedia: AgentMediaReport;
   providerPreview: ShotVideoTakeProviderPayloadPreview;
   resourceKeys: string[];
 }
@@ -176,8 +179,59 @@ export interface SceneShotVideoTakeAuthoringSnapshot {
   context: ShotVideoTakeProductionContext;
   productionPlan: ShotVideoTakeProductionPlanReport;
   preflight: ShotVideoTakePreflightReport;
+  takeGenerationReadiness: ShotVideoTakeGenerationReadiness;
+  agentMedia: AgentMediaReport;
   providerPreview: ShotVideoTakeProviderPayloadPreview;
   resourceKeys: string[];
+}
+
+export type ShotVideoTakeReadinessStatus =
+  | 'blocked'
+  | 'needs-user-direction'
+  | 'ready-to-estimate'
+  | 'ready-to-run';
+
+export type ShotVideoTakeReadinessBlockerKind =
+  | 'missing-input-mode'
+  | 'missing-model'
+  | 'missing-video-prompt-sheet'
+  | 'missing-first-frame'
+  | 'missing-last-frame'
+  | 'missing-reference-image'
+  | 'missing-dialogue-audio'
+  | 'missing-final-prompt'
+  | 'missing-dependency-draft';
+
+export interface ShotVideoTakeGenerationReadinessBlocker {
+  kind: ShotVideoTakeReadinessBlockerKind;
+  message: string;
+  recommendedSpecialist: 'media-producer' | 'casting-director' | null;
+  recommendedCommand?: string;
+}
+
+export type ShotVideoTakeUserDirectionTopic =
+  | 'camera-motion'
+  | 'geography'
+  | 'action-continuity'
+  | 'narration-or-dialogue'
+  | 'visual-reference'
+  | 'model-choice';
+
+export interface ShotVideoTakeUserDirectionQuestion {
+  topic: ShotVideoTakeUserDirectionTopic;
+  question: string;
+}
+
+export interface ShotVideoTakeOptionalImprovement {
+  kind: string;
+  message: string;
+}
+
+export interface ShotVideoTakeGenerationReadiness {
+  status: ShotVideoTakeReadinessStatus;
+  requiredBlockers: ShotVideoTakeGenerationReadinessBlocker[];
+  userDirectionNeeded: ShotVideoTakeUserDirectionQuestion[];
+  optionalImprovements: ShotVideoTakeOptionalImprovement[];
 }
 
 export interface SceneShotVideoTakeAuthoringValidationReport {
@@ -774,7 +828,7 @@ export type ShotVideoTakeGeneralReferenceKind =
   | 'first-frame'
   | 'last-frame'
   | 'reference-image'
-  | 'multi-shot-storyboard-sheet';
+  | 'video-prompt-sheet';
 
 export interface ShotVideoTakeGeneralReferenceChoice {
   id: string;
@@ -964,6 +1018,7 @@ export interface ShotVideoTakeInputMediaImportReport {
   target: SceneShotVideoTakeTarget;
   imported: Asset;
   mediaInput: SceneShotVideoTakeMediaInput;
+  replacedInput?: SceneShotVideoTakeMediaInput;
   receipt?: unknown;
   resourceKeys: string[];
 }

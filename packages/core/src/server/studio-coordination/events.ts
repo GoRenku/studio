@@ -2,6 +2,7 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
   ProjectLanguage,
   ScenePanelTab,
+  SceneTakeWorkspaceMode,
   SceneShotDetailTab,
   CameraAngleId,
   FocusId,
@@ -216,6 +217,7 @@ export type StudioCurrentContext =
       summary?: string;
       parentSequence: { id: string; number: number; title: string; summary?: string };
       sceneTab: StudioCurrentSceneTab;
+      takeWorkspace?: StudioCurrentTakeWorkspace;
       shot?: StudioCurrentShotContext;
     }
   | {
@@ -262,6 +264,16 @@ export interface StudioCurrentShotContext {
   title: string;
   activeTab: StudioCurrentShotTab;
   currentTabSelections: StudioCurrentShotTabSelections;
+}
+
+export interface StudioCurrentTakeWorkspace {
+  mode: SceneTakeWorkspaceMode;
+  takeId?: string;
+  takeMode?: 'continuous' | 'multi-cut';
+  sourceShotListId?: string;
+  shotIds: string[];
+  selectedShotId?: string;
+  recommendedReadCommand?: string;
 }
 
 export interface StudioCurrentShotTab {

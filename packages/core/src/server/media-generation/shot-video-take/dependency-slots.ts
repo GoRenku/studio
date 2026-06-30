@@ -21,7 +21,7 @@ export interface ShotVideoTakeDependencySlotInput {
   customReferenceInputs: Array<{ id: string; title: string }>;
   selectedLocationSheetAssetIdsByLocation: Record<string, string[]>;
   requestedInputs?: ShotVideoTakeRequestedInput[];
-  requiresMultiShotStoryboardSheet?: boolean;
+  requiresVideoPromptSheet?: boolean;
 }
 
 export function declareShotVideoTakeDependencySlots(
@@ -29,14 +29,14 @@ export function declareShotVideoTakeDependencySlots(
 ): MediaGenerationDependencySlot[] {
   return [
     ...shotVideoInputModeSlots(input),
-    ...(input.requiresMultiShotStoryboardSheet
+    ...(input.requiresVideoPromptSheet
         ? [
             shotVideoInputDependencySlot({
-              kind: 'multi-shot-storyboard-sheet',
+              kind: 'video-prompt-sheet',
               target: input.target,
               required: false,
               reason:
-                'This generated multi-shot storyboard reference helps preserve continuity across the take.',
+                'This generated video prompt sheet reference helps preserve continuity across the take.',
             }),
           ]
       : []),
@@ -251,7 +251,7 @@ function requestedShotVideoInputSlot(input: {
     input.requestedInput.kind === 'first-frame' ||
     input.requestedInput.kind === 'last-frame' ||
     input.requestedInput.kind === 'reference-image' ||
-    input.requestedInput.kind === 'multi-shot-storyboard-sheet'
+    input.requestedInput.kind === 'video-prompt-sheet'
   ) {
     return shotVideoInputDependencySlot({
       kind: input.requestedInput.kind,

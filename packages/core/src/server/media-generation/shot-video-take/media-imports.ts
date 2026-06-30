@@ -2,7 +2,7 @@ import {
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import type {
@@ -22,6 +22,7 @@ import type {
 import {
   insertShotVideoTakeInputRecord,
   insertShotVideoTakeRecord,
+  listShotVideoTakeInputs,
 } from '../../database/access/shot-video-takes.js';
 import type {
   DatabaseSession,
@@ -41,6 +42,9 @@ import type {
   ImportShotVideoTakeInputMediaInput,
   ImportShotVideoTakeMediaInput,
 } from '../../project-data-service-contracts.js';
+import {
+  discardTrashObject,
+} from '../../trash/trash-lifecycle-service.js';
 import {
   updatePreparedInputSelection,
 } from './input-selection.js';
@@ -74,19 +78,9 @@ export async function importShotInputMedia(
     const now = new Date().toISOString();
     const prepared = prepareSceneShotVideoTakeInSession({ session, input });
     assertEditableSceneShotVideoTake(prepared.take);
-    const imported = await importGeneratedFile({
-      session,
-      projectFolder,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title ?? PURPOSE_CONFIG[purpose].title,
-      mediaKind: 'image',
-      assetType: purpose,
-      origin: input.receipt ? 'generated' : 'imported',
-      idGenerator: input.idGenerator,
-      now,
-    });
+    const config = PURPOSE_CONFIG[purpose];
     const subject =
-      PURPOSE_CONFIG[purpose].outputInputKind === 'multi-shot-storyboard-sheet'
+      config.outputInputKind === 'video-prompt-sheet'
         ? {
             subjectKind: 'take' as const,
             subjectId: prepared.take.takeId,
@@ -95,11 +89,35 @@ export async function importShotInputMedia(
             subjectKind: 'shot' as const,
             subjectId: prepared.orderedShotIds[0] as string,
           };
+    const replacedInput = input.replaceSelected && (input.selection ?? 'select') === 'select'
+      ? listShotVideoTakeInputs(session, {
+          sceneId: prepared.sceneId,
+          takeId: prepared.take.takeId,
+          shotIds: prepared.orderedShotIds,
+        }).find(
+          (candidate) =>
+            candidate.selected &&
+            candidate.kind === config.outputInputKind &&
+            candidate.subjectKind === subject.subjectKind &&
+            candidate.subjectId === subject.subjectId
+        )
+      : undefined;
+    const imported = await importGeneratedFile({
+      session,
+      projectFolder,
+      sourceProjectRelativePath: input.sourceProjectRelativePath,
+      title: input.title ?? config.title,
+      mediaKind: 'image',
+      assetType: purpose,
+      origin: input.receipt ? 'generated' : 'imported',
+      idGenerator: input.idGenerator,
+      now,
+    });
     const relationship = insertShotVideoTakeInputRecord(session, {
       id: imported.nextId('scene_shot_video_take_media_input'),
       sceneId: prepared.sceneId,
       takeId: prepared.take.takeId,
-      inputKind: PURPOSE_CONFIG[purpose].outputInputKind,
+      inputKind: config.outputInputKind,
       ...subject,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
@@ -117,18 +135,48 @@ export async function importShotInputMedia(
         selected: true,
       });
     }
+    if (replacedInput) {
+      discardTrashObject({
+        session,
+        project,
+        projectFolder,
+        itemKind: 'shotVideoTakeInput',
+        itemId: replacedInput.inputId,
+        commandName: 'shotVideoTake.input.replaceSelected',
+        changes: [
+          {
+            type: 'shotVideoTakeInput.discarded',
+            inputId: replacedInput.inputId,
+          },
+        ],
+      });
+    }
     return {
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
-      changes: [{ type: 'shotVideoTake.inputImported', inputId: relationship.inputId }],
+      changes: [
+        { type: 'shotVideoTake.inputImported', inputId: relationship.inputId },
+        ...(replacedInput
+          ? [
+              {
+                type: 'shotVideoTakeInput.discarded',
+                inputId: replacedInput.inputId,
+              },
+            ]
+          : []),
+      ],
       purpose,
       target: prepared.target,
       imported: imported.asset,
       mediaInput: relationship,
+      ...(replacedInput ? { replacedInput } : {}),
       ...(input.receipt ? { receipt: input.receipt } : {}),
       resourceKeys: shotVideoTakeResourceKeys(prepared).concat([
         `scene-shot-video-take-input:${relationship.inputId}`,
+        ...(replacedInput
+          ? [`scene-shot-video-take-input:${replacedInput.inputId}`]
+          : []),
         `asset:${imported.assetId}`,
       ]),
     };
@@ -149,8 +197,8 @@ export const importShotReferenceImage = (input: ImportShotVideoTakeInputMediaInp
   importShotInputMedia(input, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE);
 
 
-export const importShotMultiShotStoryboardSheet = (input: ImportShotVideoTakeInputMediaInput) =>
-  importShotInputMedia(input, SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE);
+export const importShotVideoPromptSheet = (input: ImportShotVideoTakeInputMediaInput) =>
+  importShotInputMedia(input, SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE);
 
 
 

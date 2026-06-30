@@ -329,7 +329,7 @@ export function shotVideoTakeDependencySlotsForContext(input: {
       input.context
     ),
     requestedInputs: input.context.take.state.production.requestedInputs,
-    requiresMultiShotStoryboardSheet: input.context.shotGroupMode === 'multi-shot',
+    requiresVideoPromptSheet: input.context.shotGroupMode === 'multi-shot',
   });
   if (input.includeReferenceContext) {
     return slots;
@@ -483,7 +483,7 @@ export async function declareShotVideoTakeDependencies(
       selectedLocationSheetAssetIdsByLocation: selectedLocationSheetAssetIdsByLocation(
         context
       ),
-      requiresMultiShotStoryboardSheet: context.shotGroupMode === 'multi-shot',
+      requiresVideoPromptSheet: context.shotGroupMode === 'multi-shot',
     });
   });
 }

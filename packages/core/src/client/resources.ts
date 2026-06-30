@@ -10,7 +10,10 @@ import type {
   Sequence,
 } from './screenplay.js';
 import type { ScreenplayAnalysisDocument } from './screenplay-analysis.js';
-import type { SceneShotListDocument } from './scene-shot-list.js';
+import type {
+  SceneShotListDocument,
+  ShotVideoTakeInputKind,
+} from './scene-shot-list.js';
 import type {
   ProjectCounts,
   ProjectCoverImage,
@@ -295,6 +298,7 @@ export interface DirectorContextReport {
   cast: DirectorCastReadiness;
   productionDesign: DirectorProductionDesignReadiness;
   selectedScene: DirectorSceneReadiness | null;
+  agentMedia: import('./agent-media.js').AgentMediaReport;
   nextSteps: DirectorNextStep[];
   resourceKeys: string[];
   diagnostics: DiagnosticIssue[];
@@ -359,9 +363,13 @@ export interface DirectorSceneReadiness {
   shotVideo: {
     preflightAvailable: boolean;
     selectedTakeId: string | null;
+    selectedTakeMode: 'continuous' | 'multi-cut' | null;
     selectedShotIds: string[];
+    missingPreparedInputKinds: ShotVideoTakeInputKind[];
     selectedInputCount: number;
     selectedTakeCount: number;
+    recommendedSpecialist: 'media-producer' | null;
+    recommendedCommand: string | null;
   };
 }
 

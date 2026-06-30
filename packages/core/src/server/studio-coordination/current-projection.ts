@@ -28,6 +28,7 @@ import type {
   StudioCurrent,
   StudioCurrentContext,
   StudioCurrentShotTabSelections,
+  StudioCurrentTakeWorkspace,
   StudioEvent,
   StudioFocus,
   StudioFocusRequestedEvent,
@@ -348,12 +349,22 @@ async function enrichSceneShotFocusContext(input: {
   }
   const selection = input.selection;
   const sceneTab = effectiveSceneTab(selection);
+  const takeWorkspace = await sceneTakeWorkspace({
+    projectData: input.projectData,
+    projectName: input.projectName,
+    homeDir: input.options.homeDir,
+    selection,
+  });
   const baseContext = {
     ...input.context,
     sceneTab: sceneTabLabel(sceneTab),
+    ...(takeWorkspace.workspace
+      ? { takeWorkspace: takeWorkspace.workspace }
+      : {}),
   };
+  const takeWorkspaceWarnings = takeWorkspace.warnings;
   if (sceneTab !== 'shots' && sceneTab !== 'takes') {
-    return { context: baseContext, warnings: [] };
+    return { context: baseContext, warnings: takeWorkspaceWarnings };
   }
   try {
     const resource = await input.projectData.readSceneShotListResource({
@@ -369,17 +380,17 @@ async function enrichSceneShotFocusContext(input: {
         : -1;
     if (shotIndex < 0) {
       return {
-        context: baseContext,
-        warnings: selection.shotId
-          ? [
+      context: baseContext,
+      warnings: selection.shotId
+          ? takeWorkspaceWarnings.concat([
               studioCoordinationWarning(
                 'STUDIO_COORDINATION038',
                 'Current Studio shot focus no longer exists in the active shot list.',
                 ['selection', 'shotId'],
                 'Select a shot that exists in the scene active shot list.'
               ),
-            ]
-          : [],
+            ])
+          : takeWorkspaceWarnings,
       };
     }
     const shot = shots[shotIndex]!;
@@ -407,17 +418,92 @@ async function enrichSceneShotFocusContext(input: {
           currentTabSelections: shotTabProjection.selections,
         },
       },
-      warnings: shotTabProjection.warnings,
+      warnings: takeWorkspaceWarnings.concat(shotTabProjection.warnings),
     };
   } catch {
     return {
       context: baseContext,
-      warnings: [
+      warnings: takeWorkspaceWarnings.concat([
         studioCoordinationWarning(
           'STUDIO_COORDINATION039',
           'Current Studio shot focus could not load the active shot list.',
           ['context', 'shot'],
           'Refresh Studio and try reading current focus again.'
+        ),
+      ]),
+    };
+  }
+}
+
+async function sceneTakeWorkspace(input: {
+  projectData: ReturnType<typeof createProjectDataService>;
+  projectName: string;
+  homeDir?: string;
+  selection: Extract<StudioSelection, { type: 'scene' }>;
+}): Promise<{
+  workspace: StudioCurrentTakeWorkspace | null;
+  warnings: DiagnosticIssue[];
+}> {
+  if (!input.selection.takeWorkspaceMode && !input.selection.takeId) {
+    return { workspace: null, warnings: [] };
+  }
+  const mode = input.selection.takeWorkspaceMode ?? 'edit';
+  const fallback = {
+    mode,
+    ...(input.selection.takeId ? { takeId: input.selection.takeId } : {}),
+    shotIds: input.selection.shotId ? [input.selection.shotId] : [],
+    ...(input.selection.shotId ? { selectedShotId: input.selection.shotId } : {}),
+    ...(input.selection.takeId
+      ? {
+          recommendedReadCommand: `renku take authoring context --take ${input.selection.takeId} --json`,
+        }
+      : {}),
+  } satisfies StudioCurrentTakeWorkspace;
+  if (!input.selection.takeId) {
+    return { workspace: fallback, warnings: [] };
+  }
+  try {
+    const take = await input.projectData.readSceneShotVideoTake({
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+      takeId: input.selection.takeId,
+    });
+    if (take.sceneId !== input.selection.id) {
+      return {
+        workspace: fallback,
+        warnings: [
+          studioCoordinationWarning(
+            'STUDIO_COORDINATION042',
+            'Current Studio take workspace belongs to a different scene.',
+            ['selection', 'takeId'],
+            'Refresh Studio and select a take in the current scene.'
+          ),
+        ],
+      };
+    }
+    return {
+      workspace: {
+        mode,
+        takeId: take.takeId,
+        takeMode: take.state.structure.mode,
+        sourceShotListId: take.sourceShotListId,
+        shotIds: take.shotIds,
+        ...(input.selection.shotId
+          ? { selectedShotId: input.selection.shotId }
+          : {}),
+        recommendedReadCommand: `renku take authoring context --take ${take.takeId} --json`,
+      },
+      warnings: [],
+    };
+  } catch {
+    return {
+      workspace: fallback,
+      warnings: [
+        studioCoordinationWarning(
+          'STUDIO_COORDINATION043',
+          'Current Studio take workspace could not load.',
+          ['selection', 'takeId'],
+          'Refresh Studio and select an existing take before acting on take media.'
         ),
       ],
     };

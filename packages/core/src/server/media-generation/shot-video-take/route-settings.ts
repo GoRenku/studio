@@ -117,7 +117,7 @@ export function finalInputMatchesRouteSlot(
       'character-sheet',
       'location-sheet',
       'lookbook-sheet',
-      'multi-shot-storyboard-sheet',
+      'video-prompt-sheet',
     ].includes(input.kind)
   );
 }
@@ -186,7 +186,7 @@ export function preparedInputMatchesRouteSlot(
       'character-sheet',
       'location-sheet',
       'lookbook-sheet',
-      'multi-shot-storyboard-sheet',
+      'video-prompt-sheet',
     ].includes(input.kind)
   );
 }

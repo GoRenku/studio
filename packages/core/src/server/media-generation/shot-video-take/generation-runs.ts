@@ -97,7 +97,7 @@ export const runShotLastFrameSpec = runShotInputSpec;
 export const runShotReferenceImageSpec = runShotInputSpec;
 
 
-export const runShotMultiShotStoryboardSheetSpec = runShotInputSpec;
+export const runShotVideoPromptSheetSpec = runShotInputSpec;
 
 
 

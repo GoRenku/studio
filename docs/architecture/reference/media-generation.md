@@ -20,6 +20,7 @@ Decision history:
 - `../../decisions/0026-use-thin-structured-cli-command-handlers.md`
 - `../../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
 - `../../decisions/0036-use-unsliced-location-sheets.md`
+- `../../decisions/0040-use-agent-media-execution-policy-for-external-built-in-image-generation.md`
 
 ## Current Purposes
 
@@ -38,7 +39,7 @@ scene.storyboard-sheet
 shot.first-frame
 shot.last-frame
 shot.reference-image
-shot.multi-shot-storyboard-sheet
+shot.video-prompt-sheet
 shot.video-take
 ```
 
@@ -51,6 +52,7 @@ location:<location-id>
 scene:<scene-id>
 scene:<scene-id> --shot-list <shot-list-id>
 scene:<scene-id> --take <take-id>
+take:<take-id>
 ```
 
 Core contract target shapes:
@@ -103,7 +105,8 @@ renku take create --scene <scene-id> --shot-list <shot-list-id> --shots <shot-id
 renku generation context --purpose shot.first-frame --target scene:<id> --take <take-id> --json
 renku generation context --purpose shot.last-frame --target scene:<id> --take <take-id> --json
 renku generation context --purpose shot.reference-image --target scene:<id> --take <take-id> --json
-renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take <take-id> --json
+renku generation context --purpose shot.video-prompt-sheet --target scene:<id> --take <take-id> --json
+renku generation context --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku take authoring context --take <take-id> --json
 renku take authoring context --take <take-id> --selected-shot <shot-id> --json
 
@@ -119,12 +122,14 @@ renku generation model list --purpose scene.storyboard-sheet --target scene:<id>
 renku generation model list --purpose shot.first-frame --target scene:<id> --take <take-id> --json
 renku generation model list --purpose shot.last-frame --target scene:<id> --take <take-id> --json
 renku generation model list --purpose shot.reference-image --target scene:<id> --take <take-id> --json
-renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take <take-id> --json
+renku generation model list --purpose shot.video-prompt-sheet --target scene:<id> --take <take-id> --json
+renku generation model list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku generation model list --purpose shot.video-take --target scene:<id> --take <take-id> --intent <input-mode-id> --json
 
 renku take authoring validate --file <scene-shot-video-take-authoring-json> --json
 renku take authoring apply --file <scene-shot-video-take-authoring-json> --json
 renku generation input list --purpose shot.video-take --target scene:<id> --take <take-id> --json
+renku generation input list --purpose shot.video-take --target take:<take-id> --json
 renku generation input select --purpose shot.video-take --target scene:<id> --take <take-id> --input <input-id> --json
 renku generation input clear --purpose shot.video-take --target scene:<id> --take <take-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
 renku generation input delete --purpose shot.video-take --target scene:<id> --take <take-id> --input <input-id> --json
@@ -145,7 +150,8 @@ renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> 
 renku generation spec list --purpose shot.first-frame --target scene:<id> --take <take-id> --json
 renku generation spec list --purpose shot.last-frame --target scene:<id> --take <take-id> --json
 renku generation spec list --purpose shot.reference-image --target scene:<id> --take <take-id> --json
-renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<id> --take <take-id> --json
+renku generation spec list --purpose shot.video-prompt-sheet --target scene:<id> --take <take-id> --json
+renku generation spec list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku generation spec list --purpose shot.video-take --target scene:<id> --take <take-id> --json
 
 renku generation estimate --spec <spec-id> --json
@@ -178,15 +184,23 @@ model, input mode, route parameters, selected references, composition, or motion
 no longer match the prompt assumptions.
 
 Core never synthesizes generic shot-video dependency prompts. First-frame,
-last-frame, ad hoc reference-image, and multi-shot storyboard sheet dependency
+last-frame, ad hoc reference-image, and video prompt sheet dependency
 lines use `missing-input` before the user or agent authors concrete
 `agentProposal.dependencyDrafts[]` entries. Missing-input lines can still be
 priced when the purpose has enough model and text or prompt information to
 estimate cost, but they are not runnable generation specs. `shot.reference-image`
 specs also require a title that names the reference intent shown in Studio.
 
+Image-generation context and model-list reports include `agentMedia`. The
+report exposes the configured image-generation default execution path and, for
+image purposes that an agent can create outside Renku, the external built-in
+capability `codex.gpt-image-2`. That external capability is not a Renku-managed
+provider model: it has no engines estimate, no engines execution path, and no
+Renku generation receipt. Agents use it only when policy and harness capability
+allow, then import the resulting file through the media import contract.
+
 The Studio shot References tab displays imported/generated `first-frame`,
-`last-frame`, `reference-image`, and `multi-shot-storyboard-sheet` inputs that
+`last-frame`, `reference-image`, and `video-prompt-sheet` inputs that
 belong to the selected shot-video take.
 
 The Studio shot Dialogs tab displays scene dialogue audio references for the
@@ -948,6 +962,40 @@ the files under `screenplay/storyboards/<scene-label>/<import-title>/`, and
 writes direct `scene_shot_storyboard_image` rows keyed by `scene_id`,
 `shot_list_id`, and `shot_id`. The temporary composite sheet is not imported as
 an asset.
+
+Shot video take input imports accept either the scene plus `--take` target
+shape or the take shorthand. The shorthand resolves the take through core and
+fills the owning scene id before import.
+
+```bash
+renku media import \
+  --purpose shot.video-prompt-sheet \
+  --target take:<take-id> \
+  --source generated/media/take-video-prompt-sheet.png \
+  --title <group-sheet-title> \
+  --selection select \
+  --json
+```
+
+When the source image was created outside Renku, stage it under the project
+`generated/media/` directory first, then import that project-relative path
+without a receipt. Core import remains the only attachment path.
+
+`--replace-selected` is available for shot-video take input imports. It imports
+and selects the new prepared input, then discards the previously selected input
+in the same slot in the same core mutation. Use it when the user is correcting
+an existing selected first frame, last frame, reference image, or video prompt
+sheet, not when preserving alternatives for review.
+
+After a tool writes no project mutation but Studio still needs to redraw known
+resources, use a focused refresh notification:
+
+```bash
+renku studio notify-refresh \
+  --project <project-name> \
+  --resource scene-shot-video-take:<take-id> \
+  --json
+```
 
 For generated Lookbook images, agents must inspect the generated image before
 import and choose section tags based on what the image visibly demonstrates.

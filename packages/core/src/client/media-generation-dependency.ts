@@ -9,7 +9,7 @@ export type MediaGenerationDependencyKind =
   | 'first-frame'
   | 'last-frame'
   | 'reference-image'
-  | 'multi-shot-storyboard-sheet'
+  | 'video-prompt-sheet'
   | 'reference-audio'
   | 'cast-character-sheet'
   | 'location-environment-sheet'

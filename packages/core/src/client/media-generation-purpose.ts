@@ -27,8 +27,8 @@ export const SHOT_LAST_FRAME_GENERATION_PURPOSE =
 export const SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE =
   'shot.reference-image' as const;
 
-export const SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE =
-  'shot.multi-shot-storyboard-sheet' as const;
+export const SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE =
+  'shot.video-prompt-sheet' as const;
 
 export const SHOT_VIDEO_TAKE_GENERATION_PURPOSE =
   'shot.video-take' as const;
@@ -50,6 +50,6 @@ export type MediaGenerationPurpose =
   | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
-  | typeof SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
   | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE
   | typeof SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE;

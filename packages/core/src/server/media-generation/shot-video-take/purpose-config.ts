@@ -2,7 +2,7 @@ import {
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import type {
   ShotVideoTakeInputModelChoice,
@@ -33,12 +33,12 @@ export const PURPOSE_CONFIG: Record<
       | 'first-frame'
       | 'last-frame'
       | 'reference-image'
-      | 'multi-shot-storyboard-sheet';
+      | 'video-prompt-sheet';
     outputInputKind:
       | 'first-frame'
       | 'last-frame'
       | 'reference-image'
-      | 'multi-shot-storyboard-sheet';
+      | 'video-prompt-sheet';
     title: string;
   }
 > = {
@@ -57,10 +57,10 @@ export const PURPOSE_CONFIG: Record<
     outputInputKind: 'reference-image',
     title: 'Shot reference image',
   },
-  [SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE]: {
-    dependencyKind: 'multi-shot-storyboard-sheet',
-    outputInputKind: 'multi-shot-storyboard-sheet',
-    title: 'Shot multi-shot storyboard sheet',
+  [SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE]: {
+    dependencyKind: 'video-prompt-sheet',
+    outputInputKind: 'video-prompt-sheet',
+    title: 'Shot video prompt sheet',
   },
 };
 
@@ -78,8 +78,8 @@ export function shotInputPurposeForDependencyKind(
   if (dependencyKind === 'reference-image') {
     return SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE;
   }
-  if (dependencyKind === 'multi-shot-storyboard-sheet') {
-    return SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE;
+  if (dependencyKind === 'video-prompt-sheet') {
+    return SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE;
   }
   throw new ProjectDataError(
     'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
@@ -128,6 +128,6 @@ export function isShotInputPurpose(value: unknown): value is ShotVideoTakeInputG
     value === SHOT_FIRST_FRAME_GENERATION_PURPOSE ||
     value === SHOT_LAST_FRAME_GENERATION_PURPOSE ||
     value === SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE ||
-    value === SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE
+    value === SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
   );
 }

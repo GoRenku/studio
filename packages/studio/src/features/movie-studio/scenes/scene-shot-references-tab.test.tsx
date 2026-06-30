@@ -544,7 +544,7 @@ function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport 
         ),
         referenceChoice('last-frame', 'Last Frame', 'input_last', 'file_last'),
         referenceChoice(
-          'multi-shot-storyboard-sheet',
+          'video-prompt-sheet',
           'Multi-Shot Storyboard Reference (3 shots)',
           'input_storyboard',
           'file_storyboard'
@@ -915,7 +915,7 @@ function referenceChoice(
     | 'first-frame'
     | 'last-frame'
     | 'reference-image'
-    | 'multi-shot-storyboard-sheet',
+    | 'video-prompt-sheet',
   title: string,
   inputId: string,
   assetFileId: string,

@@ -91,6 +91,7 @@ Options
   --reference-name     Relationship-scoped Renku reference name
   --reference-purpose  Relationship-scoped asset purpose text
   --source             Project-relative source file for media import
+  --resource           Studio resource key for notify-refresh
   --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
   --media-kind         Asset media kind
@@ -125,6 +126,7 @@ Options
   --subject-id         Shot video take input subject id
   --selection          Media import selection: select or take
                        Director context selection: Studio selection JSON
+  --replace-selected   Replace the currently selected prepared input in the same slot
   --include-visual-references
                        Include selected visual references in shot-list context
   --sequence           Sequence id for screenplay scene list
@@ -193,6 +195,10 @@ function createCliFlags() {
     },
     source: {
       type: 'string',
+    },
+    resource: {
+      type: 'string',
+      isMultiple: true,
     },
     type: {
       type: 'string',
@@ -293,6 +299,10 @@ function createCliFlags() {
     },
     selection: {
       type: 'string',
+    },
+    replaceSelected: {
+      type: 'boolean',
+      default: false,
     },
     includeVisualReferences: {
       type: 'boolean',
@@ -632,6 +642,7 @@ export async function runRenkuCli(
             shots: cli.flags.shots,
             take: cli.flags.take,
             selection: cli.flags.selection,
+            replaceSelected: cli.flags.replaceSelected,
           },
           json: cli.flags.json,
           io,
@@ -679,6 +690,8 @@ export async function runRenkuCli(
       case 'studio':
         return await runStudioCommand({
           input,
+          project: cli.flags.project,
+          resource: cli.flags.resource,
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,

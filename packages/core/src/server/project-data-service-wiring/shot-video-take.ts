@@ -5,10 +5,10 @@ import { createSceneShotVideoTake, deleteSceneShotVideoTake, listSceneShotVideoT
 import { updateSceneShotVideoTakeCharacterSheetSelection, updateSceneShotVideoTakeLocationSheetSelection, updateSceneShotVideoTakeLookbookSheetSelection, updateSceneShotVideoTakeDialogueAudioSelection, updateSceneShotVideoTakeReferenceInclusion } from '../media-generation/shot-video-take/reference-selection-mutations.js';
 import { estimateShotVideoTakeProduction, planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
 import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
-import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotMultiShotStoryboardSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotMultiShotStoryboardSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
+import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
 import { estimateShotVideoTakeSpec, prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
 import { runShotVideoTakeSpec } from '../media-generation/shot-video-take/generation-runs.js';
-import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotMultiShotStoryboardSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
+import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
 import { applySceneShotVideoTakeAuthoringDocument, readSceneShotVideoTakeAuthoringContext, validateSceneShotVideoTakeAuthoringDocument } from '../media-generation/shot-video-take/authoring.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
 export function createShotVideoTakeServiceWiring() {
@@ -63,19 +63,19 @@ export function createShotVideoTakeServiceWiring() {
     prepareShotReferenceImageSpec: sharedGeneration.prepareMediaGenerationSpec,
     estimateShotReferenceImageSpec: sharedGeneration.estimateMediaGenerationSpec,
     runShotReferenceImageSpec: sharedGeneration.runMediaGenerationSpec,
-    validateShotMultiShotStoryboardSheetSpec,
-    createShotMultiShotStoryboardSheetSpec:
+    validateShotVideoPromptSheetSpec,
+    createShotVideoPromptSheetSpec:
       sharedGeneration.createMediaGenerationSpec,
-    updateShotMultiShotStoryboardSheetSpec:
+    updateShotVideoPromptSheetSpec:
       sharedGeneration.updateMediaGenerationSpec,
-    readShotMultiShotStoryboardSheetSpec:
+    readShotVideoPromptSheetSpec:
       sharedGeneration.readMediaGenerationSpec,
-    listShotMultiShotStoryboardSheetSpecs,
-    prepareShotMultiShotStoryboardSheetSpec:
+    listShotVideoPromptSheetSpecs,
+    prepareShotVideoPromptSheetSpec:
       sharedGeneration.prepareMediaGenerationSpec,
-    estimateShotMultiShotStoryboardSheetSpec:
+    estimateShotVideoPromptSheetSpec:
       sharedGeneration.estimateMediaGenerationSpec,
-    runShotMultiShotStoryboardSheetSpec:
+    runShotVideoPromptSheetSpec:
       sharedGeneration.runMediaGenerationSpec,
     validateShotVideoTakeSpec: validateShotVideoTakeSpec,
     createShotVideoTakeSpec: sharedGeneration.createMediaGenerationSpec,
@@ -88,8 +88,8 @@ export function createShotVideoTakeServiceWiring() {
     importShotFirstFrame,
     importShotLastFrame,
     importShotReferenceImage,
-    importShotMultiShotStoryboardSheet:
-      importShotMultiShotStoryboardSheet,
+    importShotVideoPromptSheet:
+      importShotVideoPromptSheet,
     importShotVideoTake: importShotVideoTake,
     readSceneShotVideoTakeAuthoringContext,
     validateSceneShotVideoTakeAuthoringDocument,

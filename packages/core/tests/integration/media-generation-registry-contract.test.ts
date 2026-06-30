@@ -11,7 +11,7 @@ import {
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type MediaGenerationPurpose,
@@ -35,7 +35,7 @@ const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 ];
 
@@ -76,12 +76,12 @@ describe('media generation purpose registry contract', () => {
         targetKind: 'sceneShotVideoTake',
       },
       {
-        purpose: 'shot.multi-shot-storyboard-sheet',
+        purpose: 'shot.reference-image',
         mediaKind: 'image',
         targetKind: 'sceneShotVideoTake',
       },
       {
-        purpose: 'shot.reference-image',
+        purpose: 'shot.video-prompt-sheet',
         mediaKind: 'image',
         targetKind: 'sceneShotVideoTake',
       },
@@ -145,12 +145,12 @@ describe('media generation purpose registry contract', () => {
         generationPurpose: 'shot.reference-image',
       },
       {
-        dependencyKind: 'multi-shot-storyboard-sheet',
+        dependencyKind: 'video-prompt-sheet',
         mediaKind: 'image',
         cardinality: 'one',
         assetSelector: 'shot-video-input',
         missingInputBehavior: 'plan-generation',
-        generationPurpose: 'shot.multi-shot-storyboard-sheet',
+        generationPurpose: 'shot.video-prompt-sheet',
       },
       {
         dependencyKind: 'reference-audio',

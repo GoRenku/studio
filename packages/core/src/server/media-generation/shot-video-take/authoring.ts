@@ -15,6 +15,8 @@ import type {
   ShotVideoTakePreflightReport,
   ShotVideoTakeProductionContext,
   ShotVideoTakeProviderPayloadPreview,
+  ShotVideoTakeGenerationReadiness,
+  ShotVideoTakeGenerationReadinessBlocker,
 } from '../../../client/index.js';
 import {
   applySceneShotVideoTakeAuthoringRecord,
@@ -50,6 +52,9 @@ import {
 import {
   prepareShotVideoTakeDraftSpec,
 } from './final-specs.js';
+import {
+  buildAgentMediaReport,
+} from '../shared-generation-service.js';
 import {
   finalTakeSpecForPreflight,
   previewShotVideoTakeProductionForContext,
@@ -387,11 +392,20 @@ async function buildSceneShotVideoTakeAuthoringSnapshot(input: {
       projectName: input.input.projectName,
       homeDir: input.input.homeDir,
     });
+    const takeGenerationReadiness = buildTakeGenerationReadiness({
+      context: input.context,
+      preflight,
+    });
     return {
       document: authoringDocumentForTake(input.context.take),
       context: input.context,
       productionPlan,
       preflight,
+      takeGenerationReadiness,
+      agentMedia: await buildAgentMediaReport({
+        homeDir: input.input.homeDir,
+        mediaKind: 'image',
+      }),
       providerPreview: await previewProviderPayload({
         input: {
           projectName: input.input.projectName,
@@ -633,6 +647,151 @@ async function previewProviderPayload(input: {
     }
     throw error;
   }
+}
+
+function buildTakeGenerationReadiness(input: {
+  context: ShotVideoTakeProductionContext;
+  preflight: ShotVideoTakePreflightReport;
+}): ShotVideoTakeGenerationReadiness {
+  const requiredBlockers = [
+    ...missingChoiceBlockers(input.context),
+    ...missingDependencyBlockers(input.preflight),
+    ...missingFinalPromptBlockers(input.context),
+  ];
+  const userDirectionNeeded =
+    requiredBlockers.length > 0
+      ? []
+      : userDirectionQuestions(input.context);
+  const status =
+    requiredBlockers.length > 0
+      ? 'blocked'
+      : userDirectionNeeded.length > 0
+        ? 'needs-user-direction'
+        : input.preflight.finalTake.canCreateSpec
+          ? 'ready-to-estimate'
+          : 'blocked';
+  return {
+    status,
+    requiredBlockers,
+    userDirectionNeeded,
+    optionalImprovements: optionalReadinessImprovements(input.context),
+  };
+}
+
+function missingChoiceBlockers(
+  context: ShotVideoTakeProductionContext
+): ShotVideoTakeGenerationReadinessBlocker[] {
+  const blockers: ShotVideoTakeGenerationReadinessBlocker[] = [];
+  if (!context.take.state.production.inputModeId) {
+    blockers.push({
+      kind: 'missing-input-mode',
+      message: 'The take does not have a selected video input mode.',
+      recommendedSpecialist: 'media-producer',
+      recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
+    });
+  }
+  if (!context.take.state.production.modelChoice) {
+    blockers.push({
+      kind: 'missing-model',
+      message: 'The take does not have a selected video model.',
+      recommendedSpecialist: 'media-producer',
+      recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
+    });
+  }
+  return blockers;
+}
+
+function missingDependencyBlockers(
+  preflight: ShotVideoTakePreflightReport
+): ShotVideoTakeGenerationReadinessBlocker[] {
+  return preflight.inputsToCreate
+    .filter((dependency) => dependency.required)
+    .map((dependency) => ({
+      kind: readinessBlockerKindForInput(dependency.outputInputKind),
+      message: `Required ${dependency.outputInputKind} input is missing for this take.`,
+      recommendedSpecialist:
+        dependency.mediaKind === 'audio' ? 'casting-director' : 'media-producer',
+      ...(dependency.purpose
+        ? {
+            recommendedCommand: `renku generation context --purpose ${dependency.purpose} --target take:${preflight.take.takeId} --json`,
+          }
+        : {}),
+    }));
+}
+
+function readinessBlockerKindForInput(
+  kind: string
+): ShotVideoTakeGenerationReadinessBlocker['kind'] {
+  if (kind === 'first-frame') {
+    return 'missing-first-frame';
+  }
+  if (kind === 'last-frame') {
+    return 'missing-last-frame';
+  }
+  if (kind === 'reference-image') {
+    return 'missing-reference-image';
+  }
+  if (kind === 'video-prompt-sheet') {
+    return 'missing-video-prompt-sheet';
+  }
+  if (kind === 'audio') {
+    return 'missing-dialogue-audio';
+  }
+  return 'missing-dependency-draft';
+}
+
+function missingFinalPromptBlockers(
+  context: ShotVideoTakeProductionContext
+): ShotVideoTakeGenerationReadinessBlocker[] {
+  const finalPrompt =
+    context.take.state.production.agentProposal?.finalPromptDraft?.prompt.trim();
+  if (finalPrompt) {
+    return [];
+  }
+  return [
+    {
+      kind: 'missing-final-prompt',
+      message: 'The take does not have an authored final video prompt draft.',
+      recommendedSpecialist: 'media-producer',
+      recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
+    },
+  ];
+}
+
+function userDirectionQuestions(
+  context: ShotVideoTakeProductionContext
+): ShotVideoTakeGenerationReadiness['userDirectionNeeded'] {
+  const questions: ShotVideoTakeGenerationReadiness['userDirectionNeeded'] = [];
+  const hasMotionDirection = context.shots.some((shot) =>
+    Boolean(shot.cameraMovement?.trim())
+  );
+  if (!hasMotionDirection) {
+    questions.push({
+      topic: 'camera-motion',
+      question: 'What camera move should the take preserve from first frame to last frame?',
+    });
+  }
+  if (context.selectedLocations.length === 0) {
+    questions.push({
+      topic: 'geography',
+      question: 'Which location geography should anchor the video prompt and references?',
+    });
+  }
+  return questions;
+}
+
+function optionalReadinessImprovements(
+  context: ShotVideoTakeProductionContext
+): ShotVideoTakeGenerationReadiness['optionalImprovements'] {
+  const improvements: ShotVideoTakeGenerationReadiness['optionalImprovements'] = [];
+  if (context.storyboardImages.length === 0) {
+    improvements.push({
+      kind: 'missing-scene-storyboard-images',
+      message:
+        'Scene storyboard images are optional context for this take but can improve visual continuity.',
+    });
+  }
+  return improvements;
 }
 
 function directionEntries(

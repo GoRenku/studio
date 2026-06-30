@@ -54,6 +54,7 @@ export interface MediaCommandFlags {
   shots?: string;
   take?: string;
   selection?: string;
+  replaceSelected?: boolean;
 }
 
 type MediaImportReport =
@@ -138,8 +139,8 @@ const MEDIA_IMPORT_PURPOSE_HANDLERS = [
     run: importShotReferenceImage,
   },
   {
-    purpose: 'shot.multi-shot-storyboard-sheet',
-    run: importShotMultiShotStoryboardSheet,
+    purpose: 'shot.video-prompt-sheet',
+    run: importShotVideoPromptSheet,
   },
   {
     purpose: 'shot.video-take',
@@ -346,11 +347,11 @@ async function importShotReferenceImage(
   );
 }
 
-async function importShotMultiShotStoryboardSheet(
+async function importShotVideoPromptSheet(
   input: MediaImportPurposeHandlerInput
 ): Promise<ShotVideoTakeInputMediaImportReport> {
   return importShotInputMedia(input, (shotInput) =>
-    input.runtime.projectDataService.importShotMultiShotStoryboardSheet(shotInput)
+    input.runtime.projectDataService.importShotVideoPromptSheet(shotInput)
   );
 }
 
@@ -358,10 +359,11 @@ async function importShotVideoTake(
   input: MediaImportPurposeHandlerInput
 ): Promise<ShotVideoTakeMediaImportReport> {
   const singleFile = await readSingleFileImport(input.flags);
+  const target = await resolveShotMediaTarget(input);
   return input.runtime.projectDataService.importShotVideoTake({
     ...mediaImportProjectInput(input.runtime),
-    sceneId: parseSceneTarget(input.target, 'Shot Video Take media import'),
-    takeId: requiredFlag(input.flags.take, '--take'),
+    sceneId: target.sceneId,
+    takeId: target.takeId,
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
     receipt: singleFile.receipt,
@@ -377,15 +379,71 @@ async function importShotInputMedia(
   ) => Promise<ShotVideoTakeInputMediaImportReport>
 ): Promise<ShotVideoTakeInputMediaImportReport> {
   const singleFile = await readSingleFileImport(input.flags);
+  const target = await resolveShotMediaTarget(input);
   return importMedia({
     ...mediaImportProjectInput(input.runtime),
-    sceneId: parseSceneTarget(input.target, 'Shot Video Take input import'),
-    takeId: requiredFlag(input.flags.take, '--take'),
+    sceneId: target.sceneId,
+    takeId: target.takeId,
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
     receipt: singleFile.receipt,
     selection: parseSelection(input.flags.selection),
+    replaceSelected: input.flags.replaceSelected,
   });
+}
+
+async function resolveShotMediaTarget(input: MediaImportPurposeHandlerInput): Promise<{
+  sceneId: string;
+  takeId: string;
+}> {
+  const takeId = parseTakeTarget(input.target);
+  if (!takeId) {
+    return {
+      sceneId: parseSceneTarget(input.target, 'Shot Video Take media import'),
+      takeId: requiredFlag(input.flags.take, '--take'),
+    };
+  }
+  assertTakeTargetMatchesFlag({
+    targetTakeId: takeId,
+    flagTakeId: input.flags.take,
+  });
+  const take = await input.runtime.projectDataService.readSceneShotVideoTake({
+    ...mediaImportProjectInput(input.runtime),
+    takeId,
+  });
+  return {
+    sceneId: take.sceneId,
+    takeId: take.takeId,
+  };
+}
+
+function parseTakeTarget(value: string): string | null {
+  const [kind, id, extra] = value.split(':');
+  if (kind !== 'take') {
+    return null;
+  }
+  if (!id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI141',
+      message: `Shot Video Take target must use take:<take-id>. Received: ${value}.`,
+      suggestion: 'Use --target take:<take-id>.',
+    });
+  }
+  return id;
+}
+
+function assertTakeTargetMatchesFlag(input: {
+  targetTakeId: string;
+  flagTakeId?: string;
+}): void {
+  if (input.flagTakeId && input.flagTakeId !== input.targetTakeId) {
+    throw new StructuredError({
+      code: 'CLI142',
+      message: `--target take:${input.targetTakeId} conflicts with --take ${input.flagTakeId}.`,
+      suggestion:
+        'Omit --take when using --target take:<take-id>, or pass the same take id in both flags.',
+    });
+  }
 }
 
 async function readSingleFileImport(flags: MediaCommandFlags): Promise<{
@@ -434,6 +492,6 @@ function unsupportedMediaPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.multi-shot-storyboard-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.video-prompt-sheet, or --purpose shot.video-take.',
   });
 }

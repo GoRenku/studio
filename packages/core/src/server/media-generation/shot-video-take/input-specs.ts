@@ -1,8 +1,11 @@
 import {
+  createDiagnosticError,
+} from '@gorenku/studio-diagnostics';
+import {
   SHOT_FIRST_FRAME_GENERATION_PURPOSE,
   SHOT_LAST_FRAME_GENERATION_PURPOSE,
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import type {
   MediaGenerationSpecRecord,
@@ -88,7 +91,7 @@ export const validateShotLastFrameSpec = validateShotInputSpec;
 export const validateShotReferenceImageSpec = validateShotInputSpec;
 
 
-export const validateShotMultiShotStoryboardSheetSpec = validateShotInputSpec;
+export const validateShotVideoPromptSheetSpec = validateShotInputSpec;
 
 
 
@@ -120,7 +123,7 @@ export const createShotLastFrameSpec = createShotInputSpec;
 export const createShotReferenceImageSpec = createShotInputSpec;
 
 
-export const createShotMultiShotStoryboardSheetSpec = createShotInputSpec;
+export const createShotVideoPromptSheetSpec = createShotInputSpec;
 
 
 
@@ -151,7 +154,7 @@ export const updateShotLastFrameSpec = updateShotInputSpec;
 export const updateShotReferenceImageSpec = updateShotInputSpec;
 
 
-export const updateShotMultiShotStoryboardSheetSpec = updateShotInputSpec;
+export const updateShotVideoPromptSheetSpec = updateShotInputSpec;
 
 
 
@@ -183,8 +186,8 @@ export const listShotReferenceImageSpecs = (input: ShotVideoTakeContextInput) =>
   listShotInputSpecs(input, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE);
 
 
-export const listShotMultiShotStoryboardSheetSpecs = (input: ShotVideoTakeContextInput) =>
-  listShotInputSpecs(input, SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE);
+export const listShotVideoPromptSheetSpecs = (input: ShotVideoTakeContextInput) =>
+  listShotInputSpecs(input, SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE);
 
 
 
@@ -234,7 +237,7 @@ export const prepareShotLastFrameSpec = prepareShotInputSpec;
 export const prepareShotReferenceImageSpec = prepareShotInputSpec;
 
 
-export const prepareShotMultiShotStoryboardSheetSpec = prepareShotInputSpec;
+export const prepareShotVideoPromptSheetSpec = prepareShotInputSpec;
 
 
 
@@ -258,7 +261,7 @@ export const estimateShotLastFrameSpec = estimateShotInputSpec;
 export const estimateShotReferenceImageSpec = estimateShotInputSpec;
 
 
-export const estimateShotMultiShotStoryboardSheetSpec = estimateShotInputSpec;
+export const estimateShotVideoPromptSheetSpec = estimateShotInputSpec;
 
 
 
@@ -282,12 +285,41 @@ export function normalizeInputSpec(
     spec.dependencyKind !== config.dependencyKind ||
     spec.outputInputKind !== config.outputInputKind
   ) {
+    const subject = expectedSubjectForInputSpec(spec);
     throw new ProjectDataError(
       'PROJECT_DATA366',
-      'Shot video take input spec purpose, dependencyKind, and outputInputKind do not match.'
+      'Shot video take input spec purpose, dependencyKind, and outputInputKind do not match.',
+      {
+        issues: [
+          createDiagnosticError(
+            'PROJECT_DATA366',
+            `For purpose ${spec.purpose}, dependencyKind must be "${config.dependencyKind}" and outputInputKind must be "${config.outputInputKind}".`,
+            { path: ['dependencyKind'], context: 'Shot video take input spec' },
+            `Use dependencyKind "${config.dependencyKind}", outputInputKind "${config.outputInputKind}", subjectKind "${subject.subjectKind}", and subjectId "${subject.subjectId}".`
+          ),
+        ],
+        suggestion:
+          `For purpose ${spec.purpose}, use dependencyKind "${config.dependencyKind}" and outputInputKind "${config.outputInputKind}". Use subjectKind "${subject.subjectKind}" and subjectId "${subject.subjectId}" when authoring dependency drafts or inspecting preflight output.`,
+      }
     );
   }
   return { ...spec, parameterValues: spec.parameterValues ?? {} };
+}
+
+function expectedSubjectForInputSpec(spec: ShotVideoTakeInputGenerationSpec): {
+  subjectKind: 'shot' | 'take';
+  subjectId: string;
+} {
+  if (spec.outputInputKind === 'video-prompt-sheet') {
+    return {
+      subjectKind: 'take',
+      subjectId: spec.target.takeId,
+    };
+  }
+  return {
+    subjectKind: 'shot',
+    subjectId: spec.target.shotIds[0] ?? '<shot-id>',
+  };
 }
 
 
@@ -318,12 +350,12 @@ export function validateInputSpecAgainstContext(
     );
   }
   if (
-    spec.purpose === SHOT_MULTI_SHOT_STORYBOARD_SHEET_GENERATION_PURPOSE &&
+    spec.purpose === SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE &&
     context.target.shotIds.length < 2
   ) {
     throw new ProjectDataError(
       'PROJECT_DATA369',
-      'shot.multi-shot-storyboard-sheet requires a multi-shot take.'
+      'shot.video-prompt-sheet requires a multi-shot take.'
     );
   }
 }

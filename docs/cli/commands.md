@@ -1387,7 +1387,7 @@ scene.storyboard-sheet
 shot.first-frame
 shot.last-frame
 shot.reference-image
-shot.multi-shot-storyboard-sheet
+shot.video-prompt-sheet
 shot.video-take
 ```
 
@@ -1400,6 +1400,7 @@ location:<location-id>
 scene:<scene-id>
 scene:<scene-id> --shot-list <shot-list-id>
 scene:<scene-id> --take <take-id>
+take:<take-id>
 ```
 
 Read context and available model choices:
@@ -1425,8 +1426,10 @@ renku generation context --purpose shot.last-frame --target scene:<scene-id> --t
 renku generation model list --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
 renku generation context --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
 renku generation model list --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
-renku generation context --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
-renku generation model list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation context --purpose shot.video-prompt-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation model list --purpose shot.video-prompt-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation context --purpose shot.video-prompt-sheet --target take:<take-id> --json
+renku generation model list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku take authoring context --take <take-id> --json
 renku take authoring context --take <take-id> --selected-shot <shot-id> --json
 renku generation model list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --intent <input-mode-id> --json
@@ -1438,6 +1441,7 @@ Shot video take authoring and reusable inputs:
 renku take authoring validate --file <scene-shot-video-take-authoring-json> --json
 renku take authoring apply --file <scene-shot-video-take-authoring-json> --json
 renku generation input list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
+renku generation input list --purpose shot.video-take --target take:<take-id> --json
 renku generation input select --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
 renku generation input clear --purpose shot.video-take --target scene:<scene-id> --take <take-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
 renku generation input delete --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
@@ -1454,7 +1458,7 @@ Generated shot dependency drafts must be authored by the agent in
 `production.agentProposal.dependencyDrafts[]` in the authoring document. Core
 blocks missing authored dependency drafts with structured diagnostics and does
 not synthesize generic image prompts for first frames, last frames, ad hoc
-reference images, or multi-shot storyboard sheets.
+reference images, or video prompt sheets.
 
 Manage persisted specs:
 
@@ -1470,7 +1474,8 @@ renku generation spec list --purpose scene.storyboard-sheet --target scene:<scen
 renku generation spec list --purpose shot.first-frame --target scene:<scene-id> --take <take-id> --json
 renku generation spec list --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
 renku generation spec list --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
-renku generation spec list --purpose shot.multi-shot-storyboard-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation spec list --purpose shot.video-prompt-sheet --target scene:<scene-id> --take <take-id> --json
+renku generation spec list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku generation spec list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
 ```
 
@@ -1567,13 +1572,17 @@ Behavior:
   selected `shotIds`. The media-producer agent inspects that composite, slices
   one image per selected shot, and imports only the cropped shot images after
   scene-shot-designer has supplied the Scene Shot List.
-- Shot first frames, last frames, ad hoc reference images, and multi-shot
-  storyboard sheets are generated as shot video take inputs. Their specs must
+- Shot first frames, last frames, ad hoc reference images, and video prompt
+  sheets are generated as shot video take inputs. Their specs must
   use authored prompts; `shot.reference-image` also requires a title that names
   the reference intent.
 - The Studio shot References tab displays imported/generated `first-frame`,
-  `last-frame`, `reference-image`, and `multi-shot-storyboard-sheet` inputs
+  `last-frame`, `reference-image`, and `video-prompt-sheet` inputs
   relevant to the selected shot or production group.
+- Image-generation context and model-list reports include `agentMedia`. For
+  eligible image purposes, this report can describe the external built-in
+  `codex.gpt-image-2` capability. That capability is not a Renku provider
+  model, so files created through it are imported without a generation receipt.
 
 ## `renku media import`
 
@@ -1591,7 +1600,7 @@ scene.storyboard-sheet
 shot.first-frame
 shot.last-frame
 shot.reference-image
-shot.multi-shot-storyboard-sheet
+shot.video-prompt-sheet
 shot.video-take
 ```
 
@@ -1730,9 +1739,8 @@ renku media import \
   --json
 
 renku media import \
-  --purpose shot.multi-shot-storyboard-sheet \
-  --target scene:<scene-id> \
-  --take <take-id> \
+  --purpose shot.video-prompt-sheet \
+  --target take:<take-id> \
   --source <project-relative-path> \
   --title <group-sheet-title> \
   --selection select \
@@ -1745,6 +1753,15 @@ renku media import \
   --take <take-id> \
   --source <project-relative-path> \
   --receipt <generation-run-json> \
+  --json
+```
+
+Studio refresh notification:
+
+```bash
+renku studio notify-refresh \
+  --project <project-name> \
+  --resource scene-shot-video-take:<take-id> \
   --json
 ```
 
@@ -1777,10 +1794,11 @@ Options:
   `lookbook.image`, `lookbook.sheet`, `cast.character-sheet`, `cast.profile`,
   `location.environment-sheet`, `location.hero`, `scene.storyboard-sheet`,
   `shot.first-frame`, `shot.last-frame`, `shot.reference-image`,
-  `shot.multi-shot-storyboard-sheet`, and `shot.video-take`.
+  `shot.video-prompt-sheet`, and `shot.video-take`.
 - `--target`: required target. Current supported shapes are
   `lookbook:<lookbook-id>`, `cast:<cast-member-id>`,
-  `location:<location-id>`, and `scene:<scene-id>`.
+  `location:<location-id>`, `scene:<scene-id>`, and `take:<take-id>` for
+  shot-video take input and final video imports.
 - `--source`: required project-relative media source path for single-file
   imports. For `scene.storyboard-sheet`, this imports one cropped shot image
   and must be paired with exactly one `--shots` id.
@@ -1795,6 +1813,9 @@ Options:
   media; the take owns ordered shot membership.
 - `--selection`: optional shot image import selection, either `select` or
   `take`.
+- `--replace-selected`: for shot-video take input imports, select the new input
+  and discard the previously selected input in the same slot in the same core
+  mutation.
 - `--sections`: optional comma-separated Lookbook section keys valid for the
   owning Lookbook type.
 - `--reference-name`: required for `cast.character-sheet`; a stable
@@ -1831,6 +1852,16 @@ Behavior:
   the Scene with role `storyboard_image`, and writes direct
   `scene_shot_storyboard_image` rows keyed by scene, shot list, and shot id. The
   temporary composite sheet is not copied into the project asset graph.
+- For Shot Video Take inputs, `take:<take-id>` resolves the owning take through
+  core before import. `--replace-selected` is intended for correction flows
+  where the previous selected prepared input should be removed rather than kept
+  as an alternative.
+- Files created outside Renku must be staged under the project first, usually
+  below `generated/media/`, then imported with the normal project-relative
+  `--source` path. Omit `--receipt` for non-Renku generation sources.
+- `studio notify-refresh` appends only a Studio resource refresh notification.
+  It is not a project-data mutation and should not be used to compensate for a
+  failed import or generation command.
 - Agents should inspect generated images before import and tag only the
   sections the image visibly demonstrates. Do not blindly copy
   `focusSections` into `--sections`.

@@ -926,7 +926,7 @@ export function excludedDefaultGeneralReferenceChoices(
   }
 ): Array<{
   dependencyId: string;
-  kind: 'multi-shot-storyboard-sheet';
+  kind: 'video-prompt-sheet';
   title: string;
   inclusion: ReferenceInclusionResolution;
 }> {
@@ -934,7 +934,7 @@ export function excludedDefaultGeneralReferenceChoices(
     return [];
   }
   const dependencyId = shotVideoInputDependencyId({
-    kind: 'multi-shot-storyboard-sheet',
+    kind: 'video-prompt-sheet',
     target: input.context.target,
   });
   const inclusion = editorReferenceInclusionForDependencyId(
@@ -948,8 +948,8 @@ export function excludedDefaultGeneralReferenceChoices(
   return [
     {
       dependencyId,
-      kind: 'multi-shot-storyboard-sheet',
-      title: multiShotStoryboardSheetTitle(input.context),
+      kind: 'video-prompt-sheet',
+      title: videoPromptSheetTitle(input.context),
       inclusion,
     },
   ];
@@ -959,12 +959,12 @@ export function excludedDefaultGeneralReferenceChoices(
 
 export function shotReferenceTabInputKind(
   kind: ShotVideoTakeInputKind
-): 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet' | null {
+): 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet' | null {
   if (
     kind === 'first-frame' ||
     kind === 'last-frame' ||
     kind === 'reference-image' ||
-    kind === 'multi-shot-storyboard-sheet'
+    kind === 'video-prompt-sheet'
   ) {
     return kind;
   }
@@ -974,7 +974,7 @@ export function shotReferenceTabInputKind(
 
 
 export function generalReferenceKindForInputKind(
-  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet'
 ): ShotVideoTakeGeneralReferenceChoice['kind'] {
   return kind;
 }
@@ -991,8 +991,8 @@ export function titleForAvailableImageReference(
   if (input.kind === 'last-frame') {
     return 'Last Frame';
   }
-  if (input.kind === 'multi-shot-storyboard-sheet') {
-    return multiShotStoryboardSheetTitle(context);
+  if (input.kind === 'video-prompt-sheet') {
+    return videoPromptSheetTitle(context);
   }
   const title = input.title.trim();
   return title.length > 0
@@ -1004,7 +1004,7 @@ export function titleForAvailableImageReference(
 
 export function titleForPlannedImageReference(
   context: ShotVideoTakeProductionContext,
-  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet',
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet',
   line: MediaGenerationDependencyLine
 ): string {
   if (kind === 'first-frame') {
@@ -1013,8 +1013,8 @@ export function titleForPlannedImageReference(
   if (kind === 'last-frame') {
     return 'Last Frame';
   }
-  if (kind === 'multi-shot-storyboard-sheet') {
-    return multiShotStoryboardSheetTitle(context);
+  if (kind === 'video-prompt-sheet') {
+    return videoPromptSheetTitle(context);
   }
   const specTitle =
     line.generationDraft.state === 'authored' &&
@@ -1028,7 +1028,7 @@ export function titleForPlannedImageReference(
 
 export function titleForRequestedImageReference(
   context: ShotVideoTakeProductionContext,
-  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'multi-shot-storyboard-sheet'
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet'
 ): string {
   if (kind === 'first-frame') {
     return 'First Frame';
@@ -1036,15 +1036,15 @@ export function titleForRequestedImageReference(
   if (kind === 'last-frame') {
     return 'Last Frame';
   }
-  if (kind === 'multi-shot-storyboard-sheet') {
-    return multiShotStoryboardSheetTitle(context);
+  if (kind === 'video-prompt-sheet') {
+    return videoPromptSheetTitle(context);
   }
   return 'Reference Image';
 }
 
 
 
-export function multiShotStoryboardSheetTitle(
+export function videoPromptSheetTitle(
   context: ShotVideoTakeProductionContext
 ): string {
   if (context.target.shotIds.length <= 1) {

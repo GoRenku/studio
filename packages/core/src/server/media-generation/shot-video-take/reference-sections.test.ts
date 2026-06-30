@@ -24,7 +24,7 @@ describe('shot video take preflight and validation', () => {
     projectData = shotVideoTakeProject.projectData;
   });
 
-  it('keeps excluded default multi-shot storyboard references visible for restore', async () => {
+  it('keeps excluded default video prompt sheet references visible for restore', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
     await projectData.updateSceneShotVideoTakeProduction({
@@ -43,7 +43,7 @@ describe('shot video take preflight and validation', () => {
       takeId: written.take.takeId,
     });
     const storyboardChoice = defaultReport.references.general.find(
-      (choice) => choice.kind === 'multi-shot-storyboard-sheet'
+      (choice) => choice.kind === 'video-prompt-sheet'
     );
     expect(storyboardChoice?.card).toMatchObject({
       included: true,
@@ -67,7 +67,7 @@ describe('shot video take preflight and validation', () => {
     expect(excludedReport.references.general).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: 'multi-shot-storyboard-sheet',
+          kind: 'video-prompt-sheet',
           selected: false,
           card: expect.objectContaining({
             dependencyId: storyboardChoice!.card.dependencyId,

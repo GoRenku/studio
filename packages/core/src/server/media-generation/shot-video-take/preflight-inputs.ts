@@ -60,7 +60,7 @@ export const SHOT_VIDEO_TAKE_INPUT_KIND_LABELS: Record<ShotVideoTakeInputKind, s
   'character-sheet': 'Character sheet',
   'location-sheet': 'Location sheet',
   'lookbook-sheet': 'Lookbook sheet',
-  'multi-shot-storyboard-sheet': 'Storyboard sheet',
+  'video-prompt-sheet': 'Video prompt sheet',
   'source-video': 'Source video',
   audio: 'Audio',
 };
