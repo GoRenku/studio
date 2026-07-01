@@ -129,6 +129,8 @@ const SHOT_VIDEO_TAKE_INPUT_MODELS = [
 
 const SHOT_VIDEO_TAKE_MODELS = [
   'fal-ai/bytedance/seedance-2.0',
+  'fal-ai/bytedance/seedance-2.0/mini',
+  'fal-ai/bytedance/seedance-2.0/fast',
   'fal-ai/kling-video/v3/standard',
   'fal-ai/kling-video/v3/pro',
   'fal-ai/kling-video/o3/standard',

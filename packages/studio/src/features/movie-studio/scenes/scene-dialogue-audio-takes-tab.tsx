@@ -47,6 +47,7 @@ export function SceneDialogueAudioTakesTab({
           key={take.takeId}
           actionDisabled={actionDisabled}
           label={labels.get(take.takeId) ?? 'Take'}
+          picked={take.picked}
           player={player}
           take={take}
           onDeleteTake={onDeleteTake}
@@ -60,6 +61,7 @@ export function SceneDialogueAudioTakesTab({
 export function SceneDialogueAudioTakeRow({
   actionDisabled,
   label,
+  picked,
   player,
   take,
   onDeleteTake,
@@ -67,6 +69,7 @@ export function SceneDialogueAudioTakeRow({
 }: {
   actionDisabled: boolean;
   label: string;
+  picked: boolean;
   player: SceneDialogueAudioPlayer;
   take: SceneDialogueAudioTakeWithUrl;
   onDeleteTake: (takeId: string) => void;
@@ -80,7 +83,7 @@ export function SceneDialogueAudioTakeRow({
     <div
       className={cn(
         'flex flex-col gap-3 rounded-md border bg-muted/15 px-3 py-3',
-        take.picked
+        picked
           ? 'border-item-active-border bg-item-active-bg/70'
           : 'border-border/45'
       )}
@@ -89,7 +92,7 @@ export function SceneDialogueAudioTakeRow({
         <div className='flex min-w-0 flex-col gap-1'>
           <div className='flex items-center gap-2'>
             <span className='text-sm font-semibold text-foreground'>{label}</span>
-            {take.picked ? (
+            {picked ? (
               <span className='rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary'>
                 Picked
               </span>
@@ -115,9 +118,9 @@ export function SceneDialogueAudioTakeRow({
           </Button>
           <Button
             type='button'
-            variant={take.picked ? 'secondary' : 'outline'}
+            variant={picked ? 'secondary' : 'outline'}
             size='sm'
-            disabled={actionDisabled || take.picked}
+            disabled={actionDisabled || picked}
             onClick={() => onPickTake(take.takeId)}
           >
             Pick

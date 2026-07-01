@@ -10,6 +10,8 @@ describe('shot video route catalog validation', () => {
     expect(result.warnings).toEqual([]);
     expect(SHOT_VIDEO_MODEL_FAMILIES.map((family) => family.choice)).toEqual([
       'fal-ai/bytedance/seedance-2.0',
+      'fal-ai/bytedance/seedance-2.0/mini',
+      'fal-ai/bytedance/seedance-2.0/fast',
       'fal-ai/kling-video/v3/standard',
       'fal-ai/kling-video/v3/pro',
       'fal-ai/kling-video/o3/standard',
@@ -31,10 +33,14 @@ describe('shot video route catalog validation', () => {
     const happyHorseImageRoute = SHOT_VIDEO_MODEL_FAMILIES
       .find((family) => family.choice === 'fal-ai/alibaba/happy-horse')
       ?.routes.find((route) => route.inputMode === 'first-frame');
+    const seedanceMiniTextRoute = SHOT_VIDEO_MODEL_FAMILIES
+      .find((family) => family.choice === 'fal-ai/bytedance/seedance-2.0/mini')
+      ?.routes.find((route) => route.inputMode === 'text-only');
 
     expect(klingImageRoute?.parameters.map((parameter) => parameter.id)).not.toContain('aspect_ratio');
     expect(veoImageRoute?.parameters.map((parameter) => parameter.id)).not.toContain('seed');
     expect(happyHorseImageRoute?.parameters.map((parameter) => parameter.id)).not.toContain('aspect_ratio');
+    expect(seedanceMiniTextRoute?.parameters.map((parameter) => parameter.id)).not.toContain('seed');
   });
 
   it('declares audio reference slots only on Seedance reference routes', () => {
@@ -66,6 +72,54 @@ describe('shot video route catalog validation', () => {
       },
       {
         choice: 'fal-ai/bytedance/seedance-2.0',
+        inputMode: 'reference',
+        shotGroupMode: 'multi-shot',
+        slot: expect.objectContaining({
+          kind: 'audio',
+          providerField: 'audio_urls',
+          required: false,
+          maxCount: 3,
+          asArray: true,
+        }),
+      },
+      {
+        choice: 'fal-ai/bytedance/seedance-2.0/mini',
+        inputMode: 'reference',
+        shotGroupMode: 'single-shot',
+        slot: expect.objectContaining({
+          kind: 'audio',
+          providerField: 'audio_urls',
+          required: false,
+          maxCount: 3,
+          asArray: true,
+        }),
+      },
+      {
+        choice: 'fal-ai/bytedance/seedance-2.0/mini',
+        inputMode: 'reference',
+        shotGroupMode: 'multi-shot',
+        slot: expect.objectContaining({
+          kind: 'audio',
+          providerField: 'audio_urls',
+          required: false,
+          maxCount: 3,
+          asArray: true,
+        }),
+      },
+      {
+        choice: 'fal-ai/bytedance/seedance-2.0/fast',
+        inputMode: 'reference',
+        shotGroupMode: 'single-shot',
+        slot: expect.objectContaining({
+          kind: 'audio',
+          providerField: 'audio_urls',
+          required: false,
+          maxCount: 3,
+          asArray: true,
+        }),
+      },
+      {
+        choice: 'fal-ai/bytedance/seedance-2.0/fast',
         inputMode: 'reference',
         shotGroupMode: 'multi-shot',
         slot: expect.objectContaining({

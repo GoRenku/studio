@@ -84,6 +84,8 @@ export type ShotVideoTakeShotGroupMode = 'single-shot' | 'multi-shot';
 
 export type ShotVideoTakeModelChoice =
   | 'fal-ai/bytedance/seedance-2.0'
+  | 'fal-ai/bytedance/seedance-2.0/mini'
+  | 'fal-ai/bytedance/seedance-2.0/fast'
   | 'fal-ai/kling-video/v3/standard'
   | 'fal-ai/kling-video/v3/pro'
   | 'fal-ai/kling-video/o3/standard'

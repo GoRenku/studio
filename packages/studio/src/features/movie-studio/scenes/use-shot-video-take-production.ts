@@ -198,6 +198,7 @@ export function useShotVideoTakeProduction(
     []
   );
 
+  const storedInputMode = take?.state.production.inputModeId;
   const selectedInputMode = useMemo<ShotVideoTakeInputModeId | null>(() => {
     if (!take) return null;
     return (
@@ -280,6 +281,43 @@ export function useShotVideoTakeProduction(
     models?.inputModeId,
     takeId,
     isEditable,
+  ]);
+
+  useEffect(() => {
+    if (!takeId || !isEditable || !models || !selectedInputMode) {
+      return;
+    }
+    const modelChoice =
+      storedModelChoice ?? defaultModelForInputMode(models, selectedInputMode);
+    if (!modelChoice) {
+      return;
+    }
+    if (storedInputMode === selectedInputMode && storedModelChoice === modelChoice) {
+      return;
+    }
+    editProduction((production) => {
+      const nextInputMode = production.inputModeId ?? selectedInputMode;
+      const nextModelChoice = production.modelChoice ?? modelChoice;
+      if (
+        production.inputModeId === nextInputMode &&
+        production.modelChoice === nextModelChoice
+      ) {
+        return production;
+      }
+      return {
+        ...production,
+        inputModeId: nextInputMode,
+        modelChoice: nextModelChoice,
+      };
+    });
+  }, [
+    editProduction,
+    isEditable,
+    models,
+    selectedInputMode,
+    storedInputMode,
+    storedModelChoice,
+    takeId,
   ]);
 
   const setModel = useCallback(

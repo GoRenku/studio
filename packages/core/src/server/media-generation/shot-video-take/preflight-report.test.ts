@@ -211,6 +211,30 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
+  it('uses core defaults as the selected model in agent-facing readiness', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    const authoringContext = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+
+    expect(authoringContext.preflight).toMatchObject({
+      inputModeId: 'first-frame',
+      modelChoice: 'fal-ai/bytedance/seedance-2.0',
+    });
+    expect(authoringContext.preflight.agentBrief).toContain(
+      'Model: fal-ai/bytedance/seedance-2.0'
+    );
+    expect(authoringContext.takeGenerationReadiness.requiredBlockers).not.toContainEqual(
+      expect.objectContaining({ kind: 'missing-input-mode' })
+    );
+    expect(authoringContext.takeGenerationReadiness.requiredBlockers).not.toContainEqual(
+      expect.objectContaining({ kind: 'missing-model' })
+    );
+  });
+
   it('keeps missing take-reference sheet selections visible beside prepared cast sheet inputs', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);

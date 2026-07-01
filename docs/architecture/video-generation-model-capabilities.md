@@ -165,10 +165,13 @@ updated from provider docs before adapter work begins.
 Observed fal endpoint families:
 
 - `bytedance/seedance-2.0/text-to-video`
+- `bytedance/seedance-2.0/mini/text-to-video`
 - `bytedance/seedance-2.0/fast/text-to-video`
 - `bytedance/seedance-2.0/image-to-video`
+- `bytedance/seedance-2.0/mini/image-to-video`
 - `bytedance/seedance-2.0/fast/image-to-video`
 - `bytedance/seedance-2.0/reference-to-video`
+- `bytedance/seedance-2.0/mini/reference-to-video`
 - `bytedance/seedance-2.0/fast/reference-to-video`
 
 Text-to-video parameters currently include:
@@ -180,6 +183,9 @@ Text-to-video parameters currently include:
 - `generate_audio`;
 - `seed`;
 - `end_user_id` for B2B access.
+
+Seedance 2.0 Mini exposes the same route families, but its fal schemas do not
+include the `seed` input parameter.
 
 Image-to-video adds:
 

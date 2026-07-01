@@ -164,6 +164,58 @@ const ESTIMATE_MATRIX: EstimateMatrixCase[] = [
   ...shotGroupCases(happyHorseCase('reference', 'alibaba/happy-horse/reference-to-video')),
 ];
 
+const SEEDANCE_2_VARIANT_ESTIMATE_MATRIX: EstimateMatrixCase[] = [
+  ...shotGroupCases(seedanceCase('text-only', 'bytedance/seedance-2.0/mini/text-to-video', {
+    label: 'Seedance 2.0 Mini',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/mini',
+    expectedCostUsd: 1.3608,
+    includeSeed: false,
+  })),
+  ...shotGroupCases(seedanceCase('first-frame', 'bytedance/seedance-2.0/mini/image-to-video', {
+    label: 'Seedance 2.0 Mini',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/mini',
+    expectedCostUsd: 1.3608,
+    includeSeed: false,
+  })),
+  ...shotGroupCases(seedanceCase('first-last-frame', 'bytedance/seedance-2.0/mini/image-to-video', {
+    label: 'Seedance 2.0 Mini',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/mini',
+    expectedCostUsd: 1.3608,
+    includeSeed: false,
+  })),
+  ...shotGroupCases(seedanceCase('reference', 'bytedance/seedance-2.0/mini/reference-to-video', {
+    label: 'Seedance 2.0 Mini',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/mini',
+    expectedCostUsd: 1.3608,
+    includeSeed: false,
+  })),
+  ...shotGroupCases(seedanceCase('text-only', 'bytedance/seedance-2.0/fast/text-to-video', {
+    label: 'Seedance 2.0 Fast',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/fast',
+    expectedCostUsd: 2.17728,
+  })),
+  ...shotGroupCases(seedanceCase('first-frame', 'bytedance/seedance-2.0/fast/image-to-video', {
+    label: 'Seedance 2.0 Fast',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/fast',
+    expectedCostUsd: 2.17728,
+  })),
+  ...shotGroupCases(seedanceCase('first-last-frame', 'bytedance/seedance-2.0/fast/image-to-video', {
+    label: 'Seedance 2.0 Fast',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/fast',
+    expectedCostUsd: 2.17728,
+  })),
+  ...shotGroupCases(seedanceCase('reference', 'bytedance/seedance-2.0/fast/reference-to-video', {
+    label: 'Seedance 2.0 Fast',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0/fast',
+    expectedCostUsd: 2.17728,
+  })),
+];
+
+const ROUTE_COVERAGE_MATRIX: EstimateMatrixCase[] = [
+  ...ESTIMATE_MATRIX,
+  ...SEEDANCE_2_VARIANT_ESTIMATE_MATRIX,
+];
+
 function shotGroupCases(template: EstimateMatrixCaseTemplate): EstimateMatrixCase[] {
   return SHOT_GROUP_MODES.map((shotGroupMode) => {
     const route = { ...template, shotGroupMode };
@@ -220,7 +272,7 @@ describe('shot video take estimate integration matrix', () => {
       homeDir,
       setup,
     });
-    const matrixRouteKeys = ESTIMATE_MATRIX.map((entry) =>
+    const matrixRouteKeys = ROUTE_COVERAGE_MATRIX.map((entry) =>
       routeKey(entry.modelChoice, entry.inputModeId, entry.shotGroupMode)
     ).sort();
 
@@ -360,32 +412,60 @@ describe('shot video take estimate integration matrix', () => {
   });
 
   it.each(ESTIMATE_MATRIX)('$label estimates prepared video setup', async (entry) => {
-    const estimate = await estimateFromBrowserClient({
+    await expectPreparedVideoSetupEstimate({
       projectData,
       homeDir,
       setup,
       entry,
+    });
+  });
+
+  it.each(SEEDANCE_2_VARIANT_ESTIMATE_MATRIX)(
+    '$label estimates prepared Seedance 2.0 variant setup',
+    async (entry) => {
+      await expectPreparedVideoSetupEstimate({
+        projectData,
+        homeDir,
+        setup,
+        entry,
+      });
+    }
+  );
+
+  async function expectPreparedVideoSetupEstimate(input: {
+    projectData: ProjectDataService;
+    homeDir: string;
+    setup: MatrixProjectSetup;
+    entry: EstimateMatrixCase;
+  }): Promise<void> {
+    const estimate = await estimateFromBrowserClient({
+      projectData: input.projectData,
+      homeDir: input.homeDir,
+      setup: input.setup,
+      entry: input.entry,
       includePreparedInputs: true,
     });
-    const preparedDependencyCostUsd = preparedDependencyCostForRoute(entry);
+    const preparedDependencyCostUsd = preparedDependencyCostForRoute(input.entry);
 
     expect(estimate.issues).toEqual([]);
     expect(
       estimate.plan?.lines.filter((line) => line.kind === 'dependency-generation')
-    ).toHaveLength(preparedDependencyLineCountForRoute(entry));
-    expect(estimate.plan?.request.routeSettings).toEqual(entry.expectedRouteSettings);
+    ).toHaveLength(preparedDependencyLineCountForRoute(input.entry));
+    expect(estimate.plan?.request.routeSettings).toEqual(
+      input.entry.expectedRouteSettings
+    );
     expect(estimate.estimate).toMatchObject({
       provider: 'fal-ai',
-      model: entry.providerModel,
+      model: input.entry.providerModel,
       warnings: [],
-      billableUnits: entry.expectedBillableUnits,
+      billableUnits: input.entry.expectedBillableUnits,
     });
     expect(estimate.estimate?.estimatedCostUsd).toBeCloseTo(
-      entry.expectedCostUsd,
+      input.entry.expectedCostUsd,
       6
     );
     expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(
-      entry.expectedCostUsd + preparedDependencyCostUsd,
+      input.entry.expectedCostUsd + preparedDependencyCostUsd,
       6
     );
 
@@ -394,14 +474,14 @@ describe('shot video take estimate integration matrix', () => {
     );
     expect(finalLine?.pricing.state).toBe('priced');
     if (finalLine?.pricing.state !== 'priced') {
-      throw new Error(`Expected a priced final line for ${entry.label}.`);
+      throw new Error(`Expected a priced final line for ${input.entry.label}.`);
     }
     expect(finalLine.pricing.estimatedUsd).toBeCloseTo(
-      entry.expectedCostUsd,
+      input.entry.expectedCostUsd,
       6
     );
     assertNoObsoleteEstimateFields(estimate);
-  });
+  }
 
   it.each(ESTIMATE_MATRIX)('$label keeps a numeric graph estimate before dependencies exist', async (entry) => {
     const estimate = await estimateFromBrowserClient({
@@ -613,11 +693,18 @@ function withHomeDir(input: unknown, homeDir: string): unknown {
 
 function seedanceCase(
   inputModeId: ShotVideoTakeInputModeId,
-  providerModel: string
+  providerModel: string,
+  options: {
+    label?: string;
+    modelChoice?: ShotVideoTakeModelChoice;
+    expectedCostUsd?: number;
+    includeSeed?: boolean;
+  } = {}
 ): EstimateMatrixCaseTemplate {
+  const includeSeed = options.includeSeed ?? true;
   return {
-    label: `Seedance 2.0 ${inputModeId}`,
-    modelChoice: 'fal-ai/bytedance/seedance-2.0',
+    label: `${options.label ?? 'Seedance 2.0'} ${inputModeId}`,
+    modelChoice: options.modelChoice ?? 'fal-ai/bytedance/seedance-2.0',
     inputModeId,
     providerModel,
     parameterValues: {
@@ -631,14 +718,14 @@ function seedanceCase(
       aspect_ratio: '16:9',
       resolution: '720p',
       generate_audio: true,
-      seed: null,
+      ...(includeSeed ? { seed: null } : {}),
     },
     expectedBillableUnits: {
       duration: '9',
       aspect_ratio: '16:9',
       resolution: '720p',
     },
-    expectedCostUsd: 2.7216,
+    expectedCostUsd: options.expectedCostUsd ?? 2.7216,
   };
 }
 

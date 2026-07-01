@@ -256,7 +256,55 @@ describe('SceneShotDialogsTab', () => {
     });
   });
 
-  it('opens take management only when multiple takes are available', async () => {
+  it('lets the shot pick the only generated dialogue take', async () => {
+    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue({
+      audioByDialogueId: {
+        dialogue_urban: {
+          takes: [take('take_001', true, '2026-06-12T10:00:00.000Z')],
+        },
+      },
+    });
+    serviceMocks.updateTakeDialogueAudioSelection.mockResolvedValue({
+      resourceKeys: [],
+    });
+    const onPlanRefresh = vi.fn(async () => undefined);
+    render(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        onPlanRefresh={onPlanRefresh}
+        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
+          dialogueChoice({
+            pickedTake: null,
+            audioState: 'no-selected-take',
+            unavailableReason: 'No selected audio take',
+          }),
+        ])}
+      />
+    );
+
+    expect(await screen.findAllByText('No selected take')).toHaveLength(2);
+    const pickButton = await screen.findByRole('button', { name: 'Pick' });
+    expect((pickButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(pickButton);
+
+    await waitFor(() => {
+      expect(serviceMocks.updateTakeDialogueAudioSelection).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        {
+          dialogueId: 'dialogue_urban',
+          takeId: 'take_001',
+        }
+      );
+    });
+    expect(onPlanRefresh).toHaveBeenCalled();
+  });
+
+  it('opens take management when multiple takes are available', async () => {
     serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
     render(
       <SceneShotDialogsTab

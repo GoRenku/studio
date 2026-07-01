@@ -1295,6 +1295,39 @@ models:
       tokenFramesPerSecond: 24
       prices:
         - pricePerMillionTokens: 14
+  - name: bytedance/seedance-2.0/mini/text-to-video
+    subProvider: bytedance
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoPerMillionTokens
+      inputs: [duration, resolution, aspect_ratio]
+      tokenFramesPerSecond: 24
+      prices:
+        - pricePerMillionTokens: 7
+  - name: bytedance/seedance-2.0/mini/image-to-video
+    subProvider: bytedance
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoPerMillionTokens
+      inputs: [duration, resolution, aspect_ratio]
+      tokenFramesPerSecond: 24
+      prices:
+        - pricePerMillionTokens: 7
+  - name: bytedance/seedance-2.0/mini/reference-to-video
+    subProvider: bytedance
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoPerMillionTokens
+      inputs: [duration, resolution, aspect_ratio]
+      tokenFramesPerSecond: 24
+      prices:
+        - pricePerMillionTokens: 7
   - name: bytedance/seedance-2.0/fast/text-to-video
     subProvider: bytedance
     type: video

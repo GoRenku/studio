@@ -347,10 +347,15 @@ export function validatePreflight(context: ShotVideoTakeProductionContext): Diag
 
 
 export function agentBrief(context: ShotVideoTakeProductionContext): string {
+  const inputModeId = context.take.state.production.inputModeId ?? context.defaults.inputModeId;
+  const modelChoice =
+    context.take.state.production.modelChoice ??
+    defaultModelChoiceForInputMode(inputModeId);
   return [
     `Scene: ${context.scene.title}`,
     `Shots: ${context.shots.map((shot) => `${shot.shotId}: ${shot.action}`).join(' | ')}`,
-    `Input mode: ${context.take.state.production.inputModeId ?? context.defaults.inputModeId}`,
+    `Input mode: ${inputModeId}`,
     `Shot group mode: ${context.shotGroupMode}`,
+    `Model: ${modelChoice}`,
   ].join('\n');
 }

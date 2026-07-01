@@ -731,7 +731,7 @@ function buildTakeGenerationReadiness(input: {
   preflight: ShotVideoTakePreflightReport;
 }): ShotVideoTakeGenerationReadiness {
   const requiredBlockers = [
-    ...missingChoiceBlockers(input.context),
+    ...missingChoiceBlockers(input.preflight),
     ...missingDependencyBlockers(input.preflight),
     ...missingFinalPromptBlockers(input.context),
   ];
@@ -756,23 +756,23 @@ function buildTakeGenerationReadiness(input: {
 }
 
 function missingChoiceBlockers(
-  context: ShotVideoTakeProductionContext
+  preflight: ShotVideoTakePreflightReport
 ): ShotVideoTakeGenerationReadinessBlocker[] {
   const blockers: ShotVideoTakeGenerationReadinessBlocker[] = [];
-  if (!context.take.state.production.inputModeId) {
+  if (!preflight.inputModeId) {
     blockers.push({
       kind: 'missing-input-mode',
       message: 'The take does not have a selected video input mode.',
       recommendedSpecialist: 'media-producer',
-      recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
+      recommendedCommand: `renku take authoring context --take ${preflight.take.takeId} --json`,
     });
   }
-  if (!context.take.state.production.modelChoice) {
+  if (!preflight.modelChoice) {
     blockers.push({
       kind: 'missing-model',
       message: 'The take does not have a selected video model.',
       recommendedSpecialist: 'media-producer',
-      recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
+      recommendedCommand: `renku take authoring context --take ${preflight.take.takeId} --json`,
     });
   }
   return blockers;

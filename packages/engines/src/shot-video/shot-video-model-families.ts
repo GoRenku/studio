@@ -11,6 +11,8 @@ export type ShotVideoTakeShotGroupMode = 'single-shot' | 'multi-shot';
 
 export type ShotVideoTakeModelChoice =
   | 'fal-ai/bytedance/seedance-2.0'
+  | 'fal-ai/bytedance/seedance-2.0/mini'
+  | 'fal-ai/bytedance/seedance-2.0/fast'
   | 'fal-ai/kling-video/v3/standard'
   | 'fal-ai/kling-video/v3/pro'
   | 'fal-ai/kling-video/o3/standard'
@@ -273,6 +275,10 @@ const seedanceParameters: ShotVideoRouteParameter[] = [
   numberParameter('seed', 'Seed', null),
 ];
 
+const seedanceMiniParameters = seedanceParameters.filter(
+  (parameter) => parameter.id !== 'seed'
+);
+
 const klingTextParameters: ShotVideoRouteParameter[] = [
   selectParameter('duration', 'Duration', '5', [
     '3',
@@ -492,14 +498,13 @@ const happyHorseImageParameters = happyHorseTextParameters.filter(
 
 export const SHOT_VIDEO_MODEL_FAMILIES: ShotVideoModelFamily[] = [
   family('fal-ai/bytedance/seedance-2.0', 'Seedance', '2.0', [
-    route('seedance', 'text-only', 'single-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
-    route('seedance', 'text-only', 'multi-shot', 'bytedance/seedance-2.0/text-to-video', 'text-to-video', [], seedanceParameters, SEEDANCE_DURATION),
-    route('seedance', 'first-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('seedance', 'first-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('seedance', 'first-last-frame', 'single-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('seedance', 'first-last-frame', 'multi-shot', 'bytedance/seedance-2.0/image-to-video', 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], seedanceParameters, SEEDANCE_DURATION),
-    route('seedance', 'reference', 'single-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
-    route('seedance', 'reference', 'multi-shot', 'bytedance/seedance-2.0/reference-to-video', 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, VIDEO_PROMPT_SHEET_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], seedanceParameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
+    ...seedanceRoutes('bytedance/seedance-2.0', seedanceParameters),
+  ]),
+  family('fal-ai/bytedance/seedance-2.0/mini', 'Seedance', '2.0 Mini', [
+    ...seedanceRoutes('bytedance/seedance-2.0/mini', seedanceMiniParameters),
+  ]),
+  family('fal-ai/bytedance/seedance-2.0/fast', 'Seedance', '2.0 Fast', [
+    ...seedanceRoutes('bytedance/seedance-2.0/fast', seedanceParameters),
   ]),
   family('fal-ai/kling-video/v3/standard', 'Kling V3 Standard', '3.0', [
     ...klingV3Routes('standard'),
@@ -544,6 +549,25 @@ export const SHOT_VIDEO_MODEL_FAMILIES: ShotVideoModelFamily[] = [
     route('flat', 'reference', 'multi-shot', 'alibaba/happy-horse/reference-to-video', 'image-to-video', [REFERENCE_IMAGES_SLOT], happyHorseTextParameters, HAPPY_HORSE_DURATION),
   ]),
 ];
+
+function seedanceRoutes(
+  modelPrefix: string,
+  parameters: ShotVideoRouteParameter[]
+): ShotVideoRoute[] {
+  const textModel = `${modelPrefix}/text-to-video`;
+  const imageModel = `${modelPrefix}/image-to-video`;
+  const referenceModel = `${modelPrefix}/reference-to-video`;
+  return [
+    route('seedance', 'text-only', 'single-shot', textModel, 'text-to-video', [], parameters, SEEDANCE_DURATION),
+    route('seedance', 'text-only', 'multi-shot', textModel, 'text-to-video', [], parameters, SEEDANCE_DURATION),
+    route('seedance', 'first-frame', 'single-shot', imageModel, 'image-to-video', [FIRST_FRAME_SLOT], parameters, SEEDANCE_DURATION),
+    route('seedance', 'first-frame', 'multi-shot', imageModel, 'image-to-video', [FIRST_FRAME_SLOT], parameters, SEEDANCE_DURATION),
+    route('seedance', 'first-last-frame', 'single-shot', imageModel, 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], parameters, SEEDANCE_DURATION),
+    route('seedance', 'first-last-frame', 'multi-shot', imageModel, 'image-to-video', [FIRST_FRAME_SLOT, LAST_FRAME_END_IMAGE_SLOT], parameters, SEEDANCE_DURATION),
+    route('seedance', 'reference', 'single-shot', referenceModel, 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], parameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
+    route('seedance', 'reference', 'multi-shot', referenceModel, 'image-to-video', [OPTIONAL_REFERENCE_IMAGES_SLOT, VIDEO_PROMPT_SHEET_SLOT, OPTIONAL_REFERENCE_AUDIO_SLOT], parameters, SEEDANCE_DURATION, {}, seedanceReferenceContract),
+  ];
+}
 
 function klingV3Routes(level: 'standard' | 'pro'): ShotVideoRoute[] {
   const textModel = `kling-video/v3/${level}/text-to-video`;

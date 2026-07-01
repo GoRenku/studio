@@ -282,15 +282,22 @@ function SceneShotDialogueAudioReferenceCard({
   const pickedTake = choice.pickedTake
     ? takes.find((take) => take.takeId === choice.pickedTake?.takeId) ?? null
     : null;
+  const singleSelectableTake =
+    !pickedTake && choice.audioState === 'no-selected-take' && takes.length === 1
+      ? takes[0]
+      : null;
   const progress = pickedTake ? player.progressByUrl[pickedTake.url] ?? 0 : 0;
   const duration = pickedTake ? player.durationByUrl[pickedTake.url] ?? 0 : 0;
   const isPlaying = pickedTake ? player.playingUrl === pickedTake.url : false;
   const needsGeneration = choice.card.state === 'selected-planned';
+  const opensTakeDialog =
+    choice.takeCount > 1 ||
+    (choice.takeCount > 0 && choice.audioState === 'no-selected-take');
   const body = (
     <DialogueCardBody
       choice={choice}
       profileImageUrl={profileImageUrl}
-      openable={choice.takeCount > 1}
+      openable={opensTakeDialog}
     />
   );
 
@@ -301,13 +308,13 @@ function SceneShotDialogueAudioReferenceCard({
         choice.included
           ? 'border-item-active-border bg-item-active-bg/70'
           : 'border-border/45',
-        choice.takeCount > 1
+        opensTakeDialog
           ? 'hover:border-item-active-border/60 hover:bg-item-hover-bg/50'
           : null
       )}
     >
       <div className='grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3'>
-        {choice.takeCount > 1 ? (
+        {opensTakeDialog ? (
           <SceneShotDialogueAudioTakesDialog
             choice={choice}
             takes={takes}
@@ -322,6 +329,17 @@ function SceneShotDialogueAudioReferenceCard({
           body
         )}
         <div className='flex items-center gap-2'>
+          {singleSelectableTake ? (
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              disabled={actionDisabled}
+              onClick={() => onPickTake(choice.dialogueId, singleSelectableTake.takeId)}
+            >
+              Pick
+            </Button>
+          ) : null}
           {needsGeneration ? (
             <DialogueReferenceCostBadge pricing={choice.card.pricing} />
           ) : choice.audioState !== 'ready' ? (
@@ -528,6 +546,7 @@ function SceneShotDialogueAudioTakesDialog({
               key={take.takeId}
               actionDisabled={actionDisabled}
               label={labels.get(take.takeId) ?? 'Take'}
+              picked={choice.pickedTake?.takeId === take.takeId}
               player={player}
               take={take}
               onPickTake={(takeId) => onPickTake(choice.dialogueId, takeId)}

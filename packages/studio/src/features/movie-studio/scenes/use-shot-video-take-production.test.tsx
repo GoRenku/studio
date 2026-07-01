@@ -96,6 +96,35 @@ describe('useShotVideoTakeProduction', () => {
     });
   });
 
+  it('persists the visible default input mode and model for editable takes', async () => {
+    vi.mocked(readShotVideoTakeProduction).mockResolvedValue(
+      productionRead(takeWithProduction({}))
+    );
+    vi.mocked(updateShotVideoTakeProduction).mockResolvedValueOnce({
+      context: productionContext(
+        takeWithProduction({
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        })
+      ),
+      resourceKeys: [],
+    });
+
+    render(<ShotVideoTakeProductionHarness />);
+
+    await waitFor(() => {
+      expect(updateShotVideoTakeProduction).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        {
+          inputModeId: 'text-only',
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        }
+      );
+    });
+  });
+
   it('flushes pending AI Production edits when the editor unmounts', async () => {
     const { unmount } = render(<ShotVideoTakeProductionHarness />);
 
@@ -210,12 +239,26 @@ function productionRead(
   return {
     context: productionContext(take),
     models: {
+      purpose: 'shot.video-take',
+      target: { kind: 'shot-video-take', takeId: 'take_001' },
       inputModeId: 'text-only',
       shotGroupMode: 'single-shot',
-      models: [],
-      defaults: {
-        modelChoice: 'fal-ai/bytedance/seedance-2.0',
-      },
+      defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
+      models: [
+        {
+          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          label: 'Seedance 2.0',
+          available: true,
+          supportedInputModes: ['text-only'],
+          duration: { supported: true, values: [4, 5, 6] },
+          inputRoles: [],
+          parameters: [],
+          estimateInputs: {
+            canEstimateBeforeDependenciesExist: true,
+            requiresPreparedInputs: false,
+          },
+        },
+      ],
     },
   } as unknown as ShotVideoTakeProductionRead;
 }
