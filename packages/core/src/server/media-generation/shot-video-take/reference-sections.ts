@@ -681,13 +681,13 @@ export function buildDialogueAudioReferenceChoices(input: {
       speakerName: reference.speakerName,
       plainText: reference.plainText,
       audioState: reference.audioState,
-      pickedTake: reference.pickedTake
+      selectedTake: reference.selectedTake
         ? {
-            takeId: reference.pickedTake.takeId,
-            takeLabel: reference.pickedTakeLabel ?? 'Take',
-            createdAt: reference.pickedTake.createdAt,
-            assetId: reference.pickedTake.assetId,
-            assetFileId: reference.pickedTake.assetFileId,
+            takeId: reference.selectedTake.takeId,
+            takeLabel: reference.selectedTakeLabel ?? 'Take',
+            createdAt: reference.selectedTake.createdAt,
+            assetId: reference.selectedTake.assetId,
+            assetFileId: reference.selectedTake.assetFileId,
           }
         : null,
       takeCount: reference.takeCount,

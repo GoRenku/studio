@@ -96,21 +96,6 @@ export async function generateSceneDialogueAudioTake(
   );
 }
 
-export async function pickSceneDialogueAudioTake(
-  projectName: string,
-  sceneId: string,
-  dialogueId: string,
-  takeId: string
-): Promise<SceneDialogueAudioMutationWithUrls> {
-  return sendMutation(
-    `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/takes/${encodeURIComponent(takeId)}/pick`,
-    'POST',
-    {},
-    projectName,
-    sceneId
-  );
-}
-
 export async function deleteSceneDialogueAudioTake(
   projectName: string,
   sceneId: string,

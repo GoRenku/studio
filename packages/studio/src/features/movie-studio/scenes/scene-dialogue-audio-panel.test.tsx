@@ -11,7 +11,6 @@ import {
   deleteSceneDialogueAudioTake,
   estimateSceneDialogueAudioDraft,
   generateSceneDialogueAudioTake,
-  pickSceneDialogueAudioTake,
   saveSceneDialogueAudioSetup,
 } from '@/services/studio-scene-dialogue-audio-api';
 import { SceneDialogueAudioPanel } from './scene-dialogue-audio-panel';
@@ -20,7 +19,6 @@ vi.mock('@/services/studio-scene-dialogue-audio-api', () => ({
   deleteSceneDialogueAudioTake: vi.fn(),
   estimateSceneDialogueAudioDraft: vi.fn(),
   generateSceneDialogueAudioTake: vi.fn(),
-  pickSceneDialogueAudioTake: vi.fn(),
   saveSceneDialogueAudioSetup: vi.fn(),
 }));
 
@@ -33,7 +31,6 @@ describe('SceneDialogueAudioPanel', () => {
       resourceKeys: [],
     });
     vi.mocked(generateSceneDialogueAudioTake).mockReset();
-    vi.mocked(pickSceneDialogueAudioTake).mockReset();
     vi.mocked(deleteSceneDialogueAudioTake).mockReset();
   });
 
@@ -272,7 +269,6 @@ function savedContext(v3Text: string): SceneDialogueAudioContextWithUrls {
         },
         outputFormat: 'mp3_44100_128',
         languageCode: null,
-        pickedTakeId: null,
         takes: [],
         createdAt: '2026-06-10T00:00:00.000Z',
         updatedAt: '2026-06-10T00:00:00.000Z',

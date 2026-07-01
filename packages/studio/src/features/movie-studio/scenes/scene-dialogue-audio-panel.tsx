@@ -166,7 +166,6 @@ export function SceneDialogueAudioPanel({
               player={player}
               takes={dialogueAudio.takes}
               onDeleteTake={dialogueAudio.deleteTake}
-              onPickTake={dialogueAudio.pickTake}
             />
           </TabsContent>
           <TabsContent value='advanced' className='m-0'>

@@ -11,8 +11,6 @@ import { SceneShotDialogsTab } from './scene-shot-dialogs-tab';
 
 const serviceMocks = vi.hoisted(() => ({
   readSceneDialogueAudioContext: vi.fn(),
-  pickSceneDialogueAudioTake: vi.fn(),
-  deleteSceneDialogueAudioTake: vi.fn(),
   updateShotGroupReferenceInclusion: vi.fn(),
   updateShotReferenceInclusion: vi.fn(),
   updateTakeDialogueAudioSelection: vi.fn(),
@@ -20,8 +18,6 @@ const serviceMocks = vi.hoisted(() => ({
 
 vi.mock('@/services/studio-scene-dialogue-audio-api', () => ({
   readSceneDialogueAudioContext: serviceMocks.readSceneDialogueAudioContext,
-  pickSceneDialogueAudioTake: serviceMocks.pickSceneDialogueAudioTake,
-  deleteSceneDialogueAudioTake: serviceMocks.deleteSceneDialogueAudioTake,
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
@@ -71,6 +67,30 @@ describe('SceneShotDialogsTab', () => {
     expect(screen.getByRole('button', { name: 'Play dialogue audio' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Pick' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Delete/ })).toBeNull();
+  });
+
+  it('uses the voice-over preview for narrator dialogue without a profile image', async () => {
+    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
+    render(
+      <SceneShotDialogsTab
+        projectName='constantinople'
+        sceneId='scene_hook'
+        castMemberImages={{}}
+        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
+          dialogueChoice({
+            dependencyId: 'audio:scene-dialogue:dialogue_narrator',
+            dialogueId: 'dialogue_narrator',
+            castMemberId: 'cast_narrator',
+            speakerName: 'Narrator',
+            plainText: 'The walls remember.',
+          }),
+        ])}
+      />
+    );
+
+    expect(await screen.findByText('Narrator')).toBeTruthy();
+    expect(screen.getByTestId('voice-over-profile-placeholder')).toBeTruthy();
+    expect(screen.queryByAltText('Narrator profile image')).toBeNull();
   });
 
   it('shows every scene dialogue while default-selecting only referenced dialogue', async () => {
@@ -123,7 +143,7 @@ describe('SceneShotDialogsTab', () => {
         castMemberImages={{}}
         productionPlan={dialogueProductionPlan(0, ['shot_001'], [
           dialogueChoice({
-            pickedTake: null,
+            selectedTake: null,
             takeCount: 0,
             audioState: 'not-generated',
             unavailableReason: 'Not generated yet',
@@ -230,7 +250,7 @@ describe('SceneShotDialogsTab', () => {
         castMemberImages={{}}
         productionPlan={dialogueProductionPlan(0, ['shot_001'], [
           dialogueChoice({
-            pickedTake: null,
+            selectedTake: null,
             takeCount: 0,
             audioState: 'not-generated',
           }),
@@ -276,7 +296,7 @@ describe('SceneShotDialogsTab', () => {
         onPlanRefresh={onPlanRefresh}
         productionPlan={dialogueProductionPlan(1, ['shot_001'], [
           dialogueChoice({
-            pickedTake: null,
+            selectedTake: null,
             audioState: 'no-selected-take',
             unavailableReason: 'No selected audio take',
           }),
@@ -571,7 +591,7 @@ function dialogueChoice(
     castMemberId: 'cast_urban',
     speakerName: 'Urban',
     plainText: 'Hold the line.',
-    pickedTake: {
+    selectedTake: {
       takeId: 'take_001',
       takeLabel: 'Take 1',
       createdAt: '2026-06-12T10:00:00.000Z',

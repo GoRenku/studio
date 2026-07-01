@@ -80,7 +80,8 @@ Use the focused documents below for current direction.
   not become a shot-generation reference.
 - Scene dialogue audio takes are durable scene dialogue media assets. Shot
   video generation references them through the public `scene-dialogue` subject
-  kind and resolves the current picked take at generation-request time.
+  kind and resolves the dialogue audio take selected by the shot-video take
+  direction at generation-request time.
 - Scene storyboard images are durable per-shot Assets. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
   sheet for batch prompting, but import stores only the cropped shot images as

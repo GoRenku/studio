@@ -380,7 +380,7 @@ describe('shot video take reference selection mutations', () => {
         sceneId: ids.sceneId,
         takeId: written.take.takeId,
         dialogueId: targetDialogueId,
-        dialogueAudioTakeId: generatedAudio!.pickedTakeId!,
+        dialogueAudioTakeId: generatedAudio!.takes[0]!.takeId,
       })
     ).rejects.toMatchObject({
       code: 'PROJECT_DATA431',

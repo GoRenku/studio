@@ -10,7 +10,6 @@ import type {
 } from '@/services/studio-project-contracts';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
-  deleteSceneDialogueAudioTake,
   readSceneDialogueAudioContext,
   type SceneDialogueAudioContextWithUrls,
 } from '@/services/studio-scene-dialogue-audio-api';
@@ -43,6 +42,7 @@ import { idleSaveNotification } from '../detail-save-notification';
 import { useSceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
 import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
+import { VoiceOverProfilePreview } from '../voice-over-profile-preview';
 
 interface SceneShotDialogsTabProps {
   projectName: string;
@@ -86,7 +86,7 @@ export function SceneShotDialogsTab({
         .map((choice) =>
           [
             choice.dialogueId,
-            choice.pickedTake?.takeId ?? 'none',
+            choice.selectedTake?.takeId ?? 'none',
             choice.takeCount,
             choice.audioState,
           ].join(':')
@@ -168,22 +168,6 @@ export function SceneShotDialogsTab({
     }
   };
 
-  const deleteTake = async (dialogueId: string, takeId: string) => {
-    setActionBusy(true);
-    try {
-      const report = await deleteSceneDialogueAudioTake(
-        projectName,
-        sceneId,
-        dialogueId,
-        takeId
-      );
-      setDialogueAudioContext(report.context);
-      await onPlanRefresh?.();
-    } finally {
-      setActionBusy(false);
-    }
-  };
-
   if (!choices.length) {
     return (
       <div className='py-4'>
@@ -214,7 +198,6 @@ export function SceneShotDialogsTab({
               updateReferenceInclusion(dependencyId, inclusion)
             }
             onPickTake={pickTake}
-            onDeleteTake={deleteTake}
           />
         ))}
       </div>
@@ -263,7 +246,6 @@ function SceneShotDialogueAudioReferenceCard({
   player,
   onToggleInclusion,
   onPickTake,
-  onDeleteTake,
 }: {
   choice: ShotVideoTakeDialogueAudioReferenceChoice;
   context: SceneDialogueAudioContextWithUrls | null;
@@ -275,24 +257,21 @@ function SceneShotDialogueAudioReferenceCard({
     inclusion: 'include' | 'exclude' | null
   ) => Promise<void>;
   onPickTake: (dialogueId: string, takeId: string) => Promise<void>;
-  onDeleteTake: (dialogueId: string, takeId: string) => Promise<void>;
 }) {
   const audio = context?.audioByDialogueId[choice.dialogueId] ?? null;
   const takes = audio?.takes ?? [];
-  const pickedTake = choice.pickedTake
-    ? takes.find((take) => take.takeId === choice.pickedTake?.takeId) ?? null
+  const selectedTake = choice.selectedTake
+    ? takes.find((take) => take.takeId === choice.selectedTake?.takeId) ?? null
     : null;
   const singleSelectableTake =
-    !pickedTake && choice.audioState === 'no-selected-take' && takes.length === 1
+    !selectedTake && choice.audioState === 'no-selected-take' && takes.length === 1
       ? takes[0]
       : null;
-  const progress = pickedTake ? player.progressByUrl[pickedTake.url] ?? 0 : 0;
-  const duration = pickedTake ? player.durationByUrl[pickedTake.url] ?? 0 : 0;
-  const isPlaying = pickedTake ? player.playingUrl === pickedTake.url : false;
+  const progress = selectedTake ? player.progressByUrl[selectedTake.url] ?? 0 : 0;
+  const duration = selectedTake ? player.durationByUrl[selectedTake.url] ?? 0 : 0;
+  const isPlaying = selectedTake ? player.playingUrl === selectedTake.url : false;
   const needsGeneration = choice.card.state === 'selected-planned';
-  const opensTakeDialog =
-    choice.takeCount > 1 ||
-    (choice.takeCount > 0 && choice.audioState === 'no-selected-take');
+  const opensTakeDialog = choice.takeCount > 1;
   const body = (
     <DialogueCardBody
       choice={choice}
@@ -321,7 +300,6 @@ function SceneShotDialogueAudioReferenceCard({
             actionDisabled={actionDisabled}
             player={player}
             onPickTake={onPickTake}
-            onDeleteTake={onDeleteTake}
           >
             {body}
           </SceneShotDialogueAudioTakesDialog>
@@ -366,10 +344,10 @@ function SceneShotDialogueAudioReferenceCard({
           type='button'
           variant='ghost'
           size='icon'
-          disabled={!pickedTake}
+          disabled={!selectedTake}
           onClick={() => {
-            if (pickedTake) {
-              player.toggle(pickedTake.url);
+            if (selectedTake) {
+              player.toggle(selectedTake.url);
             }
           }}
           aria-label={isPlaying ? 'Pause dialogue audio' : 'Play dialogue audio'}
@@ -389,8 +367,8 @@ function SceneShotDialogueAudioReferenceCard({
           sliderSize='sm'
           aria-label={`${choice.speakerName} dialogue playback position`}
           onValueChange={([seconds]) => {
-            if (pickedTake && seconds !== undefined) {
-              player.seek(pickedTake.url, seconds);
+            if (selectedTake && seconds !== undefined) {
+              player.seek(selectedTake.url, seconds);
             }
           }}
         />
@@ -423,18 +401,22 @@ function DialogueCardBody({
           alt={`${choice.speakerName} profile image`}
           className='size-14 shrink-0 rounded-md object-cover'
         />
+      ) : choice.speakerName === 'Narrator' ? (
+        <span className='size-14 shrink-0 overflow-hidden rounded-md'>
+          <VoiceOverProfilePreview size='compact' />
+        </span>
       ) : (
         <span
           className='size-14 shrink-0 rounded-md border border-border/45 bg-muted'
           aria-hidden
         />
       )}
-        <span className='flex min-w-0 flex-col gap-1'>
+      <span className='flex min-w-0 flex-col gap-1'>
         <span className='truncate text-sm font-semibold text-foreground'>
           {choice.speakerName}
         </span>
         <span className='truncate text-xs text-muted-foreground'>
-          {choice.pickedTake?.takeLabel ?? dialogueAudioStateLabel(choice)}
+          {choice.selectedTake?.takeLabel ?? dialogueAudioStateLabel(choice)}
         </span>
         {openable ? (
           <span className='text-xs text-muted-foreground'>
@@ -499,7 +481,6 @@ function SceneShotDialogueAudioTakesDialog({
   player,
   children,
   onPickTake,
-  onDeleteTake,
 }: {
   choice: ShotVideoTakeDialogueAudioReferenceChoice;
   takes: NonNullable<
@@ -509,7 +490,6 @@ function SceneShotDialogueAudioTakesDialog({
   player: ReturnType<typeof useSceneDialogueAudioPlayer>;
   children: ReactNode;
   onPickTake: (dialogueId: string, takeId: string) => Promise<void>;
-  onDeleteTake: (dialogueId: string, takeId: string) => Promise<void>;
 }) {
   const labels = useMemo(() => sceneDialogueAudioTakeLabels(takes), [takes]);
   const orderedTakes = useMemo(
@@ -546,11 +526,10 @@ function SceneShotDialogueAudioTakesDialog({
               key={take.takeId}
               actionDisabled={actionDisabled}
               label={labels.get(take.takeId) ?? 'Take'}
-              picked={choice.pickedTake?.takeId === take.takeId}
               player={player}
+              selected={choice.selectedTake?.takeId === take.takeId}
               take={take}
               onPickTake={(takeId) => onPickTake(choice.dialogueId, takeId)}
-              onDeleteTake={(takeId) => onDeleteTake(choice.dialogueId, takeId)}
             />
           ))}
         </div>

@@ -104,7 +104,6 @@ export function SceneNarrativeTab({
                     : `${block.type}-${index}`
                 }
                 block={block}
-                player={player}
                 resource={resource}
                 selectedDialogueId={activeDialogueId}
                 textPreview={
@@ -321,7 +320,6 @@ function SlugLine({
 
 function SceneBlock({
   block,
-  player,
   resource,
   selectedDialogueId,
   textPreview,
@@ -329,7 +327,6 @@ function SceneBlock({
   onSelect,
 }: {
   block: Block;
-  player: ReturnType<typeof useSceneDialogueAudioPlayer>;
   resource: SceneNarrativeResourceResponse;
   selectedDialogueId: string | null;
   textPreview: string | null;
@@ -349,7 +346,6 @@ function SceneBlock({
     return (
       <SceneDialogueCard
         block={block}
-        player={player}
         resource={resource}
         selected={Boolean(
           block.dialogueId && block.dialogueId === selectedDialogueId

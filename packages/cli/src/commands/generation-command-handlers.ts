@@ -67,10 +67,6 @@ export const generationCommandHandlers = [
     run: runDialogueAudioGenerate,
   },
   {
-    path: ['dialogue-audio', 'pick'],
-    run: runDialogueAudioPick,
-  },
-  {
     path: ['input', 'list'],
     run: runInputList,
   },
@@ -288,7 +284,6 @@ function dialogueAudioPlanItem(
     hasV3AudioTags: /\[[^\]]+\]/.test(v3Text),
     textTreatment: dialogueTextTreatment(modelChoice),
     existingTakeCount: audio?.takes.length ?? 0,
-    pickedTakeId: audio?.pickedTakeId ?? null,
     diagnostics: dialogueAudioPlanDiagnostics(dialogue, selectedVoice?.usable),
   };
 }
@@ -419,17 +414,6 @@ function canBulkGenerateDialogue(
   }
   const voices = context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [];
   return voices.some((voice) => voice.usable);
-}
-
-async function runDialogueAudioPick(
-  input: GenerationCommandInput,
-): Promise<unknown> {
-  return input.runtime.projectDataService.pickSceneDialogueAudioTake({
-    ...generationProjectInput(input.runtime),
-    sceneId: requiredFlag(input.flags.scene, '--scene'),
-    dialogueId: requiredFlag(input.flags.dialogue, '--dialogue'),
-    takeId: requiredFlag(input.flags.take, '--take'),
-  });
 }
 
 type GenerationCommandInput = Parameters<

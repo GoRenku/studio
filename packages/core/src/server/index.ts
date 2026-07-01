@@ -154,7 +154,6 @@ export type {
   ResolveProjectAssetFileInput,
   ResolveProjectCoverImageInput,
   ResolvedProjectAssetFile,
-  PickSceneDialogueAudioTakeInput,
   PlanMediaGenerationDependenciesInput,
   RecordLookbookImageGenerationRunInput,
   RecordLookbookSheetGenerationRunInput,

@@ -666,7 +666,7 @@ describe('shot video take preflight and validation', () => {
         dependencyId: sceneDialogueAudioDependencyId(dialogueBlock.dialogueId),
         dialogueId: dialogueBlock.dialogueId,
         plainText: dialogueBlock.lines.join('\n'),
-        pickedTake: null,
+        selectedTake: null,
         takeCount: 0,
         audioState: 'not-generated',
         defaultIncluded: true,
@@ -689,7 +689,7 @@ describe('shot video take preflight and validation', () => {
         ),
         dialogueId: unselectedDialogueBlock.dialogueId,
         plainText: unselectedDialogueBlock.lines.join('\n'),
-        pickedTake: null,
+        selectedTake: null,
         takeCount: 0,
         audioState: 'not-generated',
         defaultIncluded: false,
@@ -906,9 +906,11 @@ describe('shot video take preflight and validation', () => {
     const firstAudio = await projectData.generateSceneDialogueAudioTake(audioInput);
     const secondAudio = await projectData.generateSceneDialogueAudioTake(audioInput);
     const firstAudioTakeId =
-      firstAudio.context.audioByDialogueId[dialogueBlock.dialogueId]?.pickedTakeId;
+      firstAudio.context.audioByDialogueId[dialogueBlock.dialogueId]?.takes[0]?.takeId;
     const secondAudioTakeId =
-      secondAudio.context.audioByDialogueId[dialogueBlock.dialogueId]?.pickedTakeId;
+      secondAudio.context.audioByDialogueId[dialogueBlock.dialogueId]?.takes.find(
+        (take) => take.takeId !== firstAudioTakeId
+      )?.takeId;
     if (!firstAudioTakeId || !secondAudioTakeId) {
       throw new Error('Expected generated dialogue audio takes.');
     }
@@ -1045,12 +1047,12 @@ describe('shot video take preflight and validation', () => {
     expect(
       shotOneReport.references.dialogueAudio.find(
         (choice) => choice.dialogueId === dialogueBlock.dialogueId
-      )?.pickedTake?.takeId
+      )?.selectedTake?.takeId
     ).toBe(firstAudioTakeId);
     expect(
       shotTwoReport.references.dialogueAudio.find(
         (choice) => choice.dialogueId === dialogueBlock.dialogueId
-      )?.pickedTake?.takeId
+      )?.selectedTake?.takeId
     ).toBe(secondAudioTakeId);
     expect(
       shotOneReport.references.dialogueAudio.find(
@@ -1205,7 +1207,7 @@ function dialogueCapabilityChoice(
     speakerName: 'Urban',
     plainText: 'Hold the line.',
     audioState: 'ready',
-    pickedTake: {
+    selectedTake: {
       takeId: 'take_001',
       takeLabel: 'Take 1',
       createdAt: '2026-06-12T10:00:00.000Z',

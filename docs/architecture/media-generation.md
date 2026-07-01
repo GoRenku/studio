@@ -96,9 +96,9 @@ selected general reference.
 
 Shot-video dialogue audio references use the public subject kind
 `scene-dialogue` and the dependency kind `reference-audio`. The dependency id is
-keyed by dialogue id, not by the currently picked take asset id, so changing the
-picked dialogue take keeps the same user selection while generation resolves the
-current picked audio file at request time.
+keyed by dialogue id, not by a take asset id. Dialogs stores the selected
+dialogue audio take in the shot-video take direction, and generation resolves
+that selected take to the concrete audio file at request time.
 
 Selectors must state their defaulting policy explicitly. `selected-only`
 selectors use only a concrete selected asset or sheet. `selected-or-default`

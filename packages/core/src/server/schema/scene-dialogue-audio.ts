@@ -24,7 +24,6 @@ export const sceneDialogueAudio = sqliteTable(
     voiceSettingsJson: text('voice_settings_json').notNull(),
     outputFormat: text('output_format').notNull(),
     languageCode: text('language_code'),
-    pickedTakeId: text('picked_take_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

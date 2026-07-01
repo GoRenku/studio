@@ -68,7 +68,7 @@ describe('Scene Dialogue Audio generation', () => {
     });
   });
 
-  it('creates and picks a simulated audio take from the shared generation runner output', async () => {
+  it('creates a simulated audio take from the shared generation runner output without selecting it', async () => {
     await writeProjectFile(
       'generated/audio/urban-sample.mp3',
       'voice sample bytes',
@@ -117,11 +117,9 @@ describe('Scene Dialogue Audio generation', () => {
     const audio = report.context.audioByDialogueId[dialogueId];
     expect(audio).toMatchObject({
       dialogueId,
-      pickedTakeId: expect.any(String),
       v3Text: 'Bronze has no temper. [shouts] Men give it one.',
       takes: [
         expect.objectContaining({
-          picked: true,
           modelChoice: 'elevenlabs/eleven_v3',
           providerTextSnapshot:
             'Bronze has no temper. [shouts] Men give it one.',

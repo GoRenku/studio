@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Block } from '@gorenku/studio-core/client';
-import { Pause, Volume2 } from 'lucide-react';
+import { Volume2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import {
   Tooltip,
@@ -10,11 +10,9 @@ import {
 import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import type { SceneDialogueAudioContextWithUrls } from '@/services/studio-scene-dialogue-audio-api';
-import type { SceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
 
 interface SceneDialogueCardProps {
   block: Extract<Block, { type: 'dialogue' }>;
-  player: SceneDialogueAudioPlayer;
   resource: SceneNarrativeResourceResponse;
   selected: boolean;
   textPreview?: string | null;
@@ -24,7 +22,6 @@ interface SceneDialogueCardProps {
 
 export function SceneDialogueCard({
   block,
-  player,
   resource,
   selected,
   textPreview,
@@ -42,10 +39,7 @@ export function SceneDialogueCard({
   const savedAudio = dialogueId
     ? dialogueAudio.audioByDialogueId[dialogueId] ?? null
     : null;
-  const pickedTake = dialogueId
-    ? savedAudio?.takes.find((take) => take.picked)
-    : null;
-  const pickedTakeUrl = pickedTake?.url ?? null;
+  const hasGeneratedAudio = Boolean(savedAudio?.takes.length);
   const displayText =
     textPreview ??
     (savedAudio
@@ -69,9 +63,6 @@ export function SceneDialogueCard({
   ) : (
     <span>{characterName}</span>
   );
-  const isPickedTakePlaying =
-    Boolean(pickedTakeUrl) && player.playingUrl === pickedTakeUrl;
-
   return (
     <div
       className={cn(
@@ -83,7 +74,7 @@ export function SceneDialogueCard({
     >
       <div className='grid grid-cols-[1.75rem_minmax(0,1fr)_1.75rem] items-center gap-2 text-center text-[12.5px] font-semibold uppercase tracking-[0.18em] text-primary'>
         <span className='flex h-7 items-center justify-center'>
-          {pickedTakeUrl ? (
+          {dialogueId && hasGeneratedAudio ? (
             <Button
               type='button'
               variant='ghost'
@@ -92,18 +83,10 @@ export function SceneDialogueCard({
                 'h-7 w-7 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100',
                 selected ? 'opacity-100' : 'opacity-0'
               )}
-              onClick={() => player.toggle(pickedTakeUrl)}
-              aria-label={
-                isPickedTakePlaying
-                  ? 'Pause dialogue audio'
-                  : 'Play dialogue audio'
-              }
+              onClick={() => onOpenDialogueAudio(dialogueId)}
+              aria-label='Open dialogue audio takes'
             >
-              {isPickedTakePlaying ? (
-                <Pause className='h-3.5 w-3.5' aria-hidden />
-              ) : (
-                <Volume2 className='h-3.5 w-3.5' aria-hidden />
-              )}
+              <Volume2 className='h-3.5 w-3.5' aria-hidden />
             </Button>
           ) : null}
         </span>

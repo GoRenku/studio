@@ -35,8 +35,8 @@ export interface ResolvedShotDialogueAudioReference {
     | 'not-generated'
     | 'no-selected-take'
     | 'missing-file';
-  pickedTake: SceneDialogueAudioTake | null;
-  pickedTakeLabel: string | null;
+  selectedTake: SceneDialogueAudioTake | null;
+  selectedTakeLabel: string | null;
   takeCount: number;
   unavailableReason: string | null;
   diagnostics: DiagnosticIssue[];
@@ -117,12 +117,12 @@ export function resolveShotDialogueAudioReferences(input: {
     const selectedTakeId = input.editorDirection
       ? selectedDialogueAudioTakeIdForEditorDirection(input.editorDirection, dialogueId)
       : selectedDialogueAudioTakeIdForGenerationContext(input.context, dialogueId);
-    const pickedTake =
+    const selectedTake =
       selectedTakeId && audio
         ? audio.takes.find((take) => take.takeId === selectedTakeId) ?? null
         : null;
-    const takeLabel = pickedTake && audio
-      ? takeLabels(audio.takes).get(pickedTake.takeId) ?? 'Take'
+    const takeLabel = selectedTake && audio
+      ? takeLabels(audio.takes).get(selectedTake.takeId) ?? 'Take'
       : null;
     const referenceDiagnostics: DiagnosticIssue[] = [];
     let unavailableReason: string | null = null;
@@ -131,7 +131,7 @@ export function resolveShotDialogueAudioReferences(input: {
     if (!audio || audio.takes.length === 0) {
       unavailableReason = 'Not generated yet';
       audioState = 'not-generated';
-    } else if (!pickedTake) {
+    } else if (!selectedTake) {
       unavailableReason = 'No selected audio take';
       audioState = 'no-selected-take';
       referenceDiagnostics.push(
@@ -152,17 +152,17 @@ export function resolveShotDialogueAudioReferences(input: {
       );
     } else if (
       !readAssetFileRecord(input.session, {
-        assetId: pickedTake.assetId,
-        assetFileId: pickedTake.assetFileId,
+        assetId: selectedTake.assetId,
+        assetFileId: selectedTake.assetFileId,
       })
     ) {
-      unavailableReason = 'Picked audio take file is missing';
+      unavailableReason = 'Selected audio take file is missing';
       audioState = 'missing-file';
       referenceDiagnostics.push(
         createDiagnosticError(
           'CORE_SHOT_DIALOGUE_AUDIO_ASSET_FILE_MISSING',
           'Selected dialogue audio take does not resolve to an asset file.',
-          { path: ['sceneDialogueAudio', dialogueId, 'takes', pickedTake.takeId] },
+          { path: ['sceneDialogueAudio', dialogueId, 'takes', selectedTake.takeId] },
           'Regenerate or import the dialogue audio take before using it as a video reference.'
         )
       );
@@ -179,8 +179,8 @@ export function resolveShotDialogueAudioReferences(input: {
       plainText: dialogueBlock.lines.join('\n') || audio?.plainText || '',
       defaultIncluded: defaultDialogueIds.has(dialogueId),
       audioState,
-      pickedTake,
-      pickedTakeLabel: takeLabel,
+      selectedTake,
+      selectedTakeLabel: takeLabel,
       takeCount: audio?.takes.length ?? 0,
       unavailableReason,
       diagnostics: referenceDiagnostics,

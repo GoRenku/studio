@@ -190,7 +190,7 @@ export async function createShotVideoTakeReferenceSelectionFixture(
     lookbookSheetId: lookbookSheet.imported.id,
     dialogueAudioTakeId:
       dialogueAudio.context.audioByDialogueId[fixture.ids.dialogueId]!
-        .pickedTakeId!,
+        .takes[0]!.takeId,
   };
 }
 

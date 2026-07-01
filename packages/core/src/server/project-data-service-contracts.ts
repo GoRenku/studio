@@ -444,7 +444,6 @@ export interface ProjectDataService {
   estimateSceneDialogueAudioDraft(input: CreateSceneDialogueAudioGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   updateSceneDialogueAudioSetup(input: UpdateSceneDialogueAudioSetupInput): Promise<SceneDialogueAudioMutationReport>;
   generateSceneDialogueAudioTake(input: GenerateSceneDialogueAudioTakeInput): Promise<SceneDialogueAudioMutationReport>;
-  pickSceneDialogueAudioTake(input: PickSceneDialogueAudioTakeInput): Promise<SceneDialogueAudioMutationReport>;
   deleteSceneDialogueAudioTake(input: DeleteSceneDialogueAudioTakeInput): Promise<SceneDialogueAudioMutationReport>;
   buildLocationEnvironmentSheetContext(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetGenerationContext>;
   listLocationEnvironmentSheetModels(input: LocationMediaGenerationContextInput): Promise<LocationEnvironmentSheetModelListReport>;
@@ -1254,15 +1253,12 @@ export interface UpdateSceneDialogueAudioSetupInput extends RenkuConfigPathOptio
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface PickSceneDialogueAudioTakeInput extends RenkuConfigPathOptions {
+export interface DeleteSceneDialogueAudioTakeInput extends RenkuConfigPathOptions {
   projectName?: string;
   sceneId: string;
   dialogueId: string;
   takeId: string;
 }
-
-export interface DeleteSceneDialogueAudioTakeInput
-  extends PickSceneDialogueAudioTakeInput {}
 
 export interface ReadMediaGenerationSpecInput extends RenkuConfigPathOptions {
   projectName?: string;

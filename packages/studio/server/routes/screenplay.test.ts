@@ -16,6 +16,17 @@ function createMountedScreenplayRoute() {
 }
 
 describe('screenplay Hono route', () => {
+  it('does not expose a scene dialogue audio pick route', async () => {
+    const app = createMountedScreenplayRoute();
+
+    const response = await app.request(
+      '/constantinople/screenplay/scenes/scene_opening/dialogue-audio/dialogue_urban/takes/take_001/pick',
+      { method: 'POST' }
+    );
+
+    expect(response.status).toBe(404);
+  });
+
   it('serves cast and location resources with HTTP image URLs only added by the response adapter', async () => {
     const firstImage = {
       assetId: 'asset_reference',

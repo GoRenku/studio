@@ -305,6 +305,7 @@ describe('media generation dependency inventory estimates integration', () => {
               purpose: 'shot.first-frame',
               dependencyKind: 'first-frame',
               outputInputKind: 'first-frame',
+              referenceMode: 'movie-lookbook',
               prompt:
                 'Author the exact first frame: Mehmed at the map table in a wide, eye-level, centered composition with restrained warm lamplight and the selected cast, location, and lookbook continuity.',
               title: 'Map study first frame',

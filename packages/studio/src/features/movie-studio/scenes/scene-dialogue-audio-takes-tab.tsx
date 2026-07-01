@@ -14,8 +14,8 @@ interface SceneDialogueAudioTakesTabProps {
   actionDisabled: boolean;
   player: SceneDialogueAudioPlayer;
   takes: SceneDialogueAudioTakeWithUrl[];
-  onDeleteTake: (takeId: string) => void;
-  onPickTake: (takeId: string) => void;
+  onDeleteTake?: (takeId: string) => void;
+  onPickTake?: (takeId: string) => void;
 }
 
 export function SceneDialogueAudioTakesTab({
@@ -47,8 +47,8 @@ export function SceneDialogueAudioTakesTab({
           key={take.takeId}
           actionDisabled={actionDisabled}
           label={labels.get(take.takeId) ?? 'Take'}
-          picked={take.picked}
           player={player}
+          selected={false}
           take={take}
           onDeleteTake={onDeleteTake}
           onPickTake={onPickTake}
@@ -61,19 +61,19 @@ export function SceneDialogueAudioTakesTab({
 export function SceneDialogueAudioTakeRow({
   actionDisabled,
   label,
-  picked,
   player,
+  selected = false,
   take,
   onDeleteTake,
   onPickTake,
 }: {
   actionDisabled: boolean;
   label: string;
-  picked: boolean;
   player: SceneDialogueAudioPlayer;
+  selected?: boolean;
   take: SceneDialogueAudioTakeWithUrl;
-  onDeleteTake: (takeId: string) => void;
-  onPickTake: (takeId: string) => void;
+  onDeleteTake?: (takeId: string) => void;
+  onPickTake?: (takeId: string) => void;
 }) {
   const progress = player.progressByUrl[take.url] ?? 0;
   const duration = player.durationByUrl[take.url] ?? 0;
@@ -83,7 +83,7 @@ export function SceneDialogueAudioTakeRow({
     <div
       className={cn(
         'flex flex-col gap-3 rounded-md border bg-muted/15 px-3 py-3',
-        picked
+        selected
           ? 'border-item-active-border bg-item-active-bg/70'
           : 'border-border/45'
       )}
@@ -92,9 +92,9 @@ export function SceneDialogueAudioTakeRow({
         <div className='flex min-w-0 flex-col gap-1'>
           <div className='flex items-center gap-2'>
             <span className='text-sm font-semibold text-foreground'>{label}</span>
-            {picked ? (
+            {selected ? (
               <span className='rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary'>
-                Picked
+                Selected
               </span>
             ) : null}
           </div>
@@ -116,25 +116,29 @@ export function SceneDialogueAudioTakeRow({
               <Play className='h-4 w-4' aria-hidden />
             )}
           </Button>
-          <Button
-            type='button'
-            variant={picked ? 'secondary' : 'outline'}
-            size='sm'
-            disabled={actionDisabled || picked}
-            onClick={() => onPickTake(take.takeId)}
-          >
-            Pick
-          </Button>
-          <Button
-            type='button'
-            variant='ghost'
-            size='icon'
-            disabled={actionDisabled}
-            onClick={() => onDeleteTake(take.takeId)}
-            aria-label={`Delete ${label}`}
-          >
-            <Trash2 className='h-4 w-4' aria-hidden />
-          </Button>
+          {onPickTake ? (
+            <Button
+              type='button'
+              variant={selected ? 'secondary' : 'outline'}
+              size='sm'
+              disabled={actionDisabled || selected}
+              onClick={() => onPickTake(take.takeId)}
+            >
+              Pick
+            </Button>
+          ) : null}
+          {onDeleteTake ? (
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              disabled={actionDisabled}
+              onClick={() => onDeleteTake(take.takeId)}
+              aria-label={`Delete ${label}`}
+            >
+              <Trash2 className='h-4 w-4' aria-hidden />
+            </Button>
+          ) : null}
         </div>
       </div>
 

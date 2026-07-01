@@ -45,7 +45,6 @@ import {
   insertSceneDialogueAudioTakeRecord,
   listSceneDialogueAudioRecords,
   listSceneDialogueAudioTakeRecords,
-  pickSceneDialogueAudioTakeRecord,
   readSceneDialogueAudioRecord,
   toSceneDialogueAudio,
   upsertSceneDialogueAudioRecord,
@@ -132,14 +131,12 @@ export interface UpdateSceneDialogueAudioSetupInput extends RenkuConfigPathOptio
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface PickSceneDialogueAudioTakeInput extends RenkuConfigPathOptions {
+export interface DeleteSceneDialogueAudioTakeInput extends RenkuConfigPathOptions {
   projectName?: string;
   sceneId: string;
   dialogueId: string;
   takeId: string;
 }
-
-export interface DeleteSceneDialogueAudioTakeInput extends PickSceneDialogueAudioTakeInput {}
 
 interface NormalizedSceneDialogueAudioSpec {
   spec: SceneDialogueAudioGenerationSpec;
@@ -545,7 +542,7 @@ export async function generateSceneDialogueAudioTake(
         }),
         now,
       });
-      const take = insertSceneDialogueAudioTakeRecord(session, {
+      insertSceneDialogueAudioTakeRecord(session, {
         id: takeId,
         sceneDialogueAudioId: audioRecord.id,
         assetId,
@@ -565,31 +562,8 @@ export async function generateSceneDialogueAudioTake(
         languageCode: normalized.spec.languageCode ?? null,
         now,
       });
-      pickSceneDialogueAudioTakeRecord(session, {
-        sceneDialogueAudioId: audioRecord.id,
-        takeId: take.id,
-        updatedAt: now,
-      });
     },
   );
-  return mutationReport(input);
-}
-
-export async function pickSceneDialogueAudioTake(
-  input: PickSceneDialogueAudioTakeInput,
-): Promise<SceneDialogueAudioMutationReport> {
-  await withSceneDialogueAudioProjectSession(input, ({ session }) => {
-    const audio = requireAudioForDialogue(
-      session,
-      input.sceneId,
-      input.dialogueId,
-    );
-    pickSceneDialogueAudioTakeRecord(session, {
-      sceneDialogueAudioId: audio.id,
-      takeId: input.takeId,
-      updatedAt: new Date().toISOString(),
-    });
-  });
   return mutationReport(input);
 }
 

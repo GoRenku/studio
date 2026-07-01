@@ -389,28 +389,28 @@ export function dialogueAudioInputsForContext(
     if (!inclusion.included) {
       continue;
     }
-    if (!reference.pickedTake) {
+    if (!reference.selectedTake) {
       if (reference.audioState !== 'not-generated') {
         issues.push(...reference.diagnostics);
       }
       continue;
     }
     const file = readAssetFileRecord(session, {
-      assetId: reference.pickedTake.assetId,
-      assetFileId: reference.pickedTake.assetFileId,
+      assetId: reference.selectedTake.assetId,
+      assetFileId: reference.selectedTake.assetFileId,
     });
     if (!file) {
       issues.push(...reference.diagnostics);
       continue;
     }
-    const key = `${reference.dialogueId}:${reference.pickedTake.assetFileId}`;
+    const key = `${reference.dialogueId}:${reference.selectedTake.assetFileId}`;
     if (inputs.has(key)) {
       continue;
     }
     inputs.set(key, {
       kind: 'audio',
-      assetId: reference.pickedTake.assetId,
-      assetFileId: reference.pickedTake.assetFileId,
+      assetId: reference.selectedTake.assetId,
+      assetFileId: reference.selectedTake.assetFileId,
       role: 'dialogue_audio',
       mediaKind: 'audio',
       projectRelativePath: file.projectRelativePath as ProjectRelativePath,

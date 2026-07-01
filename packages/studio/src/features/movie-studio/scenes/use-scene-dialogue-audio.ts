@@ -7,7 +7,6 @@ import type {
 import {
   estimateSceneDialogueAudioDraft,
   generateSceneDialogueAudioTake,
-  pickSceneDialogueAudioTake,
   deleteSceneDialogueAudioTake,
   saveSceneDialogueAudioSetup,
   type SceneDialogueAudioContextWithUrls,
@@ -350,24 +349,6 @@ export function useSceneDialogueAudio(input: {
     specSignature,
   ]);
 
-  const pickTake = useCallback(
-    async (takeId: string) => {
-      setActionBusy(true);
-      try {
-        const report = await pickSceneDialogueAudioTake(
-          projectName,
-          sceneId,
-          dialogueId,
-          takeId
-        );
-        onContextChange(report.context);
-      } finally {
-        setActionBusy(false);
-      }
-    },
-    [dialogueId, onContextChange, projectName, sceneId]
-  );
-
   const deleteTake = useCallback(
     async (takeId: string) => {
       setActionBusy(true);
@@ -406,7 +387,6 @@ export function useSceneDialogueAudio(input: {
     chooseModel,
     deleteTake,
     generateTake,
-    pickTake,
     resetAdvancedValues,
     updateDraft,
     updateVoiceSettings,

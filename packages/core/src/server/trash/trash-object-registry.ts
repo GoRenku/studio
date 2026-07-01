@@ -3,7 +3,7 @@ import {
   createDiagnosticWarning,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
-import { and, desc, eq, isNull, ne, or } from 'drizzle-orm';
+import { and, eq, isNull, ne, or } from 'drizzle-orm';
 import type { AssetTarget, TrashItemKind } from '../../client/index.js';
 import {
   discardAssetRelationshipRecord,
@@ -28,7 +28,6 @@ import {
   storyboardLookbookSourceMovies,
   projectAssets,
   sceneAssets,
-  sceneDialogueAudio,
   sceneDialogueAudioTakes,
   sceneShotVideoTakeMediaInputs,
   sceneShotVideoTakeMediaInputShots,
@@ -595,11 +594,6 @@ const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
     if (!take) {
       return [];
     }
-    const audio = input.session.db
-      .select()
-      .from(sceneDialogueAudio)
-      .where(eq(sceneDialogueAudio.id, take.sceneDialogueAudioId))
-      .get();
     return [
       {
         itemKind: 'sceneDialogueAudioTake',
@@ -610,7 +604,6 @@ const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
         restoreSnapshot: {
           sceneDialogueAudioId: take.sceneDialogueAudioId,
           assetId: take.assetId,
-          wasPicked: audio?.pickedTakeId === take.id,
         },
       },
     ];
@@ -634,63 +627,14 @@ const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
       })
       .where(eq(sceneDialogueAudioTakes.id, input.itemId))
       .run();
-    const audio = input.session.db
-      .select()
-      .from(sceneDialogueAudio)
-      .where(eq(sceneDialogueAudio.id, take.sceneDialogueAudioId))
-      .get();
-    if (audio?.pickedTakeId === take.id) {
-      const promoted = input.session.db
-        .select()
-        .from(sceneDialogueAudioTakes)
-        .where(
-          and(
-            eq(sceneDialogueAudioTakes.sceneDialogueAudioId, take.sceneDialogueAudioId),
-            isNull(sceneDialogueAudioTakes.discardedAt)
-          )
-        )
-        .orderBy(desc(sceneDialogueAudioTakes.createdAt), desc(sceneDialogueAudioTakes.id))
-        .get();
-      input.session.db
-        .update(sceneDialogueAudio)
-        .set({ pickedTakeId: promoted?.id ?? null, updatedAt: input.now })
-        .where(eq(sceneDialogueAudio.id, take.sceneDialogueAudioId))
-        .run();
-    }
   },
   applyRestore(input) {
-    const snapshot = requireDialogueTakeSnapshot(input.snapshot, input.trashItem.id);
     input.session.db
       .update(sceneDialogueAudioTakes)
       .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
       .where(eq(sceneDialogueAudioTakes.id, input.trashItem.itemId))
       .run();
-    const warnings: DiagnosticIssue[] = [];
-    if (snapshot.wasPicked) {
-      const audio = input.session.db
-        .select({ pickedTakeId: sceneDialogueAudio.pickedTakeId })
-        .from(sceneDialogueAudio)
-        .where(eq(sceneDialogueAudio.id, snapshot.sceneDialogueAudioId))
-        .get();
-      if (audio?.pickedTakeId && audio.pickedTakeId !== input.trashItem.itemId) {
-        warnings.push(
-          restoreConflictWarning({
-            path: ['trashItem', input.trashItem.id, 'pickedTakeId'],
-            message:
-              'The restored Scene Dialogue Audio take was not made picked because another active take is picked.',
-            suggestion:
-              'Review the active picked take before changing the dialogue audio pick.',
-          })
-        );
-      } else {
-        input.session.db
-          .update(sceneDialogueAudio)
-          .set({ pickedTakeId: input.trashItem.itemId, updatedAt: input.now })
-          .where(eq(sceneDialogueAudio.id, snapshot.sceneDialogueAudioId))
-          .run();
-      }
-    }
-    return warnings;
+    return [];
   },
   collectFiles(input) {
     const snapshot = requireDialogueTakeSnapshot(input.snapshot, input.trashItem.id);
@@ -1752,16 +1696,14 @@ function requireCastVoiceSnapshot(
 function requireDialogueTakeSnapshot(
   snapshot: Record<string, unknown>,
   trashItemId: string
-): { sceneDialogueAudioId: string; assetId: string; wasPicked: boolean } {
+): { sceneDialogueAudioId: string; assetId: string } {
   if (
     typeof snapshot.sceneDialogueAudioId === 'string' &&
-    typeof snapshot.assetId === 'string' &&
-    typeof snapshot.wasPicked === 'boolean'
+    typeof snapshot.assetId === 'string'
   ) {
     return {
       sceneDialogueAudioId: snapshot.sceneDialogueAudioId,
       assetId: snapshot.assetId,
-      wasPicked: snapshot.wasPicked,
     };
   }
   throw new ProjectDataError(

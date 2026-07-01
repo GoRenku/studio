@@ -194,6 +194,7 @@ describe('shot video take preflight and validation', () => {
               purpose: 'shot.first-frame',
               dependencyKind: 'first-frame',
               outputInputKind: 'first-frame',
+              referenceMode: 'movie-lookbook',
               modelChoice: 'fal-ai/openai/gpt-image-2',
               prompt: 'First frame for the map-table shot.',
               parameterValues: {

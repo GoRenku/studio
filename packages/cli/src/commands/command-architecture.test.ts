@@ -30,7 +30,6 @@ describe('CLI command architecture', () => {
       'preflight',
       'dialogue-audio plan',
       'dialogue-audio generate',
-      'dialogue-audio pick',
       'input list',
       'input select',
       'input clear',

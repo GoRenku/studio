@@ -61,8 +61,7 @@ export function generationResourceChangedReport(
     mutationPath !== 'input select' &&
     mutationPath !== 'input clear' &&
     mutationPath !== 'input delete' &&
-    mutationPath !== 'dialogue-audio generate' &&
-    mutationPath !== 'dialogue-audio pick'
+    mutationPath !== 'dialogue-audio generate'
   ) {
     return null;
   }

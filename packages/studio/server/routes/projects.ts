@@ -54,7 +54,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'estimateSceneDialogueAudioDraft'
   | 'updateSceneDialogueAudioSetup'
   | 'generateSceneDialogueAudioTake'
-  | 'pickSceneDialogueAudioTake'
   | 'deleteSceneDialogueAudioTake'
   | 'readSceneShotListResource'
   | 'createSceneShotVideoTake'

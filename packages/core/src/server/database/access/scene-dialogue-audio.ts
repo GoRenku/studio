@@ -113,7 +113,6 @@ export function upsertSceneDialogueAudioRecord(
       sceneId: input.sceneId,
       dialogueId: input.dialogueId,
       ...values,
-      pickedTakeId: null,
       createdAt: input.now,
     })
     .run();
@@ -216,32 +215,10 @@ export function readSceneDialogueAudioTakeRecord(
   );
 }
 
-export function pickSceneDialogueAudioTakeRecord(
-  session: DatabaseSession,
-  input: { sceneDialogueAudioId: string; takeId: string; updatedAt: string }
-): void {
-  const take = readSceneDialogueAudioTakeRecord(session, input);
-  if (!take) {
-    throw new ProjectDataError(
-      'PROJECT_DATA382',
-      `Scene Dialogue Audio take does not belong to this dialogue: ${input.takeId}.`
-    );
-  }
-  session.db
-    .update(sceneDialogueAudio)
-    .set({ pickedTakeId: input.takeId, updatedAt: input.updatedAt })
-    .where(eq(sceneDialogueAudio.id, input.sceneDialogueAudioId))
-    .run();
-}
-
 export function deleteSceneDialogueAudioTakeRecord(
   session: DatabaseSession,
   input: { sceneDialogueAudioId: string; takeId: string; updatedAt: string }
 ): void {
-  const audio = requireSceneDialogueAudioRecordById(
-    session,
-    input.sceneDialogueAudioId
-  );
   const take = readSceneDialogueAudioTakeRecord(session, input);
   if (!take) {
     throw new ProjectDataError(
@@ -258,21 +235,6 @@ export function deleteSceneDialogueAudioTakeRecord(
       updatedAt: input.updatedAt,
     })
     .where(eq(sceneDialogueAudioTakes.id, input.takeId))
-    .run();
-  if (audio.pickedTakeId !== input.takeId) {
-    return;
-  }
-  const promoted = listSceneDialogueAudioTakeRecords(
-    session,
-    input.sceneDialogueAudioId
-  )[0];
-  session.db
-    .update(sceneDialogueAudio)
-    .set({
-      pickedTakeId: promoted?.id ?? null,
-      updatedAt: input.updatedAt,
-    })
-    .where(eq(sceneDialogueAudio.id, input.sceneDialogueAudioId))
     .run();
 }
 
@@ -292,19 +254,13 @@ export function toSceneDialogueAudio(
     voiceSettings: parseVoiceSettings(record.voiceSettingsJson),
     outputFormat: record.outputFormat,
     languageCode: record.languageCode,
-    pickedTakeId: record.pickedTakeId,
-    takes: takes.map((take) =>
-      toSceneDialogueAudioTake(take, take.id === record.pickedTakeId)
-    ),
+    takes: takes.map((take) => toSceneDialogueAudioTake(take)),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
 }
 
-export function toSceneDialogueAudioTake(
-  record: SceneDialogueAudioTakeRecord,
-  picked: boolean
-): SceneDialogueAudioTake {
+export function toSceneDialogueAudioTake(record: SceneDialogueAudioTakeRecord): SceneDialogueAudioTake {
   return {
     takeId: record.id,
     sceneDialogueAudioId: record.sceneDialogueAudioId,
@@ -323,7 +279,6 @@ export function toSceneDialogueAudioTake(
     voiceSettingsSnapshot: parseVoiceSettings(record.voiceSettingsSnapshotJson),
     outputFormat: record.outputFormat,
     languageCode: record.languageCode,
-    picked,
     createdAt: record.createdAt,
   };
 }

@@ -312,27 +312,6 @@ export function createScreenplayRoute({
         }
       }
     )
-    .post(
-      '/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/takes/:takeId/pick',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const dialogueId = c.req.param('dialogueId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const report = await projectData.pickSceneDialogueAudioTake({
-            projectName,
-            sceneId,
-            dialogueId,
-            takeId,
-          });
-          return c.json(report);
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
     .delete(
       '/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/takes/:takeId',
       requireToken,

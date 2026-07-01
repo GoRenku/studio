@@ -226,8 +226,8 @@ The Studio shot Dialogs tab displays scene dialogue audio references for the
 selected shot-video take. Dialogue audio reference dependencies
 use dependency kind `reference-audio` and subject kind `scene-dialogue`. Their
 dependency ids are stable by screenplay dialogue id, while preflight and final
-generation resolve the current picked dialogue audio take to the concrete audio
-asset file.
+generation resolve the shot-video direction's selected dialogue audio take to
+the concrete audio asset file.
 
 Shot Video Takes persist an explicit structure mode in
 `SceneShotVideoTakeState.version: 2`. In `continuous` mode, grouped shot ids are
@@ -291,9 +291,9 @@ dependency id strings to infer behavior.
 
 Scene dialogue audio shot-video ids intentionally use the dialogue id rather
 than a take id or asset file id. This lets a user keep a dialogue reference
-selected while choosing a different picked audio take; the final generation
-request snapshots the resolved asset file that was picked at request creation
-time.
+selected while changing the shot-video direction's selected dialogue audio take;
+the final generation request snapshots the resolved asset file selected at
+request creation time.
 
 Selectors must name their selection policy:
 

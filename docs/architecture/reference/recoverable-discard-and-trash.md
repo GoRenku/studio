@@ -24,8 +24,9 @@ Current conflict examples:
   take when another active input is already selected for the same slot.
 - A restored Scene Shot Video Take that used to be picked is restored as
   unpicked when another active take is already picked for the scene.
-- A restored Scene Dialogue Audio take that used to be picked does not overwrite
-  another active picked dialogue take.
+- A restored Scene Dialogue Audio take is restored as media only. Shot-video
+  take dialogue selections are validated separately through selected-take
+  diagnostics.
 
 ## Replacement Flow Audit
 

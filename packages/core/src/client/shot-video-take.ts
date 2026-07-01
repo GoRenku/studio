@@ -894,7 +894,7 @@ export interface ShotVideoTakeDialogueAudioReferenceChoice {
     | 'not-generated'
     | 'no-selected-take'
     | 'missing-file';
-  pickedTake: {
+  selectedTake: {
     takeId: string;
     takeLabel: string;
     createdAt: string;

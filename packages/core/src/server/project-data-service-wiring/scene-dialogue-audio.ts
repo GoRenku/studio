@@ -13,7 +13,6 @@ type SceneDialogueAudioMethods = Pick<
   | 'estimateSceneDialogueAudioDraft'
   | 'updateSceneDialogueAudioSetup'
   | 'generateSceneDialogueAudioTake'
-  | 'pickSceneDialogueAudioTake'
   | 'deleteSceneDialogueAudioTake'
 >;
 
@@ -29,7 +28,6 @@ export function createSceneDialogueAudioServiceWiring(): SceneDialogueAudioMetho
     estimateSceneDialogueAudioDraft: sceneDialogueAudio.estimateSceneDialogueAudioDraft,
     updateSceneDialogueAudioSetup: sceneDialogueAudio.updateSceneDialogueAudioSetup,
     generateSceneDialogueAudioTake: sceneDialogueAudio.generateSceneDialogueAudioTake,
-    pickSceneDialogueAudioTake: sceneDialogueAudio.pickSceneDialogueAudioTake,
     deleteSceneDialogueAudioTake: sceneDialogueAudio.deleteSceneDialogueAudioTake,
   };
 }

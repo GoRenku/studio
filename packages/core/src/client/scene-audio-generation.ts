@@ -43,7 +43,6 @@ export interface SceneDialogueAudio {
   voiceSettings: SceneDialogueAudioVoiceSettings;
   outputFormat: string;
   languageCode: string | null;
-  pickedTakeId: string | null;
   takes: SceneDialogueAudioTake[];
   createdAt: string;
   updatedAt: string;
@@ -67,7 +66,6 @@ export interface SceneDialogueAudioTake {
   voiceSettingsSnapshot: SceneDialogueAudioVoiceSettings;
   outputFormat: string;
   languageCode: string | null;
-  picked: boolean;
   createdAt: string;
 }
 

@@ -353,12 +353,6 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
-    async pickSceneDialogueAudioTake() {
-      return {
-        context: makeSceneDialogueAudioContext(project),
-        resourceKeys: [],
-      };
-    },
     async deleteSceneDialogueAudioTake() {
       return {
         context: makeSceneDialogueAudioContext(project),
