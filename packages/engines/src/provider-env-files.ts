@@ -1,15 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const PROVIDER_ENV_FILE_NAMES = ['.env', '.env.local'] as const;
+const PROVIDER_ENV_FILE_NAME = '.env' as const;
 const RENKU_CONFIG_DIR_NAME = 'renku' as const;
-const STUDIO_ENGINES_PACKAGE_NAME = '@gorenku/studio-engines' as const;
 
 export interface LoadProviderEnvFilesOptions {
-  providerEnvRoots?: string[];
-  studioWorkspaceRoot?: string;
   renkuConfigDir?: string;
   homeDir?: string;
   override?: boolean;
@@ -17,6 +13,7 @@ export interface LoadProviderEnvFilesOptions {
 
 export interface LoadProviderEnvFilesResult {
   loaded: string[];
+  skipped: string[];
 }
 
 export function loadProviderEnvFiles(
@@ -26,95 +23,55 @@ export function loadProviderEnvFiles(
     ? new Set<string>()
     : new Set(Object.keys(process.env));
   const loaded: string[] = [];
+  const skipped: string[] = [];
 
-  for (const directory of resolveProviderEnvRoots(options)) {
-    for (const fileName of PROVIDER_ENV_FILE_NAMES) {
-      const filePath = path.join(directory, fileName);
-      if (!existsSync(filePath)) {
-        continue;
-      }
-      applyProviderEnvFile(readFileSync(filePath, 'utf8'), {
-        protectedKeys,
-      });
-      loaded.push(filePath);
-    }
+  const filePath = resolveProviderEnvFilePath(options);
+  if (!existsSync(filePath)) {
+    return { loaded, skipped };
   }
 
-  return { loaded };
+  const contents = readOptionalProviderEnvFile(filePath);
+  if (contents === null) {
+    skipped.push(filePath);
+    return { loaded, skipped };
+  }
+
+  applyProviderEnvFile(contents, {
+    protectedKeys,
+  });
+  loaded.push(filePath);
+
+  return { loaded, skipped };
 }
 
-function resolveProviderEnvRoots(
-  options: LoadProviderEnvFilesOptions
-): string[] {
-  if (options.providerEnvRoots) {
-    return uniqueResolvedPaths(options.providerEnvRoots);
+function readOptionalProviderEnvFile(filePath: string): string | null {
+  try {
+    return readFileSync(filePath, 'utf8');
+  } catch (error) {
+    if (isFileAccessDeniedError(error)) {
+      return null;
+    }
+    throw error;
   }
+}
 
-  const roots: string[] = [
+function isFileAccessDeniedError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error.code === 'EACCES' || error.code === 'EPERM')
+  );
+}
+
+function resolveProviderEnvFilePath(
+  options: LoadProviderEnvFilesOptions
+): string {
+  return path.join(
     options.renkuConfigDir ??
       path.join(options.homeDir ?? os.homedir(), '.config', RENKU_CONFIG_DIR_NAME),
-  ];
-  const workspaceRoot =
-    options.studioWorkspaceRoot ?? findStudioWorkspaceRoot(import.meta.url);
-  if (workspaceRoot) {
-    roots.push(workspaceRoot);
-  }
-
-  return uniqueResolvedPaths(roots);
-}
-
-function findStudioWorkspaceRoot(moduleUrl: string): string | null {
-  const packageRoot = findEnginePackageRoot(
-    path.dirname(fileURLToPath(moduleUrl))
+    PROVIDER_ENV_FILE_NAME
   );
-  if (!packageRoot) {
-    return null;
-  }
-
-  const packagesDir = path.dirname(packageRoot);
-  if (
-    path.basename(packageRoot) !== 'engines' ||
-    path.basename(packagesDir) !== 'packages'
-  ) {
-    return packageRoot;
-  }
-
-  return path.dirname(packagesDir);
-}
-
-function findEnginePackageRoot(startDir: string): string | null {
-  let current = path.resolve(startDir);
-  while (current !== path.dirname(current)) {
-    const packageJsonPath = path.join(current, 'package.json');
-    if (existsSync(packageJsonPath)) {
-      try {
-        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
-          name?: unknown;
-        };
-        if (packageJson.name === STUDIO_ENGINES_PACKAGE_NAME) {
-          return current;
-        }
-      } catch {
-        return null;
-      }
-    }
-    current = path.dirname(current);
-  }
-  return null;
-}
-
-function uniqueResolvedPaths(paths: string[]): string[] {
-  const seen = new Set<string>();
-  const resolved: string[] = [];
-  for (const currentPath of paths) {
-    const normalized = path.resolve(currentPath);
-    if (seen.has(normalized)) {
-      continue;
-    }
-    seen.add(normalized);
-    resolved.push(normalized);
-  }
-  return resolved;
 }
 
 function applyProviderEnvFile(

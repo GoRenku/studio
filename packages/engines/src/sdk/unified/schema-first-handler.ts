@@ -1,6 +1,8 @@
 import { createProducerHandlerFactory } from '../handler-factory.js';
 import {
   createProviderError,
+  formatProviderFailure,
+  readProviderFailureDetails,
   SdkErrorCode,
   type ProviderError,
 } from '../errors.js';
@@ -176,8 +178,8 @@ export function createUnifiedHandler(
           }
           providerRequestId = invokeResult.providerRequestId;
         } catch (error) {
-          const rawMessage =
-            error instanceof Error ? error.message : String(error);
+          const rawMessage = formatProviderFailure(error);
+          const failure = readProviderFailureDetails(error);
 
           const recoveryError = error as {
             falRequestId?: string;
@@ -204,6 +206,7 @@ export function createUnifiedHandler(
             model: request.model,
             jobId: request.jobId,
             error: rawMessage,
+            failure,
             providerRequestId,
             recoverable,
             reason,
@@ -231,6 +234,7 @@ export function createUnifiedHandler(
                 ...(providerRequestId && { providerRequestId }),
                 ...(recoverable && { recoverable: true }),
                 ...(reason && { reason }),
+                failure,
               },
             }
           );

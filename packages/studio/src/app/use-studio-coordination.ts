@@ -10,6 +10,7 @@ import {
   reportStudioFocusRequestFailed,
   validateStudioFocusRequest,
 } from '@/services/studio-events-api';
+import { isStudioApiErrorCode } from '@/services/studio-api-errors';
 import type {
   StudioBrowserSessionActivityKind,
   StudioFocus,
@@ -87,7 +88,8 @@ export function useStudioCoordination(input: {
         projectRef,
         focus,
       });
-    } catch {
+    } catch (error) {
+      handleStudioCoordinationReportError(error);
       // Browser activity is best-effort local coordination.
     }
   }, [browserSessionId]);
@@ -219,7 +221,8 @@ export function useStudioCoordination(input: {
       projectRef: observation.projectRef,
       focus: observation.focus,
       appliedRequestId,
-    }).catch(() => {
+    }).catch((error) => {
+      handleStudioCoordinationReportError(error);
       // Local coordination reporting should not break the Studio UI render path.
     });
   }, [
@@ -229,6 +232,12 @@ export function useStudioCoordination(input: {
     projectSession.project,
     focusReportVersion,
   ]);
+}
+
+function handleStudioCoordinationReportError(error: unknown): void {
+  if (isStudioApiErrorCode(error, 'STUDIO_SERVER021')) {
+    window.location.reload();
+  }
 }
 
 interface StudioCoordinationRefs {

@@ -23,9 +23,16 @@ SAVE_TEST_ARTIFACTS=1 RUN_VIDEO_VEO_FAST=1 pnpm test:integration
 
 Generated files will be saved to `packages/engines/tmp/` which is git-ignored.
 
-### Using .env file
+### Using the Renku provider env file
 
-You can create a `.env` file in the `packages/engines` directory:
+Provider credentials and paid-test flags should live in the central Renku config
+env file:
+
+```text
+~/.config/renku/.env
+```
+
+Example:
 
 ```env
 REPLICATE_API_TOKEN=your-token-here
@@ -33,4 +40,5 @@ SAVE_TEST_ARTIFACTS=1
 RUN_ALL_VIDEO_TESTS=1
 ```
 
-The tests will automatically load environment variables from the `.env` file using dotenv.
+The e2e test config loads that file automatically. Do not create package-local
+or repo-local `.env` files for provider credentials.

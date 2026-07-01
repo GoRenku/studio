@@ -507,10 +507,21 @@ describe('resolveProviderFileInputs', () => {
     });
   });
 
-  it('does not hide native upload errors', async () => {
+  it('wraps native upload network errors with provider diagnostics', async () => {
+    const networkError = new TypeError('fetch failed') as TypeError & {
+      cause?: unknown;
+    };
+    networkError.cause = Object.assign(
+      new Error('getaddrinfo ENOTFOUND storage.googleapis.com'),
+      {
+        code: 'ENOTFOUND',
+        syscall: 'getaddrinfo',
+        hostname: 'storage.googleapis.com',
+      }
+    );
     const adapter: ProviderAdapter = {
-      name: 'replicate',
-      secretKey: 'REPLICATE_API_TOKEN',
+      name: 'fal-ai',
+      secretKey: 'FAL_KEY',
       async createClient() {
         return {};
       },
@@ -520,9 +531,7 @@ describe('resolveProviderFileInputs', () => {
       async invoke() {
         return { result: {} };
       },
-      uploadInputFile: vi
-        .fn()
-        .mockRejectedValue(new Error('native upload failed')),
+      uploadInputFile: vi.fn().mockRejectedValue(networkError),
       normalizeOutput() {
         return [];
       },
@@ -535,14 +544,33 @@ describe('resolveProviderFileInputs', () => {
       },
     };
 
-    await expect(
-      resolveProviderFileInputs({
-        payload,
-        inputSchema: schema,
-        adapter,
-        client: { configured: true },
-      })
-    ).rejects.toThrow(/native upload failed/);
+    const error = await resolveProviderFileInputs({
+      payload,
+      inputSchema: schema,
+      adapter,
+      client: { configured: true },
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      code: SdkErrorCode.PROVIDER_PREDICTION_FAILED,
+      kind: 'transient',
+      retryable: true,
+      metadata: {
+        provider: 'fal-ai',
+        phase: 'input_upload',
+        inputPath: 'input.image_url',
+        failure: {
+          message: 'fetch failed',
+          causeMessage: 'getaddrinfo ENOTFOUND storage.googleapis.com',
+          code: 'ENOTFOUND',
+          syscall: 'getaddrinfo',
+          hostname: 'storage.googleapis.com',
+        },
+      },
+    });
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain('fetch failed');
+    expect((error as Error).message).toContain('storage.googleapis.com');
   });
 
   it('throws when blob payload cannot be mapped to URI fields', async () => {

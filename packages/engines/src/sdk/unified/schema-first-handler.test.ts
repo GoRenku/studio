@@ -344,6 +344,61 @@ describe('createUnifiedHandler', () => {
     );
   });
 
+  it('wraps adapter invoke network causes in provider diagnostics', async () => {
+    const networkError = new TypeError('fetch failed') as TypeError & {
+      cause?: unknown;
+    };
+    networkError.cause = Object.assign(
+      new Error('getaddrinfo ENOTFOUND rest.fal.ai'),
+      {
+        code: 'ENOTFOUND',
+        syscall: 'getaddrinfo',
+        hostname: 'rest.fal.ai',
+      }
+    );
+    const adapter: ProviderAdapter = {
+      name: 'fal-ai',
+      secretKey: 'FAL_KEY',
+      async createClient(): Promise<ProviderClient> {
+        return { configured: true };
+      },
+      formatModelIdentifier: (m) => `fal-ai/${m}`,
+      async invoke() {
+        throw networkError;
+      },
+      normalizeOutput: () => ['https://mock.example.com/output.png'],
+    };
+    const factory = createUnifiedHandler({
+      adapter,
+      outputMimeType: 'image/png',
+    });
+    const handler = factory(createMockInitContext({ mode: 'live' }));
+
+    const error = await handler
+      .invoke(createMockRequest())
+      .catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      code: SdkErrorCode.PROVIDER_PREDICTION_FAILED,
+      kind: 'transient',
+      retryable: true,
+      metadata: {
+        provider: 'fal-ai',
+        model: 'test-model',
+        failure: {
+          message: 'fetch failed',
+          causeMessage: 'getaddrinfo ENOTFOUND rest.fal.ai',
+          code: 'ENOTFOUND',
+          syscall: 'getaddrinfo',
+          hostname: 'rest.fal.ai',
+        },
+      },
+    });
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain('fetch failed');
+    expect((error as Error).message).toContain('rest.fal.ai');
+  });
+
   it('rethrows structured ProviderError from adapter without rewrapping', async () => {
     const providerError = createProviderError(
       SdkErrorCode.MISSING_REQUIRED_INPUT,

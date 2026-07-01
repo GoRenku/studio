@@ -2,7 +2,7 @@
  * Qwen Image Provider Integration Test (native provider uploads)
  *
  * Run with: RUN_QWEN_IMAGE_TEST=1 pnpm test:e2e
- * Requires env vars in packages/engines/.env:
+ * Requires env vars in ~/.config/renku/.env:
  *   - REPLICATE_API_TOKEN
  *
  * To save output for visual inspection:

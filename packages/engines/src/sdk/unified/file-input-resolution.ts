@@ -3,7 +3,12 @@ import type {
   ProviderClient,
   ProviderInputFile,
 } from './provider-adapter.js';
-import { createProviderError, SdkErrorCode } from '../errors.js';
+import {
+  createProviderError,
+  formatProviderFailure,
+  readProviderFailureDetails,
+  SdkErrorCode,
+} from '../errors.js';
 
 interface ResolveProviderFileInputsOptions {
   payload: Record<string, unknown>;
@@ -293,13 +298,40 @@ async function resolveBlobValueToUrl(
     );
   }
 
-  const uploadedUrl = await options.adapter.uploadInputFile(
-    options.client,
-    file
-  );
+  let uploadedUrl: string;
+  try {
+    uploadedUrl = await options.adapter.uploadInputFile(options.client, file);
+  } catch (error) {
+    throw createProviderError(
+      SdkErrorCode.PROVIDER_PREDICTION_FAILED,
+      `Provider "${options.adapter.name}" file upload failed at "${path}": ${formatProviderFailure(error)}`,
+      {
+        kind: 'transient',
+        retryable: true,
+        raw: error,
+        metadata: {
+          provider: options.adapter.name,
+          phase: 'input_upload',
+          inputPath: path,
+          failure: readProviderFailureDetails(error),
+        },
+      }
+    );
+  }
+
   if (typeof uploadedUrl !== 'string' || uploadedUrl.length === 0) {
-    throw new Error(
-      `Provider ${options.adapter.name} returned an invalid file URL after upload.`
+    throw createProviderError(
+      SdkErrorCode.PROVIDER_PREDICTION_FAILED,
+      `Provider "${options.adapter.name}" returned an invalid file URL after upload at "${path}".`,
+      {
+        kind: 'transient',
+        retryable: true,
+        metadata: {
+          provider: options.adapter.name,
+          phase: 'input_upload',
+          inputPath: path,
+        },
+      }
     );
   }
   return uploadedUrl;

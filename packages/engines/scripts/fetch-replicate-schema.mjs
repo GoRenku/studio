@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -39,11 +40,11 @@ const REPLICATE_SCHEMA_OVERRIDES_PATH = resolve(
   'schema-overrides.yaml'
 );
 
-// Load .env from repo root (Node 21.7+)
+// Load provider credentials from the single Renku config env file.
 try {
-  process.loadEnvFile(resolve(repoRoot, '.env'));
+  process.loadEnvFile(resolve(homedir(), '.config', 'renku', '.env'));
 } catch {
-  // .env file may not exist; token can still come from environment
+  // ~/.config/renku/.env may not exist; token can still come from environment.
 }
 
 /**
