@@ -1736,6 +1736,7 @@ function dependencyDraftsForCase(
       purpose: 'shot.first-frame',
       dependencyKind: 'first-frame',
       outputInputKind: 'first-frame',
+      referenceMode: 'movie-lookbook',
       prompt: `Author the exact first frame for ${input.label} from the selected composition, motion, cast, location, and lookbook references.`,
       title: `${input.label} first frame`,
     });
@@ -1745,6 +1746,7 @@ function dependencyDraftsForCase(
       purpose: 'shot.last-frame',
       dependencyKind: 'last-frame',
       outputInputKind: 'last-frame',
+      referenceMode: 'movie-lookbook',
       prompt: `Author the exact last frame for ${input.label}, preserving continuity from the first frame while showing the final action state.`,
       title: `${input.label} last frame`,
     });
@@ -1754,6 +1756,7 @@ function dependencyDraftsForCase(
       purpose: 'shot.video-prompt-sheet',
       dependencyKind: 'video-prompt-sheet',
       outputInputKind: 'video-prompt-sheet',
+      referenceMode: 'movie-lookbook',
       prompt: `Author one ordered video prompt sheet planning sheet for ${input.label}, with one readable panel per selected shot and compact camera/action metadata.`,
       title: `${input.label} video prompt sheet`,
     });
