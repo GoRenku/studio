@@ -1,17 +1,140 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+  SHOT_LAST_FRAME_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type ProjectRelativePath,
   type SceneShotVideoTakeTarget,
   type ShotVideoTakeProductionContext,
+  type ShotVideoTakeInputGenerationPurpose,
   type ShotVideoTakeOutputGenerationSpec,
 } from '../../../client/index.js';
 import {
   buildKlingTransientVoiceConversions,
+  buildShotVideoTakeInputProviderPayload,
   buildShotVideoTakeProviderPayload,
 } from './provider-payloads.js';
 
 describe('shot video take provider payloads', () => {
+  it.each([
+    SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+    SHOT_LAST_FRAME_GENERATION_PURPOSE,
+    SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+    SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
+  ])('conditions %s payloads with selected shot input references', (purpose) => {
+    const plan = buildShotVideoTakeInputProviderPayload({
+      spec: shotInputSpec(purpose, 'fal-ai/openai/gpt-image-2'),
+      context: { shotGroupMode: 'multi-shot' } as ShotVideoTakeProductionContext,
+      references: shotInputReferences(purpose),
+    });
+
+    expect(plan.model).toBe('openai/gpt-image-2/edit');
+    expect(plan.mode).toBe('image-edit');
+    expect(plan.payload).toMatchObject({
+      image_urls: [
+        'renku-input://generated/lookbooks/movie-sheet.png',
+        'renku-input://generated/locations/basilica-sheet.png',
+        'renku-input://generated/cast/ada-sheet.png',
+      ],
+      sync_mode: false,
+    });
+    expect(plan.inputFiles).toEqual([
+      {
+        field: 'image_urls',
+        projectRelativePath: 'generated/lookbooks/movie-sheet.png',
+        mediaKind: 'image',
+        asArray: true,
+        required: true,
+      },
+      {
+        field: 'image_urls',
+        projectRelativePath: 'generated/locations/basilica-sheet.png',
+        mediaKind: 'image',
+        asArray: true,
+        required: true,
+      },
+      {
+        field: 'image_urls',
+        projectRelativePath: 'generated/cast/ada-sheet.png',
+        mediaKind: 'image',
+        asArray: true,
+        required: true,
+      },
+    ]);
+  });
+
+  it('maps Nano Banana 2 shot input references to its edit route', () => {
+    const plan = buildShotVideoTakeInputProviderPayload({
+      spec: shotInputSpec(SHOT_FIRST_FRAME_GENERATION_PURPOSE, 'fal-ai/nano-banana-2'),
+      context: { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext,
+      references: shotInputReferences(SHOT_FIRST_FRAME_GENERATION_PURPOSE),
+    });
+
+    expect(plan.model).toBe('nano-banana-2/edit');
+    expect(plan.mode).toBe('image-edit');
+  });
+
+  it('maps Grok Imagine shot input references to its edit route when supported', () => {
+    const plan = buildShotVideoTakeInputProviderPayload({
+      spec: {
+        ...shotInputSpec(
+          SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+          'fal-ai/xai/grok-imagine-image'
+        ),
+        parameterValues: { output_format: 'png' },
+      },
+      context: { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext,
+      references: {
+        ...shotInputReferences(SHOT_FIRST_FRAME_GENERATION_PURPOSE),
+        continuityReferences: [
+          shotInputReferences(SHOT_FIRST_FRAME_GENERATION_PURPOSE)
+            .continuityReferences[0]!,
+        ],
+      },
+    });
+
+    expect(plan.model).toBe('xai/grok-imagine-image/edit');
+    expect(plan.mode).toBe('image-edit');
+  });
+
+  it('rejects Grok Imagine shot input references beyond the provider limit', () => {
+    expect(() =>
+      buildShotVideoTakeInputProviderPayload({
+        spec: {
+          ...shotInputSpec(
+            SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+            'fal-ai/xai/grok-imagine-image'
+          ),
+          parameterValues: { output_format: 'png' },
+        },
+        context: { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext,
+        references: {
+          ...shotInputReferences(SHOT_FIRST_FRAME_GENERATION_PURPOSE),
+          continuityReferences: [
+            ...shotInputReferences(SHOT_FIRST_FRAME_GENERATION_PURPOSE)
+              .continuityReferences,
+            {
+              role: 'character-sheet' as const,
+              dependencyId: 'cast-character-sheet:cast_ben',
+              label: 'Ben character sheet',
+              assetId: 'asset_character_sheet_ben',
+              assetFileId: 'file_character_sheet_ben',
+              projectRelativePath: 'generated/cast/ben-sheet.png' as ProjectRelativePath,
+              mediaKind: 'image' as const,
+              required: true,
+            },
+          ],
+        },
+      })
+    ).toThrow(
+      expect.objectContaining({
+        code: 'CORE_SHOT_VIDEO_INPUT_REFERENCE_LIMIT_EXCEEDED',
+      })
+    );
+  });
+
   it('maps selected dialogue audio references to deduplicated provider audio input files', () => {
     const target: SceneShotVideoTakeTarget = {
       kind: 'sceneShotVideoTake',
@@ -407,6 +530,83 @@ describe('shot video take provider payloads', () => {
     });
   });
 });
+
+function shotInputSpec(
+  purpose: ShotVideoTakeInputGenerationPurpose,
+  modelChoice:
+    | 'fal-ai/openai/gpt-image-2'
+    | 'fal-ai/nano-banana-2'
+    | 'fal-ai/xai/grok-imagine-image'
+) {
+  return {
+    purpose,
+    target: shotTarget(),
+    dependencyKind:
+      purpose === SHOT_FIRST_FRAME_GENERATION_PURPOSE
+        ? 'first-frame' as const
+        : purpose === SHOT_LAST_FRAME_GENERATION_PURPOSE
+          ? 'last-frame' as const
+          : purpose === SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
+            ? 'video-prompt-sheet' as const
+            : 'reference-image' as const,
+    outputInputKind:
+      purpose === SHOT_FIRST_FRAME_GENERATION_PURPOSE
+        ? 'first-frame' as const
+        : purpose === SHOT_LAST_FRAME_GENERATION_PURPOSE
+          ? 'last-frame' as const
+          : purpose === SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
+            ? 'video-prompt-sheet' as const
+            : 'reference-image' as const,
+    modelChoice,
+    referenceMode: 'movie-lookbook' as const,
+    prompt: 'Create a shot input image using selected references.',
+    parameterValues: { image_size: 'landscape_16_9', output_format: 'png' },
+    title: 'Shot input',
+  };
+}
+
+function shotInputReferences(purpose: ShotVideoTakeInputGenerationPurpose) {
+  return {
+    purpose,
+    referenceMode: 'movie-lookbook' as const,
+    styleReference: {
+      role: 'movie-lookbook-sheet' as const,
+      dependencyId: 'lookbook-sheet:lookbook_movie',
+      label: 'Movie Lookbook sheet',
+      assetId: 'asset_movie_sheet',
+      assetFileId: 'file_movie_sheet',
+      projectRelativePath: 'generated/lookbooks/movie-sheet.png' as ProjectRelativePath,
+      mediaKind: 'image' as const,
+      required: true,
+    },
+    continuityReferences: [
+      {
+        role: 'location-sheet' as const,
+        dependencyId: 'location-environment-sheet:location_basilica',
+        label: 'Basilica Location Sheet',
+        assetId: 'asset_location_sheet',
+        assetFileId: 'file_location_sheet',
+        projectRelativePath: 'generated/locations/basilica-sheet.png' as ProjectRelativePath,
+        mediaKind: 'image' as const,
+        required: true,
+      },
+      {
+        role: 'character-sheet' as const,
+        dependencyId: 'cast-character-sheet:cast_ada',
+        label: 'Ada character sheet',
+        assetId: 'asset_character_sheet',
+        assetFileId: 'file_character_sheet',
+        projectRelativePath: 'generated/cast/ada-sheet.png' as ProjectRelativePath,
+        mediaKind: 'image' as const,
+        required: true,
+      },
+    ],
+    promptNotes: [
+      'Use the Movie Lookbook sheet as the primary style reference.',
+      'Use Location Sheets and Character Sheets as continuity references.',
+    ],
+  };
+}
 
 function shotTarget(): SceneShotVideoTakeTarget {
   return {

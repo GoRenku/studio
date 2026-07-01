@@ -1048,9 +1048,9 @@ export function videoPromptSheetTitle(
   context: ShotVideoTakeProductionContext
 ): string {
   if (context.target.shotIds.length <= 1) {
-    return 'Multi-Shot Storyboard Reference';
+    return 'Video Prompt Sheet';
   }
-  return `Multi-Shot Storyboard Reference (${context.target.shotIds.length} shots)`;
+  return `Video Prompt Sheet (${context.target.shotIds.length} shots)`;
 }
 
 

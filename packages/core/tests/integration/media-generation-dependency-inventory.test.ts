@@ -379,18 +379,22 @@ describe('media generation dependency inventory estimates integration', () => {
           title: 'First frame',
           caption: 'First frame',
           status: 'needed',
-          pricing: expect.objectContaining({ state: 'priced', estimatedUsd: 0.005 }),
+          pricing: expect.objectContaining({
+            state: 'unpriced',
+            reason: 'Shot video input references could not be resolved.',
+          }),
         }),
       ])
     );
     expect(preflight.inputPlanItems).toHaveLength(4);
     expect(preflight.plan?.estimate).toMatchObject({
-      state: 'complete',
-      pricedLineCount: 5,
+      state: 'partial',
+      pricedLineCount: 4,
+      unpricedLineCount: 1,
       missingLineCount: 0,
-      requiresPriceOverride: false,
+      requiresPriceOverride: true,
     });
-    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7508, 6);
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7458, 6);
   });
 
   it('blocks generated shot dependencies when the agent has not authored a dependency draft', async () => {
@@ -449,7 +453,11 @@ describe('media generation dependency inventory estimates integration', () => {
         reason: 'Author a concrete dependency draft before generating this shot input.',
       },
       purpose: 'shot.first-frame',
-      pricing: { state: 'priced', estimatedUsd: 0.005 },
+      pricing: {
+        state: 'unpriced',
+        estimatedUsd: null,
+        reason: 'Shot video input references could not be resolved.',
+      },
       diagnostics: [],
     });
     expect(firstFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
@@ -461,12 +469,13 @@ describe('media generation dependency inventory estimates integration', () => {
     );
     expect(preflight.finalTake.canCreateSpec).toBe(false);
     expect(preflight.plan?.estimate).toMatchObject({
-      state: 'complete',
-      pricedLineCount: 5,
+      state: 'partial',
+      pricedLineCount: 4,
+      unpricedLineCount: 1,
       missingLineCount: 0,
-      requiresPriceOverride: false,
+      requiresPriceOverride: true,
     });
-    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7508, 6);
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7458, 6);
   });
 
   it('prices first and last frame dependencies before their prompts are authored', async () => {
@@ -511,23 +520,31 @@ describe('media generation dependency inventory estimates integration', () => {
     expect(firstFrameLine).toMatchObject({
       availability: { state: 'missing-generated' },
       generationDraft: { state: 'missing-input' },
-      pricing: { state: 'priced', estimatedUsd: 0.005 },
+      pricing: {
+        state: 'unpriced',
+        estimatedUsd: null,
+        reason: 'Shot video input references could not be resolved.',
+      },
     });
     expect(firstFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
     expect(lastFrameLine).toMatchObject({
       availability: { state: 'missing-generated' },
       generationDraft: { state: 'missing-input' },
-      pricing: { state: 'priced', estimatedUsd: 0.005 },
+      pricing: {
+        state: 'unpriced',
+        estimatedUsd: null,
+        reason: 'Shot video input references could not be resolved.',
+      },
     });
     expect(lastFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
     expect(estimate.plan?.estimate).toMatchObject({
-      state: 'complete',
-      pricedLineCount: 6,
-      unpricedLineCount: 0,
+      state: 'partial',
+      pricedLineCount: 4,
+      unpricedLineCount: 2,
       missingLineCount: 0,
-      requiresPriceOverride: false,
+      requiresPriceOverride: true,
     });
-    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8486, 6);
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8386, 6);
   });
 
   it('plans a valid shot.video-take spec with imported first and last frame inputs through the shared dependency planner', async () => {

@@ -186,10 +186,16 @@ no longer match the prompt assumptions.
 Core never synthesizes generic shot-video dependency prompts. First-frame,
 last-frame, ad hoc reference-image, and video prompt sheet dependency
 lines use `missing-input` before the user or agent authors concrete
-`agentProposal.dependencyDrafts[]` entries. Missing-input lines can still be
-priced when the purpose has enough model and text or prompt information to
-estimate cost, but they are not runnable generation specs. `shot.reference-image`
-specs also require a title that names the reference intent shown in Studio.
+`agentProposal.dependencyDrafts[]` entries. Shot input specs and dependency
+drafts must set `referenceMode`. The default is `movie-lookbook`, which uses
+the selected Movie Lookbook sheet as the primary style reference and selected
+Location Sheets and Character Sheets as continuity references. The explicit
+`storyboard-lookbook` mode is opt-in only when the user asks for storyboard,
+hand-drawn, sketch, animatic, or Storyboard Lookbook aesthetics for that shot
+input image. Missing-input lines are not runnable generation specs; they become
+unpriced when their required reference-conditioned inputs cannot be resolved.
+`shot.reference-image` specs also require a title that names the reference
+intent shown in Studio.
 
 `shot.video-prompt-sheet` is a take-owned AI-video planning sheet for an
 existing Shot Video Take. It is grounded in `renku take authoring context`,
@@ -197,10 +203,12 @@ uses one readable panel per ordered take shot, and preserves shot order,
 spatial continuity, motion continuity, visual references, and known spoken
 timing for downstream `shot.video-take` prompting. It is not a scene-owned
 storyboard sheet, not a moodboard, and not a replacement for the Scene Shot
-List. Agents must inspect the generated sheet before import and reject or
-revise sheets whose panel count, panel order, geography, movement direction,
-reference continuity, spoken timing, or label legibility contradicts the take
-authoring context.
+List. A panelled prompt-sheet layout does not make the selected Storyboard
+Lookbook the default visual source; ordinary prompt sheets still use
+`referenceMode: "movie-lookbook"`. Agents must inspect the generated sheet
+before import and reject or revise sheets whose panel count, panel order,
+geography, movement direction, reference continuity, spoken timing, or label
+legibility contradicts the take authoring context.
 
 Image-generation context and model-list reports include `agentMedia`. The
 report exposes the configured image-generation default execution path and, for
@@ -519,7 +527,9 @@ dependency. Dependency planning creates a `lookbook.sheet` draft when the
 selected Storyboard Lookbook has no sheet. Final Scene storyboard sheet spec
 creation is blocked until that dependency is imported or generated. Prepared
 provider requests use the selected Storyboard Lookbook sheet as an image
-reference when it exists.
+reference when it exists. This Storyboard Lookbook default is specific to
+`scene.storyboard-sheet`; shot input images default to the selected Movie
+Lookbook unless their spec explicitly uses `referenceMode: "storyboard-lookbook"`.
 
 The generated provider image is one temporary composite storyboard sheet for
 one to four selected shots, not one provider call per shot. The media-producer

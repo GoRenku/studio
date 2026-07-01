@@ -127,6 +127,7 @@ import { buildShotVideoTakeContext } from './shot-video-take/context.js';
 import { listShotVideoTakeModels, listShotInputModels } from './shot-video-take/model-list.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotVideoPromptSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotVideoPromptSheetSpec, prepareShotInputDraftSpec } from './shot-video-take/input-specs.js';
 import { buildShotInputDependencyDraftSpec } from './shot-video-take/dependency-draft-specs.js';
+import { declareShotVideoInputDependencies } from './shot-video-take/shot-input-dependencies.js';
 import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec, estimateShotVideoTakeSpec } from './shot-video-take/final-specs.js';
 import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotVideoPromptSheetSpec, runShotVideoTakeSpec } from './shot-video-take/generation-runs.js';
 import { declareShotVideoTakeDependencies } from './shot-video-take/dependency-inventory.js';
@@ -633,6 +634,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    declareDependencies: declareShotVideoInputDependencies,
     planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotFirstFrameSpec,
   },
@@ -660,6 +662,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    declareDependencies: declareShotVideoInputDependencies,
     planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotLastFrameSpec,
   },
@@ -687,6 +690,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    declareDependencies: declareShotVideoInputDependencies,
     planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotReferenceImageSpec,
   },
@@ -715,6 +719,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as ShotVideoTakeInputGenerationSpec,
       }),
+    declareDependencies: declareShotVideoInputDependencies,
     planDependencyDraft: buildShotInputDependencyDraftSpec,
     runSpec: runShotVideoPromptSheetSpec,
   },

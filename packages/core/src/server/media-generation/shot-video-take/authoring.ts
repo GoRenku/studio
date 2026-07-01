@@ -17,6 +17,8 @@ import type {
   ShotVideoTakeProviderPayloadPreview,
   ShotVideoTakeGenerationReadiness,
   ShotVideoTakeGenerationReadinessBlocker,
+  ShotVideoInputReferenceMode,
+  ShotVideoInputReferenceReport,
 } from '../../../client/index.js';
 import {
   applySceneShotVideoTakeAuthoringRecord,
@@ -83,6 +85,9 @@ import {
   sceneShotVideoTakeDirectionReferenceSelections,
   validateSceneShotVideoTakeStructure,
 } from './take-state.js';
+import {
+  resolveShotVideoInputReferenceBundle,
+} from './shot-input-references.js';
 
 export async function readSceneShotVideoTakeAuthoringContext(
   input: ReadSceneShotVideoTakeAuthoringContextInput
@@ -406,6 +411,10 @@ async function buildSceneShotVideoTakeAuthoringSnapshot(input: {
         homeDir: input.input.homeDir,
         mediaKind: 'image',
       }),
+      shotVideoInputReferences: buildShotVideoInputReferenceReport({
+        session,
+        context: input.context,
+      }),
       providerPreview: await previewProviderPayload({
         input: {
           projectName: input.input.projectName,
@@ -420,6 +429,74 @@ async function buildSceneShotVideoTakeAuthoringSnapshot(input: {
       resourceKeys: input.context.resourceKeys,
     };
   });
+}
+
+function buildShotVideoInputReferenceReport(input: {
+  session: DatabaseSession;
+  context: ShotVideoTakeProductionContext;
+}): ShotVideoInputReferenceReport {
+  const modes: ShotVideoInputReferenceMode[] = [
+    'movie-lookbook',
+    'storyboard-lookbook',
+  ];
+  const resolutions = modes.map((referenceMode) => {
+    try {
+      const bundle = resolveShotVideoInputReferenceBundle({
+        session: input.session,
+        context: input.context,
+        purpose: 'shot.first-frame',
+        referenceMode,
+      });
+      return {
+        referenceMode,
+        available: true,
+        bundle,
+      };
+    } catch (error) {
+      return {
+        referenceMode,
+        available: false,
+        unavailableReason:
+          error instanceof Error
+            ? error.message
+            : 'Reference mode is unavailable.',
+      };
+    }
+  });
+  const movieResolution = resolutions.find(
+    (resolution) => resolution.referenceMode === 'movie-lookbook'
+  );
+  return {
+    defaultReferenceMode: 'movie-lookbook',
+    availableReferenceModes: resolutions.map((resolution) => ({
+      referenceMode: resolution.referenceMode,
+      available: resolution.available,
+      ...(resolution.unavailableReason
+        ? { unavailableReason: resolution.unavailableReason }
+        : {}),
+    })),
+    ...(movieResolution?.available && movieResolution.bundle
+      ? {
+          defaultReferenceBundle: {
+            ...(movieResolution.bundle.styleReference
+              ? {
+                  styleReference: {
+                    role: movieResolution.bundle.styleReference.role,
+                    label: movieResolution.bundle.styleReference.label,
+                    assetId: movieResolution.bundle.styleReference.assetId,
+                  },
+                }
+              : {}),
+            continuityReferences:
+              movieResolution.bundle.continuityReferences.map((reference) => ({
+                role: reference.role,
+                label: reference.label,
+                assetId: reference.assetId,
+              })),
+          },
+        }
+      : {}),
+  };
 }
 
 function resolveAuthoringReportSelectedShotId(input: {

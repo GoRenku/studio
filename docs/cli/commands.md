@@ -1574,12 +1574,20 @@ Behavior:
   scene-shot-designer has supplied the Scene Shot List.
 - Shot first frames, last frames, ad hoc reference images, and video prompt
   sheets are generated as shot video take inputs. Their specs must
-  use authored prompts; `shot.reference-image` also requires a title that names
-  the reference intent.
+  use authored prompts and must include `referenceMode`. Use
+  `referenceMode: "movie-lookbook"` by default so Core attaches the selected
+  Movie Lookbook sheet as the primary style reference and selected Location
+  Sheets and Character Sheets as continuity references. Use
+  `referenceMode: "storyboard-lookbook"` only when the user explicitly asks for
+  storyboard, hand-drawn, sketch, animatic, or Storyboard Lookbook aesthetics
+  for that generated shot input image. `shot.reference-image` also requires a
+  title that names the reference intent.
 - `shot.video-prompt-sheet` is a take-owned planning sheet with one readable
   panel per ordered take shot. It must be derived from `take authoring context`
   and inspected before import; do not treat it as a scene storyboard sheet,
-  moodboard, poster, or generic concept collage.
+  moodboard, poster, or generic concept collage. A panelled layout does not
+  imply Storyboard Lookbook style; the default prompt-sheet visual source is
+  still the selected Movie Lookbook.
 - The Studio shot References tab displays imported/generated `first-frame`,
   `last-frame`, `reference-image`, and `video-prompt-sheet` inputs
   relevant to the selected shot or production group.

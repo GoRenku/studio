@@ -15,6 +15,10 @@ export type ShotVideoTakeInputModelChoice =
   | 'fal-ai/nano-banana-2'
   | 'fal-ai/xai/grok-imagine-image';
 
+export type ShotVideoInputReferenceMode =
+  | 'movie-lookbook'
+  | 'storyboard-lookbook';
+
 export type ShotVideoTakeInputGenerationPurpose =
   | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
@@ -170,6 +174,7 @@ export interface SceneShotVideoTakeAuthoringContextReport {
   preflight: ShotVideoTakePreflightReport;
   takeGenerationReadiness: ShotVideoTakeGenerationReadiness;
   agentMedia: AgentMediaReport;
+  shotVideoInputReferences: ShotVideoInputReferenceReport;
   providerPreview: ShotVideoTakeProviderPayloadPreview;
   resourceKeys: string[];
 }
@@ -181,8 +186,32 @@ export interface SceneShotVideoTakeAuthoringSnapshot {
   preflight: ShotVideoTakePreflightReport;
   takeGenerationReadiness: ShotVideoTakeGenerationReadiness;
   agentMedia: AgentMediaReport;
+  shotVideoInputReferences: ShotVideoInputReferenceReport;
   providerPreview: ShotVideoTakeProviderPayloadPreview;
   resourceKeys: string[];
+}
+
+export interface ShotVideoInputReferenceReport {
+  defaultReferenceMode: 'movie-lookbook';
+  availableReferenceModes: ShotVideoInputReferenceModeAvailability[];
+  defaultReferenceBundle?: ShotVideoInputReferenceBundleReport;
+}
+
+export interface ShotVideoInputReferenceModeAvailability {
+  referenceMode: ShotVideoInputReferenceMode;
+  available: boolean;
+  unavailableReason?: string;
+}
+
+export interface ShotVideoInputReferenceBundleReport {
+  styleReference?: ShotVideoInputReferenceSummary;
+  continuityReferences: ShotVideoInputReferenceSummary[];
+}
+
+export interface ShotVideoInputReferenceSummary {
+  role: string;
+  label: string;
+  assetId: string;
 }
 
 export type ShotVideoTakeReadinessStatus =
@@ -588,6 +617,7 @@ export interface ShotVideoTakeInputGenerationSpec {
   dependencyKind: ShotVideoTakeDependencyKind;
   outputInputKind: ShotVideoTakeInputKind;
   modelChoice: ShotVideoTakeInputModelChoice;
+  referenceMode: ShotVideoInputReferenceMode;
   prompt: string;
   parameterValues: ShotVideoTakeParameterValues;
   title?: string;

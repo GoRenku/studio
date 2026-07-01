@@ -94,7 +94,7 @@ describe('SceneShotReferencesTab', () => {
       screen.getByRole('img', { name: 'Last Frame' }).getAttribute('src')
     ).toBe('/scene-assets/constantinople/scene_hook/asset_input_last/file_last');
     expect(
-      screen.getByRole('img', { name: 'Multi-Shot Storyboard Reference (3 shots)' })
+      screen.getByRole('img', { name: 'Video Prompt Sheet (3 shots)' })
         .getAttribute('src')
     ).toBe('/scene-assets/constantinople/scene_hook/asset_input_storyboard/file_storyboard');
     expect(
@@ -545,7 +545,7 @@ function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport 
         referenceChoice('last-frame', 'Last Frame', 'input_last', 'file_last'),
         referenceChoice(
           'video-prompt-sheet',
-          'Multi-Shot Storyboard Reference (3 shots)',
+          'Video Prompt Sheet (3 shots)',
           'input_storyboard',
           'file_storyboard'
         ),

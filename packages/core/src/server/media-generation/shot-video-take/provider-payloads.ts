@@ -22,6 +22,10 @@ import {
   finalInputMatchesRouteSlot,
   requireShotVideoTakeRoute,
 } from './route-settings.js';
+import type {
+  ShotVideoInputReferenceBundle,
+  ShotVideoInputResolvedReference,
+} from './shot-input-references.js';
 
 
 
@@ -851,22 +855,133 @@ function logicalInputUrl(projectRelativePath: string): string {
 
 
 
-export function buildShotVideoTakeInputProviderPayload(
-  spec: ShotVideoTakeInputGenerationSpec
-): ShotVideoTakeProviderPlan {
+export function buildShotVideoTakeInputProviderPayload(input: {
+  spec: ShotVideoTakeInputGenerationSpec;
+  context: ShotVideoTakeProductionContext;
+  references: ShotVideoInputReferenceBundle;
+}): ShotVideoTakeProviderPlan {
+  const { spec, references } = input;
+  const referenceImages = shotInputReferenceImages(references);
+  const referenceModel = shotInputReferenceProviderModel(spec.modelChoice);
+  validateShotInputReferenceRoute({
+    spec,
+    model: referenceModel,
+    referenceImages,
+  });
   const payload = {
-    prompt: spec.prompt,
+    prompt:
+      referenceImages.length > 0
+        ? shotInputReferencePrompt(spec.prompt, references)
+        : spec.prompt,
     ...spec.parameterValues,
+    ...(referenceImages.length > 0
+      ? {
+          image_urls: referenceImages.map((reference) =>
+            logicalInputUrl(reference.projectRelativePath)
+          ),
+        }
+      : {}),
     sync_mode: false,
   };
   return {
     provider: 'fal-ai',
-    model: providerModel(spec.modelChoice),
-    mode: 'text-to-image',
+    model: referenceImages.length > 0 ? referenceModel : providerModel(spec.modelChoice),
+    mode: referenceImages.length > 0 ? 'image-edit' : 'text-to-image',
     outputCount: 1,
     payload,
-    inputFiles: [],
+    inputFiles: referenceImages.map((reference) => ({
+      field: 'image_urls',
+      projectRelativePath: reference.projectRelativePath,
+      mediaKind: 'image',
+      asArray: true,
+      required: reference.required,
+    })),
   };
+}
+
+function shotInputReferenceImages(
+  references: ShotVideoInputReferenceBundle
+): ShotVideoInputResolvedReference[] {
+  return [
+    ...(references.styleReference ? [references.styleReference] : []),
+    ...references.continuityReferences,
+  ];
+}
+
+function shotInputReferenceProviderModel(
+  modelChoice: ShotVideoTakeInputGenerationSpec['modelChoice']
+): string {
+  if (modelChoice === 'fal-ai/openai/gpt-image-2') {
+    return 'openai/gpt-image-2/edit';
+  }
+  if (modelChoice === 'fal-ai/nano-banana-2') {
+    return 'nano-banana-2/edit';
+  }
+  return 'xai/grok-imagine-image/edit';
+}
+
+function validateShotInputReferenceRoute(input: {
+  spec: ShotVideoTakeInputGenerationSpec;
+  model: string;
+  referenceImages: ShotVideoInputResolvedReference[];
+}): void {
+  if (input.referenceImages.length === 0) {
+    return;
+  }
+  const maxReferenceImages =
+    input.model === 'xai/grok-imagine-image/edit' ? 3 : null;
+  if (
+    maxReferenceImages !== null &&
+    input.referenceImages.length > maxReferenceImages
+  ) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_INPUT_REFERENCE_LIMIT_EXCEEDED',
+      `Shot input model ${input.model} supports at most ${maxReferenceImages} reference images, but ${input.referenceImages.length} were resolved.`,
+      {
+        suggestion:
+          'Use GPT Image 2 or Nano Banana 2 for this shot input image, or reduce selected continuity references before using Grok Imagine.',
+      }
+    );
+  }
+  if (input.model !== 'xai/grok-imagine-image/edit') {
+    return;
+  }
+  const unsupportedFields = Object.keys(input.spec.parameterValues).filter(
+    (field) => !['num_images', 'output_format'].includes(field)
+  );
+  if (unsupportedFields.length > 0) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_INPUT_REFERENCE_MODE_UNSUPPORTED',
+      `Grok Imagine reference-conditioned shot input images do not support these parameters: ${unsupportedFields.join(', ')}.`,
+      {
+        suggestion:
+          'Use GPT Image 2 or Nano Banana 2, or remove unsupported settings before using Grok Imagine with reference images.',
+      }
+    );
+  }
+}
+
+function shotInputReferencePrompt(
+  prompt: string,
+  references: ShotVideoInputReferenceBundle
+): string {
+  const referenceLines = shotInputReferenceImages(references).map(
+    (reference, index) =>
+      `${index + 1}. ${reference.label} (${reference.role}): use as ${
+        reference.role === 'movie-lookbook-sheet' ||
+        reference.role === 'storyboard-lookbook-sheet'
+          ? 'the primary style reference'
+          : 'a continuity reference'
+      }.`
+  );
+  return [
+    prompt,
+    '',
+    'Reference-conditioning instructions:',
+    ...references.promptNotes,
+    'Attached reference images, in provider order:',
+    ...referenceLines,
+  ].join('\n');
 }
 
 

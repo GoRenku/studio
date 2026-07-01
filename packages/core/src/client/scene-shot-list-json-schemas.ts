@@ -651,12 +651,13 @@ function shotVideoTakeProductionSchemaProperties(): Record<string, unknown> {
           dependencyDrafts: {
             type: 'array',
             items: objectWith(
-              ['purpose', 'dependencyKind', 'outputInputKind', 'prompt'],
+              ['purpose', 'dependencyKind', 'outputInputKind', 'referenceMode', 'prompt'],
               {
                 purpose: enumValue(SHOT_VIDEO_TAKE_INPUT_PURPOSES),
                 dependencyKind: enumValue(SHOT_VIDEO_TAKE_DEPENDENCY_KINDS),
                 outputInputKind: enumValue(SHOT_VIDEO_TAKE_INPUT_KINDS),
                 modelChoice: enumValue(SHOT_VIDEO_TAKE_INPUT_MODELS),
+                referenceMode: enumValue(['movie-lookbook', 'storyboard-lookbook'] as const),
                 prompt: nonEmptyString(),
                 parameterValues: shotVideoTakeParameterValuesSchema(),
                 title: nonEmptyString(),

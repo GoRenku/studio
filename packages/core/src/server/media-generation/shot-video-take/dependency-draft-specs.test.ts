@@ -42,6 +42,7 @@ describe('shot video take dependency draft specs', () => {
             purpose: 'shot.first-frame',
             dependencyKind: 'first-frame',
             outputInputKind: 'first-frame',
+            referenceMode: 'movie-lookbook',
             prompt: 'A precise first frame prompt.',
             title: 'Authored first frame',
           }),
@@ -55,6 +56,7 @@ describe('shot video take dependency draft specs', () => {
       purpose: 'shot.first-frame',
       materializationState: 'generatable',
       spec: {
+        referenceMode: 'movie-lookbook',
         prompt: 'A precise first frame prompt.',
         title: 'Authored first frame',
       },

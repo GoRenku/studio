@@ -176,6 +176,7 @@ export interface ShotVideoTakeDependencyDraft {
   dependencyKind: ShotVideoTakeDependencyKind;
   outputInputKind: ShotVideoTakeInputKind;
   modelChoice?: import('./shot-video-take.js').ShotVideoTakeInputModelChoice;
+  referenceMode: import('./shot-video-take.js').ShotVideoInputReferenceMode;
   prompt: string;
   parameterValues?: ShotVideoTakeParameterValues;
   title?: string;

@@ -490,8 +490,9 @@ describe('shot video take preflight and validation', () => {
             dependencyId: 'reference-image:shot:shot_001',
             state: 'selected-planned',
             pricing: expect.objectContaining({
-              state: 'priced',
-              estimatedUsd: 0.005,
+              state: 'unpriced',
+              reason:
+                'Shot video input references are not available for the requested reference mode.',
             }),
           }),
         }),

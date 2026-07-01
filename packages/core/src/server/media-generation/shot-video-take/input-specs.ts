@@ -14,6 +14,7 @@ import type {
   ShotVideoTakeInputGenerationSpec,
   MediaGenerationEstimateReport,
   ShotVideoTakeProductionContext,
+  ShotVideoInputReferenceMode,
 } from '../../../client/index.js';
 import {
   insertMediaGenerationSpec,
@@ -60,18 +61,19 @@ import {
 import {
   readShotSpec,
 } from './spec-records.js';
+import {
+  resolveShotVideoInputReferenceBundle,
+} from './shot-input-references.js';
 
 
 
 export async function validateShotInputSpec(input: ValidateShotVideoTakeInputGenerationSpecInput) {
   const normalized = normalizeInputSpec(input.spec);
-  const context = await buildShotVideoTakeContext({
+  const { context, plan } = await prepareShotInputProviderPlan({
     projectName: input.projectName,
     homeDir: input.homeDir,
-    takeId: normalized.target.takeId,
+    spec: normalized,
   });
-  validateInputSpecAgainstContext(normalized, context);
-  const plan = buildShotVideoTakeInputProviderPayload(normalized);
   return {
     valid: true as const,
     spec: normalized,
@@ -196,7 +198,11 @@ export async function prepareShotInputSpec(
 ): Promise<PreparedMediaGeneration> {
   const specRecord = await readShotSpec(input);
   assertShotInputSpec(specRecord.spec);
-  const plan = buildShotVideoTakeInputProviderPayload(specRecord.spec);
+  const { plan } = await prepareShotInputProviderPlan({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    spec: specRecord.spec,
+  });
   return {
     spec: specRecord,
     providerPayload: plan.payload,
@@ -217,8 +223,12 @@ export async function prepareShotInputDraftSpec(input: {
     homeDir: input.homeDir,
     takeId: normalized.target.takeId,
   });
-  validateInputSpecAgainstContext(normalized, context);
-  const plan = buildShotVideoTakeInputProviderPayload(normalized);
+  const { plan } = await prepareShotInputProviderPlan({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    spec: normalized,
+    context,
+  });
   return {
     spec: draftMediaGenerationSpecRecord(normalized),
     providerPayload: plan.payload,
@@ -280,6 +290,44 @@ export function normalizeInputSpec(
       `Unsupported shot video take input model: ${spec.modelChoice}.`
     );
   }
+  const referenceMode = (spec as Partial<ShotVideoTakeInputGenerationSpec>)
+    .referenceMode;
+  if (referenceMode === undefined) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_INPUT_REFERENCE_MODE_REQUIRED',
+      'Shot video take input spec requires referenceMode.',
+      {
+        issues: [
+          createDiagnosticError(
+            'CORE_SHOT_VIDEO_INPUT_REFERENCE_MODE_REQUIRED',
+            'Shot video take input spec requires referenceMode.',
+            { path: ['referenceMode'], context: 'Shot video take input spec' },
+            'Use referenceMode "movie-lookbook" unless the user explicitly requested Storyboard Lookbook, hand-drawn, sketch, or animatic aesthetics.'
+          ),
+        ],
+        suggestion:
+          'Use referenceMode "movie-lookbook" for ordinary shot input images.',
+      }
+    );
+  }
+  if (!isShotVideoInputReferenceMode(referenceMode)) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_INPUT_REFERENCE_MODE_UNSUPPORTED',
+      `Unsupported shot video take input referenceMode: ${String(referenceMode)}.`,
+      {
+        issues: [
+          createDiagnosticError(
+            'CORE_SHOT_VIDEO_INPUT_REFERENCE_MODE_UNSUPPORTED',
+            `Unsupported shot video take input referenceMode: ${String(referenceMode)}.`,
+            { path: ['referenceMode'], context: 'Shot video take input spec' },
+            'Use "movie-lookbook" or "storyboard-lookbook".'
+          ),
+        ],
+        suggestion:
+          'Use referenceMode "movie-lookbook" unless explicit storyboard aesthetics are required.',
+      }
+    );
+  }
   const config = PURPOSE_CONFIG[spec.purpose];
   if (
     spec.dependencyKind !== config.dependencyKind ||
@@ -304,6 +352,45 @@ export function normalizeInputSpec(
     );
   }
   return { ...spec, parameterValues: spec.parameterValues ?? {} };
+}
+
+async function prepareShotInputProviderPlan(input: {
+  projectName?: string;
+  homeDir?: string;
+  spec: ShotVideoTakeInputGenerationSpec;
+  context?: ShotVideoTakeProductionContext;
+}): Promise<{
+  context: ShotVideoTakeProductionContext;
+  plan: ReturnType<typeof buildShotVideoTakeInputProviderPayload>;
+}> {
+  const context =
+    input.context ??
+    await buildShotVideoTakeContext({
+      projectName: input.projectName,
+      homeDir: input.homeDir,
+      takeId: input.spec.target.takeId,
+    });
+  validateInputSpecAgainstContext(input.spec, context);
+  return withShotProjectSession(input, ({ session }) => {
+    const references = resolveShotVideoInputReferenceBundle({
+      session,
+      context,
+      purpose: input.spec.purpose,
+      referenceMode: input.spec.referenceMode,
+    });
+    const plan = buildShotVideoTakeInputProviderPayload({
+      spec: input.spec,
+      context,
+      references,
+    });
+    return { context, plan };
+  });
+}
+
+function isShotVideoInputReferenceMode(
+  value: unknown
+): value is ShotVideoInputReferenceMode {
+  return value === 'movie-lookbook' || value === 'storyboard-lookbook';
 }
 
 function expectedSubjectForInputSpec(spec: ShotVideoTakeInputGenerationSpec): {

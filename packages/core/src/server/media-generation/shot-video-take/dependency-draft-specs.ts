@@ -56,6 +56,7 @@ export async function buildShotInputDependencyDraftSpec(
         dependencyKind: dependencyKindForPurpose(purpose),
         outputInputKind,
         modelChoice: request.context.defaults.imageDependencyModelChoice,
+        referenceMode: 'movie-lookbook',
         prompt: estimateOnlyShotInputPrompt(input.label),
         parameterValues: defaultShotInputParameterValues(),
         title: input.label,
@@ -83,6 +84,7 @@ export async function buildShotInputDependencyDraftSpec(
       outputInputKind,
       modelChoice:
         draft.modelChoice ?? request.context.defaults.imageDependencyModelChoice,
+      referenceMode: draft.referenceMode,
       prompt: draft.prompt,
       parameterValues: draft.parameterValues ?? defaultShotInputParameterValues(),
       title: draft.title ?? input.label,
@@ -163,6 +165,12 @@ export function isAuthoredShotDependencyDraft(
   draft: NonNullable<SceneShotVideoTakeProductionState['agentProposal']>['dependencyDrafts'][number] | undefined
 ): draft is NonNullable<SceneShotVideoTakeProductionState['agentProposal']>['dependencyDrafts'][number] {
   if (!draft?.prompt.trim()) {
+    return false;
+  }
+  if (
+    draft.referenceMode !== 'movie-lookbook' &&
+    draft.referenceMode !== 'storyboard-lookbook'
+  ) {
     return false;
   }
   if (

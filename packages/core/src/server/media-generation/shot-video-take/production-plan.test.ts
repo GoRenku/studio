@@ -51,6 +51,7 @@ describe('shot video take preflight and validation', () => {
               purpose: 'shot.first-frame',
               dependencyKind: 'first-frame',
               outputInputKind: 'first-frame',
+              referenceMode: 'movie-lookbook',
               prompt:
                 'Author the first frame from the selected shot composition, cast, location, and Lookbook continuity.',
               title: 'Authored first frame',
@@ -70,7 +71,25 @@ describe('shot video take preflight and validation', () => {
         expect.objectContaining({
           kind: 'dependency-generation',
           dependencyKind: 'first-frame',
-          pricing: { state: 'priced', estimatedUsd: 0.005 },
+          pricing: expect.objectContaining({
+            state: 'unpriced',
+            reason: 'Shot video input references could not be resolved.',
+          }),
+        }),
+        expect.objectContaining({
+          kind: 'dependency-generation',
+          dependencyKind: 'cast-character-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+        expect.objectContaining({
+          kind: 'dependency-generation',
+          dependencyKind: 'location-environment-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
+        }),
+        expect.objectContaining({
+          kind: 'dependency-generation',
+          dependencyKind: 'lookbook-sheet',
+          pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
           kind: 'final-video-generation',
@@ -79,7 +98,12 @@ describe('shot video take preflight and validation', () => {
       ])
     );
     expect(estimate.plan?.request.routeSettings.duration).toBe('9');
-    expect(estimate.issues).toEqual([]);
+    expect(estimate.issues).toEqual([
+      expect.objectContaining({
+        code: 'CORE_MEDIA_DEPENDENCY_ESTIMATE_FAILED',
+        message: 'Shot video input references could not be resolved.',
+      }),
+    ]);
   });
 
   it('rejects null input policies instead of treating them as omitted', async () => {

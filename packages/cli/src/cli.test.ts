@@ -2894,6 +2894,7 @@ describe('renku CLI', () => {
           dependencyKind: 'first-frame',
           outputInputKind: 'first-frame',
           modelChoice: shotInputModels.defaultModelChoice,
+          referenceMode: 'storyboard-lookbook',
           prompt: 'A still first frame for Urban studying the bronze.',
           parameterValues: shotInputModels.models[0].defaultParameterValues,
           title: 'Foundry first frame',
@@ -2910,13 +2911,19 @@ describe('renku CLI', () => {
       ['generation', 'spec', 'validate', '--file', shotFirstFrameSpecPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(shotFirstFrameValidateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      valid: true,
-      spec: {
-        purpose: 'shot.first-frame',
-        modelChoice: 'fal-ai/openai/gpt-image-2',
+    expect(shotFirstFrameValidateExitCode).toBe(1);
+    const shotFirstFrameValidationOutput =
+      stdout.join('\n').trim() || stderr.join('\n').trim();
+    expect(JSON.parse(shotFirstFrameValidationOutput)).toMatchObject({
+      valid: false,
+      error: {
+        code: 'CORE_SHOT_VIDEO_INPUT_REFERENCE_FILE_MISSING',
       },
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_INPUT_REFERENCE_FILE_MISSING',
+        }),
+      ]),
     });
 
     const specPath = path.join(homeDir, 'scene-storyboard-spec.json');

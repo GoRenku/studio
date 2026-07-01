@@ -13,6 +13,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { parseSceneShotVideoTakeState } from '../shot-video-take-json/validator.js';
 
 describe('migrate database command', () => {
   let homeDir: string;
@@ -134,7 +135,7 @@ describe('migrate database command', () => {
              select created_at
              from __drizzle_migrations
              order by created_at desc
-             limit 6
+             limit 7
            )`
         )
         .run();
@@ -792,6 +793,204 @@ describe('migrate database command', () => {
           storyboardContentFingerprint: 'null',
         },
       ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('repairs persisted shot video input production state for current input references', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        pragma user_version = 31;
+
+        create table scene_shot_video_take (
+          id text primary key not null,
+          state_json text not null
+        );
+
+        create table scene_shot_video_take_media_input (
+          id text primary key not null,
+          input_kind text not null
+        );
+
+        create table asset (
+          id text primary key not null,
+          type text not null,
+          title text not null
+        );
+      `);
+
+      sqlite
+        .prepare(
+          `insert into scene_shot_video_take (id, state_json)
+           values (?, ?)`
+        )
+        .run(
+          'take_missing_reference_mode',
+          JSON.stringify({
+            version: 2,
+            structure: {
+              mode: 'continuous',
+              sharedDirection: {
+                referenceSelections: {
+                  dependencyInclusions: {},
+                  selectedCharacterSheetAssetIds: {},
+                  selectedLocationSheetAssetIds: {},
+                  selectedLookbookSheetIds: [],
+                  selectedDialogueAudioTakeIds: {},
+                },
+              },
+            },
+            production: {
+              inputModeId: 'reference',
+              preparedInputs: [
+                {
+                  kind: 'multi-shot-storyboard-sheet',
+                  assetId: 'asset_storyboard_sheet',
+                  assetFileId: 'asset_file_storyboard_sheet',
+                  subjectKind: 'take',
+                  subjectId: 'take_missing_reference_mode',
+                },
+              ],
+              agentProposal: {
+                basedOnInputModeId: 'reference',
+                basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+                dependencyDrafts: [
+                  {
+                    purpose: 'shot.first-frame',
+                    dependencyKind: 'first-frame',
+                    outputInputKind: 'first-frame',
+                    modelChoice: 'fal-ai/openai/gpt-image-2',
+                    prompt: 'Create the first frame.',
+                  },
+                  {
+                    purpose: 'shot.reference-image',
+                    dependencyKind: 'reference-image',
+                    outputInputKind: 'reference-image',
+                    modelChoice: 'fal-ai/nano-banana-2',
+                    referenceMode: 'storyboard-lookbook',
+                    prompt: 'Create the reference image.',
+                  },
+                ],
+              },
+            },
+          })
+        );
+      sqlite
+        .prepare(
+          `insert into scene_shot_video_take_media_input (id, input_kind)
+           values (?, ?)`
+        )
+        .run(
+          'scene_shot_video_take_media_input_storyboard',
+          'multi-shot-storyboard-sheet'
+        );
+      sqlite
+        .prepare(
+          `insert into asset (id, type, title)
+           values (?, ?, ?)`
+        )
+        .run(
+          'asset_storyboard_sheet',
+          'shot.multi-shot-storyboard-sheet',
+          'Shot multi-shot storyboard sheet'
+        );
+      sqlite
+        .prepare(
+          `insert into scene_shot_video_take (id, state_json)
+           values (?, ?)`
+        )
+        .run(
+          'take_without_dependency_drafts',
+          JSON.stringify({
+            version: 2,
+            structure: {
+              mode: 'continuous',
+              sharedDirection: {
+                referenceSelections: {
+                  dependencyInclusions: {},
+                  selectedCharacterSheetAssetIds: {},
+                  selectedLocationSheetAssetIds: {},
+                  selectedLookbookSheetIds: [],
+                  selectedDialogueAudioTakeIds: {},
+                },
+              },
+            },
+            production: {},
+          })
+        );
+
+      const migrationSql = await fs.readFile(
+        path.join(
+          process.cwd(),
+          'drizzle',
+          '0042_shot-video-input-reference-mode.sql'
+        ),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(32);
+      const repaired = sqlite
+        .prepare(
+          `select state_json as stateJson
+           from scene_shot_video_take
+           where id = ?`
+        )
+        .get('take_missing_reference_mode') as { stateJson: string };
+
+      expect(parseSceneShotVideoTakeState({ value: repaired.stateJson }))
+        .toMatchObject({
+          production: {
+            preparedInputs: [
+              {
+                kind: 'video-prompt-sheet',
+                assetId: 'asset_storyboard_sheet',
+                assetFileId: 'asset_file_storyboard_sheet',
+                subjectKind: 'take',
+                subjectId: 'take_missing_reference_mode',
+              },
+            ],
+            agentProposal: {
+              dependencyDrafts: [
+                { referenceMode: 'movie-lookbook' },
+                { referenceMode: 'storyboard-lookbook' },
+              ],
+            },
+          },
+        });
+      expect(
+        sqlite
+          .prepare(
+            `select input_kind as inputKind
+             from scene_shot_video_take_media_input
+             where id = ?`
+          )
+          .get('scene_shot_video_take_media_input_storyboard')
+      ).toEqual({ inputKind: 'video-prompt-sheet' });
+      expect(
+        sqlite
+          .prepare(
+            `select type, title
+             from asset
+             where id = ?`
+          )
+          .get('asset_storyboard_sheet')
+      ).toEqual({
+        type: 'shot.video-prompt-sheet',
+        title: 'Shot video prompt sheet',
+      });
+
+      const untouched = sqlite
+        .prepare(
+          `select state_json as stateJson
+           from scene_shot_video_take
+           where id = ?`
+        )
+        .get('take_without_dependency_drafts') as { stateJson: string };
+      expect(parseSceneShotVideoTakeState({ value: untouched.stateJson }))
+        .toMatchObject({ production: {} });
     } finally {
       sqlite.close();
     }
