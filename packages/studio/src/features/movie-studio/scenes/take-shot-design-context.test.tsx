@@ -9,6 +9,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import {
   updateSceneShotVideoTakeDirection,
+  type SceneShotVideoTakeWithHttp,
   type ShotVideoTakeProductionMutation,
 } from '@/services/studio-shot-video-takes-api';
 import { Button } from '@/ui/button';
@@ -105,11 +106,11 @@ function DirectionEditor() {
   );
 }
 
-function renderProvider(take: SceneShotVideoTake) {
+function renderProvider(take: SceneShotVideoTakeWithHttp) {
   return render(renderProviderElement(take));
 }
 
-function renderProviderElement(take: SceneShotVideoTake) {
+function renderProviderElement(take: SceneShotVideoTakeWithHttp) {
   return (
     <TakeShotDesignProvider
       projectName='constantinople'
@@ -122,7 +123,7 @@ function renderProviderElement(take: SceneShotVideoTake) {
   );
 }
 
-function multiCutTake(): SceneShotVideoTake {
+function multiCutTake(): SceneShotVideoTakeWithHttp {
   return takeWithStructure({
     mode: 'multi-cut',
     directionsByShotId: {
@@ -132,7 +133,7 @@ function multiCutTake(): SceneShotVideoTake {
   });
 }
 
-function continuousTake(): SceneShotVideoTake {
+function continuousTake(): SceneShotVideoTakeWithHttp {
   return takeWithStructure({
     mode: 'continuous',
     sharedDirection: { composition: { shotSize: 'close-up' } },
@@ -141,7 +142,7 @@ function continuousTake(): SceneShotVideoTake {
 
 function takeWithStructure(
   structure: SceneShotVideoTake['state']['structure']
-): SceneShotVideoTake {
+): SceneShotVideoTakeWithHttp {
   return {
     takeId: 'take_001',
     sceneId: 'scene_test',
@@ -149,6 +150,7 @@ function takeWithStructure(
     title: 'Gate pressure',
     shotIds: ['shot_001', 'shot_002'],
     picked: false,
+    video: null,
     state: {
       version: 2,
       structure,

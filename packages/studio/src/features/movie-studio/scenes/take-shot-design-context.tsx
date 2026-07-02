@@ -3,9 +3,9 @@ import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import type {
   SceneShot,
   SceneShotVideoTakeDirection,
-  SceneShotVideoTake,
 } from '@gorenku/studio-core/client';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
+import type { SceneShotVideoTakeWithHttp } from '@/services/studio-shot-video-takes-api';
 import {
   useTakeShotDesign,
   type UseTakeShotDesignResult,
@@ -20,8 +20,8 @@ interface TakeShotDesignProviderProps {
   projectName: string;
   sceneId: string;
   shot: SceneShot;
-  take?: SceneShotVideoTake | null;
-  onSaved?: (take: SceneShotVideoTake) => void;
+  take?: SceneShotVideoTakeWithHttp | null;
+  onSaved?: (take: SceneShotVideoTakeWithHttp) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   children: ReactNode;
 }
@@ -77,7 +77,7 @@ function TakeShotDesignScope({
 }
 
 function directionForShot(
-  take: SceneShotVideoTake,
+  take: SceneShotVideoTakeWithHttp,
   shotId: string
 ): SceneShotVideoTakeDirection | undefined {
   if (take.state.structure.mode === 'continuous') {
@@ -87,7 +87,7 @@ function directionForShot(
 }
 
 function takeShotDesignScopeKey(
-  take: SceneShotVideoTake | null | undefined,
+  take: SceneShotVideoTakeWithHttp | null | undefined,
   shotId: string
 ): string {
   if (!take) {

@@ -31,8 +31,7 @@ import {
   sceneDialogueAudioTakes,
   sceneShotVideoTakeMediaInputs,
   sceneShotVideoTakeMediaInputShots,
-  sceneShotVideoTakeOutputs,
-  sceneShotVideoTakeOutputShots,
+  sceneShotVideoTakeVideos,
   sceneShotVideoTakeShots,
   sceneShotVideoTakes,
   sequenceAssets,
@@ -719,17 +718,16 @@ const sceneShotVideoTakeDefinition: TrashObjectDefinition = {
       .where(eq(sceneShotVideoTakeMediaInputs.takeId, input.itemId))
       .run();
     input.session.db
-      .update(sceneShotVideoTakeOutputs)
+      .update(sceneShotVideoTakeVideos)
       .set({
         discardedAt: input.now,
         discardOperationId: input.operationId,
         restoredAt: null,
         updatedAt: input.now,
       })
-      .where(eq(sceneShotVideoTakeOutputs.takeId, input.itemId))
+      .where(eq(sceneShotVideoTakeVideos.takeId, input.itemId))
       .run();
     markSceneShotVideoTakeInputShotsDiscarded(input);
-    markSceneShotVideoTakeOutputShotsDiscarded(input);
     assetIds.forEach((assetId) => markAssetTreeDiscarded({ ...input, itemId: assetId }));
   },
   applyRestore(input) {
@@ -778,17 +776,16 @@ const sceneShotVideoTakeDefinition: TrashObjectDefinition = {
       .where(eq(sceneShotVideoTakeMediaInputs.takeId, input.trashItem.itemId))
       .run();
     input.session.db
-      .update(sceneShotVideoTakeOutputs)
+      .update(sceneShotVideoTakeVideos)
       .set({
         discardedAt: null,
         discardOperationId: null,
         restoredAt: input.now,
         updatedAt: input.now,
       })
-      .where(eq(sceneShotVideoTakeOutputs.takeId, input.trashItem.itemId))
+      .where(eq(sceneShotVideoTakeVideos.takeId, input.trashItem.itemId))
       .run();
     restoreSceneShotVideoTakeInputShots(input);
-    restoreSceneShotVideoTakeOutputShots(input);
     assetIds.forEach((assetId) =>
       restoreAssetTree({
         ...input,
@@ -1423,9 +1420,9 @@ function listSceneShotVideoTakeAssetIds(
     .all()
     .forEach((row) => assetIds.add(row.assetId));
   input.session.db
-    .select({ assetId: sceneShotVideoTakeOutputs.assetId })
-    .from(sceneShotVideoTakeOutputs)
-    .where(eq(sceneShotVideoTakeOutputs.takeId, takeId))
+    .select({ assetId: sceneShotVideoTakeVideos.assetId })
+    .from(sceneShotVideoTakeVideos)
+    .where(eq(sceneShotVideoTakeVideos.takeId, takeId))
     .all()
     .forEach((row) => assetIds.add(row.assetId));
   return [...assetIds];
@@ -1452,27 +1449,6 @@ function markSceneShotVideoTakeInputShotsDiscarded(
   });
 }
 
-function markSceneShotVideoTakeOutputShotsDiscarded(
-  input: TrashObjectDiscardContext
-): void {
-  const outputIds = input.session.db
-    .select({ id: sceneShotVideoTakeOutputs.id })
-    .from(sceneShotVideoTakeOutputs)
-    .where(eq(sceneShotVideoTakeOutputs.takeId, input.itemId))
-    .all();
-  outputIds.forEach((row) => {
-    input.session.db
-      .update(sceneShotVideoTakeOutputShots)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-      })
-      .where(eq(sceneShotVideoTakeOutputShots.outputId, row.id))
-      .run();
-  });
-}
-
 function restoreSceneShotVideoTakeInputShots(
   input: TrashObjectRestoreContext
 ): void {
@@ -1486,23 +1462,6 @@ function restoreSceneShotVideoTakeInputShots(
       .update(sceneShotVideoTakeMediaInputShots)
       .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
       .where(eq(sceneShotVideoTakeMediaInputShots.inputId, row.id))
-      .run();
-  });
-}
-
-function restoreSceneShotVideoTakeOutputShots(
-  input: TrashObjectRestoreContext
-): void {
-  const outputIds = input.session.db
-    .select({ id: sceneShotVideoTakeOutputs.id })
-    .from(sceneShotVideoTakeOutputs)
-    .where(eq(sceneShotVideoTakeOutputs.takeId, input.trashItem.itemId))
-    .all();
-  outputIds.forEach((row) => {
-    input.session.db
-      .update(sceneShotVideoTakeOutputShots)
-      .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-      .where(eq(sceneShotVideoTakeOutputShots.outputId, row.id))
       .run();
   });
 }

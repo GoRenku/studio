@@ -11,12 +11,14 @@ import type {
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
+  copySceneShotVideoTakeForRegeneration,
   createSceneShotVideoTake,
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
   readSceneShotVideoTakeEditContext,
   type SceneShotVideoTakeEditContextResponse,
   type SceneShotVideoTakeOverviewResponse,
+  type SceneShotVideoTakeWithHttp,
   type ShotVideoTakeProductionContextResponse,
   type ShotVideoTakeStoryboardImageReferenceWithHttp,
   updateSceneShotVideoTakePick,
@@ -32,6 +34,7 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
   listSceneShotVideoTakes: vi.fn(),
+  copySceneShotVideoTakeForRegeneration: vi.fn(),
   createSceneShotVideoTake: vi.fn(),
   deleteSceneShotVideoTake: vi.fn(),
   readSceneShotVideoTakeEditContext: vi.fn(),
@@ -85,6 +88,16 @@ describe('SceneTakesTab', () => {
     vi.mocked(createSceneShotVideoTake).mockReset();
     vi.mocked(createSceneShotVideoTake).mockResolvedValue(
       takeCreateReport(take())
+    );
+    vi.mocked(copySceneShotVideoTakeForRegeneration).mockReset();
+    vi.mocked(copySceneShotVideoTakeForRegeneration).mockResolvedValue(
+      takeCreateReport(
+        take({
+          takeId: 'take_regenerated',
+          title: 'Regenerated take',
+          shotIds: ['shot_001'],
+        })
+      )
     );
     vi.mocked(deleteSceneShotVideoTake).mockReset();
     vi.mocked(deleteSceneShotVideoTake).mockResolvedValue({
@@ -141,6 +154,38 @@ describe('SceneTakesTab', () => {
     });
     expect(image.getAttribute('src')).toBe('/storyboards/shot-001.png');
     expect(screen.queryByText(/^Take$/)).toBeNull();
+  });
+
+  it('renders a take video preview before storyboard imagery when video exists', async () => {
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+      takes: [
+        takeOverview(
+          take({
+            takeId: 'take_video',
+            title: 'Video take',
+            shotIds: ['shot_001'],
+            video: {
+              takeId: 'take_video',
+              assetId: 'asset_video',
+              assetFileId: 'asset_file_video',
+              projectRelativePath:
+                'generated/media/final-take.mp4' as ProjectRelativePath,
+              mimeType: 'video/mp4',
+              createdAt: '2026-06-18T12:00:00.000Z',
+              url: '/studio-api/projects/constantinople/screenplay/scenes/scene_hook/takes/take_video/video/files/asset_file_video',
+            } as never,
+          })
+        ),
+      ],
+    });
+
+    render(<SceneTakesTabHarness />);
+
+    const video = await screen.findByTitle('Map study');
+    expect(video.tagName).toBe('VIDEO');
+    expect(
+      screen.queryByRole('img', { name: 'Storyboard image for Shot 1' })
+    ).toBeNull();
   });
 
   it('uses overview shot ids for read-only take card storyboard previews', async () => {
@@ -832,7 +877,7 @@ function resource(): SceneShotListResourceResponse {
 }
 
 function takeEditContext(input: {
-  take: SceneShotVideoTake;
+  take: SceneShotVideoTakeWithHttp;
   sourceShotListId: string;
   displayShots: SceneShot[];
   storyboardImages?: ReturnType<typeof sourceStoryboardImage>[];
@@ -853,7 +898,7 @@ function takeEditContext(input: {
 }
 
 function takeProductionContext(input: {
-  take: SceneShotVideoTake;
+  take: SceneShotVideoTakeWithHttp;
   shotListId: string;
   displayShots: SceneShot[];
   storyboardImages?: ReturnType<typeof sourceStoryboardImage>[];
@@ -874,7 +919,7 @@ function takeProductionContext(input: {
 }
 
 function takeOverview(
-  value: SceneShotVideoTake,
+  value: SceneShotVideoTakeWithHttp,
   overrides: Partial<SceneShotVideoTakeOverviewResponse> = {}
 ): SceneShotVideoTakeOverviewResponse {
   return {
@@ -907,7 +952,7 @@ function takeOverview(
   };
 }
 
-function takeCreateReport(value: SceneShotVideoTake) {
+function takeCreateReport(value: SceneShotVideoTakeWithHttp) {
   return {
     overview: takeOverview(value),
     resourceKeys: [],
@@ -943,8 +988,8 @@ function sourceStoryboardImage(
 }
 
 function take(
-  overrides: Partial<SceneShotVideoTake> = {}
-): SceneShotVideoTake {
+  overrides: Partial<SceneShotVideoTakeWithHttp> = {}
+): SceneShotVideoTakeWithHttp {
   return {
     takeId: 'take_map',
     sceneId: 'scene_hook',
@@ -952,6 +997,7 @@ function take(
     shotIds: ['shot_001'],
     title: 'Map study take',
     picked: false,
+    video: null,
     state: emptyTakeState(),
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T09:00:00.000Z',

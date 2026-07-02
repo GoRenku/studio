@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createLatestOnlySaveQueue,
   type LatestOnlySaveQueue,
@@ -9,6 +9,7 @@ export type AutosaveState = 'idle' | 'saving' | 'saved' | 'error';
 export interface DebouncedSaveStatus {
   state: AutosaveState;
   message: string | null;
+  flushPending: () => Promise<boolean>;
 }
 
 export function useDebouncedAutosave<TValue, TResult = void>(input: {
@@ -27,12 +28,14 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
   const [status, setStatus] = useState<DebouncedSaveStatus>({
     state: 'idle',
     message: null,
+    flushPending: async () => true,
   });
   const lastQueuedValue = useRef(value);
   const savedVisibleTimeout = useRef<number | null>(null);
   const pendingDebounceTimeout = useRef<number | null>(null);
   const pendingDebouncedValue = useRef<TValue | undefined>(undefined);
   const hasPendingDebouncedValue = useRef(false);
+  const lastSaveFailed = useRef(false);
   const inputRef = useRef({
     save,
     onSaved,
@@ -41,6 +44,25 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
     failureMessage: input.failureMessage ?? 'Changes could not be saved.',
   });
   const queueRef = useRef<LatestOnlySaveQueue<TValue> | null>(null);
+
+  const flushPending = useCallback(async () => {
+    if (pendingDebounceTimeout.current !== null) {
+      window.clearTimeout(pendingDebounceTimeout.current);
+      pendingDebounceTimeout.current = null;
+    }
+    if (hasPendingDebouncedValue.current) {
+      const nextValue = pendingDebouncedValue.current as TValue;
+      hasPendingDebouncedValue.current = false;
+      pendingDebouncedValue.current = undefined;
+      queueRef.current?.requestSave(nextValue);
+    }
+    try {
+      await queueRef.current?.flush();
+      return !lastSaveFailed.current;
+    } catch {
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     inputRef.current = {
@@ -75,8 +97,9 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
     queueRef.current = createLatestOnlySaveQueue<TValue, TResult>({
       save: (nextValue) => inputRef.current.save(nextValue),
       onSaveStart: () => {
+        lastSaveFailed.current = false;
         clearSavedVisibleTimeout();
-        setStatus({ state: 'saving', message: 'Saving' });
+        setStatus({ state: 'saving', message: 'Saving', flushPending });
       },
       onSaveSuccess: ({ value: savedValue, result, latest }) => {
         if (!latest) {
@@ -84,10 +107,10 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
         }
 
         inputRef.current.onSaved?.(result, savedValue);
-        setStatus({ state: 'saved', message: 'Saved' });
+        setStatus({ state: 'saved', message: 'Saved', flushPending });
         clearSavedVisibleTimeout();
         savedVisibleTimeout.current = window.setTimeout(() => {
-          setStatus({ state: 'idle', message: null });
+          setStatus({ state: 'idle', message: null, flushPending });
           savedVisibleTimeout.current = null;
         }, inputRef.current.savedVisibleMs);
       },
@@ -97,12 +120,14 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
         }
 
         clearSavedVisibleTimeout();
+        lastSaveFailed.current = true;
         setStatus({
           state: 'error',
           message:
             error instanceof Error
               ? error.message
               : inputRef.current.failureMessage,
+          flushPending,
         });
       },
     });
@@ -133,7 +158,7 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
         queue.dispose();
       });
     };
-  }, []);
+  }, [flushPending]);
 
   useEffect(() => {
     if (isReady && !isReady(value)) {
@@ -165,5 +190,8 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
     }, delayMs);
   }, [delayMs, isReady, value]);
 
-  return status;
+  return {
+    ...status,
+    flushPending,
+  };
 }

@@ -5,6 +5,7 @@ import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
+import { VideoPreview } from '@/ui/video-preview';
 
 export const TAKE_CARD_GRID_MIN_WIDTH_PX = 280;
 export const TAKE_CARD_ASPECT_RATIO = 16 / 9;
@@ -13,6 +14,7 @@ interface SceneTakeCardProps {
   title: string;
   description: string;
   picked: boolean;
+  videoUrl?: string | null;
   previewShots: SceneTakePreviewShot[];
   onOpen: () => void;
   onDelete: () => Promise<void>;
@@ -29,12 +31,15 @@ export function SceneTakeCard({
   title,
   description,
   picked,
+  videoUrl,
   previewShots,
   onOpen,
   onDelete,
   onTogglePicked,
 }: SceneTakeCardProps) {
-  const preview = takePreview(previewShots);
+  const preview = videoUrl
+    ? takeVideoPreview(videoUrl, title)
+    : takePreview(previewShots);
   return (
     <ImageOverlayCard
       title={title}
@@ -74,6 +79,24 @@ export function SceneTakeCard({
       }
     />
   );
+}
+
+function takeVideoPreview(videoUrl: string, title: string): {
+  imageUrl: string | null;
+  imageAlt: string;
+  content?: ReactNode;
+} {
+  return {
+    imageUrl: null,
+    imageAlt: title,
+    content: (
+      <VideoPreview
+        src={videoUrl}
+        title={title}
+        className='h-full w-full object-cover'
+      />
+    ),
+  };
 }
 
 function takePreview(previewShots: SceneTakePreviewShot[]): {

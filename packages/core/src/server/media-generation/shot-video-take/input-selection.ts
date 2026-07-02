@@ -8,6 +8,7 @@ import {
 } from '../../database/access/asset-files.js';
 import {
   requireShotVideoTakeInput,
+  readShotVideoTakeVideo,
   selectShotVideoTakeInputRecord,
   clearShotVideoTakeInputRecordSelection,
   listShotVideoTakeInputs as listShotVideoTakeInputRecords,
@@ -25,6 +26,8 @@ import type {
   ShotVideoTakeContextInput,
   ResolveShotVideoTakeInputFileInput,
   ResolvedShotVideoTakeInputFile,
+  ResolveShotVideoTakeVideoFileInput,
+  ResolvedShotVideoTakeVideoFile,
   SelectShotVideoTakeInputInput,
   ClearShotVideoTakeInputSelectionInput,
   DeleteShotVideoTakeInputInput,
@@ -103,6 +106,64 @@ export async function resolveShotVideoTakeInputFile(
     assertResolvedPathInsideProject(projectFolder, absolutePath);
     return {
       input: shotInput,
+      file: {
+        id: fileRecord.id,
+        role: fileRecord.role,
+        projectRelativePath: fileRecord.projectRelativePath as ProjectRelativePath,
+        mediaKind: fileRecord.mediaKind,
+        mimeType: fileRecord.mimeType,
+        sizeBytes: fileRecord.sizeBytes,
+        contentHash: fileRecord.contentHash,
+        width: fileRecord.width,
+        height: fileRecord.height,
+        durationSeconds: fileRecord.durationSeconds,
+      },
+      absolutePath,
+    };
+  });
+}
+
+export async function resolveShotVideoTakeVideoFile(
+  input: ResolveShotVideoTakeVideoFileInput
+): Promise<ResolvedShotVideoTakeVideoFile> {
+  return withShotProjectSession(input, ({ session, projectFolder }) => {
+    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
+    const video = readShotVideoTakeVideo(session, prepared.take.takeId);
+    if (!video) {
+      throw new ProjectDataError(
+        'PROJECT_DATA424',
+        `Shot video take has no final video: ${prepared.take.takeId}.`
+      );
+    }
+    if (video.assetFileId !== input.assetFileId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA425',
+        `Shot video take video file is not attached to the requested take: ${input.assetFileId}.`
+      );
+    }
+    const fileRecord = readAssetFileRecord(session, {
+      assetId: video.assetId,
+      assetFileId: input.assetFileId,
+    });
+    if (!fileRecord) {
+      throw new ProjectDataError(
+        'PROJECT_DATA426',
+        `Shot video take video asset file was not found: ${input.assetFileId}.`
+      );
+    }
+    if (fileRecord.mediaKind !== 'video') {
+      throw new ProjectDataError(
+        'PROJECT_DATA427',
+        `Shot video take video asset file is not video media: ${input.assetFileId}.`
+      );
+    }
+    const absolutePath = resolveProjectRelativePath(
+      projectFolder,
+      fileRecord.projectRelativePath as ProjectRelativePath
+    );
+    assertResolvedPathInsideProject(projectFolder, absolutePath);
+    return {
+      take: prepared.take,
       file: {
         id: fileRecord.id,
         role: fileRecord.role,

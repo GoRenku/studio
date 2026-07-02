@@ -178,6 +178,35 @@ export function matchesSceneShotsResource(input: {
   );
 }
 
+export function matchesSceneTakesResource(input: {
+  resourceKeys: string[];
+  sceneId: string;
+  takeId?: string | null;
+}): boolean {
+  return input.resourceKeys.some((resourceKey) => {
+    if (
+      resourceKey === `scene:${input.sceneId}` ||
+      resourceKey === `surface:scene:${input.sceneId}:takes`
+    ) {
+      return true;
+    }
+    if (!input.takeId) {
+      return (
+        resourceKey.startsWith('scene-shot-video-take:') ||
+        resourceKey.startsWith('scene-shot-video-take-video:') ||
+        resourceKey.startsWith('scene-shot-video-take-prompt:') ||
+        resourceKey.startsWith('scene-shot-video-take-input:')
+      );
+    }
+    return (
+      resourceKey === `scene-shot-video-take:${input.takeId}` ||
+      resourceKey === `scene-shot-video-take-video:${input.takeId}` ||
+      resourceKey === `scene-shot-video-take-prompt:${input.takeId}` ||
+      resourceKey.startsWith('scene-shot-video-take-input:')
+    );
+  });
+}
+
 export function matchesSequenceResource(input: {
   resourceKeys: string[];
   sequenceId: string;

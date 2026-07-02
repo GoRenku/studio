@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { ProjectRelativePath } from '../../../client/index.js';
 import {
   insertShotVideoTakeInputRecord,
-  insertShotVideoTakeRecord,
+  insertShotVideoTakeVideoRecord,
 } from '../../database/access/shot-video-takes.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import {
@@ -59,7 +59,7 @@ describe('shot video take media imports', () => {
     );
   });
 
-  it('imports final shot video outputs with stable output records', async () => {
+  it('finalizes a first shot video on the draft take', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const sourceProjectRelativePath = 'generated/media/final-take.mp4';
@@ -79,9 +79,21 @@ describe('shot video take media imports', () => {
         title: 'Imported final take',
         mediaKind: 'video',
       },
-      output: {
-        shotIds: ['shot_001'],
-        selected: true,
+      sourceTake: {
+        takeId: written.take.takeId,
+      },
+      take: {
+        takeId: written.take.takeId,
+        video: {
+          projectRelativePath: sourceProjectRelativePath,
+          mimeType: 'video/mp4',
+        },
+      },
+      createdRegeneratedTake: false,
+      video: {
+        takeId: written.take.takeId,
+        projectRelativePath: sourceProjectRelativePath,
+        mimeType: 'video/mp4',
       },
     });
     expect(report.imported.files).toEqual(
@@ -96,7 +108,55 @@ describe('shot video take media imports', () => {
     );
   });
 
-  it('rejects deleting assets retained by take media inputs and outputs', async () => {
+  it('finalizing another video from a videoed take creates a regenerated take', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/first-final-take.mp4',
+      'first final video'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/second-final-take.mp4',
+      'second final video'
+    );
+
+    const firstReport = await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/first-final-take.mp4',
+      title: 'First final take',
+    });
+    const secondReport = await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/second-final-take.mp4',
+      title: 'Second final take',
+    });
+
+    expect(secondReport.createdRegeneratedTake).toBe(true);
+    expect(secondReport.sourceTake.takeId).toBe(written.take.takeId);
+    expect(secondReport.take.takeId).not.toBe(written.take.takeId);
+    expect(secondReport.take.regeneratedFromTakeId).toBe(written.take.takeId);
+    expect(secondReport.take.shotIds).toEqual(written.take.shotIds);
+    expect(secondReport.take.video).toMatchObject({
+      takeId: secondReport.take.takeId,
+      projectRelativePath: 'generated/media/second-final-take.mp4',
+    });
+    expect(firstReport.take.video).toMatchObject({
+      takeId: written.take.takeId,
+      projectRelativePath: 'generated/media/first-final-take.mp4',
+    });
+
+    const sourceTake = await projectData.readSceneShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+    expect(sourceTake.video).toMatchObject({
+      projectRelativePath: 'generated/media/first-final-take.mp4',
+    });
+  });
+
+  it('rejects deleting assets retained by take media inputs and videos', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     await shotVideoTakeProject.writeProjectFile(
@@ -196,14 +256,10 @@ describe('shot video take media imports', () => {
         shotIds,
         now,
       });
-      insertShotVideoTakeRecord(session, {
-        id: 'scene_shot_video_take_output_attached_asset',
-        sceneId: ids.sceneId,
+      insertShotVideoTakeVideoRecord(session, {
         takeId: written.take.takeId,
         assetId: outputAsset.assetId,
         assetFileId: outputFile.id,
-        isSelected: false,
-        shotIds,
         now,
       });
     } finally {

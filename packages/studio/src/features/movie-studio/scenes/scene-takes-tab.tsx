@@ -8,14 +8,12 @@ import {
 } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type {
-  SceneShot,
-  SceneShotVideoTake,
-} from '@gorenku/studio-core/client';
+import type { SceneShot } from '@gorenku/studio-core/client';
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import { restoreTrashItem } from '@/services/studio-trash-api';
 import {
+  copySceneShotVideoTakeForRegeneration,
   createSceneShotVideoTake,
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
@@ -24,6 +22,7 @@ import {
   updateSceneShotVideoTakeShots,
   type SceneShotVideoTakeEditContextResponse,
   type SceneShotVideoTakeOverviewResponse,
+  type SceneShotVideoTakeWithHttp,
   type ShotVideoTakeProductionContextResponse,
   type ShotVideoTakeStoryboardImageReferenceWithHttp,
 } from '@/services/studio-shot-video-takes-api';
@@ -43,7 +42,7 @@ import {
   ResizablePanelGroup,
 } from '@/ui/resizable';
 import {
-  matchesSceneShotsResource,
+  matchesSceneTakesResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import { SceneShotRail } from './scene-shot-rail';
@@ -90,7 +89,7 @@ interface SceneTakesTabProps {
 
 interface TakeEditingShotListContext {
   takeId: string;
-  take: SceneShotVideoTake;
+  take: SceneShotVideoTakeWithHttp;
   sourceShotListId: string;
   displayShots: SceneShot[];
   storyboardImagesByShotId: Record<
@@ -126,6 +125,9 @@ export function SceneTakesTab({
   const [selectionApplyError, setSelectionApplyError] = useState<string | null>(null);
   const createTakePendingRef = useRef(false);
   const [createTakePending, setCreateTakePending] = useState(false);
+  const [regeneratePendingTakeId, setRegeneratePendingTakeId] = useState<
+    string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const saveNotificationSequenceRef = useRef(0);
   const [detailSaveNotification, setDetailSaveNotification] =
@@ -161,18 +163,36 @@ export function SceneTakesTab({
 
   useEffect(() => loadResource(), [loadResource]);
 
-  useStudioResourceRefresh({
-    projectName,
-    matches: (resourceKeys) =>
-      matchesSceneShotsResource({
-        resourceKeys,
+  const loadTakeEditingContext = useCallback(
+    (nextTakeId: string) => {
+      let cancelled = false;
+      void readSceneShotVideoTakeEditContext(
+        projectName,
         sceneId,
-        shotListId: resource?.activeShotListId,
-      }),
-    onRefresh: () => {
-      loadResource();
+        nextTakeId
+      )
+        .then((editContext) => {
+          if (!cancelled) {
+            setTakeEditingContext(
+              takeEditingContextFromEditContext(editContext)
+            );
+          }
+        })
+        .catch((loadError) => {
+          if (!cancelled) {
+            setError(
+              loadError instanceof Error
+                ? loadError.message
+                : 'Unable to load take editing context.'
+            );
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
     },
-  });
+    [projectName, sceneId]
+  );
 
   const activeShotListShots = useMemo(
     () => resource?.activeShotList?.shots ?? [],
@@ -194,45 +214,29 @@ export function SceneTakesTab({
     return takeOverviews[0]?.take ?? null;
   }, [takeId, takeOverviews, workspaceMode]);
   const activeTakeKey = activeTake?.takeId ?? null;
-  const activeTakeUpdatedAt = activeTake?.updatedAt ?? null;
+
+  useStudioResourceRefresh({
+    projectName,
+    matches: (resourceKeys) =>
+      matchesSceneTakesResource({
+        resourceKeys,
+        sceneId,
+        takeId: activeTakeKey,
+      }),
+    onRefresh: () => {
+      loadResource();
+      if (workspaceMode === 'edit' && activeTakeKey) {
+        loadTakeEditingContext(activeTakeKey);
+      }
+    },
+  });
 
   useEffect(() => {
     if (workspaceMode !== 'edit' || !activeTakeKey) {
       return;
     }
-
-    let cancelled = false;
-    void readSceneShotVideoTakeEditContext(
-      projectName,
-      sceneId,
-      activeTakeKey
-    )
-      .then((editContext) => {
-        if (!cancelled) {
-          setTakeEditingContext(
-            takeEditingContextFromEditContext(editContext)
-          );
-        }
-      })
-      .catch((loadError) => {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : 'Unable to load take editing context.'
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    activeTakeKey,
-    activeTakeUpdatedAt,
-    projectName,
-    sceneId,
-    workspaceMode,
-  ]);
+    return loadTakeEditingContext(activeTakeKey);
+  }, [activeTakeKey, loadTakeEditingContext, workspaceMode]);
 
   const currentTakeEditingContext =
     takeEditingContext?.takeId === activeTakeKey ? takeEditingContext : null;
@@ -317,7 +321,7 @@ export function SceneTakesTab({
   );
 
   const handleOpenTake = useCallback(
-    (nextTake: SceneShotVideoTake) => {
+    (nextTake: SceneShotVideoTakeWithHttp) => {
       onSelect({
         type: 'scene',
         id: sceneId,
@@ -377,7 +381,7 @@ export function SceneTakesTab({
   );
 
   const handleToggleTakePick = useCallback(
-    async (take: SceneShotVideoTake) => {
+    async (take: SceneShotVideoTakeWithHttp) => {
       try {
         const report = await updateSceneShotVideoTakePick(
           projectName,
@@ -389,7 +393,13 @@ export function SceneTakesTab({
           orderSceneShotVideoTakeOverviews(
             current.map((candidate) =>
               candidate.take.takeId === report.take.takeId
-                ? { ...candidate, take: report.take }
+                ? {
+                    ...candidate,
+                    take: {
+                      ...report.take,
+                      video: candidate.take.video,
+                    },
+                  }
                 : candidate
             )
           )
@@ -500,7 +510,7 @@ export function SceneTakesTab({
     sceneId,
   ]);
 
-  const handleTakeChange = useCallback((updatedTake: SceneShotVideoTake) => {
+  const handleTakeChange = useCallback((updatedTake: SceneShotVideoTakeWithHttp) => {
     setTakeOverviews((current) =>
       orderSceneShotVideoTakeOverviews(
         current.map((candidate) =>
@@ -511,6 +521,43 @@ export function SceneTakesTab({
       )
     );
   }, []);
+
+  const handleRegenerateTake = useCallback(
+    async (sourceTake: SceneShotVideoTakeWithHttp) => {
+      setRegeneratePendingTakeId(sourceTake.takeId);
+      try {
+        const report = await copySceneShotVideoTakeForRegeneration(
+          projectName,
+          sceneId,
+          sourceTake.takeId
+        );
+        setTakeOverviews((current) =>
+          orderSceneShotVideoTakeOverviews([...current, report.overview])
+        );
+        setTakeEditingContext(
+          takeEditingContextFromOverview(report.overview)
+        );
+        onSelect({
+          type: 'scene',
+          id: sceneId,
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: report.overview.take.takeId,
+          shotId: report.overview.take.shotIds[0],
+          shotTab: 'ai-production',
+        });
+      } catch (regenerateError) {
+        setError(
+          regenerateError instanceof Error
+            ? regenerateError.message
+            : 'Unable to copy take for regeneration.'
+        );
+      } finally {
+        setRegeneratePendingTakeId(null);
+      }
+    },
+    [onSelect, projectName, sceneId]
+  );
 
   const reportDetailSaveNotification = useCallback(
     (status: SaveNotificationStatus) => {
@@ -672,6 +719,7 @@ export function SceneTakesTab({
                   overview.overviewShotIds
                 )}
                 picked={overview.take.picked}
+                videoUrl={overview.take.video?.url ?? null}
                 previewShots={takePreviewShots({
                   shots: overview.displayShots,
                   shotIds: overview.overviewShotIds,
@@ -857,6 +905,10 @@ export function SceneTakesTab({
             onCreateTake={handleCreateTake}
             createTakePending={createTakePending}
             onTakeChange={handleTakeChange}
+            onRegenerateTake={handleRegenerateTake}
+            regeneratePending={
+              regeneratePendingTakeId === selectedTake?.takeId
+            }
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>
@@ -889,6 +941,20 @@ function takeEditingContextFromProductionContext(
     displayShots: context.displayShots,
     storyboardImagesByShotId: storyboardImagesByShotId(
       context.storyboardImages
+    ),
+  };
+}
+
+function takeEditingContextFromOverview(
+  overview: SceneShotVideoTakeOverviewResponse
+): TakeEditingShotListContext {
+  return {
+    takeId: overview.take.takeId,
+    take: overview.take,
+    sourceShotListId: overview.sourceShotList.id,
+    displayShots: overview.displayShots,
+    storyboardImagesByShotId: storyboardImagesByShotId(
+      overview.storyboardImages
     ),
   };
 }

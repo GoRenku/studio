@@ -17,6 +17,7 @@ import type {
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeOverview,
   ShotVideoTakeStoryboardImageReference,
+  SceneShotVideoTakeVideo,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
@@ -25,10 +26,22 @@ export type ShotVideoTakeStoryboardImageReferenceWithHttp =
     url: string;
   };
 
+export type SceneShotVideoTakeVideoWithHttp = SceneShotVideoTakeVideo & {
+  url: string;
+};
+
+export type SceneShotVideoTakeWithHttp = Omit<
+  SceneShotVideoTake,
+  'video'
+> & {
+  video: SceneShotVideoTakeVideoWithHttp | null;
+};
+
 export type SceneShotVideoTakeOverviewResponse = Omit<
   SceneShotVideoTakeOverview,
-  'storyboardImages'
+  'take' | 'storyboardImages'
 > & {
+  take: SceneShotVideoTakeWithHttp;
   storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
 };
 
@@ -48,15 +61,17 @@ export type SceneShotVideoTakeCreateReportResponse = Omit<
 
 export type ShotVideoTakeProductionContextResponse = Omit<
   ShotVideoTakeProductionContext,
-  'storyboardImages'
+  'take' | 'storyboardImages'
 > & {
+  take: SceneShotVideoTakeWithHttp;
   storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
 };
 
 export type SceneShotVideoTakeEditContextResponse = Omit<
   SceneShotVideoTakeEditContext,
-  'storyboardImages'
+  'take' | 'storyboardImages'
 > & {
+  take: SceneShotVideoTakeWithHttp;
   storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
 };
 
@@ -129,6 +144,18 @@ export async function createSceneShotVideoTake(
     throw await readStudioApiError(response);
   }
   return (await response.json()) as SceneShotVideoTakeCreateReportResponse;
+}
+
+export async function copySceneShotVideoTakeForRegeneration(
+  projectName: string,
+  sceneId: string,
+  takeId: string
+): Promise<SceneShotVideoTakeCreateReportResponse> {
+  return sendMutation<SceneShotVideoTakeCreateReportResponse>(
+    `${productionPath(projectName, sceneId, takeId)}/regeneration-copy`,
+    'POST',
+    {}
+  );
 }
 
 export async function deleteSceneShotVideoTake(

@@ -47,6 +47,9 @@ import {
 import {
   requireNormalizedSceneShotVideoTakeShotMembership,
 } from '../../media-generation/shot-video-take/take-shot-membership.js';
+import {
+  readShotVideoTakeVideo,
+} from './shot-video-takes.js';
 
 export type SceneShotVideoTakeRecord =
   typeof sceneShotVideoTakes.$inferSelect;
@@ -58,6 +61,8 @@ export interface CreateSceneShotVideoTakeRecordInput {
   title?: string;
   shotIds: string[];
   production?: SceneShotVideoTakeProductionState;
+  state?: SceneShotVideoTakeState;
+  regeneratedFromTakeId?: string | null;
   screenplay: ScreenplayDocument;
   now: string;
 }
@@ -94,12 +99,15 @@ export function insertSceneShotVideoTakeRecord(
       sourceShotListId: input.shotListId,
       title: input.title ?? defaultTakeTitle(shotIds),
       stateJson: serializeSceneShotVideoTakeState({
-        state: buildSceneShotVideoTakeState({
-          shots: shotList.shots,
-          shotIds,
-          production: input.production ?? {},
-        }),
+        state:
+          input.state ??
+          buildSceneShotVideoTakeState({
+            shots: shotList.shots,
+            shotIds,
+            production: input.production ?? {},
+          }),
       }),
+      regeneratedFromTakeId: input.regeneratedFromTakeId ?? null,
       historySnapshot:
         serializeSceneShotVideoTakeHistorySnapshot({
           snapshot,
@@ -576,6 +584,10 @@ function toSceneShotVideoTake(
     title: input.row.title,
     shotIds,
     picked: input.row.isPicked,
+    video: readShotVideoTakeVideo(session, input.row.id),
+    ...(input.row.regeneratedFromTakeId
+      ? { regeneratedFromTakeId: input.row.regeneratedFromTakeId }
+      : {}),
     state,
     status: statusWithStructureIssues(status, structureIssues),
     createdAt: input.row.createdAt,

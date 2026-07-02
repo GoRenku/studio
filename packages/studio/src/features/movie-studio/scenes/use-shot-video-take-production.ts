@@ -15,6 +15,10 @@ import {
   type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
 import {
+  matchesSceneTakesResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
+import {
   defaultModelForInputMode,
   findModelReport,
 } from './shot-video-take-production-projection';
@@ -174,6 +178,7 @@ export function useShotVideoTakeProduction(
       setTake(result.context.take);
     },
   });
+  const { flushPending } = autosave;
 
   const editProduction = useCallback(
     (
@@ -414,6 +419,80 @@ export function useShotVideoTakeProduction(
       setPlanState('error');
     }
   }, [editorPlanSelectedShotId, projectName, sceneId, take, takeId]);
+
+  const refreshFromResourceChange = useCallback(async () => {
+    if (!takeId) {
+      return;
+    }
+    if (hasUserEditedRef.current) {
+      const saved = await flushPending();
+      if (!saved) {
+        return;
+      }
+    }
+    try {
+      const read = await readShotVideoTakeProduction(
+        projectName,
+        sceneId,
+        takeId,
+        selectedInputMode ?? undefined
+      );
+      setContext(read.context);
+      setModels(read.models);
+      setTake(read.context.take);
+      setLoadState('ready');
+      setLoadError(null);
+      const report = await planShotVideoTakeProduction(
+        projectName,
+        sceneId,
+        takeId,
+        read.context.take.state.production,
+        { defaultMode: 'auto' },
+        editorPlanSelectedShotId
+      );
+      setProductionPlan(report);
+      setEstimate({
+        target: report.target,
+        take: report.take,
+        inputModeId: report.plan.request.inputMode,
+        shotGroupMode: report.plan.request.shotGroupMode,
+        modelChoice: report.plan.request.modelChoice,
+        estimate: report.plan.finalEstimate,
+        plan: report.plan,
+        issues: report.plan.diagnostics,
+      });
+      setEstimateState('idle');
+      setEstimateError(null);
+      setPlanState('idle');
+      setPlanError(null);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : 'Unable to load AI Production.'
+      );
+      setLoadState('error');
+    }
+  }, [
+    editorPlanSelectedShotId,
+    flushPending,
+    projectName,
+    sceneId,
+    selectedInputMode,
+    takeId,
+  ]);
+
+  useStudioResourceRefresh({
+    projectName,
+    enabled: Boolean(takeId),
+    matches: (resourceKeys) =>
+      takeId
+        ? matchesSceneTakesResource({
+            resourceKeys,
+            sceneId,
+            takeId,
+          })
+        : false,
+    onRefresh: refreshFromResourceChange,
+  });
 
   useEffect(() => {
     if (!takeId) {

@@ -330,6 +330,7 @@ function takeWithProduction(
     shotIds: ['shot_001'],
     title: 'Shot Video Take',
     picked: false,
+    video: null,
     state: {
       version: 2,
     structure: {

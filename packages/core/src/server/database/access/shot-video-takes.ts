@@ -2,8 +2,8 @@ import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import type {
   ProjectRelativePath,
   SceneShotVideoTakeState,
-  SceneShotVideoTakeOutput,
   SceneShotVideoTakeMediaInput,
+  SceneShotVideoTakeVideo,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
 } from '../../../client/index.js';
@@ -13,8 +13,7 @@ import {
   sceneShotVideoTakeMediaInputShots,
   sceneShotVideoTakeMediaInputs,
   sceneShotVideoTakes,
-  sceneShotVideoTakeOutputShots,
-  sceneShotVideoTakeOutputs,
+  sceneShotVideoTakeVideos,
 } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import {
@@ -25,10 +24,12 @@ import {
   sceneShotVideoTakeStructureDirections,
 } from '../../media-generation/shot-video-take/take-state.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import type { EntityIdPrefix } from '../../entity-ids.js';
 
 export type SceneShotVideoTakeInputRecord =
   typeof sceneShotVideoTakeMediaInputs.$inferSelect;
-export type SceneShotVideoTakeRecord = typeof sceneShotVideoTakeOutputs.$inferSelect;
+export type SceneShotVideoTakeVideoRecord =
+  typeof sceneShotVideoTakeVideos.$inferSelect;
 
 export interface InsertShotVideoTakeInputRecord {
   id: string;
@@ -45,15 +46,11 @@ export interface InsertShotVideoTakeInputRecord {
   now: string;
 }
 
-export interface InsertShotVideoTakeRecord {
-  id: string;
-  sceneId: string;
+export interface InsertShotVideoTakeVideoRecord {
   takeId: string;
   assetId: string;
   assetFileId: string;
   mediaGenerationRunId?: string | null;
-  shotIds: string[];
-  isSelected: boolean;
   now: string;
 }
 
@@ -252,25 +249,25 @@ export function assertAssetNotReferencedByShotVideoTakeRecords(
       mediaInput.id,
     ]);
   }
-  const output = session.db
-    .select({ id: sceneShotVideoTakeOutputs.id })
-    .from(sceneShotVideoTakeOutputs)
+  const video = session.db
+    .select({ takeId: sceneShotVideoTakeVideos.takeId })
+    .from(sceneShotVideoTakeVideos)
     .innerJoin(
       sceneShotVideoTakes,
-      eq(sceneShotVideoTakeOutputs.takeId, sceneShotVideoTakes.id)
+      eq(sceneShotVideoTakeVideos.takeId, sceneShotVideoTakes.id)
     )
     .where(
       and(
-        eq(sceneShotVideoTakeOutputs.assetId, assetId),
-        isNull(sceneShotVideoTakeOutputs.discardedAt),
+        eq(sceneShotVideoTakeVideos.assetId, assetId),
+        isNull(sceneShotVideoTakeVideos.discardedAt),
         isNull(sceneShotVideoTakes.discardedAt)
       )
     )
     .get();
-  if (output) {
+  if (video) {
     throw takeAssetReferenceError(assetId, [
-      'sceneShotVideoTakeOutput',
-      output.id,
+      'sceneShotVideoTakeVideo',
+      video.takeId,
     ]);
   }
   for (const row of session.db
@@ -292,71 +289,97 @@ export function assertAssetNotReferencedByShotVideoTakeRecords(
   }
 }
 
-export function insertShotVideoTakeRecord(
+export function insertShotVideoTakeVideoRecord(
   session: DatabaseSession,
-  input: InsertShotVideoTakeRecord
-): SceneShotVideoTakeOutput {
-  if (input.isSelected) {
-    clearSelectedTakesForGeneration(session, input);
-  }
+  input: InsertShotVideoTakeVideoRecord
+): SceneShotVideoTakeVideo {
   session.db
-    .insert(sceneShotVideoTakeOutputs)
+    .insert(sceneShotVideoTakeVideos)
     .values({
-      id: input.id,
-      sceneId: input.sceneId,
       takeId: input.takeId,
       assetId: input.assetId,
       assetFileId: input.assetFileId,
       mediaGenerationRunId: input.mediaGenerationRunId ?? null,
       createdAt: input.now,
       updatedAt: input.now,
-      isSelected: input.isSelected,
     })
     .run();
-  input.shotIds.forEach((shotId, shotOrder) => {
-    session.db
-      .insert(sceneShotVideoTakeOutputShots)
-      .values({ outputId: input.id, shotId, shotOrder })
-      .run();
-  });
-  return requireShotVideoTake(session, input.id);
+  return requireShotVideoTakeVideo(session, input.takeId);
 }
 
-export function listShotVideoTakes(
-  session: DatabaseSession,
-  input: { sceneId: string; takeId: string }
-): SceneShotVideoTakeOutput[] {
-  return session.db
-    .select()
-    .from(sceneShotVideoTakeOutputs)
-    .where(
-      and(
-        eq(sceneShotVideoTakeOutputs.sceneId, input.sceneId),
-        eq(sceneShotVideoTakeOutputs.takeId, input.takeId)
-      )
-    )
-    .orderBy(desc(sceneShotVideoTakeOutputs.createdAt), desc(sceneShotVideoTakeOutputs.id))
-    .all()
-    .map((row) => toVideoTake(session, row));
-}
-
-export function requireShotVideoTake(
+export function readShotVideoTakeVideo(
   session: DatabaseSession,
   takeId: string
-): SceneShotVideoTakeOutput {
-  const row =
-    session.db
-      .select()
-      .from(sceneShotVideoTakeOutputs)
-      .where(eq(sceneShotVideoTakeOutputs.id, takeId))
-      .get() ?? null;
-  if (!row) {
+): SceneShotVideoTakeVideo | null {
+  const row = session.db
+    .select({
+      video: sceneShotVideoTakeVideos,
+      projectRelativePath: assetFiles.projectRelativePath,
+      mimeType: assetFiles.mimeType,
+    })
+    .from(sceneShotVideoTakeVideos)
+    .innerJoin(assetFiles, eq(sceneShotVideoTakeVideos.assetFileId, assetFiles.id))
+    .innerJoin(assets, eq(sceneShotVideoTakeVideos.assetId, assets.id))
+    .where(
+      and(
+        eq(sceneShotVideoTakeVideos.takeId, takeId),
+        isNull(sceneShotVideoTakeVideos.discardedAt),
+        isNull(assetFiles.discardedAt),
+        isNull(assets.discardedAt)
+      )
+    )
+    .get();
+  return row
+    ? toVideoTake(row.video, row.projectRelativePath, row.mimeType)
+    : null;
+}
+
+export function requireShotVideoTakeVideo(
+  session: DatabaseSession,
+  takeId: string
+): SceneShotVideoTakeVideo {
+  const video = readShotVideoTakeVideo(session, takeId);
+  if (!video) {
     throw new ProjectDataError(
       'PROJECT_DATA361',
-      `Shot video take was not found: ${takeId}.`
+      `Shot video take video was not found for take: ${takeId}.`
     );
   }
-  return toVideoTake(session, row);
+  return video;
+}
+
+export function copySelectedShotVideoTakeInputRecords(
+  session: DatabaseSession,
+  input: {
+    sourceTakeId: string;
+    targetTakeId: string;
+    now: string;
+    nextId: (prefix: EntityIdPrefix) => string;
+  }
+): SceneShotVideoTakeMediaInput[] {
+  const sourceSceneId = requireTakeSceneId(session, input.sourceTakeId);
+  const targetSceneId = requireTakeSceneId(session, input.targetTakeId);
+  return listShotVideoTakeInputs(session, {
+    sceneId: sourceSceneId,
+    takeId: input.sourceTakeId,
+  })
+    .filter((mediaInput) => mediaInput.selected)
+    .map((mediaInput) =>
+      insertShotVideoTakeInputRecord(session, {
+        id: input.nextId('scene_shot_video_take_media_input'),
+        sceneId: targetSceneId,
+        takeId: input.targetTakeId,
+        inputKind: mediaInput.kind,
+        subjectKind: mediaInput.subjectKind,
+        subjectId: mediaInput.subjectId,
+        assetId: mediaInput.assetId,
+        assetFileId: mediaInput.assetFileId,
+        mediaGenerationRunId: mediaInput.mediaGenerationRunId ?? null,
+        selection: 'select',
+        shotIds: mediaInput.shotIds,
+        now: input.now,
+      })
+    );
 }
 
 function requireShotVideoTakeInputRecord(
@@ -406,22 +429,6 @@ function setMatchingInputRecordsToTake(
     .run();
 }
 
-function clearSelectedTakesForGeneration(
-  session: DatabaseSession,
-  input: { sceneId: string; takeId: string; now: string }
-): void {
-  session.db
-    .update(sceneShotVideoTakeOutputs)
-    .set({ isSelected: false, updatedAt: input.now })
-    .where(
-      and(
-        eq(sceneShotVideoTakeOutputs.sceneId, input.sceneId),
-        eq(sceneShotVideoTakeOutputs.takeId, input.takeId)
-      )
-    )
-    .run();
-}
-
 function toAvailableInput(
   session: DatabaseSession,
   row: SceneShotVideoTakeInputRecord,
@@ -450,31 +457,21 @@ function toAvailableInput(
 }
 
 function toVideoTake(
-  session: DatabaseSession,
-  row: SceneShotVideoTakeRecord
-): SceneShotVideoTakeOutput {
+  row: SceneShotVideoTakeVideoRecord,
+  projectRelativePath: string,
+  mimeType: string | null
+): SceneShotVideoTakeVideo {
   return {
-    outputId: row.id,
     takeId: row.takeId,
     assetId: row.assetId,
     assetFileId: row.assetFileId,
     ...(row.mediaGenerationRunId
       ? { mediaGenerationRunId: row.mediaGenerationRunId }
       : {}),
-    shotIds: listTakeShotIds(session, row.id),
-    selected: row.isSelected,
+    projectRelativePath: projectRelativePath as ProjectRelativePath,
+    mimeType,
     createdAt: row.createdAt,
   };
-}
-
-function listTakeShotIds(session: DatabaseSession, takeId: string): string[] {
-  return session.db
-    .select()
-    .from(sceneShotVideoTakeOutputShots)
-    .where(eq(sceneShotVideoTakeOutputShots.outputId, takeId))
-    .orderBy(asc(sceneShotVideoTakeOutputShots.shotOrder))
-    .all()
-    .map((row) => row.shotId);
 }
 
 function listTakeInputShotIds(
@@ -488,6 +485,22 @@ function listTakeInputShotIds(
     .orderBy(asc(sceneShotVideoTakeMediaInputShots.shotOrder))
     .all()
     .map((row) => row.shotId);
+}
+
+function requireTakeSceneId(session: DatabaseSession, takeId: string): string {
+  const row =
+    session.db
+      .select({ sceneId: sceneShotVideoTakes.sceneId })
+      .from(sceneShotVideoTakes)
+      .where(eq(sceneShotVideoTakes.id, takeId))
+      .get() ?? null;
+  if (!row) {
+    throw new ProjectDataError(
+      'PROJECT_DATA419',
+      `Scene Shot Video Take was not found: ${takeId}.`
+    );
+  }
+  return row.sceneId;
 }
 
 function sameShotIds(left: string[], right: string[]): boolean {

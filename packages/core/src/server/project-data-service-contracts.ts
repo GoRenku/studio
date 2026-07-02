@@ -260,6 +260,9 @@ export interface ProjectDataService {
   resolveShotVideoTakeInputFile(
     input: ResolveShotVideoTakeInputFileInput
   ): Promise<ResolvedShotVideoTakeInputFile>;
+  resolveShotVideoTakeVideoFile(
+    input: ResolveShotVideoTakeVideoFileInput
+  ): Promise<ResolvedShotVideoTakeVideoFile>;
   registerAsset(input: RegisterAssetInput & RenkuConfigPathOptions): Promise<Asset>;
   updateAssetReference(input: UpdateAssetReferenceInput & RenkuConfigPathOptions): Promise<Asset>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
@@ -496,6 +499,7 @@ export interface ProjectDataService {
   planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
   runMediaGenerationSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTakeCreateReport>;
+  copySceneShotVideoTakeForRegeneration(input: CopySceneShotVideoTakeForRegenerationInput): Promise<SceneShotVideoTakeCreateReport>;
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<SceneShotVideoTakeListReport>;
   deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<RecoverableMutationReport>;
@@ -1467,6 +1471,15 @@ export interface ReadSceneShotVideoTakeInput
   takeId: string;
 }
 
+export interface CopySceneShotVideoTakeForRegenerationInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  sceneId?: string;
+  sourceTakeId: string;
+  title?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
 export interface ListSceneShotVideoTakesInput
   extends RenkuConfigPathOptions {
   projectName?: string;
@@ -1636,7 +1649,6 @@ export interface ImportShotVideoTakeMediaInput extends ShotVideoTakeContextInput
   sourceProjectRelativePath: string;
   title?: string;
   receipt?: unknown;
-  isSelected?: boolean;
 }
 
 export interface ListNavigationInput extends RenkuConfigPathOptions {
@@ -1796,6 +1808,20 @@ export interface ResolveShotVideoTakeInputFileInput
 
 export interface ResolvedShotVideoTakeInputFile {
   input: SceneShotVideoTakeMediaInput;
+  file: AssetFile;
+  absolutePath: string;
+}
+
+export interface ResolveShotVideoTakeVideoFileInput
+  extends RenkuConfigPathOptions {
+  projectName: string;
+  sceneId: string;
+  takeId: string;
+  assetFileId: string;
+}
+
+export interface ResolvedShotVideoTakeVideoFile {
+  take: SceneShotVideoTake;
   file: AssetFile;
   absolutePath: string;
 }

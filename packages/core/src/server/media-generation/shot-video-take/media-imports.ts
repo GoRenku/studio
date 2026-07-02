@@ -21,9 +21,14 @@ import type {
 } from '../../database/access/project.js';
 import {
   insertShotVideoTakeInputRecord,
-  insertShotVideoTakeRecord,
+  insertShotVideoTakeVideoRecord,
   listShotVideoTakeInputs,
+  copySelectedShotVideoTakeInputRecords,
 } from '../../database/access/shot-video-takes.js';
+import {
+  insertSceneShotVideoTakeRecord,
+  requireSceneShotVideoTake,
+} from '../../database/access/scene-shot-video-takes.js';
 import type {
   DatabaseSession,
 } from '../../database/lifecycle/store.js';
@@ -55,6 +60,7 @@ import {
   statExistingFile,
 } from './project-media-files.js';
 import {
+  requireScreenplayDocument,
   withShotProjectSession,
 } from './project-session.js';
 import {
@@ -66,8 +72,8 @@ import {
 import {
   assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
+  sceneShotVideoTakeTarget,
 } from './take-context.js';
-
 
 
 export async function importShotInputMedia(
@@ -207,6 +213,7 @@ export async function importShotVideoTake(
 ): Promise<ShotVideoTakeMediaImportReport> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
+    const screenplay = requireScreenplayDocument(session);
     const prepared = prepareSceneShotVideoTakeInSession({ session, input });
     assertEditableSceneShotVideoTake(prepared.take);
     const imported = await importGeneratedFile({
@@ -220,30 +227,70 @@ export async function importShotVideoTake(
       idGenerator: input.idGenerator,
       now,
     });
-    const output = insertShotVideoTakeRecord(session, {
-      id: imported.nextId('scene_shot_video_take_output'),
-      sceneId: prepared.sceneId,
-      takeId: prepared.take.takeId,
+    const targetTake = prepared.take.video
+      ? insertSceneShotVideoTakeRecord(session, {
+          id: imported.nextId('scene_shot_video_take'),
+          sceneId: prepared.sceneId,
+          shotListId: prepared.sourceShotListId,
+          title: input.title ?? `${prepared.take.title} regeneration`,
+          shotIds: prepared.orderedShotIds,
+          state: structuredClone(prepared.take.state),
+          regeneratedFromTakeId: prepared.take.takeId,
+          screenplay,
+          now,
+        })
+      : prepared.take;
+    if (prepared.take.video) {
+      copySelectedShotVideoTakeInputRecords(session, {
+        sourceTakeId: prepared.take.takeId,
+        targetTakeId: targetTake.takeId,
+        now,
+        nextId: imported.nextId,
+      });
+    }
+    const video = insertShotVideoTakeVideoRecord(session, {
+      takeId: targetTake.takeId,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
       mediaGenerationRunId: receiptRunId(input.receipt),
-      shotIds: prepared.orderedShotIds,
-      isSelected: input.isSelected ?? true,
       now,
+    });
+    const refreshedSourceTake = requireSceneShotVideoTake(session, {
+      takeId: prepared.take.takeId,
+      screenplay,
+    });
+    const refreshedTargetTake = requireSceneShotVideoTake(session, {
+      takeId: targetTake.takeId,
+      screenplay,
     });
     return {
       valid: true,
       warnings: [],
       project: toProjectReport(project, projectFolder),
-      changes: [{ type: 'shotVideoTakeOutput.imported', outputId: output.outputId }],
+      changes: [
+        {
+          type: prepared.take.video
+            ? 'shotVideoTake.regeneratedVideoImported'
+            : 'shotVideoTake.videoImported',
+          takeId: refreshedTargetTake.takeId,
+        },
+      ],
       purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      target: prepared.target,
+      target: sceneShotVideoTakeTarget(refreshedTargetTake),
+      sourceTake: refreshedSourceTake,
+      take: refreshedTargetTake,
+      createdRegeneratedTake: Boolean(prepared.take.video),
       imported: imported.asset,
-      output,
+      video,
       ...(input.receipt ? { receipt: input.receipt } : {}),
-      resourceKeys: shotVideoTakeResourceKeys(prepared).concat([
+      resourceKeys: [
+        ...shotVideoTakeResourceKeys(prepared),
+        ...shotVideoTakeResourceKeys({
+          ...prepared,
+          take: refreshedTargetTake,
+        }),
         `asset:${imported.assetId}`,
-      ]),
+      ],
     };
   });
 }

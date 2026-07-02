@@ -455,7 +455,7 @@ export type {
   SceneShotVideoTakeDirection,
   SceneShotVideoTakeStructure,
   SceneShotVideoTakeStructureMode,
-  SceneShotVideoTakeOutput,
+  SceneShotVideoTakeVideo,
   SceneShotVideoTakeMediaInput,
   ShotVideoTakeProductionContext,
   ShotVideoTakeOutputGenerationInput,

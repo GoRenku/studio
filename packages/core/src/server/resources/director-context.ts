@@ -434,7 +434,7 @@ async function readSelectedShotVideoReadiness(input: {
         ),
       ],
       selectedInputCount: selectedInputs.length,
-      selectedTakeCount: context.outputs.filter((output) => output.selected).length,
+      selectedTakeCount: context.take.video ? 1 : 0,
       recommendedSpecialist: 'media-producer',
       recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
     };

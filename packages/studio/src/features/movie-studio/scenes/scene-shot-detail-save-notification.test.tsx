@@ -4,9 +4,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
-  SceneShotVideoTake,
 } from '@gorenku/studio-core/client';
 import { updateSceneShotVideoTakeStructureMode } from '@/services/studio-shot-video-takes-api';
+import type { SceneShotVideoTakeWithHttp } from '@/services/studio-shot-video-takes-api';
 import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-production';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
 import { SceneShotDetail } from './scene-shot-detail';
@@ -41,13 +41,14 @@ const SHOT: SceneShot = {
   locationIds: [],
 };
 
-const TAKE: SceneShotVideoTake = {
+const TAKE: SceneShotVideoTakeWithHttp = {
   takeId: 'take_001',
   sceneId: 'scene_hook',
   sourceShotListId: 'shot_list_hook',
   shotIds: ['shot_001'],
   title: 'Shot 1 Shot Video Take',
   picked: false,
+  video: null,
   state: emptyTakeState(),
   createdAt: '',
   updatedAt: '',
@@ -72,13 +73,13 @@ const TAKE: SceneShotVideoTake = {
     },
 };
 
-const GROUPED_TAKE: SceneShotVideoTake = {
+const GROUPED_TAKE: SceneShotVideoTakeWithHttp = {
   ...TAKE,
   shotIds: ['shot_001', 'shot_002'],
   title: 'Two Shot Video Take',
 };
 
-const MULTI_CUT_TAKE: SceneShotVideoTake = {
+const MULTI_CUT_TAKE: SceneShotVideoTakeWithHttp = {
   ...GROUPED_TAKE,
   state: {
     version: 2,
@@ -129,7 +130,11 @@ function emptyReferenceSelections() {
 }
 
 function productionResult(
-  autosave: UseShotVideoTakeProductionResult['autosave'],
+  autosave: Omit<
+    UseShotVideoTakeProductionResult['autosave'],
+    'flushPending'
+  > &
+    Partial<Pick<UseShotVideoTakeProductionResult['autosave'], 'flushPending'>>,
   take = TAKE,
   refreshProductionPlan = vi.fn(async () => {})
 ): UseShotVideoTakeProductionResult {
@@ -145,7 +150,10 @@ function productionResult(
     setInputMode: vi.fn(),
     setModel: vi.fn(),
     setParameter: vi.fn(),
-    autosave,
+    autosave: {
+      flushPending: async () => true,
+      ...autosave,
+    },
     productionPlan: null,
     estimate: null,
     estimateState: 'idle',

@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
   SceneShotListDocument,
-  SceneShotVideoTake,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
@@ -18,6 +17,7 @@ import {
   listSceneShotVideoTakes,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
+  type SceneShotVideoTakeWithHttp,
   type SceneShotVideoTakeOverviewResponse,
   type ShotVideoTakeProductionContextResponse,
 } from '@/services/studio-shot-video-takes-api';
@@ -99,7 +99,7 @@ function resource(): SceneShotListResourceResponse {
   };
 }
 
-function take(): SceneShotVideoTake {
+function take(): SceneShotVideoTakeWithHttp {
   const production = {
     inputModeId: 'reference',
     modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -111,6 +111,7 @@ function take(): SceneShotVideoTake {
     shotIds: ['shot_001', 'shot_002'],
     title: 'Shot Video Take 1',
     picked: false,
+    video: null,
     state: emptyTakeState(production),
     createdAt: '',
     updatedAt: '',
@@ -137,7 +138,7 @@ function take(): SceneShotVideoTake {
 }
 
 function takeOverview(
-  value: SceneShotVideoTake
+  value: SceneShotVideoTakeWithHttp
 ): SceneShotVideoTakeOverviewResponse {
   return {
     take: value,
@@ -155,7 +156,7 @@ function takeOverview(
   };
 }
 
-function takeCreateReport(value: SceneShotVideoTake) {
+function takeCreateReport(value: SceneShotVideoTakeWithHttp) {
   return {
     overview: takeOverview(value),
     resourceKeys: [],
@@ -209,7 +210,6 @@ function context(): ShotVideoTakeProductionContextResponse {
     activeLookbook: null,
     storyboardImages: [],
     mediaInputs: [],
-    outputs: [],
     shotGroupMode: 'multi-shot',
     defaults: {
       inputModeId: 'reference',

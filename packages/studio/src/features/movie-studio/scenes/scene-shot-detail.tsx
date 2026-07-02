@@ -21,6 +21,7 @@ import type {
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { updateSceneShotVideoTakeStructureMode } from '@/services/studio-shot-video-takes-api';
+import type { SceneShotVideoTakeWithHttp } from '@/services/studio-shot-video-takes-api';
 import type { SceneShotDetailTab } from '../movie-studio-selection';
 import { idleSaveNotification } from '../detail-save-notification';
 import { useDetailSaveNotificationSlots } from '../detail-save-notification-slots';
@@ -44,7 +45,7 @@ interface SceneShotDetailProps {
   projectName: string;
   sceneId: string;
   shot: SceneShot;
-  take: SceneShotVideoTake | null;
+  take: SceneShotVideoTakeWithHttp | null;
   isShotEditable: boolean;
   label: string;
   activeTab?: SceneShotDetailTab;
@@ -54,7 +55,9 @@ interface SceneShotDetailProps {
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onCreateTake?: () => Promise<void>;
   createTakePending?: boolean;
-  onTakeChange?: (take: SceneShotVideoTake) => void;
+  onTakeChange?: (take: SceneShotVideoTakeWithHttp) => void;
+  onRegenerateTake?: (take: SceneShotVideoTakeWithHttp) => Promise<void>;
+  regeneratePending?: boolean;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -82,6 +85,8 @@ export function SceneShotDetail({
   onCreateTake,
   createTakePending = false,
   onTakeChange,
+  onRegenerateTake,
+  regeneratePending = false,
   onSaveNotificationChange,
 }: SceneShotDetailProps) {
   const {
@@ -204,7 +209,17 @@ export function SceneShotDetail({
           minSize={20}
           className='p-4'
         >
-          <SceneShotVideoStage />
+          <SceneShotVideoStage
+            video={editableTake?.video ?? null}
+            regeneratePending={regeneratePending}
+            onRegenerate={
+              editableTake?.video && onRegenerateTake
+                ? () => {
+                    void onRegenerateTake(editableTake);
+                  }
+                : undefined
+            }
+          />
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel

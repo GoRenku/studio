@@ -141,6 +141,8 @@ export interface SceneShotVideoTake {
   title: string;
   shotIds: string[];
   picked: boolean;
+  video: SceneShotVideoTakeVideo | null;
+  regeneratedFromTakeId?: string;
   state: SceneShotVideoTakeState;
   status: SceneShotVideoTakeStatus;
   createdAt: string;
@@ -544,14 +546,13 @@ export interface SceneShotVideoTakeMediaInput {
   createdAt: string;
 }
 
-export interface SceneShotVideoTakeOutput {
-  outputId: string;
+export interface SceneShotVideoTakeVideo {
   takeId: string;
   assetId: string;
   assetFileId: string;
   mediaGenerationRunId?: string;
-  shotIds: string[];
-  selected: boolean;
+  projectRelativePath: ProjectRelativePath;
+  mimeType: string | null;
   createdAt: string;
 }
 
@@ -576,7 +577,6 @@ export interface ShotVideoTakeProductionContext {
   activeLookbook: ShotVideoTakeLookbookReference | null;
   storyboardImages: ShotVideoTakeStoryboardImageReference[];
   mediaInputs: SceneShotVideoTakeMediaInput[];
-  outputs: SceneShotVideoTakeOutput[];
   defaults: ShotVideoTakeDefaults;
   recovery?: RecoverableMutationReport['recovery'];
   resourceKeys: string[];
@@ -604,7 +604,6 @@ export interface SceneShotVideoTakeEditContext {
   activeLookbook: ShotVideoTakeLookbookReference | null;
   storyboardImages: ShotVideoTakeStoryboardImageReference[];
   mediaInputs: SceneShotVideoTakeMediaInput[];
-  outputs: SceneShotVideoTakeOutput[];
   assetReadiness: SceneShotVideoTakeAssetReadiness;
   defaults: ShotVideoTakeDefaults;
   resourceKeys: string[];
@@ -1064,8 +1063,11 @@ export interface ShotVideoTakeMediaImportReport {
   changes?: Array<{ type: string; [key: string]: string }>;
   purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   target: SceneShotVideoTakeTarget;
+  sourceTake: SceneShotVideoTake;
+  take: SceneShotVideoTake;
+  createdRegeneratedTake: boolean;
   imported: Asset;
-  output: SceneShotVideoTakeOutput;
+  video: SceneShotVideoTakeVideo;
   receipt?: unknown;
   resourceKeys: string[];
 }

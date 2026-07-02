@@ -131,6 +131,7 @@ function testContext(
       shotIds: ['shot_001'],
       title: 'Shot Video Take A',
       picked: false,
+      video: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
       status: {
@@ -188,7 +189,6 @@ function testContext(
     activeLookbook: null,
     storyboardImages: [],
     mediaInputs: [],
-    outputs: [],
     defaults: {
       inputModeId: 'first-frame',
       imageDependencyModelChoice: 'fal-ai/openai/gpt-image-2',

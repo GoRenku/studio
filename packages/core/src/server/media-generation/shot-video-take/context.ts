@@ -21,7 +21,6 @@ import {
 } from '../../database/access/scene-shot-lists.js';
 import {
   listShotVideoTakeInputs as listShotVideoTakeInputRecords,
-  listShotVideoTakes,
 } from '../../database/access/shot-video-takes.js';
 import type {
   DatabaseSession,
@@ -193,10 +192,6 @@ export function buildContextFromPrepared(input: {
       takeId: input.prepared.take.takeId,
       shotIds: input.prepared.orderedShotIds,
     }),
-    outputs: listShotVideoTakes(input.session, {
-      sceneId: input.prepared.sceneId,
-      takeId: input.prepared.take.takeId,
-    }),
     shotGroupMode:
       input.prepared.orderedShotIds.length > 1 ? 'multi-shot' : 'single-shot',
     defaults: {
@@ -234,7 +229,6 @@ function shotVideoTakeEditContextFromProductionContext(
     activeLookbook: context.activeLookbook,
     storyboardImages: context.storyboardImages,
     mediaInputs: context.mediaInputs,
-    outputs: context.outputs,
     assetReadiness: {
       selectedInputCount: selectedInputs.length,
       readyInputCount: readyInputs.length,

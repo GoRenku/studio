@@ -67,7 +67,11 @@ export function MovieStudioScreen({
   );
   const { selection, resolvedSelection } = studioSelection;
   const [projectInformationAutosave, setProjectInformationAutosave] =
-    useState<DebouncedSaveStatus>({ state: 'idle', message: null });
+    useState<DebouncedSaveStatus>({
+      state: 'idle',
+      message: null,
+      flushPending: async () => true,
+    });
   const [isProductionExportRunning, setIsProductionExportRunning] = useState(false);
   const [lookbooksRevision, setLookbooksRevision] = useState(0);
   const [inspirationFoldersRevision, setInspirationFoldersRevision] = useState(0);

@@ -5,6 +5,7 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
+  type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 import { assetFiles, assets } from './assets.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
@@ -98,6 +99,10 @@ export const sceneShotVideoTakes = sqliteTable(
     isPicked: integer('is_picked', { mode: 'boolean' })
       .notNull()
       .default(false),
+    regeneratedFromTakeId: text('regenerated_from_take_id').references(
+      (): AnySQLiteColumn => sceneShotVideoTakes.id,
+      { onDelete: 'set null' }
+    ),
     historySnapshot: text('history_snapshot_json').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -219,15 +224,12 @@ export const sceneShotVideoTakeMediaInputShots = sqliteTable(
   ],
 );
 
-export const sceneShotVideoTakeOutputs = sqliteTable(
-  'scene_shot_video_take_output',
+export const sceneShotVideoTakeVideos = sqliteTable(
+  'scene_shot_video_take_video',
   {
-    id: text('id').primaryKey(),
-    sceneId: text('scene_id')
-      .notNull()
-      .references(() => scenes.id, { onDelete: 'cascade' }),
     takeId: text('take_id')
       .notNull()
+      .unique()
       .references(() => sceneShotVideoTakes.id, {
         onDelete: 'cascade',
       }),
@@ -243,41 +245,13 @@ export const sceneShotVideoTakeOutputs = sqliteTable(
     ),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
-    isSelected: integer('is_selected', { mode: 'boolean' }).notNull(),
     ...discardLifecycleColumns(),
   },
   (table) => [
-    index('scene_shot_video_take_output_take_idx').on(
-      table.sceneId,
+    index('scene_shot_video_take_video_take_idx').on(
       table.takeId,
       table.createdAt,
-      table.id
     ),
-    index('scene_shot_video_take_output_asset_idx').on(table.assetId),
-    uniqueIndex('scene_shot_video_take_output_selected_idx')
-      .on(table.sceneId, table.takeId)
-      .where(sql`${table.isSelected} = 1 and ${table.discardedAt} is null`),
-  ],
-);
-
-export const sceneShotVideoTakeOutputShots = sqliteTable(
-  'scene_shot_video_take_output_shot',
-  {
-    outputId: text('output_id')
-      .notNull()
-      .references(() => sceneShotVideoTakeOutputs.id, { onDelete: 'cascade' }),
-    shotId: text('shot_id').notNull(),
-    shotOrder: integer('shot_order').notNull(),
-    ...discardLifecycleColumns(),
-  },
-  (table) => [
-    uniqueIndex('scene_shot_video_take_output_shot_idx').on(
-      table.outputId,
-      table.shotId
-    ),
-    index('scene_shot_video_take_output_shot_order_idx').on(
-      table.outputId,
-      table.shotOrder
-    ),
+    index('scene_shot_video_take_video_asset_idx').on(table.assetId),
   ],
 );

@@ -67,8 +67,7 @@ describe('migrate database command', () => {
           'scene_shot_video_take_shot',
           'scene_shot_video_take_media_input',
           'scene_shot_video_take_media_input_shot',
-          'scene_shot_video_take_output',
-          'scene_shot_video_take_output_shot',
+          'scene_shot_video_take_video',
           'scene_dialogue_audio',
           'scene_dialogue_audio_take',
           'cast_voice_provider_registration',
@@ -85,6 +84,8 @@ describe('migrate database command', () => {
           'scene_shot_storyboard_sheet',
           'location_environment_sheet',
           'location_environment_sheet_view',
+          'scene_shot_video_take_output',
+          'scene_shot_video_take_output_shot',
         ])
       );
       expect(
@@ -101,11 +102,14 @@ describe('migrate database command', () => {
           'scene_shot_video_take_media_input_selected_idx'
         )
       ).toMatchObject({ isUnique: 1 });
+      expect(readColumnNames(sqlite, 'scene_shot_video_take')).toEqual(
+        expect.arrayContaining(['regenerated_from_take_id'])
+      );
       expect(
         readIndexForTable(
           sqlite,
-          'scene_shot_video_take_output',
-          'scene_shot_video_take_output_selected_idx'
+          'scene_shot_video_take_video',
+          'scene_shot_video_take_video_take_id_unique'
         )
       ).toMatchObject({ isUnique: 1 });
     } finally {
@@ -113,7 +117,7 @@ describe('migrate database command', () => {
     }
   });
 
-  it('auto-migrates generation 26 Lookbook image placement databases before reads', async () => {
+  it('auto-migrates generation 33 shot video take databases before reads', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -135,14 +139,42 @@ describe('migrate database command', () => {
              select created_at
              from __drizzle_migrations
              order by created_at desc
-             limit 7
+             limit 1
            )`
         )
         .run();
-      setup.exec('alter table lookbook_image_section drop column point_id');
-      setup.pragma('user_version = 26');
-      expect(readColumnNames(setup, 'lookbook_image_section')).not.toContain(
-        'point_id'
+      setup.exec(`
+        drop table scene_shot_video_take_video;
+        alter table scene_shot_video_take drop column regenerated_from_take_id;
+        create table scene_shot_video_take_output (
+          id text primary key not null,
+          scene_id text not null,
+          take_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          media_generation_run_id text,
+          created_at text not null,
+          updated_at text not null,
+          is_selected integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+        create table scene_shot_video_take_output_shot (
+          output_id text not null,
+          shot_id text not null,
+          shot_order integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text,
+          primary key (output_id, shot_id)
+        );
+      `);
+      setup.pragma('user_version = 33');
+      expect(readTableNames(setup)).toContain('scene_shot_video_take_output');
+      expect(readTableNames(setup)).not.toContain('scene_shot_video_take_video');
+      expect(readColumnNames(setup, 'scene_shot_video_take')).not.toContain(
+        'regenerated_from_take_id'
       );
     } finally {
       setup.close();
@@ -159,8 +191,12 @@ describe('migrate database command', () => {
       expect(migrated.pragma('user_version', { simple: true })).toBe(
         currentProjectStoreSchemaGeneration()
       );
-      expect(readColumnNames(migrated, 'lookbook_image_section')).toContain(
-        'point_id'
+      expect(readTableNames(migrated)).toContain('scene_shot_video_take_video');
+      expect(readTableNames(migrated)).not.toContain(
+        'scene_shot_video_take_output'
+      );
+      expect(readColumnNames(migrated, 'scene_shot_video_take')).toContain(
+        'regenerated_from_take_id'
       );
     } finally {
       migrated.close();
@@ -991,6 +1027,252 @@ describe('migrate database command', () => {
         .get('take_without_dependency_drafts') as { stateJson: string };
       expect(parseSceneShotVideoTakeState({ value: untouched.stateJson }))
         .toMatchObject({ production: {} });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('migrates shot video take outputs into one visible video per take', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        pragma user_version = 33;
+
+        create table scene_shot_video_take (
+          id text primary key not null,
+          scene_id text not null,
+          source_shot_list_id text not null,
+          title text not null,
+          state_json text not null,
+          is_picked integer not null,
+          history_snapshot_json text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+        create table scene_shot_video_take_shot (
+          take_id text not null,
+          shot_id text not null,
+          shot_order integer not null,
+          shot_content_fingerprint text not null,
+          storyboard_image_id text,
+          storyboard_asset_file_id text,
+          storyboard_content_fingerprint text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text,
+          primary key (take_id, shot_id)
+        );
+        create table scene_shot_video_take_media_input (
+          id text primary key not null,
+          scene_id text not null,
+          take_id text not null,
+          input_kind text not null,
+          subject_kind text not null,
+          subject_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          media_generation_run_id text,
+          selection text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+        create table scene_shot_video_take_media_input_shot (
+          input_id text not null,
+          shot_id text not null,
+          shot_order integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text,
+          primary key (input_id, shot_id)
+        );
+        create table scene_shot_video_take_output (
+          id text primary key not null,
+          scene_id text not null,
+          take_id text not null,
+          asset_id text not null,
+          asset_file_id text not null,
+          media_generation_run_id text,
+          created_at text not null,
+          updated_at text not null,
+          is_selected integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+        create table scene_shot_video_take_output_shot (
+          output_id text not null,
+          shot_id text not null,
+          shot_order integer not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text,
+          primary key (output_id, shot_id)
+        );
+        create table asset (
+          id text primary key not null
+        );
+        create table asset_file (
+          id text primary key not null
+        );
+        create table media_generation_run (
+          id text primary key not null
+        );
+
+        insert into scene_shot_video_take values (
+          'take_a',
+          'scene_a',
+          'shot_list_a',
+          'Take A',
+          '{"version":2,"structure":{"mode":"continuous","sharedDirection":{"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}}}},"production":{"inputModeId":"reference"}}',
+          1,
+          '{"selectedShotIds":["shot_001"]}',
+          '2026-07-01T00:00:00.000Z',
+          '2026-07-01T00:00:00.000Z',
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_shot values (
+          'take_a',
+          'shot_001',
+          0,
+          'shot-fingerprint',
+          'storyboard_image_a',
+          'storyboard_asset_file_a',
+          '{"id":"storyboard_image_a"}',
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_media_input values (
+          'input_a',
+          'scene_a',
+          'take_a',
+          'video-prompt-sheet',
+          'take',
+          'take_a',
+          'asset_input_a',
+          'asset_file_input_a',
+          null,
+          'select',
+          '2026-07-01T00:01:00.000Z',
+          '2026-07-01T00:01:00.000Z',
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_media_input_shot values (
+          'input_a',
+          'shot_001',
+          0,
+          null,
+          null,
+          null
+        );
+        insert into scene_shot_video_take_output values
+          (
+            'output_old',
+            'scene_a',
+            'take_a',
+            'asset_old',
+            'asset_file_old',
+            'run_old',
+            '2026-07-01T00:02:00.000Z',
+            '2026-07-01T00:02:00.000Z',
+            0,
+            null,
+            null,
+            null
+          ),
+          (
+            'output_selected',
+            'scene_a',
+            'take_a',
+            'asset_selected',
+            'asset_file_selected',
+            'run_selected',
+            '2026-07-01T00:03:00.000Z',
+            '2026-07-01T00:03:00.000Z',
+            1,
+            null,
+            null,
+            null
+          );
+        insert into scene_shot_video_take_output_shot values
+          ('output_old', 'shot_001', 0, null, null, null),
+          ('output_selected', 'shot_001', 0, null, null, null);
+        insert into asset values
+          ('asset_old'),
+          ('asset_selected');
+        insert into asset_file values
+          ('asset_file_old'),
+          ('asset_file_selected');
+        insert into media_generation_run values
+          ('run_old'),
+          ('run_selected');
+      `);
+
+      const migrationSql = await fs.readFile(
+        path.join(process.cwd(), 'drizzle', '0044_shot_video_take_video.sql'),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(34);
+      expect(readTableNames(sqlite)).toContain('scene_shot_video_take_video');
+      expect(readTableNames(sqlite)).not.toContain('scene_shot_video_take_output');
+      expect(readTableNames(sqlite)).not.toContain('scene_shot_video_take_output_shot');
+      expect(
+        sqlite
+          .prepare(
+            `select id, regenerated_from_take_id as regeneratedFromTakeId
+             from scene_shot_video_take
+             order by created_at`
+          )
+          .all()
+      ).toEqual([
+        { id: 'take_a', regeneratedFromTakeId: null },
+        {
+          id: 'scene_shot_video_take_regenerated_output_old',
+          regeneratedFromTakeId: 'take_a',
+        },
+      ]);
+      expect(
+        sqlite
+          .prepare(
+            `select take_id as takeId, asset_file_id as assetFileId
+             from scene_shot_video_take_video
+             order by created_at`
+          )
+          .all()
+      ).toEqual([
+        {
+          takeId: 'scene_shot_video_take_regenerated_output_old',
+          assetFileId: 'asset_file_old',
+        },
+        { takeId: 'take_a', assetFileId: 'asset_file_selected' },
+      ]);
+      expect(
+        sqlite
+          .prepare(
+            `select id, take_id as takeId
+             from scene_shot_video_take_media_input
+             order by id`
+          )
+          .all()
+      ).toEqual([
+        { id: 'input_a', takeId: 'take_a' },
+        {
+          id: 'input_a_copy_output_old',
+          takeId: 'scene_shot_video_take_regenerated_output_old',
+        },
+      ]);
     } finally {
       sqlite.close();
     }

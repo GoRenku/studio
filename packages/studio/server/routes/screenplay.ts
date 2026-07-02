@@ -9,6 +9,7 @@ import { projectErrorResponse } from '../errors.js';
 import {
   readAssetFileResponse,
   readShotVideoTakeInputFileResponse,
+  readShotVideoTakeVideoFileResponse,
 } from '../http/asset-file-response.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import {
@@ -438,6 +439,51 @@ export function createScreenplayRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .post(
+      '/screenplay/scenes/:sceneId/takes/:takeId/regeneration-copy',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const body = await c.req.json().catch(() => ({}));
+          const report = await projectData.copySceneShotVideoTakeForRegeneration({
+            projectName,
+            sceneId,
+            sourceTakeId: takeId,
+            title:
+              body && typeof body === 'object' && typeof body.title === 'string'
+                ? body.title
+                : undefined,
+          });
+          return c.json(
+            toSceneShotVideoTakeCreateReportResponse(projectName, report)
+          );
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .get(
+      '/screenplay/scenes/:sceneId/takes/:takeId/video/files/:assetFileId',
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const assetFileId = c.req.param('assetFileId') as string;
+          return readShotVideoTakeVideoFileResponse(projectData, {
+            projectName,
+            sceneId,
+            takeId,
+            assetFileId,
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .delete(
       '/screenplay/scenes/:sceneId/takes/:takeId',
       requireToken,

@@ -99,6 +99,28 @@ export function fakeProjectDataService(): NonNullable<
         absolutePath: '/tmp/renku/constantinople/generated/media/shot-video-input.png',
       };
     },
+    async resolveShotVideoTakeVideoFile(input) {
+      return {
+        take: makeSceneShotVideoTake({
+          sceneId: input.sceneId,
+          takeId: input.takeId,
+        }),
+        file: {
+          id: input.assetFileId,
+          role: 'primary',
+          projectRelativePath:
+            'generated/media/shot-video-take.mp4' as ProjectRelativePath,
+          mediaKind: 'video',
+          mimeType: 'video/mp4',
+          sizeBytes: 1234,
+          contentHash: 'hash',
+          width: null,
+          height: null,
+          durationSeconds: null,
+        },
+        absolutePath: '/tmp/renku/constantinople/generated/media/shot-video-take.mp4',
+      };
+    },
     async listAssets() {
       return [makeAsset('asset_cast_reference')];
     },
@@ -1046,6 +1068,22 @@ export function fakeProjectDataService(): NonNullable<
         ],
       };
     },
+    async copySceneShotVideoTakeForRegeneration(input) {
+      const take = makeSceneShotVideoTake({
+        takeId: 'scene_shot_video_take_regenerated',
+        sceneId: input.sceneId ?? 'scene_opening',
+        title: input.title ?? 'Opening take regeneration',
+      });
+      return {
+        overview: makeSceneShotVideoTakeOverview(take),
+        resourceKeys: [
+          `scene:${take.sceneId}`,
+          `surface:scene:${take.sceneId}:takes`,
+          `scene-shot-video-take:${input.sourceTakeId}`,
+          `scene-shot-video-take:${take.takeId}`,
+        ],
+      };
+    },
     async readSceneShotVideoTake(input) {
       return makeSceneShotVideoTake({
         takeId: input.takeId,
@@ -1411,7 +1449,6 @@ function makeShotVideoTakeContext(
     activeLookbook: null,
     storyboardImages: [],
     mediaInputs: [],
-    outputs: [],
     defaults: {
       inputModeId: 'text-only',
       imageDependencyModelChoice: 'fal-ai/nano-banana-2',
@@ -1456,7 +1493,6 @@ function makeSceneShotVideoTakeEditContext(input: {
     activeLookbook: context.activeLookbook,
     storyboardImages: context.storyboardImages,
     mediaInputs: context.mediaInputs,
-    outputs: context.outputs,
     assetReadiness: {
       selectedInputCount: 0,
       readyInputCount: 0,
@@ -1488,6 +1524,7 @@ function makeSceneShotVideoTake(
     title: input.title ?? 'Opening take',
     shotIds,
     picked: false,
+    video: null,
     state: {
       version: 2,
       structure: {

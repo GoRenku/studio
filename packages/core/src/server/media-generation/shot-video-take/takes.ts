@@ -26,6 +26,9 @@ import {
   updateSceneShotVideoTakeStructureModeRecord,
 } from '../../database/access/scene-shot-video-takes.js';
 import {
+  copySelectedShotVideoTakeInputRecords,
+} from '../../database/access/shot-video-takes.js';
+import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
 } from '../../entity-ids.js';
@@ -37,6 +40,7 @@ import {
 } from '../../project-data-error.js';
 import type {
   CreateSceneShotVideoTakeInput,
+  CopySceneShotVideoTakeForRegenerationInput,
   DeleteSceneShotVideoTakeInput,
   ListSceneShotVideoTakesInput,
   ReadSceneShotVideoTakeInput,
@@ -99,6 +103,72 @@ export async function createSceneShotVideoTake(
         sceneId: input.sceneId,
         takeId: take.takeId,
       }),
+    };
+  });
+}
+
+export async function copySceneShotVideoTakeForRegeneration(
+  input: CopySceneShotVideoTakeForRegenerationInput
+): Promise<SceneShotVideoTakeCreateReport> {
+  return withShotProjectSession(input, ({ session }) => {
+    const screenplay = requireScreenplayDocument(session);
+    const ids = createUniqueIdAllocator(
+      input.idGenerator ?? createRandomIdGenerator()
+    );
+    const sourceTake = requireSceneShotVideoTake(session, {
+      takeId: input.sourceTakeId,
+      screenplay,
+    });
+    if (input.sceneId && sourceTake.sceneId !== input.sceneId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA423',
+        'Scene Shot Video Take does not belong to the requested scene.',
+        {
+          suggestion:
+            'Refresh the take context and retry the operation from the scene that owns this take.',
+        }
+      );
+    }
+    const now = new Date().toISOString();
+    const take = insertSceneShotVideoTakeRecord(session, {
+      id: ids('scene_shot_video_take'),
+      sceneId: sourceTake.sceneId,
+      shotListId: sourceTake.sourceShotListId,
+      title: input.title ?? `${sourceTake.title} regeneration`,
+      shotIds: sourceTake.shotIds,
+      state: structuredClone(sourceTake.state),
+      regeneratedFromTakeId: sourceTake.takeId,
+      screenplay,
+      now,
+    });
+    copySelectedShotVideoTakeInputRecords(session, {
+      sourceTakeId: sourceTake.takeId,
+      targetTakeId: take.takeId,
+      now,
+      nextId: ids,
+    });
+    const activeShotListId = readActiveSceneShotListId(session, take.sceneId);
+    return {
+      overview: toSceneShotVideoTakeOverview({
+        session,
+        sceneId: take.sceneId,
+        take: requireSceneShotVideoTake(session, {
+          takeId: take.takeId,
+          screenplay,
+        }),
+        activeShotListId,
+        screenplay,
+      }),
+      resourceKeys: [
+        ...sceneShotVideoTakeResourceKeys({
+          sceneId: sourceTake.sceneId,
+          takeId: sourceTake.takeId,
+        }),
+        ...sceneShotVideoTakeResourceKeys({
+          sceneId: take.sceneId,
+          takeId: take.takeId,
+        }),
+      ],
     };
   });
 }

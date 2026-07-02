@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
   SceneShotListDocument,
-  SceneShotVideoTake,
   ShotVideoTakeModelListReport,
   ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionPlanReport,
@@ -19,6 +18,7 @@ import {
   listSceneShotVideoTakes,
   planShotVideoTakeProduction,
   readShotVideoTakeProduction,
+  type SceneShotVideoTakeWithHttp,
   type SceneShotVideoTakeOverviewResponse,
   type ShotVideoTakeProductionContextResponse,
 } from '@/services/studio-shot-video-takes-api';
@@ -319,7 +319,7 @@ function resource(
   };
 }
 
-function take(): SceneShotVideoTake {
+function take(): SceneShotVideoTakeWithHttp {
   return {
     takeId: 'take_hook',
     sceneId: 'scene_hook',
@@ -327,6 +327,7 @@ function take(): SceneShotVideoTake {
     shotIds: ['shot_001'],
     title: 'Shot Video Take hook',
     picked: false,
+    video: null,
     state: emptyTakeState({ inputModeId: 'text-only' }),
     createdAt: '',
     updatedAt: '',
@@ -353,7 +354,7 @@ function take(): SceneShotVideoTake {
 }
 
 function takeOverview(
-  value: SceneShotVideoTake
+  value: SceneShotVideoTakeWithHttp
 ): SceneShotVideoTakeOverviewResponse {
   return {
     take: value,
@@ -371,7 +372,7 @@ function takeOverview(
   };
 }
 
-function takeCreateReport(value: SceneShotVideoTake) {
+function takeCreateReport(value: SceneShotVideoTakeWithHttp) {
   return {
     overview: takeOverview(value),
     resourceKeys: [],
@@ -411,7 +412,6 @@ function productionContext(): ShotVideoTakeProductionContextResponse {
     activeLookbook: null,
     storyboardImages: [],
     mediaInputs: [],
-    outputs: [],
     defaults: {
       inputModeId: 'text-only',
       imageDependencyModelChoice: 'fal-ai/nano-banana-2',
