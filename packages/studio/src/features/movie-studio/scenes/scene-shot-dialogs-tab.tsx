@@ -51,6 +51,7 @@ interface SceneShotDialogsTabProps {
   castMemberImages: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
   onPlanRefresh?: () => Promise<void>;
+  onTakeMutation?: (result: ShotVideoTakeProductionMutation) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -61,6 +62,7 @@ export function SceneShotDialogsTab({
   castMemberImages,
   productionPlan,
   onPlanRefresh,
+  onTakeMutation,
   onSaveNotificationChange,
 }: SceneShotDialogsTabProps) {
   const [dialogueAudioContext, setDialogueAudioContext] =
@@ -133,8 +135,10 @@ export function SceneShotDialogsTab({
             ...(mutationShotId ? { shotId: mutationShotId } : {}),
           }
         );
-      void result;
-      await onPlanRefresh?.();
+      onTakeMutation?.(result);
+      if (result.context.take.takeId === productionPlan?.take?.takeId) {
+        await onPlanRefresh?.();
+      }
     });
   };
 
@@ -146,7 +150,7 @@ export function SceneShotDialogsTab({
     setActionBusy(true);
     try {
       await mutationStatus.runTakeEditorMutation(async () => {
-        await updateTakeDialogueAudioSelection(
+        const result = await updateTakeDialogueAudioSelection(
           projectName,
           sceneId,
           take.takeId,
@@ -156,6 +160,10 @@ export function SceneShotDialogsTab({
             takeId,
           }
         );
+        onTakeMutation?.(result);
+        if (result.context.take.takeId !== productionPlan?.take?.takeId) {
+          return;
+        }
         const context = await readSceneDialogueAudioContext(
           projectName,
           sceneId

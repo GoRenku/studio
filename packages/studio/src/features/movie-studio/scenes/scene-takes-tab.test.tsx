@@ -11,7 +11,6 @@ import type {
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
-  copySceneShotVideoTakeForRegeneration,
   createSceneShotVideoTake,
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
@@ -34,7 +33,6 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
   listSceneShotVideoTakes: vi.fn(),
-  copySceneShotVideoTakeForRegeneration: vi.fn(),
   createSceneShotVideoTake: vi.fn(),
   deleteSceneShotVideoTake: vi.fn(),
   readSceneShotVideoTakeEditContext: vi.fn(),
@@ -88,16 +86,6 @@ describe('SceneTakesTab', () => {
     vi.mocked(createSceneShotVideoTake).mockReset();
     vi.mocked(createSceneShotVideoTake).mockResolvedValue(
       takeCreateReport(take())
-    );
-    vi.mocked(copySceneShotVideoTakeForRegeneration).mockReset();
-    vi.mocked(copySceneShotVideoTakeForRegeneration).mockResolvedValue(
-      takeCreateReport(
-        take({
-          takeId: 'take_regenerated',
-          title: 'Regenerated take',
-          shotIds: ['shot_001'],
-        })
-      )
     );
     vi.mocked(deleteSceneShotVideoTake).mockReset();
     vi.mocked(deleteSceneShotVideoTake).mockResolvedValue({
@@ -186,6 +174,71 @@ describe('SceneTakesTab', () => {
     expect(
       screen.queryByRole('img', { name: 'Storyboard image for Shot 1' })
     ).toBeNull();
+  });
+
+  it('plays finalized take card videos on hover and keyboard focus', async () => {
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, 'play')
+      .mockResolvedValue(undefined);
+    const pause = vi
+      .spyOn(HTMLMediaElement.prototype, 'pause')
+      .mockImplementation(() => {});
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+      takes: [
+        takeOverview(
+          take({
+            takeId: 'take_video',
+            title: 'Video take',
+            shotIds: ['shot_001'],
+            video: {
+              takeId: 'take_video',
+              assetId: 'asset_video',
+              assetFileId: 'asset_file_video',
+              projectRelativePath:
+                'generated/media/final-take.mp4' as ProjectRelativePath,
+              mimeType: 'video/mp4',
+              createdAt: '2026-06-18T12:00:00.000Z',
+              url: '/studio-api/projects/constantinople/screenplay/scenes/scene_hook/takes/take_video/video/files/asset_file_video',
+            } as never,
+          })
+        ),
+      ],
+    });
+
+    try {
+      render(<SceneTakesTabHarness />);
+
+      const card = await screen.findByRole('button', { name: 'Map study' });
+      const video = screen.getByTitle('Map study') as HTMLVideoElement;
+      play.mockClear();
+      pause.mockClear();
+
+      fireEvent.pointerEnter(card);
+      await waitFor(() => expect(play).toHaveBeenCalledTimes(1));
+
+      Object.defineProperty(video, 'paused', {
+        configurable: true,
+        value: false,
+      });
+      fireEvent.pointerLeave(card);
+      expect(pause).toHaveBeenCalled();
+      expect(video.currentTime).toBe(0);
+
+      play.mockClear();
+      pause.mockClear();
+      fireEvent.focus(card);
+      await waitFor(() => expect(play).toHaveBeenCalledTimes(1));
+      Object.defineProperty(video, 'paused', {
+        configurable: true,
+        value: false,
+      });
+      fireEvent.blur(card);
+      expect(pause).toHaveBeenCalled();
+      expect(video.currentTime).toBe(0);
+    } finally {
+      play.mockRestore();
+      pause.mockRestore();
+    }
   });
 
   it('uses overview shot ids for read-only take card storyboard previews', async () => {
@@ -490,6 +543,84 @@ describe('SceneTakesTab', () => {
     );
   });
 
+  it('switches Take-Edit to the returned iteration take after shot selection changes', async () => {
+    const sourceTake = take({
+      takeId: 'take_reaction',
+      title: 'Reaction take',
+      sourceShotListId: 'shot_list_source',
+      shotIds: ['shot_002'],
+      updatedAt: '2026-06-18T11:00:00.000Z',
+    });
+    const sourceShots = shotList().shots;
+    const targetTake = take({
+      ...sourceTake,
+      takeId: 'take_reaction_iteration',
+      title: 'Reaction take iteration',
+      shotIds: ['shot_001', 'shot_002'],
+      regeneratedFromTakeId: 'take_reaction',
+      updatedAt: '2026-06-18T12:00:00.000Z',
+    });
+
+    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+      takes: [takeOverview(sourceTake, { displayShots: sourceShots })],
+    });
+    vi.mocked(readSceneShotVideoTakeEditContext).mockResolvedValue(
+      takeEditContext({
+        take: sourceTake,
+        sourceShotListId: 'shot_list_source',
+        displayShots: sourceShots,
+      })
+    );
+    vi.mocked(updateSceneShotVideoTakeShots).mockResolvedValue({
+      context: takeProductionContext({
+        take: targetTake,
+        shotListId: 'shot_list_source',
+        displayShots: sourceShots,
+      }),
+      resourceKeys: [],
+    });
+
+    render(
+      <SceneTakesTabHarness
+        initialSelection={{
+          type: 'scene',
+          id: 'scene_hook',
+          sceneTab: 'takes',
+          takeWorkspaceMode: 'edit',
+          takeId: 'take_reaction',
+          shotId: 'shot_002',
+          shotTab: 'composition',
+        }}
+      />
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Expand Select for Shot 1' })
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Mode' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(updateSceneShotVideoTakeShots).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_reaction',
+        ['shot_001', 'shot_002']
+      )
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('selection-take-id').textContent).toBe(
+        'take_reaction_iteration'
+      )
+    );
+    expect(screen.getByTestId('selection-shot-id').textContent).toBe(
+      'shot_001'
+    );
+    expect(screen.getByTestId('selection-shot-tab').textContent).toBe(
+      'description'
+    );
+  });
+
   it('replaces the selected take shots when a non-contiguous shot is selected', async () => {
     configureFiveShotEditTake(['shot_001', 'shot_002', 'shot_003']);
 
@@ -721,6 +852,9 @@ function SceneTakesTabHarness({
   }, []);
   return (
     <>
+      <span data-testid='selection-take-id'>{selection.takeId ?? ''}</span>
+      <span data-testid='selection-shot-id'>{selection.shotId ?? ''}</span>
+      <span data-testid='selection-shot-tab'>{selection.shotTab ?? ''}</span>
       {headerAction}
       <SceneTakesTab
         projectName='constantinople'

@@ -20,13 +20,11 @@ import type {
   ProjectRecord,
 } from '../../database/access/project.js';
 import {
-  insertShotVideoTakeInputRecord,
   insertShotVideoTakeVideoRecord,
   listShotVideoTakeInputs,
-  copySelectedShotVideoTakeInputRecords,
+  insertShotVideoTakeInputRecord,
 } from '../../database/access/shot-video-takes.js';
 import {
-  insertSceneShotVideoTakeRecord,
   requireSceneShotVideoTake,
 } from '../../database/access/scene-shot-video-takes.js';
 import type {
@@ -74,6 +72,9 @@ import {
   prepareSceneShotVideoTakeInSession,
   sceneShotVideoTakeTarget,
 } from './take-context.js';
+import {
+  continueSceneShotVideoTakeIteration,
+} from './take-iteration.js';
 
 
 export async function importShotInputMedia(
@@ -82,9 +83,28 @@ export async function importShotInputMedia(
 ): Promise<ShotVideoTakeInputMediaImportReport> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
-    assertEditableSceneShotVideoTake(prepared.take);
+    const screenplay = requireScreenplayDocument(session);
+    const sourcePrepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(sourcePrepared.take);
     const config = PURPOSE_CONFIG[purpose];
+    const imported = await importGeneratedFile({
+      session,
+      projectFolder,
+      sourceProjectRelativePath: input.sourceProjectRelativePath,
+      title: input.title ?? config.title,
+      mediaKind: 'image',
+      assetType: purpose,
+      origin: input.receipt ? 'generated' : 'imported',
+      idGenerator: input.idGenerator,
+      now,
+    });
+    const iteration = continueSceneShotVideoTakeIteration({
+      session,
+      contextInput: input,
+      screenplay,
+      now,
+    });
+    const prepared = iteration.prepared;
     const subject =
       config.outputInputKind === 'video-prompt-sheet'
         ? {
@@ -108,17 +128,6 @@ export async function importShotInputMedia(
             candidate.subjectId === subject.subjectId
         )
       : undefined;
-    const imported = await importGeneratedFile({
-      session,
-      projectFolder,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title ?? config.title,
-      mediaKind: 'image',
-      assetType: purpose,
-      origin: input.receipt ? 'generated' : 'imported',
-      idGenerator: input.idGenerator,
-      now,
-    });
     const relationship = insertShotVideoTakeInputRecord(session, {
       id: imported.nextId('scene_shot_video_take_media_input'),
       sceneId: prepared.sceneId,
@@ -179,6 +188,7 @@ export async function importShotInputMedia(
       ...(replacedInput ? { replacedInput } : {}),
       ...(input.receipt ? { receipt: input.receipt } : {}),
       resourceKeys: shotVideoTakeResourceKeys(prepared).concat([
+        ...iteration.resourceKeys,
         `scene-shot-video-take-input:${relationship.inputId}`,
         ...(replacedInput
           ? [`scene-shot-video-take-input:${replacedInput.inputId}`]
@@ -214,8 +224,8 @@ export async function importShotVideoTake(
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const screenplay = requireScreenplayDocument(session);
-    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
-    assertEditableSceneShotVideoTake(prepared.take);
+    const sourcePrepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(sourcePrepared.take);
     const imported = await importGeneratedFile({
       session,
       projectFolder,
@@ -227,27 +237,14 @@ export async function importShotVideoTake(
       idGenerator: input.idGenerator,
       now,
     });
-    const targetTake = prepared.take.video
-      ? insertSceneShotVideoTakeRecord(session, {
-          id: imported.nextId('scene_shot_video_take'),
-          sceneId: prepared.sceneId,
-          shotListId: prepared.sourceShotListId,
-          title: input.title ?? `${prepared.take.title} regeneration`,
-          shotIds: prepared.orderedShotIds,
-          state: structuredClone(prepared.take.state),
-          regeneratedFromTakeId: prepared.take.takeId,
-          screenplay,
-          now,
-        })
-      : prepared.take;
-    if (prepared.take.video) {
-      copySelectedShotVideoTakeInputRecords(session, {
-        sourceTakeId: prepared.take.takeId,
-        targetTakeId: targetTake.takeId,
-        now,
-        nextId: imported.nextId,
-      });
-    }
+    const iteration = continueSceneShotVideoTakeIteration({
+      session,
+      contextInput: input,
+      screenplay,
+      now,
+      title: input.title ?? `${sourcePrepared.take.title} regeneration`,
+    });
+    const targetTake = iteration.take;
     const video = insertShotVideoTakeVideoRecord(session, {
       takeId: targetTake.takeId,
       assetId: imported.assetId,
@@ -256,7 +253,7 @@ export async function importShotVideoTake(
       now,
     });
     const refreshedSourceTake = requireSceneShotVideoTake(session, {
-      takeId: prepared.take.takeId,
+      takeId: iteration.sourceTake.takeId,
       screenplay,
     });
     const refreshedTargetTake = requireSceneShotVideoTake(session, {
@@ -269,7 +266,7 @@ export async function importShotVideoTake(
       project: toProjectReport(project, projectFolder),
       changes: [
         {
-          type: prepared.take.video
+          type: iteration.createdIterationTake
             ? 'shotVideoTake.regeneratedVideoImported'
             : 'shotVideoTake.videoImported',
           takeId: refreshedTargetTake.takeId,
@@ -279,14 +276,14 @@ export async function importShotVideoTake(
       target: sceneShotVideoTakeTarget(refreshedTargetTake),
       sourceTake: refreshedSourceTake,
       take: refreshedTargetTake,
-      createdRegeneratedTake: Boolean(prepared.take.video),
+      createdRegeneratedTake: iteration.createdIterationTake,
       imported: imported.asset,
       video,
       ...(input.receipt ? { receipt: input.receipt } : {}),
       resourceKeys: [
-        ...shotVideoTakeResourceKeys(prepared),
+        ...iteration.resourceKeys,
         ...shotVideoTakeResourceKeys({
-          ...prepared,
+          ...iteration.prepared,
           take: refreshedTargetTake,
         }),
         `asset:${imported.assetId}`,

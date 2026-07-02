@@ -13,7 +13,6 @@ import type { SceneShotListResourceResponse } from '@/services/studio-project-co
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import { restoreTrashItem } from '@/services/studio-trash-api';
 import {
-  copySceneShotVideoTakeForRegeneration,
   createSceneShotVideoTake,
   deleteSceneShotVideoTake,
   listSceneShotVideoTakes,
@@ -125,9 +124,6 @@ export function SceneTakesTab({
   const [selectionApplyError, setSelectionApplyError] = useState<string | null>(null);
   const createTakePendingRef = useRef(false);
   const [createTakePending, setCreateTakePending] = useState(false);
-  const [regeneratePendingTakeId, setRegeneratePendingTakeId] = useState<
-    string | null
-  >(null);
   const [error, setError] = useState<string | null>(null);
   const saveNotificationSequenceRef = useRef(0);
   const [detailSaveNotification, setDetailSaveNotification] =
@@ -289,6 +285,34 @@ export function SceneTakesTab({
     }
     return shots[0]?.shotId ?? null;
   }, [displayedActiveTake, shots, shotId]);
+
+  const handleTakeProductionContext = useCallback(
+    (context: ShotVideoTakeProductionContextResponse) => {
+      const nextOverview = overviewFromProductionContext(context);
+      setTakeOverviews((current) =>
+        orderSceneShotVideoTakeOverviews(
+          upsertSceneShotVideoTakeOverview(current, nextOverview)
+        )
+      );
+      setTakeEditingContext(
+        takeEditingContextFromProductionContext(context)
+      );
+      const nextShotId =
+        selectedShotId && context.take.shotIds.includes(selectedShotId)
+          ? selectedShotId
+          : context.take.shotIds[0];
+      onSelect({
+        type: 'scene',
+        id: sceneId,
+        sceneTab: 'takes',
+        takeWorkspaceMode: 'edit',
+        takeId: context.take.takeId,
+        shotId: nextShotId,
+        shotTab: activeShotTab,
+      });
+    },
+    [activeShotTab, onSelect, sceneId, selectedShotId]
+  );
 
   const handleSelectShot = useCallback(
     (nextShotId: string) => {
@@ -480,17 +504,7 @@ export function SceneTakesTab({
         displayedActiveTake.takeId,
         openDraft.shotIds
       );
-      const updatedTake = result.context.take;
-      setTakeOverviews((current) =>
-        current.map((candidate) =>
-          candidate.take.takeId === updatedTake.takeId
-            ? overviewFromProductionContext(result.context)
-            : candidate
-        )
-      );
-      setTakeEditingContext(
-        takeEditingContextFromProductionContext(result.context)
-      );
+      handleTakeProductionContext(result.context);
       setDraftSelectionEdit(null);
       setSelectionReviewOpen(false);
     } catch (applyError) {
@@ -508,56 +522,8 @@ export function SceneTakesTab({
     selectionApplyPending,
     projectName,
     sceneId,
+    handleTakeProductionContext,
   ]);
-
-  const handleTakeChange = useCallback((updatedTake: SceneShotVideoTakeWithHttp) => {
-    setTakeOverviews((current) =>
-      orderSceneShotVideoTakeOverviews(
-        current.map((candidate) =>
-          candidate.take.takeId === updatedTake.takeId
-            ? { ...candidate, take: updatedTake }
-            : candidate
-        )
-      )
-    );
-  }, []);
-
-  const handleRegenerateTake = useCallback(
-    async (sourceTake: SceneShotVideoTakeWithHttp) => {
-      setRegeneratePendingTakeId(sourceTake.takeId);
-      try {
-        const report = await copySceneShotVideoTakeForRegeneration(
-          projectName,
-          sceneId,
-          sourceTake.takeId
-        );
-        setTakeOverviews((current) =>
-          orderSceneShotVideoTakeOverviews([...current, report.overview])
-        );
-        setTakeEditingContext(
-          takeEditingContextFromOverview(report.overview)
-        );
-        onSelect({
-          type: 'scene',
-          id: sceneId,
-          sceneTab: 'takes',
-          takeWorkspaceMode: 'edit',
-          takeId: report.overview.take.takeId,
-          shotId: report.overview.take.shotIds[0],
-          shotTab: 'ai-production',
-        });
-      } catch (regenerateError) {
-        setError(
-          regenerateError instanceof Error
-            ? regenerateError.message
-            : 'Unable to copy take for regeneration.'
-        );
-      } finally {
-        setRegeneratePendingTakeId(null);
-      }
-    },
-    [onSelect, projectName, sceneId]
-  );
 
   const reportDetailSaveNotification = useCallback(
     (status: SaveNotificationStatus) => {
@@ -904,11 +870,7 @@ export function SceneTakesTab({
             onTabChange={handleSelectShotTab}
             onCreateTake={handleCreateTake}
             createTakePending={createTakePending}
-            onTakeChange={handleTakeChange}
-            onRegenerateTake={handleRegenerateTake}
-            regeneratePending={
-              regeneratePendingTakeId === selectedTake?.takeId
-            }
+            onTakeMutation={handleTakeProductionContext}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>
@@ -941,20 +903,6 @@ function takeEditingContextFromProductionContext(
     displayShots: context.displayShots,
     storyboardImagesByShotId: storyboardImagesByShotId(
       context.storyboardImages
-    ),
-  };
-}
-
-function takeEditingContextFromOverview(
-  overview: SceneShotVideoTakeOverviewResponse
-): TakeEditingShotListContext {
-  return {
-    takeId: overview.take.takeId,
-    take: overview.take,
-    sourceShotListId: overview.sourceShotList.id,
-    displayShots: overview.displayShots,
-    storyboardImagesByShotId: storyboardImagesByShotId(
-      overview.storyboardImages
     ),
   };
 }
@@ -1022,4 +970,19 @@ function orderSceneShotVideoTakeOverviews(
     }
     return right.take.takeId.localeCompare(left.take.takeId);
   });
+}
+
+function upsertSceneShotVideoTakeOverview(
+  overviews: SceneShotVideoTakeOverviewResponse[],
+  overview: SceneShotVideoTakeOverviewResponse
+): SceneShotVideoTakeOverviewResponse[] {
+  const existingIndex = overviews.findIndex(
+    (candidate) => candidate.take.takeId === overview.take.takeId
+  );
+  if (existingIndex === -1) {
+    return [...overviews, overview];
+  }
+  return overviews.map((candidate, index) =>
+    index === existingIndex ? overview : candidate
+  );
 }

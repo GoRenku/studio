@@ -316,6 +316,20 @@
       "when": 1782988145606,
       "tag": "0044_shot_video_take_video",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1782996029896,
+      "tag": "0045_shot_video_take_regenerated_fk_repair",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1782998982939,
+      "tag": "0046_shot_video_take_relationship_repair",
+      "breakpoints": true
     }
   ]
 }

@@ -146,18 +146,6 @@ export async function createSceneShotVideoTake(
   return (await response.json()) as SceneShotVideoTakeCreateReportResponse;
 }
 
-export async function copySceneShotVideoTakeForRegeneration(
-  projectName: string,
-  sceneId: string,
-  takeId: string
-): Promise<SceneShotVideoTakeCreateReportResponse> {
-  return sendMutation<SceneShotVideoTakeCreateReportResponse>(
-    `${productionPath(projectName, sceneId, takeId)}/regeneration-copy`,
-    'POST',
-    {}
-  );
-}
-
 export async function deleteSceneShotVideoTake(
   projectName: string,
   sceneId: string,

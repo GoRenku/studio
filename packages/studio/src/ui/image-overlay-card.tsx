@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ImageOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
@@ -10,7 +10,7 @@ interface ImageOverlayCardProps {
   description?: string;
   imageUrl: string | null;
   imageAlt: string;
-  previewContent?: ReactNode;
+  previewContent?: ReactNode | ((state: { active: boolean }) => ReactNode);
   aspectClassName?: string;
   aspectRatio?: number;
   detectImageAspectRatio?: boolean;
@@ -47,6 +47,11 @@ export function ImageOverlayCard({
     detectImageAspectRatio ? imageUrl : null
   );
   const hasCopy = Boolean(title || description);
+  const [previewActive, setPreviewActive] = useState(false);
+  const renderedPreviewContent =
+    typeof previewContent === 'function'
+      ? previewContent({ active: previewActive })
+      : previewContent;
 
   return (
     <Card
@@ -65,9 +70,13 @@ export function ImageOverlayCard({
         aria-label={title ?? imageAlt}
         className='absolute inset-0 h-full w-full overflow-hidden rounded-[inherit] p-0 text-left hover:bg-transparent'
         onClick={onOpen}
+        onPointerEnter={() => setPreviewActive(true)}
+        onPointerLeave={() => setPreviewActive(false)}
+        onFocus={() => setPreviewActive(true)}
+        onBlur={() => setPreviewActive(false)}
       >
-        {previewContent ? (
-          previewContent
+        {renderedPreviewContent ? (
+          renderedPreviewContent
         ) : imageUrl ? (
           <img
             src={imageUrl}

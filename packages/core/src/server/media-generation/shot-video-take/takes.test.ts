@@ -232,6 +232,222 @@ describe('scene shot video takes', () => {
     ).resolves.toMatchObject({ picked: false });
   });
 
+  it('continues editing on a new take when production settings change after finalization', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const sourceTakeId = written.take.takeId;
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/first-production-prompt-sheet.png',
+      'first production prompt sheet'
+    );
+    await projectData.importShotVideoPromptSheet({
+      homeDir,
+      takeId: sourceTakeId,
+      sourceProjectRelativePath: 'generated/media/first-production-prompt-sheet.png',
+      title: 'First production prompt sheet',
+    });
+    const sourceTakeWithPromptSheet = await projectData.readSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+    });
+
+    await projectData.updateSceneShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+      production: {
+        ...sourceTakeWithPromptSheet.state.production,
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'video-prompt-sheet',
+            subjectKind: 'take',
+            subjectId: sourceTakeId,
+          },
+        ],
+        customPromptNote: 'First finished-video settings.',
+      },
+    });
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/first-production-take.mp4',
+      'first production video'
+    );
+    await projectData.importShotVideoTake({
+      homeDir,
+      takeId: sourceTakeId,
+      sourceProjectRelativePath: 'generated/media/first-production-take.mp4',
+      title: 'First production take',
+    });
+
+    const continued = await projectData.updateSceneShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+      production: {
+        ...sourceTakeWithPromptSheet.state.production,
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        requestedInputs: [
+          {
+            kind: 'video-prompt-sheet',
+            subjectKind: 'take',
+            subjectId: sourceTakeId,
+          },
+        ],
+        customPromptNote: 'Tighter second-attempt settings.',
+      },
+    });
+
+    expect(continued.take.takeId).not.toBe(sourceTakeId);
+    expect(continued.take.regeneratedFromTakeId).toBe(sourceTakeId);
+    expect(continued.take.video).toBeNull();
+    expect(continued.take.state.production.customPromptNote).toBe(
+      'Tighter second-attempt settings.'
+    );
+    expect(continued.take.state.production.requestedInputs).toEqual([
+      expect.objectContaining({
+        kind: 'video-prompt-sheet',
+        subjectKind: 'take',
+        subjectId: continued.take.takeId,
+      }),
+    ]);
+    expect(continued.take.state.production.preparedInputs).toEqual([
+      expect.objectContaining({
+        kind: 'video-prompt-sheet',
+        subjectKind: 'take',
+        subjectId: continued.take.takeId,
+      }),
+    ]);
+    expect(continued.resourceKeys).toEqual(
+      expect.arrayContaining([
+        `scene-shot-video-take:${sourceTakeId}`,
+        `scene-shot-video-take:${continued.take.takeId}`,
+        `scene-shot-video-take-video:${sourceTakeId}`,
+        `surface:scene:${ids.sceneId}:takes`,
+      ])
+    );
+
+    const sourceTake = await projectData.readSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+    });
+    expect(sourceTake.video).toMatchObject({
+      projectRelativePath: 'generated/media/first-production-take.mp4',
+    });
+    expect(sourceTake.state.production.customPromptNote).toBe(
+      'First finished-video settings.'
+    );
+    expect(sourceTake.state.production.requestedInputs).toEqual([
+      expect.objectContaining({
+        subjectKind: 'take',
+        subjectId: sourceTakeId,
+      }),
+    ]);
+    expect(sourceTake.state.production.preparedInputs).toEqual([
+      expect.objectContaining({
+        subjectKind: 'take',
+        subjectId: sourceTakeId,
+      }),
+    ]);
+  });
+
+  it('continues editing on a new take when composition changes after finalization', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const sourceTakeId = written.take.takeId;
+    await projectData.updateSceneShotVideoTakeDirection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+      direction: {
+        composition: {
+          shotSize: 'wide-shot',
+          customComposition: 'Hold the whole council chamber in the frame.',
+        },
+      },
+    });
+    await projectData.updateSceneShotVideoTakeProduction({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+      production: {
+        requestedInputs: [
+          {
+            kind: 'video-prompt-sheet',
+            subjectKind: 'take',
+            subjectId: sourceTakeId,
+          },
+        ],
+      },
+    });
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/first-composition-take.mp4',
+      'first composition video'
+    );
+    await projectData.importShotVideoTake({
+      homeDir,
+      takeId: sourceTakeId,
+      sourceProjectRelativePath: 'generated/media/first-composition-take.mp4',
+      title: 'First composition take',
+    });
+
+    const continued = await projectData.updateSceneShotVideoTakeDirection({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+      direction: {
+        composition: {
+          shotSize: 'close-up',
+          customComposition: 'Move into Mehmed and let the map fall soft.',
+        },
+      },
+    });
+
+    expect(continued.take.takeId).not.toBe(sourceTakeId);
+    expect(continued.take.regeneratedFromTakeId).toBe(sourceTakeId);
+    expect(
+      continued.take.state.structure.mode === 'continuous'
+        ? continued.take.state.structure.sharedDirection.composition
+        : undefined
+    ).toMatchObject({
+      shotSize: 'close-up',
+      customComposition: 'Move into Mehmed and let the map fall soft.',
+    });
+    expect(continued.take.state.production.requestedInputs).toEqual([
+      expect.objectContaining({
+        kind: 'video-prompt-sheet',
+        subjectKind: 'take',
+        subjectId: continued.take.takeId,
+      }),
+    ]);
+
+    const sourceTake = await projectData.readSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      takeId: sourceTakeId,
+    });
+    expect(sourceTake.video).toMatchObject({
+      projectRelativePath: 'generated/media/first-composition-take.mp4',
+    });
+    expect(
+      sourceTake.state.structure.mode === 'continuous'
+        ? sourceTake.state.structure.sharedDirection.composition
+        : undefined
+    ).toMatchObject({
+      shotSize: 'wide-shot',
+      customComposition: 'Hold the whole council chamber in the frame.',
+    });
+    expect(sourceTake.state.production.requestedInputs).toEqual([
+      expect.objectContaining({
+        subjectKind: 'take',
+        subjectId: sourceTakeId,
+      }),
+    ]);
+  });
+
   it('deletes editable takes through core-owned take deletion', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);

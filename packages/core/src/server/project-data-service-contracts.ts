@@ -499,7 +499,6 @@ export interface ProjectDataService {
   planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
   runMediaGenerationSpec(input: RunMediaGenerationSpecInput): Promise<MediaGenerationRunReport>;
   createSceneShotVideoTake(input: CreateSceneShotVideoTakeInput): Promise<SceneShotVideoTakeCreateReport>;
-  copySceneShotVideoTakeForRegeneration(input: CopySceneShotVideoTakeForRegenerationInput): Promise<SceneShotVideoTakeCreateReport>;
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<SceneShotVideoTakeListReport>;
   deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<RecoverableMutationReport>;
@@ -1469,15 +1468,6 @@ export interface ReadSceneShotVideoTakeInput
   projectName?: string;
   sceneId?: string;
   takeId: string;
-}
-
-export interface CopySceneShotVideoTakeForRegenerationInput
-  extends RenkuConfigPathOptions {
-  projectName?: string;
-  sceneId?: string;
-  sourceTakeId: string;
-  title?: string;
-  idGenerator?: ProjectIdGenerator;
 }
 
 export interface ListSceneShotVideoTakesInput

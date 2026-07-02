@@ -1,7 +1,9 @@
 import {
   createStudioOperationId,
+  createStudioCoordinationService,
   resolveRenkuStorageRoot,
   type StudioProjectRef,
+  type StudioSelection,
 } from '@gorenku/studio-core/server';
 import { notifyStudioProjectResourcesChanged } from './studio-notification-client.js';
 import type { CliCommandRuntime } from './structured-command.js';
@@ -18,24 +20,47 @@ export async function appendStudioResourceChangedEvent(input: {
   runtime: CliCommandRuntime;
   report: StudioResourceChangedReport;
   command: string;
+  operationId?: string;
 }): Promise<void> {
   if (input.report.resourceKeys.length === 0) {
     return;
   }
 
+  const operationId = input.operationId ?? createStudioOperationId();
   const result = await notifyStudioProjectResourcesChanged({
     homeDir: input.runtime.homeDir,
     notification: {
       projectRef: await toProjectRef(input.report.project, input.runtime.homeDir),
       resourceKeys: input.report.resourceKeys,
       source: { kind: 'cli', command: input.command },
-      operationId: createStudioOperationId(),
+      operationId,
     },
   });
 
   if (result.status === 'deliveryFailed') {
     writeStudioResourceChangedWarning(input.runtime, result);
   }
+}
+
+export async function appendStudioFocusRequestedEvent(input: {
+  runtime: CliCommandRuntime;
+  project: StudioResourceChangedReport['project'];
+  selection: StudioSelection;
+  command: string;
+  operationId?: string;
+}): Promise<void> {
+  await createStudioCoordinationService({
+    homeDir: input.runtime.homeDir,
+  }).appendStudioEvent({
+    type: 'studio.focusRequested',
+    projectRef: await toProjectRef(input.project, input.runtime.homeDir),
+    focus: {
+      screen: 'movieStudio',
+      selection: input.selection,
+    },
+    source: { kind: 'cli', command: input.command },
+    operationId: input.operationId ?? createStudioOperationId(),
+  });
 }
 
 async function toProjectRef(

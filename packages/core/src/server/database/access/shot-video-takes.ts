@@ -31,6 +31,11 @@ export type SceneShotVideoTakeInputRecord =
 export type SceneShotVideoTakeVideoRecord =
   typeof sceneShotVideoTakeVideos.$inferSelect;
 
+export interface CopiedShotVideoTakeInputRecord {
+  sourceInput: SceneShotVideoTakeMediaInput;
+  input: SceneShotVideoTakeMediaInput;
+}
+
 export interface InsertShotVideoTakeInputRecord {
   id: string;
   sceneId: string;
@@ -356,7 +361,7 @@ export function copySelectedShotVideoTakeInputRecords(
     now: string;
     nextId: (prefix: EntityIdPrefix) => string;
   }
-): SceneShotVideoTakeMediaInput[] {
+): CopiedShotVideoTakeInputRecord[] {
   const sourceSceneId = requireTakeSceneId(session, input.sourceTakeId);
   const targetSceneId = requireTakeSceneId(session, input.targetTakeId);
   return listShotVideoTakeInputs(session, {
@@ -364,22 +369,26 @@ export function copySelectedShotVideoTakeInputRecords(
     takeId: input.sourceTakeId,
   })
     .filter((mediaInput) => mediaInput.selected)
-    .map((mediaInput) =>
-      insertShotVideoTakeInputRecord(session, {
+    .map((mediaInput) => ({
+      sourceInput: mediaInput,
+      input: insertShotVideoTakeInputRecord(session, {
         id: input.nextId('scene_shot_video_take_media_input'),
         sceneId: targetSceneId,
         takeId: input.targetTakeId,
         inputKind: mediaInput.kind,
         subjectKind: mediaInput.subjectKind,
-        subjectId: mediaInput.subjectId,
+        subjectId:
+          mediaInput.subjectKind === 'take'
+            ? input.targetTakeId
+            : mediaInput.subjectId,
         assetId: mediaInput.assetId,
         assetFileId: mediaInput.assetFileId,
         mediaGenerationRunId: mediaInput.mediaGenerationRunId ?? null,
         selection: 'select',
         shotIds: mediaInput.shotIds,
         now: input.now,
-      })
-    );
+      }),
+    }));
 }
 
 function requireShotVideoTakeInputRecord(

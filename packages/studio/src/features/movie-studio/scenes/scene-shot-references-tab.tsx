@@ -40,6 +40,7 @@ interface SceneShotReferencesTabProps {
   selectedShotId?: string;
   productionPlan: ShotVideoTakeProductionPlanReport | null;
   onPlanRefresh?: () => Promise<void>;
+  onTakeMutation?: (result: ShotVideoTakeProductionMutation) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -49,6 +50,7 @@ export function SceneShotReferencesTab({
   selectedShotId,
   productionPlan,
   onPlanRefresh,
+  onTakeMutation,
   onSaveNotificationChange,
 }: SceneShotReferencesTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
@@ -64,7 +66,11 @@ export function SceneShotReferencesTab({
   const referenceIssues =
     productionPlan?.diagnostics.filter(isReferenceDiagnosticIssue) ?? [];
 
-  const refreshAfterMutation = async (_result: ShotVideoTakeProductionMutation) => {
+  const refreshAfterMutation = async (result: ShotVideoTakeProductionMutation) => {
+    onTakeMutation?.(result);
+    if (result.context.take.takeId !== productionPlan?.take?.takeId) {
+      return;
+    }
     await onPlanRefresh?.();
   };
   useEffect(() => {

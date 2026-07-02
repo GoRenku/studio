@@ -40,6 +40,12 @@ generated/imported video outputs are candidates under a Shot Video Take. That
 candidate model makes good AI iteration invisible. The current product model is
 one generated video attempt equals one take.
 
+Amendment: `plans/active/0100-shot-video-take-automatic-iteration-and-migration-repair.md`
+supersedes the manual regeneration-button direction from this plan. Do not add
+a user-visible duplicate, copy, or regenerate button to Take-Edit. Repeat
+generation should continue automatically through core-owned iteration and
+finalization.
+
 ## Confirmed Investigation Findings
 
 ### Urban Basilica Already Has The Missing Video
@@ -611,19 +617,25 @@ Update `SceneShotVideoStage` so:
 
 ### Regeneration UI
 
-Add a clear regeneration path from a take that already has video:
+Superseded by
+`plans/active/0100-shot-video-take-automatic-iteration-and-migration-repair.md`.
 
-- `SceneShotVideoStage` shows a `RotateCcw` icon button in the transport row
-  when `take.video` exists.
-- The button tooltip and accessible label are "Regenerate from this take."
-- Activating it calls `copySceneShotVideoTakeForRegeneration`, opens the copied
-  draft take, and selects the AI Production tab.
-- The copied draft take starts from the current take settings and has no video.
-- Studio opens the copied take so the user can tweak settings.
-- The copied take has no video until finalization succeeds.
-- If the user skips explicit copy and finalizes another generated video from an
-  already-videoed take, core still creates the copied take during finalization.
-- The Takes grid refreshes and shows the newly generated take separately.
+Do not add a manual regeneration, duplicate, or copy button to
+`SceneShotVideoStage`.
+
+The accepted product behavior is automatic iteration:
+
+- Take-Edit shows the active take video or the no-video placeholder.
+- The user or agent can ask for another generation without pressing a Studio
+  copy button.
+- If a generation-authoring mutation targets a take that already has a video,
+  core creates the next editable take automatically and returns it as the active
+  take.
+- If another video is finalized from a videoed take without prior edits, core
+  creates the next take during finalization.
+- Studio follows the take id returned by core or requested through Studio
+  coordination, so the editor feels in-place while finalized take provenance is
+  preserved.
 
 ## Studio Refresh
 
@@ -979,10 +991,12 @@ that separate action.
 - [ ] Wire custom playback controls with local UI primitives.
 - [ ] Avoid native browser controls in feature code.
 - [ ] Avoid showing raw filenames, asset ids, output ids, or generation run ids.
-- [ ] Add a regeneration affordance on a take-owned surface.
-- [ ] Place the initial regeneration affordance in the
-      `SceneShotVideoStage` transport row.
-- [ ] Open copied regenerated takes after copy/finalization when appropriate.
+- [ ] Do not add a manual regenerate, duplicate, or copy button to
+      `SceneShotVideoStage`.
+- [ ] Follow the automatic iteration direction in
+      `plans/active/0100-shot-video-take-automatic-iteration-and-migration-repair.md`.
+- [ ] Open the active iteration take returned by core or requested through
+      Studio coordination.
 
 ### Studio Refresh
 

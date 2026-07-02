@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pause, Play } from 'lucide-react';
 import { Button } from './button';
 import { Slider } from './slider';
@@ -7,14 +7,12 @@ interface VideoPlayerProps {
   src: string;
   title: string;
   className?: string;
-  regenerateControl?: ReactNode;
 }
 
 export function VideoPlayer({
   src,
   title,
   className,
-  regenerateControl,
 }: VideoPlayerProps) {
   return (
     <VideoPlayerSurface
@@ -22,7 +20,6 @@ export function VideoPlayer({
       src={src}
       title={title}
       className={className}
-      regenerateControl={regenerateControl}
     />
   );
 }
@@ -31,7 +28,6 @@ function VideoPlayerSurface({
   src,
   title,
   className,
-  regenerateControl,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -108,7 +104,6 @@ function VideoPlayerSurface({
         <span className='shrink-0 font-mono text-xs tabular-nums text-muted-foreground'>
           {formatMediaTime(currentTime)} / {formatMediaTime(duration)}
         </span>
-        {regenerateControl}
       </div>
     </div>
   );

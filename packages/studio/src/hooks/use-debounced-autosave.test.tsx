@@ -91,6 +91,26 @@ describe('useDebouncedAutosave', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
+  it('keeps the returned autosave object stable when status has not changed', () => {
+    const save = vi.fn(async () => 'Saved');
+
+    const { result, rerender } = renderHook(
+      ({ value }) =>
+        useDebouncedAutosave({
+          value,
+          delayMs: 10,
+          save,
+        }),
+      { initialProps: { value: 'Initial' } },
+    );
+
+    const initialAutosave = result.current;
+
+    rerender({ value: 'Initial' });
+
+    expect(result.current).toBe(initialAutosave);
+  });
+
   it('uses the caller fallback when a save rejects with a non-Error value', async () => {
     vi.useFakeTimers();
     const save = vi.fn(async () => {
@@ -115,10 +135,11 @@ describe('useDebouncedAutosave', () => {
       await Promise.resolve();
     });
 
-    expect(result.current).toEqual({
+    expect(result.current).toMatchObject({
       state: 'error',
       message: 'Shot settings could not be saved.',
     });
+    expect(result.current.flushPending).toEqual(expect.any(Function));
   });
 
   it('flushes a pending debounced value on unmount when requested', async () => {

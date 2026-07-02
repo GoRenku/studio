@@ -55,13 +55,16 @@ Scene focus may include route-owned tab state. The scene selection shape is:
 {
   type: 'scene';
   id: string;
-  sceneTab?: 'narrative' | 'shots';
+  sceneTab?: 'narrative' | 'shots' | 'takes';
+  takeWorkspaceMode?: 'list' | 'new' | 'edit';
+  takeId?: string;
   shotId?: string;
   shotTab?:
     | 'description'
     | 'lookbook'
     | 'composition'
     | 'motion'
+    | 'dialogs'
     | 'cast'
     | 'location'
     | 'references'
@@ -74,6 +77,11 @@ Rules:
 - absent `sceneTab` means `narrative` unless `shotId` or `shotTab` is present;
 - `shotId` or `shotTab` implies the `shots` scene tab;
 - `sceneTab: 'narrative'` must not be combined with shot-level state;
+- `takeWorkspaceMode` controls the Takes workspace surface and may be `list`,
+  `new`, or `edit`;
+- `takeId` requires `takeWorkspaceMode: 'edit'` and `sceneTab: 'takes'`;
+- in Takes edit mode, `shotId` and `shotTab` refer to the selected shot and
+  active shot-detail tab inside the take editor;
 - `shotTab` controls only the active shot-detail tab and defaults to
   `description`;
 - selected values inside a tab, such as shot size, subject framing, camera
@@ -82,9 +90,10 @@ Rules:
   events.
 
 `renku studio current --json` enriches scene focus with the active scene tab and,
-when the focus is on `Shots`, the current shot and active shot-detail tab. For
-tabs backed by structured shot specs, the current context reports selected
-values with stable ids and human-readable labels derived from core label maps.
+when the focus is on `Shots` or a Takes edit workspace, the current shot and
+active shot-detail tab. For tabs backed by structured shot or take data, the
+current context reports selected values with stable ids and human-readable labels
+derived from core label maps.
 
 Example:
 
@@ -93,13 +102,15 @@ Example:
   "selection": {
     "type": "scene",
     "id": "scene_djkfgf9p",
-    "sceneTab": "shots",
+    "sceneTab": "takes",
+    "takeWorkspaceMode": "edit",
+    "takeId": "take_01HX...",
     "shotId": "shot_003",
     "shotTab": "composition"
   },
   "context": {
     "kind": "scene",
-    "sceneTab": { "id": "shots", "label": "Shots" },
+    "sceneTab": { "id": "takes", "label": "Takes" },
     "shot": {
       "id": "shot_003",
       "label": "Shot 3",
@@ -110,7 +121,6 @@ Example:
           "id": "medium-close-up",
           "label": "Medium Close-Up"
         }
-      }
     }
   }
 }
@@ -788,12 +798,26 @@ The v1 selection contract should match the current browser selection model.
 ```ts
 export type StudioSelection =
   | { type: 'projectInformation' }
-  | { type: 'visualLanguage' }
-  | { type: 'storyboard' }
+  | { type: 'inspiration'; folderId?: string }
+  | { type: 'lookbooks' }
+  | { type: 'lookbook'; lookbookId: string }
+  | { type: 'trash' }
+  | { type: 'cast' }
+  | { type: 'castMember'; id: string }
+  | { type: 'locations' }
+  | { type: 'location'; id: string }
+  | { type: 'storyArc' }
+  | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }
-  | { type: 'scene'; id: string }
-  | { type: 'casting' }
-  | { type: 'cast'; id: string };
+  | {
+      type: 'scene';
+      id: string;
+      sceneTab?: 'narrative' | 'shots' | 'takes';
+      takeWorkspaceMode?: 'list' | 'new' | 'edit';
+      takeId?: string;
+      shotId?: string;
+      shotTab?: SceneShotDetailTab;
+    };
 ```
 
 Scene selections open the current scene design surface. Clip selections are not
@@ -1005,7 +1029,7 @@ renku project select <project-name> [--json]
 
 1. validate that the project exists through core project data services;
 2. append a `studio.focusRequested` event for Movie Studio;
-3. use the default selection `{ type: 'storyboard' }`;
+3. use the default selection `{ type: 'storyArc' }`;
 4. request project and library refreshes.
 
 If Studio is running, it should switch to that project.

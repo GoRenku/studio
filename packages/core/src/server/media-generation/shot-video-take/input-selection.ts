@@ -7,6 +7,7 @@ import {
   readAssetFileRecord,
 } from '../../database/access/asset-files.js';
 import {
+  insertShotVideoTakeInputRecord,
   requireShotVideoTakeInput,
   readShotVideoTakeVideo,
   selectShotVideoTakeInputRecord,
@@ -22,6 +23,10 @@ import {
 import {
   ProjectDataError,
 } from '../../project-data-error.js';
+import {
+  createRandomIdGenerator,
+  createUniqueIdAllocator,
+} from '../../entity-ids.js';
 import type {
   ShotVideoTakeContextInput,
   ResolveShotVideoTakeInputFileInput,
@@ -48,6 +53,11 @@ import {
   prepareSceneShotVideoTakeInSession,
   sameShotIds,
 } from './take-context.js';
+import {
+  contextWithIterationResourceKeys,
+  continueSceneShotVideoTakeIteration,
+  type SceneShotVideoTakeIterationTarget,
+} from './take-iteration.js';
 import {
   updateSceneShotVideoTakeProductionRecord,
 } from '../../database/access/scene-shot-video-takes.js';
@@ -188,30 +198,58 @@ export async function selectShotVideoTakeInput(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
-    assertEditableSceneShotVideoTake(prepared.take);
+    const screenplay = requireScreenplayDocument(session);
+    const sourcePrepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(sourcePrepared.take);
     const selectedBeforeMutation = requireShotVideoTakeInput(session, input.inputId);
     if (
-      selectedBeforeMutation.takeId !== prepared.take.takeId ||
-      !sameShotIds(selectedBeforeMutation.shotIds, prepared.orderedShotIds)
+      selectedBeforeMutation.takeId !== sourcePrepared.take.takeId ||
+      !sameShotIds(selectedBeforeMutation.shotIds, sourcePrepared.orderedShotIds)
     ) {
       throw new ProjectDataError(
         'PROJECT_DATA362',
         'Shot video take input belongs to a different Shot Video Take.'
       );
     }
-    const selected = selectShotVideoTakeInputRecord(session, {
-      inputId: input.inputId,
+    const iteration = continueSceneShotVideoTakeIteration({
+      session,
+      contextInput: input,
+      screenplay,
       now,
     });
+    const targetInput = inputForIterationSelection({
+      session,
+      input,
+      iteration,
+      sourceInput: selectedBeforeMutation,
+      now,
+    });
+    const selected = targetInput.selected
+      ? targetInput
+      : selectShotVideoTakeInputRecord(session, {
+          inputId: targetInput.inputId,
+          now,
+        });
     updatePreparedInputSelection({
       session,
-      prepared,
+      prepared: iteration.prepared,
       now,
       input: selected,
       selected: true,
     });
-    return buildContextFromPrepared({ session, projectFolder, project, prepared });
+    return contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshedPreparedForIteration({
+          session,
+          input,
+          iteration,
+        }),
+      }),
+      iteration
+    );
   });
 }
 
@@ -222,30 +260,55 @@ export async function clearShotVideoTakeInputSelection(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
-    assertEditableSceneShotVideoTake(prepared.take);
+    const screenplay = requireScreenplayDocument(session);
+    const iteration = continueSceneShotVideoTakeIteration({
+      session,
+      contextInput: input,
+      screenplay,
+      now,
+    });
     clearShotVideoTakeInputRecordSelection(session, {
-      sceneId: prepared.sceneId,
-      takeId: prepared.take.takeId,
+      sceneId: iteration.prepared.sceneId,
+      takeId: iteration.take.takeId,
       inputKind: input.kind,
       subjectKind: input.subjectKind,
-      subjectId: input.subjectId,
+      subjectId: subjectIdForIterationTake({
+        iteration,
+        subjectKind: input.subjectKind,
+        subjectId: input.subjectId,
+      }),
       now,
     });
     updatePreparedInputSelection({
       session,
-      prepared,
+      prepared: iteration.prepared,
       now,
       input: {
         kind: input.kind,
         assetId: '',
         assetFileId: '',
         subjectKind: input.subjectKind,
-        subjectId: input.subjectId,
+        subjectId: subjectIdForIterationTake({
+          iteration,
+          subjectKind: input.subjectKind,
+          subjectId: input.subjectId,
+        }),
       },
       selected: false,
     });
-    return buildContextFromPrepared({ session, projectFolder, project, prepared });
+    return contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshedPreparedForIteration({
+          session,
+          input,
+          iteration,
+        }),
+      }),
+      iteration
+    );
   });
 }
 
@@ -256,44 +319,57 @@ export async function deleteShotVideoTakeInput(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
-    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
-    assertEditableSceneShotVideoTake(prepared.take);
+    const screenplay = requireScreenplayDocument(session);
+    const sourcePrepared = prepareSceneShotVideoTakeInSession({ session, input });
+    assertEditableSceneShotVideoTake(sourcePrepared.take);
     const deleting = requireShotVideoTakeInput(session, input.inputId);
     if (
-      deleting.takeId !== prepared.take.takeId ||
-      !sameShotIds(deleting.shotIds, prepared.orderedShotIds)
+      deleting.takeId !== sourcePrepared.take.takeId ||
+      !sameShotIds(deleting.shotIds, sourcePrepared.orderedShotIds)
     ) {
       throw new ProjectDataError(
         'PROJECT_DATA362',
         'Shot video take input belongs to a different Shot Video Take.'
       );
     }
-
-    const discardReport = discardTrashObject({
+    const iteration = continueSceneShotVideoTakeIteration({
       session,
-      project,
-      projectFolder,
-      itemKind: 'shotVideoTakeInput',
-      itemId: input.inputId,
-      commandName: 'shotVideoTake.input.discard',
-      changes: [
-        {
-          type: 'shotVideoTakeInput.discarded',
-          inputId: input.inputId,
-        },
-      ],
+      contextInput: input,
+      screenplay,
+      now,
+    });
+    const targetDeleting = inputForIterationDelete({
+      iteration,
+      sourceInput: deleting,
     });
 
-    if (deleting.selected) {
+    const discardReport = targetDeleting
+      ? discardTrashObject({
+          session,
+          project,
+          projectFolder,
+          itemKind: 'shotVideoTakeInput',
+          itemId: targetDeleting.inputId,
+          commandName: 'shotVideoTake.input.discard',
+          changes: [
+            {
+              type: 'shotVideoTakeInput.discarded',
+              inputId: targetDeleting.inputId,
+            },
+          ],
+        })
+      : null;
+
+    if (targetDeleting?.selected) {
       const replacement = listShotVideoTakeInputRecords(session, {
-        sceneId: prepared.sceneId,
-        takeId: prepared.take.takeId,
-        shotIds: prepared.orderedShotIds,
+        sceneId: iteration.prepared.sceneId,
+        takeId: iteration.take.takeId,
+        shotIds: iteration.prepared.orderedShotIds,
       }).find(
         (candidate) =>
-          candidate.kind === deleting.kind &&
-          candidate.subjectKind === deleting.subjectKind &&
-          candidate.subjectId === deleting.subjectId
+          candidate.kind === targetDeleting.kind &&
+          candidate.subjectKind === targetDeleting.subjectKind &&
+          candidate.subjectId === targetDeleting.subjectId
       );
       if (replacement) {
         const selected = selectShotVideoTakeInputRecord(session, {
@@ -302,7 +378,7 @@ export async function deleteShotVideoTakeInput(
         });
         updatePreparedInputSelection({
           session,
-          prepared,
+          prepared: iteration.prepared,
           now,
           input: selected,
           selected: true,
@@ -310,21 +386,112 @@ export async function deleteShotVideoTakeInput(
       } else {
         updatePreparedInputSelection({
           session,
-          prepared,
+          prepared: iteration.prepared,
           now,
-          input: deleting,
+          input: targetDeleting,
           selected: false,
         });
       }
     }
 
+    const context = contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshedPreparedForIteration({
+          session,
+          input,
+          iteration,
+        }),
+      }),
+      iteration
+    );
     return {
-      ...buildContextFromPrepared({ session, projectFolder, project, prepared }),
-      recovery: discardReport.recovery,
+      ...context,
+      ...(discardReport ? { recovery: discardReport.recovery } : {}),
     };
   });
 }
 
+
+function inputForIterationSelection(input: {
+  session: DatabaseSession;
+  input: SelectShotVideoTakeInputInput;
+  iteration: SceneShotVideoTakeIterationTarget;
+  sourceInput: SceneShotVideoTakeMediaInput;
+  now: string;
+}): SceneShotVideoTakeMediaInput {
+  if (!input.iteration.createdIterationTake) {
+    return input.sourceInput;
+  }
+  const copiedInput = input.iteration.copiedInputs.find(
+    (copy) => copy.sourceInput.inputId === input.sourceInput.inputId
+  );
+  if (copiedInput) {
+    return copiedInput.input;
+  }
+  const ids = createUniqueIdAllocator(
+    input.input.idGenerator ?? createRandomIdGenerator()
+  );
+  return insertShotVideoTakeInputRecord(input.session, {
+    id: ids('scene_shot_video_take_media_input'),
+    sceneId: input.iteration.prepared.sceneId,
+    takeId: input.iteration.take.takeId,
+    inputKind: input.sourceInput.kind,
+    subjectKind: input.sourceInput.subjectKind,
+    subjectId: subjectIdForIterationTake({
+      iteration: input.iteration,
+      subjectKind: input.sourceInput.subjectKind,
+      subjectId: input.sourceInput.subjectId,
+    }),
+    assetId: input.sourceInput.assetId,
+    assetFileId: input.sourceInput.assetFileId,
+    mediaGenerationRunId: input.sourceInput.mediaGenerationRunId ?? null,
+    selection: 'select',
+    shotIds: input.sourceInput.shotIds,
+    now: input.now,
+  });
+}
+
+function inputForIterationDelete(input: {
+  iteration: SceneShotVideoTakeIterationTarget;
+  sourceInput: SceneShotVideoTakeMediaInput;
+}): SceneShotVideoTakeMediaInput | null {
+  if (!input.iteration.createdIterationTake) {
+    return input.sourceInput;
+  }
+  return (
+    input.iteration.copiedInputs.find(
+      (copy) => copy.sourceInput.inputId === input.sourceInput.inputId
+    )?.input ?? null
+  );
+}
+
+function refreshedPreparedForIteration(input: {
+  session: DatabaseSession;
+  input: ShotVideoTakeContextInput;
+  iteration: SceneShotVideoTakeIterationTarget;
+}): PreparedSceneShotVideoTake {
+  return prepareSceneShotVideoTakeInSession({
+    session: input.session,
+    input: {
+      ...input.input,
+      sceneId: input.iteration.take.sceneId,
+      takeId: input.iteration.take.takeId,
+    },
+  });
+}
+
+function subjectIdForIterationTake(input: {
+  iteration: SceneShotVideoTakeIterationTarget;
+  subjectKind: string;
+  subjectId: string;
+}): string {
+  return input.subjectKind === 'take'
+    ? input.iteration.take.takeId
+    : input.subjectId;
+}
 
 
 export function updatePreparedInputSelection(input: {

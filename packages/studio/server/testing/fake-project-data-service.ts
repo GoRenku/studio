@@ -1068,22 +1068,6 @@ export function fakeProjectDataService(): NonNullable<
         ],
       };
     },
-    async copySceneShotVideoTakeForRegeneration(input) {
-      const take = makeSceneShotVideoTake({
-        takeId: 'scene_shot_video_take_regenerated',
-        sceneId: input.sceneId ?? 'scene_opening',
-        title: input.title ?? 'Opening take regeneration',
-      });
-      return {
-        overview: makeSceneShotVideoTakeOverview(take),
-        resourceKeys: [
-          `scene:${take.sceneId}`,
-          `surface:scene:${take.sceneId}:takes`,
-          `scene-shot-video-take:${input.sourceTakeId}`,
-          `scene-shot-video-take:${take.takeId}`,
-        ],
-      };
-    },
     async readSceneShotVideoTake(input) {
       return makeSceneShotVideoTake({
         takeId: input.takeId,

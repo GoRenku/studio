@@ -2,6 +2,34 @@ import type {
   SceneShotVideoTakeProductionState,
 } from '../../../client/index.js';
 
+export function retargetTakeScopedProductionState(input: {
+  production: SceneShotVideoTakeProductionState;
+  targetTakeId: string;
+}): SceneShotVideoTakeProductionState {
+  const production = structuredClone(input.production);
+  return {
+    ...production,
+    ...(production.requestedInputs
+      ? {
+          requestedInputs: production.requestedInputs.map((requestedInput) =>
+            requestedInput.subjectKind === 'take'
+              ? { ...requestedInput, subjectId: input.targetTakeId }
+              : requestedInput
+          ),
+        }
+      : {}),
+    ...(production.preparedInputs
+      ? {
+          preparedInputs: production.preparedInputs.map((preparedInput) =>
+            preparedInput.subjectKind === 'take'
+              ? { ...preparedInput, subjectId: input.targetTakeId }
+              : preparedInput
+          ),
+        }
+      : {}),
+  };
+}
+
 export function carryTakeProductionStateForShotMembership(input: {
   production: SceneShotVideoTakeProductionState;
   previousShotIds: string[];

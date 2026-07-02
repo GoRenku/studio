@@ -43,9 +43,12 @@ import {
   sceneNarrativeReferenceScope,
 } from './reference-scope.js';
 import {
-  assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
+import {
+  contextWithIterationResourceKeys,
+  continueSceneShotVideoTakeIteration,
+} from './take-iteration.js';
 import {
   sceneShotVideoTakeDirectionReferenceSelections,
   sceneShotVideoTakeGenerationDirections,
@@ -169,13 +172,18 @@ async function updateSceneShotVideoTakeReferenceSelections(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const prepared = prepareSceneShotVideoTakeInSession({ session, input });
-    assertEditableSceneShotVideoTake(prepared.take);
+    const now = new Date().toISOString();
+    const iteration = continueSceneShotVideoTakeIteration({
+      session,
+      contextInput: input,
+      screenplay,
+      now,
+    });
     const context = buildContextFromPrepared({
       session,
       projectFolder,
       project,
-      prepared,
+      prepared: iteration.prepared,
     });
     const mutationScope = resolveSceneShotVideoTakeReferenceMutationScope({
       state: context.take.state,
@@ -184,19 +192,25 @@ async function updateSceneShotVideoTakeReferenceSelections(
     });
     const referenceSelections = buildReferenceSelections({ session, context });
     updateSceneShotVideoTakeReferenceSelectionsRecord(session, {
-      takeId: prepared.take.takeId,
+      takeId: iteration.take.takeId,
       shotId: mutationScope.shotId,
       referenceSelections,
       screenplay,
-      now: new Date().toISOString(),
+      now,
     });
-    const refreshed = prepareSceneShotVideoTakeInSession({ session, input });
-    return buildContextFromPrepared({
+    const refreshed = prepareSceneShotVideoTakeInSession({
       session,
-      projectFolder,
-      project,
-      prepared: refreshed,
+      input: { ...input, sceneId: iteration.take.sceneId, takeId: iteration.take.takeId },
     });
+    return contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshed,
+      }),
+      iteration
+    );
   });
 }
 

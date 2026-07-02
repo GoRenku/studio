@@ -21,7 +21,11 @@ import type {
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { updateSceneShotVideoTakeStructureMode } from '@/services/studio-shot-video-takes-api';
-import type { SceneShotVideoTakeWithHttp } from '@/services/studio-shot-video-takes-api';
+import type {
+  SceneShotVideoTakeWithHttp,
+  ShotVideoTakeProductionContextResponse,
+  ShotVideoTakeProductionMutation,
+} from '@/services/studio-shot-video-takes-api';
 import type { SceneShotDetailTab } from '../movie-studio-selection';
 import { idleSaveNotification } from '../detail-save-notification';
 import { useDetailSaveNotificationSlots } from '../detail-save-notification-slots';
@@ -55,9 +59,7 @@ interface SceneShotDetailProps {
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onCreateTake?: () => Promise<void>;
   createTakePending?: boolean;
-  onTakeChange?: (take: SceneShotVideoTakeWithHttp) => void;
-  onRegenerateTake?: (take: SceneShotVideoTakeWithHttp) => Promise<void>;
-  regeneratePending?: boolean;
+  onTakeMutation?: (context: ShotVideoTakeProductionContextResponse) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -84,9 +86,7 @@ export function SceneShotDetail({
   onTabChange = () => {},
   onCreateTake,
   createTakePending = false,
-  onTakeChange,
-  onRegenerateTake,
-  regeneratePending = false,
+  onTakeMutation,
   onSaveNotificationChange,
 }: SceneShotDetailProps) {
   const {
@@ -110,6 +110,9 @@ export function SceneShotDetail({
     sceneId,
     takeId: editableTake?.takeId,
     selectedShotId: shot.shotId,
+    onMutationSaved: (result) => {
+      onTakeMutation?.(result.context);
+    },
   });
   const { refreshProductionPlan } = production;
   const [structureDialogOpen, setStructureDialogOpen] = useState(false);
@@ -148,6 +151,13 @@ export function SceneShotDetail({
     }
   }, [activeTab, isShotEditable, onTabChange]);
 
+  const handleTakeMutation = useCallback(
+    (result: ShotVideoTakeProductionMutation) => {
+      onTakeMutation?.(result.context);
+    },
+    [onTakeMutation]
+  );
+
   const handleStructureModeChange = useCallback(
     async (
       mode: SceneShotVideoTakeStructureMode,
@@ -165,8 +175,10 @@ export function SceneShotDetail({
           mode,
           sourceShotId
         );
-        onTakeChange?.(result.context.take);
-        await refreshProductionPlan();
+        handleTakeMutation(result);
+        if (result.context.take.takeId === editableTake.takeId) {
+          await refreshProductionPlan();
+        }
         setStructureDialogOpen(false);
       } catch (error) {
         if (
@@ -186,7 +198,7 @@ export function SceneShotDetail({
     },
     [
       editableTake,
-      onTakeChange,
+      handleTakeMutation,
       projectName,
       refreshProductionPlan,
       sceneId,
@@ -211,14 +223,6 @@ export function SceneShotDetail({
         >
           <SceneShotVideoStage
             video={editableTake?.video ?? null}
-            regeneratePending={regeneratePending}
-            onRegenerate={
-              editableTake?.video && onRegenerateTake
-                ? () => {
-                    void onRegenerateTake(editableTake);
-                  }
-                : undefined
-            }
           />
         </ResizablePanel>
         <ResizableHandle withHandle />
@@ -233,7 +237,7 @@ export function SceneShotDetail({
             sceneId={sceneId}
             shot={shot}
             take={editableTake}
-            onSaved={onTakeChange}
+            onSaved={handleTakeMutation}
             onSaveNotificationChange={handleShotDesignSaveNotificationChange}
           >
             <LineTabs
@@ -283,6 +287,7 @@ export function SceneShotDetail({
                         castMemberImages={castMemberImages}
                         productionPlan={production.productionPlan}
                         onPlanRefresh={refreshProductionPlan}
+                        onTakeMutation={handleTakeMutation}
                         onSaveNotificationChange={handleDialogsSaveNotificationChange}
                       />
                     </LineTabsContent>
@@ -293,6 +298,7 @@ export function SceneShotDetail({
                         selectedShotId={shot.shotId}
                         productionPlan={production.productionPlan}
                         onPlanRefresh={refreshProductionPlan}
+                        onTakeMutation={handleTakeMutation}
                         onSaveNotificationChange={handleReferencesSaveNotificationChange}
                       />
                     </LineTabsContent>

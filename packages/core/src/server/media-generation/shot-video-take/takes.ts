@@ -26,9 +26,6 @@ import {
   updateSceneShotVideoTakeStructureModeRecord,
 } from '../../database/access/scene-shot-video-takes.js';
 import {
-  copySelectedShotVideoTakeInputRecords,
-} from '../../database/access/shot-video-takes.js';
-import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
 } from '../../entity-ids.js';
@@ -40,7 +37,6 @@ import {
 } from '../../project-data-error.js';
 import type {
   CreateSceneShotVideoTakeInput,
-  CopySceneShotVideoTakeForRegenerationInput,
   DeleteSceneShotVideoTakeInput,
   ListSceneShotVideoTakesInput,
   ReadSceneShotVideoTakeInput,
@@ -61,6 +57,13 @@ import {
   assertEditableSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
+import {
+  contextWithIterationResourceKeys,
+  continueSceneShotVideoTakeIteration,
+} from './take-iteration.js';
+import {
+  retargetTakeScopedProductionState,
+} from './take-production-state.js';
 import {
   applyTakeStateToShot,
 } from './take-state.js';
@@ -103,72 +106,6 @@ export async function createSceneShotVideoTake(
         sceneId: input.sceneId,
         takeId: take.takeId,
       }),
-    };
-  });
-}
-
-export async function copySceneShotVideoTakeForRegeneration(
-  input: CopySceneShotVideoTakeForRegenerationInput
-): Promise<SceneShotVideoTakeCreateReport> {
-  return withShotProjectSession(input, ({ session }) => {
-    const screenplay = requireScreenplayDocument(session);
-    const ids = createUniqueIdAllocator(
-      input.idGenerator ?? createRandomIdGenerator()
-    );
-    const sourceTake = requireSceneShotVideoTake(session, {
-      takeId: input.sourceTakeId,
-      screenplay,
-    });
-    if (input.sceneId && sourceTake.sceneId !== input.sceneId) {
-      throw new ProjectDataError(
-        'PROJECT_DATA423',
-        'Scene Shot Video Take does not belong to the requested scene.',
-        {
-          suggestion:
-            'Refresh the take context and retry the operation from the scene that owns this take.',
-        }
-      );
-    }
-    const now = new Date().toISOString();
-    const take = insertSceneShotVideoTakeRecord(session, {
-      id: ids('scene_shot_video_take'),
-      sceneId: sourceTake.sceneId,
-      shotListId: sourceTake.sourceShotListId,
-      title: input.title ?? `${sourceTake.title} regeneration`,
-      shotIds: sourceTake.shotIds,
-      state: structuredClone(sourceTake.state),
-      regeneratedFromTakeId: sourceTake.takeId,
-      screenplay,
-      now,
-    });
-    copySelectedShotVideoTakeInputRecords(session, {
-      sourceTakeId: sourceTake.takeId,
-      targetTakeId: take.takeId,
-      now,
-      nextId: ids,
-    });
-    const activeShotListId = readActiveSceneShotListId(session, take.sceneId);
-    return {
-      overview: toSceneShotVideoTakeOverview({
-        session,
-        sceneId: take.sceneId,
-        take: requireSceneShotVideoTake(session, {
-          takeId: take.takeId,
-          screenplay,
-        }),
-        activeShotListId,
-        screenplay,
-      }),
-      resourceKeys: [
-        ...sceneShotVideoTakeResourceKeys({
-          sceneId: sourceTake.sceneId,
-          takeId: sourceTake.takeId,
-        }),
-        ...sceneShotVideoTakeResourceKeys({
-          sceneId: take.sceneId,
-          takeId: take.takeId,
-        }),
-      ],
     };
   });
 }
@@ -336,27 +273,35 @@ export async function updateSceneShotVideoTakeProduction(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const now = new Date().toISOString();
+    const iteration = continueSceneShotVideoTakeIteration({
       session,
-      input,
-    });
-    assertEditableSceneShotVideoTake(prepared.take);
-    updateSceneShotVideoTakeProductionRecord(session, {
-      takeId: input.takeId,
-      production: input.production,
+      contextInput: input,
       screenplay,
-      now: new Date().toISOString(),
+      now,
+    });
+    updateSceneShotVideoTakeProductionRecord(session, {
+      takeId: iteration.take.takeId,
+      production: retargetTakeScopedProductionState({
+        production: input.production,
+        targetTakeId: iteration.take.takeId,
+      }),
+      screenplay,
+      now,
     });
     const refreshed = prepareSceneShotVideoTakeInSession({
       session,
-      input,
+      input: { ...input, sceneId: iteration.take.sceneId, takeId: iteration.take.takeId },
     });
-    return buildContextFromPrepared({
-      session,
-      projectFolder,
-      project,
-      prepared: refreshed,
-    });
+    return contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshed,
+      }),
+      iteration
+    );
   });
 }
 
@@ -365,28 +310,33 @@ export async function updateSceneShotVideoTakeDirection(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const now = new Date().toISOString();
+    const iteration = continueSceneShotVideoTakeIteration({
       session,
-      input,
+      contextInput: input,
+      screenplay,
+      now,
     });
-    assertEditableSceneShotVideoTake(prepared.take);
     updateSceneShotVideoTakeDirectionRecord(session, {
-      takeId: input.takeId,
+      takeId: iteration.take.takeId,
       shotId: input.shotId,
       direction: input.direction,
       screenplay,
-      now: new Date().toISOString(),
+      now,
     });
     const refreshed = prepareSceneShotVideoTakeInSession({
       session,
-      input,
+      input: { ...input, sceneId: iteration.take.sceneId, takeId: iteration.take.takeId },
     });
-    return buildContextFromPrepared({
-      session,
-      projectFolder,
-      project,
-      prepared: refreshed,
-    });
+    return contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshed,
+      }),
+      iteration
+    );
   });
 }
 
@@ -395,28 +345,33 @@ export async function updateSceneShotVideoTakeStructureMode(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const now = new Date().toISOString();
+    const iteration = continueSceneShotVideoTakeIteration({
       session,
-      input,
+      contextInput: input,
+      screenplay,
+      now,
     });
-    assertEditableSceneShotVideoTake(prepared.take);
     updateSceneShotVideoTakeStructureModeRecord(session, {
-      takeId: input.takeId,
+      takeId: iteration.take.takeId,
       mode: input.mode,
       sourceShotId: input.sourceShotId,
       screenplay,
-      now: new Date().toISOString(),
+      now,
     });
     const refreshed = prepareSceneShotVideoTakeInSession({
       session,
-      input,
+      input: { ...input, sceneId: iteration.take.sceneId, takeId: iteration.take.takeId },
     });
-    return buildContextFromPrepared({
-      session,
-      projectFolder,
-      project,
-      prepared: refreshed,
-    });
+    return contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshed,
+      }),
+      iteration
+    );
   });
 }
 
@@ -425,26 +380,31 @@ export async function updateSceneShotVideoTakeShots(
 ): Promise<ShotVideoTakeProductionContext> {
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const now = new Date().toISOString();
+    const iteration = continueSceneShotVideoTakeIteration({
       session,
-      input,
+      contextInput: input,
+      screenplay,
+      now,
     });
-    assertEditableSceneShotVideoTake(prepared.take);
     updateSceneShotVideoTakeShotMembershipRecord(session, {
-      takeId: input.takeId,
+      takeId: iteration.take.takeId,
       shotIds: input.shotIds,
       screenplay,
-      now: new Date().toISOString(),
+      now,
     });
     const refreshed = prepareSceneShotVideoTakeInSession({
       session,
-      input,
+      input: { ...input, sceneId: iteration.take.sceneId, takeId: iteration.take.takeId },
     });
-    return buildContextFromPrepared({
-      session,
-      projectFolder,
-      project,
-      prepared: refreshed,
-    });
+    return contextWithIterationResourceKeys(
+      buildContextFromPrepared({
+        session,
+        projectFolder,
+        project,
+        prepared: refreshed,
+      }),
+      iteration
+    );
   });
 }

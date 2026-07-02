@@ -156,6 +156,76 @@ describe('shot video take media imports', () => {
     });
   });
 
+  it('copies selected take-scoped inputs onto the regenerated take during repeat finalization', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/video-prompt-sheet.png',
+      'video prompt sheet'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/source-video-take.mp4',
+      'source video take'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/regenerated-video-take.mp4',
+      'regenerated video take'
+    );
+
+    const promptSheet = await projectData.importShotVideoPromptSheet({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/video-prompt-sheet.png',
+      title: 'Video prompt sheet',
+    });
+    expect(promptSheet.mediaInput).toMatchObject({
+      kind: 'video-prompt-sheet',
+      selected: true,
+      subjectKind: 'take',
+      subjectId: written.take.takeId,
+    });
+    await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/source-video-take.mp4',
+      title: 'Source video take',
+    });
+
+    const regenerated = await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/regenerated-video-take.mp4',
+      title: 'Regenerated video take',
+    });
+
+    expect(regenerated.createdRegeneratedTake).toBe(true);
+    const regeneratedInputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      takeId: regenerated.take.takeId,
+    });
+    expect(regeneratedInputs.inputs).toEqual([
+      expect.objectContaining({
+        kind: 'video-prompt-sheet',
+        selected: true,
+        subjectKind: 'take',
+        subjectId: regenerated.take.takeId,
+        projectRelativePath: 'generated/media/video-prompt-sheet.png',
+      }),
+    ]);
+    const sourceInputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+    expect(sourceInputs.inputs).toEqual([
+      expect.objectContaining({
+        kind: 'video-prompt-sheet',
+        selected: true,
+        subjectKind: 'take',
+        subjectId: written.take.takeId,
+      }),
+    ]);
+  });
+
   it('rejects deleting assets retained by take media inputs and videos', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);

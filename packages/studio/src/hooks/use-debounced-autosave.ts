@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createLatestOnlySaveQueue,
   type LatestOnlySaveQueue,
@@ -11,6 +11,11 @@ export interface DebouncedSaveStatus {
   message: string | null;
   flushPending: () => Promise<boolean>;
 }
+
+type DebouncedSaveNotificationStatus = Pick<
+  DebouncedSaveStatus,
+  'state' | 'message'
+>;
 
 export function useDebouncedAutosave<TValue, TResult = void>(input: {
   value: TValue;
@@ -25,10 +30,9 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
   const { value, save, onSaved, isReady } = input;
   const delayMs = input.delayMs ?? 700;
   const savedVisibleMs = input.savedVisibleMs ?? 1800;
-  const [status, setStatus] = useState<DebouncedSaveStatus>({
+  const [status, setStatus] = useState<DebouncedSaveNotificationStatus>({
     state: 'idle',
     message: null,
-    flushPending: async () => true,
   });
   const lastQueuedValue = useRef(value);
   const savedVisibleTimeout = useRef<number | null>(null);
@@ -99,7 +103,7 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
       onSaveStart: () => {
         lastSaveFailed.current = false;
         clearSavedVisibleTimeout();
-        setStatus({ state: 'saving', message: 'Saving', flushPending });
+        setStatus({ state: 'saving', message: 'Saving' });
       },
       onSaveSuccess: ({ value: savedValue, result, latest }) => {
         if (!latest) {
@@ -107,10 +111,10 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
         }
 
         inputRef.current.onSaved?.(result, savedValue);
-        setStatus({ state: 'saved', message: 'Saved', flushPending });
+        setStatus({ state: 'saved', message: 'Saved' });
         clearSavedVisibleTimeout();
         savedVisibleTimeout.current = window.setTimeout(() => {
-          setStatus({ state: 'idle', message: null, flushPending });
+          setStatus({ state: 'idle', message: null });
           savedVisibleTimeout.current = null;
         }, inputRef.current.savedVisibleMs);
       },
@@ -127,7 +131,6 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
             error instanceof Error
               ? error.message
               : inputRef.current.failureMessage,
-          flushPending,
         });
       },
     });
@@ -190,8 +193,12 @@ export function useDebouncedAutosave<TValue, TResult = void>(input: {
     }, delayMs);
   }, [delayMs, isReady, value]);
 
-  return {
-    ...status,
-    flushPending,
-  };
+  return useMemo(
+    () => ({
+      state: status.state,
+      message: status.message,
+      flushPending,
+    }),
+    [flushPending, status.message, status.state]
+  );
 }

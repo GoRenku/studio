@@ -31,6 +31,7 @@ import {
   selectShotVideoTakeInput,
   updateShotVideoTakeProduction,
   type ShotVideoTakeInputSlot,
+  type ShotVideoTakeProductionMutation,
 } from '@/services/studio-shot-video-takes-api';
 
 export interface UseShotVideoTakeProductionInput {
@@ -38,6 +39,7 @@ export interface UseShotVideoTakeProductionInput {
   sceneId: string;
   takeId?: string | null;
   selectedShotId?: string;
+  onMutationSaved?: (result: ShotVideoTakeProductionMutation) => void;
 }
 
 export interface UseShotVideoTakeProductionResult {
@@ -68,7 +70,7 @@ export interface UseShotVideoTakeProductionResult {
 export function useShotVideoTakeProduction(
   input: UseShotVideoTakeProductionInput
 ): UseShotVideoTakeProductionResult {
-  const { projectName, sceneId, takeId, selectedShotId } = input;
+  const { projectName, sceneId, takeId, selectedShotId, onMutationSaved } = input;
   const takeIdKey = takeId ?? '';
 
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
@@ -176,6 +178,7 @@ export function useShotVideoTakeProduction(
       hasUserEditedRef.current = false;
       setContext(result.context);
       setTake(result.context.take);
+      onMutationSaved?.(result);
     },
   });
   const { flushPending } = autosave;
@@ -550,11 +553,17 @@ export function useShotVideoTakeProduction(
     takeId,
   ]);
 
-  const applyMutationResult = useCallback((result: { context: ShotVideoTakeProductionContext }) => {
-    hasUserEditedRef.current = false;
-    setContext(result.context);
-    setTake(result.context.take);
-  }, []);
+  const applyMutationResult = useCallback(
+    (result: ShotVideoTakeProductionMutation): boolean => {
+      const activeTakeChanged = result.context.take.takeId !== takeId;
+      hasUserEditedRef.current = false;
+      setContext(result.context);
+      setTake(result.context.take);
+      onMutationSaved?.(result);
+      return activeTakeChanged;
+    },
+    [onMutationSaved, takeId]
+  );
 
   const reuseInput = useCallback(
     async (inputId: string) => {
@@ -565,8 +574,10 @@ export function useShotVideoTakeProduction(
         takeId,
         inputId
       );
-      applyMutationResult(result);
-      await refreshProductionPlan();
+      const activeTakeChanged = applyMutationResult(result);
+      if (!activeTakeChanged) {
+        await refreshProductionPlan();
+      }
     },
     [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
   );
@@ -580,8 +591,10 @@ export function useShotVideoTakeProduction(
         takeId,
         slot
       );
-      applyMutationResult(result);
-      await refreshProductionPlan();
+      const activeTakeChanged = applyMutationResult(result);
+      if (!activeTakeChanged) {
+        await refreshProductionPlan();
+      }
     },
     [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
   );
@@ -595,8 +608,10 @@ export function useShotVideoTakeProduction(
         takeId,
         inputId
       );
-      applyMutationResult(result);
-      await refreshProductionPlan();
+      const activeTakeChanged = applyMutationResult(result);
+      if (!activeTakeChanged) {
+        await refreshProductionPlan();
+      }
     },
     [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
   );

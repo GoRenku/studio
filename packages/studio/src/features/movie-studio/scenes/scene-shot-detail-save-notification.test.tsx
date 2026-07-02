@@ -195,10 +195,12 @@ describe('SceneShotDetail save notifications', () => {
     );
 
     await waitFor(() => {
-      expect(onSaveNotificationChange).toHaveBeenCalledWith({
-        state: 'saved',
-        message: 'Saved',
-      });
+      expect(onSaveNotificationChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: 'saved',
+          message: 'Saved',
+        })
+      );
     });
   });
 
@@ -272,7 +274,7 @@ describe('SceneShotDetail save notifications', () => {
       },
       resourceKeys: [],
     } as never);
-    const onTakeChange = vi.fn();
+    const onTakeMutation = vi.fn();
 
     render(
       <SceneShotDetail
@@ -285,7 +287,7 @@ describe('SceneShotDetail save notifications', () => {
         activeTab='description'
         castMemberLabels={{}}
         locationLabels={{}}
-        onTakeChange={onTakeChange}
+        onTakeMutation={onTakeMutation}
       />
     );
 
@@ -304,7 +306,7 @@ describe('SceneShotDetail save notifications', () => {
       );
     });
     expect(refreshProductionPlan).toHaveBeenCalledOnce();
-    expect(onTakeChange).toHaveBeenCalledOnce();
+    expect(onTakeMutation).toHaveBeenCalledOnce();
   });
 
   it('asks for a source shot when collapsing divergent multi-cut directions', async () => {

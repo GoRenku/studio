@@ -444,6 +444,51 @@ describe('shot video take reference selection mutations', () => {
     });
   });
 
+  it('continues editing on a new take when reference selections change after finalization', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/source-reference-take.mp4',
+      'source reference video'
+    );
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/urban-character-sheet.png',
+      'urban character sheet'
+    );
+    const characterSheet = await projectData.importCastCharacterSheetMedia({
+      homeDir,
+      castMemberId: ids.castMemberId,
+      sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
+      title: 'Urban character sheet',
+    });
+    await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/source-reference-take.mp4',
+      title: 'Source reference take',
+    });
+
+    const continued =
+      await projectData.updateSceneShotVideoTakeCharacterSheetSelection({
+        homeDir,
+        sceneId: ids.sceneId,
+        takeId: written.take.takeId,
+        castMemberId: ids.castMemberId,
+        assetId: characterSheet.imported.assetId,
+      });
+
+    expect(continued.take.takeId).not.toBe(written.take.takeId);
+    expect(continued.take.regeneratedFromTakeId).toBe(written.take.takeId);
+    expect(takeReferenceSelections(continued.take)).toMatchObject({
+      selectedCharacterSheetAssetIds: {
+        [ids.castMemberId]: characterSheet.imported.assetId,
+      },
+    });
+    await expect(readReferenceSelections(written.take.takeId)).resolves.toMatchObject({
+      selectedCharacterSheetAssetIds: {},
+    });
+  });
+
   it('rejects multi-cut reference mutations missing a shot id', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);

@@ -79,6 +79,13 @@ import {
   sceneShotVideoTakeTarget,
 } from './take-context.js';
 import {
+  contextWithIterationResourceKeys,
+  continueSceneShotVideoTakeIteration,
+} from './take-iteration.js';
+import {
+  retargetTakeScopedProductionState,
+} from './take-production-state.js';
+import {
   normalizeSceneShotVideoTakeShotMembership,
 } from './take-shot-membership.js';
 import {
@@ -135,7 +142,7 @@ export async function applySceneShotVideoTakeAuthoringDocument(
   });
   const applied = await withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const screenplay = requireScreenplayDocument(session);
-    const prepared = prepareSceneShotVideoTakeInSession({
+    const sourcePrepared = prepareSceneShotVideoTakeInSession({
       session,
       input: {
         projectName: input.projectName,
@@ -144,10 +151,10 @@ export async function applySceneShotVideoTakeAuthoringDocument(
         takeId: proposal.document.takeId,
       },
     });
-    assertEditableSceneShotVideoTake(prepared.take);
+    assertEditableSceneShotVideoTake(sourcePrepared.take);
     if (
       proposal.document.baseTakeUpdatedAt &&
-      prepared.take.updatedAt !== proposal.document.baseTakeUpdatedAt
+      sourcePrepared.take.updatedAt !== proposal.document.baseTakeUpdatedAt
     ) {
       throwAuthoringError([
         issue(
@@ -158,26 +165,50 @@ export async function applySceneShotVideoTakeAuthoringDocument(
         ),
       ]);
     }
-    const take = applySceneShotVideoTakeAuthoringRecord(session, {
-      takeId: proposal.document.takeId,
-      shotIds: proposal.document.shotIds,
-      state: proposal.state,
+    const now = new Date().toISOString();
+    const iteration = continueSceneShotVideoTakeIteration({
+      session,
+      contextInput: {
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        sceneId: proposal.document.sceneId,
+        takeId: proposal.document.takeId,
+      },
       screenplay,
-      now: new Date().toISOString(),
+      now,
     });
-    const currentPrepared = preparedTakeWithTake({ prepared, take });
+    const take = applySceneShotVideoTakeAuthoringRecord(session, {
+      takeId: iteration.take.takeId,
+      shotIds: proposal.document.shotIds,
+      state: {
+        ...proposal.state,
+        production: retargetTakeScopedProductionState({
+          production: proposal.state.production,
+          targetTakeId: iteration.take.takeId,
+        }),
+      },
+      screenplay,
+      now,
+    });
+    const currentPrepared = preparedTakeWithTake({
+      prepared: iteration.prepared,
+      take,
+    });
     return {
       project: {
         id: project.id,
         name: project.name,
         projectFolder,
       },
-      context: buildContextFromPrepared({
-        session,
-        projectFolder,
-        project,
-        prepared: currentPrepared,
-      }),
+      context: contextWithIterationResourceKeys(
+        buildContextFromPrepared({
+          session,
+          projectFolder,
+          project,
+          prepared: currentPrepared,
+        }),
+        iteration
+      ),
     };
   });
   const current = await buildSceneShotVideoTakeAuthoringSnapshot({

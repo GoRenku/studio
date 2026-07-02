@@ -5,7 +5,10 @@ import type {
   SceneShotVideoTakeDirection,
 } from '@gorenku/studio-core/client';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
-import type { SceneShotVideoTakeWithHttp } from '@/services/studio-shot-video-takes-api';
+import type {
+  SceneShotVideoTakeWithHttp,
+  ShotVideoTakeProductionMutation,
+} from '@/services/studio-shot-video-takes-api';
 import {
   useTakeShotDesign,
   type UseTakeShotDesignResult,
@@ -21,7 +24,7 @@ interface TakeShotDesignProviderProps {
   sceneId: string;
   shot: SceneShot;
   take?: SceneShotVideoTakeWithHttp | null;
-  onSaved?: (take: SceneShotVideoTakeWithHttp) => void;
+  onSaved?: (result: ShotVideoTakeProductionMutation) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   children: ReactNode;
 }
@@ -61,7 +64,7 @@ function TakeShotDesignScope({
     takeId: take?.takeId,
     shotId: take?.state.structure.mode === 'multi-cut' ? shot.shotId : undefined,
     initial,
-    onSaved: (result) => onSaved?.(result.context.take),
+    onSaved,
   });
 
   useEffect(() => {

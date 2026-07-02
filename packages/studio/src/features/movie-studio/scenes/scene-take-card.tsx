@@ -84,16 +84,17 @@ export function SceneTakeCard({
 function takeVideoPreview(videoUrl: string, title: string): {
   imageUrl: string | null;
   imageAlt: string;
-  content?: ReactNode;
+  content?: ReactNode | ((state: { active: boolean }) => ReactNode);
 } {
   return {
     imageUrl: null,
     imageAlt: title,
-    content: (
+    content: ({ active }) => (
       <VideoPreview
         src={videoUrl}
         title={title}
         className='h-full w-full object-cover'
+        active={active}
       />
     ),
   };

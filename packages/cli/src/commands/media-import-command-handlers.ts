@@ -7,6 +7,7 @@ import {
   type SceneStoryboardImagesImportReport,
   type ShotVideoTakeInputMediaImportReport,
   type ShotVideoTakeMediaImportReport,
+  createStudioOperationId,
 } from '@gorenku/studio-core/server';
 import {
   StructuredError,
@@ -17,6 +18,7 @@ import {
   readSceneStoryboardImagesImportDocument,
 } from './media-import-documents.js';
 import {
+  appendStudioFocusRequestedEvent,
   appendStudioResourceChangedEvent,
   type StudioResourceChangedReport,
 } from './studio-resource-event-command.js';
@@ -88,10 +90,17 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       runtime,
       target,
     });
+    const operationId = createStudioOperationId();
     await appendStudioResourceChangedEvent({
       runtime,
       report: report as StudioResourceChangedReport,
       command: 'media import',
+      operationId,
+    });
+    await appendShotVideoTakeFocusRequest({
+      runtime,
+      report,
+      operationId,
     });
     return report;
   },
@@ -368,6 +377,38 @@ async function importShotVideoTake(
     title: input.flags.title,
     receipt: singleFile.receipt,
   });
+}
+
+async function appendShotVideoTakeFocusRequest(input: {
+  runtime: CliCommandRuntime;
+  report: MediaImportReport;
+  operationId: string;
+}): Promise<void> {
+  if (!isShotVideoTakeMediaImportReport(input.report)) {
+    return;
+  }
+  await appendStudioFocusRequestedEvent({
+    runtime: input.runtime,
+    project: input.report.project,
+    command: 'media import',
+    operationId: input.operationId,
+    selection: {
+      type: 'scene',
+      id: input.report.take.sceneId,
+      sceneTab: 'takes',
+      takeWorkspaceMode: 'edit',
+      takeId: input.report.take.takeId,
+      ...(input.report.take.shotIds[0]
+        ? { shotId: input.report.take.shotIds[0], shotTab: 'ai-production' }
+        : {}),
+    },
+  });
+}
+
+function isShotVideoTakeMediaImportReport(
+  report: MediaImportReport
+): report is ShotVideoTakeMediaImportReport {
+  return report.purpose === 'shot.video-take';
 }
 
 async function importShotInputMedia(

@@ -1,7 +1,10 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { initRenkuConfig } from '@gorenku/studio-core/server';
+import {
+  createStudioCoordinationService,
+  initRenkuConfig,
+} from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mediaImportCommandHandler } from './media-import-command-handlers.js';
 
@@ -84,6 +87,92 @@ describe('media import command handlers', () => {
       } as never),
     ).rejects.toMatchObject({
       code: 'CLI142',
+    });
+  });
+
+  it('requests Studio focus on the target take after final shot video import', async () => {
+    const readSceneShotVideoTake = vi.fn().mockResolvedValue({
+      takeId: 'take_source0001',
+      sceneId: 'scene_test0001',
+    });
+    const importShotVideoTake = vi.fn().mockResolvedValue({
+      valid: true,
+      purpose: 'shot.video-take',
+      project: { name: 'constantinople', id: 'project_test0001' },
+      resourceKeys: [
+        'scene-shot-video-take:take_source0001',
+        'scene-shot-video-take:take_target0001',
+        'surface:scene:scene_test0001:takes',
+      ],
+      sourceTake: { takeId: 'take_source0001' },
+      take: {
+        takeId: 'take_target0001',
+        sceneId: 'scene_test0001',
+        shotIds: ['shot_001'],
+      },
+      createdRegeneratedTake: true,
+      video: { takeId: 'take_target0001' },
+    });
+
+    await expect(
+      mediaImportCommandHandler.run({
+        flags: {
+          purpose: 'shot.video-take',
+          target: 'take:take_source0001',
+          source: 'generated/media/final-take.mp4',
+          title: 'Final take',
+        },
+        runtime: runtimeFixture({
+          homeDir,
+          projectDataService: {
+            readSceneShotVideoTake,
+            importShotVideoTake,
+          },
+        }),
+      } as never),
+    ).resolves.toMatchObject({
+      purpose: 'shot.video-take',
+      sourceTake: { takeId: 'take_source0001' },
+      take: { takeId: 'take_target0001' },
+      createdRegeneratedTake: true,
+    });
+
+    expect(importShotVideoTake).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: 'scene_test0001',
+      takeId: 'take_source0001',
+      sourceProjectRelativePath: 'generated/media/final-take.mp4',
+      title: 'Final take',
+      receipt: undefined,
+    });
+    await expect(
+      createStudioCoordinationService({ homeDir }).readStudioEvents()
+    ).resolves.toMatchObject({
+      events: [
+        expect.objectContaining({
+          type: 'studio.focusRequested',
+          projectRef: {
+            name: 'constantinople',
+            id: 'project_test0001',
+            storageRoot,
+          },
+          focus: {
+            screen: 'movieStudio',
+            selection: {
+              type: 'scene',
+              id: 'scene_test0001',
+              sceneTab: 'takes',
+              takeWorkspaceMode: 'edit',
+              takeId: 'take_target0001',
+              shotId: 'shot_001',
+              shotTab: 'ai-production',
+            },
+          },
+          source: { kind: 'cli', command: 'media import' },
+          operationId: expect.any(String),
+        }),
+      ],
     });
   });
 });

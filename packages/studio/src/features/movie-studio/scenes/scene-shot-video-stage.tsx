@@ -1,19 +1,14 @@
-import { Film, RotateCcw } from 'lucide-react';
+import { Film } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import { VideoPlayer } from '@/ui/video-player';
 import type { SceneShotVideoTakeVideoWithHttp } from '@/services/studio-shot-video-takes-api';
 
 interface SceneShotVideoStageProps {
   video?: SceneShotVideoTakeVideoWithHttp | null;
-  onRegenerate?: () => void;
-  regeneratePending?: boolean;
 }
 
 export function SceneShotVideoStage({
   video,
-  onRegenerate,
-  regeneratePending = false,
 }: SceneShotVideoStageProps) {
   if (video) {
     return (
@@ -21,26 +16,6 @@ export function SceneShotVideoStage({
         src={video.url}
         title='Shot video take'
         className='h-full w-full object-contain'
-        regenerateControl={
-          onRegenerate ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type='button'
-                  size='icon'
-                  variant='ghost'
-                  aria-label='Regenerate from this take'
-                  className='h-8 w-8 shrink-0'
-                  disabled={regeneratePending}
-                  onClick={onRegenerate}
-                >
-                  <RotateCcw data-icon='inline-start' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Regenerate from this take.</TooltipContent>
-            </Tooltip>
-          ) : null
-        }
       />
     );
   }

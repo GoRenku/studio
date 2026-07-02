@@ -251,6 +251,100 @@ describe('Shot Video Take authoring documents', () => {
     expect(applied.current.productionPlan.references).toBeDefined();
   });
 
+  it('applies authoring documents to a new take when the source take already has video', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const sourceTakeId = written.take.takeId;
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/authored-source-prompt-sheet.png',
+      'authored source prompt sheet'
+    );
+    await projectData.importShotVideoPromptSheet({
+      homeDir,
+      takeId: sourceTakeId,
+      sourceProjectRelativePath: 'generated/media/authored-source-prompt-sheet.png',
+      title: 'Authored source prompt sheet',
+    });
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/authored-source-take.mp4',
+      'authored source video'
+    );
+    await projectData.importShotVideoTake({
+      homeDir,
+      takeId: sourceTakeId,
+      sourceProjectRelativePath: 'generated/media/authored-source-take.mp4',
+      title: 'Authored source take',
+    });
+    const context = await projectData.readSceneShotVideoTakeAuthoringContext({
+      homeDir,
+      takeId: sourceTakeId,
+    });
+
+    const applied = await projectData.applySceneShotVideoTakeAuthoringDocument({
+      homeDir,
+      document: {
+        ...context.document,
+        shotIds: ['shot_001'],
+        production: {
+          ...context.document.production,
+          requestedInputs: [
+            {
+              kind: 'video-prompt-sheet',
+              subjectKind: 'take',
+              subjectId: sourceTakeId,
+            },
+          ],
+          customPromptNote: 'Second attempt authored by the agent.',
+        },
+      },
+    });
+
+    const targetTakeId = applied.current.context.take.takeId;
+    expect(targetTakeId).not.toBe(sourceTakeId);
+    expect(applied.document).toMatchObject({
+      takeId: targetTakeId,
+      shotIds: ['shot_001'],
+      production: {
+        requestedInputs: [
+          expect.objectContaining({
+            subjectKind: 'take',
+            subjectId: targetTakeId,
+          }),
+        ],
+        preparedInputs: [
+          expect.objectContaining({
+            subjectKind: 'take',
+            subjectId: targetTakeId,
+          }),
+        ],
+        customPromptNote: 'Second attempt authored by the agent.',
+      },
+    });
+    expect(applied.current.context.take).toMatchObject({
+      takeId: targetTakeId,
+      regeneratedFromTakeId: sourceTakeId,
+      video: null,
+      shotIds: ['shot_001'],
+    });
+    expect(applied.resourceKeys).toEqual(
+      expect.arrayContaining([
+        `scene-shot-video-take:${sourceTakeId}`,
+        `scene-shot-video-take:${targetTakeId}`,
+        `scene-shot-video-take-video:${sourceTakeId}`,
+        `surface:scene:${ids.sceneId}:takes`,
+      ])
+    );
+
+    const sourceTake = await projectData.readSceneShotVideoTake({
+      homeDir,
+      takeId: sourceTakeId,
+    });
+    expect(sourceTake.video).toMatchObject({
+      projectRelativePath: 'generated/media/authored-source-take.mp4',
+    });
+    expect(sourceTake.shotIds).toEqual(['shot_001', 'shot_002']);
+  });
+
   it('rejects stale authoring documents instead of overwriting newer take state', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);

@@ -56,6 +56,7 @@ export function ScenePanel({
   const [resource, setResource] = useState<SceneNarrativeResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
+  const [tabBarAction, setTabBarAction] = useState<ReactNode | null>(null);
   const activeTab: ScenePanelTab =
     sceneTab ?? (shotId || shotTab || takeId ? 'takes' : 'narrative');
   const takesLabel =
@@ -100,6 +101,10 @@ export function ScenePanel({
     return () => onHeaderTitleChange?.(null);
   }, [onHeaderTitleChange, resource?.scene.title]);
 
+  useEffect(() => {
+    onHeaderActionChange?.(null);
+  }, [onHeaderActionChange]);
+
   if (error) {
     return <p className='p-6 text-sm text-destructive'>{error}</p>;
   }
@@ -134,6 +139,7 @@ export function ScenePanel({
         { value: 'shots', label: 'Shots' },
         { value: 'takes', label: takesLabel },
       ]}
+      trailing={tabBarAction}
     >
       <LineTabsContent value='narrative' className='overflow-hidden'>
         <SceneNarrativeTab
@@ -156,7 +162,7 @@ export function ScenePanel({
           sceneId={sceneId}
           shotId={shotId}
           onSelect={onSelect}
-          onHeaderActionChange={onHeaderActionChange}
+          onHeaderActionChange={setTabBarAction}
           onSaveNotificationChange={onSaveNotificationChange}
         />
       </LineTabsContent>
@@ -172,7 +178,7 @@ export function ScenePanel({
           takeWorkspaceMode={takeWorkspaceMode}
           takeId={takeId}
           onSelect={onSelect}
-          onHeaderActionChange={onHeaderActionChange}
+          onHeaderActionChange={setTabBarAction}
           onSaveNotificationChange={onSaveNotificationChange}
         />
       </LineTabsContent>

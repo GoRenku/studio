@@ -75,10 +75,12 @@ describe('SceneDialogueAudioPanel', () => {
         v3Text: 'Bronze has no temper. [shouts] Men give it one.',
       })
     );
-    expect(onSaveNotificationChange).toHaveBeenCalledWith({
-      state: 'saved',
-      message: 'Saved',
-    });
+    expect(onSaveNotificationChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: 'saved',
+        message: 'Saved',
+      })
+    );
   });
 
   it('flushes pending dialog text when the panel unmounts before debounce completes', async () => {
