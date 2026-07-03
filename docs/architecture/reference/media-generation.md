@@ -21,6 +21,7 @@ Decision history:
 - `../../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
 - `../../decisions/0036-use-unsliced-location-sheets.md`
 - `../../decisions/0040-use-agent-media-execution-policy-for-external-built-in-image-generation.md`
+- `../../decisions/0042-use-purpose-cost-projections-for-generation-estimates.md`
 
 ## Current Purposes
 
@@ -192,10 +193,47 @@ the selected Movie Lookbook sheet as the primary style reference and selected
 Location Sheets and Character Sheets as continuity references. The explicit
 `storyboard-lookbook` mode is opt-in only when the user asks for storyboard,
 hand-drawn, sketch, animatic, or Storyboard Lookbook aesthetics for that shot
-input image. Missing-input lines are not runnable generation specs; they become
-unpriced when their required reference-conditioned inputs cannot be resolved.
+input image. Missing-input lines are not runnable generation specs, but they
+can still be priced when the purpose, model, and route pricing facts are known.
 `shot.reference-image` specs also require a title that names the reference
 intent shown in Studio.
+
+## Cost Estimates
+
+Generation estimates are cost projections, not readiness checks.
+
+Every media generation purpose owns a `buildCostProjection` implementation in
+the purpose registry. The projection converts the purpose spec into a
+`GenerationPriceKey` and `GenerationPricingInputs`, then calls the engine
+`estimateGenerationCost` API. The cost rail must not prepare provider payloads,
+resolve project files, validate selected dependency readiness, or inspect prompt
+or artifact contents.
+
+Estimate responses return:
+
+```ts
+{
+  spec: MediaGenerationSpecRecord;
+  estimate: GenerationCostEstimate;
+}
+```
+
+For priced estimates, pass `estimate.costApprovalToken` to
+`renku generation run --approval-token`. The token approves the pricing facts
+used for the estimate. It is not a provider request hash.
+
+Cost states:
+
+- `priced`: the model route has enough pricing facts for a dollar estimate.
+- `missing-pricing-input`: the selected model route needs a pricing fact such
+  as duration, resolution, aspect ratio, or character count.
+- `unpriced`: no pricing is configured for the selected provider/model/route or
+  no pricing row matches the provided pricing facts.
+
+Dependency inventories and shot production plans may display cost lines, but
+they are not the source of pricing truth. Readiness can be blocked while cost is
+priced; for example, an unauthored first-frame dependency can show
+`generationDraft.state: "missing-input"` and `pricing.state: "priced"`.
 
 `shot.video-prompt-sheet` is a take-owned AI-video planning sheet for an
 existing Shot Video Take. It is grounded in `renku take authoring context`, but

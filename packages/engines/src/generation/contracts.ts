@@ -48,16 +48,67 @@ export interface GenerationRequest {
   outputNames?: string[];
 }
 
-export interface GenerationEstimate {
+export interface GenerationPriceKey {
   provider: string;
   model: string;
   mediaKind: GenerationMediaKind;
-  pricing: ModelPriceConfig | number | null;
-  estimatedCostUsd: number | null;
-  approvalToken: string;
-  billableUnits: Record<string, unknown>;
-  warnings: string[];
 }
+
+export interface GenerationPricingInputs {
+  outputCount?: number;
+  inputImageCount?: number;
+  inputAudioCount?: number;
+  inputVideoCount?: number;
+  durationSeconds?: number | string;
+  characterCount?: number;
+  imageSize?: string | { width: number; height: number };
+  resolution?: string;
+  aspectRatio?: string;
+  quality?: string;
+  generateAudio?: boolean;
+  usesVoiceControl?: boolean;
+  numFrames?: number;
+  videoSize?: string | { width: number; height: number };
+  mode?: string;
+  musicLengthMs?: number;
+}
+
+export type GenerationCostEstimate =
+  | {
+      state: 'priced';
+      provider: string;
+      model: string;
+      mediaKind: GenerationMediaKind;
+      pricing: ModelPriceConfig | number;
+      estimatedCostUsd: number;
+      costApprovalToken: string;
+      billableUnits: Record<string, unknown>;
+      warnings: [];
+    }
+  | {
+      state: 'unpriced';
+      provider: string;
+      model: string;
+      mediaKind: GenerationMediaKind;
+      pricing: ModelPriceConfig | number | null;
+      estimatedCostUsd: null;
+      reason: string;
+      costApprovalToken: string | null;
+      billableUnits: Record<string, unknown>;
+      warnings: string[];
+    }
+  | {
+      state: 'missing-pricing-input';
+      provider: string;
+      model: string;
+      mediaKind: GenerationMediaKind;
+      pricing: ModelPriceConfig | number | null;
+      estimatedCostUsd: null;
+      missingInputs: string[];
+      costApprovalToken: null;
+      billableUnits: Record<string, unknown>;
+      warnings: string[];
+    };
 
 export interface GenerationOutput {
   artifactId: string;

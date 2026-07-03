@@ -55,6 +55,7 @@ It should contain:
 - shared DTOs for UI and CLI.
 - Visual Language analysis and Lookbook mutation commands.
 - persisted media generation specs and run records.
+- media generation cost projection contracts and cost approval checks.
 - media import behavior that registers generated or imported files as assets.
 
 Broader future generation/task responsibilities also belong in core once
@@ -65,6 +66,11 @@ architectural direction, not current implemented tables or services.
 The current accepted generation implementation is narrower: Lookbook Image
 generation uses persisted generation specs and run records owned by core, with
 provider execution delegated to engines.
+
+Generation estimate endpoints are core-owned cost projections. They read or
+draft a media generation spec, call the purpose registry's cost projection, and
+return a `GenerationCostEstimate`. They do not prepare provider payloads or
+resolve dependency media.
 
 `studio-core` should be the only package that knows how to apply a metadata
 mutation correctly.
@@ -181,6 +187,7 @@ The server should not own:
 - asset selection rules;
 - cast pinning or clip binding behavior;
 - queue transition rules.
+- generation cost rules or approval-token derivation.
 
 ## `packages/studio/src`
 
@@ -200,6 +207,7 @@ The UI should not:
 - infer relationships from folder paths;
 - encode domain mutation rules;
 - own long-running task state;
+- decide whether a generation is priced or approval-token-ready;
 - import `@gorenku/studio-core/server`;
 - import `better-sqlite3`, Drizzle's SQLite driver, or Node filesystem modules.
 

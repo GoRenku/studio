@@ -102,7 +102,7 @@ describe('shot video take preflight and validation', () => {
     });
   });
 
-  it('includes transient Kling create-voice cost in final shot-video estimates', async () => {
+  it('estimates final shot-video cost without transient Kling create-voice internals', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const context = await projectData.buildShotVideoTakeContext({
@@ -136,25 +136,15 @@ describe('shot video take preflight and validation', () => {
       specId: spec.id,
     });
 
-    expect(estimate.estimate.estimatedCostUsd).toBeCloseTo(0.987);
-    expect(estimate.estimate.approvalToken).toMatch(/^sha256:/);
+    expect(estimate.estimate.estimatedCostUsd).toBeCloseTo(0.98);
+    expect(estimate.estimate.state).toBe('priced');
+    expect(estimate.estimate.costApprovalToken).toMatch(/^sha256:/);
     expect(estimate.estimate.billableUnits).toMatchObject({
-      transientKlingVoiceConversions: 1,
-      transientKlingVoiceCacheStates: [
-        expect.objectContaining({
-          sourceProjectPath: 'generated/audio/dialogue-001.wav',
-          cacheResult: 'miss',
-          targetElementId: 'urban',
-        }),
-      ],
-      internalTransientVoiceEstimates: [
-        expect.objectContaining({
-          provider: 'fal-ai',
-          model: 'kling-video/create-voice',
-          estimatedCostUsd: 0.007,
-        }),
-      ],
+      uses_voice_control: true,
     });
+    expect(estimate.estimate.billableUnits).not.toHaveProperty(
+      'transientKlingVoiceConversions'
+    );
   });
 });
 

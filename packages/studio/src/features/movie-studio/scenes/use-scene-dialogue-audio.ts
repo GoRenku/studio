@@ -266,8 +266,8 @@ export function useSceneDialogueAudio(input: {
           return;
         }
         setApproval(
-          report.estimate.approvalToken
-            ? { specSignature, token: report.estimate.approvalToken }
+          report.estimate.state === 'priced'
+            ? { specSignature, token: report.estimate.costApprovalToken }
             : null
         );
         setEstimateState({

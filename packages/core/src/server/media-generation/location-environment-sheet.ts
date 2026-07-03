@@ -12,7 +12,6 @@ import type {
   LocationEnvironmentSheetOutputFormat,
   LocationGenerationAssetFileReference,
   LocationGenerationScreenplayContext,
-  MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
@@ -69,6 +68,7 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
 import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
@@ -373,28 +373,13 @@ export async function buildLocationEnvironmentSheetDependencyDraftSpec(
   };
 }
 
-export async function estimateLocationEnvironmentSheetSpec(
-  input: LocationEnvironmentSheetSpecIdInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareLocationEnvironmentSheetSpec(input);
-  const { estimateGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
-    throw new ProjectDataError(
-      'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Location environment sheet model.'
-    );
-  }
-  return { ...prepared, estimate };
-}
-
 export async function runLocationEnvironmentSheetSpec(
   input: RunLocationEnvironmentSheetSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareLocationEnvironmentSheetSpec(input);
-  const { estimateGeneration, runGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
+  const { runGeneration } = await loadGenerationEngines();
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
+  if (estimate.state !== 'priced') {
     throw new ProjectDataError(
       'PROJECT_DATA273',
       'Generation estimate is unknown for the selected Location environment sheet model.'
@@ -404,7 +389,7 @@ export async function runLocationEnvironmentSheetSpec(
   const result = await runGeneration({
     ...prepared.generation,
     mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -417,7 +402,7 @@ export async function runLocationEnvironmentSheetSpec(
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
     estimate,
-    approvalToken: estimate.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

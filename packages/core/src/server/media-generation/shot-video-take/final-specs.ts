@@ -5,7 +5,6 @@ import type {
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
   ShotVideoTakeOutputGenerationSpec,
-  MediaGenerationEstimateReport,
   ShotVideoTakeProductionContext,
 } from '../../../client/index.js';
 import {
@@ -41,14 +40,8 @@ import {
 } from './project-session.js';
 import {
   buildShotVideoTakeProviderPayload,
-  buildShotVideoTakePricingProviderPayload,
-  buildKlingTransientVoiceConversions,
   toGenerationRequest,
 } from './provider-payloads.js';
-import {
-  buildKlingTransientVoiceEstimateDetails,
-  combineShotVideoTakeEstimate,
-} from './kling-transient-voice.js';
 import {
   finalInputMatchesRouteSlot,
   missingRequiredRouteInputLabelsForFinalSpec,
@@ -61,9 +54,6 @@ import {
 import {
   readShotSpec,
 } from './spec-records.js';
-
-
-
 export async function validateShotVideoTakeSpec(
   input: ValidateShotVideoTakeOutputGenerationSpecInput
 ) {
@@ -175,64 +165,6 @@ export async function prepareShotVideoTakeDraftSpec(input: {
     spec: draftMediaGenerationSpecRecord(normalized),
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized),
-  };
-}
-
-
-
-export async function estimateShotVideoTakeSpec(
-  input: ReadMediaGenerationSpecInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareShotVideoTakeSpec(input);
-  const { estimateGeneration } = await import('@gorenku/studio-engines');
-  assertShotVideoTakeSpec(prepared.spec.spec);
-  const context = await buildShotVideoTakeContext({
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    takeId: prepared.spec.spec.target.takeId,
-  });
-  const pricingPlan = buildShotVideoTakePricingProviderPayload({
-    spec: prepared.spec.spec,
-    context,
-  });
-  const pricingGeneration = toGenerationRequest(pricingPlan, prepared.spec.spec);
-  const finalEstimate = await estimateGeneration(pricingGeneration);
-  const route = requireShotVideoTakeRoute(
-    prepared.spec.spec.modelChoice,
-    prepared.spec.spec.inputModeId,
-    context.shotGroupMode
-  );
-  const transientVoiceConversions = buildKlingTransientVoiceConversions({
-    spec: prepared.spec.spec,
-    route,
-    payload: pricingPlan.payload,
-  });
-  if (transientVoiceConversions.length === 0) {
-    return { ...prepared, estimate: finalEstimate };
-  }
-  const projectFolder = await withShotProjectSession(input, ({ projectFolder }) => projectFolder);
-  const transientVoiceEstimateDetails =
-    await buildKlingTransientVoiceEstimateDetails({
-      projectFolder,
-      conversions: transientVoiceConversions,
-      estimateGeneration,
-    });
-  return {
-    ...prepared,
-    estimate: combineShotVideoTakeEstimate({
-      finalEstimate,
-      transientVoiceEstimates: transientVoiceEstimateDetails.estimates,
-      transientVoiceCacheStates: transientVoiceEstimateDetails.cacheStates,
-      approvalBasis: {
-        final: pricingGeneration,
-        transientKlingVoiceConversions:
-          transientVoiceEstimateDetails.estimates.map((estimate) => ({
-            provider: estimate.provider,
-            model: estimate.model,
-            approvalToken: estimate.approvalToken,
-          })),
-      },
-    }),
   };
 }
 

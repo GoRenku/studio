@@ -11,7 +11,6 @@ import type {
   LocationHeroModelChoiceReport,
   LocationHeroModelListReport,
   LocationHeroOutputFormat,
-  MediaGenerationEstimateReport,
   MediaGenerationRun,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -73,6 +72,7 @@ import {
   mapNanoBananaResolution,
 } from './cast-image-common.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
 
 const LOCATION_HERO_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2/edit',
@@ -333,28 +333,13 @@ export async function prepareLocationHeroDraftSpec(input: {
   };
 }
 
-export async function estimateLocationHeroSpec(
-  input: LocationHeroSpecIdInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareLocationHeroSpec(input);
-  const { estimateGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
-    throw new ProjectDataError(
-      'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Location hero model.'
-    );
-  }
-  return { ...prepared, estimate };
-}
-
 export async function runLocationHeroSpec(
   input: RunLocationHeroSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareLocationHeroSpec(input);
-  const { estimateGeneration, runGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null && !input.simulate && !input.allowUnpricedCost) {
+  const { runGeneration } = await loadGenerationEngines();
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
+  if (estimate.state !== 'priced' && !input.simulate && !input.allowUnpricedCost) {
     throw new ProjectDataError(
       'PROJECT_DATA273',
       'Generation estimate is unknown for the selected Location hero model.',
@@ -368,7 +353,11 @@ export async function runLocationHeroSpec(
   const result = await runGeneration({
     ...prepared.generation,
     mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    approvalToken:
+      estimate.state === 'priced'
+        ? estimate.costApprovalToken
+        : input.approvalToken ?? 'unpriced-cost-override',
+    allowUnpricedCost: Boolean(input.allowUnpricedCost),
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -382,11 +371,14 @@ export async function runLocationHeroSpec(
     providerPayload: prepared.providerPayload,
     estimate: {
       ...estimate,
-      ...(estimate.estimatedCostUsd === null && input.allowUnpricedCost
+      ...(estimate.state === 'unpriced' && input.allowUnpricedCost
         ? { unpricedCostOverride: true }
         : {}),
     },
-    approvalToken: estimate.approvalToken,
+    approvalToken:
+      estimate.state === 'priced'
+        ? estimate.costApprovalToken
+        : input.approvalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

@@ -1,11 +1,13 @@
 export type {
-  GenerationEstimate,
+  GenerationCostEstimate,
   GenerationInputFile,
   GenerationMediaKind,
   GenerationMode,
   GenerationModelSummary,
   GenerationOutput,
   GenerationPolicy,
+  GenerationPriceKey,
+  GenerationPricingInputs,
   GenerationReceipt,
   GenerationRequest,
   GenerationRunResult,
@@ -14,8 +16,12 @@ export {
   modelTypeToMediaKind,
 } from './contracts.js';
 export {
-  estimateGeneration,
+  estimateGenerationCost,
+  hashGenerationCostApproval,
 } from './estimates.js';
+export {
+  buildLogicalProviderPayload,
+} from './logical-provider-payload.js';
 export {
   listGenerationModels,
   loadBundledGenerationCatalog,

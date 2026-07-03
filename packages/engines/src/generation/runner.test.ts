@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { LoadedModelCatalog } from '../model-catalog.js';
+import { estimateGenerationCost } from './estimates.js';
 import { runGeneration } from './runner.js';
 
 describe('runGeneration', () => {
@@ -175,6 +176,77 @@ describe('runGeneration', () => {
       },
     ]);
   });
+
+  it('rejects stale live approval tokens before provider execution', async () => {
+    await expect(
+      runGeneration({
+        mode: 'live',
+        catalog: createCatalog(),
+        approvalToken: 'sha256:stale-cost-approval',
+        policy: {
+          provider: 'test-provider',
+          model: 'text-to-speech',
+          mediaKind: 'audio',
+          mode: 'text-to-speech',
+          outputCount: 1,
+        },
+        request: {
+          parameters: {
+            text: 'A paid request with a stale approval token.',
+          },
+        },
+      })
+    ).rejects.toThrow(/current cost approval token/);
+  });
+
+  it('rejects non-voice approval tokens when nested voice ids imply voice control', async () => {
+    const catalog = createCatalog();
+    const nonVoiceEstimate = await estimateGenerationCost({
+      catalog,
+      priceKey: {
+        provider: 'test-provider',
+        model: 'voice-control-video',
+        mediaKind: 'video',
+      },
+      pricingInputs: {
+        outputCount: 1,
+        durationSeconds: '5',
+        generateAudio: true,
+        usesVoiceControl: false,
+      },
+    });
+    expect(nonVoiceEstimate.state).toBe('priced');
+    if (nonVoiceEstimate.state !== 'priced') {
+      throw new Error('Expected non-voice estimate to be priced.');
+    }
+
+    await expect(
+      runGeneration({
+        mode: 'live',
+        catalog,
+        approvalToken: nonVoiceEstimate.costApprovalToken,
+        policy: {
+          provider: 'test-provider',
+          model: 'voice-control-video',
+          mediaKind: 'video',
+          mode: 'image-to-video',
+          outputCount: 1,
+        },
+        request: {
+          parameters: {
+            duration: '5',
+            generate_audio: true,
+            elements: [
+              {
+                voice_id: 'transient_voice_001',
+              },
+            ],
+          },
+          outputNames: ['voice-control.mp4'],
+        },
+      })
+    ).rejects.toThrow(/current cost approval token/);
+  });
 });
 
 function createCatalog(): LoadedModelCatalog {
@@ -197,6 +269,38 @@ function createCatalog(): LoadedModelCatalog {
               name: 'text-to-speech',
               type: 'audio',
               mime: ['audio/mp3'],
+              price: {
+                pricePerCharacter: 0.001,
+              },
+            },
+          ],
+          [
+            'voice-control-video',
+            {
+              name: 'voice-control-video',
+              type: 'video',
+              mime: ['video/mp4'],
+              price: {
+                function: 'costByVideoDurationAndAudioVoiceControl',
+                inputs: ['duration', 'generate_audio', 'uses_voice_control'],
+                prices: [
+                  {
+                    generate_audio: true,
+                    uses_voice_control: true,
+                    pricePerSecond: 0.196,
+                  },
+                  {
+                    generate_audio: true,
+                    uses_voice_control: false,
+                    pricePerSecond: 0.168,
+                  },
+                  {
+                    generate_audio: false,
+                    uses_voice_control: false,
+                    pricePerSecond: 0.112,
+                  },
+                ],
+              },
             },
           ],
         ]),

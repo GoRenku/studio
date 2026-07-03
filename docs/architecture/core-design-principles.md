@@ -70,6 +70,11 @@ Decision history:
 - Persist user-editable generation specs before estimate or execution.
 - Store generation run records with spec, provider-payload, estimate, output,
   and diagnostic snapshots.
+- Keep generation cost estimates on a purpose-owned cost rail. Cost projection
+  uses model, route, and pricing inputs; it must not prepare provider payloads,
+  resolve files, or validate dependency readiness.
+- Use `estimate.costApprovalToken` from a priced cost estimate as the approval
+  token for paid generation runs.
 - Keep generation and media import separate. A generated file is not attached to
   project metadata until an import command succeeds.
 - Generated candidates are assets and may be treated as takes.

@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   Asset,
-  MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
@@ -83,6 +82,7 @@ import {
   CAST_IMAGE_FRAMES,
 } from './cast-image-common.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
 import { lookbookSheetDependencySlot } from './dependency-slot-definitions.js';
 import type {
   MediaGenerationDependencyDeclarationInput,
@@ -354,28 +354,13 @@ export async function prepareSceneStoryboardSheetDraftSpec(input: {
   };
 }
 
-export async function estimateSceneStoryboardSheetSpec(
-  input: ReadMediaGenerationSpecInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareSceneStoryboardSheetSpec(input);
-  const { estimateGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
-    throw new ProjectDataError(
-      'PROJECT_DATA333',
-      'Generation estimate is unknown for the selected Scene storyboard sheet model.'
-    );
-  }
-  return { ...prepared, estimate };
-}
-
 export async function runSceneStoryboardSheetSpec(
   input: RunMediaGenerationSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareSceneStoryboardSheetSpec(input);
-  const { estimateGeneration, runGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
+  const { runGeneration } = await loadGenerationEngines();
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
+  if (estimate.state !== 'priced') {
     throw new ProjectDataError(
       'PROJECT_DATA333',
       'Generation estimate is unknown for the selected Scene storyboard sheet model.'
@@ -398,7 +383,7 @@ export async function runSceneStoryboardSheetSpec(
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
     estimate,
-    approvalToken: estimate.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

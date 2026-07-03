@@ -63,7 +63,7 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
 describe('SceneShotReferencesTab', () => {
   beforeEach(() => {
     for (const mock of Object.values(mutationMocks)) {
-      mock.mockResolvedValue({ resource: SCENE_SHOT_LIST_RESOURCE });
+      mock.mockResolvedValue(referenceMutationResult());
       mock.mockClear();
     }
   });
@@ -515,21 +515,27 @@ function referenceHandlers() {
 }
 
 function deferredMutation() {
-  let resolve: (value: typeof SCENE_SHOT_LIST_RESOURCE) => void = () => {};
-  const promise = new Promise<typeof SCENE_SHOT_LIST_RESOURCE>((settle) => {
-    resolve = settle;
-  });
+  let resolve: (value: ReturnType<typeof referenceMutationResult>) => void =
+    () => {};
+  const promise = new Promise<ReturnType<typeof referenceMutationResult>>(
+    (settle) => {
+      resolve = settle;
+    }
+  );
   return {
     promise,
-    resolve: () => resolve(SCENE_SHOT_LIST_RESOURCE),
+    resolve: () => resolve(referenceMutationResult()),
   };
 }
 
-const SCENE_SHOT_LIST_RESOURCE = {
-  projectName: 'constantinople',
-  sceneId: 'scene_hook',
-  scenes: [],
-};
+function referenceMutationResult() {
+  return {
+    context: {
+      take: makeTake(),
+    },
+    resourceKeys: [],
+  };
+}
 
 function productionPlanWithReferenceImages(): ShotVideoTakeProductionPlanReport {
   return {

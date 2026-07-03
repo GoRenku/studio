@@ -1,5 +1,4 @@
 import type {
-  ShotVideoTakeProductionEstimateReport,
   ShotVideoTakeProductionContext,
   ShotVideoTakeOutputGenerationPlan,
   ShotVideoTakeProductionPlanReport,
@@ -78,26 +77,6 @@ import {
 import {
   resolveSceneShotVideoTakeEditorDirection,
 } from './take-state.js';
-
-
-
-export async function estimateShotVideoTakeProduction(
-  input: PreviewShotVideoTakeProductionInput
-): Promise<ShotVideoTakeProductionEstimateReport> {
-  const plan = await planShotVideoTakeProduction(input);
-  const reportContext = await shotVideoTakePlanReportContext(input);
-  return {
-    target: reportContext.target,
-    take: reportContext.take,
-    inputModeId: plan.request.inputMode,
-    shotGroupMode: plan.request.shotGroupMode,
-    modelChoice: plan.request.modelChoice,
-    estimate: plan.finalEstimate,
-    plan,
-    issues: plan.diagnostics,
-  };
-}
-
 
 
 export async function shotVideoTakePlanReportContext(

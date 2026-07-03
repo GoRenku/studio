@@ -1,7 +1,6 @@
 import type {
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
-  PreparedMediaGeneration,
 } from '../../client/index.js';
 
 export function draftMediaGenerationSpecRecord(
@@ -26,11 +25,4 @@ function targetId(target: MediaGenerationSpec['target']): string {
     return `${target.sceneId}:${target.dialogueId}`;
   }
   return target.id;
-}
-
-export async function estimatePreparedGeneration(
-  prepared: PreparedMediaGeneration
-) {
-  const { estimateGeneration } = await import('@gorenku/studio-engines');
-  return estimateGeneration(prepared.generation);
 }

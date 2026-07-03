@@ -12,7 +12,6 @@ import type {
   ShotVideoTakePreflightReport,
   MediaGenerationDependencySlot,
   ShotVideoTakeOutputGenerationSpec,
-  MediaGenerationDependencyPricing,
 } from '../../../client/index.js';
 import type {
   DatabaseSession,
@@ -54,27 +53,14 @@ import {
   ShotVideoTakeDependencyRequest,
 } from './dependency-draft-specs.js';
 import {
-  issue,
-} from './diagnostics.js';
-import {
   resolveShotDialogueAudioReferences,
 } from './dialogue-audio-references.js';
 import type {
   ResolvedShotDialogueAudioReference,
 } from './dialogue-audio-references.js';
 import {
-  validateFinalPricingSpecAgainstContext,
-} from './final-specs.js';
-import {
   requireShotVideoTakeRoute,
 } from './route-settings.js';
-import {
-  finalTakeSpecForPreflight,
-} from './preflight-report.js';
-import {
-  buildShotVideoTakePricingProviderPayload,
-  toGenerationRequest,
-} from './provider-payloads.js';
 import {
   isShotInputPurpose,
 } from './purpose-config.js';
@@ -96,6 +82,9 @@ import {
 import {
   prepareSceneShotVideoTakeInSession,
 } from './take-context.js';
+import {
+  estimateShotVideoTakeFinalPlanLine,
+} from '../estimation/shot-video-take-estimates.js';
 
 
 
@@ -227,7 +216,7 @@ export async function buildShotVideoTakeDependencyInventory(input: {
           }).filter((slot) => referenceDependencySlotIncluded(input.context, slot))
         : [],
     estimateRoot: async (): Promise<MediaGenerationDependencyRootEstimate> => {
-      const finalPricing = await estimateFinalPlanLine({
+      const finalPricing = await estimateShotVideoTakeFinalPlanLine({
         context: input.context,
         inputModeId: input.inputModeId,
         modelChoice: input.modelChoice,
@@ -543,84 +532,6 @@ export function finalEstimateFromDependencyInventory(
   return (dependencyInventory as MediaGenerationDependencyInventory & {
     finalEstimate?: ShotVideoTakePreflightReport['estimate'];
   }).finalEstimate ?? null;
-}
-
-
-
-export async function estimateFinalPlanLine(input: {
-  context: ShotVideoTakeProductionContext;
-  inputModeId: ShotVideoTakeInputModeId;
-  modelChoice: ShotVideoTakeModelChoice;
-  normalizedSettings: NonNullable<SceneShotVideoTakeProductionState['parameterValues']>;
-  preparedInputs: ShotVideoTakePreflightInput[];
-  diagnostics: DiagnosticIssue[];
-}): Promise<{
-  pricing: MediaGenerationDependencyPricing;
-  diagnostics: DiagnosticIssue[];
-  estimate: ShotVideoTakePreflightReport['estimate'];
-}> {
-  try {
-    const spec = finalTakeSpecForPreflight({
-      context: input.context,
-      inputModeId: input.inputModeId,
-      modelChoice: input.modelChoice,
-      preparedInputs: input.preparedInputs,
-      parameterValues: input.normalizedSettings,
-      promptMode: 'estimate-placeholder',
-    });
-    validateFinalPricingSpecAgainstContext(spec, input.context);
-    const plan = buildShotVideoTakePricingProviderPayload({
-      spec,
-      context: input.context,
-    });
-    const { estimateGeneration } = await import('@gorenku/studio-engines');
-    const estimate = await estimateGeneration(toGenerationRequest(plan, spec));
-    if (estimate.estimatedCostUsd === null) {
-      return {
-        pricing: {
-          state: 'unpriced',
-          estimatedUsd: null,
-          reason: estimate.warnings.join(' ') || 'No pricing is configured for the final video route.',
-          overrideRequired: true,
-        },
-        diagnostics: [
-          issue(
-            'CORE_SHOT_VIDEO_PLAN_UNPRICED_LINE',
-            'Final video generation is unpriced.',
-            ['dependencyInventory', 'rootGeneration'],
-            'Approve an explicit unpriced-cost override before running.'
-          ),
-        ],
-        estimate,
-      };
-    }
-    return {
-      pricing: { state: 'priced', estimatedUsd: estimate.estimatedCostUsd },
-      diagnostics: [],
-      estimate,
-    };
-  } catch (error) {
-    const message = error instanceof Error
-      ? `Final video estimate failed: ${error.message}`
-      : 'Final video estimate failed.';
-    const diagnostic = issue(
-      'CORE_SHOT_VIDEO_PLAN_UNPRICED_LINE',
-      message,
-      ['dependencyInventory', 'rootGeneration'],
-      'Review the selected model, route settings, and prepared inputs.'
-    );
-    input.diagnostics.push(diagnostic);
-    return {
-      pricing: {
-        state: 'unpriced',
-        estimatedUsd: null,
-        reason: message,
-        overrideRequired: true,
-      },
-      diagnostics: [diagnostic],
-      estimate: null,
-    };
-  }
 }
 
 

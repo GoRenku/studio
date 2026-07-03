@@ -5,7 +5,6 @@ import type {
   CastCharacterSheetModelListReport,
   CastImageModelChoiceReport,
   CastMediaImportReport,
-  MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
@@ -33,6 +32,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
 import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
@@ -319,28 +319,13 @@ export async function buildCastCharacterSheetDependencyDraftSpec(
   };
 }
 
-export async function estimateCastCharacterSheetSpec(
-  input: CastCharacterSheetSpecIdInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareCastCharacterSheetSpec(input);
-  const { estimateGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
-    throw new ProjectDataError(
-      'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Cast character sheet model.'
-    );
-  }
-  return { ...prepared, estimate };
-}
-
 export async function runCastCharacterSheetSpec(
   input: RunCastCharacterSheetSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareCastCharacterSheetSpec(input);
-  const { estimateGeneration, runGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
+  const { runGeneration } = await loadGenerationEngines();
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
+  if (estimate.state !== 'priced') {
     throw new ProjectDataError(
       'PROJECT_DATA273',
       'Generation estimate is unknown for the selected Cast character sheet model.'
@@ -350,7 +335,7 @@ export async function runCastCharacterSheetSpec(
   const result = await runGeneration({
     ...prepared.generation,
     mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -363,7 +348,7 @@ export async function runCastCharacterSheetSpec(
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
     estimate,
-    approvalToken: estimate.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

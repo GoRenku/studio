@@ -1,4 +1,4 @@
-import type { GenerationEstimate } from '@gorenku/studio-engines';
+import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import type { ProjectRelativePath } from './project.js';
 import type { ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind } from './scene-shot-list.js';
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
@@ -109,6 +109,11 @@ export type MediaGenerationDependencyPricing =
       overrideRequired: true;
     }
   | {
+      state: 'missing-pricing-input';
+      estimatedUsd: null;
+      missingInputs: string[];
+    }
+  | {
       state: 'not-applicable';
       estimatedUsd: null;
     };
@@ -162,7 +167,7 @@ export interface MediaGenerationRootGenerationLine {
   pricing: MediaGenerationDependencyPricing;
   canCreateSpec: boolean;
   blockedReason: string | null;
-  estimate: GenerationEstimate | null;
+  estimate: GenerationCostEstimate | null;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
@@ -233,6 +238,6 @@ export interface MediaGenerationDependencyPlan {
   dependencyInventory: MediaGenerationDependencyInventory;
   lines: MediaGenerationPlanLine[];
   estimate: MediaGenerationDependencyInventoryEstimate;
-  finalEstimate: GenerationEstimate | null;
+  finalEstimate: GenerationCostEstimate | null;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }

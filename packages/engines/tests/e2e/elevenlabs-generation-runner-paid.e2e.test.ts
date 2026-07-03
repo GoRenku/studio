@@ -20,7 +20,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
-  estimateGeneration,
+  estimateGenerationCost,
   loadBundledGenerationCatalog,
   runGeneration,
   type GenerationRequest,
@@ -44,13 +44,14 @@ describeIf('ElevenLabs paid shared generation runner E2E', () => {
     catalog = await loadBundledGenerationCatalog();
   });
 
-  it('generates persisted TTS audio through estimateGeneration and live runGeneration', async () => {
+  it('generates persisted TTS audio through estimateGenerationCost and live runGeneration', async () => {
     const outputRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), 'renku-elevenlabs-runner-paid-')
     );
+    const text = 'Renku Studio paid generation runner contract test.';
     const request: GenerationRequest = {
       parameters: {
-        text: 'Renku Studio paid generation runner contract test.',
+        text,
         voice: TEST_VOICE_ID,
         output_format: 'mp3_44100_128',
         voice_settings: {
@@ -69,18 +70,34 @@ describeIf('ElevenLabs paid shared generation runner E2E', () => {
       outputCount: 1,
     } as const;
 
-    const estimate = await estimateGeneration({ catalog, policy, request });
+    const estimate = await estimateGenerationCost({
+      catalog,
+      priceKey: {
+        provider: policy.provider,
+        model: policy.model,
+        mediaKind: policy.mediaKind,
+      },
+      pricingInputs: {
+        outputCount: policy.outputCount,
+        characterCount: text.length,
+      },
+    });
+    expect(estimate.state).toBe('priced');
+    if (estimate.state !== 'priced') {
+      throw new Error('Expected ElevenLabs generation estimate to be priced.');
+    }
     expect(estimate).toMatchObject({
+      state: 'priced',
       provider: 'elevenlabs',
       model: 'eleven_v3',
       mediaKind: 'audio',
-      approvalToken: expect.any(String),
+      costApprovalToken: expect.any(String),
     });
 
     const result = await runGeneration({
       catalog,
       mode: 'live',
-      approvalToken: estimate.approvalToken,
+      approvalToken: estimate.costApprovalToken,
       outputRoot,
       outputProjectRelativeRoot: 'generated/media',
       policy,

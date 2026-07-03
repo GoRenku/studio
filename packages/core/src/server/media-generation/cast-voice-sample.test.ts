@@ -93,17 +93,12 @@ describe('Cast Voice sample generation', () => {
         specId: created.id,
       })
     ).resolves.toMatchObject({
-      generation: {
-        policy: {
-          provider: 'elevenlabs',
-          model: 'eleven_v3',
-          mediaKind: 'audio',
-          mode: 'text-to-speech',
-          outputCount: 1,
-        },
-        request: {
-          outputNames: ['normal-voice.mp3'],
-        },
+      estimate: {
+        state: 'priced',
+        provider: 'elevenlabs',
+        model: 'eleven_v3',
+        mediaKind: 'audio',
+        costApprovalToken: expect.stringMatching(/^sha256:/),
       },
     });
 

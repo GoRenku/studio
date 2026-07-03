@@ -12,7 +12,6 @@ import type {
   ShotVideoTakeInputGenerationPurpose,
   PreparedMediaGeneration,
   ShotVideoTakeInputGenerationSpec,
-  MediaGenerationEstimateReport,
   ShotVideoTakeProductionContext,
   ShotVideoInputReferenceMode,
 } from '../../../client/index.js';
@@ -248,30 +247,6 @@ export const prepareShotReferenceImageSpec = prepareShotInputSpec;
 
 
 export const prepareShotVideoPromptSheetSpec = prepareShotInputSpec;
-
-
-
-export async function estimateShotInputSpec(
-  input: ReadMediaGenerationSpecInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareShotInputSpec(input);
-  const { estimateGeneration } = await import('@gorenku/studio-engines');
-  const estimate = await estimateGeneration(prepared.generation);
-  return { ...prepared, estimate };
-}
-
-
-
-export const estimateShotFirstFrameSpec = estimateShotInputSpec;
-
-
-export const estimateShotLastFrameSpec = estimateShotInputSpec;
-
-
-export const estimateShotReferenceImageSpec = estimateShotInputSpec;
-
-
-export const estimateShotVideoPromptSheetSpec = estimateShotInputSpec;
 
 
 

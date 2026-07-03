@@ -228,11 +228,8 @@ function estimateReport(): MediaGenerationEstimateReport {
       createdAt: '2026-06-10T00:00:00.000Z',
       updatedAt: '2026-06-10T00:00:00.000Z',
     },
-    providerPayload: {
-      text: spec.v3Text,
-      voice: 'provider_voice_urban',
-    },
     estimate: {
+      state: 'priced',
       provider: 'elevenlabs',
       model: 'eleven_v3',
       mediaKind: 'audio',
@@ -242,7 +239,7 @@ function estimateReport(): MediaGenerationEstimateReport {
         pricePerCharacter: 0.0001,
       },
       estimatedCostUsd: 0.004,
-      approvalToken: 'approval_token',
+      costApprovalToken: 'approval_token',
       billableUnits: { text: spec.v3Text },
       warnings: [],
     },

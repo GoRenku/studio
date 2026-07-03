@@ -1,4 +1,4 @@
-import { estimateGeneration, runGeneration } from '@gorenku/studio-engines';
+import { runGeneration } from '@gorenku/studio-engines';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
@@ -6,7 +6,6 @@ import {
 import type {
   AgentMediaReport,
   MediaGenerationDependencyPlan,
-  MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   MediaGenerationSpec,
@@ -45,6 +44,13 @@ import type { PlanMediaGenerationDependenciesInput } from '../project-data-servi
 import { planMediaGenerationDependencyInventory } from './dependency-inventory.js';
 import { resolveMediaGenerationDependencySelection } from './dependency-selectors.js';
 import { planLinesFromDependencyInventory } from './dependency-inventory-lines.js';
+import {
+  estimateMediaGenerationSpecRecordCost,
+  mediaGenerationCostEstimateToPricing,
+} from './estimation/cost-projection.js';
+import {
+  estimateDraftMediaGenerationSpec,
+} from './estimation/spec-estimates.js';
 
 export async function buildMediaGenerationContext(
   input: MediaGenerationPurposeContextInput
@@ -167,27 +173,6 @@ export async function prepareDraftMediaGenerationSpec(
   return requireMediaGenerationPurposeDefinition(input.spec.purpose).prepareDraftSpec(input);
 }
 
-export async function estimateMediaGenerationSpec(
-  input: ReadMediaGenerationSpecInput
-): Promise<MediaGenerationEstimateReport> {
-  const specRecord = await readMediaGenerationSpec(input);
-  const definition = requireMediaGenerationPurposeDefinition(specRecord.purpose);
-  if (definition.estimateSpec) {
-    return definition.estimateSpec(input);
-  }
-  const prepared = await prepareMediaGenerationSpec(input);
-  const estimate = await estimateGeneration(prepared.generation);
-  return { ...prepared, estimate };
-}
-
-export async function estimateDraftMediaGenerationSpec(
-  input: PrepareDraftMediaGenerationSpecInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareDraftMediaGenerationSpec(input);
-  const estimate = await estimateGeneration(prepared.generation);
-  return { ...prepared, estimate };
-}
-
 export async function planMediaGenerationDependencies(
   input: PlanMediaGenerationDependenciesInput
 ): Promise<MediaGenerationDependencyPlan> {
@@ -239,56 +224,16 @@ export async function planMediaGenerationDependencies(
         });
       },
       estimateRoot: async () => {
-        try {
-          const estimate = await estimateDraftMediaGenerationSpec({
-            projectName: input.projectName,
-            homeDir: input.homeDir,
-            spec: normalized.spec,
-          });
-          if (estimate.estimate.estimatedCostUsd === null) {
-            return {
-              pricing: {
-                state: 'unpriced' as const,
-                estimatedUsd: null,
-                reason:
-                  estimate.estimate.warnings.join(' ') ||
-                  `No pricing is configured for ${normalized.spec.purpose}.`,
-                overrideRequired: true as const,
-              },
-              diagnostics: [],
-              estimate: estimate.estimate,
-            };
-          }
-          return {
-            pricing: {
-              state: 'priced' as const,
-              estimatedUsd: estimate.estimate.estimatedCostUsd,
-            },
-            diagnostics: [],
-            estimate: estimate.estimate,
-          };
-        } catch (error) {
-          const message =
-            error instanceof Error
-              ? `Root generation estimate failed: ${error.message}`
-              : 'Root generation estimate failed.';
-          const issue = createDiagnosticError(
-            'CORE_MEDIA_DEPENDENCY_ROOT_ESTIMATE_FAILED',
-            message,
-            { path: ['dependencyInventory', 'rootGeneration'] },
-            'Review the root generation spec and provider pricing support.'
-          );
-          return {
-            pricing: {
-              state: 'unpriced' as const,
-              estimatedUsd: null,
-              reason: message,
-              overrideRequired: true as const,
-            },
-            diagnostics: [issue],
-            estimate: null,
-          };
-        }
+        const estimate = await estimateDraftMediaGenerationSpec({
+          projectName: input.projectName,
+          homeDir: input.homeDir,
+          spec: normalized.spec,
+        });
+        return {
+          pricing: mediaGenerationCostEstimateToPricing(estimate.estimate),
+          diagnostics: [],
+          estimate: estimate.estimate,
+        };
       },
     })
   );
@@ -353,9 +298,19 @@ export async function runMediaGenerationSpec(
     return requireMediaGenerationPurposeDefinition(specRecord.purpose).runSpec(input) as Promise<MediaGenerationRunReport>;
   }
   const prepared = await prepareMediaGenerationSpec(input);
-  const estimate = await estimateGeneration(prepared.generation);
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
+  if (estimate.state === 'missing-pricing-input' && !input.simulate) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_COST_INPUT_MISSING',
+      `Media generation cost estimate is missing pricing inputs for ${prepared.spec.purpose}: ${estimate.missingInputs.join(', ')}.`,
+      {
+        suggestion:
+          'Complete the pricing fields for this generation setup before running it.',
+      }
+    );
+  }
   if (
-    estimate.estimatedCostUsd === null &&
+    estimate.state === 'unpriced' &&
     !input.simulate &&
     !input.allowUnpricedCost
   ) {
@@ -368,11 +323,29 @@ export async function runMediaGenerationSpec(
       }
     );
   }
+  if (
+    estimate.state === 'priced' &&
+    !input.simulate &&
+    input.approvalToken !== estimate.costApprovalToken
+  ) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_COST_APPROVAL_TOKEN_MISMATCH',
+      `Media generation run requires the current cost approval token for ${prepared.spec.purpose}.`,
+      {
+        suggestion:
+          'Run the estimate command again and pass its cost approval token to the run command.',
+      }
+    );
+  }
   const outputPaths = await resolveSharedGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
     mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    approvalToken:
+      estimate.state === 'priced'
+        ? estimate.costApprovalToken
+        : input.approvalToken ?? 'unpriced-cost-override',
+    allowUnpricedCost: Boolean(input.allowUnpricedCost),
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -389,11 +362,14 @@ export async function runMediaGenerationSpec(
       providerPayload: prepared.providerPayload,
       estimate: {
         ...estimate,
-        ...(estimate.estimatedCostUsd === null && input.allowUnpricedCost
+        ...(estimate.state === 'unpriced' && input.allowUnpricedCost
           ? { unpricedCostOverride: true }
           : {}),
       },
-      approvalToken: estimate.approvalToken,
+      approvalToken:
+        estimate.state === 'priced'
+          ? estimate.costApprovalToken
+          : input.approvalToken,
       simulated: Boolean(input.simulate),
       status: input.simulate ? 'simulated' : 'completed',
       outputs: result.outputs,

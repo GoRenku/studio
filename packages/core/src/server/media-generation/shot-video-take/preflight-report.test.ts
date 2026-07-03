@@ -25,6 +25,11 @@ describe('shot video take preflight and validation', () => {
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: {
+          duration: '5',
+          aspect_ratio: '16:9',
+          resolution: '720p',
+        },
         requestedInputs: [
           {
             kind: 'character-sheet',

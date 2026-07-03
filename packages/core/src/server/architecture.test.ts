@@ -435,6 +435,125 @@ describe('core server architecture', () => {
       ].join(' ')
     ).toEqual([]);
   });
+
+  it('keeps media generation cost projection independent of readiness preparation', async () => {
+    const source = await fs.readFile(
+      path.join(
+        projectSourceRoot,
+        'media-generation',
+        'estimation',
+        'cost-projection.ts'
+      ),
+      'utf8'
+    );
+    const forbiddenNeedles = [
+      'prepare',
+      'provider-payload',
+      'dependency-inventory',
+      'project-session',
+      'database/access',
+      'resolveProjectRelativePath',
+      'resolveShotVideoInputReferenceBundle',
+      'validateFinalSpecAgainstContext',
+      'validateInputSpecAgainstContext',
+    ];
+
+    expect(
+      forbiddenNeedles.filter((needle) => source.includes(needle)),
+      [
+        'Cost projection must consume only purpose specs and pricing facts.',
+        'Readiness validation, provider payload construction, and file resolution belong outside the cost rail.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
+  it('keeps media generation estimation modules off readiness imports', async () => {
+    const estimationRoot = path.join(
+      projectSourceRoot,
+      'media-generation',
+      'estimation'
+    );
+    const files = await listTypeScriptFiles(estimationRoot);
+    const forbiddenImportFragments = [
+      'shared-generation-service',
+      'generation-runs',
+      'provider-payloads',
+      'provider-payload-validation',
+      'input-file-payload',
+      'dependency-selectors',
+      'preflight-report',
+      'preflight-inputs',
+      'input-selection',
+      'media-imports',
+      'spec-records',
+    ];
+    const offenders: Array<{
+      file: string;
+      importSource: string;
+      forbiddenFragment: string;
+    }> = [];
+
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      for (const importSource of extractImportSources(source)) {
+        const forbiddenFragment = forbiddenImportFragments.find((fragment) =>
+          importSource.includes(fragment)
+        );
+        if (forbiddenFragment) {
+          offenders.push({
+            file: path.relative(projectSourceRoot, file),
+            importSource,
+            forbiddenFragment,
+          });
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Estimation modules may read specs and pricing inputs, but they must not import readiness preparation,',
+        'provider payload construction, generation runs, file resolution, or dependency selection internals.',
+        'This protects the architecture boundary structurally instead of enumerating public estimate function names.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
+  it('keeps engine cost estimation free of provider payload validation', async () => {
+    const source = await fs.readFile(
+      path.join(repoRoot, 'packages', 'engines', 'src', 'generation', 'estimates.ts'),
+      'utf8'
+    );
+    const forbiddenNeedles = [
+      'provider-payload-validation',
+      'input-file-payload',
+      'logical-provider-payload',
+      'runner',
+      '../sdk/',
+      'node:fs',
+      'buildLogicalProviderPayload',
+      'validateProviderPayload',
+    ];
+
+    expect(
+      forbiddenNeedles.filter((needle) => source.includes(needle)),
+      [
+        'Engine cost estimation must price declared pricing inputs only.',
+        'It must not construct or validate provider payloads or resolve files.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
+  it('requires explicit cost projection on every media generation purpose', async () => {
+    const source = await fs.readFile(
+      path.join(projectSourceRoot, 'media-generation', 'purpose-registry.ts'),
+      'utf8'
+    );
+
+    expect(source).not.toContain('estimateSpec');
+    expect(source).not.toContain('buildCostProjection?');
+    expect(source).toContain('buildCostProjection(');
+  });
 });
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
@@ -473,6 +592,20 @@ function findNeedleLines(source: string, needle: string): number[] {
     .split('\n')
     .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
 }
+
+function extractImportSources(source: string): string[] {
+  const importSourcePattern =
+    /(?:from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
+  const importSources: string[] = [];
+  for (const match of source.matchAll(importSourcePattern)) {
+    const importSource = match[1] ?? match[2];
+    if (importSource) {
+      importSources.push(importSource);
+    }
+  }
+  return importSources;
+}
+
 
 function isOwningExportLine(line: string): boolean {
   return (

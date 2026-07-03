@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { LoadedModelCatalog } from '../model-catalog.js';
-import {
-  buildLogicalProviderPayload,
-  estimateGeneration,
-} from './estimates.js';
+import type {
+  GenerationPolicy,
+  GenerationRequest,
+} from './contracts.js';
+import { estimateGenerationCost } from './estimates.js';
+import { buildLogicalProviderPayload } from './logical-provider-payload.js';
 import {
   listGenerationModels,
   loadBundledGenerationCatalog,
 } from './model-discovery.js';
-import { hashGenerationRequest } from './request-hash.js';
 
 describe('generation estimates', () => {
   it('lists generation models by media kind', async () => {
@@ -28,10 +29,10 @@ describe('generation estimates', () => {
     );
   });
 
-  it('estimates cost and creates an approval token for the exact request', async () => {
+  it('estimates cost and creates a cost approval token from pricing facts', async () => {
     const catalog = createCatalog();
 
-    const estimate = await estimateGeneration({
+    const estimate = await estimateGenerationFromRequest({
       catalog,
       policy: {
         provider: 'fal-ai',
@@ -46,12 +47,13 @@ describe('generation estimates', () => {
     });
 
     expect(estimate).toMatchObject({
+      state: 'priced',
       estimatedCostUsd: 0.06,
-      approvalToken: expect.stringMatching(/^sha256:/),
+      costApprovalToken: expect.stringMatching(/^sha256:/),
       billableUnits: {
         image_size: '1024x1024',
         quality: 'medium',
-        num_images: 2,
+        outputCount: 2,
       },
     });
     expect(estimate).not.toHaveProperty('approval');
@@ -61,7 +63,7 @@ describe('generation estimates', () => {
     const catalog = createCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -77,7 +79,7 @@ describe('generation estimates', () => {
       estimatedCostUsd: 0.36,
       billableUnits: {
         resolution: '2K',
-        num_images: 3,
+        outputCount: 3,
       },
     });
   });
@@ -86,7 +88,7 @@ describe('generation estimates', () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -106,7 +108,7 @@ describe('generation estimates', () => {
       })
     ).resolves.toMatchObject({
       estimatedCostUsd: 0.037,
-      approvalToken: expect.stringMatching(/^sha256:/),
+      costApprovalToken: expect.stringMatching(/^sha256:/),
     });
   });
 
@@ -114,7 +116,7 @@ describe('generation estimates', () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -144,7 +146,7 @@ describe('generation estimates', () => {
       })
     ).resolves.toMatchObject({
       estimatedCostUsd: 0.054,
-      approvalToken: expect.stringMatching(/^sha256:/),
+      costApprovalToken: expect.stringMatching(/^sha256:/),
     });
   });
 
@@ -152,7 +154,7 @@ describe('generation estimates', () => {
     const catalog = createCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -177,7 +179,7 @@ describe('generation estimates', () => {
       billableUnits: {
         duration: 5,
         resolution: '720p',
-        image_url: 'renku-input://generated/images/start-frame.png',
+        inputImageCount: 1,
       },
     });
   });
@@ -186,7 +188,7 @@ describe('generation estimates', () => {
     const catalog = createCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -213,7 +215,7 @@ describe('generation estimates', () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -235,7 +237,7 @@ describe('generation estimates', () => {
       })
     ).resolves.toMatchObject({
       estimatedCostUsd: 0.41000000000000003,
-      approvalToken: expect.stringMatching(/^sha256:/),
+      costApprovalToken: expect.stringMatching(/^sha256:/),
     });
   });
 
@@ -243,7 +245,7 @@ describe('generation estimates', () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -283,7 +285,7 @@ describe('generation estimates', () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -323,7 +325,7 @@ describe('generation estimates', () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -363,7 +365,7 @@ describe('generation estimates', () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -463,7 +465,7 @@ describe('generation estimates', () => {
     ];
 
     for (const testCase of cases) {
-      const estimate = await estimateGeneration({
+      const estimate = await estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -480,7 +482,7 @@ describe('generation estimates', () => {
     }
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -498,11 +500,11 @@ describe('generation estimates', () => {
     });
   });
 
-  it('rejects Kling V3 voice-control estimates when audio generation is off', async () => {
+  it('keeps Kling V3 voice-control estimates unpriced when no price row matches', async () => {
     const catalog = await loadBundledGenerationCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -519,7 +521,11 @@ describe('generation estimates', () => {
           pricingInputCounts: {},
         },
       })
-    ).rejects.toThrow('Kling V3 voice control pricing requires generate_audio: true.');
+    ).resolves.toMatchObject({
+      state: 'unpriced',
+      estimatedCostUsd: null,
+      reason: 'No matching pricing row is configured for the requested pricing inputs.',
+    });
   });
 
   it('estimates bundled ElevenLabs text-to-speech pricing by character for every TTS model', async () => {
@@ -532,7 +538,7 @@ describe('generation estimates', () => {
       'eleven_turbo_v2_5',
     ]) {
       await expect(
-        estimateGeneration({
+        estimateGenerationFromRequest({
           catalog,
           policy: {
             provider: 'elevenlabs',
@@ -555,7 +561,7 @@ describe('generation estimates', () => {
         },
         warnings: [],
         billableUnits: {
-          text,
+          characterCount: text.length,
         },
       });
     }
@@ -565,7 +571,7 @@ describe('generation estimates', () => {
     const catalog = createCatalog();
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy: {
           provider: 'fal-ai',
@@ -582,12 +588,13 @@ describe('generation estimates', () => {
         },
       })
     ).resolves.toMatchObject({
+      state: 'unpriced',
       estimatedCostUsd: null,
-      warnings: ['No pricing is configured for this model.'],
+      reason: 'No matching pricing row is configured for the requested pricing inputs.',
     });
   });
 
-  it('approval tokens hash the policy and request without the optional catalog', async () => {
+  it('cost approval tokens hash pricing facts without the optional catalog', async () => {
     const catalog = createCatalog();
     const policy = {
       provider: 'fal-ai',
@@ -601,13 +608,13 @@ describe('generation estimates', () => {
     };
 
     await expect(
-      estimateGeneration({
+      estimateGenerationFromRequest({
         catalog,
         policy,
         request,
       })
     ).resolves.toMatchObject({
-      approvalToken: hashGenerationRequest({ policy, request }),
+      costApprovalToken: expect.stringMatching(/^sha256:/),
     });
   });
 
@@ -732,6 +739,88 @@ describe('generation estimates', () => {
     expect(existingImageUrls).toEqual(['https://example.test/source.png']);
   });
 });
+
+function estimateGenerationFromRequest(input: {
+  catalog: LoadedModelCatalog;
+  policy: GenerationPolicy;
+  request: GenerationRequest;
+}) {
+  const payload: Record<string, unknown> = {
+    ...(input.policy.parameters ?? {}),
+    ...(input.request.parameters ?? {}),
+    ...(input.request.prompt ? { prompt: input.request.prompt } : {}),
+  };
+  const pricingCounts = input.request.pricingInputCounts ?? {};
+  return estimateGenerationCost({
+    catalog: input.catalog,
+    priceKey: {
+      provider: input.policy.provider,
+      model: input.policy.model,
+      mediaKind: input.policy.mediaKind,
+    },
+    pricingInputs: {
+      outputCount:
+        input.policy.outputCount ??
+        numericPayloadValue(payload, 'num_images') ??
+        numericPayloadValue(payload, 'numImages') ??
+        numericPayloadValue(payload, 'count') ??
+        1,
+      inputImageCount:
+        pricingCounts.image ??
+        (input.request.inputFiles ?? []).filter(
+          (file) => file.mediaKind === 'image'
+        ).length,
+      inputAudioCount:
+        pricingCounts.audio ??
+        (input.request.inputFiles ?? []).filter(
+          (file) => file.mediaKind === 'audio'
+        ).length,
+      inputVideoCount:
+        pricingCounts.video ??
+        (input.request.inputFiles ?? []).filter(
+          (file) => file.mediaKind === 'video'
+        ).length,
+      durationSeconds:
+        numberOrStringPayloadValue(payload, 'duration_seconds') ??
+        numberOrStringPayloadValue(payload, 'durationSeconds') ??
+        numberOrStringPayloadValue(payload, 'duration'),
+      characterCount:
+        typeof payload.text === 'string'
+          ? payload.text.length
+          : typeof payload.prompt === 'string'
+            ? payload.prompt.length
+            : undefined,
+      imageSize: payload.image_size as never,
+      resolution: payload.resolution as never,
+      aspectRatio: payload.aspect_ratio as never,
+      quality: payload.quality as never,
+      generateAudio: payload.generate_audio as never,
+      usesVoiceControl: payload.uses_voice_control as never,
+      numFrames: payload.num_frames as never,
+      videoSize: payload.video_size as never,
+      mode: payload.mode as never,
+      musicLengthMs: payload.music_length_ms as never,
+    },
+  });
+}
+
+function numericPayloadValue(
+  payload: Record<string, unknown>,
+  key: string
+): number | undefined {
+  const value = payload[key];
+  return typeof value === 'number' ? value : undefined;
+}
+
+function numberOrStringPayloadValue(
+  payload: Record<string, unknown>,
+  key: string
+): number | string | undefined {
+  const value = payload[key];
+  return typeof value === 'number' || typeof value === 'string'
+    ? value
+    : undefined;
+}
 
 function createCatalog(): LoadedModelCatalog {
   return {

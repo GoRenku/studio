@@ -22,6 +22,10 @@ export function aggregateDependencyInventoryEstimate(input: {
     ...input.dependencies.map((line) => line.pricing),
     input.rootGeneration.pricing,
   ].filter((pricing) => pricing.state === 'unpriced');
+  const missingPricingInputLines = [
+    ...input.dependencies.map((line) => line.pricing),
+    input.rootGeneration.pricing,
+  ].filter((pricing) => pricing.state === 'missing-pricing-input');
   const unavailableDependencies = input.dependencies.filter(
     (line) =>
       line.required &&
@@ -33,13 +37,19 @@ export function aggregateDependencyInventoryEstimate(input: {
     state:
       unavailableDependencies.length > 0
         ? 'unavailable'
+        : missingPricingInputLines.length > 0
+          ? 'unavailable'
         : unpricedLines.length > 0
           ? 'partial'
           : 'complete',
-    estimatedTotalUsd: unavailableDependencies.length > 0 ? null : total,
+    estimatedTotalUsd:
+      unavailableDependencies.length > 0 || missingPricingInputLines.length > 0
+        ? null
+        : total,
     pricedDependencyCount: pricedLines.length,
     unpricedDependencyCount: unpricedLines.length,
-    unavailableDependencyCount: unavailableDependencies.length,
+    unavailableDependencyCount:
+      unavailableDependencies.length + missingPricingInputLines.length,
     requiresPriceOverride: unpricedLines.length > 0,
   };
 }
@@ -93,7 +103,11 @@ function rootPlanLine(
     purpose: line.purpose,
     mediaKind: line.mediaKind,
     depth: 0,
-    state: line.pricing.state === 'not-applicable' ? 'missing' : 'planned',
+    state:
+      line.pricing.state === 'not-applicable' ||
+      line.pricing.state === 'missing-pricing-input'
+        ? 'missing'
+        : 'planned',
     materializationState: line.canCreateSpec ? 'generatable' : 'blocked-by-dependencies',
     ...(line.blockedReason ? { materializationReason: line.blockedReason } : {}),
     pricing: line.pricing,

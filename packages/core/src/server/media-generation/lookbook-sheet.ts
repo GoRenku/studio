@@ -11,7 +11,6 @@ import type {
   LookbookSheetModelChoiceReport,
   LookbookSheetModelListReport,
   LookbookSheetOutputFormat,
-  MediaGenerationEstimateReport,
   PreparedMediaGeneration,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
@@ -57,6 +56,7 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
 import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
@@ -334,28 +334,13 @@ export async function buildLookbookSheetDependencyDraftSpec(
   };
 }
 
-export async function estimateLookbookSheetSpec(
-  input: LookbookSheetSpecIdInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareLookbookSheetSpec(input);
-  const { estimateGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
-    throw new ProjectDataError(
-      'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Lookbook sheet model.'
-    );
-  }
-  return { ...prepared, estimate };
-}
-
 export async function runLookbookSheetSpec(
   input: RunLookbookSheetSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareLookbookSheetSpec(input);
-  const { estimateGeneration, runGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
+  const { runGeneration } = await loadGenerationEngines();
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
+  if (estimate.state !== 'priced') {
     throw new ProjectDataError(
       'PROJECT_DATA273',
       'Generation estimate is unknown for the selected Lookbook sheet model.'
@@ -365,7 +350,7 @@ export async function runLookbookSheetSpec(
   const result = await runGeneration({
     ...prepared.generation,
     mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
   });
@@ -377,7 +362,7 @@ export async function runLookbookSheetSpec(
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
     estimate,
-    approvalToken: estimate.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

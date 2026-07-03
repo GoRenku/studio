@@ -27,9 +27,9 @@ import type {
   LookbookSheetMediaImportReport,
   LookbookSheetModelListReport,
   MediaGenerationPurpose,
+  MediaGenerationCostProjection,
   MediaGenerationDependencyRequest,
   MediaGenerationDependencySlot,
-  MediaGenerationEstimateReport,
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
   MediaGenerationRequestTarget,
@@ -123,12 +123,13 @@ import * as lookbookImage from './lookbook-image.js';
 import * as lookbookSheet from './lookbook-sheet.js';
 import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
 import * as sceneDialogueAudio from './scene-dialogue-audio.js';
+import { buildMediaGenerationCostProjection } from './estimation/cost-projection.js';
 import { buildShotVideoTakeContext } from './shot-video-take/context.js';
 import { listShotVideoTakeModels, listShotInputModels } from './shot-video-take/model-list.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotVideoPromptSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotVideoPromptSheetSpec, prepareShotInputDraftSpec } from './shot-video-take/input-specs.js';
 import { buildShotInputDependencyDraftSpec } from './shot-video-take/dependency-draft-specs.js';
 import { declareShotVideoInputDependencies } from './shot-video-take/shot-input-dependencies.js';
-import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec, estimateShotVideoTakeSpec } from './shot-video-take/final-specs.js';
+import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec } from './shot-video-take/final-specs.js';
 import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotVideoPromptSheetSpec, runShotVideoTakeSpec } from './shot-video-take/generation-runs.js';
 import { declareShotVideoTakeDependencies } from './shot-video-take/dependency-inventory.js';
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from './shot-video-take/media-imports.js';
@@ -205,6 +206,8 @@ export interface ValidateMediaGenerationSpecInput {
 
 export interface PrepareDraftMediaGenerationSpecInput extends ValidateMediaGenerationSpecInput {}
 
+export interface MediaGenerationCostProjectionInput extends ValidateMediaGenerationSpecInput {}
+
 export interface CreateMediaGenerationSpecInput extends ValidateMediaGenerationSpecInput {
   idGenerator?: Parameters<typeof lookbookImage.createLookbookImageSpec>[0]['idGenerator'];
 }
@@ -227,6 +230,9 @@ export interface MediaGenerationPurposeDefinition {
   purpose: MediaGenerationPurpose;
   mediaKind: MediaKind;
   targetKind: MediaGenerationRequestTarget['kind'];
+  buildCostProjection(
+    input: MediaGenerationCostProjectionInput
+  ): Promise<MediaGenerationCostProjection>;
   buildContext(input: MediaGenerationPurposeContextInput): Promise<MediaGenerationContextReport>;
   listModels(input: MediaGenerationPurposeContextInput): Promise<MediaGenerationModelListReport>;
   validateSpec(
@@ -237,7 +243,6 @@ export interface MediaGenerationPurposeDefinition {
   listSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
-  estimateSpec?(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   declareDependencies?(
     input: MediaGenerationDependencyDeclarationInput
   ): Promise<MediaGenerationDependencySlot[]>;
@@ -252,6 +257,7 @@ const DEFINITIONS = [
     purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'lookbook',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       lookbookImage.buildLookbookImageContext(toLookbookInput(input)),
     listModels: (input) => lookbookImage.listLookbookImageModels(toLookbookInput(input)),
@@ -289,6 +295,7 @@ const DEFINITIONS = [
     purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'lookbook',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       lookbookSheet.buildLookbookSheetContext(toLookbookInput(input)),
     listModels: (input) => lookbookSheet.listLookbookSheetModels(toLookbookInput(input)),
@@ -327,6 +334,7 @@ const DEFINITIONS = [
     purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'castMember',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       characterSheet.buildCastCharacterSheetContext(toCastInput(input)),
     listModels: (input) => characterSheet.listCastCharacterSheetModels(toCastInput(input)),
@@ -365,6 +373,7 @@ const DEFINITIONS = [
     purpose: CAST_PROFILE_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'castMember',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) => castProfile.buildCastProfileContext(toCastInput(input)),
     listModels: (input) => castProfile.listCastProfileModels(toCastInput(input)),
     validateSpec: (input) =>
@@ -402,6 +411,7 @@ const DEFINITIONS = [
     purpose: CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
     mediaKind: 'audio',
     targetKind: 'castMember',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       castVoiceSample.buildCastVoiceSampleContext(toCastInput(input)),
     listModels: (input) =>
@@ -440,6 +450,7 @@ const DEFINITIONS = [
     purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
     mediaKind: 'audio',
     targetKind: 'sceneDialogue',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       sceneDialogueAudio.readSceneDialogueAudioContext({
         projectName: input.projectName,
@@ -496,6 +507,7 @@ const DEFINITIONS = [
     purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'location',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       locationSheet.buildLocationEnvironmentSheetContext(toLocationInput(input)),
     listModels: (input) =>
@@ -536,6 +548,7 @@ const DEFINITIONS = [
     purpose: LOCATION_HERO_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'location',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       locationHero.buildLocationHeroContext(toLocationHeroInput(input)),
     listModels: (input) =>
@@ -574,6 +587,7 @@ const DEFINITIONS = [
     purpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'scene',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) =>
       sceneStoryboardSheet.buildSceneStoryboardSheetContext(toSceneInput(input)),
     listModels: (input) =>
@@ -614,6 +628,7 @@ const DEFINITIONS = [
     purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotVideoTake',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -642,6 +657,7 @@ const DEFINITIONS = [
     purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotVideoTake',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -670,6 +686,7 @@ const DEFINITIONS = [
     purpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotVideoTake',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -698,6 +715,7 @@ const DEFINITIONS = [
     purpose: SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
     mediaKind: 'image',
     targetKind: 'sceneShotVideoTake',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) =>
       listShotInputModels(
@@ -727,6 +745,7 @@ const DEFINITIONS = [
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     mediaKind: 'video',
     targetKind: 'sceneShotVideoTake',
+    buildCostProjection: buildMediaGenerationCostProjection,
     buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
     listModels: (input) => listShotVideoTakeModels(toShotModelInput(input)),
     validateSpec: (input) =>
@@ -751,7 +770,6 @@ const DEFINITIONS = [
       } satisfies UpdateShotVideoTakeOutputGenerationSpecInput),
     listSpecs: (input) => listShotVideoTakeSpecs(toShotInput(input)),
     prepareSpec: prepareShotVideoTakeSpec,
-    estimateSpec: estimateShotVideoTakeSpec,
     prepareDraftSpec: (input) =>
       prepareShotVideoTakeDraftSpec({
         projectName: input.projectName,

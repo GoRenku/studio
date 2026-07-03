@@ -2,7 +2,9 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
-  GenerationEstimate,
+  GenerationCostEstimate,
+  GenerationPriceKey,
+  GenerationPricingInputs,
   GenerationRequest,
   GenerationRunResult,
 } from '@gorenku/studio-engines';
@@ -82,6 +84,18 @@ export function klingTransientVoiceGenerationPolicy() {
   };
 }
 
+export function klingTransientVoicePriceKey(): GenerationPriceKey {
+  return {
+    provider: KLING_TRANSIENT_VOICE_PROVIDER,
+    model: KLING_TRANSIENT_VOICE_MODEL,
+    mediaKind: 'json',
+  };
+}
+
+export function klingTransientVoicePricingInputs(): GenerationPricingInputs {
+  return { outputCount: 1 };
+}
+
 export function klingTransientVoiceGenerationRequest(
   conversion: KlingTransientVoiceConversion
 ): GenerationRequest {
@@ -104,86 +118,6 @@ export function klingTransientVoiceGenerationRequest(
   };
 }
 
-export async function buildKlingTransientVoiceEstimateDetails(input: {
-  projectFolder: string;
-  conversions: KlingTransientVoiceConversion[];
-  estimateGeneration: (input: {
-    policy: ReturnType<typeof klingTransientVoiceGenerationPolicy>;
-    request: GenerationRequest;
-  }) => Promise<GenerationEstimate>;
-}): Promise<{
-  estimates: GenerationEstimate[];
-  fingerprints: FingerprintedConversion[];
-  cacheStates: Array<Record<string, unknown>>;
-}> {
-  const fingerprints = await fingerprintConversions(input);
-  const unique = uniqueFingerprintedConversions(fingerprints);
-  const estimates = await Promise.all(
-    unique.map((entry) =>
-      input.estimateGeneration({
-        policy: klingTransientVoiceGenerationPolicy(),
-        request: klingTransientVoiceGenerationRequest(entry.conversion),
-      })
-    )
-  );
-  const cache = await readKlingTransientVoiceCache(input.projectFolder);
-  const now = new Date();
-  const cacheStates = fingerprints.map((entry) => {
-    if (!entry.sourceAudioFingerprint) {
-      return conversionCacheState(entry, 'skipped');
-    }
-    const cached = findCacheEntry(cache.entries, entry.sourceAudioFingerprint);
-    if (!cached) {
-      return conversionCacheState(entry, 'miss');
-    }
-    return conversionCacheState(
-      entry,
-      isFreshCacheEntry(cached, now) ? 'hit' : 'expired',
-      cached
-    );
-  });
-  return { estimates, fingerprints, cacheStates };
-}
-
-export function combineShotVideoTakeEstimate(input: {
-  finalEstimate: GenerationEstimate;
-  transientVoiceEstimates: GenerationEstimate[];
-  transientVoiceCacheStates: Array<Record<string, unknown>>;
-  approvalBasis: unknown;
-}): GenerationEstimate {
-  const internalCost = sumKnownCosts(input.transientVoiceEstimates);
-  const finalCost = input.finalEstimate.estimatedCostUsd;
-  const estimatedCostUsd =
-    finalCost === null || internalCost === null ? null : finalCost + internalCost;
-  return {
-    ...input.finalEstimate,
-    estimatedCostUsd,
-    approvalToken: compositeApprovalToken(input.approvalBasis),
-    billableUnits: {
-      ...input.finalEstimate.billableUnits,
-      transientKlingVoiceConversions: input.transientVoiceEstimates.length,
-      transientKlingVoiceCacheStates: input.transientVoiceCacheStates,
-      finalVideo: input.finalEstimate.billableUnits,
-      internalTransientVoiceEstimates: input.transientVoiceEstimates.map((estimate) => ({
-        provider: estimate.provider,
-        model: estimate.model,
-        estimatedCostUsd: estimate.estimatedCostUsd,
-      })),
-    },
-    warnings: [
-      ...input.finalEstimate.warnings,
-      ...input.transientVoiceEstimates.flatMap((estimate) => estimate.warnings),
-    ],
-  };
-}
-
-export function compositeApprovalToken(input: unknown): string {
-  return `sha256:${crypto
-    .createHash('sha256')
-    .update(stableStringify(input))
-    .digest('hex')}`;
-}
-
 export async function resolveKlingTransientVoices(input: {
   projectFolder: string;
   conversions: KlingTransientVoiceConversion[];
@@ -197,10 +131,10 @@ export async function resolveKlingTransientVoices(input: {
     outputProjectRelativeRoot: string;
     inputRoot: string;
   }) => Promise<GenerationRunResult>;
-  estimateGeneration: (input: {
-    policy: ReturnType<typeof klingTransientVoiceGenerationPolicy>;
-    request: GenerationRequest;
-  }) => Promise<GenerationEstimate>;
+  estimateGenerationCost: (input: {
+    priceKey: GenerationPriceKey;
+    pricingInputs: GenerationPricingInputs;
+  }) => Promise<GenerationCostEstimate>;
 }): Promise<KlingTransientVoiceResolutionReport> {
   const fingerprints = await fingerprintConversions(input);
   if (input.simulate) {
@@ -261,15 +195,15 @@ export async function resolveKlingTransientVoices(input: {
   const freshEntriesToWrite: KlingTransientVoiceCacheEntry[] = [];
   for (const miss of liveMisses.values()) {
     const request = klingTransientVoiceGenerationRequest(miss.conversion);
-    const estimate = await input.estimateGeneration({
-      policy: klingTransientVoiceGenerationPolicy(),
-      request,
+    const estimate = await input.estimateGenerationCost({
+      priceKey: klingTransientVoicePriceKey(),
+      pricingInputs: klingTransientVoicePricingInputs(),
     });
     const result = await input.runGeneration({
       policy: klingTransientVoiceGenerationPolicy(),
       request,
       mode: 'live',
-      approvalToken: estimate.approvalToken,
+      approvalToken: klingTransientVoiceApprovalToken(estimate),
       outputRoot: path.join(input.projectFolder, KLING_TRANSIENT_VOICE_RESPONSE_PROJECT_ROOT),
       outputProjectRelativeRoot: KLING_TRANSIENT_VOICE_RESPONSE_PROJECT_ROOT,
       inputRoot: input.projectFolder,
@@ -313,6 +247,18 @@ export async function resolveKlingTransientVoices(input: {
   return { resolutions, warnings };
 }
 
+function klingTransientVoiceApprovalToken(
+  estimate: GenerationCostEstimate
+): string {
+  if (estimate.state === 'priced') {
+    return estimate.costApprovalToken;
+  }
+  throw new ProjectDataError(
+    'CORE_SHOT_VIDEO_KLING_TRANSIENT_VOICE_COST_UNAVAILABLE',
+    'Kling transient voice creation requires a priced cost estimate before running live.'
+  );
+}
+
 export function injectKlingTransientVoiceIds(input: {
   payload: Record<string, unknown>;
   requestParameters: Record<string, unknown>;
@@ -351,16 +297,6 @@ async function fingerprintConversions(input: {
       }),
     }))
   );
-}
-
-function uniqueFingerprintedConversions(
-  entries: FingerprintedConversion[]
-): FingerprintedConversion[] {
-  const unique = new Map<string, FingerprintedConversion>();
-  for (const entry of entries) {
-    unique.set(fingerprintedConversionKey(entry), entry);
-  }
-  return [...unique.values()];
 }
 
 async function readKlingTransientVoiceCache(
@@ -453,24 +389,6 @@ function isFreshCacheEntry(
 ): boolean {
   const expiresAt = Date.parse(entry.expiresAt);
   return Number.isFinite(expiresAt) && expiresAt > now.getTime();
-}
-
-function conversionCacheState(
-  entry: FingerprintedConversion,
-  cacheResult: 'hit' | 'miss' | 'skipped' | 'expired',
-  cached?: KlingTransientVoiceCacheEntry
-): Record<string, unknown> {
-  return {
-    provider: KLING_TRANSIENT_VOICE_PROVIDER,
-    model: KLING_TRANSIENT_VOICE_MODEL,
-    sourceAudioAssetFileId: entry.conversion.sourceAudio.assetFileId,
-    sourceProjectPath: entry.conversion.sourceAudio.projectRelativePath,
-    sourceAudioFingerprint: entry.sourceAudioFingerprint,
-    targetElementId: entry.conversion.targetElementId,
-    cacheProjectPath: KLING_TRANSIENT_VOICE_CACHE_PROJECT_PATH,
-    cacheResult,
-    expiresAt: cached?.expiresAt,
-  };
 }
 
 async function readVoiceIdFromCreateVoiceResult(input: {
@@ -587,28 +505,4 @@ function cacheKey(sourceAudioFingerprint: string): string {
 function safeTransientVoiceOutputStem(input: string): string {
   return input.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') ||
     'dialogue-audio';
-}
-
-function sumKnownCosts(estimates: GenerationEstimate[]): number | null {
-  let total = 0;
-  for (const estimate of estimates) {
-    if (estimate.estimatedCostUsd === null) {
-      return null;
-    }
-    total += estimate.estimatedCostUsd;
-  }
-  return total;
-}
-
-function stableStringify(input: unknown): string {
-  if (Array.isArray(input)) {
-    return `[${input.map(stableStringify).join(',')}]`;
-  }
-  if (input && typeof input === 'object') {
-    return `{${Object.entries(input as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, value]) => `${JSON.stringify(key)}:${stableStringify(value)}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(input);
 }

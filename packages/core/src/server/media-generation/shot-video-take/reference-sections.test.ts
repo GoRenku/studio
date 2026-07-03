@@ -490,9 +490,8 @@ describe('shot video take preflight and validation', () => {
             dependencyId: 'reference-image:shot:shot_001',
             state: 'selected-planned',
             pricing: expect.objectContaining({
-              state: 'unpriced',
-              reason:
-                'Shot video input references are not available for the requested reference mode.',
+              state: 'priced',
+              estimatedUsd: 0.005,
             }),
           }),
         }),
@@ -732,9 +731,10 @@ describe('shot video take preflight and validation', () => {
     const audioLine = report.plan.dependencyInventory.dependencies.find(
       (line) => line.dependencyKind === 'reference-audio'
     );
-    expect(report.plan.estimate.estimatedTotalUsd).toBeGreaterThanOrEqual(
-      audioLine?.pricing.state === 'priced' ? audioLine.pricing.estimatedUsd : 0
-    );
+    expect(audioLine?.pricing).toMatchObject({
+      state: 'priced',
+      estimatedUsd: expectedUrbanAudioEstimateUsd,
+    });
   });
 
   it('reads multi-cut reference selections from the selected shot while generation aggregates the take', async () => {

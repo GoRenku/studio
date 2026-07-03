@@ -5,7 +5,6 @@ import type {
   CastProfileGenerationSpec,
   CastProfileModelChoice,
   CastProfileModelListReport,
-  MediaGenerationEstimateReport,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   MediaGenerationDependencySlot,
@@ -33,6 +32,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
+import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
 import { declareCastProfileDependencySlots } from './cast-profile-dependency-slots.js';
 import type { MediaGenerationDependencyDeclarationInput } from './purpose-registry.js';
 import {
@@ -304,28 +304,13 @@ export async function prepareCastProfileDraftSpec(input: {
   };
 }
 
-export async function estimateCastProfileSpec(
-  input: CastProfileSpecIdInput
-): Promise<MediaGenerationEstimateReport> {
-  const prepared = await prepareCastProfileSpec(input);
-  const { estimateGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
-    throw new ProjectDataError(
-      'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Cast profile model.'
-    );
-  }
-  return { ...prepared, estimate };
-}
-
 export async function runCastProfileSpec(
   input: RunCastProfileSpecInput
 ): Promise<MediaGenerationRunReport> {
   const prepared = await prepareCastProfileSpec(input);
-  const { estimateGeneration, runGeneration } = await loadGenerationEngines();
-  const estimate = await estimateGeneration(prepared.generation);
-  if (estimate.estimatedCostUsd === null) {
+  const { runGeneration } = await loadGenerationEngines();
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
+  if (estimate.state !== 'priced') {
     throw new ProjectDataError(
       'PROJECT_DATA273',
       'Generation estimate is unknown for the selected Cast profile model.'
@@ -335,7 +320,7 @@ export async function runCastProfileSpec(
   const result = await runGeneration({
     ...prepared.generation,
     mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -348,7 +333,7 @@ export async function runCastProfileSpec(
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
     estimate,
-    approvalToken: estimate.approvalToken,
+    approvalToken: estimate.costApprovalToken,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

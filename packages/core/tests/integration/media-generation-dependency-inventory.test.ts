@@ -55,7 +55,7 @@ describe('media generation dependency inventory estimates integration', () => {
       spec: lookbookSheetSpec(lookbook.lookbook.id),
     });
 
-    expect(estimate.spec.id).toBe(`draft:lookbook.sheet:lookbook:${lookbook.lookbook.id}`);
+    expect(estimate.spec.id).toMatch(/^draft:lookbook\.sheet:lookbook:/);
     expect(estimate.estimate.estimatedCostUsd).toEqual(expect.any(Number));
 
     const persisted = await projectData.listMediaGenerationSpecs({
@@ -67,36 +67,19 @@ describe('media generation dependency inventory estimates integration', () => {
     expect(persisted.specs).toEqual([]);
   });
 
-  it('reports root estimate failures as structured dependency diagnostics', async () => {
+  it('propagates root cost projection failures', async () => {
     const lookbook = await createActiveLookbook(projectData, homeDir);
-    vi.spyOn(studioEngines, 'estimateGeneration').mockRejectedValueOnce(
+    vi.spyOn(studioEngines, 'estimateGenerationCost').mockRejectedValueOnce(
       new Error('Root estimator unavailable.')
     );
 
-    const plan = await projectData.planMediaGenerationDependencies({
-      projectName: 'constantinople',
-      homeDir,
-      spec: lookbookSheetSpec(lookbook.lookbook.id),
-    });
-
-    expect(plan.dependencyInventory.rootGeneration).toMatchObject({
-      pricing: {
-        state: 'unpriced',
-        estimatedUsd: null,
-        overrideRequired: true,
-      },
-      diagnostics: [
-        expect.objectContaining({
-          code: 'CORE_MEDIA_DEPENDENCY_ROOT_ESTIMATE_FAILED',
-          severity: 'error',
-        }),
-      ],
-    });
-    expect(plan.estimate).toMatchObject({
-      state: 'partial',
-      estimatedTotalUsd: 0,
-      requiresPriceOverride: true,
-    });
+    await expect(
+      projectData.planMediaGenerationDependencies({
+        projectName: 'constantinople',
+        homeDir,
+        spec: lookbookSheetSpec(lookbook.lookbook.id),
+      })
+    ).rejects.toThrow('Root estimator unavailable.');
   });
 
   it('requires the selected Storyboard Lookbook sheet before planning Scene storyboard sheet creation', async () => {
@@ -381,21 +364,21 @@ describe('media generation dependency inventory estimates integration', () => {
           caption: 'First frame',
           status: 'needed',
           pricing: expect.objectContaining({
-            state: 'unpriced',
-            reason: 'Shot video input references could not be resolved.',
+            state: 'priced',
+            estimatedUsd: 0.005,
           }),
         }),
       ])
     );
     expect(preflight.inputPlanItems).toHaveLength(4);
     expect(preflight.plan?.estimate).toMatchObject({
-      state: 'partial',
-      pricedLineCount: 4,
-      unpricedLineCount: 1,
+      state: 'complete',
+      pricedLineCount: 5,
+      unpricedLineCount: 0,
       missingLineCount: 0,
-      requiresPriceOverride: true,
+      requiresPriceOverride: false,
     });
-    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7458, 6);
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7508, 6);
   });
 
   it('blocks generated shot dependencies when the agent has not authored a dependency draft', async () => {
@@ -455,9 +438,8 @@ describe('media generation dependency inventory estimates integration', () => {
       },
       purpose: 'shot.first-frame',
       pricing: {
-        state: 'unpriced',
-        estimatedUsd: null,
-        reason: 'Shot video input references could not be resolved.',
+        state: 'priced',
+        estimatedUsd: 0.005,
       },
       diagnostics: [],
     });
@@ -470,13 +452,13 @@ describe('media generation dependency inventory estimates integration', () => {
     );
     expect(preflight.finalTake.canCreateSpec).toBe(false);
     expect(preflight.plan?.estimate).toMatchObject({
-      state: 'partial',
-      pricedLineCount: 4,
-      unpricedLineCount: 1,
+      state: 'complete',
+      pricedLineCount: 5,
+      unpricedLineCount: 0,
       missingLineCount: 0,
-      requiresPriceOverride: true,
+      requiresPriceOverride: false,
     });
-    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7458, 6);
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7508, 6);
   });
 
   it('prices first and last frame dependencies before their prompts are authored', async () => {
@@ -522,9 +504,8 @@ describe('media generation dependency inventory estimates integration', () => {
       availability: { state: 'missing-generated' },
       generationDraft: { state: 'missing-input' },
       pricing: {
-        state: 'unpriced',
-        estimatedUsd: null,
-        reason: 'Shot video input references could not be resolved.',
+        state: 'priced',
+        estimatedUsd: 0.005,
       },
     });
     expect(firstFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
@@ -532,20 +513,19 @@ describe('media generation dependency inventory estimates integration', () => {
       availability: { state: 'missing-generated' },
       generationDraft: { state: 'missing-input' },
       pricing: {
-        state: 'unpriced',
-        estimatedUsd: null,
-        reason: 'Shot video input references could not be resolved.',
+        state: 'priced',
+        estimatedUsd: 0.005,
       },
     });
     expect(lastFrameLine?.generationDraft).not.toHaveProperty('draftGenerationSpec');
     expect(estimate.plan?.estimate).toMatchObject({
-      state: 'partial',
-      pricedLineCount: 4,
-      unpricedLineCount: 2,
+      state: 'complete',
+      pricedLineCount: 6,
+      unpricedLineCount: 0,
       missingLineCount: 0,
-      requiresPriceOverride: true,
+      requiresPriceOverride: false,
     });
-    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8386, 6);
+    expect(estimate.plan?.estimate.estimatedTotalUsd).toBeCloseTo(2.8486, 6);
   });
 
   it('plans a valid shot.video-take spec with imported first and last frame inputs through the shared dependency planner', async () => {

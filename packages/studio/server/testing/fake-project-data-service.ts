@@ -350,14 +350,14 @@ export function fakeProjectDataService(): NonNullable<
           'media_generation_spec_dialogue_audio',
           input.spec
         ),
-        providerPayload: {},
         estimate: {
+          state: 'priced',
           provider: 'elevenlabs',
           model: 'eleven_v3',
           mediaKind: 'audio',
-          pricing: null,
+          pricing: 0.01,
           estimatedCostUsd: 0.01,
-          approvalToken: 'dialogue-audio-approval-token',
+          costApprovalToken: 'dialogue-audio-approval-token',
           billableUnits: {},
           warnings: [],
         },
@@ -787,28 +787,14 @@ export function fakeProjectDataService(): NonNullable<
     async estimateLookbookImageSpec(input) {
       return {
         spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookImageSpec()),
-        providerPayload: {},
-        generation: {
-          policy: {
-            provider: 'fal-ai',
-            model: 'nano-banana-2',
-            mediaKind: 'image',
-            mode: 'text-to-image',
-            outputCount: 1,
-          },
-          request: {
-            prompt: 'A Lookbook image.',
-            parameters: {},
-            outputNames: ['lookbook-image.png'],
-          },
-        },
         estimate: {
+          state: 'priced',
           provider: 'fal-ai',
           model: 'nano-banana-2',
           mediaKind: 'image',
           pricing: 0,
           estimatedCostUsd: 0,
-          approvalToken: 'sha256:test',
+          costApprovalToken: 'sha256:test',
           billableUnits: { outputCount: 1 },
           warnings: [],
         },
@@ -827,8 +813,9 @@ export function fakeProjectDataService(): NonNullable<
           specSnapshot: makeLookbookImageSpec(),
           providerPayload: {},
           estimateSnapshot: {
+            state: 'priced',
             estimatedCostUsd: 0,
-            approvalToken: 'sha256:test',
+            costApprovalToken: 'sha256:test',
           },
           simulated: Boolean(input.simulate),
           status: input.simulate ? 'simulated' : 'completed',
@@ -947,28 +934,14 @@ export function fakeProjectDataService(): NonNullable<
     async estimateLookbookSheetSpec(input) {
       return {
         spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookSheetSpec()),
-        providerPayload: {},
-        generation: {
-          policy: {
-            provider: 'fal-ai',
-            model: 'nano-banana-2',
-            mediaKind: 'image',
-            mode: 'text-to-image',
-            outputCount: 1,
-          },
-          request: {
-            prompt: 'A Lookbook sheet.',
-            parameters: {},
-            outputNames: ['lookbook-sheet.png'],
-          },
-        },
         estimate: {
+          state: 'priced',
           provider: 'fal-ai',
           model: 'nano-banana-2',
           mediaKind: 'image',
           pricing: 0,
           estimatedCostUsd: 0,
-          approvalToken: 'sha256:test',
+          costApprovalToken: 'sha256:test',
           billableUnits: { outputCount: 1 },
           warnings: [],
         },
@@ -987,8 +960,9 @@ export function fakeProjectDataService(): NonNullable<
           specSnapshot: makeLookbookSheetSpec(),
           providerPayload: {},
           estimateSnapshot: {
+            state: 'priced',
             estimatedCostUsd: 0,
-            approvalToken: 'sha256:test',
+            costApprovalToken: 'sha256:test',
           },
           simulated: Boolean(input.simulate),
           status: input.simulate ? 'simulated' : 'completed',
@@ -1240,12 +1214,13 @@ export function fakeProjectDataService(): NonNullable<
           input.production?.modelChoice ??
           'fal-ai/bytedance/seedance-2.0',
         estimate: {
+          state: 'priced',
           provider: 'fal-ai',
           model: 'fal-ai/bytedance/seedance-2.0',
           mediaKind: 'video',
-          pricing: null,
+          pricing: 0.42,
           estimatedCostUsd: 0.42,
-          approvalToken: 'fake-approval-token',
+          costApprovalToken: 'fake-approval-token',
           billableUnits: {},
           warnings: [],
         },
@@ -1358,12 +1333,13 @@ function makeShotVideoTakePlan(input: {
     },
     diagnostics: [],
     finalEstimate: {
+      state: 'priced',
       provider: 'fal-ai',
       model: 'bytedance/seedance-2.0/text-to-video',
       mediaKind: 'video',
-      pricing: null,
+      pricing: 0.42,
       estimatedCostUsd: 0.42,
-      approvalToken: 'fake-approval-token',
+      costApprovalToken: 'fake-approval-token',
       billableUnits: {},
       warnings: [],
     },

@@ -3,14 +3,16 @@ import { listShotVideoTakeModels } from '../media-generation/shot-video-take/mod
 import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, resolveShotVideoTakeVideoFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/shot-video-take/input-selection.js';
 import { createSceneShotVideoTake, deleteSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakePick, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeDirection, updateSceneShotVideoTakeShots, updateSceneShotVideoTakeStructureMode } from '../media-generation/shot-video-take/takes.js';
 import { updateSceneShotVideoTakeCharacterSheetSelection, updateSceneShotVideoTakeLocationSheetSelection, updateSceneShotVideoTakeLookbookSheetSelection, updateSceneShotVideoTakeDialogueAudioSelection, updateSceneShotVideoTakeReferenceInclusion } from '../media-generation/shot-video-take/reference-selection-mutations.js';
-import { estimateShotVideoTakeProduction, planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
+import { planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
+import { estimateShotVideoTakeProduction } from '../media-generation/estimation/shot-video-take-production-estimates.js';
 import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
-import { estimateShotVideoTakeSpec, prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
+import { prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
 import { runShotVideoTakeSpec } from '../media-generation/shot-video-take/generation-runs.js';
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
 import { applySceneShotVideoTakeAuthoringDocument, readSceneShotVideoTakeAuthoringContext, validateSceneShotVideoTakeAuthoringDocument } from '../media-generation/shot-video-take/authoring.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
+import * as estimation from '../media-generation/estimation/spec-estimates.js';
 export function createShotVideoTakeServiceWiring() {
   return {
     createSceneShotVideoTake,
@@ -46,7 +48,7 @@ export function createShotVideoTakeServiceWiring() {
     readShotFirstFrameSpec: sharedGeneration.readMediaGenerationSpec,
     listShotFirstFrameSpecs,
     prepareShotFirstFrameSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateShotFirstFrameSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateShotFirstFrameSpec: estimation.estimateMediaGenerationSpec,
     runShotFirstFrameSpec: sharedGeneration.runMediaGenerationSpec,
     validateShotLastFrameSpec,
     createShotLastFrameSpec: sharedGeneration.createMediaGenerationSpec,
@@ -54,7 +56,7 @@ export function createShotVideoTakeServiceWiring() {
     readShotLastFrameSpec: sharedGeneration.readMediaGenerationSpec,
     listShotLastFrameSpecs,
     prepareShotLastFrameSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateShotLastFrameSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateShotLastFrameSpec: estimation.estimateMediaGenerationSpec,
     runShotLastFrameSpec: sharedGeneration.runMediaGenerationSpec,
     validateShotReferenceImageSpec,
     createShotReferenceImageSpec: sharedGeneration.createMediaGenerationSpec,
@@ -62,7 +64,7 @@ export function createShotVideoTakeServiceWiring() {
     readShotReferenceImageSpec: sharedGeneration.readMediaGenerationSpec,
     listShotReferenceImageSpecs,
     prepareShotReferenceImageSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateShotReferenceImageSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateShotReferenceImageSpec: estimation.estimateMediaGenerationSpec,
     runShotReferenceImageSpec: sharedGeneration.runMediaGenerationSpec,
     validateShotVideoPromptSheetSpec,
     createShotVideoPromptSheetSpec:
@@ -75,17 +77,16 @@ export function createShotVideoTakeServiceWiring() {
     prepareShotVideoPromptSheetSpec:
       sharedGeneration.prepareMediaGenerationSpec,
     estimateShotVideoPromptSheetSpec:
-      sharedGeneration.estimateMediaGenerationSpec,
-    runShotVideoPromptSheetSpec:
-      sharedGeneration.runMediaGenerationSpec,
-    validateShotVideoTakeSpec: validateShotVideoTakeSpec,
+      estimation.estimateMediaGenerationSpec,
+    runShotVideoPromptSheetSpec: sharedGeneration.runMediaGenerationSpec,
+    validateShotVideoTakeSpec,
     createShotVideoTakeSpec: sharedGeneration.createMediaGenerationSpec,
     updateShotVideoTakeSpec: sharedGeneration.updateMediaGenerationSpec,
     readShotVideoTakeSpec: sharedGeneration.readMediaGenerationSpec,
-    listShotVideoTakeSpecs: listShotVideoTakeSpecs,
-    prepareShotVideoTakeSpec: prepareShotVideoTakeSpec,
-    estimateShotVideoTakeSpec: estimateShotVideoTakeSpec,
-    runShotVideoTakeSpec: runShotVideoTakeSpec,
+    listShotVideoTakeSpecs,
+    prepareShotVideoTakeSpec,
+    estimateShotVideoTakeSpec: estimation.estimateMediaGenerationSpec,
+    runShotVideoTakeSpec,
     importShotFirstFrame,
     importShotLastFrame,
     importShotReferenceImage,

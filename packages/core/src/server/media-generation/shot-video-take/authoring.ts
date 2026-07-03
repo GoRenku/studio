@@ -58,9 +58,11 @@ import {
   buildAgentMediaReport,
 } from '../shared-generation-service.js';
 import {
-  finalTakeSpecForPreflight,
   previewShotVideoTakeProductionForContext,
 } from './preflight-report.js';
+import {
+  buildShotVideoTakeFinalSpec,
+} from './final-spec-construction.js';
 import {
   buildShotVideoTakeProductionPlanReport,
   planShotVideoTakeProductionForContext,
@@ -717,7 +719,7 @@ async function previewProviderPayload(input: {
   preflight: ShotVideoTakePreflightReport;
 }): Promise<ShotVideoTakeProviderPayloadPreview> {
   try {
-    const spec = finalTakeSpecForPreflight({
+    const spec = buildShotVideoTakeFinalSpec({
       context: input.context,
       inputModeId: input.preflight.inputModeId,
       modelChoice: input.preflight.modelChoice,

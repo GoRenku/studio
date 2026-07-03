@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { MediaGenerationEstimateReport } from '../../src/client/index.js';
 
-vi.mock('../../src/server/media-generation/shared-generation-service.js', () => ({
+vi.mock('../../src/server/media-generation/estimation/spec-estimates.js', () => ({
   estimateDraftMediaGenerationSpec: vi.fn(),
 }));
 
-import { estimateDraftMediaGenerationSpec } from '../../src/server/media-generation/shared-generation-service.js';
-import { estimateMediaGenerationDependencyDraft } from '../../src/server/media-generation/dependency-draft-estimates.js';
+import { estimateDraftMediaGenerationSpec } from '../../src/server/media-generation/estimation/spec-estimates.js';
+import { estimateMediaGenerationDependencyDraft } from '../../src/server/media-generation/estimation/dependency-draft-estimates.js';
 
 const mockedEstimateDraftMediaGenerationSpec = vi.mocked(
   estimateDraftMediaGenerationSpec
@@ -16,9 +16,14 @@ describe('media generation dependency draft estimate classification', () => {
   it('classifies supported provider routes without pricing as unpriced dependency lines', async () => {
     mockedEstimateDraftMediaGenerationSpec.mockResolvedValueOnce({
       estimate: {
+        state: 'unpriced',
         provider: 'fal-ai',
         model: 'image-model',
+        mediaKind: 'image',
+        pricing: null,
         estimatedCostUsd: null,
+        reason: 'No pricing is configured for this model.',
+        costApprovalToken: null,
         warnings: ['No pricing is configured for this model.'],
         billableUnits: {},
       },
@@ -49,7 +54,7 @@ describe('media generation dependency draft estimate classification', () => {
     });
   });
 
-  it('classifies invalid draft estimate failures as structured diagnostics', async () => {
+  it('propagates invalid draft estimate failures', async () => {
     mockedEstimateDraftMediaGenerationSpec.mockRejectedValueOnce(
       new Error('Draft estimate exploded.')
     );
@@ -63,19 +68,6 @@ describe('media generation dependency draft estimate classification', () => {
         dependencyId: 'lookbook-sheet:lookbook-a',
         label: 'Lookbook sheet',
       })
-    ).resolves.toEqual({
-      pricing: {
-        state: 'unpriced',
-        estimatedUsd: null,
-        reason: 'Draft estimate exploded.',
-        overrideRequired: true,
-      },
-      diagnostics: [
-        expect.objectContaining({
-          code: 'CORE_MEDIA_DEPENDENCY_ESTIMATE_FAILED',
-          severity: 'error',
-        }),
-      ],
-    });
+    ).rejects.toThrow('Draft estimate exploded.');
   });
 });

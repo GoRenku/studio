@@ -1,4 +1,5 @@
 import * as sceneDialogueAudio from '../media-generation/scene-dialogue-audio.js';
+import * as estimation from '../media-generation/estimation/spec-estimates.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 type SceneDialogueAudioMethods = Pick<
@@ -25,7 +26,7 @@ export function createSceneDialogueAudioServiceWiring(): SceneDialogueAudioMetho
     updateSceneDialogueAudioSpec: sceneDialogueAudio.updateSceneDialogueAudioSpec,
     listSceneDialogueAudioSpecs: sceneDialogueAudio.listSceneDialogueAudioSpecs,
     prepareSceneDialogueAudioSpec: sceneDialogueAudio.prepareSceneDialogueAudioSpec,
-    estimateSceneDialogueAudioDraft: sceneDialogueAudio.estimateSceneDialogueAudioDraft,
+    estimateSceneDialogueAudioDraft: estimation.estimateDraftMediaGenerationSpec,
     updateSceneDialogueAudioSetup: sceneDialogueAudio.updateSceneDialogueAudioSetup,
     generateSceneDialogueAudioTake: sceneDialogueAudio.generateSceneDialogueAudioTake,
     deleteSceneDialogueAudioTake: sceneDialogueAudio.deleteSceneDialogueAudioTake,

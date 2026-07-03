@@ -7,6 +7,7 @@ import * as lookbookImage from '../media-generation/lookbook-image.js';
 import * as lookbookSheet from '../media-generation/lookbook-sheet.js';
 import * as sceneStoryboardSheet from '../media-generation/scene-storyboard-sheet.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
+import * as estimation from '../media-generation/estimation/spec-estimates.js';
 export function createMediaGenerationServiceWiring() {
   return {
     buildLookbookImageContext: lookbookImage.buildLookbookImageContext,
@@ -17,7 +18,7 @@ export function createMediaGenerationServiceWiring() {
     readLookbookImageSpec: sharedGeneration.readMediaGenerationSpec,
     listLookbookImageSpecs: lookbookImage.listLookbookImageSpecs,
     prepareLookbookImageSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateLookbookImageSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateLookbookImageSpec: estimation.estimateMediaGenerationSpec,
     runLookbookImageSpec: sharedGeneration.runMediaGenerationSpec,
     recordLookbookImageRun: lookbookImage.recordLookbookImageRun,
     importLookbookImageMedia: lookbookImage.importLookbookImageMedia,
@@ -29,7 +30,7 @@ export function createMediaGenerationServiceWiring() {
     readLookbookSheetSpec: sharedGeneration.readMediaGenerationSpec,
     listLookbookSheetSpecs: lookbookSheet.listLookbookSheetSpecs,
     prepareLookbookSheetSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateLookbookSheetSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateLookbookSheetSpec: estimation.estimateMediaGenerationSpec,
     runLookbookSheetSpec: sharedGeneration.runMediaGenerationSpec,
     recordLookbookSheetRun: lookbookSheet.recordLookbookSheetRun,
     importLookbookSheetMedia: lookbookSheet.importLookbookSheetMedia,
@@ -37,13 +38,13 @@ export function createMediaGenerationServiceWiring() {
     validateCastCharacterSheetSpec: characterSheet.validateCastCharacterSheetSpec, createCastCharacterSheetSpec: sharedGeneration.createMediaGenerationSpec,
     updateCastCharacterSheetSpec: sharedGeneration.updateMediaGenerationSpec, readCastCharacterSheetSpec: sharedGeneration.readMediaGenerationSpec,
     listCastCharacterSheetSpecs: characterSheet.listCastCharacterSheetSpecs, prepareCastCharacterSheetSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateCastCharacterSheetSpec: sharedGeneration.estimateMediaGenerationSpec, runCastCharacterSheetSpec: sharedGeneration.runMediaGenerationSpec,
+    estimateCastCharacterSheetSpec: estimation.estimateMediaGenerationSpec, runCastCharacterSheetSpec: sharedGeneration.runMediaGenerationSpec,
     recordCastCharacterSheetRun: characterSheet.recordCastCharacterSheetRun, importCastCharacterSheetMedia: characterSheet.importCastCharacterSheetMedia,
     buildCastProfileContext: castProfile.buildCastProfileContext, listCastProfileModels: castProfile.listCastProfileModels,
     validateCastProfileSpec: castProfile.validateCastProfileSpec, createCastProfileSpec: sharedGeneration.createMediaGenerationSpec,
     updateCastProfileSpec: sharedGeneration.updateMediaGenerationSpec, readCastProfileSpec: sharedGeneration.readMediaGenerationSpec,
     listCastProfileSpecs: castProfile.listCastProfileSpecs, prepareCastProfileSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateCastProfileSpec: sharedGeneration.estimateMediaGenerationSpec, runCastProfileSpec: sharedGeneration.runMediaGenerationSpec,
+    estimateCastProfileSpec: estimation.estimateMediaGenerationSpec, runCastProfileSpec: sharedGeneration.runMediaGenerationSpec,
     recordCastProfileRun: castProfile.recordCastProfileRun, importCastProfileMedia: castProfile.importCastProfileMedia,
     buildCastVoiceSampleContext: castVoiceSample.buildCastVoiceSampleContext,
     listCastVoiceSampleModels: castVoiceSample.listCastVoiceSampleModels,
@@ -53,7 +54,7 @@ export function createMediaGenerationServiceWiring() {
     readCastVoiceSampleSpec: sharedGeneration.readMediaGenerationSpec,
     listCastVoiceSampleSpecs: castVoiceSample.listCastVoiceSampleSpecs,
     prepareCastVoiceSampleSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateCastVoiceSampleSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateCastVoiceSampleSpec: estimation.estimateMediaGenerationSpec,
     runCastVoiceSampleSpec: sharedGeneration.runMediaGenerationSpec,
     buildLocationEnvironmentSheetContext: locationSheet.buildLocationEnvironmentSheetContext,
     listLocationEnvironmentSheetModels: locationSheet.listLocationEnvironmentSheetModels,
@@ -63,7 +64,7 @@ export function createMediaGenerationServiceWiring() {
     readLocationEnvironmentSheetSpec: sharedGeneration.readMediaGenerationSpec,
     listLocationEnvironmentSheetSpecs: locationSheet.listLocationEnvironmentSheetSpecs,
     prepareLocationEnvironmentSheetSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateLocationEnvironmentSheetSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateLocationEnvironmentSheetSpec: estimation.estimateMediaGenerationSpec,
     runLocationEnvironmentSheetSpec: sharedGeneration.runMediaGenerationSpec,
     recordLocationEnvironmentSheetRun: locationSheet.recordLocationEnvironmentSheetRun,
     importLocationEnvironmentSheetMedia: locationSheet.importLocationEnvironmentSheetMedia,
@@ -75,7 +76,7 @@ export function createMediaGenerationServiceWiring() {
     readLocationHeroSpec: sharedGeneration.readMediaGenerationSpec,
     listLocationHeroSpecs: locationHero.listLocationHeroSpecs,
     prepareLocationHeroSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateLocationHeroSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateLocationHeroSpec: estimation.estimateMediaGenerationSpec,
     runLocationHeroSpec: sharedGeneration.runMediaGenerationSpec,
     recordLocationHeroRun: locationHero.recordLocationHeroRun,
     importLocationHeroMedia: locationHero.importLocationHeroMedia,
@@ -88,7 +89,7 @@ export function createMediaGenerationServiceWiring() {
     readSceneStoryboardSheetSpec: sharedGeneration.readMediaGenerationSpec,
     listSceneStoryboardSheetSpecs: sceneStoryboardSheet.listSceneStoryboardSheetSpecs,
     prepareSceneStoryboardSheetSpec: sharedGeneration.prepareMediaGenerationSpec,
-    estimateSceneStoryboardSheetSpec: sharedGeneration.estimateMediaGenerationSpec,
+    estimateSceneStoryboardSheetSpec: estimation.estimateMediaGenerationSpec,
     runSceneStoryboardSheetSpec: sharedGeneration.runMediaGenerationSpec,
     recordSceneStoryboardSheetRun: sceneStoryboardSheet.recordSceneStoryboardSheetRun,
     importSceneStoryboardImagesMedia:

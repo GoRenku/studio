@@ -76,6 +76,7 @@ export type * from './trash.js';
 export type * from './agent-media.js';
 export type * from './media-generation-purpose.js';
 export type * from './media-generation-target.js';
+export type * from './media-generation-cost.js';
 export type * from './media-generation-dependency.js';
 export type * from './media-generation-lifecycle.js';
 export type * from './lookbook-media-generation.js';

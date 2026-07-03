@@ -1,4 +1,5 @@
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
+import * as estimation from '../media-generation/estimation/spec-estimates.js';
 
 export function createSharedMediaGenerationServiceWiring() {
   return {
@@ -11,8 +12,8 @@ export function createSharedMediaGenerationServiceWiring() {
     listMediaGenerationSpecs: sharedGeneration.listMediaGenerationSpecs,
     prepareMediaGenerationSpec: sharedGeneration.prepareMediaGenerationSpec,
     prepareDraftMediaGenerationSpec: sharedGeneration.prepareDraftMediaGenerationSpec,
-    estimateMediaGenerationSpec: sharedGeneration.estimateMediaGenerationSpec,
-    estimateDraftMediaGenerationSpec: sharedGeneration.estimateDraftMediaGenerationSpec,
+    estimateMediaGenerationSpec: estimation.estimateMediaGenerationSpec,
+    estimateDraftMediaGenerationSpec: estimation.estimateDraftMediaGenerationSpec,
     planMediaGenerationDependencies: sharedGeneration.planMediaGenerationDependencies,
     runMediaGenerationSpec: sharedGeneration.runMediaGenerationSpec,
   };

@@ -1,4 +1,4 @@
-import type { GenerationEstimate } from '@gorenku/studio-engines';
+import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import type { MediaGenerationPurpose } from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
 import type { LookbookImageGenerationSpec, LookbookImageModelChoice, LookbookSheetGenerationSpec, LookbookSheetModelChoice } from './lookbook-media-generation.js';
@@ -77,8 +77,7 @@ export interface MediaGenerationRun {
 
 export interface MediaGenerationEstimateReport {
   spec: MediaGenerationSpecRecord;
-  providerPayload: Record<string, unknown>;
-  estimate: GenerationEstimate;
+  estimate: GenerationCostEstimate;
 }
 
 export interface PreparedMediaGeneration {

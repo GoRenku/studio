@@ -72,8 +72,8 @@ describe('shot video take preflight and validation', () => {
           kind: 'dependency-generation',
           dependencyKind: 'first-frame',
           pricing: expect.objectContaining({
-            state: 'unpriced',
-            reason: 'Shot video input references could not be resolved.',
+            state: 'priced',
+            estimatedUsd: 0.005,
           }),
         }),
         expect.objectContaining({
@@ -98,12 +98,7 @@ describe('shot video take preflight and validation', () => {
       ])
     );
     expect(estimate.plan?.request.routeSettings.duration).toBe('9');
-    expect(estimate.issues).toEqual([
-      expect.objectContaining({
-        code: 'CORE_MEDIA_DEPENDENCY_ESTIMATE_FAILED',
-        message: 'Shot video input references could not be resolved.',
-      }),
-    ]);
+    expect(estimate.issues).toEqual([]);
   });
 
   it('rejects null input policies instead of treating them as omitted', async () => {

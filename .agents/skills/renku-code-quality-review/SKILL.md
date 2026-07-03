@@ -73,6 +73,7 @@ actual diff.
 rg -n "fallback|compat|compatibility|alias|shim|facade|wrapper|re-export|barrel|legacy|obsolete" <changed-paths>
 rg -n "throw new Error|catch \\(|\\.prepare\\(|session\\.sqlite|window\\.addEventListener|renku:studio-resource-changed" <changed-paths>
 rg -n "data|item|helper|manager|util|detail|snapshot|view|open\\(|load\\(|fetchData" <changed-paths>
+rg -n "estimate|pricing|costApprovalToken|approvalToken|validate|prepare|provider payload|runGeneration" <changed-paths>
 rg -n "<button|<input|<select|<textarea|<dialog" packages/studio/src
 ```
 

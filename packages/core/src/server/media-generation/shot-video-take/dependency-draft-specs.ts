@@ -3,7 +3,6 @@ import {
 } from '../../../client/index.js';
 import type {
   DraftMediaGenerationSpec,
-  MediaGenerationDependencyPricing,
   ShotVideoTakeProductionContext,
   SceneShotVideoTakeProductionState,
 } from '../../../client/index.js';
@@ -20,6 +19,10 @@ import {
   dependencyKindForPurpose,
   shotInputPurposeForDependencyKind,
 } from './purpose-config.js';
+import {
+  estimateMissingShotInputDependency,
+  estimateOnlyShotInputPrompt,
+} from '../estimation/shot-input-dependency-estimates.js';
 
 
 
@@ -92,67 +95,6 @@ export async function buildShotInputDependencyDraftSpec(
     materializationState: 'generatable',
   };
 }
-
-async function estimateMissingShotInputDependency(input: {
-  projectName?: string;
-  homeDir?: string;
-  draftGenerationSpec: DraftMediaGenerationSpec;
-}): Promise<{
-  pricing: MediaGenerationDependencyPricing;
-  estimate: import('@gorenku/studio-engines').GenerationEstimate | null;
-}> {
-  try {
-    const { estimateDraftMediaGenerationSpec } = await import(
-      '../shared-generation-service.js'
-    );
-    const estimateReport = await estimateDraftMediaGenerationSpec({
-      projectName: input.projectName,
-      homeDir: input.homeDir,
-      spec: input.draftGenerationSpec.spec,
-    });
-    const estimate = estimateReport.estimate;
-    if (estimate.estimatedCostUsd === null) {
-      return {
-        pricing: {
-          state: 'unpriced',
-          estimatedUsd: null,
-          reason:
-            estimate.warnings.join(' ') ||
-            'No pricing is configured for this dependency route.',
-          overrideRequired: true,
-        },
-        estimate,
-      };
-    }
-    return {
-      pricing: { state: 'priced', estimatedUsd: estimate.estimatedCostUsd },
-      estimate,
-    };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Dependency estimate failed.';
-    return {
-      pricing: {
-        state: 'unpriced',
-        estimatedUsd: null,
-        reason: message,
-        overrideRequired: true,
-      },
-      estimate: null,
-    };
-  }
-}
-
-
-
-export function estimateOnlyShotInputPrompt(label: string): string {
-  return [
-    `Estimate placeholder for ${label}.`,
-    'This draft is used only for pricing; an authored prompt is required before generation.',
-  ].join(' ');
-}
-
-
 
 export interface ShotVideoTakeDependencyRequest {
   kind: 'shot-video-take';

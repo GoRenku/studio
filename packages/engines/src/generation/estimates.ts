@@ -1,224 +1,454 @@
+import crypto from 'node:crypto';
 import {
   lookupModel,
   type LoadedModelCatalog,
   type ModelPriceConfig,
 } from '../model-catalog.js';
 import {
-  type GenerationEstimate,
-  type GenerationPolicy,
-  type GenerationRequest,
+  type GenerationCostEstimate,
+  type GenerationPriceKey,
+  type GenerationPricingInputs,
 } from './contracts.js';
 import { loadBundledGenerationCatalog } from './model-discovery.js';
-import { hashGenerationRequest } from './request-hash.js';
-import { validateGenerationProviderPayload } from './provider-payload-validation.js';
-import {
-  assignGenerationInputFilePayloadValue,
-  createGenerationProviderPayloadBase,
-} from './input-file-payload.js';
 
-export async function estimateGeneration(input: {
-  policy: GenerationPolicy;
-  request: GenerationRequest;
+export async function estimateGenerationCost(input: {
+  priceKey: GenerationPriceKey;
+  pricingInputs: GenerationPricingInputs;
   catalog?: LoadedModelCatalog;
-}): Promise<GenerationEstimate> {
+}): Promise<GenerationCostEstimate> {
   const catalog = input.catalog ?? (await loadBundledGenerationCatalog());
-  const model = lookupModel(catalog, input.policy.provider, input.policy.model);
+  const model = lookupModel(
+    catalog,
+    input.priceKey.provider,
+    input.priceKey.model
+  );
+  const billableUnits = billableUnitsFromPricingInputs(input.pricingInputs);
   if (!model) {
-    throw new Error(
-      `Unknown generation model: ${input.policy.provider}/${input.policy.model}.`
-    );
-  }
-  const payload = buildLogicalProviderPayload(input.policy, input.request);
-  if (!input.request.pricingInputCounts) {
-    await validateGenerationProviderPayload({
-      catalog,
-      provider: input.policy.provider,
-      model: input.policy.model,
-      payload,
+    return unpricedEstimate({
+      priceKey: input.priceKey,
+      pricing: null,
+      billableUnits,
+      reason: `No model catalog entry exists for ${input.priceKey.provider}/${input.priceKey.model}.`,
+      tokenBasis: null,
     });
   }
-  const count =
-    input.policy.outputCount ?? deriveGenerationOutputCount(payload);
-  const pricing = model.price ?? null;
-  const price =
-    pricing === null
-      ? null
-      : typeof pricing === 'number'
-        ? pricing * count
-        : priceFromConfig(pricing, payload, count, input.request.pricingInputCounts);
 
-  const approvalToken = hashGenerationRequest({
-    policy: input.policy,
-    request: input.request,
-  });
+  const pricing = model.price ?? null;
+  if (pricing === null) {
+    return unpricedEstimate({
+      priceKey: input.priceKey,
+      pricing,
+      billableUnits,
+      reason: 'No pricing is configured for this provider model.',
+      tokenBasis: null,
+    });
+  }
+
+  const missingInputs = missingPricingInputs(pricing, input.pricingInputs);
+  if (missingInputs.length > 0) {
+    return {
+      state: 'missing-pricing-input',
+      provider: input.priceKey.provider,
+      model: input.priceKey.model,
+      mediaKind: input.priceKey.mediaKind,
+      pricing,
+      estimatedCostUsd: null,
+      missingInputs,
+      costApprovalToken: null,
+      billableUnits,
+      warnings: [
+        `Missing pricing input${missingInputs.length === 1 ? '' : 's'}: ${missingInputs.join(', ')}.`,
+      ],
+    };
+  }
+
+  const outputCount = normalizedOutputCount(input.pricingInputs.outputCount);
+  const price =
+    typeof pricing === 'number'
+      ? pricing * outputCount
+      : priceFromConfig(pricing, input.pricingInputs, outputCount);
+
+  if (price === null) {
+    return unpricedEstimate({
+      priceKey: input.priceKey,
+      pricing,
+      billableUnits,
+      reason: 'No matching pricing row is configured for the requested pricing inputs.',
+      tokenBasis: {
+        priceKey: input.priceKey,
+        pricingInputs: normalizedPricingInputs(input.pricingInputs),
+        pricing,
+        state: 'unpriced',
+      },
+    });
+  }
 
   return {
-    provider: input.policy.provider,
-    model: input.policy.model,
-    mediaKind: input.policy.mediaKind,
+    state: 'priced',
+    provider: input.priceKey.provider,
+    model: input.priceKey.model,
+    mediaKind: input.priceKey.mediaKind,
     pricing,
     estimatedCostUsd: price,
-    approvalToken,
-    billableUnits: {
-      outputCount: count,
-      ...payload,
-      ...(input.request.pricingInputCounts?.image !== undefined
-        ? { inputImageCount: input.request.pricingInputCounts.image }
-        : {}),
-    },
-    warnings:
-      price === null ? ['No pricing is configured for this model.'] : [],
+    costApprovalToken: hashGenerationCostApproval({
+      priceKey: input.priceKey,
+      pricingInputs: normalizedPricingInputs(input.pricingInputs),
+      pricing,
+      state: 'priced',
+      estimatedCostUsd: price,
+    }),
+    billableUnits,
+    warnings: [],
   };
 }
 
-export function buildLogicalProviderPayload(
-  policy: GenerationPolicy,
-  request: GenerationRequest
-): Record<string, unknown> {
-  const payload = createGenerationProviderPayloadBase(policy, request);
-  for (const file of request.inputFiles ?? []) {
-    if (file.required && !file.projectRelativePath) {
-      throw new Error(
-        `Missing required generation input file for ${file.field}.`
-      );
-    }
-    const value = `renku-input://${encodeURI(file.projectRelativePath)}`;
-    assignGenerationInputFilePayloadValue({ payload, file, value });
-  }
-  return payload;
+export function hashGenerationCostApproval(input: unknown): string {
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(stableStringify(input))
+    .digest('hex')}`;
+}
+
+function unpricedEstimate(input: {
+  priceKey: GenerationPriceKey;
+  pricing: ModelPriceConfig | number | null;
+  billableUnits: Record<string, unknown>;
+  reason: string;
+  tokenBasis: unknown;
+}): Extract<GenerationCostEstimate, { state: 'unpriced' }> {
+  return {
+    state: 'unpriced',
+    provider: input.priceKey.provider,
+    model: input.priceKey.model,
+    mediaKind: input.priceKey.mediaKind,
+    pricing: input.pricing,
+    estimatedCostUsd: null,
+    reason: input.reason,
+    costApprovalToken: input.tokenBasis
+      ? hashGenerationCostApproval(input.tokenBasis)
+      : null,
+    billableUnits: input.billableUnits,
+    warnings: [input.reason],
+  };
 }
 
 function priceFromConfig(
   pricing: ModelPriceConfig,
-  payload: Record<string, unknown>,
-  count: number,
-  pricingInputCounts: GenerationRequest['pricingInputCounts']
+  inputs: GenerationPricingInputs,
+  outputCount: number
 ): number | null {
   if (typeof pricing.price === 'number') {
-    return pricing.price * count;
+    return pricing.price * outputCount;
   }
   if (typeof pricing.pricePerImage === 'number') {
-    return pricing.pricePerImage * count;
+    return pricing.pricePerImage * outputCount;
   }
   if (typeof pricing.pricePerSecond === 'number') {
     return (
-      pricing.pricePerSecond * seconds(payload) * count +
-      inputImageCost(pricing, payload, count, pricingInputCounts)
+      pricing.pricePerSecond * seconds(inputs.durationSeconds) * outputCount +
+      inputImageCost(pricing, inputs, outputCount)
     );
   }
   if (typeof pricing.pricePerMinute === 'number') {
-    return pricing.pricePerMinute * Math.ceil(seconds(payload) / 60) * count;
+    return (
+      pricing.pricePerMinute *
+      Math.ceil(seconds(inputs.durationSeconds) / 60) *
+      outputCount
+    );
   }
   if (typeof pricing.pricePerCharacter === 'number') {
-    return pricing.pricePerCharacter * characters(payload) * count;
+    return pricing.pricePerCharacter * characterCount(inputs) * outputCount;
+  }
+  if (typeof pricing.pricePerMegapixel === 'number') {
+    return megapixelPrice(pricing, inputs, outputCount);
   }
   if (pricing.function === 'costByImageSizeAndQuality' && pricing.prices) {
     const row =
       pricing.prices.find((candidate) =>
-        imageSizeAndQualityRowMatches(candidate, payload)
-      ) ?? nearestCustomImageSizeRow(pricing.prices, payload);
+        imageSizeAndQualityRowMatches(candidate, inputs)
+      ) ?? nearestCustomImageSizeRow(pricing.prices, inputs);
     const pricePerImage = row?.pricePerImage;
-    return typeof pricePerImage === 'number' ? pricePerImage * count : null;
+    return typeof pricePerImage === 'number'
+      ? pricePerImage * outputCount
+      : null;
   }
   if (pricing.function === 'costByImageAndResolution' && pricing.prices) {
     const row = pricing.prices.find((candidate) =>
-      Object.entries(candidate).every(([key, value]) => {
-        if (key === 'pricePerImage') {
-          return true;
-        }
-        return payload[key] === value;
+      rowMatches(candidate, {
+        resolution: inputs.resolution,
       })
     );
     const pricePerImage = row?.pricePerImage;
-    return typeof pricePerImage === 'number' ? pricePerImage * count : null;
-  }
-  if (pricing.function === 'costByVideoDurationAndResolution' && pricing.prices) {
-    const row = pricing.prices.find((candidate) =>
-      Object.entries(candidate).every(([key, value]) => {
-        if (key === 'pricePerSecond') {
-          return true;
-        }
-        if (key === 'uses_voice_control' && value === false) {
-          return payload[key] === false || payload[key] === undefined;
-        }
-        return payload[key] === value;
-      })
-    );
-    const pricePerSecond = row?.pricePerSecond;
-    return typeof pricePerSecond === 'number'
-      ? pricePerSecond * seconds(payload) * count +
-          inputImageCost(pricing, payload, count, pricingInputCounts)
-      : null;
-  }
-  if (pricing.function === 'costByVideoDurationAndWithAudio' && pricing.prices) {
-    const row = pricing.prices.find((candidate) =>
-      Object.entries(candidate).every(([key, value]) => {
-        if (key === 'pricePerSecond') {
-          return true;
-        }
-        if (key === 'uses_voice_control' && value === false) {
-          return payload[key] === false || payload[key] === undefined;
-        }
-        return payload[key] === value;
-      })
-    );
-    const pricePerSecond = row?.pricePerSecond;
-    return typeof pricePerSecond === 'number'
-      ? pricePerSecond * seconds(payload) * count +
-          inputImageCost(pricing, payload, count, pricingInputCounts)
+    return typeof pricePerImage === 'number'
+      ? pricePerImage * outputCount
       : null;
   }
   if (
-    pricing.function === 'costByVideoDurationAndAudioVoiceControl' &&
+    (pricing.function === 'costByVideoDurationAndResolution' ||
+      pricing.function === 'costByVideoDurationAndWithAudio' ||
+      pricing.function === 'costByVideoDurationAndAudioVoiceControl' ||
+      pricing.function === 'costByVideoDurationModeAndAudio' ||
+      pricing.function === 'costByVideoDurationAndMode') &&
     pricing.prices
   ) {
-    if (payload.uses_voice_control === true && payload.generate_audio === false) {
-      throw new Error(
-        'Kling V3 voice control pricing requires generate_audio: true.'
-      );
+    if (
+      pricing.function === 'costByVideoDurationAndAudioVoiceControl' &&
+      inputs.usesVoiceControl === true &&
+      inputs.generateAudio === false
+    ) {
+      return null;
     }
     const row = pricing.prices.find((candidate) =>
-      Object.entries(candidate).every(([key, value]) => {
-        if (key === 'pricePerSecond') {
-          return true;
-        }
-        if (key === 'uses_voice_control' && value === false) {
-          return payload[key] === false || payload[key] === undefined;
-        }
-        return payload[key] === value;
+      rowMatches(candidate, {
+        resolution: inputs.resolution,
+        generate_audio: inputs.generateAudio,
+        uses_voice_control: inputs.usesVoiceControl,
+        mode: inputs.mode,
       })
     );
     const pricePerSecond = row?.pricePerSecond;
     return typeof pricePerSecond === 'number'
-      ? pricePerSecond * seconds(payload) * count +
-          inputImageCost(pricing, payload, count, pricingInputCounts)
+      ? pricePerSecond * seconds(inputs.durationSeconds) * outputCount +
+          inputImageCost(pricing, inputs, outputCount)
       : null;
   }
   if (pricing.function === 'costByVideoPerMillionTokens') {
-    return videoTokenPrice(pricing, payload, count);
+    return videoTokenPrice(pricing, inputs, outputCount);
   }
   return null;
 }
 
+function missingPricingInputs(
+  pricing: ModelPriceConfig | number,
+  inputs: GenerationPricingInputs
+): string[] {
+  if (typeof pricing === 'number') {
+    return [];
+  }
+  const required = new Set(pricing.inputs ?? inferredPricingInputs(pricing));
+  const missing = [...required]
+    .map((inputName) => missingPricingInput(inputName, inputs))
+    .filter((inputName): inputName is string => Boolean(inputName));
+  return [...new Set(missing)];
+}
+
+function inferredPricingInputs(pricing: ModelPriceConfig): string[] {
+  if (
+    typeof pricing.price === 'number' ||
+    typeof pricing.pricePerImage === 'number'
+  ) {
+    return [];
+  }
+  if (typeof pricing.pricePerSecond === 'number') {
+    return ['duration'];
+  }
+  if (typeof pricing.pricePerMinute === 'number') {
+    return ['duration'];
+  }
+  if (typeof pricing.pricePerCharacter === 'number') {
+    return ['text'];
+  }
+  return [];
+}
+
+function missingPricingInput(
+  inputName: string,
+  inputs: GenerationPricingInputs
+): string | null {
+  if (inputName === 'num_images' || inputName === 'count') {
+    return hasPositiveNumber(inputs.outputCount) ? null : 'outputCount';
+  }
+  if (inputName === 'image_size') {
+    return inputs.imageSize === undefined ? 'imageSize' : null;
+  }
+  if (inputName === 'video_size') {
+    return inputs.videoSize === undefined ? 'videoSize' : null;
+  }
+  if (inputName === 'quality') {
+    return inputs.quality === undefined ? 'quality' : null;
+  }
+  if (inputName === 'resolution') {
+    return inputs.resolution === undefined ? 'resolution' : null;
+  }
+  if (inputName === 'duration' || inputName === 'duration_seconds') {
+    return readPositiveSeconds(inputs.durationSeconds) === null
+      ? 'durationSeconds'
+      : null;
+  }
+  if (inputName === 'text') {
+    return typeof inputs.characterCount === 'number' &&
+      Number.isFinite(inputs.characterCount) &&
+      inputs.characterCount >= 0
+      ? null
+      : 'characterCount';
+  }
+  if (inputName === 'aspect_ratio') {
+    return inputs.aspectRatio === undefined ? 'aspectRatio' : null;
+  }
+  if (inputName === 'generate_audio') {
+    return typeof inputs.generateAudio === 'boolean'
+      ? null
+      : 'generateAudio';
+  }
+  if (inputName === 'uses_voice_control') {
+    return inputs.usesVoiceControl === undefined ||
+      typeof inputs.usesVoiceControl === 'boolean'
+      ? null
+      : 'usesVoiceControl';
+  }
+  if (inputName === 'image_url' || inputName === 'image_urls') {
+    return typeof inputs.inputImageCount === 'number' &&
+      Number.isFinite(inputs.inputImageCount) &&
+      inputs.inputImageCount >= 0
+      ? null
+      : 'inputImageCount';
+  }
+  if (inputName === 'audio_url' || inputName === 'audio_urls') {
+    return typeof inputs.inputAudioCount === 'number' &&
+      Number.isFinite(inputs.inputAudioCount) &&
+      inputs.inputAudioCount >= 0
+      ? null
+      : 'inputAudioCount';
+  }
+  if (inputName === 'video_url' || inputName === 'video_urls') {
+    return typeof inputs.inputVideoCount === 'number' &&
+      Number.isFinite(inputs.inputVideoCount) &&
+      inputs.inputVideoCount >= 0
+      ? null
+      : 'inputVideoCount';
+  }
+  if (inputName === 'num_frames') {
+    return hasPositiveNumber(inputs.numFrames) ? null : 'numFrames';
+  }
+  if (inputName === 'mode') {
+    return inputs.mode === undefined ? 'mode' : null;
+  }
+  if (inputName === 'music_length_ms') {
+    return hasPositiveNumber(inputs.musicLengthMs) ? null : 'musicLengthMs';
+  }
+  return null;
+}
+
+function billableUnitsFromPricingInputs(
+  inputs: GenerationPricingInputs
+): Record<string, unknown> {
+  const units: Record<string, unknown> = {};
+  const normalized = normalizedPricingInputs(inputs);
+  if (normalized.outputCount !== undefined) {
+    units.outputCount = normalized.outputCount;
+  }
+  if (normalized.inputImageCount !== undefined) {
+    units.inputImageCount = normalized.inputImageCount;
+  }
+  if (normalized.inputAudioCount !== undefined) {
+    units.inputAudioCount = normalized.inputAudioCount;
+  }
+  if (normalized.inputVideoCount !== undefined) {
+    units.inputVideoCount = normalized.inputVideoCount;
+  }
+  if (normalized.durationSeconds !== undefined) {
+    units.duration = normalized.durationSeconds;
+  }
+  if (normalized.characterCount !== undefined) {
+    units.characterCount = normalized.characterCount;
+  }
+  if (normalized.imageSize !== undefined) {
+    units.image_size = normalized.imageSize;
+  }
+  if (normalized.videoSize !== undefined) {
+    units.video_size = normalized.videoSize;
+  }
+  if (normalized.resolution !== undefined) {
+    units.resolution = normalized.resolution;
+  }
+  if (normalized.aspectRatio !== undefined) {
+    units.aspect_ratio = normalized.aspectRatio;
+  }
+  if (normalized.quality !== undefined) {
+    units.quality = normalized.quality;
+  }
+  if (normalized.generateAudio !== undefined) {
+    units.generate_audio = normalized.generateAudio;
+  }
+  if (normalized.usesVoiceControl !== undefined) {
+    units.uses_voice_control = normalized.usesVoiceControl;
+  }
+  if (normalized.numFrames !== undefined) {
+    units.num_frames = normalized.numFrames;
+  }
+  if (normalized.mode !== undefined) {
+    units.mode = normalized.mode;
+  }
+  if (normalized.musicLengthMs !== undefined) {
+    units.music_length_ms = normalized.musicLengthMs;
+  }
+  return units;
+}
+
+function normalizedPricingInputs(
+  inputs: GenerationPricingInputs
+): GenerationPricingInputs {
+  return {
+    ...(inputs.outputCount !== undefined
+      ? { outputCount: normalizedOutputCount(inputs.outputCount) }
+      : {}),
+    ...(inputs.inputImageCount !== undefined
+      ? { inputImageCount: normalizedNonNegativeCount(inputs.inputImageCount) }
+      : {}),
+    ...(inputs.inputAudioCount !== undefined
+      ? { inputAudioCount: normalizedNonNegativeCount(inputs.inputAudioCount) }
+      : {}),
+    ...(inputs.inputVideoCount !== undefined
+      ? { inputVideoCount: normalizedNonNegativeCount(inputs.inputVideoCount) }
+      : {}),
+    ...(inputs.durationSeconds !== undefined
+      ? { durationSeconds: inputs.durationSeconds }
+      : {}),
+    ...(inputs.characterCount !== undefined
+      ? { characterCount: normalizedNonNegativeCount(inputs.characterCount) }
+      : {}),
+    ...(inputs.imageSize !== undefined ? { imageSize: inputs.imageSize } : {}),
+    ...(inputs.resolution !== undefined ? { resolution: inputs.resolution } : {}),
+    ...(inputs.aspectRatio !== undefined
+      ? { aspectRatio: inputs.aspectRatio }
+      : {}),
+    ...(inputs.quality !== undefined ? { quality: inputs.quality } : {}),
+    ...(inputs.generateAudio !== undefined
+      ? { generateAudio: inputs.generateAudio }
+      : {}),
+    ...(inputs.usesVoiceControl !== undefined
+      ? { usesVoiceControl: inputs.usesVoiceControl }
+      : {}),
+    ...(inputs.numFrames !== undefined
+      ? { numFrames: normalizedNonNegativeCount(inputs.numFrames) }
+      : {}),
+    ...(inputs.videoSize !== undefined ? { videoSize: inputs.videoSize } : {}),
+    ...(inputs.mode !== undefined ? { mode: inputs.mode } : {}),
+    ...(inputs.musicLengthMs !== undefined
+      ? { musicLengthMs: normalizedNonNegativeCount(inputs.musicLengthMs) }
+      : {}),
+  };
+}
+
 function videoTokenPrice(
   pricing: ModelPriceConfig,
-  payload: Record<string, unknown>,
-  count: number
+  inputs: GenerationPricingInputs,
+  outputCount: number
 ): number | null {
-  const pricePerMillionTokens = videoTokenPricePerMillion(pricing, payload);
+  const pricePerMillionTokens = videoTokenPricePerMillion(pricing, inputs);
   if (typeof pricePerMillionTokens !== 'number') {
     return null;
   }
-  const duration = seconds(payload);
-  const { width, height } = videoDimensions(payload);
+  const duration = seconds(inputs.durationSeconds);
+  const { width, height } = videoDimensions(inputs);
   const tokenFramesPerSecond = pricing.tokenFramesPerSecond ?? 30;
   const tokens = (width * height * duration * tokenFramesPerSecond) / 1024;
-  return (tokens / 1_000_000) * pricePerMillionTokens * count;
+  return (tokens / 1_000_000) * pricePerMillionTokens * outputCount;
 }
 
 function videoTokenPricePerMillion(
   pricing: ModelPriceConfig,
-  payload: Record<string, unknown>
+  inputs: GenerationPricingInputs
 ): number | null {
   if (typeof pricing.pricePerMillionTokens === 'number') {
     return pricing.pricePerMillionTokens;
@@ -229,22 +459,47 @@ function videoTokenPricePerMillion(
   }
   const row =
     rows.find((candidate) =>
-      Object.entries(candidate).every(([key, value]) => {
-        if (key === 'pricePerMillionTokens') {
-          return true;
-        }
-        return payload[key] === value;
+      rowMatches(candidate, {
+        resolution: inputs.resolution,
+        aspect_ratio: inputs.aspectRatio,
+        generate_audio: inputs.generateAudio,
       })
-    ) ?? rows.find((candidate) => typeof candidate.pricePerMillionTokens === 'number');
+    ) ??
+    rows.find(
+      (candidate) => typeof candidate.pricePerMillionTokens === 'number'
+    );
   return typeof row?.pricePerMillionTokens === 'number'
     ? row.pricePerMillionTokens
     : null;
 }
 
-function videoDimensions(payload: Record<string, unknown>): PricingImageDimensions {
-  const height = videoHeight(payload.resolution);
+function megapixelPrice(
+  pricing: ModelPriceConfig,
+  inputs: GenerationPricingInputs,
+  outputCount: number
+): number | null {
+  if (typeof pricing.pricePerMegapixel !== 'number') {
+    return null;
+  }
+  const dimensions =
+    readImageSizeDimensions(inputs.imageSize) ??
+    readImageSizeDimensions(inputs.videoSize);
+  if (!dimensions) {
+    return null;
+  }
+  const frames = normalizedOutputCount(inputs.numFrames ?? 1);
+  const megapixels = (dimensions.width * dimensions.height * frames) / 1_000_000;
+  return pricing.pricePerMegapixel * megapixels * outputCount;
+}
+
+function videoDimensions(inputs: GenerationPricingInputs): PricingImageDimensions {
+  const explicit = readImageSizeDimensions(inputs.videoSize);
+  if (explicit) {
+    return explicit;
+  }
+  const height = videoHeight(inputs.resolution);
   return {
-    width: videoWidthForAspectRatio(height, payload.aspect_ratio),
+    width: videoWidthForAspectRatio(height, inputs.aspectRatio),
     height,
   };
 }
@@ -259,6 +514,9 @@ function videoHeight(value: unknown): number {
   }
   if (normalized.includes('720')) {
     return 720;
+  }
+  if (normalized.includes('1440')) {
+    return 1440;
   }
   if (normalized.includes('4k') || normalized.includes('2160')) {
     return 2160;
@@ -298,37 +556,40 @@ const IMAGE_SIZE_PRICING_DIMENSIONS: Record<string, PricingImageDimensions> = {
 
 function imageSizeAndQualityRowMatches(
   row: Record<string, unknown>,
-  payload: Record<string, unknown>
+  inputs: GenerationPricingInputs
 ): boolean {
   return Object.entries(row).every(([key, value]) => {
     if (key === 'pricePerImage') {
       return true;
     }
     if (key === 'image_size') {
-      return imageSizesMatch(value, payload.image_size);
+      return imageSizesMatch(value, inputs.imageSize);
     }
-    return Object.is(payload[key], value);
+    if (key === 'quality') {
+      return Object.is(inputs.quality, value);
+    }
+    return rowInputValue(inputs, key) === value;
   });
 }
 
 function nearestCustomImageSizeRow(
   rows: Array<Record<string, unknown>>,
-  payload: Record<string, unknown>
+  inputs: GenerationPricingInputs
 ): Record<string, unknown> | null {
-  const payloadSize = readImageSizeDimensions(payload.image_size);
-  if (!payloadSize || typeof payload.image_size !== 'object') {
+  const inputSize = readImageSizeDimensions(inputs.imageSize);
+  if (!inputSize || typeof inputs.imageSize !== 'object') {
     return null;
   }
   let best: { row: Record<string, unknown>; distance: number } | null = null;
   for (const row of rows) {
-    if (!nonImageSizePriceFieldsMatch(row, payload)) {
+    if (!nonImageSizePriceFieldsMatch(row, inputs)) {
       continue;
     }
     const rowSize = readImageSizeDimensions(row.image_size);
     if (!rowSize) {
       continue;
     }
-    const distance = Math.abs(pixelArea(rowSize) - pixelArea(payloadSize));
+    const distance = Math.abs(pixelArea(rowSize) - pixelArea(inputSize));
     if (!best || distance < best.distance) {
       best = { row, distance };
     }
@@ -338,13 +599,13 @@ function nearestCustomImageSizeRow(
 
 function nonImageSizePriceFieldsMatch(
   row: Record<string, unknown>,
-  payload: Record<string, unknown>
+  inputs: GenerationPricingInputs
 ): boolean {
   return Object.entries(row).every(([key, value]) => {
     if (key === 'pricePerImage' || key === 'image_size') {
       return true;
     }
-    return Object.is(payload[key], value);
+    return Object.is(rowInputValue(inputs, key), value);
   });
 }
 
@@ -395,6 +656,49 @@ function readImageSizeDimensions(value: unknown): PricingImageDimensions | null 
   return { width, height };
 }
 
+function rowMatches(
+  row: Record<string, unknown>,
+  inputs: Record<string, unknown>
+): boolean {
+  return Object.entries(row).every(([key, value]) => {
+    if (key.startsWith('pricePer')) {
+      return true;
+    }
+    if (key === 'uses_voice_control' && value === false) {
+      return inputs[key] === false || inputs[key] === undefined;
+    }
+    return Object.is(inputs[key], value);
+  });
+}
+
+function rowInputValue(
+  inputs: GenerationPricingInputs,
+  key: string
+): unknown {
+  if (key === 'image_size') {
+    return inputs.imageSize;
+  }
+  if (key === 'resolution') {
+    return inputs.resolution;
+  }
+  if (key === 'quality') {
+    return inputs.quality;
+  }
+  if (key === 'aspect_ratio') {
+    return inputs.aspectRatio;
+  }
+  if (key === 'generate_audio') {
+    return inputs.generateAudio;
+  }
+  if (key === 'uses_voice_control') {
+    return inputs.usesVoiceControl;
+  }
+  if (key === 'mode') {
+    return inputs.mode;
+  }
+  return undefined;
+}
+
 function dimensionsMatch(
   expected: PricingImageDimensions,
   actual: PricingImageDimensions
@@ -416,55 +720,74 @@ export function deriveGenerationOutputCount(
   return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : 1;
 }
 
-function seconds(payload: Record<string, unknown>): number {
-  const raw =
-    payload.duration_seconds ?? payload.durationSeconds ?? payload.duration;
-  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
-    return raw;
+function seconds(value: unknown): number {
+  return readPositiveSeconds(value) ?? 1;
+}
+
+function readPositiveSeconds(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value;
   }
-  if (typeof raw === 'string') {
-    const trimmed = raw.trim();
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
     const secondsMatch = /^(\d+(?:\.\d+)?)s$/.exec(trimmed);
     const parsed = Number(secondsMatch?.[1] ?? trimmed);
     if (Number.isFinite(parsed) && parsed > 0) {
       return parsed;
     }
   }
-  return 1;
+  return null;
 }
 
-function characters(payload: Record<string, unknown>): number {
-  const raw = payload.text ?? payload.prompt ?? '';
-  return typeof raw === 'string' ? raw.length : 0;
+function characterCount(inputs: GenerationPricingInputs): number {
+  return normalizedNonNegativeCount(inputs.characterCount ?? 0);
 }
 
 function inputImageCost(
   pricing: ModelPriceConfig,
-  payload: Record<string, unknown>,
-  outputCount: number,
-  pricingInputCounts: GenerationRequest['pricingInputCounts']
+  inputs: GenerationPricingInputs,
+  outputCount: number
 ): number {
   if (typeof pricing.pricePerInputImage !== 'number') {
     return 0;
   }
-  return pricing.pricePerInputImage * inputImageCount(payload, pricingInputCounts) * outputCount;
+  return pricing.pricePerInputImage * inputImageCount(inputs) * outputCount;
 }
 
-function inputImageCount(
-  payload: Record<string, unknown>,
-  pricingInputCounts: GenerationRequest['pricingInputCounts']
-): number {
-  if (pricingInputCounts?.image !== undefined) {
-    return pricingInputCounts.image;
+function inputImageCount(inputs: GenerationPricingInputs): number {
+  return normalizedNonNegativeCount(inputs.inputImageCount ?? 0);
+}
+
+function normalizedOutputCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : 1;
+}
+
+function normalizedNonNegativeCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : 0;
+}
+
+function hasPositiveNumber(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function stableStringify(input: unknown): string {
+  return JSON.stringify(sortForHash(input));
+}
+
+function sortForHash(input: unknown): unknown {
+  if (Array.isArray(input)) {
+    return input.map(sortForHash);
   }
-  let count = 0;
-  if (typeof payload.image_url === 'string' && payload.image_url.length > 0) {
-    count += 1;
+  if (!input || typeof input !== 'object') {
+    return input;
   }
-  if (Array.isArray(payload.image_urls)) {
-    count += payload.image_urls.filter(
-      (value) => typeof value === 'string' && value.length > 0
-    ).length;
-  }
-  return count;
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => [key, sortForHash(value)])
+  );
 }

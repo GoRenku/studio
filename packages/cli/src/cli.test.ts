@@ -995,10 +995,10 @@ describe('renku CLI', () => {
     expect(estimateExitCode).toBe(0);
     const estimate = JSON.parse(stdout.join('\n')) as {
       estimate: {
-        approvalToken: string;
+        costApprovalToken: string;
       };
     };
-    expect(estimate.estimate.approvalToken).toMatch(/^sha256:/);
+    expect(estimate.estimate.costApprovalToken).toMatch(/^sha256:/);
 
     stdout = [];
     stderr = [];
@@ -2983,7 +2983,7 @@ describe('renku CLI', () => {
     );
     expect(estimateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      estimate: { approvalToken: expect.stringMatching(/^sha256:/) },
+      estimate: { costApprovalToken: expect.stringMatching(/^sha256:/) },
     });
 
     stdout = [];

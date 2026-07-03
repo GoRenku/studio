@@ -285,6 +285,7 @@ describe('SceneShotDialogsTab', () => {
       },
     });
     serviceMocks.updateTakeDialogueAudioSelection.mockResolvedValue({
+      context: dialogueMutationContext(),
       resourceKeys: [],
     });
     const onPlanRefresh = vi.fn(async () => undefined);
@@ -347,7 +348,8 @@ describe('SceneShotDialogsTab', () => {
   it('uses group inclusion updates for multi-shot dialogue selections', async () => {
     serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
     serviceMocks.updateShotGroupReferenceInclusion.mockResolvedValue({
-      resource: { projectName: 'constantinople', sceneId: 'scene_hook', scenes: [] },
+      context: dialogueMutationContext(['shot_001', 'shot_002']),
+      resourceKeys: [],
     });
     render(
       <SceneShotDialogsTab
@@ -515,7 +517,17 @@ function deferredMutation() {
   });
   return {
     promise,
-    resolve: () => resolve({ resourceKeys: [] }),
+    resolve: () =>
+      resolve({
+        context: dialogueMutationContext(['shot_001', 'shot_002']),
+        resourceKeys: [],
+      }),
+  };
+}
+
+function dialogueMutationContext(shotIds: string[] = ['shot_001']) {
+  return {
+    take: dialogueProductionPlan(1, shotIds).take,
   };
 }
 

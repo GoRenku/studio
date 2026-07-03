@@ -91,6 +91,8 @@ Fallbacks are allowed only when they are current product behavior with a named
 owner and tests. Examples of allowed fallback-like states in current generation
 work include:
 
+- cost estimates using documented conservative defaults when exact pricing facts
+  are unavailable;
 - selector `selected-or-default` behavior when explicitly declared;
 - satisfied dependency pricing at `$0.00`;
 - manual attachment `not-applicable` pricing because it is not generation work;
@@ -104,8 +106,8 @@ Flag fallback behavior such as:
 - treating unknown selector kinds as missing;
 - converting malformed requests into quiet missing dependencies;
 - picking the first asset or Lookbook sheet without an explicit selector policy;
-- swallowing planner, estimate, or root-generation failures behind empty
-  diagnostics;
+- swallowing planner, root-generation, or unexpected estimate failures behind
+  empty diagnostics instead of returning documented estimate states/defaults;
 - falling back to final-generation-only pricing when an inventory exists;
 - using compatibility readers for old schema or command shapes.
 
@@ -269,10 +271,44 @@ succeeds.
 Dependency inventories are the reference and pricing source of truth. They are
 not automatic execution graphs.
 
+Cost estimates are product guidance, not execution truth. They should give the
+user a useful ballpark or conservative upper-bound estimate without turning the
+estimate path into validation, preparation, provider payload construction, or
+generation execution. Small differences from the eventual provider receipt are
+acceptable when the estimate remains safe and understandable. A slightly high
+estimate is usually better than no estimate.
+
+When reviewing estimate changes, flag attempts to make estimates exact by
+pulling in active generation behavior. Estimate code may use passive pricing
+facts, static route/model metadata, spec fields, selected dependency counts, and
+documented conservative defaults. It must not validate run-readiness, require
+files to exist, prepare provider payloads, enforce creative or dependency
+content correctness, or call generation/run services just to compute a price.
+If a pricing fact is needed, prefer an estimate-owned approximation or
+conservative default over importing the active run path.
+
+Do not report estimate-only defaults as bugs merely because they are not exact.
+For example, an unresolved image frame can use an intentional default rather
+than failing the estimate. Report it only when the default is clearly unsafe,
+systematically underprices a known paid path, or bypasses the cost approval
+contract.
+
+Keep the approval-token contract separate from estimate exactness. It is still a
+high-severity issue if live paid generation accepts arbitrary, stale, or
+mismatched approval tokens. Direct provider-call boundaries must verify priced
+tokens against the estimate they actually compute, while keeping an explicit
+unpriced override path.
+
 Flag:
 
 - UI-side pricing totals when core reports an inventory estimate;
 - final-only estimate fallback when an inventory exists;
+- validation, preparation, provider-payload, or run-service behavior pulled into
+  estimates for exactness;
+- estimate findings that demand failure or validation where a conservative
+  default is the intended product behavior;
+- live paid generation paths that accept any non-empty approval token instead of
+  verifying the current priced estimate token;
 - selected generated dependencies with `not-applicable` pricing;
 - public graph execution fields such as execution levels for dependencies;
 - React parsing dependency id strings to infer mutation behavior;

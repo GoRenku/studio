@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { GenerationEstimate } from '@gorenku/studio-engines';
+import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import type { SceneShotVideoTakeTarget } from './media-generation-target.js';
 import type {
   VideoPromptSheetNotationModeId,
@@ -96,6 +96,6 @@ export interface GenerationPreviewProviderPreview {
 export interface GenerationPreviewEstimate {
   state: 'not-estimated' | 'estimated' | 'unpriced';
   estimatedCostUsd?: number | null;
-  engineEstimate?: GenerationEstimate;
+  costEstimate?: GenerationCostEstimate;
   warnings?: string[];
 }
