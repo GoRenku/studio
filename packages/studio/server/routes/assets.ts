@@ -2,7 +2,10 @@ import { studioResourceKeysForAssetTarget } from '@gorenku/studio-core/server';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readAssetPageRequest } from '../http/asset-request.js';
-import { readAssetFileResponse } from '../http/asset-file-response.js';
+import {
+  readAssetFileResponse,
+  readProjectAssetFileByIdResponse,
+} from '../http/asset-file-response.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
@@ -24,6 +27,20 @@ export function createAssetsRoute({
           ...readAssetPageRequest(c.req.query()),
         });
         return c.json({ page });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .get('/assets/:assetId/files/:assetFileId', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const assetId = c.req.param('assetId') as string;
+        const assetFileId = c.req.param('assetFileId') as string;
+        return await readProjectAssetFileByIdResponse(projectData, {
+          projectName,
+          assetId,
+          assetFileId,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

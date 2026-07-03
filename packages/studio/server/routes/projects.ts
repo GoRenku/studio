@@ -86,6 +86,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'updateProjectInformation'
   | 'resolveCoverImage'
   | 'listAssets'
+  | 'resolveProjectAssetFileById'
   | 'createAssetSelect'
   | 'removeAssetSelect'
   | 'discardAsset'

@@ -14,7 +14,7 @@ import type {
   ShotSizeId,
   SubjectFramingId,
 } from '../../client/index.js';
-import type { GenerationPreviewSnapshot } from '../../client/generation-preview.js';
+import type { StudioGenerationPreview } from '../../client/generation-preview.js';
 
 export const STUDIO_COORDINATION_EVENT_VERSION = '0.1.0' as const;
 
@@ -112,7 +112,7 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
 export interface StudioGenerationPreviewRequestedEvent extends StudioEventBase {
   type: 'studio.generationPreviewRequested';
   projectRef: StudioProjectRef;
-  preview: GenerationPreviewSnapshot;
+  preview: StudioGenerationPreview;
 }
 
 export interface StudioFocusRequestedEvent extends StudioEventBase {

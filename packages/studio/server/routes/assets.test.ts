@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import type { Asset } from '@gorenku/studio-core/client';
+import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
@@ -118,6 +119,95 @@ describe('assets Hono route', () => {
       'private, max-age=31536000, immutable'
     );
     await expect(response.text()).resolves.toBe('png bytes');
+  });
+
+  it('serves a project asset file through the generic asset-file route', async () => {
+    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('generic bytes'));
+    const app = createMountedAssetsRoute();
+
+    const response = await app.request(
+      '/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/png');
+    await expect(response.text()).resolves.toBe('generic bytes');
+  });
+
+  it('serves a project video file through the generic asset-file route', async () => {
+    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('video bytes'));
+    const videoFile = {
+      id: 'asset_file_video_primary',
+      role: 'primary',
+      projectRelativePath:
+        'generated/media/shot-video-take.mp4' as Asset['files'][number]['projectRelativePath'],
+      mediaKind: 'video',
+      mimeType: 'video/mp4',
+      sizeBytes: 1234,
+      contentHash: 'hash',
+      width: null,
+      height: null,
+      durationSeconds: null,
+    };
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData: {
+          ...fakeProjectDataService(),
+          async resolveProjectAssetFileById(input) {
+            expect(input.assetId).toBe('asset_video_take');
+            expect(input.assetFileId).toBe('asset_file_video_primary');
+            return {
+              assetId: input.assetId,
+              assetMediaKind: 'video',
+              file: videoFile,
+              absolutePath:
+                '/tmp/renku/constantinople/generated/media/shot-video-take.mp4',
+            };
+          },
+        },
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    const response = await app.request(
+      '/constantinople/assets/asset_video_take/files/asset_file_video_primary'
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('video/mp4');
+    await expect(response.text()).resolves.toBe('video bytes');
+  });
+
+  it('rejects missing generic asset files without leaking absolute paths', async () => {
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData: {
+          ...fakeProjectDataService(),
+          async resolveProjectAssetFileById() {
+            throw createStructuredError({
+              code: 'CORE_PROJECT_ASSET_FILE_NOT_FOUND',
+              message: 'Project asset file was not found.',
+            });
+          },
+        },
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    const response = await app.request(
+      '/constantinople/assets/asset_missing/files/asset_file_missing'
+    );
+    const body = await response.text();
+
+    expect(response.status).toBe(400);
+    expect(body).toContain('CORE_PROJECT_ASSET_FILE_NOT_FOUND');
+    expect(body).not.toContain('/tmp/renku');
   });
 
   it('lists, selects, unselects, deletes, and serves grouped location environment sheet files through ProjectDataService', async () => {

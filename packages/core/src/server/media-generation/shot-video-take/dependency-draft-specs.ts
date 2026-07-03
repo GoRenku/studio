@@ -23,6 +23,9 @@ import {
   estimateMissingShotInputDependency,
   estimateOnlyShotInputPrompt,
 } from '../estimation/shot-input-dependency-estimates.js';
+import {
+  promptSheetMetadataForShotInputSpec,
+} from './prompt-sheet-metadata.js';
 
 
 
@@ -88,6 +91,7 @@ export async function buildShotInputDependencyDraftSpec(
       modelChoice:
         draft.modelChoice ?? request.context.defaults.imageDependencyModelChoice,
       referenceMode: draft.referenceMode,
+      ...promptSheetMetadataForShotInputSpec(draft),
       prompt: draft.prompt,
       parameterValues: draft.parameterValues ?? defaultShotInputParameterValues(),
       title: draft.title ?? input.label,

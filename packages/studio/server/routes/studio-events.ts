@@ -2,10 +2,12 @@ import {
   createProjectDataService,
   createStudioCoordinationService,
   createStudioOperationId,
-  validateGenerationPreviewSnapshot,
+  validateGenerationPreviewRequest,
   validateStudioFocusRequestForProject,
+  type GenerationPreviewRequest,
   type ScenePanelTab,
   type SceneShotDetailTab,
+  type StudioGenerationPreview,
   type StudioSelection,
   type StudioBrowserSessionActivityKind,
   type ProjectDataService,
@@ -25,6 +27,9 @@ import {
   createStudioApiTokenMiddleware,
   createStudioNotificationTokenMiddleware,
 } from '../http/studio-api-token.js';
+import {
+  buildStudioGenerationPreview,
+} from '../projections/generation-preview.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
 const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots', 'takes'];
@@ -50,7 +55,15 @@ export interface CreateStudioEventsRouteOptions {
   token: StudioRuntimeToken;
   cliNotificationToken?: string;
   serverInstanceId?: string;
+  homeDir?: string;
+  generationPreviewProjection?: StudioGenerationPreviewProjection;
 }
+
+type StudioGenerationPreviewProjection = (input: {
+  projectName: string;
+  homeDir?: string;
+  preview: GenerationPreviewRequest;
+}) => Promise<StudioGenerationPreview>;
 
 type StudioEventsRouteProjectData = Pick<
   ProjectDataService,
@@ -64,6 +77,8 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
   const requireNotificationToken = createStudioNotificationTokenMiddleware(
     options.cliNotificationToken
   );
+  const projectGenerationPreview =
+    options.generationPreviewProjection ?? buildStudioGenerationPreview;
 
   return new Hono()
     .get('/', async (c) => {
@@ -103,16 +118,21 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
       try {
         const body = await c.req.json();
         const request = readGenerationPreviewRequest(body);
+        const preview = await projectGenerationPreview({
+          projectName: request.projectRef.name,
+          homeDir: options.homeDir,
+          preview: request.preview,
+        });
         const event = await coordination.appendStudioEvent({
           type: 'studio.generationPreviewRequested',
           projectRef: request.projectRef,
-          preview: request.preview,
+          preview,
           source: request.source,
           operationId: request.operationId ?? createStudioOperationId(),
         });
         return c.json({
           eventId: event.id,
-          previewId: request.preview.previewId,
+          previewId: preview.previewId,
           event,
         });
       } catch (error) {
@@ -246,7 +266,7 @@ function readGenerationPreviewRequest(body: unknown) {
       message: 'Generation preview notification body must be an object.',
     });
   }
-  const preview = validateGenerationPreviewSnapshot(request.preview);
+  const preview = validateGenerationPreviewRequest(request.preview);
   const projectRef = readProjectRef(
     request.projectRef,
     issues,

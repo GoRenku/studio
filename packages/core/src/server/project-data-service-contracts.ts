@@ -257,6 +257,9 @@ export interface ProjectDataService {
   resolveProjectAssetFile(
     input: ResolveProjectAssetFileInput
   ): Promise<ResolvedProjectAssetFile>;
+  resolveProjectAssetFileById(
+    input: ResolveProjectAssetFileByIdInput
+  ): Promise<ResolvedProjectAssetFileById>;
   resolveShotVideoTakeInputFile(
     input: ResolveShotVideoTakeInputFileInput
   ): Promise<ResolvedShotVideoTakeInputFile>;
@@ -1784,6 +1787,19 @@ export interface ResolveProjectAssetFileInput extends RenkuConfigPathOptions {
 export interface ResolvedProjectAssetFile {
   asset: Asset;
   file: Asset['files'][number];
+  absolutePath: string;
+}
+
+export interface ResolveProjectAssetFileByIdInput extends RenkuConfigPathOptions {
+  projectName: string;
+  assetId: string;
+  assetFileId: string;
+}
+
+export interface ResolvedProjectAssetFileById {
+  assetId: string;
+  assetMediaKind: string;
+  file: AssetFile;
   absolutePath: string;
 }
 

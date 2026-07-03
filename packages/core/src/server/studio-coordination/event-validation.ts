@@ -7,7 +7,7 @@ import {
   type StudioEventSource,
   type StudioProjectRef,
 } from './events.js';
-import { validateGenerationPreviewSnapshot } from '../generation-preview/validation.js';
+import { validateStudioGenerationPreview } from '../generation-preview/validation.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 const SCENE_PANEL_TABS = ['narrative', 'shots', 'takes'];
@@ -87,7 +87,7 @@ export function collectStudioEventIssues(value: unknown) {
     case 'studio.generationPreviewRequested':
       validateProjectRef(record.projectRef, ['projectRef'], issues);
       try {
-        validateGenerationPreviewSnapshot(record.preview);
+        validateStudioGenerationPreview(record.preview);
       } catch (error) {
         if (error instanceof ProjectDataError) {
           issues.push(...error.issues);

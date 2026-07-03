@@ -71,6 +71,18 @@ export function fakeProjectDataService(): NonNullable<
         absolutePath: '/tmp/renku/constantinople/cast/reference.png',
       };
     },
+    async resolveProjectAssetFileById(input) {
+      const asset = makeAsset(input.assetId);
+      return {
+        assetId: asset.assetId,
+        assetMediaKind: asset.mediaKind,
+        file: {
+          ...asset.files[0],
+          id: input.assetFileId,
+        },
+        absolutePath: '/tmp/renku/constantinople/cast/reference.png',
+      };
+    },
     async resolveShotVideoTakeInputFile(input) {
       const asset = makeAsset('asset_shot_video_input');
       return {

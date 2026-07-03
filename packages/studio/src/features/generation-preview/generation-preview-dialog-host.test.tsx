@@ -14,12 +14,22 @@ describe('GenerationPreviewDialogHost', () => {
     });
 
     expect(await screen.findByText('Prompt Sheet A')).toBeTruthy();
+    expect(screen.getByText('Preparation of the Siege')).toBeTruthy();
+    expect(screen.getByText('Opening council')).toBeTruthy();
+    expect(screen.getByText('Take 1')).toBeTruthy();
+    expect(screen.getByText('Shot 1')).toBeTruthy();
+    expect(screen.queryByText('scene_test0001')).toBeNull();
+    expect(screen.queryByText('take_test0001')).toBeNull();
+    expect(screen.queryByText('shot_test0001')).toBeNull();
     expect(screen.getByText('Visual Style')).toBeTruthy();
     expect(screen.getByText('motion-annotation')).toBeTruthy();
     await act(async () => {
       selectTab('References');
     });
     expect(await screen.findByText('Storyboard Lookbook Sheet')).toBeTruthy();
+    expect(screen.getByAltText('Storyboard Lookbook Sheet').getAttribute('src')).toBe(
+      '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style'
+    );
 
     await dispatchPreview(
       previewFixture({
@@ -99,6 +109,12 @@ function previewFixture(input: {
       name: 'constantinople',
       title: 'Preparation of the Siege',
     },
+    subject: {
+      projectLabel: 'Preparation of the Siege',
+      sceneLabel: 'Opening council',
+      takeLabel: 'Take 1',
+      shotLabel: 'Shot 1',
+    },
     target: {
       kind: 'sceneShotVideoTake',
       id: 'take_test0001',
@@ -128,6 +144,8 @@ function previewFixture(input: {
         assetFileId: 'asset_file_style',
         sourcePurpose: 'lookbook.sheet',
         selected: true,
+        browserUrl:
+          '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
       },
     ],
     configuration: [

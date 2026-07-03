@@ -270,6 +270,8 @@ function createCatalog(): LoadedModelCatalog {
               type: 'audio',
               mime: ['audio/mp3'],
               price: {
+                function: 'costByCharacters',
+                inputs: ['text'],
                 pricePerCharacter: 0.001,
               },
             },

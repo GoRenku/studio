@@ -22,6 +22,25 @@ export async function readAssetFileResponse(
   });
 }
 
+export async function readProjectAssetFileByIdResponse(
+  projectData: ProjectsRouteProjectData,
+  input: {
+    projectName: string;
+    assetId: string;
+    assetFileId: string;
+  }
+): Promise<Response> {
+  const resolved = await projectData.resolveProjectAssetFileById(input);
+  const bytes = await fs.readFile(resolved.absolutePath);
+  return new Response(bytes, {
+    status: 200,
+    headers: {
+      'Content-Type': contentTypeForAssetFile(resolved.file),
+      'Cache-Control': 'private, max-age=31536000, immutable',
+    },
+  });
+}
+
 export async function readShotVideoTakeInputFileResponse(
   projectData: ProjectsRouteProjectData,
   input: {

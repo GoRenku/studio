@@ -55,8 +55,16 @@ export {
   validateShotVideoTakeInputPolicy,
 } from './media-generation/shot-video-take/input-policy.js';
 export {
-  validateGenerationPreviewSnapshot,
+  validateGenerationPreviewRequest,
+  validateStudioGenerationPreview,
 } from './generation-preview/validation.js';
+export {
+  buildGenerationPreviewSubject,
+  resolveGenerationPreviewReferenceFiles,
+} from './generation-preview/projection.js';
+export type {
+  GenerationPreviewReferenceFileAccess,
+} from './generation-preview/projection.js';
 export type {
   ChangeAssetSelectInput,
   ClearLookbookCardImageInput,
@@ -154,8 +162,10 @@ export type {
   RemoveCastVoiceInput,
   RenameInspirationFolderInput,
   ReorderInspirationFoldersInput,
+  ResolveProjectAssetFileByIdInput,
   ResolveProjectAssetFileInput,
   ResolveProjectCoverImageInput,
+  ResolvedProjectAssetFileById,
   ResolvedProjectAssetFile,
   PlanMediaGenerationDependenciesInput,
   RecordLookbookImageGenerationRunInput,
@@ -231,8 +241,11 @@ export {
   DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
 } from '../client/screenplay-analysis.js';
 export type {
-  GenerationPreviewReference,
-  GenerationPreviewSnapshot,
+  GenerationPreviewRequest,
+  GenerationPreviewRequestReference,
+  StudioGenerationPreview,
+  StudioGenerationPreviewReference,
+  StudioGenerationPreviewSubject,
 } from '../client/generation-preview.js';
 export type {
   SceneShot,

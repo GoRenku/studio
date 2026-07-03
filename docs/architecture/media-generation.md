@@ -110,10 +110,13 @@ generated pixels match the selected metadata. GPT-Image-2 is the default
 prompt-sheet image model.
 
 Generation previews are a live review surface before expensive generation. The
-Core contract is `GenerationPreviewSnapshot`, delivered through
+CLI/agent contract is `GenerationPreviewRequest`, delivered through
 `renku generation preview show --file <generation-preview-json> --json` to a
-running Studio server. The preview dialog shows generator-bound prompt text,
-model identity, references, provider token order, configuration, diagnostics,
+running Studio server with logical `assetId + assetFileId` references only. The
+Studio event contract is `StudioGenerationPreview`, which is created after Core
+resolves those references to active project asset files and builds meaningful
+subject labels. The preview dialog shows generator-bound prompt text, model
+identity, resolved references, provider token order, configuration, diagnostics,
 prompt-sheet metadata when present, and sanitized provider payloads. Preview
 events are not durable project history and do not create offline backlogs when
 Studio is closed.

@@ -2,10 +2,11 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import type {
   GenerationPreviewConfigurationItem,
-  GenerationPreviewReference,
-  GenerationPreviewSnapshot,
+  StudioGenerationPreview,
+  StudioGenerationPreviewReference,
 } from '@gorenku/studio-core/client';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
+import { AudioPreview } from '@/ui/audio-preview';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import {
@@ -23,14 +24,14 @@ type PreviewTab = 'prompt' | 'references' | 'config' | 'issues';
 
 interface GenerationPreviewEventDetail {
   projectName: string;
-  preview: GenerationPreviewSnapshot;
+  preview: StudioGenerationPreview;
   eventId: string;
   createdAt: string;
 }
 
 export function GenerationPreviewDialogHost() {
   const [state, setState] = useState<{
-    preview: GenerationPreviewSnapshot;
+    preview: StudioGenerationPreview;
     eventId: string;
     createdAt: string;
     revision: number;
@@ -75,21 +76,20 @@ export function GenerationPreviewDialogHost() {
                 <div className='min-w-0 flex flex-col gap-2'>
                   <DialogTitle>{preview.title}</DialogTitle>
                   <DialogDescription>
-                    {preview.project.title ?? preview.project.name}
+                    {preview.subject.projectLabel}
                   </DialogDescription>
                 </div>
                 <div className='flex flex-wrap items-center gap-2'>
-                  <Badge variant='accent'>{preview.purpose}</Badge>
+                  <Badge variant='accent'>{purposeLabel(preview.purpose)}</Badge>
                   <Badge>{preview.model.provider}</Badge>
                   <Badge>{preview.model.modelId}</Badge>
                   <Badge variant='outline'>Revision {state?.revision ?? 1}</Badge>
                 </div>
               </div>
               <div className='flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
-                <span>Take {preview.target.takeId}</span>
-                <span>Scene {preview.target.sceneId}</span>
-                <span>{preview.target.shotIds.join(', ')}</span>
-                <span>Updated {state ? formatTime(state.createdAt) : ''}</span>
+                {headerSubjectLabels(preview, state?.createdAt).map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
               </div>
             </DialogHeader>
             <Tabs
@@ -128,7 +128,7 @@ export function GenerationPreviewDialogHost() {
   );
 }
 
-function PromptTab({ preview }: { preview: GenerationPreviewSnapshot }) {
+function PromptTab({ preview }: { preview: StudioGenerationPreview }) {
   return (
     <div className='flex flex-col gap-4'>
       <div className='rounded-md border border-border/50 bg-muted/20 p-4'>
@@ -164,7 +164,7 @@ function PromptTab({ preview }: { preview: GenerationPreviewSnapshot }) {
   );
 }
 
-function ReferencesTab({ preview }: { preview: GenerationPreviewSnapshot }) {
+function ReferencesTab({ preview }: { preview: StudioGenerationPreview }) {
   return (
     <div className='grid grid-cols-3 gap-3'>
       {preview.references.map((reference, index) => (
@@ -178,7 +178,7 @@ function ReferencesTab({ preview }: { preview: GenerationPreviewSnapshot }) {
   );
 }
 
-function ConfigTab({ preview }: { preview: GenerationPreviewSnapshot }) {
+function ConfigTab({ preview }: { preview: StudioGenerationPreview }) {
   const providerItems = useMemo(
     () =>
       [
@@ -216,7 +216,7 @@ function ConfigTab({ preview }: { preview: GenerationPreviewSnapshot }) {
   );
 }
 
-function IssuesTab({ preview }: { preview: GenerationPreviewSnapshot }) {
+function IssuesTab({ preview }: { preview: StudioGenerationPreview }) {
   if (!preview.diagnostics.length) {
     return (
       <Alert>
@@ -251,7 +251,7 @@ function ReferenceCard({
   reference,
   index,
 }: {
-  reference: GenerationPreviewReference;
+  reference: StudioGenerationPreviewReference;
   index: number;
 }) {
   return (
@@ -284,19 +284,22 @@ function ReferenceCard({
           className='mb-3 aspect-video w-full rounded-md object-cover'
         />
       ) : null}
+      {reference.kind === 'audio' ? (
+        <AudioPreview
+          src={reference.browserUrl}
+          title={reference.label}
+          className='mb-3 w-full'
+        />
+      ) : null}
       <div className='grid grid-cols-1 gap-2 text-xs'>
         <InfoCell label='Role' value={reference.role} />
         <InfoCell label='Token' value={reference.providerToken} />
-        <InfoCell
-          label='Source'
-          value={reference.kind === 'image' ? reference.sourcePurpose : undefined}
-        />
       </div>
     </article>
   );
 }
 
-function TokenRows({ references }: { references: GenerationPreviewReference[] }) {
+function TokenRows({ references }: { references: StudioGenerationPreviewReference[] }) {
   const tokenReferences = references.filter((reference) => reference.providerToken);
   if (!tokenReferences.length) {
     return <p className='text-sm text-muted-foreground'>No provider tokens.</p>;
@@ -355,6 +358,27 @@ function formatConfigValue(value: GenerationPreviewConfigurationItem['value']) {
     return value.join(', ');
   }
   return value;
+}
+
+function headerSubjectLabels(
+  preview: StudioGenerationPreview,
+  createdAt: string | undefined
+): string[] {
+  return [
+    preview.subject.sceneLabel,
+    preview.subject.takeLabel,
+    preview.subject.shotLabel,
+    createdAt ? `Updated ${formatTime(createdAt)}` : undefined,
+  ].filter((label): label is string => Boolean(label));
+}
+
+function purposeLabel(purpose: StudioGenerationPreview['purpose']): string {
+  switch (purpose) {
+    case 'shot.video-prompt-sheet':
+      return 'Video Prompt Sheet';
+    case 'shot.video-take':
+      return 'Video Take';
+  }
 }
 
 function formatTime(value: string): string {

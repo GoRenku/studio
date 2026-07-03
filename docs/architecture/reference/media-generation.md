@@ -270,6 +270,12 @@ provider token), never local absolute paths or provider upload URLs. Subsequent
 feedback should revise the same `previewId` so the open dialog updates in
 place.
 
+When an agent authors `shot.video-prompt-sheet` as a dependency draft for a
+Shot Video Take, the runnable draft spec must carry through both
+`promptSheetVisualStyleId` and `promptSheetNotationModeId`. Missing dependency
+draft placeholders remain non-runnable; they may be costed, but they must not
+invent prompt-sheet metadata just to satisfy prepare/generate readiness.
+
 Image-generation context and model-list reports include `agentMedia`. The
 report exposes the configured image-generation default execution path and, for
 image purposes that an agent can create outside Renku, the external built-in

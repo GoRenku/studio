@@ -1,5 +1,5 @@
 import {
-  validateGenerationPreviewSnapshot,
+  validateGenerationPreviewRequest,
   resolveRenkuStorageRoot,
   type MediaGenerationRequestTarget,
   type MediaGenerationSpec,
@@ -164,7 +164,7 @@ async function runInputList(input: GenerationCommandInput): Promise<unknown> {
 }
 
 async function runPreviewShow(input: GenerationCommandInput): Promise<unknown> {
-  const preview = validateGenerationPreviewSnapshot(
+  const preview = validateGenerationPreviewRequest(
     await readJsonFile(requiredFlag(input.flags.file, '--file'))
   );
   const project = await input.runtime.projectDataService.readProject({

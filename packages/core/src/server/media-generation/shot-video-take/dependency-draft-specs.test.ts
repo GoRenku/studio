@@ -63,6 +63,101 @@ describe('shot video take dependency draft specs', () => {
     });
   });
 
+  it('preserves prompt-sheet metadata for authored video prompt sheet drafts', async () => {
+    const target = testTarget();
+
+    await expect(
+      buildShotInputDependencyDraftSpec({
+        rootPurpose: 'shot.video-take',
+        rootTarget: target,
+        request: {
+          kind: 'shot-video-take',
+          context: testContext(target, {
+            purpose: 'shot.video-prompt-sheet',
+            dependencyKind: 'video-prompt-sheet',
+            outputInputKind: 'video-prompt-sheet',
+            referenceMode: 'storyboard-lookbook',
+            promptSheetVisualStyleId: 'handdrawn-storyboard',
+            promptSheetNotationModeId: 'motion-annotation',
+            prompt: 'A precise video prompt sheet draft.',
+            title: 'Authored video prompt sheet',
+          }),
+        },
+        dependencyKind: 'video-prompt-sheet',
+        dependencyTarget: target,
+        label: 'Video prompt sheet',
+        reason: 'Required by selected route.',
+      })
+    ).resolves.toMatchObject({
+      purpose: 'shot.video-prompt-sheet',
+      materializationState: 'generatable',
+      spec: {
+        promptSheetVisualStyleId: 'handdrawn-storyboard',
+        promptSheetNotationModeId: 'motion-annotation',
+        referenceMode: 'storyboard-lookbook',
+        prompt: 'A precise video prompt sheet draft.',
+        title: 'Authored video prompt sheet',
+      },
+    });
+  });
+
+  it('does not treat missing video prompt sheet drafts as runnable specs', async () => {
+    const target = testTarget();
+
+    const plan = await buildShotInputDependencyDraftSpec({
+      rootPurpose: 'shot.video-take',
+      rootTarget: target,
+      request: {
+        kind: 'shot-video-take',
+        context: testContext(target),
+      },
+      dependencyKind: 'video-prompt-sheet',
+      dependencyTarget: target,
+      label: 'Video prompt sheet',
+      reason: 'Required by selected route.',
+    });
+
+    expect(plan).toMatchObject({
+      materializationState: 'missing-input',
+    });
+    expect(plan).not.toHaveProperty('spec');
+  });
+
+  it('omits prompt-sheet metadata from non-prompt-sheet dependency specs', async () => {
+    const target = testTarget();
+
+    await expect(
+      buildShotInputDependencyDraftSpec({
+        rootPurpose: 'shot.video-take',
+        rootTarget: target,
+        request: {
+          kind: 'shot-video-take',
+          context: testContext(target, {
+            purpose: 'shot.first-frame',
+            dependencyKind: 'first-frame',
+            outputInputKind: 'first-frame',
+            referenceMode: 'movie-lookbook',
+            promptSheetVisualStyleId: 'cinematic-realistic',
+            promptSheetNotationModeId: 'none',
+            prompt: 'A first frame draft with stale prompt-sheet fields.',
+            title: 'Authored first frame',
+          }),
+        },
+        dependencyKind: 'first-frame',
+        dependencyTarget: target,
+        label: 'First frame',
+        reason: 'Required by selected route.',
+      })
+    ).resolves.toMatchObject({
+      purpose: 'shot.first-frame',
+      materializationState: 'generatable',
+      spec: expect.not.objectContaining({
+        promptSheetVisualStyleId: expect.anything(),
+        promptSheetNotationModeId: expect.anything(),
+      }),
+    });
+  });
+
   it('rejects unsupported dependency targets with structured errors', async () => {
     const target = testTarget();
 

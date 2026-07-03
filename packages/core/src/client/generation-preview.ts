@@ -10,7 +10,7 @@ export type GenerationPreviewPurpose =
   | 'shot.video-prompt-sheet'
   | 'shot.video-take';
 
-export interface GenerationPreviewSnapshot {
+export interface GenerationPreviewRequest {
   kind: 'generationPreview';
   previewId: string;
   purpose: GenerationPreviewPurpose;
@@ -25,11 +25,24 @@ export interface GenerationPreviewSnapshot {
   promptSheetVisualStyleId?: VideoPromptSheetVisualStyleId;
   promptSheetNotationModeId?: VideoPromptSheetNotationModeId;
   finalPrompt: GenerationPreviewPrompt;
-  references: GenerationPreviewReference[];
+  references: GenerationPreviewRequestReference[];
   configuration: GenerationPreviewConfigurationItem[];
   providerPreview?: GenerationPreviewProviderPreview;
   estimate?: GenerationPreviewEstimate;
   diagnostics: DiagnosticIssue[];
+}
+
+export interface StudioGenerationPreview
+  extends Omit<GenerationPreviewRequest, 'references'> {
+  subject: StudioGenerationPreviewSubject;
+  references: StudioGenerationPreviewReference[];
+}
+
+export interface StudioGenerationPreviewSubject {
+  projectLabel: string;
+  sceneLabel?: string;
+  takeLabel?: string;
+  shotLabel?: string;
 }
 
 export interface GenerationPreviewModel {
@@ -45,7 +58,7 @@ export interface GenerationPreviewPrompt {
   negativePrompt?: string;
 }
 
-export type GenerationPreviewReference =
+export type GenerationPreviewRequestReference =
   | {
       kind: 'image';
       role: string;
@@ -55,7 +68,6 @@ export type GenerationPreviewReference =
       assetFileId: string;
       sourcePurpose?: string;
       selected: boolean;
-      browserUrl?: string;
     }
   | {
       kind: 'audio';
@@ -66,7 +78,6 @@ export type GenerationPreviewReference =
       assetFileId: string;
       dialogueId?: string;
       selected: boolean;
-      browserUrl?: string;
     }
   | {
       kind: 'video';
@@ -76,8 +87,12 @@ export type GenerationPreviewReference =
       assetId: string;
       assetFileId: string;
       selected: boolean;
-      browserUrl?: string;
     };
+
+export type StudioGenerationPreviewReference =
+  GenerationPreviewRequestReference & {
+    browserUrl: string;
+  };
 
 export interface GenerationPreviewConfigurationItem {
   key: string;

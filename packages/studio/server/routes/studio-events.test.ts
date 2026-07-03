@@ -1,9 +1,12 @@
 import type { Project } from '@gorenku/studio-core/client';
 import type {
   AppendStudioEventInput,
+  GenerationPreviewRequest,
+  StudioGenerationPreview,
   StudioCoordinationService,
   StudioEvent,
 } from '@gorenku/studio-core/server';
+import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { describe, expect, it } from 'vitest';
 import { createStudioRuntimeToken } from '../studio-runtime-token.js';
 import { createStudioEventsRoute, type CreateStudioEventsRouteOptions } from './studio-events.js';
@@ -81,13 +84,18 @@ describe('studio events Hono route', () => {
   it('accepts CLI generation preview notifications with the notification token', async () => {
     const token = createStudioRuntimeToken();
     const appended: AppendStudioEventInput[] = [];
+    const preview = generationPreviewFixture();
     const app = createStudioEventsRoute({
       token,
       cliNotificationToken: 'notification-token-test',
       coordination: fakeCoordinationService(appended),
+      generationPreviewProjection: async (input) => {
+        expect(input.projectName).toBe('constantinople');
+        expect(input.preview).toEqual(preview);
+        return studioGenerationPreviewFixture(input.preview);
+      },
     });
 
-    const preview = generationPreviewFixture();
     const response = await app.request('/generation-previews', {
       method: 'POST',
       body: JSON.stringify({
@@ -115,7 +123,7 @@ describe('studio events Hono route', () => {
           id: 'project_test0001',
           storageRoot: '/tmp/renku',
         },
-        preview,
+        preview: studioGenerationPreviewFixture(preview),
         source: { kind: 'cli', command: 'generation preview show' },
         operationId: 'studio_operation_preview_test',
       },
@@ -123,6 +131,61 @@ describe('studio events Hono route', () => {
     await expect(response.json()).resolves.toMatchObject({
       eventId: 'studio_event_test',
       previewId: 'generation_preview_test',
+      event: {
+        preview: {
+          subject: {
+            projectLabel: 'Preparation of the Siege',
+            sceneLabel: 'Opening council',
+            takeLabel: 'Take 1',
+            shotLabel: 'Shot 1',
+          },
+          references: [
+            {
+              browserUrl:
+                '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it('rejects generation preview notifications when references cannot be resolved', async () => {
+    const token = createStudioRuntimeToken();
+    const app = createStudioEventsRoute({
+      token,
+      cliNotificationToken: 'notification-token-test',
+      coordination: fakeCoordinationService([]),
+      generationPreviewProjection: async () => {
+        throw createStructuredError({
+          code: 'CORE_GENERATION_PREVIEW_REFERENCE_FILE_NOT_FOUND',
+          message: 'Generation preview reference asset file was not found.',
+        });
+      },
+    });
+
+    const response = await app.request('/generation-previews', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectRef: {
+          name: 'constantinople',
+          id: 'project_test0001',
+          storageRoot: '/tmp/renku',
+        },
+        preview: generationPreviewFixture(),
+        source: { kind: 'cli', command: 'generation preview show' },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Notification-Token': 'notification-token-test',
+      },
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'CORE_GENERATION_PREVIEW_REFERENCE_FILE_NOT_FOUND',
+      },
     });
   });
 
@@ -157,16 +220,19 @@ describe('studio events Hono route', () => {
     });
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       error: {
         code: 'CORE_GENERATION_PREVIEW_INVALID',
-        issues: [
-          {
-            code: 'CORE_GENERATION_PREVIEW_REFERENCE_PATH_FORBIDDEN',
-          },
-        ],
       },
     });
+    expect(body.error.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_GENERATION_PREVIEW_REFERENCE_FIELD_UNSUPPORTED',
+        }),
+      ])
+    );
   });
 
   it('rejects generation preview notifications without a projectRef', async () => {
@@ -498,7 +564,7 @@ function makeProject(): Project {
   };
 }
 
-function generationPreviewFixture() {
+function generationPreviewFixture(): GenerationPreviewRequest {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
@@ -547,5 +613,24 @@ function generationPreviewFixture() {
       },
     ],
     diagnostics: [],
+  };
+}
+
+function studioGenerationPreviewFixture(
+  preview: GenerationPreviewRequest
+): StudioGenerationPreview {
+  return {
+    ...preview,
+    subject: {
+      projectLabel: 'Preparation of the Siege',
+      sceneLabel: 'Opening council',
+      takeLabel: 'Take 1',
+      shotLabel: 'Shot 1',
+    },
+    references: preview.references.map((reference) => ({
+      ...reference,
+      browserUrl:
+        '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
+    })),
   };
 }

@@ -189,15 +189,20 @@ To keep that boundary from regressing:
 - adding a new event type must include a short explanation of why it is UI
   coordination state rather than durable project state.
 
-`studio.generationPreviewRequested` is a UI coordination event. It carries a
-Core-validated `generationPreview` snapshot so the running browser can open or
-update the Generation Preview Dialog before an agent generates a video prompt
-image or final video. The event may include final prompt text, model identity,
-configuration, logical project references, provider-token ordering, diagnostics,
-prompt-sheet metadata, and a sanitized provider payload preview, because its
-purpose is local review of the exact generator-bound handoff. The snapshot must
-not encode prompt-sheet internals such as panels, captions, annotation keys, or
-shot-coverage checks.
+`studio.generationPreviewRequested` is a UI coordination event. The CLI/agent
+notification carries a Core-validated `GenerationPreviewRequest` with logical
+project references only. Before appending the event, the Studio server asks Core
+to resolve each `assetId + assetFileId` into an active project asset file and to
+build meaningful subject labels. The stored event carries the browser display
+projection, `StudioGenerationPreview`, with Studio-safe asset-file URLs and
+subject labels so the running browser can open or update the Generation Preview
+Dialog before an agent generates a video prompt image or final video.
+
+The preview may include final prompt text, model identity, configuration,
+provider-token ordering, diagnostics, prompt-sheet metadata, and a sanitized
+provider payload preview, because its purpose is local review of the exact
+generator-bound handoff. The preview must not encode prompt-sheet internals such
+as panels, captions, annotation keys, or shot-coverage checks.
 
 It must not be consumed by project data services, used to reconstruct generation
 history, or stored as a substitute for media generation specs, estimates, runs,
@@ -217,7 +222,9 @@ renku generation preview show --file <generation-preview-json> --json
 Unlike resource refresh, generation previews do not have an offline backlog. If
 Studio is not running, the command fails because the requested result is a
 visible dialog. Preview references must be logical project references and must
-not include provider upload URLs, secrets, or local absolute paths.
+not include browser URLs, provider upload URLs, secrets, or local absolute paths.
+Studio resolves logical references into `/studio-api/projects/.../assets/...`
+file URLs only after the notification reaches the server.
 
 Tests should reinforce this boundary:
 

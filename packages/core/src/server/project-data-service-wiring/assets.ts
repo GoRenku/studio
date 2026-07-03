@@ -13,6 +13,7 @@ import {
   listAssetSelects,
   listAssets,
   resolveProjectAssetFile,
+  resolveProjectAssetFileById,
 } from '../resources/assets.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
@@ -20,6 +21,7 @@ export function createAssetServiceWiring(): Pick<
   ProjectDataService,
   | 'listAssetPage'
   | 'resolveProjectAssetFile'
+  | 'resolveProjectAssetFileById'
   | 'registerAsset'
   | 'updateAssetReference'
   | 'listAssets'
@@ -34,6 +36,7 @@ export function createAssetServiceWiring(): Pick<
   return {
     listAssetPage,
     resolveProjectAssetFile,
+    resolveProjectAssetFileById,
     registerAsset,
     updateAssetReference,
     listAssets,

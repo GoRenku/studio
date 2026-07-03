@@ -1,5 +1,5 @@
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
-import type { GenerationPreviewSnapshot } from '@gorenku/studio-core/client';
+import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
 
 export interface StudioProjectRef {
   name: string;
@@ -58,7 +58,7 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
 export interface StudioGenerationPreviewRequestedEvent extends StudioEventBase {
   type: 'studio.generationPreviewRequested';
   projectRef: StudioProjectRef;
-  preview: GenerationPreviewSnapshot;
+  preview: StudioGenerationPreview;
 }
 
 export type StudioEvent =

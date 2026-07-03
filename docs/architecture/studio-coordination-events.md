@@ -35,10 +35,12 @@ information and project library refresh cases.
 
 Generation previews use `studio.generationPreviewRequested`. This event opens or
 updates the read-only Generation Preview Dialog with the exact prompt, model,
-references, provider token order, configuration, diagnostics, and Video Prompt
-Panel plan that an agent is about to submit. It is live UI coordination only:
-closed Studio sessions do not accumulate preview backlogs, and project services
-must not treat preview events as generation history.
+resolved references, provider token order, configuration, diagnostics, and
+prompt-sheet metadata that an agent is about to submit. The CLI/agent request
+uses logical project references only; the Studio server resolves those
+references into Studio-safe browser URLs before appending the event. It is live
+UI coordination only: closed Studio sessions do not accumulate preview backlogs,
+and project services must not treat preview events as generation history.
 
 Decision history:
 
