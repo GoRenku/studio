@@ -19,6 +19,14 @@ export type ShotVideoInputReferenceMode =
   | 'movie-lookbook'
   | 'storyboard-lookbook';
 
+export type VideoPromptSheetVisualStyleId =
+  | 'cinematic-realistic'
+  | 'handdrawn-storyboard';
+
+export type VideoPromptSheetNotationModeId =
+  | 'none'
+  | 'motion-annotation';
+
 export type ShotVideoTakeInputGenerationPurpose =
   | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
   | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
@@ -617,6 +625,8 @@ export interface ShotVideoTakeInputGenerationSpec {
   outputInputKind: ShotVideoTakeInputKind;
   modelChoice: ShotVideoTakeInputModelChoice;
   referenceMode: ShotVideoInputReferenceMode;
+  promptSheetVisualStyleId?: VideoPromptSheetVisualStyleId;
+  promptSheetNotationModeId?: VideoPromptSheetNotationModeId;
   prompt: string;
   parameterValues: ShotVideoTakeParameterValues;
   title?: string;

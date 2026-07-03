@@ -78,6 +78,171 @@ describe('studio events Hono route', () => {
     });
   });
 
+  it('accepts CLI generation preview notifications with the notification token', async () => {
+    const token = createStudioRuntimeToken();
+    const appended: AppendStudioEventInput[] = [];
+    const app = createStudioEventsRoute({
+      token,
+      cliNotificationToken: 'notification-token-test',
+      coordination: fakeCoordinationService(appended),
+    });
+
+    const preview = generationPreviewFixture();
+    const response = await app.request('/generation-previews', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectRef: {
+          name: 'constantinople',
+          id: 'project_test0001',
+          storageRoot: '/tmp/renku',
+        },
+        preview,
+        source: { kind: 'cli', command: 'generation preview show' },
+        operationId: 'studio_operation_preview_test',
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Notification-Token': 'notification-token-test',
+      },
+    });
+
+    expect(response.status).toBe(200);
+    expect(appended).toEqual([
+      {
+        type: 'studio.generationPreviewRequested',
+        projectRef: {
+          name: 'constantinople',
+          id: 'project_test0001',
+          storageRoot: '/tmp/renku',
+        },
+        preview,
+        source: { kind: 'cli', command: 'generation preview show' },
+        operationId: 'studio_operation_preview_test',
+      },
+    ]);
+    await expect(response.json()).resolves.toMatchObject({
+      eventId: 'studio_event_test',
+      previewId: 'generation_preview_test',
+    });
+  });
+
+  it('rejects generation preview notifications with provider upload URLs', async () => {
+    const token = createStudioRuntimeToken();
+    const app = createStudioEventsRoute({
+      token,
+      cliNotificationToken: 'notification-token-test',
+      coordination: fakeCoordinationService([]),
+    });
+    const preview = generationPreviewFixture();
+    preview.references[0] = {
+      ...preview.references[0],
+      browserUrl: 'https://v3.fal.media/upload/private.png',
+    } as never;
+
+    const response = await app.request('/generation-previews', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectRef: {
+          name: 'constantinople',
+          id: 'project_test0001',
+          storageRoot: '/tmp/renku',
+        },
+        preview,
+        source: { kind: 'cli', command: 'generation preview show' },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Notification-Token': 'notification-token-test',
+      },
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+        issues: [
+          {
+            code: 'CORE_GENERATION_PREVIEW_REFERENCE_PATH_FORBIDDEN',
+          },
+        ],
+      },
+    });
+  });
+
+  it('rejects generation preview notifications without a projectRef', async () => {
+    const token = createStudioRuntimeToken();
+    const app = createStudioEventsRoute({
+      token,
+      cliNotificationToken: 'notification-token-test',
+      coordination: fakeCoordinationService([]),
+    });
+
+    const response = await app.request('/generation-previews', {
+      method: 'POST',
+      body: JSON.stringify({
+        preview: generationPreviewFixture(),
+        source: { kind: 'cli', command: 'generation preview show' },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Notification-Token': 'notification-token-test',
+      },
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'STUDIO_SERVER032',
+        issues: [
+          {
+            message: 'projectRef must be an object.',
+          },
+        ],
+      },
+    });
+  });
+
+  it('rejects generation preview notifications for a different projectRef', async () => {
+    const token = createStudioRuntimeToken();
+    const app = createStudioEventsRoute({
+      token,
+      cliNotificationToken: 'notification-token-test',
+      coordination: fakeCoordinationService([]),
+    });
+
+    const response = await app.request('/generation-previews', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectRef: {
+          name: 'other-project',
+          id: 'project_other0001',
+          storageRoot: '/tmp/renku/other-project',
+        },
+        preview: generationPreviewFixture(),
+        source: { kind: 'cli', command: 'generation preview show' },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Notification-Token': 'notification-token-test',
+      },
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'STUDIO_SERVER032',
+        issues: [
+          {
+            message: 'projectRef.id must match preview.project.id.',
+          },
+          {
+            message: 'projectRef.name must match preview.project.name.',
+          },
+        ],
+      },
+    });
+  });
+
   it('rejects CLI project resource change notifications from unexpected browser origins', async () => {
     const token = createStudioRuntimeToken();
     const app = createStudioEventsRoute({
@@ -330,5 +495,57 @@ function makeProject(): Project {
       sequences: 0,
       scenes: 0,
     },
+  };
+}
+
+function generationPreviewFixture() {
+  return {
+    kind: 'generationPreview',
+    previewId: 'generation_preview_test',
+    purpose: 'shot.video-prompt-sheet',
+    project: {
+      id: 'project_test0001',
+      name: 'constantinople',
+      title: 'Preparation of the Siege',
+    },
+    target: {
+      kind: 'sceneShotVideoTake',
+      id: 'take_test0001',
+      sceneId: 'scene_test0001',
+      takeId: 'take_test0001',
+      shotIds: ['shot_test0001'],
+    },
+    title: 'Choreography prompt sheet',
+    model: {
+      provider: 'fal-ai',
+      modelId: 'fal-ai/openai/gpt-image-2',
+      mediaKind: 'image',
+      executionPath: 'renku-managed',
+    },
+    promptSheetVisualStyleId: 'handdrawn-storyboard',
+    promptSheetNotationModeId: 'motion-annotation',
+    finalPrompt: {
+      text: 'Create a motion annotated video prompt image.',
+    },
+    references: [
+      {
+        kind: 'image',
+        role: 'style',
+        label: 'Storyboard Lookbook Sheet',
+        providerToken: '@Reference1',
+        assetId: 'asset_style',
+        assetFileId: 'asset_file_style',
+        sourcePurpose: 'lookbook.sheet',
+        selected: true,
+      },
+    ],
+    configuration: [
+      {
+        key: 'image_size',
+        label: 'Image size',
+        value: '1024x768',
+      },
+    ],
+    diagnostics: [],
   };
 }

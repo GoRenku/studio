@@ -100,6 +100,44 @@ keyed by dialogue id, not by a take asset id. Dialogs stores the selected
 dialogue audio take in the shot-video take direction, and generation resolves
 that selected take to the concrete audio file at request time.
 
+Shot-video prompt sheets are opaque image dependencies for Scene Shot Video
+Takes. Core validates the durable generation envelope: purpose, take target,
+dependency kind, selected references, model, parameters, prompt presence, and
+the deterministic metadata fields `promptSheetVisualStyleId` and
+`promptSheetNotationModeId`. Studio does not validate prompt-sheet layout,
+panel count, labels, captions, timing marks, shot coverage, or whether the
+generated pixels match the selected metadata. GPT-Image-2 is the default
+prompt-sheet image model.
+
+Generation previews are a live review surface before expensive generation. The
+Core contract is `GenerationPreviewSnapshot`, delivered through
+`renku generation preview show --file <generation-preview-json> --json` to a
+running Studio server. The preview dialog shows generator-bound prompt text,
+model identity, references, provider token order, configuration, diagnostics,
+prompt-sheet metadata when present, and sanitized provider payloads. Preview
+events are not durable project history and do not create offline backlogs when
+Studio is closed.
+
+App-owned prompt transforms are allowed only for specific Studio product roles
+or mechanical provider handoffs. Current classifications:
+
+- `scene.storyboard-sheet` is an accepted batch-generation optimization: Studio
+  asks for a strict composite so agents can crop per-shot storyboard images.
+- Lookbook image and Lookbook sheet generation are accepted Lookbook artifact
+  transforms: Core appends role-specific Movie Lookbook or Storyboard Lookbook
+  framing to an authored prompt.
+- Location environment sheet and Cast character sheet dependency drafts are
+  accepted artifact-role transforms: Core can draft a purpose-specific prompt
+  from selected project context, then agents/users may revise the authored spec.
+- Location Hero Image is an accepted Studio overview-surface transform derived
+  from a selected Location Sheet and location metadata.
+- Shot-video reference-conditioning prose is mechanical provider mapping: Core
+  names selected logical references and provider token order without validating
+  reference contents or prompt semantics.
+
+None of these classifications allow Studio to inspect generated media contents,
+require prompt wording, or generalize a sheet layout into runtime validation.
+
 Selectors must state their defaulting policy explicitly. `selected-only`
 selectors use only a concrete selected asset or sheet. `selected-or-default`
 selectors may fall back to the purpose-owned default only when that behavior is

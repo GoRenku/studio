@@ -84,6 +84,7 @@ export type * from './location-media-generation.js';
 export type * from './scene-audio-generation.js';
 export type * from './scene-storyboard-media-generation.js';
 export type * from './shot-video-take.js';
+export type * from './generation-preview.js';
 export {
   sceneShotVideoTakeDirectionHasPromptFields,
   sceneShotVideoTakeDirectionHasShotProjectionFields,

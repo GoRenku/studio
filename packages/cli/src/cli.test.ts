@@ -2506,6 +2506,7 @@ describe('renku CLI', () => {
       };
       resourceKeys: string[];
     };
+    const createdTakeId = takeCreateReport.overview.take.takeId;
     expect(takeCreateReport).toMatchObject({
       overview: {
         take: {
@@ -2527,8 +2528,10 @@ describe('renku CLI', () => {
       },
       resourceKeys: expect.arrayContaining([
         `scene:${sceneId}`,
-        `surface:scene:${sceneId}:shots`,
         `surface:scene:${sceneId}:takes`,
+        `scene-shot-video-take:${createdTakeId}`,
+        `scene-shot-video-take-video:${createdTakeId}`,
+        `scene-shot-video-take-prompt:${createdTakeId}`,
       ]),
     });
     const take = takeCreateReport.overview.take;

@@ -2,6 +2,7 @@ import {
   createProjectDataService,
   createStudioCoordinationService,
   createStudioOperationId,
+  validateGenerationPreviewSnapshot,
   validateStudioFocusRequestForProject,
   type ScenePanelTab,
   type SceneShotDetailTab,
@@ -38,6 +39,10 @@ const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
   'references',
   'ai-production',
 ];
+const PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT =
+  'studio.projectResourcesChanged notification';
+const GENERATION_PREVIEW_NOTIFICATION_CONTEXT =
+  'studio.generationPreviewRequested notification';
 
 export interface CreateStudioEventsRouteOptions {
   coordination?: StudioCoordinationService;
@@ -90,6 +95,26 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
           operationId: request.operationId ?? createStudioOperationId(),
         });
         return c.json({ event });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .post('/generation-previews', requireNotificationToken, async (c) => {
+      try {
+        const body = await c.req.json();
+        const request = readGenerationPreviewRequest(body);
+        const event = await coordination.appendStudioEvent({
+          type: 'studio.generationPreviewRequested',
+          projectRef: request.projectRef,
+          preview: request.preview,
+          source: request.source,
+          operationId: request.operationId ?? createStudioOperationId(),
+        });
+        return c.json({
+          eventId: event.id,
+          previewId: request.preview.previewId,
+          event,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -210,6 +235,73 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
         return projectErrorResponse(c, error);
       }
     });
+}
+
+function readGenerationPreviewRequest(body: unknown) {
+  const request = readRecord(body);
+  const issues: DiagnosticIssue[] = [];
+  if (!request) {
+    throw createStructuredError({
+      code: 'STUDIO_SERVER031',
+      message: 'Generation preview notification body must be an object.',
+    });
+  }
+  const preview = validateGenerationPreviewSnapshot(request.preview);
+  const projectRef = readProjectRef(
+    request.projectRef,
+    issues,
+    GENERATION_PREVIEW_NOTIFICATION_CONTEXT
+  );
+  const source = readCliNotificationSource(
+    request.source,
+    issues,
+    GENERATION_PREVIEW_NOTIFICATION_CONTEXT
+  );
+  const operationId = request.operationId;
+  if (operationId !== undefined && typeof operationId !== 'string') {
+    issues.push(
+      notificationIssue(
+        'operationId must be a string when provided.',
+        ['operationId'],
+        GENERATION_PREVIEW_NOTIFICATION_CONTEXT
+      )
+    );
+  }
+  if (projectRef && projectRef.id !== preview.project.id) {
+    issues.push(
+      notificationIssue(
+        'projectRef.id must match preview.project.id.',
+        ['projectRef', 'id'],
+        GENERATION_PREVIEW_NOTIFICATION_CONTEXT
+      )
+    );
+  }
+  if (projectRef && projectRef.name !== preview.project.name) {
+    issues.push(
+      notificationIssue(
+        'projectRef.name must match preview.project.name.',
+        ['projectRef', 'name'],
+        GENERATION_PREVIEW_NOTIFICATION_CONTEXT
+      )
+    );
+  }
+
+  if (issues.length > 0 || !projectRef || !source) {
+    throw createStructuredError({
+      code: 'STUDIO_SERVER032',
+      message: 'Generation preview notification failed validation.',
+      issues,
+      suggestion:
+        'Send a validated preview, matching projectRef, and CLI source.',
+    });
+  }
+
+  return {
+    projectRef,
+    preview,
+    source,
+    ...(typeof operationId === 'string' ? { operationId } : {}),
+  };
 }
 
 async function validateSceneShotSelection(input: {
@@ -397,9 +489,17 @@ function readProjectResourcesChangedRequest(
     );
   }
 
-  const projectRef = readProjectRef(record?.projectRef, issues);
+  const projectRef = readProjectRef(
+    record?.projectRef,
+    issues,
+    PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT
+  );
   const resourceKeys = readResourceKeys(record?.resourceKeys, issues);
-  const source = readCliNotificationSource(record?.source, issues);
+  const source = readCliNotificationSource(
+    record?.source,
+    issues,
+    PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT
+  );
   const operationId = record?.operationId;
   if (operationId !== undefined && typeof operationId !== 'string') {
     issues.push(
@@ -428,11 +528,14 @@ function readProjectResourcesChangedRequest(
 
 function readProjectRef(
   value: unknown,
-  issues: DiagnosticIssue[]
+  issues: DiagnosticIssue[],
+  context: string
 ): StudioProjectRef | null {
   const record = readRecord(value);
   if (!record) {
-    issues.push(notificationIssue('projectRef must be an object.', ['projectRef']));
+    issues.push(
+      notificationIssue('projectRef must be an object.', ['projectRef'], context)
+    );
     return null;
   }
 
@@ -444,7 +547,7 @@ function readProjectRef(
         notificationIssue(`projectRef.${key} must be a string.`, [
           'projectRef',
           key,
-        ])
+        ], context)
       );
     } else {
       ref[key] = field;
@@ -491,11 +594,12 @@ function readResourceKeys(
 
 function readCliNotificationSource(
   value: unknown,
-  issues: DiagnosticIssue[]
+  issues: DiagnosticIssue[],
+  context: string
 ): { kind: 'cli'; command: string } | null {
   const record = readRecord(value);
   if (!record) {
-    issues.push(notificationIssue('source must be an object.', ['source']));
+    issues.push(notificationIssue('source must be an object.', ['source'], context));
     return null;
   }
   if (record.kind !== 'cli') {
@@ -503,7 +607,7 @@ function readCliNotificationSource(
       notificationIssue('source.kind must be cli for this endpoint.', [
         'source',
         'kind',
-      ])
+      ], context)
     );
   }
   if (typeof record.command !== 'string' || !record.command.trim()) {
@@ -511,7 +615,7 @@ function readCliNotificationSource(
       notificationIssue('source.command must be a string.', [
         'source',
         'command',
-      ])
+      ], context)
     );
   }
   return record.kind === 'cli' &&
@@ -544,11 +648,15 @@ function readRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function notificationIssue(message: string, path: string[]): DiagnosticIssue {
+function notificationIssue(
+  message: string,
+  path: string[],
+  context = PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT
+): DiagnosticIssue {
   return createDiagnosticError(
     'STUDIO_SERVER030',
     message,
-    { path, context: 'studio.projectResourcesChanged notification' }
+    { path, context }
   );
 }
 

@@ -7,6 +7,8 @@ import {
   type StudioEventSource,
   type StudioProjectRef,
 } from './events.js';
+import { validateGenerationPreviewSnapshot } from '../generation-preview/validation.js';
+import { ProjectDataError } from '../project-data-error.js';
 
 const SCENE_PANEL_TABS = ['narrative', 'shots', 'takes'];
 const SCENE_SHOT_DETAIL_TABS = [
@@ -79,6 +81,18 @@ export function collectStudioEventIssues(value: unknown) {
               )
             );
           }
+        }
+      }
+      break;
+    case 'studio.generationPreviewRequested':
+      validateProjectRef(record.projectRef, ['projectRef'], issues);
+      try {
+        validateGenerationPreviewSnapshot(record.preview);
+      } catch (error) {
+        if (error instanceof ProjectDataError) {
+          issues.push(...error.issues);
+        } else {
+          issues.push(issue('STUDIO_COORDINATION039', 'Generation preview payload is invalid.', ['preview']));
         }
       }
       break;

@@ -14,12 +14,14 @@ import type {
   ShotSizeId,
   SubjectFramingId,
 } from '../../client/index.js';
+import type { GenerationPreviewSnapshot } from '../../client/generation-preview.js';
 
 export const STUDIO_COORDINATION_EVENT_VERSION = '0.1.0' as const;
 
 export type StudioEventType =
   | 'studio.projectRefreshRequested'
   | 'studio.projectResourcesChanged'
+  | 'studio.generationPreviewRequested'
   | 'studio.focusRequested'
   | 'studio.focusChanged'
   | 'studio.focusRequestFailed'
@@ -107,6 +109,12 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
   resourceKeys: string[];
 }
 
+export interface StudioGenerationPreviewRequestedEvent extends StudioEventBase {
+  type: 'studio.generationPreviewRequested';
+  projectRef: StudioProjectRef;
+  preview: GenerationPreviewSnapshot;
+}
+
 export interface StudioFocusRequestedEvent extends StudioEventBase {
   type: 'studio.focusRequested';
   projectRef?: StudioProjectRef;
@@ -150,6 +158,7 @@ export interface StudioBrowserSessionActiveEvent extends StudioEventBase {
 export type StudioEvent =
   | StudioProjectRefreshRequestedEvent
   | StudioProjectResourcesChangedEvent
+  | StudioGenerationPreviewRequestedEvent
   | StudioFocusRequestedEvent
   | StudioFocusChangedEvent
   | StudioFocusRequestFailedEvent
@@ -160,6 +169,7 @@ type StudioAssignedEnvelopeKeys = 'id' | 'version' | 'createdAt';
 export type AppendStudioEventInput =
   | (Omit<StudioProjectRefreshRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioProjectResourcesChangedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
+  | (Omit<StudioGenerationPreviewRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusChangedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusRequestFailedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)

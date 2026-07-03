@@ -16,6 +16,7 @@ import type {
   StudioFocus,
   StudioEvent,
   StudioFocusRequestedEvent,
+  StudioGenerationPreviewRequestedEvent,
   StudioPendingRequest,
   StudioProjectRef,
 } from '@/services/studio-current-contracts';
@@ -301,6 +302,16 @@ async function applyStudioEventBatch(input: {
       }
     }
 
+    if (event.type === 'studio.generationPreviewRequested') {
+      const previewEvent = event as StudioGenerationPreviewRequestedEvent;
+      if (
+        input.currentProjectRef.current?.identity.id ===
+        previewEvent.projectRef.id
+      ) {
+        publishGenerationPreview(previewEvent);
+      }
+    }
+
     if (
       event.type === 'studio.focusRequested' &&
       event.id === latestFocusRequest?.id
@@ -318,6 +329,21 @@ async function applyStudioEventBatch(input: {
       });
     }
   }
+}
+
+function publishGenerationPreview(
+  event: StudioGenerationPreviewRequestedEvent
+): void {
+  window.dispatchEvent(
+    new CustomEvent('renku:generation-preview-requested', {
+      detail: {
+        projectName: event.projectRef.name,
+        preview: event.preview,
+        eventId: event.id,
+        createdAt: event.createdAt,
+      },
+    })
+  );
 }
 
 function invalidateChangedResources(event: {

@@ -54,6 +54,9 @@ export {
 export {
   validateShotVideoTakeInputPolicy,
 } from './media-generation/shot-video-take/input-policy.js';
+export {
+  validateGenerationPreviewSnapshot,
+} from './generation-preview/validation.js';
 export type {
   ChangeAssetSelectInput,
   ClearLookbookCardImageInput,
@@ -227,6 +230,10 @@ export type {
 export {
   DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
 } from '../client/screenplay-analysis.js';
+export type {
+  GenerationPreviewReference,
+  GenerationPreviewSnapshot,
+} from '../client/generation-preview.js';
 export type {
   SceneShot,
   SceneShotDialogueReference,

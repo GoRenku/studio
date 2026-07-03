@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const projectSourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const coreSourceRoot = path.join(projectSourceRoot, '..');
+const repoRoot = path.resolve(coreSourceRoot, '..', '..', '..');
 const clientSourceRoot = path.join(coreSourceRoot, 'client');
 const projectDataServiceWiringRoot = path.join(
   projectSourceRoot,
@@ -391,6 +392,49 @@ describe('core server architecture', () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it('keeps video prompt sheet internals out of runtime contracts', async () => {
+    const roots = [
+      path.join(repoRoot, 'packages', 'core', 'src'),
+      path.join(repoRoot, 'packages', 'cli', 'src'),
+      path.join(repoRoot, 'packages', 'studio', 'src'),
+      path.join(repoRoot, 'packages', 'studio', 'server'),
+    ];
+    const files = (await Promise.all(roots.map(listSourceFiles))).flat();
+    const forbiddenNeedles = [
+      'VideoPrompt' + 'ImageStyleId',
+      'VideoPrompt' + 'AnnotationKey',
+      'VideoPrompt' + 'ImagePlan',
+      'VideoPrompt' + 'Panel',
+      'videoPrompt' + 'ImagePlan',
+      'validateVideoPrompt' + 'ImagePlan',
+      'validateVideoPrompt' + 'Panels',
+      'CORE_VIDEO_PROMPT' + '_IMAGE',
+    ];
+    const offenders: Array<{ file: string; line: number; needle: string }> = [];
+
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      for (const needle of forbiddenNeedles) {
+        findNeedleLines(source, needle).forEach((line) => {
+          offenders.push({
+            file: path.relative(repoRoot, file),
+            line,
+            needle,
+          });
+        });
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Video prompt sheets are opaque image artifacts.',
+        'Runtime contracts may keep promptSheetVisualStyleId and promptSheetNotationModeId,',
+        'but must not reintroduce panel plans, annotation keys, or content-plan validation.',
+      ].join(' ')
+    ).toEqual([]);
+  });
 });
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
@@ -402,6 +446,23 @@ async function listTypeScriptFiles(root: string): Promise<string[]> {
         return listTypeScriptFiles(absolutePath);
       }
       return entry.isFile() && entry.name.endsWith('.ts') ? [absolutePath] : [];
+    })
+  );
+  return files.flat();
+}
+
+async function listSourceFiles(root: string): Promise<string[]> {
+  const entries = await fs.readdir(root, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const absolutePath = path.join(root, entry.name);
+      if (entry.isDirectory()) {
+        return listSourceFiles(absolutePath);
+      }
+      return entry.isFile() &&
+        (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))
+        ? [absolutePath]
+        : [];
     })
   );
   return files.flat();

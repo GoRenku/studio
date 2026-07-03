@@ -198,17 +198,39 @@ unpriced when their required reference-conditioned inputs cannot be resolved.
 intent shown in Studio.
 
 `shot.video-prompt-sheet` is a take-owned AI-video planning sheet for an
-existing Shot Video Take. It is grounded in `renku take authoring context`,
-uses one readable panel per ordered take shot, and preserves shot order,
-spatial continuity, motion continuity, visual references, and known spoken
-timing for downstream `shot.video-take` prompting. It is not a scene-owned
-storyboard sheet, not a moodboard, and not a replacement for the Scene Shot
-List. A panelled prompt-sheet layout does not make the selected Storyboard
-Lookbook the default visual source; ordinary prompt sheets still use
-`referenceMode: "movie-lookbook"`. Agents must inspect the generated sheet
-before import and reject or revise sheets whose panel count, panel order,
-geography, movement direction, reference continuity, spoken timing, or label
-legibility contradicts the take authoring context.
+existing Shot Video Take. It is grounded in `renku take authoring context`, but
+the generated sheet image is opaque to Studio. Core validates the generation
+envelope and the selected logical references; it does not validate panel count,
+panel numbers, panel ids, captions, annotation keys, source-shot coverage, or
+visual conformity to prompt-sheet metadata.
+
+Prompt-sheet specs default to `modelChoice: "fal-ai/openai/gpt-image-2"` and
+must include two orthogonal metadata fields:
+
+- `promptSheetVisualStyleId`: `cinematic-realistic` or
+  `handdrawn-storyboard`;
+- `promptSheetNotationModeId`: `none` or `motion-annotation`.
+
+Motion annotation is a notation mode, not a visual style. It can combine with
+either cinematic-realistic or hand-drawn prompt sheets. Agents may still write
+prompts that ask for panels, arrows, timing maps, captions, diagrams, or any
+other sheet strategy, but those choices remain agent/user-owned prompt content
+instead of Studio runtime schema.
+
+Agents must show a Generation Preview Dialog before generating
+`shot.video-prompt-sheet` images and before final `shot.video-take` runs:
+
+```bash
+renku generation preview show --file <generation-preview-json> --json
+```
+
+The preview snapshot is validated by Core and delivered only to a running Studio
+server. It is live UI coordination, not durable generation history; if Studio is
+closed, the command fails instead of creating an offline backlog. References in
+the preview must be logical project references (`assetId`, `assetFileId`, role,
+provider token), never local absolute paths or provider upload URLs. Subsequent
+feedback should revise the same `previewId` so the open dialog updates in
+place.
 
 Image-generation context and model-list reports include `agentMedia`. The
 report exposes the configured image-generation default execution path and, for

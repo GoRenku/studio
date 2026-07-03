@@ -84,6 +84,7 @@ export type {
   StudioFocusRequest,
   StudioFocusRequestFailedEvent,
   StudioFocusRequestedEvent,
+  StudioGenerationPreviewRequestedEvent,
   StudioPendingRequest,
   StudioProjectRef,
   StudioProjectRefreshRequestedEvent,

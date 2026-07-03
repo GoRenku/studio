@@ -127,6 +127,16 @@ const SHOT_VIDEO_TAKE_INPUT_MODELS = [
   'fal-ai/xai/grok-imagine-image',
 ] as const;
 
+const VIDEO_PROMPT_SHEET_VISUAL_STYLES = [
+  'cinematic-realistic',
+  'handdrawn-storyboard',
+] as const;
+
+const VIDEO_PROMPT_SHEET_NOTATION_MODES = [
+  'none',
+  'motion-annotation',
+] as const;
+
 const SHOT_VIDEO_TAKE_MODELS = [
   'fal-ai/bytedance/seedance-2.0',
   'fal-ai/bytedance/seedance-2.0/mini',
@@ -660,6 +670,8 @@ function shotVideoTakeProductionSchemaProperties(): Record<string, unknown> {
                 outputInputKind: enumValue(SHOT_VIDEO_TAKE_INPUT_KINDS),
                 modelChoice: enumValue(SHOT_VIDEO_TAKE_INPUT_MODELS),
                 referenceMode: enumValue(['movie-lookbook', 'storyboard-lookbook'] as const),
+                promptSheetVisualStyleId: enumValue(VIDEO_PROMPT_SHEET_VISUAL_STYLES),
+                promptSheetNotationModeId: enumValue(VIDEO_PROMPT_SHEET_NOTATION_MODES),
                 prompt: nonEmptyString(),
                 parameterValues: shotVideoTakeParameterValuesSchema(),
                 title: nonEmptyString(),

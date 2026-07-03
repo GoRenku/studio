@@ -1,8 +1,11 @@
 import {
+  validateGenerationPreviewSnapshot,
+  resolveRenkuStorageRoot,
   type MediaGenerationRequestTarget,
   type MediaGenerationSpec,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
+import { notifyStudioGenerationPreview } from './studio-notification-client.js';
 import {
   assertShotVideoTakePurpose,
   parseGenerationPurpose,
@@ -65,6 +68,10 @@ export const generationCommandHandlers = [
   {
     path: ['dialogue-audio', 'generate'],
     run: runDialogueAudioGenerate,
+  },
+  {
+    path: ['preview', 'show'],
+    run: runPreviewShow,
   },
   {
     path: ['input', 'list'],
@@ -154,6 +161,57 @@ async function runInputList(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.listShotVideoTakeInputs(
     await readShotVideoContextInput(input),
   );
+}
+
+async function runPreviewShow(input: GenerationCommandInput): Promise<unknown> {
+  const preview = validateGenerationPreviewSnapshot(
+    await readJsonFile(requiredFlag(input.flags.file, '--file'))
+  );
+  const project = await input.runtime.projectDataService.readProject({
+    projectName: preview.project.name,
+    homeDir: input.runtime.homeDir,
+  });
+  if (
+    project.identity.id !== preview.project.id ||
+    project.identity.name !== preview.project.name
+  ) {
+    throw new StructuredError({
+      code: 'CLI143',
+      message:
+        'Generation preview project identity does not match the resolved project.',
+      suggestion:
+        'Regenerate the preview from the current project context before showing it in Studio.',
+    });
+  }
+  const delivery = await notifyStudioGenerationPreview({
+    homeDir: input.runtime.homeDir,
+    notification: {
+      projectRef: {
+        name: project.identity.name,
+        id: project.identity.id,
+        storageRoot: await resolveRenkuStorageRoot({
+          homeDir: input.runtime.homeDir,
+        }),
+      },
+      preview,
+      source: { kind: 'cli', command: 'generation preview show' },
+    },
+  });
+  if (delivery.status !== 'delivered') {
+    throw generationPreviewDeliveryError(delivery);
+  }
+  return {
+    valid: true,
+    previewId: preview.previewId,
+    purpose: preview.purpose,
+    project: {
+      id: preview.project.id,
+      name: preview.project.name,
+    },
+    studio: {
+      delivery: 'delivered',
+    },
+  };
 }
 
 async function runInputSelect(input: GenerationCommandInput): Promise<unknown> {
@@ -530,4 +588,39 @@ function generationProjectInput(runtime: CliCommandRuntime): {
     projectName: runtime.projectName,
     homeDir: runtime.homeDir,
   };
+}
+
+function generationPreviewDeliveryError(delivery: Exclude<Awaited<ReturnType<typeof notifyStudioGenerationPreview>>, { status: 'delivered' }>): StructuredError {
+  if (delivery.status === 'notRunning') {
+    return new StructuredError({
+      code: 'CLI144',
+      message:
+        'Studio is not running, so the Generation Preview Dialog cannot be shown.',
+      suggestion:
+        'Start Renku Studio, then run generation preview show again with the same preview file.',
+    });
+  }
+  if (delivery.status === 'notConfigured') {
+    return new StructuredError({
+      code: 'CLI145',
+      message:
+        'The running Studio runtime is missing its local notification token.',
+      suggestion:
+        'Restart Studio so CLI preview notifications can be delivered.',
+    });
+  }
+  return new StructuredError({
+    code: 'CLI146',
+    message: 'Generation preview could not be delivered to Studio.',
+    suggestion:
+      'Check that Studio is still running and reachable on its local server URL.',
+    issues: [
+      {
+        code: 'CLI146',
+        severity: 'error',
+        message: delivery.detail,
+        location: { path: ['studio'], context: 'generation preview delivery' },
+      },
+    ],
+  });
 }

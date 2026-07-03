@@ -38,6 +38,7 @@ function statusForStructuredError(code: string): 400 | 404 | 500 {
   }
   if (
     code.startsWith('CONFIG') ||
+    code.startsWith('CORE') ||
     code.startsWith('PROJECT_DATA') ||
     code.startsWith('PROJECT_SETUP') ||
     code.startsWith('STUDIO_SERVER')

@@ -189,6 +189,36 @@ To keep that boundary from regressing:
 - adding a new event type must include a short explanation of why it is UI
   coordination state rather than durable project state.
 
+`studio.generationPreviewRequested` is a UI coordination event. It carries a
+Core-validated `generationPreview` snapshot so the running browser can open or
+update the Generation Preview Dialog before an agent generates a video prompt
+image or final video. The event may include final prompt text, model identity,
+configuration, logical project references, provider-token ordering, diagnostics,
+prompt-sheet metadata, and a sanitized provider payload preview, because its
+purpose is local review of the exact generator-bound handoff. The snapshot must
+not encode prompt-sheet internals such as panels, captions, annotation keys, or
+shot-coverage checks.
+
+It must not be consumed by project data services, used to reconstruct generation
+history, or stored as a substitute for media generation specs, estimates, runs,
+receipts, assets, or take metadata. The Studio server appends the event only
+after receiving a live notification at:
+
+```text
+POST /studio-api/studio/events/generation-previews
+```
+
+The CLI command is:
+
+```bash
+renku generation preview show --file <generation-preview-json> --json
+```
+
+Unlike resource refresh, generation previews do not have an offline backlog. If
+Studio is not running, the command fails because the requested result is a
+visible dialog. Preview references must be logical project references and must
+not include provider upload URLs, secrets, or local absolute paths.
+
 Tests should reinforce this boundary:
 
 - coordination projections should be computable without treating event payloads

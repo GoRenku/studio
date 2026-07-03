@@ -50,6 +50,65 @@ Concrete examples of forbidden fixes:
 When reviewing code, treat architectural boundary violations as high-severity
 issues even if tests pass and the UI appears to work.
 
+## Top Instruction: AI Artifacts And Prompts Are Opaque
+
+Do not validate, parse, score, repair, or otherwise try to understand the
+creative contents of AI prompts, generated media, reference media, or sheet-like
+artifacts in Studio runtime code.
+
+This is a hard architecture rule. The accepted decision is
+`docs/decisions/0041-keep-ai-artifacts-and-prompts-opaque.md`, and the current
+cleanup plan is `plans/active/0103-opaque-ai-artifacts-and-prompts.md`.
+
+Studio may validate the envelope it owns:
+
+- generation purpose, target, owner relationship, and selected dependency slot;
+- asset id, asset file id, media kind, MIME type, and project-relative path;
+- provider model, route, parameter schema, input count, cost, approval token,
+  and receipt/provenance;
+- deterministic generation metadata such as prompt-sheet visual style and
+  notation mode;
+- prompt field presence and type when a provider route requires a prompt;
+- preview safety, including rejecting local paths, secrets, or provider upload
+  URLs in stored or displayed preview payloads.
+
+Studio may also own deterministic generation transforms for accepted
+application workflows. These are product-purpose optimizations, not user/agent
+creative choices. For example, `scene.storyboard-sheet` may keep its strict
+provider prompt and fixed composite layout because it exists to generate
+several storyboard images in one request. Location hero images, profile images,
+and similar app-specific display/reference artifacts may also have
+Studio-owned prompt scaffolding when the product purpose is explicit.
+
+Prompt-sheet metadata must use orthogonal options. Visual style and notation
+mode are separate axes: motion annotation can apply to either a cinematic sheet
+or a hand-drawn sheet.
+
+Studio must not validate the creative artifact contents:
+
+- do not require prompt text to mention specific shots, references, provider
+  tokens, captions, panels, motion, or house-template phrases;
+- do not require generated or reference images to contain panels, labels,
+  readable text, diagrams, contact-sheet regions, style sections, shot coverage,
+  character matches, location matches, or any other visual content;
+- do not require audio or video references to contain expected words, timing,
+  actions, camera movement, or continuity;
+- do not encode sheet internals such as panel count, panel ids, panel order,
+  captions, annotation keys, hard constraints, or shot representation into
+  schemas, DTOs, validators, previews, or UI state;
+- do not validate generated media contents against deterministic metadata such
+  as prompt-sheet visual style or notation mode;
+- do not move these checks into Studio routes, CLI handlers, React components,
+  or skill wrappers.
+
+Agents, agent instructions, evals, and user review may inspect artifacts and
+recommend prompt/sheet/reference strategies. Those recommendations must remain
+agent-owned workflow guidance, not Studio runtime contracts. The key
+differentiator is ownership of the choice: creative choices belong to the user
+and agent loop; accepted application-specific output shapes and optimizations
+may belong to Studio. If ownership is unclear, treat it as a product and
+architecture decision before adding or removing core prompt logic.
+
 ## Top Instruction: Use Shadcn UI Controls Only
 
 In `packages/studio`, it is strictly forbidden to use raw HTML form or

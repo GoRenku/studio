@@ -33,6 +33,13 @@ not accumulate offline resource-refresh backlogs.
 `studio.projectRefreshRequested` remains available for the narrower project
 information and project library refresh cases.
 
+Generation previews use `studio.generationPreviewRequested`. This event opens or
+updates the read-only Generation Preview Dialog with the exact prompt, model,
+references, provider token order, configuration, diagnostics, and Video Prompt
+Panel plan that an agent is about to submit. It is live UI coordination only:
+closed Studio sessions do not accumulate preview backlogs, and project services
+must not treat preview events as generation history.
+
 Decision history:
 
 - `../decisions/0006-use-sqlite-for-project-data-and-studio-events-for-ui-coordination.md`

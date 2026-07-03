@@ -3,6 +3,7 @@ import { ProjectLibraryScreen } from '@/features/project-library/project-library
 import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
+import { GenerationPreviewDialogHost } from '@/features/generation-preview/generation-preview-dialog-host';
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 import { Toaster } from '@/ui/sonner';
 
@@ -63,6 +64,7 @@ export default function App() {
   return (
     <>
       <AppContent />
+      <GenerationPreviewDialogHost />
       <Toaster richColors position='bottom-right' />
     </>
   );

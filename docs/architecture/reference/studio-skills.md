@@ -87,6 +87,13 @@ operational companions that teach agents how to use those contracts.
   changes, compares validation/apply `prior` and `current` snapshots, and
   re-reads persisted authoring context before final generation so prompt
   assumptions match the final Studio-reviewed state.
+- For `shot.video-prompt-sheet`, authors an opaque prompt-sheet spec with
+  `promptSheetVisualStyleId`, `promptSheetNotationModeId`, logical references,
+  and a detailed prompt, then defaults to GPT-Image-2 unless the user selects a
+  different model.
+- Shows the Generation Preview Dialog with `renku generation preview show`
+  before generating prompt-sheet images or final shot videos, then revises the
+  same `previewId` when the user gives feedback.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
   the output to `casting-director` for `renku cast voice attach`.
 
