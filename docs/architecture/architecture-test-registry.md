@@ -148,9 +148,9 @@ Static tests:
 
 Runtime tests:
 
-- `packages/core/src/server/media-generation/shot-video-take/reference-selection-mutations.test.ts`
-- `packages/core/src/server/media-generation/shot-video-take/input-selection.test.ts`
-- `packages/core/src/server/media-generation/shot-video-take/take-shot-membership.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/mutations/reference-selections.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/input-selection.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/persistence/take-shot-membership.test.ts`
 
 Forbidden capabilities:
 
@@ -242,6 +242,86 @@ Maintenance owner:
   work belongs in `packages/engines/src/generation/execution`. Static tests
   should protect those module folders, while runtime tests prove pricing math,
   payload validation, and runner behavior.
+
+### Core Media Generation Lifecycle And Dependencies
+
+Owner docs:
+
+- `docs/architecture/media-generation.md`
+- `docs/architecture/reference/media-generation.md`
+- `docs/decisions/0044-use-media-generation-module-boundaries.md`
+
+Static tests:
+
+- `packages/core/src/server/architecture.test.ts`
+
+Runtime tests:
+
+- `packages/core/tests/integration/media-generation-dependency-inventory.test.ts`
+- `packages/core/tests/integration/media-generation-purpose-lifecycle-matrix.test.ts`
+
+Forbidden capabilities:
+
+- adapter code importing purpose-private modules instead of Core services;
+- cost code importing lifecycle readiness services;
+- dependency selectors living in cost projection code;
+- purpose lifecycle and cost registries drifting apart by public purpose id;
+- lifecycle service files taking direct low-level database or filesystem
+  ownership outside their narrow service role.
+
+Maintenance owner:
+
+- Lifecycle work belongs in `packages/core/src/server/media-generation/lifecycle`.
+  Dependency infrastructure belongs in
+  `packages/core/src/server/media-generation/dependencies`. Adapters should call
+  ProjectDataService/Core service wiring; they should not enforce
+  media-generation domain rules locally.
+
+### Shot Video Take Submodule Direction
+
+Owner docs:
+
+- `docs/architecture/media-generation.md`
+- `docs/architecture/reference/media-generation.md`
+- `docs/decisions/0044-use-media-generation-module-boundaries.md`
+
+Static tests:
+
+- `packages/core/src/server/architecture.test.ts`
+
+Runtime tests:
+
+- `packages/core/src/server/media-generation/purposes/shot-video-take/authoring/authoring.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/planning/production-plan.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/planning/preflight-report.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/input-selection.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/mutations/reference-selections.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/specs/spec-validation.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/provider/provider-payloads.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/imports/media-imports.test.ts`
+- `packages/core/src/server/media-generation/purposes/shot-video-take/persistence/takes.test.ts`
+
+Forbidden capabilities:
+
+- planning importing provider, run, import, or persistence writer modules;
+- selection importing provider, run, or import modules;
+- provider preparation importing selection mutation modules or persistence
+  writers;
+- imports importing provider or run modules;
+- persistence importing provider, run, import, engine execution, or engine
+  pricing modules;
+- callers using removed root-level `media-generation/shot-video-take` import
+  paths or a `shot-video-take/index.ts` compatibility barrel.
+
+Maintenance owner:
+
+- Shot Video Take work should add behavior to the submodule that owns the
+  domain rule: user-editable direction in `authoring`, dependency/readiness
+  reports in `planning`, selected inputs/references in `selection`, spec
+  lifecycle in `specs`, provider payload preparation in `provider`, live run
+  recording in `runs`, media attachment in `imports`, durable take records and
+  write primitives in `persistence`, and cross-submodule read-only helpers in
+  `shared`.
 
 ## Feature Plan Requirement
 

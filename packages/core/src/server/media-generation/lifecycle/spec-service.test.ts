@@ -1,0 +1,142 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../database/access/media-generation.js', () => ({
+  requireMediaGenerationSpec: vi.fn(),
+}));
+
+vi.mock('./dependency-service.js', () => ({
+  assertRootDependenciesResolved: vi.fn(),
+}));
+
+vi.mock('./project-session.js', () => ({
+  withMediaGenerationProjectSession: vi.fn(),
+}));
+
+vi.mock('./purpose-lifecycle-registry.js', () => ({
+  requireMediaGenerationPurposeDefinition: vi.fn(),
+}));
+
+import { requireMediaGenerationSpec } from '../../database/access/media-generation.js';
+import { assertRootDependenciesResolved } from './dependency-service.js';
+import { withMediaGenerationProjectSession } from './project-session.js';
+import { requireMediaGenerationPurposeDefinition } from './purpose-lifecycle-registry.js';
+import {
+  createMediaGenerationSpec,
+  listMediaGenerationSpecs,
+  prepareDraftMediaGenerationSpec,
+  prepareMediaGenerationSpec,
+  readMediaGenerationSpec,
+  updateMediaGenerationSpec,
+  validateMediaGenerationSpec,
+} from './spec-service.js';
+
+const mockedRequireSpec = vi.mocked(requireMediaGenerationSpec);
+const mockedAssertDependencies = vi.mocked(assertRootDependenciesResolved);
+const mockedWithProjectSession = vi.mocked(withMediaGenerationProjectSession);
+const mockedRequireDefinition = vi.mocked(requireMediaGenerationPurposeDefinition);
+
+describe('media generation lifecycle spec service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedWithProjectSession.mockImplementation(async (_input, fn) =>
+      fn({ session: { kind: 'session' }, projectFolder: '/project' } as never)
+    );
+  });
+
+  it('delegates validation, listing, and draft preparation to the purpose definition', async () => {
+    const definition = {
+      validateSpec: vi.fn(async () => ({ spec: { normalized: true } })),
+      listSpecs: vi.fn(async () => ({ specs: [{ id: 'spec-a' }] })),
+      prepareDraftSpec: vi.fn(async () => ({ generation: { mode: 'draft' } })),
+    };
+    mockedRequireDefinition.mockReturnValue(definition as never);
+
+    await expect(
+      validateMediaGenerationSpec({ spec: { purpose: 'lookbook.image' } } as never)
+    ).resolves.toEqual({ spec: { normalized: true } });
+    await expect(
+      listMediaGenerationSpecs({
+        purpose: 'lookbook.image',
+        target: { kind: 'lookbook', id: 'lookbook-a' },
+      } as never)
+    ).resolves.toEqual({ specs: [{ id: 'spec-a' }] });
+    await expect(
+      prepareDraftMediaGenerationSpec({
+        spec: { purpose: 'lookbook.image' },
+      } as never)
+    ).resolves.toEqual({ generation: { mode: 'draft' } });
+  });
+
+  it('checks root dependencies before create and update for dependency-owning purposes', async () => {
+    const createSpec = vi.fn(async () => ({ id: 'created-spec' }));
+    const updateSpec = vi.fn(async () => ({ id: 'updated-spec' }));
+    mockedRequireDefinition.mockReturnValue({
+      declareDependencies: vi.fn(),
+      createSpec,
+      updateSpec,
+    } as never);
+
+    await expect(
+      createMediaGenerationSpec({ spec: { purpose: 'shot.video-take' } } as never)
+    ).resolves.toEqual({ id: 'created-spec' });
+    await expect(
+      updateMediaGenerationSpec({ spec: { purpose: 'shot.video-take' } } as never)
+    ).resolves.toEqual({ id: 'updated-spec' });
+
+    expect(mockedAssertDependencies).toHaveBeenCalledTimes(2);
+    expect(createSpec).toHaveBeenCalledTimes(1);
+    expect(updateSpec).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not check dependencies for purposes that declare none', async () => {
+    const createSpec = vi.fn(async () => ({ id: 'created-spec' }));
+    mockedRequireDefinition.mockReturnValue({
+      createSpec,
+    } as never);
+
+    await createMediaGenerationSpec({
+      spec: { purpose: 'lookbook.image' },
+    } as never);
+
+    expect(mockedAssertDependencies).not.toHaveBeenCalled();
+    expect(createSpec).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads persisted specs through the media generation project session', async () => {
+    mockedRequireSpec.mockReturnValueOnce({
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+      spec: { purpose: 'lookbook.image' },
+    } as never);
+
+    await expect(
+      readMediaGenerationSpec({ specId: 'spec-a', homeDir: '/home' } as never)
+    ).resolves.toMatchObject({
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+    });
+    expect(mockedRequireSpec).toHaveBeenCalledWith(
+      { kind: 'session' },
+      'spec-a'
+    );
+  });
+
+  it('prepares persisted specs through the purpose that owns the stored purpose id', async () => {
+    const prepareSpec = vi.fn(async () => ({ generation: { policy: 'prepared' } }));
+    mockedRequireSpec.mockReturnValueOnce({
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+      spec: { purpose: 'lookbook.image' },
+    } as never);
+    mockedRequireDefinition.mockReturnValueOnce({ prepareSpec } as never);
+
+    await expect(
+      prepareMediaGenerationSpec({ specId: 'spec-a', homeDir: '/home' } as never)
+    ).resolves.toEqual({ generation: { policy: 'prepared' } });
+
+    expect(prepareSpec).toHaveBeenCalledWith({
+      specId: 'spec-a',
+      homeDir: '/home',
+    });
+  });
+});

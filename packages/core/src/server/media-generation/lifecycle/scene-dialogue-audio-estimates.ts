@@ -20,7 +20,7 @@ import {
   MISSING_SCENE_DIALOGUE_AUDIO_CAST_VOICE_REASON,
   SCENE_DIALOGUE_AUDIO_MODEL_CHOICES,
   sceneDialogueAudioTextTreatmentForModel,
-} from '../scene-dialogue-audio-config.js';
+} from '../purposes/scene-dialogue-audio-config.js';
 import {
   buildMediaGenerationCostProjection,
   mediaGenerationCostEstimateToPricing,

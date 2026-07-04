@@ -10,10 +10,10 @@ import type {
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import {
   buildShotVideoTakeFinalSpec,
-} from '../shot-video-take/final-spec-construction.js';
+} from '../purposes/shot-video-take/specs/final-spec-construction.js';
 import {
   issue,
-} from '../shot-video-take/diagnostics.js';
+} from '../purposes/shot-video-take/shared/diagnostics.js';
 import {
   buildMediaGenerationCostProjection,
   mediaGenerationCostEstimateToPricing,

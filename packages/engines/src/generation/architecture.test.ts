@@ -55,10 +55,10 @@ async function listTypeScriptFiles(root: string): Promise<string[]> {
 
 function extractImportSources(source: string): string[] {
   const importSourcePattern =
-    /(?:from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
+    /(?:from\s+['"]([^'"]+)['"]|import\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
   const importSources: string[] = [];
   for (const match of source.matchAll(importSourcePattern)) {
-    const importSource = match[1] ?? match[2];
+    const importSource = match[1] ?? match[2] ?? match[3];
     if (importSource) {
       importSources.push(importSource);
     }

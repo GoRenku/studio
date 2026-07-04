@@ -65,9 +65,9 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { readStudioSelectionContextProjection } from './selection-context.js';
-import { buildAgentMediaReport } from '../media-generation/shared-generation-service.js';
-import { buildShotVideoTakeContext } from '../media-generation/shot-video-take/context.js';
-import { previewShotVideoTakeProductionForContext } from '../media-generation/shot-video-take/preflight-report.js';
+import { buildAgentMediaReport } from '../media-generation/lifecycle/context-service.js';
+import { buildShotVideoTakeContext } from '../media-generation/purposes/shot-video-take/authoring/context.js';
+import { previewShotVideoTakeProductionForContext } from '../media-generation/purposes/shot-video-take/planning/preflight-report.js';
 
 export async function readDirectorContext(
   input: ReadDirectorContextInput = {}

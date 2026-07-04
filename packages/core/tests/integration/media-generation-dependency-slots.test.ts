@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { declareCastProfileDependencySlots } from '../../src/server/media-generation/cast-profile-dependency-slots.js';
+import { declareCastProfileDependencySlots } from '../../src/server/media-generation/purposes/cast-profile-dependency-slots.js';
 import {
   parseShotVideoInputDependencyId,
   shotVideoInputDependencyId,
-} from '../../src/server/media-generation/dependency-identifiers.js';
-import { declareShotVideoTakeDependencySlots } from '../../src/server/media-generation/shot-video-take/dependency-slots.js';
+} from '../../src/server/media-generation/dependencies/dependency-identifiers.js';
+import { declareShotVideoTakeDependencySlots } from '../../src/server/media-generation/purposes/shot-video-take/planning/dependency-slots.js';
 import type { SceneShotVideoTakeTarget } from '../../src/client/index.js';
 
 const target: SceneShotVideoTakeTarget = {

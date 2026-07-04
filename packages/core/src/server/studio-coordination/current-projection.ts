@@ -7,7 +7,7 @@ import type {
   SceneShotDetailTab,
   SceneShotVideoTakeDirection,
 } from '../../client/index.js';
-import { sceneShotVideoTakeDirectionForShot } from '../media-generation/shot-video-take/take-state.js';
+import { sceneShotVideoTakeDirectionForShot } from '../media-generation/purposes/shot-video-take/shared/take-state-projections.js';
 import {
   CAMERA_ANGLE_LABELS,
   FOCUS_LABELS,

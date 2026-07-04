@@ -7,7 +7,7 @@ import type {
 import {
   planShotVideoTakeProduction,
   shotVideoTakePlanReportContext,
-} from '../shot-video-take/production-plan.js';
+} from '../purposes/shot-video-take/planning/production-plan.js';
 
 export async function estimateShotVideoTakeProduction(
   input: PreviewShotVideoTakeProductionInput

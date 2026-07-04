@@ -12,7 +12,7 @@ import type {
   SequenceResource,
   StoryArcResource,
 } from '../../client/index.js';
-import { readSceneDialogueAudioContext } from '../media-generation/scene-dialogue-audio.js';
+import { readSceneDialogueAudioContext } from '../media-generation/purposes/scene-dialogue-audio.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   listActNavigationPage,

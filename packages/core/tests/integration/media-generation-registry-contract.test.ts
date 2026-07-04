@@ -19,8 +19,8 @@ import {
 import {
   listMediaGenerationPurposeDefinitions,
   requireMediaGenerationPurposeDefinition,
-} from '../../src/server/media-generation/purpose-registry.js';
-import { listMediaGenerationDependencyKindDefinitions } from '../../src/server/media-generation/dependency-kind-registry.js';
+} from '../../src/server/media-generation/lifecycle/purpose-lifecycle-registry.js';
+import { listMediaGenerationDependencyKindDefinitions } from '../../src/server/media-generation/dependencies/dependency-kind-registry.js';
 
 const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,

@@ -51,12 +51,23 @@ renku generation run --spec <spec-id> --approve-unpriced-cost --json
 renku media import --purpose lookbook.image --target lookbook:<id> --source <path> --json
 ```
 
-Internally, the common lifecycle is registry-backed. Core owns a media
-generation purpose registry and shared generation service for purpose lookup,
-spec persistence, prepare, estimate, dependency planning, run, and run
-recording. Purpose definitions still own context construction, spec validation,
-provider payloads, output names, dependency declarations, draft dependency
-specs, and import behavior.
+Internally, the common lifecycle is registry-backed and split by ownership.
+Core lifecycle services live under
+`packages/core/src/server/media-generation/lifecycle` and own purpose lookup,
+context/model service entrypoints, spec persistence, readiness preparation,
+dependency planning, run orchestration, and persisted-spec estimate reads.
+Core cost behavior lives under `media-generation/cost` and owns cost
+projection, cost approval, cost-line pricing states, and the cost-only purpose
+registry. Shared dependency ids, dependency selectors, dependency inventory,
+dependency draft contracts, and dependency line projection live under
+`media-generation/dependencies`.
+
+Purpose implementations live under
+`packages/core/src/server/media-generation/purposes`. Purpose definitions still
+own purpose-specific context construction, spec validation, provider payloads,
+output names, dependency declarations, draft dependency specs, and import
+behavior. Cost projection code belongs in `media-generation/cost`, not hidden
+inside purpose readiness modules.
 
 Browser-safe media generation contracts are split by ownership under
 `packages/core/src/client`. Shared purpose, target, dependency, and lifecycle
@@ -67,14 +78,14 @@ report, and import report shapes in its own client contract file. The public
 browser entrypoint remains `packages/core/src/client/index.ts`.
 
 Shot-video server behavior is split under
-`packages/core/src/server/media-generation/shot-video-take`. Context loading,
-take production state updates, route settings, provider payloads, dependency
-inventory, dependency draft specs, preflight reports, production plan reports,
-reference projection, input selection, media import, spec lifecycle, run
-recording, and project-relative file safety each have a purpose-named owner
-module. There is no local `shot-video-take.ts` compatibility surface or
-shot-video index barrel; service wiring and the purpose registry import the
-operation owner modules directly.
+`packages/core/src/server/media-generation/purposes/shot-video-take`. The
+submodules are `authoring`, `planning`, `selection`, `specs`, `provider`,
+`runs`, `imports`, `persistence`, and `shared`. There is no local
+`shot-video-take.ts` compatibility surface or shot-video index barrel; service
+wiring and the lifecycle registry import the operation owner modules directly.
+Read-only take-state projections and project media file helpers live in
+`shared` when multiple submodules need them without crossing into persistence
+or provider ownership.
 
 Dependency planning is shared media-generation architecture, not a shot-video
 special case. Core builds a read-only dependency inventory from purpose-owned

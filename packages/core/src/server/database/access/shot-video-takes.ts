@@ -20,9 +20,11 @@ import {
   parseSceneShotVideoTakeState,
 } from '../../shot-video-take-json/validator.js';
 import {
-  sceneShotVideoTakeDirectionReferenceSelections,
   sceneShotVideoTakeStructureDirections,
-} from '../../media-generation/shot-video-take/take-state.js';
+} from '../../media-generation/purposes/shot-video-take/persistence/take-state.js';
+import {
+  sceneShotVideoTakeDirectionReferenceSelections,
+} from '../../media-generation/purposes/shot-video-take/shared/take-state-projections.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import type { EntityIdPrefix } from '../../entity-ids.js';
 

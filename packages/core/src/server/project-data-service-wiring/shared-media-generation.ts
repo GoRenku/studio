@@ -1,21 +1,26 @@
-import * as sharedGeneration from '../media-generation/shared-generation-service.js';
+import * as contextGeneration from '../media-generation/lifecycle/context-service.js';
 import * as costEstimation from '../media-generation/cost/spec-estimates.js';
+import * as dependencyGeneration from '../media-generation/lifecycle/dependency-service.js';
+import * as modelGeneration from '../media-generation/lifecycle/model-service.js';
+import * as runGenerationService from '../media-generation/lifecycle/run-service.js';
 import * as lifecycleEstimation from '../media-generation/lifecycle/spec-estimates.js';
+import * as specGeneration from '../media-generation/lifecycle/spec-service.js';
 
 export function createSharedMediaGenerationServiceWiring() {
   return {
-    buildMediaGenerationContext: sharedGeneration.buildMediaGenerationContext,
-    listMediaGenerationModels: sharedGeneration.listMediaGenerationModels,
-    validateMediaGenerationSpec: sharedGeneration.validateMediaGenerationSpec,
-    createMediaGenerationSpec: sharedGeneration.createMediaGenerationSpec,
-    updateMediaGenerationSpec: sharedGeneration.updateMediaGenerationSpec,
-    readMediaGenerationSpec: sharedGeneration.readMediaGenerationSpec,
-    listMediaGenerationSpecs: sharedGeneration.listMediaGenerationSpecs,
-    prepareMediaGenerationSpec: sharedGeneration.prepareMediaGenerationSpec,
-    prepareDraftMediaGenerationSpec: sharedGeneration.prepareDraftMediaGenerationSpec,
+    buildMediaGenerationContext: contextGeneration.buildMediaGenerationContext,
+    listMediaGenerationModels: modelGeneration.listMediaGenerationModels,
+    validateMediaGenerationSpec: specGeneration.validateMediaGenerationSpec,
+    createMediaGenerationSpec: specGeneration.createMediaGenerationSpec,
+    updateMediaGenerationSpec: specGeneration.updateMediaGenerationSpec,
+    readMediaGenerationSpec: specGeneration.readMediaGenerationSpec,
+    listMediaGenerationSpecs: specGeneration.listMediaGenerationSpecs,
+    prepareMediaGenerationSpec: specGeneration.prepareMediaGenerationSpec,
+    prepareDraftMediaGenerationSpec: specGeneration.prepareDraftMediaGenerationSpec,
     estimateMediaGenerationSpec: lifecycleEstimation.estimateMediaGenerationSpec,
     estimateDraftMediaGenerationSpec: costEstimation.estimateDraftMediaGenerationSpec,
-    planMediaGenerationDependencies: sharedGeneration.planMediaGenerationDependencies,
-    runMediaGenerationSpec: sharedGeneration.runMediaGenerationSpec,
+    planMediaGenerationDependencies:
+      dependencyGeneration.planMediaGenerationDependencies,
+    runMediaGenerationSpec: runGenerationService.runMediaGenerationSpec,
   };
 }

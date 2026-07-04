@@ -8,8 +8,8 @@ import type {
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { resolveProjectAssetFileById } from '../resources/assets.js';
-import { buildShotVideoTakeContext } from '../media-generation/shot-video-take/context.js';
-import { sameShotIds } from '../media-generation/shot-video-take/take-context.js';
+import { buildShotVideoTakeContext } from '../media-generation/purposes/shot-video-take/authoring/context.js';
+import { sameShotIds } from '../media-generation/purposes/shot-video-take/authoring/take-context.js';
 
 export interface GenerationPreviewReferenceFileAccess {
   assetId: string;

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   listMediaGenerationPurposeDefinitions,
-} from './media-generation/purpose-registry.js';
+} from './media-generation/lifecycle/purpose-lifecycle-registry.js';
 import {
   listMediaGenerationPurposeCostDefinitions,
 } from './media-generation/cost/purpose-cost-registry.js';
@@ -17,6 +17,12 @@ const mediaGenerationCostRoot = path.join(
   projectSourceRoot,
   'media-generation',
   'cost'
+);
+const shotVideoTakePurposeRoot = path.join(
+  projectSourceRoot,
+  'media-generation',
+  'purposes',
+  'shot-video-take'
 );
 const projectDataServiceWiringRoot = path.join(
   projectSourceRoot,
@@ -142,7 +148,9 @@ describe('core server architecture', () => {
         relativePath === 'architecture.test.ts' ||
         relativePath.endsWith('.test.ts') ||
         relativePath === path.join('database', 'access', 'scene-shot-video-takes.ts') ||
-        relativePath.startsWith(path.join('media-generation', 'shot-video-take'))
+        relativePath.startsWith(
+          path.join('media-generation', 'purposes', 'shot-video-take')
+        )
       ) {
         continue;
       }
@@ -319,7 +327,7 @@ describe('core server architecture', () => {
     ].filter((file) => !file.endsWith('.test.ts'));
     const transientCleanupFiles = new Set([
       path.join('commands', 'cast-voice-commands.ts'),
-      path.join('media-generation', 'scene-dialogue-audio.ts'),
+      path.join('media-generation', 'purposes', 'scene-dialogue-audio.ts'),
     ]);
     const offenders: Array<{ file: string; pattern: string }> = [];
 
@@ -489,6 +497,51 @@ describe('core server architecture', () => {
     ).toEqual([]);
   });
 
+  it('keeps Shot Video Take submodule imports directed by owner', async () => {
+    const files = (await listTypeScriptFiles(shotVideoTakePurposeRoot)).filter(
+      (file) => !file.endsWith('.test.ts')
+    );
+    const offenders: Array<{
+      file: string;
+      importSource: string;
+      reason: string;
+    }> = [];
+
+    for (const file of files) {
+      const sourceOwner = path
+        .relative(shotVideoTakePurposeRoot, file)
+        .split(path.sep)[0];
+      const source = await fs.readFile(file, 'utf8');
+      for (const importSource of extractImportSources(source)) {
+        const resolvedPath = await resolveImportSourcePath(file, importSource);
+        const reason = forbiddenShotVideoTakeSubmoduleImportReason({
+          importSource,
+          sourceOwner,
+          targetPath: resolvedPath,
+        });
+        if (reason) {
+          offenders.push({
+            file: path.relative(projectSourceRoot, file),
+            importSource,
+            reason,
+          });
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Shot Video Take submodules must preserve their module boundaries.',
+        'Planning cannot import provider, run, import, or persistence writers;',
+        'selection cannot import provider, run, or import modules;',
+        'provider cannot import selection mutations or persistence writers;',
+        'imports cannot import provider or run modules;',
+        'and persistence cannot import provider, run, import, or engine execution/pricing modules.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
   it('keeps media generation live cost approval fail-fast', async () => {
     const runtimeRoots = [
       path.join(repoRoot, 'packages', 'core', 'src'),
@@ -653,10 +706,10 @@ async function listSourceFiles(root: string): Promise<string[]> {
 
 function extractImportSources(source: string): string[] {
   const importSourcePattern =
-    /(?:from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
+    /(?:from\s+['"]([^'"]+)['"]|import\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
   const importSources: string[] = [];
   for (const match of source.matchAll(importSourcePattern)) {
-    const importSource = match[1] ?? match[2];
+    const importSource = match[1] ?? match[2] ?? match[3];
     if (importSource) {
       importSources.push(importSource);
     }
@@ -674,17 +727,109 @@ function forbiddenInfrastructureImports(source: string): string[] {
   );
 }
 
+async function resolveImportSourcePath(
+  fromFile: string,
+  importSource: string
+): Promise<string | null> {
+  if (!importSource.startsWith('.')) {
+    return null;
+  }
+  const resolved = path.resolve(path.dirname(fromFile), importSource);
+  const candidates = importPathCandidates(resolved);
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function importPathCandidates(resolvedPath: string): string[] {
+  if (resolvedPath.endsWith('.js')) {
+    return [resolvedPath.replace(/\.js$/, '.ts')];
+  }
+  if (resolvedPath.endsWith('.ts')) {
+    return [resolvedPath];
+  }
+  return [`${resolvedPath}.ts`, path.join(resolvedPath, 'index.ts')];
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function forbiddenShotVideoTakeSubmoduleImportReason(input: {
+  importSource: string;
+  sourceOwner: string;
+  targetPath: string | null;
+}): string | null {
+  if (
+    input.sourceOwner === 'persistence' &&
+    (input.importSource === '@gorenku/studio-engines' ||
+      input.importSource.startsWith('@gorenku/studio-engines/'))
+  ) {
+    return 'persistence must not import engine execution or pricing modules';
+  }
+  if (!input.targetPath?.startsWith(shotVideoTakePurposeRoot)) {
+    return null;
+  }
+
+  const targetRelativePath = path.relative(
+    shotVideoTakePurposeRoot,
+    input.targetPath
+  );
+  const targetOwner = targetRelativePath.split(path.sep)[0];
+
+  if (
+    input.sourceOwner === 'planning' &&
+    ['provider', 'runs', 'imports', 'persistence'].includes(targetOwner)
+  ) {
+    return 'planning must not import provider, runs, imports, or persistence modules';
+  }
+  if (
+    input.sourceOwner === 'selection' &&
+    ['provider', 'runs', 'imports'].includes(targetOwner)
+  ) {
+    return 'selection must not import provider, runs, or imports modules';
+  }
+  if (
+    input.sourceOwner === 'provider' &&
+    targetOwner === 'selection' &&
+    targetRelativePath.split(path.sep)[1] === 'mutations'
+  ) {
+    return 'provider must not import selection mutation modules';
+  }
+  if (input.sourceOwner === 'provider' && targetOwner === 'persistence') {
+    return 'provider must not import persistence write modules';
+  }
+  if (
+    input.sourceOwner === 'imports' &&
+    ['provider', 'runs'].includes(targetOwner)
+  ) {
+    return 'imports must not import provider or runs modules';
+  }
+  if (
+    input.sourceOwner === 'persistence' &&
+    ['provider', 'runs', 'imports'].includes(targetOwner)
+  ) {
+    return 'persistence must not import provider, runs, or imports modules';
+  }
+  return null;
+}
+
 function forbiddenMediaGenerationCostImportReason(
   importSource: string
 ): string | null {
   if (importSource.startsWith('../lifecycle')) {
     return 'cost must not import media generation lifecycle readiness services';
   }
-  if (importSource.includes('purpose-registry')) {
-    return 'cost must not import the lifecycle purpose registry';
-  }
-  if (importSource.includes('shared-generation-service')) {
-    return 'cost must not import shared generation orchestration';
+  if (importSource.startsWith('../purposes')) {
+    return 'cost must not import purpose readiness or provider modules';
   }
   if (importSource.includes('dependency-selectors')) {
     return 'cost must not resolve concrete dependency assets';
@@ -707,9 +852,6 @@ function forbiddenMediaGenerationCostImportReason(
     importSource === 'node:path'
   ) {
     return 'cost must not read or resolve provider input/output files';
-  }
-  if (importSource.includes('shot-video-take')) {
-    return 'cost must not import Shot Video Take readiness or planning modules';
   }
   return null;
 }

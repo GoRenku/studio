@@ -2,7 +2,7 @@
 
 Date: 2026-07-04
 
-Status: investigation
+Status: accepted follow-up recorded
 
 Role: architecture investigation
 
@@ -181,11 +181,14 @@ to protect the behavior:
 
 ## Recommendation
 
-Do not add replacement static tests for these boundaries yet.
+The missing boundaries described in this investigation have been accepted as the
+implementation direction in
+`plans/active/0108-media-generation-module-boundary-refactor.md` and
+`docs/decisions/0044-use-media-generation-module-boundaries.md`.
 
-First, create the missing modules so the boundary is visible in the filesystem
-and public APIs. Then add narrow import-boundary tests that name the module
-boundary, not private implementation files or helper names.
+The follow-up refactor creates the missing modules so the boundary is visible in
+the filesystem and public APIs. Narrow import-boundary tests should name those
+module boundaries, not private implementation files or helper names.
 
 The target is a codebase where architecture tests can say "this module must not
 import that module" instead of "this file must not mention today's private

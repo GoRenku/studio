@@ -53,7 +53,7 @@ export {
 } from './project-data-service.js';
 export {
   validateShotVideoTakeInputPolicy,
-} from './media-generation/shot-video-take/input-policy.js';
+} from './media-generation/purposes/shot-video-take/selection/input-policy.js';
 export {
   validateGenerationPreviewRequest,
   validateStudioGenerationPreview,

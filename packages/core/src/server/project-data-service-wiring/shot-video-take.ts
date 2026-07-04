@@ -1,17 +1,18 @@
-import { buildShotVideoTakeContext, readSceneShotVideoTakeEditContext } from '../media-generation/shot-video-take/context.js';
-import { listShotVideoTakeModels } from '../media-generation/shot-video-take/model-list.js';
-import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, resolveShotVideoTakeVideoFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/shot-video-take/input-selection.js';
-import { createSceneShotVideoTake, deleteSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakePick, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeDirection, updateSceneShotVideoTakeShots, updateSceneShotVideoTakeStructureMode } from '../media-generation/shot-video-take/takes.js';
-import { updateSceneShotVideoTakeCharacterSheetSelection, updateSceneShotVideoTakeLocationSheetSelection, updateSceneShotVideoTakeLookbookSheetSelection, updateSceneShotVideoTakeDialogueAudioSelection, updateSceneShotVideoTakeReferenceInclusion } from '../media-generation/shot-video-take/reference-selection-mutations.js';
-import { planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
+import { buildShotVideoTakeContext, readSceneShotVideoTakeEditContext } from '../media-generation/purposes/shot-video-take/authoring/context.js';
+import { listShotVideoTakeModels } from '../media-generation/purposes/shot-video-take/specs/model-list.js';
+import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, resolveShotVideoTakeVideoFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/purposes/shot-video-take/selection/input-selection.js';
+import { createSceneShotVideoTake, deleteSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakePick, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeDirection, updateSceneShotVideoTakeShots, updateSceneShotVideoTakeStructureMode } from '../media-generation/purposes/shot-video-take/persistence/takes.js';
+import { updateSceneShotVideoTakeCharacterSheetSelection, updateSceneShotVideoTakeLocationSheetSelection, updateSceneShotVideoTakeLookbookSheetSelection, updateSceneShotVideoTakeDialogueAudioSelection, updateSceneShotVideoTakeReferenceInclusion } from '../media-generation/purposes/shot-video-take/selection/mutations/reference-selections.js';
+import { planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/purposes/shot-video-take/planning/production-plan.js';
 import { estimateShotVideoTakeProduction } from '../media-generation/lifecycle/shot-video-take-production-estimates.js';
-import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
-import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
-import { prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
-import { runShotVideoTakeSpec } from '../media-generation/shot-video-take/generation-runs.js';
-import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
-import { applySceneShotVideoTakeAuthoringDocument, readSceneShotVideoTakeAuthoringContext, validateSceneShotVideoTakeAuthoringDocument } from '../media-generation/shot-video-take/authoring.js';
-import * as sharedGeneration from '../media-generation/shared-generation-service.js';
+import { previewShotVideoTakeProduction } from '../media-generation/purposes/shot-video-take/planning/preflight-report.js';
+import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs } from '../media-generation/purposes/shot-video-take/specs/input-specs.js';
+import { prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/purposes/shot-video-take/specs/final-specs.js';
+import { runShotVideoTakeSpec } from '../media-generation/purposes/shot-video-take/runs/generation-runs.js';
+import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from '../media-generation/purposes/shot-video-take/imports/media-imports.js';
+import { applySceneShotVideoTakeAuthoringDocument, readSceneShotVideoTakeAuthoringContext, validateSceneShotVideoTakeAuthoringDocument } from '../media-generation/purposes/shot-video-take/authoring/authoring.js';
+import * as runGenerationService from '../media-generation/lifecycle/run-service.js';
+import * as specGeneration from '../media-generation/lifecycle/spec-service.js';
 import * as estimation from '../media-generation/lifecycle/spec-estimates.js';
 export function createShotVideoTakeServiceWiring() {
   return {
@@ -43,46 +44,41 @@ export function createShotVideoTakeServiceWiring() {
     clearShotVideoTakeInputSelection,
     deleteShotVideoTakeInput,
     validateShotFirstFrameSpec,
-    createShotFirstFrameSpec: sharedGeneration.createMediaGenerationSpec,
-    updateShotFirstFrameSpec: sharedGeneration.updateMediaGenerationSpec,
-    readShotFirstFrameSpec: sharedGeneration.readMediaGenerationSpec,
+    createShotFirstFrameSpec: specGeneration.createMediaGenerationSpec,
+    updateShotFirstFrameSpec: specGeneration.updateMediaGenerationSpec,
+    readShotFirstFrameSpec: specGeneration.readMediaGenerationSpec,
     listShotFirstFrameSpecs,
-    prepareShotFirstFrameSpec: sharedGeneration.prepareMediaGenerationSpec,
+    prepareShotFirstFrameSpec: specGeneration.prepareMediaGenerationSpec,
     estimateShotFirstFrameSpec: estimation.estimateMediaGenerationSpec,
-    runShotFirstFrameSpec: sharedGeneration.runMediaGenerationSpec,
+    runShotFirstFrameSpec: runGenerationService.runMediaGenerationSpec,
     validateShotLastFrameSpec,
-    createShotLastFrameSpec: sharedGeneration.createMediaGenerationSpec,
-    updateShotLastFrameSpec: sharedGeneration.updateMediaGenerationSpec,
-    readShotLastFrameSpec: sharedGeneration.readMediaGenerationSpec,
+    createShotLastFrameSpec: specGeneration.createMediaGenerationSpec,
+    updateShotLastFrameSpec: specGeneration.updateMediaGenerationSpec,
+    readShotLastFrameSpec: specGeneration.readMediaGenerationSpec,
     listShotLastFrameSpecs,
-    prepareShotLastFrameSpec: sharedGeneration.prepareMediaGenerationSpec,
+    prepareShotLastFrameSpec: specGeneration.prepareMediaGenerationSpec,
     estimateShotLastFrameSpec: estimation.estimateMediaGenerationSpec,
-    runShotLastFrameSpec: sharedGeneration.runMediaGenerationSpec,
+    runShotLastFrameSpec: runGenerationService.runMediaGenerationSpec,
     validateShotReferenceImageSpec,
-    createShotReferenceImageSpec: sharedGeneration.createMediaGenerationSpec,
-    updateShotReferenceImageSpec: sharedGeneration.updateMediaGenerationSpec,
-    readShotReferenceImageSpec: sharedGeneration.readMediaGenerationSpec,
+    createShotReferenceImageSpec: specGeneration.createMediaGenerationSpec,
+    updateShotReferenceImageSpec: specGeneration.updateMediaGenerationSpec,
+    readShotReferenceImageSpec: specGeneration.readMediaGenerationSpec,
     listShotReferenceImageSpecs,
-    prepareShotReferenceImageSpec: sharedGeneration.prepareMediaGenerationSpec,
+    prepareShotReferenceImageSpec: specGeneration.prepareMediaGenerationSpec,
     estimateShotReferenceImageSpec: estimation.estimateMediaGenerationSpec,
-    runShotReferenceImageSpec: sharedGeneration.runMediaGenerationSpec,
+    runShotReferenceImageSpec: runGenerationService.runMediaGenerationSpec,
     validateShotVideoPromptSheetSpec,
-    createShotVideoPromptSheetSpec:
-      sharedGeneration.createMediaGenerationSpec,
-    updateShotVideoPromptSheetSpec:
-      sharedGeneration.updateMediaGenerationSpec,
-    readShotVideoPromptSheetSpec:
-      sharedGeneration.readMediaGenerationSpec,
+    createShotVideoPromptSheetSpec: specGeneration.createMediaGenerationSpec,
+    updateShotVideoPromptSheetSpec: specGeneration.updateMediaGenerationSpec,
+    readShotVideoPromptSheetSpec: specGeneration.readMediaGenerationSpec,
     listShotVideoPromptSheetSpecs,
-    prepareShotVideoPromptSheetSpec:
-      sharedGeneration.prepareMediaGenerationSpec,
-    estimateShotVideoPromptSheetSpec:
-      estimation.estimateMediaGenerationSpec,
-    runShotVideoPromptSheetSpec: sharedGeneration.runMediaGenerationSpec,
+    prepareShotVideoPromptSheetSpec: specGeneration.prepareMediaGenerationSpec,
+    estimateShotVideoPromptSheetSpec: estimation.estimateMediaGenerationSpec,
+    runShotVideoPromptSheetSpec: runGenerationService.runMediaGenerationSpec,
     validateShotVideoTakeSpec,
-    createShotVideoTakeSpec: sharedGeneration.createMediaGenerationSpec,
-    updateShotVideoTakeSpec: sharedGeneration.updateMediaGenerationSpec,
-    readShotVideoTakeSpec: sharedGeneration.readMediaGenerationSpec,
+    createShotVideoTakeSpec: specGeneration.createMediaGenerationSpec,
+    updateShotVideoTakeSpec: specGeneration.updateMediaGenerationSpec,
+    readShotVideoTakeSpec: specGeneration.readMediaGenerationSpec,
     listShotVideoTakeSpecs,
     prepareShotVideoTakeSpec,
     estimateShotVideoTakeSpec: estimation.estimateMediaGenerationSpec,

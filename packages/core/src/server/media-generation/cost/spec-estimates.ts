@@ -3,7 +3,7 @@ import type {
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
 } from '../../../client/index.js';
-import { draftMediaGenerationSpecRecord } from '../draft-generation.js';
+import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import { requireMediaGenerationPurposeCostDefinition } from './purpose-cost-registry.js';
 
 export async function estimateDraftMediaGenerationSpec(

@@ -204,12 +204,14 @@ intent shown in Studio.
 
 Generation estimates are cost projections, not readiness checks.
 
-Every media generation purpose owns a `buildCostProjection` implementation in
-the purpose registry. The projection converts the purpose spec into a
-`GenerationPriceKey` and `GenerationPricingInputs`, then calls the engine
-`estimateGenerationCost` API. The cost rail must not prepare provider payloads,
-resolve project files, validate selected dependency readiness, or inspect prompt
-or artifact contents.
+Every media generation purpose is covered by the cost purpose registry under
+`packages/core/src/server/media-generation/cost`. The projection converts the
+purpose spec into a `GenerationPriceKey` and `GenerationPricingInputs`, then
+calls the engine `estimateGenerationCost` API. The cost rail must not prepare
+provider payloads, resolve project files, validate selected dependency
+readiness, or inspect prompt or artifact contents. Persisted-spec estimate
+commands live in lifecycle services: lifecycle reads the spec record, then
+delegates the in-memory cost projection to `media-generation/cost`.
 
 Estimate responses return:
 

@@ -1,4 +1,4 @@
-import * as sceneDialogueAudio from '../media-generation/scene-dialogue-audio.js';
+import * as sceneDialogueAudio from '../media-generation/purposes/scene-dialogue-audio.js';
 import * as estimation from '../media-generation/cost/spec-estimates.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 

@@ -43,10 +43,10 @@ import {
   updateSceneShotVideoTakeStateProduction,
   updateSceneShotVideoTakeDirection,
   validateSceneShotVideoTakeStructure,
-} from '../../media-generation/shot-video-take/take-state.js';
+} from '../../media-generation/purposes/shot-video-take/persistence/take-state.js';
 import {
   requireNormalizedSceneShotVideoTakeShotMembership,
-} from '../../media-generation/shot-video-take/take-shot-membership.js';
+} from '../../media-generation/purposes/shot-video-take/persistence/take-shot-membership.js';
 import {
   readShotVideoTakeVideo,
 } from './shot-video-takes.js';

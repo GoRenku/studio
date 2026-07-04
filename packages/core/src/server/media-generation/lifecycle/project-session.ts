@@ -7,9 +7,26 @@ export type MediaGenerationEstimationPathOptions = RenkuConfigPathOptions & {
   projectName?: string;
 };
 
+export type MediaGenerationProjectSessionPathOptions =
+  RenkuConfigPathOptions & {
+    projectName?: string;
+  };
+
 export async function withMediaGenerationEstimationProjectSession<T>(
   input: MediaGenerationEstimationPathOptions,
   fn: (handle: { session: DatabaseSession }) => T | Promise<T>
+): Promise<T> {
+  return withMediaGenerationProjectSession(input, ({ session }) =>
+    fn({ session })
+  );
+}
+
+export async function withMediaGenerationProjectSession<T>(
+  input: MediaGenerationProjectSessionPathOptions,
+  fn: (handle: {
+    projectFolder: string;
+    session: DatabaseSession;
+  }) => T | Promise<T>
 ): Promise<T> {
   if (input.projectName) {
     const handle = await openProjectSession({
@@ -17,10 +34,18 @@ export async function withMediaGenerationEstimationProjectSession<T>(
       homeDir: input.homeDir,
     });
     try {
-      return await fn({ session: handle.session });
+      return await fn({
+        projectFolder: handle.projectFolder,
+        session: handle.session,
+      });
     } finally {
       handle.session.close();
     }
   }
-  return withCurrentProjectSession(input, ({ session }) => fn({ session }));
+  return withCurrentProjectSession(input, ({ currentProject, session }) =>
+    fn({
+      projectFolder: currentProject.projectFolder,
+      session,
+    })
+  );
 }

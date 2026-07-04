@@ -18,12 +18,12 @@ import {
 import { updateAssetRelationshipSelection } from '../../src/server/database/access/asset-relationships/index.js';
 import { deleteAssetFileRecordsForAsset } from '../../src/server/database/access/asset-files.js';
 import { openProjectSession } from '../../src/server/database/lifecycle/active-session.js';
-import { planMediaGenerationDependencyInventory } from '../../src/server/media-generation/dependency-inventory.js';
-import { resolveMediaGenerationDependencySelection } from '../../src/server/media-generation/dependency-selectors.js';
+import { planMediaGenerationDependencyInventory } from '../../src/server/media-generation/dependencies/dependency-inventory.js';
+import { resolveMediaGenerationDependencySelection } from '../../src/server/media-generation/dependencies/dependency-selectors.js';
 import {
   locationEnvironmentSheetDependencySlot,
   lookbookSheetDependencySlot,
-} from '../../src/server/media-generation/dependency-slot-definitions.js';
+} from '../../src/server/media-generation/dependencies/dependency-slot-definitions.js';
 import {
   createSampleMovieProject,
   writeConfig,
