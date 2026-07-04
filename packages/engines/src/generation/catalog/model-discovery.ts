@@ -5,16 +5,16 @@ import {
   lookupModel,
   type LoadedModelCatalog,
   type ModelDefinition,
-} from '../model-catalog.js';
+} from '../../model-catalog.js';
 import {
   modelTypeToMediaKind,
   type GenerationMediaKind,
   type GenerationMode,
   type GenerationModelSummary,
-} from './contracts.js';
+} from '../contracts.js';
 
 export function resolveBundledModelCatalogDir(): string {
-  return resolve(dirname(fileURLToPath(import.meta.url)), '../../catalog/models');
+  return resolve(dirname(fileURLToPath(import.meta.url)), '../../../catalog/models');
 }
 
 export async function loadBundledGenerationCatalog(): Promise<LoadedModelCatalog> {

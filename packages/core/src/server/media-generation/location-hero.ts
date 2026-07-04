@@ -72,13 +72,13 @@ import {
   mapNanoBananaResolution,
 } from './cast-image-common.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
-import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import { estimateMediaGenerationSpecRecordCost } from './cost/cost-projection.js';
 import {
   mediaGenerationEstimateWithApproval,
   mediaGenerationRunApprovalToken,
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,
-} from './cost-approval.js';
+} from './cost/cost-approval.js';
 
 const LOCATION_HERO_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2/edit',

@@ -2,8 +2,8 @@ import {
   lookupModel,
   type LoadedModelCatalog,
   type ModelPriceConfig,
-} from '../model-catalog.js';
-import { loadBundledGenerationCatalog } from './model-discovery.js';
+} from '../../model-catalog.js';
+import { loadBundledGenerationCatalog } from '../catalog/model-discovery.js';
 
 export interface GenerationPricingSupport {
   provider: string;

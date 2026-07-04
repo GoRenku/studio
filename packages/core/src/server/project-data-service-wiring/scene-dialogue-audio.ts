@@ -1,5 +1,5 @@
 import * as sceneDialogueAudio from '../media-generation/scene-dialogue-audio.js';
-import * as estimation from '../media-generation/estimation/spec-estimates.js';
+import * as estimation from '../media-generation/cost/spec-estimates.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 type SceneDialogueAudioMethods = Pick<

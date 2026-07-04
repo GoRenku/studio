@@ -2,10 +2,10 @@ import {
   loadModelSchemaFile,
   lookupModel,
   type LoadedModelCatalog,
-} from '../model-catalog.js';
-import { validatePayload } from '../sdk/schema-validator.js';
-import { resolveSchemaRefs } from '../sdk/unified/schema-file.js';
-import { resolveBundledModelCatalogDir } from './model-discovery.js';
+} from '../../model-catalog.js';
+import { validatePayload } from '../../sdk/schema-validator.js';
+import { resolveSchemaRefs } from '../../sdk/unified/schema-file.js';
+import { resolveBundledModelCatalogDir } from '../catalog/model-discovery.js';
 
 export async function validateGenerationProviderPayload(input: {
   catalog: LoadedModelCatalog;

@@ -68,13 +68,13 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
-import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import { estimateMediaGenerationSpecRecordCost } from './cost/cost-projection.js';
 import {
   mediaGenerationEstimateWithApproval,
   mediaGenerationRunApprovalToken,
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,
-} from './cost-approval.js';
+} from './cost/cost-approval.js';
 import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,

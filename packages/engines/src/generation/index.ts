@@ -18,27 +18,27 @@ export {
 export {
   estimateGenerationCost,
   hashGenerationCostApproval,
-} from './estimates.js';
+} from './pricing/estimate-generation-cost.js';
 export {
   buildLogicalProviderPayload,
-} from './logical-provider-payload.js';
+} from './execution/logical-provider-payload.js';
 export {
   listGenerationModels,
   loadBundledGenerationCatalog,
   readGenerationModel,
   resolveBundledModelCatalogDir,
-} from './model-discovery.js';
+} from './catalog/model-discovery.js';
 export {
   hashGenerationRequest,
-} from './request-hash.js';
+} from './execution/request-hash.js';
 export {
   validateGenerationProviderPayload,
-} from './provider-payload-validation.js';
+} from './execution/provider-payload-validation.js';
 export {
   readGenerationPricingSupport,
   type GenerationPricingSupport,
-} from './generation-pricing-registry.js';
+} from './pricing/generation-pricing-registry.js';
 export {
   runGeneration,
   type RunGenerationOptions,
-} from './runner.js';
+} from './execution/runner.js';

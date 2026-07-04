@@ -7,7 +7,7 @@ import * as lookbookImage from '../media-generation/lookbook-image.js';
 import * as lookbookSheet from '../media-generation/lookbook-sheet.js';
 import * as sceneStoryboardSheet from '../media-generation/scene-storyboard-sheet.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
-import * as estimation from '../media-generation/estimation/spec-estimates.js';
+import * as estimation from '../media-generation/lifecycle/spec-estimates.js';
 export function createMediaGenerationServiceWiring() {
   return {
     buildLookbookImageContext: lookbookImage.buildLookbookImageContext,

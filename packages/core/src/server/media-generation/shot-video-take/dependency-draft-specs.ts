@@ -22,7 +22,7 @@ import {
 import {
   estimateMissingShotInputDependency,
   estimateOnlyShotInputPrompt,
-} from '../estimation/shot-input-dependency-estimates.js';
+} from '../cost/shot-input-dependency-estimates.js';
 import {
   promptSheetMetadataForShotInputSpec,
 } from './prompt-sheet-metadata.js';

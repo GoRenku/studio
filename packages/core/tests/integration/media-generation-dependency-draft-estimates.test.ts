@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { MediaGenerationEstimateReport } from '../../src/client/index.js';
 
-vi.mock('../../src/server/media-generation/estimation/spec-estimates.js', () => ({
+vi.mock('../../src/server/media-generation/cost/spec-estimates.js', () => ({
   estimateDraftMediaGenerationSpec: vi.fn(),
 }));
 
-import { estimateDraftMediaGenerationSpec } from '../../src/server/media-generation/estimation/spec-estimates.js';
-import { estimateMediaGenerationDependencyDraft } from '../../src/server/media-generation/estimation/dependency-draft-estimates.js';
+import { estimateDraftMediaGenerationSpec } from '../../src/server/media-generation/cost/spec-estimates.js';
+import { estimateMediaGenerationDependencyDraft } from '../../src/server/media-generation/cost/dependency-draft-estimates.js';
 
 const mockedEstimateDraftMediaGenerationSpec = vi.mocked(
   estimateDraftMediaGenerationSpec

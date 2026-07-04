@@ -72,7 +72,7 @@ import {
 } from './scene-dialogue-audio-config.js';
 import {
   estimateSceneDialogueAudioPricingOnly,
-} from './estimation/scene-dialogue-audio-estimates.js';
+} from './lifecycle/scene-dialogue-audio-estimates.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
 export interface SceneDialogueAudioTargetInput extends RenkuConfigPathOptions {

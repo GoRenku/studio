@@ -24,7 +24,7 @@ import {
 import {
   buildMediaGenerationCostProjection,
   mediaGenerationCostEstimateToPricing,
-} from './cost-projection.js';
+} from '../cost/cost-projection.js';
 import {
   withMediaGenerationEstimationProjectSession,
 } from './project-session.js';

@@ -84,7 +84,7 @@ import {
 } from './take-context.js';
 import {
   estimateShotVideoTakeFinalPlanLine,
-} from '../estimation/shot-video-take-estimates.js';
+} from '../lifecycle/shot-video-take-estimates.js';
 
 
 

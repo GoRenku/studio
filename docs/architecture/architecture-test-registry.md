@@ -167,6 +167,82 @@ Maintenance owner:
   prove bad state fails before a write. Static tests should protect the owner
   boundary, not require a central list of every focused command.
 
+### Core Media Generation Cost Rail
+
+Owner docs:
+
+- `docs/architecture/media-generation.md`
+- `docs/architecture/reference/media-generation.md`
+- `docs/decisions/0042-use-purpose-cost-projections-for-generation-estimates.md`
+- `plans/active/0108-media-generation-module-boundary-refactor.md`
+
+Static tests:
+
+- `packages/core/src/server/architecture.test.ts`
+
+Runtime tests:
+
+- `packages/core/src/server/media-generation/cost/cost-projection.test.ts`
+- `packages/core/src/server/media-generation/cost/cost-approval.test.ts`
+- `packages/core/tests/integration/media-generation-dependency-inventory.test.ts`
+
+Forbidden capabilities:
+
+- importing media-generation lifecycle readiness services;
+- importing the lifecycle purpose registry;
+- importing shared generation orchestration;
+- resolving concrete dependency assets through dependency selectors;
+- building or validating provider payloads;
+- importing generation run or media import modules;
+- importing low-level database access;
+- reading or resolving provider input/output files;
+- importing Shot Video Take readiness or planning modules.
+
+Maintenance owner:
+
+- Cost work must keep `packages/core/src/server/media-generation/cost` limited
+  to pricing projection, cost approval, cost-line conversion, and cost-only
+  purpose registry behavior. Persisted spec reads belong in lifecycle services,
+  which delegate in-memory spec records to cost. Add runtime tests for pricing
+  states and import-boundary tests only for stable module ownership, not private
+  helper names.
+
+### Engines Generation Pricing Rail
+
+Owner docs:
+
+- `docs/architecture/media-generation.md`
+- `docs/architecture/reference/media-generation.md`
+- `plans/active/0108-media-generation-module-boundary-refactor.md`
+
+Static tests:
+
+- `packages/engines/src/generation/architecture.test.ts`
+
+Runtime tests:
+
+- `packages/engines/src/generation/pricing/estimate-generation-cost.test.ts`
+- `packages/engines/src/generation/execution/runner.test.ts`
+- `packages/engines/src/generation/execution/provider-payload-validation.test.ts`
+
+Forbidden capabilities:
+
+- importing generation execution modules;
+- importing provider SDK modules;
+- reading or writing provider input/output files;
+- building or validating provider payloads;
+- loading generation input files;
+- importing generation runners.
+
+Maintenance owner:
+
+- Engine pricing work must stay inside
+  `packages/engines/src/generation/pricing` and depend only on generation
+  pricing contracts, catalog facts, and deterministic cost hashing. Execution
+  work belongs in `packages/engines/src/generation/execution`. Static tests
+  should protect those module folders, while runtime tests prove pricing math,
+  payload validation, and runner behavior.
+
 ## Feature Plan Requirement
 
 Every active implementation plan that adds or changes one of these surfaces

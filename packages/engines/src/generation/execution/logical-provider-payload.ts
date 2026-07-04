@@ -1,7 +1,7 @@
 import type {
   GenerationPolicy,
   GenerationRequest,
-} from './contracts.js';
+} from '../contracts.js';
 import {
   assignGenerationInputFilePayloadValue,
   createGenerationProviderPayloadBase,

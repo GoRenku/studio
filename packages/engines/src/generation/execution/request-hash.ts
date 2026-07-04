@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { GenerationPolicy, GenerationRequest } from './contracts.js';
+import type { GenerationPolicy, GenerationRequest } from '../contracts.js';
 
 export function hashGenerationRequest(input: {
   policy: GenerationPolicy;

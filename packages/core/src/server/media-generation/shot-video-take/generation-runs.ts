@@ -18,16 +18,16 @@ import {
 } from './final-specs.js';
 import {
   estimateMediaGenerationSpecRecordCost,
-} from '../estimation/cost-projection.js';
+} from '../cost/cost-projection.js';
 import {
   estimateMediaGenerationSpec,
-} from '../estimation/spec-estimates.js';
+} from '../lifecycle/spec-estimates.js';
 import {
   mediaGenerationEstimateWithApproval,
   mediaGenerationRunApprovalToken,
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,
-} from '../cost-approval.js';
+} from '../cost/cost-approval.js';
 import {
   resolveShotGenerationOutputPaths,
 } from './generation-output-paths.js';

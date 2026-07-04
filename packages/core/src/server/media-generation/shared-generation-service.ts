@@ -47,16 +47,16 @@ import { planLinesFromDependencyInventory } from './dependency-inventory-lines.j
 import {
   estimateMediaGenerationSpecRecordCost,
   mediaGenerationCostEstimateToPricing,
-} from './estimation/cost-projection.js';
+} from './cost/cost-projection.js';
 import {
   estimateDraftMediaGenerationSpec,
-} from './estimation/spec-estimates.js';
+} from './cost/spec-estimates.js';
 import {
   mediaGenerationEstimateWithApproval,
   mediaGenerationRunApprovalToken,
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,
-} from './cost-approval.js';
+} from './cost/cost-approval.js';
 
 export async function buildMediaGenerationContext(
   input: MediaGenerationPurposeContextInput

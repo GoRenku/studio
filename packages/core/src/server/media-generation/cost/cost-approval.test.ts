@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GenerationCostEstimate } from '@gorenku/studio-engines';
-import { LOCATION_HERO_GENERATION_PURPOSE } from '../../client/index.js';
+import { LOCATION_HERO_GENERATION_PURPOSE } from '../../../client/index.js';
 import {
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,

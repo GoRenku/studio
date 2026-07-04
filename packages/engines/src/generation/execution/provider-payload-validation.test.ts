@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG_MODELS_ROOT } from '../../tests/test-catalog-paths.js';
-import { loadModelCatalog } from '../model-catalog.js';
+import { CATALOG_MODELS_ROOT } from '../../../tests/test-catalog-paths.js';
+import { loadModelCatalog } from '../../model-catalog.js';
 import { validateGenerationProviderPayload } from './provider-payload-validation.js';
 
 describe('generation provider payload validation', () => {

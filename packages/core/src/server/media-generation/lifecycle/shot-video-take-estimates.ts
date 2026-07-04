@@ -17,7 +17,7 @@ import {
 import {
   buildMediaGenerationCostProjection,
   mediaGenerationCostEstimateToPricing,
-} from './cost-projection.js';
+} from '../cost/cost-projection.js';
 
 export async function estimateShotVideoTakeFinalPlanLine(input: {
   context: ShotVideoTakeProductionContext;

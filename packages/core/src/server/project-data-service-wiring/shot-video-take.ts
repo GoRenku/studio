@@ -4,7 +4,7 @@ import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, resolveShotVide
 import { createSceneShotVideoTake, deleteSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakePick, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeDirection, updateSceneShotVideoTakeShots, updateSceneShotVideoTakeStructureMode } from '../media-generation/shot-video-take/takes.js';
 import { updateSceneShotVideoTakeCharacterSheetSelection, updateSceneShotVideoTakeLocationSheetSelection, updateSceneShotVideoTakeLookbookSheetSelection, updateSceneShotVideoTakeDialogueAudioSelection, updateSceneShotVideoTakeReferenceInclusion } from '../media-generation/shot-video-take/reference-selection-mutations.js';
 import { planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/shot-video-take/production-plan.js';
-import { estimateShotVideoTakeProduction } from '../media-generation/estimation/shot-video-take-production-estimates.js';
+import { estimateShotVideoTakeProduction } from '../media-generation/lifecycle/shot-video-take-production-estimates.js';
 import { previewShotVideoTakeProduction } from '../media-generation/shot-video-take/preflight-report.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs } from '../media-generation/shot-video-take/input-specs.js';
 import { prepareShotVideoTakeSpec, validateShotVideoTakeSpec, listShotVideoTakeSpecs } from '../media-generation/shot-video-take/final-specs.js';
@@ -12,7 +12,7 @@ import { runShotVideoTakeSpec } from '../media-generation/shot-video-take/genera
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from '../media-generation/shot-video-take/media-imports.js';
 import { applySceneShotVideoTakeAuthoringDocument, readSceneShotVideoTakeAuthoringContext, validateSceneShotVideoTakeAuthoringDocument } from '../media-generation/shot-video-take/authoring.js';
 import * as sharedGeneration from '../media-generation/shared-generation-service.js';
-import * as estimation from '../media-generation/estimation/spec-estimates.js';
+import * as estimation from '../media-generation/lifecycle/spec-estimates.js';
 export function createShotVideoTakeServiceWiring() {
   return {
     createSceneShotVideoTake,

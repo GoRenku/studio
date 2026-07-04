@@ -5,11 +5,19 @@ import { describe, expect, it } from 'vitest';
 import {
   listMediaGenerationPurposeDefinitions,
 } from './media-generation/purpose-registry.js';
+import {
+  listMediaGenerationPurposeCostDefinitions,
+} from './media-generation/cost/purpose-cost-registry.js';
 
 const projectSourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const coreSourceRoot = path.join(projectSourceRoot, '..');
 const repoRoot = path.resolve(coreSourceRoot, '..', '..', '..');
 const clientSourceRoot = path.join(coreSourceRoot, 'client');
+const mediaGenerationCostRoot = path.join(
+  projectSourceRoot,
+  'media-generation',
+  'cost'
+);
 const projectDataServiceWiringRoot = path.join(
   projectSourceRoot,
   'project-data-service-wiring'
@@ -439,6 +447,48 @@ describe('core server architecture', () => {
     expect(definitionsMissingProjection).toEqual([]);
   });
 
+  it('keeps cost and lifecycle purpose registries aligned by public purpose id', async () => {
+    const lifecyclePurposes = listMediaGenerationPurposeDefinitions()
+      .map((definition) => definition.purpose)
+      .sort();
+    const costPurposes = listMediaGenerationPurposeCostDefinitions()
+      .map((definition) => definition.purpose)
+      .sort();
+
+    expect(costPurposes).toEqual(lifecyclePurposes);
+  });
+
+  it('keeps media generation cost independent from readiness and execution modules', async () => {
+    const files = (await listTypeScriptFiles(mediaGenerationCostRoot)).filter(
+      (file) => !file.endsWith('.test.ts')
+    );
+    const offenders: Array<{ file: string; importSource: string; reason: string }> =
+      [];
+
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      for (const importSource of extractImportSources(source)) {
+        const reason = forbiddenMediaGenerationCostImportReason(importSource);
+        if (reason) {
+          offenders.push({
+            file: path.relative(projectSourceRoot, file),
+            importSource,
+            reason,
+          });
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Core media generation cost must stay a pricing projection module.',
+        'It may map specs to pricing inputs and call engine pricing,',
+        'but it must not import lifecycle readiness, provider preparation, dependency selection, run, import, database, filesystem, or Shot Video Take planning modules.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
   it('keeps media generation live cost approval fail-fast', async () => {
     const runtimeRoots = [
       path.join(repoRoot, 'packages', 'core', 'src'),
@@ -486,7 +536,15 @@ describe('core server architecture', () => {
     }
 
     const engineRunnerSource = await fs.readFile(
-      path.join(repoRoot, 'packages', 'engines', 'src', 'generation', 'runner.ts'),
+      path.join(
+        repoRoot,
+        'packages',
+        'engines',
+        'src',
+        'generation',
+        'execution',
+        'runner.ts'
+      ),
       'utf8'
     );
     for (const forbiddenPattern of [
@@ -509,7 +567,14 @@ describe('core server architecture', () => {
     ]) {
       findPatternLines(engineRunnerSource, forbiddenPattern.pattern).forEach((line) => {
         offenders.push({
-          file: path.join('packages', 'engines', 'src', 'generation', 'runner.ts'),
+          file: path.join(
+            'packages',
+            'engines',
+            'src',
+            'generation',
+            'execution',
+            'runner.ts'
+          ),
           line,
           pattern: forbiddenPattern.label,
         });
@@ -607,6 +672,46 @@ function forbiddenInfrastructureImports(source: string): string[] {
       importSource.includes('database/access') ||
       importSource.includes('database/lifecycle/store')
   );
+}
+
+function forbiddenMediaGenerationCostImportReason(
+  importSource: string
+): string | null {
+  if (importSource.startsWith('../lifecycle')) {
+    return 'cost must not import media generation lifecycle readiness services';
+  }
+  if (importSource.includes('purpose-registry')) {
+    return 'cost must not import the lifecycle purpose registry';
+  }
+  if (importSource.includes('shared-generation-service')) {
+    return 'cost must not import shared generation orchestration';
+  }
+  if (importSource.includes('dependency-selectors')) {
+    return 'cost must not resolve concrete dependency assets';
+  }
+  if (importSource.includes('provider-payload')) {
+    return 'cost must not build or validate provider payloads';
+  }
+  if (importSource.includes('generation-runs')) {
+    return 'cost must not import generation run modules';
+  }
+  if (importSource.includes('media-imports')) {
+    return 'cost must not import media import modules';
+  }
+  if (importSource.includes('database/access')) {
+    return 'cost must not import low-level database access';
+  }
+  if (
+    importSource === 'node:fs' ||
+    importSource === 'node:fs/promises' ||
+    importSource === 'node:path'
+  ) {
+    return 'cost must not read or resolve provider input/output files';
+  }
+  if (importSource.includes('shot-video-take')) {
+    return 'cost must not import Shot Video Take readiness or planning modules';
+  }
+  return null;
 }
 
 function findTextLines(source: string, text: string): number[] {

@@ -3,13 +3,13 @@ import {
   lookupModel,
   type LoadedModelCatalog,
   type ModelPriceConfig,
-} from '../model-catalog.js';
+} from '../../model-catalog.js';
 import {
   type GenerationCostEstimate,
   type GenerationPriceKey,
   type GenerationPricingInputs,
-} from './contracts.js';
-import { loadBundledGenerationCatalog } from './model-discovery.js';
+} from '../contracts.js';
+import { loadBundledGenerationCatalog } from '../catalog/model-discovery.js';
 
 export async function estimateGenerationCost(input: {
   priceKey: GenerationPriceKey;
@@ -711,13 +711,6 @@ function dimensionsMatch(
 
 function pixelArea(dimensions: PricingImageDimensions): number {
   return dimensions.width * dimensions.height;
-}
-
-export function deriveGenerationOutputCount(
-  payload: Record<string, unknown>
-): number {
-  const raw = payload.num_images ?? payload.numImages ?? payload.count;
-  return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : 1;
 }
 
 function seconds(value: unknown): number {

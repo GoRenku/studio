@@ -1,8 +1,8 @@
 import type {
   GenerationCostEstimate,
 } from '@gorenku/studio-engines';
-import type { MediaGenerationPurpose } from '../../client/index.js';
-import { ProjectDataError } from '../project-data-error.js';
+import type { MediaGenerationPurpose } from '../../../client/index.js';
+import { ProjectDataError } from '../../project-data-error.js';
 
 export type MediaGenerationRunCostApprovalInput =
   | { kind: 'none' }

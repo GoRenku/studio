@@ -2,7 +2,7 @@ import type {
   GenerationInputFile,
   GenerationPolicy,
   GenerationRequest,
-} from './contracts.js';
+} from '../contracts.js';
 
 export function createGenerationProviderPayloadBase(
   policy: GenerationPolicy,

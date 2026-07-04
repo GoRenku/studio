@@ -62,13 +62,13 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
-import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import { estimateMediaGenerationSpecRecordCost } from './cost/cost-projection.js';
 import {
   mediaGenerationEstimateWithApproval,
   mediaGenerationRunApprovalToken,
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,
-} from './cost-approval.js';
+} from './cost/cost-approval.js';
 import {
   assertLookbookSectionsForType,
 } from '../visual-language-json/validator.js';

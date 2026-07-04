@@ -2,7 +2,7 @@ import type { LoadedModelCatalog } from '../model-catalog.js';
 import {
   readGenerationPricingSupport,
   type GenerationPricingSupport,
-} from '../generation/generation-pricing-registry.js';
+} from '../generation/pricing/generation-pricing-registry.js';
 import type { ShotVideoRoute } from './shot-video-model-families.js';
 
 export function readShotVideoRoutePricingSupport(input: {

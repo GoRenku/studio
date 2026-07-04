@@ -17,7 +17,7 @@ import type {
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { requireMediaGenerationDependencyKindDefinition } from './dependency-kind-registry.js';
-import { estimateMediaGenerationDependencyDraft } from './estimation/dependency-draft-estimates.js';
+import { estimateMediaGenerationDependencyDraft } from './cost/dependency-draft-estimates.js';
 import { planMediaGenerationDependencyDraft } from './dependency-draft-specs.js';
 import { aggregateDependencyInventoryEstimate } from './dependency-inventory-lines.js';
 import type { MediaGenerationDependencySelectorResult } from './dependency-selectors.js';

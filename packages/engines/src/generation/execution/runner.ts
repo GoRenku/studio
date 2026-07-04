@@ -1,28 +1,25 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createProviderRegistry } from '../registry.js';
+import { createProviderRegistry } from '../../registry.js';
 import {
   loadModelInputSchema,
   lookupModel,
   type LoadedModelCatalog,
-} from '../model-catalog.js';
-import { createSimulatedFallbackArtifacts } from '../simulated-fallback-output.js';
-import type { ProviderJobContext, ProviderMode } from '../types.js';
+} from '../../model-catalog.js';
+import { createSimulatedFallbackArtifacts } from '../../simulated-fallback-output.js';
+import type { ProviderJobContext, ProviderMode } from '../../types.js';
 import {
   modelTypeToMediaKind,
   type GenerationOutput,
   type GenerationPolicy,
   type GenerationRequest,
   type GenerationRunResult,
-} from './contracts.js';
+} from '../contracts.js';
 import {
   loadBundledGenerationCatalog,
   resolveBundledModelCatalogDir,
-} from './model-discovery.js';
-import {
-  deriveGenerationOutputCount,
-} from './estimates.js';
+} from '../catalog/model-discovery.js';
 import { buildLogicalProviderPayload } from './logical-provider-payload.js';
 import {
   assignGenerationInputFilePayloadValue,
@@ -274,6 +271,11 @@ function artifactKindForMedia(mediaKind: string): string {
     return 'GeneratedAudio';
   }
   return 'GeneratedJson';
+}
+
+function deriveGenerationOutputCount(payload: Record<string, unknown>): number {
+  const raw = payload.num_images ?? payload.numImages ?? payload.count;
+  return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : 1;
 }
 
 async function persistOutputs(input: {

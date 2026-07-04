@@ -82,13 +82,13 @@ import {
   CAST_IMAGE_FRAMES,
 } from './cast-image-common.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
-import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import { estimateMediaGenerationSpecRecordCost } from './cost/cost-projection.js';
 import {
   mediaGenerationEstimateWithApproval,
   mediaGenerationRunApprovalToken,
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,
-} from './cost-approval.js';
+} from './cost/cost-approval.js';
 import { lookbookSheetDependencySlot } from './dependency-slot-definitions.js';
 import type {
   MediaGenerationDependencyDeclarationInput,

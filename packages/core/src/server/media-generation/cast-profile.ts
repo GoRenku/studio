@@ -32,13 +32,13 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
-import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import { estimateMediaGenerationSpecRecordCost } from './cost/cost-projection.js';
 import {
   mediaGenerationEstimateWithApproval,
   mediaGenerationRunApprovalToken,
   parseMediaGenerationRunCostApproval,
   requireMediaGenerationCostApproval,
-} from './cost-approval.js';
+} from './cost/cost-approval.js';
 import { declareCastProfileDependencySlots } from './cast-profile-dependency-slots.js';
 import type { MediaGenerationDependencyDeclarationInput } from './purpose-registry.js';
 import {

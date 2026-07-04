@@ -123,7 +123,7 @@ import * as lookbookImage from './lookbook-image.js';
 import * as lookbookSheet from './lookbook-sheet.js';
 import * as sceneStoryboardSheet from './scene-storyboard-sheet.js';
 import * as sceneDialogueAudio from './scene-dialogue-audio.js';
-import { buildMediaGenerationCostProjection } from './estimation/cost-projection.js';
+import { buildMediaGenerationCostProjection } from './cost/cost-projection.js';
 import { buildShotVideoTakeContext } from './shot-video-take/context.js';
 import { listShotVideoTakeModels, listShotInputModels } from './shot-video-take/model-list.js';
 import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotVideoPromptSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotVideoPromptSheetSpec, prepareShotInputDraftSpec } from './shot-video-take/input-specs.js';

@@ -1,9 +1,9 @@
 import { lookupModel, loadModelSchemaFile, type LoadedModelCatalog } from '../model-catalog.js';
-import { readGenerationPricingSupport } from '../generation/generation-pricing-registry.js';
+import { readGenerationPricingSupport } from '../generation/pricing/generation-pricing-registry.js';
 import {
   loadBundledGenerationCatalog,
   resolveBundledModelCatalogDir,
-} from '../generation/model-discovery.js';
+} from '../generation/catalog/model-discovery.js';
 import type {
   ShotVideoModelFamily,
   ShotVideoRoute,
