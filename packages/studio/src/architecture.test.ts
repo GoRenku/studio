@@ -6,38 +6,45 @@ import { describe, expect, it } from 'vitest';
 const studioSourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const uiSourceRoot = path.join(studioSourceRoot, 'ui');
 
-interface ForbiddenNeedle {
-  needle: string;
+interface ForbiddenSourcePattern {
+  label: string;
+  pattern: RegExp;
   reason: string;
 }
 
 interface ArchitectureFinding {
   file: string;
-  line: number;
-  needle: string;
+  line?: number;
+  importSource?: string;
+  pattern: string;
   reason: string;
 }
 
-const featureImportForbiddenNeedles: ForbiddenNeedle[] = [
+const featureForbiddenImports: ForbiddenSourcePattern[] = [
   {
-    needle: '@gorenku/studio-core/server',
+    label: 'server-only core import',
+    pattern: /^@gorenku\/studio-core\/server(?:\/|$)/,
     reason:
       'browser feature code must consume browser-safe contracts and Studio HTTP services, not server-only core APIs',
   },
   {
-    needle: 'node:fs',
+    label: 'Node filesystem import',
+    pattern: /^node:fs(?:\/|$)/,
     reason: 'browser feature code must not import Node filesystem APIs',
   },
   {
-    needle: 'node:path',
+    label: 'Node path import',
+    pattern: /^node:path$/,
     reason: 'browser feature code must not import Node path APIs',
   },
   {
-    needle: 'better-sqlite3',
+    label: 'SQLite driver import',
+    pattern: /^better-sqlite3$/,
     reason: 'browser feature code must not import database drivers',
   },
   {
-    needle: 'drizzle-orm',
+    label: 'Drizzle import',
+    pattern: /^drizzle-orm(?:\/|$)/,
     reason: 'browser feature code must not import Drizzle/database modules',
   },
 ];
@@ -45,27 +52,27 @@ const featureImportForbiddenNeedles: ForbiddenNeedle[] = [
 const rawControlPatterns = [
   {
     pattern: /<button\b/,
-    needle: '<button',
+    label: '<button',
     reason: 'feature code must use the local Button primitive from src/ui',
   },
   {
     pattern: /<input\b/,
-    needle: '<input',
+    label: '<input',
     reason: 'feature code must use the local Input primitive from src/ui',
   },
   {
     pattern: /<select\b/,
-    needle: '<select',
+    label: '<select',
     reason: 'feature code must use the local Select primitive from src/ui',
   },
   {
     pattern: /<textarea\b/,
-    needle: '<textarea',
+    label: '<textarea',
     reason: 'feature code must use the local Textarea primitive from src/ui',
   },
   {
     pattern: /<dialog\b/,
-    needle: '<dialog',
+    label: '<dialog',
     reason: 'feature code must use the local Dialog primitive from src/ui',
   },
 ];
@@ -102,9 +109,9 @@ describe('Studio frontend architecture', () => {
     const files = (await listTypeScriptFiles(studioSourceRoot)).filter(
       (file) => !isTestFile(file)
     );
-    const findings = await findForbiddenNeedles(
+    const findings = await findForbiddenImports(
       files,
-      featureImportForbiddenNeedles
+      featureForbiddenImports
     );
 
     expect(
@@ -132,7 +139,7 @@ describe('Studio frontend architecture', () => {
           findings.push({
             file: relativeSourcePath(file),
             line,
-            needle: rawControlPattern.needle,
+            pattern: rawControlPattern.label,
             reason: rawControlPattern.reason,
           });
         }
@@ -174,36 +181,50 @@ function relativeSourcePath(file: string): string {
   return path.relative(studioSourceRoot, file).split(path.sep).join('/');
 }
 
-async function findForbiddenNeedles(
+async function findForbiddenImports(
   files: string[],
-  forbiddenNeedles: ForbiddenNeedle[]
+  forbiddenImports: ForbiddenSourcePattern[]
 ): Promise<ArchitectureFinding[]> {
   const findings = await Promise.all(
     files.map(async (file) => {
       const source = await fs.readFile(file, 'utf8');
-      return forbiddenNeedles.flatMap((forbiddenNeedle) =>
-        findNeedleLines(source, forbiddenNeedle.needle).map((line) => ({
-          file: relativeSourcePath(file),
-          line,
-          needle: forbiddenNeedle.needle,
-          reason: forbiddenNeedle.reason,
-        }))
-      );
+      return extractImportSources(source).flatMap((importSource) => {
+        const forbiddenImport = forbiddenImports.find((candidate) =>
+          candidate.pattern.test(importSource)
+        );
+        return forbiddenImport
+          ? [
+              {
+                file: relativeSourcePath(file),
+                importSource,
+                pattern: forbiddenImport.label,
+                reason: forbiddenImport.reason,
+              },
+            ]
+          : [];
+      });
     })
   );
   return findings.flat();
-}
-
-function findNeedleLines(source: string, needle: string): number[] {
-  return source
-    .split('\n')
-    .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
 }
 
 function findPatternLines(source: string, pattern: RegExp): number[] {
   return source
     .split('\n')
     .flatMap((line, index) => (pattern.test(line) ? [index + 1] : []));
+}
+
+function extractImportSources(source: string): string[] {
+  const importSourcePattern =
+    /(?:from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
+  const importSources: string[] = [];
+  for (const match of source.matchAll(importSourcePattern)) {
+    const importSource = match[1] ?? match[2];
+    if (importSource) {
+      importSources.push(importSource);
+    }
+  }
+  return importSources;
 }
 
 function isTestFile(file: string): boolean {

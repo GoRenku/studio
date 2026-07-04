@@ -343,6 +343,34 @@ Flag:
 - broad project reloads used because selected-resource ownership is unclear;
 - offline backlogs of stale refresh hints.
 
+### 10. Architecture Test Hygiene
+
+Architecture tests protect boundaries. They must not freeze the current internal
+implementation.
+
+When the diff touches any `architecture.test.ts`, `architecture.test.tsx`, or
+architecture-test helper, check:
+
+- It does not hard-code current project function names, class names, private
+  helper names, or local variable names as source-text strings.
+- It does not keep a central inventory of every allowed command path, service
+  method, helper, or purpose-specific implementation function.
+- It does not ban one retired function name when the real boundary is an import
+  path, package layer, public contract shape, or runtime behavior.
+- It does not use loose source-text "needles" for implementation names.
+- A normal refactor inside the owning layer would not require editing the test.
+- The test reports the forbidden capability or boundary, not merely the raw text
+  fragment it matched.
+- Import-boundary checks use parsed import sources where practical instead of
+  scanning whole files for arbitrary strings.
+- Exact public contract shape checks are used only when an accepted architecture
+  doc or ADR makes that shape the contract.
+- Runtime behavior tests are preferred when the concern is data integrity,
+  ownership validation, or fail-before-write behavior.
+
+Flag architecture tests that violate this as architecture drift, even when the
+tests are currently green.
+
 ## Finding Checklist
 
 Before sending findings, verify:
@@ -353,5 +381,7 @@ Before sending findings, verify:
 - Every finding proposes a practical solution.
 - Findings are ordered by severity.
 - Non-issues and historical context are not reported as findings.
+- If architecture tests changed, the Architecture Test Hygiene checklist above
+  was applied explicitly.
 - If no issues are found, the response says that clearly and names residual
   test or verification gaps.

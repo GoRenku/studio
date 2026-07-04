@@ -2,6 +2,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import {
+  listMediaGenerationPurposeDefinitions,
+} from './media-generation/purpose-registry.js';
 
 const projectSourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const coreSourceRoot = path.join(projectSourceRoot, '..');
@@ -50,17 +53,12 @@ describe('core server architecture', () => {
       'utf8'
     );
     const lineCount = source.split('\n').length;
-    const forbiddenNeedles = [
-      'node:fs',
-      'node:path',
-      'session.db',
-      'openProjectStore',
-    ];
+    const forbiddenImports = forbiddenInfrastructureImports(source);
+    const directDatabaseAccessLines = findPatternLines(source, /\bsession\s*\.\s*db\b/);
 
     expect(lineCount).toBeLessThanOrEqual(80);
-    expect(
-      forbiddenNeedles.filter((needle) => source.includes(needle))
-    ).toEqual([]);
+    expect(forbiddenImports).toEqual([]);
+    expect(directDatabaseAccessLines).toEqual([]);
     expect(source).not.toMatch(
       /from ['"]\.\/(?:commands|database|files|production-export|resources|schema)\//
     );
@@ -71,21 +69,13 @@ describe('core server architecture', () => {
 
   it('keeps ProjectDataService domain wiring shallow', async () => {
     const files = await listTypeScriptFiles(projectDataServiceWiringRoot);
-    const forbiddenNeedles = [
-      'node:fs',
-      'node:path',
-      'database/access',
-      'session.db',
-      'openProjectStore',
-    ];
 
     expect(files.length).toBeGreaterThanOrEqual(5);
     for (const file of files) {
       const source = await fs.readFile(file, 'utf8');
       expect(source.split('\n').length).toBeLessThanOrEqual(100);
-      expect(
-        forbiddenNeedles.filter((needle) => source.includes(needle))
-      ).toEqual([]);
+      expect(forbiddenInfrastructureImports(source)).toEqual([]);
+      expect(findPatternLines(source, /\bsession\s*\.\s*db\b/)).toEqual([]);
       expect(source).not.toMatch(/from ['"]\.\.\/(?:files|schema)\//);
     }
   });
@@ -95,28 +85,31 @@ describe('core server architecture', () => {
       path.join(projectSourceRoot, 'project-data-service-contracts.ts'),
       'utf8'
     );
-    const forbiddenNeedles = [
+    const forbiddenPatterns = [
       {
-        needle: 'updateSceneShotVideoTakeState',
+        pattern: /\bSceneShotVideoTakeState\b/,
+        label: 'durable take state type',
         reason:
-          'adapter-facing contracts must expose focused take commands instead of a generic metadata patch method',
+          'adapter-facing contracts must expose focused take commands instead of durable take-state shapes',
       },
       {
-        needle: 'UpdateSceneShotVideoTakeStateInput',
-        reason:
-          'generic take-state patch input must not be part of the public service contract',
-      },
-      {
-        needle: 'statePatch: Partial<SceneShotVideoTakeState>',
+        pattern: /\bstatePatch\b/,
+        label: 'state patch payload',
         reason:
           'callers must not be able to construct arbitrary durable take-state maps',
       },
+      {
+        pattern: /\bPartial\s*<\s*SceneShotVideoTakeState\s*>/,
+        label: 'partial durable take state',
+        reason:
+          'generic take-state patch input must not be part of the public service contract',
+      },
     ];
-    const offenders = forbiddenNeedles.flatMap(({ needle, reason }) =>
-      findNeedleLines(source, needle).map((line) => ({
+    const offenders = forbiddenPatterns.flatMap(({ pattern, label, reason }) =>
+      findPatternLines(source, pattern).map((line) => ({
         file: 'project-data-service-contracts.ts',
         line,
-        needle,
+        pattern: label,
         reason,
       }))
     );
@@ -146,7 +139,11 @@ describe('core server architecture', () => {
         continue;
       }
       const source = await fs.readFile(file, 'utf8');
-      if (source.includes('updateSceneShotVideoTakeStateRecord')) {
+      if (
+        extractImportSources(source).some((importSource) =>
+          importSource.endsWith('/database/access/scene-shot-video-takes.js')
+        )
+      ) {
         offenders.push(relativePath);
       }
     }
@@ -215,12 +212,12 @@ describe('core server architecture', () => {
         path.relative(projectSourceRoot, file) !==
           path.join('database', 'lifecycle', 'store.ts')
     );
-    const forbiddenNeedle = ['session', '.', 'sqlite', '.', 'prepare'].join('');
+    const directSQLitePreparePattern = /\bsession\s*\.\s*sqlite\s*\.\s*prepare\b/;
     const offenders: string[] = [];
 
     for (const file of runtimeFiles) {
       const source = await fs.readFile(file, 'utf8');
-      if (source.includes(forbiddenNeedle)) {
+      if (directSQLitePreparePattern.test(source)) {
         offenders.push(path.relative(projectSourceRoot, file));
       }
     }
@@ -316,18 +313,18 @@ describe('core server architecture', () => {
       path.join('commands', 'cast-voice-commands.ts'),
       path.join('media-generation', 'scene-dialogue-audio.ts'),
     ]);
-    const offenders: Array<{ file: string; needle: string }> = [];
+    const offenders: Array<{ file: string; pattern: string }> = [];
 
     for (const file of files) {
       const relativePath = path.relative(projectSourceRoot, file);
       const source = await fs.readFile(file, 'utf8');
-      const forbiddenNeedles = ['.delete(', 'deleteProjectRelativeFile'];
+      const forbiddenPatterns = ['.delete('];
       if (!transientCleanupFiles.has(relativePath)) {
-        forbiddenNeedles.push('fs.rm(', 'fs.unlink(');
+        forbiddenPatterns.push('fs.rm(', 'fs.unlink(');
       }
-      forbiddenNeedles.forEach((needle) => {
-        if (source.includes(needle)) {
-          offenders.push({ file: relativePath, needle });
+      forbiddenPatterns.forEach((pattern) => {
+        if (source.includes(pattern)) {
+          offenders.push({ file: relativePath, pattern });
         }
       });
     }
@@ -401,26 +398,24 @@ describe('core server architecture', () => {
       path.join(repoRoot, 'packages', 'studio', 'server'),
     ];
     const files = (await Promise.all(roots.map(listSourceFiles))).flat();
-    const forbiddenNeedles = [
+    const forbiddenMarkers = [
       'VideoPrompt' + 'ImageStyleId',
       'VideoPrompt' + 'AnnotationKey',
       'VideoPrompt' + 'ImagePlan',
       'VideoPrompt' + 'Panel',
       'videoPrompt' + 'ImagePlan',
-      'validateVideoPrompt' + 'ImagePlan',
-      'validateVideoPrompt' + 'Panels',
       'CORE_VIDEO_PROMPT' + '_IMAGE',
     ];
-    const offenders: Array<{ file: string; line: number; needle: string }> = [];
+    const offenders: Array<{ file: string; line: number; pattern: string }> = [];
 
     for (const file of files) {
       const source = await fs.readFile(file, 'utf8');
-      for (const needle of forbiddenNeedles) {
-        findNeedleLines(source, needle).forEach((line) => {
+      for (const marker of forbiddenMarkers) {
+        findTextLines(source, marker).forEach((line) => {
           offenders.push({
             file: path.relative(repoRoot, file),
             line,
-            needle,
+            pattern: marker,
           });
         });
       }
@@ -436,123 +431,12 @@ describe('core server architecture', () => {
     ).toEqual([]);
   });
 
-  it('keeps media generation cost projection independent of readiness preparation', async () => {
-    const source = await fs.readFile(
-      path.join(
-        projectSourceRoot,
-        'media-generation',
-        'estimation',
-        'cost-projection.ts'
-      ),
-      'utf8'
-    );
-    const forbiddenNeedles = [
-      'prepare',
-      'provider-payload',
-      'dependency-inventory',
-      'project-session',
-      'database/access',
-      'resolveProjectRelativePath',
-      'resolveShotVideoInputReferenceBundle',
-      'validateFinalSpecAgainstContext',
-      'validateInputSpecAgainstContext',
-    ];
-
-    expect(
-      forbiddenNeedles.filter((needle) => source.includes(needle)),
-      [
-        'Cost projection must consume only purpose specs and pricing facts.',
-        'Readiness validation, provider payload construction, and file resolution belong outside the cost rail.',
-      ].join(' ')
-    ).toEqual([]);
-  });
-
-  it('keeps media generation estimation modules off readiness imports', async () => {
-    const estimationRoot = path.join(
-      projectSourceRoot,
-      'media-generation',
-      'estimation'
-    );
-    const files = await listTypeScriptFiles(estimationRoot);
-    const forbiddenImportFragments = [
-      'shared-generation-service',
-      'generation-runs',
-      'provider-payloads',
-      'provider-payload-validation',
-      'input-file-payload',
-      'dependency-selectors',
-      'preflight-report',
-      'preflight-inputs',
-      'input-selection',
-      'media-imports',
-      'spec-records',
-    ];
-    const offenders: Array<{
-      file: string;
-      importSource: string;
-      forbiddenFragment: string;
-    }> = [];
-
-    for (const file of files) {
-      const source = await fs.readFile(file, 'utf8');
-      for (const importSource of extractImportSources(source)) {
-        const forbiddenFragment = forbiddenImportFragments.find((fragment) =>
-          importSource.includes(fragment)
-        );
-        if (forbiddenFragment) {
-          offenders.push({
-            file: path.relative(projectSourceRoot, file),
-            importSource,
-            forbiddenFragment,
-          });
-        }
-      }
-    }
-
-    expect(
-      offenders,
-      [
-        'Estimation modules may read specs and pricing inputs, but they must not import readiness preparation,',
-        'provider payload construction, generation runs, file resolution, or dependency selection internals.',
-        'This protects the architecture boundary structurally instead of enumerating public estimate function names.',
-      ].join(' ')
-    ).toEqual([]);
-  });
-
-  it('keeps engine cost estimation free of provider payload validation', async () => {
-    const source = await fs.readFile(
-      path.join(repoRoot, 'packages', 'engines', 'src', 'generation', 'estimates.ts'),
-      'utf8'
-    );
-    const forbiddenNeedles = [
-      'provider-payload-validation',
-      'input-file-payload',
-      'logical-provider-payload',
-      'runner',
-      '../sdk/',
-      'node:fs',
-      'buildLogicalProviderPayload',
-      'validateProviderPayload',
-    ];
-
-    expect(
-      forbiddenNeedles.filter((needle) => source.includes(needle)),
-      [
-        'Engine cost estimation must price declared pricing inputs only.',
-        'It must not construct or validate provider payloads or resolve files.',
-      ].join(' ')
-    ).toEqual([]);
-  });
-
   it('requires explicit cost projection on every media generation purpose', async () => {
-    const source = await fs.readFile(
-      path.join(projectSourceRoot, 'media-generation', 'purpose-registry.ts'),
-      'utf8'
-    );
+    const definitionsMissingProjection = listMediaGenerationPurposeDefinitions()
+      .filter((definition) => typeof definition.buildCostProjection !== 'function')
+      .map((definition) => definition.purpose);
 
-    expect(source).not.toContain('estimateSpec');
-    expect(source).not.toContain('buildCostProjection?');
-    expect(source).toContain('buildCostProjection(');
+    expect(definitionsMissingProjection).toEqual([]);
   });
 
   it('keeps media generation live cost approval fail-fast', async () => {
@@ -572,23 +456,30 @@ describe('core server architecture', () => {
           path.relative(repoRoot, file) !==
             path.join('packages', 'core', 'src', 'server', 'architecture.test.ts')
       );
-    const forbiddenNeedles = [
-      'unpriced-cost-override',
-      'allowUnpricedCost',
-      'allowUnpricedCost: true',
-      'approvalToken: estimate.costApprovalToken',
-      'approvalToken: approvalTokenForRun',
+    const forbiddenPatterns = [
+      {
+        label: 'obsolete unpriced approval sentinel',
+        pattern: /unpriced-cost-override/,
+      },
+      {
+        label: 'obsolete unpriced approval flag',
+        pattern: /\ballowUnpricedCost\b/,
+      },
+      {
+        label: 'run path self-approval from fresh estimate',
+        pattern: /approvalToken\s*:\s*estimate\.costApprovalToken/,
+      },
     ];
-    const offenders: Array<{ file: string; line: number; needle: string }> = [];
+    const offenders: Array<{ file: string; line: number; pattern: string }> = [];
 
     for (const file of runtimeFiles) {
       const source = await fs.readFile(file, 'utf8');
-      for (const needle of forbiddenNeedles) {
-        findNeedleLines(source, needle).forEach((line) => {
+      for (const forbiddenPattern of forbiddenPatterns) {
+        findPatternLines(source, forbiddenPattern.pattern).forEach((line) => {
           offenders.push({
             file: path.relative(repoRoot, file),
             line,
-            needle,
+            pattern: forbiddenPattern.label,
           });
         });
       }
@@ -598,17 +489,29 @@ describe('core server architecture', () => {
       path.join(repoRoot, 'packages', 'engines', 'src', 'generation', 'runner.ts'),
       'utf8'
     );
-    for (const needle of [
-      'approvalToken?: string;',
-      'allowUnpricedCost?: boolean;',
-      'GenerationRunCostApproval',
-      'costApproval',
+    for (const forbiddenPattern of [
+      {
+        label: 'run approval token option',
+        pattern: /\bapprovalToken\??\s*:\s*string\b/,
+      },
+      {
+        label: 'obsolete unpriced approval option',
+        pattern: /\ballowUnpricedCost\??\s*:\s*boolean\b/,
+      },
+      {
+        label: 'engine-side approval type',
+        pattern: /\bGenerationRunCostApproval\b/,
+      },
+      {
+        label: 'engine-side approval option',
+        pattern: /\bcostApproval\b/,
+      },
     ]) {
-      findNeedleLines(engineRunnerSource, needle).forEach((line) => {
+      findPatternLines(engineRunnerSource, forbiddenPattern.pattern).forEach((line) => {
         offenders.push({
           file: path.join('packages', 'engines', 'src', 'generation', 'runner.ts'),
           line,
-          needle,
+          pattern: forbiddenPattern.label,
         });
       });
     }
@@ -624,7 +527,7 @@ describe('core server architecture', () => {
       ),
       'utf8'
     );
-    findNeedleLines(dependencyContractSource, 'costApprovalToken').forEach(
+    findPatternLines(dependencyContractSource, /\bcostApprovalToken\b/).forEach(
       (line) => {
         offenders.push({
           file: path.join(
@@ -635,7 +538,7 @@ describe('core server architecture', () => {
             'media-generation-dependency.ts'
           ),
           line,
-          needle: 'costApprovalToken',
+          pattern: 'dependency approval token field',
         });
       }
     );
@@ -683,12 +586,6 @@ async function listSourceFiles(root: string): Promise<string[]> {
   return files.flat();
 }
 
-function findNeedleLines(source: string, needle: string): number[] {
-  return source
-    .split('\n')
-    .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
-}
-
 function extractImportSources(source: string): string[] {
   const importSourcePattern =
     /(?:from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
@@ -702,6 +599,27 @@ function extractImportSources(source: string): string[] {
   return importSources;
 }
 
+function forbiddenInfrastructureImports(source: string): string[] {
+  return extractImportSources(source).filter(
+    (importSource) =>
+      importSource === 'node:fs' ||
+      importSource === 'node:path' ||
+      importSource.includes('database/access') ||
+      importSource.includes('database/lifecycle/store')
+  );
+}
+
+function findTextLines(source: string, text: string): number[] {
+  return source
+    .split('\n')
+    .flatMap((line, index) => (line.includes(text) ? [index + 1] : []));
+}
+
+function findPatternLines(source: string, pattern: RegExp): number[] {
+  return source
+    .split('\n')
+    .flatMap((line, index) => (pattern.test(line) ? [index + 1] : []));
+}
 
 function isOwningExportLine(line: string): boolean {
   return (

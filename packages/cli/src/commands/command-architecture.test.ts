@@ -22,41 +22,12 @@ describe('CLI command architecture', () => {
     ]);
   });
 
-  it('keeps generation command paths in one handler registry', () => {
-    expect(generationCommandHandlers.map((handler) => handler.path.join(' '))).toEqual([
-      'context',
-      'model list',
-      'production update',
-      'preflight',
-      'dialogue-audio plan',
-      'dialogue-audio generate',
-      'preview show',
-      'input list',
-      'input select',
-      'input clear',
-      'input delete',
-      'spec validate',
-      'spec create',
-      'spec update',
-      'spec show',
-      'spec list',
-      'estimate',
-      'run',
-    ]);
+  it('keeps generation command paths unique in one handler registry', () => {
+    expectUniqueHandlerPaths(generationCommandHandlers);
   });
 
-  it('keeps Cast Voice command paths in one handler registry', () => {
-    expect(castVoiceCommandHandlers.map((handler) => handler.path.join(' '))).toEqual([
-      'list',
-      'show',
-      'validate',
-      'attach',
-      'remove',
-      'registrations list',
-      'registrations show',
-      'registrations create',
-      'registrations remove',
-    ]);
+  it('keeps Cast Voice command paths unique in one handler registry', () => {
+    expectUniqueHandlerPaths(castVoiceCommandHandlers);
   });
 
   it('does not deep-import core media-generation internals from CLI commands', async () => {
@@ -80,19 +51,25 @@ describe('CLI command architecture', () => {
 
   it('does not expose arbitrary shot-video take state patching from CLI commands', async () => {
     const commandSources = await readCommandSources();
-    const forbiddenNeedles = [
+    const forbiddenPatterns = [
       {
-        needle: 'updateSceneShotVideoTakeState',
-        reason:
-          'CLI commands must call focused core commands instead of generic take-state patching',
+        label: 'durable take state type',
+        pattern: /\bSceneShotVideoTakeState\b/,
+        reason: 'CLI commands must not accept or assemble durable take state',
       },
       {
-        needle: 'statePatch',
+        label: 'state patch payload',
+        pattern: /\bstatePatch\b/,
         reason:
           'CLI commands must not accept or assemble arbitrary durable take-state patches',
       },
+      {
+        label: 'partial durable take state',
+        pattern: /\bPartial\s*<\s*SceneShotVideoTakeState\s*>/,
+        reason: 'CLI commands must not expose partial durable take-state patches',
+      },
     ];
-    const findings = findForbiddenNeedles(commandSources, forbiddenNeedles);
+    const findings = findForbiddenPatterns(commandSources, forbiddenPatterns);
 
     expect(
       findings,
@@ -105,29 +82,33 @@ describe('CLI command architecture', () => {
 
   it('keeps CLI commands away from project database internals', async () => {
     const commandSources = await readCommandSources();
-    const forbiddenNeedles = [
+    const forbiddenPatterns = [
       {
-        needle: 'database/access',
+        label: 'database access import',
+        pattern: /(?:^|\/)database\/access(?:\/|$)/,
         reason:
           'CLI commands must call core services instead of database access modules',
       },
       {
-        needle: 'schema/',
+        label: 'Drizzle schema import',
+        pattern: /(?:^|\/)schema\//,
         reason:
           'CLI commands must not import Drizzle schema modules',
       },
       {
-        needle: 'drizzle-orm',
+        label: 'Drizzle import',
+        pattern: /^drizzle-orm(?:\/|$)/,
         reason:
           'CLI commands must not use Drizzle directly',
       },
       {
-        needle: 'better-sqlite3',
+        label: 'SQLite driver import',
+        pattern: /^better-sqlite3$/,
         reason:
           'CLI commands must not use SQLite drivers directly',
       },
     ];
-    const findings = findForbiddenNeedles(commandSources, forbiddenNeedles);
+    const findings = findForbiddenImports(commandSources, forbiddenPatterns);
 
     expect(
       findings,
@@ -138,6 +119,16 @@ describe('CLI command architecture', () => {
     ).toEqual([]);
   });
 });
+
+function expectUniqueHandlerPaths(
+  handlers: Array<{ path: string[] }>
+): void {
+  const commandPaths = handlers.map((handler) => handler.path.join(' '));
+  expect(
+    commandPaths.filter((commandPath) => commandPath.trim().length === 0)
+  ).toEqual([]);
+  expect(new Set(commandPaths).size).toBe(commandPaths.length);
+}
 
 async function readCommandSources(): Promise<Array<{ file: string; source: string }>> {
   const files = (await listTypeScriptFiles(commandDir)).filter(
@@ -165,24 +156,60 @@ async function listTypeScriptFiles(root: string): Promise<string[]> {
   return files.flat();
 }
 
-function findForbiddenNeedles(
+function findForbiddenPatterns(
   sources: Array<{ file: string; source: string }>,
-  forbiddenNeedles: Array<{ needle: string; reason: string }>
-): Array<{ file: string; line: number; needle: string; reason: string }> {
+  forbiddenPatterns: Array<{ label: string; pattern: RegExp; reason: string }>
+): Array<{ file: string; line: number; pattern: string; reason: string }> {
   return sources.flatMap(({ file, source }) =>
-    forbiddenNeedles.flatMap((forbiddenNeedle) =>
-      findNeedleLines(source, forbiddenNeedle.needle).map((line) => ({
+    forbiddenPatterns.flatMap((forbiddenPattern) =>
+      findPatternLines(source, forbiddenPattern.pattern).map((line) => ({
         file,
         line,
-        needle: forbiddenNeedle.needle,
-        reason: forbiddenNeedle.reason,
+        pattern: forbiddenPattern.label,
+        reason: forbiddenPattern.reason,
       }))
     )
   );
 }
 
-function findNeedleLines(source: string, needle: string): number[] {
+function findForbiddenImports(
+  sources: Array<{ file: string; source: string }>,
+  forbiddenImports: Array<{ label: string; pattern: RegExp; reason: string }>
+): Array<{ file: string; importSource: string; pattern: string; reason: string }> {
+  return sources.flatMap(({ file, source }) =>
+    extractImportSources(source).flatMap((importSource) => {
+      const forbiddenImport = forbiddenImports.find((candidate) =>
+        candidate.pattern.test(importSource)
+      );
+      return forbiddenImport
+        ? [
+            {
+              file,
+              importSource,
+              pattern: forbiddenImport.label,
+              reason: forbiddenImport.reason,
+            },
+          ]
+        : [];
+    })
+  );
+}
+
+function findPatternLines(source: string, pattern: RegExp): number[] {
   return source
     .split('\n')
-    .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
+    .flatMap((line, index) => (pattern.test(line) ? [index + 1] : []));
+}
+
+function extractImportSources(source: string): string[] {
+  const importSourcePattern =
+    /(?:from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
+  const importSources: string[] = [];
+  for (const match of source.matchAll(importSourcePattern)) {
+    const importSource = match[1] ?? match[2];
+    if (importSource) {
+      importSources.push(importSource);
+    }
+  }
+  return importSources;
 }

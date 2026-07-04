@@ -23,6 +23,13 @@ The preferred model is signal over inventory:
 - a valid refactor inside the owning package should not require architecture
   test edits.
 
+Hard rule: static architecture tests must not hard-code current implementation
+function names, class names, private helper names, local variable names, or
+command/service inventories as source-text strings. If the boundary is real,
+write the test against the import boundary, public contract shape, package layer,
+or runtime behavior instead of the current helper name that happens to implement
+it.
+
 When a feature changes a boundary, update this registry and the relevant tests
 in the same implementation slice. Routine feature growth that stays inside an
 already-protected boundary should usually need only an Architecture Test Impact

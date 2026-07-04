@@ -50,6 +50,39 @@ Concrete examples of forbidden fixes:
 When reviewing code, treat architectural boundary violations as high-severity
 issues even if tests pass and the UI appears to work.
 
+## Top Instruction: Architecture Tests Must Not Encode Implementation Names
+
+Do not add or keep architecture tests that hard-code current implementation
+function names, class names, private helper names, local variable names, or
+command/service inventories as source-text strings.
+
+Architecture tests must protect stable boundaries, not freeze today's internal
+names. This is a hard rule. A test is not acceptable if a normal refactor inside
+the owning layer, such as renaming a helper function or adding a routine command,
+requires editing the architecture test.
+
+Architecture tests should prefer:
+
+- import-boundary checks, such as a UI package not importing server or database
+  modules;
+- stable public contract shape checks, when the exact public shape is the
+  accepted architecture contract;
+- runtime boundary tests that prove invalid state fails before a write;
+- broad capability checks that name the forbidden capability rather than the
+  current helper that happens to implement it.
+
+Architecture tests must not:
+
+- use source-text "needles" for project function names;
+- list every allowed command, service method, helper, or purpose-specific
+  implementation function;
+- ban one retired function name when the real boundary is an import path, package
+  layer, public contract shape, or runtime behavior;
+- reintroduce old implementation names as compatibility sentinels.
+
+Exceptions are allowed only for stable external APIs or package/import names when
+the API or import itself is the architecture boundary being protected.
+
 ## Top Instruction: AI Artifacts And Prompts Are Opaque
 
 Do not validate, parse, score, repair, or otherwise try to understand the

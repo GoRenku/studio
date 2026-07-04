@@ -57,6 +57,7 @@ Load area-specific docs when the diff touches that area:
 - Media generation: `docs/architecture/reference/media-generation.md`,
   `docs/decisions/0025-use-shared-media-generation-purpose-architecture.md`,
   and the currently active dependency-inventory plans when relevant.
+- Architecture tests: `docs/architecture/architecture-test-registry.md`.
 - Resource refresh or coordination: `docs/decisions/0030-use-unified-studio-resource-refresh-components.md`
   and `docs/decisions/0031-use-studio-server-owned-coordination-delivery.md`.
 

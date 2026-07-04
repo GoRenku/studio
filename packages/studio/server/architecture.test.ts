@@ -7,66 +7,82 @@ const serverRoot = path.dirname(fileURLToPath(import.meta.url));
 const routeRoot = path.join(serverRoot, 'routes');
 const httpRoot = path.join(serverRoot, 'http');
 
-interface ForbiddenNeedle {
-  needle: string;
+interface ForbiddenSourcePattern {
+  label: string;
+  pattern: RegExp;
   reason: string;
 }
 
 interface ArchitectureFinding {
   file: string;
-  line: number;
-  needle: string;
+  line?: number;
+  importSource?: string;
+  pattern: string;
   reason: string;
 }
 
-const routeForbiddenNeedles: ForbiddenNeedle[] = [
+const routeForbiddenPatterns: ForbiddenSourcePattern[] = [
   {
-    needle: 'updateSceneShotVideoTakeState',
-    reason:
-      'routes must call focused core commands instead of generic take-state patching',
+    label: 'durable take state type',
+    pattern: /\bSceneShotVideoTakeState\b/,
+    reason: 'routes must not accept or assemble durable take state',
   },
   {
-    needle: 'statePatch',
+    label: 'state patch payload',
+    pattern: /\bstatePatch\b/,
     reason: 'routes must not assemble durable take state patches',
   },
   {
-    needle: 'context.take.state.structure.sharedDirection.referenceSelections',
+    label: 'durable reference-selection map',
+    pattern: /\breferenceSelections\b/,
     reason: 'routes must not inspect durable take reference-selection maps',
   },
   {
-    needle: 'context.take.state.structure.directionsByShotId',
+    label: 'durable take direction map',
+    pattern: /\bdirectionsByShotId\b/,
     reason: 'routes must not inspect durable take direction maps',
   },
 ];
 
-const httpForbiddenNeedles: ForbiddenNeedle[] = [
+const httpForbiddenPatterns: ForbiddenSourcePattern[] = [
   {
-    needle: 'updateSceneShotVideoTakeState',
-    reason:
-      'HTTP helpers may parse requests but must not call generic take-state patching',
+    label: 'durable take state type',
+    pattern: /\bSceneShotVideoTakeState\b/,
+    reason: 'HTTP helpers must not accept or assemble durable take state',
   },
   {
-    needle: 'statePatch',
+    label: 'state patch payload',
+    pattern: /\bstatePatch\b/,
     reason:
       'HTTP helpers may parse request fields but must not build durable state patches',
   },
+  {
+    label: 'durable reference-selection map',
+    pattern: /\breferenceSelections\b/,
+    reason:
+      'HTTP helpers may parse request fields but must not assemble durable reference-selection maps',
+  },
 ];
 
-const routeForbiddenImports: ForbiddenNeedle[] = [
+const routeForbiddenImports: ForbiddenSourcePattern[] = [
   {
-    needle: 'database/access',
+    label: 'database access import',
+    pattern: /(?:^|\/)database\/access(?:\/|$)/,
     reason: 'routes must call ProjectDataService instead of database access modules',
   },
   {
-    needle: 'schema/',
+    label: 'Drizzle schema import',
+    pattern: /(?:^|\/)schema\//,
     reason: 'routes must not import Drizzle schema modules',
   },
   {
-    needle: 'drizzle-orm',
+    label: 'Drizzle import',
+    pattern: /^drizzle-orm(?:\/|$)/,
     reason: 'routes must not use Drizzle directly',
   },
   {
-    needle: 'better-sqlite3',
+    label: 'SQLite driver import',
+    pattern: /^better-sqlite3$/,
     reason: 'routes must not use SQLite drivers directly',
   },
 ];
@@ -74,7 +90,7 @@ const routeForbiddenImports: ForbiddenNeedle[] = [
 describe('Studio server architecture', () => {
   it('keeps take reference-selection mutation out of route files', async () => {
     const files = await listTypeScriptFiles(routeRoot);
-    const findings = await findForbiddenNeedles(files, routeRoot, routeForbiddenNeedles);
+    const findings = await findForbiddenPatterns(files, routeRoot, routeForbiddenPatterns);
 
     expect(
       findings,
@@ -88,7 +104,7 @@ describe('Studio server architecture', () => {
 
   it('keeps HTTP request helpers from building durable take state patches', async () => {
     const files = await listTypeScriptFiles(httpRoot);
-    const findings = await findForbiddenNeedles(files, httpRoot, httpForbiddenNeedles);
+    const findings = await findForbiddenPatterns(files, httpRoot, httpForbiddenPatterns);
 
     expect(
       findings,
@@ -102,7 +118,7 @@ describe('Studio server architecture', () => {
 
   it('keeps route files away from project database internals', async () => {
     const files = await listTypeScriptFiles(routeRoot);
-    const findings = await findForbiddenNeedles(files, routeRoot, routeForbiddenImports);
+    const findings = await findForbiddenImports(files, routeRoot, routeForbiddenImports);
 
     expect(
       findings,
@@ -114,21 +130,21 @@ describe('Studio server architecture', () => {
   });
 });
 
-async function findForbiddenNeedles(
+async function findForbiddenPatterns(
   files: string[],
   root: string,
-  forbiddenNeedles: ForbiddenNeedle[]
+  forbiddenPatterns: ForbiddenSourcePattern[]
 ): Promise<ArchitectureFinding[]> {
   const findings = await Promise.all(
     files.map(async (file) => {
       const source = await fs.readFile(file, 'utf8');
       const relativeFile = path.relative(root, file);
-      return forbiddenNeedles.flatMap((forbiddenNeedle) =>
-        findNeedleLines(source, forbiddenNeedle.needle).map((line) => ({
+      return forbiddenPatterns.flatMap((forbiddenPattern) =>
+        findPatternLines(source, forbiddenPattern.pattern).map((line) => ({
           file: relativeFile,
           line,
-          needle: forbiddenNeedle.needle,
-          reason: forbiddenNeedle.reason,
+          pattern: forbiddenPattern.label,
+          reason: forbiddenPattern.reason,
         }))
       );
     })
@@ -136,10 +152,52 @@ async function findForbiddenNeedles(
   return findings.flat();
 }
 
-function findNeedleLines(source: string, needle: string): number[] {
+async function findForbiddenImports(
+  files: string[],
+  root: string,
+  forbiddenImports: ForbiddenSourcePattern[]
+): Promise<ArchitectureFinding[]> {
+  const findings = await Promise.all(
+    files.map(async (file) => {
+      const source = await fs.readFile(file, 'utf8');
+      const relativeFile = path.relative(root, file);
+      return extractImportSources(source).flatMap((importSource) => {
+        const forbiddenImport = forbiddenImports.find((candidate) =>
+          candidate.pattern.test(importSource)
+        );
+        return forbiddenImport
+          ? [
+              {
+                file: relativeFile,
+                importSource,
+                pattern: forbiddenImport.label,
+                reason: forbiddenImport.reason,
+              },
+            ]
+          : [];
+      });
+    })
+  );
+  return findings.flat();
+}
+
+function findPatternLines(source: string, pattern: RegExp): number[] {
   return source
     .split('\n')
-    .flatMap((line, index) => (line.includes(needle) ? [index + 1] : []));
+    .flatMap((line, index) => (pattern.test(line) ? [index + 1] : []));
+}
+
+function extractImportSources(source: string): string[] {
+  const importSourcePattern =
+    /(?:from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\))/g;
+  const importSources: string[] = [];
+  for (const match of source.matchAll(importSourcePattern)) {
+    const importSource = match[1] ?? match[2];
+    if (importSource) {
+      importSources.push(importSource);
+    }
+  }
+  return importSources;
 }
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
