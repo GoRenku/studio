@@ -47,6 +47,7 @@ renku generation model list --purpose lookbook.image --target lookbook:<id> --js
 renku generation spec create --file <spec-json> --json
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
+renku generation run --spec <spec-id> --approve-unpriced-cost --json
 renku media import --purpose lookbook.image --target lookbook:<id> --source <path> --json
 ```
 
@@ -81,6 +82,12 @@ dependency declarations, resolves existing assets through deterministic asset
 selectors, estimates planned dependency specs through the same shared lifecycle
 used by persisted specs, and aggregates the inventory total from dependency
 lines plus the root generation line.
+
+The dependency inventory is a human and agent to-do list, not an execution plan.
+It may show the likely full workflow cost, including generated dependencies that
+do not exist yet, but it must not create approval tokens for dependency lines,
+approval bundles, or automatic generation schedules. Each live provider
+generation is still run and approved one at a time.
 
 Dependency pricing and generation readiness are separate facts. A generated
 dependency can be priced while still reporting `missing-input` when the user or
@@ -155,6 +162,12 @@ estimates in `@gorenku/studio-engines`; reused existing assets contribute
 priced. Studio and CLI surfaces render inventory totals and line items, but
 they do not compute generation prices.
 
+There is one approval meaning. A cost approval token approves one live
+generation run for one concrete generation spec. Parent dependency plans do not
+return child approval tokens, and live runs do not walk dependency inventories.
+The accepted decision is
+`../decisions/0043-use-single-generation-approval-tokens.md`.
+
 Execution boundaries still fail fast. Final spec creation and provider payload
 construction must reject selected inputs that cannot be sent to the selected
 provider route, including unsupported dialogue audio references or audio
@@ -202,3 +215,4 @@ reference.
 - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 - `../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
 - `../decisions/0036-use-unsliced-location-sheets.md`
+- `../decisions/0043-use-single-generation-approval-tokens.md`

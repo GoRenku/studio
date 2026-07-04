@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type {
-  GenerationCostEstimate,
   GenerationRunResult,
 } from '@gorenku/studio-engines';
 import {
@@ -23,7 +22,6 @@ describe('Kling transient voice IDs', () => {
       projectFolder,
       conversions: [conversion],
       simulate: true,
-      estimateGenerationCost: estimateCreateVoice,
       runGeneration: vi.fn(),
     });
     const payload = { elements: [{ video_url: 'renku-input://video.mp4' }] };
@@ -83,7 +81,6 @@ describe('Kling transient voice IDs', () => {
       projectFolder,
       conversions: [conversionFor('generated/audio/dialogue.wav')],
       simulate: false,
-      estimateGenerationCost: estimateCreateVoice,
       runGeneration,
     });
 
@@ -122,7 +119,6 @@ describe('Kling transient voice IDs', () => {
       projectFolder,
       conversions: [conversionFor('generated/audio/dialogue.wav')],
       simulate: false,
-      estimateGenerationCost: estimateCreateVoice,
       runGeneration,
     });
     const cache = JSON.parse(
@@ -170,7 +166,6 @@ describe('Kling transient voice IDs', () => {
         },
       ],
       simulate: false,
-      estimateGenerationCost: estimateCreateVoice,
       runGeneration,
     });
 
@@ -203,7 +198,6 @@ describe('Kling transient voice IDs', () => {
       projectFolder,
       conversions: [conversionFor('generated/audio/dialogue.wav')],
       simulate: false,
-      estimateGenerationCost: estimateCreateVoice,
       runGeneration,
     });
 
@@ -222,7 +216,6 @@ describe('Kling transient voice IDs', () => {
       projectFolder,
       conversions: [conversionFor('generated/audio/missing.wav')],
       simulate: false,
-      estimateGenerationCost: estimateCreateVoice,
       runGeneration,
     });
 
@@ -248,7 +241,6 @@ describe('Kling transient voice IDs', () => {
       projectFolder,
       conversions: [conversionFor('generated/audio/dialogue.wav')],
       simulate: false,
-      estimateGenerationCost: estimateCreateVoice,
       runGeneration: createVoiceRun('fresh_voice_003'),
     });
 
@@ -293,20 +285,6 @@ function conversionFor(projectRelativePath: string): KlingTransientVoiceConversi
     targetElementId: 'urban',
     targetPromptToken: '@Element1',
     payloadPath: ['elements', 0, 'voice_id'],
-  };
-}
-
-async function estimateCreateVoice(): Promise<GenerationCostEstimate> {
-  return {
-    state: 'priced' as const,
-    provider: 'fal-ai',
-    model: 'kling-video/create-voice',
-    mediaKind: 'json' as const,
-    pricing: 0.007,
-    estimatedCostUsd: 0.007,
-    costApprovalToken: 'sha256:create-voice',
-    billableUnits: { outputCount: 1 },
-    warnings: [],
   };
 }
 

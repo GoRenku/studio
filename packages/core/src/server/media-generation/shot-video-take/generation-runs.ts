@@ -2,7 +2,6 @@ import type {
   MediaGenerationRunReport,
   ShotVideoTakeOutputGenerationSpec,
 } from '../../../client/index.js';
-import { ProjectDataError } from '../../project-data-error.js';
 import {
   insertMediaGenerationRun,
 } from '../../database/access/media-generation.js';
@@ -23,6 +22,12 @@ import {
 import {
   estimateMediaGenerationSpec,
 } from '../estimation/spec-estimates.js';
+import {
+  mediaGenerationEstimateWithApproval,
+  mediaGenerationRunApprovalToken,
+  parseMediaGenerationRunCostApproval,
+  requireMediaGenerationCostApproval,
+} from '../cost-approval.js';
 import {
   resolveShotGenerationOutputPaths,
 } from './generation-output-paths.js';
@@ -69,21 +74,20 @@ export async function runShotInputSpec(
   assertEditableSceneShotVideoTake(context.take);
   const { runGeneration } = await import('@gorenku/studio-engines');
   const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
-  assertRunCostApproved({
+  const mode = input.simulate ? 'simulated' : 'live';
+  const costApproval = requireMediaGenerationCostApproval({
+    mode,
+    purpose: prepared.spec.purpose,
     estimate,
-    approvalToken: input.approvalToken,
-    simulate: Boolean(input.simulate),
-    allowUnpricedCost: Boolean(input.allowUnpricedCost),
-    mismatchCode: 'CORE_SHOT_VIDEO_INPUT_APPROVAL_TOKEN_MISMATCH',
-    mismatchMessage:
-      'Shot input generation requires an approval token from the matching cost estimate.',
+    approval: parseMediaGenerationRunCostApproval({
+      approvalToken: input.approvalToken,
+      approveUnpricedCost: input.approveUnpricedCost,
+    }),
   });
   const outputPaths = await resolveShotGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
-    mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: approvalTokenForRun(estimate, input.approvalToken),
-    allowUnpricedCost: Boolean(input.allowUnpricedCost),
+    mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
   });
@@ -92,8 +96,8 @@ export async function runShotInputSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate,
-    approvalToken: approvalTokenForReceipt(estimate, input.approvalToken),
+    estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
+    approvalToken: mediaGenerationRunApprovalToken(costApproval),
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,
@@ -127,16 +131,18 @@ export async function runShotVideoTakeSpec(
     takeId: prepared.spec.spec.target.takeId,
   });
   assertEditableSceneShotVideoTake(context.take);
-  const { estimateGenerationCost, runGeneration } = await import('@gorenku/studio-engines');
+  const { runGeneration } = await import('@gorenku/studio-engines');
   const combinedEstimate = await estimateMediaGenerationSpec(input);
-  assertRunCostApproved({
-    estimate: combinedEstimate.estimate,
+  const mode = input.simulate ? 'simulated' : 'live';
+  const approval = parseMediaGenerationRunCostApproval({
     approvalToken: input.approvalToken,
-    simulate: Boolean(input.simulate),
-    allowUnpricedCost: Boolean(input.allowUnpricedCost),
-    mismatchCode: 'CORE_SHOT_VIDEO_TAKE_APPROVAL_TOKEN_MISMATCH',
-    mismatchMessage:
-      'Shot Video Take run requires an approval token from the matching cost estimate.',
+    approveUnpricedCost: input.approveUnpricedCost,
+  });
+  const costApproval = requireMediaGenerationCostApproval({
+    mode,
+    purpose: prepared.spec.purpose,
+    estimate: combinedEstimate.estimate,
+    approval,
   });
   const outputPaths = await resolveShotGenerationOutputPaths(input);
   const transientVoiceDiagnostics = await prepareKlingTransientVoicePayload({
@@ -146,17 +152,11 @@ export async function runShotVideoTakeSpec(
     requestParameters: prepared.generation.request.parameters,
     projectFolder: outputPaths.projectFolder,
     simulate: Boolean(input.simulate),
-    estimateGenerationCost,
     runGeneration,
   });
   const result = await runGeneration({
     ...prepared.generation,
-    mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: approvalTokenForRun(
-      combinedEstimate.estimate,
-      input.approvalToken
-    ),
-    allowUnpricedCost: Boolean(input.allowUnpricedCost),
+    mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -166,11 +166,11 @@ export async function runShotVideoTakeSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate: combinedEstimate.estimate,
-    approvalToken: approvalTokenForReceipt(
+    estimate: mediaGenerationEstimateWithApproval(
       combinedEstimate.estimate,
-      input.approvalToken
+      costApproval
     ),
+    approvalToken: mediaGenerationRunApprovalToken(costApproval),
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,
@@ -190,7 +190,6 @@ async function prepareKlingTransientVoicePayload(input: {
   requestParameters: Record<string, unknown>;
   projectFolder: string;
   simulate: boolean;
-  estimateGenerationCost: typeof import('@gorenku/studio-engines').estimateGenerationCost;
   runGeneration: typeof import('@gorenku/studio-engines').runGeneration;
 }): Promise<Record<string, unknown> | null> {
   const spec = input.spec as ShotVideoTakeOutputGenerationSpec;
@@ -216,7 +215,6 @@ async function prepareKlingTransientVoicePayload(input: {
     projectFolder: input.projectFolder,
     conversions,
     simulate: input.simulate,
-    estimateGenerationCost: input.estimateGenerationCost,
     runGeneration: input.runGeneration,
   });
   injectKlingTransientVoiceIds({
@@ -245,68 +243,6 @@ async function prepareKlingTransientVoicePayload(input: {
 function isRecord(input: unknown): input is Record<string, unknown> {
   return Boolean(input) && typeof input === 'object' && !Array.isArray(input);
 }
-
-function assertRunCostApproved(input: {
-  estimate: Awaited<ReturnType<typeof estimateMediaGenerationSpecRecordCost>>;
-  approvalToken?: string;
-  simulate: boolean;
-  allowUnpricedCost: boolean;
-  mismatchCode: string;
-  mismatchMessage: string;
-}): void {
-  if (input.estimate.state === 'missing-pricing-input') {
-    throw new ProjectDataError(
-      'CORE_MEDIA_COST_INPUT_MISSING',
-      `Generation cost estimate is missing pricing inputs: ${input.estimate.missingInputs.join(', ')}.`
-    );
-  }
-  if (
-    input.estimate.state === 'unpriced' &&
-    !input.simulate &&
-    !input.allowUnpricedCost
-  ) {
-    throw new ProjectDataError(
-      'PROJECT_DATA390',
-      'Generation cost estimate is unavailable for this model.',
-      {
-        suggestion:
-          'Review the selected model pricing or approve an explicit unpriced-cost override.',
-      }
-    );
-  }
-  if (
-    input.estimate.state === 'priced' &&
-    !input.simulate &&
-    input.approvalToken !== input.estimate.costApprovalToken
-  ) {
-    throw new ProjectDataError(input.mismatchCode, input.mismatchMessage, {
-      suggestion:
-        'Run the estimate command again and pass its cost approval token to the run command.',
-    });
-  }
-}
-
-function approvalTokenForRun(
-  estimate: Awaited<ReturnType<typeof estimateMediaGenerationSpecRecordCost>>,
-  approvalToken: string | undefined
-): string | undefined {
-  if (estimate.state === 'priced') {
-    return estimate.costApprovalToken;
-  }
-  return approvalToken ?? 'unpriced-cost-override';
-}
-
-function approvalTokenForReceipt(
-  estimate: Awaited<ReturnType<typeof estimateMediaGenerationSpecRecordCost>>,
-  approvalToken: string | undefined
-): string | undefined {
-  if (estimate.state === 'priced') {
-    return estimate.costApprovalToken;
-  }
-  return approvalToken;
-}
-
-
 
 export async function recordShotGenerationRun(
   input: RunMediaGenerationSpecInput & {

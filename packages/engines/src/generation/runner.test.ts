@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { LoadedModelCatalog } from '../model-catalog.js';
-import { estimateGenerationCost } from './estimates.js';
 import { runGeneration } from './runner.js';
 
 describe('runGeneration', () => {
@@ -177,12 +176,11 @@ describe('runGeneration', () => {
     ]);
   });
 
-  it('rejects stale live approval tokens before provider execution', async () => {
+  it('leaves live approval enforcement to core and reaches provider setup', async () => {
     await expect(
       runGeneration({
         mode: 'live',
         catalog: createCatalog(),
-        approvalToken: 'sha256:stale-cost-approval',
         policy: {
           provider: 'test-provider',
           model: 'text-to-speech',
@@ -192,60 +190,11 @@ describe('runGeneration', () => {
         },
         request: {
           parameters: {
-            text: 'A paid request with a stale approval token.',
+            text: 'Core approved this request before calling engines.',
           },
         },
       })
-    ).rejects.toThrow(/current cost approval token/);
-  });
-
-  it('rejects non-voice approval tokens when nested voice ids imply voice control', async () => {
-    const catalog = createCatalog();
-    const nonVoiceEstimate = await estimateGenerationCost({
-      catalog,
-      priceKey: {
-        provider: 'test-provider',
-        model: 'voice-control-video',
-        mediaKind: 'video',
-      },
-      pricingInputs: {
-        outputCount: 1,
-        durationSeconds: '5',
-        generateAudio: true,
-        usesVoiceControl: false,
-      },
-    });
-    expect(nonVoiceEstimate.state).toBe('priced');
-    if (nonVoiceEstimate.state !== 'priced') {
-      throw new Error('Expected non-voice estimate to be priced.');
-    }
-
-    await expect(
-      runGeneration({
-        mode: 'live',
-        catalog,
-        approvalToken: nonVoiceEstimate.costApprovalToken,
-        policy: {
-          provider: 'test-provider',
-          model: 'voice-control-video',
-          mediaKind: 'video',
-          mode: 'image-to-video',
-          outputCount: 1,
-        },
-        request: {
-          parameters: {
-            duration: '5',
-            generate_audio: true,
-            elements: [
-              {
-                voice_id: 'transient_voice_001',
-              },
-            ],
-          },
-          outputNames: ['voice-control.mp4'],
-        },
-      })
-    ).rejects.toThrow(/current cost approval token/);
+    ).rejects.toThrow(/No adapter configured for provider "test-provider"/);
   });
 });
 
@@ -255,6 +204,14 @@ function createCatalog(): LoadedModelCatalog {
       [
         'test-provider',
         new Map([
+          [
+            'unpriced-image',
+            {
+              name: 'unpriced-image',
+              type: 'image',
+              mime: ['image/png'],
+            },
+          ],
           [
             'image-edit',
             {
@@ -273,6 +230,43 @@ function createCatalog(): LoadedModelCatalog {
                 function: 'costByCharacters',
                 inputs: ['text'],
                 pricePerCharacter: 0.001,
+              },
+            },
+          ],
+          [
+            'image-to-video-model',
+            {
+              name: 'image-to-video-model',
+              type: 'video',
+              mime: ['video/mp4'],
+              price: {
+                function: 'costByVideoDurationAndResolution',
+                inputs: ['duration', 'resolution', 'image_url'],
+                pricePerInputImage: 0.01,
+                prices: [
+                  {
+                    resolution: '480p',
+                    pricePerSecond: 0.08,
+                  },
+                ],
+              },
+            },
+          ],
+          [
+            'media-url-video-model',
+            {
+              name: 'media-url-video-model',
+              type: 'video',
+              mime: ['video/mp4'],
+              price: {
+                function: 'costByVideoDurationAndResolution',
+                inputs: ['duration', 'resolution', 'audio_url', 'video_urls'],
+                prices: [
+                  {
+                    resolution: '480p',
+                    pricePerSecond: 0.08,
+                  },
+                ],
               },
             },
           ],

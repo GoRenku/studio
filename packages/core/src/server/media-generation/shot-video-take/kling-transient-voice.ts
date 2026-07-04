@@ -2,9 +2,6 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
-  GenerationCostEstimate,
-  GenerationPriceKey,
-  GenerationPricingInputs,
   GenerationRequest,
   GenerationRunResult,
 } from '@gorenku/studio-engines';
@@ -84,18 +81,6 @@ export function klingTransientVoiceGenerationPolicy() {
   };
 }
 
-export function klingTransientVoicePriceKey(): GenerationPriceKey {
-  return {
-    provider: KLING_TRANSIENT_VOICE_PROVIDER,
-    model: KLING_TRANSIENT_VOICE_MODEL,
-    mediaKind: 'json',
-  };
-}
-
-export function klingTransientVoicePricingInputs(): GenerationPricingInputs {
-  return { outputCount: 1 };
-}
-
 export function klingTransientVoiceGenerationRequest(
   conversion: KlingTransientVoiceConversion
 ): GenerationRequest {
@@ -109,7 +94,6 @@ export function klingTransientVoiceGenerationRequest(
       },
     ],
     parameters: {},
-    pricingInputCounts: {},
     outputNames: [
       `${safeTransientVoiceOutputStem(
         conversion.sourceAudio.assetFileId
@@ -126,15 +110,10 @@ export async function resolveKlingTransientVoices(input: {
     policy: ReturnType<typeof klingTransientVoiceGenerationPolicy>;
     request: GenerationRequest;
     mode: 'live' | 'simulated';
-    approvalToken?: string;
     outputRoot: string;
     outputProjectRelativeRoot: string;
     inputRoot: string;
   }) => Promise<GenerationRunResult>;
-  estimateGenerationCost: (input: {
-    priceKey: GenerationPriceKey;
-    pricingInputs: GenerationPricingInputs;
-  }) => Promise<GenerationCostEstimate>;
 }): Promise<KlingTransientVoiceResolutionReport> {
   const fingerprints = await fingerprintConversions(input);
   if (input.simulate) {
@@ -195,15 +174,10 @@ export async function resolveKlingTransientVoices(input: {
   const freshEntriesToWrite: KlingTransientVoiceCacheEntry[] = [];
   for (const miss of liveMisses.values()) {
     const request = klingTransientVoiceGenerationRequest(miss.conversion);
-    const estimate = await input.estimateGenerationCost({
-      priceKey: klingTransientVoicePriceKey(),
-      pricingInputs: klingTransientVoicePricingInputs(),
-    });
     const result = await input.runGeneration({
       policy: klingTransientVoiceGenerationPolicy(),
       request,
       mode: 'live',
-      approvalToken: klingTransientVoiceApprovalToken(estimate),
       outputRoot: path.join(input.projectFolder, KLING_TRANSIENT_VOICE_RESPONSE_PROJECT_ROOT),
       outputProjectRelativeRoot: KLING_TRANSIENT_VOICE_RESPONSE_PROJECT_ROOT,
       inputRoot: input.projectFolder,
@@ -245,18 +219,6 @@ export async function resolveKlingTransientVoices(input: {
     }
   }
   return { resolutions, warnings };
-}
-
-function klingTransientVoiceApprovalToken(
-  estimate: GenerationCostEstimate
-): string {
-  if (estimate.state === 'priced') {
-    return estimate.costApprovalToken;
-  }
-  throw new ProjectDataError(
-    'CORE_SHOT_VIDEO_KLING_TRANSIENT_VOICE_COST_UNAVAILABLE',
-    'Kling transient voice creation requires a priced cost estimate before running live.'
-  );
 }
 
 export function injectKlingTransientVoiceIds(input: {

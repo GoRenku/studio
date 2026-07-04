@@ -33,6 +33,12 @@ import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import {
+  mediaGenerationEstimateWithApproval,
+  mediaGenerationRunApprovalToken,
+  parseMediaGenerationRunCostApproval,
+  requireMediaGenerationCostApproval,
+} from './cost-approval.js';
 import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
@@ -90,6 +96,7 @@ export interface UpdateCastCharacterSheetSpecInput extends CastCharacterSheetSpe
 export interface RunCastCharacterSheetSpecInput extends CastCharacterSheetSpecIdInput {
   approvalToken?: string;
   simulate?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -325,17 +332,20 @@ export async function runCastCharacterSheetSpec(
   const prepared = await prepareCastCharacterSheetSpec(input);
   const { runGeneration } = await loadGenerationEngines();
   const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
-  if (estimate.state !== 'priced') {
-    throw new ProjectDataError(
-      'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Cast character sheet model.'
-    );
-  }
+  const mode = input.simulate ? 'simulated' : 'live';
+  const costApproval = requireMediaGenerationCostApproval({
+    mode,
+    purpose: prepared.spec.purpose,
+    estimate,
+    approval: parseMediaGenerationRunCostApproval({
+      approvalToken: input.approvalToken,
+      approveUnpricedCost: input.approveUnpricedCost,
+    }),
+  });
   const outputPaths = await resolveCastGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
-    mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: estimate.costApprovalToken,
+    mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -347,8 +357,8 @@ export async function runCastCharacterSheetSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate,
-    approvalToken: estimate.costApprovalToken,
+    estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
+    approvalToken: mediaGenerationRunApprovalToken(costApproval),
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

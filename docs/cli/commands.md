@@ -1484,6 +1484,7 @@ Estimate and run:
 ```bash
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <approval-token> --json
+renku generation run --spec <spec-id> --approve-unpriced-cost --json
 renku generation run --spec <spec-id> --simulate --json
 ```
 

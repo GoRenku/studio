@@ -554,6 +554,102 @@ describe('core server architecture', () => {
     expect(source).not.toContain('buildCostProjection?');
     expect(source).toContain('buildCostProjection(');
   });
+
+  it('keeps media generation live cost approval fail-fast', async () => {
+    const runtimeRoots = [
+      path.join(repoRoot, 'packages', 'core', 'src'),
+      path.join(repoRoot, 'packages', 'cli', 'src'),
+      path.join(repoRoot, 'packages', 'studio', 'src'),
+      path.join(repoRoot, 'packages', 'studio', 'server'),
+      path.join(repoRoot, 'packages', 'engines', 'src'),
+    ];
+    const runtimeFiles = (await Promise.all(runtimeRoots.map(listSourceFiles)))
+      .flat()
+      .filter(
+        (file) =>
+          !file.endsWith('.test.ts') &&
+          !file.endsWith('.test.tsx') &&
+          path.relative(repoRoot, file) !==
+            path.join('packages', 'core', 'src', 'server', 'architecture.test.ts')
+      );
+    const forbiddenNeedles = [
+      'unpriced-cost-override',
+      'allowUnpricedCost',
+      'allowUnpricedCost: true',
+      'approvalToken: estimate.costApprovalToken',
+      'approvalToken: approvalTokenForRun',
+    ];
+    const offenders: Array<{ file: string; line: number; needle: string }> = [];
+
+    for (const file of runtimeFiles) {
+      const source = await fs.readFile(file, 'utf8');
+      for (const needle of forbiddenNeedles) {
+        findNeedleLines(source, needle).forEach((line) => {
+          offenders.push({
+            file: path.relative(repoRoot, file),
+            line,
+            needle,
+          });
+        });
+      }
+    }
+
+    const engineRunnerSource = await fs.readFile(
+      path.join(repoRoot, 'packages', 'engines', 'src', 'generation', 'runner.ts'),
+      'utf8'
+    );
+    for (const needle of [
+      'approvalToken?: string;',
+      'allowUnpricedCost?: boolean;',
+      'GenerationRunCostApproval',
+      'costApproval',
+    ]) {
+      findNeedleLines(engineRunnerSource, needle).forEach((line) => {
+        offenders.push({
+          file: path.join('packages', 'engines', 'src', 'generation', 'runner.ts'),
+          line,
+          needle,
+        });
+      });
+    }
+
+    const dependencyContractSource = await fs.readFile(
+      path.join(
+        repoRoot,
+        'packages',
+        'core',
+        'src',
+        'client',
+        'media-generation-dependency.ts'
+      ),
+      'utf8'
+    );
+    findNeedleLines(dependencyContractSource, 'costApprovalToken').forEach(
+      (line) => {
+        offenders.push({
+          file: path.join(
+            'packages',
+            'core',
+            'src',
+            'client',
+            'media-generation-dependency.ts'
+          ),
+          line,
+          needle: 'costApprovalToken',
+        });
+      }
+    );
+
+    expect(
+      offenders,
+      [
+        'Live media generation approval must be explicit caller intent.',
+        'Core run paths must use the shared cost-approval gate and engines must not receive approval tokens.',
+        'Dependency plans must not expose approval tokens.',
+        'Do not reintroduce sentinel strings, old unpriced flags, computed estimate tokens as run approval, or engine-side approval matching.',
+      ].join(' ')
+    ).toEqual([]);
+  });
 });
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {

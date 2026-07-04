@@ -39,7 +39,7 @@ export interface GenerationCommandFlags {
   subjectKind?: string;
   subjectId?: string;
   approvalToken?: string;
-  allowUnpricedCost?: boolean;
+  approveUnpricedCost?: boolean;
   simulate?: boolean;
   all?: boolean;
 }
@@ -292,7 +292,7 @@ async function runGeneration(input: GenerationCommandInput): Promise<unknown> {
     ...generationProjectInput(input.runtime),
     specId: requiredFlag(input.flags.spec, '--spec'),
     approvalToken: input.flags.approvalToken,
-    allowUnpricedCost: input.flags.allowUnpricedCost,
+    approveUnpricedCost: input.flags.approveUnpricedCost,
     simulate: input.flags.simulate,
   });
 }
@@ -413,7 +413,7 @@ async function runDialogueAudioGenerate(
     dialogueId: requiredFlag(input.flags.dialogue, '--dialogue'),
     setup: {},
     approvalToken,
-    allowUnpricedCost: input.flags.allowUnpricedCost,
+    approveUnpricedCost: input.flags.approveUnpricedCost,
     simulate: input.flags.simulate,
   });
 }
@@ -440,7 +440,7 @@ async function runAllDialogueAudioGenerate(
         dialogueId: dialogue.dialogueId,
         setup: {},
         approvalToken: input.flags.approvalToken,
-        allowUnpricedCost: input.flags.allowUnpricedCost,
+        approveUnpricedCost: input.flags.approveUnpricedCost,
         simulate: input.flags.simulate,
       })
     );

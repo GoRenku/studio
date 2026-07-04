@@ -22,6 +22,7 @@ Decision history:
 - `../../decisions/0036-use-unsliced-location-sheets.md`
 - `../../decisions/0040-use-agent-media-execution-policy-for-external-built-in-image-generation.md`
 - `../../decisions/0042-use-purpose-cost-projections-for-generation-estimates.md`
+- `../../decisions/0043-use-single-generation-approval-tokens.md`
 
 ## Current Purposes
 
@@ -157,6 +158,7 @@ renku generation spec list --purpose shot.video-take --target scene:<id> --take 
 
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
+renku generation run --spec <spec-id> --approve-unpriced-cost --json
 renku generation run --spec <spec-id> --simulate --json
 ```
 
@@ -219,8 +221,35 @@ Estimate responses return:
 ```
 
 For priced estimates, pass `estimate.costApprovalToken` to
-`renku generation run --approval-token`. The token approves the pricing facts
-used for the estimate. It is not a provider request hash.
+`renku generation run --approval-token` for the same persisted spec. The token
+approves one live generation run using the current pricing facts for that spec.
+It is not a provider request hash.
+
+Dependency plans may include cost estimates for every generated dependency line
+and an aggregate workflow total. Those dependency line estimates are planning
+data only. They do not include approval tokens, cannot be submitted as an
+approval bundle, and do not permit automatic dependency generation.
+
+Live generation approval is a typed core contract:
+
+```ts
+type MediaGenerationRunCostApprovalInput =
+  | { kind: 'none' }
+  | { kind: 'priced'; approvalToken: string }
+  | { kind: 'unpriced-explicit-approval' };
+```
+
+Core accepts simulated runs without approval. Live priced runs require the
+current priced token from the estimate. Live unpriced runs require explicit
+unpriced approval, exposed in the CLI as `--approve-unpriced-cost`. Missing
+pricing inputs fail before provider execution even when unpriced approval is
+present. Purpose runners must not synthesize approval tokens from their current
+estimate; the token is comparison data unless it came from the caller.
+
+The approval check is for the exact generation spec being run. It does not walk
+dependency plans, validate dependency readiness, or approve child dependency
+generations. The accepted decision is
+`../../decisions/0043-use-single-generation-approval-tokens.md`.
 
 Cost states:
 

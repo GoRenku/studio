@@ -13,7 +13,6 @@ import {
   modelTypeToMediaKind,
   type GenerationOutput,
   type GenerationPolicy,
-  type GenerationPricingInputs,
   type GenerationRequest,
   type GenerationRunResult,
 } from './contracts.js';
@@ -23,7 +22,6 @@ import {
 } from './model-discovery.js';
 import {
   deriveGenerationOutputCount,
-  estimateGenerationCost,
 } from './estimates.js';
 import { buildLogicalProviderPayload } from './logical-provider-payload.js';
 import {
@@ -37,8 +35,6 @@ export interface RunGenerationOptions {
   policy: GenerationPolicy;
   request: GenerationRequest;
   mode: ProviderMode;
-  approvalToken?: string;
-  allowUnpricedCost?: boolean;
   catalog?: LoadedModelCatalog;
   outputRoot?: string;
   outputProjectRelativeRoot?: string;
@@ -87,25 +83,6 @@ export async function runGeneration(
   });
   const outputCount =
     options.policy.outputCount ?? deriveGenerationOutputCount(payload);
-  const estimate = await estimateGenerationCost({
-    priceKey: {
-      provider: options.policy.provider,
-      model: options.policy.model,
-      mediaKind: options.policy.mediaKind,
-    },
-    pricingInputs: pricingInputsFromGenerationRequest({
-      policy: options.policy,
-      request: options.request,
-      payload,
-    }),
-    catalog,
-  });
-  assertLiveCostApproved({
-    mode: options.mode,
-    estimate,
-    approvalToken: options.approvalToken,
-    allowUnpricedCost: Boolean(options.allowUnpricedCost),
-  });
   const executionPayload = await buildExecutionProviderPayload({
     policy: options.policy,
     request: options.request,
@@ -152,142 +129,11 @@ export async function runGeneration(
       mediaKind: options.policy.mediaKind,
       mode: options.policy.mode,
       generatedAt: new Date().toISOString(),
-      ...(estimate.state === 'priced'
-        ? { estimatedCostUsd: estimate.estimatedCostUsd }
-        : {}),
       requestHash,
       outputs,
       simulated: options.mode === 'simulated',
     },
   };
-}
-
-function assertLiveCostApproved(input: {
-  mode: ProviderMode;
-  estimate: Awaited<ReturnType<typeof estimateGenerationCost>>;
-  approvalToken?: string;
-  allowUnpricedCost: boolean;
-}): void {
-  if (input.mode !== 'live') {
-    return;
-  }
-  if (input.estimate.state === 'missing-pricing-input') {
-    throw new Error(
-      `Live generation requires complete cost pricing inputs before provider execution: ${input.estimate.missingInputs.join(', ')}.`
-    );
-  }
-  if (input.estimate.state === 'unpriced') {
-    if (input.allowUnpricedCost) {
-      return;
-    }
-    throw new Error(
-      'Live generation requires an explicit unpriced cost override when the estimate is unpriced.'
-    );
-  }
-  if (input.approvalToken !== input.estimate.costApprovalToken) {
-    throw new Error(
-      'Live generation requires the current cost approval token from generation estimate.'
-    );
-  }
-}
-
-function pricingInputsFromGenerationRequest(input: {
-  policy: GenerationPolicy;
-  request: GenerationRequest;
-  payload: Record<string, unknown>;
-}): GenerationPricingInputs {
-  const pricingCounts = input.request.pricingInputCounts ?? {};
-  return {
-    outputCount:
-      input.policy.outputCount ?? deriveGenerationOutputCount(input.payload),
-    inputImageCount:
-      pricingCounts.image ??
-      (input.request.inputFiles ?? []).filter(
-        (file) => file.mediaKind === 'image'
-      ).length,
-    inputAudioCount:
-      pricingCounts.audio ??
-      (input.request.inputFiles ?? []).filter(
-        (file) => file.mediaKind === 'audio'
-      ).length,
-    inputVideoCount:
-      pricingCounts.video ??
-      (input.request.inputFiles ?? []).filter(
-        (file) => file.mediaKind === 'video'
-      ).length,
-    durationSeconds: durationPricingInput(
-      input.payload.duration_seconds ??
-        input.payload.durationSeconds ??
-        input.payload.duration
-    ),
-    characterCount:
-      typeof input.payload.text === 'string'
-        ? input.payload.text.length
-        : typeof input.payload.prompt === 'string'
-          ? input.payload.prompt.length
-          : undefined,
-    imageSize: imageSizePricingInput(input.payload.image_size),
-    resolution: stringPricingInput(input.payload.resolution),
-    aspectRatio: stringPricingInput(input.payload.aspect_ratio),
-    quality: stringPricingInput(input.payload.quality),
-    generateAudio: booleanPricingInput(input.payload.generate_audio),
-    usesVoiceControl:
-      booleanPricingInput(input.payload.uses_voice_control) ??
-      voiceControlPricingInput(input.payload),
-    numFrames: numberPricingInput(input.payload.num_frames),
-    videoSize: imageSizePricingInput(input.payload.video_size),
-    mode: stringPricingInput(input.payload.mode),
-    musicLengthMs: numberPricingInput(input.payload.music_length_ms),
-  };
-}
-
-function durationPricingInput(value: unknown): string | number | undefined {
-  return typeof value === 'string' || typeof value === 'number'
-    ? value
-    : undefined;
-}
-
-function imageSizePricingInput(
-  value: unknown
-): GenerationPricingInputs['imageSize'] {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (!value || typeof value !== 'object') {
-    return undefined;
-  }
-  const record = value as Record<string, unknown>;
-  return typeof record.width === 'number' && typeof record.height === 'number'
-    ? { width: record.width, height: record.height }
-    : undefined;
-}
-
-function stringPricingInput(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
-function booleanPricingInput(value: unknown): boolean | undefined {
-  return typeof value === 'boolean' ? value : undefined;
-}
-
-function voiceControlPricingInput(payload: unknown): boolean | undefined {
-  return payloadHasVoiceId(payload) ? true : undefined;
-}
-
-function payloadHasVoiceId(value: unknown): boolean {
-  if (Array.isArray(value)) {
-    return value.some((entry) => payloadHasVoiceId(entry));
-  }
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  return Object.entries(value).some(
-    ([key, entry]) => key === 'voice_id' || payloadHasVoiceId(entry)
-  );
-}
-
-function numberPricingInput(value: unknown): number | undefined {
-  return typeof value === 'number' ? value : undefined;
 }
 
 function createProviderJobContext(input: {

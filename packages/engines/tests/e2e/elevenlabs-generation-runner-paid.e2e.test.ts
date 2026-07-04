@@ -97,7 +97,6 @@ describeIf('ElevenLabs paid shared generation runner E2E', () => {
     const result = await runGeneration({
       catalog,
       mode: 'live',
-      approvalToken: estimate.costApprovalToken,
       outputRoot,
       outputProjectRelativeRoot: 'generated/media',
       policy,

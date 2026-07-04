@@ -23,7 +23,7 @@ export function readSceneDialogueAudioGenerateRequest(input: unknown): {
   setup: Partial<SceneDialogueAudioGenerationSpec>;
   approvalToken?: string;
   simulate?: boolean;
-  allowUnpricedCost?: boolean;
+  approveUnpricedCost?: boolean;
 } {
   const issues: ReturnType<typeof createDiagnosticError>[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
@@ -41,8 +41,8 @@ export function readSceneDialogueAudioGenerateRequest(input: unknown): {
     setup,
     ...(approvalToken ? { approvalToken } : {}),
     ...(typeof record.simulate === 'boolean' ? { simulate: record.simulate } : {}),
-    ...(typeof record.allowUnpricedCost === 'boolean'
-      ? { allowUnpricedCost: record.allowUnpricedCost }
+    ...(typeof record.approveUnpricedCost === 'boolean'
+      ? { approveUnpricedCost: record.approveUnpricedCost }
       : {}),
   };
 }

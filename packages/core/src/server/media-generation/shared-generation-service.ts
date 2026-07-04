@@ -51,6 +51,12 @@ import {
 import {
   estimateDraftMediaGenerationSpec,
 } from './estimation/spec-estimates.js';
+import {
+  mediaGenerationEstimateWithApproval,
+  mediaGenerationRunApprovalToken,
+  parseMediaGenerationRunCostApproval,
+  requireMediaGenerationCostApproval,
+} from './cost-approval.js';
 
 export async function buildMediaGenerationContext(
   input: MediaGenerationPurposeContextInput
@@ -299,53 +305,20 @@ export async function runMediaGenerationSpec(
   }
   const prepared = await prepareMediaGenerationSpec(input);
   const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
-  if (estimate.state === 'missing-pricing-input' && !input.simulate) {
-    throw new ProjectDataError(
-      'CORE_MEDIA_COST_INPUT_MISSING',
-      `Media generation cost estimate is missing pricing inputs for ${prepared.spec.purpose}: ${estimate.missingInputs.join(', ')}.`,
-      {
-        suggestion:
-          'Complete the pricing fields for this generation setup before running it.',
-      }
-    );
-  }
-  if (
-    estimate.state === 'unpriced' &&
-    !input.simulate &&
-    !input.allowUnpricedCost
-  ) {
-    throw new ProjectDataError(
-      'PROJECT_DATA390',
-      `Media generation estimate is unpriced for ${prepared.spec.purpose}.`,
-      {
-        suggestion:
-          'Approve an explicit unpriced-cost override before running this generation.',
-      }
-    );
-  }
-  if (
-    estimate.state === 'priced' &&
-    !input.simulate &&
-    input.approvalToken !== estimate.costApprovalToken
-  ) {
-    throw new ProjectDataError(
-      'CORE_MEDIA_COST_APPROVAL_TOKEN_MISMATCH',
-      `Media generation run requires the current cost approval token for ${prepared.spec.purpose}.`,
-      {
-        suggestion:
-          'Run the estimate command again and pass its cost approval token to the run command.',
-      }
-    );
-  }
+  const mode = input.simulate ? 'simulated' : 'live';
+  const costApproval = requireMediaGenerationCostApproval({
+    mode,
+    purpose: prepared.spec.purpose,
+    estimate,
+    approval: parseMediaGenerationRunCostApproval({
+      approvalToken: input.approvalToken,
+      approveUnpricedCost: input.approveUnpricedCost,
+    }),
+  });
   const outputPaths = await resolveSharedGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
-    mode: input.simulate ? 'simulated' : 'live',
-    approvalToken:
-      estimate.state === 'priced'
-        ? estimate.costApprovalToken
-        : input.approvalToken ?? 'unpriced-cost-override',
-    allowUnpricedCost: Boolean(input.allowUnpricedCost),
+    mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -360,16 +333,8 @@ export async function runMediaGenerationSpec(
       provider: prepared.generation.policy.provider,
       model: prepared.generation.policy.model,
       providerPayload: prepared.providerPayload,
-      estimate: {
-        ...estimate,
-        ...(estimate.state === 'unpriced' && input.allowUnpricedCost
-          ? { unpricedCostOverride: true }
-          : {}),
-      },
-      approvalToken:
-        estimate.state === 'priced'
-          ? estimate.costApprovalToken
-          : input.approvalToken,
+      estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
+      approvalToken: mediaGenerationRunApprovalToken(costApproval),
       simulated: Boolean(input.simulate),
       status: input.simulate ? 'simulated' : 'completed',
       outputs: result.outputs,

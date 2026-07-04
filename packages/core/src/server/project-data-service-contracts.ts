@@ -1077,6 +1077,7 @@ export interface RunLookbookImageGenerationSpecInput
   extends ReadLookbookImageGenerationSpecInput {
   approvalToken?: string;
   simulate?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1135,6 +1136,7 @@ export interface RunLookbookSheetGenerationSpecInput
   extends ReadLookbookSheetGenerationSpecInput {
   approvalToken?: string;
   simulate?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1247,7 +1249,7 @@ export interface GenerateSceneDialogueAudioTakeInput
   setup: Partial<SceneDialogueAudioGenerationSpec>;
   approvalToken?: string;
   simulate?: boolean;
-  allowUnpricedCost?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1275,7 +1277,7 @@ export interface RunMediaGenerationSpecInput
   extends ReadMediaGenerationSpecInput {
   approvalToken?: string;
   simulate?: boolean;
-  allowUnpricedCost?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1412,7 +1414,7 @@ export interface GenerateLocationHeroFromSheetInput extends RenkuConfigPathOptio
   sourceLocationSheetAssetId: string;
   approvalToken?: string;
   simulate?: boolean;
-  allowUnpricedCost?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 

@@ -83,6 +83,12 @@ import {
 } from './cast-image-common.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import {
+  mediaGenerationEstimateWithApproval,
+  mediaGenerationRunApprovalToken,
+  parseMediaGenerationRunCostApproval,
+  requireMediaGenerationCostApproval,
+} from './cost-approval.js';
 import { lookbookSheetDependencySlot } from './dependency-slot-definitions.js';
 import type {
   MediaGenerationDependencyDeclarationInput,
@@ -360,17 +366,20 @@ export async function runSceneStoryboardSheetSpec(
   const prepared = await prepareSceneStoryboardSheetSpec(input);
   const { runGeneration } = await loadGenerationEngines();
   const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
-  if (estimate.state !== 'priced') {
-    throw new ProjectDataError(
-      'PROJECT_DATA333',
-      'Generation estimate is unknown for the selected Scene storyboard sheet model.'
-    );
-  }
+  const mode = input.simulate ? 'simulated' : 'live';
+  const costApproval = requireMediaGenerationCostApproval({
+    mode,
+    purpose: prepared.spec.purpose,
+    estimate,
+    approval: parseMediaGenerationRunCostApproval({
+      approvalToken: input.approvalToken,
+      approveUnpricedCost: input.approveUnpricedCost,
+    }),
+  });
   const outputPaths = await resolveSceneGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
-    mode: input.simulate ? 'simulated' : 'live',
-    approvalToken: input.approvalToken,
+    mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -382,8 +391,8 @@ export async function runSceneStoryboardSheetSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate,
-    approvalToken: estimate.costApprovalToken,
+    estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
+    approvalToken: mediaGenerationRunApprovalToken(costApproval),
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,

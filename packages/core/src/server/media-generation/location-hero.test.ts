@@ -111,6 +111,22 @@ describe('Location hero generation and import', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('fails fast on live source-sheet generation without cost approval', async () => {
+    const fixture = await createConfiguredProject();
+    const sourceSheet = await importSourceSheet(fixture);
+
+    await expect(
+      fixture.projectData.generateLocationHeroFromSheet({
+        projectName: 'constantinople',
+        homeDir: fixture.homeDir,
+        locationId: fixture.location.id,
+        sourceLocationSheetAssetId: sourceSheet.imported.assetId,
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_COST_APPROVAL_REQUIRED',
+    });
+  });
+
   it('generates a hero from a selected Location Sheet asset requested by id', async () => {
     const fixture = await createConfiguredProject();
     const sourceSheet = await importSourceSheet(fixture);

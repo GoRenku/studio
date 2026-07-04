@@ -84,7 +84,7 @@ export async function generateSceneDialogueAudioTake(
     setup: Partial<SceneDialogueAudioGenerationSpec>;
     approvalToken?: string;
     simulate?: boolean;
-    allowUnpricedCost?: boolean;
+    approveUnpricedCost?: boolean;
   }
 ): Promise<SceneDialogueAudioMutationWithUrls> {
   return sendMutation(

@@ -73,6 +73,12 @@ import {
 } from './cast-image-common.js';
 import { draftMediaGenerationSpecRecord } from './draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from './estimation/cost-projection.js';
+import {
+  mediaGenerationEstimateWithApproval,
+  mediaGenerationRunApprovalToken,
+  parseMediaGenerationRunCostApproval,
+  requireMediaGenerationCostApproval,
+} from './cost-approval.js';
 
 const LOCATION_HERO_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2/edit',
@@ -120,7 +126,7 @@ export interface UpdateLocationHeroSpecInput extends LocationHeroSpecIdInput {
 export interface RunLocationHeroSpecInput extends LocationHeroSpecIdInput {
   approvalToken?: string;
   simulate?: boolean;
-  allowUnpricedCost?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -150,7 +156,7 @@ export interface GenerateLocationHeroFromSheetInput extends LocationHeroTargetIn
   sourceLocationSheetAssetId: string;
   approvalToken?: string;
   simulate?: boolean;
-  allowUnpricedCost?: boolean;
+  approveUnpricedCost?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -339,25 +345,20 @@ export async function runLocationHeroSpec(
   const prepared = await prepareLocationHeroSpec(input);
   const { runGeneration } = await loadGenerationEngines();
   const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
-  if (estimate.state !== 'priced' && !input.simulate && !input.allowUnpricedCost) {
-    throw new ProjectDataError(
-      'PROJECT_DATA273',
-      'Generation estimate is unknown for the selected Location hero model.',
-      {
-        suggestion:
-          'Approve an explicit unpriced-cost override before running this Location hero generation.',
-      }
-    );
-  }
+  const mode = input.simulate ? 'simulated' : 'live';
+  const costApproval = requireMediaGenerationCostApproval({
+    mode,
+    purpose: prepared.spec.purpose,
+    estimate,
+    approval: parseMediaGenerationRunCostApproval({
+      approvalToken: input.approvalToken,
+      approveUnpricedCost: input.approveUnpricedCost,
+    }),
+  });
   const outputPaths = await resolveLocationGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
-    mode: input.simulate ? 'simulated' : 'live',
-    approvalToken:
-      estimate.state === 'priced'
-        ? estimate.costApprovalToken
-        : input.approvalToken ?? 'unpriced-cost-override',
-    allowUnpricedCost: Boolean(input.allowUnpricedCost),
+    mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
     inputRoot: outputPaths.projectFolder,
@@ -369,16 +370,8 @@ export async function runLocationHeroSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate: {
-      ...estimate,
-      ...(estimate.state === 'unpriced' && input.allowUnpricedCost
-        ? { unpricedCostOverride: true }
-        : {}),
-    },
-    approvalToken:
-      estimate.state === 'priced'
-        ? estimate.costApprovalToken
-        : input.approvalToken,
+    estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
+    approvalToken: mediaGenerationRunApprovalToken(costApproval),
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,
@@ -410,7 +403,7 @@ export async function generateLocationHeroFromSheet(
     specId: spec.id,
     approvalToken: input.approvalToken,
     simulate: input.simulate,
-    allowUnpricedCost: input.allowUnpricedCost,
+    approveUnpricedCost: input.approveUnpricedCost,
     idGenerator: input.idGenerator,
   });
   const output = firstImageOutput(runReport.run.outputs);
