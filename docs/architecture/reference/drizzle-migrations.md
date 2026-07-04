@@ -9,6 +9,10 @@ Role: reference
 Renku Studio uses Drizzle for project-local SQLite databases. The migration
 workflow must follow Drizzle Kit's documented codebase-first migration flow.
 
+For installed-package behavior, including what users receive in the distributed
+package and how new project creation and release upgrades use the shipped
+migration files, see `../project-database-distribution.md`.
+
 Decision history:
 
 - `../../decisions/0011-use-drizzle-kit-for-project-sqlite-migrations.md`
@@ -85,6 +89,49 @@ renku project migrate constantinople
 This command resolves the configured storage root, finds the project-local
 SQLite database, and runs the package-owned Drizzle Kit migration operation.
 
+Before applying migrations to an existing, non-empty project database, core
+creates a verified SQLite backup beside the project database:
+
+```text
+<storageRoot>/<projectName>/.renku/project-database-backups/
+```
+
+Backup filenames include the source schema generation, target schema
+generation, UTC timestamp, and a short random suffix:
+
+```text
+project-before-migration-from-generation-34-to-35-20260702T132455123Z-8f31c2.sqlite
+project-before-migration-from-generation-34-to-35-20260702T132455123Z-8f31c2.json
+```
+
+The `.sqlite` file is created with SQLite `VACUUM INTO` and verified by opening
+the backup read-only and running `PRAGMA quick_check`. The `.json` sidecar
+records the source database path, backup path, source and target schema
+generations, file sizes, and verification result. Migration starts only after
+the backup and metadata have been written successfully.
+
+The core migration report includes:
+
+```ts
+{
+  projectName: string;
+  projectPath: string;
+  databasePath: string;
+  preMigrationBackup: {
+    backupPath: string;
+    metadataPath: string;
+    createdAt: string;
+    sourceSchemaGeneration: number | null;
+    targetSchemaGeneration: number;
+    sourceDatabaseSizeBytes: number;
+    backupDatabaseSizeBytes: number;
+  } | null;
+}
+```
+
+`preMigrationBackup` is `null` only when there was no existing non-empty
+database to protect, such as the initial migration during new project creation.
+
 When a direct database path is needed, use the lower-level package command:
 
 ```bash
@@ -101,6 +148,13 @@ RENKU_PROJECT_DATABASE_PATH=/absolute/path/to/project.sqlite \
 
 `packages/core` owns this migration operation. CLI and Studio must not invoke
 Drizzle Kit from normal runtime paths.
+
+The lower-level `drizzle.project-migrate.config.ts` is protected by the same
+core backup gate. If it receives
+`RENKU_PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH`, it validates the backup and
+sidecar metadata before exposing the database URL to Drizzle Kit. If the
+environment variable is absent and the target database already exists, the
+config creates the backup itself and writes the created backup path to stderr.
 
 ## Changing Project Schema
 
@@ -219,3 +273,30 @@ mechanism.
 Do not add implicit schema creation, historical schema readers, or silent defaults.
 If the migration config, migration files, project database path, or Drizzle Kit
 command is invalid, the operation should fail with a clear core error code.
+
+Backup-specific failures use the project data namespace:
+
+- `PROJECT_DATA046`: pre-migration backup could not be created.
+- `PROJECT_DATA047`: pre-migration backup could not be verified.
+- `PROJECT_DATA048`: pre-migration backup metadata could not be written.
+
+If Drizzle Kit fails after a backup has been created, the structured migration
+error includes the backup path and suggests stopping Studio before restoring the
+backup over `project.sqlite`.
+
+## Manual Recovery From A Failed Migration
+
+Automatic restore is intentionally not part of the migration lifecycle. A failed
+migration may have partially changed the live database, and silently restoring
+could hide what happened.
+
+To recover manually:
+
+1. Stop Studio and any CLI process using the project.
+2. Locate the backup path from the failed command output or from
+   `.renku/project-database-backups/`.
+3. Move the broken database aside with a timestamped name, for example
+   `project.sqlite.failed-20260702T132455Z`.
+4. Copy the selected `.sqlite` backup to `.renku/project.sqlite`.
+5. Fix the migration code or project data issue that caused the failure.
+6. Re-run the migration only after the cause has been fixed.

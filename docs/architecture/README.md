@@ -42,6 +42,9 @@ Use this page as the map:
   Shot Video Take structure model.
 - `drizzle-first-project-data.md` defines the Drizzle-first runtime query
   policy and raw SQL escape hatch.
+- `project-database-distribution.md` explains how installed packages ship
+  project database migrations, create new project databases, and upgrade
+  existing project databases with backups.
 - `json-storage-validation.md` records the AJV and JSON Schema requirement for
   SQLite JSON columns.
 - `reference/domain-vocabulary.md` defines canonical project vocabulary.

@@ -77,6 +77,9 @@ export async function runProjectSelectionCommand(options: {
       options.io.stdout.log(`Renku project database migrated: ${report.projectName}`);
       options.io.stdout.log(`Project: ${report.projectPath}`);
       options.io.stdout.log(`Database: ${report.databasePath}`);
+      options.io.stdout.log(
+        `Pre-migration backup: ${report.preMigrationBackup?.backupPath ?? 'none'}`
+      );
     }
     return 0;
   }

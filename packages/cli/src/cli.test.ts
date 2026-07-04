@@ -205,11 +205,77 @@ describe('renku CLI', () => {
     );
 
     expect(migrateExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toEqual({
+    const jsonReport = JSON.parse(stdout.join('\n')) as {
+      preMigrationBackup: { backupPath: string; metadataPath: string };
+    };
+    expect(jsonReport).toMatchObject({
       projectName: 'constantinople',
       projectPath: path.join(storageRoot, 'constantinople'),
       databasePath: path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'),
+      preMigrationBackup: {
+        backupPath: expect.stringContaining(
+          path.join(
+            storageRoot,
+            'constantinople',
+            '.renku',
+            'project-database-backups',
+            'project-before-migration-from-generation-'
+          )
+        ),
+        metadataPath: expect.stringContaining(
+          path.join(
+            storageRoot,
+            'constantinople',
+            '.renku',
+            'project-database-backups',
+            'project-before-migration-from-generation-'
+          )
+        ),
+      },
     });
+    await expect(fs.stat(jsonReport.preMigrationBackup.backupPath)).resolves.toHaveProperty(
+      'isFile'
+    );
+    await expect(fs.stat(jsonReport.preMigrationBackup.metadataPath)).resolves.toHaveProperty(
+      'isFile'
+    );
+    expect(stderr).toEqual([]);
+
+    stdout = [];
+    stderr = [];
+    const humanExitCode = await runRenkuCli(
+      ['project', 'migrate', 'constantinople'],
+      {
+        homeDir,
+        io: captureIo(stdout, stderr),
+      }
+    );
+
+    expect(humanExitCode).toBe(0);
+    expect(stdout.join('\n')).toContain(
+      'Renku project database migrated: constantinople'
+    );
+    expect(stdout.join('\n')).toContain(
+      `Project: ${path.join(storageRoot, 'constantinople')}`
+    );
+    expect(stdout.join('\n')).toContain(
+      `Database: ${path.join(
+        storageRoot,
+        'constantinople',
+        '.renku',
+        'project.sqlite'
+      )}`
+    );
+    expect(stdout.join('\n')).toContain('Pre-migration backup:');
+    expect(stdout.join('\n')).toContain(
+      path.join(
+        storageRoot,
+        'constantinople',
+        '.renku',
+        'project-database-backups',
+        'project-before-migration-from-generation-'
+      )
+    );
     expect(stderr).toEqual([]);
   });
 

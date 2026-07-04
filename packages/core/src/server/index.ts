@@ -118,6 +118,7 @@ export type {
   ListScreenplaySequencesForActInput,
   PatchProjectInformationInput,
   ProjectDataService,
+  ProjectDatabasePreMigrationBackupReport,
   ProjectDatabaseMigrationReport,
   ProjectInformationLanguageUpdate,
   ProjectInformationPatch,

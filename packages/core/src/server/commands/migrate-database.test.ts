@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProjectDataService } from '../index.js';
+import { migrateProjectDatabase } from '../database/lifecycle/migrator.js';
 import { closeProjectStore } from '../database/lifecycle/store.js';
 import {
   currentProjectStoreSchemaGeneration,
@@ -37,11 +38,41 @@ describe('migrate database command', () => {
       homeDir,
     });
 
-    expect(report).toEqual({
+    expect(report).toMatchObject({
       projectName: 'constantinople',
       projectPath: path.join(storageRoot, 'constantinople'),
       databasePath: path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'),
+      preMigrationBackup: {
+        backupPath: expect.stringContaining(
+          path.join(
+            storageRoot,
+            'constantinople',
+            '.renku',
+            'project-database-backups',
+            'project-before-migration-from-generation-'
+          )
+        ),
+        metadataPath: expect.stringContaining(
+          path.join(
+            storageRoot,
+            'constantinople',
+            '.renku',
+            'project-database-backups',
+            'project-before-migration-from-generation-'
+          )
+        ),
+        sourceSchemaGeneration: currentProjectStoreSchemaGeneration(),
+        targetSchemaGeneration: currentProjectStoreSchemaGeneration(),
+        sourceDatabaseSizeBytes: expect.any(Number),
+        backupDatabaseSizeBytes: expect.any(Number),
+      },
     });
+    expect(report.preMigrationBackup?.backupPath).toMatch(
+      /project-before-migration-from-generation-\d+-to-\d+-\d{8}T\d{9}Z-[a-f0-9]{6}\.sqlite$/
+    );
+    await expect(
+      fs.stat(report.preMigrationBackup!.metadataPath)
+    ).resolves.toHaveProperty('isFile');
 
     const sqlite = new Database(report.databasePath);
     try {
@@ -114,6 +145,20 @@ describe('migrate database command', () => {
       ).toMatchObject({ isUnique: 1 });
     } finally {
       sqlite.close();
+    }
+
+    const backup = new Database(report.preMigrationBackup!.backupPath, {
+      readonly: true,
+      fileMustExist: true,
+    });
+    try {
+      expect(backup.pragma('quick_check', { simple: true })).toBe('ok');
+      expect(backup.pragma('user_version', { simple: true })).toBe(
+        currentProjectStoreSchemaGeneration()
+      );
+      expect(readTableNames(backup)).toContain('project');
+    } finally {
+      backup.close();
     }
   });
 
@@ -228,6 +273,26 @@ describe('migrate database command', () => {
       identity: { name: 'constantinople' },
     });
 
+    const [backupPath] = await listBackupSqliteFiles(
+      path.join(created.projectPath, '.renku', 'project-database-backups')
+    );
+    expect(backupPath).toBeDefined();
+    const backup = new Database(backupPath, {
+      readonly: true,
+      fileMustExist: true,
+    });
+    try {
+      expect(backup.pragma('quick_check', { simple: true })).toBe('ok');
+      expect(backup.pragma('user_version', { simple: true })).toBe(33);
+      expect(readTableNames(backup)).toContain('scene_shot_video_take_output');
+      expect(readTableNames(backup)).not.toContain('scene_shot_video_take_video');
+      expect(readColumnNames(backup, 'scene_shot_video_take')).not.toContain(
+        'regenerated_from_take_id'
+      );
+    } finally {
+      backup.close();
+    }
+
     const migrated = new Database(databasePath);
     try {
       expect(migrated.pragma('user_version', { simple: true })).toBe(
@@ -242,6 +307,84 @@ describe('migrate database command', () => {
       );
     } finally {
       migrated.close();
+    }
+  });
+
+  it('stops before Drizzle Kit when a pre-migration backup cannot be created', async () => {
+    const projectFolder = path.join(storageRoot, 'blocked-backup');
+    const databasePath = path.join(projectFolder, '.renku', 'project.sqlite');
+    await fs.mkdir(path.dirname(databasePath), { recursive: true });
+    const setup = new Database(databasePath);
+    try {
+      setup.exec('create table project (id text primary key);');
+      setup.pragma('user_version = 1');
+    } finally {
+      setup.close();
+    }
+    await fs.writeFile(
+      path.join(projectFolder, '.renku', 'project-database-backups'),
+      'not a directory',
+      'utf8'
+    );
+
+    expect(() => migrateProjectDatabase(databasePath)).toThrow(
+      expect.objectContaining({
+        code: 'PROJECT_DATA046',
+      })
+    );
+
+    const sqlite = new Database(databasePath, {
+      readonly: true,
+      fileMustExist: true,
+    });
+    try {
+      expect(readTableNames(sqlite)).not.toContain('__drizzle_migrations');
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('reports the backup path when Drizzle Kit fails after backup creation', async () => {
+    const projectFolder = path.join(storageRoot, 'migration-failure');
+    const databasePath = path.join(projectFolder, '.renku', 'project.sqlite');
+    await fs.mkdir(path.dirname(databasePath), { recursive: true });
+    const setup = new Database(databasePath);
+    try {
+      setup.exec('create table project (id text primary key);');
+      setup.pragma('user_version = 1');
+    } finally {
+      setup.close();
+    }
+
+    let thrown: unknown;
+    try {
+      migrateProjectDatabase(databasePath);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toMatchObject({
+      code: 'PROJECT_DATA042',
+      message: expect.stringContaining(
+        'A pre-migration backup was created at'
+      ),
+      suggestion: expect.stringContaining(
+        'Stop Studio before restoring it over project.sqlite'
+      ),
+    });
+    const backupPath = (thrown as Error).message.match(
+      /A pre-migration backup was created at (.*\.sqlite)\./
+    )?.[1];
+    expect(backupPath).toBeDefined();
+    const backup = new Database(backupPath!, {
+      readonly: true,
+      fileMustExist: true,
+    });
+    try {
+      expect(backup.pragma('quick_check', { simple: true })).toBe('ok');
+      expect(backup.pragma('user_version', { simple: true })).toBe(1);
+    } finally {
+      backup.close();
     }
   });
 
@@ -3257,6 +3400,14 @@ function readTableNames(sqlite: Database.Database): string[] {
     .prepare("select name from sqlite_master where type = 'table'")
     .all()
     .map((row) => (row as { name: string }).name);
+}
+
+async function listBackupSqliteFiles(backupDir: string): Promise<string[]> {
+  const entries = await fs.readdir(backupDir);
+  return entries
+    .filter((entry) => entry.endsWith('.sqlite'))
+    .map((entry) => path.join(backupDir, entry))
+    .sort();
 }
 
 async function deleteDrizzleMigrationRowsAfterTag(

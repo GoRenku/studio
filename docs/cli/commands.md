@@ -204,7 +204,26 @@ renku project migrate <project-name> --json
 Behavior:
 
 - Opens the named project database and applies pending migrations.
-- Reports the project path and database path.
+- Creates a verified pre-migration backup before mutating an existing,
+  non-empty project database.
+- Reports the project path, database path, and pre-migration backup path in
+  human-readable output.
+- JSON output includes `preMigrationBackup` with `backupPath`, `metadataPath`,
+  `createdAt`, source and target schema generations, and source and backup file
+  sizes.
+- `preMigrationBackup` is `null` only when there was no existing non-empty
+  database to protect, such as the initial migration during project creation.
+
+Backups are stored inside the project folder:
+
+```text
+<project-folder>/.renku/project-database-backups/
+```
+
+If migration fails after the backup is created, the structured error includes
+the backup path. To recover, stop Studio and any CLI process using the project,
+move the broken `.renku/project.sqlite` aside, copy the selected backup to
+`.renku/project.sqlite`, fix the migration issue, and then re-run the migration.
 
 ## `renku director context`
 

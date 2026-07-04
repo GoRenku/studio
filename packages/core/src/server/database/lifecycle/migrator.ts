@@ -3,11 +3,25 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ProjectDataError } from '../../project-data-error.js';
+import {
+  PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH_ENV,
+  ProjectDatabaseBackupError,
+  createProjectDatabasePreMigrationBackup,
+  type ProjectDatabasePreMigrationBackupReport,
+} from './project-database-backups.js';
+import { ProjectStoreSchemaGenerationResolutionError } from './project-store-schema-generation-reader.js';
 
 const CORE_PACKAGE_NAME = '@gorenku/studio-core';
 const PROJECT_DATABASE_PATH_ENV = 'RENKU_PROJECT_DATABASE_PATH';
 
-export function migrateProjectDatabase(databasePath: string): void {
+export interface ProjectDatabaseMigrationRunReport {
+  databasePath: string;
+  preMigrationBackup: ProjectDatabasePreMigrationBackupReport | null;
+}
+
+export function migrateProjectDatabase(
+  databasePath: string
+): ProjectDatabaseMigrationRunReport {
   const packageRoot = findCorePackageRoot(dirname(fileURLToPath(import.meta.url)));
   const configPath = join(packageRoot, 'drizzle.project-migrate.config.ts');
   const drizzleKitPath = join(packageRoot, 'node_modules', 'drizzle-kit', 'bin.cjs');
@@ -25,6 +39,7 @@ export function migrateProjectDatabase(databasePath: string): void {
     );
   }
 
+  const preMigrationBackup = createPreMigrationBackup(databasePath);
   const result = spawnSync(
     process.execPath,
     [drizzleKitPath, 'migrate', '--config', configPath],
@@ -34,6 +49,12 @@ export function migrateProjectDatabase(databasePath: string): void {
       env: {
         ...process.env,
         [PROJECT_DATABASE_PATH_ENV]: databasePath,
+        ...(preMigrationBackup
+          ? {
+              [PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH_ENV]:
+                preMigrationBackup.backupPath,
+            }
+          : {}),
       },
     }
   );
@@ -41,7 +62,12 @@ export function migrateProjectDatabase(databasePath: string): void {
   if (result.error) {
     throw new ProjectDataError(
       'PROJECT_DATA041',
-      `Project database migration command failed to start for ${databasePath}: ${result.error.message}`
+      migrationFailureMessage({
+        databasePath,
+        preMigrationBackup,
+        message: `Project database migration command failed to start for ${databasePath}: ${result.error.message}`,
+      }),
+      migrationFailureOptions(preMigrationBackup)
     );
   }
 
@@ -52,8 +78,36 @@ export function migrateProjectDatabase(databasePath: string): void {
 
     throw new ProjectDataError(
       'PROJECT_DATA042',
-      `Project database migration failed for ${databasePath}.${output ? `\n${output}` : ''}`
+      migrationFailureMessage({
+        databasePath,
+        preMigrationBackup,
+        message: `Project database migration failed for ${databasePath}.${output ? `\n${output}` : ''}`,
+      }),
+      migrationFailureOptions(preMigrationBackup)
     );
+  }
+
+  return {
+    databasePath,
+    preMigrationBackup,
+  };
+}
+
+function createPreMigrationBackup(
+  databasePath: string
+): ProjectDatabasePreMigrationBackupReport | null {
+  try {
+    return createProjectDatabasePreMigrationBackup(databasePath);
+  } catch (error) {
+    if (error instanceof ProjectDatabaseBackupError) {
+      throw new ProjectDataError(error.code, error.message, {
+        suggestion: error.suggestion,
+      });
+    }
+    if (error instanceof ProjectStoreSchemaGenerationResolutionError) {
+      throw new ProjectDataError(error.code, error.message);
+    }
+    throw error;
   }
 }
 
@@ -79,4 +133,30 @@ function findCorePackageRoot(startFolder: string): string {
     'PROJECT_DATA043',
     `Could not resolve the ${CORE_PACKAGE_NAME} package root from ${startFolder}.`
   );
+}
+
+function migrationFailureMessage(input: {
+  databasePath: string;
+  preMigrationBackup: ProjectDatabasePreMigrationBackupReport | null;
+  message: string;
+}): string {
+  if (!input.preMigrationBackup) {
+    return input.message;
+  }
+  return [
+    input.message,
+    `A pre-migration backup was created at ${input.preMigrationBackup.backupPath}.`,
+    `Database: ${input.databasePath}.`,
+  ].join('\n');
+}
+
+function migrationFailureOptions(
+  preMigrationBackup: ProjectDatabasePreMigrationBackupReport | null
+): { suggestion?: string } {
+  if (!preMigrationBackup) {
+    return {};
+  }
+  return {
+    suggestion: `A pre-migration backup was created at ${preMigrationBackup.backupPath}. Stop Studio before restoring it over project.sqlite.`,
+  };
 }

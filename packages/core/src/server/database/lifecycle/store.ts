@@ -3,7 +3,10 @@ import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { existsSync } from 'node:fs';
 import { ProjectDataError } from '../../project-data-error.js';
 import { resolveProjectDatabasePath } from '../../files/project-paths.js';
-import { migrateProjectDatabase } from './migrator.js';
+import {
+  migrateProjectDatabase,
+  type ProjectDatabaseMigrationRunReport,
+} from './migrator.js';
 import { currentProjectStoreSchemaGeneration } from './project-store-schema-generation.js';
 
 export interface DatabaseSession {
@@ -88,7 +91,7 @@ function openSqliteWithCurrentSchema(input: {
   } catch (error) {
     if (input.autoMigrate && canAutoMigrateProjectStore(sqlite)) {
       sqlite.close();
-      migrateProjectDatabase(input.databasePath);
+      const migration = migrateProjectDatabase(input.databasePath);
       const migrated = new Database(input.databasePath);
       try {
         migrated.pragma('foreign_keys = ON');
@@ -96,12 +99,32 @@ function openSqliteWithCurrentSchema(input: {
         return migrated;
       } catch (migrationError) {
         migrated.close();
-        throw migrationError;
+        throw addAutoMigrationBackupContext(migrationError, migration);
       }
     }
     sqlite.close();
     throw error;
   }
+}
+
+function addAutoMigrationBackupContext(
+  error: unknown,
+  migration: ProjectDatabaseMigrationRunReport
+): unknown {
+  if (!migration.preMigrationBackup || !(error instanceof ProjectDataError)) {
+    return error;
+  }
+  return new ProjectDataError(
+    error.code,
+    [
+      error.message,
+      `A pre-migration backup was created at ${migration.preMigrationBackup.backupPath}.`,
+    ].join('\n'),
+    {
+      issues: error.issues,
+      suggestion: `A pre-migration backup was created at ${migration.preMigrationBackup.backupPath}. Stop Studio before restoring it over project.sqlite.`,
+    }
+  );
 }
 
 export function closeProjectStore(input: { projectFolder: string }): void {

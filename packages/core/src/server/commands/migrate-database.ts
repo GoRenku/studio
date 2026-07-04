@@ -25,11 +25,12 @@ export async function migrateProjectDatabaseForProject(
     );
   }
 
-  migrateProjectDatabase(databasePath);
+  const migration = migrateProjectDatabase(databasePath);
 
   return {
     projectName: input.projectName,
     projectPath: projectFolder,
     databasePath,
+    preMigrationBackup: migration.preMigrationBackup,
   };
 }
