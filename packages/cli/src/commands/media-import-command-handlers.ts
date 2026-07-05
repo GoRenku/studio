@@ -4,6 +4,7 @@ import {
   type LocationHeroMediaImportReport,
   type LookbookImageMediaImportReport,
   type LookbookSheetMediaImportReport,
+  type ReferenceImageMediaImportReport,
   type SceneStoryboardImagesImportReport,
   type ShotVideoTakeInputMediaImportReport,
   type ShotVideoTakeMediaImportReport,
@@ -23,6 +24,7 @@ import {
   type StudioResourceChangedReport,
 } from './studio-resource-event-command.js';
 import {
+  parseAssetTarget,
   parseCastTarget,
   parseLocationTarget,
   parseAnchor,
@@ -63,6 +65,7 @@ type MediaImportReport =
   | LookbookImageMediaImportReport
   | LookbookSheetMediaImportReport
   | CastMediaImportReport
+  | ReferenceImageMediaImportReport
   | LocationEnvironmentSheetMediaImportReport
   | LocationHeroMediaImportReport
   | SceneStoryboardImagesImportReport
@@ -118,6 +121,10 @@ const MEDIA_IMPORT_PURPOSE_HANDLERS = [
   {
     purpose: 'cast.character-sheet',
     run: importCastCharacterSheet,
+  },
+  {
+    purpose: 'reference.image',
+    run: importReferenceImage,
   },
   {
     purpose: 'cast.profile',
@@ -243,6 +250,21 @@ async function importCastProfile(
     title: input.flags.title,
     oneLineSummary: input.flags.summary,
     receipt: singleFile.receipt,
+  });
+}
+
+async function importReferenceImage(
+  input: MediaImportPurposeHandlerInput
+): Promise<ReferenceImageMediaImportReport> {
+  const singleFile = await readSingleFileImport(input.flags);
+  return input.runtime.projectDataService.importReferenceImageMedia({
+    ...mediaImportProjectInput(input.runtime),
+    target: parseAssetTarget(input.target, 'Reference image import'),
+    sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
+    title: input.flags.title,
+    oneLineSummary: input.flags.summary,
+    referenceName: optionalTrimmed(input.flags.referenceName),
+    referencePurpose: optionalTrimmed(input.flags.referencePurpose),
   });
 }
 
@@ -533,6 +555,6 @@ function unsupportedMediaPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.video-prompt-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose reference.image, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.video-prompt-sheet, or --purpose shot.video-take.',
   });
 }

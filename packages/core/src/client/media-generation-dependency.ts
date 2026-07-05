@@ -12,6 +12,7 @@ export type MediaGenerationDependencyKind =
   | 'video-prompt-sheet'
   | 'reference-audio'
   | 'cast-character-sheet'
+  | 'cast-reference-image'
   | 'location-environment-sheet'
   | 'lookbook-sheet'
   | 'manual-attachment';
@@ -19,6 +20,7 @@ export type MediaGenerationDependencyKind =
 export type MediaGenerationAssetSelectorId =
   | 'shot-video-input'
   | 'cast-character-sheet'
+  | 'cast-reference-image'
   | 'location-environment-sheet'
   | 'lookbook-sheet'
   | 'manual-attachment';

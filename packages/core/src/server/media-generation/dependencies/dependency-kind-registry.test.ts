@@ -9,7 +9,7 @@ describe('media generation dependency kind registry', () => {
     const definitions = listMediaGenerationDependencyKindDefinitions();
     definitions.pop();
 
-    expect(listMediaGenerationDependencyKindDefinitions()).toHaveLength(9);
+    expect(listMediaGenerationDependencyKindDefinitions()).toHaveLength(10);
     expect(
       listMediaGenerationDependencyKindDefinitions().map(
         (definition) => definition.dependencyKind
@@ -21,6 +21,7 @@ describe('media generation dependency kind registry', () => {
       'video-prompt-sheet',
       'reference-audio',
       'cast-character-sheet',
+      'cast-reference-image',
       'location-environment-sheet',
       'lookbook-sheet',
       'manual-attachment',

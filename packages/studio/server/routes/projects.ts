@@ -15,6 +15,7 @@ import {
 import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
+import { createGenerationPreviewRoute } from './generation-preview.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
 import { createProductionExportsRoute } from './production-exports.js';
@@ -83,6 +84,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'deleteShotVideoTakeInput'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
+  | 'updateCastCharacterSheetReferenceInclusion'
   | 'updateProjectInformation'
   | 'resolveCoverImage'
   | 'listAssets'
@@ -199,6 +201,10 @@ export function createProjectsRoute(
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
+    .route(
+      '/:projectName',
+      createGenerationPreviewRoute({ projectData, requireToken })
+    )
     .route('/:projectName', createTrashRoute({ projectData, requireToken }))
     .route(
       '/:projectName',

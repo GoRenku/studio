@@ -1,5 +1,6 @@
 import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import {
+  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type GenerationPreviewRequest,
@@ -19,6 +20,7 @@ const PROVIDER_UPLOAD_URL_HOST_PARTS = [
 const GENERATION_PREVIEW_TOP_LEVEL_KEYS = new Set([
   'kind',
   'previewId',
+  'generationSpecId',
   'purpose',
   'project',
   'target',
@@ -49,11 +51,20 @@ const GENERATION_PREVIEW_REQUEST_REFERENCE_KEYS = new Set([
   'sourcePurpose',
   'dialogueId',
   'selected',
+  'selectionControl',
 ]);
 
 const STUDIO_GENERATION_PREVIEW_REFERENCE_KEYS = new Set([
   ...GENERATION_PREVIEW_REQUEST_REFERENCE_KEYS,
   'browserUrl',
+]);
+
+const GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_KEYS = new Set([
+  'dependencyId',
+  'required',
+  'defaultIncluded',
+  'editable',
+  'inclusionOverride',
 ]);
 
 export function validateGenerationPreviewRequest(
@@ -104,19 +115,32 @@ function validateGenerationPreviewEnvelope(
   requireNonEmptyString(preview, 'previewId', ['previewId'], options.context, issues);
   if (
     preview.purpose !== SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE &&
-    preview.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE
+    preview.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE &&
+    preview.purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE
   ) {
     issues.push(
       createDiagnosticError(
         'CORE_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
-        'Generation preview purpose must be shot.video-prompt-sheet or shot.video-take.',
+        'Generation preview purpose must be shot.video-prompt-sheet, shot.video-take, or cast.character-sheet.',
         { path: ['purpose'], context: options.context }
+      )
+    );
+  }
+  if (
+    preview.generationSpecId !== undefined &&
+    (typeof preview.generationSpecId !== 'string' || !preview.generationSpecId.trim())
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_SPEC_ID_INVALID',
+        'Generation preview generationSpecId must be a non-empty string when provided.',
+        { path: ['generationSpecId'], context: options.context }
       )
     );
   }
 
   validateProject(preview.project, options.context, issues);
-  validateTarget(preview.target, options.context, issues);
+  validateTarget(preview.target, preview.purpose, options.context, issues);
   requireNonEmptyString(preview, 'title', ['title'], options.context, issues);
   validateModel(preview.model, options.context, issues);
   validatePrompt(preview.finalPrompt, options.context, issues);
@@ -247,6 +271,7 @@ function validateProject(
 
 function validateTarget(
   value: unknown,
+  purpose: unknown,
   context: string,
   issues: DiagnosticIssue[]
 ): void {
@@ -261,6 +286,18 @@ function validateTarget(
     );
     return;
   }
+  if (purpose === CAST_CHARACTER_SHEET_GENERATION_PURPOSE) {
+    validateCastMemberTarget(target, context, issues);
+    return;
+  }
+  validateSceneShotVideoTakeTarget(target, context, issues);
+}
+
+function validateSceneShotVideoTakeTarget(
+  target: Record<string, unknown>,
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
   if (target.kind !== 'sceneShotVideoTake') {
     issues.push(
       createDiagnosticError(
@@ -285,6 +322,23 @@ function validateTarget(
       )
     );
   }
+}
+
+function validateCastMemberTarget(
+  target: Record<string, unknown>,
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
+  if (target.kind !== 'castMember') {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_TARGET_UNSUPPORTED',
+        'Generation preview target must be a castMember target for cast.character-sheet previews.',
+        { path: ['target', 'kind'], context }
+      )
+    );
+  }
+  requireNonEmptyString(target, 'id', ['target', 'id'], context, issues);
 }
 
 function validateModel(
@@ -443,6 +497,12 @@ function validateReference(
       )
     );
   }
+  validateSelectionControl(
+    (reference as { selectionControl?: unknown }).selectionControl,
+    path,
+    options.context,
+    issues
+  );
   for (const [key, candidate] of Object.entries(reference)) {
     if (key === 'browserUrl' && options.allowBrowserUrl) {
       validateStudioBrowserUrl(candidate, [...path, key], options.context, issues);
@@ -458,6 +518,76 @@ function validateReference(
         )
       );
     }
+  }
+}
+
+function validateSelectionControl(
+  value: unknown,
+  referencePath: string[],
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
+  if (value === undefined) {
+    return;
+  }
+  const control = readRecord(value);
+  if (!control) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_INVALID',
+        'Generation preview reference.selectionControl must be an object.',
+        { path: [...referencePath, 'selectionControl'], context }
+      )
+    );
+    return;
+  }
+  const path = [...referencePath, 'selectionControl'];
+  for (const [key, candidate] of Object.entries(control)) {
+    if (!GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_KEYS.has(key)) {
+      issues.push(
+        createDiagnosticError(
+          'CORE_GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_FIELD_UNSUPPORTED',
+          `Generation preview reference.selectionControl field is not supported: ${key}.`,
+          { path: [...path, key], context },
+          'Send only dependencyId, required, defaultIncluded, editable, and inclusionOverride.'
+        )
+      );
+    }
+    if (typeof candidate === 'string' && leaksLocalOrProviderPath(candidate)) {
+      issues.push(
+        createDiagnosticError(
+          'CORE_GENERATION_PREVIEW_REFERENCE_PATH_FORBIDDEN',
+          'Generation preview references must not include local paths or provider upload URLs.',
+          { path: [...path, key], context },
+          'Send logical project references such as assetId and assetFileId instead.'
+        )
+      );
+    }
+  }
+  requireNonEmptyString(control, 'dependencyId', [...path, 'dependencyId'], context, issues);
+  for (const key of ['required', 'defaultIncluded', 'editable'] as const) {
+    if (typeof control[key] !== 'boolean') {
+      issues.push(
+        createDiagnosticError(
+          'CORE_GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_FIELD_INVALID',
+          `Generation preview reference.selectionControl.${key} must be a boolean.`,
+          { path: [...path, key], context }
+        )
+      );
+    }
+  }
+  if (
+    control.inclusionOverride !== null &&
+    control.inclusionOverride !== 'include' &&
+    control.inclusionOverride !== 'exclude'
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_OVERRIDE_INVALID',
+        'Generation preview reference.selectionControl.inclusionOverride must be include, exclude, or null.',
+        { path: [...path, 'inclusionOverride'], context }
+      )
+    );
   }
 }
 
@@ -593,7 +723,7 @@ function validateSubject(
     options.context,
     issues
   );
-  for (const key of ['sceneLabel', 'takeLabel', 'shotLabel'] as const) {
+  for (const key of ['sceneLabel', 'takeLabel', 'shotLabel', 'castMemberLabel'] as const) {
     if (subject[key] !== undefined && typeof subject[key] !== 'string') {
       issues.push(
         createDiagnosticError(

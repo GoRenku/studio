@@ -1,5 +1,6 @@
 import type {
   MediaGenerationSpec,
+  GenerationPreviewRequest,
   LookbookSection,
   MediaGenerationSpecRecord,
   ProjectRelativePath,
@@ -82,6 +83,9 @@ export function fakeProjectDataService(): NonNullable<
         },
         absolutePath: '/tmp/renku/constantinople/cast/reference.png',
       };
+    },
+    async updateCastCharacterSheetReferenceInclusion() {
+      return generationPreviewRequest();
     },
     async resolveShotVideoTakeInputFile(input) {
       const asset = makeAsset('asset_shot_video_input');
@@ -1716,6 +1720,48 @@ function makeVisualLanguageCommandReport(type: string) {
     project: { name: 'test-project' },
     changes: [{ type }],
     resourceKeys: [],
+  };
+}
+
+function generationPreviewRequest(): GenerationPreviewRequest {
+  return {
+    kind: 'generationPreview',
+    previewId: 'generation_preview_test',
+    generationSpecId: 'media_generation_spec_test',
+    purpose: 'cast.character-sheet',
+    project: {
+      id: 'project_test0001',
+      name: 'constantinople',
+    },
+    target: { kind: 'castMember', id: 'cast_narrator' },
+    title: 'Narrator Character Sheet',
+    model: {
+      provider: 'fal-ai',
+      modelId: 'openai/gpt-image-2/edit',
+      mediaKind: 'image',
+      executionPath: 'renku-managed',
+    },
+    finalPrompt: { text: 'Create a lean character sheet.' },
+    references: [
+      {
+        kind: 'image',
+        role: 'character-sheet-continuity',
+        label: 'Existing sheet',
+        providerToken: 'image_urls',
+        assetId: 'asset_cast_reference',
+        assetFileId: 'asset_file_cast_reference',
+        selected: true,
+        selectionControl: {
+          dependencyId: 'cast-character-sheet:cast_narrator:asset_cast_reference',
+          required: false,
+          defaultIncluded: true,
+          inclusionOverride: null,
+          editable: true,
+        },
+      },
+    ],
+    configuration: [],
+    diagnostics: [],
   };
 }
 

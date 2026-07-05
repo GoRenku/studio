@@ -366,6 +366,7 @@ const DEFINITIONS = [
         homeDir: input.homeDir,
         spec: input.spec as CastCharacterSheetGenerationSpec,
       }),
+    declareDependencies: characterSheet.declareCastCharacterSheetDependencies,
     planDependencyDraft: characterSheet.buildCastCharacterSheetDependencyDraftSpec,
     runSpec: characterSheet.runCastCharacterSheetSpec,
   },

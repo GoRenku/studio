@@ -207,6 +207,53 @@ describe('generationCommandHandlers', () => {
     });
   });
 
+  it('builds generation preview show requests from saved specs', async () => {
+    const handler = generationCommandHandlers.find(
+      (candidate) => candidate.path.join(' ') === 'preview show',
+    );
+    if (!handler) {
+      throw new Error('Expected preview show handler.');
+    }
+    const homeDir = await writeRenkuConfig();
+    const preview = previewFixture();
+    vi.mocked(notifyStudioGenerationPreview).mockResolvedValue({
+      status: 'delivered',
+    });
+    const buildMediaGenerationPreview = vi.fn().mockResolvedValue(preview);
+    const readProject = vi.fn().mockResolvedValue({
+      identity: {
+        id: 'project_test0001',
+        name: 'constantinople',
+      },
+    });
+
+    await expect(
+      handler.run({
+        flags: { project: 'constantinople', spec: 'media_generation_spec_1' },
+        runtime: {
+          projectName: 'constantinople',
+          homeDir,
+          projectDataService: { buildMediaGenerationPreview, readProject },
+        },
+      } as never),
+    ).resolves.toMatchObject({
+      valid: true,
+      previewId: 'generation_preview_test',
+      purpose: 'shot.video-prompt-sheet',
+    });
+
+    expect(buildMediaGenerationPreview).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      homeDir,
+      specId: 'media_generation_spec_1',
+    });
+    expect(notifyStudioGenerationPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notification: expect.objectContaining({ preview }),
+      })
+    );
+  });
+
   it('fails generation preview show when Studio is not running', async () => {
     const handler = generationCommandHandlers.find(
       (candidate) => candidate.path.join(' ') === 'preview show',

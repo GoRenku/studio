@@ -1,4 +1,17 @@
+import type { AssetTarget } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
+
+type AssetTargetCliKind = 'cast' | 'location' | 'sequence' | 'scene';
+
+const ASSET_TARGET_BUILDERS: Record<
+  AssetTargetCliKind,
+  (id: string) => AssetTarget
+> = {
+  cast: (id) => ({ kind: 'castMember', castMemberId: id }),
+  location: (id) => ({ kind: 'location', locationId: id }),
+  sequence: (id) => ({ kind: 'sequence', sequenceId: id }),
+  scene: (id) => ({ kind: 'scene', sceneId: id }),
+};
 
 export function parseLookbookTarget(value: string, context: string): string {
   const id = parseKindedTarget(value, 'lookbook', context);
@@ -18,6 +31,17 @@ export function parseLocationTarget(value: string, context: string): string {
 export function parseSceneTarget(value: string, context: string): string {
   const id = parseKindedTarget(value, 'scene', context);
   return id;
+}
+
+export function parseAssetTarget(value: string, context: string): AssetTarget {
+  if (value === 'project') {
+    return { kind: 'project' };
+  }
+  const [kind, id, extra] = value.split(':');
+  if (extra !== undefined || !id || !isAssetTargetCliKind(kind)) {
+    throw invalidAssetTarget(value, context);
+  }
+  return ASSET_TARGET_BUILDERS[kind](id);
 }
 
 export function parseSceneDialogueTarget(
@@ -112,4 +136,17 @@ function targetLabel(kind: 'lookbook' | 'cast' | 'location' | 'scene'): string {
     case 'scene':
       return 'scene-id';
   }
+}
+
+function isAssetTargetCliKind(kind: string): kind is AssetTargetCliKind {
+  return kind in ASSET_TARGET_BUILDERS;
+}
+
+function invalidAssetTarget(value: string, context: string): StructuredError {
+  return new StructuredError({
+    code: 'CLI025',
+    message: `${context} target must use project, cast:<cast-member-id>, location:<location-id>, sequence:<sequence-id>, or scene:<scene-id>. Received: ${value}.`,
+    suggestion:
+      'Use --target project, --target cast:<cast-member-id>, --target location:<location-id>, --target sequence:<sequence-id>, or --target scene:<scene-id>.',
+  });
 }

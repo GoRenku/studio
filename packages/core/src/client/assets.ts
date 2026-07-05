@@ -1,5 +1,7 @@
 import type { ProjectRelativePath } from './project.js';
 
+export const REFERENCE_IMAGE_MEDIA_PURPOSE = 'reference.image' as const;
+
 export type AssetTarget =
   | { kind: 'project' }
   | { kind: 'castMember'; castMemberId: string }
@@ -34,6 +36,21 @@ export interface UpdateAssetReferenceInput {
   oneLineSummary?: string | null;
   referenceName: string;
   purpose?: string | null;
+}
+
+export interface ReferenceImageMediaImportReport {
+  valid: true;
+  warnings: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
+  project: {
+    name: string;
+    id?: string;
+    projectFolder?: string;
+  };
+  changes?: Array<{ type: string; [key: string]: string }>;
+  purpose: typeof REFERENCE_IMAGE_MEDIA_PURPOSE;
+  target: AssetTarget;
+  imported: Asset;
+  resourceKeys: string[];
 }
 
 export interface AssetReference {

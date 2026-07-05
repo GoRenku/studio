@@ -44,6 +44,104 @@ describe('Cast image provider payload mapping', () => {
     });
   });
 
+  it('maps Grok Imagine character sheet references to the Fal edit route', () => {
+    const plan = buildCastCharacterSheetProviderPayload(
+      characterSheetSpec({
+        modelChoice: 'fal-ai/xai/grok-imagine-image',
+      }),
+      characterSheetContext({
+        characterSheetTakes: [
+          characterSheetAsset(
+            'asset_character_sheet_a',
+            'cast/ada/character-sheets/ada-sheet-a.png'
+          ),
+        ],
+      })
+    );
+
+    expect(plan).toMatchObject({
+      provider: 'fal-ai',
+      model: 'xai/grok-imagine-image/edit',
+      mode: 'reference-to-image',
+      outputCount: 1,
+      inputFiles: [
+        {
+          field: 'image_urls',
+          projectRelativePath: 'cast/ada/character-sheets/ada-sheet-a.png',
+          mediaKind: 'image',
+          asArray: true,
+        },
+      ],
+      payload: {
+        prompt: 'Full character sheet for Ada.',
+        image_urls: [
+          'renku-input://cast/ada/character-sheets/ada-sheet-a.png',
+        ],
+        aspect_ratio: '16:9',
+        resolution: '1k',
+      },
+    });
+  });
+
+  it('maps high-detail Grok Imagine character sheet references to the quality edit route', () => {
+    const plan = buildCastCharacterSheetProviderPayload(
+      characterSheetSpec({
+        modelChoice: 'fal-ai/xai/grok-imagine-image',
+        detail: 'high',
+      }),
+      characterSheetContext({
+        characterSheetTakes: [
+          characterSheetAsset(
+            'asset_character_sheet_a',
+            'cast/ada/character-sheets/ada-sheet-a.png'
+          ),
+        ],
+      })
+    );
+
+    expect(plan).toMatchObject({
+      model: 'xai/grok-imagine-image/quality/edit',
+      mode: 'reference-to-image',
+      payload: {
+        resolution: '2k',
+      },
+    });
+  });
+
+  it('rejects Grok Imagine character sheet reference sets above the provider limit', () => {
+    expect(() =>
+      buildCastCharacterSheetProviderPayload(
+        characterSheetSpec({
+          modelChoice: 'fal-ai/xai/grok-imagine-image',
+        }),
+        characterSheetContext({
+          characterSheetTakes: [
+            characterSheetAsset(
+              'asset_character_sheet_a',
+              'cast/ada/character-sheets/ada-sheet-a.png'
+            ),
+            characterSheetAsset(
+              'asset_character_sheet_b',
+              'cast/ada/character-sheets/ada-sheet-b.png'
+            ),
+            characterSheetAsset(
+              'asset_character_sheet_c',
+              'cast/ada/character-sheets/ada-sheet-c.png'
+            ),
+            characterSheetAsset(
+              'asset_character_sheet_d',
+              'cast/ada/character-sheets/ada-sheet-d.png'
+            ),
+          ],
+        })
+      )
+    ).toThrow(
+      expect.objectContaining({
+        code: 'CORE_CAST_CHARACTER_SHEET_REFERENCE_LIMIT_EXCEEDED',
+      })
+    );
+  });
+
   it('maps profile edit generation to a logical character sheet input file', () => {
     expect(
       buildCastProfileProviderPayload(
@@ -224,6 +322,102 @@ describe('Cast image import', () => {
             }),
           }),
         ]),
+      },
+    });
+  });
+
+  it('imports generic reference images for character sheet generation without requiring a Lookbook', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-cast-reference-image-test-'));
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const project = await projectData.readProject({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const castMember = project.cast.find((member) => member.handle === 'mehmed-ii');
+    expect(castMember).toBeDefined();
+
+    const helmetSource = 'research/helmet.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, helmetSource)), {
+      recursive: true,
+    });
+    await fs.writeFile(path.join(created.projectPath, helmetSource), 'helmet bytes');
+
+    const imported = await projectData.importReferenceImageMedia({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'castMember', castMemberId: castMember!.id },
+      sourceProjectRelativePath: helmetSource,
+      title: 'Helmet reference',
+      referenceName: 'battlefield-helmet',
+      referencePurpose: 'Ottoman helmet construction reference',
+    });
+    expect(imported).toMatchObject({
+      purpose: 'reference.image',
+      imported: {
+        type: 'reference_image',
+        role: 'reference',
+        referenceName: 'battlefield-helmet',
+        purpose: 'Ottoman helmet construction reference',
+        files: [
+          {
+            role: 'primary',
+            projectRelativePath: helmetSource,
+          },
+        ],
+      },
+      resourceKeys: expect.arrayContaining([
+        `assets:castMember:${castMember!.id}`,
+      ]),
+    });
+
+    const context = await projectData.buildCastCharacterSheetContext({
+      projectName: 'constantinople',
+      homeDir,
+      castMemberId: castMember!.id,
+    });
+    expect(context.activeLookbook).toBeNull();
+    const referenceOption = context.referenceOptions.find(
+      (option) => option.assetId === imported.imported.assetId
+    );
+    expect(referenceOption).toMatchObject({
+      dependencyKind: 'cast-reference-image',
+      referenceRole: 'cast-reference-image',
+      label: 'battlefield-helmet',
+      defaultIncluded: false,
+      included: false,
+      projectRelativePath: helmetSource,
+    });
+
+    const payloadPlan = buildCastCharacterSheetProviderPayload(
+      characterSheetSpec({
+        target: { kind: 'castMember', id: castMember!.id },
+        referenceSelections: {
+          dependencyInclusions: {
+            [referenceOption!.dependencyId]: 'include',
+          },
+        },
+      }),
+      context
+    );
+    expect(payloadPlan).toMatchObject({
+      mode: 'reference-to-image',
+      inputFiles: [
+        {
+          field: 'image_urls',
+          projectRelativePath: helmetSource,
+          mediaKind: 'image',
+          asArray: true,
+        },
+      ],
+      payload: {
+        image_urls: ['renku-input://research/helmet.png'],
       },
     });
   });
@@ -520,8 +714,10 @@ function profileSpec(
   };
 }
 
-function characterSheetContext(): CastCharacterSheetGenerationContext {
-  return {
+function characterSheetContext(
+  overrides: Partial<CastCharacterSheetGenerationContext> = {}
+): CastCharacterSheetGenerationContext {
+  const context: CastCharacterSheetGenerationContext = {
     purpose: 'cast.character-sheet',
     target: { kind: 'castMember', id: 'cast_ada' },
     project: {
@@ -556,7 +752,9 @@ function characterSheetContext(): CastCharacterSheetGenerationContext {
     selectedAssets: [],
     characterSheetTakes: [],
     profileTakes: [],
+    referenceImageAssets: [],
     imageFiles: [],
+    referenceOptions: [],
     defaults: {
       takeCount: 1,
       seed: null,
@@ -566,6 +764,46 @@ function characterSheetContext(): CastCharacterSheetGenerationContext {
       outputFormat: 'png',
     },
     resourceKeys: [],
+  };
+  return { ...context, ...overrides };
+}
+
+function characterSheetAsset(
+  assetId: string,
+  projectRelativePath: string
+): CastCharacterSheetGenerationContext['characterSheetTakes'][number] {
+  return {
+    assetId,
+    relationshipId: `relationship_${assetId}`,
+    target: { kind: 'castMember', castMemberId: 'cast_ada' },
+    localeId: null,
+    type: 'character_sheet',
+    selection: { kind: 'take' },
+    availability: 'ready',
+    mediaKind: 'image',
+    title: assetId,
+    oneLineSummary: null,
+    origin: 'generated',
+    role: 'character_sheet',
+    referenceName: null,
+    purpose: 'cast.character-sheet',
+    sortOrder: 0,
+    files: [
+      {
+        id: `asset_file_${assetId}`,
+        role: 'primary',
+        projectRelativePath: projectRelativePath as ProjectRelativePath,
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        sizeBytes: null,
+        contentHash: null,
+        width: null,
+        height: null,
+        durationSeconds: null,
+      },
+    ],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 

@@ -64,6 +64,13 @@ const DEPENDENCY_KIND_DEFINITIONS = [
     generationPurpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   },
   {
+    dependencyKind: 'cast-reference-image',
+    mediaKind: 'image',
+    cardinality: 'one',
+    assetSelector: 'cast-reference-image',
+    missingInputBehavior: 'require-attachment',
+  },
+  {
     dependencyKind: 'location-environment-sheet',
     mediaKind: 'image',
     cardinality: 'one',

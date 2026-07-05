@@ -1,47 +1,13 @@
 {
   "input_schema": {
-    "x-fal-order-properties": [
-      "prompt",
-      "num_images",
-      "output_format",
-      "sync_mode",
-      "image_urls"
-    ],
-    "type": "object",
     "properties": {
-      "prompt": {
-        "examples": [
-          "Make this scene more realistic but still keep the game vibes"
-        ],
-        "title": "Prompt",
-        "type": "string",
-        "maxLength": 8000,
-        "description": "Text description of the desired image."
-      },
       "num_images": {
         "minimum": 1,
-        "title": "Number of Images",
-        "type": "integer",
-        "maximum": 4,
+        "default": 1,
         "description": "Number of images to generate.",
-        "default": 1
-      },
-      "sync_mode": {
-        "title": "Sync Mode",
-        "type": "boolean",
-        "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
-        "default": false
-      },
-      "output_format": {
-        "enum": [
-          "jpeg",
-          "png",
-          "webp"
-        ],
-        "title": "Output Format",
-        "type": "string",
-        "description": "The format of the generated image.",
-        "default": "jpeg"
+        "maximum": 4,
+        "title": "Number of Images",
+        "type": "integer"
       },
       "image_urls": {
         "examples": [
@@ -49,26 +15,89 @@
             "https://v3b.fal.media/files/b/0a8b911d/Abk8vStrvmSPlzUqI_NN3_image_043.png"
           ]
         ],
-        "title": "Image URLs",
-        "type": "array",
-        "description": "List of URLs of the images to edit. A maximum of 3 images are supported.",
         "items": {
           "type": "string",
           "format": "uri"
-        }
+        },
+        "title": "Image URLs",
+        "description": "List of URLs of the images to edit. A maximum of 3 images are supported.",
+        "type": "array"
+      },
+      "resolution": {
+        "default": "1k",
+        "enum": [
+          "1k",
+          "2k"
+        ],
+        "title": "Resolution",
+        "description": "Resolution of the generated image. `1k` for standard resolution, `2k` for high resolution.",
+        "type": "string"
+      },
+      "output_format": {
+        "enum": [
+          "jpeg",
+          "png",
+          "webp"
+        ],
+        "description": "The format of the generated image.",
+        "title": "Output Format",
+        "default": "jpeg",
+        "type": "string"
+      },
+      "sync_mode": {
+        "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
+        "title": "Sync Mode",
+        "default": false,
+        "type": "boolean"
+      },
+      "aspect_ratio": {
+        "enum": [
+          "auto",
+          "2:1",
+          "20:9",
+          "19.5:9",
+          "16:9",
+          "4:3",
+          "3:2",
+          "1:1",
+          "2:3",
+          "3:4",
+          "9:16",
+          "9:19.5",
+          "9:20",
+          "1:2"
+        ],
+        "description": "Aspect ratio of the edited image. When set to `auto` (the default), the output preserves the aspect ratio of the first input image.",
+        "title": "Aspect Ratio",
+        "default": "auto",
+        "type": "string"
+      },
+      "prompt": {
+        "examples": [
+          "Make this scene more realistic but still keep the game vibes"
+        ],
+        "maxLength": 8000,
+        "description": "Text description of the desired image.",
+        "title": "Prompt",
+        "type": "string"
       }
     },
-    "title": "XAIImageEditInput",
     "required": [
       "prompt"
-    ]
+    ],
+    "x-fal-order-properties": [
+      "prompt",
+      "num_images",
+      "aspect_ratio",
+      "resolution",
+      "output_format",
+      "sync_mode",
+      "image_urls"
+    ],
+    "title": "XAIImageEditInput",
+    "type": "object"
   },
   "output_schema": {
-    "x-fal-order-properties": [
-      "images",
-      "revised_prompt"
-    ],
-    "type": "object",
     "properties": {
       "images": {
         "examples": [
@@ -78,36 +107,59 @@
             }
           ]
         ],
-        "title": "Images",
-        "type": "array",
-        "description": "The URL of the edited image.",
         "items": {
           "$ref": "#/ImageFile"
-        }
+        },
+        "description": "The URL of the edited image.",
+        "title": "Images",
+        "type": "array"
       },
       "revised_prompt": {
-        "title": "Revised Prompt",
-        "type": "string",
-        "description": "The enhanced prompt that was used to generate the image."
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The enhanced prompt that was used to generate the image.",
+        "title": "Revised Prompt"
       }
     },
-    "title": "XAIImageEditOutput",
     "required": [
+      "images"
+    ],
+    "x-fal-order-properties": [
       "images",
       "revised_prompt"
-    ]
+    ],
+    "title": "XAIImageEditOutput",
+    "type": "object"
   },
   "ImageFile": {
-    "x-fal-order-properties": [
-      "url",
-      "content_type",
-      "file_name",
-      "file_size",
-      "width",
-      "height"
-    ],
-    "type": "object",
     "properties": {
+      "url": {
+        "description": "The URL where the file can be downloaded from.",
+        "title": "Url",
+        "type": "string",
+        "format": "uri"
+      },
+      "file_name": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The name of the file. It will be auto-generated if not provided.",
+        "title": "File Name",
+        "examples": [
+          "z9RV14K95DvU.png"
+        ]
+      },
       "height": {
         "anyOf": [
           {
@@ -117,14 +169,25 @@
             "type": "null"
           }
         ],
-        "title": "Height",
-        "description": "The height of the image"
+        "description": "The height of the image",
+        "title": "Height"
+      },
+      "content_type": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The mime type of the file.",
+        "title": "Content Type",
+        "examples": [
+          "image/png"
+        ]
       },
       "file_size": {
-        "examples": [
-          4404019
-        ],
-        "title": "File Size",
         "anyOf": [
           {
             "type": "integer"
@@ -133,43 +196,11 @@
             "type": "null"
           }
         ],
-        "description": "The size of the file in bytes."
-      },
-      "file_name": {
+        "description": "The size of the file in bytes.",
+        "title": "File Size",
         "examples": [
-          "z9RV14K95DvU.png"
-        ],
-        "title": "File Name",
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "description": "The name of the file. It will be auto-generated if not provided."
-      },
-      "content_type": {
-        "examples": [
-          "image/png"
-        ],
-        "title": "Content Type",
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "description": "The mime type of the file."
-      },
-      "url": {
-        "title": "Url",
-        "type": "string",
-        "description": "The URL where the file can be downloaded from.",
-        "format": "uri"
+          4404019
+        ]
       },
       "width": {
         "anyOf": [
@@ -180,14 +211,23 @@
             "type": "null"
           }
         ],
-        "title": "Width",
-        "description": "The width of the image"
+        "description": "The width of the image",
+        "title": "Width"
       }
     },
-    "title": "ImageFile",
     "required": [
       "url"
-    ]
+    ],
+    "x-fal-order-properties": [
+      "url",
+      "content_type",
+      "file_name",
+      "file_size",
+      "width",
+      "height"
+    ],
+    "title": "ImageFile",
+    "type": "object"
   },
   "x-renku-viewer": {
     "version": 1,
@@ -196,32 +236,19 @@
       "component": "object",
       "label": "Input",
       "order": [
-        "prompt",
         "num_images",
-        "sync_mode",
+        "image_urls",
+        "resolution",
         "output_format",
-        "image_urls"
+        "sync_mode",
+        "aspect_ratio",
+        "prompt"
       ],
       "fields": {
-        "prompt": {
-          "pointer": "/input_schema/properties/prompt",
-          "component": "string",
-          "label": "Prompt"
-        },
         "num_images": {
           "pointer": "/input_schema/properties/num_images",
           "component": "integer",
           "label": "Num Images"
-        },
-        "sync_mode": {
-          "pointer": "/input_schema/properties/sync_mode",
-          "component": "boolean",
-          "label": "Sync Mode"
-        },
-        "output_format": {
-          "pointer": "/input_schema/properties/output_format",
-          "component": "string-enum",
-          "label": "Output Format"
         },
         "image_urls": {
           "pointer": "/input_schema/properties/image_urls",
@@ -232,6 +259,31 @@
             "component": "file-uri",
             "label": "Item"
           }
+        },
+        "resolution": {
+          "pointer": "/input_schema/properties/resolution",
+          "component": "string-enum",
+          "label": "Resolution"
+        },
+        "output_format": {
+          "pointer": "/input_schema/properties/output_format",
+          "component": "string-enum",
+          "label": "Output Format"
+        },
+        "sync_mode": {
+          "pointer": "/input_schema/properties/sync_mode",
+          "component": "boolean",
+          "label": "Sync Mode"
+        },
+        "aspect_ratio": {
+          "pointer": "/input_schema/properties/aspect_ratio",
+          "component": "string-enum",
+          "label": "Aspect Ratio"
+        },
+        "prompt": {
+          "pointer": "/input_schema/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
         }
       }
     }

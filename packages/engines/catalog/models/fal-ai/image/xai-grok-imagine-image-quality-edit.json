@@ -9,14 +9,28 @@
         "title": "Number of Images",
         "type": "integer"
       },
+      "image_urls": {
+        "examples": [
+          [
+            "https://v3b.fal.media/files/b/0a8b911d/Abk8vStrvmSPlzUqI_NN3_image_043.png"
+          ]
+        ],
+        "items": {
+          "type": "string",
+          "format": "uri"
+        },
+        "title": "Image URLs",
+        "description": "List of URLs of the images to edit. A maximum of 3 images are supported.",
+        "type": "array"
+      },
       "resolution": {
+        "default": "1k",
         "enum": [
           "1k",
           "2k"
         ],
-        "description": "Resolution of the generated image. `1k` for standard resolution, `2k` for high resolution.",
         "title": "Resolution",
-        "default": "1k",
+        "description": "Resolution of the generated image. `1k` for standard resolution, `2k` for high resolution.",
         "type": "string"
       },
       "output_format": {
@@ -30,17 +44,15 @@
         "default": "jpeg",
         "type": "string"
       },
-      "prompt": {
-        "examples": [
-          "Abstract human silhouette, golden particles ready to burst outward representing joy, data visualization style, emotional expression through particles, artistic scientific"
-        ],
-        "maxLength": 8000,
-        "description": "Text description of the desired image.",
-        "title": "Prompt",
-        "type": "string"
+      "sync_mode": {
+        "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
+        "title": "Sync Mode",
+        "default": false,
+        "type": "boolean"
       },
       "aspect_ratio": {
         "enum": [
+          "auto",
           "2:1",
           "20:9",
           "19.5:9",
@@ -55,16 +67,19 @@
           "9:20",
           "1:2"
         ],
-        "description": "Aspect ratio of the generated image.",
+        "description": "Aspect ratio of the edited image. When set to `auto` (the default), the output preserves the aspect ratio of the first input image.",
         "title": "Aspect Ratio",
-        "default": "1:1",
+        "default": "auto",
         "type": "string"
       },
-      "sync_mode": {
-        "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
-        "title": "Sync Mode",
-        "default": false,
-        "type": "boolean"
+      "prompt": {
+        "examples": [
+          "Make this scene more realistic but still keep the game vibes"
+        ],
+        "maxLength": 8000,
+        "description": "Text description of the desired image.",
+        "title": "Prompt",
+        "type": "string"
       }
     },
     "required": [
@@ -76,9 +91,10 @@
       "aspect_ratio",
       "resolution",
       "output_format",
-      "sync_mode"
+      "sync_mode",
+      "image_urls"
     ],
-    "title": "XAIImageInput",
+    "title": "XAIImageEditQualityInput",
     "type": "object"
   },
   "output_schema": {
@@ -87,14 +103,14 @@
         "examples": [
           [
             {
-              "url": "https://v3b.fal.media/files/b/0a8b90b7/9avg_nKJmcVinjQHJR_Ja.jpg"
+              "url": "https://v3b.fal.media/files/b/0a8b911d/XMqiVoO2ECXUZEUYmPl2l.jpg"
             }
           ]
         ],
         "items": {
           "$ref": "#/ImageFile"
         },
-        "description": "The URL of the generated image.",
+        "description": "The URL of the edited image.",
         "title": "Images",
         "type": "array"
       },
@@ -118,7 +134,7 @@
       "images",
       "revised_prompt"
     ],
-    "title": "XAIImageOutput",
+    "title": "XAIImageEditOutput",
     "type": "object"
   },
   "ImageFile": {
@@ -221,17 +237,28 @@
       "label": "Input",
       "order": [
         "num_images",
+        "image_urls",
         "resolution",
         "output_format",
-        "prompt",
+        "sync_mode",
         "aspect_ratio",
-        "sync_mode"
+        "prompt"
       ],
       "fields": {
         "num_images": {
           "pointer": "/input_schema/properties/num_images",
           "component": "integer",
           "label": "Num Images"
+        },
+        "image_urls": {
+          "pointer": "/input_schema/properties/image_urls",
+          "component": "array-file-uri",
+          "label": "Image Urls",
+          "item": {
+            "pointer": "/input_schema/properties/image_urls/items",
+            "component": "file-uri",
+            "label": "Item"
+          }
         },
         "resolution": {
           "pointer": "/input_schema/properties/resolution",
@@ -243,20 +270,20 @@
           "component": "string-enum",
           "label": "Output Format"
         },
-        "prompt": {
-          "pointer": "/input_schema/properties/prompt",
-          "component": "string",
-          "label": "Prompt"
+        "sync_mode": {
+          "pointer": "/input_schema/properties/sync_mode",
+          "component": "boolean",
+          "label": "Sync Mode"
         },
         "aspect_ratio": {
           "pointer": "/input_schema/properties/aspect_ratio",
           "component": "string-enum",
           "label": "Aspect Ratio"
         },
-        "sync_mode": {
-          "pointer": "/input_schema/properties/sync_mode",
-          "component": "boolean",
-          "label": "Sync Mode"
+        "prompt": {
+          "pointer": "/input_schema/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
         }
       }
     }

@@ -19,6 +19,7 @@ import {
 } from '@/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import { VideoPreview } from '@/ui/video-preview';
+import { updateCastCharacterSheetPreviewReference } from '@/services/studio-generation-preview-api';
 
 type PreviewTab = 'prompt' | 'references' | 'config' | 'issues';
 
@@ -31,6 +32,7 @@ interface GenerationPreviewEventDetail {
 
 export function GenerationPreviewDialogHost() {
   const [state, setState] = useState<{
+    projectName: string;
     preview: StudioGenerationPreview;
     eventId: string;
     createdAt: string;
@@ -38,6 +40,10 @@ export function GenerationPreviewDialogHost() {
   } | null>(null);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<PreviewTab>('prompt');
+  const [updatingDependencyId, setUpdatingDependencyId] = useState<string | null>(
+    null
+  );
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
     const handlePreview = (event: Event) => {
@@ -46,6 +52,7 @@ export function GenerationPreviewDialogHost() {
         return;
       }
       setState((previous) => ({
+        projectName: detail.projectName,
         preview: detail.preview,
         eventId: detail.eventId,
         createdAt: detail.createdAt,
@@ -54,6 +61,7 @@ export function GenerationPreviewDialogHost() {
             ? previous.revision + 1
             : 1,
       }));
+      setUpdateError(null);
       setOpen(true);
     };
     window.addEventListener('renku:generation-preview-requested', handlePreview);
@@ -65,6 +73,40 @@ export function GenerationPreviewDialogHost() {
   }, []);
 
   const preview = state?.preview ?? null;
+
+  const handleReferenceToggle = async (
+    reference: StudioGenerationPreviewReference
+  ) => {
+    const control = reference.selectionControl;
+    if (!state || !preview?.generationSpecId || !control?.editable) {
+      return;
+    }
+    const inclusion = reference.selected ? 'exclude' : 'include';
+    setUpdatingDependencyId(control.dependencyId);
+    setUpdateError(null);
+    try {
+      const nextPreview = await updateCastCharacterSheetPreviewReference({
+        projectName: state.projectName,
+        specId: preview.generationSpecId,
+        dependencyId: control.dependencyId,
+        inclusion,
+      });
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              preview: nextPreview,
+              createdAt: new Date().toISOString(),
+              revision: current.revision + 1,
+            }
+          : current
+      );
+    } catch (error) {
+      setUpdateError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setUpdatingDependencyId(null);
+    }
+  };
 
   return (
     <Dialog open={open && Boolean(preview)} onOpenChange={setOpen}>
@@ -91,6 +133,13 @@ export function GenerationPreviewDialogHost() {
                   <span key={label}>{label}</span>
                 ))}
               </div>
+              {updateError ? (
+                <Alert variant='destructive'>
+                  <AlertCircle />
+                  <AlertTitle>Preview Update Failed</AlertTitle>
+                  <AlertDescription>{updateError}</AlertDescription>
+                </Alert>
+              ) : null}
             </DialogHeader>
             <Tabs
               value={tab}
@@ -107,7 +156,11 @@ export function GenerationPreviewDialogHost() {
                 <PromptTab preview={preview} />
               </TabsContent>
               <TabsContent value='references' className='min-h-0 overflow-auto py-4'>
-                <ReferencesTab preview={preview} />
+                <ReferencesTab
+                  preview={preview}
+                  updatingDependencyId={updatingDependencyId}
+                  onReferenceToggle={handleReferenceToggle}
+                />
               </TabsContent>
               <TabsContent value='config' className='min-h-0 overflow-auto py-4'>
                 <ConfigTab preview={preview} />
@@ -164,7 +217,15 @@ function PromptTab({ preview }: { preview: StudioGenerationPreview }) {
   );
 }
 
-function ReferencesTab({ preview }: { preview: StudioGenerationPreview }) {
+function ReferencesTab({
+  preview,
+  updatingDependencyId,
+  onReferenceToggle,
+}: {
+  preview: StudioGenerationPreview;
+  updatingDependencyId: string | null;
+  onReferenceToggle(reference: StudioGenerationPreviewReference): void;
+}) {
   return (
     <div className='grid grid-cols-3 gap-3'>
       {preview.references.map((reference, index) => (
@@ -172,6 +233,11 @@ function ReferencesTab({ preview }: { preview: StudioGenerationPreview }) {
           key={`${reference.kind}:${reference.assetId}:${reference.assetFileId}:${index}`}
           reference={reference}
           index={index}
+          canEdit={Boolean(preview.generationSpecId)}
+          updating={
+            updatingDependencyId === reference.selectionControl?.dependencyId
+          }
+          onToggle={onReferenceToggle}
         />
       ))}
     </div>
@@ -250,10 +316,20 @@ function IssuesTab({ preview }: { preview: StudioGenerationPreview }) {
 function ReferenceCard({
   reference,
   index,
+  canEdit,
+  updating,
+  onToggle,
 }: {
   reference: StudioGenerationPreviewReference;
   index: number;
+  canEdit: boolean;
+  updating: boolean;
+  onToggle(reference: StudioGenerationPreviewReference): void;
 }) {
+  const canToggle =
+    canEdit &&
+    Boolean(reference.selectionControl?.editable) &&
+    !reference.selectionControl?.required;
   return (
     <article className='min-h-48 rounded-md border border-border/50 bg-card/60 p-3'>
       <div className='mb-3 flex items-start justify-between gap-2'>
@@ -265,9 +341,26 @@ function ReferenceCard({
             {reference.label}
           </h3>
         </div>
-        <Badge variant={reference.selected ? 'accent' : 'outline'}>
-          {reference.selected ? 'Included' : 'Excluded'}
-        </Badge>
+        <div className='flex shrink-0 items-center gap-2'>
+          <Badge variant={reference.selected ? 'accent' : 'outline'}>
+            {reference.selected ? 'Included' : 'Excluded'}
+          </Badge>
+          {canToggle ? (
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              disabled={updating}
+              onClick={() => onToggle(reference)}
+            >
+              {updating
+                ? 'Updating'
+                : reference.selected
+                  ? 'Exclude'
+                  : 'Include'}
+            </Button>
+          ) : null}
+        </div>
       </div>
       {reference.kind === 'image' && reference.browserUrl ? (
         <img
@@ -365,6 +458,7 @@ function headerSubjectLabels(
   createdAt: string | undefined
 ): string[] {
   return [
+    preview.subject.castMemberLabel,
     preview.subject.sceneLabel,
     preview.subject.takeLabel,
     preview.subject.shotLabel,
@@ -378,6 +472,8 @@ function purposeLabel(purpose: StudioGenerationPreview['purpose']): string {
       return 'Video Prompt Sheet';
     case 'shot.video-take':
       return 'Video Take';
+    case 'cast.character-sheet':
+      return 'Character Sheet';
   }
 }
 

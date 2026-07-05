@@ -78,6 +78,29 @@ export interface CastGenerationAssetFileReference {
   mimeType: string | null;
 }
 
+export type CastCharacterSheetReferenceRole =
+  | 'character-sheet-continuity'
+  | 'cast-reference-image';
+
+export interface CastCharacterSheetReferenceSelections {
+  dependencyInclusions: Record<string, 'include' | 'exclude'>;
+}
+
+export interface CastCharacterSheetReferenceOption {
+  dependencyId: string;
+  dependencyKind: 'cast-character-sheet' | 'cast-reference-image';
+  referenceRole: CastCharacterSheetReferenceRole;
+  label: string;
+  assetId: string;
+  assetFileId: string;
+  projectRelativePath: ProjectRelativePath;
+  mediaKind: 'image';
+  required: boolean;
+  defaultIncluded: boolean;
+  inclusionOverride: 'include' | 'exclude' | null;
+  included: boolean;
+}
+
 export interface CastGenerationLookbookContext {
   lookbook: Lookbook;
   cardImage: LookbookImage | null;
@@ -92,11 +115,13 @@ export interface CastCharacterSheetGenerationContext {
   castMember: CastMember;
   activeCastDesign: CastDesignSummary | null;
   timePeriod: CastGenerationTimePeriodContext;
-  activeLookbook: CastGenerationLookbookContext;
+  activeLookbook: CastGenerationLookbookContext | null;
   selectedAssets: Asset[];
   characterSheetTakes: Asset[];
   profileTakes: Asset[];
+  referenceImageAssets: Asset[];
   imageFiles: CastGenerationAssetFileReference[];
+  referenceOptions: CastCharacterSheetReferenceOption[];
   defaults: {
     takeCount: 1;
     seed: null;
@@ -156,6 +181,7 @@ export interface CastCharacterSheetGenerationSpec {
   target: CastMediaGenerationTarget;
   modelChoice: CastCharacterSheetModelChoice;
   prompt: string;
+  referenceSelections?: CastCharacterSheetReferenceSelections;
   takeCount?: number;
   seed?: number | null;
   imageFrame?: CastImageFrame;
@@ -204,6 +230,8 @@ export interface CastImageModelChoiceReport {
   available: boolean;
   unavailableReason?: string;
   supportsSeed: boolean;
+  supportsImageReferences: boolean;
+  maxImageReferences: number | null;
   requiresSourceAsset: boolean;
   takeCount: {
     min: 1;

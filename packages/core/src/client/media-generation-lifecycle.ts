@@ -90,6 +90,7 @@ export interface PreparedMediaGeneration {
       mediaKind: 'image' | 'audio' | 'video';
       mode:
         | 'text-to-image'
+        | 'reference-to-image'
         | 'image-edit'
         | 'text-to-speech'
         | 'text-to-video'

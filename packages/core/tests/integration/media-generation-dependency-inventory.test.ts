@@ -780,12 +780,18 @@ describe('media generation dependency inventory estimates integration', () => {
           kind: 'final-video-generation',
           pricing: { state: 'priced', estimatedUsd: 2.7216 },
         }),
+        expect.objectContaining({
+          dependencyLineId: `dependency:cast-character-sheet:${ids.castMemberId}`,
+          kind: 'dependency-generation',
+          pricing: { state: 'priced', estimatedUsd: 0.04 },
+          required: false,
+        }),
       ])
     );
     expect(estimate.plan?.estimate).toMatchObject({
       state: 'partial',
-      estimatedTotalUsd: 2.7216,
-      pricedLineCount: 3,
+      estimatedTotalUsd: 2.7616,
+      pricedLineCount: 4,
       missingLineCount: 0,
       requiresPriceOverride: true,
     });

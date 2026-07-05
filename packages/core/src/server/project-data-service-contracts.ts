@@ -153,6 +153,7 @@ import type {
   ProjectShell,
   ProductionExportInput,
   ProductionExportSummary,
+  ReferenceImageMediaImportReport,
   RegisterAssetInput,
   UpdateAssetReferenceInput,
   SceneNavigationRow,
@@ -163,6 +164,7 @@ import type {
   SceneShotListResource,
   GarbageCollectionPreview,
   GarbageCollectionReport,
+  GenerationPreviewRequest,
   RecoverableMutationReport,
   TrashListReport,
   VisualLanguageCommandReport,
@@ -270,6 +272,7 @@ export interface ProjectDataService {
     input: ResolveShotVideoTakeVideoFileInput
   ): Promise<ResolvedShotVideoTakeVideoFile>;
   registerAsset(input: RegisterAssetInput & RenkuConfigPathOptions): Promise<Asset>;
+  importReferenceImageMedia(input: ImportReferenceImageMediaInput): Promise<ReferenceImageMediaImportReport>;
   updateAssetReference(input: UpdateAssetReferenceInput & RenkuConfigPathOptions): Promise<Asset>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
   createAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
@@ -500,6 +503,8 @@ export interface ProjectDataService {
   listMediaGenerationSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  buildMediaGenerationPreview(input: BuildMediaGenerationPreviewInput): Promise<GenerationPreviewRequest>;
+  updateCastCharacterSheetReferenceInclusion(input: UpdateCastCharacterSheetReferenceInclusionInput): Promise<GenerationPreviewRequest>;
   estimateMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
@@ -1277,6 +1282,15 @@ export interface ReadMediaGenerationSpecInput extends RenkuConfigPathOptions {
   specId: string;
 }
 
+export interface BuildMediaGenerationPreviewInput
+  extends ReadMediaGenerationSpecInput {}
+
+export interface UpdateCastCharacterSheetReferenceInclusionInput
+  extends ReadMediaGenerationSpecInput {
+  dependencyId: string;
+  inclusion: 'include' | 'exclude' | null;
+}
+
 export interface RunMediaGenerationSpecInput
   extends ReadMediaGenerationSpecInput {
   approvalToken?: string;
@@ -1346,6 +1360,16 @@ export interface ImportCastMediaInput extends RenkuConfigPathOptions {
   referencePurpose?: string;
   receipt?: unknown;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface ImportReferenceImageMediaInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  target: AssetTarget;
+  sourceProjectRelativePath: string;
+  title?: string;
+  oneLineSummary?: string;
+  referenceName?: string;
+  referencePurpose?: string;
 }
 
 export interface LocationMediaGenerationContextInput extends RenkuConfigPathOptions {

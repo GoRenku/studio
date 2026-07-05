@@ -90,6 +90,60 @@ describe('media import command handlers', () => {
     });
   });
 
+  it('imports generic reference images through ProjectDataService', async () => {
+    const importReferenceImageMedia = vi.fn().mockResolvedValue({
+      valid: true,
+      purpose: 'reference.image',
+      project: { name: 'constantinople', id: 'project_test0001' },
+      target: { kind: 'castMember', castMemberId: 'cast_mehmed' },
+      imported: {
+        assetId: 'asset_helmet',
+        type: 'reference_image',
+        role: 'reference',
+        title: 'Helmet reference',
+        referenceName: 'battlefield-helmet',
+      },
+      resourceKeys: ['assets:castMember:cast_mehmed'],
+      warnings: [],
+    });
+
+    await expect(
+      mediaImportCommandHandler.run({
+        flags: {
+          purpose: 'reference.image',
+          target: 'cast:cast_mehmed',
+          source: 'research/helmet.jpg',
+          title: 'Helmet reference',
+          summary: 'Ottoman helmet construction reference.',
+          referenceName: 'battlefield-helmet',
+          referencePurpose: 'Battlefield helmet reference',
+        },
+        runtime: runtimeFixture({
+          homeDir,
+          projectDataService: {
+            importReferenceImageMedia,
+          },
+        }),
+      } as never),
+    ).resolves.toMatchObject({
+      purpose: 'reference.image',
+      imported: {
+        assetId: 'asset_helmet',
+      },
+    });
+
+    expect(importReferenceImageMedia).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'castMember', castMemberId: 'cast_mehmed' },
+      sourceProjectRelativePath: 'research/helmet.jpg',
+      title: 'Helmet reference',
+      oneLineSummary: 'Ottoman helmet construction reference.',
+      referenceName: 'battlefield-helmet',
+      referencePurpose: 'Battlefield helmet reference',
+    });
+  });
+
   it('requests Studio focus on the target take after final shot video import', async () => {
     const readSceneShotVideoTake = vi.fn().mockResolvedValue({
       takeId: 'take_source0001',

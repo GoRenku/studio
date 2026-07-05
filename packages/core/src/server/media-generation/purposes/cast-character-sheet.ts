@@ -1,10 +1,17 @@
 import type {
+  Asset,
   CastCharacterSheetGenerationContext,
+  CastCharacterSheetReferenceOption,
+  CastCharacterSheetReferenceSelections,
   CastCharacterSheetGenerationSpec,
+  CastImageDetail,
   CastCharacterSheetModelChoice,
   CastCharacterSheetModelListReport,
   CastImageModelChoiceReport,
   CastMediaImportReport,
+  GenerationPreviewConfigurationItem,
+  GenerationPreviewRequest,
+  MediaGenerationDependencySlot,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
@@ -44,6 +51,15 @@ import type {
   MediaGenerationDependencyDraftSpecInput,
 } from '../dependencies/dependency-draft-specs.js';
 import {
+  castCharacterSheetDependencyId,
+  castReferenceImageDependencyId,
+} from '../dependencies/dependency-identifiers.js';
+import {
+  castCharacterSheetDependencySlot,
+  castReferenceImageDependencySlot,
+} from '../dependencies/dependency-slot-definitions.js';
+import type { MediaGenerationDependencyDeclarationInput } from '../lifecycle/purpose-lifecycle-registry.js';
+import {
   buildScreenplayContext,
   buildTimePeriodContext,
   imageFileReferences,
@@ -52,9 +68,9 @@ import {
   mapNanoBananaResolution,
   mapPresetFrame,
   normalizeCastImageSpecControls,
+  readActiveLookbookContext,
   readCastAssetsByRole,
   readCastProjectContext,
-  requireActiveLookbookContext,
   requireCastMemberForContext,
   requireTakeCount,
   resolveCastGenerationOutputPaths,
@@ -71,6 +87,15 @@ const CHARACTER_SHEET_MODELS = new Set<string>([
   'fal-ai/nano-banana-2',
   'fal-ai/xai/grok-imagine-image',
 ]);
+
+const GROK_IMAGINE_MAX_REFERENCE_IMAGES = 3;
+
+interface CastCharacterSheetReferenceContext {
+  castMember: CastCharacterSheetGenerationContext['castMember'];
+  selectedAssets: Asset[];
+  characterSheetTakes: Asset[];
+  referenceImageAssets: Asset[];
+}
 
 export interface CastCharacterSheetProjectInput extends RenkuConfigPathOptions {
   projectName?: string;
@@ -91,6 +116,11 @@ export interface CastCharacterSheetSpecIdInput extends CastCharacterSheetProject
 
 export interface UpdateCastCharacterSheetSpecInput extends CastCharacterSheetSpecIdInput {
   spec: CastCharacterSheetGenerationSpec;
+}
+
+export interface UpdateCastCharacterSheetReferenceInclusionInput extends CastCharacterSheetSpecIdInput {
+  dependencyId: string;
+  inclusion: 'include' | 'exclude' | null;
 }
 
 export interface RunCastCharacterSheetSpecInput extends CastCharacterSheetSpecIdInput {
@@ -127,10 +157,16 @@ export async function buildCastCharacterSheetContext(
   const projectContext = await readCastProjectContext(input);
   return withCastProjectSession(input, ({ session, projectFolder }) => {
     const castMember = requireCastMemberForContext(session, input.castMemberId);
-    const activeLookbook = requireActiveLookbookContext(session);
+    const activeLookbook = readActiveLookbookContext(session);
     const activeCastDesign = readActiveCastDesignDocument(session, input.castMemberId);
     const assets = readCastAssetsByRole(session, input.castMemberId);
-    return {
+    const imageFiles = imageFileReferences(projectFolder, [
+      ...assets.selectedAssets,
+      ...assets.characterSheetTakes,
+      ...assets.profileTakes,
+      ...assets.referenceImageAssets,
+    ]);
+    const contextWithoutOptions = {
       purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
       target: { kind: 'castMember', id: input.castMemberId },
       project: projectContext,
@@ -147,11 +183,8 @@ export async function buildCastCharacterSheetContext(
       selectedAssets: assets.selectedAssets,
       characterSheetTakes: assets.characterSheetTakes,
       profileTakes: assets.profileTakes,
-      imageFiles: imageFileReferences(projectFolder, [
-        ...assets.selectedAssets,
-        ...assets.characterSheetTakes,
-        ...assets.profileTakes,
-      ]),
+      referenceImageAssets: assets.referenceImageAssets,
+      imageFiles,
       defaults: {
         takeCount: 1,
         seed: null,
@@ -163,6 +196,12 @@ export async function buildCastCharacterSheetContext(
       resourceKeys: studioResourceKeysForAssetTarget({
         kind: 'castMember',
         castMemberId: input.castMemberId,
+      }),
+    } satisfies Omit<CastCharacterSheetGenerationContext, 'referenceOptions'>;
+    return {
+      ...contextWithoutOptions,
+      referenceOptions: resolveCastCharacterSheetReferenceOptions({
+        context: contextWithoutOptions,
       }),
     };
   });
@@ -179,6 +218,66 @@ export async function listCastCharacterSheetModels(
   };
 }
 
+export async function declareCastCharacterSheetDependencies(
+  input: MediaGenerationDependencyDeclarationInput
+): Promise<MediaGenerationDependencySlot[]> {
+  if (input.target.kind !== 'castMember') {
+    throw new ProjectDataError(
+      'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+      `cast.character-sheet dependency planning requires a castMember target. Received: ${input.target.kind}.`
+    );
+  }
+  const context = await buildCastCharacterSheetReferenceContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    castMemberId: input.target.id,
+  });
+  return resolveCastCharacterSheetReferenceOptions({
+    context,
+    referenceSelections: referenceSelectionsFromDependencyRequest(input.request),
+  }).map((option) => {
+    const asset = findCastReferenceAsset(context, option.assetId);
+    const slot =
+      option.dependencyKind === 'cast-character-sheet'
+        ? castCharacterSheetDependencySlot({
+            castMemberId: context.castMember.id,
+            castMemberName: context.castMember.name,
+            assetId: option.assetId,
+            selectionPolicy: 'selected-only',
+            required: option.required,
+            reason: 'Optional continuity reference for the cast character sheet.',
+          })
+        : castReferenceImageDependencySlot({
+            castMemberId: context.castMember.id,
+            castMemberName: context.castMember.name,
+            assetId: option.assetId,
+            assetTitle: asset?.title,
+            required: option.required,
+            reason: 'Optional ad hoc visual reference for the cast character sheet.',
+          });
+    return {
+      ...slot,
+      label: option.label,
+      defaultIncluded: option.defaultIncluded,
+    };
+  });
+}
+
+async function buildCastCharacterSheetReferenceContext(
+  input: CastCharacterSheetTargetInput
+): Promise<CastCharacterSheetReferenceContext> {
+  return withCastProjectSession(input, ({ session }) => {
+    const castMember = requireCastMemberForContext(session, input.castMemberId);
+    const assets = readCastAssetsByRole(session, input.castMemberId);
+    return {
+      castMember,
+      selectedAssets: assets.selectedAssets,
+      characterSheetTakes: assets.characterSheetTakes,
+      referenceImageAssets: assets.referenceImageAssets,
+    };
+  });
+}
+
 export async function validateCastCharacterSheetSpec(input: {
   projectName?: string;
   homeDir?: string;
@@ -189,6 +288,10 @@ export async function validateCastCharacterSheetSpec(input: {
     projectName: input.projectName,
     homeDir: input.homeDir,
     castMemberId: normalized.target.id,
+  });
+  resolveCastCharacterSheetReferenceOptions({
+    context,
+    referenceSelections: normalized.referenceSelections,
   });
   const plan = buildCastCharacterSheetProviderPayload(normalized, context);
   return { valid: true, spec: normalized, providerPayload: plan.payload };
@@ -251,6 +354,129 @@ export async function listCastCharacterSheetSpecs(
       targetId: input.castMemberId,
     }),
   }));
+}
+
+export async function buildCastCharacterSheetGenerationPreview(
+  input: CastCharacterSheetSpecIdInput
+): Promise<GenerationPreviewRequest> {
+  const specRecord = await readCastCharacterSheetSpec(input);
+  assertCharacterSheetSpec(specRecord.spec);
+  const context = await buildCastCharacterSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    castMemberId: specRecord.spec.target.id,
+  });
+  const referenceOptions = resolveCastCharacterSheetReferenceOptions({
+    context,
+    referenceSelections: specRecord.spec.referenceSelections,
+  });
+  const plan = buildCastCharacterSheetProviderPayload(specRecord.spec, context);
+  return {
+    kind: 'generationPreview',
+    previewId: `generation-preview:${specRecord.id}`,
+    generationSpecId: specRecord.id,
+    purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+    project: {
+      id: context.project.id ?? context.project.name,
+      name: context.project.name,
+      title: context.project.title,
+    },
+    target: specRecord.target,
+    title: specRecord.title,
+    model: {
+      provider: plan.provider,
+      modelId: plan.model,
+      route: plan.model,
+      executionPath: 'renku-managed',
+      mediaKind: 'image',
+    },
+    finalPrompt: { text: specRecord.spec.prompt },
+    references: referenceOptions.map((reference) => ({
+      kind: 'image' as const,
+      role: reference.referenceRole,
+      label: reference.label,
+      providerToken: 'image_urls',
+      assetId: reference.assetId,
+      assetFileId: reference.assetFileId,
+      sourcePurpose:
+        reference.dependencyKind === 'cast-character-sheet'
+          ? CAST_CHARACTER_SHEET_GENERATION_PURPOSE
+          : undefined,
+      selected: reference.included,
+      selectionControl: {
+        dependencyId: reference.dependencyId,
+        required: reference.required,
+        defaultIncluded: reference.defaultIncluded,
+        inclusionOverride: reference.inclusionOverride,
+        editable: true,
+      },
+    })),
+    configuration: castCharacterSheetPreviewConfiguration(specRecord.spec, plan),
+    providerPreview: {
+      provider: plan.provider,
+      model: plan.model,
+      mode: plan.mode,
+      providerTokenOrder: referenceOptions
+        .filter((reference) => reference.included)
+        .map((reference) => reference.dependencyId),
+      payload: plan.payload,
+    },
+    diagnostics: [],
+  };
+}
+
+export async function updateCastCharacterSheetReferenceInclusion(
+  input: UpdateCastCharacterSheetReferenceInclusionInput
+): Promise<GenerationPreviewRequest> {
+  const specRecord = await readCastCharacterSheetSpec(input);
+  assertCharacterSheetSpec(specRecord.spec);
+  const context = await buildCastCharacterSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    castMemberId: specRecord.spec.target.id,
+  });
+  const referenceOptions = resolveCastCharacterSheetReferenceOptions({
+    context,
+    referenceSelections: specRecord.spec.referenceSelections,
+  });
+  if (!referenceOptions.some((option) => option.dependencyId === input.dependencyId)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA294',
+      `Cast character sheet reference dependency was not found: ${input.dependencyId}.`,
+      {
+        suggestion:
+          'Refresh the generation preview and choose one of the displayed reference dependencies.',
+      }
+    );
+  }
+  const nextInclusions = {
+    ...(specRecord.spec.referenceSelections?.dependencyInclusions ?? {}),
+  };
+  if (input.inclusion === null) {
+    delete nextInclusions[input.dependencyId];
+  } else {
+    nextInclusions[input.dependencyId] = input.inclusion;
+  }
+  const nextReferenceSelections =
+    Object.keys(nextInclusions).length > 0
+      ? { dependencyInclusions: nextInclusions }
+      : undefined;
+  const nextSpec = {
+    ...specRecord.spec,
+    ...(nextReferenceSelections
+      ? { referenceSelections: nextReferenceSelections }
+      : {}),
+  };
+  if (!nextReferenceSelections) {
+    delete (nextSpec as { referenceSelections?: unknown }).referenceSelections;
+  }
+  await updateCastCharacterSheetSpec({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    specId: input.specId,
+    spec: nextSpec,
+  });
+  return buildCastCharacterSheetGenerationPreview(input);
 }
 
 export async function prepareCastCharacterSheetSpec(
@@ -416,13 +642,14 @@ export function buildCastCharacterSheetProviderPayload(
   spec: CastCharacterSheetGenerationSpec,
   context: CastCharacterSheetGenerationContext
 ): CastProviderPlan {
+  const references = includedCastCharacterSheetReferences(spec, context);
   switch (spec.modelChoice) {
     case 'fal-ai/openai/gpt-image-2':
-      return buildGptImage2Payload(spec, context);
+      return buildGptImage2Payload(spec, context, references);
     case 'fal-ai/nano-banana-2':
-      return buildNanoBanana2Payload(spec, context);
+      return buildNanoBanana2Payload(spec, context, references);
     case 'fal-ai/xai/grok-imagine-image':
-      return buildGrokImaginePayload(spec, context);
+      return buildGrokImaginePayload(spec, context, references);
     default:
       throw unsupportedModel(spec.modelChoice);
   }
@@ -441,21 +668,44 @@ async function normalizeSpec(input: {
   }
   validateCastTarget(input.spec.target);
   assertModelChoice(input.spec.modelChoice);
-  const normalized = normalizeCastImageSpecControls(input.spec, 'project');
+  const controls = normalizeCastImageSpecControls(input.spec, 'project');
+  const referenceSelections = normalizeReferenceSelections(input.spec.referenceSelections);
+  const normalized: CastCharacterSheetGenerationSpec = {
+    ...controls,
+    ...(referenceSelections ? { referenceSelections } : {}),
+  };
   await withCastProjectSession(input, ({ session }) => {
     requireCastMemberForContext(session, normalized.target.id);
-    requireActiveLookbookContext(session);
   });
   return normalized;
 }
 
 function buildGptImage2Payload(
   spec: CastCharacterSheetGenerationSpec,
-  context: CastCharacterSheetGenerationContext
+  context: CastCharacterSheetGenerationContext,
+  references: CastCharacterSheetReferenceOption[]
 ): CastProviderPlan {
   const takeCount = requireTakeCount(spec, 4);
   if (spec.seed !== null && spec.seed !== undefined) {
     unsupported('GPT Image 2 does not support generation seed.');
+  }
+  if (references.length > 0) {
+    return {
+      provider: 'fal-ai',
+      model: 'openai/gpt-image-2/edit',
+      mode: 'reference-to-image',
+      outputCount: takeCount,
+      inputFiles: referenceInputFiles(references),
+      payload: {
+        prompt: spec.prompt,
+        image_urls: referenceLogicalInputs(references),
+        num_images: takeCount,
+        image_size: mapPresetFrame(resolveCastImageFrame(spec, context.project.aspectRatio)),
+        quality: mapGptQuality(spec.detail ?? 'standard'),
+        output_format: spec.outputFormat ?? 'png',
+        sync_mode: false,
+      },
+    };
   }
   return {
     provider: 'fal-ai',
@@ -475,9 +725,32 @@ function buildGptImage2Payload(
 
 function buildNanoBanana2Payload(
   spec: CastCharacterSheetGenerationSpec,
-  context: CastCharacterSheetGenerationContext
+  context: CastCharacterSheetGenerationContext,
+  references: CastCharacterSheetReferenceOption[]
 ): CastProviderPlan {
   const takeCount = requireTakeCount(spec, 4);
+  if (references.length > 0) {
+    return {
+      provider: 'fal-ai',
+      model: 'nano-banana-2/edit',
+      mode: 'reference-to-image',
+      outputCount: takeCount,
+      inputFiles: referenceInputFiles(references),
+      payload: {
+        prompt: spec.prompt,
+        image_urls: referenceLogicalInputs(references),
+        num_images: takeCount,
+        seed: spec.seed ?? null,
+        aspect_ratio: resolveCastImageFrame(spec, context.project.aspectRatio),
+        resolution: mapNanoBananaResolution(spec.detail ?? 'standard'),
+        output_format: spec.outputFormat ?? 'png',
+        safety_tolerance: '4',
+        limit_generations: true,
+        enable_web_search: false,
+        sync_mode: false,
+      },
+    };
+  }
   return {
     provider: 'fal-ai',
     model: 'nano-banana-2',
@@ -500,18 +773,35 @@ function buildNanoBanana2Payload(
 
 function buildGrokImaginePayload(
   spec: CastCharacterSheetGenerationSpec,
-  context: CastCharacterSheetGenerationContext
+  context: CastCharacterSheetGenerationContext,
+  references: CastCharacterSheetReferenceOption[]
 ): CastProviderPlan {
   const takeCount = requireTakeCount(spec, 4);
   if (spec.seed !== null && spec.seed !== undefined) {
     unsupported('Grok Imagine does not support generation seed.');
   }
-  if ((spec.detail ?? 'standard') !== 'standard') {
-    unsupported('Grok Imagine supports only standard detail.');
-  }
+  requireGrokImagineReferenceCount(references);
   const frame = resolveCastImageFrame(spec, context.project.aspectRatio);
   if (frame === '21:9') {
     unsupported('Grok Imagine does not support exact 21:9.');
+  }
+  if (references.length > 0) {
+    return {
+      provider: 'fal-ai',
+      model: grokImagineEditModel(spec.detail ?? 'standard'),
+      mode: 'reference-to-image',
+      outputCount: takeCount,
+      inputFiles: referenceInputFiles(references),
+      payload: {
+        prompt: spec.prompt,
+        image_urls: referenceLogicalInputs(references),
+        num_images: takeCount,
+        aspect_ratio: frame,
+        resolution: mapGrokImagineResolution(spec.detail ?? 'standard'),
+        output_format: spec.outputFormat ?? 'png',
+        sync_mode: false,
+      },
+    };
   }
   return {
     provider: 'fal-ai',
@@ -522,10 +812,284 @@ function buildGrokImaginePayload(
       prompt: spec.prompt,
       num_images: takeCount,
       aspect_ratio: frame,
+      resolution: mapGrokImagineResolution(spec.detail ?? 'standard'),
       output_format: spec.outputFormat ?? 'png',
       sync_mode: false,
     },
   };
+}
+
+function requireGrokImagineReferenceCount(
+  references: CastCharacterSheetReferenceOption[]
+): void {
+  if (references.length <= GROK_IMAGINE_MAX_REFERENCE_IMAGES) {
+    return;
+  }
+  throw new ProjectDataError(
+    'CORE_CAST_CHARACTER_SHEET_REFERENCE_LIMIT_EXCEEDED',
+    `Grok Imagine supports at most ${GROK_IMAGINE_MAX_REFERENCE_IMAGES} reference images for cast character sheets, but ${references.length} were resolved.`,
+    {
+      suggestion:
+        'Exclude some character sheet references, or use GPT Image 2 or Nano Banana 2 for larger reference sets.',
+    }
+  );
+}
+
+function grokImagineEditModel(detail: CastImageDetail): string {
+  return detail === 'high'
+    ? 'xai/grok-imagine-image/quality/edit'
+    : 'xai/grok-imagine-image/edit';
+}
+
+function mapGrokImagineResolution(detail: CastImageDetail): '1k' | '2k' {
+  return detail === 'high' ? '2k' : '1k';
+}
+
+function includedCastCharacterSheetReferences(
+  spec: CastCharacterSheetGenerationSpec,
+  context: CastCharacterSheetGenerationContext
+): CastCharacterSheetReferenceOption[] {
+  return resolveCastCharacterSheetReferenceOptions({
+    context,
+    referenceSelections: spec.referenceSelections,
+  }).filter((reference) => reference.included);
+}
+
+export function resolveCastCharacterSheetReferenceOptions(input: {
+  context: CastCharacterSheetReferenceContext;
+  referenceSelections?: CastCharacterSheetReferenceSelections;
+}): CastCharacterSheetReferenceOption[] {
+  const baseOptions = [
+    ...referenceOptionsForAssets({
+      context: input.context,
+      assets: characterSheetReferenceAssets(input.context),
+      dependencyKind: 'cast-character-sheet',
+      referenceRole: 'character-sheet-continuity',
+      defaultIncluded: true,
+    }),
+    ...referenceOptionsForAssets({
+      context: input.context,
+      assets: input.context.referenceImageAssets ?? [],
+      dependencyKind: 'cast-reference-image',
+      referenceRole: 'cast-reference-image',
+      defaultIncluded: false,
+    }),
+  ];
+  const byDependencyId = new Map(
+    baseOptions.map((option) => [option.dependencyId, option])
+  );
+  const selections = input.referenceSelections?.dependencyInclusions ?? {};
+  for (const dependencyId of Object.keys(selections)) {
+    if (!byDependencyId.has(dependencyId)) {
+      throw new ProjectDataError(
+        'PROJECT_DATA294',
+        `Cast character sheet reference dependency was not found: ${dependencyId}.`,
+        {
+          suggestion:
+            'Refresh the generation context and choose one of the available reference dependencies.',
+        }
+      );
+    }
+  }
+  return baseOptions.map((option) => {
+    const inclusionOverride = selections[option.dependencyId] ?? null;
+    return {
+      ...option,
+      inclusionOverride,
+      included:
+        option.required ||
+        inclusionOverride === 'include' ||
+        (inclusionOverride === null && option.defaultIncluded),
+    };
+  });
+}
+
+function referenceOptionsForAssets(input: {
+  context: CastCharacterSheetReferenceContext;
+  assets: Asset[];
+  dependencyKind: 'cast-character-sheet' | 'cast-reference-image';
+  referenceRole: CastCharacterSheetReferenceOption['referenceRole'];
+  defaultIncluded: boolean;
+}): CastCharacterSheetReferenceOption[] {
+  const options: CastCharacterSheetReferenceOption[] = [];
+  const seenAssetIds = new Set<string>();
+  for (const asset of input.assets) {
+    if (seenAssetIds.has(asset.assetId)) {
+      continue;
+    }
+    seenAssetIds.add(asset.assetId);
+    const file = primaryImageFile(asset);
+    if (!file) {
+      continue;
+    }
+    const dependencyId =
+      input.dependencyKind === 'cast-character-sheet'
+        ? castCharacterSheetDependencyId(input.context.castMember.id, asset.assetId)
+        : castReferenceImageDependencyId(input.context.castMember.id, asset.assetId);
+    options.push({
+      dependencyId,
+      dependencyKind: input.dependencyKind,
+      referenceRole: input.referenceRole,
+      label: assetReferenceLabel(asset),
+      assetId: asset.assetId,
+      assetFileId: file.id,
+      projectRelativePath: file.projectRelativePath,
+      mediaKind: 'image',
+      required: false,
+      defaultIncluded: input.defaultIncluded,
+      inclusionOverride: null,
+      included: input.defaultIncluded,
+    });
+  }
+  return options;
+}
+
+function characterSheetReferenceAssets(input: {
+  selectedAssets: Asset[];
+  characterSheetTakes: Asset[];
+}): Asset[] {
+  return dedupeAssetsById([
+    ...input.selectedAssets.filter(
+      (asset) => asset.role === 'character_sheet' && asset.mediaKind === 'image'
+    ),
+    ...input.characterSheetTakes.filter((asset) => asset.mediaKind === 'image'),
+  ]);
+}
+
+function dedupeAssetsById(assets: Asset[]): Asset[] {
+  const seen = new Set<string>();
+  const deduped: Asset[] = [];
+  for (const asset of assets) {
+    if (seen.has(asset.assetId)) {
+      continue;
+    }
+    seen.add(asset.assetId);
+    deduped.push(asset);
+  }
+  return deduped;
+}
+
+function primaryImageFile(asset: Asset): Asset['files'][number] | null {
+  return (
+    asset.files.find(
+      (file) => file.mediaKind === 'image' && file.role === 'primary'
+    ) ??
+    asset.files.find((file) => file.mediaKind === 'image') ??
+    null
+  );
+}
+
+function assetReferenceLabel(asset: Asset): string {
+  return asset.referenceName?.trim() || asset.title.trim() || asset.assetId;
+}
+
+function findCastReferenceAsset(
+  context: CastCharacterSheetReferenceContext,
+  assetId: string
+): Asset | null {
+  return (
+    [
+      ...context.selectedAssets,
+      ...context.characterSheetTakes,
+      ...context.referenceImageAssets,
+    ].find((asset) => asset.assetId === assetId) ?? null
+  );
+}
+
+function referenceInputFiles(
+  references: CastCharacterSheetReferenceOption[]
+): CastProviderPlan['inputFiles'] {
+  return references.map((reference) => ({
+    field: 'image_urls',
+    projectRelativePath: reference.projectRelativePath,
+    mediaKind: 'image' as const,
+    asArray: true,
+    required: false,
+  }));
+}
+
+function referenceLogicalInputs(
+  references: CastCharacterSheetReferenceOption[]
+): string[] {
+  return references.map(
+    (reference) => `renku-input://${encodeURI(reference.projectRelativePath)}`
+  );
+}
+
+function normalizeReferenceSelections(
+  value: CastCharacterSheetGenerationSpec['referenceSelections']
+): CastCharacterSheetReferenceSelections | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA294',
+      'Cast character sheet referenceSelections must be an object.'
+    );
+  }
+  const inclusions = value.dependencyInclusions;
+  if (!inclusions || typeof inclusions !== 'object' || Array.isArray(inclusions)) {
+    throw new ProjectDataError(
+      'PROJECT_DATA294',
+      'Cast character sheet referenceSelections.dependencyInclusions must be an object.'
+    );
+  }
+  const normalized: Record<string, 'include' | 'exclude'> = {};
+  for (const [dependencyId, inclusion] of Object.entries(inclusions)) {
+    if (!dependencyId.trim()) {
+      throw new ProjectDataError(
+        'PROJECT_DATA294',
+        'Cast character sheet reference dependency ids must be non-empty strings.'
+      );
+    }
+    if (inclusion !== 'include' && inclusion !== 'exclude') {
+      throw new ProjectDataError(
+        'PROJECT_DATA294',
+        `Unsupported cast character sheet reference inclusion: ${String(inclusion)}.`
+      );
+    }
+    normalized[dependencyId] = inclusion;
+  }
+  return Object.keys(normalized).length > 0
+    ? { dependencyInclusions: normalized }
+    : undefined;
+}
+
+function referenceSelectionsFromDependencyRequest(
+  request: { kind: string; [key: string]: unknown }
+): CastCharacterSheetReferenceSelections | undefined {
+  const spec = request.spec;
+  if (
+    request.kind !== 'media-generation-spec' ||
+    !spec ||
+    typeof spec !== 'object' ||
+    Array.isArray(spec) ||
+    (spec as { purpose?: unknown }).purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE
+  ) {
+    return undefined;
+  }
+  return normalizeReferenceSelections(
+    (spec as CastCharacterSheetGenerationSpec).referenceSelections
+  );
+}
+
+function castCharacterSheetPreviewConfiguration(
+  spec: CastCharacterSheetGenerationSpec,
+  plan: CastProviderPlan
+): GenerationPreviewConfigurationItem[] {
+  return [
+    { key: 'mode', label: 'Mode', value: plan.mode },
+    { key: 'model', label: 'Model', value: plan.model },
+    { key: 'takeCount', label: 'Takes', value: spec.takeCount ?? 1 },
+    { key: 'imageFrame', label: 'Frame', value: spec.imageFrame ?? 'project' },
+    { key: 'detail', label: 'Detail', value: spec.detail ?? 'standard' },
+    {
+      key: 'outputFormat',
+      label: 'Output format',
+      value: spec.outputFormat ?? 'png',
+    },
+  ];
 }
 
 function modelChoices(
@@ -546,6 +1110,8 @@ function modelChoices(
       supportedFrames: ['project', '1:1', '3:4', '4:3', '16:9', '9:16'],
       supportedDetails: ['draft', 'standard', 'high'],
       supportedOutputFormats: ['png', 'jpeg', 'webp'],
+      supportsImageReferences: true,
+      maxImageReferences: null,
     },
     {
       modelChoice: 'fal-ai/nano-banana-2',
@@ -557,6 +1123,8 @@ function modelChoices(
       supportedFrames: ['project', '1:1', '3:4', '4:3', '16:9', '9:16', '21:9'],
       supportedDetails: ['draft', 'standard', 'high'],
       supportedOutputFormats: ['png', 'jpeg', 'webp'],
+      supportsImageReferences: true,
+      maxImageReferences: null,
     },
     {
       modelChoice: 'fal-ai/xai/grok-imagine-image',
@@ -569,8 +1137,10 @@ function modelChoices(
       requiresSourceAsset: false,
       takeCount: { min: 1, max: 4, default: 1 },
       supportedFrames: ['project', '1:1', '3:4', '4:3', '16:9', '9:16'],
-      supportedDetails: ['standard'],
+      supportedDetails: ['draft', 'standard', 'high'],
       supportedOutputFormats: ['png', 'jpeg', 'webp'],
+      supportsImageReferences: true,
+      maxImageReferences: GROK_IMAGINE_MAX_REFERENCE_IMAGES,
     },
   ];
 }

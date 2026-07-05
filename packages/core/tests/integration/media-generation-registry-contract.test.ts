@@ -169,6 +169,13 @@ describe('media generation purpose registry contract', () => {
         generationPurpose: 'cast.character-sheet',
       },
       {
+        dependencyKind: 'cast-reference-image',
+        mediaKind: 'image',
+        cardinality: 'one',
+        assetSelector: 'cast-reference-image',
+        missingInputBehavior: 'require-attachment',
+      },
+      {
         dependencyKind: 'location-environment-sheet',
         mediaKind: 'image',
         cardinality: 'one',

@@ -10,16 +10,23 @@ import { listMediaImportPurposeHandlers } from './media-import-command-handlers.
 const commandDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('CLI command architecture', () => {
-  it('keeps media import purpose handlers aligned with generation purposes', () => {
+  it('keeps generated media and explicit reference media importable', () => {
     const nonImportPurposes = new Set([
       'cast.voice-sample',
       'scene.dialogue-audio',
     ]);
-    expect(listMediaImportPurposeHandlers().map((handler) => handler.purpose)).toEqual([
+    const explicitReferenceImportPurposes = ['reference.image'];
+    const expectedPurposes = [
       ...SUPPORTED_GENERATION_PURPOSES.filter(
         (purpose) => !nonImportPurposes.has(purpose)
       ),
-    ]);
+      ...explicitReferenceImportPurposes,
+    ];
+    const actualPurposes = listMediaImportPurposeHandlers().map(
+      (handler) => handler.purpose
+    );
+    expect(new Set(actualPurposes)).toEqual(new Set(expectedPurposes));
+    expect(actualPurposes).toHaveLength(expectedPurposes.length);
   });
 
   it('keeps generation command paths unique in one handler registry', () => {

@@ -67,7 +67,7 @@ export interface CastImageTargetInput extends CastImageProjectInput {
 export interface CastProviderPlan {
   provider: 'fal-ai';
   model: string;
-  mode: 'text-to-image' | 'image-edit';
+  mode: 'text-to-image' | 'reference-to-image' | 'image-edit';
   payload: Record<string, unknown>;
   outputCount: number;
   inputFiles?: PreparedMediaGeneration['generation']['request']['inputFiles'];
@@ -285,6 +285,7 @@ export function readCastAssetsByRole(
   selectedCharacterSheets: Asset[];
   characterSheetTakes: Asset[];
   profileTakes: Asset[];
+  referenceImageAssets: Asset[];
 } {
   const target = { kind: 'castMember' as const, castMemberId };
   const selectedAssets = listAssetRelationshipPage(session, {
@@ -309,6 +310,11 @@ export function readCastAssetsByRole(
       selection: 'take',
       limit: 200,
     }).items,
+    referenceImageAssets: listAssetRelationshipPage(session, {
+      target,
+      role: 'reference',
+      limit: 200,
+    }).items.filter((asset) => asset.mediaKind === 'image'),
   };
 }
 

@@ -14,6 +14,7 @@ export type {
   AssetReference,
   AssetSelection,
   AssetTarget,
+  ReferenceImageMediaImportReport,
   RegisterAssetInput,
   UpdateAssetReferenceInput,
 } from './assets.js';
@@ -86,6 +87,9 @@ export type * from './scene-audio-generation.js';
 export type * from './scene-storyboard-media-generation.js';
 export type * from './shot-video-take.js';
 export type * from './generation-preview.js';
+export {
+  REFERENCE_IMAGE_MEDIA_PURPOSE,
+} from './assets.js';
 export {
   sceneShotVideoTakeDirectionHasPromptFields,
   sceneShotVideoTakeDirectionHasShotProjectionFields,

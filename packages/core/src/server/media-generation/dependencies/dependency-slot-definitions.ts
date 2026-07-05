@@ -6,6 +6,7 @@ import type {
 } from '../../../client/index.js';
 import {
   castCharacterSheetDependencyId,
+  castReferenceImageDependencyId,
   locationEnvironmentSheetDependencyId,
   lookbookSheetDependencyId,
   shotVideoInputDependencyId,
@@ -31,6 +32,35 @@ export function castCharacterSheetDependencySlot(input: {
       role: 'character_sheet',
       mediaKind: 'image',
       selectionPolicy: input.selectionPolicy,
+    },
+    required: input.required,
+    reason: input.reason,
+  };
+}
+
+export function castReferenceImageDependencySlot(input: {
+  castMemberId: string;
+  castMemberName: string;
+  assetId: string;
+  assetTitle?: string;
+  required: boolean;
+  reason: string;
+}): MediaGenerationDependencySlot {
+  return {
+    dependencyId: castReferenceImageDependencyId(input.castMemberId, input.assetId),
+    dependencyKind: 'cast-reference-image',
+    label: input.assetTitle
+      ? `${input.castMemberName} Reference: ${input.assetTitle}`
+      : `${input.castMemberName} reference image`,
+    dependencyTarget: { kind: 'castMember', id: input.castMemberId },
+    selector: {
+      kind: 'asset-relationship',
+      target: { kind: 'castMember', castMemberId: input.castMemberId },
+      assetId: input.assetId,
+      role: 'reference',
+      mediaKind: 'image',
+      fileRole: 'primary',
+      selectionPolicy: 'selected-only',
     },
     required: input.required,
     reason: input.reason,

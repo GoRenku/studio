@@ -4,12 +4,15 @@ import type {
   GenerationPreviewRequestReference,
   ProjectRelativePath,
   SceneShot,
+  SceneShotVideoTakeTarget,
   StudioGenerationPreviewSubject,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { resolveProjectAssetFileById } from '../resources/assets.js';
 import { buildShotVideoTakeContext } from '../media-generation/purposes/shot-video-take/authoring/context.js';
 import { sameShotIds } from '../media-generation/purposes/shot-video-take/authoring/take-context.js';
+import { withMediaGenerationProjectSession } from '../media-generation/lifecycle/project-session.js';
 
 export interface GenerationPreviewReferenceFileAccess {
   assetId: string;
@@ -50,6 +53,21 @@ export async function buildGenerationPreviewSubject(input: {
   const projectLabel =
     meaningfulLabel(input.preview.project.title, input.preview.project.id) ??
     input.preview.project.name;
+  if (input.preview.target.kind === 'castMember') {
+    const castMember = await readPreviewCastMember({
+      projectName: input.projectName ?? input.preview.project.name,
+      homeDir: input.homeDir,
+      castMemberId: input.preview.target.id,
+    });
+    return {
+      projectLabel,
+      ...optionalLabel(
+        'castMemberLabel',
+        meaningfulLabel(castMember.name, castMember.id) ?? castMember.handle
+      ),
+    };
+  }
+
   if (input.preview.target.kind !== 'sceneShotVideoTake') {
     return { projectLabel };
   }
@@ -59,7 +77,7 @@ export async function buildGenerationPreviewSubject(input: {
     homeDir: input.homeDir,
     takeId: input.preview.target.takeId,
   });
-  validateSubjectTarget(input.preview, context.target);
+  validateSubjectTarget(input.preview.target, context.target);
 
   return {
     projectLabel:
@@ -77,6 +95,27 @@ export async function buildGenerationPreviewSubject(input: {
       shotOrderLabel(context.displayShots, input.preview.target.shotIds)
     ),
   };
+}
+
+async function readPreviewCastMember(input: {
+  projectName: string;
+  homeDir?: string;
+  castMemberId: string;
+}): Promise<{ id: string; name: string; handle: string }> {
+  return withMediaGenerationProjectSession(input, ({ session }) => {
+    const castMember = readCastMemberRecord(session, input.castMemberId);
+    if (!castMember) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_PREVIEW_TARGET_NOT_FOUND',
+        `Generation preview cast member was not found: ${input.castMemberId}.`
+      );
+    }
+    return {
+      id: castMember.id,
+      name: castMember.name,
+      handle: castMember.handle,
+    };
+  });
 }
 
 async function resolvePreviewReferenceFile(input: {
@@ -205,13 +244,13 @@ function previewReferenceErrorMapping(code: string):
 }
 
 function validateSubjectTarget(
-  preview: GenerationPreviewRequest,
-  target: GenerationPreviewRequest['target']
+  previewTarget: SceneShotVideoTakeTarget,
+  target: SceneShotVideoTakeTarget
 ): void {
   if (
-    preview.target.sceneId !== target.sceneId ||
-    preview.target.takeId !== target.takeId ||
-    !sameShotIds(preview.target.shotIds, target.shotIds)
+    previewTarget.sceneId !== target.sceneId ||
+    previewTarget.takeId !== target.takeId ||
+    !sameShotIds(previewTarget.shotIds, target.shotIds)
   ) {
     throw new ProjectDataError(
       'CORE_GENERATION_PREVIEW_TARGET_STALE',

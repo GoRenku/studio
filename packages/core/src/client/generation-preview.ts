@@ -1,6 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { GenerationCostEstimate } from '@gorenku/studio-engines';
-import type { SceneShotVideoTakeTarget } from './media-generation-target.js';
+import type { MediaGenerationTarget } from './media-generation-target.js';
 import type {
   VideoPromptSheetNotationModeId,
   VideoPromptSheetVisualStyleId,
@@ -8,18 +8,20 @@ import type {
 
 export type GenerationPreviewPurpose =
   | 'shot.video-prompt-sheet'
-  | 'shot.video-take';
+  | 'shot.video-take'
+  | 'cast.character-sheet';
 
 export interface GenerationPreviewRequest {
   kind: 'generationPreview';
   previewId: string;
+  generationSpecId?: string;
   purpose: GenerationPreviewPurpose;
   project: {
     id: string;
     name: string;
     title?: string;
   };
-  target: SceneShotVideoTakeTarget;
+  target: MediaGenerationTarget;
   title: string;
   model: GenerationPreviewModel;
   promptSheetVisualStyleId?: VideoPromptSheetVisualStyleId;
@@ -43,6 +45,7 @@ export interface StudioGenerationPreviewSubject {
   sceneLabel?: string;
   takeLabel?: string;
   shotLabel?: string;
+  castMemberLabel?: string;
 }
 
 export interface GenerationPreviewModel {
@@ -68,6 +71,7 @@ export type GenerationPreviewRequestReference =
       assetFileId: string;
       sourcePurpose?: string;
       selected: boolean;
+      selectionControl?: GenerationPreviewReferenceSelectionControl;
     }
   | {
       kind: 'audio';
@@ -78,6 +82,7 @@ export type GenerationPreviewRequestReference =
       assetFileId: string;
       dialogueId?: string;
       selected: boolean;
+      selectionControl?: GenerationPreviewReferenceSelectionControl;
     }
   | {
       kind: 'video';
@@ -87,7 +92,16 @@ export type GenerationPreviewRequestReference =
       assetId: string;
       assetFileId: string;
       selected: boolean;
+      selectionControl?: GenerationPreviewReferenceSelectionControl;
     };
+
+export interface GenerationPreviewReferenceSelectionControl {
+  dependencyId: string;
+  required: boolean;
+  defaultIncluded: boolean;
+  inclusionOverride: 'include' | 'exclude' | null;
+  editable: boolean;
+}
 
 export type StudioGenerationPreviewReference =
   GenerationPreviewRequestReference & {

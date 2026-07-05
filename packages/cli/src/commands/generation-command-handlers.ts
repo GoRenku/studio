@@ -164,9 +164,7 @@ async function runInputList(input: GenerationCommandInput): Promise<unknown> {
 }
 
 async function runPreviewShow(input: GenerationCommandInput): Promise<unknown> {
-  const preview = validateGenerationPreviewRequest(
-    await readJsonFile(requiredFlag(input.flags.file, '--file'))
-  );
+  const preview = await readPreviewShowRequest(input);
   const project = await input.runtime.projectDataService.readProject({
     projectName: preview.project.name,
     homeDir: input.runtime.homeDir,
@@ -212,6 +210,29 @@ async function runPreviewShow(input: GenerationCommandInput): Promise<unknown> {
       delivery: 'delivered',
     },
   };
+}
+
+async function readPreviewShowRequest(input: GenerationCommandInput) {
+  if (input.flags.file && input.flags.spec) {
+    throw new StructuredError({
+      code: 'CLI145',
+      message: 'generation preview show accepts either --file or --spec, not both.',
+      suggestion:
+        'Use --file for a preview JSON payload or --spec for a saved media generation spec.',
+    });
+  }
+  if (input.flags.spec) {
+    return validateGenerationPreviewRequest(
+      await input.runtime.projectDataService.buildMediaGenerationPreview({
+        projectName: input.runtime.projectName,
+        homeDir: input.runtime.homeDir,
+        specId: input.flags.spec,
+      })
+    );
+  }
+  return validateGenerationPreviewRequest(
+    await readJsonFile(requiredFlag(input.flags.file, '--file'))
+  );
 }
 
 async function runInputSelect(input: GenerationCommandInput): Promise<unknown> {

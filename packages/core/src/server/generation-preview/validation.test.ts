@@ -70,6 +70,54 @@ describe('generation preview validation', () => {
     );
   });
 
+  it('accepts reference selection controls with the current field shape', () => {
+    const preview = previewFixture();
+    (preview.references[0] as Record<string, unknown>).selectionControl = {
+      dependencyId: 'reference-image:shot:shot_test0001',
+      required: false,
+      defaultIncluded: true,
+      editable: true,
+      inclusionOverride: null,
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).not.toThrow();
+  });
+
+  it('rejects unsupported reference selection control fields', () => {
+    const preview = previewFixture();
+    (preview.references[0] as Record<string, unknown>).selectionControl = {
+      dependencyId: 'reference-image:shot:shot_test0001',
+      required: false,
+      defaultIncluded: true,
+      editable: true,
+      inclusionOverride: null,
+      localPreviewPath: 'asset-file-preview',
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+      })
+    );
+  });
+
+  it('rejects local paths inside reference selection controls', () => {
+    const preview = previewFixture();
+    (preview.references[0] as Record<string, unknown>).selectionControl = {
+      dependencyId: '/Users/me/secret.png',
+      required: false,
+      defaultIncluded: true,
+      editable: true,
+      inclusionOverride: null,
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+      })
+    );
+  });
+
   it('accepts Studio display previews with subject labels and resolved browser URLs', () => {
     expect(validateStudioGenerationPreview(studioPreviewFixture())).toMatchObject({
       subject: {

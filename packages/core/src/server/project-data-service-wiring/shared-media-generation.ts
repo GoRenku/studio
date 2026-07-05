@@ -17,6 +17,9 @@ export function createSharedMediaGenerationServiceWiring() {
     listMediaGenerationSpecs: specGeneration.listMediaGenerationSpecs,
     prepareMediaGenerationSpec: specGeneration.prepareMediaGenerationSpec,
     prepareDraftMediaGenerationSpec: specGeneration.prepareDraftMediaGenerationSpec,
+    buildMediaGenerationPreview: specGeneration.buildMediaGenerationPreview,
+    updateCastCharacterSheetReferenceInclusion:
+      specGeneration.updateCastCharacterSheetReferenceInclusion,
     estimateMediaGenerationSpec: lifecycleEstimation.estimateMediaGenerationSpec,
     estimateDraftMediaGenerationSpec: costEstimation.estimateDraftMediaGenerationSpec,
     planMediaGenerationDependencies:

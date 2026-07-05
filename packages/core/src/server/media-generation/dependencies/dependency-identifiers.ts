@@ -60,6 +60,13 @@ export function castCharacterSheetDependencyId(
     : `cast-character-sheet:${castMemberId}`;
 }
 
+export function castReferenceImageDependencyId(
+  castMemberId: string,
+  assetId: string
+): string {
+  return `cast-reference-image:${castMemberId}:${assetId}`;
+}
+
 export function locationEnvironmentSheetDependencyId(
   locationId: string,
   assetId?: string
