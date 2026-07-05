@@ -442,6 +442,14 @@ Responsive grid layout for media cards:
 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5
 ```
 
+### Media Selection Controls
+
+Use the shared circular `ImageSelectionControl` for include/exclude or pick/clear
+actions on visual media cards. The control may be disabled or marked busy while a
+selection mutation is in flight; in that state it keeps the same circular visual
+shape, prevents duplicate clicks, and exposes an updating label to assistive
+technology.
+
 ### Forms
 
 **Inputs**: `h-9 border-input bg-transparent shadow-sm`, focus: `ring-1 ring-ring`

@@ -13,6 +13,8 @@ interface ImageSelectionControlProps {
   selected: boolean;
   selectedLabel: string;
   unselectedLabel: string;
+  disabled?: boolean;
+  busy?: boolean;
   onToggleSelected: () => Promise<void>;
 }
 
@@ -20,9 +22,11 @@ export function ImageSelectionControl({
   selected,
   selectedLabel,
   unselectedLabel,
+  disabled = false,
+  busy = false,
   onToggleSelected,
 }: ImageSelectionControlProps) {
-  const label = selected ? selectedLabel : unselectedLabel;
+  const label = busy ? 'Updating reference selection' : selected ? selectedLabel : unselectedLabel;
 
   return (
     <Tooltip>
@@ -38,6 +42,7 @@ export function ImageSelectionControl({
           }
           aria-label={label}
           aria-pressed={selected}
+          disabled={disabled || busy}
           onClick={(event) => {
             const button = event.currentTarget;
             void onToggleSelected().finally(() => button.blur());

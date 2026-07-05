@@ -301,6 +301,15 @@ provider token), never local absolute paths or provider upload URLs. Subsequent
 feedback should revise the same `previewId` so the open dialog updates in
 place.
 
+The visible Studio dialog is a user review surface, not a provider debug view.
+It should show the final prompt as readable prose, resolved reference media,
+configuration items that Core includes in `preview.configuration`, estimate
+information when present, and Core diagnostics only when diagnostics exist. It
+must not require the user-facing dialog to show provider token tables, provider
+token order, raw provider payload JSON, role cells, token cells, or an empty
+Issues success state. Those lower-level fields may remain available in the
+preview contract for CLI, agent, and developer workflows.
+
 When an agent authors `shot.video-prompt-sheet` as a dependency draft for a
 Shot Video Take, the runnable draft spec must carry through both
 `promptSheetVisualStyleId` and `promptSheetNotationModeId`. Missing dependency

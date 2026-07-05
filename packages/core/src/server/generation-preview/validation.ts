@@ -144,7 +144,7 @@ function validateGenerationPreviewEnvelope(
   requireNonEmptyString(preview, 'title', ['title'], options.context, issues);
   validateModel(preview.model, options.context, issues);
   validatePrompt(preview.finalPrompt, options.context, issues);
-  validateReferences(preview.references, options, issues);
+  validateReferences(preview.references, preview.purpose, options, issues);
   validateConfiguration(preview.configuration, options.context, issues);
   validateProviderPreview(preview.providerPreview, options.context, issues);
   validateSubject(preview.subject, options, issues);
@@ -391,6 +391,7 @@ function validatePrompt(
 
 function validateReferences(
   value: unknown,
+  purpose: unknown,
   options: {
     context: string;
     allowBrowserUrl: boolean;
@@ -408,13 +409,14 @@ function validateReferences(
     return;
   }
   value.forEach((reference, index) => {
-    validateReference(reference, index, options, issues);
+    validateReference(reference, index, purpose, options, issues);
   });
 }
 
 function validateReference(
   value: unknown,
   index: number,
+  purpose: unknown,
   options: {
     context: string;
     allowBrowserUrl: boolean;
@@ -460,6 +462,20 @@ function validateReference(
         'CORE_GENERATION_PREVIEW_REFERENCE_KIND_INVALID',
         'Generation preview reference kind must be image, audio, or video.',
         { path: [...path, 'kind'], context: options.context }
+      )
+    );
+  }
+  if (
+    purpose === CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
+    reference.kind !== undefined &&
+    reference.kind !== 'image'
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_REFERENCE_KIND_UNSUPPORTED',
+        'Cast character sheet generation preview references must be image references.',
+        { path: [...path, 'kind'], context: options.context },
+        'Use image reference assets for character sheet previews.'
       )
     );
   }

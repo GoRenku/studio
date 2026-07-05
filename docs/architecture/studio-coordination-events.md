@@ -35,10 +35,15 @@ information and project library refresh cases.
 
 Generation previews use `studio.generationPreviewRequested`. This event opens or
 updates the read-only Generation Preview Dialog with the exact prompt, model,
-resolved references, provider token order, configuration, diagnostics, and
+resolved references, provider preview data, configuration, diagnostics, and
 prompt-sheet metadata that an agent is about to submit. The CLI/agent request
 uses logical project references only; the Studio server resolves those
-references into Studio-safe browser URLs before appending the event. It is live
+references into Studio-safe browser URLs before appending the event. The
+user-facing dialog intentionally renders only the review surface users need:
+prompt prose, resolved references, user-relevant configuration, cost estimate
+when present, and diagnostics when Core reports them. Low-level provider payloads
+and provider token order can remain in the event contract for CLI, agent, and
+future developer tooling without being visible in the Studio dialog. It is live
 UI coordination only: closed Studio sessions do not accumulate preview backlogs,
 and project services must not treat preview events as generation history.
 

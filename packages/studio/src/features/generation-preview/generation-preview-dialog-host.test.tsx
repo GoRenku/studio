@@ -1,69 +1,230 @@
 // @vitest-environment jsdom
 import React from 'react';
+import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationPreviewDialogHost } from './generation-preview-dialog-host';
 
 describe('GenerationPreviewDialogHost', () => {
-  it('opens, updates in place, preserves the selected tab, and reopens after dismissal', async () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    window.__RENKU_STUDIO_BOOTSTRAP__ = {
+      studioApiToken: 'studio-token-test',
+    };
+  });
+
+  it('renders the redesigned prompt surface without the old debug chrome', async () => {
     render(<GenerationPreviewDialogHost />);
 
-    await dispatchPreview(previewFixture({ title: 'Prompt Sheet A' }), {
-      eventId: 'studio_event_001',
-      createdAt: '2026-07-02T10:00:00.000Z',
-    });
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-prompt-sheet',
+        title: 'Prompt Sheet A',
+        providerPreview: {
+          provider: 'fal-ai',
+          model: 'fal-ai/openai/gpt-image-2',
+          providerTokenOrder: ['@Reference1'],
+          payload: {
+            prompt: 'provider payload prompt',
+            image_url: 'provider-upload-url',
+          },
+        },
+      })
+    );
 
-    expect(await screen.findByText('Prompt Sheet A')).toBeTruthy();
-    expect(screen.getByText('Preparation of the Siege')).toBeTruthy();
-    expect(screen.getByText('Opening council')).toBeTruthy();
-    expect(screen.getByText('Take 1')).toBeTruthy();
-    expect(screen.getByText('Shot 1')).toBeTruthy();
-    expect(screen.queryByText('scene_test0001')).toBeNull();
-    expect(screen.queryByText('take_test0001')).toBeNull();
-    expect(screen.queryByText('shot_test0001')).toBeNull();
-    expect(screen.getByText('Visual Style')).toBeTruthy();
-    expect(screen.getByText('motion-annotation')).toBeTruthy();
+    expect(
+      await screen.findByText('Shot Prompt Sheet Generation Preview')
+    ).toBeTruthy();
+    expect(screen.getByText('Create a motion annotated video prompt image.')).toBeTruthy();
+    expect(screen.queryByText('Prompt Sheet A')).toBeNull();
+    expect(screen.queryByText('Preparation of the Siege')).toBeNull();
+    expect(screen.queryByText('Opening council')).toBeNull();
+    expect(screen.queryByText('Take 1')).toBeNull();
+    expect(screen.queryByText('Shot 1')).toBeNull();
+    expect(screen.queryByText('fal-ai')).toBeNull();
+    expect(screen.queryByText('fal-ai/openai/gpt-image-2')).toBeNull();
+    expect(screen.queryByText('Provider Tokens')).toBeNull();
+    expect(screen.queryByText('Provider Payload')).toBeNull();
+    expect(screen.queryByText('@Reference1')).toBeNull();
+    expect(screen.queryByText('provider-upload-url')).toBeNull();
+    expect(screen.queryByText('No Issues')).toBeNull();
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Prompt',
+      'References',
+      'Config',
+    ]);
+    expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
+  });
+
+  it('maps every preview purpose to the exact visible dialog title', async () => {
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'cast.character-sheet',
+        title: 'Cast Preview',
+      })
+    );
+    expect(
+      await screen.findByText('Character Sheet Generation Preview')
+    ).toBeTruthy();
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-prompt-sheet',
+        title: 'Prompt Sheet Preview',
+      })
+    );
+    expect(
+      await screen.findByText('Shot Prompt Sheet Generation Preview')
+    ).toBeTruthy();
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-take',
+        title: 'Video Take Preview',
+      })
+    );
+    expect(await screen.findByText('Shot Video Generation Preview')).toBeTruthy();
+  });
+
+  it('renders references and config without role, token, or payload fields', async () => {
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-prompt-sheet',
+        title: 'Prompt Sheet A',
+        referenceLabel: 'Storyboard Lookbook Sheet',
+      })
+    );
+
     await act(async () => {
       selectTab('References');
     });
+
     expect(await screen.findByText('Storyboard Lookbook Sheet')).toBeTruthy();
     expect(screen.getByAltText('Storyboard Lookbook Sheet').getAttribute('src')).toBe(
       '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style'
     );
+    expect(screen.queryByText('Role')).toBeNull();
+    expect(screen.queryByText('Token')).toBeNull();
+    expect(screen.queryByText('Included')).toBeNull();
+    expect(screen.queryByText('Excluded')).toBeNull();
+    expect(screen.queryByText('IMAGE 1')).toBeNull();
+
+    await act(async () => {
+      selectTab('Config');
+    });
+
+    expect(await screen.findByText('Image size')).toBeTruthy();
+    expect(screen.getByText('1024x768')).toBeTruthy();
+    expect(screen.queryByText('Provider')).toBeNull();
+    expect(screen.queryByText('Route')).toBeNull();
+    expect(screen.queryByText('Execution path')).toBeNull();
+    expect(screen.queryByText('Provider Payload')).toBeNull();
+  });
+
+  it('renders Core diagnostics as a banner without an Issues tab', async () => {
+    render(<GenerationPreviewDialogHost />);
 
     await dispatchPreview(
       previewFixture({
-        title: 'Prompt Sheet B',
-        referenceLabel: 'Revised Storyboard Lookbook Sheet',
-      }),
-      {
-        eventId: 'studio_event_002',
-        createdAt: '2026-07-02T10:01:00.000Z',
-      }
+        purpose: 'shot.video-take',
+        title: 'Video Take Preview',
+        diagnostics: [
+          {
+            severity: 'warning',
+            code: 'GENERATION_PREVIEW_TEST',
+            message: 'The preview includes a warning from Core.',
+            suggestion: 'Review the warning before generating.',
+          },
+        ],
+      })
     );
 
-    expect(await screen.findByText('Prompt Sheet B')).toBeTruthy();
-    expect(screen.getByText('Revision 2')).toBeTruthy();
-    expect(screen.getByText('Revised Storyboard Lookbook Sheet')).toBeTruthy();
+    expect(
+      await screen.findByText('Shot Video Generation Preview')
+    ).toBeTruthy();
+    expect(screen.getByText('Generation Preview Notes')).toBeTruthy();
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('GENERATION_PREVIEW_TEST');
+    expect(alert.textContent).toContain('The preview includes a warning from Core.');
+    expect(alert.textContent).toContain('Review the warning before generating.');
+    expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
+    expect(screen.queryByText('No Issues')).toBeNull();
+  });
+
+  it('updates editable reference inclusion and keeps later previews reopenable', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        preview: previewFixture({
+          purpose: 'cast.character-sheet',
+          title: 'Character Sheet Preview',
+          referenceLabel: 'Storyboard Lookbook Sheet',
+          selected: false,
+          editableReference: true,
+        }),
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'cast.character-sheet',
+        title: 'Character Sheet Preview',
+        referenceLabel: 'Storyboard Lookbook Sheet',
+        selected: true,
+        editableReference: true,
+      })
+    );
+
+    await act(async () => {
+      selectTab('References');
+    });
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Exclude Storyboard Lookbook Sheet',
+      })
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/studio-api/projects/constantinople/generation-previews/specs/generation_spec_test/reference-inclusion',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({
+            dependencyId: 'dependency_style',
+            inclusion: 'exclude',
+          }),
+        })
+      );
+    });
+    expect(
+      await screen.findByRole('button', {
+        name: 'Include Storyboard Lookbook Sheet',
+      })
+    ).toBeTruthy();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Close' }).at(-1)!);
     await waitFor(() => {
-      expect(screen.queryByText('Prompt Sheet B')).toBeNull();
+      expect(
+        screen.queryByText('Character Sheet Generation Preview')
+      ).toBeNull();
     });
 
     await dispatchPreview(
       previewFixture({
-        title: 'Prompt Sheet C',
+        purpose: 'shot.video-take',
+        title: 'Video Take Preview',
         referenceLabel: 'Reopened Storyboard Lookbook Sheet',
-      }),
-      {
-        eventId: 'studio_event_003',
-        createdAt: '2026-07-02T10:02:00.000Z',
-      }
+      })
     );
-
-    expect(await screen.findByText('Prompt Sheet C')).toBeTruthy();
-    expect(screen.getByText('Revision 3')).toBeTruthy();
+    expect(await screen.findByText('Shot Video Generation Preview')).toBeTruthy();
     expect(screen.getByText('Reopened Storyboard Lookbook Sheet')).toBeTruthy();
   });
 });
@@ -78,18 +239,15 @@ function selectTab(name: string): void {
   fireEvent.click(tab);
 }
 
-async function dispatchPreview(
-  preview: ReturnType<typeof previewFixture>,
-  event: { eventId: string; createdAt: string }
-): Promise<void> {
+async function dispatchPreview(preview: StudioGenerationPreview): Promise<void> {
   await act(async () => {
     window.dispatchEvent(
       new CustomEvent('renku:generation-preview-requested', {
         detail: {
           projectName: preview.project.name,
           preview,
-          eventId: event.eventId,
-          createdAt: event.createdAt,
+          eventId: 'studio_event_test',
+          createdAt: '2026-07-02T10:00:00.000Z',
         },
       })
     );
@@ -97,13 +255,21 @@ async function dispatchPreview(
 }
 
 function previewFixture(input: {
+  purpose: StudioGenerationPreview['purpose'];
   title: string;
   referenceLabel?: string;
-}) {
+  selected?: boolean;
+  editableReference?: boolean;
+  providerPreview?: StudioGenerationPreview['providerPreview'];
+  diagnostics?: StudioGenerationPreview['diagnostics'];
+}): StudioGenerationPreview {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
-    purpose: 'shot.video-prompt-sheet',
+    generationSpecId: input.editableReference
+      ? 'generation_spec_test'
+      : undefined,
+    purpose: input.purpose,
     project: {
       id: 'project_test0001',
       name: 'constantinople',
@@ -114,6 +280,7 @@ function previewFixture(input: {
       sceneLabel: 'Opening council',
       takeLabel: 'Take 1',
       shotLabel: 'Shot 1',
+      castMemberLabel: 'Valeria',
     },
     target: {
       kind: 'sceneShotVideoTake',
@@ -128,6 +295,7 @@ function previewFixture(input: {
       modelId: 'fal-ai/openai/gpt-image-2',
       mediaKind: 'image',
       executionPath: 'renku-managed',
+      route: 'image-to-image',
     },
     promptSheetVisualStyleId: 'handdrawn-storyboard',
     promptSheetNotationModeId: 'motion-annotation',
@@ -143,7 +311,16 @@ function previewFixture(input: {
         assetId: 'asset_style',
         assetFileId: 'asset_file_style',
         sourcePurpose: 'lookbook.sheet',
-        selected: true,
+        selected: input.selected ?? true,
+        selectionControl: input.editableReference
+          ? {
+              dependencyId: 'dependency_style',
+              required: false,
+              defaultIncluded: true,
+              inclusionOverride: null,
+              editable: true,
+            }
+          : undefined,
         browserUrl:
           '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
       },
@@ -155,6 +332,7 @@ function previewFixture(input: {
         value: '1024x768',
       },
     ],
-    diagnostics: [],
+    providerPreview: input.providerPreview,
+    diagnostics: input.diagnostics ?? [],
   };
 }

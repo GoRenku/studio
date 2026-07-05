@@ -118,6 +118,43 @@ describe('generation preview validation', () => {
     );
   });
 
+  it('rejects audio references in cast character sheet previews', () => {
+    const preview = {
+      ...previewFixture(),
+      purpose: 'cast.character-sheet',
+      target: {
+        kind: 'castMember',
+        id: 'cast_mehmed',
+        castMemberId: 'cast_mehmed',
+      },
+      promptSheetVisualStyleId: undefined,
+      promptSheetNotationModeId: undefined,
+      references: [
+        {
+          kind: 'audio',
+          role: 'voice-reference',
+          label: 'Voice reference',
+          assetId: 'asset_voice',
+          assetFileId: 'asset_file_voice',
+          selected: true,
+        },
+      ],
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'CORE_GENERATION_PREVIEW_REFERENCE_KIND_UNSUPPORTED',
+            message:
+              'Cast character sheet generation preview references must be image references.',
+          }),
+        ]),
+      })
+    );
+  });
+
   it('accepts Studio display previews with subject labels and resolved browser URLs', () => {
     expect(validateStudioGenerationPreview(studioPreviewFixture())).toMatchObject({
       subject: {
