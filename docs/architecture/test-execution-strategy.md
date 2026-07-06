@@ -2,7 +2,7 @@
 
 Date: 2026-07-05
 
-Status: analysis and guidance
+Status: implemented guidance
 
 Role: architecture guidance
 
@@ -26,11 +26,21 @@ The default development habit should be:
 3. Run integration and e2e suites once near the end, not repeatedly during every
    small code change.
 
+## Implementation Status
+
+Implemented on 2026-07-06 through
+`plans/active/0117-test-execution-strategy-implementation.md`.
+
+The repository now uses explicit fast, integration, browser e2e, and
+live-provider e2e execution buckets. The implementation preserved protected
+slow tests and moved them behind explicit commands instead of deleting or
+weakening coverage.
+
 ## Current Status
 
-The repository currently has about 220 test files under `packages/`.
+The original investigation found about 220 test files under `packages/`.
 
-Current test-file shape:
+Original test-file shape:
 
 | Bucket | Count | Notes |
 | --- | ---: | --- |
@@ -40,7 +50,7 @@ Current test-file shape:
 | Studio route tests | 12 | Hono route tests, generally using fake project services. |
 | Architecture tests | 5 | Static boundary and ownership checks. |
 | Engines schema tests | 2 | Catalog/schema validation tests. |
-| Integration tests | 8 | Core integration tests, Engines integration tests, and one source-file test named `simulation-integration`. |
+| Integration tests | 8 | Core integration tests, Engines integration tests, and one source-file test that was named `simulation-integration`. |
 | E2E-shaped tests | 26 | Studio Playwright specs, live provider e2e tests, and Studio in-process `.e2e.test.*` suites. |
 
 The important issue is not merely the number of tests. The important issue is
@@ -48,7 +58,7 @@ which suites are pulled into ordinary development commands.
 
 ### Root Commands
 
-Root `pnpm test` currently runs:
+Root `pnpm test` runs package fast suites:
 
 - Diagnostics tests.
 - Core tests.
@@ -56,20 +66,36 @@ Root `pnpm test` currently runs:
 - Engines tests.
 - Studio tests.
 
-Root `pnpm check` currently runs type checks, test type checks, lint, and
-architecture checks. It does not run browser e2e.
+Root `pnpm check` runs type checks, test type checks, lint, architecture
+checks, and the test-execution partition check. It does not run browser e2e.
+
+Root `pnpm test:integration` runs deterministic local integration suites for
+Core, CLI, Engines, and Studio.
+
+Root `pnpm test:final` runs:
+
+```bash
+pnpm check
+pnpm test
+pnpm test:integration
+pnpm test:e2e:studio:smoke
+```
+
+Provider e2e remains separate and explicit.
 
 ### Core
 
-`packages/core/vitest.config.ts` currently includes:
+`packages/core/vitest.config.ts` includes the fast source-adjacent suite:
 
 ```text
 src/**/*.test.ts
-tests/**/*.test.ts
 ```
 
-That means `pnpm --filter @gorenku/studio-core test` includes
-`packages/core/tests/integration/**`.
+Core integration tests run through:
+
+```bash
+pnpm --filter @gorenku/studio-core test:integration
+```
 
 The Core integration bucket includes high-signal files such as:
 
@@ -86,7 +112,8 @@ planner.
 
 ### Studio
 
-`packages/studio/vitest.config.ts` currently includes:
+`packages/studio/vitest.config.ts` includes fast server, service, React, hook,
+UI, and architecture tests:
 
 ```text
 server/**/*.test.ts
@@ -94,8 +121,15 @@ src/**/*.test.ts
 src/**/*.test.tsx
 ```
 
-That means `pnpm --filter @gorenku/studio test` includes in-process e2e-style
-files under `src/`, including:
+The fast Studio config explicitly excludes `src/**/*.e2e.test.*`.
+
+The in-process e2e-style files under `src/` now run through:
+
+```bash
+pnpm --filter @gorenku/studio test:integration
+```
+
+That integration bucket includes:
 
 - `packages/studio/src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts`
 - `packages/studio/src/services/scene-shot-video-take-state-persistence.e2e.test.ts`
@@ -107,8 +141,11 @@ serialization, cost totals, graph estimates, and model/input-mode permutations.
 It should be treated as protected final coverage. It should not be deleted to
 make development feel faster.
 
-The problem is that these in-process e2e tests currently sit inside the normal
-Studio Vitest include pattern.
+The named estimate matrix command remains available:
+
+```bash
+pnpm --filter @gorenku/studio test:shot-video-estimates
+```
 
 ### Studio Browser E2E
 
@@ -140,23 +177,23 @@ The live provider e2e tests under `packages/engines/tests/e2e` are correctly
 outside the default Engines test command. They require provider credentials and
 may spend money or time. They should remain opt-in final checks.
 
-One caveat: `packages/engines/src/sdk/unified/simulation-integration.test.ts`
-lives under `src`, so it is included in normal Engines tests despite being
-named as an integration test. If it is fast and hermetic, it can remain in the
-fast suite but should be renamed to describe the behavior. If it is slow or
-multi-layer enough to belong with integration, it should move to the explicit
-integration suite.
+The former source-local unified simulation integration test now lives under
+`packages/engines/tests/integration/unified-simulation-flow.test.ts`, so it runs
+through Engines `test:integration` instead of the default fast suite.
 
 ### CLI
 
-The CLI has focused command-handler tests, but it also has a large
-`packages/cli/src/cli.test.ts` file. That file exercises many full CLI flows,
-creates temporary projects, and validates human/agent command behavior.
+The CLI has focused command-handler tests in the fast suite. The large full
+workflow contract test now lives at
+`packages/cli/tests/integration/cli-workflows.test.ts` and runs through:
 
-That coverage is important because the CLI is a major contract. The concern is
-that it mixes many workflow-level checks into the normal CLI test command. Over
-time, the CLI should have a fast command-handler suite for edit-loop work and a
-separate workflow/integration suite for full CLI contract verification.
+```bash
+pnpm --filter @gorenku/studio-cli test:integration
+```
+
+That coverage is important because the CLI is a major contract. It remains in
+the repository, but no longer mixes workflow-level checks into the normal CLI
+fast test command.
 
 ## Test Tiers
 
@@ -213,17 +250,16 @@ pnpm --filter @gorenku/studio-engines test
 pnpm --filter @gorenku/studio test
 ```
 
-In the target architecture, these package commands should run fast tests only.
+These package commands run fast tests only.
 They should not include Core integration tests, Studio in-process e2e tests, or
 browser e2e tests.
 
-Today, Core and Studio do not fully meet that target:
+Core and Studio now meet that target:
 
-- Core package tests include `packages/core/tests/integration/**`.
-- Studio package tests include `packages/studio/src/**/*.e2e.test.*`.
+- Core package tests exclude `packages/core/tests/integration/**`.
+- Studio package tests exclude `packages/studio/src/**/*.e2e.test.*`.
 
-That is the main configuration problem to fix when source/config changes are
-allowed.
+Those suites remain covered by explicit integration commands.
 
 ### Tier 3: Integration Suites
 
@@ -250,12 +286,12 @@ Target commands should be explicit, for example:
 
 ```bash
 pnpm --filter @gorenku/studio-core test:integration
+pnpm --filter @gorenku/studio-cli test:integration
 pnpm --filter @gorenku/studio test:integration
 pnpm --filter @gorenku/studio-engines test:integration
 ```
 
-The current repository already has Engines `test:integration`. Core and Studio
-do not yet have matching split commands.
+Root `pnpm test:integration` runs the local deterministic integration gate.
 
 ### Tier 4: E2E Suites
 
@@ -345,9 +381,9 @@ and catalog still agree.
 
 ### Integration Tests In Default Core Test
 
-Core's default test command currently includes `tests/**/*.test.ts`. This pulls
-Core integration tests into ordinary `pnpm --filter @gorenku/studio-core test`
-and root `pnpm test`.
+Core's default test command previously included `tests/**/*.test.ts`. That
+pulled Core integration tests into ordinary
+`pnpm --filter @gorenku/studio-core test` and root `pnpm test`.
 
 Expected impact:
 
@@ -357,18 +393,18 @@ Expected impact:
 - integration failures become the first feedback instead of a final confidence
   check.
 
-Recommended direction:
+Implemented direction:
 
 - make source-adjacent Core tests the default fast suite;
-- move or keep `packages/core/tests/integration/**` under an explicit
-  `test:integration:core` command;
+- keep `packages/core/tests/integration/**` under an explicit
+  `test:integration` command;
 - keep the integration tests themselves unless a separate review proves a test
   has no meaningful contract.
 
 ### Studio In-Process E2E In Default Studio Test
 
-Studio's default Vitest config currently includes `src/**/*.e2e.test.ts` and
-`src/**/*.e2e.test.tsx` because they match `src/**/*.test.*`.
+Studio's default Vitest config previously included `src/**/*.e2e.test.ts` and
+`src/**/*.e2e.test.tsx` because they matched `src/**/*.test.*`.
 
 Expected impact:
 
@@ -377,7 +413,7 @@ Expected impact:
 - expensive, valuable final checks run too often;
 - the slowest tests become the development loop instead of the final gate.
 
-Recommended direction:
+Implemented direction:
 
 - keep the in-process e2e tests;
 - exclude `src/**/*.e2e.test.*` from the fast Studio Vitest config;
@@ -387,14 +423,14 @@ Recommended direction:
 
 ### CLI Workflow Tests Mixed With Fast CLI Tests
 
-The CLI's top-level `cli.test.ts` is a broad workflow contract test. It is
-valuable, but it is too broad to be the only default feedback mechanism for many
-CLI changes.
+The CLI's former top-level `cli.test.ts` is a broad workflow contract test. It
+is valuable, but it is too broad to be the only default feedback mechanism for
+many CLI changes.
 
-Recommended direction:
+Implemented direction:
 
 - keep focused command handler tests in the fast suite;
-- create a separate CLI workflow/integration suite for full command-line flows;
+- keep full command-line flows in the separate CLI workflow/integration suite;
 - when a CLI workflow test fails, add a focused handler or core test for the
   owning rule.
 
@@ -416,7 +452,7 @@ Recommended direction:
 
 ## Recommended Command Model
 
-When the repository is ready for script/config changes, use this command model.
+Use this command model.
 
 ### Fast Development
 
@@ -441,7 +477,7 @@ Root fast suite:
 pnpm test
 ```
 
-For this to work as intended, root `pnpm test` must remain fast. It should not
+Root `pnpm test` must remain fast. It should not
 include Core integration, Studio in-process e2e, Studio browser e2e, or Engines
 live provider e2e.
 
@@ -597,35 +633,31 @@ For example:
 
 ## Implementation Checklist For The Split
 
-This checklist describes the future implementation work. It is not completed by
-this document.
-
-- Add explicit Core integration config and command for
+- [x] Add explicit Core integration config and command for
   `packages/core/tests/integration/**`.
-- Keep Core default tests focused on source-adjacent fast tests.
-- Add explicit Studio integration config and command for
+- [x] Keep Core default tests focused on source-adjacent fast tests.
+- [x] Add explicit Studio integration config and command for
   `packages/studio/src/**/*.e2e.test.*`.
-- Keep Studio default tests focused on server route tests, service unit tests,
+- [x] Keep Studio default tests focused on server route tests, service unit tests,
   React feature tests, and local utility tests.
-- Preserve `packages/studio/src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts`
+- [x] Preserve `packages/studio/src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts`
   as a protected final check.
-- Add fast tests around the highest-value rules protected by the estimate matrix
+- [x] Audit fast tests around the highest-value rules protected by the estimate matrix
   so developers do not need to run the matrix repeatedly.
-- Split CLI broad workflow tests from fast command-handler tests when the CLI
+- [x] Split CLI broad workflow tests from fast command-handler tests when the CLI
   test suite becomes a development-loop bottleneck.
-- Decide whether `packages/engines/src/sdk/unified/simulation-integration.test.ts`
-  is fast enough to keep in default Engines tests or should move to Engines
-  integration.
-- Add root `test:integration` and `test:final` scripts only after package-level
+- [x] Move `packages/engines/src/sdk/unified/simulation-integration.test.ts`
+  to Engines integration.
+- [x] Add root `test:integration` and `test:final` scripts only after package-level
   split commands exist.
-- Document which final suites are required for each kind of change.
+- [x] Document which final suites are required for each kind of change.
 
 ## Summary
 
-The current suite has good coverage, but its execution boundaries are blurry.
-Core integration tests and Studio in-process e2e tests currently leak into
-ordinary package test commands. That makes agents and developers more likely to
-rerun expensive suites during the edit loop.
+The suite has good coverage, and its execution boundaries are now explicit.
+Core integration tests, CLI workflow tests, Studio in-process e2e tests, Studio
+browser e2e tests, and Engines live-provider e2e tests are all available through
+named commands instead of leaking into every ordinary package test command.
 
 The target model is:
 

@@ -16,9 +16,10 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "eslint src",
+    "lint": "eslint src tests",
     "type-check": "tsc --noEmit",
     "test": "vitest run --pool=threads --poolOptions.threads.singleThread",
+    "test:integration": "vitest run --config vitest.integration.config.ts --pool=threads --poolOptions.threads.singleThread",
     "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
     "check:all": "pnpm type-check && pnpm lint && pnpm test:typecheck",
     "test:ui": "vitest --ui",

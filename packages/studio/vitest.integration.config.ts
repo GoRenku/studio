@@ -9,14 +9,8 @@ export default defineConfig({
     fileParallelism: false,
     minWorkers: 1,
     maxWorkers: 1,
-    include: ['server/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
-    exclude: [
-      'node_modules',
-      'dist',
-      'server-dist',
-      'src/**/*.e2e.test.ts',
-      'src/**/*.e2e.test.tsx',
-    ],
+    include: ['src/**/*.e2e.test.ts', 'src/**/*.e2e.test.tsx'],
+    exclude: ['node_modules', 'dist', 'server-dist'],
   },
   resolve: {
     alias: {

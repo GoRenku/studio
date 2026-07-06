@@ -10,7 +10,7 @@ import {
   resolveStudioRuntimeDescriptorPath,
 } from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { runRenkuCli } from './cli.js';
+import { runRenkuCli } from '../../src/cli.js';
 
 describe('renku CLI', () => {
   let homeDir: string;

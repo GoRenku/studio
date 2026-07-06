@@ -32,6 +32,7 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate:project": "drizzle-kit migrate --config drizzle.project-migrate.config.ts",
     "test": "vitest run --pool=forks",
+    "test:integration": "vitest run --config vitest.integration.config.ts --pool=forks",
     "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
     "check:all": "pnpm type-check && pnpm lint && pnpm test:typecheck",
     "test:ui": "vitest --ui",

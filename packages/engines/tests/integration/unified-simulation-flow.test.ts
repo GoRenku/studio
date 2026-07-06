@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createUnifiedHandler } from './schema-first-handler.js';
-import { falAdapter } from '../fal/adapter.js';
-import { replicateAdapter } from '../replicate/adapter.js';
-import { wavespeedAdapter } from '../wavespeed/adapter.js';
-import type { ProviderAdapter } from './provider-adapter.js';
-import type { HandlerFactoryInit, ProviderJobContext } from '../../types.js';
+import { createUnifiedHandler } from '../../src/sdk/unified/schema-first-handler.js';
+import { falAdapter } from '../../src/sdk/fal/adapter.js';
+import { replicateAdapter } from '../../src/sdk/replicate/adapter.js';
+import { wavespeedAdapter } from '../../src/sdk/wavespeed/adapter.js';
+import type { ProviderAdapter } from '../../src/sdk/unified/provider-adapter.js';
+import type { HandlerFactoryInit, ProviderJobContext } from '../../src/types.js';
 
 /**
  * Integration tests for the unified simulation flow.

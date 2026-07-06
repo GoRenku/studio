@@ -1,12 +1,10 @@
-import { loadEnv } from './src/contracts/core.js';
+import { defineConfig } from 'vitest/config';
 
-loadEnv(import.meta.url);
-
-export default {
+export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     include: ['tests/integration/**/*.test.ts'],
     exclude: ['node_modules/**', 'dist/**'],
   },
-};
+});

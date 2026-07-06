@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "e2e:build-deps": "pnpm --dir ../.. --filter @gorenku/studio-core... build",
     "pretest:e2e": "pnpm run e2e:build-deps",
     "test:e2e": "playwright test",
@@ -22,7 +23,7 @@
     "test:e2e:smoke": "playwright test --project=chromium-smoke",
     "pretest:e2e:ui": "pnpm run e2e:build-deps",
     "test:e2e:ui": "playwright test --ui",
-    "test:shot-video-estimates": "vitest run src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts",
+    "test:shot-video-estimates": "vitest run --config vitest.integration.config.ts src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts",
     "test:watch": "vitest",
     "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
     "check:all": "pnpm lint && pnpm test:typecheck && pnpm test"
