@@ -1,71 +1,33 @@
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
   CastVoiceAttachmentDocument,
   ProjectRelativePath,
 } from '../../../client/index.js';
-import type { ScreenplayCreateDocument } from '../../../client/screenplay.js';
 import {
   createDeterministicIdGenerator,
-  createProjectDataService,
   type ProjectDataService,
 } from '../../index.js';
-import {
-  createBlankMovieProject,
-  writeConfig,
-} from '../../testing/project-data-fixtures.js';
+import { createDialogueAudioReadyProject } from '../../testing/dialogue-audio-template-fixtures.js';
 
 describe('Scene Dialogue Audio generation', () => {
   let homeDir: string;
   let projectData: ProjectDataService;
   let projectPath: string;
+  let sceneId: string;
+  let dialogueId: string;
 
   beforeEach(async () => {
-    homeDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), 'renku-scene-dialogue-audio-test-'),
-    );
-    await writeConfig(homeDir, path.join(homeDir, 'projects'));
-
-    projectData = createProjectDataService();
-    const created = await createBlankMovieProject({
-      projectData,
-      homeDir,
-      projectName: 'dialogue-audio-test',
-      title: 'Dialogue Audio Test',
-    });
-    if (!created) {
+    const readyProject = await createDialogueAudioReadyProject();
+    if (!readyProject) {
       return;
     }
-    projectPath = created.projectPath;
-    await projectData.openCurrentProject({
-      projectName: 'dialogue-audio-test',
-      homeDir,
-    });
-    await projectData.applyCastOperations({
-      homeDir,
-      document: {
-        kind: 'castOperations',
-        operations: [
-          {
-            operation: 'castMember.add',
-            castMember: {
-              key: 'urban',
-              handle: 'urban',
-              name: 'Urban',
-              role: 'cannon founder',
-            },
-          },
-        ],
-      },
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.createScreenplay({
-      homeDir,
-      document: screenplayDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
+    homeDir = readyProject.homeDir;
+    projectData = readyProject.projectData;
+    projectPath = readyProject.projectPath;
+    sceneId = readyProject.sceneId;
+    dialogueId = readyProject.dialogueId;
   });
 
   it('creates a simulated audio take from the shared generation runner output without selecting it', async () => {
@@ -79,20 +41,6 @@ describe('Scene Dialogue Audio generation', () => {
       document: castVoiceAttachment(),
       idGenerator: createDeterministicIdGenerator(),
     });
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-    const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
-    if (
-      !scene?.id ||
-      !dialogue ||
-      dialogue.type !== 'dialogue' ||
-      !dialogue.dialogueId
-    ) {
-      throw new Error('Expected seeded scene dialogue.');
-    }
-    const sceneId = scene.id;
-    const dialogueId = dialogue.dialogueId;
-
     const report = await projectData.generateSceneDialogueAudioTake({
       projectName: 'dialogue-audio-test',
       homeDir,
@@ -101,7 +49,7 @@ describe('Scene Dialogue Audio generation', () => {
       setup: {
         modelChoice: 'elevenlabs/eleven_v3',
         castVoiceId: attached.voice.id,
-        plainText: dialogue.lines.join('\n'),
+        plainText: 'Bronze has no temper. Men give it one.',
         v3Text: 'Bronze has no temper. [shouts] Men give it one.',
         voiceSettings: {
           stability: 0.5,
@@ -145,27 +93,15 @@ describe('Scene Dialogue Audio generation', () => {
       document: castVoiceAttachment(),
       idGenerator: createDeterministicIdGenerator(),
     });
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-    const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
-    if (
-      !scene?.id ||
-      !dialogue ||
-      dialogue.type !== 'dialogue' ||
-      !dialogue.dialogueId
-    ) {
-      throw new Error('Expected seeded scene dialogue.');
-    }
-
     const generateInput = {
       projectName: 'dialogue-audio-test',
       homeDir,
-      sceneId: scene.id,
-      dialogueId: dialogue.dialogueId,
+      sceneId,
+      dialogueId,
       setup: {
         modelChoice: 'elevenlabs/eleven_v3' as const,
         castVoiceId: attached.voice.id,
-        plainText: dialogue.lines.join('\n'),
+        plainText: 'Bronze has no temper. Men give it one.',
         v3Text: 'Bronze has no temper. [shouts] Men give it one.',
         outputFormat: 'mp3_44100_128',
       },
@@ -176,7 +112,7 @@ describe('Scene Dialogue Audio generation', () => {
     const secondReport =
       await projectData.generateSceneDialogueAudioTake(generateInput);
 
-    const audio = secondReport.context.audioByDialogueId[dialogue.dialogueId];
+    const audio = secondReport.context.audioByDialogueId[dialogueId];
     expect(audio?.takes).toHaveLength(2);
     const generatedFiles = await fs.readdir(
       path.join(projectPath, 'generated/media/scene-dialogue-audio'),
@@ -195,50 +131,6 @@ describe('Scene Dialogue Audio generation', () => {
     await fs.writeFile(absolutePath, content, 'utf8');
   }
 });
-
-function screenplayDocument(): ScreenplayCreateDocument {
-  return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Dialogue Audio Test',
-      logline: 'A founder tests a cannon and a conscience.',
-    },
-    cast: [],
-    locations: [],
-    acts: [
-      {
-        key: 'act-one',
-        title: 'Act I',
-        sequences: [
-          {
-            key: 'the-wall',
-            title: 'The Wall',
-            scenes: [
-              {
-                key: 'cannon-test',
-                title: 'Cannon Test',
-                setting: {
-                  interiorExterior: 'EXT',
-                  timeOfDay: 'DAWN',
-                  locationIds: [],
-                },
-                blocks: [
-                  {
-                    dialogueId: 'dialogue_urban_test',
-                    type: 'dialogue',
-                    castMemberId: 'cast_test0001',
-                    lines: ['Bronze has no temper. Men give it one.'],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  };
-}
-
 function castVoiceAttachment(): CastVoiceAttachmentDocument {
   return {
     kind: 'castVoiceAttachment',

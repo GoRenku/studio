@@ -11,7 +11,7 @@ import {
   currentProjectStoreSchemaGeneration,
 } from '../database/lifecycle/project-store-schema-generation.js';
 import {
-  createSampleMovieProject,
+  createCommandBuiltSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
 import { parseSceneShotVideoTakeState } from '../shot-video-take-json/validator.js';
@@ -28,7 +28,7 @@ describe('migrate database command', () => {
 
   it('applies project database migrations by project name', async () => {
     const projectData = createProjectDataService();
-    const created = await createSampleMovieProject({ projectData, homeDir });
+    const created = await createCommandBuiltSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -164,7 +164,7 @@ describe('migrate database command', () => {
 
   it('auto-migrates generation 33 shot video take databases before reads', async () => {
     const projectData = createProjectDataService();
-    const created = await createSampleMovieProject({ projectData, homeDir });
+    const created = await createCommandBuiltSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }

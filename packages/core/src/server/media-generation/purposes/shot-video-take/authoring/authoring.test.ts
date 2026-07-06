@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  createShotVideoTakeTestProject,
+  createFinalizedShotVideoTakeProject,
+  createOneShotVideoTakeProject,
+  createThreeShotVideoTakeProject,
+  createTwoShotVideoTakeProject,
   type ShotVideoTakeTestProject,
+  type ShotVideoTakeTemplateProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
 
 describe('Shot Video Take authoring documents', () => {
@@ -9,15 +13,18 @@ describe('Shot Video Take authoring documents', () => {
   let homeDir: string;
   let projectData: ShotVideoTakeTestProject['projectData'];
 
-  beforeEach(async () => {
-    shotVideoTakeProject = await createShotVideoTakeTestProject();
-    homeDir = shotVideoTakeProject.homeDir;
-    projectData = shotVideoTakeProject.projectData;
-  });
+  async function useTemplate(
+    template: Promise<ShotVideoTakeTemplateProject>
+  ): Promise<ShotVideoTakeTemplateProject> {
+    const templateProject = await template;
+    shotVideoTakeProject = templateProject;
+    homeDir = templateProject.homeDir;
+    projectData = templateProject.projectData;
+    return templateProject;
+  }
 
   it('validates and applies current take authoring documents through core', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { ids, written } = await useTemplate(createTwoShotVideoTakeProject());
     const takeId = written.take.takeId;
 
     const context = await projectData.readSceneShotVideoTakeAuthoringContext({
@@ -113,8 +120,7 @@ describe('Shot Video Take authoring documents', () => {
   });
 
   it('validation reports proposed production state instead of persisted production state', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { written } = await useTemplate(createTwoShotVideoTakeProject());
     const context = await projectData.readSceneShotVideoTakeAuthoringContext({
       homeDir,
       takeId: written.take.takeId,
@@ -149,8 +155,7 @@ describe('Shot Video Take authoring documents', () => {
   });
 
   it('rejects unsupported route combinations with structured diagnostics', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { written } = await useTemplate(createOneShotVideoTakeProject());
     const context = await projectData.readSceneShotVideoTakeAuthoringContext({
       homeDir,
       takeId: written.take.takeId,
@@ -178,8 +183,7 @@ describe('Shot Video Take authoring documents', () => {
   });
 
   it('rejects non-contiguous authoring shot ids during validation', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 3);
+    const { written } = await useTemplate(createThreeShotVideoTakeProject());
     const context = await projectData.readSceneShotVideoTakeAuthoringContext({
       homeDir,
       takeId: written.take.takeId,
@@ -204,8 +208,7 @@ describe('Shot Video Take authoring documents', () => {
   });
 
   it('applies multi-cut documents without requiring caller-selected shot scope', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { written } = await useTemplate(createTwoShotVideoTakeProject());
     const takeId = written.take.takeId;
     await projectData.updateSceneShotVideoTakeStructureMode({
       homeDir,
@@ -252,29 +255,8 @@ describe('Shot Video Take authoring documents', () => {
   });
 
   it('applies authoring documents to a new take when the source take already has video', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { ids, written } = await useTemplate(createFinalizedShotVideoTakeProject());
     const sourceTakeId = written.take.takeId;
-    await shotVideoTakeProject.writeProjectFile(
-      'generated/media/authored-source-prompt-sheet.png',
-      'authored source prompt sheet'
-    );
-    await projectData.importShotVideoPromptSheet({
-      homeDir,
-      takeId: sourceTakeId,
-      sourceProjectRelativePath: 'generated/media/authored-source-prompt-sheet.png',
-      title: 'Authored source prompt sheet',
-    });
-    await shotVideoTakeProject.writeProjectFile(
-      'generated/media/authored-source-take.mp4',
-      'authored source video'
-    );
-    await projectData.importShotVideoTake({
-      homeDir,
-      takeId: sourceTakeId,
-      sourceProjectRelativePath: 'generated/media/authored-source-take.mp4',
-      title: 'Authored source take',
-    });
     const context = await projectData.readSceneShotVideoTakeAuthoringContext({
       homeDir,
       takeId: sourceTakeId,
@@ -340,14 +322,13 @@ describe('Shot Video Take authoring documents', () => {
       takeId: sourceTakeId,
     });
     expect(sourceTake.video).toMatchObject({
-      projectRelativePath: 'generated/media/authored-source-take.mp4',
+      projectRelativePath: 'generated/media/template-final-take.mp4',
     });
     expect(sourceTake.shotIds).toEqual(['shot_001', 'shot_002']);
   });
 
   it('rejects stale authoring documents instead of overwriting newer take state', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { written } = await useTemplate(createTwoShotVideoTakeProject());
     const takeId = written.take.takeId;
     const context = await projectData.readSceneShotVideoTakeAuthoringContext({
       homeDir,

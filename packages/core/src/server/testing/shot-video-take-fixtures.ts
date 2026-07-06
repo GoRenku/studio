@@ -6,6 +6,8 @@ import type {
   SceneShotVideoTake,
 } from '../../client/index.js';
 import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
+import { resolveProjectDatabasePath, resolveProjectFolder } from '../files/project-paths.js';
+import { resolveRenkuStorageRoot } from '../renku-config.js';
 import { createSampleMovieProject, writeConfig } from './project-data-fixtures.js';
 
 interface ShotVideoTakeProjectFileService {
@@ -60,6 +62,50 @@ export interface ShotVideoTakeTestProject {
   lookbookDocument(): ReturnType<typeof shotVideoTakeLookbookDocument>;
 }
 
+type ShotVideoTakeWrittenShotList = Awaited<
+  ReturnType<ShotVideoTakeTestProject['writeShotList']>
+>;
+
+type ShotVideoTakeTemplateName =
+  | 'one-shot'
+  | 'two-shot'
+  | 'three-shot'
+  | 'active-lookbook'
+  | 'imported-first-frame'
+  | 'selected-reference'
+  | 'finalized';
+
+interface ShotVideoTakeTemplate {
+  name: ShotVideoTakeTemplateName;
+  projectFolder: string;
+  databasePath: string;
+  ids: ShotVideoTakeSampleIds;
+  written: ShotVideoTakeWrittenShotList;
+  lookbookId?: string;
+}
+
+export interface ShotVideoTakeTemplateProject extends ShotVideoTakeTestProject {
+  ids: ShotVideoTakeSampleIds;
+  written: ShotVideoTakeWrittenShotList;
+  lookbookId?: string;
+}
+
+let oneShotVideoTakeTemplatePromise: Promise<ShotVideoTakeTemplate> | undefined;
+let twoShotVideoTakeTemplatePromise: Promise<ShotVideoTakeTemplate> | undefined;
+let threeShotVideoTakeTemplatePromise: Promise<ShotVideoTakeTemplate> | undefined;
+let activeLookbookShotVideoTakeTemplatePromise:
+  | Promise<ShotVideoTakeTemplate>
+  | undefined;
+let importedFirstFrameShotVideoTakeTemplatePromise:
+  | Promise<ShotVideoTakeTemplate>
+  | undefined;
+let selectedReferenceShotVideoTakeTemplatePromise:
+  | Promise<ShotVideoTakeTemplate>
+  | undefined;
+let finalizedShotVideoTakeTemplatePromise:
+  | Promise<ShotVideoTakeTemplate>
+  | undefined;
+
 export async function createShotVideoTakeTestProject(): Promise<ShotVideoTakeTestProject> {
   const homeDir = await fs.mkdtemp(
     path.join(os.tmpdir(), 'renku-shot-video-take-test-')
@@ -67,19 +113,91 @@ export async function createShotVideoTakeTestProject(): Promise<ShotVideoTakeTes
   await writeConfig(homeDir, path.join(homeDir, 'projects'));
   const projectData = createProjectDataService();
   await createSampleMovieProject({ projectData, homeDir });
+  return shotVideoTakeTestProjectForHome({ homeDir, projectData });
+}
+
+export async function createOneShotVideoTakeProject(): Promise<ShotVideoTakeTemplateProject> {
+  oneShotVideoTakeTemplatePromise ??= buildShotVideoTakeTemplate({
+    name: 'one-shot',
+    shotCount: 1,
+  });
+  return await copyShotVideoTakeTemplate(await oneShotVideoTakeTemplatePromise);
+}
+
+export async function createTwoShotVideoTakeProject(): Promise<ShotVideoTakeTemplateProject> {
+  twoShotVideoTakeTemplatePromise ??= buildShotVideoTakeTemplate({
+    name: 'two-shot',
+    shotCount: 2,
+  });
+  return await copyShotVideoTakeTemplate(await twoShotVideoTakeTemplatePromise);
+}
+
+export async function createThreeShotVideoTakeProject(): Promise<ShotVideoTakeTemplateProject> {
+  threeShotVideoTakeTemplatePromise ??= buildShotVideoTakeTemplate({
+    name: 'three-shot',
+    shotCount: 3,
+  });
+  return await copyShotVideoTakeTemplate(await threeShotVideoTakeTemplatePromise);
+}
+
+export async function createActiveLookbookShotVideoTakeProject(): Promise<ShotVideoTakeTemplateProject> {
+  activeLookbookShotVideoTakeTemplatePromise ??= buildShotVideoTakeTemplate({
+    name: 'active-lookbook',
+    shotCount: 1,
+    activeLookbook: true,
+  });
+  return await copyShotVideoTakeTemplate(
+    await activeLookbookShotVideoTakeTemplatePromise
+  );
+}
+
+export async function createImportedFirstFrameShotVideoTakeProject(): Promise<ShotVideoTakeTemplateProject> {
+  importedFirstFrameShotVideoTakeTemplatePromise ??= buildShotVideoTakeTemplate({
+    name: 'imported-first-frame',
+    shotCount: 1,
+    importedFirstFrame: true,
+  });
+  return await copyShotVideoTakeTemplate(
+    await importedFirstFrameShotVideoTakeTemplatePromise
+  );
+}
+
+export async function createSelectedReferenceShotVideoTakeProject(): Promise<ShotVideoTakeTemplateProject> {
+  selectedReferenceShotVideoTakeTemplatePromise ??= buildShotVideoTakeTemplate({
+    name: 'selected-reference',
+    shotCount: 1,
+    activeLookbook: true,
+    importedFirstFrame: true,
+  });
+  return await copyShotVideoTakeTemplate(
+    await selectedReferenceShotVideoTakeTemplatePromise
+  );
+}
+
+export async function createFinalizedShotVideoTakeProject(): Promise<ShotVideoTakeTemplateProject> {
+  finalizedShotVideoTakeTemplatePromise ??= buildShotVideoTakeTemplate({
+    name: 'finalized',
+    shotCount: 2,
+    finalized: true,
+  });
+  return await copyShotVideoTakeTemplate(await finalizedShotVideoTakeTemplatePromise);
+}
+
+function shotVideoTakeTestProjectForHome(input: {
+  homeDir: string;
+  projectData: ReturnType<typeof createProjectDataService>;
+  sampleIds?: ShotVideoTakeSampleIds;
+}): ShotVideoTakeTestProject {
+  const { homeDir, projectData } = input;
+  let sampleIdsPromise: Promise<ShotVideoTakeSampleIds> | undefined =
+    input.sampleIds ? Promise.resolve(input.sampleIds) : undefined;
 
   return {
     homeDir,
     projectData,
     async sampleIds() {
-      const screenplay = await projectData.readScreenplay({ homeDir });
-      const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
-      return {
-        sceneId: scene.id as string,
-        castMemberId: screenplay.screenplay!.cast[1]!.id as string,
-        narratorCastMemberId: screenplay.screenplay!.cast[0]!.id as string,
-        locationId: screenplay.screenplay!.locations[0]!.id as string,
-      };
+      sampleIdsPromise ??= readShotVideoTakeSampleIds({ projectData, homeDir });
+      return await sampleIdsPromise;
     },
     async addVisualExtraCastMember() {
       const report = await projectData.applyCastOperations({
@@ -219,6 +337,174 @@ export async function createShotVideoTakeTestProject(): Promise<ShotVideoTakeTes
     sampleShotList: sampleShotVideoTakeShotList,
     lookbookDocument: shotVideoTakeLookbookDocument,
   };
+}
+
+async function buildShotVideoTakeTemplate(input: {
+  name: ShotVideoTakeTemplateName;
+  shotCount: number;
+  activeLookbook?: boolean;
+  importedFirstFrame?: boolean;
+  finalized?: boolean;
+}): Promise<ShotVideoTakeTemplate> {
+  const homeDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), `renku-shot-video-${input.name}-template-${process.pid}-`)
+  );
+  await writeConfig(homeDir, path.join(homeDir, 'projects'));
+  const projectData = createProjectDataService();
+  await createSampleMovieProject({ projectData, homeDir });
+  const project = shotVideoTakeTestProjectForHome({ homeDir, projectData });
+  const ids = await project.sampleIds();
+  let written = await project.writeShotList(ids, input.shotCount);
+  let lookbookId: string | undefined;
+
+  if (input.activeLookbook) {
+    const lookbook = await projectData.createLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Imperial Wound',
+      document: project.lookbookDocument(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    lookbookId = lookbook.lookbook.id;
+    await projectData.selectLookbookForType({
+      projectName: 'constantinople',
+      homeDir,
+      type: 'movie',
+      lookbookId,
+    });
+  }
+
+  if (input.importedFirstFrame) {
+    const firstFramePath = 'generated/media/template-first-frame.png';
+    await project.writeProjectFile(firstFramePath, 'template first frame');
+    await projectData.importShotFirstFrame({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: firstFramePath,
+    });
+  }
+
+  if (input.finalized) {
+    const promptSheetPath = 'generated/media/template-prompt-sheet.png';
+    await project.writeProjectFile(promptSheetPath, 'template prompt sheet');
+    await projectData.importShotVideoPromptSheet({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: promptSheetPath,
+      title: 'Template prompt sheet',
+    });
+    const videoPath = 'generated/media/template-final-take.mp4';
+    await project.writeProjectFile(videoPath, 'template final video');
+    await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: videoPath,
+      title: 'Template final take',
+    });
+    written = {
+      ...written,
+      take: await projectData.readSceneShotVideoTake({
+        homeDir,
+        takeId: written.take.takeId,
+      }),
+    };
+  }
+
+  const currentProject = await projectData.readCurrentProject({ homeDir });
+  if (!currentProject) {
+    throw new Error('Expected current project for shot video take template.');
+  }
+  const databasePath = resolveProjectDatabasePath(currentProject.projectFolder);
+  await assertPathExists(currentProject.projectFolder, 'shot video take template folder');
+  await assertPathExists(databasePath, 'shot video take template database');
+
+  return {
+    name: input.name,
+    projectFolder: currentProject.projectFolder,
+    databasePath,
+    ids,
+    written,
+    lookbookId,
+  };
+}
+
+async function copyShotVideoTakeTemplate(
+  template: ShotVideoTakeTemplate
+): Promise<ShotVideoTakeTemplateProject> {
+  await assertPathExists(template.projectFolder, 'shot video take template folder');
+  await assertPathExists(template.databasePath, 'shot video take template database');
+
+  const homeDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), `renku-shot-video-${template.name}-test-`)
+  );
+  await writeConfig(homeDir, path.join(homeDir, 'projects'));
+  const storageRoot = await resolveRenkuStorageRoot({ homeDir });
+  await fs.mkdir(storageRoot, { recursive: true });
+  const projectFolder = resolveProjectFolder(storageRoot, 'constantinople');
+  await fs.cp(template.projectFolder, projectFolder, {
+    recursive: true,
+    force: false,
+    errorOnExist: true,
+  });
+  const databasePath = resolveProjectDatabasePath(projectFolder);
+  await assertPathExists(projectFolder, 'copied shot video take project folder');
+  await assertPathExists(databasePath, 'copied shot video take project database');
+
+  const projectData = createProjectDataService();
+  await projectData.openCurrentProject({
+    homeDir,
+    projectName: 'constantinople',
+  });
+  return {
+    ...shotVideoTakeTestProjectForHome({
+      homeDir,
+      projectData,
+      sampleIds: template.ids,
+    }),
+    ids: template.ids,
+    written: template.written,
+    lookbookId: template.lookbookId,
+  };
+}
+
+async function readShotVideoTakeSampleIds(input: {
+  projectData: ReturnType<typeof createProjectDataService>;
+  homeDir: string;
+}): Promise<ShotVideoTakeSampleIds> {
+  const screenplay = await input.projectData.readScreenplay({
+    homeDir: input.homeDir,
+  });
+  const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+  return {
+    sceneId: scene.id as string,
+    castMemberId: screenplay.screenplay!.cast[1]!.id as string,
+    narratorCastMemberId: screenplay.screenplay!.cast[0]!.id as string,
+    locationId: screenplay.screenplay!.locations[0]!.id as string,
+  };
+}
+
+async function assertPathExists(filePath: string, description: string): Promise<void> {
+  try {
+    await fs.access(filePath);
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      throw new ShotVideoTakeTemplateFixtureError(
+        `Expected ${description} to exist at ${filePath}.`
+      );
+    }
+    throw error;
+  }
+}
+
+class ShotVideoTakeTemplateFixtureError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ShotVideoTakeTemplateFixtureError';
+  }
+}
+
+function isNodeError(error: unknown): error is Error & { code: string } {
+  return error instanceof Error && typeof (error as { code?: unknown }).code === 'string';
 }
 
 export async function writeShotVideoTakeProjectFile(input: {

@@ -44,6 +44,25 @@ export async function createBlankMovieProject(input: {
   title?: string;
 }): Promise<ProjectCreateReport | null> {
   const projectData = input.projectData ?? createProjectDataService();
+  if (input.projectName !== undefined || input.title !== undefined) {
+    return await createCommandBuiltBlankMovieProject({ ...input, projectData });
+  }
+  const { createIsolatedBlankMovieProjectFromTemplate } = await import(
+    './movie-project-template-fixtures.js'
+  );
+  return await createIsolatedBlankMovieProjectFromTemplate({
+    homeDir: input.homeDir,
+    projectData,
+  });
+}
+
+export async function createCommandBuiltBlankMovieProject(input: {
+  homeDir: string;
+  projectData?: ProjectDataService;
+  projectName?: string;
+  title?: string;
+}): Promise<ProjectCreateReport | null> {
+  const projectData = input.projectData ?? createProjectDataService();
   return await runCreateOrSkip(
     projectData.createMovieProject({
       projectName: input.projectName ?? 'blank-movie',
@@ -55,6 +74,20 @@ export async function createBlankMovieProject(input: {
 }
 
 export async function createSampleMovieProject(input: {
+  homeDir: string;
+  projectData?: ProjectDataService;
+}): Promise<ProjectCreateReport | null> {
+  const projectData = input.projectData ?? createProjectDataService();
+  const { createIsolatedSampleMovieProjectFromTemplate } = await import(
+    './movie-project-template-fixtures.js'
+  );
+  return await createIsolatedSampleMovieProjectFromTemplate({
+    homeDir: input.homeDir,
+    projectData,
+  });
+}
+
+export async function createCommandBuiltSampleMovieProject(input: {
   homeDir: string;
   projectData?: ProjectDataService;
 }): Promise<ProjectCreateReport | null> {

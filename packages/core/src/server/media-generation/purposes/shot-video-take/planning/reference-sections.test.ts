@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  createShotVideoTakeTestProject,
+  createActiveLookbookShotVideoTakeProject,
+  createOneShotVideoTakeProject,
+  createTwoShotVideoTakeProject,
   type ShotVideoTakeTestProject,
+  type ShotVideoTakeTemplateProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
 import type {
   ProjectRelativePath,
@@ -18,15 +21,18 @@ describe('shot video take preflight and validation', () => {
   let homeDir: string;
   let projectData: ShotVideoTakeTestProject['projectData'];
 
-  beforeEach(async () => {
-    shotVideoTakeProject = await createShotVideoTakeTestProject();
-    homeDir = shotVideoTakeProject.homeDir;
-    projectData = shotVideoTakeProject.projectData;
-  });
+  async function useTemplate(
+    template: Promise<ShotVideoTakeTemplateProject>
+  ): Promise<ShotVideoTakeTemplateProject> {
+    const templateProject = await template;
+    shotVideoTakeProject = templateProject;
+    homeDir = templateProject.homeDir;
+    projectData = templateProject.projectData;
+    return templateProject;
+  }
 
   it('keeps excluded default video prompt sheet references visible for restore', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { ids, written } = await useTemplate(createTwoShotVideoTakeProject());
     await projectData.updateSceneShotVideoTakeProduction({
       homeDir,
       sceneId: ids.sceneId,
@@ -81,8 +87,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('rejects unknown reference inclusion dependencies without persisting them', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     await expect(
       projectData.updateSceneShotVideoTakeReferenceInclusion({
@@ -105,21 +110,12 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('reports an active Lookbook reference as needed when no reference image exists', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
+    const { written, lookbookId } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
+    if (!lookbookId) {
+      throw new Error('Expected active lookbook template to include a lookbook.');
+    }
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
@@ -134,7 +130,7 @@ describe('shot video take preflight and validation', () => {
     expect(preflight.inputPlanItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+          dependencyLineId: `dependency:lookbook-sheet:${lookbookId}`,
           title: 'Imperial Wound',
           caption: 'Lookbook sheet',
           mediaKind: 'image',
@@ -146,21 +142,9 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('shows a planned Location Sheet reference when a selected shot location has no sheets', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
+    const { ids, written } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
@@ -200,7 +184,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('shows scene cast choices without planning unselected character-sheet dependencies', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids } = await useTemplate(createActiveLookbookShotVideoTakeProject());
     const extraCastMemberId = await shotVideoTakeProject.addVisualExtraCastMember();
     await shotVideoTakeProject.addCastToSceneNarrative({
       sceneId: ids.sceneId,
@@ -221,19 +205,6 @@ describe('shot video take preflight and validation', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
     const take = takeReport.overview.take;
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
@@ -320,17 +291,30 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('excludes voice-over cast members from shot character-sheet references', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids } = await useTemplate(createOneShotVideoTakeProject());
     await shotVideoTakeProject.addCastToSceneNarrative({
       sceneId: ids.sceneId,
       extraCastMemberId: ids.narratorCastMemberId,
       locationId: ids.locationId,
     });
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const shotList = shotVideoTakeProject.sampleShotList(ids, 1);
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: shotList,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const takeReport = await projectData.createSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const take = takeReport.overview.take;
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
-      takeId: written.take.takeId,
+      takeId: take.takeId,
       production: {
         inputModeId: 'text-only',
         modelChoice: 'fal-ai/bytedance/seedance-2.0',
@@ -351,32 +335,23 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('uses the selected lookbook sheet as the concrete ready reference input', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
+    const { ids, written, lookbookId } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
+    if (!lookbookId) {
+      throw new Error('Expected active lookbook template to include a lookbook.');
+    }
     await shotVideoTakeProject.writeProjectFile('generated/media/lookbook-sheet-a.png', 'sheet a');
     await shotVideoTakeProject.writeProjectFile('generated/media/lookbook-sheet-b.png', 'sheet b');
     const sheetA = await projectData.importLookbookSheetMedia({
       homeDir,
-      lookbookId: lookbook.lookbook.id,
+      lookbookId,
       sourceProjectRelativePath: 'generated/media/lookbook-sheet-a.png',
       title: 'Sheet A',
     });
     const sheetB = await projectData.importLookbookSheetMedia({
       homeDir,
-      lookbookId: lookbook.lookbook.id,
+      lookbookId,
       sourceProjectRelativePath: 'generated/media/lookbook-sheet-b.png',
       title: 'Sheet B',
     });
@@ -406,7 +381,7 @@ describe('shot video take preflight and validation', () => {
           assetId: sheetB.imported.asset.assetId,
           assetFileId: selectedSheetFile.id,
           subjectKind: 'lookbook',
-          subjectId: lookbook.lookbook.id,
+          subjectId: lookbookId,
         }),
       ])
     );
@@ -421,7 +396,7 @@ describe('shot video take preflight and validation', () => {
     expect(preflight.plan?.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+          id: `dependency:lookbook-sheet:${lookbookId}`,
           availability: { state: 'satisfied' },
           dependencyKind: 'lookbook-sheet',
           selectedAsset: expect.objectContaining({
@@ -456,14 +431,13 @@ describe('shot video take preflight and validation', () => {
       selected: true,
       card: {
         state: 'selected-ready',
-        dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+        dependencyLineId: `dependency:lookbook-sheet:${lookbookId}`,
       },
     });
   });
 
   it('shows shot-scoped planned reference image dependencies in the production plan', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { written } = await useTemplate(createOneShotVideoTakeProject());
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
@@ -500,8 +474,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('rejects excluding first-frame references required by the selected route', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     const production = {
       inputModeId: 'first-frame' as const,
@@ -528,8 +501,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('shows multiple imported image input takes once with one selected', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { written } = await useTemplate(createOneShotVideoTakeProject());
     await shotVideoTakeProject.writeProjectFile('generated/media/first-frame-a.png', 'first frame a');
     await shotVideoTakeProject.writeProjectFile('generated/media/first-frame-b.png', 'first frame b');
     const selected = await projectData.importShotFirstFrame({
@@ -588,7 +560,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('reports shot dialogue references as dialogue audio choices keyed by dialogue id', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids } = await useTemplate(createOneShotVideoTakeProject());
     const initialScreenplay = await projectData.readScreenplay({ homeDir });
     const initialScene =
       initialScreenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
@@ -738,7 +710,12 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('reads multi-cut reference selections from the selected shot while generation aggregates the take', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids, lookbookId } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
+    if (!lookbookId) {
+      throw new Error('Expected active lookbook template to include a lookbook.');
+    }
     const screenplay = await projectData.readScreenplay({ homeDir });
     const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
     const dialogueBlockIndex = scene.blocks.length;
@@ -834,19 +811,6 @@ describe('shot video take preflight and validation', () => {
       description: 'Primary environment sheet for shot two.',
     });
 
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
     await shotVideoTakeProject.writeProjectFile(
       'generated/media/lookbook-sheet-a.png',
       'lookbook sheet a'
@@ -857,13 +821,13 @@ describe('shot video take preflight and validation', () => {
     );
     const lookbookSheetA = await projectData.importLookbookSheetMedia({
       homeDir,
-      lookbookId: lookbook.lookbook.id,
+      lookbookId,
       sourceProjectRelativePath: 'generated/media/lookbook-sheet-a.png',
       title: 'Lookbook Sheet A',
     });
     const lookbookSheetB = await projectData.importLookbookSheetMedia({
       homeDir,
-      lookbookId: lookbook.lookbook.id,
+      lookbookId,
       sourceProjectRelativePath: 'generated/media/lookbook-sheet-b.png',
       title: 'Lookbook Sheet B',
     });

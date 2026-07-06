@@ -39,6 +39,7 @@ export interface UseShotVideoTakeProductionInput {
   sceneId: string;
   takeId?: string | null;
   selectedShotId?: string;
+  autosaveDelayMs?: number;
   onMutationSaved?: (result: ShotVideoTakeProductionMutation) => void;
 }
 
@@ -70,7 +71,14 @@ export interface UseShotVideoTakeProductionResult {
 export function useShotVideoTakeProduction(
   input: UseShotVideoTakeProductionInput
 ): UseShotVideoTakeProductionResult {
-  const { projectName, sceneId, takeId, selectedShotId, onMutationSaved } = input;
+  const {
+    projectName,
+    sceneId,
+    takeId,
+    selectedShotId,
+    autosaveDelayMs,
+    onMutationSaved,
+  } = input;
   const takeIdKey = takeId ?? '';
 
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
@@ -168,6 +176,7 @@ export function useShotVideoTakeProduction(
       }
       return save(production);
     },
+    delayMs: autosaveDelayMs,
     failureMessage: 'AI Production settings could not be saved.',
     flushOnUnmount: true,
     isReady: () =>

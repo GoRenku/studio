@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  createShotVideoTakeTestProject,
+  createActiveLookbookShotVideoTakeProject,
+  createFinalizedShotVideoTakeProject,
+  createOneShotVideoTakeProject,
+  createTwoShotVideoTakeProject,
   type ShotVideoTakeTestProject,
+  type ShotVideoTakeTemplateProject,
 } from '../../../../../testing/shot-video-take-fixtures.js';
 import { createDeterministicIdGenerator } from '../../../../../index.js';
 import type {
@@ -14,16 +18,21 @@ describe('shot video take reference selection mutations', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
   let homeDir: string;
   let projectData: ShotVideoTakeTestProject['projectData'];
+  let currentSceneId: string;
 
-  beforeEach(async () => {
-    shotVideoTakeProject = await createShotVideoTakeTestProject();
-    homeDir = shotVideoTakeProject.homeDir;
-    projectData = shotVideoTakeProject.projectData;
-  });
+  async function useTemplate(
+    template: Promise<ShotVideoTakeTemplateProject>
+  ): Promise<ShotVideoTakeTemplateProject> {
+    const templateProject = await template;
+    shotVideoTakeProject = templateProject;
+    homeDir = templateProject.homeDir;
+    projectData = templateProject.projectData;
+    currentSceneId = templateProject.ids.sceneId;
+    return templateProject;
+  }
 
   it('rejects blank character sheet asset ids without persisting them', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     await expect(
       projectData.updateSceneShotVideoTakeCharacterSheetSelection({
@@ -46,8 +55,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects character sheet assets from another Cast Member before writing take state', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
     await shotVideoTakeProject.writeProjectFile(
       'generated/media/narrator-character-sheet.png',
       'narrator sheet'
@@ -81,8 +89,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects blank location sheet asset ids without persisting them', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     await expect(
       projectData.updateSceneShotVideoTakeLocationSheetSelection({
@@ -105,7 +112,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects location sheets from another Location before writing take state', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
     await projectData.applyLocationOperations({
       homeDir,
       document: {
@@ -140,7 +147,6 @@ describe('shot video take reference selection mutations', () => {
     if (!otherLocationId) {
       throw new Error('Expected wrong-sheet test location to exist.');
     }
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const project = await projectData.readCurrentProject({ homeDir });
     if (!project) {
       throw new Error('Expected current project to exist.');
@@ -181,8 +187,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects blank lookbook sheet ids without persisting them', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     await expect(
       projectData.updateSceneShotVideoTakeLookbookSheetSelection({
@@ -204,28 +209,22 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects Lookbook sheets outside the active Lookbook before writing take state', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const lookbookIds = createDeterministicIdGenerator();
-    const activeLookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Active Lookbook',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: lookbookIds,
-    });
+    const { ids, written, lookbookId } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
+    if (!lookbookId) {
+      throw new Error('Expected active lookbook template to include a lookbook.');
+    }
     const inactiveLookbook = await projectData.createLookbook({
       projectName: 'constantinople',
       homeDir,
       name: 'Inactive Lookbook',
       document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: lookbookIds,
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: activeLookbook.lookbook.id,
+      idGenerator: {
+        next(prefix) {
+          return `${prefix}_inactive_sheet_0079`;
+        },
+      },
     });
     await shotVideoTakeProject.writeProjectFile(
       'generated/media/inactive-lookbook-sheet.png',
@@ -260,7 +259,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects blank dialogue audio take ids without persisting them', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids } = await useTemplate(createOneShotVideoTakeProject());
     const screenplay = await projectData.readScreenplay({ homeDir });
     const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
     const dialogueId = 'dialogue_blank_audio_take';
@@ -283,8 +282,7 @@ describe('shot video take reference selection mutations', () => {
         },
       },
     });
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-
+    const written = await createOneShotTakeForCurrentScene(ids);
     await expect(
       projectData.updateSceneShotVideoTakeDialogueAudioSelection({
         homeDir,
@@ -306,7 +304,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects dialogue audio takes from another dialogue before writing take state', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids } = await useTemplate(createOneShotVideoTakeProject());
     await shotVideoTakeProject.writeProjectFile(
       'generated/audio/urban-sample.mp3',
       'voice sample bytes'
@@ -372,8 +370,7 @@ describe('shot video take reference selection mutations', () => {
       simulate: true,
     });
     const generatedAudio = audio.context.audioByDialogueId[sourceDialogueId];
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-
+    const written = await createOneShotTakeForCurrentScene(ids);
     await expect(
       projectData.updateSceneShotVideoTakeDialogueAudioSelection({
         homeDir,
@@ -397,8 +394,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects unknown dependency inclusion ids before writing take state', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     await expect(
       projectData.updateSceneShotVideoTakeReferenceInclusion({
@@ -423,8 +419,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects continuous reference mutations that include a shot id', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     await expect(
       projectData.updateSceneShotVideoTakeCharacterSheetSelection({
@@ -445,12 +440,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('continues editing on a new take when reference selections change after finalization', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    await shotVideoTakeProject.writeProjectFile(
-      'generated/media/source-reference-take.mp4',
-      'source reference video'
-    );
+    const { ids, written } = await useTemplate(createFinalizedShotVideoTakeProject());
     await shotVideoTakeProject.writeProjectFile(
       'generated/media/urban-character-sheet.png',
       'urban character sheet'
@@ -461,13 +451,6 @@ describe('shot video take reference selection mutations', () => {
       sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
       title: 'Urban character sheet',
     });
-    await projectData.importShotVideoTake({
-      homeDir,
-      takeId: written.take.takeId,
-      sourceProjectRelativePath: 'generated/media/source-reference-take.mp4',
-      title: 'Source reference take',
-    });
-
     const continued =
       await projectData.updateSceneShotVideoTakeCharacterSheetSelection({
         homeDir,
@@ -490,8 +473,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects multi-cut reference mutations missing a shot id', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { ids, written } = await useTemplate(createTwoShotVideoTakeProject());
     await projectData.updateSceneShotVideoTakeStructureMode({
       homeDir,
       sceneId: ids.sceneId,
@@ -517,8 +499,7 @@ describe('shot video take reference selection mutations', () => {
   });
 
   it('rejects multi-cut reference mutations with a foreign shot id', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { ids, written } = await useTemplate(createTwoShotVideoTakeProject());
     await projectData.updateSceneShotVideoTakeStructureMode({
       homeDir,
       sceneId: ids.sceneId,
@@ -545,13 +526,32 @@ describe('shot video take reference selection mutations', () => {
   });
 
   async function readReferenceSelections(takeId: string) {
-    const ids = await shotVideoTakeProject.sampleIds();
     const take = await projectData.readSceneShotVideoTake({
       homeDir,
-      sceneId: ids.sceneId,
+      sceneId: currentSceneId,
       takeId,
     });
     return takeReferenceSelections(take);
+  }
+
+  async function createOneShotTakeForCurrentScene(ids: {
+    sceneId: string;
+    castMemberId: string;
+    locationId: string;
+  }) {
+    const written = await projectData.writeSceneShotList({
+      homeDir,
+      document: shotVideoTakeProject.sampleShotList(ids, 1),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const takeReport = await projectData.createSceneShotVideoTake({
+      homeDir,
+      sceneId: ids.sceneId,
+      shotListId: written.shotList.id,
+      shotIds: ['shot_001'],
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    return { ...written, take: takeReport.overview.take };
   }
 });
 

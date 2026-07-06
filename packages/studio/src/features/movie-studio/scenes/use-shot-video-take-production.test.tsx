@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShotVideoTake,
 } from '@gorenku/studio-core/client';
@@ -28,6 +28,7 @@ vi.mock('@/services/studio-shot-video-takes-api', () => ({
 
 describe('useShotVideoTakeProduction', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.mocked(readShotVideoTakeProduction).mockReset();
     vi.mocked(readShotVideoTakeProduction).mockResolvedValue(
       productionRead(initialTake())
@@ -74,10 +75,22 @@ describe('useShotVideoTakeProduction', () => {
     );
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('forwards the persisted production mutation result into local take state', async () => {
     render(<ShotVideoTakeProductionHarness />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Set duration' }));
+    const setDuration = await screen.findByRole('button', { name: 'Set duration' });
+    vi.useFakeTimers();
+    fireEvent.click(setDuration);
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
 
     await waitFor(() => {
       expect(updateShotVideoTakeProduction).toHaveBeenCalledWith(
@@ -110,7 +123,7 @@ describe('useShotVideoTakeProduction', () => {
       resourceKeys: [],
     });
 
-    render(<ShotVideoTakeProductionHarness />);
+    render(<ShotVideoTakeProductionHarness autosaveDelayMs={1} />);
 
     await waitFor(() => {
       expect(updateShotVideoTakeProduction).toHaveBeenCalledWith(
@@ -128,8 +141,15 @@ describe('useShotVideoTakeProduction', () => {
   it('flushes pending AI Production edits when the editor unmounts', async () => {
     const { unmount } = render(<ShotVideoTakeProductionHarness />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Set duration' }));
-    unmount();
+    const setDuration = await screen.findByRole('button', { name: 'Set duration' });
+    vi.useFakeTimers();
+    fireEvent.click(setDuration);
+
+    await act(async () => {
+      unmount();
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
 
     await waitFor(() => {
       expect(updateShotVideoTakeProduction).toHaveBeenCalledWith(
@@ -206,14 +226,17 @@ describe('useShotVideoTakeProduction', () => {
 
 function ShotVideoTakeProductionHarness({
   selectedShotId,
+  autosaveDelayMs,
 }: {
   selectedShotId?: string;
+  autosaveDelayMs?: number;
 }) {
   const production = useShotVideoTakeProduction({
     projectName: 'constantinople',
     sceneId: 'scene_hook',
     takeId: 'take_001',
     selectedShotId,
+    autosaveDelayMs,
   });
 
   if (production.loadState !== 'ready') {

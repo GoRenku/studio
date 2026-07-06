@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SceneShotVideoTakeDirection } from '@gorenku/studio-core/client';
 import {
   updateSceneShotVideoTakeDirection,
@@ -40,11 +40,22 @@ describe('useTakeShotDesign', () => {
     );
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('reports the saved take mutation result to its caller', async () => {
     const onSaved = vi.fn();
     render(<TakeShotDesignHarness onSaved={onSaved} />);
 
+    vi.useFakeTimers();
     fireEvent.click(screen.getByRole('button', { name: 'Set close-up' }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
 
     await waitFor(() =>
       expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
@@ -61,8 +72,14 @@ describe('useTakeShotDesign', () => {
   it('flushes a pending shot-design edit when the editor unmounts', async () => {
     const { unmount } = render(<TakeShotDesignHarness />);
 
+    vi.useFakeTimers();
     fireEvent.click(screen.getByRole('button', { name: 'Set close-up' }));
-    unmount();
+
+    await act(async () => {
+      unmount();
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
 
     await waitFor(() =>
       expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
@@ -78,7 +95,14 @@ describe('useTakeShotDesign', () => {
   it('saves reference-only direction state instead of clearing it', async () => {
     render(<TakeShotDesignHarness />);
 
+    vi.useFakeTimers();
     fireEvent.click(screen.getByRole('button', { name: 'Set reference' }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+    vi.useRealTimers();
 
     await waitFor(() =>
       expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(

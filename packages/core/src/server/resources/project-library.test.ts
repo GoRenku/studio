@@ -6,7 +6,7 @@ import {
   createProjectDataService,
 } from '../index.js';
 import {
-  createSampleMovieProject,
+  createCommandBuiltSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
 
@@ -22,7 +22,7 @@ describe('project library resource', () => {
 
   it('lists only SQLite-backed projects from storageRoot', async () => {
     const projectData = createProjectDataService();
-    const created = await createSampleMovieProject({ projectData, homeDir });
+    const created = await createCommandBuiltSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
@@ -40,7 +40,7 @@ describe('project library resource', () => {
 
   it('keeps listing the project library when one project database cannot be opened', async () => {
     const projectData = createProjectDataService();
-    const created = await createSampleMovieProject({ projectData, homeDir });
+    const created = await createCommandBuiltSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }

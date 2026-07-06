@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  createShotVideoTakeTestProject,
+  createActiveLookbookShotVideoTakeProject,
+  createOneShotVideoTakeProject,
   type ShotVideoTakeTestProject,
+  type ShotVideoTakeTemplateProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
 import { createDeterministicIdGenerator } from '../../../../index.js';
 
@@ -10,28 +12,20 @@ describe('shot video take preflight and validation', () => {
   let homeDir: string;
   let projectData: ShotVideoTakeTestProject['projectData'];
 
-  beforeEach(async () => {
-    shotVideoTakeProject = await createShotVideoTakeTestProject();
-    homeDir = shotVideoTakeProject.homeDir;
-    projectData = shotVideoTakeProject.projectData;
-  });
+  async function useTemplate(
+    template: Promise<ShotVideoTakeTemplateProject>
+  ): Promise<ShotVideoTakeTemplateProject> {
+    const templateProject = await template;
+    shotVideoTakeProject = templateProject;
+    homeDir = templateProject.homeDir;
+    projectData = templateProject.projectData;
+    return templateProject;
+  }
 
   it('estimates a first-frame take when saved duration is numeric but provider expects a string enum', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
+    const { ids, written } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
@@ -102,8 +96,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('rejects null input policies instead of treating them as omitted', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { written } = await useTemplate(createOneShotVideoTakeProject());
 
     await expect(
       projectData.readShotVideoTakeProductionPlan({
@@ -121,8 +114,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('drops stale settings that are unsupported by the selected route before estimating', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { written } = await useTemplate(createOneShotVideoTakeProject());
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
@@ -156,21 +148,9 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('includes planned dependency costs in the plan total', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
+    const { written } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
@@ -222,21 +202,12 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('prices selected missing visual references for text-only shot video plans', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
+    const { ids, written, lookbookId } = await useTemplate(
+      createActiveLookbookShotVideoTakeProject()
+    );
+    if (!lookbookId) {
+      throw new Error('Expected active lookbook template to include a lookbook.');
+    }
 
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
@@ -251,7 +222,7 @@ describe('shot video take preflight and validation', () => {
     expect(report.plan.dependencyInventory.dependencies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+          id: `dependency:lookbook-sheet:${lookbookId}`,
           required: false,
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
@@ -265,7 +236,7 @@ describe('shot video take preflight and validation', () => {
     expect(report.references.lookbook[0]?.card).toEqual(
       expect.objectContaining({
         state: 'selected-planned',
-        dependencyLineId: `dependency:lookbook-sheet:${lookbook.lookbook.id}`,
+        dependencyLineId: `dependency:lookbook-sheet:${lookbookId}`,
         pricing: expect.objectContaining({ state: 'priced' }),
       })
     );
@@ -279,7 +250,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('keeps selected generated locations ready in the dependency inventory', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
+    const { ids } = await useTemplate(createActiveLookbookShotVideoTakeProject());
     const scopedLocationId = await shotVideoTakeProject.addExtraLocationToSceneNarrative(ids);
     const project = await projectData.readCurrentProject({ homeDir });
     if (!project) {
@@ -325,20 +296,6 @@ describe('shot video take preflight and validation', () => {
       locationId: scopedLocationId,
       assetId: scopedLocationSheet.imported.assetId,
     });
-    const lookbook = await projectData.createLookbook({
-      projectName: 'constantinople',
-      homeDir,
-      name: 'Imperial Wound',
-      document: shotVideoTakeProject.lookbookDocument(),
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.selectLookbookForType({
-      projectName: 'constantinople',
-      homeDir,
-      type: 'movie',
-      lookbookId: lookbook.lookbook.id,
-    });
-
     const report = await projectData.readShotVideoTakeProductionPlan({
       homeDir,
       sceneId: ids.sceneId,
@@ -386,8 +343,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('excludes optional reference-image dependencies from shot video plans', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
     await projectData.updateSceneShotVideoTakeDirection({
       homeDir,
       takeId: written.take.takeId,

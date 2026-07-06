@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  createShotVideoTakeTestProject,
+  createImportedFirstFrameShotVideoTakeProject,
+  createOneShotVideoTakeProject,
+  createTwoShotVideoTakeProject,
   type ShotVideoTakeTestProject,
+  type ShotVideoTakeTemplateProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
 
 describe('shot video take preflight and validation', () => {
@@ -9,15 +12,18 @@ describe('shot video take preflight and validation', () => {
   let homeDir: string;
   let projectData: ShotVideoTakeTestProject['projectData'];
 
-  beforeEach(async () => {
-    shotVideoTakeProject = await createShotVideoTakeTestProject();
-    homeDir = shotVideoTakeProject.homeDir;
-    projectData = shotVideoTakeProject.projectData;
-  });
+  async function useTemplate(
+    template: Promise<ShotVideoTakeTemplateProject>
+  ): Promise<ShotVideoTakeTemplateProject> {
+    const templateProject = await template;
+    shotVideoTakeProject = templateProject;
+    homeDir = templateProject.homeDir;
+    projectData = templateProject.projectData;
+    return templateProject;
+  }
 
   it('reports requested input slots as non-blocking dependency suggestions', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
@@ -143,8 +149,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('reports missing route-required video prompt sheets as readiness blockers', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const { written } = await useTemplate(createTwoShotVideoTakeProject());
 
     await projectData.updateSceneShotVideoTakeProduction({
       homeDir,
@@ -190,16 +195,9 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('preserves imported input file paths in preflight prepared inputs', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const sourceProjectRelativePath = 'generated/media/first-frame.png';
-    await shotVideoTakeProject.writeProjectFile(sourceProjectRelativePath, 'first frame');
-
-    await projectData.importShotFirstFrame({
-      homeDir,
-      takeId: written.take.takeId,
-      sourceProjectRelativePath,
-    });
+    const { written } = await useTemplate(
+      createImportedFirstFrameShotVideoTakeProject()
+    );
 
     const preflight = await projectData.previewShotVideoTakeProduction({
       homeDir,
@@ -210,15 +208,14 @@ describe('shot video take preflight and validation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: 'first-frame',
-          projectRelativePath: sourceProjectRelativePath,
+          projectRelativePath: 'generated/media/template-first-frame.png',
         }),
       ])
     );
   });
 
   it('uses core defaults as the selected model in agent-facing readiness', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { written } = await useTemplate(createOneShotVideoTakeProject());
 
     const authoringContext = await projectData.readSceneShotVideoTakeAuthoringContext({
       homeDir,
@@ -241,8 +238,7 @@ describe('shot video take preflight and validation', () => {
   });
 
   it('keeps missing take-reference sheet selections visible beside prepared cast sheet inputs', async () => {
-    const ids = await shotVideoTakeProject.sampleIds();
-    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const { ids, written } = await useTemplate(createOneShotVideoTakeProject());
     const sheetSource = 'generated/media/cast-sheet.png';
     await shotVideoTakeProject.writeProjectFile(sheetSource, 'cast sheet');
     const characterSheet = await projectData.importCastCharacterSheetMedia({
