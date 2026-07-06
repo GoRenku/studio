@@ -21,6 +21,7 @@ import {
 import type {
   ShotVideoRoute,
   ShotVideoRouteInputSlot,
+  ShotVideoTakeRouteParameterValue,
 } from '@gorenku/studio-engines';
 import {
   issue,
@@ -63,15 +64,43 @@ export function inputRolesForRoute(
 export function parametersForRoute(
   route: ShotVideoRoute
 ): ShotVideoTakeModelChoiceReport['parameters'] {
-  return route.parameters.map((parameter) => ({
-    name: parameter.id,
-    label: parameter.label,
-    required: parameter.required,
-    ...(parameter.defaultValue !== undefined ? { defaultValue: parameter.defaultValue } : {}),
-    ...(parameter.allowedValues ? { allowedValues: parameter.allowedValues } : {}),
-    ...(parameter.minimum !== undefined ? { minimum: parameter.minimum } : {}),
-    ...(parameter.maximum !== undefined ? { maximum: parameter.maximum } : {}),
-  }));
+  return route.parameters
+    .filter((parameter) => parameter.control !== 'structured')
+    .map((parameter) => {
+      const defaultValue = parameterReportValue(parameter.defaultValue);
+      const allowedValues = parameter.allowedValues?.flatMap((allowedValue) => {
+        const value = parameterReportValue(allowedValue);
+        return value === undefined ? [] : [value];
+      });
+      return {
+        name: parameter.id,
+        label: parameter.label,
+        required: parameter.required,
+        ...(defaultValue !== undefined ? { defaultValue } : {}),
+        ...(allowedValues ? { allowedValues } : {}),
+        ...(parameter.minimum !== undefined ? { minimum: parameter.minimum } : {}),
+        ...(parameter.maximum !== undefined ? { maximum: parameter.maximum } : {}),
+      };
+    });
+}
+
+function parameterReportValue(
+  value: ShotVideoTakeRouteParameterValue | undefined
+): ShotVideoTakeModelChoiceReport['parameters'][number]['defaultValue'] | undefined {
+  if (value === undefined || isStructuredParameterValue(value)) {
+    return undefined;
+  }
+  return value;
+}
+
+function isStructuredParameterValue(
+  value: ShotVideoTakeRouteParameterValue
+): value is Record<string, unknown>[] {
+  return Array.isArray(value) && value.some((item) => isRecord(item));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 

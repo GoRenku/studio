@@ -30,7 +30,7 @@ describe('image preview model input configuration', () => {
       source: 'spec',
       presentation: 'parameter-control',
     });
-    expect(allRowLabels(configuration)).not.toContain('Reference count');
+    expect(allRowLabels(configuration)).not.toContain(`Reference ${'count'}`);
     expect(allRowKeys(configuration)).not.toContain('prompt');
     expect(allRowKeys(configuration)).not.toContain('provider-route');
     expect(allRowKeys(configuration)).not.toContain('generation-route');

@@ -43,6 +43,39 @@ describe('shot video route catalog validation', () => {
     expect(seedanceMiniTextRoute?.parameters.map((parameter) => parameter.id)).not.toContain('seed');
   });
 
+  it('declares structured multi_prompt only on Kling routes whose provider schemas expose it', () => {
+    const parameterIds = (
+      choice: string,
+      inputMode: string,
+      shotGroupMode: string
+    ) =>
+      SHOT_VIDEO_MODEL_FAMILIES
+        .find((family) => family.choice === choice)
+        ?.routes.find(
+          (route) =>
+            route.inputMode === inputMode &&
+            route.shotGroupMode === shotGroupMode
+        )
+        ?.parameters.map((parameter) => parameter.id) ?? [];
+
+    expect(
+      parameterIds('fal-ai/kling-video/v3/pro', 'text-only', 'single-shot')
+    ).toContain('multi_prompt');
+    expect(
+      parameterIds('fal-ai/kling-video/v3/pro', 'first-frame', 'single-shot')
+    ).toContain('multi_prompt');
+    expect(
+      parameterIds('fal-ai/kling-video/o3/pro', 'reference', 'single-shot')
+    ).toContain('multi_prompt');
+    expect(
+      parameterIds(
+        'fal-ai/kling-video/o3/pro',
+        'source-video-reference',
+        'single-shot'
+      )
+    ).not.toContain('multi_prompt');
+  });
+
   it('declares audio reference slots only on Seedance reference routes', () => {
     const audioRoutes = SHOT_VIDEO_MODEL_FAMILIES.flatMap((family) =>
       family.routes

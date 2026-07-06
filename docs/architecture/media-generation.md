@@ -69,6 +69,16 @@ output names, dependency declarations, draft dependency specs, and import
 behavior. Cost projection code belongs in `media-generation/cost`, not hidden
 inside purpose readiness modules.
 
+Saved-spec generation previews follow
+`generation-preview-purpose-bindings.md`. Image generation previews share one
+model-configuration path based on provider route schema descriptors and the
+actual provider payload. Purpose-specific preview code is a binding layer for
+current context, provider plan selection, target/title data, and durable
+reference asset/file ids; it must not duplicate image model-parameter row
+construction. Final `shot.video-take` previews use shot-video route metadata
+because they target video models with route-specific parameters and media input
+slots.
+
 Browser-safe media generation contracts are split by ownership under
 `packages/core/src/client`. Shared purpose, target, dependency, and lifecycle
 contracts live in `media-generation-purpose.ts`,
@@ -219,6 +229,7 @@ reference.
 
 - `reference/media-generation.md`
 - `reference/studio-skills.md`
+- `generation-preview-purpose-bindings.md`
 - `visual-language.md`
 - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
@@ -227,3 +238,4 @@ reference.
 - `../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
 - `../decisions/0036-use-unsliced-location-sheets.md`
 - `../decisions/0043-use-single-generation-approval-tokens.md`
+- `../decisions/0045-use-generation-preview-purpose-bindings.md`

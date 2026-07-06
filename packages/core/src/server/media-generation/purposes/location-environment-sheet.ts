@@ -67,6 +67,8 @@ import {
 } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from '../cost/cost-projection.js';
 import {
@@ -324,6 +326,40 @@ export async function prepareLocationEnvironmentSheetSpec(
   };
 }
 
+export async function buildLocationEnvironmentSheetGenerationPreview(
+  input: LocationEnvironmentSheetSpecIdInput
+) {
+  const specRecord = await readLocationEnvironmentSheetSpec(input);
+  assertLocationEnvironmentSheetSpec(specRecord.spec);
+  const context = await buildLocationEnvironmentSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    locationId: specRecord.spec.target.id,
+  });
+  const plan = buildLocationEnvironmentSheetProviderPayload(
+    specRecord.spec,
+    context
+  );
+  return buildSavedImageGenerationPreview({
+    specRecord,
+    purpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+    project: context.project,
+    target: specRecord.target,
+    title: specRecord.title,
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel:
+      modelChoices().find(
+        (model) => model.modelChoice === specRecord.spec.modelChoice
+      )?.label ?? specRecord.spec.modelChoice,
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: 'text-to-image',
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    references: [],
+    payload: plan.payload,
+  });
+}
+
 export async function prepareLocationEnvironmentSheetDraftSpec(input: {
   projectName?: string;
   homeDir?: string;
@@ -366,7 +402,7 @@ export async function buildLocationEnvironmentSheetDependencyDraftSpec(
       prompt: [
         `Create a production environment sheet for ${context.location.name}.`,
         input.reason,
-        'Use the active visual language and location design context. Make the sheet useful as a video reference image.',
+        'Translate the project visual language and location design into visible architecture, geography, materials, surfaces, lighting, atmosphere, scale cues, and continuity views. Make the sheet useful as a video reference image.',
       ].join(' '),
       takeCount: 1,
       seed: null,

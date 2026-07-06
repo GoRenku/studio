@@ -26,6 +26,7 @@ import type {
   LookbookSheetGenerationSpec,
   LookbookSheetMediaImportReport,
   LookbookSheetModelListReport,
+  GenerationPreviewRequest,
   MediaGenerationPurpose,
   MediaGenerationCostProjection,
   MediaGenerationDependencyRequest,
@@ -126,10 +127,10 @@ import * as sceneDialogueAudio from '../purposes/scene-dialogue-audio.js';
 import { buildMediaGenerationCostProjection } from '../cost/cost-projection.js';
 import { buildShotVideoTakeContext } from '../purposes/shot-video-take/authoring/context.js';
 import { listShotVideoTakeModels, listShotInputModels } from '../purposes/shot-video-take/specs/model-list.js';
-import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotVideoPromptSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotVideoPromptSheetSpec, prepareShotInputDraftSpec } from '../purposes/shot-video-take/specs/input-specs.js';
+import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotVideoPromptSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotVideoPromptSheetSpec, buildShotInputGenerationPreview, prepareShotInputDraftSpec } from '../purposes/shot-video-take/specs/input-specs.js';
 import { buildShotInputDependencyDraftSpec } from '../purposes/shot-video-take/planning/dependency-draft-specs.js';
 import { declareShotVideoInputDependencies } from '../purposes/shot-video-take/planning/shot-input-dependencies.js';
-import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, prepareShotVideoTakeDraftSpec } from '../purposes/shot-video-take/specs/final-specs.js';
+import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, buildShotVideoTakeGenerationPreview, prepareShotVideoTakeDraftSpec } from '../purposes/shot-video-take/specs/final-specs.js';
 import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotVideoPromptSheetSpec, runShotVideoTakeSpec } from '../purposes/shot-video-take/runs/generation-runs.js';
 import { declareShotVideoTakeDependencies } from '../purposes/shot-video-take/planning/dependency-inventory.js';
 import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from '../purposes/shot-video-take/imports/media-imports.js';
@@ -243,6 +244,7 @@ export interface MediaGenerationPurposeDefinition {
   listSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
+  buildPreview?(input: ReadMediaGenerationSpecInput): Promise<GenerationPreviewRequest>;
   declareDependencies?(
     input: MediaGenerationDependencyDeclarationInput
   ): Promise<MediaGenerationDependencySlot[]>;
@@ -283,6 +285,7 @@ const DEFINITIONS = [
       } satisfies UpdateLookbookImageGenerationSpecInput),
     listSpecs: (input) => lookbookImage.listLookbookImageSpecs(toLookbookInput(input)),
     prepareSpec: lookbookImage.prepareLookbookImageSpec,
+    buildPreview: lookbookImage.buildLookbookImageGenerationPreview,
     prepareDraftSpec: (input) =>
       lookbookImage.prepareLookbookImageDraftSpec({
         projectName: input.projectName,
@@ -321,6 +324,7 @@ const DEFINITIONS = [
       } satisfies UpdateLookbookSheetGenerationSpecInput),
     listSpecs: (input) => lookbookSheet.listLookbookSheetSpecs(toLookbookInput(input)),
     prepareSpec: lookbookSheet.prepareLookbookSheetSpec,
+    buildPreview: lookbookSheet.buildLookbookSheetGenerationPreview,
     prepareDraftSpec: (input) =>
       lookbookSheet.prepareLookbookSheetDraftSpec({
         projectName: input.projectName,
@@ -360,6 +364,7 @@ const DEFINITIONS = [
       } satisfies UpdateCastCharacterSheetGenerationSpecInput),
     listSpecs: (input) => characterSheet.listCastCharacterSheetSpecs(toCastInput(input)),
     prepareSpec: characterSheet.prepareCastCharacterSheetSpec,
+    buildPreview: characterSheet.buildCastCharacterSheetGenerationPreview,
     prepareDraftSpec: (input) =>
       characterSheet.prepareCastCharacterSheetDraftSpec({
         projectName: input.projectName,
@@ -399,6 +404,7 @@ const DEFINITIONS = [
       } satisfies UpdateCastProfileGenerationSpecInput),
     listSpecs: (input) => castProfile.listCastProfileSpecs(toCastInput(input)),
     prepareSpec: castProfile.prepareCastProfileSpec,
+    buildPreview: castProfile.buildCastProfileGenerationPreview,
     prepareDraftSpec: (input) =>
       castProfile.prepareCastProfileDraftSpec({
         projectName: input.projectName,
@@ -535,6 +541,7 @@ const DEFINITIONS = [
       } satisfies UpdateLocationEnvironmentSheetGenerationSpecInput),
     listSpecs: (input) => locationSheet.listLocationEnvironmentSheetSpecs(toLocationInput(input)),
     prepareSpec: locationSheet.prepareLocationEnvironmentSheetSpec,
+    buildPreview: locationSheet.buildLocationEnvironmentSheetGenerationPreview,
     prepareDraftSpec: (input) =>
       locationSheet.prepareLocationEnvironmentSheetDraftSpec({
         projectName: input.projectName,
@@ -576,6 +583,7 @@ const DEFINITIONS = [
       } satisfies UpdateLocationHeroGenerationSpecInput),
     listSpecs: (input) => locationHero.listLocationHeroSpecs(toLocationInput(input)),
     prepareSpec: locationHero.prepareLocationHeroSpec,
+    buildPreview: locationHero.buildLocationHeroGenerationPreview,
     prepareDraftSpec: (input) =>
       locationHero.prepareLocationHeroDraftSpec({
         projectName: input.projectName,
@@ -615,6 +623,7 @@ const DEFINITIONS = [
       } satisfies UpdateSceneStoryboardSheetGenerationSpecInput),
     listSpecs: (input) => sceneStoryboardSheet.listSceneStoryboardSheetSpecs(toSceneInput(input)),
     prepareSpec: sceneStoryboardSheet.prepareSceneStoryboardSheetSpec,
+    buildPreview: sceneStoryboardSheet.buildSceneStoryboardSheetGenerationPreview,
     prepareDraftSpec: (input) =>
       sceneStoryboardSheet.prepareSceneStoryboardSheetDraftSpec({
         projectName: input.projectName,
@@ -644,6 +653,7 @@ const DEFINITIONS = [
       updateShotFirstFrameSpec(toShotInputSpecUpdate(input)),
     listSpecs: (input) => listShotFirstFrameSpecs(toShotInput(input)),
     prepareSpec: prepareShotFirstFrameSpec,
+    buildPreview: buildShotInputGenerationPreview,
     prepareDraftSpec: (input) =>
       prepareShotInputDraftSpec({
         projectName: input.projectName,
@@ -673,6 +683,7 @@ const DEFINITIONS = [
       updateShotLastFrameSpec(toShotInputSpecUpdate(input)),
     listSpecs: (input) => listShotLastFrameSpecs(toShotInput(input)),
     prepareSpec: prepareShotLastFrameSpec,
+    buildPreview: buildShotInputGenerationPreview,
     prepareDraftSpec: (input) =>
       prepareShotInputDraftSpec({
         projectName: input.projectName,
@@ -702,6 +713,7 @@ const DEFINITIONS = [
       updateShotReferenceImageSpec(toShotInputSpecUpdate(input)),
     listSpecs: (input) => listShotReferenceImageSpecs(toShotInput(input)),
     prepareSpec: prepareShotReferenceImageSpec,
+    buildPreview: buildShotInputGenerationPreview,
     prepareDraftSpec: (input) =>
       prepareShotInputDraftSpec({
         projectName: input.projectName,
@@ -732,6 +744,7 @@ const DEFINITIONS = [
     listSpecs: (input) =>
       listShotVideoPromptSheetSpecs(toShotInput(input)),
     prepareSpec: prepareShotVideoPromptSheetSpec,
+    buildPreview: buildShotInputGenerationPreview,
     prepareDraftSpec: (input) =>
       prepareShotInputDraftSpec({
         projectName: input.projectName,
@@ -771,6 +784,7 @@ const DEFINITIONS = [
       } satisfies UpdateShotVideoTakeOutputGenerationSpecInput),
     listSpecs: (input) => listShotVideoTakeSpecs(toShotInput(input)),
     prepareSpec: prepareShotVideoTakeSpec,
+    buildPreview: buildShotVideoTakeGenerationPreview,
     prepareDraftSpec: (input) =>
       prepareShotVideoTakeDraftSpec({
         projectName: input.projectName,

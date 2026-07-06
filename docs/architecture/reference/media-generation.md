@@ -23,6 +23,7 @@ Decision history:
 - `../../decisions/0040-use-agent-media-execution-policy-for-external-built-in-image-generation.md`
 - `../../decisions/0042-use-purpose-cost-projections-for-generation-estimates.md`
 - `../../decisions/0043-use-single-generation-approval-tokens.md`
+- `../../decisions/0045-use-generation-preview-purpose-bindings.md`
 
 ## Current Purposes
 

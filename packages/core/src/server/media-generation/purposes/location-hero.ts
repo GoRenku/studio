@@ -16,8 +16,12 @@ import type {
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
   ProjectRelativePath,
+  GenerationPreviewRequestReference,
 } from '../../../client/index.js';
-import { LOCATION_HERO_GENERATION_PURPOSE } from '../../../client/index.js';
+import {
+  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOCATION_HERO_GENERATION_PURPOSE,
+} from '../../../client/index.js';
 import { insertAssetFileRecord } from '../../database/access/asset-files.js';
 import { insertAssetRecord } from '../../database/access/assets.js';
 import {
@@ -65,6 +69,8 @@ import {
 } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import type { LocationHeroMutationReport } from '../../project-data-service-contracts.js';
 import { studioResourceKeysForAssetTarget } from '../../studio-coordination/resource-keys.js';
 import {
@@ -319,6 +325,38 @@ export async function prepareLocationHeroSpec(
   };
 }
 
+export async function buildLocationHeroGenerationPreview(
+  input: LocationHeroSpecIdInput
+) {
+  const specRecord = await readLocationHeroSpec(input);
+  assertLocationHeroSpec(specRecord.spec);
+  const context = await buildLocationHeroContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    locationId: specRecord.spec.target.id,
+    sourceLocationSheetAssetId: specRecord.spec.sourceLocationSheetAssetId,
+  });
+  const plan = buildLocationHeroProviderPayload(specRecord.spec, context);
+  return buildSavedImageGenerationPreview({
+    specRecord,
+    purpose: LOCATION_HERO_GENERATION_PURPOSE,
+    project: context.project,
+    target: specRecord.target,
+    title: specRecord.title,
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel:
+      modelChoices(context).find(
+        (model) => model.modelChoice === specRecord.spec.modelChoice
+      )?.label ?? specRecord.spec.modelChoice,
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: plan.mode,
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    references: locationHeroPreviewReferences(specRecord.spec, context),
+    payload: plan.payload,
+  });
+}
+
 export async function prepareLocationHeroDraftSpec(input: {
   projectName?: string;
   homeDir?: string;
@@ -337,6 +375,32 @@ export async function prepareLocationHeroDraftSpec(input: {
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized),
   };
+}
+
+function locationHeroPreviewReferences(
+  spec: LocationHeroGenerationSpec,
+  context: LocationHeroGenerationContext
+): GenerationPreviewRequestReference[] {
+  const file = context.imageFiles.find(
+    (candidate) =>
+      candidate.assetId === spec.sourceLocationSheetAssetId &&
+      candidate.role === 'primary'
+  );
+  if (!file) {
+    return [];
+  }
+  return [
+    {
+      kind: 'image',
+      role: 'location-environment-sheet',
+      label: 'Location environment sheet',
+      providerToken: 'image_urls',
+      assetId: file.assetId,
+      assetFileId: file.assetFileId,
+      sourcePurpose: LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+      selected: true,
+    },
+  ];
 }
 
 export async function runLocationHeroSpec(

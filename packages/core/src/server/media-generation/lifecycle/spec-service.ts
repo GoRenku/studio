@@ -3,9 +3,6 @@ import type {
   MediaGenerationSpecRecord,
 } from '../../../client/index.js';
 import {
-  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
-} from '../../../client/index.js';
-import {
   requireMediaGenerationSpec,
 } from '../../database/access/media-generation.js';
 import type {
@@ -24,10 +21,7 @@ import {
 } from './purpose-lifecycle-registry.js';
 import { assertRootDependenciesResolved } from './dependency-service.js';
 import { withMediaGenerationProjectSession } from './project-session.js';
-import {
-  buildCastCharacterSheetGenerationPreview,
-  updateCastCharacterSheetReferenceInclusion as updateCastCharacterSheetReferenceInclusionForSpec,
-} from '../purposes/cast-character-sheet.js';
+import { updateCastCharacterSheetReferenceInclusion as updateCastCharacterSheetReferenceInclusionForSpec } from '../purposes/cast-character-sheet.js';
 
 export async function validateMediaGenerationSpec(
   input: ValidateMediaGenerationSpecInput
@@ -92,19 +86,18 @@ export async function buildMediaGenerationPreview(
   input: BuildMediaGenerationPreviewInput
 ): Promise<GenerationPreviewRequest> {
   const specRecord = await readMediaGenerationSpec(input);
-  switch (specRecord.purpose) {
-    case CAST_CHARACTER_SHEET_GENERATION_PURPOSE:
-      return buildCastCharacterSheetGenerationPreview(input);
-    default:
-      throw new ProjectDataError(
-        'CORE_MEDIA_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
-        `Generation preview from saved specs is not supported for purpose: ${specRecord.purpose}.`,
-        {
-          suggestion:
-            'Use a generation preview payload file for this purpose until a saved-spec preview builder is added.',
-        }
-      );
+  const definition = requireMediaGenerationPurposeDefinition(specRecord.purpose);
+  if (definition.buildPreview) {
+    return definition.buildPreview(input);
   }
+  throw new ProjectDataError(
+    'CORE_MEDIA_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
+    `Generation preview from saved specs is not supported for purpose: ${specRecord.purpose}.`,
+    {
+      suggestion:
+        'Use a generation preview payload file for this purpose until a saved-spec preview builder is added.',
+    }
+  );
 }
 
 export async function updateCastCharacterSheetReferenceInclusion(

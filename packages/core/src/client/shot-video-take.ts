@@ -681,12 +681,22 @@ export interface ShotVideoTakeModelInputRoleReport {
   mediaKind: 'image' | 'audio' | 'video';
 }
 
+export type ShotVideoTakeParameterControlValue =
+  | string
+  | number
+  | boolean
+  | null
+  | string[]
+  | number[]
+  | boolean[]
+  | Record<string, unknown>;
+
 export interface ShotVideoTakeParameterReport {
   name: string;
   label: string;
   required: boolean;
-  defaultValue?: import('./scene-shot-list.js').ShotVideoTakeParameterValue;
-  allowedValues?: import('./scene-shot-list.js').ShotVideoTakeParameterValue[];
+  defaultValue?: ShotVideoTakeParameterControlValue;
+  allowedValues?: ShotVideoTakeParameterControlValue[];
   minimum?: number;
   maximum?: number;
 }

@@ -724,6 +724,7 @@ function shotVideoTakeParameterValuesSchema(): Record<string, unknown> {
         { type: 'array', items: { type: 'string' } },
         { type: 'array', items: { type: 'number' } },
         { type: 'array', items: { type: 'boolean' } },
+        { type: 'array', items: { type: 'object' } },
       ],
     },
   };

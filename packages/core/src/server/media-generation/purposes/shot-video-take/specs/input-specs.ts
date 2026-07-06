@@ -14,6 +14,7 @@ import type {
   ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeProductionContext,
   ShotVideoInputReferenceMode,
+  GenerationPreviewRequestReference,
 } from '../../../../../client/index.js';
 import {
   insertMediaGenerationSpec,
@@ -47,12 +48,15 @@ import {
   buildShotVideoTakeInputProviderPayload,
   toGenerationRequest,
 } from '../provider/provider-payloads.js';
+import { buildSavedImageGenerationPreview } from '../../../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../../../generation-preview/provider-preview-prompt.js';
 import {
   INPUT_MODEL_CHOICES,
   PURPOSE_CONFIG,
   isShotInputPurpose,
   titleForInputSpec,
 } from '../shared/purpose-config.js';
+import { shotInputModelChoices } from './model-list.js';
 import {
   validatePromptSheetMetadataAbsent,
   validateVideoPromptSheetMetadata,
@@ -65,6 +69,7 @@ import {
   readShotSpec,
 } from './spec-records.js';
 import {
+  type ShotVideoInputReferenceBundle,
   resolveShotVideoInputReferenceBundle,
 } from '../planning/shot-input-references.js';
 
@@ -213,6 +218,43 @@ export async function prepareShotInputSpec(
   };
 }
 
+export async function buildShotInputGenerationPreview(
+  input: ReadMediaGenerationSpecInput
+) {
+  const specRecord = await readShotSpec(input);
+  assertShotInputSpec(specRecord.spec);
+  const { context, plan, references } = await prepareShotInputProviderPlan({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    spec: specRecord.spec,
+  });
+  return buildSavedImageGenerationPreview({
+    specRecord,
+    purpose: specRecord.spec.purpose,
+    project: context.project,
+    target: specRecord.target,
+    title: specRecord.title,
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel:
+      shotInputModelChoices().find(
+        (model) => model.modelChoice === specRecord.spec.modelChoice
+      )?.label ?? specRecord.spec.modelChoice,
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: plan.mode === 'reference-to-image' ? 'reference-to-image' : 'text-to-image',
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    references: shotInputPreviewReferences(references),
+    providerTokenOrder: shotInputProviderTokenOrder(references),
+    payload: plan.payload,
+    ...(specRecord.spec.purpose === SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
+      ? {
+          promptSheetVisualStyleId: specRecord.spec.promptSheetVisualStyleId,
+          promptSheetNotationModeId: specRecord.spec.promptSheetNotationModeId,
+        }
+      : {}),
+  });
+}
+
 
 
 export async function prepareShotInputDraftSpec(input: {
@@ -341,6 +383,7 @@ async function prepareShotInputProviderPlan(input: {
 }): Promise<{
   context: ShotVideoTakeProductionContext;
   plan: ReturnType<typeof buildShotVideoTakeInputProviderPayload>;
+  references: ShotVideoInputReferenceBundle;
 }> {
   const context =
     input.context ??
@@ -362,8 +405,34 @@ async function prepareShotInputProviderPlan(input: {
       context,
       references,
     });
-    return { context, plan };
+    return { context, plan, references };
   });
+}
+
+function shotInputPreviewReferences(
+  bundle: ShotVideoInputReferenceBundle
+): GenerationPreviewRequestReference[] {
+  return [
+    ...(bundle.styleReference ? [bundle.styleReference] : []),
+    ...bundle.continuityReferences,
+  ].map((reference) => ({
+    kind: 'image' as const,
+    role: reference.role,
+    label: reference.label,
+    providerToken: 'image_urls',
+    assetId: reference.assetId,
+    assetFileId: reference.assetFileId,
+    selected: true,
+  }));
+}
+
+function shotInputProviderTokenOrder(
+  bundle: ShotVideoInputReferenceBundle
+): string[] {
+  return [
+    ...(bundle.styleReference ? [bundle.styleReference.dependencyId] : []),
+    ...bundle.continuityReferences.map((reference) => reference.dependencyId),
+  ];
 }
 
 function isShotVideoInputReferenceMode(

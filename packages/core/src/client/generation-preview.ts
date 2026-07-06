@@ -1,5 +1,19 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { GenerationCostEstimate } from '@gorenku/studio-engines';
+import type {
+  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  CAST_PROFILE_GENERATION_PURPOSE,
+  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOCATION_HERO_GENERATION_PURPOSE,
+  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  LOOKBOOK_SHEET_GENERATION_PURPOSE,
+  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+  SHOT_LAST_FRAME_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+} from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
 import type {
   VideoPromptSheetNotationModeId,
@@ -7,9 +21,18 @@ import type {
 } from './shot-video-take.js';
 
 export type GenerationPreviewPurpose =
-  | 'shot.video-prompt-sheet'
-  | 'shot.video-take'
-  | 'cast.character-sheet';
+  | typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE
+  | typeof LOOKBOOK_SHEET_GENERATION_PURPOSE
+  | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE
+  | typeof CAST_PROFILE_GENERATION_PURPOSE
+  | typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE
+  | typeof LOCATION_HERO_GENERATION_PURPOSE
+  | typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
+  | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
+  | typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
+  | typeof SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
+  | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
 
 export interface GenerationPreviewRequest {
   kind: 'generationPreview';

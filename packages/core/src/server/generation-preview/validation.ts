@@ -1,6 +1,15 @@
 import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  CAST_PROFILE_GENERATION_PURPOSE,
+  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOCATION_HERO_GENERATION_PURPOSE,
+  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  LOOKBOOK_SHEET_GENERATION_PURPOSE,
+  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+  SHOT_LAST_FRAME_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type GenerationPreviewRequest,
@@ -107,6 +116,21 @@ const GENERATION_PREVIEW_CONFIGURATION_PRESENTATIONS = new Set([
   'parameter-control',
 ]);
 
+const SUPPORTED_GENERATION_PREVIEW_PURPOSES = new Set<string>([
+  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  LOOKBOOK_SHEET_GENERATION_PURPOSE,
+  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  CAST_PROFILE_GENERATION_PURPOSE,
+  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
+  LOCATION_HERO_GENERATION_PURPOSE,
+  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+  SHOT_LAST_FRAME_GENERATION_PURPOSE,
+  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
+  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+]);
+
 export function validateGenerationPreviewRequest(
   value: unknown
 ): GenerationPreviewRequest {
@@ -153,15 +177,13 @@ function validateGenerationPreviewEnvelope(
   validateTopLevelKeys(preview, options.topLevelKeys, options.context, issues);
   requireString(preview, 'kind', 'generationPreview', options.context, issues);
   requireNonEmptyString(preview, 'previewId', ['previewId'], options.context, issues);
-  if (
-    preview.purpose !== SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE &&
-    preview.purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE &&
-    preview.purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE
-  ) {
+  if (!SUPPORTED_GENERATION_PREVIEW_PURPOSES.has(String(preview.purpose))) {
     issues.push(
       createDiagnosticError(
         'CORE_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
-        'Generation preview purpose must be shot.video-prompt-sheet, shot.video-take, or cast.character-sheet.',
+        `Generation preview purpose must be one of: ${[
+          ...SUPPORTED_GENERATION_PREVIEW_PURPOSES,
+        ].join(', ')}.`,
         { path: ['purpose'], context: options.context }
       )
     );
@@ -352,7 +374,47 @@ function validateTarget(
     validateCastMemberTarget(target, context, issues);
     return;
   }
+  if (purpose === CAST_PROFILE_GENERATION_PURPOSE) {
+    validateCastMemberTarget(target, context, issues);
+    return;
+  }
+  if (
+    purpose === LOOKBOOK_IMAGE_GENERATION_PURPOSE ||
+    purpose === LOOKBOOK_SHEET_GENERATION_PURPOSE
+  ) {
+    validateSimpleIdTarget(target, 'lookbook', context, issues);
+    return;
+  }
+  if (
+    purpose === LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE ||
+    purpose === LOCATION_HERO_GENERATION_PURPOSE
+  ) {
+    validateSimpleIdTarget(target, 'location', context, issues);
+    return;
+  }
+  if (purpose === SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE) {
+    validateSimpleIdTarget(target, 'scene', context, issues);
+    return;
+  }
   validateSceneShotVideoTakeTarget(target, context, issues);
+}
+
+function validateSimpleIdTarget(
+  target: Record<string, unknown>,
+  kind: 'lookbook' | 'location' | 'scene',
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
+  if (target.kind !== kind) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_TARGET_UNSUPPORTED',
+        `Generation preview target must be a ${kind} target.`,
+        { path: ['target', 'kind'], context }
+      )
+    );
+  }
+  requireNonEmptyString(target, 'id', ['target', 'id'], context, issues);
 }
 
 function validateSceneShotVideoTakeTarget(

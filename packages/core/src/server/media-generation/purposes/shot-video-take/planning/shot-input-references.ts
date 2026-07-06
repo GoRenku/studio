@@ -240,16 +240,16 @@ function promptNotesForReferences(
     return [
       styleReference
         ? `Use ${styleReference.label} as the primary drawing/style reference.`
-        : 'Use the selected Storyboard Lookbook sheet as the primary drawing/style reference.',
-      'Use selected Location Sheets and Character Sheets as content continuity references.',
+        : 'Use the attached Storyboard Lookbook sheet as the primary drawing/style reference.',
+      'Use attached Location Sheet and Character Sheet references as content continuity references.',
       'Keep this artifact take-owned; do not turn it into a scene storyboard sheet.',
     ];
   }
   return [
     styleReference
       ? `Use ${styleReference.label} as the primary movie style reference.`
-      : 'Use the selected Movie Lookbook sheet as the primary movie style reference.',
-    'Use selected Location Sheets and Character Sheets as continuity references.',
+      : 'Use the attached Movie Lookbook sheet as the primary movie style reference.',
+    'Use attached Location Sheet and Character Sheet references as continuity references.',
     'Do not render this shot input image in Storyboard Lookbook drawing style.',
   ];
 }

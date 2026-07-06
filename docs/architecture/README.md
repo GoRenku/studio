@@ -38,6 +38,9 @@ Use this page as the map:
   project-native creative direction surfaces.
 - `media-generation.md` explains the current persisted media generation and
   separate media import architecture.
+- `generation-preview-purpose-bindings.md` defines the saved-spec generation
+  preview boundary: shared image preview configuration, purpose bindings, and
+  separate final shot-video route preview logic.
 - `shot-video-take-structure-modes.md` defines the continuous versus multi-cut
   Shot Video Take structure model.
 - `drizzle-first-project-data.md` defines the Drizzle-first runtime query
@@ -138,6 +141,9 @@ Use this page as the map:
 - `media-generation.md` explains the current implemented Lookbook Image
   generation slice, persisted generation specs, generation runs, and separate
   media import.
+- `generation-preview-purpose-bindings.md` defines saved-spec generation
+  preview ownership, shared image preview configuration, and final shot-video
+  preview route handling.
 - `reference/media-generation.md` defines the current exact generation and
   import contract.
 - `plans/exploration/project-generation-definitions.md` explores a broader
@@ -151,6 +157,7 @@ Use this page as the map:
   - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
   - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
   - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
+  - `../decisions/0045-use-generation-preview-purpose-bindings.md`
 
 Do not promote broader generation explorations to architecture or ADRs until
 implementation proves the exact generation-definition, request, task, queue, and

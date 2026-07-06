@@ -15,6 +15,7 @@ import type {
   SceneStoryboardSheetModelListReport,
   SceneStoryboardSheetOutputFormat,
   MediaGenerationDependencySlot,
+  GenerationPreviewRequestReference,
 } from '../../../client/index.js';
 import {
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
@@ -63,6 +64,8 @@ import {
   resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
+import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import type {
   ImportSceneStoryboardImagesMediaInput,
   ReadSceneStoryboardSheetGenerationContextInput,
@@ -109,7 +112,7 @@ const OUTPUT_FORMATS = new Set<SceneStoryboardSheetOutputFormat>([
 interface SceneStoryboardSheetProviderPlan {
   provider: 'fal-ai' | 'elevenlabs';
   model: string;
-  mode: 'text-to-image' | 'image-edit';
+  mode: 'text-to-image' | 'reference-to-image';
   payload: Record<string, unknown>;
   inputFiles?: PreparedMediaGeneration['generation']['request']['inputFiles'];
   outputCount: 1;
@@ -340,6 +343,38 @@ export async function prepareSceneStoryboardSheetSpec(
   };
 }
 
+export async function buildSceneStoryboardSheetGenerationPreview(
+  input: ReadMediaGenerationSpecInput
+) {
+  const specRecord = await readSceneStoryboardSheetSpec(input);
+  assertSceneStoryboardSheetSpec(specRecord.spec);
+  const context = await buildSceneStoryboardSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    sceneId: specRecord.spec.target.id,
+    shotListId: specRecord.spec.shotListId,
+  });
+  const plan = buildSceneStoryboardSheetProviderPayload(specRecord.spec, context);
+  return buildSavedImageGenerationPreview({
+    specRecord,
+    purpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
+    project: context.project,
+    target: specRecord.target,
+    title: specRecord.title,
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel:
+      modelChoices().find(
+        (model) => model.modelChoice === specRecord.spec.modelChoice
+      )?.label ?? specRecord.spec.modelChoice,
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: plan.mode,
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    references: sceneStoryboardPreviewReferences(context),
+    payload: plan.payload,
+  });
+}
+
 export async function prepareSceneStoryboardSheetDraftSpec(input: {
   projectName?: string;
   homeDir?: string;
@@ -358,6 +393,27 @@ export async function prepareSceneStoryboardSheetDraftSpec(input: {
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized),
   };
+}
+
+function sceneStoryboardPreviewReferences(
+  context: SceneStoryboardSheetGenerationContext
+): GenerationPreviewRequestReference[] {
+  const sheet = context.selectedStoryboardLookbookSheet;
+  const file = sheet?.asset.files.find((candidate) => candidate.mediaKind === 'image');
+  if (!sheet || !file) {
+    return [];
+  }
+  return [
+    {
+      kind: 'image',
+      role: 'storyboard-lookbook-sheet',
+      label: sheet.asset.title || 'Storyboard Lookbook sheet',
+      providerToken: 'image_urls',
+      assetId: sheet.asset.assetId,
+      assetFileId: file.id,
+      selected: true,
+    },
+  ];
 }
 
 export async function runSceneStoryboardSheetSpec(
@@ -680,7 +736,7 @@ function buildGptImage2Payload(
     return {
       provider: 'fal-ai',
       model: 'openai/gpt-image-2/edit',
-      mode: 'image-edit',
+      mode: 'reference-to-image',
       outputCount: 1,
       inputFiles: storyboardLookbookSheetInputFiles(referencePath),
       payload: {
@@ -719,7 +775,7 @@ function buildNanoBanana2Payload(
     return {
       provider: 'fal-ai',
       model: 'nano-banana-2/edit',
-      mode: 'image-edit',
+      mode: 'reference-to-image',
       outputCount: 1,
       inputFiles: storyboardLookbookSheetInputFiles(referencePath),
       payload: {
@@ -772,7 +828,7 @@ function buildGrokImaginePayload(
     return {
       provider: 'fal-ai',
       model: 'xai/grok-imagine-image/edit',
-      mode: 'image-edit',
+      mode: 'reference-to-image',
       outputCount: 1,
       inputFiles: storyboardLookbookSheetInputFiles(referencePath),
       payload: {

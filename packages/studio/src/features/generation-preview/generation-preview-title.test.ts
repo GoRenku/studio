@@ -1,6 +1,8 @@
+import { describe, expect, it } from 'vitest';
 import type { GenerationPreviewPurpose } from '@gorenku/studio-core/client';
+import { generationPreviewTitle } from './generation-preview-title';
 
-const GENERATION_PREVIEW_TITLES = {
+const PREVIEW_TITLE_CASES = {
   'lookbook.image': 'Lookbook Image Generation Preview',
   'lookbook.sheet': 'Lookbook Sheet Generation Preview',
   'cast.character-sheet': 'Character Sheet Generation Preview',
@@ -15,8 +17,11 @@ const GENERATION_PREVIEW_TITLES = {
   'shot.video-take': 'Shot Video Generation Preview',
 } satisfies Record<GenerationPreviewPurpose, string>;
 
-export function generationPreviewTitle(
-  purpose: GenerationPreviewPurpose
-): string {
-  return GENERATION_PREVIEW_TITLES[purpose];
-}
+describe('generationPreviewTitle', () => {
+  it.each(Object.entries(PREVIEW_TITLE_CASES))(
+    'returns a dialog title for %s',
+    (purpose, title) => {
+      expect(generationPreviewTitle(purpose as GenerationPreviewPurpose)).toBe(title);
+    }
+  );
+});

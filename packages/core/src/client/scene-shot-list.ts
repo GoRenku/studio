@@ -103,7 +103,8 @@ export type ShotVideoTakeParameterValue =
   | string[]
   | number[]
   | boolean[]
-  | Record<string, unknown>;
+  | Record<string, unknown>
+  | Record<string, unknown>[];
 
 export type ShotVideoTakeParameterValues = Record<
   string,

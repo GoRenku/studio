@@ -23,6 +23,21 @@ const PURPOSES: MediaGenerationPurpose[] = [
   'shot.video-take',
 ];
 
+const PREVIEWABLE_PURPOSES: MediaGenerationPurpose[] = [
+  'lookbook.image',
+  'lookbook.sheet',
+  'cast.character-sheet',
+  'cast.profile',
+  'location.environment-sheet',
+  'location.hero',
+  'scene.storyboard-sheet',
+  'shot.first-frame',
+  'shot.last-frame',
+  'shot.reference-image',
+  'shot.video-prompt-sheet',
+  'shot.video-take',
+];
+
 describe('media generation lifecycle purpose registry', () => {
   it('registers each current purpose exactly once and returns a copy', () => {
     const definitions = listMediaGenerationPurposeDefinitions();
@@ -98,5 +113,14 @@ describe('media generation lifecycle purpose registry', () => {
           suggestion: expect.stringContaining('registered media generation purposes'),
         })
       );
+  });
+
+  it('registers preview builders for every saved-spec previewable purpose', () => {
+    const previewable = listMediaGenerationPurposeDefinitions()
+      .filter((definition) => typeof definition.buildPreview === 'function')
+      .map((definition) => definition.purpose)
+      .sort();
+
+    expect(previewable).toEqual([...PREVIEWABLE_PURPOSES].sort());
   });
 });

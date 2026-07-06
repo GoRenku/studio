@@ -15,6 +15,95 @@ describe('generation preview validation', () => {
     });
   });
 
+  it.each([
+    ['lookbook.image', { kind: 'lookbook', id: 'lookbook_main' }],
+    ['lookbook.sheet', { kind: 'lookbook', id: 'lookbook_main' }],
+    ['cast.character-sheet', { kind: 'castMember', id: 'cast_mehmed' }],
+    ['cast.profile', { kind: 'castMember', id: 'cast_mehmed' }],
+    ['location.environment-sheet', { kind: 'location', id: 'loc_basilica' }],
+    ['location.hero', { kind: 'location', id: 'loc_basilica' }],
+    ['scene.storyboard-sheet', { kind: 'scene', id: 'scene_opening' }],
+    [
+      'shot.first-frame',
+      {
+        kind: 'sceneShotVideoTake',
+        id: 'take_test0001',
+        sceneId: 'scene_test0001',
+        takeId: 'take_test0001',
+        shotIds: ['shot_test0001'],
+      },
+    ],
+    [
+      'shot.last-frame',
+      {
+        kind: 'sceneShotVideoTake',
+        id: 'take_test0001',
+        sceneId: 'scene_test0001',
+        takeId: 'take_test0001',
+        shotIds: ['shot_test0001'],
+      },
+    ],
+    [
+      'shot.reference-image',
+      {
+        kind: 'sceneShotVideoTake',
+        id: 'take_test0001',
+        sceneId: 'scene_test0001',
+        takeId: 'take_test0001',
+        shotIds: ['shot_test0001'],
+      },
+    ],
+    [
+      'shot.video-prompt-sheet',
+      {
+        kind: 'sceneShotVideoTake',
+        id: 'take_test0001',
+        sceneId: 'scene_test0001',
+        takeId: 'take_test0001',
+        shotIds: ['shot_test0001'],
+      },
+    ],
+    [
+      'shot.video-take',
+      {
+        kind: 'sceneShotVideoTake',
+        id: 'take_test0001',
+        sceneId: 'scene_test0001',
+        takeId: 'take_test0001',
+        shotIds: ['shot_test0001'],
+      },
+    ],
+  ])('accepts supported preview purpose %s', (purpose, target) => {
+    const preview = {
+      ...previewFixture(),
+      purpose,
+      target,
+      ...(purpose === 'shot.video-prompt-sheet'
+        ? {}
+        : {
+            promptSheetVisualStyleId: undefined,
+            promptSheetNotationModeId: undefined,
+          }),
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).not.toThrow();
+  });
+
+  it('rejects unknown preview purposes', () => {
+    const preview = {
+      ...previewFixture(),
+      purpose: 'scene.dialogue-audio',
+      promptSheetVisualStyleId: undefined,
+      promptSheetNotationModeId: undefined,
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+      })
+    );
+  });
+
   it('does not parse prompt text for panel structure', () => {
     const preview = previewFixture();
     preview.finalPrompt.text =

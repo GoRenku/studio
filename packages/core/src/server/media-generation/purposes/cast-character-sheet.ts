@@ -80,7 +80,8 @@ import {
   withCastProjectSession,
   type CastProviderPlan,
 } from './cast-image-common.js';
-import { buildImagePreviewConfiguration } from '../../generation-preview/configuration/model-input-configuration.js';
+import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 
 const CHARACTER_SHEET_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2',
@@ -371,31 +372,18 @@ export async function buildCastCharacterSheetGenerationPreview(
     referenceSelections: specRecord.spec.referenceSelections,
   });
   const plan = buildCastCharacterSheetProviderPayload(specRecord.spec, context);
-  const configuration = await castCharacterSheetPreviewConfiguration(
-    specRecord.spec,
-    plan,
-    context
-  );
-  return {
-    kind: 'generationPreview',
-    previewId: `generation-preview:${specRecord.id}`,
-    generationSpecId: specRecord.id,
+  return buildSavedImageGenerationPreview({
+    specRecord,
     purpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
-    project: {
-      id: context.project.id ?? context.project.name,
-      name: context.project.name,
-      title: context.project.title,
-    },
+    project: context.project,
     target: specRecord.target,
     title: specRecord.title,
-    model: {
-      provider: plan.provider,
-      modelId: plan.model,
-      route: plan.model,
-      executionPath: 'renku-managed',
-      mediaKind: 'image',
-    },
-    finalPrompt: { text: specRecord.spec.prompt },
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel: castCharacterSheetModelLabel(specRecord.spec.modelChoice, context),
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: plan.mode,
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: referenceOptions.map((reference) => ({
       kind: 'image' as const,
       role: reference.referenceRole,
@@ -416,18 +404,11 @@ export async function buildCastCharacterSheetGenerationPreview(
         editable: true,
       },
     })),
-    configuration,
-    providerPreview: {
-      provider: plan.provider,
-      model: plan.model,
-      mode: plan.mode,
-      providerTokenOrder: referenceOptions
-        .filter((reference) => reference.included)
-        .map((reference) => reference.dependencyId),
-      payload: plan.payload,
-    },
-    diagnostics: [],
-  };
+    providerTokenOrder: referenceOptions
+      .filter((reference) => reference.included)
+      .map((reference) => reference.dependencyId),
+    payload: plan.payload,
+  });
 }
 
 export async function updateCastCharacterSheetReferenceInclusion(
@@ -544,7 +525,7 @@ export async function buildCastCharacterSheetDependencyDraftSpec(
       prompt: [
         `Create a production character sheet for ${context.castMember.name}.`,
         input.reason,
-        'Use the active visual language and cast design context. Keep the sheet useful as a video reference image.',
+        'Translate the project visual language and cast design into visible identity, wardrobe, material, palette, lighting, posture, and turnaround-layout instructions. Keep the sheet useful as a video reference image.',
       ].join(' '),
       takeCount: 1,
       seed: null,
@@ -1077,20 +1058,6 @@ function referenceSelectionsFromDependencyRequest(
   return normalizeReferenceSelections(
     (spec as CastCharacterSheetGenerationSpec).referenceSelections
   );
-}
-
-async function castCharacterSheetPreviewConfiguration(
-  spec: CastCharacterSheetGenerationSpec,
-  plan: CastProviderPlan,
-  context: CastCharacterSheetGenerationContext
-) {
-  return buildImagePreviewConfiguration({
-    provider: plan.provider,
-    providerModel: plan.model,
-    modelChoice: spec.modelChoice,
-    modelLabel: castCharacterSheetModelLabel(spec.modelChoice, context),
-    payload: plan.payload,
-  });
 }
 
 function castCharacterSheetModelLabel(

@@ -146,6 +146,48 @@ describe('shot video take preflight and validation', () => {
       'transientKlingVoiceConversions'
     );
   });
+
+  it('shows provider multi_prompt text in saved final video previews', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const context = await projectData.buildShotVideoTakeContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+    const multiPrompt = [
+      { prompt: 'Urban studies the cannon mold before speaking.', duration: 3 },
+      { prompt: 'The chamber answers with a restrained slow push.', duration: 2 },
+    ];
+
+    const spec = await projectData.createShotVideoTakeSpec({
+      homeDir,
+      spec: {
+        purpose: 'shot.video-take',
+        target: context.target,
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/kling-video/v3/pro',
+        prompt: '',
+        parameterValues: { duration: '5', multi_prompt: multiPrompt },
+        inputs: [],
+      },
+    });
+
+    const preview = await projectData.buildMediaGenerationPreview({
+      homeDir,
+      specId: spec.id,
+    });
+
+    expect(preview.finalPrompt.text).toBe(
+      [
+        'Shot 1 (duration: 3): Urban studies the cannon mold before speaking.',
+        'Shot 2 (duration: 2): The chamber answers with a restrained slow push.',
+      ].join('\n\n')
+    );
+    expect(preview.providerPreview?.payload).toMatchObject({
+      prompt: null,
+      multi_prompt: multiPrompt,
+    });
+  });
 });
 
 function dialogueAudioInput(assetFileId: string, projectRelativePath: string) {

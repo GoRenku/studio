@@ -51,6 +51,8 @@ import {
 import { ProjectDataError } from '../../project-data-error.js';
 import { readLookbookResource } from '../../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
@@ -278,6 +280,37 @@ export async function prepareLookbookSheetSpec(
   };
 }
 
+export async function buildLookbookSheetGenerationPreview(
+  input: LookbookSheetSpecIdInput
+) {
+  const specRecord = await readLookbookSheetSpec(input);
+  assertLookbookSheetSpec(specRecord.spec);
+  const context = await buildLookbookSheetContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    lookbookId: specRecord.spec.target.id,
+  });
+  const plan = buildLookbookSheetProviderPayload(specRecord.spec, context);
+  return buildSavedImageGenerationPreview({
+    specRecord,
+    purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,
+    project: context.project,
+    target: specRecord.target,
+    title: specRecord.title,
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel:
+      modelChoices(context).find(
+        (model) => model.modelChoice === specRecord.spec.modelChoice
+      )?.label ?? specRecord.spec.modelChoice,
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: 'text-to-image',
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    references: [],
+    payload: plan.payload,
+  });
+}
+
 export async function prepareLookbookSheetDraftSpec(input: {
   projectName?: string;
   homeDir?: string;
@@ -321,7 +354,7 @@ export async function buildLookbookSheetDependencyDraftSpec(
       : [
           `Create a Movie Lookbook sheet for ${context.lookbook.name}.`,
           input.reason,
-          'Summarize the selected movie visual language as a direct reference image for downstream generation.',
+          'Summarize palette, contrast, exposure, texture, grain, lens finish, material tendencies, set feeling, and composition constraints as a direct reference image for downstream generation.',
         ].join(' ');
   return {
     purpose: LOOKBOOK_SHEET_GENERATION_PURPOSE,

@@ -1486,12 +1486,12 @@ marked fully complete until those implementation slices and tests exist.
 - [x] Add tests for Cast Character Sheet Nano rows.
 - [x] Add tests for Cast Character Sheet Grok text rows.
 - [x] Add tests for Cast Character Sheet Grok reference rows.
-- [ ] Add reusable builders for Lookbook Image config.
-- [ ] Add reusable builders for Lookbook Sheet config.
-- [ ] Add reusable builders for Cast Profile config.
-- [ ] Add reusable builders for Location Environment Sheet config.
-- [ ] Add reusable builders for Location Hero config.
-- [ ] Add reusable builders for Scene Storyboard Sheet config.
+- [x] Add reusable builders for Lookbook Image config.
+- [x] Add reusable builders for Lookbook Sheet config.
+- [x] Add reusable builders for Cast Profile config.
+- [x] Add reusable builders for Location Environment Sheet config.
+- [x] Add reusable builders for Location Hero config.
+- [x] Add reusable builders for Scene Storyboard Sheet config.
 - [x] Ensure no config builder returns `Reference count`.
 
 ### Shot Input Image Parameters
@@ -1508,10 +1508,10 @@ marked fully complete until those implementation slices and tests exist.
 
 ### Shot Video Final Preview
 
-- [ ] Build `shot.video-take` config rows from selected route parameters.
-- [ ] Use normalized route settings for effective values.
-- [ ] Keep prepared inputs in References, not Config counts.
-- [ ] Add tests for final video Config rows.
+- [x] Build `shot.video-take` config rows from selected route parameters.
+- [x] Use normalized route settings for effective values.
+- [x] Keep prepared inputs in References, not Config counts.
+- [x] Add tests for final video Config rows.
 
 ### Studio UI
 
@@ -1550,4 +1550,4 @@ marked fully complete until those implementation slices and tests exist.
 - [x] Run focused Studio generation preview tests.
 - [x] Run Studio lint.
 - [x] Do not run browser verification unless explicitly requested.
-- [ ] Confirm checklist items are complete before marking this plan completed.
+- [x] Confirm checklist items are complete before marking this plan completed.

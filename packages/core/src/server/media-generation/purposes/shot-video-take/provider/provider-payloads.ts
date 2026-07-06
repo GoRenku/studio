@@ -890,7 +890,7 @@ export function buildShotVideoTakeInputProviderPayload(input: {
   return {
     provider: 'fal-ai',
     model: referenceImages.length > 0 ? referenceModel : providerModel(spec.modelChoice),
-    mode: referenceImages.length > 0 ? 'image-edit' : 'text-to-image',
+    mode: referenceImages.length > 0 ? 'reference-to-image' : 'text-to-image',
     outputCount: 1,
     payload,
     inputFiles: referenceImages.map((reference) => ({

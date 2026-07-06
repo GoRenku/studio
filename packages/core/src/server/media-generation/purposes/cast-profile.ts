@@ -10,8 +10,12 @@ import type {
   MediaGenerationDependencySlot,
   MediaGenerationTarget,
   PreparedMediaGeneration,
+  GenerationPreviewRequestReference,
 } from '../../../client/index.js';
-import { CAST_PROFILE_GENERATION_PURPOSE } from '../../../client/index.js';
+import {
+  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  CAST_PROFILE_GENERATION_PURPOSE,
+} from '../../../client/index.js';
 import {
   insertMediaGenerationRun,
   insertMediaGenerationSpec,
@@ -30,6 +34,8 @@ import {
 } from '../../entity-ids.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import { studioResourceKeysForAssetTarget } from '../../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from '../cost/cost-projection.js';
@@ -292,6 +298,37 @@ export async function prepareCastProfileSpec(
   };
 }
 
+export async function buildCastProfileGenerationPreview(
+  input: CastProfileSpecIdInput
+) {
+  const specRecord = await readCastProfileSpec(input);
+  assertProfileSpec(specRecord.spec);
+  const context = await buildCastProfileContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    castMemberId: specRecord.spec.target.id,
+  });
+  const plan = buildCastProfileProviderPayload(specRecord.spec, context);
+  return buildSavedImageGenerationPreview({
+    specRecord,
+    purpose: CAST_PROFILE_GENERATION_PURPOSE,
+    project: context.project,
+    target: specRecord.target,
+    title: specRecord.title,
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel:
+      modelChoices(context).find(
+        (model) => model.modelChoice === specRecord.spec.modelChoice
+      )?.label ?? specRecord.spec.modelChoice,
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: plan.mode,
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    references: castProfilePreviewReferences(specRecord.spec, context),
+    payload: plan.payload,
+  });
+}
+
 export async function prepareCastProfileDraftSpec(input: {
   projectName?: string;
   homeDir?: string;
@@ -309,6 +346,33 @@ export async function prepareCastProfileDraftSpec(input: {
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized, 'Cast profile'),
   };
+}
+
+function castProfilePreviewReferences(
+  spec: CastProfileGenerationSpec,
+  context: CastProfileGenerationContext
+): GenerationPreviewRequestReference[] {
+  if (!spec.sourceAssetId) {
+    return [];
+  }
+  const file = context.imageFiles.find(
+    (candidate) => candidate.assetId === spec.sourceAssetId
+  );
+  if (!file) {
+    return [];
+  }
+  return [
+    {
+      kind: 'image',
+      role: 'cast-profile-source-image',
+      label: 'Cast profile source image',
+      providerToken: 'image_urls',
+      assetId: file.assetId,
+      assetFileId: file.assetFileId,
+      sourcePurpose: CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+      selected: true,
+    },
+  ];
 }
 
 export async function runCastProfileSpec(

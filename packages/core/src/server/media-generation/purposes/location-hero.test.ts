@@ -12,6 +12,13 @@ import {
   createDeterministicIdGenerator,
   createProjectDataService,
 } from '../../index.js';
+import { insertAssetFileRecord } from '../../database/access/asset-files.js';
+import { insertAssetRecord } from '../../database/access/assets.js';
+import {
+  insertAssetRelationshipRecord,
+  nextAssetRelationshipSortOrder,
+} from '../../database/access/asset-relationships/index.js';
+import { withCurrentProjectSession } from '../../database/lifecycle/current-project.js';
 import {
   createSampleMovieProject,
   writeConfig,
@@ -202,6 +209,50 @@ describe('Location hero generation and import', () => {
         ?.selection
     ).toEqual({ kind: 'select', order: 1 });
   });
+
+  it('uses the primary Location Sheet file in saved-spec preview references', async () => {
+    const fixture = await createConfiguredProject();
+    const sourceSheet = await insertMultiFileSourceSheet(fixture);
+    const specRecord = await fixture.projectData.createLocationHeroSpec({
+      projectName: 'constantinople',
+      homeDir: fixture.homeDir,
+      spec: spec({
+        target: { kind: 'location', id: fixture.location.id },
+        sourceLocationSheetAssetId: sourceSheet.assetId,
+      }),
+    });
+
+    const prepared = await fixture.projectData.prepareLocationHeroSpec({
+      projectName: 'constantinople',
+      homeDir: fixture.homeDir,
+      specId: specRecord.id,
+    });
+    const preview = await fixture.projectData.buildMediaGenerationPreview({
+      projectName: 'constantinople',
+      homeDir: fixture.homeDir,
+      specId: specRecord.id,
+    });
+
+    expect(prepared.generation.request.inputFiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          projectRelativePath: sourceSheet.primaryProjectRelativePath,
+        }),
+      ])
+    );
+    expect(preview.references).toEqual([
+      expect.objectContaining({
+        assetId: sourceSheet.assetId,
+        assetFileId: sourceSheet.primaryFileId,
+        sourcePurpose: 'location.environment-sheet',
+      }),
+    ]);
+    expect(preview.references).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ assetFileId: sourceSheet.compositeFileId }),
+      ])
+    );
+  });
 });
 
 function spec(
@@ -347,6 +398,93 @@ async function importSourceSheet(
     title: 'Council Chamber Sheet',
     description: 'Council chamber spatial reference.',
   });
+}
+
+async function insertMultiFileSourceSheet(
+  fixture: Awaited<ReturnType<typeof createConfiguredProject>>
+) {
+  const folder = 'generated/media/location-sheets/multi-file-source';
+  const compositeProjectRelativePath =
+    `${folder}/composite.png` as ProjectRelativePath;
+  const primaryProjectRelativePath = `${folder}/primary.png` as ProjectRelativePath;
+  await fs.mkdir(path.join(fixture.created.projectPath, folder), { recursive: true });
+  await fs.writeFile(
+    path.join(fixture.created.projectPath, compositeProjectRelativePath),
+    'composite sheet image'
+  );
+  await fs.writeFile(
+    path.join(fixture.created.projectPath, primaryProjectRelativePath),
+    'primary sheet image'
+  );
+
+  const assetId = 'asset_location_sheet_multi_file';
+  const compositeFileId = 'asset_file_location_sheet_composite';
+  const primaryFileId = 'asset_file_location_sheet_primary';
+  const target = {
+    kind: 'location' as const,
+    locationId: fixture.location.id,
+  };
+  const now = '2026-06-23T00:00:00.000Z';
+  await withCurrentProjectSession(
+    { homeDir: fixture.homeDir },
+    ({ session }) => {
+      insertAssetRecord(session, {
+        id: assetId,
+        type: 'location_environment_sheet',
+        mediaKind: 'image',
+        title: 'Multi-file Location Sheet',
+        oneLineSummary: 'Location sheet with a composite and primary file.',
+        origin: 'generated',
+        availability: 'ready',
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertAssetFileRecord(session, {
+        id: compositeFileId,
+        assetId,
+        role: 'composite',
+        projectRelativePath: compositeProjectRelativePath,
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        sizeBytes: 21,
+        contentHash: 'composite',
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertAssetFileRecord(session, {
+        id: primaryFileId,
+        assetId,
+        role: 'primary',
+        projectRelativePath: primaryProjectRelativePath,
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        sizeBytes: 19,
+        contentHash: 'primary',
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertAssetRelationshipRecord(session, target, {
+        relationshipId: 'location_asset_multi_file_sheet',
+        assetId,
+        localeId: null,
+        role: 'environment_sheet',
+        sortOrder: nextAssetRelationshipSortOrder(session, {
+          target,
+          role: 'environment_sheet',
+          localeId: null,
+        }),
+        now,
+      });
+    }
+  );
+
+  return {
+    assetId,
+    compositeFileId,
+    primaryFileId,
+    compositeProjectRelativePath,
+    primaryProjectRelativePath,
+  };
 }
 
 function lookbook(): Lookbook {

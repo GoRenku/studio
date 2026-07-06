@@ -22,6 +22,7 @@ import { withMediaGenerationProjectSession } from './project-session.js';
 import { requireMediaGenerationPurposeDefinition } from './purpose-lifecycle-registry.js';
 import {
   createMediaGenerationSpec,
+  buildMediaGenerationPreview,
   listMediaGenerationSpecs,
   prepareDraftMediaGenerationSpec,
   prepareMediaGenerationSpec,
@@ -137,6 +138,46 @@ describe('media generation lifecycle spec service', () => {
     expect(prepareSpec).toHaveBeenCalledWith({
       specId: 'spec-a',
       homeDir: '/home',
+    });
+  });
+
+  it('builds persisted generation previews through the purpose definition preview hook', async () => {
+    const buildPreview = vi.fn(async () => ({
+      kind: 'generationPreview',
+      previewId: 'generation-preview:spec-a',
+    }));
+    mockedRequireSpec.mockReturnValueOnce({
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+      spec: { purpose: 'lookbook.image' },
+    } as never);
+    mockedRequireDefinition.mockReturnValueOnce({ buildPreview } as never);
+
+    await expect(
+      buildMediaGenerationPreview({ specId: 'spec-a', homeDir: '/home' })
+    ).resolves.toMatchObject({
+      kind: 'generationPreview',
+      previewId: 'generation-preview:spec-a',
+    });
+
+    expect(buildPreview).toHaveBeenCalledWith({
+      specId: 'spec-a',
+      homeDir: '/home',
+    });
+  });
+
+  it('fails saved-spec previews with structured diagnostics when a purpose has no preview hook', async () => {
+    mockedRequireSpec.mockReturnValueOnce({
+      id: 'spec-a',
+      purpose: 'cast.voice-sample',
+      spec: { purpose: 'cast.voice-sample' },
+    } as never);
+    mockedRequireDefinition.mockReturnValueOnce({ prepareSpec: vi.fn() } as never);
+
+    await expect(
+      buildMediaGenerationPreview({ specId: 'spec-a' })
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
     });
   });
 });

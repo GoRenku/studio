@@ -32,7 +32,7 @@ describe('shot video take provider payloads', () => {
     });
 
     expect(plan.model).toBe('openai/gpt-image-2/edit');
-    expect(plan.mode).toBe('image-edit');
+    expect(plan.mode).toBe('reference-to-image');
     expect(plan.payload).toMatchObject({
       image_urls: [
         'renku-input://generated/lookbooks/movie-sheet.png',
@@ -74,7 +74,7 @@ describe('shot video take provider payloads', () => {
     });
 
     expect(plan.model).toBe('nano-banana-2/edit');
-    expect(plan.mode).toBe('image-edit');
+    expect(plan.mode).toBe('reference-to-image');
   });
 
   it('maps Grok Imagine shot input references to its edit route when supported', () => {
@@ -97,7 +97,7 @@ describe('shot video take provider payloads', () => {
     });
 
     expect(plan.model).toBe('xai/grok-imagine-image/edit');
-    expect(plan.mode).toBe('image-edit');
+    expect(plan.mode).toBe('reference-to-image');
   });
 
   it('rejects image parameters that are not supported by the selected shot input model', () => {

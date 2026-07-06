@@ -41,7 +41,8 @@ export type ShotVideoTakeRouteParameterValue =
   | string[]
   | number[]
   | boolean[]
-  | Record<string, unknown>;
+  | Record<string, unknown>
+  | Record<string, unknown>[];
 
 export type ShotVideoDurationDomain =
   | {
@@ -70,7 +71,7 @@ export interface ShotVideoRouteParameter {
   id: string;
   providerField: string;
   label: string;
-  control: 'duration' | 'select' | 'switch' | 'number';
+  control: 'duration' | 'select' | 'switch' | 'number' | 'structured';
   required: boolean;
   defaultValue?: ShotVideoTakeRouteParameterValue;
   allowedValues?: ShotVideoTakeRouteParameterValue[];
@@ -296,6 +297,7 @@ const klingTextParameters: ShotVideoRouteParameter[] = [
     '15',
   ]),
   selectParameter('aspect_ratio', 'Aspect Ratio', '16:9', ['16:9', '9:16', '1:1']),
+  structuredParameter('multi_prompt', 'Multi Prompt'),
   switchParameter('generate_audio', 'Generate Audio', true),
   numberParameter('cfg_scale', 'Guidance Scale', 0.5, 0, 1),
 ];
@@ -334,6 +336,7 @@ const klingO3TextParameters: ShotVideoRouteParameter[] = [
     '15',
   ]),
   selectParameter('aspect_ratio', 'Aspect Ratio', '16:9', ['16:9', '9:16', '1:1']),
+  structuredParameter('multi_prompt', 'Multi Prompt'),
   switchParameter('generate_audio', 'Generate Audio', false),
 ];
 
@@ -709,5 +712,18 @@ function numberParameter(
     ...(defaultValue !== undefined ? { defaultValue } : {}),
     ...(minimum !== undefined ? { minimum } : {}),
     ...(maximum !== undefined ? { maximum } : {}),
+  };
+}
+
+function structuredParameter(
+  id: string,
+  label: string
+): ShotVideoRouteParameter {
+  return {
+    id,
+    providerField: id,
+    label,
+    control: 'structured',
+    required: false,
   };
 }

@@ -2,6 +2,8 @@ import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../../../client/index.js';
 import type {
+  GenerationPreviewRequest,
+  GenerationPreviewRequestReference,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
   ShotVideoTakeOutputGenerationSpec,
@@ -42,6 +44,8 @@ import {
   buildShotVideoTakeProviderPayload,
   toGenerationRequest,
 } from '../provider/provider-payloads.js';
+import { buildShotVideoTakePreviewConfiguration } from '../../../../generation-preview/configuration/shot-video-configuration.js';
+import { providerPreviewPromptText } from '../../../../generation-preview/provider-preview-prompt.js';
 import {
   finalInputMatchesRouteSlot,
   missingRequiredRouteInputLabelsForFinalSpec,
@@ -146,6 +150,66 @@ export async function prepareShotVideoTakeSpec(
   };
 }
 
+export async function buildShotVideoTakeGenerationPreview(
+  input: ReadMediaGenerationSpecInput
+): Promise<GenerationPreviewRequest> {
+  const specRecord = await readShotSpec(input);
+  assertShotVideoTakeSpec(specRecord.spec);
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    takeId: specRecord.spec.target.takeId,
+  });
+  validateFinalSpecAgainstContext(specRecord.spec, context);
+  const plan = buildShotVideoTakeProviderPayload(specRecord.spec, context);
+  return {
+    kind: 'generationPreview',
+    previewId: `generation-preview:${specRecord.id}`,
+    generationSpecId: specRecord.id,
+    purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+    project: {
+      id: context.project.id ?? context.project.name,
+      name: context.project.name,
+      title: context.project.title,
+    },
+    target: specRecord.target,
+    title: specRecord.title,
+    model: {
+      provider: plan.provider,
+      modelId: plan.model,
+      route: plan.model,
+      executionPath: 'renku-managed',
+      mediaKind: 'video',
+    },
+    finalPrompt: {
+      text: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+      ...(specRecord.spec.negativePrompt
+        ? { negativePrompt: specRecord.spec.negativePrompt }
+        : {}),
+    },
+    references: shotVideoTakePreviewReferences(specRecord.spec),
+    configuration: buildShotVideoTakePreviewConfiguration({
+      spec: specRecord.spec,
+      context,
+      plan,
+      modelLabel:
+        modelChoices(context, specRecord.spec.inputModeId).find(
+          (model) => model.modelChoice === specRecord.spec.modelChoice
+        )?.label ?? specRecord.spec.modelChoice,
+    }),
+    providerPreview: {
+      provider: plan.provider,
+      model: plan.model,
+      mode: plan.mode,
+      providerTokenOrder: specRecord.spec.inputs.map(
+        (reference) => reference.assetFileId
+      ),
+      payload: plan.payload,
+    },
+    diagnostics: [],
+  };
+}
+
 
 
 export async function prepareShotVideoTakeDraftSpec(input: {
@@ -166,6 +230,20 @@ export async function prepareShotVideoTakeDraftSpec(input: {
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, normalized),
   };
+}
+
+function shotVideoTakePreviewReferences(
+  spec: ShotVideoTakeOutputGenerationSpec
+): GenerationPreviewRequestReference[] {
+  return spec.inputs.map((reference) => ({
+    kind: reference.mediaKind,
+    role: reference.role,
+    label: reference.role || reference.kind,
+    providerToken: reference.providerReferenceRole ?? reference.kind,
+    assetId: reference.assetId,
+    assetFileId: reference.assetFileId,
+    selected: true,
+  }));
 }
 
 
@@ -263,8 +341,13 @@ export function validateFinalPricingSpecAgainstContext(
       'Shot video take model does not support the selected input mode for this take.'
     );
   }
+  const route = requireShotVideoTakeRoute(
+    spec.modelChoice,
+    spec.inputModeId,
+    context.shotGroupMode
+  );
   for (const key of Object.keys(spec.parameterValues)) {
-    if (!report.parameters.some((parameter) => parameter.name === key)) {
+    if (!route.parameters.some((parameter) => parameter.id === key)) {
       throw new ProjectDataError(
         'PROJECT_DATA372',
         `Unsupported shot video take parameter for selected model: ${key}.`

@@ -52,6 +52,8 @@ import {
 import { ProjectDataError } from '../../project-data-error.js';
 import { readLookbookResource } from '../../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
+import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import {
   assertLookbookImagePlacementCapacity,
   replaceSingleLookbookImagePlacementSlots,
@@ -284,6 +286,37 @@ export async function prepareLookbookImageSpec(
     providerPayload: plan.payload,
     generation: toGenerationRequest(plan, specRecord.spec),
   };
+}
+
+export async function buildLookbookImageGenerationPreview(
+  input: LookbookImageSpecIdInput
+) {
+  const specRecord = await readLookbookImageSpec(input);
+  assertLookbookImageSpec(specRecord.spec);
+  const context = await buildLookbookImageContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    lookbookId: specRecord.spec.target.id,
+  });
+  const plan = buildLookbookImageProviderPayload(specRecord.spec, context);
+  return buildSavedImageGenerationPreview({
+    specRecord,
+    purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+    project: context.project,
+    target: specRecord.target,
+    title: specRecord.title,
+    modelChoice: specRecord.spec.modelChoice,
+    modelLabel:
+      modelChoices(context).find(
+        (model) => model.modelChoice === specRecord.spec.modelChoice
+      )?.label ?? specRecord.spec.modelChoice,
+    provider: plan.provider,
+    providerModel: plan.model,
+    mode: 'text-to-image',
+    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    references: [],
+    payload: plan.payload,
+  });
 }
 
 export async function prepareLookbookImageDraftSpec(input: {
