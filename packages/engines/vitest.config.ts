@@ -4,6 +4,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    globalSetup: [
+      new URL('../../scripts/vitest-renku-tmpdir-cleanup.mjs', import.meta.url)
+        .pathname,
+    ],
     include: [
       'src/**/*.test.ts',
       'tests/schemas/**/*.test.ts',

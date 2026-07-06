@@ -5,6 +5,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    globalSetup: [
+      path.resolve(__dirname, '../../scripts/vitest-renku-tmpdir-cleanup.mjs'),
+    ],
     pool: 'threads',
     fileParallelism: false,
     minWorkers: 1,
