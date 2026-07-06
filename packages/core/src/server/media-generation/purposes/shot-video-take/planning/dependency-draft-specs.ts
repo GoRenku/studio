@@ -54,6 +54,7 @@ export async function buildShotInputDependencyDraftSpec(
         candidate.outputInputKind === outputInputKind
     );
   if (!isAuthoredShotDependencyDraft(draft)) {
+    const modelChoice = request.context.defaults.imageDependencyModelChoice;
     const pricingSpec = {
       purpose,
       spec: {
@@ -61,10 +62,13 @@ export async function buildShotInputDependencyDraftSpec(
         target: input.dependencyTarget,
         dependencyKind: dependencyKindForPurpose(purpose),
         outputInputKind,
-        modelChoice: request.context.defaults.imageDependencyModelChoice,
+        modelChoice,
         referenceMode: 'movie-lookbook',
         prompt: estimateOnlyShotInputPrompt(input.label),
-        parameterValues: defaultShotInputParameterValues(),
+        parameterValues: defaultShotInputParameterValues(
+          modelChoice,
+          'reference-to-image'
+        ),
         title: input.label,
       },
     } satisfies DraftMediaGenerationSpec;
@@ -81,6 +85,8 @@ export async function buildShotInputDependencyDraftSpec(
       estimate: priced.estimate,
     };
   }
+  const modelChoice =
+    draft.modelChoice ?? request.context.defaults.imageDependencyModelChoice;
   return {
     purpose,
     spec: {
@@ -88,12 +94,13 @@ export async function buildShotInputDependencyDraftSpec(
       target: input.dependencyTarget,
       dependencyKind: dependencyKindForPurpose(purpose),
       outputInputKind,
-      modelChoice:
-        draft.modelChoice ?? request.context.defaults.imageDependencyModelChoice,
+      modelChoice,
       referenceMode: draft.referenceMode,
       ...promptSheetMetadataForShotInputSpec(draft),
       prompt: draft.prompt,
-      parameterValues: draft.parameterValues ?? defaultShotInputParameterValues(),
+      parameterValues:
+        draft.parameterValues ??
+        defaultShotInputParameterValues(modelChoice, 'reference-to-image'),
       title: draft.title ?? input.label,
     },
     materializationState: 'generatable',

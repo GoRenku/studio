@@ -83,6 +83,35 @@ describe('generation preview validation', () => {
     expect(() => validateGenerationPreviewRequest(preview)).not.toThrow();
   });
 
+  it('rejects the retired array-shaped configuration contract', () => {
+    const preview = previewFixture();
+    (preview as Record<string, unknown>).configuration = [
+      {
+        key: 'image_size',
+        label: 'Image size',
+        value: '1024x768',
+      },
+    ];
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+      })
+    );
+  });
+
+  it('rejects unsupported configuration row fields', () => {
+    const preview = previewFixture();
+    (preview.configuration.sections[0]!.rows[0] as Record<string, unknown>).payload =
+      { prompt: 'hidden' };
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+      })
+    );
+  });
+
   it('rejects unsupported reference selection control fields', () => {
     const preview = previewFixture();
     (preview.references[0] as Record<string, unknown>).selectionControl = {
@@ -222,13 +251,27 @@ function previewFixture() {
         selected: true,
       },
     ],
-    configuration: [
-      {
-        key: 'image_size',
-        label: 'Image size',
-        value: '1024x768',
-      },
-    ],
+    configuration: {
+      sections: [
+        {
+          key: 'model-inputs',
+          label: 'Model inputs',
+          rows: [
+            {
+              key: 'image_size',
+              label: 'Image size',
+              value: 'landscape_16_9',
+              providerField: 'image_size',
+              schemaDefault: 'landscape_4_3',
+              allowedValues: ['landscape_4_3', 'landscape_16_9'],
+              required: false,
+              source: 'spec',
+              presentation: 'parameter-control',
+            },
+          ],
+        },
+      ],
+    },
     diagnostics: [],
   };
 }

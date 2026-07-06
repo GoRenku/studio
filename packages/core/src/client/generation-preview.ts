@@ -28,7 +28,7 @@ export interface GenerationPreviewRequest {
   promptSheetNotationModeId?: VideoPromptSheetNotationModeId;
   finalPrompt: GenerationPreviewPrompt;
   references: GenerationPreviewRequestReference[];
-  configuration: GenerationPreviewConfigurationItem[];
+  configuration: GenerationPreviewConfiguration;
   providerPreview?: GenerationPreviewProviderPreview;
   estimate?: GenerationPreviewEstimate;
   diagnostics: DiagnosticIssue[];
@@ -108,10 +108,52 @@ export type StudioGenerationPreviewReference =
     browserUrl: string;
   };
 
-export interface GenerationPreviewConfigurationItem {
+export type GenerationPreviewConfigurationValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { kind: 'dimensions'; width: number; height: number }
+  | Array<string | number | boolean>;
+
+export type GenerationPreviewConfigurationValueSource =
+  | 'spec'
+  | 'context-default'
+  | 'renku-fixed'
+  | 'provider-default'
+  | 'derived'
+  | 'model-capability'
+  | 'provider-route';
+
+export type GenerationPreviewConfigurationRowPresentation =
+  | 'static'
+  | 'parameter-control';
+
+export interface GenerationPreviewConfiguration {
+  sections: GenerationPreviewConfigurationSection[];
+}
+
+export interface GenerationPreviewConfigurationSection {
   key: string;
   label: string;
-  value: string | number | boolean | null | string[] | number[] | boolean[];
+  rows: GenerationPreviewConfigurationRow[];
+}
+
+export interface GenerationPreviewConfigurationRow {
+  key: string;
+  label: string;
+  value: GenerationPreviewConfigurationValue;
+  valueLabel?: string;
+  providerField?: string;
+  schemaDefault?: GenerationPreviewConfigurationValue;
+  schemaDefaultLabel?: string;
+  allowedValues?: GenerationPreviewConfigurationValue[];
+  minimum?: number;
+  maximum?: number;
+  required?: boolean;
+  source: GenerationPreviewConfigurationValueSource;
+  emphasis?: 'primary' | 'secondary';
+  presentation?: GenerationPreviewConfigurationRowPresentation;
 }
 
 export interface GenerationPreviewProviderPreview {

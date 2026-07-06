@@ -29,6 +29,14 @@ export {
   resolveBundledModelCatalogDir,
 } from './catalog/model-discovery.js';
 export {
+  describeGenerationModelInputs,
+  type GenerationModelInputDescriptor,
+  type GenerationModelInputFieldDescriptor,
+  type GenerationModelInputFieldKind,
+  type GenerationModelInputScalarValue,
+  type GenerationModelInputValue,
+} from './catalog/model-input-descriptors.js';
+export {
   hashGenerationRequest,
 } from './execution/request-hash.js';
 export {

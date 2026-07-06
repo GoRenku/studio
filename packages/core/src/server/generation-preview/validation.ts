@@ -67,6 +67,46 @@ const GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_KEYS = new Set([
   'inclusionOverride',
 ]);
 
+const GENERATION_PREVIEW_CONFIGURATION_KEYS = new Set(['sections']);
+
+const GENERATION_PREVIEW_CONFIGURATION_SECTION_KEYS = new Set([
+  'key',
+  'label',
+  'rows',
+]);
+
+const GENERATION_PREVIEW_CONFIGURATION_ROW_KEYS = new Set([
+  'key',
+  'label',
+  'value',
+  'valueLabel',
+  'providerField',
+  'schemaDefault',
+  'schemaDefaultLabel',
+  'allowedValues',
+  'minimum',
+  'maximum',
+  'required',
+  'source',
+  'emphasis',
+  'presentation',
+]);
+
+const GENERATION_PREVIEW_CONFIGURATION_VALUE_SOURCES = new Set([
+  'spec',
+  'context-default',
+  'renku-fixed',
+  'provider-default',
+  'derived',
+  'model-capability',
+  'provider-route',
+]);
+
+const GENERATION_PREVIEW_CONFIGURATION_PRESENTATIONS = new Set([
+  'static',
+  'parameter-control',
+]);
+
 export function validateGenerationPreviewRequest(
   value: unknown
 ): GenerationPreviewRequest {
@@ -184,6 +224,28 @@ function validateTopLevelKeys(
           `Generation preview field is not supported: ${key}.`,
           { path: [key], context },
           'Send only the current generation preview envelope fields.'
+        )
+      );
+    }
+  }
+}
+
+function validateObjectKeys(
+  record: Record<string, unknown>,
+  supportedKeys: Set<string>,
+  path: string[],
+  context: string,
+  issues: DiagnosticIssue[],
+  code: string
+): void {
+  for (const key of Object.keys(record)) {
+    if (!supportedKeys.has(key)) {
+      issues.push(
+        createDiagnosticError(
+          code,
+          `Generation preview configuration field is not supported: ${key}.`,
+          { path: [...path, key], context },
+          'Send only the current generation preview configuration contract fields.'
         )
       );
     }
@@ -633,31 +695,277 @@ function validateConfiguration(
   context: string,
   issues: DiagnosticIssue[]
 ): void {
-  if (!Array.isArray(value)) {
+  const configuration = readRecord(value);
+  if (!configuration) {
     issues.push(
       createDiagnosticError(
         'CORE_GENERATION_PREVIEW_CONFIGURATION_INVALID',
-        'Generation preview configuration must be an array.',
+        'Generation preview configuration must be an object.',
         { path: ['configuration'], context }
       )
     );
     return;
   }
-  value.forEach((item, index) => {
-    const record = readRecord(item);
-    if (!record) {
+  validateObjectKeys(
+    configuration,
+    GENERATION_PREVIEW_CONFIGURATION_KEYS,
+    ['configuration'],
+    context,
+    issues,
+    'CORE_GENERATION_PREVIEW_CONFIGURATION_FIELD_UNSUPPORTED'
+  );
+  if (!Array.isArray(configuration.sections)) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_SECTIONS_INVALID',
+        'Generation preview configuration.sections must be an array.',
+        { path: ['configuration', 'sections'], context }
+      )
+    );
+    return;
+  }
+  configuration.sections.forEach((section, sectionIndex) => {
+    validateConfigurationSection(section, sectionIndex, context, issues);
+  });
+}
+
+function validateConfigurationSection(
+  value: unknown,
+  sectionIndex: number,
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
+  const path = ['configuration', 'sections', String(sectionIndex)];
+  const section = readRecord(value);
+  if (!section) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_SECTION_INVALID',
+        'Generation preview configuration section must be an object.',
+        { path, context }
+      )
+    );
+    return;
+  }
+  validateObjectKeys(
+    section,
+    GENERATION_PREVIEW_CONFIGURATION_SECTION_KEYS,
+    path,
+    context,
+    issues,
+    'CORE_GENERATION_PREVIEW_CONFIGURATION_SECTION_FIELD_UNSUPPORTED'
+  );
+  requireNonEmptyString(section, 'key', [...path, 'key'], context, issues);
+  requireNonEmptyString(section, 'label', [...path, 'label'], context, issues);
+  if (!Array.isArray(section.rows)) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_ROWS_INVALID',
+        'Generation preview configuration section.rows must be an array.',
+        { path: [...path, 'rows'], context }
+      )
+    );
+    return;
+  }
+  section.rows.forEach((row, rowIndex) =>
+    validateConfigurationRow(row, [...path, 'rows', String(rowIndex)], context, issues)
+  );
+}
+
+function validateConfigurationRow(
+  value: unknown,
+  path: string[],
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
+  const row = readRecord(value);
+  if (!row) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_ROW_INVALID',
+        'Generation preview configuration row must be an object.',
+        { path, context }
+      )
+    );
+    return;
+  }
+  validateObjectKeys(
+    row,
+    GENERATION_PREVIEW_CONFIGURATION_ROW_KEYS,
+    path,
+    context,
+    issues,
+    'CORE_GENERATION_PREVIEW_CONFIGURATION_ROW_FIELD_UNSUPPORTED'
+  );
+  requireNonEmptyString(row, 'key', [...path, 'key'], context, issues);
+  requireNonEmptyString(row, 'label', [...path, 'label'], context, issues);
+  validateConfigurationValue(row.value, [...path, 'value'], context, issues);
+  if (!GENERATION_PREVIEW_CONFIGURATION_VALUE_SOURCES.has(String(row.source))) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_SOURCE_INVALID',
+        'Generation preview configuration row.source is not supported.',
+        { path: [...path, 'source'], context },
+        'Use one of spec, context-default, renku-fixed, provider-default, derived, model-capability, or provider-route.'
+      )
+    );
+  }
+  if (
+    row.presentation !== undefined &&
+    !GENERATION_PREVIEW_CONFIGURATION_PRESENTATIONS.has(String(row.presentation))
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_PRESENTATION_INVALID',
+        'Generation preview configuration row.presentation is not supported.',
+        { path: [...path, 'presentation'], context },
+        'Use static or parameter-control.'
+      )
+    );
+  }
+  if (
+    row.emphasis !== undefined &&
+    row.emphasis !== 'primary' &&
+    row.emphasis !== 'secondary'
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_EMPHASIS_INVALID',
+        'Generation preview configuration row.emphasis must be primary or secondary.',
+        { path: [...path, 'emphasis'], context }
+      )
+    );
+  }
+  for (const key of ['valueLabel', 'providerField', 'schemaDefaultLabel'] as const) {
+    if (row[key] !== undefined && typeof row[key] !== 'string') {
       issues.push(
         createDiagnosticError(
-          'CORE_GENERATION_PREVIEW_CONFIGURATION_ITEM_INVALID',
-          'Generation preview configuration item must be an object.',
-          { path: ['configuration', String(index)], context }
+          'CORE_GENERATION_PREVIEW_CONFIGURATION_ROW_STRING_INVALID',
+          `Generation preview configuration row.${key} must be a string when provided.`,
+          { path: [...path, key], context }
         )
       );
+    }
+  }
+  if (row.schemaDefault !== undefined) {
+    validateConfigurationValue(row.schemaDefault, [...path, 'schemaDefault'], context, issues);
+  }
+  if (row.allowedValues !== undefined) {
+    if (!Array.isArray(row.allowedValues)) {
+      issues.push(
+        createDiagnosticError(
+          'CORE_GENERATION_PREVIEW_CONFIGURATION_ALLOWED_VALUES_INVALID',
+          'Generation preview configuration row.allowedValues must be an array when provided.',
+          { path: [...path, 'allowedValues'], context }
+        )
+      );
+    } else {
+      row.allowedValues.forEach((item, index) =>
+        validateConfigurationValue(
+          item,
+          [...path, 'allowedValues', String(index)],
+          context,
+          issues
+        )
+      );
+    }
+  }
+  for (const key of ['minimum', 'maximum'] as const) {
+    if (row[key] !== undefined && typeof row[key] !== 'number') {
+      issues.push(
+        createDiagnosticError(
+          'CORE_GENERATION_PREVIEW_CONFIGURATION_BOUND_INVALID',
+          `Generation preview configuration row.${key} must be a number when provided.`,
+          { path: [...path, key], context }
+        )
+      );
+    }
+  }
+  if (row.required !== undefined && typeof row.required !== 'boolean') {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_REQUIRED_INVALID',
+        'Generation preview configuration row.required must be a boolean when provided.',
+        { path: [...path, 'required'], context }
+      )
+    );
+  }
+  if (row.presentation === 'parameter-control') {
+    validateParameterControlRow(row, path, context, issues);
+  }
+}
+
+function validateParameterControlRow(
+  row: Record<string, unknown>,
+  path: string[],
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
+  const value = row.value;
+  if (isDimensionsConfigurationValue(value) || Array.isArray(value)) {
+    return;
+  }
+  if (
+    typeof value === 'string' &&
+    !Array.isArray(row.allowedValues) &&
+    row.schemaDefault === undefined
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_CONFIGURATION_PARAMETER_METADATA_REQUIRED',
+        'Text parameter-control rows must include allowedValues or schemaDefault.',
+        { path, context },
+        'Send enough schema metadata for Studio to render the read-only control without provider-specific branching.'
+      )
+    );
+  }
+}
+
+function validateConfigurationValue(
+  value: unknown,
+  path: string[],
+  context: string,
+  issues: DiagnosticIssue[]
+): void {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (
+      value.every(
+        (item) =>
+          typeof item === 'string' ||
+          typeof item === 'number' ||
+          typeof item === 'boolean'
+      )
+    ) {
       return;
     }
-    requireNonEmptyString(record, 'key', ['configuration', String(index), 'key'], context, issues);
-    requireNonEmptyString(record, 'label', ['configuration', String(index), 'label'], context, issues);
-  });
+  } else if (isDimensionsConfigurationValue(value)) {
+    return;
+  }
+  issues.push(
+    createDiagnosticError(
+      'CORE_GENERATION_PREVIEW_CONFIGURATION_VALUE_INVALID',
+      'Generation preview configuration values must be scalar, null, scalar arrays, or dimensions objects.',
+      { path, context }
+    )
+  );
+}
+
+function isDimensionsConfigurationValue(value: unknown): boolean {
+  const dimensions = readRecord(value);
+  return Boolean(
+    dimensions &&
+      dimensions.kind === 'dimensions' &&
+      typeof dimensions.width === 'number' &&
+      typeof dimensions.height === 'number'
+  );
 }
 
 function validateProviderPreview(

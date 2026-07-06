@@ -9,7 +9,6 @@ import type {
   CastCharacterSheetModelListReport,
   CastImageModelChoiceReport,
   CastMediaImportReport,
-  GenerationPreviewConfigurationItem,
   GenerationPreviewRequest,
   MediaGenerationDependencySlot,
   MediaGenerationRunReport,
@@ -81,6 +80,7 @@ import {
   withCastProjectSession,
   type CastProviderPlan,
 } from './cast-image-common.js';
+import { buildImagePreviewConfiguration } from '../../generation-preview/configuration/model-input-configuration.js';
 
 const CHARACTER_SHEET_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2',
@@ -371,6 +371,11 @@ export async function buildCastCharacterSheetGenerationPreview(
     referenceSelections: specRecord.spec.referenceSelections,
   });
   const plan = buildCastCharacterSheetProviderPayload(specRecord.spec, context);
+  const configuration = await castCharacterSheetPreviewConfiguration(
+    specRecord.spec,
+    plan,
+    context
+  );
   return {
     kind: 'generationPreview',
     previewId: `generation-preview:${specRecord.id}`,
@@ -411,7 +416,7 @@ export async function buildCastCharacterSheetGenerationPreview(
         editable: true,
       },
     })),
-    configuration: castCharacterSheetPreviewConfiguration(specRecord.spec, plan),
+    configuration,
     providerPreview: {
       provider: plan.provider,
       model: plan.model,
@@ -1074,22 +1079,28 @@ function referenceSelectionsFromDependencyRequest(
   );
 }
 
-function castCharacterSheetPreviewConfiguration(
+async function castCharacterSheetPreviewConfiguration(
   spec: CastCharacterSheetGenerationSpec,
-  plan: CastProviderPlan
-): GenerationPreviewConfigurationItem[] {
-  return [
-    { key: 'mode', label: 'Mode', value: plan.mode },
-    { key: 'model', label: 'Model', value: plan.model },
-    { key: 'takeCount', label: 'Takes', value: spec.takeCount ?? 1 },
-    { key: 'imageFrame', label: 'Frame', value: spec.imageFrame ?? 'project' },
-    { key: 'detail', label: 'Detail', value: spec.detail ?? 'standard' },
-    {
-      key: 'outputFormat',
-      label: 'Output format',
-      value: spec.outputFormat ?? 'png',
-    },
-  ];
+  plan: CastProviderPlan,
+  context: CastCharacterSheetGenerationContext
+) {
+  return buildImagePreviewConfiguration({
+    provider: plan.provider,
+    providerModel: plan.model,
+    modelChoice: spec.modelChoice,
+    modelLabel: castCharacterSheetModelLabel(spec.modelChoice, context),
+    payload: plan.payload,
+  });
+}
+
+function castCharacterSheetModelLabel(
+  modelChoice: CastCharacterSheetModelChoice,
+  context: CastCharacterSheetGenerationContext
+): string {
+  return (
+    modelChoices(context).find((model) => model.modelChoice === modelChoice)?.label ??
+    modelChoice
+  );
 }
 
 function modelChoices(

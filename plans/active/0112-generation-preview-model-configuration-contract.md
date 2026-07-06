@@ -928,21 +928,22 @@ Validation:
 ### Layout
 
 Rewrite `GenerationPreviewConfigPanel` as a dense read-only configuration
-surface that uses the same parameter controls as AI Production Run Setup:
+summary:
 
 - fixed tab body, scrolls internally;
 - sections rendered in order from Core;
 - small uppercase section labels;
-- model parameter rows rendered with the shared `GenerationParameterControl`
-  component in disabled/read-only mode;
+- model parameter rows rendered as compact label/value rows;
 - static rows, such as provider route and generation route, rendered as compact
   label/value rows;
 - metadata such as provider field, schema default, allowed values, range, and
-  source rendered as quiet supporting text under the matching control/row;
+  source retained in the typed row contract but not rendered as visible
+  explanatory text;
 - no disconnected config cards.
 
-The controls are not editable in this slice. They are used for visual and
-semantic consistency with Run Setup, not as a local way to mutate spec state.
+The Config tab is not editable in this slice. Values must be set upstream; the
+preview surface should summarize the effective configuration with minimal
+visible text.
 If preview-time editing is later designed, changes must flow through the same
 Core/server spec-update path as the rest of Studio.
 
@@ -950,8 +951,7 @@ Example parameter row shape:
 
 ```text
 Quality
-[ medium ▼ ]   disabled
-provider field: quality · provider default: high · allowed: low, medium, high · source: spec
+medium
 ```
 
 Studio rendering rules:
@@ -1245,14 +1245,10 @@ Important distinction:
   rows.
 - Remove estimate rendering from Config.
 - Remove card-grid treatment for config rows.
-- Render model-parameter rows through the shared control in disabled/read-only
-  mode.
+- Render model-parameter rows as compact label/value rows.
 - Render static rows as compact label/value rows.
-- Render row metadata:
-  - provider field;
-  - schema default;
-  - allowed values or numeric range;
-  - source.
+- Keep row metadata in the typed contract without rendering it as visible
+  explanatory text.
 - Keep the component generic and data-driven.
 - Do not import engines into Studio.
 - Do not inspect `providerPreview.payload`.
@@ -1331,8 +1327,7 @@ Studio tests:
 
 - Config tab renders section labels and row values from
   `preview.configuration.sections`.
-- Config tab renders parameter-control rows with the same shared control used
-  by AI Production Run Setup.
+- Config tab renders parameter-control rows as minimal read-only values.
 - AI Production Run Setup imports the shared control directly.
 - Config tab does not render `Estimated total`.
 - Dialog footer renders estimate when `preview.estimate` exists.
@@ -1406,90 +1401,110 @@ Resolution:
 
 ## Completion Checklist
 
+Update 2026-07-05: completed items below reflect the implemented/current
+preview surface. Items for saved-spec preview builders that are not currently
+wired through `buildMediaGenerationPreview`, plus final `shot.video-take`
+Config rows, remain unchecked.
+
+Update 2026-07-06: `0114` cleared the remaining verification blockers from
+review. The stale CLI preview fixture now sends the sectioned configuration
+contract, the shot input provider-payload fixtures use current parameter and
+reference-bundle shapes, focused CLI/Core verification passed, and `pnpm check`
+passed. The unrelated future-builder items below remain unchecked.
+
+Update 2026-07-06 checklist verification: the remaining unchecked items were
+re-checked against the implementation and must stay unchecked. Saved-spec
+generation previews are still only wired for `cast.character-sheet` in
+`packages/core/src/server/media-generation/lifecycle/spec-service.ts`; the
+other image purpose preview builders listed below have not been added. Final
+`shot.video-take` saved-spec previews also do not yet build Config rows from
+selected route parameters or normalized route settings. This plan should not be
+marked fully complete until those implementation slices and tests exist.
+
 ### Review And Architecture
 
-- [ ] Confirm the plan covers only Core-listed image model choices, not every
+- [x] Confirm the plan covers only Core-listed image model choices, not every
       catalog image model.
-- [ ] Confirm no Studio component imports provider schemas or engines.
-- [ ] Confirm Core owns row visibility and value-source labeling.
-- [ ] Confirm engines owns schema descriptor extraction.
-- [ ] Confirm prompt and media artifact opacity rules are preserved.
-- [ ] Confirm no compatibility array contract is kept for old
+- [x] Confirm no Studio component imports provider schemas or engines.
+- [x] Confirm Core owns row visibility and value-source labeling.
+- [x] Confirm engines owns schema descriptor extraction.
+- [x] Confirm prompt and media artifact opacity rules are preserved.
+- [x] Confirm no compatibility array contract is kept for old
       `configuration`.
-- [ ] Confirm estimate is treated as dialog footer state, not Config state.
+- [x] Confirm estimate is treated as dialog footer state, not Config state.
 
 ### Engine Schema Descriptor
 
-- [ ] Add schema descriptor module in `packages/engines`.
-- [ ] Export descriptor API from package public entrypoints.
-- [ ] Extract labels from schema titles.
-- [ ] Extract required fields.
-- [ ] Extract schema defaults.
-- [ ] Extract enum values from direct `enum`.
-- [ ] Extract enum values from enum-bearing `anyOf`.
-- [ ] Extract numeric min/max.
-- [ ] Represent dimensions unions without losing preset enums.
-- [ ] Add descriptor tests for GPT Image 2 text route.
-- [ ] Add descriptor tests for GPT Image 2 edit route.
-- [ ] Add descriptor tests for Nano Banana 2 text route.
-- [ ] Add descriptor tests for Nano Banana 2 edit route.
-- [ ] Add descriptor tests for Grok text route.
-- [ ] Add descriptor tests for Grok edit and quality edit routes.
-- [ ] Add descriptor tests for Seedream v5 Lite text route.
+- [x] Add schema descriptor module in `packages/engines`.
+- [x] Export descriptor API from package public entrypoints.
+- [x] Extract labels from schema titles.
+- [x] Extract required fields.
+- [x] Extract schema defaults.
+- [x] Extract enum values from direct `enum`.
+- [x] Extract enum values from enum-bearing `anyOf`.
+- [x] Extract numeric min/max.
+- [x] Represent dimensions unions without losing preset enums.
+- [x] Add descriptor tests for GPT Image 2 text route.
+- [x] Add descriptor tests for GPT Image 2 edit route.
+- [x] Add descriptor tests for Nano Banana 2 text route.
+- [x] Add descriptor tests for Nano Banana 2 edit route.
+- [x] Add descriptor tests for Grok text route.
+- [x] Add descriptor tests for Grok edit and quality edit routes.
+- [x] Add descriptor tests for Seedream v5 Lite text route.
 
 ### Core Contract
 
-- [ ] Replace `GenerationPreviewConfigurationItem[]` with
+- [x] Replace `GenerationPreviewConfigurationItem[]` with
       `GenerationPreviewConfiguration`.
-- [ ] Update all preview fixtures.
-- [ ] Update preview validation for sections and rows.
-- [ ] Reject unsupported configuration object properties.
-- [ ] Validate value shapes.
-- [ ] Validate value source ids.
-- [ ] Validate row presentation ids.
-- [ ] Validate `parameter-control` rows contain enough metadata to render
+- [x] Update all preview fixtures.
+- [x] Update preview validation for sections and rows.
+- [x] Reject unsupported configuration object properties.
+- [x] Validate value shapes.
+- [x] Validate value source ids.
+- [x] Validate row presentation ids.
+- [x] Validate `parameter-control` rows contain enough metadata to render
       without provider-specific React branching.
-- [ ] Update Studio coordination event validation as needed.
-- [ ] Update client exports.
+- [x] Update Studio coordination event validation as needed.
+- [x] Update client exports.
 
 ### Core Configuration Builders
 
-- [ ] Add shared config value helpers.
-- [ ] Add schema/payload merge helper.
-- [ ] Add model section builder.
-- [ ] Add image model primary-row builder.
-- [ ] Add fixed provider settings builder.
-- [ ] Add purpose metadata row helper.
-- [ ] Validate provider payload before building preview rows.
-- [ ] Ensure provider defaults are marked separately from Renku-sent values.
-- [ ] Ensure schema defaults do not overwrite effective payload values.
+- [x] Add shared config value helpers.
+- [x] Add schema/payload merge helper.
+- [x] Add model section builder.
+- [x] Add image model primary-row builder.
+- [x] Add fixed provider settings builder.
+- [x] Add purpose metadata row helper.
+- [x] Validate provider payload before building preview rows.
+- [x] Ensure provider defaults are marked separately from Renku-sent values.
+- [x] Ensure schema defaults do not overwrite effective payload values.
 
 ### Image Purpose Integration
 
-- [ ] Update Cast Character Sheet preview config.
-- [ ] Add tests for Cast Character Sheet GPT rows.
-- [ ] Add tests for Cast Character Sheet Nano rows.
-- [ ] Add tests for Cast Character Sheet Grok text rows.
-- [ ] Add tests for Cast Character Sheet Grok reference rows.
+- [x] Update Cast Character Sheet preview config.
+- [x] Add tests for Cast Character Sheet GPT rows.
+- [x] Add tests for Cast Character Sheet Nano rows.
+- [x] Add tests for Cast Character Sheet Grok text rows.
+- [x] Add tests for Cast Character Sheet Grok reference rows.
 - [ ] Add reusable builders for Lookbook Image config.
 - [ ] Add reusable builders for Lookbook Sheet config.
 - [ ] Add reusable builders for Cast Profile config.
 - [ ] Add reusable builders for Location Environment Sheet config.
 - [ ] Add reusable builders for Location Hero config.
 - [ ] Add reusable builders for Scene Storyboard Sheet config.
-- [ ] Ensure no config builder returns `Reference count`.
+- [x] Ensure no config builder returns `Reference count`.
 
 ### Shot Input Image Parameters
 
-- [ ] Replace shared shot input parameter report with model-specific reports.
-- [ ] Replace shared shot input defaults with model-specific defaults.
-- [ ] Update GPT shot input defaults.
-- [ ] Add Nano shot input defaults.
-- [ ] Add Grok shot input defaults.
-- [ ] Add Grok reference-route parameter restrictions.
-- [ ] Update shot input spec validation for selected model parameter ids.
-- [ ] Update shot input dependency draft specs to use model-specific defaults.
-- [ ] Update provider payload tests for model-specific image parameters.
+- [x] Replace shared shot input parameter report with model-specific reports.
+- [x] Replace shared shot input defaults with model-specific defaults.
+- [x] Update GPT shot input defaults.
+- [x] Add Nano shot input defaults.
+- [x] Add Grok shot input defaults.
+- [x] Add Grok reference-route parameter restrictions.
+- [x] Update shot input spec validation for selected model parameter ids.
+- [x] Update shot input dependency draft specs to use model-specific defaults.
+- [x] Update provider payload tests for model-specific image parameters.
 
 ### Shot Video Final Preview
 
@@ -1500,40 +1515,39 @@ Resolution:
 
 ### Studio UI
 
-- [ ] Move run-setup parameter controls into
+- [x] Move run-setup parameter controls into
       `features/generation-parameters/generation-parameter-control.tsx`.
-- [ ] Rename `RunSetupParameter` to `GenerationParameterControl`.
-- [ ] Update AI Production Run Setup to import the shared control directly.
-- [ ] Rewrite `GenerationPreviewConfigPanel` around sections and rows.
-- [ ] Remove config card grid.
-- [ ] Remove estimate rendering from Config.
-- [ ] Render model parameter rows with the shared control in disabled/read-only
-      mode.
-- [ ] Render static configuration rows as compact label/value rows.
-- [ ] Add footer estimate component.
-- [ ] Render estimate in `GenerationPreviewDialog` footer.
-- [ ] Keep Close button in footer.
-- [ ] Render row metadata without raw JSON.
-- [ ] Do not branch on provider model ids in React.
-- [ ] Do not show `Reference count`.
-- [ ] Do not show `providerPreview.payload`.
-- [ ] Keep shared `LineTabBar` tabs.
+- [x] Rename `RunSetupParameter` to `GenerationParameterControl`.
+- [x] Update AI Production Run Setup to import the shared control directly.
+- [x] Rewrite `GenerationPreviewConfigPanel` around sections and rows.
+- [x] Remove config card grid.
+- [x] Remove estimate rendering from Config.
+- [x] Render model parameter rows as minimal read-only values.
+- [x] Render static configuration rows as compact label/value rows.
+- [x] Add footer estimate component.
+- [x] Render estimate in `GenerationPreviewDialog` footer.
+- [x] Keep Close button in footer.
+- [x] Render row metadata without raw JSON.
+- [x] Do not branch on provider model ids in React.
+- [x] Do not show `Reference count`.
+- [x] Do not show `providerPreview.payload`.
+- [x] Keep shared `LineTabBar` tabs.
 
 ### Documentation
 
-- [ ] Update media-generation architecture reference.
-- [ ] Update studio coordination events reference.
-- [ ] Document schema default vs effective Renku value distinction.
-- [ ] Document estimate footer placement.
-- [ ] Document shot input model-specific parameter reports.
+- [x] Update media-generation architecture reference.
+- [x] Update studio coordination events reference.
+- [x] Document schema default vs effective Renku value distinction.
+- [x] Document estimate footer placement.
+- [x] Document shot input model-specific parameter reports.
 
 ### Verification
 
-- [ ] Run focused engine descriptor tests.
-- [ ] Run focused core generation preview tests.
-- [ ] Run focused core image purpose tests.
-- [ ] Run focused shot-video input tests.
-- [ ] Run focused Studio generation preview tests.
-- [ ] Run Studio lint.
-- [ ] Do not run browser verification unless explicitly requested.
+- [x] Run focused engine descriptor tests.
+- [x] Run focused core generation preview tests.
+- [x] Run focused core image purpose tests.
+- [x] Run focused shot-video input tests.
+- [x] Run focused Studio generation preview tests.
+- [x] Run Studio lint.
+- [x] Do not run browser verification unless explicitly requested.
 - [ ] Confirm checklist items are complete before marking this plan completed.

@@ -4,8 +4,11 @@ import type {
   ShotVideoTakeParameterValues,
   ShotVideoTakePromptDraft,
 } from '@gorenku/studio-core/client';
+import {
+  GenerationParameterControl,
+  type GenerationParameterControlValue,
+} from '@/features/generation-parameters/generation-parameter-control';
 import { Badge } from '@/ui/badge';
-import { RunSetupParameter } from './run-setup-controls';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
 
 interface SceneShotAiProductionRunSetupProps {
@@ -61,11 +64,17 @@ export function SceneShotAiProductionRunSetup({
           </p>
         ) : (
           parameters.map((parameter) => (
-            <RunSetupParameter
+            <GenerationParameterControl
               key={parameter.name}
               parameter={parameter}
-              value={values[parameter.name] ?? parameter.defaultValue}
-              onChange={(value) => onParameterChange(parameter.name, value)}
+              value={
+                (values[parameter.name] ?? parameter.defaultValue) as
+                  | GenerationParameterControlValue
+                  | undefined
+              }
+              onChange={(value) =>
+                onParameterChange(parameter.name, value as ShotVideoTakeParameterValue)
+              }
               disabled={disabled}
             />
           ))

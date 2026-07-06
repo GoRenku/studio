@@ -605,13 +605,27 @@ function generationPreviewFixture(): GenerationPreviewRequest {
         selected: true,
       },
     ],
-    configuration: [
-      {
-        key: 'image_size',
-        label: 'Image size',
-        value: '1024x768',
-      },
-    ],
+    configuration: {
+      sections: [
+        {
+          key: 'model-inputs',
+          label: 'Model inputs',
+          rows: [
+            {
+              key: 'image_size',
+              label: 'Image size',
+              value: 'landscape_16_9',
+              providerField: 'image_size',
+              schemaDefault: 'landscape_4_3',
+              allowedValues: ['landscape_4_3', 'landscape_16_9'],
+              required: false,
+              source: 'spec',
+              presentation: 'parameter-control',
+            },
+          ],
+        },
+      ],
+    },
     diagnostics: [],
   };
 }

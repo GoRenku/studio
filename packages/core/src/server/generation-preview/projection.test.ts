@@ -201,7 +201,7 @@ function previewRequestBase(): GenerationPreviewRequest {
       text: 'Create a motion annotated video prompt image.',
     },
     references: [],
-    configuration: [],
+    configuration: { sections: [] },
     diagnostics: [],
   };
 }

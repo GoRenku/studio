@@ -17,6 +17,7 @@ import {
   GenerationPreviewTabs,
   type GenerationPreviewTab,
 } from './generation-preview-tabs';
+import { GenerationPreviewEstimateFooter } from './generation-preview-estimate-footer';
 
 interface GenerationPreviewDialogProps {
   open: boolean;
@@ -57,7 +58,10 @@ export function GenerationPreviewDialog({
               onTabChange={setTab}
               onReferenceToggle={onReferenceToggle}
             />
-            <DialogFooter>
+            <DialogFooter className='items-end gap-4'>
+              <div className='mr-auto min-w-0'>
+                <GenerationPreviewEstimateFooter preview={preview} />
+              </div>
               <Button variant='outline' onClick={() => onOpenChange(false)}>
                 Close
               </Button>

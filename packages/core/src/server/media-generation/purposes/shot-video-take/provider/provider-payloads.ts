@@ -17,6 +17,7 @@ import type {
 } from '@gorenku/studio-engines';
 import {
   providerModel,
+  supportedShotInputParameterNames,
 } from '../shared/purpose-config.js';
 import {
   finalInputMatchesRouteSlot,
@@ -863,6 +864,9 @@ export function buildShotVideoTakeInputProviderPayload(input: {
   const { spec, references } = input;
   const referenceImages = shotInputReferenceImages(references);
   const referenceModel = shotInputReferenceProviderModel(spec.modelChoice);
+  const routeKind =
+    referenceImages.length > 0 ? 'reference-to-image' : 'text-to-image';
+  validateShotInputParameterValues(spec, routeKind);
   validateShotInputReferenceRoute({
     spec,
     model: referenceModel,
@@ -897,6 +901,27 @@ export function buildShotVideoTakeInputProviderPayload(input: {
       required: reference.required,
     })),
   };
+}
+
+function validateShotInputParameterValues(
+  spec: ShotVideoTakeInputGenerationSpec,
+  routeKind: 'text-to-image' | 'reference-to-image'
+): void {
+  const supported = supportedShotInputParameterNames(spec.modelChoice, routeKind);
+  const unsupportedFields = Object.keys(spec.parameterValues).filter(
+    (field) => !supported.has(field)
+  );
+  if (unsupportedFields.length === 0) {
+    return;
+  }
+  throw new ProjectDataError(
+    'CORE_SHOT_VIDEO_INPUT_PARAMETERS_UNSUPPORTED',
+    `Shot input model ${spec.modelChoice} does not support these ${routeKind} parameters: ${unsupportedFields.join(', ')}.`,
+    {
+      suggestion:
+        'Use parameters from the selected shot input model report before generating this dependency.',
+    }
+  );
 }
 
 function shotInputReferenceImages(

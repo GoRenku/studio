@@ -303,12 +303,32 @@ place.
 
 The visible Studio dialog is a user review surface, not a provider debug view.
 It should show the final prompt as readable prose, resolved reference media,
-configuration items that Core includes in `preview.configuration`, estimate
-information when present, and Core diagnostics only when diagnostics exist. It
-must not require the user-facing dialog to show provider token tables, provider
-token order, raw provider payload JSON, role cells, token cells, or an empty
-Issues success state. Those lower-level fields may remain available in the
-preview contract for CLI, agent, and developer workflows.
+configuration rows that Core includes in `preview.configuration.sections`,
+estimate information when present, and Core diagnostics only when diagnostics
+exist. The configuration object is a Core-authored, sectioned review
+projection, not a raw payload dump. Core builds it from the selected purpose
+spec, the effective provider plan and payload, model-list capability reports,
+and the provider schema descriptor exposed by Engines. Studio renders the rows
+it receives and must not import provider schemas, inspect raw provider payload
+JSON, or infer model-specific field support in React.
+
+Configuration rows distinguish effective Renku values from provider schema
+defaults. A row may carry the exact value Renku will send, or a provider default
+that Renku deliberately relies on. Schema defaults and allowed values are
+contract metadata; they must not overwrite the effective payload value or turn
+the Studio Config tab into explanatory clutter. For example, GPT Image 2 can
+have schema default `quality: "high"` while Renku sends `quality: "medium"` for
+the product `detail: "standard"` setting.
+
+Cost estimate display is a dialog-level approval concern. When a preview
+contains `preview.estimate`, Studio shows it in the dialog footer beside the
+Close action. The Config tab stays focused on the model route, provider route,
+and effective model parameters. It must not render `Estimated total`.
+
+The user-facing dialog must not show provider token tables, provider token
+order, raw provider payload JSON, role cells, token cells, reference counts, or
+an empty Issues success state. Those lower-level fields may remain available in
+the preview contract for CLI, agent, and developer workflows.
 
 When an agent authors `shot.video-prompt-sheet` as a dependency draft for a
 Shot Video Take, the runnable draft spec must carry through both
@@ -636,6 +656,14 @@ provider requests use the selected Storyboard Lookbook sheet as an image
 reference when it exists. This Storyboard Lookbook default is specific to
 `scene.storyboard-sheet`; shot input images default to the selected Movie
 Lookbook unless their spec explicitly uses `referenceMode: "storyboard-lookbook"`.
+Shot input image model-list reports are model-specific. GPT Image 2 exposes
+`image_size`, `quality`, and `output_format`; Nano Banana 2 exposes
+`aspect_ratio`, `resolution`, `output_format`, and `seed`; Grok Imagine exposes
+`aspect_ratio`, `resolution`, and `output_format` for text-to-image, while its
+reference-conditioned route is restricted to the provider-supported output
+format setting and provider defaults. Core validates shot input
+`parameterValues` against the selected model and effective route before
+building provider payloads.
 
 The generated provider image is one temporary composite storyboard sheet for
 one to four selected shots, not one provider call per shot. The media-producer

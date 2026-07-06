@@ -1760,7 +1760,7 @@ function generationPreviewRequest(): GenerationPreviewRequest {
         },
       },
     ],
-    configuration: [],
+    configuration: { sections: [] },
     diagnostics: [],
   };
 }

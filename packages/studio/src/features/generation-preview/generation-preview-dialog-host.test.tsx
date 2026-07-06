@@ -118,12 +118,46 @@ describe('GenerationPreviewDialogHost', () => {
       selectTab('Config');
     });
 
-    expect(await screen.findByText('Image size')).toBeTruthy();
-    expect(screen.getByText('1024x768')).toBeTruthy();
+    expect(await screen.findByText('Model inputs')).toBeTruthy();
+    expect(await screen.findAllByText('Image size')).toHaveLength(1);
+    expect(screen.getByText('landscape_16_9')).toBeTruthy();
+    expect(screen.queryByText('IMAGE SIZE')).toBeNull();
+    expect(screen.queryByText(/provider field:/)).toBeNull();
+    expect(screen.queryByText(/provider default:/)).toBeNull();
+    expect(screen.queryByText(/allowed:/)).toBeNull();
+    expect(screen.queryByText(/source:/)).toBeNull();
     expect(screen.queryByText('Provider')).toBeNull();
     expect(screen.queryByText('Route')).toBeNull();
     expect(screen.queryByText('Execution path')).toBeNull();
     expect(screen.queryByText('Provider Payload')).toBeNull();
+    expect(screen.queryByText('Reference count')).toBeNull();
+    expect(screen.queryByText('Estimated total')).toBeNull();
+  });
+
+  it('renders estimate in the dialog footer instead of the Config tab', async () => {
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-prompt-sheet',
+        title: 'Prompt Sheet A',
+        estimate: {
+          state: 'estimated',
+          estimatedCostUsd: 0.12,
+          warnings: ['Pricing may change before generation.'],
+        },
+      })
+    );
+
+    expect(await screen.findByText('Estimated total')).toBeTruthy();
+    expect(screen.getByText('$0.12')).toBeTruthy();
+
+    await act(async () => {
+      selectTab('Config');
+    });
+
+    const configPanel = screen.getByText('Model inputs').closest('[role="tabpanel"]');
+    expect(configPanel?.textContent).not.toContain('Estimated total');
   });
 
   it('renders Core diagnostics as a banner without an Issues tab', async () => {
@@ -138,6 +172,7 @@ describe('GenerationPreviewDialogHost', () => {
             severity: 'warning',
             code: 'GENERATION_PREVIEW_TEST',
             message: 'The preview includes a warning from Core.',
+            location: { path: [] },
             suggestion: 'Review the warning before generating.',
           },
         ],
@@ -262,6 +297,7 @@ function previewFixture(input: {
   editableReference?: boolean;
   providerPreview?: StudioGenerationPreview['providerPreview'];
   diagnostics?: StudioGenerationPreview['diagnostics'];
+  estimate?: StudioGenerationPreview['estimate'];
 }): StudioGenerationPreview {
   return {
     kind: 'generationPreview',
@@ -325,14 +361,30 @@ function previewFixture(input: {
           '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
       },
     ],
-    configuration: [
-      {
-        key: 'image_size',
-        label: 'Image size',
-        value: '1024x768',
-      },
-    ],
+    configuration: {
+      sections: [
+        {
+          key: 'model-inputs',
+          label: 'Model inputs',
+          rows: [
+            {
+              key: 'image_size',
+              label: 'Image size',
+              value: 'landscape_16_9',
+              providerField: 'image_size',
+              schemaDefault: 'landscape_4_3',
+              schemaDefaultLabel: 'landscape_4_3',
+              allowedValues: ['landscape_4_3', 'landscape_16_9'],
+              required: false,
+              source: 'spec',
+              presentation: 'parameter-control',
+            },
+          ],
+        },
+      ],
+    },
     providerPreview: input.providerPreview,
+    estimate: input.estimate,
     diagnostics: input.diagnostics ?? [],
   };
 }

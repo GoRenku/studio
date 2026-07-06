@@ -9,6 +9,7 @@ import type {
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoiceReport,
   ShotVideoTakeInputModelChoiceReport,
+  ShotVideoTakeInputModelChoice,
   ShotVideoTakeShotGroupMode,
   ShotVideoTakeModelChoice,
 } from '../../../../../client/index.js';
@@ -24,6 +25,7 @@ import {
 } from '../authoring/context.js';
 import {
   defaultShotInputParameterValues,
+  type ShotInputRouteKind,
 } from '../shared/purpose-config.js';
 import {
   durationSupportForRoute,
@@ -99,44 +101,133 @@ export function shotInputModelChoices(): ShotVideoTakeInputModelChoiceReport[] {
       label: 'GPT Image 2',
       available: true,
       mediaKind: 'image',
-      defaultParameterValues: defaultShotInputParameterValues(),
-      parameters: shotInputParameters(),
+      defaultParameterValues: defaultShotInputParameterValues(
+        'fal-ai/openai/gpt-image-2',
+        'text-to-image'
+      ),
+      parameters: shotInputParameters('fal-ai/openai/gpt-image-2', 'text-to-image'),
     },
     {
       modelChoice: 'fal-ai/nano-banana-2',
       label: 'Nano Banana 2',
       available: true,
       mediaKind: 'image',
-      defaultParameterValues: defaultShotInputParameterValues(),
-      parameters: shotInputParameters(),
+      defaultParameterValues: defaultShotInputParameterValues(
+        'fal-ai/nano-banana-2',
+        'text-to-image'
+      ),
+      parameters: shotInputParameters('fal-ai/nano-banana-2', 'text-to-image'),
     },
     {
       modelChoice: 'fal-ai/xai/grok-imagine-image',
       label: 'Grok Imagine',
       available: true,
       mediaKind: 'image',
-      defaultParameterValues: defaultShotInputParameterValues(),
-      parameters: shotInputParameters(),
+      defaultParameterValues: defaultShotInputParameterValues(
+        'fal-ai/xai/grok-imagine-image',
+        'text-to-image'
+      ),
+      parameters: shotInputParameters(
+        'fal-ai/xai/grok-imagine-image',
+        'text-to-image'
+      ),
     },
   ];
 }
 
 
 
-export function shotInputParameters(): ShotVideoTakeInputModelChoiceReport['parameters'] {
+export function shotInputParameters(
+  modelChoice: ShotVideoTakeInputModelChoice,
+  routeKind: ShotInputRouteKind
+): ShotVideoTakeInputModelChoiceReport['parameters'] {
+  if (modelChoice === 'fal-ai/openai/gpt-image-2') {
+    return [
+      {
+        name: 'image_size',
+        label: 'Image size',
+        required: true,
+        defaultValue: { width: 1024, height: 768 },
+      },
+      {
+        name: 'quality',
+        label: 'Quality',
+        required: true,
+        defaultValue: 'low',
+        allowedValues: ['low', 'medium', 'high'],
+      },
+      {
+        name: 'output_format',
+        label: 'Output format',
+        required: true,
+        defaultValue: 'png',
+        allowedValues: ['jpeg', 'png', 'webp'],
+      },
+    ];
+  }
+  if (modelChoice === 'fal-ai/nano-banana-2') {
+    return [
+      {
+        name: 'aspect_ratio',
+        label: 'Aspect ratio',
+        required: true,
+        defaultValue: '16:9',
+        allowedValues: ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16'],
+      },
+      {
+        name: 'resolution',
+        label: 'Resolution',
+        required: true,
+        defaultValue: '1K',
+        allowedValues: ['1K', '2K', '4K'],
+      },
+      {
+        name: 'output_format',
+        label: 'Output format',
+        required: true,
+        defaultValue: 'png',
+        allowedValues: ['jpeg', 'png', 'webp'],
+      },
+      {
+        name: 'seed',
+        label: 'Seed',
+        required: false,
+        defaultValue: null,
+      },
+    ];
+  }
+  if (routeKind === 'reference-to-image') {
+    return [
+      {
+        name: 'output_format',
+        label: 'Output format',
+        required: true,
+        defaultValue: 'png',
+        allowedValues: ['jpeg', 'png', 'webp'],
+      },
+    ];
+  }
   return [
     {
-      name: 'image_size',
-      label: 'Image size',
+      name: 'aspect_ratio',
+      label: 'Aspect ratio',
       required: true,
-      defaultValue: { width: 1024, height: 768 },
+      defaultValue: '16:9',
+      allowedValues: ['2:1', '20:9', '19.5:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:19.5', '9:20', '1:2'],
     },
     {
-      name: 'quality',
-      label: 'Quality',
+      name: 'resolution',
+      label: 'Resolution',
       required: true,
-      defaultValue: 'low',
-      allowedValues: ['low', 'medium', 'high'],
+      defaultValue: '1k',
+      allowedValues: ['1k', '2k'],
+    },
+    {
+      name: 'output_format',
+      label: 'Output format',
+      required: true,
+      defaultValue: 'png',
+      allowedValues: ['jpeg', 'png', 'webp'],
     },
   ];
 }

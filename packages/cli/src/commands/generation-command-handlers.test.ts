@@ -376,13 +376,22 @@ function previewFixture() {
         selected: true,
       },
     ],
-    configuration: [
-      {
-        key: 'image_size',
-        label: 'Image size',
-        value: '1024x768',
-      },
-    ],
+    configuration: {
+      sections: [
+        {
+          key: 'model-inputs',
+          label: 'Model inputs',
+          rows: [
+            {
+              key: 'image_size',
+              label: 'Image size',
+              value: '1024x768',
+              source: 'spec',
+            },
+          ],
+        },
+      ],
+    },
     diagnostics: [],
   };
 }

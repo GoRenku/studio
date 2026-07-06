@@ -7,6 +7,7 @@ import {
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type ProjectRelativePath,
   type SceneShotVideoTakeTarget,
+  type ShotVideoTakeParameterValues,
   type ShotVideoTakeProductionContext,
   type ShotVideoTakeInputGenerationPurpose,
   type ShotVideoTakeOutputGenerationSpec,
@@ -97,6 +98,29 @@ describe('shot video take provider payloads', () => {
 
     expect(plan.model).toBe('xai/grok-imagine-image/edit');
     expect(plan.mode).toBe('image-edit');
+  });
+
+  it('rejects image parameters that are not supported by the selected shot input model', () => {
+    expect(() =>
+      buildShotVideoTakeInputProviderPayload({
+        spec: {
+          ...shotInputSpec(SHOT_FIRST_FRAME_GENERATION_PURPOSE, 'fal-ai/nano-banana-2'),
+          parameterValues: { image_size: 'landscape_16_9', quality: 'low' },
+        },
+        context: { shotGroupMode: 'single-shot' } as ShotVideoTakeProductionContext,
+        references: {
+          purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+          referenceMode: 'movie-lookbook',
+          styleReference: null,
+          continuityReferences: [],
+          promptNotes: [],
+        },
+      })
+    ).toThrow(
+      expect.objectContaining({
+        code: 'CORE_SHOT_VIDEO_INPUT_PARAMETERS_UNSUPPORTED',
+      })
+    );
   });
 
   it('rejects Grok Imagine shot input references beyond the provider limit', () => {
@@ -560,9 +584,26 @@ function shotInputSpec(
     modelChoice,
     referenceMode: 'movie-lookbook' as const,
     prompt: 'Create a shot input image using selected references.',
-    parameterValues: { image_size: 'landscape_16_9', output_format: 'png' },
+    parameterValues: shotInputParameterValues(modelChoice),
     title: 'Shot input',
   };
+}
+
+function shotInputParameterValues(
+  modelChoice: 'fal-ai/openai/gpt-image-2' | 'fal-ai/nano-banana-2' | 'fal-ai/xai/grok-imagine-image'
+): ShotVideoTakeParameterValues {
+  if (modelChoice === 'fal-ai/openai/gpt-image-2') {
+    return { image_size: 'landscape_16_9', quality: 'low', output_format: 'png' };
+  }
+  if (modelChoice === 'fal-ai/nano-banana-2') {
+    return {
+      aspect_ratio: '16:9',
+      resolution: '1K',
+      output_format: 'png',
+      seed: null,
+    };
+  }
+  return { output_format: 'png' };
 }
 
 function shotInputReferences(purpose: ShotVideoTakeInputGenerationPurpose) {
