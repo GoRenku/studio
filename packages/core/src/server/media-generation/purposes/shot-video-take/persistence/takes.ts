@@ -60,6 +60,7 @@ import {
 import {
   contextWithIterationResourceKeys,
   continueSceneShotVideoTakeIteration,
+  sceneShotVideoTakeStateWithCopiedOwnedMedia,
 } from '../authoring/take-iteration.js';
 import {
   retargetTakeScopedProductionState,
@@ -276,16 +277,22 @@ export async function updateSceneShotVideoTakeProduction(
     const now = new Date().toISOString();
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,
+      productionForOwnedMediaCopy: input.production,
+    });
+    const production = retargetTakeScopedProductionState({
+      production: input.production,
+      targetTakeId: iteration.take.takeId,
     });
     updateSceneShotVideoTakeProductionRecord(session, {
       takeId: iteration.take.takeId,
-      production: retargetTakeScopedProductionState({
-        production: input.production,
-        targetTakeId: iteration.take.takeId,
-      }),
+      production: sceneShotVideoTakeStateWithCopiedOwnedMedia({
+        state: { ...iteration.take.state, production },
+        copiedInputs: iteration.copiedInputs,
+      }).production,
       screenplay,
       now,
     });
@@ -313,6 +320,7 @@ export async function updateSceneShotVideoTakeDirection(
     const now = new Date().toISOString();
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,
@@ -348,6 +356,7 @@ export async function updateSceneShotVideoTakeStructureMode(
     const now = new Date().toISOString();
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,
@@ -383,6 +392,7 @@ export async function updateSceneShotVideoTakeShots(
     const now = new Date().toISOString();
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,

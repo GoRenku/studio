@@ -84,6 +84,10 @@ export const takeCommandHandlers = [
     run: runTakeCreate,
   },
   {
+    path: ['repair-owned-media'],
+    run: runTakeRepairOwnedMedia,
+  },
+  {
     path: ['authoring', 'context'],
     run: runTakeAuthoringContext,
   },
@@ -118,6 +122,12 @@ async function runTakeCreate(input: TakeCommandInput): Promise<unknown> {
     sceneId: requiredFlag(input.flags.scene, '--scene'),
     shotListId: requiredFlag(input.flags.shotList, '--shot-list'),
     shotIds: parseShots(requiredFlag(input.flags.shots, '--shots')),
+  });
+}
+
+async function runTakeRepairOwnedMedia(input: TakeCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.repairShotVideoTakeOwnedMedia({
+    ...takeProjectInput(input.runtime),
   });
 }
 
@@ -210,7 +220,7 @@ function unknownTakeCommand(commandPath: readonly string[]): StructuredError {
     code: 'CLI107',
     message: `Unknown take command: ${commandPath.join(' ') || '(none)'}.`,
     suggestion:
-      'Use take list, take show, take create, or take authoring context/validate/apply.',
+      'Use take list, take show, take create, take repair-owned-media, or take authoring context/validate/apply.',
   });
 }
 

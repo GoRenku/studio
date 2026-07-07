@@ -102,6 +102,7 @@ import type {
   SceneShotVideoTakeDirection,
   SceneShotVideoTakeStructureMode,
   ShotVideoTakeProductionContext,
+  ShotVideoTakeOwnedMediaRepairReport,
   SceneShotVideoTakeProductionState,
   ShotVideoTakeOutputGenerationPlan,
   ShotVideoTakeOutputGenerationSpec,
@@ -514,6 +515,9 @@ export interface ProjectDataService {
   readSceneShotVideoTake(input: ReadSceneShotVideoTakeInput): Promise<SceneShotVideoTake>;
   listSceneShotVideoTakes(input: ListSceneShotVideoTakesInput): Promise<SceneShotVideoTakeListReport>;
   deleteSceneShotVideoTake(input: DeleteSceneShotVideoTakeInput): Promise<RecoverableMutationReport>;
+  repairShotVideoTakeOwnedMedia(
+    input: RepairShotVideoTakeOwnedMediaInput
+  ): Promise<ShotVideoTakeOwnedMediaRepairReport>;
   updateSceneShotVideoTakePick(input: UpdateSceneShotVideoTakePickInput): Promise<{ take: SceneShotVideoTake; resourceKeys: string[] }>;
   updateSceneShotVideoTakeProduction(input: UpdateSceneShotVideoTakeProductionInput): Promise<ShotVideoTakeProductionContext>;
   updateSceneShotVideoTakeDirection(input: UpdateSceneShotVideoTakeDirectionInput): Promise<ShotVideoTakeProductionContext>;
@@ -1522,6 +1526,12 @@ export interface ShotVideoTakeContextInput extends RenkuConfigPathOptions {
 
 export interface DeleteSceneShotVideoTakeInput
   extends ShotVideoTakeContextInput {}
+
+export interface RepairShotVideoTakeOwnedMediaInput
+  extends RenkuConfigPathOptions {
+  projectName?: string;
+  idGenerator?: ProjectIdGenerator;
+}
 
 export interface UpdateSceneShotVideoTakePickInput
   extends ShotVideoTakeContextInput {

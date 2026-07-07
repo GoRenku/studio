@@ -59,6 +59,10 @@ import {
   type SceneShotVideoTakeIterationTarget,
 } from '../authoring/take-iteration.js';
 import {
+  copyTakeOwnedMediaAssetFile,
+  isShotVideoTakeOwnedMediaAsset,
+} from '../ownership/take-owned-media.js';
+import {
   updateSceneShotVideoTakeProductionRecord,
 } from '../../../../database/access/scene-shot-video-takes.js';
 import {
@@ -213,12 +217,14 @@ export async function selectShotVideoTakeInput(
     }
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,
     });
     const targetInput = inputForIterationSelection({
       session,
+      projectFolder,
       input,
       iteration,
       sourceInput: selectedBeforeMutation,
@@ -263,6 +269,7 @@ export async function clearShotVideoTakeInputSelection(
     const screenplay = requireScreenplayDocument(session);
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,
@@ -334,6 +341,7 @@ export async function deleteShotVideoTakeInput(
     }
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,
@@ -417,6 +425,7 @@ export async function deleteShotVideoTakeInput(
 
 function inputForIterationSelection(input: {
   session: DatabaseSession;
+  projectFolder: string;
   input: SelectShotVideoTakeInputInput;
   iteration: SceneShotVideoTakeIterationTarget;
   sourceInput: SceneShotVideoTakeMediaInput;
@@ -434,6 +443,24 @@ function inputForIterationSelection(input: {
   const ids = createUniqueIdAllocator(
     input.input.idGenerator ?? createRandomIdGenerator()
   );
+  const copiedAsset = isShotVideoTakeOwnedMediaAsset(input.session, {
+    inputKind: input.sourceInput.kind,
+    assetId: input.sourceInput.assetId,
+  })
+    ? copyTakeOwnedMediaAssetFile({
+        session: input.session,
+        projectFolder: input.projectFolder,
+        sourceAssetId: input.sourceInput.assetId,
+        sourceAssetFileId: input.sourceInput.assetFileId,
+        targetTakeId: input.iteration.take.takeId,
+        inputKind: input.sourceInput.kind,
+        now: input.now,
+        nextId: ids,
+      })
+    : {
+        assetId: input.sourceInput.assetId,
+        assetFileId: input.sourceInput.assetFileId,
+      };
   return insertShotVideoTakeInputRecord(input.session, {
     id: ids('scene_shot_video_take_media_input'),
     sceneId: input.iteration.prepared.sceneId,
@@ -445,8 +472,8 @@ function inputForIterationSelection(input: {
       subjectKind: input.sourceInput.subjectKind,
       subjectId: input.sourceInput.subjectId,
     }),
-    assetId: input.sourceInput.assetId,
-    assetFileId: input.sourceInput.assetFileId,
+    assetId: copiedAsset.assetId,
+    assetFileId: copiedAsset.assetFileId,
     mediaGenerationRunId: input.sourceInput.mediaGenerationRunId ?? null,
     selection: 'select',
     shotIds: input.sourceInput.shotIds,

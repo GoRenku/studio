@@ -100,6 +100,7 @@ export async function importShotInputMedia(
     });
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,
@@ -239,6 +240,7 @@ export async function importShotVideoTake(
     });
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,

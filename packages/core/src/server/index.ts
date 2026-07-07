@@ -204,6 +204,7 @@ export type {
   UpdateSceneStoryboardSheetGenerationSpecInput,
   CreateSceneShotVideoTakeInput,
   DeleteSceneShotVideoTakeInput,
+  RepairShotVideoTakeOwnedMediaInput,
   ReadSceneShotVideoTakeInput,
   ListSceneShotVideoTakesInput,
   UpdateSceneShotVideoTakePickInput,

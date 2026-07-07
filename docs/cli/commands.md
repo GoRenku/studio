@@ -1464,6 +1464,7 @@ renku generation input list --purpose shot.video-take --target take:<take-id> --
 renku generation input select --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
 renku generation input clear --purpose shot.video-take --target scene:<scene-id> --take <take-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
 renku generation input delete --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
+renku take repair-owned-media --json
 ```
 
 `take authoring context` is the agent-facing read contract for final shot-video
@@ -1472,6 +1473,13 @@ production plan, reference sections, preflight readiness, estimate, diagnostics,
 and provider payload preview. Agents should validate and apply a full authoring
 document instead of patching take state or writing separate reference-kind
 commands.
+
+`take repair-owned-media` is a focused current-contract repair for development
+projects where active Shot Video Take-owned input media was copied by row while
+still sharing the same asset/file. It deep-copies the shared active take-owned
+inputs, updates prepared input state, and reports each repaired input and new
+asset/file id. Normal take reads and deletes do not treat shared take-owned
+media as valid runtime state.
 
 Generated shot dependency drafts must be authored by the agent in
 `production.agentProposal.dependencyDrafts[]` in the authoring document. Core

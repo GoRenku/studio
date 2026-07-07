@@ -83,6 +83,7 @@ import {
 import {
   contextWithIterationResourceKeys,
   continueSceneShotVideoTakeIteration,
+  sceneShotVideoTakeStateWithCopiedOwnedMedia,
 } from './take-iteration.js';
 import {
   retargetTakeScopedProductionState,
@@ -172,6 +173,7 @@ export async function applySceneShotVideoTakeAuthoringDocument(
     const now = new Date().toISOString();
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: {
         projectName: input.projectName,
         homeDir: input.homeDir,
@@ -180,17 +182,22 @@ export async function applySceneShotVideoTakeAuthoringDocument(
       },
       screenplay,
       now,
+      productionForOwnedMediaCopy: proposal.state.production,
     });
+    const state = {
+      ...proposal.state,
+      production: retargetTakeScopedProductionState({
+        production: proposal.state.production,
+        targetTakeId: iteration.take.takeId,
+      }),
+    };
     const take = applySceneShotVideoTakeAuthoringRecord(session, {
       takeId: iteration.take.takeId,
       shotIds: proposal.document.shotIds,
-      state: {
-        ...proposal.state,
-        production: retargetTakeScopedProductionState({
-          production: proposal.state.production,
-          targetTakeId: iteration.take.takeId,
-        }),
-      },
+      state: sceneShotVideoTakeStateWithCopiedOwnedMedia({
+        state,
+        copiedInputs: iteration.copiedInputs,
+      }),
       screenplay,
       now,
     });

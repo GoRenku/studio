@@ -137,6 +137,16 @@ panel count, labels, captions, timing marks, shot coverage, or whether the
 generated pixels match the selected metadata. GPT-Image-2 is the default
 prompt-sheet image model.
 
+Shot-video take-owned media must not be shared between active takes. Video
+Prompt Sheets, first frames, last frames, shot-video reference images, and final
+take videos are part of a take's production workspace. Creating a copied take
+iteration must copy take-owned media into new asset/file ownership for the new
+take. Deleting a take may discard only media that Core proves is exclusively
+owned by that take. Non-owned references such as Cast Character Sheets,
+Location Sheets, Lookbook Sheets, and Dialogue Audio remain shared project
+references. The accepted rule is
+`shot-video-take-owned-media.md`.
+
 Generation previews are a live review surface before expensive generation. The
 CLI/agent contract is a saved media generation spec id or a transient
 `MediaGenerationSpec` JSON file. The CLI asks Core to build the

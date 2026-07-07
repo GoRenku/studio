@@ -187,6 +187,15 @@ immediately before paid generation and revise prompts when final persisted
 model, input mode, route parameters, selected references, composition, or motion
 no longer match the prompt assumptions.
 
+Shot-video take-owned media is exclusive to one active take. Video Prompt
+Sheets, first frames, last frames, shot-video reference images, and final take
+videos must be copied into new asset/file ownership when a take iteration is
+created. Non-owned references such as Cast Character Sheets, Location Sheets,
+Lookbook Sheets, and Dialogue Audio remain shared project references. Deleting
+a take may discard only take-owned media that Core proves is not referenced by
+another active take. The ownership decision is
+`../shot-video-take-owned-media.md`.
+
 Core never synthesizes generic shot-video dependency prompts. First-frame,
 last-frame, ad hoc reference-image, and video prompt sheet dependency
 lines use `missing-input` before the user or agent authors concrete

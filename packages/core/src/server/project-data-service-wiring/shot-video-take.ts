@@ -2,6 +2,7 @@ import { buildShotVideoTakeContext, readSceneShotVideoTakeEditContext } from '..
 import { listShotVideoTakeModels } from '../media-generation/purposes/shot-video-take/specs/model-list.js';
 import { listShotVideoTakeInputs, resolveShotVideoTakeInputFile, resolveShotVideoTakeVideoFile, selectShotVideoTakeInput, clearShotVideoTakeInputSelection, deleteShotVideoTakeInput } from '../media-generation/purposes/shot-video-take/selection/input-selection.js';
 import { createSceneShotVideoTake, deleteSceneShotVideoTake, listSceneShotVideoTakes, readSceneShotVideoTake, updateSceneShotVideoTakePick, updateSceneShotVideoTakeProduction, updateSceneShotVideoTakeDirection, updateSceneShotVideoTakeShots, updateSceneShotVideoTakeStructureMode } from '../media-generation/purposes/shot-video-take/persistence/takes.js';
+import { repairShotVideoTakeOwnedMedia } from '../media-generation/purposes/shot-video-take/ownership/take-owned-media-repair.js';
 import { updateSceneShotVideoTakeCharacterSheetSelection, updateSceneShotVideoTakeLocationSheetSelection, updateSceneShotVideoTakeLookbookSheetSelection, updateSceneShotVideoTakeDialogueAudioSelection, updateSceneShotVideoTakeReferenceInclusion } from '../media-generation/purposes/shot-video-take/selection/mutations/reference-selections.js';
 import { planShotVideoTakeProduction, readShotVideoTakeProductionPlan } from '../media-generation/purposes/shot-video-take/planning/production-plan.js';
 import { estimateShotVideoTakeProduction } from '../media-generation/lifecycle/shot-video-take-production-estimates.js';
@@ -20,6 +21,7 @@ export function createShotVideoTakeServiceWiring() {
     readSceneShotVideoTake,
     listSceneShotVideoTakes,
     deleteSceneShotVideoTake,
+    repairShotVideoTakeOwnedMedia,
     updateSceneShotVideoTakePick,
     updateSceneShotVideoTakeProduction,
     updateSceneShotVideoTakeDirection,

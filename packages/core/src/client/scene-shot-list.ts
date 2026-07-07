@@ -1,4 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import type { ProjectRelativePath } from './project.js';
 import type { Block, SceneSetting } from './screenplay.js';
 
 export interface SceneShotListDocument {
@@ -154,6 +155,27 @@ export interface ShotVideoTakePreparedInput {
   assetFileId?: string;
   subjectKind: ShotVideoTakeInputSubjectKind;
   subjectId: string;
+}
+
+export interface ShotVideoTakeOwnedMediaRepairChange {
+  inputId: string;
+  takeId: string;
+  inputKind: ShotVideoTakeInputKind;
+  sourceAssetId: string;
+  sourceAssetFileId: string;
+  assetId: string;
+  assetFileId: string;
+  projectRelativePath: ProjectRelativePath;
+}
+
+export interface ShotVideoTakeOwnedMediaRepairReport {
+  project: {
+    id: string;
+    name: string;
+    projectFolder: string;
+  };
+  repairedInputs: ShotVideoTakeOwnedMediaRepairChange[];
+  resourceKeys: string[];
 }
 
 export interface SceneShotVideoTakeProductionState {

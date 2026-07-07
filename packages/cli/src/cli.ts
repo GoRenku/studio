@@ -79,7 +79,7 @@ Commands
   screenplay           Inspect, validate, create, and revise screenplay JSON
   studio current       Show current Studio focus and context
   studio server status Show canonical local Studio server status
-  take                 List, show, create, and update shot video takes
+  take                 List, show, create, update, and repair shot video takes
   trash                List, restore, preview, and empty Trash
 
 Options

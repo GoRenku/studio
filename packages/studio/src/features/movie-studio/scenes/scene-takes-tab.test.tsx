@@ -18,7 +18,6 @@ import {
   type SceneShotVideoTakeEditContextResponse,
   type SceneShotVideoTakeOverviewResponse,
   type SceneShotVideoTakeWithHttp,
-  type ShotVideoTakeProductionContextResponse,
   type ShotVideoTakeStoryboardImageReferenceWithHttp,
   updateSceneShotVideoTakePick,
   updateSceneShotVideoTakeShots,
@@ -339,82 +338,6 @@ function shotList(): SceneShotListDocument {
   };
 }
 
-function fiveShotList(): SceneShotListDocument {
-  return {
-    kind: 'sceneShotList',
-    sceneId: 'scene_hook',
-    title: 'Bombardment source coverage',
-    summary: 'Five shots.',
-    coverageStrategy: 'Move from the wall to the machine.',
-    shots: [
-      shot('shot_001', 'Walls in smoke'),
-      shot('shot_002', 'Bronze mouth'),
-      shot('shot_003', 'Urban reads the metal'),
-      shot('shot_004', 'Mara and Urban divided by bronze'),
-      shot('shot_005', 'The machine is fed'),
-    ],
-  };
-}
-
-function configureFiveShotEditTake(shotIds: string[]) {
-  const sourceShots = fiveShotList().shots;
-  const sourceTake = take({
-    takeId: 'take_reaction',
-    title: 'Reaction take',
-    sourceShotListId: 'shot_list_source',
-    shotIds,
-    updatedAt: '2026-06-18T11:00:00.000Z',
-  });
-  const storyboardImages = sourceShots.map((sourceShot, index) =>
-    sourceStoryboardImage(
-      sourceShot.shotId,
-      `asset_old_${index + 1}`,
-      `file_old_${index + 1}`,
-      `/storyboards/source-shot-${index + 1}.png`
-    )
-  );
-
-  vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
-    takes: [
-      takeOverview(sourceTake, {
-        displayShots: sourceShots,
-        storyboardImages,
-      }),
-    ],
-  });
-  vi.mocked(readSceneShotVideoTakeEditContext).mockResolvedValue(
-    takeEditContext({
-      take: sourceTake,
-      sourceShotListId: 'shot_list_source',
-      displayShots: sourceShots,
-      storyboardImages,
-    })
-  );
-  vi.mocked(updateSceneShotVideoTakeShots).mockImplementation(
-    async (_projectName, _sceneId, _takeId, nextShotIds) => ({
-      context: takeProductionContext({
-        take: {
-          ...sourceTake,
-          shotIds: nextShotIds,
-          updatedAt: '2026-06-18T12:00:00.000Z',
-        },
-        shotListId: 'shot_list_source',
-        displayShots: sourceShots,
-        storyboardImages,
-      }),
-      resourceKeys: [],
-    })
-  );
-}
-
-function selectedForEditLabels(): string[] {
-  return Array.from(
-    document.querySelectorAll('[data-selected-for-edit="true"]')
-  )
-    .map((element) => element.getAttribute('aria-label'))
-    .filter((label): label is string => Boolean(label));
-}
-
 function resource(): SceneShotListResourceResponse {
   return {
     scene: {
@@ -467,27 +390,6 @@ function takeEditContext(input: {
     displayShots: input.displayShots,
     storyboardImages: input.storyboardImages ?? [],
   } as unknown as SceneShotVideoTakeEditContextResponse;
-}
-
-function takeProductionContext(input: {
-  take: SceneShotVideoTakeWithHttp;
-  shotListId: string;
-  displayShots: SceneShot[];
-  storyboardImages?: ReturnType<typeof sourceStoryboardImage>[];
-}): ShotVideoTakeProductionContextResponse {
-  return {
-    take: input.take,
-    shotList: {
-      id: input.shotListId,
-      title: 'Source shot list',
-      summary: 'Source shot coverage.',
-      createdAt: '2026-06-18T09:00:00.000Z',
-      updatedAt: '2026-06-18T09:00:00.000Z',
-      isActive: false,
-    },
-    displayShots: input.displayShots,
-    storyboardImages: input.storyboardImages ?? [],
-  } as unknown as ShotVideoTakeProductionContextResponse;
 }
 
 function takeOverview(

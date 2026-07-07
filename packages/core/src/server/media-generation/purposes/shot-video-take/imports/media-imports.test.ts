@@ -209,9 +209,17 @@ describe('shot video take media imports', () => {
         selected: true,
         subjectKind: 'take',
         subjectId: regenerated.take.takeId,
-        projectRelativePath: 'generated/media/video-prompt-sheet.png',
       }),
     ]);
+    expect(regeneratedInputs.inputs[0]?.assetId).not.toBe(
+      promptSheet.mediaInput.assetId
+    );
+    expect(regeneratedInputs.inputs[0]?.assetFileId).not.toBe(
+      promptSheet.mediaInput.assetFileId
+    );
+    expect(regeneratedInputs.inputs[0]?.projectRelativePath).toContain(
+      `generated/media/scene-shot-video-takes/${regenerated.take.takeId}/`
+    );
     const sourceInputs = await projectData.listShotVideoTakeInputs({
       homeDir,
       takeId: written.take.takeId,
@@ -366,7 +374,7 @@ describe('shot video take media imports', () => {
         target: { kind: 'scene', sceneId: ids.sceneId },
         assetId: inputAsset.assetId,
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA078' });
+    ).resolves.toMatchObject({ valid: true });
     await expect(
       projectData.discardAsset({
         homeDir,
@@ -374,6 +382,6 @@ describe('shot video take media imports', () => {
         target: { kind: 'scene', sceneId: ids.sceneId },
         assetId: outputAsset.assetId,
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA078' });
+    ).resolves.toMatchObject({ valid: true });
   });
 });

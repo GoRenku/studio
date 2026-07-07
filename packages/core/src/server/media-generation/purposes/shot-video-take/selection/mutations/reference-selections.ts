@@ -175,6 +175,7 @@ async function updateSceneShotVideoTakeReferenceSelections(
     const now = new Date().toISOString();
     const iteration = continueSceneShotVideoTakeIteration({
       session,
+      projectFolder,
       contextInput: input,
       screenplay,
       now,

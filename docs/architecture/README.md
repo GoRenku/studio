@@ -41,6 +41,8 @@ Use this page as the map:
 - `generation-preview-purpose-bindings.md` defines the saved-spec generation
   preview boundary: shared image preview configuration, purpose bindings, and
   separate final shot-video route preview logic.
+- `shot-video-take-owned-media.md` defines the ownership rule for
+  take-owned media, copied take iterations, and take deletion safety.
 - `shot-video-take-structure-modes.md` defines the continuous versus multi-cut
   Shot Video Take structure model.
 - `drizzle-first-project-data.md` defines the Drizzle-first runtime query

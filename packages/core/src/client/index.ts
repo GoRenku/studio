@@ -218,6 +218,8 @@ export type {
   ShotVideoTakeModelChoice,
   ShotVideoTakeParameterValue,
   ShotVideoTakeParameterValues,
+  ShotVideoTakeOwnedMediaRepairChange,
+  ShotVideoTakeOwnedMediaRepairReport,
   ShotVideoTakePreparedInput,
   SceneShotVideoTakeProductionState,
   ShotVideoTakePromptDraft,
