@@ -68,6 +68,7 @@ export type {
 export type {
   ChangeAssetSelectInput,
   ClearLookbookCardImageInput,
+  BuildDraftMediaGenerationPreviewInput,
   BuildMediaGenerationPreviewInput,
   CreateMovieProjectInput,
   CastMediaGenerationContextInput,

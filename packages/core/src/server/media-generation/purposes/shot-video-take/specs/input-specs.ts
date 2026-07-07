@@ -219,9 +219,13 @@ export async function prepareShotInputSpec(
 }
 
 export async function buildShotInputGenerationPreview(
-  input: ReadMediaGenerationSpecInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ) {
-  const specRecord = await readShotSpec(input);
+  const { specRecord } = input;
   assertShotInputSpec(specRecord.spec);
   const { context, plan, references } = await prepareShotInputProviderPlan({
     projectName: input.projectName,

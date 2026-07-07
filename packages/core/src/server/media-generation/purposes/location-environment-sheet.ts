@@ -327,9 +327,13 @@ export async function prepareLocationEnvironmentSheetSpec(
 }
 
 export async function buildLocationEnvironmentSheetGenerationPreview(
-  input: LocationEnvironmentSheetSpecIdInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ) {
-  const specRecord = await readLocationEnvironmentSheetSpec(input);
+  const { specRecord } = input;
   assertLocationEnvironmentSheetSpec(specRecord.spec);
   const context = await buildLocationEnvironmentSheetContext({
     projectName: input.projectName,

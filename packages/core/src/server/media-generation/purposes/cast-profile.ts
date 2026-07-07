@@ -299,9 +299,13 @@ export async function prepareCastProfileSpec(
 }
 
 export async function buildCastProfileGenerationPreview(
-  input: CastProfileSpecIdInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ) {
-  const specRecord = await readCastProfileSpec(input);
+  const { specRecord } = input;
   assertProfileSpec(specRecord.spec);
   const context = await buildCastProfileContext({
     projectName: input.projectName,

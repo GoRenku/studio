@@ -291,13 +291,19 @@ Agents must show a Generation Preview Dialog before generating
 `shot.video-prompt-sheet` images and before final `shot.video-take` runs:
 
 ```bash
-renku generation preview show --file <generation-preview-json> --json
+renku generation preview show --file <media-generation-spec-json> --json
+renku generation preview show --spec <media-generation-spec-id> --json
 ```
 
-The preview snapshot is validated by Core and delivered only to a running Studio
-server. It is live UI coordination, not durable generation history; if Studio is
-closed, the command fails instead of creating an offline backlog. References in
-the preview must be logical project references (`assetId`, `assetFileId`, role,
+Use `--file` only for an agent-authored transient media generation spec when no
+persisted media generation spec exists yet. Use `--spec` for persisted specs,
+including final `shot.video-take` specs. In both cases Core builds the preview
+envelope from the spec, route metadata, provider plan, and current project
+context. The preview snapshot is validated by Core and delivered only to a
+running Studio server. It is live UI coordination, not durable generation
+history; if Studio is closed, the command fails instead of creating an offline
+backlog. References in the generated preview must be logical project references
+(`assetId`, `assetFileId`, role,
 provider token), never local absolute paths or provider upload URLs. Subsequent
 feedback should revise the same `previewId` so the open dialog updates in
 place.

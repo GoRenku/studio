@@ -91,9 +91,11 @@ operational companions that teach agents how to use those contracts.
   `promptSheetVisualStyleId`, `promptSheetNotationModeId`, logical references,
   and a detailed prompt, then defaults to GPT-Image-2 unless the user selects a
   different model.
-- Shows the Generation Preview Dialog with `renku generation preview show`
-  before generating prompt-sheet images or final shot videos, then revises the
-  same `previewId` when the user gives feedback.
+- Shows the Generation Preview Dialog with `renku generation preview show
+  --file <media-generation-spec-json>` for transient specs or `--spec
+  <media-generation-spec-id>` for saved specs before generating prompt-sheet
+  images or final shot videos, then revises the same Core-built preview when
+  the user gives feedback.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
   the output to `casting-director` for `renku cast voice attach`.
 

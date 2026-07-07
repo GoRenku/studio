@@ -289,9 +289,13 @@ export async function prepareLookbookImageSpec(
 }
 
 export async function buildLookbookImageGenerationPreview(
-  input: LookbookImageSpecIdInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ) {
-  const specRecord = await readLookbookImageSpec(input);
+  const { specRecord } = input;
   assertLookbookImageSpec(specRecord.spec);
   const context = await buildLookbookImageContext({
     projectName: input.projectName,

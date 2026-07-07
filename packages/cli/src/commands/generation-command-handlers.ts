@@ -218,7 +218,7 @@ async function readPreviewShowRequest(input: GenerationCommandInput) {
       code: 'CLI145',
       message: 'generation preview show accepts either --file or --spec, not both.',
       suggestion:
-        'Use --file for a preview JSON payload or --spec for a saved media generation spec.',
+        'Use --file for a draft media generation spec or --spec for a saved media generation spec.',
     });
   }
   if (input.flags.spec) {
@@ -230,8 +230,15 @@ async function readPreviewShowRequest(input: GenerationCommandInput) {
       })
     );
   }
+  const spec = (await readJsonFile(
+    requiredFlag(input.flags.file, '--file')
+  )) as MediaGenerationSpec;
   return validateGenerationPreviewRequest(
-    await readJsonFile(requiredFlag(input.flags.file, '--file'))
+    await input.runtime.projectDataService.buildDraftMediaGenerationPreview({
+      projectName: input.runtime.projectName,
+      homeDir: input.runtime.homeDir,
+      spec,
+    })
   );
 }
 
@@ -618,7 +625,7 @@ function generationPreviewDeliveryError(delivery: Exclude<Awaited<ReturnType<typ
       message:
         'Studio is not running, so the Generation Preview Dialog cannot be shown.',
       suggestion:
-        'Start Renku Studio, then run generation preview show again with the same preview file.',
+        'Start Renku Studio, then run generation preview show again with the same spec file or saved spec id.',
     });
   }
   if (delivery.status === 'notConfigured') {

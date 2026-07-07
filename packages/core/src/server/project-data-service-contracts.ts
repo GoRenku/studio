@@ -504,6 +504,7 @@ export interface ProjectDataService {
   prepareMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   buildMediaGenerationPreview(input: BuildMediaGenerationPreviewInput): Promise<GenerationPreviewRequest>;
+  buildDraftMediaGenerationPreview(input: BuildDraftMediaGenerationPreviewInput): Promise<GenerationPreviewRequest>;
   updateCastCharacterSheetReferenceInclusion(input: UpdateCastCharacterSheetReferenceInclusionInput): Promise<GenerationPreviewRequest>;
   estimateMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
@@ -1284,6 +1285,9 @@ export interface ReadMediaGenerationSpecInput extends RenkuConfigPathOptions {
 
 export interface BuildMediaGenerationPreviewInput
   extends ReadMediaGenerationSpecInput {}
+
+export interface BuildDraftMediaGenerationPreviewInput
+  extends ValidateMediaGenerationSpecInput {}
 
 export interface UpdateCastCharacterSheetReferenceInclusionInput
   extends ReadMediaGenerationSpecInput {

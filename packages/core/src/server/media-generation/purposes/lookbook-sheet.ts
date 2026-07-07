@@ -281,9 +281,13 @@ export async function prepareLookbookSheetSpec(
 }
 
 export async function buildLookbookSheetGenerationPreview(
-  input: LookbookSheetSpecIdInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ) {
-  const specRecord = await readLookbookSheetSpec(input);
+  const { specRecord } = input;
   assertLookbookSheetSpec(specRecord.spec);
   const context = await buildLookbookSheetContext({
     projectName: input.projectName,

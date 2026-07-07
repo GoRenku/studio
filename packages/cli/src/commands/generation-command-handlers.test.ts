@@ -157,10 +157,12 @@ describe('generationCommandHandlers', () => {
       throw new Error('Expected preview show handler.');
     }
     const homeDir = await writeRenkuConfig();
-    const previewFile = await writePreviewFile(homeDir, previewFixture());
+    const previewFile = await writeJsonFile(homeDir, 'draft-spec.json', draftSpecFixture());
+    const preview = previewFixture();
     vi.mocked(notifyStudioGenerationPreview).mockResolvedValue({
       status: 'delivered',
     });
+    const buildDraftMediaGenerationPreview = vi.fn().mockResolvedValue(preview);
     const readProject = vi.fn().mockResolvedValue({
       identity: {
         id: 'project_test0001',
@@ -173,7 +175,7 @@ describe('generationCommandHandlers', () => {
         flags: { file: previewFile },
         runtime: {
           homeDir,
-          projectDataService: { readProject },
+          projectDataService: { buildDraftMediaGenerationPreview, readProject },
         },
       } as never),
     ).resolves.toEqual({
@@ -193,6 +195,11 @@ describe('generationCommandHandlers', () => {
       projectName: 'constantinople',
       homeDir,
     });
+    expect(buildDraftMediaGenerationPreview).toHaveBeenCalledWith({
+      projectName: undefined,
+      homeDir,
+      spec: draftSpecFixture(),
+    });
     expect(notifyStudioGenerationPreview).toHaveBeenCalledWith({
       homeDir,
       notification: {
@@ -201,7 +208,7 @@ describe('generationCommandHandlers', () => {
           name: 'constantinople',
           storageRoot: path.join(homeDir, 'library'),
         },
-        preview: previewFixture(),
+        preview,
         source: { kind: 'cli', command: 'generation preview show' },
       },
     });
@@ -262,7 +269,10 @@ describe('generationCommandHandlers', () => {
       throw new Error('Expected preview show handler.');
     }
     const homeDir = await writeRenkuConfig();
-    const previewFile = await writePreviewFile(homeDir, previewFixture());
+    const previewFile = await writeJsonFile(homeDir, 'draft-spec.json', draftSpecFixture());
+    const buildDraftMediaGenerationPreview = vi.fn().mockResolvedValue(
+      previewFixture()
+    );
     vi.mocked(notifyStudioGenerationPreview).mockResolvedValue({
       status: 'notRunning',
     });
@@ -273,6 +283,7 @@ describe('generationCommandHandlers', () => {
         runtime: {
           homeDir,
           projectDataService: {
+            buildDraftMediaGenerationPreview,
             readProject: vi.fn().mockResolvedValue({
               identity: {
                 id: 'project_test0001',
@@ -297,7 +308,10 @@ describe('generationCommandHandlers', () => {
     const homeDir = await writeRenkuConfig();
     const invalidPreview = previewFixture();
     invalidPreview.previewId = '';
-    const previewFile = await writePreviewFile(homeDir, invalidPreview);
+    const previewFile = await writeJsonFile(homeDir, 'draft-spec.json', draftSpecFixture());
+    const buildDraftMediaGenerationPreview = vi.fn().mockResolvedValue(
+      invalidPreview
+    );
 
     await expect(
       handler.run({
@@ -305,12 +319,51 @@ describe('generationCommandHandlers', () => {
         runtime: {
           homeDir,
           projectDataService: {
+            buildDraftMediaGenerationPreview,
             readProject: vi.fn(),
           },
         },
       } as never),
     ).rejects.toMatchObject({
       code: 'CORE_GENERATION_PREVIEW_INVALID',
+    });
+    expect(notifyStudioGenerationPreview).not.toHaveBeenCalled();
+  });
+
+  it('does not deliver raw preview payload files as draft specs', async () => {
+    const handler = generationCommandHandlers.find(
+      (candidate) => candidate.path.join(' ') === 'preview show',
+    );
+    if (!handler) {
+      throw new Error('Expected preview show handler.');
+    }
+    const homeDir = await writeRenkuConfig();
+    const previewFile = await writeJsonFile(homeDir, 'preview.json', previewFixture());
+    const specError = Object.assign(
+      new Error('Invalid media generation spec.'),
+      { code: 'CORE_MEDIA_GENERATION_SPEC_INVALID' }
+    );
+    const buildDraftMediaGenerationPreview = vi.fn().mockRejectedValue(specError);
+
+    await expect(
+      handler.run({
+        flags: { file: previewFile },
+        runtime: {
+          homeDir,
+          projectDataService: {
+            buildDraftMediaGenerationPreview,
+            readProject: vi.fn(),
+          },
+        },
+      } as never),
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_GENERATION_SPEC_INVALID',
+    });
+
+    expect(buildDraftMediaGenerationPreview).toHaveBeenCalledWith({
+      projectName: undefined,
+      homeDir,
+      spec: previewFixture(),
     });
     expect(notifyStudioGenerationPreview).not.toHaveBeenCalled();
   });
@@ -328,13 +381,35 @@ async function writeRenkuConfig(): Promise<string> {
   return homeDir;
 }
 
-async function writePreviewFile(
+async function writeJsonFile(
   homeDir: string,
-  preview: ReturnType<typeof previewFixture>,
+  filename: string,
+  value: unknown,
 ): Promise<string> {
-  const previewFile = path.join(homeDir, 'preview.json');
-  await fs.writeFile(previewFile, JSON.stringify(preview), 'utf8');
-  return previewFile;
+  const file = path.join(homeDir, filename);
+  await fs.writeFile(file, JSON.stringify(value), 'utf8');
+  return file;
+}
+
+function draftSpecFixture() {
+  return {
+    purpose: 'shot.video-prompt-sheet',
+    target: {
+      kind: 'sceneShotVideoTake',
+      id: 'take_test0001',
+      sceneId: 'scene_test0001',
+      takeId: 'take_test0001',
+      shotIds: ['shot_test0001'],
+    },
+    modelChoice: 'fal-ai/openai/gpt-image-2',
+    prompt: 'Create a motion annotated video prompt image.',
+    promptSheetVisualStyleId: 'handdrawn-storyboard',
+    promptSheetNotationModeId: 'motion-annotation',
+    parameterValues: {
+      image_size: '1024x768',
+    },
+    referenceMode: 'none',
+  };
 }
 
 function previewFixture() {

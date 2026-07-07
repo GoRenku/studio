@@ -6,6 +6,7 @@ import {
   requireMediaGenerationSpec,
 } from '../../database/access/media-generation.js';
 import type {
+  BuildDraftMediaGenerationPreviewInput,
   BuildMediaGenerationPreviewInput,
   ReadMediaGenerationSpecInput,
   UpdateCastCharacterSheetReferenceInclusionInput,
@@ -22,6 +23,7 @@ import {
 import { assertRootDependenciesResolved } from './dependency-service.js';
 import { withMediaGenerationProjectSession } from './project-session.js';
 import { updateCastCharacterSheetReferenceInclusion as updateCastCharacterSheetReferenceInclusionForSpec } from '../purposes/cast-character-sheet.js';
+import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
 
 export async function validateMediaGenerationSpec(
   input: ValidateMediaGenerationSpecInput
@@ -86,16 +88,40 @@ export async function buildMediaGenerationPreview(
   input: BuildMediaGenerationPreviewInput
 ): Promise<GenerationPreviewRequest> {
   const specRecord = await readMediaGenerationSpec(input);
+  return buildGenerationPreviewFromSpecRecord({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    specRecord,
+  });
+}
+
+export async function buildDraftMediaGenerationPreview(
+  input: BuildDraftMediaGenerationPreviewInput
+): Promise<GenerationPreviewRequest> {
+  const validated = await validateMediaGenerationSpec(input);
+  return buildGenerationPreviewFromSpecRecord({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    specRecord: draftMediaGenerationSpecRecord(validated.spec),
+  });
+}
+
+async function buildGenerationPreviewFromSpecRecord(input: {
+  projectName?: string;
+  homeDir?: string;
+  specRecord: MediaGenerationSpecRecord;
+}): Promise<GenerationPreviewRequest> {
+  const { specRecord } = input;
   const definition = requireMediaGenerationPurposeDefinition(specRecord.purpose);
   if (definition.buildPreview) {
     return definition.buildPreview(input);
   }
   throw new ProjectDataError(
     'CORE_MEDIA_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
-    `Generation preview from saved specs is not supported for purpose: ${specRecord.purpose}.`,
+    `Generation preview is not supported for purpose: ${specRecord.purpose}.`,
     {
       suggestion:
-        'Use a generation preview payload file for this purpose until a saved-spec preview builder is added.',
+        'Use a previewable media generation purpose or add a Core preview builder before showing this spec in Studio.',
     }
   );
 }

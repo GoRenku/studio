@@ -189,11 +189,13 @@ To keep that boundary from regressing:
 - adding a new event type must include a short explanation of why it is UI
   coordination state rather than durable project state.
 
-`studio.generationPreviewRequested` is a UI coordination event. The CLI/agent
-notification carries a Core-validated `GenerationPreviewRequest` with logical
-project references only. Before appending the event, the Studio server asks Core
-to resolve each `assetId + assetFileId` into an active project asset file and to
-build meaningful subject labels. The stored event carries the browser display
+`studio.generationPreviewRequested` is a UI coordination event. Agents request
+the preview from a saved media generation spec id or a transient
+`MediaGenerationSpec` JSON file. The CLI notification carries the Core-built
+and Core-validated `GenerationPreviewRequest` with logical project references
+only. Before appending the event, the Studio server asks Core to resolve each
+`assetId + assetFileId` into an active project asset file and to build
+meaningful subject labels. The stored event carries the browser display
 projection, `StudioGenerationPreview`, with Studio-safe asset-file URLs and
 subject labels so the running browser can open or update the Generation Preview
 Dialog before an agent generates a video prompt image or final video.
@@ -216,7 +218,8 @@ POST /studio-api/studio/events/generation-previews
 The CLI command is:
 
 ```bash
-renku generation preview show --file <generation-preview-json> --json
+renku generation preview show --file <media-generation-spec-json> --json
+renku generation preview show --spec <media-generation-spec-id> --json
 ```
 
 Unlike resource refresh, generation previews do not have an offline backlog. If

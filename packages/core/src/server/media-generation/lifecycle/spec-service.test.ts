@@ -21,6 +21,7 @@ import { assertRootDependenciesResolved } from './dependency-service.js';
 import { withMediaGenerationProjectSession } from './project-session.js';
 import { requireMediaGenerationPurposeDefinition } from './purpose-lifecycle-registry.js';
 import {
+  buildDraftMediaGenerationPreview,
   createMediaGenerationSpec,
   buildMediaGenerationPreview,
   listMediaGenerationSpecs,
@@ -160,13 +161,70 @@ describe('media generation lifecycle spec service', () => {
       previewId: 'generation-preview:spec-a',
     });
 
-    expect(buildPreview).toHaveBeenCalledWith({
-      specId: 'spec-a',
-      homeDir: '/home',
-    });
+    expect(buildPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        homeDir: '/home',
+        specRecord: expect.objectContaining({
+          id: 'spec-a',
+          purpose: 'lookbook.image',
+        }),
+      })
+    );
   });
 
-  it('fails saved-spec previews with structured diagnostics when a purpose has no preview hook', async () => {
+  it('builds draft generation previews through the same purpose definition preview hook', async () => {
+    const spec = {
+      purpose: 'lookbook.image',
+      target: { kind: 'lookbook', id: 'lookbook-a' },
+      modelChoice: 'model-a',
+      prompt: 'Paint the basilica.',
+    };
+    const normalizedSpec = {
+      ...spec,
+      prompt: 'Paint the basilica in rain.',
+    };
+    const validateSpec = vi.fn(async () => ({
+      valid: true,
+      spec: normalizedSpec,
+      providerPayload: {},
+    }));
+    const buildPreview = vi.fn(async () => ({
+      kind: 'generationPreview',
+      previewId: 'generation-preview:draft:lookbook.image:lookbook:lookbook-a',
+    }));
+    mockedRequireDefinition.mockReturnValue({
+      validateSpec,
+      buildPreview,
+    } as never);
+
+    await expect(
+      buildDraftMediaGenerationPreview({
+        homeDir: '/home',
+        spec,
+      } as never)
+    ).resolves.toMatchObject({
+      kind: 'generationPreview',
+      previewId: 'generation-preview:draft:lookbook.image:lookbook:lookbook-a',
+    });
+
+    expect(validateSpec).toHaveBeenCalledWith({
+      homeDir: '/home',
+      spec,
+    });
+    expect(buildPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        homeDir: '/home',
+        specRecord: expect.objectContaining({
+          id: 'draft:lookbook.image:lookbook:lookbook-a',
+          purpose: 'lookbook.image',
+          spec: normalizedSpec,
+        }),
+      })
+    );
+    expect(mockedRequireSpec).not.toHaveBeenCalled();
+  });
+
+  it('fails generation previews with structured diagnostics when a purpose has no preview hook', async () => {
     mockedRequireSpec.mockReturnValueOnce({
       id: 'spec-a',
       purpose: 'cast.voice-sample',

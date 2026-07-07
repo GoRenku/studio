@@ -227,6 +227,12 @@ export interface MediaGenerationDependencyDeclarationInput {
   parentLineId?: string;
 }
 
+export interface MediaGenerationPreviewBuildInput {
+  projectName?: string;
+  homeDir?: string;
+  specRecord: MediaGenerationSpecRecord;
+}
+
 export interface MediaGenerationPurposeDefinition {
   purpose: MediaGenerationPurpose;
   mediaKind: MediaKind;
@@ -244,7 +250,7 @@ export interface MediaGenerationPurposeDefinition {
   listSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
-  buildPreview?(input: ReadMediaGenerationSpecInput): Promise<GenerationPreviewRequest>;
+  buildPreview?(input: MediaGenerationPreviewBuildInput): Promise<GenerationPreviewRequest>;
   declareDependencies?(
     input: MediaGenerationDependencyDeclarationInput
   ): Promise<MediaGenerationDependencySlot[]>;

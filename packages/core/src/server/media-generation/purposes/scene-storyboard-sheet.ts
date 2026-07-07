@@ -344,9 +344,13 @@ export async function prepareSceneStoryboardSheetSpec(
 }
 
 export async function buildSceneStoryboardSheetGenerationPreview(
-  input: ReadMediaGenerationSpecInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ) {
-  const specRecord = await readSceneStoryboardSheetSpec(input);
+  const { specRecord } = input;
   assertSceneStoryboardSheetSpec(specRecord.spec);
   const context = await buildSceneStoryboardSheetContext({
     projectName: input.projectName,

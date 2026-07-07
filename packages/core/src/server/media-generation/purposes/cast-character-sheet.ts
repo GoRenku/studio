@@ -358,9 +358,13 @@ export async function listCastCharacterSheetSpecs(
 }
 
 export async function buildCastCharacterSheetGenerationPreview(
-  input: CastCharacterSheetSpecIdInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ): Promise<GenerationPreviewRequest> {
-  const specRecord = await readCastCharacterSheetSpec(input);
+  const { specRecord } = input;
   assertCharacterSheetSpec(specRecord.spec);
   const context = await buildCastCharacterSheetContext({
     projectName: input.projectName,
@@ -456,13 +460,17 @@ export async function updateCastCharacterSheetReferenceInclusion(
   if (!nextReferenceSelections) {
     delete (nextSpec as { referenceSelections?: unknown }).referenceSelections;
   }
-  await updateCastCharacterSheetSpec({
+  const updatedSpecRecord = await updateCastCharacterSheetSpec({
     projectName: input.projectName,
     homeDir: input.homeDir,
     specId: input.specId,
     spec: nextSpec,
   });
-  return buildCastCharacterSheetGenerationPreview(input);
+  return buildCastCharacterSheetGenerationPreview({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    specRecord: updatedSpecRecord,
+  });
 }
 
 export async function prepareCastCharacterSheetSpec(

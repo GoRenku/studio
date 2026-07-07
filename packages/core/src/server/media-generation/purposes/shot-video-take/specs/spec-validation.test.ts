@@ -188,6 +188,106 @@ describe('shot video take preflight and validation', () => {
       multi_prompt: multiPrompt,
     });
   });
+
+  it('projects route prompt tokens in saved final video previews', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const context = await projectData.buildShotVideoTakeContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+
+    const spec = await projectData.createShotVideoTakeSpec({
+      homeDir,
+      spec: {
+        purpose: 'shot.video-take',
+        target: context.target,
+        inputModeId: 'reference',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0/mini',
+        prompt:
+          '@Image1 defines timing, @Image2 defines the place, and @Audio1 defines voice style.',
+        parameterValues: { duration: '5' },
+        inputs: [
+          imageInput(
+            'video-prompt-sheet',
+            'video_prompt_sheet',
+            'generated/images/video-prompt-sheet.png'
+          ),
+          imageInput(
+            'location-sheet',
+            'location_sheet',
+            'generated/images/location-sheet.png'
+          ),
+          dialogueAudioInput('audio_file_001', 'generated/audio/dialogue-001.mp3'),
+        ],
+      },
+    });
+
+    const preview = await projectData.buildMediaGenerationPreview({
+      homeDir,
+      specId: spec.id,
+    });
+
+    expect(preview.references.map((reference) => reference.providerToken)).toEqual([
+      '@Image1',
+      '@Image2',
+      '@Audio1',
+    ]);
+    expect(preview.providerPreview?.providerTokenOrder).toEqual([
+      '@Image1',
+      '@Image2',
+      '@Audio1',
+    ]);
+    expect(preview.configuration.sections.map((section) => section.key)).toEqual([
+      'model',
+      'model-inputs',
+    ]);
+  });
+
+  it('shows model configuration in draft final video previews', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const context = await projectData.buildShotVideoTakeContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+
+    const preview = await projectData.buildDraftMediaGenerationPreview({
+      homeDir,
+      spec: {
+        purpose: 'shot.video-take',
+        target: context.target,
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/kling-video/v3/pro',
+        prompt: 'One continuous video take over the ruined city.',
+        parameterValues: { duration: '5' },
+        inputs: [],
+      },
+    });
+
+    const modelSection = preview.configuration.sections.find(
+      (section) => section.key === 'model'
+    );
+
+    expect(preview.generationSpecId).toBe(
+      `draft:shot.video-take:sceneShotVideoTake:${context.target.id}`
+    );
+    expect(preview.configuration.sections.map((section) => section.key)).toEqual([
+      'model',
+      'model-inputs',
+    ]);
+    expect(modelSection?.label).toBe('Model');
+    expect(modelSection?.rows.map((row) => row.key)).toEqual([
+      'model',
+      'inputMode',
+      'providerRoute',
+    ]);
+    expect(modelSection?.rows[0]).toMatchObject({
+      label: 'Model',
+      value: 'fal-ai/kling-video/v3/pro',
+    });
+    expect(typeof modelSection?.rows[0]?.valueLabel).toBe('string');
+  });
 });
 
 function dialogueAudioInput(assetFileId: string, projectRelativePath: string) {
@@ -205,7 +305,7 @@ function dialogueAudioInput(assetFileId: string, projectRelativePath: string) {
 }
 
 function imageInput(
-  kind: 'first-frame',
+  kind: 'first-frame' | 'video-prompt-sheet' | 'location-sheet',
   role: string,
   projectRelativePath: string
 ) {

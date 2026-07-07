@@ -326,9 +326,13 @@ export async function prepareLocationHeroSpec(
 }
 
 export async function buildLocationHeroGenerationPreview(
-  input: LocationHeroSpecIdInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ) {
-  const specRecord = await readLocationHeroSpec(input);
+  const { specRecord } = input;
   assertLocationHeroSpec(specRecord.spec);
   const context = await buildLocationHeroContext({
     projectName: input.projectName,

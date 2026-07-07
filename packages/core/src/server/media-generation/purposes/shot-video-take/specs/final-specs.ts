@@ -43,7 +43,9 @@ import {
 import {
   buildShotVideoTakeProviderPayload,
   toGenerationRequest,
+  type ShotVideoTakeProviderPlan,
 } from '../provider/provider-payloads.js';
+import type { ShotVideoRoute } from '@gorenku/studio-engines';
 import { buildShotVideoTakePreviewConfiguration } from '../../../../generation-preview/configuration/shot-video-configuration.js';
 import { providerPreviewPromptText } from '../../../../generation-preview/provider-preview-prompt.js';
 import {
@@ -151,9 +153,13 @@ export async function prepareShotVideoTakeSpec(
 }
 
 export async function buildShotVideoTakeGenerationPreview(
-  input: ReadMediaGenerationSpecInput
+  input: {
+    projectName?: string;
+    homeDir?: string;
+    specRecord: MediaGenerationSpecRecord;
+  }
 ): Promise<GenerationPreviewRequest> {
-  const specRecord = await readShotSpec(input);
+  const { specRecord } = input;
   assertShotVideoTakeSpec(specRecord.spec);
   const context = await buildShotVideoTakeContext({
     projectName: input.projectName,
@@ -161,7 +167,20 @@ export async function buildShotVideoTakeGenerationPreview(
     takeId: specRecord.spec.target.takeId,
   });
   validateFinalSpecAgainstContext(specRecord.spec, context);
+  const route = requireShotVideoTakeRoute(
+    specRecord.spec.modelChoice,
+    specRecord.spec.inputModeId,
+    context.shotGroupMode
+  );
   const plan = buildShotVideoTakeProviderPayload(specRecord.spec, context);
+  const providerTokenByInput = shotVideoTakeProviderTokenByInput({
+    route,
+    inputFiles: plan.inputFiles,
+  });
+  const providerTokenOrder = shotVideoTakeProviderTokenOrder({
+    route,
+    inputFiles: plan.inputFiles,
+  });
   return {
     kind: 'generationPreview',
     previewId: `generation-preview:${specRecord.id}`,
@@ -187,7 +206,10 @@ export async function buildShotVideoTakeGenerationPreview(
         ? { negativePrompt: specRecord.spec.negativePrompt }
         : {}),
     },
-    references: shotVideoTakePreviewReferences(specRecord.spec),
+    references: shotVideoTakePreviewReferences(
+      specRecord.spec,
+      providerTokenByInput
+    ),
     configuration: buildShotVideoTakePreviewConfiguration({
       spec: specRecord.spec,
       context,
@@ -201,9 +223,7 @@ export async function buildShotVideoTakeGenerationPreview(
       provider: plan.provider,
       model: plan.model,
       mode: plan.mode,
-      providerTokenOrder: specRecord.spec.inputs.map(
-        (reference) => reference.assetFileId
-      ),
+      ...(providerTokenOrder.length > 0 ? { providerTokenOrder } : {}),
       payload: plan.payload,
     },
     diagnostics: [],
@@ -233,17 +253,139 @@ export async function prepareShotVideoTakeDraftSpec(input: {
 }
 
 function shotVideoTakePreviewReferences(
-  spec: ShotVideoTakeOutputGenerationSpec
+  spec: ShotVideoTakeOutputGenerationSpec,
+  providerTokenByInput: Map<string, string>
 ): GenerationPreviewRequestReference[] {
-  return spec.inputs.map((reference) => ({
-    kind: reference.mediaKind,
-    role: reference.role,
-    label: reference.role || reference.kind,
-    providerToken: reference.providerReferenceRole ?? reference.kind,
-    assetId: reference.assetId,
-    assetFileId: reference.assetFileId,
-    selected: true,
-  }));
+  return spec.inputs.map((reference) => {
+    const providerToken = providerTokenByInput.get(providerInputKey(reference));
+    return {
+      kind: reference.mediaKind,
+      role: reference.role,
+      label: reference.role || reference.kind,
+      ...(providerToken ? { providerToken } : {}),
+      assetId: reference.assetId,
+      assetFileId: reference.assetFileId,
+      selected: true,
+    };
+  });
+}
+
+function shotVideoTakeProviderTokenByInput(input: {
+  route: ShotVideoRoute;
+  inputFiles?: ShotVideoTakeProviderPlan['inputFiles'];
+}): Map<string, string> {
+  const providerTokenByInput = new Map<string, string>();
+  for (const providerInput of input.inputFiles ?? []) {
+    const providerToken = shotVideoTakeProviderTokenForInputFile({
+      route: input.route,
+      inputFile: providerInput,
+      inputFiles: input.inputFiles ?? [],
+    });
+    if (!providerToken) {
+      continue;
+    }
+    providerTokenByInput.set(providerInputFileKey(providerInput), providerToken);
+  }
+  return providerTokenByInput;
+}
+
+function shotVideoTakeProviderTokenOrder(input: {
+  route: ShotVideoRoute;
+  inputFiles?: ShotVideoTakeProviderPlan['inputFiles'];
+}): string[] {
+  const providerTokenOrder: string[] = [];
+  for (const providerInput of input.inputFiles ?? []) {
+    const providerToken = shotVideoTakeProviderTokenForInputFile({
+      route: input.route,
+      inputFile: providerInput,
+      inputFiles: input.inputFiles ?? [],
+    });
+    if (!providerToken || providerTokenOrder.includes(providerToken)) {
+      continue;
+    }
+    providerTokenOrder.push(providerToken);
+  }
+  return providerTokenOrder;
+}
+
+function shotVideoTakeProviderTokenForInputFile(input: {
+  route: ShotVideoRoute;
+  inputFile: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>[number];
+  inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>;
+}): string | undefined {
+  const { route, inputFile, inputFiles } = input;
+  const contract = route.referenceContract;
+  if (!contract) {
+    return undefined;
+  }
+  if (
+    contract.sourceVideo &&
+    inputFile.field === contract.sourceVideo.providerField
+  ) {
+    return contract.sourceVideo.promptToken;
+  }
+  if (
+    contract.elements &&
+    inputFile.field === contract.elements.providerField
+  ) {
+    const elementIndex =
+      Array.isArray(inputFile.payloadPath) &&
+      typeof inputFile.payloadPath[1] === 'number'
+        ? inputFile.payloadPath[1]
+        : undefined;
+    return elementIndex === undefined
+      ? undefined
+      : `${contract.elements.promptTokenPrefix}${elementIndex + 1}`;
+  }
+  if (
+    contract.topLevelImages &&
+    inputFile.field === contract.topLevelImages.providerField &&
+    inputFile.mediaKind === 'image'
+  ) {
+    const index = providerInputIndex(inputFiles, inputFile);
+    return index < 0
+      ? undefined
+      : `${contract.topLevelImages.promptTokenPrefix}${index + 1}`;
+  }
+  if (
+    contract.audioReferences &&
+    inputFile.field === contract.audioReferences.providerField &&
+    inputFile.mediaKind === 'audio'
+  ) {
+    const index = providerInputIndex(inputFiles, inputFile);
+    return index < 0
+      ? undefined
+      : `${contract.audioReferences.promptTokenPrefix}${index + 1}`;
+  }
+  return undefined;
+}
+
+function providerInputIndex(
+  inputFiles: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>,
+  inputFile: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>[number]
+): number {
+  return inputFiles
+    .filter(
+      (candidate) =>
+        candidate.field === inputFile.field &&
+        candidate.mediaKind === inputFile.mediaKind
+    )
+    .findIndex(
+      (candidate) =>
+        providerInputFileKey(candidate) === providerInputFileKey(inputFile)
+    );
+}
+
+function providerInputKey(
+  input: ShotVideoTakeOutputGenerationSpec['inputs'][number]
+): string {
+  return `${input.mediaKind}:${input.projectRelativePath}`;
+}
+
+function providerInputFileKey(
+  inputFile: NonNullable<ShotVideoTakeProviderPlan['inputFiles']>[number]
+): string {
+  return `${inputFile.mediaKind}:${inputFile.projectRelativePath}`;
 }
 
 
