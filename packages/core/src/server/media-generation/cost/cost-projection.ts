@@ -10,6 +10,7 @@ import type {
   CastCharacterSheetGenerationSpec,
   CastProfileGenerationSpec,
   CastVoiceSampleGenerationSpec,
+  ImageEditGenerationSpec,
   LocationEnvironmentSheetGenerationSpec,
   LocationHeroGenerationSpec,
   LookbookImageGenerationSpec,
@@ -24,6 +25,7 @@ import type {
   ShotVideoTakeOutputGenerationSpec,
 } from '../../../client/index.js';
 import {
+  IMAGE_EDIT_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
@@ -68,6 +70,8 @@ export function buildPurposeCostProjection(
   spec: MediaGenerationSpec
 ): Omit<MediaGenerationCostProjection, 'estimate'> {
   switch (spec.purpose) {
+    case IMAGE_EDIT_GENERATION_PURPOSE:
+      return imageEditCostProjection(spec as ImageEditGenerationSpec);
     case LOOKBOOK_IMAGE_GENERATION_PURPOSE:
       return imageCostProjection({
         modelChoice: (spec as LookbookImageGenerationSpec).modelChoice,
@@ -203,6 +207,28 @@ function shotInputCostProjection(
   if (priceKey.model === 'nano-banana-2') {
     pricingInputs.resolution =
       stringFromParameter(spec.parameterValues.resolution) ?? '1K';
+  }
+  return { priceKey, pricingInputs };
+}
+
+function imageEditCostProjection(
+  spec: ImageEditGenerationSpec
+): Omit<MediaGenerationCostProjection, 'estimate'> {
+  const priceKey = imagePriceKey(spec.modelChoice);
+  const pricingInputs: GenerationPricingInputs = {
+    outputCount: numberFromParameter(spec.parameterValues.num_images) ?? 1,
+    inputImageCount: 1,
+  };
+  if (priceKey.model === 'openai/gpt-image-2/edit') {
+    pricingInputs.imageSize = imageSizeFromParameter(
+      spec.parameterValues.image_size
+    );
+    pricingInputs.quality = stringFromParameter(spec.parameterValues.quality);
+  }
+  if (priceKey.model === 'nano-banana-2/edit') {
+    pricingInputs.resolution = stringFromParameter(
+      spec.parameterValues.resolution
+    );
   }
   return { priceKey, pricingInputs };
 }
@@ -387,6 +413,10 @@ function imageSizeFromParameter(
 
 function stringFromParameter(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
+}
+
+function numberFromParameter(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
 }
 
 function booleanFromParameter(value: unknown): boolean | undefined {

@@ -30,6 +30,7 @@ Decision history:
 The implemented media generation purposes are:
 
 ```text
+image.edit
 lookbook.image
 lookbook.sheet
 cast.character-sheet
@@ -49,6 +50,7 @@ shot.video-take
 Target formats:
 
 ```text
+asset:<asset-id>
 lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
@@ -61,6 +63,11 @@ take:<take-id>
 Core contract target shapes:
 
 ```ts
+{
+  kind: "asset";
+  id: string;
+}
+
 {
   kind: "lookbook";
   id: string;
@@ -96,6 +103,7 @@ Current CLI surface:
 
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<id> --json
+renku generation context --purpose image.edit --target asset:<asset-id> --json
 renku generation context --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation context --purpose cast.character-sheet --target cast:<id> --json
 renku generation context --purpose cast.profile --target cast:<id> --json
@@ -114,6 +122,7 @@ renku take authoring context --take <take-id> --json
 renku take authoring context --take <take-id> --selected-shot <shot-id> --json
 
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
+renku generation model list --purpose image.edit --target asset:<asset-id> --json
 renku generation model list --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation model list --purpose cast.character-sheet --target cast:<id> --json
 renku generation model list --purpose cast.profile --target cast:<id> --json
@@ -143,6 +152,7 @@ renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
 
 renku generation spec list --purpose lookbook.image --target lookbook:<id> --json
+renku generation spec list --purpose image.edit --target asset:<asset-id> --json
 renku generation spec list --purpose lookbook.sheet --target lookbook:<id> --json
 renku generation spec list --purpose cast.character-sheet --target cast:<id> --json
 renku generation spec list --purpose cast.profile --target cast:<id> --json
@@ -161,7 +171,17 @@ renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <token> --json
 renku generation run --spec <spec-id> --approve-unpriced-cost --json
 renku generation run --spec <spec-id> --simulate --json
+renku generation run show --run <run-id> --json
 ```
+
+`image.edit` is a generic Renku-managed image edit purpose. Its source is a
+registered project image asset addressed as `asset:<asset-id>`, never a local
+path. The spec may include `sourceAssetFileId` only when the asset has multiple
+active image files. It produces generated files and Media Generation Run
+records only; destination attachment remains purpose-specific through commands
+such as `renku media import --purpose shot.video-prompt-sheet --replace-selected`.
+Agents must use `generation run show --run <run-id> --json` to recover a real
+receipt instead of fabricating one.
 
 `renku take create --json` returns a `SceneShotVideoTakeCreateReport`.
 Use `overview.take.takeId` as the durable take id for later `--take` commands.

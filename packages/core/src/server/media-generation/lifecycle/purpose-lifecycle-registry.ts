@@ -1,5 +1,8 @@
 import type {
   AgentMediaReport,
+  ImageEditGenerationContext,
+  ImageEditGenerationSpec,
+  ImageEditModelListReport,
   CastCharacterSheetGenerationContext,
   CastCharacterSheetGenerationSpec,
   CastCharacterSheetModelListReport,
@@ -53,6 +56,7 @@ import type {
   ShotVideoTakeModelListReport,
 } from '../../../client/index.js';
 import {
+  IMAGE_EDIT_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
@@ -116,6 +120,7 @@ import type {
   ValidateShotVideoTakeInputGenerationSpecInput,
 } from '../../project-data-service-contracts.js';
 import * as characterSheet from '../purposes/cast-character-sheet.js';
+import * as imageEdit from '../purposes/image-edit.js';
 import * as castProfile from '../purposes/cast-profile.js';
 import * as castVoiceSample from '../purposes/cast-voice-sample.js';
 import * as locationSheet from '../purposes/location-environment-sheet.js';
@@ -140,6 +145,7 @@ import type {
 } from '../dependencies/dependency-draft-specs.js';
 
 export type MediaGenerationContextReport =
+  | ImageEditGenerationContext
   | LookbookImageGenerationContext
   | LookbookSheetGenerationContext
   | CastCharacterSheetGenerationContext
@@ -155,6 +161,7 @@ export type AgentAwareMediaGenerationContextReport =
   MediaGenerationContextReport & { agentMedia?: AgentMediaReport };
 
 export type MediaGenerationModelListReport =
+  | ImageEditModelListReport
   | LookbookImageModelListReport
   | LookbookSheetModelListReport
   | CastCharacterSheetModelListReport
@@ -261,6 +268,45 @@ export interface MediaGenerationPurposeDefinition {
 }
 
 const DEFINITIONS = [
+  {
+    purpose: IMAGE_EDIT_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'asset',
+    buildCostProjection: buildMediaGenerationCostProjection,
+    buildContext: (input) =>
+      imageEdit.buildImageEditContext(toAssetInput(input)),
+    listModels: (input) => imageEdit.listImageEditModels(toAssetInput(input)),
+    validateSpec: (input) =>
+      imageEdit.validateImageEditSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ImageEditGenerationSpec,
+      }),
+    createSpec: (input) =>
+      imageEdit.createImageEditSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ImageEditGenerationSpec,
+        idGenerator: input.idGenerator,
+      }),
+    updateSpec: (input) =>
+      imageEdit.updateImageEditSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as ImageEditGenerationSpec,
+      }),
+    listSpecs: (input) => imageEdit.listImageEditSpecs(toAssetInput(input)),
+    prepareSpec: imageEdit.prepareImageEditSpec,
+    buildPreview: imageEdit.buildImageEditGenerationPreview,
+    prepareDraftSpec: (input) =>
+      imageEdit.prepareImageEditDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ImageEditGenerationSpec,
+      }),
+    runSpec: imageEdit.runImageEditSpec,
+  },
   {
     purpose: LOOKBOOK_IMAGE_GENERATION_PURPOSE,
     mediaKind: 'image',
@@ -851,6 +897,13 @@ function toLookbookInput(
 ): ReadLookbookImageGenerationContextInput {
   const target = requireTargetKind(input, 'lookbook');
   return { projectName: input.projectName, homeDir: input.homeDir, lookbookId: target.id };
+}
+
+function toAssetInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): imageEdit.ImageEditTargetInput {
+  const target = requireTargetKind(input, 'asset');
+  return { projectName: input.projectName, homeDir: input.homeDir, assetId: target.id };
 }
 
 function toCastInput(

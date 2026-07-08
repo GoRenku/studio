@@ -2,6 +2,7 @@ import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-dia
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
+  IMAGE_EDIT_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOCATION_HERO_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
@@ -118,6 +119,7 @@ const GENERATION_PREVIEW_CONFIGURATION_PRESENTATIONS = new Set([
 
 const SUPPORTED_GENERATION_PREVIEW_PURPOSES = new Set<string>([
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  IMAGE_EDIT_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
@@ -379,6 +381,12 @@ function validateTarget(
     return;
   }
   if (
+    purpose === IMAGE_EDIT_GENERATION_PURPOSE
+  ) {
+    validateSimpleIdTarget(target, 'asset', context, issues);
+    return;
+  }
+  if (
     purpose === LOOKBOOK_IMAGE_GENERATION_PURPOSE ||
     purpose === LOOKBOOK_SHEET_GENERATION_PURPOSE
   ) {
@@ -401,7 +409,7 @@ function validateTarget(
 
 function validateSimpleIdTarget(
   target: Record<string, unknown>,
-  kind: 'lookbook' | 'location' | 'scene',
+  kind: 'asset' | 'lookbook' | 'location' | 'scene',
   context: string,
   issues: DiagnosticIssue[]
 ): void {

@@ -80,6 +80,7 @@ export type * from './media-generation-target.js';
 export type * from './media-generation-cost.js';
 export type * from './media-generation-dependency.js';
 export type * from './media-generation-lifecycle.js';
+export type * from './image-edit-media-generation.js';
 export type * from './lookbook-media-generation.js';
 export type * from './cast-media-generation.js';
 export type * from './location-media-generation.js';
@@ -96,6 +97,7 @@ export {
   sceneShotVideoTakeDirectionHasState,
 } from './shot-video-take.js';
 export {
+  IMAGE_EDIT_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,

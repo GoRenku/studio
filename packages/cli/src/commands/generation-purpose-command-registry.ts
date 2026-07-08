@@ -14,6 +14,7 @@ import { requiredFlag } from './structured-command.js';
 
 export const SUPPORTED_GENERATION_PURPOSES = [
   'lookbook.image',
+  'image.edit',
   'lookbook.sheet',
   'cast.character-sheet',
   'cast.profile',
@@ -50,6 +51,9 @@ export function parseGenerationTarget(input: {
       kind: 'lookbook',
       id: parseLookbookTarget(input.target, 'Lookbook generation'),
     };
+  }
+  if (purpose === 'image.edit') {
+    return parseAssetGenerationTarget(input.target);
   }
   if (isCastGenerationPurpose(purpose)) {
     return {
@@ -92,8 +96,20 @@ export function unsupportedGenerationPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose scene.dialogue-audio, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.video-prompt-sheet, or --purpose shot.video-take.',
+      'Use --purpose image.edit, --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose scene.dialogue-audio, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.video-prompt-sheet, or --purpose shot.video-take.',
   });
+}
+
+function parseAssetGenerationTarget(target: string): MediaGenerationRequestTarget {
+  const [kind, id, extra] = target.split(':');
+  if (kind !== 'asset' || !id || extra !== undefined) {
+    throw new StructuredError({
+      code: 'CLI147',
+      message: `Image edit generation target must use asset:<asset-id>. Received: ${target}.`,
+      suggestion: 'Use --target asset:<asset-id> for --purpose image.edit.',
+    });
+  }
+  return { kind: 'asset', id };
 }
 
 function parseSceneShotGroupTarget(input: {

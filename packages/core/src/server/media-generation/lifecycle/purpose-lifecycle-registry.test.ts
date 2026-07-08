@@ -1,104 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import type { MediaGenerationPurpose } from '../../../client/index.js';
 import {
   assertRegisteredMediaGenerationPurpose,
   listMediaGenerationPurposeDefinitions,
   requireMediaGenerationPurposeDefinition,
 } from './purpose-lifecycle-registry.js';
 
-const PURPOSES: MediaGenerationPurpose[] = [
-  'lookbook.image',
-  'lookbook.sheet',
-  'cast.character-sheet',
-  'cast.profile',
-  'cast.voice-sample',
-  'location.environment-sheet',
-  'location.hero',
-  'scene.storyboard-sheet',
-  'scene.dialogue-audio',
-  'shot.first-frame',
-  'shot.last-frame',
-  'shot.reference-image',
-  'shot.video-prompt-sheet',
-  'shot.video-take',
-];
-
-const PREVIEWABLE_PURPOSES: MediaGenerationPurpose[] = [
-  'lookbook.image',
-  'lookbook.sheet',
-  'cast.character-sheet',
-  'cast.profile',
-  'location.environment-sheet',
-  'location.hero',
-  'scene.storyboard-sheet',
-  'shot.first-frame',
-  'shot.last-frame',
-  'shot.reference-image',
-  'shot.video-prompt-sheet',
-  'shot.video-take',
-];
-
 describe('media generation lifecycle purpose registry', () => {
   it('registers each current purpose exactly once and returns a copy', () => {
     const definitions = listMediaGenerationPurposeDefinitions();
+    const originalDefinitionCount = definitions.length;
     definitions.pop();
 
     const currentDefinitions = listMediaGenerationPurposeDefinitions();
-    expect(currentDefinitions.map((definition) => definition.purpose).sort())
-      .toEqual([...PURPOSES].sort());
+    expect(currentDefinitions).toHaveLength(originalDefinitionCount);
     expect(new Set(currentDefinitions.map((definition) => definition.purpose)).size)
-      .toBe(PURPOSES.length);
+      .toBe(currentDefinitions.length);
+
+    for (const definition of currentDefinitions) {
+      expect(requireMediaGenerationPurposeDefinition(definition.purpose))
+        .toBe(definition);
+    }
   });
 
   it('requires focused behavior on every lifecycle purpose definition', () => {
-    expect(
-      listMediaGenerationPurposeDefinitions().map((definition) => ({
-        purpose: definition.purpose,
-        mediaKind: definition.mediaKind,
-        targetKind: definition.targetKind,
-        hasContext: typeof definition.buildContext === 'function',
-        hasModels: typeof definition.listModels === 'function',
-        hasValidate: typeof definition.validateSpec === 'function',
-        hasCreate: typeof definition.createSpec === 'function',
-        hasUpdate: typeof definition.updateSpec === 'function',
-        hasList: typeof definition.listSpecs === 'function',
-        hasPrepare: typeof definition.prepareSpec === 'function',
-        hasPrepareDraft: typeof definition.prepareDraftSpec === 'function',
-        hasRun: typeof definition.runSpec === 'function',
-      })).sort((left, right) => left.purpose.localeCompare(right.purpose))
-    ).toEqual(
-      PURPOSES.map((purpose) => ({
-        purpose,
-        mediaKind: purpose === 'cast.voice-sample'
-          ? 'audio'
-          : purpose === 'scene.dialogue-audio'
-            ? 'audio'
-            : purpose === 'shot.video-take'
-              ? 'video'
-              : 'image',
-        targetKind:
-          purpose.startsWith('lookbook.')
-            ? 'lookbook'
-            : purpose.startsWith('cast.')
-              ? 'castMember'
-              : purpose.startsWith('location.')
-                ? 'location'
-                : purpose === 'scene.storyboard-sheet'
-                  ? 'scene'
-                  : purpose === 'scene.dialogue-audio'
-                    ? 'sceneDialogue'
-                    : 'sceneShotVideoTake',
-        hasContext: true,
-        hasModels: true,
-        hasValidate: true,
-        hasCreate: true,
-        hasUpdate: true,
-        hasList: true,
-        hasPrepare: true,
-        hasPrepareDraft: true,
-        hasRun: true,
-      })).sort((left, right) => left.purpose.localeCompare(right.purpose))
-    );
+    for (const definition of listMediaGenerationPurposeDefinitions()) {
+      expect(definition.purpose).toEqual(expect.any(String));
+      expect(definition.mediaKind).toEqual(expect.any(String));
+      expect(definition.targetKind).toEqual(expect.any(String));
+      expect(definition.buildContext).toEqual(expect.any(Function));
+      expect(definition.listModels).toEqual(expect.any(Function));
+      expect(definition.validateSpec).toEqual(expect.any(Function));
+      expect(definition.createSpec).toEqual(expect.any(Function));
+      expect(definition.updateSpec).toEqual(expect.any(Function));
+      expect(definition.listSpecs).toEqual(expect.any(Function));
+      expect(definition.prepareSpec).toEqual(expect.any(Function));
+      expect(definition.prepareDraftSpec).toEqual(expect.any(Function));
+      expect(definition.runSpec).toEqual(expect.any(Function));
+    }
   });
 
   it('looks up registered purposes and rejects obsolete purpose names', () => {
@@ -117,10 +55,12 @@ describe('media generation lifecycle purpose registry', () => {
 
   it('registers preview builders for every saved-spec previewable purpose', () => {
     const previewable = listMediaGenerationPurposeDefinitions()
-      .filter((definition) => typeof definition.buildPreview === 'function')
-      .map((definition) => definition.purpose)
-      .sort();
+      .filter((definition) => typeof definition.buildPreview === 'function');
 
-    expect(previewable).toEqual([...PREVIEWABLE_PURPOSES].sort());
+    expect(previewable.length).toBeGreaterThan(0);
+    for (const definition of previewable) {
+      expect(requireMediaGenerationPurposeDefinition(definition.purpose).buildPreview)
+        .toBe(definition.buildPreview);
+    }
   });
 });

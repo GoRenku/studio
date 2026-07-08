@@ -13,6 +13,7 @@ import type {
   SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+  IMAGE_EDIT_GENERATION_PURPOSE,
 } from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
 import type {
@@ -21,6 +22,7 @@ import type {
 } from './shot-video-take.js';
 
 export type GenerationPreviewPurpose =
+  | typeof IMAGE_EDIT_GENERATION_PURPOSE
   | typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE
   | typeof LOOKBOOK_SHEET_GENERATION_PURPOSE
   | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE

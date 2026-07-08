@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ProjectRelativePath } from '../../../../../client/index.js';
+import type {
+  ImageEditGenerationSpec,
+  ProjectRelativePath,
+} from '../../../../../client/index.js';
+import { createDeterministicIdGenerator } from '../../../../index.js';
 import {
   insertShotVideoTakeInputRecord,
   insertShotVideoTakeVideoRecord,
@@ -57,6 +61,89 @@ describe('shot video take media imports', () => {
         }),
       ])
     );
+  });
+
+  it('replaces a selected prompt sheet with a simulated image edit run receipt', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 2);
+    const sourceProjectRelativePath = 'generated/media/video-prompt-sheet.png';
+    await shotVideoTakeProject.writeProjectFile(
+      sourceProjectRelativePath,
+      'video prompt sheet'
+    );
+
+    const selectedPromptSheet = await projectData.importShotVideoPromptSheet({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath,
+      title: 'Video prompt sheet',
+    });
+    const imageEditSpec: ImageEditGenerationSpec = {
+      purpose: 'image.edit',
+      target: { kind: 'asset', id: selectedPromptSheet.imported.assetId },
+      sourceAssetFileId: selectedPromptSheet.mediaInput.assetFileId,
+      modelChoice: 'fal-ai/openai/gpt-image-2/edit',
+      prompt: 'Preserve the sheet and adjust only the requested panels.',
+      parameterValues: {
+        image_size: { width: 1024, height: 768 },
+        quality: 'high',
+        output_format: 'png',
+        num_images: 1,
+      },
+      title: 'Prompt sheet correction',
+    };
+    const specRecord = await projectData.createMediaGenerationSpec({
+      homeDir,
+      spec: imageEditSpec,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const imageEditRun = await projectData.runMediaGenerationSpec({
+      homeDir,
+      specId: specRecord.id,
+      simulate: true,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const editedOutput = firstProjectRelativeOutputPath(imageEditRun.run.outputs);
+
+    const correctedPromptSheet = await projectData.importShotVideoPromptSheet({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: editedOutput,
+      title: 'Corrected video prompt sheet',
+      receipt: imageEditRun,
+      replaceSelected: true,
+    });
+
+    expect(correctedPromptSheet.mediaInput).toMatchObject({
+      kind: 'video-prompt-sheet',
+      selected: true,
+      subjectKind: 'take',
+      subjectId: written.take.takeId,
+      mediaGenerationRunId: imageEditRun.run.id,
+    });
+    expect(correctedPromptSheet.replacedInput).toMatchObject({
+      inputId: selectedPromptSheet.mediaInput.inputId,
+    });
+    expect(correctedPromptSheet.changes).toEqual(
+      expect.arrayContaining([
+        {
+          type: 'shotVideoTakeInput.discarded',
+          inputId: selectedPromptSheet.mediaInput.inputId,
+        },
+      ])
+    );
+
+    const activeInputs = await projectData.listShotVideoTakeInputs({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+    expect(activeInputs.inputs).toEqual([
+      expect.objectContaining({
+        inputId: correctedPromptSheet.mediaInput.inputId,
+        selected: true,
+        mediaGenerationRunId: imageEditRun.run.id,
+      }),
+    ]);
   });
 
   it('finalizes a first shot video on the draft take', async () => {
@@ -385,3 +472,22 @@ describe('shot video take media imports', () => {
     ).resolves.toMatchObject({ valid: true });
   });
 });
+
+function firstProjectRelativeOutputPath(outputs: unknown): ProjectRelativePath {
+  if (!Array.isArray(outputs)) {
+    throw new Error('Expected generation outputs array.');
+  }
+  const output = outputs.find(
+    (candidate): candidate is { projectRelativePath: ProjectRelativePath } =>
+      Boolean(
+        candidate &&
+          typeof candidate === 'object' &&
+          typeof (candidate as { projectRelativePath?: unknown }).projectRelativePath ===
+            'string'
+      )
+  );
+  if (!output) {
+    throw new Error('Expected generation output with projectRelativePath.');
+  }
+  return output.projectRelativePath;
+}

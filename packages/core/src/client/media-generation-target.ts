@@ -3,6 +3,11 @@ export interface LookbookImageGenerationTarget {
   id: string;
 }
 
+export interface AssetMediaGenerationTarget {
+  kind: 'asset';
+  id: string;
+}
+
 export interface CastMediaGenerationTarget {
   kind: 'castMember';
   id: string;
@@ -40,6 +45,7 @@ export interface SceneShotVideoTakeRequestTarget {
 }
 
 export type MediaGenerationTarget =
+  | AssetMediaGenerationTarget
   | LookbookImageGenerationTarget
   | CastMediaGenerationTarget
   | LocationMediaGenerationTarget
@@ -48,6 +54,7 @@ export type MediaGenerationTarget =
   | SceneShotVideoTakeTarget;
 
 export type MediaGenerationRequestTarget =
+  | AssetMediaGenerationTarget
   | LookbookImageGenerationTarget
   | CastMediaGenerationTarget
   | LocationMediaGenerationTarget

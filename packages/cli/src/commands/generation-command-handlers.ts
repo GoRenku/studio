@@ -28,6 +28,7 @@ export interface GenerationCommandFlags {
   model?: string;
   file?: string;
   spec?: string;
+  run?: string;
   shotList?: string;
   shots?: string;
   scene?: string;
@@ -112,6 +113,10 @@ export const generationCommandHandlers = [
   {
     path: ['estimate'],
     run: runEstimate,
+  },
+  {
+    path: ['run', 'show'],
+    run: runGenerationShow,
   },
   {
     path: ['run'],
@@ -322,6 +327,13 @@ async function runGeneration(input: GenerationCommandInput): Promise<unknown> {
     approvalToken: input.flags.approvalToken,
     approveUnpricedCost: input.flags.approveUnpricedCost,
     simulate: input.flags.simulate,
+  });
+}
+
+async function runGenerationShow(input: GenerationCommandInput): Promise<unknown> {
+  return input.runtime.projectDataService.readMediaGenerationRun({
+    ...generationProjectInput(input.runtime),
+    runId: requiredFlag(input.flags.run, '--run'),
   });
 }
 

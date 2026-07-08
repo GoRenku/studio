@@ -7,6 +7,7 @@ import type {
 } from '../../../client/index.js';
 import {
   insertMediaGenerationRun,
+  requireMediaGenerationRun,
 } from '../../database/access/media-generation.js';
 import {
   createRandomIdGenerator,
@@ -14,7 +15,9 @@ import {
 } from '../../entity-ids.js';
 import type {
   RunMediaGenerationSpecInput,
+  ReadMediaGenerationRunInput,
 } from '../../project-data-service-contracts.js';
+import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import {
   mediaGenerationEstimateWithApproval,
@@ -84,6 +87,20 @@ export async function runMediaGenerationSpec(
     });
   });
   return { run };
+}
+
+export async function readMediaGenerationRun(
+  input: ReadMediaGenerationRunInput
+): Promise<MediaGenerationRunReport> {
+  if (!input.runId?.trim()) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_RUN_ID_REQUIRED',
+      'Media generation run id is required.'
+    );
+  }
+  return withMediaGenerationProjectSession(input, ({ session }) => ({
+    run: requireMediaGenerationRun(session, input.runId),
+  }));
 }
 
 async function resolveSharedGenerationOutputPaths(input: RenkuConfigPathOptions) {

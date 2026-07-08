@@ -149,6 +149,6 @@ function unknownGenerationCommand(
     code: 'CLI019',
     message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,
     suggestion:
-      'Use generation context, generation model list, generation preview show, generation spec validate/create/update/show/list, generation estimate, or generation run.',
+      'Use generation context, generation model list, generation preview show, generation spec validate/create/update/show/list, generation estimate, generation run, or generation run show.',
   });
 }

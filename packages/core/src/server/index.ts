@@ -175,6 +175,7 @@ export type {
   RecordLookbookImageGenerationRunInput,
   RecordLookbookSheetGenerationRunInput,
   ReadMediaGenerationSpecInput,
+  ReadMediaGenerationRunInput,
   RecordMediaGenerationRunInput,
   RunMediaGenerationSpecInput,
   ScreenplayAnalysisProjectInput,

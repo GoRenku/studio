@@ -12,6 +12,7 @@ const commandDir = path.dirname(fileURLToPath(import.meta.url));
 describe('CLI command architecture', () => {
   it('keeps generated media and explicit reference media importable', () => {
     const nonImportPurposes = new Set([
+      'image.edit',
       'cast.voice-sample',
       'scene.dialogue-audio',
     ]);

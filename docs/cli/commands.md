@@ -1396,6 +1396,7 @@ Create, estimate, and run persisted media generation specs.
 Current implemented purposes:
 
 ```text
+image.edit
 lookbook.image
 lookbook.sheet
 cast.character-sheet
@@ -1413,6 +1414,7 @@ shot.video-take
 Current target formats:
 
 ```text
+asset:<asset-id>
 lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
@@ -1426,7 +1428,9 @@ Read context and available model choices:
 
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation context --purpose image.edit --target asset:<asset-id> --json
 renku generation model list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation model list --purpose image.edit --target asset:<asset-id> --json
 renku generation context --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation model list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json
@@ -1495,6 +1499,7 @@ renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
 renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation spec list --purpose image.edit --target asset:<asset-id> --json
 renku generation spec list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
@@ -1513,6 +1518,24 @@ renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <approval-token> --json
 renku generation run --spec <spec-id> --approve-unpriced-cost --json
 renku generation run --spec <spec-id> --simulate --json
+renku generation run show --run <run-id> --json
+```
+
+`image.edit` edits one registered image asset and creates generated output
+files plus a Media Generation Run receipt. It does not attach or replace media
+for Shot Video Takes, Cast, Locations, Lookbooks, Scenes, or reference images.
+Use the destination-owned import command after inspecting the generated file.
+
+Example prompt-sheet correction flow:
+
+```bash
+renku generation input list --purpose shot.video-take --target take:<take-id> --json
+renku generation preview show --file image-edit-spec.json --json
+renku generation spec create --file image-edit-spec.json --json
+renku generation estimate --spec <spec-id> --json
+renku generation run --spec <spec-id> --approval-token <approval-token> --json
+renku generation run show --run <run-id> --json
+renku media import --purpose shot.video-prompt-sheet --target take:<take-id> --source <edited-output-project-relative-path> --receipt image-edit-run.json --selection select --replace-selected --json
 ```
 
 Lookbook Image spec shape:

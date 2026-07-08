@@ -94,6 +94,7 @@ Examples:
 
 | Purpose | Shared Preview Path | Purpose Binding Responsibility |
 | --- | --- | --- |
+| `image.edit` | model, prompt, Config from provider payload | Validate the source asset target, call the generic image edit provider payload builder, and include the source image reference with role `image-edit-source`. |
 | `lookbook.image` | model, prompt, Config from provider payload | Read Lookbook context, call the Lookbook Image provider payload builder, and return real selected references only if they exist. |
 | `cast.profile` | model, prompt, Config from provider payload | Validate Cast Member ownership, call the Cast Profile provider payload builder, and resolve selected/source cast image references. |
 | `location.hero` | model, prompt, Config from provider payload | Validate Location ownership, call the Location Hero provider payload builder, and include the selected Location Sheet asset as a reference. |
@@ -137,6 +138,7 @@ different domain relationships:
 
 - a Cast Profile can reference selected/source Cast image assets;
 - a Location Hero references a source Location Sheet asset;
+- an Image Edit references the source asset file as `image-edit-source`;
 - shot input images use the shot input reference bundle;
 - Scene Storyboard Sheet references come from selected Lookbook sheet context
   when real asset/file ids exist.
@@ -186,6 +188,11 @@ Core preview runtime must not:
 - show raw provider payload JSON as Config content;
 - show local paths or provider upload URLs;
 - add compatibility support for retired array-shaped `configuration`.
+
+For `image.edit`, the preview must preserve `providerPreview.mode:
+"image-edit"` and show the source image as a reference. The preview envelope
+may include source asset id and asset file id; it must not include absolute
+local paths or provider upload URLs.
 
 ## Review Checklist
 

@@ -98,6 +98,7 @@ Options
   --provider           Generation provider
   --model              Generation model
   --spec               Media Generation Spec id
+  --run                Media Generation Run id
   --approval-token     Binding token returned by generation estimate
   --approve-unpriced-cost
                        Approve running generation when no model price is configured
@@ -213,6 +214,9 @@ function createCliFlags() {
       type: 'string',
     },
     spec: {
+      type: 'string',
+    },
+    run: {
       type: 'string',
     },
     approvalToken: {
@@ -585,6 +589,7 @@ export async function runRenkuCli(
             model: cli.flags.model,
             file: cli.flags.file,
             spec: cli.flags.spec,
+            run: cli.flags.run,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
             scene: cli.flags.scene,

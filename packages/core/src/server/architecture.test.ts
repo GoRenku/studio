@@ -220,6 +220,36 @@ describe('core server architecture', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('keeps generic image edit generation out of destination media mutation modules', async () => {
+    const imageEditSource = await fs.readFile(
+      path.join(
+        projectSourceRoot,
+        'media-generation',
+        'purposes',
+        'image-edit.ts'
+      ),
+      'utf8'
+    );
+    const forbiddenDestinationImports = extractImportSources(imageEditSource)
+      .filter((importSource) =>
+        [
+          'media-generation/purposes/shot-video-take',
+          'media-generation/purposes/cast',
+          'media-generation/purposes/location',
+          'media-generation/purposes/lookbook',
+          'media-generation/purposes/scene',
+        ].some((destinationPath) => importSource.includes(destinationPath))
+      );
+
+    expect(
+      forbiddenDestinationImports,
+      [
+        '`image.edit` may create generated files and run records only.',
+        'Destination attachment and replacement must remain in purpose-owned import commands.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
   it('keeps runtime project data access off direct SQLite prepare calls', async () => {
     const files = await listTypeScriptFiles(projectSourceRoot);
     const runtimeFiles = files.filter(

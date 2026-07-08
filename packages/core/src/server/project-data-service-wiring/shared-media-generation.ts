@@ -14,6 +14,7 @@ export function createSharedMediaGenerationServiceWiring() {
     createMediaGenerationSpec: specGeneration.createMediaGenerationSpec,
     updateMediaGenerationSpec: specGeneration.updateMediaGenerationSpec,
     readMediaGenerationSpec: specGeneration.readMediaGenerationSpec,
+    readMediaGenerationRun: runGenerationService.readMediaGenerationRun,
     listMediaGenerationSpecs: specGeneration.listMediaGenerationSpecs,
     prepareMediaGenerationSpec: specGeneration.prepareMediaGenerationSpec,
     prepareDraftMediaGenerationSpec: specGeneration.prepareDraftMediaGenerationSpec,

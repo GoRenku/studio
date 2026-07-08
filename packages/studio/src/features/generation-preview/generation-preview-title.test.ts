@@ -3,6 +3,7 @@ import type { GenerationPreviewPurpose } from '@gorenku/studio-core/client';
 import { generationPreviewTitle } from './generation-preview-title';
 
 const PREVIEW_TITLE_CASES = {
+  'image.edit': 'Image Edit Generation Preview',
   'lookbook.image': 'Lookbook Image Generation Preview',
   'lookbook.sheet': 'Lookbook Sheet Generation Preview',
   'cast.character-sheet': 'Character Sheet Generation Preview',

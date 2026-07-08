@@ -95,6 +95,66 @@ describe('generationCommandHandlers', () => {
     });
   });
 
+  it('parses image.edit asset targets for generation context', async () => {
+    const handler = generationCommandHandlers.find(
+      (candidate) => candidate.path.join(' ') === 'context',
+    );
+    if (!handler) {
+      throw new Error('Expected context handler.');
+    }
+    const buildMediaGenerationContext = vi.fn().mockResolvedValue({ ok: true });
+
+    await expect(
+      handler.run({
+        flags: {
+          purpose: 'image.edit',
+          target: 'asset:asset_source',
+        },
+        runtime: {
+          projectDataService: {
+            buildMediaGenerationContext,
+          },
+        },
+      } as never),
+    ).resolves.toEqual({ ok: true });
+
+    expect(buildMediaGenerationContext).toHaveBeenCalledWith({
+      purpose: 'image.edit',
+      target: { kind: 'asset', id: 'asset_source' },
+      shotIds: undefined,
+      shotListId: undefined,
+    });
+  });
+
+  it('reads generation run receipts by id', async () => {
+    const handler = generationCommandHandlers.find(
+      (candidate) => candidate.path.join(' ') === 'run show',
+    );
+    if (!handler) {
+      throw new Error('Expected run show handler.');
+    }
+    const readMediaGenerationRun = vi.fn().mockResolvedValue({
+      run: { id: 'media_generation_run_1' },
+    });
+
+    await expect(
+      handler.run({
+        flags: {
+          run: 'media_generation_run_1',
+        },
+        runtime: {
+          projectDataService: {
+            readMediaGenerationRun,
+          },
+        },
+      } as never),
+    ).resolves.toEqual({ run: { id: 'media_generation_run_1' } });
+
+    expect(readMediaGenerationRun).toHaveBeenCalledWith({
+      runId: 'media_generation_run_1',
+    });
+  });
+
   it('rejects mismatched take target shorthand and take flag', async () => {
     const handler = generationCommandHandlers.find(
       (candidate) => candidate.path.join(' ') === 'input list',

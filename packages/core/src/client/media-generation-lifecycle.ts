@@ -1,6 +1,7 @@
 import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import type { MediaGenerationPurpose } from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
+import type { ImageEditGenerationSpec, ImageEditModelChoice } from './image-edit-media-generation.js';
 import type { LookbookImageGenerationSpec, LookbookImageModelChoice, LookbookSheetGenerationSpec, LookbookSheetModelChoice } from './lookbook-media-generation.js';
 import type { CastCharacterSheetGenerationSpec, CastCharacterSheetModelChoice, CastProfileGenerationSpec, CastProfileModelChoice, CastVoiceSampleGenerationSpec, CastVoiceSampleModelChoice } from './cast-media-generation.js';
 import type { LocationEnvironmentSheetGenerationSpec, LocationEnvironmentSheetModelChoice, LocationHeroGenerationSpec, LocationHeroModelChoice } from './location-media-generation.js';
@@ -10,6 +11,7 @@ import type { ShotVideoTakeOutputGenerationSpec, ShotVideoTakeInputGenerationSpe
 import type { ShotVideoTakeModelChoice } from './scene-shot-list.js';
 
 export type MediaGenerationSpec =
+  | ImageEditGenerationSpec
   | LookbookImageGenerationSpec
   | LookbookSheetGenerationSpec
   | CastCharacterSheetGenerationSpec
@@ -37,7 +39,8 @@ export interface MediaGenerationSpecRecord {
     | LocationHeroModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice
-    | ShotVideoTakeModelChoice;
+    | ShotVideoTakeModelChoice
+    | ImageEditModelChoice;
   title: string;
   spec: MediaGenerationSpec;
   createdAt: string;
@@ -60,7 +63,8 @@ export interface MediaGenerationRun {
     | LocationHeroModelChoice
     | SceneStoryboardSheetModelChoice
     | ShotVideoTakeInputModelChoice
-    | ShotVideoTakeModelChoice;
+    | ShotVideoTakeModelChoice
+    | ImageEditModelChoice;
   provider: 'fal-ai' | 'elevenlabs';
   model: string;
   specSnapshot: MediaGenerationSpec;

@@ -1,5 +1,7 @@
 export const LOOKBOOK_IMAGE_GENERATION_PURPOSE = 'lookbook.image' as const;
 
+export const IMAGE_EDIT_GENERATION_PURPOSE = 'image.edit' as const;
+
 export const LOOKBOOK_SHEET_GENERATION_PURPOSE = 'lookbook.sheet' as const;
 
 export const CAST_CHARACTER_SHEET_GENERATION_PURPOSE =
@@ -39,6 +41,7 @@ export const SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE =
 export type MediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
 export type MediaGenerationPurpose =
+  | typeof IMAGE_EDIT_GENERATION_PURPOSE
   | typeof LOOKBOOK_IMAGE_GENERATION_PURPOSE
   | typeof LOOKBOOK_SHEET_GENERATION_PURPOSE
   | typeof CAST_CHARACTER_SHEET_GENERATION_PURPOSE

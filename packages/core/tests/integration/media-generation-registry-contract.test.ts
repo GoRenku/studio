@@ -3,6 +3,7 @@ import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
+  IMAGE_EDIT_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOCATION_HERO_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
@@ -23,6 +24,7 @@ import {
 import { listMediaGenerationDependencyKindDefinitions } from '../../src/server/media-generation/dependencies/dependency-kind-registry.js';
 
 const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
+  IMAGE_EDIT_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
@@ -59,6 +61,7 @@ describe('media generation purpose registry contract', () => {
       { purpose: 'cast.character-sheet', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.profile', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.voice-sample', mediaKind: 'audio', targetKind: 'castMember' },
+      { purpose: 'image.edit', mediaKind: 'image', targetKind: 'asset' },
       { purpose: 'location.environment-sheet', mediaKind: 'image', targetKind: 'location' },
       { purpose: 'location.hero', mediaKind: 'image', targetKind: 'location' },
       { purpose: 'lookbook.image', mediaKind: 'image', targetKind: 'lookbook' },

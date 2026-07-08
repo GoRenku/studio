@@ -501,6 +501,7 @@ export interface ProjectDataService {
   createMediaGenerationSpec(input: CreateMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
   updateMediaGenerationSpec(input: UpdateMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
   readMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationSpecRecord>;
+  readMediaGenerationRun(input: ReadMediaGenerationRunInput): Promise<MediaGenerationRunReport>;
   listMediaGenerationSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
@@ -1285,6 +1286,11 @@ export interface DeleteSceneDialogueAudioTakeInput extends RenkuConfigPathOption
 export interface ReadMediaGenerationSpecInput extends RenkuConfigPathOptions {
   projectName?: string;
   specId: string;
+}
+
+export interface ReadMediaGenerationRunInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  runId: string;
 }
 
 export interface BuildMediaGenerationPreviewInput

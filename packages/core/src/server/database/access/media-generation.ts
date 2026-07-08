@@ -6,6 +6,7 @@ import type {
   MediaGenerationSpecRecord,
 } from '../../../client/index.js';
 import {
+  IMAGE_EDIT_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
@@ -111,7 +112,7 @@ export function listMediaGenerationSpecs(
   session: DatabaseSession,
   input: {
     purpose: MediaGenerationPurpose;
-    targetKind: 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotVideoTake';
+    targetKind: 'asset' | 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotVideoTake';
     targetId: string;
   }
 ): MediaGenerationSpecRecord[] {
@@ -194,6 +195,17 @@ export function requireMediaGenerationRun(
   return toRunRecord(row);
 }
 
+export function listMediaGenerationRuns(
+  session: DatabaseSession
+): MediaGenerationRun[] {
+  return session.db
+    .select()
+    .from(mediaGenerationRuns)
+    .orderBy(desc(mediaGenerationRuns.startedAt), desc(mediaGenerationRuns.id))
+    .all()
+    .map(toRunRecord);
+}
+
 function toSpecRecord(row: MediaGenerationSpecRow): MediaGenerationSpecRecord {
   const spec = JSON.parse(row.specJson) as MediaGenerationSpec;
   assertMediaGenerationPurpose(spec.purpose);
@@ -238,6 +250,7 @@ function assertMediaGenerationPurpose(
 ): asserts purpose is MediaGenerationPurpose {
   if (
     purpose !== LOOKBOOK_IMAGE_GENERATION_PURPOSE &&
+    purpose !== IMAGE_EDIT_GENERATION_PURPOSE &&
     purpose !== LOOKBOOK_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_PROFILE_GENERATION_PURPOSE &&
